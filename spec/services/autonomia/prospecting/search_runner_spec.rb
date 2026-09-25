@@ -591,6 +591,26 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
           expect(lead.reload.metadata.dig('whatsapp_verification', 'status')).to eq('queued')
         end
 
+        # A decisão é do banco, na hora de gravar: uma verificação do número antigo que termina depois de a busca ler
+        # o lead também sai.
+        it 'tira a verificação do número antigo gravada entre a leitura do lead e a gravação' do
+          lead = search_with_phone('+5541999990001').leads.first
+          stub_mock_provider([places.first.merge(phone: '+55 41 98888-7777')])
+          runner = described_class.new(account: account, user: user,
+                                       params: { query: 'dentista', location: 'Curitiba, PR', requested_limit: 1, fresh: true })
+          allow(runner).to receive(:score_for).and_wrap_original do |original, *args, **kwargs|
+            Autonomia::Prospecting::Lead.where(id: lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+              ['metadata = metadata || ?::jsonb', { 'whatsapp_verification' => old_verification }.to_json]
+            )
+            original.call(*args, **kwargs)
+          end
+
+          runner.perform
+
+          expect(lead.reload.phone).to eq('+55 41 98888-7777')
+          expect(lead.metadata).not_to have_key('whatsapp_verification')
+        end
+
         it 'mantém a verificação quando o telefone é o mesmo, só escrito de outro jeito' do
           lead = verified_lead
 

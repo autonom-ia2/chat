@@ -1,5 +1,6 @@
 class Autonomia::Prospecting::WhatsappVerifier
-  Result = Struct.new(:lead, :exists, :phone, :chat_id, keyword_init: true)
+  # pending: o telefone do lead mudou durante a consulta; nada foi gravado e o número novo voltou à fila (ENRIQ-69).
+  Result = Struct.new(:lead, :exists, :phone, :chat_id, :pending, keyword_init: true)
 
   Error = Class.new(StandardError)
 
@@ -34,23 +35,28 @@ class Autonomia::Prospecting::WhatsappVerifier
     raise Error, 'prospecting.whatsapp.session_missing' if waha_session.blank?
 
     response = Waha::Client.new.check_contact_exists(phone: normalized_phone, session: waha_session)
-    exists = ActiveModel::Type::Boolean.new.cast(response['numberExists'])
-    chat_id = exists ? response['chatId'].presence || "#{normalized_phone.delete('+')}#{Autonomia::Prospecting::PhoneContract::CHAT_ID_SUFFIX}" : nil
-
-    persist_result!(exists: exists, chat_id: chat_id)
-
-    Result.new(lead: @lead.reload, exists: exists, phone: normalized_phone, chat_id: chat_id)
+    record_result(ActiveModel::Type::Boolean.new.cast(response['numberExists']), response['chatId'])
   rescue Waha::Client::Error => e
-    persist_failure!(e.message)
+    return number_changed_result unless persist_failure!(e.message)
+
     raise Error, 'prospecting.whatsapp.verification_failed'
   end
 
   private
 
+  def record_result(exists, waha_chat_id)
+    chat_id = exists ? waha_chat_id.presence || "#{normalized_phone.delete('+')}#{Autonomia::Prospecting::PhoneContract::CHAT_ID_SUFFIX}" : nil
+    return number_changed_result unless persist_result!(exists: exists, chat_id: chat_id)
+
+    Result.new(lead: @lead.reload, exists: exists, phone: normalized_phone, chat_id: chat_id)
+  end
+
   def normalized_phone
-    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(
-      checked_number, region: Autonomia::Prospecting::PhoneContract.region_for(@account)
-    )
+    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(checked_number, region: phone_region)
+  end
+
+  def phone_region
+    @phone_region ||= Autonomia::Prospecting::PhoneContract.region_for(@account)
   end
 
   # O número como estava no lead quando a consulta começou.
@@ -83,12 +89,32 @@ class Autonomia::Prospecting::WhatsappVerifier
   end
 
   # Enriquecimento e verificação rodam em jobs paralelos: gravar só a chave desta verificação no jsonb, sem
-  # reescrever o metadata lido antes (ENRIQ-57). E só se o lead ainda tem o número consultado: uma busca que trocou o
-  # telefone no meio já deixou o lead na fila para o número novo (ENRIQ-69).
+  # reescrever o metadata lido antes (ENRIQ-57). E só se o lead ainda tem o número consultado, comparado em E.164 sob
+  # a trava da linha, para a busca não trocar o telefone entre a conferência e a gravação (ENRIQ-69). true se gravou.
   def persist!(payload)
-    same_number = Autonomia::Prospecting::Lead.where(id: @lead.id).where(@source[:attribute] => checked_number)
-    same_number.update_all( # rubocop:disable Rails/SkipsModelValidations
-      ['metadata = metadata || ?::jsonb, updated_at = ?', { @source[:metadata_key] => payload.compact }.to_json, Time.current]
-    )
+    Autonomia::Prospecting::Lead.transaction do
+      current = Autonomia::Prospecting::Lead.lock.find(@lead.id)
+      next false unless Autonomia::Prospecting::PhoneContract.e164(current.public_send(@source[:attribute]), region: phone_region) == normalized_phone
+
+      Autonomia::Prospecting::Lead.where(id: @lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+        ['metadata = metadata || ?::jsonb, updated_at = ?', { @source[:metadata_key] => payload.compact }.to_json, Time.current]
+      )
+      true
+    end
+  end
+
+  # O resultado era do número antigo. A marca "queued" da consulta antiga sai, e o telefone do Google volta à fila para
+  # o número novo, em vez de ficar em "Verificando" até o ReaperJob; o after_search da busca que trocou não o
+  # recoloca, porque "queued" não conta como pendente (LeadWorkQueue.google_phone_pending?).
+  def number_changed_result
+    requeue_google_phone! if @source == SOURCES[:google]
+    Result.new(lead: @lead.reload, exists: nil, phone: nil, chat_id: nil, pending: true)
+  end
+
+  def requeue_google_phone!
+    Autonomia::Prospecting::Lead.where(id: @lead.id)
+                                .where("metadata -> 'whatsapp_verification' ->> 'status' = 'queued'")
+                                .update_all(["metadata = metadata - 'whatsapp_verification', updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
+    Autonomia::Prospecting::LeadWorkQueue.enqueue_whatsapp(@account, [Autonomia::Prospecting::Lead.find(@lead.id)])
   end
 end

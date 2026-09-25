@@ -98,7 +98,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
         lead: lead_payload(result.lead),
         exists: result.exists,
         phone: result.phone,
-        chat_id: result.chat_id
+        # pending: o telefone do lead mudou durante a consulta; nada vale para o número novo, que voltou à fila (ENRIQ-69).
+        chat_id: result.chat_id, pending: result.pending == true
       }
     }
   rescue ::Autonomia::Prospecting::WhatsappVerifier::Error => e

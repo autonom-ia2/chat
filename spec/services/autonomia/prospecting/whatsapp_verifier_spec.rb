@@ -40,19 +40,51 @@ RSpec.describe Autonomia::Prospecting::WhatsappVerifier do
   end
 
   # ENRIQ-69 (#682, E6): a verificação é do número consultado. Se uma busca troca o telefone do lead enquanto o WAHA
-  # responde, o resultado do número antigo não é gravado como se fosse do lead; a verificação do número novo vem da
-  # fila, pela busca que trocou.
-  it 'não grava o resultado quando o telefone do lead mudou durante a consulta' do
-    stub_request(:get, check_url)
-      .with(query: { phone: '+5541999990000', session: 'sessao-prospeccao' })
-      .to_return do
-        Autonomia::Prospecting::Lead.where(id: lead.id).update_all(phone: '(41) 98888-7777') # rubocop:disable Rails/SkipsModelValidations
-        { status: 200, body: { numberExists: true, chatId: '5541999990000@c.us' }.to_json, headers: { 'Content-Type' => 'application/json' } }
-      end
+  # responde, o resultado do número antigo não é gravado como se fosse do lead, e o lead volta à fila para o número
+  # novo: a marca "queued" da consulta antiga não pode ficar presa em "Verificando" até o reaper.
+  describe 'telefone trocado durante a consulta' do
+    include ActiveJob::TestHelper
 
-    verify
+    def stub_check_changing_phone_to(new_phone)
+      stub_request(:get, check_url)
+        .with(query: { phone: '+5541999990000', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).update_all(phone: new_phone) # rubocop:disable Rails/SkipsModelValidations
+          { status: 200, body: { numberExists: true, chatId: '5541999990000@c.us' }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
+    end
 
-    expect(lead.reload.metadata).not_to have_key('whatsapp_verification')
+    it 'não grava o resultado do número antigo e põe o número novo na fila' do
+      stub_check_changing_phone_to('(41) 98888-7777')
+
+      result = verify
+
+      expect(result.pending).to be(true)
+      expect(result.exists).to be_nil
+      expect(lead.reload.metadata.dig('whatsapp_verification', 'status')).to eq('queued')
+      expect(Autonomia::Prospecting::VerifyWhatsappJob).to have_been_enqueued.with(account.id, [lead.id])
+    end
+
+    it 'solta a marca "queued" da consulta antiga e enfileira de novo, em vez de esperar o reaper' do
+      lead.update!(metadata: { 'whatsapp_verification' => { 'status' => 'queued', 'queued_at' => 3.hours.ago.iso8601 } })
+      stub_check_changing_phone_to('(41) 98888-7777')
+
+      verify
+
+      verification = lead.reload.metadata['whatsapp_verification']
+      expect(verification['status']).to eq('queued')
+      expect(Time.zone.parse(verification['queued_at'])).to be > 1.minute.ago
+      expect(Autonomia::Prospecting::VerifyWhatsappJob).to have_been_enqueued.with(account.id, [lead.id])
+    end
+
+    it 'grava quando o telefone só mudou de escrita (mesmo número em E.164)' do
+      stub_check_changing_phone_to('+55 41 99999-0000')
+
+      result = verify
+
+      expect(lead.reload.metadata['whatsapp_verification']).to include('status' => 'verified', 'phone' => '+5541999990000')
+      expect(result.pending).to be_falsey
+    end
   end
 
   it 'monta o chatId a partir do telefone quando o WAHA não devolve um' do

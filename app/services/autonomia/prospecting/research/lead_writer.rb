@@ -36,6 +36,7 @@ class Autonomia::Prospecting::Research::LeadWriter
     # Falha técnica não apaga o que uma pesquisa anterior achou: só o estado e o código mudam.
     return attributes if outcome.failure?
 
+    # Seguro contra a verificação de WhatsApp em paralelo: o lock! do write recarregou o lead com a linha travada.
     attributes[:metadata] = @lead.metadata.to_h.merge('research' => research_metadata(outcome))
     attributes.merge(profile_attributes(outcome.profile)).merge(decision_attributes(outcome))
   end

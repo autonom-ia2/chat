@@ -6,9 +6,20 @@ class Autonomia::Prospecting::SearchRunner
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683): 3 páginas de 20 no Google (#678).
   MAX_REQUESTED_LIMIT = Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS
-  # Lead que já existe ganha só as chaves de metadata que a busca traz (ENRIQ-57, ENRIQ-69).
-  METADATA_MERGE_SQL = 'metadata = metadata || ?::jsonb'.freeze
-  METADATA_MERGE_WITHOUT_VERIFICATION_SQL = "metadata = (metadata - 'whatsapp_verification') || ?::jsonb".freeze
+  # Lead que já existe ganha só as chaves de metadata que a busca traz (ENRIQ-57), e a verificação de WhatsApp sai
+  # quando é de outro número (ENRIQ-69). A decisão é do banco, sobre o metadata da hora da gravação: uma verificação
+  # que termina depois de a busca ler o lead também é julgada. Parâmetros: número a supor quando a verificação não
+  # guarda o dela, E.164 novo do lead, chaves novas.
+  METADATA_MERGE_SQL = <<~SQL.squish.freeze
+    metadata = (
+      CASE
+        WHEN COALESCE(metadata -> 'whatsapp_verification' ->> 'status', 'queued') <> 'queued'
+         AND COALESCE(metadata -> 'whatsapp_verification' ->> 'phone', ?::text) IS DISTINCT FROM ?::text
+        THEN metadata - 'whatsapp_verification'
+        ELSE metadata
+      END
+    ) || ?::jsonb
+  SQL
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -313,7 +324,7 @@ class Autonomia::Prospecting::SearchRunner
     scoring_attributes = score_for(attributes, google_rank)
     new_metadata = attributes[:metadata].to_h
     existing = lead.persisted?
-    stale_verification = existing && stale_whatsapp_verification?(lead, attributes[:phone])
+    previous_phone = lead.phone
     # Pelo id, não pelo objeto: com o objeto, o inverse_of põe o lead em search.leads, e o lead recusado na corrida
     # (ou inválido) ficaria ali e derrubaria o save! da própria busca.
     lead.assign_attributes(
@@ -322,29 +333,19 @@ class Autonomia::Prospecting::SearchRunner
     )
     lead.metadata = lead.metadata.to_h.merge(new_metadata) unless existing
     lead.save!
-    merge_lead_metadata!(lead, new_metadata, drop_whatsapp_verification: stale_verification) if existing
+    merge_lead_metadata!(lead, new_metadata, previous_phone: previous_phone) if existing
     lead
   end
 
   # A verificação de WhatsApp é do número verificado, não do lead (ENRIQ-69): com outro telefone ela deixa de valer,
   # e sem ela o lead volta à fila de verificação (LeadWorkQueue.after_search). Mesmo número escrito de outro jeito
-  # continua valendo; a marca "queued" fica, porque o job lê o telefone atual do lead.
-  def stale_whatsapp_verification?(lead, new_phone)
-    verification = lead.metadata.to_h['whatsapp_verification'].to_h
-    return false if verification.blank? || verification['status'] == 'queued'
-
-    new_e164 = phone_e164(new_phone)
-    new_e164 != phone_e164(lead.phone) || verification.fetch('phone', new_e164) != new_e164
-  end
-
-  # Lead que já existe: grava só as chaves que a busca traz, sem regravar o metadata lido antes (ENRIQ-57). A
-  # verificação de WhatsApp roda em outro job e pode terminar entre a leitura e a gravação do lead.
-  def merge_lead_metadata!(lead, new_metadata, drop_whatsapp_verification:)
-    return if new_metadata.empty? && !drop_whatsapp_verification
-
-    sql = drop_whatsapp_verification ? METADATA_MERGE_WITHOUT_VERIFICATION_SQL : METADATA_MERGE_SQL
+  # continua valendo (E.164); a marca "queued" fica, e o verificador devolve à fila se o número mudou no meio. A
+  # verificação sem o número dela (antiga) vale enquanto o telefone do lead não muda.
+  def merge_lead_metadata!(lead, new_metadata, previous_phone:)
+    new_e164 = phone_e164(lead.phone)
+    assumed_phone = new_e164 == phone_e164(previous_phone) ? new_e164 : ''
     scope = Autonomia::Prospecting::Lead.where(id: lead.id)
-    scope.update_all([sql, new_metadata.to_json]) # rubocop:disable Rails/SkipsModelValidations
+    scope.update_all([METADATA_MERGE_SQL, assumed_phone, new_e164, new_metadata.to_json]) # rubocop:disable Rails/SkipsModelValidations
     lead.metadata = scope.pick(:metadata)
     lead.clear_attribute_changes([:metadata])
   end
