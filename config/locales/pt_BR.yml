@@ -736,3 +736,4 @@ pt_BR:
         rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'
         enrichment_in_progress: 'Este lead já está sendo enriquecido. O card se atualiza sozinho quando terminar.'
         research_disabled: 'A pesquisa de empresa e decisor está desligada nesta conta. Fale com o suporte para ligar.'
+        owner_not_found: 'Essa pessoa não está entre os sócios que a pesquisa achou para esta empresa. Atualize o painel e escolha um nome da lista.'
