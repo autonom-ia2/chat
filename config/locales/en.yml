@@ -536,8 +536,14 @@ en:
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       selection_list_name: 'Seleção da busca %{date}'
+      score_bands:
+        very_hot: 'Lead muito quente'
+        high: 'Oportunidade alta'
+        warm: 'Lead morno'
+        low: 'Prioridade baixa'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
+        score_unavailable: 'A nota da busca está indisponível no momento. Fale com o suporte.'
         google_busy: 'A busca no Google está sobrecarregada agora. Tente de novo em alguns minutos.'
         google_invalid_argument: 'O Google recusou os dados da busca. Confira o termo, o local e a área e tente de novo.'
         google_timeout: 'O Google não respondeu a tempo. Tente de novo em alguns minutos.'
