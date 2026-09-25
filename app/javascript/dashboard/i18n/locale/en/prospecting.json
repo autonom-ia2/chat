@@ -631,6 +631,9 @@
         "BLOCKED": "A pesquisa deste lead foi bloqueada."
       },
       "NO_DECISION_REASON": {
+        "COMPANY_NOT_FOUND": "Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).",
+        "COMPANY_AMBIGUOUS": "Mais de uma empresa do cadastro público combina com este lead; nenhuma foi escolhida.",
+        "EXPLICIT_ROLE_NOT_SUPPORTED": "A pesquisa pelo cadastro público só indica o proprietário; o tipo de decisor pedido ainda não tem pesquisa.",
         "NO_QSA": "A Receita não traz quadro de sócios para esta empresa.",
         "ONLY_COMPANIES": "Os sócios desta empresa são outras empresas, não pessoas.",
         "ONLY_MINORS": "O quadro de sócios só tem menores de idade, que não são mostrados.",

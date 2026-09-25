@@ -151,6 +151,9 @@ describe('leadResearch · bloco Empresa', () => {
 
 describe('leadResearch · motivo sem decisor, confiança e data', () => {
   it.each([
+    'company_not_found',
+    'company_ambiguous',
+    'explicit_role_not_supported',
     'no_qsa',
     'only_companies',
     'only_minors',

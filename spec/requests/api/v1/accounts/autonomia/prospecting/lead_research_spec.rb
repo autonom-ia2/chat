@@ -128,7 +128,7 @@ RSpec.describe 'Autonomia prospecting lead research', type: :request do
       get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches/#{search.id}", headers: auth_headers(admin)
 
       payload = response.parsed_body['payload']
-      expect(payload['research_progress']).to eq('total' => 4, 'done' => 2, 'running' => 1, 'queued' => 1, 'failed' => 1)
+      expect(payload['research_progress']).to eq('total' => 4, 'done' => 1, 'running' => 1, 'queued' => 1, 'failed' => 1)
       expect(payload['leads'].map { |item| item.dig('research', 'company_status') }).to eq(statuses)
     end
 

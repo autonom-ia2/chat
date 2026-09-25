@@ -39,15 +39,17 @@ module Autonomia::Prospecting::Research::Queue
          .or(leads.where(company_research_status: [States::QUEUED, States::WAITING_CAPACITY], research_requested_at: ...(now - QUEUED_STALE_AFTER)))
   end
 
-  # Barra de progresso da busca: "done" conta todo desfecho, inclusive falha; "failed" é a parte que falhou.
+  # Barra de progresso da busca, com os mesmos grupos que a tela conta nos leads (leadResearch.js#researchPhase):
+  # grupos separados que somam total. Lead nunca pesquisado não entra. running inclui quem espera a vez da empresa;
+  # done é todo desfecho que não é falha (blocked incluso); a barra mostra concluídos = done + failed.
   def progress(leads)
-    statuses = leads.map(&:company_research_status)
+    statuses = leads.map(&:company_research_status).reject { |status| status.blank? || status == States::NOT_RESEARCHED }
     {
       total: statuses.size,
-      done: statuses.count { |status| States::TERMINAL.include?(status) },
-      running: statuses.count(States::RESEARCHING),
-      queued: statuses.count { |status| [States::QUEUED, States::WAITING_CAPACITY].include?(status) },
-      failed: statuses.count('failed')
+      done: statuses.count { |status| States::TERMINAL.include?(status) && status != States::FAILED },
+      running: statuses.count { |status| [States::RESEARCHING, States::WAITING_CAPACITY].include?(status) },
+      queued: statuses.count(States::QUEUED),
+      failed: statuses.count(States::FAILED)
     }
   end
 

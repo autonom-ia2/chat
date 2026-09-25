@@ -189,7 +189,12 @@ export const qualificationLabelKey = qualification => {
   return key ? `PROSPECTING.RESEARCH.QUALIFICATIONS.${key}` : null;
 };
 
+// Códigos de no_decision_reason do servidor: os da regra do dono (OwnerPolicy::REASONS)
+// e os da descoberta do CNPJ (company_not_found, company_ambiguous).
 const NO_DECISION_REASONS = [
+  'company_not_found',
+  'company_ambiguous',
+  'explicit_role_not_supported',
   'no_qsa',
   'only_companies',
   'only_minors',

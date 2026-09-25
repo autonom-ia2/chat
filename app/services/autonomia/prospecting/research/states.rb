@@ -5,6 +5,7 @@ module Autonomia::Prospecting::Research::States
   QUEUED = 'queued'.freeze
   RESEARCHING = 'researching'.freeze
   WAITING_CAPACITY = 'waiting_capacity'.freeze
+  FAILED = 'failed'.freeze
   TERMINAL = %w[confirmed possible ambiguous no_result failed blocked].freeze
   ALL = ([NOT_RESEARCHED, QUEUED, RESEARCHING, WAITING_CAPACITY] + TERMINAL).freeze
   # Pedido aceito e ainda não terminado: um segundo pedido do mesmo lead é recusado.

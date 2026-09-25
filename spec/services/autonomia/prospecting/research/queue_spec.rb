@@ -104,13 +104,13 @@ RSpec.describe Autonomia::Prospecting::Research::Queue do
   end
 
   describe '.progress' do
-    it 'conta total, concluídos, em pesquisa, na fila e falhas' do
+    it 'conta em grupos separados que somam o total, sem o lead nunca pesquisado, como a tela' do
       statuses = %w[not_researched queued waiting_capacity researching confirmed no_result ambiguous failed blocked]
       leads = create_leads(statuses.size).each_with_index.map do |lead, index|
         lead.tap { |item| item.update!(company_research_status: statuses[index]) }
       end
 
-      expect(described_class.progress(leads)).to eq(total: 9, done: 5, running: 1, queued: 2, failed: 1)
+      expect(described_class.progress(leads)).to eq(total: 8, done: 4, running: 2, queued: 1, failed: 1)
     end
   end
 end

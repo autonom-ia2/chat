@@ -322,6 +322,18 @@ describe('LeadDetailResearch · estados e mensagens', () => {
       'Nenhum sócio com vínculo de dono ou de comando (sócio, titular, administrador, diretor).',
     ],
     ['public_entity', 'É um órgão público: não há dono a indicar.'],
+    [
+      'company_not_found',
+      'Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).',
+    ],
+    [
+      'company_ambiguous',
+      'Mais de uma empresa do cadastro público combina com este lead; nenhuma foi escolhida.',
+    ],
+    [
+      'explicit_role_not_supported',
+      'A pesquisa pelo cadastro público só indica o proprietário; o tipo de decisor pedido ainda não tem pesquisa.',
+    ],
     ['codigo_novo', 'Nenhum decisor foi confirmado no cadastro público.'],
   ])('sem decisor pelo motivo %s', (code, text) => {
     const wrapper = mountPanel(
