@@ -29,7 +29,9 @@ class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
     Autonomia::Prospecting::WhatsappVerifier.new(lead: lead, source: source).perform
   rescue Autonomia::Prospecting::WhatsappVerifier::Error => e
     Rails.logger.info("[Autonomia::Prospecting::VerifyWhatsappJob] lead_id=#{lead.id} source=#{source} error=#{e.message}")
-    release_queued_marker(lead) if source == :google && google_queued?(lead.reload)
+    # Lead apagado durante o lote não tem marca a soltar, e o resto do lote segue.
+    current = Autonomia::Prospecting::Lead.find_by(id: lead.id)
+    release_queued_marker(current) if source == :google && current && google_queued?(current)
   end
 
   def google_queued?(lead)

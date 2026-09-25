@@ -98,6 +98,22 @@ RSpec.describe Autonomia::Prospecting::VerifyWhatsappJob do
     expect(Autonomia::Prospecting::LeadBroadcaster).to have_received(:updated).with(have_attributes(id: site_lead.id))
   end
 
+  it 'lead apagado antes de um erro do verificador não derruba o resto do lote' do
+    allow(Autonomia::Prospecting::WhatsappVerifier).to receive(:new).and_call_original
+    allow(Autonomia::Prospecting::WhatsappVerifier).to receive(:new).with(hash_including(lead: have_attributes(id: google_lead.id))) do
+      Autonomia::Prospecting::Lead.where(id: google_lead.id).delete_all
+      instance_double(Autonomia::Prospecting::WhatsappVerifier).tap do |verifier|
+        allow(verifier).to receive(:perform).and_raise(Autonomia::Prospecting::WhatsappVerifier::Error, 'session_missing')
+      end
+    end
+    stub_check('+554133334444', true)
+    stub_check('+5541988887777', true)
+
+    expect { perform([google_lead.id, site_lead.id]) }.not_to raise_error
+
+    expect(site_lead.reload.metadata.dig('whatsapp_verification', 'status')).to eq('verified')
+  end
+
   it 'solta a marca de fila quando o lead não tem telefone válido' do
     google_lead.update!(phone: '1234')
 
