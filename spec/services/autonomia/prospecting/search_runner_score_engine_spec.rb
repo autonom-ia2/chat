@@ -201,18 +201,23 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
                                search_rank: 1, open_now: true, whatsapp_verified: false, decisor_found: false, decisor_failed: false)
     end
 
-    # Penalidade "já no CRM" do Orth (negative-factors.ts): o lead que a busca reencontra já virou card.
-    it 'marca como já no CRM, com o nome do funil, o lead que já tem card' do
-      run_search
+    # O Orth em produção não aplica "já no CRM": app/api/search/route.ts passa negCtx = {} ao computeNegativeFactors. A
+    # legada também não. Espelhando o Orth, o lead que a busca reencontra com card não perde nota nem prioridade.
+    it 'não tira nota nem prioridade do lead que já tem card, nas duas notas' do
+      allow(orth_scorer).to receive(:new).and_wrap_original do |original, **arguments|
+        orth_calls << arguments
+        original.call(**arguments)
+      end
+      before_card = scoring_by_name(run_search)
       pipeline, stage = create_crm_pipeline(account: account, user: user)
       card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Alfa Odonto')
       Autonomia::Prospecting::Lead.find_by!(account: account, name: 'Alfa Odonto').update!(crm_card: card)
 
-      run_search
+      after_card = scoring_by_name(run_search)
 
-      leads = orth_calls.last[:leads].index_by { |lead| lead[:name] }
-      expect(leads['Alfa Odonto']).to include(already_in_crm: true, crm_funnel_name: 'Funil Comercial')
-      expect(leads['Beta Odonto']).to include(already_in_crm: false, crm_funnel_name: nil)
+      expect(after_card['Alfa Odonto'].except('score_breakdown')).to eq(before_card['Alfa Odonto'].except('score_breakdown'))
+      expect(orth_calls.last[:leads].pluck(:already_in_crm)).to eq([false, false, false])
+      expect(orth_calls.last[:leads]).to all(satisfy { |lead| !lead.key?(:crm_funnel_name) })
     end
   end
 end
