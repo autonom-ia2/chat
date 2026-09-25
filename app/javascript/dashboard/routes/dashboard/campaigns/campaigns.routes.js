@@ -8,6 +8,8 @@ import WhatsAppCampaignAnalyticsPage from './pages/WhatsAppCampaignAnalyticsPage
 import WhatsAppApiCampaignsPage from './pages/WhatsAppApiCampaignsPage.vue';
 import EmailSenderPage from './pages/EmailSenderPage.vue';
 import EmailCampaignsPage from './pages/EmailCampaignsPage.vue';
+import SettingsWrapper from '../settings/SettingsWrapper.vue';
+import WhatsAppTemplatesPage from '../settings/templates/Index.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
@@ -29,6 +31,24 @@ const requireEmailCampaigns = (to, _from, next) => {
 
 const campaignsRoutes = {
   routes: [
+    // Modelos WhatsApp dentro de Campanhas (#725): a mesma tela de Configurações → Modelos,
+    // com endereço próprio para só o grupo Campanhas do menu ficar aceso. Por ora só
+    // administrador, como em Configurações; funções personalizadas ficam para o #726.
+    {
+      path: frontendURL('accounts/:accountId/campaigns/templates'),
+      component: SettingsWrapper,
+      children: [
+        {
+          path: '',
+          name: 'campaigns_templates_index',
+          meta: {
+            featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+            permissions: ['administrator'],
+          },
+          component: WhatsAppTemplatesPage,
+        },
+      ],
+    },
     {
       path: frontendURL('accounts/:accountId/campaigns'),
       component: CampaignsPageRouteView,

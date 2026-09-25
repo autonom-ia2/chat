@@ -67,7 +67,7 @@ export const cenas = [
   {
     legenda: 'Analisar campanha e usar links rastreáveis',
     acao: 'ir para',
-    url: `/app/accounts/${login.contaId}/crm/campaign-management`,
+    url: `/app/accounts/${login.contaId}/campaigns/management`,
     aguardarTexto: 'Links rastreáveis e códigos QR',
     zoom: 1,
     duracaoMs: 1200,

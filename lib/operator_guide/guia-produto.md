@@ -488,8 +488,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver gestão e relatório de campanhas de e-mail
 - intent: "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
-- onde_fica: Sidebar > CRM > Gestão de campanhas
-- rota: `crm_campaign_management_index` - `/app/accounts/:accountId/crm/campaign-management`
+- onde_fica: Sidebar > Campanhas > Gestão de campanhas (último item do grupo, depois de SMS)
+- rota: `crm_campaign_management_index` - `/app/accounts/:accountId/campaigns/management`
 - gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega.
 - passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
@@ -1588,13 +1588,23 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Ver os modelos de mensagem do WhatsApp
 - intent: Onde vejo os modelos do WhatsApp?; Como crio um modelo novo?; Meu modelo foi aprovado mas não aparece aqui, por quê?; Como vejo o modelo antes de usar numa campanha?
-- onde_fica: Configurações > Modelos
+- onde_fica: Configurações > Modelos (a mesma tela também fica em Campanhas > Modelos WhatsApp)
 - rota: `settings_templates` - `/app/accounts/:accountId/settings/templates`
 - gate: papel `administrator`
 - pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
 - passos: 1. Abra Configurações > Modelos; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Busque pelo nome ou pelo texto; 5. Abra o modelo para ver status, categoria e caixas.
 - gotchas: esta tela só exibe, porque criar e editar modelo é sempre no provedor, e não há botão de criar aqui; sincronizar fica desligado sem nenhuma caixa de WhatsApp; a sincronização leva alguns minutos e a tela mostra a hora da última tentativa; respondendo só parte das caixas, aparece aviso de sincronização parcial e a lista fica incompleta; modelo ainda não enviado para aprovação não serve para campanha.
 - nav_target: `settings_templates`
+
+### Ver os modelos do WhatsApp pela área de Campanhas
+- intent: Onde vejo os modelos antes de montar uma campanha do WhatsApp?; Quais modelos posso usar na campanha do WhatsApp Oficial?; Onde ficam os modelos do WhatsApp em Campanhas?
+- onde_fica: Sidebar > Campanhas > Modelos WhatsApp, logo antes de WhatsApp Oficial
+- rota: `campaigns_templates_index` - `/app/accounts/:accountId/campaigns/templates`
+- gate: feature flag `campaigns`; papel `administrator`
+- pre_requisitos: pelo menos uma caixa de WhatsApp conectada, e os modelos já existindo no provedor
+- passos: 1. Abra Campanhas > Modelos WhatsApp; 2. Sincronize os modelos; 3. Filtre por caixa, idioma e tipo; 4. Confira que o modelo que vai usar está aprovado; 5. Siga para Campanhas > WhatsApp Oficial para montar a campanha.
+- gotchas: é a mesma tela de Configurações > Modelos, só com outro caminho no menu; por enquanto só administrador vê; só exibe e sincroniza, porque criar e editar modelo é sempre no provedor; os modelos das campanhas de e-mail são outra coisa e ficam dentro de cada campanha de e-mail.
+- nav_target: `campaigns_templates_index`
 
 ### Trazer contatos e conversas de outra ferramenta
 - intent: Como trago meus contatos da ferramenta antiga?; Dá para importar o histórico de conversas?; De quais sistemas eu consigo importar?; Posso rodar duas importações ao mesmo tempo?

@@ -1379,7 +1379,8 @@
      ],
      "rotas": [
       "inbox_conversation",
-      "settings_templates"
+      "settings_templates",
+      "campaigns_templates_index"
      ],
      "me_leve_ate_la": {
       "rota": "settings_templates",

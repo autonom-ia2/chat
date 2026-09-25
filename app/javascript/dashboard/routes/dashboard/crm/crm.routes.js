@@ -90,12 +90,23 @@ export const routes = [
     beforeEnter: ensureCrmEnabled,
     component: CrmSlaPage,
   },
+  // Gestão de campanhas mora em Campanhas desde o #725: o endereço é /campaigns/management
+  // (fora de /crm, senão o CRM também fica aceso no menu). O nome da rota não muda, e o
+  // endereço antigo leva ao novo com a mesma query (favoritos e links do Guia seguem valendo).
   {
-    path: frontendURL('accounts/:accountId/crm/campaign-management'),
+    path: frontendURL('accounts/:accountId/campaigns/management'),
     name: 'crm_campaign_management_index',
     meta: campaignsMeta,
     beforeEnter: ensureCrmEnabled,
     component: CrmCampaignManagementPage,
+  },
+  {
+    path: frontendURL('accounts/:accountId/crm/campaign-management'),
+    redirect: to => ({
+      name: 'crm_campaign_management_index',
+      params: to.params,
+      query: to.query,
+    }),
   },
   {
     path: frontendURL('accounts/:accountId/crm/settings/integration-tokens'),
