@@ -625,7 +625,13 @@
         "RUNNING_HINT": "A pesquisa está confirmando a empresa e o quadro de sócios.",
         "DISABLED": "A pesquisa de empresa e decisor está desligada nesta conta.",
         "FAILED": "A última pesquisa não pôde ser concluída. Tente verificar novamente.",
-        "BLOCKED": "A pesquisa deste lead foi bloqueada."
+        "BLOCKED": "A pesquisa deste lead foi bloqueada.",
+        "USE_AS_CONTACT": "Usar como contato",
+        "USE_AS_CONTACT_LABEL": "Usar {name} como contato",
+        "ADOPTING": "Salvando…",
+        "CURRENT_CONTACT": "Contato atual",
+        "OWNER_ADOPTED": "{name} agora é o decisor e o contato deste lead.",
+        "ADOPT_ERROR": "Não foi possível usar este sócio como contato."
       },
       "NO_DECISION_REASON": {
         "COMPANY_NOT_FOUND": "Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).",

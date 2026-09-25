@@ -37,6 +37,8 @@ const {
   settings,
   researchRequestLeadId,
   requestLeadResearch,
+  adoptingOwner,
+  adoptOwner,
 } = useProspectingSearchContext();
 
 const selectedStageName = computed(() => {
@@ -183,7 +185,13 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
             :research-enabled="Boolean(settings?.research_enabled)"
             :can-manage="canManage"
             :requesting="researchRequestLeadId === selectedLeadDetail.id"
+            :adopting-owner-name="
+              adoptingOwner?.leadId === selectedLeadDetail.id
+                ? adoptingOwner.name
+                : ''
+            "
             @research="requestLeadResearch(selectedLeadDetail, $event)"
+            @adopt-owner="adoptOwner(selectedLeadDetail, $event)"
           />
 
           <LeadDetailEnrichment

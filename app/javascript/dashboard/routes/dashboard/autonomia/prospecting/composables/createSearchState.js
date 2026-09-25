@@ -17,6 +17,8 @@ const createFlags = () => ({
   isSearching: ref(false),
   enrichingLeadId: ref(null),
   researchRequestLeadId: ref(null),
+  // Sócio sendo adotado como contato ({ leadId, name }), #680.
+  adoptingOwner: ref(null),
   verifyingWhatsAppLeadIds: ref([]),
   showNewSearch: ref(false),
   showFilters: ref(false),

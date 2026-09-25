@@ -53,10 +53,94 @@ describe('LeadDetailResearch · Quem atende', () => {
     const owners = section(mountPanel(researchBlock()), 'owners');
 
     expect(owners.find('h4').text()).toBe('Quem atende');
-    expect(owners.findAll('li').map(item => item.text())).toEqual([
+    expect(
+      owners
+        .findAll('[data-test="research-owner-line"]')
+        .map(item => item.text())
+    ).toEqual([
       'JOAO DA SILVA · Sócio-administrador',
       'MARIA DA SILVA · Sócio',
     ]);
+  });
+
+  // Usar como contato (#680): um sócio vira o decisor e o contato do lead.
+  it('cada sócio que não é o decisor tem Usar como contato; o decisor aparece como contato atual', () => {
+    const owners = section(mountPanel(researchBlock()), 'owners');
+    const [joao, maria] = owners.findAll('li');
+
+    expect(joao.text()).toContain('Contato atual');
+    expect(joao.find('button').exists()).toBe(false);
+    const adopt = maria.find('button');
+    expect(adopt.text()).toBe('Usar como contato');
+    expect(adopt.attributes('aria-label')).toBe(
+      'Usar MARIA DA SILVA como contato'
+    );
+    expect(adopt.element.disabled).toBe(false);
+  });
+
+  it('o decisor é reconhecido sem diferença de caixa nem espaço', () => {
+    const owners = section(
+      mountPanel(
+        researchBlock({
+          decision: { name: ' Maria da Silva ', role: 'SOCIO' },
+        })
+      ),
+      'owners'
+    );
+    const [joao, maria] = owners.findAll('li');
+
+    expect(maria.text()).toContain('Contato atual');
+    expect(joao.find('button').text()).toBe('Usar como contato');
+  });
+
+  it('sem decisor, todos os sócios podem virar contato', () => {
+    const owners = section(
+      mountPanel(
+        researchBlock({ decision: null, decision_status: 'possible' })
+      ),
+      'owners'
+    );
+
+    expect(owners.findAll('button')).toHaveLength(2);
+    expect(owners.text()).not.toContain('Contato atual');
+  });
+
+  it('clicar avisa quem abriu com o sócio escolhido', async () => {
+    const wrapper = mountPanel(researchBlock());
+
+    await section(wrapper, 'owners')
+      .findAll('li')[1]
+      .find('button')
+      .trigger('click');
+
+    expect(wrapper.emitted('adoptOwner')).toEqual([
+      [{ name: 'MARIA DA SILVA', qualification: 'SOCIO' }],
+    ]);
+  });
+
+  it('enquanto salva, o botão do sócio diz Salvando e nenhum outro responde', () => {
+    const owners = section(
+      mountPanel(researchBlock({ decision: null }), {
+        adoptingOwnerName: 'MARIA DA SILVA',
+      }),
+      'owners'
+    );
+    const buttons = owners.findAll('button');
+
+    expect(buttons.map(button => button.text())).toEqual([
+      'Usar como contato',
+      'Salvando…',
+    ]);
+    expect(buttons.every(button => button.element.disabled)).toBe(true);
+  });
+
+  it('quem só vê não tem Usar como contato', () => {
+    const owners = section(
+      mountPanel(researchBlock(), { canManage: false }),
+      'owners'
+    );
+
+    expect(owners.findAll('button')).toHaveLength(0);
   });
 
   it('não mostra a fonte interna do dado', () => {
