@@ -83,6 +83,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # O .git entra no contexto do build (git rev-parse no Dockerfile); sem credencial persistida, nenhum token
+          # vai para uma camada da imagem ou do cache.
+          persist-credentials: false
 
       - name: Log deployment trigger context
         run: |
@@ -118,11 +122,12 @@ jobs:
           tags: |
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
-          # As duas stacks montam a mesma imagem (mesmo Dockerfile e plataforma) e dividem o cache. mode=max guarda
-          # também as etapas intermediárias: sem isso o bundle install da etapa pre-builder (~19 dos ~24 min do build,
-          # medido em 25/09) era refeito a cada deploy. ignore-error mantém o deploy de pé se o cache falhar.
-          cache-from: type=gha,scope=chatwoot-prod-linux-amd64
-          cache-to: type=gha,mode=max,ignore-error=true,scope=chatwoot-prod-linux-amd64
+          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
+          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
+          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
+          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
+          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
 
       - name: Publish runtime image parameter
         env:

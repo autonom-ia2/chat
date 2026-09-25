@@ -53,10 +53,20 @@ Onde moram as variáveis de ambiente de produção, e o que não pode sumir dela
 
 ## Cache do build
 
-As duas stacks montam a mesma imagem (`docker/Dockerfile`, `linux/amd64`) e dividem o cache do GitHub Actions no
-escopo `chatwoot-prod-linux-amd64`, em `mode=max`. O modo `max` guarda também as etapas intermediárias do Dockerfile:
+Cada stack guarda o cache das camadas no próprio ECR (tag `buildcache` no repositório `chatwoot-autonomia-prod`
+de cada conta), com `type=registry` e `mode=max`. O modo `max` guarda também as etapas intermediárias do Dockerfile:
 medido em 25/09, o `bundle install` da etapa `pre-builder` levava cerca de 19 dos 24 minutos do build porque o modo
-`min` não o guardava. A etapa só é refeita quando `Gemfile`/`Gemfile.lock` mudam. `ignore-error=true` mantém o deploy
-de pé se o cache falhar ou for despejado pelo limite de 10 GB do repositório. Voltar ao comportamento anterior é
-trocar `mode=max` por `mode=min` e os escopos pelos antigos (`chatwoot-autonomia-prod-linux-amd64` e
-`chatwoot-autonomia-hub2you-linux-amd64`).
+`min` (cache do GitHub) não o guardava. O cache do GitHub não serve para isso: o repositório já passa do limite de
+10 GB, e o modo `max` despejaria o cache dos testes a cada push; além disso, PR de fork lê esse cache, e o ECR não.
+
+A etapa das gems é refeita quando `Gemfile`/`Gemfile.lock` mudam e também quando muda uma camada anterior a ela. A
+imagem `node:24-alpine` não é fixada por digest, então uma republicação dela invalida o cache das gems mesmo com o
+Gemfile igual. O ganho de ~19 minutos vale para a maior parte dos deploys, não para todos.
+
+A tag `buildcache` ocupa uma das 10 imagens que a lifecycle policy do ECR mantém; como é regravada a cada deploy, ela
+nunca é a mais antiga. As tags do repositório são mutáveis nas duas contas. `ignore-error=true` mantém o deploy de pé
+se a gravação do cache falhar. O checkout usa `persist-credentials: false`: o `.git` entra no contexto do build (o
+Dockerfile roda `git rev-parse HEAD`), e sem isso o token do checkout ficaria numa camada cacheada.
+
+Voltar ao comportamento anterior: `cache-from`/`cache-to` com `type=gha`, `mode=min` e os escopos antigos
+(`chatwoot-autonomia-prod-linux-amd64` e `chatwoot-autonomia-hub2you-linux-amd64`).
