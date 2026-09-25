@@ -67,16 +67,28 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
   # normaliza para snake_case): o que a busca achou nunca volta ao modelo — quem digitasse
   # o CPF de outra pessoa ouviria o nome e o nascimento dela. O envio busca de novo, no adapter, e esse é o custo de
   # uma consulta a mais quando o modelo não trouxe os três. Conferência, não portão: falha aqui é nada a perguntar.
+  # A MESMA BUSCA NA MESMA CONVERSA NÃO SE PAGA DE NOVO (chat#718): o que ela não achou fica guardado pelo produto, pelo
+  # documento e pelos campos que faltam (`Insurance::BuscaDoSeguradoGuardada`), e a conferência repetida nas rodadas lê
+  # dali.
   # -> problemas no formato da validação, um por campo não achado.
   def segurado_nao_achado
     return [] unless busca_do_segurado?
 
-    resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada)
-    do_segurado = Array(resposta.to_h['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.', 'segurado.') }
+    do_segurado = ::Autonomia::Insurance::BuscaDoSeguradoGuardada.buscar(delivery&.conversation&.id, identidade_da_busca) do
+      nao_achados_na_busca
+    end
     do_segurado.map { |campo| { 'campo' => campo, 'severidade' => 'erro', 'motivo' => NAO_ACHADO } }
   rescue StandardError => e
     Rails.logger.warn("[autonomia][insurance] busca do segurado indisponivel account=#{account.id} #{e.class}")
     []
+  end
+
+  # A busca paga, no adapter: -> os campos do segurado que ela não achou, e se ela falhou (`lookup_failed`, adapters#107:
+  # a queda do fornecedor volta 200 com os campos em `not_found`, e não pode ser guardada como "não achado").
+  def nao_achados_na_busca
+    resposta = connector.quote_enrich(provider: connection.provider, product: produto, input: entrada).to_h
+    nao_achados = Array(resposta['not_found']).map(&:to_s).select { |campo| campo.start_with?('insured.', 'segurado.') }
+    ::Autonomia::Insurance::BuscaDoSeguradoGuardada::Busca.new(nao_achados: nao_achados, falhou: resposta['lookup_failed'] == true)
   end
 
   # Consulta paga só quando falta algo que ela resolve: com documento, e sem os campos que ela busca.
@@ -91,6 +103,15 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Veiculo
 
     campos = documento.length == DIGITOS_DE_CNPJ ? %w[name] : %w[name birthDate gender]
     campos.any? { |campo| segurado[campo].blank? }
+  end
+
+  # O QUE DECIDE A RESPOSTA DA BUSCA: o produto, o documento e os campos que ela vai buscar. Outro documento, ou um campo
+  # que o modelo passou a trazer, é outra busca.
+  def identidade_da_busca
+    return [produto, entrada['segurado'].to_h['cpfCnpj'].to_s.delete('^0-9'), %w[nome]] unless quote_input.auto?
+
+    segurado = entrada['insured'].to_h
+    [produto, segurado['document'].to_s.delete('^0-9'), %w[name birthDate gender].select { |campo| segurado[campo].blank? }]
   end
 
   def nome_do_segurado_do_ramo_falta?

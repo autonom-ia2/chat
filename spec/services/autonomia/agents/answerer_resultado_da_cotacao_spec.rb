@@ -72,8 +72,9 @@ RSpec.describe Autonomia::Agents::Answerer do
     )
   end
 
+  # `seguradora`: um nome ou a lista de nomes da cotação que o modelo escolheu (chat#718); nil é o resultado inteiro.
   def chamada(seguradora = nil, id = 'r1')
-    { 'name' => slug, 'call_id' => id, 'arguments' => { 'seguradora' => seguradora }.to_json }
+    { 'name' => slug, 'call_id' => id, 'arguments' => { 'seguradoras' => seguradora && Array(seguradora) }.to_json }
   end
 
   def fala(texto)
@@ -228,7 +229,7 @@ RSpec.describe Autonomia::Agents::Answerer do
 
     it 'com preço de uma e recusa de outra: as duas falas, sem motivo e sem o texto do portal' do
       cotacao_da_conversa([porto, sancor])
-      capturado = modelo(function_call: chamada('Sancor e Porto'))
+      capturado = modelo(function_call: chamada(['Sancor', 'Porto Seguro']))
 
       responder
 

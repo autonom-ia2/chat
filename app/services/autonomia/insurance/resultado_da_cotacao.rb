@@ -10,8 +10,7 @@ class Autonomia::Insurance::ResultadoDaCotacao
   # As execuções de `cotar_seguro` que não contam como a cotação da conversa: trocadas por um pedido novo,
   # descartadas com o turno, barradas pelo operador, ou aceitas e ainda não despachadas.
   FORA = %w[superseded discarded blocked pending].freeze
-  # As palavras que não distinguem uma seguradora de outra no nome ("Porto Seguro", "Sancor Seguros").
-  PALAVRAS_VAZIAS = %w[a o as os e de da do das dos seguro seguros seguradora seguradoras cia companhia sa].freeze
+  NENHUMA_AINDA = 'nenhuma até agora'.freeze
   # O parâmetro das ferramentas que leem a cotação (`ver_resultado_da_cotacao`, `enviar_proposta_da_seguradora`): com
   # mais de um bem cotado na conversa (chat#612), é ele que diz de qual o cliente fala (`escolha`).
   PARAM_PRODUTO = { 'name' => 'produto', 'type' => 'string', 'required' => false,
@@ -129,11 +128,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
   end
   private_class_method :escolher, :candidatas_do_ramo, :sem_um_bem, :pergunta
 
-  # -> as palavras que distinguem um texto: sem acento, em minúsculas, sem repetir e sem `PALAVRAS_VAZIAS`.
-  def self.palavras(texto)
-    ActiveSupport::Inflector.transliterate(texto.to_s).downcase.scan(/[a-z0-9]+/).uniq - PALAVRAS_VAZIAS
-  end
-
   attr_reader :run
 
   def initialize(run)
@@ -203,6 +197,12 @@ class Autonomia::Insurance::ResultadoDaCotacao
     entradas.keys.map { |codigo| nome(codigo) }.compact_blank
   end
 
+  # -> a lista fechada das seguradoras desta cotação (chat#718): o nome de cada uma, em ordem alfabética, sem valor.
+  # Sem nenhuma ainda (a cotação correndo antes da primeira resposta), diz isso, e não uma lista vazia.
+  def lista_fechada
+    nomes.sort.join('; ').presence || NENHUMA_AINDA
+  end
+
   # -> o comparativo em PDF desta cotação foi aceito pelo publicador? A identidade dele na lista do aceite
   # (`InsuranceQuote::COMPARATIVO_KEY`) ou a sentinela das execuções anteriores (`PDF_SENT_KEY`).
   def comparativo_enviado?
@@ -221,18 +221,19 @@ class Autonomia::Insurance::ResultadoDaCotacao
     nao_respondeu_a_tempo?(codigo) ? Guardado::SEM_PROPOSTA : entrada(codigo)['desfecho']
   end
 
-  # -> os códigos das seguradoras que `consulta` nomeia, primeiro as do passo 2 e depois as do passo 3:
-  #   1. a seguradora cujas palavras do nome aparecem TODAS na consulta ("porto" nomeia "Porto Seguro");
-  #   2. entre as do passo 1, sai a de palavras contidas nas de outra ("Bp Assinatura" tira "Bp");
-  #   3. palavra da consulta que nenhuma do passo 2 cobre nomeia quem a tem no nome ("liberty" nomeia
-  #      "Liberty Site").
-  def procurar(consulta)
-    pedidas = self.class.palavras(consulta)
-    return [] if pedidas.empty?
+  # QUEM ESCOLHE A SEGURADORA É O MODELO (decisão do Rodrigo, 25/09/2026, chat#718). Até aqui o nome que o cliente
+  # disse era quebrado em palavras e casado com os nomes da cotação, e era esse casamento que decidia de qual seguradora
+  # ele falava. Agora o modelo escolhe na lista fechada das seguradoras desta cotação (`#nomes`, que as ferramentas
+  # devolvem quando o nome não está nela), e aqui só se confere a identidade: o nome inteiro, sem diferença de caixa
+  # nem de espaço. -> os códigos das seguradoras com exatamente esse nome, vazio quando nenhuma tem.
+  #
+  # MAIS DE UM CÓDIGO COM O MESMO NOME volta inteiro, como o casamento antigo fazia (revisão da chat#718): devolver
+  # nada ali mandava o modelo de volta à lista, onde o nome é o mesmo, e ele chamava de novo até acabar as rodadas.
+  def codigos_do_nome(escolhido)
+    alvo = escolhido.to_s.squish
+    return [] if alvo.empty?
 
-    inteiras = sem_contidas(nomeaveis.select { |codigo| (palavras_do_nome(codigo) - pedidas).empty? })
-    soltas = pedidas - inteiras.flat_map { |codigo| palavras_do_nome(codigo) }
-    inteiras + (nomeaveis - inteiras).select { |codigo| palavras_do_nome(codigo).intersect?(soltas) }
+    entradas.keys.select { |codigo| nome(codigo).to_s.squish.casecmp?(alvo) }
   end
 
   private
@@ -252,22 +253,6 @@ class Autonomia::Insurance::ResultadoDaCotacao
   def entrada(codigo)
     valor = entradas[codigo.to_s]
     valor.is_a?(Hash) ? valor : {}
-  end
-
-  # Os códigos cuja entrada tem nome com alguma palavra: sem nome, uma entrada casaria com qualquer consulta.
-  def nomeaveis
-    @nomeaveis ||= entradas.keys.select { |codigo| palavras_do_nome(codigo).any? }
-  end
-
-  def palavras_do_nome(codigo)
-    self.class.palavras(entrada(codigo)['nome'])
-  end
-
-  def sem_contidas(codigos)
-    codigos.reject do |codigo|
-      proprias = palavras_do_nome(codigo)
-      codigos.any? { |outro| (proprias - palavras_do_nome(outro)).empty? && palavras_do_nome(outro).size > proprias.size }
-    end
   end
 
   # As ofertas com preço destes códigos, na forma que `QuoteOffers` lê, na ordem de `QuoteOffers#quoted`.

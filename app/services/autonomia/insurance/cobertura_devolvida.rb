@@ -26,10 +26,30 @@ module Autonomia::Insurance::CoberturaDevolvida
     'coverage_type' => 'tipo de cobertura',
     'extra_expenses' => 'despesas extraordinárias',
     'quick_repair' => 'reparo rápido',
-    'tire_and_wheel' => 'proteção de pneus e rodas'
+    'tire_and_wheel' => 'proteção de pneus e rodas',
+    # Imóvel (residencial e empresarial, chat#641): as importâncias que o adapter passa a devolver. Auto não as recebe.
+    'fire_lightning_explosion' => 'incêndio, raio e explosão',
+    'electrical_damage' => 'danos elétricos',
+    'theft' => 'roubo',
+    'electronic_equipment' => 'equipamentos eletrônicos',
+    'windstorm' => 'vendaval',
+    'vehicle_impact' => 'impacto de veículos',
+    'vehicle_impact_windstorm' => 'impacto de veículos e vendaval',
+    'pipe_leak' => 'vazamento de tanques e tubulações',
+    'rent_loss' => 'perda ou pagamento de aluguel',
+    'collapse' => 'desmoronamento',
+    'flooding' => 'alagamento',
+    'document_recovery' => 'recomposição de documentos',
+    'civil_liability' => 'responsabilidade civil',
+    'fixed_expenses' => 'despesas fixas',
+    'glass_amount' => 'vidros'
   }.freeze
   CAMPOS = ROTULOS.keys.freeze
-  EM_REAIS = %w[property_damage bodily_injury moral_damage death_accident disability_accident deductible_amount].freeze
+  IMPORTANCIAS_DO_IMOVEL = %w[fire_lightning_explosion electrical_damage theft electronic_equipment windstorm vehicle_impact
+                              vehicle_impact_windstorm pipe_leak rent_loss collapse flooding document_recovery civil_liability
+                              fixed_expenses glass_amount].freeze
+  EM_REAIS = (%w[property_damage bodily_injury moral_damage death_accident disability_accident deductible_amount] +
+              IMPORTANCIAS_DO_IMOVEL).freeze
   PERCENTUAL = %w[referenced_value_percent].freeze
 
   module_function

@@ -85,6 +85,9 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # commit e3aeb7b):
   #   (no autonomia-adapters) npx tsx -e "import {schemaDoRamo} from './src/platforms/agger/ramos/schema.ts';
   #     console.log(JSON.stringify(schemaDoRamo('18'),null,2))"
+  # Regenerado de novo em 25/09/2026 na branch `fix/ajustes-pos-empresarial` (adapters#106, commit f8b2cdb): entra o
+  # campo do cliente `imovelConstrucaoReforma` (opcional, padrão false), que ia fixo nos campos da impressão. Só ele
+  # mudou; o de residencial regenerado no mesmo commit saiu idêntico.
   # Regenerar quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
   SCHEMA_EMPRESARIAL = JSON.parse(File.read(File.expand_path('mock/schema_empresarial.json', __dir__))).freeze
 
@@ -118,12 +121,13 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
     { 'platform' => provider, 'product' => product.to_s, **schema }
   end
 
-  # A busca do segurado (chat#585): o mock acha tudo — quem precisar do "não achado" dubla este método.
+  # A busca do segurado (chat#585): o mock acha tudo, sem falha (`lookup_failed`, adapters#107) — quem precisar do
+  # "não achado" ou da queda dubla este método.
   # Produto desconhecido é recusado como no adapter real.
   def quote_enrich(provider:, product:, input:)
     require_provider!(provider)
     require_produto!(product)
-    { 'input' => input, 'not_found' => [] }
+    { 'input' => input, 'not_found' => [], 'lookup_failed' => false }
   end
 
   # Recusa o que o schema exige e não veio. Não imita a checagem de domínio do adapter real (a troca

@@ -28,7 +28,7 @@ class Autonomia::Agents::Tools::PedidoRepetido
     "Este pedido tem exatamente os mesmos dados da consulta que #{estado}. Não abri outra. " \
       'Para falar do andamento ou dos preços, consulte antes ver_resultado_da_cotacao: ele diz quem já cotou, ' \
       'por quanto, e quem ainda falta. Responda com isso, com as suas palavras e sem vocabulário de sistema. ' \
-      'Se ele mudou algum dado, refaça a chamada com o dado novo — dado diferente abre consulta nova.'
+      'Se ele mudou algum dado, refaça a chamada com o dado novo: dado diferente abre consulta nova.'
   end
 
   private

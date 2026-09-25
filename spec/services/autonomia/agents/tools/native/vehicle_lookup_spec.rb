@@ -41,7 +41,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::VehicleLookup do
     texto = consultar('ncd-3080')
 
     expect(texto).to include('NCD3080', 'CG 150 Titan', 'moto', '2004')
-    expect(texto).to include('`vehicle.vehicleType` = m')
+    expect(texto).to include('preencha vehicle.vehicleType com m')
+    expect(texto).not_to include('`', '—') # o modelo copia a crase e o travessão (chat#641)
   end
 
   it 'placa que o portal nao conhece volta sem tipo, e sem instrucao de tipo' do
