@@ -31,6 +31,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   # como no Orth (lib/services/search/search-filters.ts).
   NEIGHBORHOOD_TYPES = %w[sublocality_level_1 sublocality neighborhood].freeze
   CITY_TYPES = %w[locality administrative_area_level_2].freeze
+  # Colunas string do lead que recebem texto livre do Google (#723).
+  TEXT_COLUMNS = %i[name address category neighborhood city].freeze
 
   attr_reader :api_units
 
@@ -143,6 +145,11 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   end
 
   def lead_for(place)
+    attributes = place_attributes(place).merge(url_attributes(place)).merge(address_attributes(place)).merge(place_signals(place))
+    fit_text_columns(attributes)
+  end
+
+  def place_attributes(place)
     reviews = Array(place['reviews']).first(5)
     {
       provider: 'google_places',
@@ -157,14 +164,19 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       category: Array(place['types']).first,
       metadata: reviews.present? ? { reviews_snapshot: reviews } : {},
       raw_payload: place
-    }.merge(url_attributes(place)).merge(address_attributes(place)).merge(place_signals(place))
+    }
+  end
+
+  # Texto do Google maior que a coluna é cortado em vez de derrubar a busca (#723).
+  def fit_text_columns(attributes)
+    attributes.merge(TEXT_COLUMNS.index_with { |column| Autonomia::Prospecting::ColumnFit.text(attributes[column]) })
   end
 
   # URLs que cabem na coluna, sem derrubar a busca (#723).
   def url_attributes(place)
     {
-      website: Autonomia::Prospecting::Providers::PlaceUrl.fit(place['websiteUri']),
-      google_maps_uri: Autonomia::Prospecting::Providers::PlaceUrl.fit(place['googleMapsUri'])
+      website: Autonomia::Prospecting::ColumnFit.url(place['websiteUri']),
+      google_maps_uri: Autonomia::Prospecting::ColumnFit.url(place['googleMapsUri'], drop_query: false)
     }
   end
 

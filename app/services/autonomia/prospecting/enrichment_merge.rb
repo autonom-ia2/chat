@@ -14,6 +14,7 @@ class Autonomia::Prospecting::EnrichmentMerge
     enriched_linkedin: 'linkedin',
     enriched_cnpj: 'cnpj'
   }.freeze
+  SOCIAL_KEYS = %w[instagram facebook linkedin].freeze
   # Chaves do scraper que não são dado do site: sozinhas, a página não trouxe nada.
   SCRAPE_BOOKKEEPING_KEYS = %w[website scraped_at truncated source_urls].freeze
   # Chaves da resposta da IA que falam de uma pessoa: não entram no lead.
@@ -57,8 +58,16 @@ class Autonomia::Prospecting::EnrichmentMerge
     previous.merge(@scraped.compact_blank).merge('ai' => @ai.compact.presence || previous['ai'] || {})
   end
 
+  # Link de rede raspado do site maior que a coluna não derruba o enriquecimento do lead (#723).
   def contact_fields
-    CONTACT_FIELDS.to_h { |column, key| [column, first_present(@scraped[key], @lead.public_send(column))] }
+    CONTACT_FIELDS.to_h do |column, key|
+      [column, first_present(scraped_contact(key), @lead.public_send(column))]
+    end
+  end
+
+  def scraped_contact(key)
+    value = @scraped[key]
+    SOCIAL_KEYS.include?(key) ? Autonomia::Prospecting::ColumnFit.url(value, drop_query: false) : value
   end
 
   def summary_from_scrape

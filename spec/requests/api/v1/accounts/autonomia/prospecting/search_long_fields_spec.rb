@@ -17,7 +17,8 @@ RSpec.describe 'Autonomia prospecting search with long place fields', type: :req
       { id: 'places/normal', displayName: { text: 'Clinica Normal' }, formattedAddress: 'Florianopolis, SC',
         websiteUri: 'https://normal.example.com/?ref=gmb', googleMapsUri: 'https://maps.google.com/?cid=2' },
       { id: 'places/sem-saida', displayName: { text: 'Clinica Sem Saida' }, formattedAddress: 'Florianopolis, SC',
-        websiteUri: "https://sem-saida.example.com/#{'a' * 300}" }
+        websiteUri: "https://sem-saida.example.com/#{'a' * 300}" },
+      { id: 'places/nome-longo', displayName: { text: "Clinica #{'Nome ' * 60}" }, formattedAddress: "Rua #{'Longa ' * 60}" }
     ]
   end
 
@@ -29,7 +30,7 @@ RSpec.describe 'Autonomia prospecting search with long place fields', type: :req
   end
 
   def run_search
-    post searches_path, params: { search: { query: 'clinica', location: 'Florianopolis, SC', radius: 5000, requested_limit: 3 } },
+    post searches_path, params: { search: { query: 'clinica', location: 'Florianopolis, SC', radius: 5000, requested_limit: 4 } },
                         headers: auth_headers(admin), as: :json
   end
 
@@ -38,7 +39,7 @@ RSpec.describe 'Autonomia prospecting search with long place fields', type: :req
 
     expect(response).to have_http_status(:created)
     expect(Autonomia::Prospecting::Search.last.status).to eq('completed')
-    expect(Autonomia::Prospecting::Lead.where(account: account).count).to eq(3)
+    expect(Autonomia::Prospecting::Lead.where(account: account).count).to eq(4)
   end
 
   it 'tira o rastreio da URL longa e guarda o endereço que cabe' do
@@ -53,6 +54,14 @@ RSpec.describe 'Autonomia prospecting search with long place fields', type: :req
     run_search
 
     expect(Autonomia::Prospecting::Lead.find_by(account: account, provider_place_id: 'places/sem-saida').website).to be_nil
+  end
+
+  it 'corta nome e endereço maiores que a coluna em vez de perder o lead' do
+    run_search
+
+    lead = Autonomia::Prospecting::Lead.find_by(account: account, provider_place_id: 'places/nome-longo')
+    expect(lead.name.length).to eq(255)
+    expect(lead.address.length).to eq(255)
   end
 
   it 'não mexe no site que já cabe, mesmo com parâmetro' do
