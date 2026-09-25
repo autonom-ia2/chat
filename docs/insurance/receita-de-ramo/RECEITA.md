@@ -1,10 +1,11 @@
 # Receita — o especialista de um ramo novo
 
-> **Versão 2, 24/09/2026: provada em residencial.** A versão 1 foi escrita a partir de **auto** (10 a
-> 21/09/2026). O piloto de residencial passou pelas oito fases entre 21 e 23/09 e está em produção na
-> conta 16 desde 22/09; a rodada de teste de 24/09 fechou os últimos buracos (chat#634, #639). O próximo
-> ramo, **empresarial** (decisão do CEO de 24/09), é o primeiro a nascer desta receita: o que ele
-> revelar volta para cá no mesmo PR que o fechar.
+> **Versão 3, 25/09/2026: revista com o empresarial.** A versão 1 foi escrita a partir de **auto** (10 a
+> 21/09/2026); a versão 2, provada em residencial (21 a 24/09). O empresarial foi o primeiro ramo a nascer da
+> receita, e mesmo assim cada teste real do Rodrigo achou uma capacidade que auto ou residencial já tinham e
+> ele não (piloto-empresarial.md). A versão 3 transforma cada uma dessas faltas em item do
+> [checklist do ramo](#checklist-do-ramo), com evidência obrigatória, e o checklist virou portão da liberação
+> na conta. O próximo ramo, **vida (91)**, é o primeiro a passar por ele.
 
 Ordem de construção do especialista de um ramo de seguro (residencial, condomínio, empresarial,
 vida, acidentes pessoais, fiança locatícia, viagem, celular, bike, vida global) e da passagem da
@@ -77,7 +78,17 @@ toda célula diferente de auto precisa de motivo.
 | Proposta de uma seguradora | `enviar_proposta_da_seguradora` | provar que sai |
 | Lapidação | mudar um dado e recotar parte da entrada anterior do mesmo bem | idem |
 | Pedido repetido | 24 h responde do histórico | idem |
-| Passagem à equipe | a fala da Lia de que vai encaminhar dispara o CRM | idem |
+| Passagem à equipe | a fala da Lia de que vai encaminhar dispara o CRM, com a nota do motivo | idem |
+| Quem é o segurado | §D.1 do comum: o cliente decide; o documento dá o CPF da pessoa nomeada | idem, PF ou PJ |
+| Renovação | apólice anterior dá seguradora, bônus, sinistros e vigência; sem ela, seguro novo com aviso uma vez | **desde o primeiro dia**, se o ramo tem renovação no portal |
+| Coberturas | três níveis: o pedido do cliente, depois a apólice, depois o padrão | idem, com a tabela de coberturas do cliente |
+| Vários bens | frota a partir de 3 bens do mesmo segurado; abaixo disso, uma cotação por bem em paralelo | a regra equivalente do ramo |
+| Mínimos e tetos | valor abaixo do mínimo cota com o mínimo e explica; tetos pela base | os mínimos e tetos do ramo, medidos |
+| Recusa conhecida | seguradora que recusa por cadastro ou decisão fica registrada com o dono | a lista do ramo, com dono |
+
+**Nenhuma linha pode ficar "depois".** No empresarial, a renovação e as coberturas do cliente entraram só
+quando o Rodrigo perguntou, depois do ar. Linha que o ramo não tem se escreve com o motivo ("vida não tem
+renovação no portal"), nunca em branco.
 
 Depois da tabela, procure `auto?`, `RAMO_AUTO`, `ramo == '31'` e o nome do ramo pronto (`residencial`) nos dois
 repositórios: cada condicional de ramo é um lugar onde o ramo novo pode cair no caminho errado em silêncio.
@@ -124,6 +135,11 @@ dada para o piloto em curso.
   diferentes. Ler de volta é determinístico.
 - Pelo menos uma seguradora com preço. Recusa nomeada pelo portal é informação: registre no
   `ramos-nao-auto.md` qual campo ela nomeou.
+- **A rodada espelha produção.** Dado do tipo que o cliente real manda: CNPJ de empresa que existe, com a razão
+  social que a Receita devolve, e CEP real. Nome de mentira faz a seguradora recusar pela razão social (Bradesco e
+  Zurich, 24/09), e a recusa vira falso defeito. Script de medição mede; só a conversa real depois do deploy prova.
+- **Medir em três faixas de valor, nunca num valor só:** o mínimo do ramo, um valor típico e um alto. O teto do
+  empresarial foi medido só em 400 mil e quebrou no primeiro valor diferente que o Rodrigo mandou.
 
 O filtro de seguradoras do adapter descarta seguradora que cota (modo B10). O override
 `SEGURADORAS_DO_PORTAL` em `ramos/contratos.ts` **não resolve em produção: só o script de prova o lê.** Confira
@@ -175,6 +191,13 @@ especialista. Nada de nome de campo, código ou padrão digitado no chat2you. Pa
   diz pelo tipo com `null`. Um opcional mal declarado derruba a chamada inteira e deixa o agente mudo.
 - A descrição de cada campo **não traz valor entre crases nem travessão**: o modelo copia os dois para
   o WhatsApp.
+- **Ferramenta nova se testa pelo `Connector::Http` real, com o tempo medido.** O conector normaliza as chaves
+  para snake_case, e a busca de atividade levava 18 s contra um limite de 10 s: os dois passaram em mais de
+  2.000 specs com mock em camelCase e caíram no primeiro teste real (modos F9 e F10). O spec da ferramenta usa a
+  resposta como o conector entrega, e o limite de tempo é o medido mais folga, escrito com o número.
+- **A descrição do campo é instrução**, e é a instrução mais perto da ação. Ela não pode mandar perguntar o que o
+  manual manda ler, nem o contrário (renovação, 25/09). A procura de contradição da Fase 4 inclui as descrições
+  e as mensagens de conferência do adapter.
 - A decisão de desenho fica registrada: um formulário por especialista (cada um vê o do seu ramo) ou
   um formulário com todos os ramos. O primeiro é o esperado; o segundo multiplica o tamanho do que o
   modelo lê a cada turno.
@@ -206,6 +229,15 @@ que custava dinheiro, duas vezes no mesmo dia.
   (decisão do Rodrigo, 22/09). Trava que deixa quem insiste sem cotação nenhuma é pior que o limite.
 - Cópia local de dado nunca fica atrás de fornecedor pago: se a regra usa um dado que a conversa já tem,
   ela não depende da consulta paga para funcionar.
+- **Fato do cliente nunca é fixo no código.** A localização do empresarial saía "andar 2" para todo imóvel; o
+  cliente no térreo era cotado errado. Padrão fixo só para campo de origem `escolha`, com o motivo medido; o que o
+  cliente diz vence o padrão (`{ ...deduzidos, ...pedido }`).
+- **Toda mensagem de conferência tem a saída "não se aplica".** A que só diz "pergunte ao cliente" faz a Lia
+  perguntar a seguradora anterior a quem nunca teve seguro. Cada falta diz também quando mandar o grupo nulo.
+- **Ruído do portal por ramo.** A mensagem que o portal escreve no plano sem ser recusa ("Houve um erro ao
+  realizar este cálculo" no 18) entra em `RUIDO_POR_RAMO`; sem isso, o comparativo descarta seguradora que cotou.
+- **Impressão e proposta de uma seguradora por ramo.** Os campos que o PDF exige (`CAMPOS_DA_IMPRESSAO`) são
+  medidos com o comparativo **e** com a proposta de uma seguradora, os dois lidos abertos.
 
 ## Fase 4 — O manual do ramo
 
@@ -223,7 +255,10 @@ Arquivo `quote_agent/instrucoes/especialista_<ramo>.md`, lido **depois** do bloc
 - **Procurar na conversa antes de pedir.** O especialista recebe a conversa e os documentos; pedir o que
   está na frente dele vira pergunta repetida ao cliente.
 - **Sem contradição com o bloco comum nem dentro do próprio arquivo.** Regra nova numa seção e regra
-  oposta noutra seção, mais perto da ação: o modelo segue a mais perto. Procure no arquivo inteiro.
+  oposta noutra seção, mais perto da ação: o modelo segue a mais perto. Procure no arquivo inteiro, e também nas
+  descrições dos campos e nas mensagens de conferência do adapter para o ramo.
+- **Nenhum texto fala da posição do anexo** ("no PDF acima"). O canal não garante a ordem: no WhatsApp o PDF
+  chega depois do texto (25/09). Guarda por teste, com método de string.
 - O manual é assinado (md5) como os outros dois: mudou uma letra, a suíte reprova até alguém reler.
 - **Quem ficou sem proposta não é assunto do cliente** (decisões do CEO de 23 e 24/09, chat#634 e #639): nem
   recusa, nem prazo, nem instabilidade. O bloco comum já diz isso; o manual do ramo não pode reabrir. Nenhum
@@ -283,7 +318,9 @@ para a rodada, a não ser que já dada para o piloto em curso.
 
 ## Antes de declarar pronto, em qualquer fase
 
-- **Paridade com o residencial, por guarda e não de memória (25/09/2026).** No empresarial, cinco capacidades
+- **Paridade com auto e com o residencial, por guarda e não de memória (25/09/2026).** Auto tem regras de
+  jornada que valem para todo ramo (quem é o segurado, conferência de preço, lista de seguradoras lenta, frota):
+  a auditoria de paridade compara com os dois. No empresarial, cinco capacidades
   que o residencial já tinha faltaram, uma de cada vez, e cada falta só apareceu num teste real do Rodrigo:
   - o teto pelo incêndio;
   - os campos da impressão;
@@ -315,11 +352,50 @@ para a rodada, a não ser que já dada para o piloto em curso.
 - **Revisão adversarial independente** antes do pedido de merge. CI não é revisão.
 - **Merge e deploy só com OK explícito do Rodrigo**, e o deploy acompanhado até o fim, com a imagem
   conferida por dentro do container.
-- **Ordem do deploy: o chat antes do adapter** sempre que o chat precisa entender o que o adapter passa a
-  mandar. Em 24/09 a recusa escrita nos planos (adapters#97) só subiu depois do chat que a deixa fora da fala
-  da Lia: na ordem inversa, o chat antigo classificaria o texto novo.
+- **A ordem do deploy segue a dependência, escrita no PR:**
+  - **o chat antes** quando o chat precisa entender o que o adapter passa a mandar. Em 24/09 a recusa escrita
+    nos planos (adapters#97) só subiu depois do chat que a deixa fora da fala da Lia;
+  - **o adapter antes** quando o chat consome um campo novo do schema do adapter. Na renovação (25/09), os
+    mocks do chat vinham do adapter novo, e a corretora ainda precisou de "Atualizar produtos".
+- **O revisor não roda `test/contract`** nem nada que chame o portal ou a produção. Um revisor rodou e bateu no
+  portal real (24/09). O briefing do revisor diz isso por escrito e pede o foco em regressão de auto e residencial.
 - **O merge no chat dispara o deploy das duas stacks**, uns 40 minutos de troca de instância. Outra sessão pode
   estar mexendo no mesmo repositório: combine a vez antes do merge.
+
+## Checklist do ramo
+
+Cada item só fecha com **evidência**: o PR, o spec, a execução ou o número da conversa real. "Feito" sem link não
+conta. O checklist mora no `piloto-<ramo>.md`, copiado daqui no primeiro dia, e é o que o Rodrigo lê para liberar
+o ramo na conta.
+
+| # | Item | Fase | Evidência esperada |
+|---|---|---|---|
+| R1 | Decisão do Rodrigo e descoberta de 04/09 lida antes de medir | 0 e 1 | a data da decisão; o arquivo da descoberta citado |
+| R2 | Jornada de auto preenchida, todas as linhas, sem "depois" | antes do código | a tabela no piloto, mostrada ao Rodrigo |
+| R3 | Cota pelo caminho do produto, lida de volta, em três faixas de valor, com dado real | 1 | ids das execuções |
+| R4 | Formulário gerado do schema; todo campo atravessa; descrições sem crase nem travessão | 2 | specs de travessia e de descrição |
+| R5 | Ferramenta nova testada com a resposta do `Connector::Http` e o tempo medido | 2 | spec com snake_case e o número medido |
+| R6 | Travas de regra com saída "não se aplica"; PF e PJ separados; mínimo cota com o mínimo | 3 | testes que falham sem a trava |
+| R7 | Pacote, tetos pela base e ruído do ramo medidos | 3 | tabelas no adapter e as execuções |
+| R8 | Nenhum fato do cliente fixo no código; o pedido vence o padrão | 3 | busca por constante do ramo; spec |
+| R9 | Comparativo **e** proposta de uma seguradora abertos e lidos | 3 e 6 | os dois PDFs de uma execução |
+| R10 | Coberturas nos três níveis (pedido, apólice, padrão) | 3 e 4 | spec e conversa real |
+| R11 | Renovação, se o ramo tem, ou o motivo de não ter | 3 e 4 | spec e conversa real, ou a linha na jornada |
+| R12 | Manual sem contradição (arquivo, comum, descrições e conferências), sem posição de anexo, com promessas ligadas | 4 | spec das promessas e md5 |
+| R13 | Especialista nos agentes existentes, só onde a corretora cota | 5 | a migration e `disponivel?` |
+| R14 | Guarda de paridade do adapter verde, exceções com motivo | antes do ar | o teste de paridade |
+| R15 | Roteiro real inteiro: sozinho; depois de outro ramo; dois bens; com auto e residencial na mesma mensagem; apólice com coberturas; cliente pedindo cobertura; dado mudado entre rodadas | 6 | números das conversas |
+| R16 | Recusas conhecidas registradas, com o dono de cada uma | 6 | a lista no piloto |
+| R17 | Revisão adversarial sem `test/contract`, suíte local lida, mutação | antes do merge | o relatório do revisor |
+| R18 | Ordem do deploy escrita no PR e vez combinada com as outras sessões | deploy | o PR |
+
+**Como o checklist é garantido.** Não depende de memória, nem da minha:
+1. **Guarda no código.** Um spec reprova o especialista de ramo novo em `ESPECIALISTAS` sem o `piloto-<ramo>.md`
+   com os dezoito itens, cada um com evidência ou exceção com motivo. Ramo sem checklist não entra no build.
+2. **A liberação na conta é o portão.** Liberar o ramo é escrita em produção e exige o OK do Rodrigo; o pedido de
+   OK vem com o checklist, e item aberto é motivo para negar.
+3. **O revisor audita pelo checklist**, item por item, e não só o diff.
+4. **A issue do ramo nasce com o checklist** e cada item fecha com o link da evidência.
 
 ## Como esta receita é mantida
 

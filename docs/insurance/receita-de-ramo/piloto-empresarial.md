@@ -71,3 +71,14 @@ Preenchida antes do código; célula "a medir" é o que a Fase 1 responde.
 **Ainda não provado em conversa real:** empresarial combinado com auto ou residencial na mesma mensagem. A suíte cobre o paralelo por item, mas a prova real não foi feita.
 
 **O que o teste real ensinou:** os modos F9 e F10 em [modos-de-falha](modos-de-falha.md).
+
+## Atualização de 25/09/2026, à tarde
+
+- **Provado em conversa real (conversa 87, conta 16):** empresarial e residencial pedidos na mesma mensagem e
+  cotados em paralelo, cada um com o seu comparativo em PDF e a sua nota interna (execuções 101 e 102).
+- **Renovação em residencial e empresarial no ar** (adapters#105, chat#711): sem apólice, a cotação sai como
+  seguro novo com aviso uma vez (provado, execução 100). A prova **com** apólice está pendente: não havia apólice
+  de renovação disponível (registrado na chat#641).
+- **Pedido repetido em 24 h** responde do histórico sem reenviar o PDF: o Rodrigo decidiu manter assim.
+- **Em PR para o próximo grande deploy:** "no PDF acima" (o PDF chega depois no WhatsApp), o travessão em
+  `recusas.rb` e os itens D, G e H da auditoria de paridade com auto.
