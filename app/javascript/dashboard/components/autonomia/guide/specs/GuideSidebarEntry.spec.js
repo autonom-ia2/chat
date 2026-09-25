@@ -15,14 +15,21 @@ vi.mock('dashboard/composables/store', () => ({
     if (getter === 'accounts/getAccount') {
       return ref(() => ({ autonomia_guide_available: disponivel.value }));
     }
+    if (getter === 'accounts/isRTL') return ref(false);
     return ref(1);
   },
 }));
+const corDaMarca = ref('');
+vi.mock('dashboard/composables/useBrandedSidebar', () => ({
+  useBrandedSidebar: () => ({ brandedColor: corDaMarca }),
+}));
 
+// O balão vai para o <body> (Teleport); nos testes de comportamento ele fica no lugar,
+// para o wrapper achá-lo. O teste do Teleport de verdade monta sem esse stub.
 const montar = (props = {}) =>
   mount(GuideSidebarEntry, {
     props,
-    global: { mocks: { $t: key => key } },
+    global: { mocks: { $t: key => key }, stubs: { teleport: true } },
   });
 const intro = w => w.find('[data-guia-intro]');
 const ponto = w => w.find('[data-guia-ponto]');
@@ -148,6 +155,58 @@ describe('GuideSidebarEntry', () => {
     );
     conectado.unmount();
     alvo.remove();
+  });
+
+  // Dentro da barra lateral com cor de marca, as regras `.sidebar-branded :deep(...)`
+  // deixavam o balão transparente e com texto branco sobre a página.
+  it('leva o balão para fora da barra lateral', () => {
+    const barra = document.createElement('aside');
+    document.body.appendChild(barra);
+    const wrapper = mount(GuideSidebarEntry, {
+      attachTo: barra,
+      global: { mocks: { $t: key => key } },
+    });
+
+    const balao = document.body.querySelector('[data-guia-intro]');
+    expect(balao).not.toBeNull();
+    expect(barra.contains(balao)).toBe(false);
+    wrapper.unmount();
+    barra.remove();
+  });
+
+  describe('com a barra lateral na cor da marca', () => {
+    afterEach(() => {
+      corDaMarca.value = '';
+    });
+
+    // `.sidebar-branded :deep(.bg-n-brand)` repinta de branco a 70%: com o texto
+    // branco do botão azul, ele parecia desativado.
+    it('o botão não usa a cor que a barra repinta e fica branco com o texto da marca', () => {
+      corDaMarca.value = '#0b1e3f';
+      const wrapper = montar();
+      const botao = wrapper.get('[data-guia-abrir]');
+
+      expect(botao.classes()).not.toContain('bg-n-brand');
+      expect(botao.classes()).toContain('!bg-white');
+      expect(botao.classes()).toContain(
+        '!text-[var(--sidebar-background-color)]'
+      );
+      wrapper.unmount();
+    });
+
+    it('com o Guia aberto, o botão fica translúcido com texto branco', () => {
+      corDaMarca.value = '#0b1e3f';
+      uiSettingsRef.value = {
+        is_autonomia_guide_panel_open: true,
+        autonomia_guide_opened: true,
+      };
+      const wrapper = montar();
+      const botao = wrapper.get('[data-guia-abrir]');
+
+      expect(botao.classes()).toContain('!bg-white/15');
+      expect(botao.classes()).toContain('!text-white');
+      wrapper.unmount();
+    });
   });
 
   it('quem já conhece o Guia não vê balão nem ponto', () => {
