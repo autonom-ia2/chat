@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ProspectingGoogleMap from '../ProspectingGoogleMap.vue';
 import ResultsFiltersPopover from './ResultsFiltersPopover.vue';
 import BulkActionsBar from './BulkActionsBar.vue';
 import LeadCard from './LeadCard.vue';
 import ResearchProgressBar from './ResearchProgressBar.vue';
+import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
 
@@ -20,11 +21,33 @@ const {
   showFilters,
   activeFiltersCount,
   googleMapsApiKey,
-  exportCsv,
+  exportLeads,
+  isExporting,
   researchProgress,
 } = useProspectingSearchContext();
 
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
+
+// Exportação (#682): o botão de download abre a escolha entre CSV e Excel.
+const showExportMenu = ref(false);
+const exportMenuItems = computed(() => [
+  {
+    label: t('PROSPECTING.SEARCH.EXPORT_CSV'),
+    value: 'csv',
+    action: 'export',
+    icon: 'i-lucide-file-text',
+  },
+  {
+    label: t('PROSPECTING.SEARCH.EXPORT_XLSX'),
+    value: 'xlsx',
+    action: 'export',
+    icon: 'i-lucide-file-spreadsheet',
+  },
+]);
+const chooseExportFormat = ({ value }) => {
+  showExportMenu.value = false;
+  exportLeads(value);
+};
 const mapLeads = computed(() =>
   sortedLeads.value.filter(lead => lead.latitude && lead.longitude)
 );
@@ -101,12 +124,28 @@ const selectedSearchMapRadius = computed(() =>
         <button
           type="button"
           class="flex size-9 items-center justify-center rounded-md border border-n-weak text-n-slate-12 hover:bg-n-solid-2 disabled:cursor-not-allowed disabled:opacity-60"
-          :disabled="!sortedLeads.length"
+          :disabled="!sortedLeads.length || isExporting"
           :title="t('PROSPECTING.SEARCH.CSV_EXPORT')"
-          @click="exportCsv"
+          :aria-label="t('PROSPECTING.SEARCH.CSV_EXPORT')"
+          aria-haspopup="menu"
+          :aria-expanded="showExportMenu"
+          @click="showExportMenu = !showExportMenu"
         >
-          <span class="i-lucide-download size-4" />
+          <span
+            class="size-4"
+            :class="
+              isExporting
+                ? 'i-lucide-loader-circle animate-spin'
+                : 'i-lucide-download'
+            "
+          />
         </button>
+        <DropdownMenu
+          v-if="showExportMenu"
+          :menu-items="exportMenuItems"
+          class="end-0 top-full z-20 mt-1 w-44"
+          @action="chooseExportFormat"
+        />
         <ResultsFiltersPopover v-if="showFilters" />
       </div>
     </div>
