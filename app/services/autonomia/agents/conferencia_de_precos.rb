@@ -3,6 +3,8 @@
 # Decisão do CEO de 18/09/2026: quem escreve valor em reais e nome de seguradora ao cliente é a Lia, a partir do
 # que `ver_resultado_da_cotacao` devolveu no turno; o código só confere. Este é o único lugar da conferência:
 #
+#   0. a referência é o que a ferramenta devolveu neste turno; sem leitura no turno, o resultado guardado que ela
+#      leria (`InsuranceQuoteResult.referencia_guardada`, revisão adversarial de 24/09/2026);
 #   1. todo valor em reais da fala está no texto que a ferramenta devolveu neste turno, e toda seguradora da
 #      cotação que a fala cita também está nele; e no trecho que cita seguradora, o valor é o DELA, com o
 #      período dela (`trocados`);
@@ -48,8 +50,11 @@ class Autonomia::Agents::ConferenciaDePrecos
   TRECHOS = /\n|(?<=[.;!?])\s+/
 
   # OS RECUOS, quando nem a reescrita nem a versão sem valores passam. Sem valor e sem nome de seguradora.
+  # SEM O PDF, A PESSOA NÃO PEDE DE NOVO (chat#692, revisão adversarial de 24/09/2026): a instrução manda a Lia buscar
+  # e mandar os valores, e o recuo que dizia "me peça de novo" deixava a pessoa sem o que pediu. Quem manda agora é a
+  # equipe: a fala de que vai encaminhar é o gatilho da passagem no CRM, como nos outros desfechos sem opção entregue.
   RECUO_COM_COMPARATIVO = 'Os valores de cada seguradora estão no comparativo em PDF que te mandei.'.freeze
-  RECUO_SEM_COMPARATIVO = 'Não consegui escrever os valores por aqui agora. Se quiser, me peça de novo.'.freeze
+  RECUO_SEM_COMPARATIVO = 'Não consegui conferir os valores por aqui agora. Vou encaminhar para alguém da equipe te mandar as opções.'.freeze
 
   # -> os valores em centavos que o texto escreve.
   def self.valores(texto)
@@ -152,10 +157,11 @@ class Autonomia::Agents::ConferenciaDePrecos
     lugar = if @dados.comparativo
               'diga que os valores estão no comparativo em PDF que o cliente já recebeu'
             else
-              'diga que você não conseguiu escrever os valores agora e que ele pode pedir de novo'
+              'diga que você não conseguiu passar os valores agora e que vai encaminhar para alguém da equipe mandar as ' \
+                'opções, sem prazo e sem pedir que ele peça de novo'
             end
-    "A sua resposta tem #{divergencias.size} valor(es) ou nome(s) de seguradora que não estão nos dados que " \
-      "ver_resultado_da_cotacao devolveu neste turno. Os dados são estes:\n#{dados_por_extenso}\n\n" \
+    "A sua resposta tem #{divergencias.size} valor(es) ou nome(s) de seguradora que não estão nos dados da " \
+      "cotação. Os dados são estes:\n#{dados_por_extenso}\n\n" \
       'Reescreva a resposta ao cliente em reply, com cada valor e cada nome de seguradora exatamente como ' \
       'estão nos dados e o período junto de cada valor. Em reply_sem_valores, escreva a mesma resposta sem ' \
       "nenhum valor em reais: #{lugar}. Sem travessão."

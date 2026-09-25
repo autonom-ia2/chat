@@ -141,13 +141,30 @@ module Autonomia
 
       # A FALA COM PREÇO SAI CONFERIDA (fatia 3 do #420). Quando `ver_resultado_da_cotacao` rodou neste turno, a
       # resposta passa por `ConferenciaDePrecos`, que pode pedir ao modelo uma reescrita (`reescrever`).
+      #
+      # SEM LEITURA NO TURNO TAMBÉM (revisão adversarial de 24/09/2026): a fala com valor em reais que ninguém leu
+      # neste turno era publicada sem conferência. Agora a referência é o resultado guardado, o mesmo que a
+      # ferramenta leria (`referencia_guardada`). Fala sem valor segue como estava.
       def conferir_precos(reply)
-        dados = @delivery&.resultado_do_turno
-        return reply if dados.nil? || reply.blank?
+        return reply if @delivery.nil? || reply.blank?
+
+        dados = @delivery.resultado_do_turno || referencia_guardada(reply)
+        return reply if dados.nil?
 
         ConferenciaDePrecos.new(dados, conversa: @delivery.conversation&.id).publicavel(reply) do |pedido|
           reescrever(reply, pedido)
         end
+      end
+
+      # Só no Agente de Cotação, e só quando a fala escreve valor: a conferência sem valor nenhum não tem o que
+      # barrar. -> `ConferenciaDePrecos::Dados` da cotação do evento, ou das cotações com preço da conversa, ou nil.
+      def referencia_guardada(reply)
+        return nil unless @agent.agent_type == 'insurance_quote'
+        return nil if ConferenciaDePrecos.valores(reply).empty?
+
+        Tools::Native::InsuranceQuoteResult.referencia_guardada(
+          @delivery.conversation&.id, agent: @agent, execucao: @delivery.execucao_do_evento
+        )
       end
 
       # A reescrita pedida pela conferência: a mesma instrução e a mesma conversa do turno, a fala que não
