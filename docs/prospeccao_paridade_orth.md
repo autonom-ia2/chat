@@ -6,10 +6,10 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 | Destino | Funções |
 |---|---:|
-| **Entregue por PR** | **273** |
-| &nbsp;&nbsp;#706 (E2) | 83 |
+| **Entregue por PR** | **276** |
+| &nbsp;&nbsp;#706 (E2) | 84 |
 | &nbsp;&nbsp;#699 (E1) | 66 |
-| &nbsp;&nbsp;#709 (E3) | 41 |
+| &nbsp;&nbsp;#709 (E3) | 43 |
 | &nbsp;&nbsp;#714 (E4) | 33 |
 | &nbsp;&nbsp;#691 (E0) | 20 |
 | &nbsp;&nbsp;#719 (E5) | 12 |
@@ -23,11 +23,10 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | **Movido para outra issue (#705 Central e Guia, #713 recusa)** | **3** |
 | &nbsp;&nbsp;#705 | 3 |
 | **Fora do escopo por decisão** | **29** |
-| **Pendente** | **83** |
-| **A confirmar** | **8** |
+| **Pendente** | **88** |
 | **Total** | **486** |
 
-- **155 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 158 referências, cada uma aberta e com o trecho esperado na linha, e com o número de linha já levado para a branch da E6. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
+- **158 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 164 referências, cada uma aberta e com o trecho esperado na linha, e com o número de linha já levado para a branch da E6. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
 - **#682 (E6)** entregou 15 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (23 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C). O número do PR da E6 entra aqui quando ele for aberto.
 - **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
@@ -35,29 +34,31 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 ### Por parte da tela
 
-| Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | a confirmar | Total |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Modo e jogadas | 31 | 10 | 1 | 0 | 3 | 6 | 0 | 51 |
-| Onde buscar | 24 | 10 | 2 | 0 | 5 | 8 | 1 | 50 |
-| Filtros | 24 | 3 | 0 | 0 | 2 | 11 | 0 | 40 |
-| Motor da busca | 31 | 12 | 1 | 0 | 3 | 12 | 0 | 59 |
-| Enriquecimento e WhatsApp | 36 | 13 | 0 | 0 | 4 | 14 | 5 | 72 |
-| Card do lead e resultados | 33 | 15 | 2 | 0 | 1 | 8 | 0 | 59 |
-| Painel do lead e pesquisa | 31 | 6 | 2 | 1 | 2 | 4 | 1 | 47 |
-| Ações pós-busca, CRM, campanha e tour | 24 | 11 | 5 | 1 | 4 | 12 | 0 | 57 |
-| Plataforma, chaves e permissões | 24 | 10 | 2 | 1 | 5 | 8 | 1 | 51 |
+| Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Modo e jogadas | 31 | 10 | 1 | 0 | 3 | 6 | 51 |
+| Onde buscar | 24 | 10 | 2 | 0 | 5 | 9 | 50 |
+| Filtros | 24 | 3 | 0 | 0 | 2 | 11 | 40 |
+| Motor da busca | 31 | 12 | 1 | 0 | 3 | 12 | 59 |
+| Enriquecimento e WhatsApp | 37 | 13 | 0 | 0 | 4 | 18 | 72 |
+| Card do lead e resultados | 33 | 15 | 2 | 0 | 1 | 8 | 59 |
+| Painel do lead e pesquisa | 32 | 6 | 2 | 1 | 2 | 4 | 47 |
+| Ações pós-busca, CRM, campanha e tour | 24 | 11 | 5 | 1 | 4 | 12 | 57 |
+| Plataforma, chaves e permissões | 25 | 10 | 2 | 1 | 5 | 8 | 51 |
 
 ### Por situação original no inventário
 
-| Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | a confirmar | Total |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| ausente no c2 | 109 | 0 | 8 | 0 | 24 | 44 | 2 | 187 |
-| divergente | 94 | 10 | 3 | 1 | 4 | 25 | 6 | 143 |
-| defasado | 29 | 0 | 4 | 0 | 0 | 4 | 0 | 37 |
-| igual | 8 | 40 | 0 | 0 | 1 | 1 | 0 | 50 |
-| só no c2 | 18 | 40 | 0 | 2 | 0 | 9 | 0 | 69 |
+| Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| ausente no c2 | 111 | 0 | 8 | 0 | 24 | 44 | 187 |
+| divergente | 95 | 10 | 3 | 1 | 4 | 30 | 143 |
+| defasado | 29 | 0 | 4 | 0 | 0 | 4 | 37 |
+| igual | 8 | 40 | 0 | 0 | 1 | 1 | 50 |
+| só no c2 | 18 | 40 | 0 | 2 | 0 | 9 | 69 |
 
 ## O que está pendente e por quê
+
+**O termo de Evidência da #682 está parcial.** Das 486 funções, 88 continuam sem PR e sem decisão que as tire do escopo. Por isso o PR da E6 cita a issue com `Refs #682`, e não com `Closes #682`: a #682 só fecha quando cada pendente abaixo tiver uma etapa dona ou uma decisão registrada. As 34 que esperam decisão vão ao Rodrigo num lote só; as 54 que esperam etapa precisam de issue ou de etapa marcada. Até lá, estas são as funções do Orth que o cliente do chat2you ainda não tem.
 
 Os pendentes se dividem em dois tipos. Primeiro, os que **esperam uma decisão do Rodrigo** que nenhuma issue ou PR registra:
 
@@ -75,23 +76,25 @@ Os pendentes se dividem em dois tipos. Primeiro, os que **esperam uma decisão d
 - **Filtros de jogada sem tela (bairro e cidade, avaliações recentes):** FILTRO-13, FILTRO-14.
 - **Log do Rails ou tabela de eventos:** ENRIQ-60.
 
-Segundo, **49 que não dependem de decisão** e ficaram sem etapa dona ou fora do que cada PR fez:
+Segundo, **54 que não dependem de decisão** e ficaram sem etapa dona ou fora do que cada PR fez:
 
 - **Modo e jogadas:** MODO-46, MODO-49.
-- **Onde buscar:** LOCAL-02, LOCAL-06, LOCAL-08, LOCAL-11, LOCAL-45, LOCAL-46, LOCAL-48.
+- **Onde buscar:** LOCAL-02, LOCAL-06, LOCAL-08, LOCAL-11, LOCAL-42, LOCAL-45, LOCAL-46, LOCAL-48.
 - **Filtros:** FILTRO-11, FILTRO-12, FILTRO-15, FILTRO-16, FILTRO-22.
 - **Motor da busca:** MOTOR-04, MOTOR-12, MOTOR-14, MOTOR-26, MOTOR-42, MOTOR-49, MOTOR-51.
 - **Card do lead e resultados:** CARD-37, CARD-42, CARD-43, CARD-48, CARD-51.
 - **Painel do lead e pesquisa:** PAINEL-04, PAINEL-07, PAINEL-30.
-- **Enriquecimento e WhatsApp:** ENRIQ-21, ENRIQ-22, ENRIQ-23, ENRIQ-24, ENRIQ-25, ENRIQ-26, ENRIQ-27, ENRIQ-31, ENRIQ-47, ENRIQ-59, ENRIQ-61.
+- **Enriquecimento e WhatsApp:** ENRIQ-21, ENRIQ-22, ENRIQ-23, ENRIQ-24, ENRIQ-25, ENRIQ-26, ENRIQ-27, ENRIQ-31, ENRIQ-32, ENRIQ-37, ENRIQ-47, ENRIQ-57, ENRIQ-59, ENRIQ-61, ENRIQ-69.
 - **Ações pós-busca, CRM, campanha e tour:** ACAO-15, ACAO-20, ACAO-35, ACAO-36, ACAO-X06, ACAO-X10.
 - **Plataforma, chaves e permissões:** PLAT-29, PLAT-34, PLAT-51.
 
-Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são itens que nenhum PR cita e que eu não consegui provar no código só pela leitura; precisam de teste ou de abrir a tela.
+Somando: 34 esperam decisão e 54 esperam uma etapa.
+
+Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova foram abertos no código da branch, cada um com arquivo e linha na própria nota: 3 estavam entregues (ENRIQ-56 pelo #706; PAINEL-43 e PLAT-15 pelo #709) e 5 não estavam feitos e passaram a pendente (LOCAL-42, ENRIQ-32, ENRIQ-37, ENRIQ-57, ENRIQ-69). LOCAL-42 e ENRIQ-69 são defeitos que o cliente sente: no modo raio, arrastar a prévia muda o centro da busca sem mudar o círculo; e, depois de uma busca que troca o telefone do lead, o botão de WhatsApp segue com o número verificado antigo.
 
 ## Como ler a tabela
 
-- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `fora (decisão)`: fora do escopo, com a decisão na nota. `pendente`: não feito, com o motivo. `a confirmar`: sem prova.
+- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `fora (decisão)`: fora do escopo, com a decisão na nota. `pendente`: não feito, com o motivo.
 - **Conferido.** Arquivo e linha quando a função foi aberta no código: conferido na `main` (ou na branch `feat/682-fechamento`, para as funções da E6), com o número de linha da branch `feat/682-fechamento`. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
 - **Decisões usadas:** as de 24/09 no épico #676 (sem cobrança, créditos, trava nem gate de plano; chaves Google e BigDataCorp nossas; IA só na credencial do Kanban; nota do Orth inteira), as de 25/09 nas issues #679 (não apagar dado, sai a retenção), #680 (recusa no contato vai para a #713), #681 (perfil restrito a contas, pesos próprios mapeados, relevância e posição saem da nota) e #705 (Central e Guia num lote só), e o "não portar" do próprio inventário rev.7 para código morto do Orth.
 
@@ -196,7 +199,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | LOCAL-39 | Autocomplete em dois campos, cidade e bairro | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-40 | Proxy de foto do Google Places | ausente no c2 | fora (decisão) | Plano rev.7: a busca do Orth não usa o proxy de foto. |  |
 | LOCAL-41 | Geocodificacao reversa (coordenada vira nome e endereco) | ausente no c2 | fora (decisão) | Plano rev.7: fora da busca. |  |
-| LOCAL-42 | O centro da busca por raio e o do local escolhido, nao o do mapa arrastado | divergente | a confirmar | Não conferi se o centro do raio deixou de seguir o mapa arrastado; nenhum PR cita. |  |
+| LOCAL-42 | O centro da busca por raio e o do local escolhido, nao o do mapa arrastado | divergente | pendente | Conferido: não feito. No modo raio o centro enviado ainda é o da prévia arrastada (`F/composables/searchSlices/locationSlice.js:43`), e o círculo desenhado fica no local escolhido. Sem etapa dona; correção pequena (usar sempre o centro do local no modo raio). | |
 | LOCAL-43 | Buscar no Google desde o primeiro uso, sem provedor simulado por padrao | divergente | #691 (E0) | google_places passou a ser o padrão (migration 20260925100000); conta 17 migrada em produção. |  |
 | LOCAL-44 | Bairro do lead e filtro por bairro e por cidade | ausente no c2 | #699 (E1) | Bairro gravado no lead. O filtro por bairro e cidade não foi portado (ver FILTRO-14). | `S/providers/google_places_provider.rb:168` |
 | LOCAL-45 | Sessao de autocomplete (session token) entre sugestoes e detalhes | divergente | pendente | Não há session token no autocomplete. |  |
@@ -350,12 +353,12 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ENRIQ-29 | E-mail do site | só no c2 | preservado |  |  |
 | ENRIQ-30 | Título, descrição, telefone do site, trecho de texto e links de origem | só no c2 | preservado |  |  |
 | ENRIQ-31 | Diagnóstico do scrape e trace opcional | ausente no c2 | pendente | Contadores de diagnóstico do scrape não existem. |  |
-| ENRIQ-32 | Mensagem de erro de site legível | divergente | a confirmar | Não conferi se o erro de site aparece traduzido no painel; nenhum PR cita. |  |
+| ENRIQ-32 | Mensagem de erro de site legível | divergente | pendente | Conferido: não feito. O erro do enriquecimento é gravado (`S/lead_enricher.rb:174`) e vai no payload do lead, mas nenhuma tela o lê nem o traduz. Sem etapa dona. | |
 | ENRIQ-33 | WhatsApp achado no site é verificado no WAHA durante o enriquecimento | ausente no c2 | #706 (E2) | WhatsApp do site verificado. | `S/whatsapp_verifier.rb:9` |
 | ENRIQ-34 | WhatsApp do site confirmado entra na lista de telefones do lead e vira o botão WhatsApp | ausente no c2 | #706 (E2) | Botão WhatsApp e Ligar usam o número do site confirmado (nota da E2 na #705). |  |
 | ENRIQ-35 | Verificação automática do telefone do Google logo após a busca | divergente | #706 (E2) | Verificação no servidor ao fim da busca. |  |
 | ENRIQ-36 | Verificação ao abrir o detalhe, com vários candidatos (Google, internacional, site) | ausente no c2 | #706 (E2) | Candidatos do Google e do site verificados no job, não ao abrir o painel. |  |
-| ENRIQ-37 | Rota de verificação que só grava se o número existe, com códigos de erro distintos | divergente | a confirmar | Não conferi a separação de número inválido e WAHA indisponível na resposta. |  |
+| ENRIQ-37 | Rota de verificação que só grava se o número existe, com códigos de erro distintos | divergente | pendente | Conferido: não feito. Todo erro da verificação volta 422 com a chave do erro (`C/leads_controller.rb:104`); número inválido e WAHA fora não se separam. Sem etapa dona. | |
 | ENRIQ-38 | Qual sessão WAHA faz a checagem | divergente | pendente | Pool de sessões nossas ou sessão da conta: decisão do Rodrigo não registrada; o c2 usa a sessão da conta. |  |
 | ENRIQ-39 | Resultado negativo e falha da verificação ficam gravados | só no c2 | preservado |  |  |
 | ENRIQ-40 | Selo WhatsApp verificado ao lado do telefone | divergente | #706 (E2) | Selo verificado ao lado do telefone (LeadPhoneActions.vue). | `F/components/search/LeadCardActions.vue:107` |
@@ -374,8 +377,8 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ENRIQ-53 | Normalização de telefone por biblioteca, com país | divergente | #699 (E1) | telephone_number com país. | `S/phone_contract.rb:2` |
 | ENRIQ-54 | Telefone nacional e internacional guardados e exibidos formatados | divergente | #699 (E1) | Contrato de telefone nos cinco pontos. |  |
 | ENRIQ-55 | Telefone do contato criado no Chatwoot a partir do lead | divergente | #699 (E1) | Mesma normalização no contato; o #714 prefere o WhatsApp verificado. |  |
-| ENRIQ-56 | Lista estruturada de telefones do lead com principal de WhatsApp e gravação atômica | divergente | a confirmar | Não conferi lista estruturada de telefones com trava por lead. |  |
-| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | a confirmar | Não conferi a gravação atômica do jsonb entre enriquecimento e verificação. |  |
+| ENRIQ-56 | Lista estruturada de telefones do lead com principal de WhatsApp e gravação atômica | divergente | #706 (E2) | Telefone do Google e WhatsApp do site com verificação própria cada um, o do site vira o principal quando o do Google não é WhatsApp, e a gravação é atômica no jsonb. Diferente do Orth: não é uma lista com rótulo por número. | `S/whatsapp_verifier.rb:7`, `S/lead_payload.rb:83`, `S/whatsapp_verifier.rb:82` |
+| ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | pendente | Conferido: metade feita. A verificação grava só a sua chave no jsonb desde o #706 (`S/whatsapp_verifier.rb:82`), mas a busca refeita ainda regrava o metadata do lead a partir do objeto carregado (`S/search_runner.rb:311`) e pode apagar uma verificação que termine no meio. Sem etapa dona. | |
 | ENRIQ-58 | Pular número já verificado e tentar de novo após falha | divergente | #706 (E2) | Nova tentativa quando a verificação falhou. | `S/lead_work_queue.rb:58` |
 | ENRIQ-59 | Observabilidade estruturada do enriquecimento | ausente no c2 | pendente | Sem log estruturado de início, fim e duração do enriquecimento. |  |
 | ENRIQ-60 | Registro de eventos em log de aplicação | divergente | pendente | Log do Rails ou tabela: decisão não registrada. |  |
@@ -387,7 +390,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ENRIQ-66 | WhatsApp verificado aumenta a contactabilidade no score | igual | preservado | Contactabilidade entra na prioridade do Orth no #719. |  |
 | ENRIQ-67 | Testes automatizados de scraper, guarda de URL, telefone e verificação | ausente no c2 | #691 (E0) | Testes de caracterização antes de mexer (#691) e specs do scraper seguro (#706). |  |
 | ENRIQ-68 | Dados do enriquecimento chegam ao CRM e à campanha (e-mail, WhatsApp do site, redes, CNPJ, decisor, resumo) | ausente no c2 | #714 (E4) | E-mail, WhatsApp, redes, CNPJ, decisor e resumo levados ao contato e ao card. | `S/crm_card_converter.rb:65` |
-| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | a confirmar | Não conferi se a verificação é comparada ao telefone atual antes de reusar. |  |
+| ENRIQ-69 | Verificação de WhatsApp amarrada ao número verificado, não ao lead | divergente | pendente | Conferido: não feito. A busca refeita troca o telefone e mantém a verificação antiga no metadata (`S/search_runner.rb:311`), e o botão de WhatsApp usa o número da verificação (`S/lead_payload.rb:46`). Sem etapa dona. | |
 | ENRIQ-70 | Reaproveitamento do enriquecimento em buscas repetidas | igual | preservado |  |  |
 | ENRIQ-71 | Status running sem dono após queda da requisição | divergente | #706 (E2) | ReaperJob devolve running antigo a falha. | `S/lead_work_queue.rb:6` |
 | ENRIQ-72 | Quem pode disparar enriquecimento e verificação | divergente | #706 (E2) | Disparo automático roda no servidor, sem depender de quem abriu a tela. |  |
@@ -502,7 +505,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PAINEL-40 | Exportação CSV com CNPJ do cadastro (prioridade sobre o do site), razão social, fantasia, situação, decisor, LinkedIn e Instagram do decisor, confiança, papel e data | defasado | #682 (E6) | Export com CNPJ do cadastro acima do do site, razão social, fantasia, situação, UF, decisor (nome, cargo, confiança, LinkedIn, Instagram), sócios e data da pesquisa (frente A). Empresa e decisor só com a empresa confirmada, pelo mesmo Research::Payload da tela. | `S/export/table.rb:76` |
 | PAINEL-41 | Painel de empresa e decisor também dentro do lead no CRM, e dados do decisor e da empresa levados ao contato e ao card | ausente no c2 | #714 (E4) | Decisor, CNPJ e razão social no contato e no card. |  |
 | PAINEL-42 | Segunda superfície no C2: a tela de Listas também tem botão Enriquecer e card de enriquecimento | divergente | #682 (E6) | Listas usam o mesmo LeadCard e LeadDetailDrawer da busca (frente B): enriquecer, pesquisa, adotar sócio, WhatsApp e estágio padrão do CRM; o #709 já tinha posto o resumo da pesquisa nas Listas. | `F/pages/ProspectingListsPage.vue:802`, `F/pages/ProspectingListsPage.vue:1321` |
-| PAINEL-43 | Estados vazios e de carregamento do painel | ausente no c2 | a confirmar | Estados vazio e carregando do painel não conferidos; nenhum PR cita. |  |
+| PAINEL-43 | Estados vazios e de carregamento do painel | ausente no c2 | #709 (E3) | Estados do painel de pesquisa: pesquisando, falha, bloqueada, nunca pesquisado e motivo de não haver decisor, cada um com frase própria e testado. Sem o esqueleto de carregamento do Orth. | `F/components/search/LeadDetailResearch.vue:66`, `F/specs/components/LeadDetailResearch.spec.js:414` |
 | PAINEL-44 | Rede social do decisor presa à pessoa certa | divergente | #709 (E3) | Rede do decisor nunca cai para a da empresa. |  |
 | PAINEL-45 | Confiança e fonte do decisor gravadas mas invisíveis no C2 | defasado | #709 (E3) | Confiança e data visíveis. |  |
 | PAINEL-46 | Documentação do produto no C2 descreve o Enriquecer antigo | só no c2 | #705 | Central de Ajuda e Guia no lote único da #705 (decisão de 25/09). |  |
@@ -588,7 +591,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PLAT-12 | Estado da pesquisa de decisor no lead | defasado | #709 (E3) | Estado da pesquisa no lead (migration 20260925140100). |  |
 | PLAT-13 | Perfil canônico da empresa e candidatos a decisor com fontes e escolha manual | ausente no c2 | #709 (E3) | autonomia_prospecting_company_profiles. | `M/company_profile.rb:3` |
 | PLAT-14 | Fila de pesquisa e projeção de capacidade por lead | ausente no c2 | #709 (E3) | Fila por Sidekiq e estado por lead. |  |
-| PLAT-15 | Guarda cifrada da resposta bruta dos provedores de pesquisa | ausente no c2 | a confirmar | Não conferi se alguma resposta bruta de provedor é guardada; o #709 grava só a lista fechada de campos. |  |
+| PLAT-15 | Guarda cifrada da resposta bruta dos provedores de pesquisa | ausente no c2 | #709 (E3) | Não se aplica mais: a pesquisa não guarda resposta bruta de provedor, só a lista fechada de campos do cadastro e dos sócios, que o inventário pedia para proteger. Se um dia guardar, vale a nota da revisão (encrypts do Rails com a configuração exigida). | `S/research/profile_attributes.rb:18` |
 | PLAT-16 | Registro da busca (histórico) | defasado | #699 (E1) | preset_id no metadata; custo estimado fora por decisão. |  |
 | PLAT-17 | Presets de filtros salvos por empresa | ausente no c2 | pendente | Jogada salva depende de decisão do Rodrigo (inventário); nenhuma issue ou PR registra a decisão e não existe tabela de jogadas. |  |
 | PLAT-18 | Configuração de score por empresa (ofertas ativas, pesos, nichos sugeridos, modo) | defasado | pendente | Ofertas ativas e nichos sugeridos: decisão pendente (MODO-39). |  |
