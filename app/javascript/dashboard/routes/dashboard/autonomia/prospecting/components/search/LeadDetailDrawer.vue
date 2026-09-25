@@ -10,7 +10,7 @@ import LeadDetailResearch from './LeadDetailResearch.vue';
 import LeadDetailReviews from './LeadDetailReviews.vue';
 import LeadStatusBanner from './LeadStatusBanner.vue';
 import DiscardLeadsModal from './DiscardLeadsModal.vue';
-import { isLeadDiscarded } from '../../utils/leadCrmPresence';
+import { hasLeadStatus, isLeadDiscarded } from '../../utils/leadCrmPresence';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -130,6 +130,7 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
       <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         <section class="grid gap-3">
           <LeadStatusBanner
+            v-if="hasLeadStatus(selectedLeadDetail)"
             :lead="selectedLeadDetail"
             :show-reason="false"
             class="rounded-lg"

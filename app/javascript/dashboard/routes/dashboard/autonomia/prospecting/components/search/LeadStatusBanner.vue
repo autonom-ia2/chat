@@ -1,13 +1,13 @@
 <script setup>
 // Faixa do lead já no CRM ou descartado (#732), no topo do card e do painel,
 // como a faixa de "Já é cliente" do Orth (ResultsTable.tsx). No CRM: funil,
-// estágio e responsável do card que o lead tem. Descartado: o motivo.
+// estágio e responsável do card que o lead tem. Descartado: o motivo. Quem usa
+// a faixa só a põe quando hasLeadStatus(lead).
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   crmPresenceDetail,
   isLeadDiscarded,
-  isLeadInCrm,
 } from '../../utils/leadCrmPresence';
 
 const props = defineProps({
@@ -18,7 +18,6 @@ const props = defineProps({
 const { t } = useI18n();
 
 const discarded = computed(() => isLeadDiscarded(props.lead));
-const inCrm = computed(() => isLeadInCrm(props.lead));
 const detail = computed(() => {
   if (discarded.value) return props.showReason ? props.lead.discard_reason : '';
   return crmPresenceDetail(props.lead, t('PROSPECTING.LEAD_STATUS.NO_OWNER'));
@@ -27,7 +26,6 @@ const detail = computed(() => {
 
 <template>
   <div
-    v-if="discarded || inCrm"
     data-test="lead-status"
     class="flex min-w-0 flex-wrap items-center gap-1.5 px-4 py-1.5 text-[11px]"
     :class="

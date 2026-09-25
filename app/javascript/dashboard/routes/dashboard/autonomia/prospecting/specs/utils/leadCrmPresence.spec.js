@@ -1,6 +1,7 @@
 import {
   crmPresenceDetail,
   crmSendableLeads,
+  hasLeadStatus,
   isCrmSendable,
   isLeadDiscarded,
   isLeadInCrm,
@@ -31,6 +32,16 @@ describe('leadCrmPresence', () => {
 
     expect(isCrmSendable(fresh)).toBe(true);
     expect(crmSendableLeads([fresh, inCrm, discarded])).toEqual([fresh]);
+  });
+
+  it('a faixa aparece para lead no CRM ou descartado, e só para eles', () => {
+    expect(hasLeadStatus({ crm_card_id: 555, status: 'new_lead' })).toBe(true);
+    expect(hasLeadStatus({ crm_card_id: null, status: 'discarded' })).toBe(
+      true
+    );
+    expect(hasLeadStatus({ crm_card_id: null, status: 'new_lead' })).toBe(
+      false
+    );
   });
 
   it('detalhe é funil, estágio e responsável', () => {

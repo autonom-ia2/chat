@@ -6,8 +6,10 @@ export const isLeadInCrm = lead => Boolean(lead?.crm_card_id);
 
 export const isLeadDiscarded = lead => lead?.status === 'discarded';
 
-export const isCrmSendable = lead =>
-  !isLeadInCrm(lead) && !isLeadDiscarded(lead);
+// Quem mostra a faixa (LeadStatusBanner) no card e no painel.
+export const hasLeadStatus = lead => isLeadInCrm(lead) || isLeadDiscarded(lead);
+
+export const isCrmSendable = lead => !hasLeadStatus(lead);
 
 export const crmSendableLeads = leads => leads.filter(isCrmSendable);
 

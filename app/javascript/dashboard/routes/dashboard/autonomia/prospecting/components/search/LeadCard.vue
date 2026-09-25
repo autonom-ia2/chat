@@ -18,7 +18,7 @@ import {
   priorityValue,
 } from '../../utils/prospectingPriority';
 import { isWhatsAppVerified, leadPhoneDisplay } from '../../utils/leadPhone';
-import { isLeadDiscarded } from '../../utils/leadCrmPresence';
+import { hasLeadStatus, isLeadDiscarded } from '../../utils/leadCrmPresence';
 import { phoneRegionFromSettings } from '../../utils/phoneContract';
 import * as formatters from '../../utils/searchFormatters';
 
@@ -86,7 +86,7 @@ const toggleDetails = event => {
     ]"
     @click="toggleDetails"
   >
-    <LeadStatusBanner :lead="lead" />
+    <LeadStatusBanner v-if="hasLeadStatus(lead)" :lead="lead" />
     <div class="flex min-w-0 items-start gap-3 p-4 pb-2">
       <ProspectingPriorityRing :priority="priority" :size="56" />
       <div class="min-w-0 flex-1">
