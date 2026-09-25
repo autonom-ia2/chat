@@ -98,7 +98,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     expect(locationInput(wrapper).element.value).toBe('');
     expect(radiusInput(wrapper).element.value).toBe('1');
     expect(limitInput(wrapper).element.value).toBe('20');
-    expect(autoExpandInput(wrapper).element.checked).toBe(false);
+    expect(autoExpandInput(wrapper).element.checked).toBe(true);
     expect(autoExpandInput(wrapper).element.disabled).toBe(false);
 
     const area = choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.AREA_TYPE');
@@ -303,7 +303,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     await confirmCuritiba(wrapper);
     await radiusInput(wrapper).setValue('2.5');
     await limitInput(wrapper).setValue('30');
-    await autoExpandInput(wrapper).setValue(true);
+    await autoExpandInput(wrapper).setValue(false);
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.SCORE_MODE', 'gbp');
     await openFormFilters(wrapper);
     await choose(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_SITE', 'yes');
@@ -335,7 +335,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
         location_latitude: '-25.4284',
         location_longitude: '-49.2733',
         location_label: 'Curitiba, PR, Brasil',
-        filters: { auto_expand_radius: true },
+        filters: { auto_expand_radius: false },
         decision_maker_type: 'owner',
         advanced_filters: {
           has_website: 'yes',
@@ -412,7 +412,7 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
       bounds,
     });
     expect(payload.metadata.score_mode).toBe('general');
-    expect(payload.metadata.filters).toEqual({ auto_expand_radius: false });
+    expect(payload.metadata.filters).toEqual({ auto_expand_radius: true });
   });
 
   it('depois de criar recarrega o histórico, fecha o formulário e mostra os leads da busca nova', async () => {

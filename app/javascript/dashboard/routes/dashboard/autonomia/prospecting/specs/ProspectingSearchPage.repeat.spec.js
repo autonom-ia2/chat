@@ -147,6 +147,29 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
     expect(AutonomiaProspectingAPI.getSearches).toHaveBeenCalledTimes(2);
   });
 
+  // Expansão de raio do Orth (#732 item 4): ligada por padrão. A caixa
+  // desmarcada fica desmarcada ao repetir; busca salva sem a chave repete com a
+  // expansão ligada, como o allowRadiusExpansion !== false do Orth.
+  it.each([
+    [{ auto_expand_radius: false }, false],
+    [{}, true],
+  ])(
+    'Repetir com search_filters %j manda auto_expand_radius %s',
+    async (searchFilters, expected) => {
+      const wrapper = await mountWithHistory([
+        bakerySearch(),
+        { ...savedRadiusSearch(), search_filters: searchFilters },
+      ]);
+
+      await clickOnCard(wrapper, 1, REPEAT);
+
+      const [request] = AutonomiaProspectingAPI.createSearch.mock.calls[0];
+      expect(request.metadata.filters).toEqual({
+        auto_expand_radius: expected,
+      });
+    }
+  );
+
   it('Repetir uma busca de área visível manda os mesmos limites', async () => {
     const search = gymSearch({
       location_label: 'Londrina, PR, Brasil',
