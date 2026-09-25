@@ -362,10 +362,17 @@ class Autonomia::Prospecting::SearchRunner
   def priority_multiplier(lead)
     contactability = lead.phone.present? ? 1.0 : 0.3
     contactability = 1.3 if lead.metadata.to_h.dig('whatsapp_verification', 'status') == 'verified'
-    decisor = lead.decision_name.present? ? 1.2 : 1.0
+    decisor = research_decision?(lead) ? 1.2 : 1.0
     hour = lead.raw_payload.to_h.dig('currentOpeningHours', 'openNow') == true ? 1.15 : 1.0
 
     contactability * decisor * hour
+  end
+
+  # O decisor que sobe a prioridade é o que a tela mostra (#679): o da pesquisa, confirmado ou possível. O nome gravado
+  # antes dela fica no lead, mas não conta.
+  def research_decision?(lead)
+    lead.decision_name.present? &&
+      Autonomia::Prospecting::Research::Payload::FOUND.include?(lead.decision_research_status)
   end
 
   def priority_penalty(lead)

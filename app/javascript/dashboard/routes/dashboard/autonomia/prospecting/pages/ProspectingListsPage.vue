@@ -9,6 +9,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
+import LeadResearchSummary from '../components/search/LeadResearchSummary.vue';
 import { useLeadLiveUpdates } from '../composables/useLeadLiveUpdates';
 import {
   activeAdvancedLeadFiltersCount,
@@ -183,6 +184,9 @@ const leadPriorityTheme = lead => {
   return priority === null ? null : priorityTheme(priority);
 };
 const leadSignals = lead => leadPrioritySignals(lead, { t });
+// O decisor da lista é o mesmo da busca (#679): com o bloco research, vem da
+// pesquisa; o nome gravado antes dela só aparece em lead sem esse bloco.
+const legacyDecisionName = lead => (lead.research ? null : lead.decision_name);
 
 const contactUrl = contactId =>
   `/app/accounts/${route.params.accountId}/contacts/${contactId}`;
@@ -1025,10 +1029,16 @@ onMounted(loadPage);
                   </span>
                 </div>
 
+                <LeadResearchSummary
+                  v-if="lead.research"
+                  :research="lead.research"
+                  :research-enabled="Boolean(settings?.research_enabled)"
+                />
+
                 <div
                   v-if="
                     lead.enrichment_status === 'completed' ||
-                    lead.decision_name ||
+                    legacyDecisionName(lead) ||
                     lead.enrichment_summary
                   "
                   class="mx-4 mb-3 grid gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-950"
@@ -1044,11 +1054,15 @@ onMounted(loadPage);
                       {{ t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED') }}
                     </span>
                   </div>
-                  <div v-if="lead.decision_name" class="leading-relaxed">
+                  <div
+                    v-if="legacyDecisionName(lead)"
+                    data-test="list-lead-legacy-decision"
+                    class="leading-relaxed"
+                  >
                     <span class="font-semibold text-emerald-950">
                       {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
                     </span>
-                    {{ lead.decision_name }}
+                    {{ legacyDecisionName(lead) }}
                     <span v-if="lead.decision_role">
                       {{ `· ${lead.decision_role}` }}
                     </span>

@@ -178,6 +178,51 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
 
       expect(lead.reload).to have_attributes(decision_name: 'Pessoa da IA', decision_role: 'Diretor', decision_research_status: 'no_result')
     end
+
+    # "Verificar novamente": o dono que a pesquisa anterior gravou deixa de valer para este lead. Solta nome, cargo,
+    # confiança e redes do decisor só deste lead; o palpite antigo da IA (nome fora dos donos da pesquisa) fica.
+    it 'dono que vira menor no verificar novamente sai do decisor do lead' do
+      run
+      lead.update!(decision_linkedin: 'https://linkedin.com/in/anasouza')
+      lead.update_columns(company_research_status: 'queued', decision_research_status: 'queued') # rubocop:disable Rails/SkipsModelValidations
+      allow(research::OwnerPolicy).to receive(:select).and_return(owner_selection(owners: [], reason: 'only_minors', evidence: nil))
+
+      run(force: true)
+
+      expect(lead.reload).to have_attributes(decision_research_status: 'no_result', decision_name: nil, decision_role: nil,
+                                             decision_confidence: nil, decision_linkedin: nil)
+      expect(Autonomia::Prospecting::LeadPayload.new(account: account).build(lead)['decision_name']).to be_nil
+    end
+
+    it 'verificar novamente que acha outra empresa sem dono solta o sócio da empresa anterior' do
+      run
+      lead.update_columns(company_research_status: 'queued', decision_research_status: 'queued') # rubocop:disable Rails/SkipsModelValidations
+      allow(research::OwnerPolicy).to receive(:select).and_return(owner_selection(owners: [], reason: 'only_companies', evidence: nil))
+
+      run(force: true)
+
+      expect(lead.reload).to have_attributes(decision_research_status: 'no_result', decision_name: nil, decision_role: nil)
+    end
+
+    it 'só menores no quadro solta também o nome que o lead tinha antes da pesquisa' do
+      lead.update!(decision_name: 'JOAO MENOR', decision_role: 'Sócio')
+      allow(research::OwnerPolicy).to receive(:select).and_return(owner_selection(owners: [], reason: 'only_minors', evidence: nil))
+
+      run
+
+      expect(lead.reload).to have_attributes(decision_name: nil, decision_role: nil, decision_confidence: nil)
+    end
+
+    it 'verificar novamente sem empresa (ambíguo) não apaga o decisor anterior: a tela é que o esconde' do
+      run
+      lead.update_columns(company_research_status: 'queued', decision_research_status: 'queued') # rubocop:disable Rails/SkipsModelValidations
+      allow(research::CnpjDiscovery).to receive(:new) { instance_double(research::CnpjDiscovery, perform: discovery(:ambiguous)) }
+
+      run(force: true)
+
+      expect(lead.reload).to have_attributes(decision_research_status: 'ambiguous', decision_name: 'ANA SOUZA')
+      expect(research::Payload.build(lead)[:decision]).to be_nil
+    end
   end
 
   describe 'descoberta do CNPJ sem empresa' do
@@ -294,6 +339,32 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
       expect(research::CnpjDiscovery).to have_received(:new).twice
       expect(lead.reload.research_reused).to be(false)
       expect(lead.company_profile.verified_at).to be_within(5.seconds).of(Time.current)
+    end
+
+    # O perfil da empresa é um só por CNPJ e é regravado quando outra conta pesquisa de novo. O bloco research do lead
+    # mostra a empresa e a data da pesquisa dele, na mesma época dos donos e do decisor que ele gravou.
+    it 'o bloco research não mistura o cadastro regravado por outra conta com os donos da pesquisa do lead' do
+      research_once(lead)
+      first_verified_at = lead.reload.company_profile.verified_at
+      travel 30.days
+      other_account = create(:account)
+      Autonomia::Prospecting::Config.enable_for!(other_account)
+      Autonomia::Prospecting::Config.enable_research_for!(other_account)
+      same_place = create_lead(other_account, 'places/sorriso')
+      allow(research::Registry).to receive(:fetch).and_return(
+        company.with(legal_name: 'CLINICA SORRISO NOVA LTDA', registration_status: 'BAIXADA')
+      )
+      allow(research::OwnerPolicy).to receive(:select).and_return(owner_selection(owners: [{ name: 'CARLA DIAS', qualification: 'SOCIO' }]))
+      run(same_place, force: true)
+      expect(lead.reload.company_profile.legal_name).to eq('CLINICA SORRISO NOVA LTDA')
+
+      payload = research::Payload.build(lead)
+
+      expect(payload[:verified_at]).to eq(first_verified_at.iso8601)
+      expect(payload[:company]).to include('legal_name' => 'CLINICA SORRISO LTDA', 'registration_status' => 'ATIVA')
+      expect(payload[:owners].pluck('name')).to eq(['ANA SOUZA', 'BRUNO LIMA'])
+      expect(payload[:decision]).to include(name: 'ANA SOUZA', verified_at: first_verified_at.iso8601)
+      expect(research::Payload.build(same_place.reload)).to include(verified_at: Time.current.iso8601)
     end
 
     it 'force ignora o reaproveitamento e faz a chamada' do
