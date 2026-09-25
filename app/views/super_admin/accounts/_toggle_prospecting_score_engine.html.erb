@@ -1,0 +1,19 @@
+<section class="main-content__body">
+  <hr/>
+  <% engine = Autonomia::Prospecting::Setting.find_by(account: page.resource)&.score_engine || 'legacy' %>
+  <% target = engine == 'orth' ? 'legacy' : 'orth' %>
+  <%= form_for([:toggle_prospecting_score_engine, namespace, page.resource], method: :post, html: { class: "form" }) do |f| %>
+    <div class="form-actions">
+      <div class="pb-3">
+        <p class="font-medium">Prospecting score engine</p>
+        <p>
+          Which score this account sees on prospecting leads. Every new search computes both; the other one is kept on the
+          search for comparison (rake prospecting:score_shadow_report). Old searches and leads are never rewritten.
+        </p>
+        <p>Current engine: <strong><%= engine %></strong></p>
+      </div>
+      <%= hidden_field_tag :engine, target %>
+      <%= f.submit(target == 'orth' ? 'Switch to Orth score' : 'Switch back to legacy score') %>
+    </div>
+  <% end %>
+</section>
