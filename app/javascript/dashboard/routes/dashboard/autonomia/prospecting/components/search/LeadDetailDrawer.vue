@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadDetailContact from './LeadDetailContact.vue';
@@ -16,6 +17,10 @@ import * as formatters from '../../utils/searchFormatters';
 import * as detail from '../../utils/leadDetail';
 
 const EMPTY_VALUE = '-';
+
+// Montado só com o lead aberto. Cobre o canto direito, onde fica o lançador do
+// Guia (#646): sinaliza enquanto existir, para ele sair de cima dos botões.
+useFixedPanelPresence(computed(() => true));
 
 const { t } = useI18n();
 const {
