@@ -223,6 +223,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       whatsapp_payload(lead)
     ).merge(
       search_rank_payload(lead, search)
+    ).merge(
+      search_scoring_payload(lead, search)
     )
   end
 
@@ -230,6 +232,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   def search_rank_payload(lead, search)
     rank = search&.metadata.to_h.dig('lead_ranks', lead.id.to_s)
     rank.nil? ? {} : { 'search_rank' => rank }
+  end
+
+  # Nota e prioridade do lead nesta busca (#678), no mesmo formato do atributo do lead. Busca anterior a isso não tem:
+  # ficam os valores do lead.
+  def search_scoring_payload(lead, search)
+    scoring = search&.metadata.to_h.dig('lead_scoring', lead.id.to_s)
+    return {} if scoring.blank?
+
+    scoring.slice('score', 'score_breakdown', 'priority_score', 'priority_position').to_h do |key, value|
+      [key, ::Autonomia::Prospecting::Lead.type_for_attribute(key).cast(value).as_json]
+    end
   end
 
   def page

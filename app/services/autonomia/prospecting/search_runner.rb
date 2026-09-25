@@ -68,6 +68,7 @@ class Autonomia::Prospecting::SearchRunner
     {
       'lead_ids' => leads.map(&:id),
       'lead_ranks' => lead_ranks(leads),
+      'lead_scoring' => lead_scoring(leads),
       'results_count' => leads.size,
       'search_filters' => search_filters,
       'requested_radius' => radius,
@@ -226,9 +227,25 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   # O lead é um só por conta e o search_rank dele é o da busca mais recente. A busca guarda a posição de cada lead
-  # dela, para o card e o refino por faixa de posição ao reabrir (#677). Prioridade e pontuação ainda são do lead.
+  # dela, para o card e o refino por faixa de posição ao reabrir (#677).
   def lead_ranks(leads)
     leads.to_h { |lead| [lead.id.to_s, lead.search_rank] }
+  end
+
+  # Nota, detalhe da nota e prioridade também são da busca (#678): a posição de prioridade só faz sentido entre os
+  # leads da mesma busca, e a nota muda com o modo e a posição no Google dela.
+  def lead_scoring(leads)
+    leads.to_h do |lead|
+      [
+        lead.id.to_s,
+        {
+          'score' => lead.score&.to_f,
+          'score_breakdown' => lead.score_breakdown,
+          'priority_score' => lead.priority_score&.to_f,
+          'priority_position' => lead.priority_position
+        }
+      ]
+    end
   end
 
   def lost_race?(error)
@@ -653,6 +670,7 @@ class Autonomia::Prospecting::SearchRunner
                         .merge(scoring_metadata).merge(
                           'lead_ids' => leads.map(&:id),
                           'lead_ranks' => search.metadata.to_h['lead_ranks'],
+                          'lead_scoring' => search.metadata.to_h['lead_scoring'],
                           'results_count' => leads.size,
                           'cached_from_search_id' => search.id,
                           'search_filters' => search_filters

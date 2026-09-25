@@ -103,4 +103,20 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
     expect(open_transactions_during_calls).to eq([baseline] * 3)
   end
+
+  # Nota, prioridade e posição são da busca (#678): o lead é um só por conta e guarda os valores da busca mais recente.
+  it 'guarda nota, detalhe da nota e prioridade de cada lead na própria busca' do
+    result = run_search(requested_limit: 20)
+
+    scoring = result.search.metadata['lead_scoring']
+    expect(scoring.keys).to match_array(result.leads.map { |lead| lead.id.to_s })
+    lead = result.leads.first
+    expect(scoring[lead.id.to_s]).to eq(
+      'score' => lead.score.to_f,
+      'score_breakdown' => lead.score_breakdown,
+      'priority_score' => lead.priority_score.to_f,
+      'priority_position' => lead.priority_position
+    )
+    expect(scoring.values.pluck('priority_position').sort).to eq((1..20).to_a)
+  end
 end
