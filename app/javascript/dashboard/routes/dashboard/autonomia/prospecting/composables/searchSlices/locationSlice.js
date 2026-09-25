@@ -36,6 +36,48 @@ const areaConfig = ({
   return base;
 };
 
+const isChecked = value => value === true || value === 'true';
+
+// Repetir ou editar uma busca salva (#678): o local volta confirmado, sem
+// consultar o Google, com o ponto e a área gravados. O raio é o que a pessoa
+// pediu, não o que a expansão automática alcançou.
+const restoreLocationForm = (
+  {
+    form,
+    locationDetails,
+    confirmedLocation,
+    previewViewport,
+    locationSuggestions,
+    locationError,
+  },
+  search
+) => {
+  const area = search.area_config || {};
+  const label = search.location_label || search.location || '';
+  const radius = Number(search.requested_radius || search.radius);
+  form.value = {
+    ...form.value,
+    location: search.location || '',
+    area_type: search.area_type || 'radius',
+    radius_km: radius > 0 ? radius / 1000 : form.value.radius_km,
+    auto_expand_radius: isChecked(search.search_filters?.auto_expand_radius),
+    decision_maker_type:
+      search.decision_maker_type || DEFAULT_DECISION_MAKER_TYPE,
+  };
+  locationDetails.value = {
+    label,
+    place_id: search.location_place_id || area.place_id || '',
+    latitude: search.location_latitude ?? area.center?.lat,
+    longitude: search.location_longitude ?? area.center?.lng,
+  };
+  confirmedLocation.value = label;
+  previewViewport.value = area.center
+    ? { center: area.center, bounds: area.bounds }
+    : null;
+  locationSuggestions.value = [];
+  locationError.value = '';
+};
+
 export const locationSlice = {
   formDefaults: () => ({
     location: '',
@@ -65,6 +107,7 @@ export const locationSlice = {
     previewViewport.value = null;
     locationError.value = '';
   },
+  restoreForm: (state, search) => restoreLocationForm(state, search),
   toPayload: state => {
     const { form, locationDetails, selectedLocationLabel } = state;
     return {

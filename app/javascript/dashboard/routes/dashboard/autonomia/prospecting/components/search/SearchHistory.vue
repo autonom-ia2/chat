@@ -9,6 +9,7 @@ const { t } = useI18n();
 const {
   canManage,
   isLoading,
+  isSearching,
   searches,
   searchHistoryMeta,
   selectedSearchId,
@@ -19,6 +20,8 @@ const {
   openSearchConfig,
   deleteSearch,
   loadMoreSearches,
+  repeatSearch,
+  editSearch,
 } = useProspectingSearchContext();
 
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
@@ -121,6 +124,25 @@ const searchPreset = search => findPreset(search.preset_id);
           v-if="canManage"
           class="flex flex-wrap items-center gap-2 border-t border-n-weak px-3 py-2.5"
         >
+          <button
+            type="button"
+            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-2.5 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2 disabled:cursor-wait disabled:opacity-60"
+            :title="t('PROSPECTING.SEARCH.REPEAT_SEARCH')"
+            :disabled="isSearching"
+            @click.stop="repeatSearch(search)"
+          >
+            <span class="i-lucide-rotate-cw size-3.5" />
+            {{ t('PROSPECTING.SEARCH.REPEAT_SEARCH') }}
+          </button>
+          <button
+            type="button"
+            class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-2.5 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
+            :title="t('PROSPECTING.SEARCH.EDIT_SEARCH')"
+            @click.stop="editSearch(search)"
+          >
+            <span class="i-lucide-pencil size-3.5" />
+            {{ t('PROSPECTING.SEARCH.EDIT_SEARCH') }}
+          </button>
           <button
             type="button"
             class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-2.5 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"

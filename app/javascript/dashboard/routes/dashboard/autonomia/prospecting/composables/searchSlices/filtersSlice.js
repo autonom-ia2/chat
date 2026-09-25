@@ -23,6 +23,14 @@ export const filtersSlice = {
     };
     sortKey.value = search?.sort_key || DEFAULT_SORT_KEY;
   },
+  // Repetir ou editar leva os filtros e a ordem que a busca pediu.
+  restoreForm: ({ formFilters, sortKey }, search) => {
+    formFilters.value = {
+      ...defaultAdvancedLeadFilters(),
+      ...(search?.advanced_filters || {}),
+    };
+    sortKey.value = search?.sort_key || DEFAULT_SORT_KEY;
+  },
   toPayload: ({ formFilters, sortKey }) => ({
     metadata: {
       advanced_filters: formFilters.value,

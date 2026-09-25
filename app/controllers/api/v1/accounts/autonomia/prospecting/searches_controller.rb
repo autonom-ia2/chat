@@ -155,6 +155,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       else
         leads.count
       end
+    # Raio pedido, para repetir a busca (#678): com "Expandir raio", radius é o que a expansão alcançou.
+    payload['requested_radius'] = search.metadata.to_h['requested_radius'] || search.radius
     payload['crm_pipeline_id'] = search.metadata.to_h['crm_pipeline_id']
     payload['crm_stage_id'] = search.metadata.to_h['crm_stage_id']
     payload['crm_count'] = leads.count { |lead| lead.crm_card_id.present? }
