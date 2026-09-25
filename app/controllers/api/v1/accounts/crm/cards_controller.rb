@@ -9,6 +9,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
 
   RESULTS_PER_PAGE = 25
   MAX_RESULTS_PER_PAGE = 100
+  XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'.freeze
 
   def index
     authorize ::Crm::Card
@@ -16,6 +17,16 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # defaulting to updated_at desc — byte-identical to the historical default).
     @cards = filtered_cards.page(params[:page] || 1).per(per_page)
     @cards_count = filtered_cards.count
+  end
+
+  # Planilha da Lista (#722): mesmo filtro, busca, ordem e visibilidade da Lista, sem página.
+  def export
+    authorize ::Crm::Card, :export?
+    export = ::Crm::Cards::XlsxExport.new(
+      cards: filtered_cards, account: Current.account, user: Current.user, account_user: Current.account_user,
+      pipeline: Current.account.crm_pipelines.find_by(id: params[:pipeline_id])
+    )
+    send_data export.generate, filename: export.filename, type: XLSX_CONTENT_TYPE, disposition: :attachment
   end
 
   def show; end

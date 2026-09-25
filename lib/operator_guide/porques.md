@@ -819,6 +819,16 @@
 - passos: 1. Abra o CRM em modo Lista; 2. Ajuste filtros, colunas e ordenacao; 3. Clique no botao de visoes salvas; 4. Crie uma nova visao; 5. Escolha visibilidade privada, time ou conta; 6. Aplique a visao quando quiser restaurar a configuracao.
 - gotchas: visoes privadas aparecem so para o dono; visoes de time/conta aparecem para outros usuarios com acesso ao CRM; a visao salva captura configuracao da lista, nao altera cards.
 
+### exportar_a_lista_do_crm_para_excel
+- titulo: Exportar a lista do CRM para Excel
+- rota: crm_kanban_index
+- intent: "Como exporto o CRM para Excel?"; "Como baixo uma planilha dos cards?"; "Da para exportar o funil em CSV?"; "Como tiro os leads do CRM para uma planilha?"
+- onde_fica: Sidebar > CRM > CRM Kanban > alternar para Lista > botao Exportar, ao lado de Novo card
+- perfil: `administrator` ou custom role com `crm_export` (ou `crm_admin`). Agente sem funcao personalizada NAO exporta, mesmo vendo o CRM: a planilha leva nome, telefone e e-mail dos contatos. Se o perfil nao puder, diga que falta a permissao Exportar a lista do CRM para Excel e que um administrador pode concede-la na funcao personalizada.
+- pre_requisitos: CRM habilitado; funil selecionado; modo Lista aberto.
+- passos: 1. Abra o CRM e troque para Lista; 2. Escolha o funil, a aba de resultado, a busca, os filtros e a ordenacao que quer levar; 3. Clique em Exportar; 4. O navegador baixa um arquivo .xlsx que abre no Excel ou no Google Planilhas.
+- gotchas: so existe na Lista, nao no Kanban nem no Calendario; a planilha segue exatamente o recorte da Lista (funil, aba de resultado, busca, filtros e ordenacao) e traz todos os cards, nao so os carregados na tela; cards e campos que a pessoa nao ve na tela tambem nao saem no arquivo; o formato e Excel (.xlsx), nao CSV.
+
 ### ordenar_e_filtrar_status_da_lista_de_conversas
 - titulo: Ordenar e filtrar status da lista de conversas
 - rota: home

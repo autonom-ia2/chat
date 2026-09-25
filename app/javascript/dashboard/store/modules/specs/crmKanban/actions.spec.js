@@ -15,6 +15,7 @@ vi.mock('../../../../api/crmKanban', () => ({
     showCard: vi.fn(),
     getBoard: vi.fn(),
     getCards: vi.fn(),
+    exportCards: vi.fn(),
     getFollowUps: vi.fn(),
     createFollowUp: vi.fn(),
     completeFollowUp: vi.fn(),
@@ -627,5 +628,87 @@ describe('#crmKanban board filters', () => {
       pipeline_id: 7,
       stage_id: 3,
     });
+  });
+});
+
+// #722 — a planilha da Lista pede ao servidor exatamente o recorte da Lista.
+describe('#crmKanban exportCardsList', () => {
+  const filtros = {
+    ...defaultFilters(),
+    search: 'seguro',
+    stageIds: [3, 4],
+    result: 'won',
+    valueMin: '10',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CrmKanbanAPI.getCards.mockResolvedValue({
+      data: { payload: [], meta: { count: 0 } },
+    });
+  });
+
+  it('manda os mesmos parâmetros da Lista, sem página', async () => {
+    CrmKanbanAPI.exportCards.mockResolvedValue({
+      data: new Blob(['x']),
+      headers: {},
+    });
+    const ordem = { pipelineId: 9, sort: 'value_cents', direction: 'asc' };
+
+    await actions.fetchCardsList(
+      { commit: vi.fn(), state: { filters: filtros, cardsList: [] } },
+      { ...ordem, page: 2, perPage: 75 }
+    );
+    await actions.exportCardsList({ state: { filters: filtros } }, ordem);
+
+    const {
+      page,
+      per_page: perPage,
+      ...daLista
+    } = CrmKanbanAPI.getCards.mock.calls[0][0];
+    expect(page).toBe(2);
+    expect(perPage).toBe(75);
+    expect(CrmKanbanAPI.exportCards).toHaveBeenCalledWith(daLista);
+    expect(daLista).toMatchObject({
+      pipeline_id: 9,
+      search: 'seguro',
+      stage_ids: '3,4',
+      result: 'won',
+      value_min: 1000,
+      sort: 'value_cents',
+      direction: 'asc',
+    });
+  });
+
+  it('usa o nome do arquivo que o servidor sugere', async () => {
+    const blob = new Blob(['x']);
+    CrmKanbanAPI.exportCards.mockResolvedValue({
+      data: blob,
+      headers: {
+        'content-disposition':
+          'attachment; filename="crm-2026-09-25.xlsx"; filename*=UTF-8\'\'crm-2026-09-25.xlsx',
+      },
+    });
+
+    const resultado = await actions.exportCardsList(
+      { state: { filters: filtros } },
+      { pipelineId: 9 }
+    );
+
+    expect(resultado).toEqual({ blob, filename: 'crm-2026-09-25.xlsx' });
+  });
+
+  it('sem o cabeçalho do nome, cai num nome .xlsx', async () => {
+    CrmKanbanAPI.exportCards.mockResolvedValue({
+      data: new Blob(['x']),
+      headers: {},
+    });
+
+    const { filename } = await actions.exportCardsList(
+      { state: { filters: filtros } },
+      { pipelineId: 9 }
+    );
+
+    expect(filename).toBe('crm.xlsx');
   });
 });

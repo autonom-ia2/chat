@@ -218,6 +218,7 @@ Rails.application.routes.draw do
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               post :from_conversation, on: :collection
+              get :export, on: :collection
               member do
                 post :move
                 post :close

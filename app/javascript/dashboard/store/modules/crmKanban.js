@@ -277,6 +277,23 @@ const normalizeFilters = filters => {
   return params;
 };
 
+// Parâmetros da Lista, comuns à página e à planilha (#722): uma fonte só, para a
+// planilha nunca trazer um recorte diferente do que a Lista mostra. Sem sort ativo,
+// o parâmetro some e o servidor usa a ordem padrão da Lista.
+const listQueryParams = (filters, { pipelineId, sort, direction } = {}) => ({
+  ...normalizeFilters(filters),
+  pipeline_id: pipelineId,
+  ...(sort ? { sort, direction: direction || 'desc' } : {}),
+});
+
+// `attachment; filename="crm-2026-09-25.xlsx"; filename*=UTF-8''...` -> o nome entre aspas.
+const FALLBACK_EXPORT_FILENAME = 'crm.xlsx';
+const filenameFromDisposition = header => {
+  const [, afterKey] = String(header || '').split('filename="');
+  const [name] = String(afterKey || '').split('"');
+  return name || FALLBACK_EXPORT_FILENAME;
+};
+
 const stringMatches = (value, expected) =>
   String(value || '') === String(expected || '');
 
@@ -505,13 +522,9 @@ export const actions = {
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingCardsList: true });
     try {
       const response = await CrmKanbanAPI.getCards({
-        ...normalizeFilters($state.filters),
-        pipeline_id: pipelineId,
+        ...listQueryParams($state.filters, { pipelineId, sort, direction }),
         page,
         per_page: perPage,
-        // Server-side sort (FilterQuery whitelists the param). Omitted when no
-        // sort is active so the default `updated_at desc` index call is unchanged.
-        ...(sort ? { sort, direction: direction || 'desc' } : {}),
       });
       const fetched = response.data.payload || [];
       // `append` powers the list-view "Load more" affordance (page > 1): keep the
@@ -527,6 +540,21 @@ export const actions = {
     } finally {
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isFetchingCardsList: false });
     }
+  },
+
+  // #722 — planilha da Lista: os mesmos parâmetros da Lista (funil, filtros, busca,
+  // resultado e ordenação), sem página. Devolve o blob e o nome sugerido pelo servidor.
+  exportCardsList: async ({ state: $state }, payload = {}) => {
+    const { pipelineId, sort, direction } = payload;
+    const response = await CrmKanbanAPI.exportCards(
+      listQueryParams($state.filters, { pipelineId, sort, direction })
+    );
+    return {
+      blob: response.data,
+      filename: filenameFromDisposition(
+        response.headers?.['content-disposition']
+      ),
+    };
   },
 
   setFilters: ({ commit }, filters) => {

@@ -51,6 +51,8 @@ gem 'gmail_xoauth'
 gem 'net-smtp',  '~> 0.3.4'
 # Prevent CSV injection
 gem 'csv-safe'
+# Excel (.xlsx) export of the CRM list
+gem 'caxlsx', '~> 4.5'
 
 ##-- for active storage --##
 gem 'aws-sdk-s3', require: false
