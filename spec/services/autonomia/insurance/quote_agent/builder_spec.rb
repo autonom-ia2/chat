@@ -87,9 +87,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     end
 
     # A instrução DOCUMENTA as ferramentas por slug, e o slug errado ali é tão mudo quanto na
-    # config: ela mandava usar `consultar_produtos_disponiveis`, que não existe.
+    # config: ela mandava usar `consultar_produtos_disponiveis`, que não existe. Desde a paridade da jornada
+    # (25/09/2026) o subtítulo traz o slug sem crase: é o subtítulo de uma palavra só.
     it 'so cita ferramenta que existe no catalogo' do
-      citados = arquivos_de_instrucao.flat_map { |arquivo| arquivo.read.scan(/^### `([a-z_]+)`$/).flatten }
+      citados = arquivos_de_instrucao.flat_map do |arquivo|
+        arquivo.read.lines.map(&:chomp).select { |linha| linha.start_with?('### ') }
+               .map { |linha| linha.delete_prefix('### ') }.reject { |titulo| titulo.include?(' ') }
+      end
       desconhecidos = citados - Autonomia::Agents::Tools::Registry.slugs
 
       expect(citados).not_to be_empty

@@ -93,8 +93,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # tinha na mão); só pelo parentesco, ou com dois CPFs do mesmo nome, pergunta.
     # Pela chat#641 (`209fc264…` -> `18bfb6a9…`): imóvel de negócio é empresarial, e volta ao principal com o nome do
     # ramo, e não como caso para uma pessoa.
+    # Pela paridade da jornada (`18bfb6a9…` -> `294c8982…`, 25/09/2026): mais de um imóvel deixa de ser recusa (§2 e o
+    # item 13 do que nunca faz), porque o bloco comum manda cotar cada bem em paralelo; e o parágrafo de quem é o
+    # segurado sai daqui, porque a regra inteira foi para a §D.1 do bloco comum.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('18bfb6a9c782078f80da58d0b2be7c24')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeResidencial::ARQUIVO.binread)).to eq('294c898238b9ba8aa354a5ac555b6ff1')
     end
   end
 end

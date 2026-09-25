@@ -169,40 +169,6 @@ module ManualDoEspecialistaDeAuto
       vazia = Autonomia::Insurance::AutoRenewal.new({})
       !vazia.renovacao? && vazia.bonus.nil? && !vazia.sem_bonus?
     },
-    # SEGURADO TROCADO PELO TITULAR DO DOCUMENTO (#415). Em 12/09/2026, execução 20 da conversa 5045:
-    # o cliente pediu "usa a apólice que te mandei, do William" e a cotação saiu no nome, no CPF, no
-    # nascimento e no telefone do William, marcada como renovação, com a classe de bônus 9 e um
-    # sinistro dele. A §4 dava precedência absoluta ao pedido do cliente e só excepcionava cobertura:
-    # "usa a apólice do fulano" era lido como ORDEM, não como documento de terceiro, e a §6.2 nunca
-    # disparava. Medido no caso de produção (`~/ops/agente-cotacao/teste-especialista/
-    # caso-producao-5045/`): sem o parágrafo, 13 defeitos em 16 no bilhete que só repassa as palavras
-    # do cliente; com ele, 0.
-    #
-    # A FRONTEIRA É REFERÊNCIA × INDICAÇÃO (P1 do Codex, 12/09). A primeira escrita desta regra dizia
-    # que o segurado é SEMPRE a pessoa da conversa — e isso quebra caso legítimo e previsto no
-    # próprio manual: cotar para a esposa com o CPF dela, cotar para empresa (§3), o "CPF do titular
-    # ou CNPJ" da §4. O que o documento não pode é DECIDIR sozinho; quem o cliente indica de forma
-    # explícita continua valendo.
-    #
-    # QUEM É O SEGURADO É O QUE O ESPECIALISTA ESCREVE, e chega assim ao portal: o `cpf` e o `nome`
-    # que ele manda viram `insured.document` e `insured.name` na entrada, e o grupo `insured` viaja.
-    # Se o grupo saísse da entrada, ou se o CPF deixasse de decidir quem é o segurado, a regra
-    # perderia objeto. As SEIS coisas pessoais que ela proíbe copiar do documento são conferidas uma
-    # a uma — proibir o que não existe no formulário seria texto sem alvo — e são as mesmas que o
-    # contador da medição confere (`caso-producao-5045/medir.py`, `CAMPOS_PESSOAIS`). O ENDEREÇO são
-    # três campos, não um: o CEP, o número e o complemento. Conferir só o CEP deixava o endereço do
-    # titular entrar pelo número, e o `numero` solto ainda funde em `address.number` na entrada.
-    'E para QUEM CONTRATA a ordem é outra: quem decide é o cliente, nunca o documento.' => lambda {
-      entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva',
-                                'numero' => '294')
-
-      grupos_da_entrada.include?('insured') &&
-        entrada.dig('insured', 'document') == '04297912678' &&
-        entrada.dig('insured', 'name') == 'Rodrigo Silva' &&
-        entrada.dig('address', 'number') == '294' &&
-        %w[insured.name insured.document insured.birthDate insured.maritalStatus insured.phone
-           address.zipCode address.number address.complement].all? { |n| campo(n) }
-    },
     # O CAMINHO LEGÍTIMO É EXPRESSÁVEL — e é isso que impede a regra de virar recusa. Cotar no nome
     # de quem o cliente indicou, com o bônus DELA e a apólice DELA, tem de caber no MESMO pedido: o
     # CPF que o especialista escreve é o único que decide o segurado, e o bloco de renovação viaja
@@ -242,7 +208,7 @@ module ManualDoEspecialistaDeAuto
     # obrigatório no formulário, e o erro é o DOCUMENTO escolher quem —, mas levar o bônus e o
     # histórico do titular não é obrigatório: os dois campos são opcionais. Se virassem exigência,
     # este item proibiria a única saída que sobrou para a apólice de terceiro.
-    'Deixa o documento escolher o segurado — cota em nome de quem o cliente não indicou.' => lambda {
+    'Deixa o documento escolher o segurado: cota em nome de quem o cliente não indicou.' => lambda {
       campo('insured.document')['obrigatorio'] == true && expostos.include?('insured.name') &&
         %w[quotation.bonusClass quotation.previousClaimsCount].all? { |n| campo(n)['obrigatorio'] == false }
     },
@@ -369,6 +335,75 @@ module PromessaDaListaFechada
   }.freeze
 end
 
+# QUEM É O SEGURADO VALE EM TODO RAMO (paridade da jornada, 25/09/2026). A regra morava no manual de auto, com uma
+# cópia parcial no de residencial e nada no de empresarial; agora mora no bloco comum (§D.1), e a promessa veio com
+# ela. A âncora é o ARQUIVO do bloco comum, e não o texto montado de auto: tirada a regra do comum, este exemplo
+# reprova mesmo que um manual de ramo ainda tenha uma cópia. A capacidade é a mesma de antes, a de auto, e mais a
+# de que todo ramo tem onde escrever o documento do segurado: o parâmetro comum da ferramenta e o campo do
+# formulário de residencial e de empresarial.
+module PromessaDoSegurado
+  extend FormularioDoEspecialista
+
+  RAMOS = %w[cotacao_auto cotacao_residencial cotacao_empresarial].freeze
+
+  module_function
+
+  def documento_do_segurado_em_todo_ramo?
+    cpf = Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao::COMUNS.find { |p| p['name'] == 'cpf' }
+    mock = Autonomia::Insurance::Connector::Mock
+    cpf['description'].include?('CPF ou CNPJ do segurado') &&
+      [mock::SCHEMA_RESIDENCIAL, mock::SCHEMA_EMPRESARIAL].all? do |schema|
+        schema['campos'].any? { |c| c['campo'] == 'segurado.cpfCnpj' && c['obrigatorio'] }
+      end
+  end
+
+  # O texto que cada especialista de ramo lê, montado como em runtime.
+  def manuais_montados
+    RAMOS.map do |slug|
+      arquivo = Autonomia::Insurance::QuoteAgent::Builder::ESPECIALISTAS.find { |e| e[:slug] == slug }.fetch(:arquivo)
+      Autonomia::Insurance::QuoteAgent::Builder.instrucao_do_especialista(arquivo)
+    end
+  end
+
+  PROMESSAS = {
+    # SEGURADO TROCADO PELO TITULAR DO DOCUMENTO (#415). Em 12/09/2026, execução 20 da conversa 5045:
+    # o cliente pediu "usa a apólice que te mandei, do William" e a cotação saiu no nome, no CPF, no
+    # nascimento e no telefone do William, marcada como renovação, com a classe de bônus 9 e um
+    # sinistro dele. A §4 dava precedência absoluta ao pedido do cliente e só excepcionava cobertura:
+    # "usa a apólice do fulano" era lido como ORDEM, não como documento de terceiro, e a §6.2 nunca
+    # disparava. Medido no caso de produção (`~/ops/agente-cotacao/teste-especialista/
+    # caso-producao-5045/`): sem o parágrafo, 13 defeitos em 16 no bilhete que só repassa as palavras
+    # do cliente; com ele, 0.
+    #
+    # A FRONTEIRA É REFERÊNCIA × INDICAÇÃO (P1 do Codex, 12/09). A primeira escrita desta regra dizia
+    # que o segurado é SEMPRE a pessoa da conversa — e isso quebra caso legítimo e previsto no
+    # próprio manual: cotar para a esposa com o CPF dela, cotar para empresa (§3), o "CPF do titular
+    # ou CNPJ" da §4. O que o documento não pode é DECIDIR sozinho; quem o cliente indica de forma
+    # explícita continua valendo.
+    #
+    # QUEM É O SEGURADO É O QUE O ESPECIALISTA ESCREVE, e chega assim ao portal: o `cpf` e o `nome`
+    # que ele manda viram `insured.document` e `insured.name` na entrada, e o grupo `insured` viaja.
+    # Se o grupo saísse da entrada, ou se o CPF deixasse de decidir quem é o segurado, a regra
+    # perderia objeto. As SEIS coisas pessoais que ela proíbe copiar do documento são conferidas uma
+    # a uma — proibir o que não existe no formulário seria texto sem alvo — e são as mesmas que o
+    # contador da medição confere (`caso-producao-5045/medir.py`, `CAMPOS_PESSOAIS`). O ENDEREÇO são
+    # três campos, não um: o CEP, o número e o complemento. Conferir só o CEP deixava o endereço do
+    # titular entrar pelo número, e o `numero` solto ainda funde em `address.number` na entrada.
+    'Para QUEM CONTRATA a ordem é outra: quem decide é o cliente, nunca o documento.' => lambda {
+      entrada = entrada_de_auto('cpf' => '042.979.126-78', 'nome' => 'Rodrigo Silva',
+                                'numero' => '294')
+
+      grupos_da_entrada.include?('insured') &&
+        entrada.dig('insured', 'document') == '04297912678' &&
+        entrada.dig('insured', 'name') == 'Rodrigo Silva' &&
+        entrada.dig('address', 'number') == '294' &&
+        %w[insured.name insured.document insured.birthDate insured.maritalStatus insured.phone
+           address.zipCode address.number address.complement].all? { |n| campo(n) } &&
+        documento_do_segurado_em_todo_ramo?
+    }
+  }.freeze
+end
+
 RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # O TEXTO QUE O MODELO LÊ, montado como em runtime (#525): bloco comum + manual do ramo.
   let(:texto) { described_class.instrucao_do_especialista(ArquivosDoEspecialista::DO_RAMO) }
@@ -433,6 +468,29 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     expect(texto.scan(/\$[a-zA-Z]+/)).to be_empty
   end
 
+  describe 'quem é o segurado, no bloco comum (§D.1)' do
+    PromessaDoSegurado::PROMESSAS.each do |frase, sustenta|
+      it "«#{frase}» está no bloco comum e tem o que a sustenta" do
+        expect(comum).to include(frase)
+        expect(sustenta.call).to be_truthy
+      end
+    end
+
+    it 'chega aos três ramos, e nenhum manual de ramo repete a regra' do
+      frase = PromessaDoSegurado::PROMESSAS.keys.first
+
+      expect(PromessaDoSegurado.manuais_montados).to all(include(frase))
+      expect(PromessaDoSegurado.manuais_montados.map { |manual| manual.scan(frase).size }).to all(eq(1))
+    end
+  end
+
+  # A VOZ DO MANUAL VIRA A VOZ DO WHATSAPP (regra do Rodrigo): o modelo copia o travessão e a crase que lê. Os
+  # manuais de residencial e de empresarial já tinham esta guarda; o bloco comum e o de auto passam a ter.
+  it 'o bloco comum e o manual de auto não escrevem travessão nem crase' do
+    expect(comum).not_to include('—', '–', '`')
+    expect(do_ramo).not_to include('—', '–', '`')
+  end
+
   # PROSA NÃO SE VERIFICA POR MÁQUINA: uma promessa nova escrita com outras palavras ("emita a apólice")
   # passaria pela tabela. O que a máquina faz é NÃO DEIXAR O TEXTO MUDAR SEM REVISÃO: mudou uma letra,
   # este exemplo reprova, e quem o atualiza revisa `PROMESSAS` junto — o md5 é a assinatura da revisão.
@@ -472,15 +530,25 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # disse, antes de ser pedido.
   # Pela chat#641 (`e14321b7…` -> `6af397c7…`): pedido de outro ramo volta ao principal com o nome do ramo, e não
   # como caso para uma pessoa; com três ramos no ar, o principal leva a quem cota.
+  # Pela paridade da jornada (`6af397c7…` -> `cec07ea1…`, 25/09/2026): quem é o segurado sai da §3 e vai para a §D.1
+  # do bloco comum, e aqui fica só o que é de auto (o bônus na renovação, o CPF entre os quatro mínimos); "cote
+  # direto" deixa de afirmar uma rodada de ferramentas por resposta (o Runner tem seis); e os 41 travessões saem, trocados por
+  # vírgula, dois pontos ou ponto, sem mudar o sentido. "Frota" continua como estava, só sem o travessão.
+  # Decisão do Rodrigo, 25/09/2026 (`cec07ea1…` -> `2d1558ba…`): frota é três veículos ou mais para o mesmo segurado;
+  # um ou dois veículos são itens, cotados em paralelo pelo §B do comum.
   it 'o manual do ramo é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('6af397c7ef9e03bd1ba1a3963e928f9c')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::ARQUIVO.binread)).to eq('2d1558ba709c82d6fe9378b9fe22f21a')
   end
 
   # chat#612 (23/09/2026): a §G e a §J não contam recusa nem motivo ao cliente; só a instabilidade.
   # chat#638 (24/09/2026, `1fface70…` -> `40eeb5e3…`): nem a instabilidade nem o prazo; o motivo fica com a equipe; e
   # "nenhuma cotou" não fala mais de "perfil que precisa de análise".
+  # Pela paridade da jornada (`40eeb5e3…` -> `2139e030…`, 25/09/2026): entra a §D.1, quem é o segurado, em forma
+  # neutra de ramo (CPF ou CNPJ, pessoa ou empresa), que antes só auto tinha inteira; os 15 travessões viram
+  # vírgula, dois pontos, parênteses ou ponto; e as crases de item e de ver_resultado_da_cotacao saem, com os
+  # nomes intactos.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('40eeb5e35b9e4f6f329d2cb2b82475c6')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('2139e03053e32acc28463498c425d3d2')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
