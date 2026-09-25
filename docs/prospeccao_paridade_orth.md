@@ -1,12 +1,12 @@
 # Prospecção: paridade com o Orth, as 486 funções
 
-Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, a frente da E6 que está entregando, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026).
+Prestação de contas do épico #676 (E6, #682). Cada função do inventário do plano rev.7 (google-saas `1f8ad9a` x chat2you `1bf71b3fa1`) tem aqui o destino: o PR que entregou, a decisão que tirou do escopo, ou pendente com o motivo. Código conferido na `main` em `732c23da08` (25/09/2026); as 15 funções da própria E6 foram conferidas na branch `feat/682-fechamento`, que junta as frentes A (exportar), B (Listas e tour), C (pt_BR, menu e permissão) e D (este documento).
 
 ## Resumo
 
 | Destino | Funções |
 |---|---:|
-| **Entregue por PR** | **258** |
+| **Entregue por PR** | **273** |
 | &nbsp;&nbsp;#706 (E2) | 83 |
 | &nbsp;&nbsp;#699 (E1) | 66 |
 | &nbsp;&nbsp;#709 (E3) | 41 |
@@ -16,11 +16,10 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | &nbsp;&nbsp;#670 (lote #652) | 1 |
 | &nbsp;&nbsp;#671 (lote #652) | 1 |
 | &nbsp;&nbsp;#688 (fecha #675) | 1 |
+| &nbsp;&nbsp;#682 (E6): frente B, Listas e tour | 8 |
+| &nbsp;&nbsp;#682 (E6): frente A, exportar | 5 |
+| &nbsp;&nbsp;#682 (E6): frente C, pt_BR | 2 |
 | **Preservado (já existia no chat2you)** | **90** |
-| **Em andamento nesta E6 (#682)** | **15** |
-| &nbsp;&nbsp;E6 frente B | 8 |
-| &nbsp;&nbsp;E6 frente A | 5 |
-| &nbsp;&nbsp;E6 frente C | 2 |
 | **Movido para outra issue (#705 Central e Guia, #713 recusa)** | **3** |
 | &nbsp;&nbsp;#705 | 3 |
 | **Fora do escopo por decisão** | **29** |
@@ -30,11 +29,13 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 - **155 funções** têm arquivo e linha conferidos na `main` (`732c23da08`): 158 referências, cada uma aberta e com o trecho esperado na linha. As demais entregues se apoiam no corpo do PR ou na nota da etapa na #705, e isso está dito na linha.
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
-- **E6 frentes A, B e C** estão em andamento em paralelo com este documento: exportar (A), Listas com o mesmo card e painel mais o tour (B), pt_BR, atalho de Configurações e botões por permissão (C). Quando o PR da E6 entrar, essas linhas passam a apontar para ele.
+- **#682 (E6)** entregou 15 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (23 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C). O número do PR da E6 entra aqui quando ele for aberto.
+- **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
+- **Desvios da E6 registrados:** o export deixa de fora a coluna Dist km do Orth e o link de WhatsApp tirado do site sem verificação; o tour marca a visita ao abrir, e não ao concluir como no Orth, e só pede sugestões do Google no clique; a tela de Listas ainda não tem botão de exportar (o cliente da API já tem `exportList`).
 
 ### Por parte da tela
 
-| Parte | PR | preservado | E6 | outra issue | fora | pendente | a confirmar | Total |
+| Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | a confirmar | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | Modo e jogadas | 31 | 10 | 1 | 0 | 3 | 6 | 0 | 51 |
 | Onde buscar | 24 | 10 | 2 | 0 | 5 | 8 | 1 | 50 |
@@ -48,7 +49,7 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 ### Por situação original no inventário
 
-| Situação original | PR | preservado | E6 | outra issue | fora | pendente | a confirmar | Total |
+| Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | a confirmar | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | ausente no c2 | 109 | 0 | 8 | 0 | 24 | 44 | 2 | 187 |
 | divergente | 94 | 10 | 3 | 1 | 4 | 25 | 6 | 143 |
@@ -90,8 +91,8 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 
 ## Como ler a tabela
 
-- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `E6 frente A/B/C`: em andamento nesta etapa. `#705`: Central de Ajuda e Guia no lote único do fim. `fora (decisão)`: fora do escopo, com a decisão na nota. `pendente`: não feito, com o motivo. `a confirmar`: sem prova.
-- **Conferido.** Arquivo e linha na `main` quando a função foi aberta no código. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
+- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `fora (decisão)`: fora do escopo, com a decisão na nota. `pendente`: não feito, com o motivo. `a confirmar`: sem prova.
+- **Conferido.** Arquivo e linha na `main` (ou na branch `feat/682-fechamento`, para as funções da E6) quando a função foi aberta no código. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
 - **Decisões usadas:** as de 24/09 no épico #676 (sem cobrança, créditos, trava nem gate de plano; chaves Google e BigDataCorp nossas; IA só na credencial do Kanban; nota do Orth inteira), as de 25/09 nas issues #679 (não apagar dado, sai a retenção), #680 (recusa no contato vai para a #713), #681 (perfil restrito a contas, pesos próprios mapeados, relevância e posição saem da nota) e #705 (Central e Guia num lote só), e o "não portar" do próprio inventário rev.7 para código morto do Orth.
 
 ## Modo e jogadas (51)
@@ -133,7 +134,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MODO-33 | Texto do modo no detalhe do lead | ausente no c2 | #719 (E5) | Frase do Orth no detalhe depois da virada (corpo do #719 e nota da E5 na #705). |  |
 | MODO-34 | Tom do selo de estrela no card muda com o modo | ausente no c2 | #706 (E2) | Selo de nota do card lê o modo da busca. | `F/components/search/LeadCard.vue:45` |
 | MODO-35 | Fator negativo 'inactive_gbp' só no modo GMN | só no c2 | preservado |  | `S/lead_scorer.rb:163` |
-| MODO-36 | Tour guiado com texto por modo | ausente no c2 | E6 frente B | Tour guiado (frente B desta E6). |  |
+| MODO-36 | Tour guiado com texto por modo | ausente no c2 | #682 (E6) | Tour guiado (frente B): os textos de modo, jogada e decisor mudam entre GMN e Geral. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:60` |
 | MODO-37 | Modo gravado em cada lead e em cada busca | igual | preservado |  |  |
 | MODO-38 | Modo entra na chave do cache de busca | só no c2 | preservado | Modo e filtros na chave do cache. | `S/search_runner.rb:56` |
 | MODO-39 | Ofertas de serviço que definem os pesos (7 globais, só no GMN) | divergente | pendente | Ofertas de serviço: opção A ou B pede decisão do Rodrigo; a decisão de 25/09 (#681) trata só de pesos próprios e perfil padrão. |  |
@@ -190,7 +191,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | LOCAL-34 | Provedor simulado (mock) para buscar sem Google | só no c2 | preservado | Mock só para desenvolvimento e teste. | `S/providers/mock_provider.rb:86` |
 | LOCAL-35 | Ordenar resultados por distancia do centro | ausente no c2 | #706 (E2) | Ordenar por distância. | `F/utils/sortLeads.js:6` |
 | LOCAL-36 | Mapa de resultados com marcadores clicaveis | divergente | #706 (E2) | Pinos agrupados. | `F/components/ProspectingGoogleMap.vue:4` |
-| LOCAL-37 | Tour guiado que preenche nicho, local e raio | ausente no c2 | E6 frente B | Tour que preenche a busca (frente B desta E6). |  |
+| LOCAL-37 | Tour guiado que preenche nicho, local e raio | ausente no c2 | #682 (E6) | Tour pré-preenche nicho, local e raio (exemplo restaurante, Moema, 3 km); sugestão do Google só no clique em "Ver sugestões do local", sem chamada paga automática. | `F/composables/useSearchTour.js:34`, `F/utils/searchTour.js:10` |
 | LOCAL-38 | Vies da busca pelo endereco da empresa (geocodeCompanyAddress) | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-39 | Autocomplete em dois campos, cidade e bairro | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
 | LOCAL-40 | Proxy de foto do Google Places | ausente no c2 | fora (decisão) | Plano rev.7: a busca do Orth não usa o proxy de foto. |  |
@@ -203,7 +204,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | LOCAL-47 | Telefone do lead normalizado conforme o pais | divergente | #699 (E1) | Telefone pelo país da conta. | `S/phone_contract.rb:23` |
 | LOCAL-48 | Aviso de que nomes e enderecos vem no idioma do provedor | ausente no c2 | pendente | Não há aviso de idioma do provedor na tela. |  |
 | LOCAL-49 | Mensagem amigavel para erro do Google Places | ausente no c2 | #691 (E0) | Erro do Google em português pelo status. | `S/providers/google_places_location.rb:79` |
-| LOCAL-50 | Textos da tela de busca em mais de um idioma | divergente | E6 frente C | pt_BR da prospecção (frente C desta E6). |  |
+| LOCAL-50 | Textos da tela de busca em mais de um idioma | divergente | #682 (E6) | Textos da prospecção em pt_BR (frente C): erros da tela, carregando, prévia do mapa, fonte, validade do cache; recusas do servidor com frase em pt_BR e código em campo separado. | `app/javascript/dashboard/i18n/locale/en/prospecting.json:4`, `config/locales/pt_BR.yml:874` |
 
 ## Filtros (40)
 
@@ -312,7 +313,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | MOTOR-56 | Chamadas ao Google fora da transação do banco | divergente | #706 (E2) | A transação só envolve o upsert e o save da busca. | `S/search_runner.rb:48` |
 | MOTOR-57 | Provider padrão de conta nova | divergente | #691 (E0) | Padrão google_places; mock só em teste e desenvolvimento. |  |
 | MOTOR-58 | Atualização ao vivo de cada lead da lista (site, decisor, WhatsApp) | ausente no c2 | #706 (E2) | Evento prospecting.lead.updated. | `S/lead_payload.rb:2` |
-| MOTOR-59 | Exportar uma busca do histórico gerada no servidor | defasado | E6 frente A | Export por busca no servidor (frente A desta E6). |  |
+| MOTOR-59 | Exportar uma busca do histórico gerada no servidor | defasado | #682 (E6) | Export da busca gerado no servidor (frente A): GET .../searches/:id/export?format=csv ou xlsx. | `config/routes.rb:388`, `C/searches_controller.rb:84` |
 
 ## Enriquecimento e WhatsApp (72)
 
@@ -434,8 +435,8 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | CARD-37 | Limpar seleção | ausente no c2 | pendente | Não existe botão Limpar seleção (BulkActionsBar.vue só tem selecionar visíveis). |  |
 | CARD-38 | Enviar selecionados ao CRM | divergente | #714 (E4) |  |  |
 | CARD-39 | Adicionar selecionados à campanha | ausente no c2 | #714 (E4) | Adicionar à campanha a partir da seleção. | `F/pages/ProspectingSearchPage.vue:13` |
-| CARD-40 | Exportar CSV | defasado | E6 frente A | CSV com colunas do Orth (frente A desta E6). |  |
-| CARD-41 | Exportar Excel (.xlsx) | ausente no c2 | E6 frente A | Excel (frente A desta E6). |  |
+| CARD-40 | Exportar CSV | defasado | #682 (E6) | CSV do servidor (frente A): BOM UTF-8, ponto e vírgula, 35 colunas; célula que começa com =, +, -, @, %, barra vertical, tab ou CR ganha apóstrofo. Fica de fora a coluna Dist km do Orth. | `S/export/csv_file.rb:9`, `S/export/cell.rb:9` |
+| CARD-41 | Exportar Excel (.xlsx) | ausente no c2 | #682 (E6) | Excel .xlsx mínimo montado com rubyzip (frente A): texto em inlineStr, sem fórmula, mesma neutralização do CSV. | `S/export/xlsx_file.rb:51` |
 | CARD-42 | Aviso de idioma misto do provedor | ausente no c2 | pendente | Não há aviso de idioma misto. |  |
 | CARD-43 | Título com total de resultados e chamadas de API | divergente | pendente | Título não mostra as chamadas à API. |  |
 | CARD-44 | Mapa de resultados com clique no pino abrindo o lead | igual | preservado |  |  |
@@ -498,9 +499,9 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PAINEL-37 | Pesquisa de decisor em lote disparada pela própria busca, com barra 'X de Y itens concluídos' | ausente no c2 | #709 (E3) | Pesquisa em lote disparada pela busca. |  |
 | PAINEL-38 | Selos 'Empresa' e 'Decisor' com estado da pesquisa, confiança, data de verificação e 'resultado reutilizado' no card da lista | defasado | #709 (E3) | Selos na linha da lista, na busca e nas Listas. |  |
 | PAINEL-39 | Projeção do resultado da pesquisa no próprio lead (dados da empresa e estado do decisor) para lista, CSV e CRM | ausente no c2 | #709 (E3) | Colunas da pesquisa no lead (migration 20260925140100). |  |
-| PAINEL-40 | Exportação CSV com CNPJ do cadastro (prioridade sobre o do site), razão social, fantasia, situação, decisor, LinkedIn e Instagram do decisor, confiança, papel e data | defasado | E6 frente A | Export com empresa e decisor (frente A desta E6). |  |
+| PAINEL-40 | Exportação CSV com CNPJ do cadastro (prioridade sobre o do site), razão social, fantasia, situação, decisor, LinkedIn e Instagram do decisor, confiança, papel e data | defasado | #682 (E6) | Export com CNPJ do cadastro acima do do site, razão social, fantasia, situação, UF, decisor (nome, cargo, confiança, LinkedIn, Instagram), sócios e data da pesquisa (frente A). Empresa e decisor só com a empresa confirmada, pelo mesmo Research::Payload da tela. | `S/export/table.rb:76` |
 | PAINEL-41 | Painel de empresa e decisor também dentro do lead no CRM, e dados do decisor e da empresa levados ao contato e ao card | ausente no c2 | #714 (E4) | Decisor, CNPJ e razão social no contato e no card. |  |
-| PAINEL-42 | Segunda superfície no C2: a tela de Listas também tem botão Enriquecer e card de enriquecimento | divergente | E6 frente B | Listas com o mesmo painel (frente B desta E6); o #709 já pôs o resumo da pesquisa nas Listas. |  |
+| PAINEL-42 | Segunda superfície no C2: a tela de Listas também tem botão Enriquecer e card de enriquecimento | divergente | #682 (E6) | Listas usam o mesmo LeadCard e LeadDetailDrawer da busca (frente B): enriquecer, pesquisa, adotar sócio, WhatsApp e estágio padrão do CRM; o #709 já tinha posto o resumo da pesquisa nas Listas. | `F/pages/ProspectingListsPage.vue:802`, `F/pages/ProspectingListsPage.vue:1321` |
 | PAINEL-43 | Estados vazios e de carregamento do painel | ausente no c2 | a confirmar | Estados vazio e carregando do painel não conferidos; nenhum PR cita. |  |
 | PAINEL-44 | Rede social do decisor presa à pessoa certa | divergente | #709 (E3) | Rede do decisor nunca cai para a da empresa. |  |
 | PAINEL-45 | Confiança e fonte do decisor gravadas mas invisíveis no C2 | defasado | #709 (E3) | Confiança e data visíveis. |  |
@@ -544,16 +545,16 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | ACAO-31 | "Ver leads" (reabrir resultado salvo sem custo) e "Repetir busca" | ausente no c2 | #706 (E2) | Repetir e Editar. |  |
 | ACAO-32 | Excluir busca do histórico e "Ver mais" | igual | preservado |  |  |
 | ACAO-33 | Escopo do histórico por usuário/hierarquia | divergente | pendente | Visibilidade por usuário ou hierarquia pede decisão do Rodrigo; não registrada. Hoje tudo é por conta. |  |
-| ACAO-34 | Listas de prospecção: criar, abrir, remover lead | só no c2 | preservado | Listas preservadas; a E6 frente B troca card e painel. |  |
+| ACAO-34 | Listas de prospecção: criar, abrir, remover lead | só no c2 | preservado | Listas preservadas; a #682 (E6) troca card e painel pelos da busca e mantém remover da lista e campanha. |  |
 | ACAO-35 | Adicionar lead à lista muda status para ready_for_campaign | só no c2 | pendente | Adicionar à lista ainda muda qualquer status para ready_for_campaign. | `C/lists_controller.rb:27` |
 | ACAO-36 | Modal "adicionar leads" limitado aos 100 leads mais recentes | só no c2 | pendente | Modal de adicionar leads segue limitado; adicionar à lista direto da busca só existe pelo caminho da campanha (#714). |  |
 | ACAO-37 | Segmento de campanha a partir da lista (etiqueta + campanha one_off) | só no c2 | preservado | Destino de Adicionar à campanha (#714). |  |
 | ACAO-38 | Verificação automática de WhatsApp ao abrir listas | só no c2 | #706 (E2) | Verificação no servidor, inclusive para Listas. |  |
-| ACAO-39 | Exportar resultados | defasado | E6 frente A | Export pelo servidor (frente A desta E6). |  |
-| ACAO-40 | Tour guiado: disparo automático e persistência | ausente no c2 | E6 frente B | Tour (frente B desta E6). |  |
-| ACAO-41 | Tour: passos de boas-vindas, modo, jogada, decisor com texto por score_mode | ausente no c2 | E6 frente B | Tour (frente B desta E6). |  |
-| ACAO-42 | Tour: pré-preenche busca, espera local confirmado, abre/fecha filtros, espera resultados, fecha sozinho | ausente no c2 | E6 frente B | Tour (frente B desta E6). |  |
-| ACAO-43 | Botão "Refazer tour" no rodapé | ausente no c2 | E6 frente B | Refazer tour (frente B desta E6). |  |
+| ACAO-39 | Exportar resultados | defasado | #682 (E6) | Botão de download da busca oferece CSV e Excel pelo servidor, com os selecionados ou os visíveis depois do filtro, na ordem da tela (frente A). A lista também exporta (GET .../lists/:id/export); o botão nas Listas não existe ainda, só exportList no cliente da API. | `F/components/search/SearchResults.vue:31`, `app/javascript/dashboard/api/autonomiaProspecting.js:43`, `config/routes.rb:404` |
+| ACAO-40 | Tour guiado: disparo automático e persistência | ausente no c2 | #682 (E6) | Tour abre sozinho na primeira visita de quem tem prospecting_manage e grava a marca ao abrir (o Orth marca ao concluir ou pular e só abre para empresa sem busca). | `F/composables/useSearchTour.js:128`, `F/utils/searchTour.js:8` |
+| ACAO-41 | Tour: passos de boas-vindas, modo, jogada, decisor com texto por score_mode | ausente no c2 | #682 (E6) | Oito passos: boas-vindas, modo, jogada, local, decisor, filtros, Buscar e resultados; texto por score_mode. | `F/utils/searchTour.js:13`, `F/utils/searchTour.js:30` |
+| ACAO-42 | Tour: pré-preenche busca, espera local confirmado, abre/fecha filtros, espera resultados, fecha sozinho | ausente no c2 | #682 (E6) | Pré-preenche o exemplo, espera o local confirmado, abre e fecha a gaveta de filtros, espera busca com leads e fecha sozinho em 3,5 s; a busca só roda no clique em Buscar. | `F/composables/useSearchTour.js:34`, `F/utils/searchTour.js:9` |
+| ACAO-43 | Botão "Refazer tour" no rodapé | ausente no c2 | #682 (E6) | Refazer tour no rodapé da tela de busca. | `F/pages/ProspectingSearchPage.vue:111` |
 | ACAO-44 | Assistente de IA executar a busca, enviar ao CRM ou montar campanha | só no c2 | preservado | Endpoints novos entram no catálogo do Guia; a bateria é da #705. |  |
 | ACAO-45 | Assistente de IA ler configuração de score e progresso do onboarding da busca | divergente | fora (decisão) | Plano rev.7: nada a portar para score; marco de tour depende de ACAO-40. |  |
 | ACAO-46 | Assistente de IA levar à tela de busca | igual | preservado |  |  |
@@ -578,7 +579,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PLAT-03 | Semântica de 'Ver' na prospecção: ler sim, buscar não | divergente | preservado | Leitura por GET e escrita por não-GET. |  |
 | PLAT-04 | Quem altera a configuração da busca (score, modo GMN, país, chaves) | divergente | preservado | Corte por manage mantido no #719. |  |
 | PLAT-05 | Detalhes técnicos do score no drawer do lead (modo, score bruto, fatores negativos) | ausente no c2 | pendente | Quem vê os detalhes técnicos da nota: decisão não registrada. |  |
-| PLAT-06 | Tour guiado da busca na primeira vez | ausente no c2 | E6 frente B | Tour com marca em ui_settings (frente B desta E6). |  |
+| PLAT-06 | Tour guiado da busca na primeira vez | ausente no c2 | #682 (E6) | Marca prospecting_search_tour_seen_at no ui_settings do usuário. | `F/utils/searchTour.js:8` |
 | PLAT-07 | Gate de plano no botão 'Adicionar à campanha' | divergente | #714 (E4) | Sem gate de plano; exige campaign_manage. | `C/base_controller.rb:29` |
 | PLAT-08 | Cota e medição de chamadas ao Google Places | divergente | #691 (E0) | Limites fora; consumed_api_units segue como medição. |  |
 | PLAT-09 | Créditos de inteligência (reserva, débito, pacotes, compra, câmbio) | ausente no c2 | fora (decisão) | Decisão do Rodrigo (24/09): sem cobrança, sem créditos, sem trava de consumo e sem gate de plano. |  |
@@ -605,7 +606,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PLAT-30 | Job de enriquecimento em lote | ausente no c2 | #706 (E2) | Jobs de enriquecimento e reaper no schedule. | `config/schedule.yml:222` |
 | PLAT-31 | Job da fila de pesquisa e retomada de pesquisas travadas | ausente no c2 | #709 (E3) | ResearchJob com trava e varredor. |  |
 | PLAT-32 | Crons financeiros da busca e da IA | ausente no c2 | fora (decisão) | Decisão do Rodrigo (24/09): sem cobrança, sem créditos, sem trava de consumo e sem gate de plano. |  |
-| PLAT-33 | Idiomas da tela de busca | divergente | E6 frente C | pt_BR (frente C desta E6). |  |
+| PLAT-33 | Idiomas da tela de busca | divergente | #682 (E6) | Tela da prospecção em pt_BR (frente C); termos mantidos de propósito: Status, Score, Lead, GMN, Google Places. | `app/javascript/dashboard/i18n/locale/en/prospecting.json:4` |
 | PLAT-34 | Idioma da resposta da IA | divergente | pendente | A instrução da IA do enriquecimento não recebe o idioma do usuário ou da conta. |  |
 | PLAT-35 | Status do lead no funil de prospecção e motivo do descarte | só no c2 | preservado |  |  |
 | PLAT-36 | Envio ao CRM com funil e etapa padrão da conta, e vínculo com contato e card | só no c2 | preservado | Base do envio com funil e estágio do #714. |  |
@@ -619,7 +620,7 @@ Somando: 34 esperam decisão e 49 esperam uma etapa. Os 8 **a confirmar** são i
 | PLAT-44 | Retenção e limpeza dos dados de pesquisa (payload bruto, candidatos não adotados, perfis órfãos, nonces) | ausente no c2 | fora (decisão) | Decisão do Rodrigo de 25/09 na #679: não apagar nada; a regra de retenção saiu do aceite. |  |
 | PLAT-45 | Trava por empresa pesquisada, registro de execuções e reuso do perfil com validade | ausente no c2 | #709 (E3) | Trava por empresa e reuso. | `S/research/company_lock.rb:25` |
 | PLAT-46 | Atualização em tempo real da tela (leads da busca, presets, novas buscas, progresso da pesquisa) | ausente no c2 | #706 (E2) | Evento ao vivo (lead); progresso da pesquisa no #709. |  |
-| PLAT-48 | Permissões cruzadas: a prospecção cria contato, cartão no CRM, etiqueta e mexe no público de campanha | só no c2 | #714 (E4) | Servidor exige a permissão do módulo de destino; esconder os botões é a frente C desta E6. |  |
+| PLAT-48 | Permissões cruzadas: a prospecção cria contato, cartão no CRM, etiqueta e mexe no público de campanha | só no c2 | #714 (E4) | Servidor exige a permissão do módulo de destino (#714). A #682 (E6) esconde Enviar ao CRM sem Crm::CardPolicy#create? e Adicionar à campanha sem campaign_manage (can_send_to_crm e can_manage_campaigns em C/settings_controller.rb:68). |  |
 | PLAT-49 | Abrir a prospecção por link direto ou F5 | divergente | #688 (fecha #675) | Link direto e F5 abrem a tela certa (fecha #675). |  |
 | PLAT-50 | Escolhas da tela sem <select> nativo | defasado | #670 (lote #652) | Selects nativos trocados na busca (#670), nas Listas (#671) e na configuração (#672). Nenhum <select> no código da prospecção. |  |
 | PLAT-51 | Diagnóstico da chave do Google Places da plataforma | ausente no c2 | pendente | Não há diagnóstico da chave do Google no superadmin (opcional no plano). |  |
