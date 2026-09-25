@@ -24,7 +24,7 @@ export const useSearchRepeat = (state, { applyCrmTarget, submitSearch }) => {
 
   const repeatSearch = async search => {
     await fillFormFrom(search);
-    await submitSearch();
+    await submitSearch({ fresh: true });
   };
 
   return { editSearch, repeatSearch };

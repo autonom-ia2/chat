@@ -35,15 +35,17 @@ export const useSearchForm = (
     }
   };
 
-  const submitSearch = async () => {
+  // fresh: Repetir do histórico chama o Google de novo, sem cache, como no Orth.
+  const submitSearch = async ({ fresh = false } = {}) => {
     if (!canSearch.value) return;
 
     isSearching.value = true;
     leads.value = [];
 
     try {
+      const request = buildSearchRequest(state);
       const { data } = await AutonomiaProspectingAPI.createSearch(
-        buildSearchRequest(state)
+        fresh ? { ...request, fresh: true } : request
       );
 
       const payload = data.payload || {};

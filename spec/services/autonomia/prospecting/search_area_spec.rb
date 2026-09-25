@@ -89,21 +89,21 @@ RSpec.describe Autonomia::Prospecting::SearchArea do
       )
     end
 
-    it 'retângulo vai como locationRestriction rectangle' do
+    it 'retângulo vai como locationBias rectangle, como no Orth' do
       config = { 'bounds' => { 'north' => -25.4, 'south' => -25.5, 'east' => -49.2, 'west' => -49.3 } }
 
       expect(described_class.google_location('rectangle', config, radius: 1000)).to eq(
-        locationRestriction: {
+        locationBias: {
           rectangle: { low: { latitude: -25.5, longitude: -49.3 }, high: { latitude: -25.4, longitude: -49.2 } }
         }
       )
     end
 
-    it 'polígono pede o retângulo que o contém como locationRestriction' do
+    it 'polígono pede o retângulo que o contém como locationBias, como no Orth' do
       config = described_class.normalize('polygon', { 'path' => u_path }, radius: 1000)
 
       expect(described_class.google_location('polygon', config, radius: 1000)).to eq(
-        locationRestriction: {
+        locationBias: {
           rectangle: { low: { latitude: -25.5, longitude: -49.3 }, high: { latitude: -25.4, longitude: -49.2 } }
         }
       )

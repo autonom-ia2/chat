@@ -2,9 +2,9 @@
 # existiam. Aqui mora a geometria: normalizar o que vem da tela, montar a posição do pedido ao Google e dizer se um
 # lugar está dentro do polígono.
 #
-# O Google só aceita círculo como viés (locationBias) e só aceita retângulo como restrição (locationRestriction).
-# Por isso o círculo desenhado vai como viés, e retângulo e polígono vão como restrição: quem desenhou quer o que está
-# dentro. O polígono pede o retângulo que o contém e o recorte ponto no polígono vem depois, na resposta.
+# Como no Orth (lib/services/search/area-utils.ts, toLocationBias), toda área vai ao Google como viés (locationBias):
+# o círculo como círculo, retângulo e polígono como retângulo. O polígono pede o retângulo que o contém e o recorte
+# ponto no polígono vem depois, na resposta.
 module Autonomia::Prospecting::SearchArea
   DRAWN_TYPES = %w[circle rectangle polygon].freeze
   TYPES = (%w[radius viewport] + DRAWN_TYPES).freeze
@@ -42,13 +42,13 @@ module Autonomia::Prospecting::SearchArea
     point_in_polygon?(lat, lng, Array(config.to_h['path']))
   end
 
-  # Pedaço de posição do corpo do searchText: { locationBias: ... }, { locationRestriction: ... } ou {}.
+  # Pedaço de posição do corpo do searchText: { locationBias: ... } ou {}.
   def google_location(area_type, config, radius:)
     config = config.to_h.deep_stringify_keys
     case area_type.to_s
     when 'rectangle', 'polygon'
       rectangle = google_rectangle(config['bounds'])
-      rectangle ? { locationRestriction: { rectangle: rectangle } } : {}
+      rectangle ? { locationBias: { rectangle: rectangle } } : {}
     when 'viewport'
       rectangle = google_rectangle(config['bounds'])
       rectangle ? { locationBias: { rectangle: rectangle } } : circle_bias(config, radius)

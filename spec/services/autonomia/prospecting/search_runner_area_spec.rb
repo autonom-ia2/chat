@@ -141,15 +141,15 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       expect(a_request(:post, google_endpoint)).to have_been_made.once
     end
 
-    it 'retângulo desenhado vai como locationRestriction rectangle' do
+    it 'retângulo desenhado vai como locationBias rectangle, como no Orth' do
       stub_google_places
 
       run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 1, area_type: 'rectangle',
                  area_config: { bounds: bounds })
 
       body = google_request_body
-      expect(body).not_to have_key('locationBias')
-      expect(body['locationRestriction']).to eq(
+      expect(body).not_to have_key('locationRestriction')
+      expect(body['locationBias']).to eq(
         'rectangle' => { 'low' => { 'latitude' => -25.5, 'longitude' => -49.3 },
                          'high' => { 'latitude' => -25.4, 'longitude' => -49.2 } }
       )
@@ -162,7 +162,7 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
       result = run_search(polygon_params(requested_limit: 2))
 
-      expect(google_request_body['locationRestriction']['rectangle']).to eq(
+      expect(google_request_body['locationBias']['rectangle']).to eq(
         'low' => { 'latitude' => -25.5, 'longitude' => -49.3 }, 'high' => { 'latitude' => -25.4, 'longitude' => -49.2 }
       )
       expect(result.leads.map(&:provider_place_id)).to eq(['places/in'])

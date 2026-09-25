@@ -97,6 +97,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       :limit,
       :crm_pipeline_id,
       :crm_stage_id,
+      :fresh,
       categories: [],
       area_config: {},
       metadata: [

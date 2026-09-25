@@ -21,7 +21,8 @@ class Autonomia::Prospecting::SearchRunner
 
   def perform
     validate!
-    cached = cached_result
+    # Repetir do histórico chama o Google de novo, como no Orth, que não tem cache de busca (#678).
+    cached = fresh? ? nil : cached_result
     return cached if cached
 
     search = create_search!
@@ -681,6 +682,10 @@ class Autonomia::Prospecting::SearchRunner
       value = metadata['score_mode'].presence || @setting.search_score_mode
       %w[gbp general].include?(value.to_s) ? value.to_s : 'gbp'
     end
+  end
+
+  def fresh?
+    ActiveModel::Type::Boolean.new.cast(@params[:fresh]) == true
   end
 
   def cached_result

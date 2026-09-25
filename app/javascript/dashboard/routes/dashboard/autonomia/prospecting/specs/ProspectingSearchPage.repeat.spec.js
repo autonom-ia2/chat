@@ -130,7 +130,7 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
     AutonomiaProspectingAPI.createSearch.mockReset();
   });
 
-  it('Repetir roda de novo com tudo o que a busca pediu, com o raio pedido', async () => {
+  it('Repetir roda de novo com tudo o que a busca pediu, com o raio pedido, sem cache (como o Orth)', async () => {
     const wrapper = await mountWithHistory([
       bakerySearch(),
       savedRadiusSearch(),
@@ -139,9 +139,10 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
     await clickOnCard(wrapper, 1, REPEAT);
 
     expect(AutonomiaProspectingAPI.createSearch).toHaveBeenCalledTimes(1);
-    expect(AutonomiaProspectingAPI.createSearch).toHaveBeenCalledWith(
-      expectedRadiusRequest
-    );
+    expect(AutonomiaProspectingAPI.createSearch).toHaveBeenCalledWith({
+      ...expectedRadiusRequest,
+      fresh: true,
+    });
     expect(AutonomiaProspectingAPI.getSearches).toHaveBeenCalledTimes(2);
   });
 
