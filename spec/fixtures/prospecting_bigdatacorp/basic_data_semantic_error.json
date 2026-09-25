@@ -1,0 +1,19 @@
+{
+  "QueryId": "sanitized-query-semantic-1",
+  "Status": {
+    "basic_data": [
+      {
+        "Code": 0,
+        "Message": "OK"
+      }
+    ]
+  },
+  "Result": [
+    {
+      "Error": {
+        "Code": "INVALID_QUERY",
+        "Message": "Sanitized provider error"
+      }
+    }
+  ]
+}

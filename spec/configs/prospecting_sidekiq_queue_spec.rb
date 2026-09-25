@@ -5,9 +5,10 @@ require 'rails_helper'
 RSpec.describe 'Fila da Prospecção no Sidekiq' do # rubocop:disable RSpec/DescribeClass
   let(:queues) { YAML.load(ERB.new(Rails.root.join('config/sidekiq.yml').read).result)[:queues] }
 
-  it 'enriquecimento e verificação de WhatsApp rodam na fila prospecting' do
+  it 'enriquecimento, verificação de WhatsApp e pesquisa de empresa e decisor rodam na fila prospecting' do
     expect(Autonomia::Prospecting::EnrichLeadJob.new.queue_name).to eq('prospecting')
     expect(Autonomia::Prospecting::VerifyWhatsappJob.new.queue_name).to eq('prospecting')
+    expect(Autonomia::Prospecting::Research::ResearchJob.new.queue_name).to eq('prospecting')
   end
 
   it 'a fila prospecting existe no Sidekiq e fica abaixo da scheduled_jobs' do

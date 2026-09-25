@@ -13,6 +13,7 @@ export const prospectingApiMock = () => ({
     createLeadCrmCard: vi.fn(),
     verifyLeadWhatsApp: vi.fn(),
     enrichLead: vi.fn(),
+    researchLead: vi.fn(),
   },
 });
 

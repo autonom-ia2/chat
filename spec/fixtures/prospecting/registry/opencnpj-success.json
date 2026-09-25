@@ -1,0 +1,32 @@
+{
+  "cnpj": "11.222.333/0001-81",
+  "razao_social": "EMPRESA ALFA SINTETICA LTDA",
+  "nome_fantasia": "ALFA SINTETICA",
+  "situacao_cadastral": "Ativa",
+  "logradouro": "RUA EXEMPLO",
+  "numero": "100",
+  "cep": "01001000",
+  "municipio": "SAO PAULO",
+  "uf": "SP",
+  "QSA": [
+    {
+      "nome_socio": "PESSOA FISICA SINTETICA",
+      "identificador_socio": 2,
+      "qualificacao_socio": "SOCIO-ADMINISTRADOR",
+      "faixa_etaria": "Entre 31 a 40 anos",
+      "nome_representante_legal": "REPRESENTANTE SINTETICO",
+      "qualificacao_representante_legal": "PROCURADOR"
+    },
+    {
+      "nome_socio": "PESSOA JURIDICA SINTETICA",
+      "identificador_socio": 1,
+      "qualificacao_socio": "SOCIO"
+    },
+    {
+      "nome_socio": "SOCIO ESTRANGEIRO SINTETICO",
+      "identificador_socio": 3,
+      "qualificacao_socio": "SOCIO",
+      "faixa_etaria": "Entre 13 a 20 anos"
+    }
+  ]
+}

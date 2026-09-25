@@ -1,0 +1,39 @@
+{
+  "QueryId": "sanitized-query-success-1",
+  "Status": {
+    "basic_data": [
+      {
+        "Code": 0,
+        "Message": "OK"
+      }
+    ]
+  },
+  "Result": [
+    {
+      "MatchKeys": "name{Emp**********lo},phone{********9999}",
+      "BasicData": {
+        "TaxIdNumber": "12345678000199",
+        "OfficialName": "Empresa Exemplo Ltda",
+        "TradeName": "Empresa Exemplo",
+        "TaxIdStatus": "ATIVA",
+        "HeadquarterState": "SP",
+        "IsHeadquarter": true,
+        "OfficialNameInputNameMatchPercentage": 98.5,
+        "TradeNameInputNameMatchPercentage": 100
+      }
+    },
+    {
+      "MatchKeys": "name{Emp*********************or}",
+      "BasicData": {
+        "TaxIdNumber": "98765432000188",
+        "OfficialName": "Empresa Exemplo Interior Ltda",
+        "TradeName": "Empresa Exemplo Interior",
+        "TaxIdStatus": "BAIXADA",
+        "HeadquarterState": "SP",
+        "IsHeadquarter": false,
+        "OfficialNameInputNameMatchPercentage": 87,
+        "TradeNameInputNameMatchPercentage": 91.25
+      }
+    }
+  ]
+}

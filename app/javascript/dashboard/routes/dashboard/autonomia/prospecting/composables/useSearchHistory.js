@@ -16,6 +16,7 @@ export const useSearchHistory = (
     isLoadingMoreSearches,
     canLoadMoreSearches,
     leads,
+    openSearchResearchProgress,
     selectedSearchId,
     selectedLeadIds,
     selectedLeadDetailId,
@@ -84,6 +85,7 @@ export const useSearchHistory = (
     selectedLeadIds.value = [];
     selectedLeadDetailId.value = null;
     const search = payload.search || payload;
+    openSearchResearchProgress.value = search.research_progress || null;
     restoreSearchViewState(search);
     await applyCrmTarget(search);
     verifyLeadsWhatsApp(leads.value);

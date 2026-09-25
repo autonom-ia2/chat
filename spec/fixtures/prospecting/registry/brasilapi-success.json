@@ -1,0 +1,31 @@
+{
+  "cnpj": "11.222.333/0001-81",
+  "razao_social": "EMPRESA BETA SINTETICA LTDA",
+  "nome_fantasia": "BETA SINTETICA",
+  "descricao_situacao_cadastral": "ATIVA",
+  "logradouro": "AVENIDA EXEMPLO",
+  "numero": "200",
+  "cep": "20040002",
+  "municipio": "RIO DE JANEIRO",
+  "uf": "RJ",
+  "qsa": [
+    {
+      "identificador_de_socio": 2,
+      "nome_socio": "PESSOA FISICA BRASIL API",
+      "qualificacao_socio": "SOCIO",
+      "faixa_etaria": "Entre 0 a 12 anos",
+      "nome_representante_legal": "REPRESENTANTE BRASIL API",
+      "qualificacao_representante_legal": "REPRESENTANTE LEGAL"
+    },
+    {
+      "identificador_de_socio": 1,
+      "nome_socio": "PESSOA JURIDICA BRASIL API",
+      "qualificacao_socio": "SOCIO"
+    },
+    {
+      "identificador_de_socio": 3,
+      "nome_socio": "SOCIO ESTRANGEIRO BRASIL API",
+      "qualificacao_socio": "SOCIO"
+    }
+  ]
+}

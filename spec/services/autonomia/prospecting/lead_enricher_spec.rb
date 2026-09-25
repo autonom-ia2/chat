@@ -148,25 +148,41 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
       expect(result.enriched_cnpj).to eq('12.345.678/0001-90')
     end
 
-    it 'grava decisor confiante e resumo da IA' do
+    # Com a pesquisa de empresa e decisor (#679), quem decide é o quadro de sócios: o enriquecimento fica com site,
+    # e-mail, WhatsApp, redes e CNPJ do site, e o resumo da IA. O decisor da IA não é gravado, nem vira confiança sem
+    # nome, e a rede da empresa nunca cai no decisor.
+    it 'grava o resumo da IA e não grava decisor, confiança nem rede no decisor' do
       result = enrich
 
-      expect(result.decision_name).to eq('Ana Souza')
-      expect(result.decision_role).to eq('Sócia')
-      expect(result.decision_source_url).to eq('https://clinicasorriso.example.com/equipe')
-      expect(result.decision_linkedin).to eq('https://linkedin.com/company/clinicasorriso')
-      expect(result.enrichment_summary).to eq('Clínica odontológica com duas unidades.')
+      expect(result).to have_attributes(
+        decision_name: nil, decision_role: nil, decision_confidence: nil, decision_source_url: nil,
+        decision_linkedin: nil, decision_instagram: nil,
+        enriched_linkedin: 'https://linkedin.com/company/clinicasorriso',
+        enrichment_summary: 'Clínica odontológica com duas unidades.'
+      )
+      expect(result.enriched_data['ai'].keys).to contain_exactly('summary', 'signals')
     end
 
-    it 'descarta nome e cargo do decisor com confiança abaixo de 0.6, mas guarda a confiança' do
-      allow(ai_client).to receive(:create).and_return({ text: ai_payload.merge('decision_confidence' => 0.5).to_json })
+    it 'decisor confiante da IA sozinho não conta como enriquecimento útil' do
+      lead.update!(website: nil)
+      allow(ai_client).to receive(:create).and_return({ text: ai_payload.merge('summary' => nil, 'signals' => []).to_json })
 
       result = enrich
 
-      expect(result.decision_name).to be_nil
-      expect(result.decision_role).to be_nil
-      expect(result.decision_source_url).to be_nil
-      expect(result.decision_confidence.to_f).to eq(0.5)
+      expect(result).to be_enrichment_failed
+      expect(result.enrichment_error).to eq('empty_result')
+    end
+
+    # O gabarito compara o método novo com o de hoje: o decisor da IA continua acessível, sem gravar nada.
+    it '.ai_decision devolve o decisor da IA sem gravar no lead' do
+      decision = described_class.ai_decision(lead)
+
+      expect(decision).to eq(
+        'decision_name' => 'Ana Souza', 'decision_role' => 'Sócia', 'decision_confidence' => 0.8,
+        'decision_source_url' => 'https://clinicasorriso.example.com/equipe', 'decision_linkedin' => nil,
+        'decision_instagram' => nil, 'confident' => true
+      )
+      expect(lead.reload).to have_attributes(decision_name: nil, enrichment_status: 'pending')
     end
 
     it 'engole erro da IA e conclui só com o site' do
@@ -342,13 +358,13 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
       expect(result.enriched_data).not_to have_key('error')
     end
 
-    it 'troca pelo valor novo quando o site traz outro' do
+    it 'troca pelo valor novo quando o site traz outro, sem trocar o decisor' do
       lead.update!(enriched_whatsapp: '+5541911112222', decision_name: 'Bruno Lima', decision_confidence: 0.9)
 
       result = enrich
 
       expect(result.enriched_whatsapp).to eq('+5541999990000')
-      expect(result.decision_name).to eq('Ana Souza')
+      expect(result.decision_name).to eq('Bruno Lima')
     end
   end
 end

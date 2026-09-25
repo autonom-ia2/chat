@@ -84,7 +84,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     return payload unless include_leads
 
     payload.merge(
-      leads: list.leads.order(created_at: :desc).map { |lead| lead_payload(lead) }
+      leads: list.leads.includes(:company_profile).order(created_at: :desc).map { |lead| lead_payload(lead) }
     )
   end
 
@@ -110,6 +110,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
       reviews_payload(lead)
     ).merge(
       whatsapp_payload(lead)
+    ).merge(
+      # O decisor da lista é o mesmo da busca: o da pesquisa (#679), nunca o nome que ficou gravado de antes.
+      ::Autonomia::Prospecting::LeadPayload.new(account: Current.account).research(lead)
     )
   end
 

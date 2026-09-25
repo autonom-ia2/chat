@@ -83,6 +83,51 @@ RSpec.describe 'Autonomia prospecting lists API', type: :request do
     expect(list.list_leads.count).to eq(0)
   end
 
+  # A lista mostra o mesmo decisor da busca (#679): o da pesquisa. O nome que ficou gravado de antes (palpite da IA da
+  # E2) continua no banco, mas não volta como decisor quando a pesquisa terminou sem dono.
+  describe 'decisor dos leads da lista' do
+    let(:profile) do
+      Autonomia::Prospecting::CompanyProfile.create!(
+        cnpj: '12345678000190', legal_name: 'ALPHA RESTAURANTE LTDA', verified_at: 1.day.ago,
+        registration_status: 'ATIVA', registration_state: 'MG', owners: [], qsa: []
+      )
+    end
+
+    def research(target, decision_status:, owners:, reason: nil)
+      target.update!(company_profile: profile, company_research_status: 'confirmed', decision_research_status: decision_status,
+                     metadata: { 'research' => { 'owners' => owners, 'no_decision_reason' => reason, 'decision_source' => 'qsa' } })
+    end
+
+    def listed_lead(target)
+      list = create_list
+      list.list_leads.create!(account: account, lead: target)
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/lists/#{list.id}", headers: auth_headers(admin)
+      expect(response).to have_http_status(:ok)
+      response.parsed_body.dig('payload', 'leads', 0)
+    end
+
+    it 'pesquisa sem dono: o nome antigo da IA não volta como decisor e o motivo vem no bloco research' do
+      lead.update!(decision_name: 'Joao Palpite IA', decision_role: 'Gerente')
+      research(lead, decision_status: 'no_result', owners: [], reason: 'only_companies')
+
+      payload = listed_lead(lead)
+
+      expect(payload['research']).to include('decision_status' => 'no_result', 'no_decision_reason' => 'only_companies',
+                                             'decision' => nil)
+      expect(payload.dig('research', 'company', 'legal_name')).to eq('ALPHA RESTAURANTE LTDA')
+    end
+
+    it 'pesquisa com dono: o decisor vem da pesquisa' do
+      lead.update!(decision_name: 'ANA SOUZA', decision_role: 'Sócio-Administrador', decision_confidence: 0.9)
+      research(lead, decision_status: 'confirmed', owners: [{ 'name' => 'ANA SOUZA', 'qualification' => 'Sócio-Administrador' }])
+
+      payload = listed_lead(lead)
+
+      expect(payload.dig('research', 'decision')).to include('name' => 'ANA SOUZA', 'role' => 'Sócio-Administrador')
+      expect(payload.dig('research', 'owners')).to eq([{ 'name' => 'ANA SOUZA', 'qualification' => 'Sócio-Administrador' }])
+    end
+  end
+
   it 'creates a campaign segment from leads ready for campaign' do
     list = create_list
     mark_ready_for_campaign(lead, phone: '+5531999990001')

@@ -1,0 +1,47 @@
+{
+  "cnpj_raiz": "11222333",
+  "razao_social": "EMPRESA GAMA SINTETICA LTDA",
+  "socios": [
+    {
+      "nome": "PESSOA FISICA CNPJ WS",
+      "tipo": "Pessoa Física",
+      "qualificacao_socio": {
+        "descricao": "Sócio-Administrador"
+      },
+      "faixa_etaria": "Entre 21 a 30 anos",
+      "nome_representante": "REPRESENTANTE CNPJ WS",
+      "qualificacao_representante": {
+        "id": 5,
+        "descricao": "Procurador"
+      }
+    },
+    {
+      "nome": "PESSOA JURIDICA CNPJ WS",
+      "tipo": "Pessoa Jurídica",
+      "qualificacao_socio": {
+        "descricao": "Sócio"
+      }
+    },
+    {
+      "nome": "TIPO NAO DOCUMENTADO CNPJ WS",
+      "tipo": "Outro",
+      "qualificacao_socio": {
+        "descricao": "Sócio"
+      }
+    }
+  ],
+  "estabelecimento": {
+    "cnpj": "11222333000181",
+    "nome_fantasia": "GAMA SINTETICA",
+    "situacao_cadastral": "Ativa",
+    "logradouro": "PRACA EXEMPLO",
+    "numero": "300",
+    "cep": "30110008",
+    "cidade": {
+      "nome": "BELO HORIZONTE"
+    },
+    "estado": {
+      "sigla": "MG"
+    }
+  }
+}

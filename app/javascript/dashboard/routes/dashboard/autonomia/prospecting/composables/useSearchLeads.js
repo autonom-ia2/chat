@@ -7,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+import { mergeLeadResearch } from '../utils/leadResearch';
 
 // Campos que o servidor grava por busca (lead_ranks e lead_scoring, #678).
 const SEARCH_SCOPED_FIELDS = [
@@ -24,6 +25,7 @@ const pickSearchScopedFields = lead =>
       lead[field],
     ])
   );
+import { useLeadResearch } from './useLeadResearch';
 import { useLeadCsv } from './useLeadCsv';
 import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
@@ -70,11 +72,16 @@ export const useSearchLeads = (state, { canManage }) => {
   // Toda resposta da API (evento, enriquecimento, card no CRM, WhatsApp) traz
   // o lead da conta, com posição, nota e prioridade da última busca que o
   // tocou. Esses campos são desta busca (#678) e ficam.
+  // A pesquisa de empresa e decisor (#679) não regride: resposta atrasada não
+  // desfaz o resultado que o evento já trouxe.
   const replaceLead = updatedLead => {
     if (!updatedLead?.id) return;
     leads.value = leads.value.map(item =>
       item.id === updatedLead.id
-        ? { ...updatedLead, ...pickSearchScopedFields(item) }
+        ? mergeLeadResearch(item, {
+            ...updatedLead,
+            ...pickSearchScopedFields(item),
+          })
         : item
     );
   };
@@ -167,6 +174,7 @@ export const useSearchLeads = (state, { canManage }) => {
       crmCardUrl,
     },
     useLeadWhatsApp(state, { canManage, replaceLead }),
+    useLeadResearch(state, { replaceLead }),
     useLeadSelection(state),
     useLeadCsv(state, t)
   );

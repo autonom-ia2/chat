@@ -60,6 +60,12 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.post(`${this.url}/leads/${leadId}/enrichment`);
   }
 
+  // Pesquisa de empresa e decisor (#679): 202 e fila; force ignora o resultado
+  // guardado (verificar novamente).
+  researchLead(leadId, { force = false } = {}) {
+    return axios.post(`${this.url}/leads/${leadId}/research`, { force });
+  }
+
   updateLead(leadId, lead) {
     return axios.patch(`${this.url}/leads/${leadId}`, { lead });
   }

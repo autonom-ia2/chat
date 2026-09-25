@@ -597,4 +597,27 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       end
     end
   end
+
+  # A prioridade conta o mesmo decisor que a tela mostra (#679): o da pesquisa. O nome gravado antes dela (palpite da IA
+  # da E2) continua no lead, mas não sobe a prioridade.
+  describe 'decisor na prioridade' do
+    let(:runner) { described_class.new(account: account, user: user, params: { query: 'padaria' }) }
+
+    def lead_with(decision_status:, decision_name:)
+      Autonomia::Prospecting::Lead.new(account: account, provider: 'mock', provider_place_id: 'p1', name: 'Padaria', phone: '+554133330000',
+                                       decision_name: decision_name, decision_research_status: decision_status)
+    end
+
+    it 'conta o decisor confirmado ou possível da pesquisa' do
+      %w[confirmed possible].each do |status|
+        expect(runner.send(:priority_multiplier, lead_with(decision_status: status, decision_name: 'ANA SOUZA'))).to eq(1.2)
+      end
+    end
+
+    it 'não conta o nome antigo quando a pesquisa não confirmou decisor ou nunca rodou' do
+      %w[no_result ambiguous failed not_researched].each do |status|
+        expect(runner.send(:priority_multiplier, lead_with(decision_status: status, decision_name: 'Joao Palpite IA'))).to eq(1.0)
+      end
+    end
+  end
 end

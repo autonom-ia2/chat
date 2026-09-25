@@ -27,13 +27,14 @@ module Autonomia::Prospecting::LeadWorkQueue
     true
   end
 
-  # Disparo do servidor ao fim da busca: não depende da aba aberta. Enriquecer é pesquisa (só com a pesquisa
-  # ligada pelo superadmin, #683) e só para quem nunca foi enriquecido; verificar WhatsApp roda sempre que o
-  # módulo está ligado e há sessão WAHA na conta.
+  # Disparo do servidor ao fim da busca: não depende da aba aberta. Enriquecer e pesquisar empresa e decisor é pesquisa
+  # (só com a pesquisa ligada pelo superadmin, #683) e só para quem nunca passou por ela; verificar WhatsApp roda sempre
+  # que o módulo está ligado e há sessão WAHA na conta.
   def after_search(account:, leads:)
     return unless Autonomia::Prospecting::Config.enabled?(account)
 
     leads.select(&:enrichment_pending?).each { |lead| enqueue_enrichment(lead) } if Autonomia::Prospecting::Config.research_enabled?(account)
+    Autonomia::Prospecting::Research::Queue.after_search(account: account, leads: leads)
     enqueue_whatsapp(account, leads) if Autonomia::Prospecting::WhatsappVerifier.available_for?(account)
   end
 

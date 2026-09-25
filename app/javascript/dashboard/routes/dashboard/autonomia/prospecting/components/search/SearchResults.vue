@@ -5,6 +5,7 @@ import ProspectingGoogleMap from '../ProspectingGoogleMap.vue';
 import ResultsFiltersPopover from './ResultsFiltersPopover.vue';
 import BulkActionsBar from './BulkActionsBar.vue';
 import LeadCard from './LeadCard.vue';
+import ResearchProgressBar from './ResearchProgressBar.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
 
@@ -20,6 +21,7 @@ const {
   activeFiltersCount,
   googleMapsApiKey,
   exportCsv,
+  researchProgress,
 } = useProspectingSearchContext();
 
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
@@ -158,6 +160,7 @@ const selectedSearchMapRadius = computed(() =>
           {{ t('PROSPECTING.QUALITY.NO_STATUS_RESULTS') }}
         </div>
         <div v-else class="grid min-w-0 gap-3 p-4">
+          <ResearchProgressBar :progress="researchProgress" />
           <BulkActionsBar />
           <LeadCard v-for="lead in sortedLeads" :key="lead.id" :lead="lead" />
         </div>

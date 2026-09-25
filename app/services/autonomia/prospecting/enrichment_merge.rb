@@ -1,6 +1,10 @@
 # Junta o resultado de um enriquecimento com o que o lead já tem (#678, E2 frente D). O que o site ou a IA trouxe
-# agora vence; o que não trouxe fica como estava: um segundo enriquecimento sem o WhatsApp, o CNPJ, o e-mail, as
-# redes ou o decisor não apaga o que o primeiro achou.
+# agora vence; o que não trouxe fica como estava: um segundo enriquecimento sem o WhatsApp, o CNPJ, o e-mail ou as
+# redes não apaga o que o primeiro achou.
+#
+# O decisor não é mais do enriquecimento (#679): quem decide sai do quadro de sócios, pela pesquisa de empresa e
+# decisor. Daqui não sai nome, cargo, confiança, fonte nem rede de decisor, e o palpite da IA não fica guardado.
+# O decisor da IA continua acessível para o gabarito em LeadEnricher.ai_decision.
 class Autonomia::Prospecting::EnrichmentMerge
   CONTACT_FIELDS = {
     enriched_email: 'email',
@@ -10,15 +14,17 @@ class Autonomia::Prospecting::EnrichmentMerge
     enriched_linkedin: 'linkedin',
     enriched_cnpj: 'cnpj'
   }.freeze
-  DECISION_FIELDS = %i[decision_name decision_role decision_confidence decision_source_url].freeze
   # Chaves do scraper que não são dado do site: sozinhas, a página não trouxe nada.
   SCRAPE_BOOKKEEPING_KEYS = %w[website scraped_at truncated source_urls].freeze
+  # Chaves da resposta da IA que falam de uma pessoa: não entram no lead.
+  AI_DECISION_KEYS = %w[decision_name decision_role decision_confidence decision_source_url decision_linkedin decision_instagram].freeze
+  # Régua do decisor da IA, usada só pelo gabarito (LeadEnricher.ai_decision).
   CONFIDENT_DECISION = 0.6
 
   def initialize(lead:, scraped:, ai_data:)
     @lead = lead
     @scraped = scraped
-    @ai = ai_data
+    @ai = ai_data.except(*AI_DECISION_KEYS)
   end
 
   # Falso quando nem o site nem a IA trouxeram algo que o vendedor use: aí o enriquecimento é falha, não "enriquecido".
@@ -34,18 +40,15 @@ class Autonomia::Prospecting::EnrichmentMerge
       enrichment_failed_attempts: 0,
       enrichment_source: useful_ai? ? 'site_and_autonomia_ai' : 'site',
       enriched_data: enriched_data,
-      decision_linkedin: first_present(@ai['decision_linkedin'], @scraped['linkedin'], @lead.decision_linkedin),
-      decision_instagram: first_present(@ai['decision_instagram'], @scraped['instagram'], @lead.decision_instagram),
       enrichment_summary: first_present(@ai['summary'], summary_from_scrape, @lead.enrichment_summary),
-      **contact_fields,
-      **decision_fields
+      **contact_fields
     }
   end
 
   private
 
   def useful_ai?
-    confident_decision? || @ai.slice('summary', 'decision_linkedin', 'decision_instagram').compact_blank.present?
+    @ai['summary'].present?
   end
 
   # O erro gravado por uma rodada antiga sai; a IA desta rodada vence quando trouxe algo.
@@ -56,23 +59,6 @@ class Autonomia::Prospecting::EnrichmentMerge
 
   def contact_fields
     CONTACT_FIELDS.to_h { |column, key| [column, first_present(@scraped[key], @lead.public_send(column))] }
-  end
-
-  # Decisor confiante novo substitui o anterior inteiro; sem ele, o decisor que já havia fica. Sem nenhum dos dois,
-  # guarda só a confiança que a IA deu.
-  def decision_fields
-    if confident_decision?
-      { decision_name: @ai['decision_name'], decision_role: @ai['decision_role'],
-        decision_confidence: @ai['decision_confidence'], decision_source_url: @ai['decision_source_url'] }
-    elsif @lead.decision_name.present?
-      DECISION_FIELDS.index_with { |field| @lead.public_send(field) }
-    else
-      { decision_name: nil, decision_role: nil, decision_confidence: @ai['decision_confidence'], decision_source_url: nil }
-    end
-  end
-
-  def confident_decision?
-    @ai['decision_name'].present? && @ai['decision_confidence'].to_f >= CONFIDENT_DECISION
   end
 
   def summary_from_scrape

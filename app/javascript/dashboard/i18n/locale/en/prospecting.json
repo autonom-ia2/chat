@@ -563,6 +563,98 @@
       "MISSING_TITLE": "Sem chave de IA do Kanban CRM",
       "MISSING_DESCRIPTION": "A IA da prospecção usa só a chave da integração CRM Kanban AI desta conta. Sem ela, o enriquecimento traz apenas o que está no site do lead, sem resumo nem decisor.",
       "CONFIGURE": "Configurar em Configurações > Integrações > CRM Kanban AI"
+    },
+    "RESEARCH": {
+      "STATES": {
+        "NOT_RESEARCHED": "Não pesquisado",
+        "QUEUED": "Na fila",
+        "RESEARCHING": "Em pesquisa",
+        "WAITING_CAPACITY": "Aguardando capacidade",
+        "CONFIRMED": "Confirmado",
+        "POSSIBLE": "Possível",
+        "AMBIGUOUS": "Ambíguo",
+        "NO_RESULT": "Nenhum resultado",
+        "FAILED": "Falha técnica",
+        "BLOCKED": "Bloqueado"
+      },
+      "BADGE": {
+        "COMPANY": "Empresa: {state}",
+        "DECISION": "Decisor: {state}"
+      },
+      "DECISION_LABEL": "Decisor:",
+      "DECISION_LINE": {
+        "NOT_RESEARCHED": "Não pesquisado",
+        "IN_PROGRESS": "Pesquisa em andamento",
+        "WAITING_CAPACITY": "Aguardando capacidade · retomada automática",
+        "FAILED": "Pesquisa não concluída",
+        "POSSIBLE": "Possível decisor",
+        "NOT_CONFIRMED": "Não confirmado",
+        "BLOCKED": "Pesquisa bloqueada",
+        "DISABLED": "Pesquisa desligada"
+      },
+      "CONFIDENCE": "{percent}% de confiança",
+      "VERIFIED_ON": "verificado em {date}",
+      "REUSED": "resultado reutilizado",
+      "PROGRESS": {
+        "LABEL": "{done} de {total} concluídos",
+        "RUNNING": "em andamento",
+        "FINISHED": "concluído",
+        "FAILED_COUNT": "{count} com falha"
+      },
+      "PANEL": {
+        "TITLE": "Empresa e decisor",
+        "SEARCH": "Pesquisar",
+        "RETRY": "Verificar novamente",
+        "RUNNING": "Pesquisando…",
+        "CONFIRM_TITLE": "Refazer pesquisa?",
+        "CONFIRM_DESCRIPTION": "Vamos pesquisar este lead de novo, sem usar o resultado guardado. O resultado atual fica na tela até o novo chegar.",
+        "CONFIRM_ACTION": "Refazer pesquisa",
+        "CANCEL": "Cancelar",
+        "OWNERS_TITLE": "Quem atende",
+        "COMPANY_TITLE": "Empresa",
+        "LEGAL_NAME": "Razão social",
+        "TRADE_NAME": "Nome fantasia",
+        "CNPJ": "CNPJ",
+        "COPY_CNPJ": "Copiar CNPJ {cnpj}",
+        "COPY_SUFFIX": "copiar",
+        "CNPJ_COPIED": "CNPJ copiado.",
+        "CNPJ_COPY_FAILED": "Não foi possível copiar o CNPJ.",
+        "REGISTRATION_STATUS": "Situação",
+        "REGISTRATION_STATE": "Registro {state}",
+        "INACTIVE_ALERT": "Empresa com situação {status} na Receita",
+        "UPDATED_ON": "Pesquisa atualizada em {date}",
+        "REUSED_ON": "Resultado reutilizado em {date}",
+        "NEVER_RESEARCHED": "Nenhuma pesquisa de empresa e decisor feita para este lead.",
+        "RUNNING_HINT": "A pesquisa está confirmando a empresa e o quadro de sócios.",
+        "DISABLED": "A pesquisa de empresa e decisor está desligada nesta conta.",
+        "FAILED": "A última pesquisa não pôde ser concluída. Tente verificar novamente.",
+        "BLOCKED": "A pesquisa deste lead foi bloqueada."
+      },
+      "NO_DECISION_REASON": {
+        "COMPANY_NOT_FOUND": "Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).",
+        "COMPANY_AMBIGUOUS": "Mais de uma empresa do cadastro público combina com este lead; nenhuma foi escolhida.",
+        "EXPLICIT_ROLE_NOT_SUPPORTED": "A pesquisa pelo cadastro público só indica o proprietário; o tipo de decisor pedido ainda não tem pesquisa.",
+        "NO_QSA": "A Receita não traz quadro de sócios para esta empresa.",
+        "ONLY_COMPANIES": "Os sócios desta empresa são outras empresas, não pessoas.",
+        "ONLY_MINORS": "O quadro de sócios só tem menores de idade, que não são mostrados.",
+        "NO_ELIGIBLE_ROLE": "Nenhum sócio com vínculo de dono ou de comando (sócio, titular, administrador, diretor).",
+        "PUBLIC_ENTITY": "É um órgão público: não há dono a indicar.",
+        "UNKNOWN": "Nenhum decisor foi confirmado no cadastro público."
+      },
+      "QUALIFICATIONS": {
+        "SOCIO_ADMINISTRADOR": "Sócio-administrador",
+        "SOCIO": "Sócio",
+        "TITULAR": "Titular",
+        "EMPRESARIO_INDIVIDUAL": "Empresário individual",
+        "PROPRIETARIO": "Proprietário",
+        "ACIONISTA_CONTROLADOR": "Acionista controlador",
+        "ADMINISTRADOR": "Administrador",
+        "DIRETOR": "Diretor",
+        "PRESIDENTE": "Presidente",
+        "CEO": "CEO"
+      },
+      "QUEUED_ALERT": "Pesquisa na fila. O resultado aparece aqui sozinho.",
+      "REQUEST_ERROR": "Não foi possível pedir a pesquisa."
     }
   }
 }
