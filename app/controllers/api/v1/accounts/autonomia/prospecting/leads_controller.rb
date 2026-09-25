@@ -1,6 +1,10 @@
 class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  before_action :authorize_crm_card_create!, only: [:create_crm_card, :create_crm_cards]
+  before_action -> { authorize_campaign_update!(params[:campaign_id]) }, only: [:create_campaign_segment]
+
   def index
-    render json: { payload: filtered_leads_scope.includes(:company_profile).order(created_at: :desc).limit(100).map { |lead| lead_payload(lead) } }
+    leads = filtered_leads_scope.includes(:company_profile, :contact).order(created_at: :desc).limit(100)
+    render json: { payload: leads.map { |lead| lead_payload(lead) } }
   end
 
   def show
@@ -124,12 +128,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { payload: { lead: lead_payload(lead.reload) } }, status: :accepted
   end
 
-  # "Usar como contato" (#680): um sócio da pesquisa vira o decisor e o contato do lead. Responde o lead.
+  # "Usar como contato" (#680): um sócio da pesquisa vira o decisor e o contato do lead. Responde o lead, e ao lado dele
+  # o que aconteceu com o contato (contact_outcome), para a tela não dizer que trocou o contato quando não trocou.
   def adopt_owner
     lead = leads_scope.find(params[:id])
-    ::Autonomia::Prospecting::OwnerAdoption.new(lead: lead, user: Current.user, owner_name: params[:owner_name]).perform
+    result = ::Autonomia::Prospecting::OwnerAdoption.new(lead: lead, user: Current.user, owner_name: params[:owner_name]).perform
 
-    render json: { payload: lead_payload(lead.reload) }
+    render json: { payload: lead_payload(lead.reload), contact_outcome: result.contact_outcome, shared_lead_name: result.shared_lead_name }
   rescue ::Autonomia::Prospecting::OwnerAdoption::NotAnOwner
     render json: { error: I18n.t('autonomia.prospecting.errors.owner_not_found'), code: 'prospecting.owner_not_found' },
            status: :unprocessable_entity

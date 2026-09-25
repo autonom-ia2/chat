@@ -4,9 +4,9 @@
 # - Com decisor (pesquisa confirmada ou possível, ou o decisor que a IA achou antes de existir pesquisa), o contato é a
 #   pessoa: nome do decisor, cargo, empresa, e-mail, o WhatsApp verificado e as redes. Sem decisor, é a própria empresa.
 # - Acha o contato existente pelo telefone, pelo identificador da prospecção ou pelo e-mail; reenvio nunca duplica.
-# - Contato existente só ganha o que está vazio. O nome só muda quando fomos nós que o escrevemos (o nome gravado em
-#   custom_attributes, o do lead ou o da empresa): assim "Usar como contato" troca a empresa pela pessoa, mas o nome que
-#   o usuário deu fica.
+# - Contato existente só ganha o que está vazio. O nome e o cargo só mudam quando fomos nós que os escrevemos (a marca
+#   em custom_attributes): assim "Usar como contato" troca a empresa pela pessoa, mas o nome e o cargo que o usuário
+#   deu ficam, mesmo quando o nome dele coincide com o do negócio no Google.
 # - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
 #   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
 #   dados dele.
@@ -15,6 +15,7 @@ class Autonomia::Prospecting::ContactConverter
 
   DECISION_STATUSES = %w[confirmed possible].freeze
   WRITTEN_NAME_KEY = 'autonomia_prospecting_contact_name'.freeze
+  WRITTEN_JOB_TITLE_KEY = 'autonomia_prospecting_contact_job_title'.freeze
 
   def initialize(lead:, user:, company: nil)
     @lead = lead
@@ -100,14 +101,29 @@ class Autonomia::Prospecting::ContactConverter
 
   def rename(contact)
     contact.name = contact_name
-    contact.additional_attributes = contact.additional_attributes.to_h.merge('job_title' => decision_maker? ? @lead.decision_role : nil).compact
     contact.custom_attributes = contact.custom_attributes.to_h.merge(WRITTEN_NAME_KEY => contact_name)
+    write_job_title(contact)
   end
 
+  # Só o nome que nós escrevemos (contato novo, sem nome, ou com a marca WRITTEN_NAME_KEY) é trocado. Contato que o
+  # usuário já tinha fica com o nome dele, mesmo quando coincide com o nome do negócio no Google.
   def replaceable_name?(contact)
     return true if contact.new_record? || contact.name.blank?
 
-    [contact.custom_attributes.to_h[WRITTEN_NAME_KEY], @lead.name, @company.name].compact.include?(contact.name)
+    contact.custom_attributes.to_h[WRITTEN_NAME_KEY] == contact.name
+  end
+
+  # O cargo segue a mesma regra: só grava o do decisor quando o campo está vazio ou guarda o que nós gravamos. Sem
+  # decisor, sai só o cargo que nós pusemos; o que o usuário digitou nunca é apagado.
+  def write_job_title(contact)
+    attributes = contact.additional_attributes.to_h
+    current = attributes['job_title']
+    written = contact.custom_attributes.to_h[WRITTEN_JOB_TITLE_KEY]
+    return if current.present? && current != written
+
+    role = decision_maker? ? @lead.decision_role.presence : nil
+    contact.additional_attributes = attributes.merge('job_title' => role).compact
+    contact.custom_attributes = contact.custom_attributes.to_h.merge(WRITTEN_JOB_TITLE_KEY => role).compact
   end
 
   # Valor único por conta (telefone, e-mail, identificador): só preenche o vazio, e só se outro contato não o usa.

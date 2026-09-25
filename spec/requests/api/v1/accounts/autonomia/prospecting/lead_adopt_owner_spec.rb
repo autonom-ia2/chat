@@ -66,6 +66,45 @@ RSpec.describe 'Autonomia prospecting lead adopt owner', type: :request do
     expect(lead.contact.additional_attributes['job_title']).to eq('SOCIO')
   end
 
+  it 'diz que o contato virou a pessoa, e o lead traz o nome do contato real' do
+    adopt('BRUNO LIMA')
+
+    expect(response.parsed_body['contact_outcome']).to eq('updated')
+    expect(response.parsed_body.dig('payload', 'contact_name')).to eq('BRUNO LIMA')
+  end
+
+  it 'contato dividido com outro lead: troca o decisor, não mexe no contato e diz isso' do
+    alpha = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/alpha',
+                                                 name: 'Oficina Alpha', phone: '+55 41 3333-4444')
+    alpha_contact = Autonomia::Prospecting::ContactConverter.new(lead: alpha, user: admin).perform.contact
+
+    adopt('BRUNO LIMA')
+
+    expect(response).to have_http_status(:ok)
+    body = response.parsed_body
+    expect(body['contact_outcome']).to eq('shared_with_other_lead')
+    expect(body['shared_lead_name']).to eq('Oficina Alpha')
+    expect(body.dig('payload', 'decision_name')).to eq('BRUNO LIMA')
+    expect(body.dig('payload', 'contact_name')).to eq('Oficina Alpha')
+    expect(alpha_contact.reload.name).to eq('Oficina Alpha')
+  end
+
+  it 'lead já no CRM: o card passa a mostrar o decisor novo, na descrição e no metadata' do
+    allow(Crm::Config).to receive(:enabled?).and_return(true)
+    lead.update!(decision_research_status: 'confirmed', company_research_status: 'confirmed')
+    _pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    card = Autonomia::Prospecting::CrmCardConverter.new(lead: lead, user: admin, pipeline_id: stage.pipeline_id, stage_id: stage.id)
+                                                   .perform.card
+    expect(card.description).to include('ANA SOUZA')
+
+    adopt('BRUNO LIMA')
+
+    card.reload
+    expect(card.metadata.dig('autonomia_prospecting', 'decision', 'name')).to eq('BRUNO LIMA')
+    expect(card.description).to include('BRUNO LIMA')
+    expect(card.description).not_to include('ANA SOUZA')
+  end
+
   it 'recusa nome fora da lista da pesquisa com 422, sem mexer no lead' do
     adopt('CARLOS INVENTADO')
 

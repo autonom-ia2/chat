@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
+
   def index
     render json: { payload: lists_scope.order(created_at: :desc).limit(100).map { |list| list_payload(list) } }
   end
@@ -77,7 +79,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     return payload unless include_leads
 
     payload.merge(
-      leads: list.leads.includes(:company_profile).order(created_at: :desc).map { |lead| lead_payload(lead) }
+      leads: list.leads.includes(:company_profile, :contact).order(created_at: :desc).map { |lead| lead_payload(lead) }
     )
   end
 

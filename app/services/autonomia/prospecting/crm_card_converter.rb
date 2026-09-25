@@ -40,6 +40,12 @@ class Autonomia::Prospecting::CrmCardConverter
     existing_result(card)
   end
 
+  # O decisor do card (metadata e linha da descrição) com o lead como está agora. O OwnerAdoption usa o mesmo para o
+  # card acompanhar o "Usar como contato".
+  def decision_snapshot
+    { 'decision' => decision, 'line' => decision_line }
+  end
+
   private
 
   def find_stage

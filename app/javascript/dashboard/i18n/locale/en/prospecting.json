@@ -631,7 +631,11 @@
         "USE_AS_CONTACT_LABEL": "Usar {name} como contato",
         "ADOPTING": "Salvando…",
         "CURRENT_CONTACT": "Contato atual",
+        "DECISION_OWNER": "Decisor",
         "OWNER_ADOPTED": "{name} agora é o decisor e o contato deste lead.",
+        "OWNER_ADOPTED_SHARED_CONTACT": "Decisor trocado para {name}. O contato do CRM é compartilhado com {other} e não foi alterado.",
+        "OWNER_ADOPTED_SHARED_CONTACT_UNNAMED": "Decisor trocado para {name}. O contato do CRM é compartilhado com outro negócio e não foi alterado.",
+        "OWNER_ADOPTED_KEPT_CONTACT": "Decisor trocado para {name}. O contato deste lead já existia com outro nome e não foi alterado.",
         "ADOPT_ERROR": "Não foi possível usar este sócio como contato."
       },
       "NO_DECISION_REASON": {

@@ -80,6 +80,50 @@ RSpec.describe Autonomia::Prospecting::CampaignSegmentBuilder do
     end
   end
 
+  # Quem pediu para não receber é o número, não o lead: outro lead com o mesmo telefone acha o mesmo contato (ou o
+  # cria) e não pode levar a campanha até quem recusou.
+  describe 'recusa de um lead vale para o mesmo número em outro lead' do
+    it 'contato já criado pelo lead que recusou: o outro lead fica fora e o contato não ganha a etiqueta' do
+      add_lead(name: 'Pronto', phone: '+5531999990009')
+      refused = add_lead(name: 'Recusou', phone: '+5531999990001')
+      Autonomia::Prospecting::ContactConverter.new(lead: refused, user: user).perform
+      refused.update!(status: :no_consent)
+      add_lead(name: 'Outra unidade', phone: '+5531999990001')
+
+      result = described_class.new(list: list, user: user, segment_name: 'Selecao').perform
+
+      expect(reasons(result)).to eq('Recusou' => 'opt_out', 'Outra unidade' => 'opt_out')
+      expect(refused.reload.contact.label_list).not_to include(result.label.title)
+    end
+
+    it 'sem contato prévio: o lead pronto com o número de quem recusou não cria contato nem recebe' do
+      add_lead(name: 'Pronto', phone: '+5531999990009')
+      add_lead(name: 'Recusou', phone: '+5531999990001', status: :no_consent)
+      other = add_lead(name: 'Outra unidade', phone: '+55 31 99999-0001')
+
+      result = described_class.new(list: list, user: user, segment_name: 'Selecao').perform
+
+      expect(reasons(result)).to eq('Recusou' => 'opt_out', 'Outra unidade' => 'opt_out')
+      expect(other.reload.contact).to be_nil
+      expect(account.contacts.where(phone_number: '+5531999990001')).to be_empty
+    end
+
+    it 'recusa de lead fora da lista também vale, pelo contato ligado a ele' do
+      add_lead(name: 'Pronto', phone: '+5531999990009')
+      outside = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'place-fora', name: 'Fora',
+                                                     phone: '+5531977770000', country: 'BR', enriched_email: 'dono@loja.com.br')
+      contact = Autonomia::Prospecting::ContactConverter.new(lead: outside, user: user).perform.contact
+      outside.update!(status: :no_consent)
+      lead = add_lead(name: 'Mesmo e-mail', phone: '+5531999990002')
+      lead.update!(enriched_email: 'dono@loja.com.br')
+
+      result = described_class.new(list: list, user: user, segment_name: 'Selecao').perform
+
+      expect(reasons(result)).to eq('Mesmo e-mail' => 'opt_out')
+      expect(contact.reload.label_list).not_to include(result.label.title)
+    end
+  end
+
   it 'sem nenhum elegível recusa, e ainda assim diz o motivo de cada bloqueado' do
     add_lead(name: 'Sem WhatsApp', phone: '+5531999990005', verified: false)
     builder = described_class.new(list: list, user: user)

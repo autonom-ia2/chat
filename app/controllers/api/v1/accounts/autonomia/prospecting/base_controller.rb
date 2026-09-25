@@ -8,6 +8,25 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     render json: { error: 'autonomia.prospecting.disabled' }, status: :not_found unless ::Autonomia::Prospecting::Config.enabled?(Current.account)
   end
 
+  # Enviar ao CRM cria card e roda a automação de entrada do estágio: exige a mesma permissão de criar card do próprio
+  # CRM (Crm::CardPolicy#create?), além da prospecção (#680).
+  def authorize_crm_card_create!
+    return if Pundit.policy!(pundit_user, ::Crm::Card).create?
+
+    render json: { error: I18n.t('autonomia.prospecting.crm_send.errors.forbidden'), code: 'prospecting.crm_send.forbidden' },
+           status: :forbidden
+  end
+
+  # Pôr o segmento numa campanha muda a audiência dela, e a campanha manda mensagem real: exige a permissão de gerenciar
+  # campanhas (CampaignPolicy#update?). Sem campanha escolhida, o segmento só etiqueta contatos.
+  def authorize_campaign_update!(campaign_id)
+    return if campaign_id.blank?
+    return if Current.account_user&.permission_granted?('campaign_manage')
+
+    render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
+           status: :forbidden
+  end
+
   def searches_scope
     ::Autonomia::Prospecting::Search.where(account: Current.account)
   end

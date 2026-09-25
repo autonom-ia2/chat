@@ -216,6 +216,52 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
     end
   end
 
+  # Contato que o usuário já tinha e que a prospecção nunca gravou: o nome dele pode coincidir com o do negócio no
+  # Google (perfil comercial do WhatsApp), e mesmo assim não é nosso para renomear nem para apagar o cargo.
+  describe 'contato do usuário com o mesmo nome do negócio (#680)' do
+    it 'decisor não renomeia o contato nem apaga o cargo que o usuário digitou' do
+      existing = create(:contact, account: account, name: 'Padaria Alpha', phone_number: '+5531999990001',
+                                  additional_attributes: { 'job_title' => 'Atendimento loja centro' })
+      padaria = Autonomia::Prospecting::Lead.create!(
+        account: account, provider: 'mock', provider_place_id: 'places/padaria', name: 'Padaria Alpha', phone: '+5531999990001',
+        country: 'BR', decision_name: 'Joao da Silva', decision_role: 'Dono', decision_research_status: 'not_researched'
+      )
+
+      contact = described_class.new(lead: padaria, user: user).perform.contact.reload
+
+      expect(contact).to eq(existing)
+      expect(contact.name).to eq('Padaria Alpha')
+      expect(contact.additional_attributes['job_title']).to eq('Atendimento loja centro')
+    end
+
+    it 'sem decisor, o cargo do contato do usuário fica' do
+      create(:contact, account: account, name: 'Oficina Beta', phone_number: '+5531999990002',
+                       additional_attributes: { 'job_title' => 'Gerente' })
+      oficina = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/oficina',
+                                                     name: 'Oficina Beta', phone: '+5531999990002', country: 'BR')
+
+      contact = described_class.new(lead: oficina, user: user).perform.contact.reload
+
+      expect(contact.name).to eq('Oficina Beta')
+      expect(contact.additional_attributes['job_title']).to eq('Gerente')
+    end
+
+    it 'cargo que nós gravamos troca com o decisor; cargo que o usuário mudou depois fica' do
+      lead.update!(decision_name: 'ANA SOUZA', decision_role: 'SOCIA', decision_research_status: 'not_researched')
+      contact = described_class.new(lead: lead, user: user).perform.contact
+      expect(contact.additional_attributes['job_title']).to eq('SOCIA')
+
+      lead.update!(decision_name: 'BRUNO LIMA', decision_role: 'SOCIO')
+      expect(described_class.new(lead: lead, user: user).perform.contact.additional_attributes['job_title']).to eq('SOCIO')
+
+      contact.reload.update!(additional_attributes: contact.additional_attributes.merge('job_title' => 'Diretor comercial'))
+      lead.update!(decision_name: 'CARLA DIAS', decision_role: 'SOCIA')
+      renamed = described_class.new(lead: lead, user: user).perform.contact
+      expect(renamed.name).to eq('CARLA DIAS')
+      expect(renamed.additional_attributes['job_title']).to eq('Diretor comercial')
+    end
+  end
+
   describe 'telefone do contato pela tabela compartilhada com o front' do
     ProspectingPhoneContractCases.all.each do |item|
       it "#{item['caso']}: #{item['raw'].inspect} grava #{item['e164'].inspect}" do

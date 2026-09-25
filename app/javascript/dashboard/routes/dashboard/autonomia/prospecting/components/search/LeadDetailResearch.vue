@@ -96,7 +96,14 @@ const qualificationText = qualification => {
 const sameName = (left, right) =>
   (left || '').trim().toLocaleUpperCase() ===
   (right || '').trim().toLocaleUpperCase();
+// "Contato atual" compara com o contato real do lead (contact_name), não com o
+// decisor: o contato pode ser de outro negócio com o mesmo telefone, ou um
+// contato que o usuário já tinha. O decisor que não é o contato leva o selo
+// Decisor.
 const isCurrentContact = owner =>
+  Boolean(props.lead.contact_name) &&
+  sameName(owner.name, props.lead.contact_name);
+const isDecision = owner =>
   Boolean(research.value.decision?.name) &&
   sameName(owner.name, research.value.decision.name);
 
@@ -192,6 +199,12 @@ const requestResearch = async () => {
             class="rounded-full bg-n-teal-2 px-2 py-0.5 text-xs font-medium text-n-teal-11 ring-1 ring-n-teal-5"
           >
             {{ t('PROSPECTING.RESEARCH.PANEL.CURRENT_CONTACT') }}
+          </span>
+          <span
+            v-else-if="isDecision(owner)"
+            class="rounded-full bg-n-alpha-2 px-2 py-0.5 text-xs font-medium text-n-slate-11 ring-1 ring-n-weak"
+          >
+            {{ t('PROSPECTING.RESEARCH.PANEL.DECISION_OWNER') }}
           </span>
           <button
             v-else-if="canManage"

@@ -36,6 +36,25 @@ export const useLeadResearch = (state, { replaceLead }) => {
     }
   };
 
+  // O servidor diz o que aconteceu com o contato: só "virou a pessoa" afirma a
+  // troca. Contato dividido com outro negócio, ou que já era do usuário, fica
+  // como estava, e a mensagem diz isso.
+  const adoptedMessage = (data, name) => {
+    const panel = 'PROSPECTING.RESEARCH.PANEL';
+    if (data.contact_outcome === 'shared_with_other_lead') {
+      return data.shared_lead_name
+        ? t(`${panel}.OWNER_ADOPTED_SHARED_CONTACT`, {
+            name,
+            other: data.shared_lead_name,
+          })
+        : t(`${panel}.OWNER_ADOPTED_SHARED_CONTACT_UNNAMED`, { name });
+    }
+    if (data.contact_outcome === 'kept_existing_contact') {
+      return t(`${panel}.OWNER_ADOPTED_KEPT_CONTACT`, { name });
+    }
+    return t(`${panel}.OWNER_ADOPTED`, { name });
+  };
+
   const adoptOwner = async (lead, owner) => {
     if (!lead?.id || adoptingOwner.value) return;
 
@@ -47,9 +66,7 @@ export const useLeadResearch = (state, { replaceLead }) => {
         owner.name
       );
       replaceLead(data.payload);
-      useAlert(
-        t('PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED', { name: owner.name })
-      );
+      useAlert(adoptedMessage(data, owner.name));
     } catch (e) {
       alertError(e, t('PROSPECTING.RESEARCH.PANEL.ADOPT_ERROR'));
     } finally {

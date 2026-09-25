@@ -518,6 +518,7 @@ en:
           too_many_leads: 'Envie até %{max} leads por vez.'
           pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
           crm_disabled: 'O CRM está desligado nesta conta.'
+          forbidden: 'Seu perfil não pode criar cards no CRM. Peça a um administrador a permissão de gerenciar cards.'
         card_description:
           score: 'Nota da prospecção: %{score}'
           decision: 'Decisor: %{name}'
@@ -532,6 +533,8 @@ en:
         no_phone: 'Lead sem telefone.'
         no_whatsapp: 'Telefone sem WhatsApp confirmado.'
         not_ready: 'Lead ainda não está pronto para campanha.'
+      campaign_errors:
+        forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
       selection_list_name: 'Seleção da busca %{date}'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'

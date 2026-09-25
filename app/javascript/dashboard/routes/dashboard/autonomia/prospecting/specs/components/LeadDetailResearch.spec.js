@@ -32,10 +32,10 @@ const ConfirmModalStub = {
   template: '<div class="confirm-modal-stub" />',
 };
 
-const mountPanel = (research, props = {}) =>
+const mountPanel = (research, props = {}, lead = {}) =>
   mount(LeadDetailResearch, {
     props: {
-      lead: { id: 101, name: 'Padaria Sol', research },
+      lead: { id: 101, name: 'Padaria Sol', research, ...lead },
       researchEnabled: true,
       canManage: true,
       requesting: false,
@@ -64,8 +64,11 @@ describe('LeadDetailResearch · Quem atende', () => {
   });
 
   // Usar como contato (#680): um sócio vira o decisor e o contato do lead.
-  it('cada sócio que não é o decisor tem Usar como contato; o decisor aparece como contato atual', () => {
-    const owners = section(mountPanel(researchBlock()), 'owners');
+  it('cada sócio que não é o decisor tem Usar como contato; o decisor que é o contato aparece como contato atual', () => {
+    const owners = section(
+      mountPanel(researchBlock(), {}, { contact_name: 'JOAO DA SILVA' }),
+      'owners'
+    );
     const [joao, maria] = owners.findAll('li');
 
     expect(joao.text()).toContain('Contato atual');
@@ -78,12 +81,14 @@ describe('LeadDetailResearch · Quem atende', () => {
     expect(adopt.element.disabled).toBe(false);
   });
 
-  it('o decisor é reconhecido sem diferença de caixa nem espaço', () => {
+  it('o contato é reconhecido sem diferença de caixa nem espaço', () => {
     const owners = section(
       mountPanel(
         researchBlock({
           decision: { name: ' Maria da Silva ', role: 'SOCIO' },
-        })
+        }),
+        {},
+        { contact_name: 'maria da silva ' }
       ),
       'owners'
     );
@@ -91,6 +96,29 @@ describe('LeadDetailResearch · Quem atende', () => {
 
     expect(maria.text()).toContain('Contato atual');
     expect(joao.find('button').text()).toBe('Usar como contato');
+  });
+
+  // O contato do lead pode ser de outro negócio com o mesmo telefone, ou um
+  // contato que o usuário já tinha: o selo não afirma o que não aconteceu.
+  it('decisor que não é o contato do lead leva o selo Decisor, nunca Contato atual', () => {
+    const owners = section(
+      mountPanel(researchBlock(), {}, { contact_name: 'Oficina Alpha' }),
+      'owners'
+    );
+    const [joao, maria] = owners.findAll('li');
+
+    expect(joao.text()).toContain('Decisor');
+    expect(joao.text()).not.toContain('Contato atual');
+    expect(joao.find('button').exists()).toBe(false);
+    expect(maria.find('button').text()).toBe('Usar como contato');
+    expect(owners.text()).not.toContain('Contato atual');
+  });
+
+  it('lead ainda sem contato: o decisor leva o selo Decisor', () => {
+    const owners = section(mountPanel(researchBlock()), 'owners');
+
+    expect(owners.findAll('li')[0].text()).toContain('Decisor');
+    expect(owners.text()).not.toContain('Contato atual');
   });
 
   it('sem decisor, todos os sócios podem virar contato', () => {

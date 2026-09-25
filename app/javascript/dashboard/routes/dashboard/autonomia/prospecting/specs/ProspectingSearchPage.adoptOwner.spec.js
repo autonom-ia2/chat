@@ -37,7 +37,12 @@ const USE = 'PROSPECTING.RESEARCH.PANEL.USE_AS_CONTACT';
 const CURRENT = 'PROSPECTING.RESEARCH.PANEL.CURRENT_CONTACT';
 
 const researchedLead = (extra = {}) =>
-  sunLead({ research: researchBlock(), contact_id: 900, ...extra });
+  sunLead({
+    research: researchBlock(),
+    contact_id: 900,
+    contact_name: 'JOAO DA SILVA',
+    ...extra,
+  });
 
 const mountWithResearch = async () => {
   const search = bakerySearch();
@@ -71,11 +76,13 @@ describe('ProspectingSearchPage · usar sócio como contato', () => {
       data: {
         payload: researchedLead({
           contact_id: 901,
+          contact_name: 'MARIA DA SILVA',
           decision_name: 'MARIA DA SILVA',
           research: researchBlock({
             decision: { name: 'MARIA DA SILVA', role: 'SOCIO' },
           }),
         }),
+        contact_outcome: 'updated',
       },
     });
 
@@ -96,6 +103,56 @@ describe('ProspectingSearchPage · usar sócio como contato', () => {
     ).toBe('/app/accounts/1/contacts/901');
     expect(useAlert).toHaveBeenCalledWith(
       'PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED'
+    );
+  });
+
+  // O contato do lead é de outro negócio com o mesmo telefone: o decisor muda,
+  // o contato não, e a tela não diz que trocou.
+  it('contato compartilhado com outro negócio: avisa que só o decisor mudou e não marca Contato atual', async () => {
+    const wrapper = await mountWithResearch();
+    AutonomiaProspectingAPI.adoptOwner.mockResolvedValue({
+      data: {
+        payload: researchedLead({
+          contact_name: 'Oficina Alpha',
+          decision_name: 'MARIA DA SILVA',
+          research: researchBlock({
+            decision: { name: 'MARIA DA SILVA', role: 'SOCIO' },
+          }),
+        }),
+        contact_outcome: 'shared_with_other_lead',
+        shared_lead_name: 'Oficina Alpha',
+      },
+    });
+
+    await buttonWithText(ownerItems(wrapper)[1], USE).trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED_SHARED_CONTACT'
+    );
+    expect(useAlert).not.toHaveBeenCalledWith(
+      'PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED'
+    );
+    expect(ownerItems(wrapper)[1].text()).not.toContain(CURRENT);
+    expect(ownerItems(wrapper)[1].text()).toContain(
+      'PROSPECTING.RESEARCH.PANEL.DECISION_OWNER'
+    );
+  });
+
+  it('contato que já era do usuário: avisa que o contato não foi alterado', async () => {
+    const wrapper = await mountWithResearch();
+    AutonomiaProspectingAPI.adoptOwner.mockResolvedValue({
+      data: {
+        payload: researchedLead({ contact_name: 'Padaria Sol' }),
+        contact_outcome: 'kept_existing_contact',
+      },
+    });
+
+    await buttonWithText(ownerItems(wrapper)[1], USE).trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'PROSPECTING.RESEARCH.PANEL.OWNER_ADOPTED_KEPT_CONTACT'
     );
   });
 

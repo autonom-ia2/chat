@@ -72,11 +72,19 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
 
   # A ordem é a da explicação mais útil: primeiro o que a pessoa decidiu (descarte, pedido para parar, bloqueio),
   # depois o que falta no lead. Contato bloqueado ou que pediu para parar nunca recebe a etiqueta.
+  # A recusa de outro lead com o mesmo contato, telefone ou e-mail também vale (ConsentVeto).
   def compute_block_reason(lead)
     return 'discarded' if lead.discarded?
     return 'opt_out' if lead.no_consent?
 
-    contact_block_reason(existing_contact(lead)) || lead_block_reason(lead)
+    contact = existing_contact(lead)
+    return 'opt_out' if consent_veto.vetoed?(lead: lead, contact: contact)
+
+    contact_block_reason(contact) || lead_block_reason(lead)
+  end
+
+  def consent_veto
+    @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
   end
 
   def contact_block_reason(contact)
