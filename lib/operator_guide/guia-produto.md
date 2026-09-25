@@ -633,7 +633,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Usar o proprio Guia da Plataforma
 - intent: O que o Guia faz?; Voce consegue me levar para uma tela?; O Guia pode configurar por mim?; Como pergunto onde fica uma funcao?
-- onde_fica: Widget/atalho global do Guia dentro do dashboard, quando habilitado
+- onde_fica: Barra lateral > botao Pergunte ao Guia, no pe da barra, acima da foto do perfil (com a barra recolhida, so o icone de interrogacao); no celular, bolinha azul no canto inferior direito; quando habilitado
 - perfil: `administrator`, `agent` e custom roles podem perguntar ao Guia quando o recurso estiver habilitado para a conta. Se o usuario pedir uma tela bloqueada para o perfil dele, diga que o perfil atual nao tem acesso, explique o motivo e ofereca caminho alternativo ou orientacao para acionar um administrator.
 - pre_requisitos: usuario autenticado em uma conta ativa; Guia habilitado para a conta.
 - passos: 1. Pergunte em linguagem natural onde fica ou como fazer algo; 2. O Guia identifica seu perfil e as flags da conta; 3. Ele responde com o caminho no menu e os pre-requisitos, consultando os dados da sua conta quando a pergunta for sobre o que voce tem; 4. Quando houver uma rota permitida, ele pode abrir a tela certa; 5. Se voce for administrador e pedir para ele fazer algo, ele monta o pedido e mostra o que vai acontecer: nada acontece ate voce confirmar na tela.
