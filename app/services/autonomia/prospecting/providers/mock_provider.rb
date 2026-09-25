@@ -153,7 +153,7 @@ class Autonomia::Prospecting::Providers::MockProvider
   end
 
   def viewport_bounds?
-    @area_type == 'viewport' && @area_config['bounds'].present?
+    %w[viewport rectangle polygon].include?(@area_type) && @area_config['bounds'].present?
   end
 
   def viewport_coordinate(seed, axis)

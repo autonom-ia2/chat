@@ -73,45 +73,9 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     }.merge(location_bias_payload)
   end
 
+  # Viés ou restrição conforme o tipo de área (#678): a geometria mora em SearchArea.
   def location_bias_payload
-    rectangle = rectangle_bias
-    return { locationBias: { rectangle: rectangle } } if rectangle.present?
-
-    circle = circle_bias
-    return { locationBias: { circle: circle } } if circle.present?
-
-    {}
-  end
-
-  def rectangle_bias
-    return unless @area_type == 'viewport'
-
-    bounds = @area_config['bounds']
-    return if bounds.blank?
-
-    {
-      low: {
-        latitude: bounds['south'].to_f,
-        longitude: bounds['west'].to_f
-      },
-      high: {
-        latitude: bounds['north'].to_f,
-        longitude: bounds['east'].to_f
-      }
-    }
-  end
-
-  def circle_bias
-    center = @area_config['center']
-    return if center.blank?
-
-    {
-      center: {
-        latitude: center['lat'].to_f,
-        longitude: center['lng'].to_f
-      },
-      radius: [@radius, 50_000].min
-    }
+    Autonomia::Prospecting::SearchArea.google_location(@area_type, @area_config, radius: @radius)
   end
 
   def headers

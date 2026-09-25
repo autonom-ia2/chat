@@ -2,7 +2,7 @@ require 'digest'
 require 'json'
 
 class Autonomia::Prospecting::SearchRunner
-  AREA_TYPES = %w[radius viewport].freeze
+  AREA_TYPES = Autonomia::Prospecting::SearchArea::TYPES
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
   MAX_REQUESTED_LIMIT = 60
@@ -68,6 +68,7 @@ class Autonomia::Prospecting::SearchRunner
     raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
 
     validate_google_places! if provider_name == 'google_places'
+    validate_drawn_area!
 
     if requested_limit > MAX_REQUESTED_LIMIT
       raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
@@ -84,6 +85,14 @@ class Autonomia::Prospecting::SearchRunner
 
     message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: expansion_target)
     raise ActiveRecord::RecordInvalid, search_with_error(:base, message)
+  end
+
+  # Área desenhada sem desenho que sirva (centro, limites ou três pontos) não vira busca (#678).
+  def validate_drawn_area!
+    return unless Autonomia::Prospecting::SearchArea.drawn?(area_type)
+    return if Autonomia::Prospecting::SearchArea.normalize(area_type, raw_area_config, radius: radius)
+
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.drawn_area_required'))
   end
 
   def create_search!
@@ -377,9 +386,14 @@ class Autonomia::Prospecting::SearchRunner
 
   # Chaves e regras da gaveta de filtros do Orth (search-filters.ts). has_photos, open_now e has_opening_hours são
   # atributos que o provider entrega (contrato #677); sem eles o filtro ativo falha alto em vez de zerar a busca.
+  # O recorte do polígono (#678) entra aqui: roda depois de a posição no Google já estar atribuída pelo índice.
   def advanced_filter_matches?(attributes, google_rank)
-    presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
+    within_drawn_area?(attributes) && presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
       reviews_filter_matches?(attributes)
+  end
+
+  def within_drawn_area?(attributes)
+    Autonomia::Prospecting::SearchArea.contains?(area_type, area_config, attributes[:latitude], attributes[:longitude])
   end
 
   def presence_filters_match?(attributes)
@@ -491,37 +505,40 @@ class Autonomia::Prospecting::SearchRunner
     end
   end
 
-  def normalized_area_config
-    raw_config = @params[:area_config].presence || {}
-    raw_config = raw_config.to_unsafe_h if raw_config.respond_to?(:to_unsafe_h)
-    raw_config = raw_config.to_h if raw_config.respond_to?(:to_h)
-    raw_config = raw_config.deep_stringify_keys
+  def raw_area_config
+    @raw_area_config ||= begin
+      raw_config = @params[:area_config].presence || {}
+      raw_config = raw_config.to_unsafe_h if raw_config.respond_to?(:to_unsafe_h)
+      raw_config = raw_config.to_h if raw_config.respond_to?(:to_h)
+      raw_config.deep_stringify_keys
+    end
+  end
 
-    center = normalize_center(raw_config['center']) || metadata_center
+  def normalized_area_config
     base = {
       'label' => metadata['location_label'].presence || location.presence,
       'place_id' => metadata['location_place_id'].presence
     }.compact
+    geometry = if Autonomia::Prospecting::SearchArea.drawn?(area_type)
+                 Autonomia::Prospecting::SearchArea.normalize(area_type, raw_area_config, radius: radius).to_h
+               else
+                 located_area_config(raw_area_config)
+               end
+    base.merge(geometry)
+  end
+
+  # Raio e área visível: a área parte do local escolhido.
+  def located_area_config(raw_config)
+    center = normalize_center(raw_config['center']) || metadata_center
 
     if area_type == 'viewport'
       bounds = normalize_bounds(raw_config['bounds'])
       center ||= center_from_bounds(bounds)
 
-      return base.merge(
-        {
-          'bounds' => bounds,
-          'center' => center,
-          'radius' => radius
-        }.compact
-      )
+      return { 'bounds' => bounds, 'center' => center, 'radius' => radius }.compact
     end
 
-    base.merge(
-      {
-        'center' => center,
-        'radius' => radius
-      }.compact
-    )
+    { 'center' => center, 'radius' => radius }.compact
   end
 
   def metadata_center
