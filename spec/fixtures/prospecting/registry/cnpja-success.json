@@ -1,0 +1,56 @@
+{
+  "taxId": "11222333000181",
+  "alias": "DELTA SINTETICA",
+  "status": {
+    "text": "Ativa"
+  },
+  "address": {
+    "street": "RUA PUBLICA",
+    "number": "400",
+    "zip": "70040900",
+    "city": "BRASILIA",
+    "state": "DF"
+  },
+  "company": {
+    "name": "EMPRESA DELTA SINTETICA LTDA",
+    "members": [
+      {
+        "person": {
+          "name": "PESSOA NATURAL CNPJA",
+          "type": "NATURAL",
+          "age": "Entre 41 a 50 anos"
+        },
+        "role": {
+          "text": "Sócio-Administrador"
+        },
+        "agent": {
+          "person": {
+            "name": "REPRESENTANTE CNPJA",
+            "type": "NATURAL"
+          },
+          "role": {
+            "text": "Procurador"
+          }
+        }
+      },
+      {
+        "person": {
+          "name": "PESSOA LEGAL CNPJA",
+          "type": "LEGAL"
+        },
+        "role": {
+          "text": "Sócio"
+        }
+      },
+      {
+        "person": {
+          "name": "TIPO NAO DOCUMENTADO CNPJA",
+          "type": "FOREIGN"
+        },
+        "role": {
+          "text": "Sócio"
+        }
+      }
+    ]
+  }
+}
