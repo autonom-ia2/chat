@@ -301,6 +301,9 @@
       "FILTERS": "Filtros",
       "APPLY_FILTERS": "Aplicar",
       "CLEAR_FILTERS": "Limpar filtros",
+      "EXPORT": "Exportar",
+      "EXPORT_TITLE": "Baixar a lista em Excel, com o funil, os filtros e a ordem atuais",
+      "EXPORT_ERROR": "Não foi possível exportar a lista. Tente de novo.",
       "CREATE_INITIAL_PIPELINE": "Criar funil inicial",
       "LOAD_MORE": "Carregar mais"
     },

@@ -47,10 +47,17 @@ const SEND = 'PROSPECTING.SEARCH.SEND_TO_CRM';
 const SEND_LIST = 'PROSPECTING.LISTS.SEND_LIST_TO_CRM';
 const LIST = { id: 7, name: 'Padarias', leads_count: 3 };
 
-const mountLists = async (leads = [sunLead(), hotBreadLead(), moonLead()]) => {
+const mountLists = async (
+  leads = [sunLead(), hotBreadLead(), moonLead()],
+  { canSendToCrm = true } = {}
+) => {
   AutonomiaProspectingAPI.getSettings.mockResolvedValue({
     data: {
-      payload: { default_crm_pipeline_id: 3, default_crm_stage_id: 31 },
+      payload: {
+        default_crm_pipeline_id: 3,
+        default_crm_stage_id: 31,
+        can_send_to_crm: canSendToCrm,
+      },
     },
   });
   AutonomiaProspectingAPI.getLists.mockResolvedValue({
@@ -152,6 +159,24 @@ describe('ProspectingListsPage · enviar ao CRM', () => {
       .find('[data-test="crm-send-close"]')
       .trigger('click');
     expect(sendModal(wrapper).exists()).toBe(false);
+  });
+
+  // #682: a permissão de criar card do CRM (Crm::CardPolicy#create?) vem do
+  // servidor; sem ela, nem o lead nem a lista têm o botão.
+  it('sem permissão de criar card, a lista e o lead ficam sem enviar ao CRM', async () => {
+    const wrapper = await mountLists(undefined, { canSendToCrm: false });
+
+    expect(buttonWithText(wrapper, SEND_LIST)).toBeUndefined();
+    expect(
+      buttonWithText(leadRow(wrapper, 'Padaria Sol'), SEND)
+    ).toBeUndefined();
+  });
+
+  it('com permissão de criar card, a lista e o lead têm enviar ao CRM', async () => {
+    const wrapper = await mountLists();
+
+    expect(buttonWithText(wrapper, SEND_LIST)).toBeTruthy();
+    expect(buttonWithText(leadRow(wrapper, 'Padaria Sol'), SEND)).toBeTruthy();
   });
 
   it('quem só vê não tem enviar ao CRM', async () => {

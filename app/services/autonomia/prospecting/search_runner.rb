@@ -6,6 +6,20 @@ class Autonomia::Prospecting::SearchRunner
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
   # Teto de produto do pedido (#683): 3 páginas de 20 no Google (#678).
   MAX_REQUESTED_LIMIT = Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS
+  # Lead que já existe ganha só as chaves de metadata que a busca traz (ENRIQ-57), e a verificação de WhatsApp sai
+  # quando é de outro número (ENRIQ-69). A decisão é do banco, sobre o metadata da hora da gravação: uma verificação
+  # que termina depois de a busca ler o lead também é julgada. Parâmetros: número a supor quando a verificação não
+  # guarda o dela, E.164 novo do lead, chaves novas.
+  METADATA_MERGE_SQL = <<~SQL.squish.freeze
+    metadata = (
+      CASE
+        WHEN COALESCE(metadata -> 'whatsapp_verification' ->> 'status', 'queued') <> 'queued'
+         AND COALESCE(metadata -> 'whatsapp_verification' ->> 'phone', ?::text) IS DISTINCT FROM ?::text
+        THEN metadata - 'whatsapp_verification'
+        ELSE metadata
+      END
+    ) || ?::jsonb
+  SQL
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -97,15 +111,16 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   def validate!
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
-    raise UnsupportedProviderError, 'Unsupported prospecting provider' unless %w[mock google_places].include?(provider_name)
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
+    # A tela mostra a frase como veio (#682): em :base, sem o nome do atributo em inglês na frente.
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.query_required')) if query.blank?
+    raise UnsupportedProviderError, I18n.t('autonomia.prospecting.errors.unsupported_provider') unless %w[mock google_places].include?(provider_name)
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.limit_invalid')) if requested_limit <= 0
 
     validate_google_places! if provider_name == 'google_places'
     validate_drawn_area!
 
     if requested_limit > MAX_REQUESTED_LIMIT
-      raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+      raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.limit_too_high', max: MAX_REQUESTED_LIMIT))
     end
 
     validate_rank_range!
@@ -307,15 +322,40 @@ class Autonomia::Prospecting::SearchRunner
   def save_lead!(search, attributes, dedupe_key, google_rank)
     lead = find_existing_lead(attributes, dedupe_key) || Autonomia::Prospecting::Lead.new(account: @account)
     scoring_attributes = score_for(attributes, google_rank)
-    lead_metadata = lead.metadata.to_h.merge(attributes[:metadata].to_h)
+    new_metadata = attributes[:metadata].to_h
+    existing = lead.persisted?
+    previous_phone = lead.phone
     # Pelo id, não pelo objeto: com o objeto, o inverse_of põe o lead em search.leads, e o lead recusado na corrida
     # (ou inválido) ficaria ali e derrubaria o save! da própria busca.
     lead.assign_attributes(
-      attributes.merge(scoring_attributes).merge(prospect_search_id: search.id, dedupe_key: dedupe_key, search_rank: google_rank,
-                                                 metadata: lead_metadata)
+      attributes.except(:metadata).merge(scoring_attributes)
+                .merge(prospect_search_id: search.id, dedupe_key: dedupe_key, search_rank: google_rank)
     )
+    lead.metadata = lead.metadata.to_h.merge(new_metadata) unless existing
     lead.save!
+    merge_lead_metadata!(lead, new_metadata, previous_phone: previous_phone) if existing
     lead
+  end
+
+  # A verificação de WhatsApp é do número verificado, não do lead (ENRIQ-69): com outro telefone ela deixa de valer,
+  # e sem ela o lead volta à fila de verificação (LeadWorkQueue.after_search). Mesmo número escrito de outro jeito
+  # continua valendo (E.164); a marca "queued" fica, e o verificador devolve à fila se o número mudou no meio. A
+  # verificação sem o número dela (antiga) vale enquanto o telefone do lead não muda.
+  def merge_lead_metadata!(lead, new_metadata, previous_phone:)
+    new_e164 = phone_e164(lead.phone)
+    assumed_phone = new_e164 == phone_e164(previous_phone) ? new_e164 : ''
+    scope = Autonomia::Prospecting::Lead.where(id: lead.id)
+    scope.update_all([METADATA_MERGE_SQL, assumed_phone, new_e164, new_metadata.to_json]) # rubocop:disable Rails/SkipsModelValidations
+    lead.metadata = scope.pick(:metadata)
+    lead.clear_attribute_changes([:metadata])
+  end
+
+  def phone_e164(phone)
+    Autonomia::Prospecting::PhoneContract.e164(phone, region: phone_region)
+  end
+
+  def phone_region
+    @phone_region ||= Autonomia::Prospecting::PhoneContract.region_for(@account)
   end
 
   def score_for(attributes, google_rank)

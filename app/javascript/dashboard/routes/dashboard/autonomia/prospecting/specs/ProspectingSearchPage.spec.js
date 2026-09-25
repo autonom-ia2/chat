@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import ProspectingSearchPage from '../pages/ProspectingSearchPage.vue';
+import { uiSettingsStore } from './support/uiSettingsStore';
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '1' }, query: {} }),
@@ -36,6 +37,7 @@ const montar = async (settings, searches = []) => {
   });
   const wrapper = mount(ProspectingSearchPage, {
     global: {
+      plugins: [uiSettingsStore().store],
       stubs: {
         ProspectingGoogleMap: {
           props: ['apiKey'],
@@ -102,6 +104,7 @@ describe('ProspectingSearchPage', () => {
     });
     const wrapper = mount(ProspectingSearchPage, {
       global: {
+        plugins: [uiSettingsStore().store],
         stubs: {
           ProspectingGoogleMap: true,
           ProspectingPriorityRing: true,

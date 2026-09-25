@@ -29,6 +29,7 @@ const explanation = computed(() =>
     <span
       v-tooltip.bottom="explanation"
       data-test="search-mode-badge"
+      data-tour="search-mode"
       tabindex="0"
       class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium"
       :class="

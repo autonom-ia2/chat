@@ -36,7 +36,7 @@ RSpec.describe Autonomia::Prospecting::Scoring::HumanInsight do
       result = build(70, components: [comp('website', 30, 30), comp('phone', 10, 10), comp('rating', 20, 20),
                                       comp('volume', 15, 5), comp('activity', 10, 1), comp('photos', 15, 1)])
 
-      expect(result).to eq('Oportunidade alta: sem site, sem telefone, rating fraco.')
+      expect(result).to eq('Oportunidade alta: sem site, sem telefone, nota fraca.')
       expect(result).not_to include('volume saudável')
     end
 
@@ -49,7 +49,7 @@ RSpec.describe Autonomia::Prospecting::Scoring::HumanInsight do
     it 'Geral: os sinais fortes usam frases positivas' do
       result = build(75, mode: 'general', components: [comp('website', 30, 30), comp('phone', 10, 10), comp('rating', 20, 20)])
 
-      expect(result).to eq('Lead bem qualificado: site, telefone, rating alto.')
+      expect(result).to eq('Lead bem qualificado: site, telefone, nota alta.')
     end
 
     it 'ignora sinal com peso zero, zerado por filtro' do

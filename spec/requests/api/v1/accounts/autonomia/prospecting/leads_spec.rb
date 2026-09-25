@@ -135,6 +135,51 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
     end
   end
 
+  # ENRIQ-69 (#682, E6): se uma busca troca o telefone enquanto o WAHA responde, a verificação manual não diz "tem
+  # WhatsApp" de um número que já não é o do lead; responde o estado real, pendente e de novo na fila.
+  describe 'verificação manual com o telefone trocado no meio' do
+    let(:waha_env) { { 'WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste' } }
+
+    before do
+      create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'sessao-prospeccao' })
+      stub_request(:get, 'https://waha.test/api/contacts/check-exists')
+        .with(query: { phone: '+5511999998888', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).update_all(phone: '+55 11 97777-6666') # rubocop:disable Rails/SkipsModelValidations
+          { status: 200, body: { numberExists: true, chatId: '5511999998888@c.us' }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
+    end
+
+    it 'responde pendente, sem o número antigo' do
+      with_modified_env(waha_env) do
+        post "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}/whatsapp_verification",
+             headers: auth_headers(admin)
+      end
+
+      expect(response).to have_http_status(:ok)
+      payload = response.parsed_body['payload']
+      expect(payload).to include('exists' => nil, 'pending' => true, 'phone' => nil, 'chat_id' => nil)
+      expect(payload['lead']).to include('whatsapp_verification_status' => 'queued', 'whatsapp_verified' => false,
+                                         'whatsapp_phone' => '+5511977776666', 'whatsapp_url' => nil)
+    end
+
+    it 'lead apagado enquanto o WAHA responde: 404, como o lead que já não existia' do
+      stub_request(:get, 'https://waha.test/api/contacts/check-exists')
+        .with(query: { phone: '+5511999998888', session: 'sessao-prospeccao' })
+        .to_return do
+          Autonomia::Prospecting::Lead.where(id: lead.id).delete_all
+          { status: 200, body: { numberExists: true }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
+
+      with_modified_env(waha_env) do
+        post "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}/whatsapp_verification",
+             headers: auth_headers(admin)
+      end
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

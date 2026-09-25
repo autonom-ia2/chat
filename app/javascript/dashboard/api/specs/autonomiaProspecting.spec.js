@@ -76,4 +76,23 @@ describe('#AutonomiaProspectingAPI', () => {
       { owner_name: 'MARIA DA SILVA' }
     );
   });
+
+  // Exportação pelo servidor (#682): o arquivo volta como blob.
+  it('exporta a busca no formato pedido, com os leads da tela na ordem dela', () => {
+    prospecting.exportSearch(11, { format: 'xlsx', leadIds: [3, 1] });
+
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/searches/11/export',
+      { params: { format: 'xlsx', lead_ids: [3, 1] }, responseType: 'blob' }
+    );
+  });
+
+  it('exporta a lista inteira quando não recebe leads', () => {
+    prospecting.exportList(4, { format: 'csv' });
+
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/lists/4/export',
+      { params: { format: 'csv', lead_ids: undefined }, responseType: 'blob' }
+    );
+  });
 });

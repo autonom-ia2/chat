@@ -1,7 +1,9 @@
-// Caracterização das ações em lote (#677): seleção, envio ao CRM e CSV. O
+// Caracterização das ações em lote (#677): seleção, envio ao CRM e exportação. O
 // envio em si (janela, lotes e resumo) está em ProspectingSearchPage.crmSend e
 // CrmSendModal (#680).
 import { flushPromises } from '@vue/test-utils';
+import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
+import { useAlert } from 'dashboard/composables';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import {
   bakerySearch,
@@ -14,12 +16,7 @@ import {
   settingsFixture,
   sunLead,
 } from './support/searchPageHarness';
-import {
-  ADDRESS_SEPARATOR,
-  captureCsvDownload,
-  leadCheckbox,
-  readBlob,
-} from './support/resultsHelpers';
+import { captureCsvDownload, leadCheckbox } from './support/resultsHelpers';
 
 const permission = vi.hoisted(() => ({ canManage: true }));
 
@@ -115,47 +112,89 @@ describe('ProspectingSearchPage · ações em lote', () => {
     expect(modal.props('suggestedStageId')).toBe('');
   });
 
+  // Exportação pelo servidor (#682): o botão oferece CSV e Excel, e a tela
+  // manda os leads que exportaria antes, os visíveis ou os selecionados, na
+  // ordem dela. O arquivo vem pronto do servidor.
+  const chooseExport = async (wrapper, format) => {
+    await buttonWithTitle(wrapper, 'PROSPECTING.SEARCH.CSV_EXPORT').trigger(
+      'click'
+    );
+    await buttonWithText(
+      wrapper,
+      `PROSPECTING.SEARCH.EXPORT_${format.toUpperCase()}`
+    ).trigger('click');
+    await flushPromises();
+  };
+
+  it('o botão de download oferece CSV e Excel', async () => {
+    const wrapper = await mountSearchPage();
+
+    await buttonWithTitle(wrapper, 'PROSPECTING.SEARCH.CSV_EXPORT').trigger(
+      'click'
+    );
+
+    expect(
+      buttonWithText(wrapper, 'PROSPECTING.SEARCH.EXPORT_CSV')
+    ).toBeTruthy();
+    expect(
+      buttonWithText(wrapper, 'PROSPECTING.SEARCH.EXPORT_XLSX')
+    ).toBeTruthy();
+    expect(AutonomiaProspectingAPI.exportSearch).not.toHaveBeenCalled();
+  });
+
   it('exporta CSV de todos os leads visíveis, na ordem da tela', async () => {
     const wrapper = await mountSearchPage();
     const download = captureCsvDownload();
+    const file = new Blob(['csv do servidor'], { type: 'text/csv' });
+    AutonomiaProspectingAPI.exportSearch.mockResolvedValue({ data: file });
+    // A ordem da tela: Padaria Sol, Pão Quente, Confeitaria Lua.
+    const visibleIds = [101, 102, 103];
 
-    await buttonWithTitle(wrapper, 'PROSPECTING.SEARCH.CSV_EXPORT').trigger(
-      'click'
-    );
-    const csv = await readBlob(download.blob);
+    await chooseExport(wrapper, 'csv');
 
+    expect(AutonomiaProspectingAPI.exportSearch).toHaveBeenCalledWith(11, {
+      format: 'csv',
+      leadIds: visibleIds,
+    });
+    expect(download.blob).toBe(file);
     expect(download.fileName).toBe('prospeccao-11.csv');
     expect(download.clicks).toBe(1);
-    expect(download.blob.type).toBe('text/csv;charset=utf-8;');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:csv');
-    expect(csv.split('\n')).toEqual([
-      'name,phone,website,address,status,source',
-      `"Padaria Sol","(41) 99999-0001","https://sol.com.br","Rua A, 10${ADDRESS_SEPARATOR}Curitiba PR","new","Google Maps"`,
-      `"Pão Quente","4133330002","","Rua B, 20${ADDRESS_SEPARATOR}Curitiba PR","contacted","google_places"`,
-      `"Confeitaria Lua","","https://lua.com.br","Rua C, 30${ADDRESS_SEPARATOR}Curitiba","new","google_places"`,
-    ]);
+    expect(
+      buttonWithText(wrapper, 'PROSPECTING.SEARCH.EXPORT_CSV')
+    ).toBeFalsy();
   });
 
-  it('exporta só os selecionados e escapa aspas', async () => {
+  it('exporta em Excel só os selecionados', async () => {
     const search = bakerySearch();
+    const selected = sunLead({ name: 'Padaria "Sol"' });
     const wrapper = await mountSearchPage({
       searches: [search],
-      payloads: {
-        11: {
-          search,
-          leads: [sunLead({ name: 'Padaria "Sol"' }), hotBreadLead()],
-        },
-      },
+      payloads: { 11: { search, leads: [selected, hotBreadLead()] } },
     });
     const download = captureCsvDownload();
+    AutonomiaProspectingAPI.exportSearch.mockResolvedValue({
+      data: new Blob(['xlsx']),
+    });
 
     await leadCheckbox(wrapper, 'Padaria "Sol"').trigger('change');
-    await buttonWithTitle(wrapper, 'PROSPECTING.SEARCH.CSV_EXPORT').trigger(
-      'click'
-    );
-    const lines = (await readBlob(download.blob)).split('\n');
+    await chooseExport(wrapper, 'xlsx');
 
-    expect(lines).toHaveLength(2);
-    expect(lines[1].startsWith('"Padaria ""Sol""",')).toBe(true);
+    expect(AutonomiaProspectingAPI.exportSearch).toHaveBeenCalledWith(11, {
+      format: 'xlsx',
+      leadIds: [selected.id],
+    });
+    expect(download.fileName).toBe('prospeccao-11.xlsx');
+  });
+
+  it('falha no servidor avisa e não baixa nada', async () => {
+    const wrapper = await mountSearchPage();
+    const download = captureCsvDownload();
+    AutonomiaProspectingAPI.exportSearch.mockRejectedValue(new Error('500'));
+
+    await chooseExport(wrapper, 'csv');
+
+    expect(useAlert).toHaveBeenCalledWith('PROSPECTING.SEARCH.EXPORT_ERROR');
+    expect(download.clicks).toBe(0);
   });
 });

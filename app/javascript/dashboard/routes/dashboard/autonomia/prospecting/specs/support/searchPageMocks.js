@@ -16,6 +16,7 @@ export const prospectingApiMock = () => ({
     verifyLeadWhatsApp: vi.fn(),
     enrichLead: vi.fn(),
     researchLead: vi.fn(),
+    exportSearch: vi.fn(),
   },
 });
 

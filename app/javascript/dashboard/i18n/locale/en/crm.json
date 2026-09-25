@@ -301,6 +301,9 @@
       "FILTERS": "Filters",
       "APPLY_FILTERS": "Apply",
       "CLEAR_FILTERS": "Clear filters",
+      "EXPORT": "Export",
+      "EXPORT_TITLE": "Download the list as Excel, with the current pipeline, filters and order",
+      "EXPORT_ERROR": "Could not export the list. Please try again.",
       "CREATE_INITIAL_PIPELINE": "Create initial pipeline",
       "LOAD_MORE": "Load more"
     },

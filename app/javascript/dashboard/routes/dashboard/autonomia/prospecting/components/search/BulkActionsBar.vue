@@ -4,7 +4,8 @@ import { useProspectingSearchContext } from '../../composables/useProspectingSea
 
 const { t } = useI18n();
 const {
-  canManage,
+  canSendToCrm,
+  canAddToCampaign,
   sortedLeads,
   selectedLeadIds,
   hasSelectedLeads,
@@ -35,7 +36,7 @@ const {
           }}
         </span>
         <button
-          v-if="canManage"
+          v-if="canSendToCrm"
           type="button"
           class="inline-flex h-7 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-medium text-white"
           @click="openCrmSend(selectedLeadObjects)"
@@ -44,7 +45,7 @@ const {
           {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
         </button>
         <button
-          v-if="canManage"
+          v-if="canAddToCampaign"
           type="button"
           class="inline-flex h-7 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
           @click="campaignLeads = selectedLeadObjects"

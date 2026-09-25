@@ -371,6 +371,7 @@
     "AUDIT_LOGS": "Audit Logs",
     "INBOXES": "Inboxes",
     "WHATSAPP_TEMPLATES": "Templates",
+    "CAMPAIGN_WHATSAPP_TEMPLATES": "WhatsApp templates",
     "NOTIFICATIONS": "Notifications",
     "CANNED_RESPONSES": "Canned Responses",
     "INTEGRATIONS": "Integrations",

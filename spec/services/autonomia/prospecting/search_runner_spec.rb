@@ -380,7 +380,9 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
       it 'recusa limite zero' do
         expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 0) }
-          .to raise_error(ActiveRecord::RecordInvalid, /greater than 0/)
+          .to raise_error(ActiveRecord::RecordInvalid) { |error|
+            expect(error.record.errors[:base]).to eq([I18n.t('autonomia.prospecting.errors.limit_invalid')])
+          }
       end
 
       it 'aceita 21 e 60 com o max_results_per_search padrão de 20 e recusa 61' do
@@ -389,7 +391,9 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 21).leads.size).to eq(21)
         expect(run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 60).leads.size).to eq(60)
         expect { run_search(query: 'padaria', location: 'Curitiba, PR', requested_limit: 61) }
-          .to raise_error(ActiveRecord::RecordInvalid, /less than or equal to 60/)
+          .to raise_error(ActiveRecord::RecordInvalid) { |error|
+            expect(error.record.errors[:base]).to eq([I18n.t('autonomia.prospecting.errors.limit_too_high', max: 60)])
+          }
       end
 
       # Com a paginação (#678) a página é sempre de 20 (pageSize) e o pedido de 60 chega em até 3 páginas.
@@ -536,6 +540,106 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         expect(lead.reload.name).to eq('Alfa Odonto Renovada')
         expect(lead.prospect_search_id).to eq(second.search.id)
         expect(lead.metadata.dig('whatsapp_verification', 'status')).to eq('verified')
+      end
+
+      # ENRIQ-69 (#682, E6): a verificação é do número verificado, não do lead. Busca nova com outro telefone
+      # deixa a do número antigo sem valer e o lead volta à fila de verificação.
+      context 'when a busca nova traz outro telefone para o lead' do
+        include ActiveJob::TestHelper
+
+        let(:old_verification) do
+          { 'status' => 'verified', 'phone' => '+5541999990001', 'chat_id' => '5541999990001@c.us' }
+        end
+        let(:site_verification) { { 'status' => 'not_whatsapp', 'phone' => '+5541977776666' } }
+
+        def search_with_phone(phone)
+          stub_mock_provider([places.first.merge(phone: phone)])
+          run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1, fresh: true)
+        end
+
+        def verified_lead
+          lead = search_with_phone('+5541999990001').leads.first
+          lead.update!(metadata: lead.metadata.merge('whatsapp_verification' => old_verification,
+                                                     'site_whatsapp_verification' => site_verification))
+          lead
+        end
+
+        it 'deixa a verificação do número antigo sem valer e o botão sem o número antigo' do
+          lead = verified_lead
+
+          second = search_with_phone('+55 41 98888-7777')
+
+          expect(lead.reload.phone).to eq('+55 41 98888-7777')
+          expect(lead.metadata).not_to have_key('whatsapp_verification')
+          expect(lead.metadata['site_whatsapp_verification']).to eq(site_verification)
+          expect(second.leads.first.metadata).not_to have_key('whatsapp_verification')
+          payload = Autonomia::Prospecting::LeadPayload.new(account: account).build(lead)
+          expect(payload).to include(whatsapp_verified: false, whatsapp_phone: '+5541988887777')
+        end
+
+        it 'põe o lead de novo na fila de verificação da E2' do
+          lead = verified_lead
+          Autonomia::Prospecting::Config.enable_for!(account)
+          create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'sessao-prospeccao' })
+
+          second = search_with_phone('+55 41 98888-7777')
+          with_modified_env('WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste') do
+            Autonomia::Prospecting::LeadWorkQueue.after_search(account: account, leads: second.leads)
+          end
+
+          expect(Autonomia::Prospecting::VerifyWhatsappJob).to have_been_enqueued.with(account.id, [lead.id])
+          expect(lead.reload.metadata.dig('whatsapp_verification', 'status')).to eq('queued')
+        end
+
+        # A decisão é do banco, na hora de gravar: uma verificação do número antigo que termina depois de a busca ler
+        # o lead também sai.
+        it 'tira a verificação do número antigo gravada entre a leitura do lead e a gravação' do
+          lead = search_with_phone('+5541999990001').leads.first
+          stub_mock_provider([places.first.merge(phone: '+55 41 98888-7777')])
+          runner = described_class.new(account: account, user: user,
+                                       params: { query: 'dentista', location: 'Curitiba, PR', requested_limit: 1, fresh: true })
+          allow(runner).to receive(:score_for).and_wrap_original do |original, *args, **kwargs|
+            Autonomia::Prospecting::Lead.where(id: lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+              ['metadata = metadata || ?::jsonb', { 'whatsapp_verification' => old_verification }.to_json]
+            )
+            original.call(*args, **kwargs)
+          end
+
+          runner.perform
+
+          expect(lead.reload.phone).to eq('+55 41 98888-7777')
+          expect(lead.metadata).not_to have_key('whatsapp_verification')
+        end
+
+        it 'mantém a verificação quando o telefone é o mesmo, só escrito de outro jeito' do
+          lead = verified_lead
+
+          search_with_phone('(41) 99999-0001')
+
+          expect(lead.reload.metadata['whatsapp_verification']).to eq(old_verification)
+        end
+      end
+
+      # ENRIQ-57 (#682, E6): a busca grava só as chaves que traz no metadata, sem regravar o que leu antes. Uma
+      # verificação que termina entre a leitura e a gravação do lead não some.
+      it 'não apaga a verificação gravada em paralelo durante o upsert' do
+        stub_mock_provider([places.first])
+        lead = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 1).leads.first
+        verification = { 'status' => 'verified', 'phone' => '+5541999990001' }
+        # O Google traz as avaliações no metadata do lead; é essa gravação que regravava o jsonb inteiro.
+        stub_mock_provider([places.first.merge(metadata: { reviews_snapshot: [{ 'text' => 'Atendimento ótimo' }] })])
+        runner = described_class.new(account: account, user: user,
+                                     params: { query: 'dentista', location: 'Curitiba, PR', requested_limit: 1, fresh: true })
+        allow(runner).to receive(:score_for).and_wrap_original do |original, *args, **kwargs|
+          Autonomia::Prospecting::Lead.where(id: lead.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+            ['metadata = metadata || ?::jsonb', { 'whatsapp_verification' => verification }.to_json]
+          )
+          original.call(*args, **kwargs)
+        end
+
+        runner.perform
+
+        expect(lead.reload.metadata['whatsapp_verification']).to eq(verification)
       end
 
       it 'deduplica pelo telefone quando o lugar não tem provider_place_id' do

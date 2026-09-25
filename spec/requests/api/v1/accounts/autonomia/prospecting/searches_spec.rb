@@ -43,7 +43,8 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
     get "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches", headers: auth_headers(admin)
 
     expect(response).to have_http_status(:not_found)
-    expect(response.parsed_body['error']).to eq('autonomia.prospecting.disabled')
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.errors.disabled'))
+    expect(response.parsed_body['code']).to eq('autonomia.prospecting.disabled')
   end
 
   it 'blocks non-admin users' do
@@ -62,7 +63,7 @@ RSpec.describe 'Autonomia prospecting searches API', type: :request do
          headers: auth_headers(admin)
 
     expect(response).to have_http_status(:unprocessable_entity)
-    expect(response.parsed_body['error']).to include("Query can't be blank")
+    expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.errors.query_required'))
   end
 
   it 'updates CRM target for a saved search' do

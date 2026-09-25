@@ -109,7 +109,7 @@ async function openScreen(name, options = {}) {
     await route.fulfill(response);
   });
   await page.goto(
-    `http://127.0.0.1:3437/app/accounts/436/crm/campaign-management?locale=${locale}&theme=${options.theme || 'light'}&role=${options.role || 'admin'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
+    `http://127.0.0.1:3437/app/accounts/436/campaigns/management?locale=${locale}&theme=${options.theme || 'light'}&role=${options.role || 'admin'}${options.campaign === false ? '' : `&campaign=${options.campaign || 4361}`}`
   );
   await page.waitForFunction(() => window.__qa?.ready === true, null, {
     timeout: 60000,

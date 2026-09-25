@@ -3,6 +3,11 @@ class Crm::CardPolicy < ApplicationPolicy
     account_user.present?
   end
 
+  # Planilha com dado pessoal em lote (nome, telefone, e-mail): no OSS, só administrador.
+  def export?
+    account_user&.administrator? || false
+  end
+
   def show?
     visible_scope.exists?(id: record.id)
   end

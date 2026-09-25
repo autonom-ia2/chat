@@ -218,6 +218,7 @@ Rails.application.routes.draw do
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               post :from_conversation, on: :collection
+              get :export, on: :collection
               member do
                 post :move
                 post :close
@@ -385,6 +386,7 @@ Rails.application.routes.draw do
               resources :searches, only: [:index, :show, :create, :update, :destroy] do
                 get :location_suggestions, on: :collection
                 get :location_details, on: :collection
+                get :export, on: :member
               end
               resources :leads, only: [:index, :show, :update] do
                 post :contact, on: :member, action: :create_contact
@@ -400,6 +402,7 @@ Rails.application.routes.draw do
                 post 'leads', on: :member, action: :add_lead
                 delete 'leads/:lead_id', on: :member, action: :remove_lead
                 post :campaign_segment, on: :member
+                get :export, on: :member
               end
               resource :settings, only: [:show, :update]
             end

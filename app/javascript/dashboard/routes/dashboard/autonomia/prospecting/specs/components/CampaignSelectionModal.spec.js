@@ -214,7 +214,9 @@ describe('CampaignSelectionModal', () => {
       response: {
         status: 422,
         data: {
-          error: 'prospecting.campaign.no_eligible_leads',
+          // #682: a frase do servidor vem em error e o código em code.
+          error: 'Frase do servidor.',
+          code: 'prospecting.campaign.no_eligible_leads',
           payload: {
             segment: {
               eligible_count: 0,
@@ -302,5 +304,35 @@ describe('CampaignSelectionModal', () => {
     ]);
     expect(wrapper.text()).toContain('Não foi possível carregar as campanhas.');
     expect(submit(wrapper).element.disabled).toBe(false);
+  });
+
+  // Sem campaign_manage o servidor recusaria a campanha, mas aceita o segmento
+  // (authorize_campaign_update!, #682): a janela esconde a escolha e manda sem.
+  it('sem poder escolher campanha, não pede as campanhas, esconde a escolha e cria só o segmento', async () => {
+    const wrapper = mount(CampaignSelectionModal, {
+      props: {
+        leads: LEADS,
+        defaultSegmentName: 'padaria',
+        canChooseCampaign: false,
+      },
+      global: { stubs: { ChoiceSelect: ChoiceSelectStub } },
+    });
+    await flushPromises();
+    AutonomiaProspectingAPI.addLeadsToCampaign.mockResolvedValue(
+      segmentResponse({ campaign: null })
+    );
+
+    expect(CampaignsAPI.get).not.toHaveBeenCalled();
+    expect(campaignChoice(wrapper)).toBeUndefined();
+    expect(wrapper.text()).not.toContain('Campanha');
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.addLeadsToCampaign).toHaveBeenCalledWith({
+      leadIds: [101, 102, 103],
+      campaignId: '',
+      segmentName: 'padaria',
+    });
+    expect(result(wrapper).text()).toContain('1 lead(s) entraram no segmento');
   });
 });

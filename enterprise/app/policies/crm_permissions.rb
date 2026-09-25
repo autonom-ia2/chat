@@ -15,7 +15,8 @@ module CrmPermissions
   # - crm_manage_pipelines: pipelines, stages, automations, pipeline inboxes, inbox settings
   # - crm_manage_ai: pipeline AI settings + AI actions on cards (cost-incurring; needs an explicit role)
   # - crm_admin: integration tokens (full CRM credential lifecycle)
-  PLAIN_AGENT_DENIED_KEYS = %w[crm_manage_pipelines crm_manage_ai crm_admin].freeze
+  # - crm_export: planilha da Lista, dado pessoal em lote (#722); só com a chave explícita
+  PLAIN_AGENT_DENIED_KEYS = %w[crm_manage_pipelines crm_manage_ai crm_admin crm_export].freeze
 
   def crm_permission?(key)
     return false if account_user.blank?

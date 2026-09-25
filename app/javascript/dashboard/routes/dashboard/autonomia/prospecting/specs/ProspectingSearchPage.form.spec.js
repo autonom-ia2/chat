@@ -357,6 +357,33 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     });
   });
 
+  // LOCAL-42 (#682, E6): arrastar a prévia mudava o centro da busca e o
+  // círculo ficava no local. Como no Orth (BuscaClient.tsx, mapCenter), no
+  // modo raio o centro é o do local escolhido, o mesmo do círculo.
+  it('no modo raio, arrastar a prévia não tira o centro da busca do círculo', async () => {
+    const wrapper = await openFormWithoutHistory();
+    AutonomiaProspectingAPI.createSearch.mockResolvedValue({
+      data: { payload: { search: bakerySearch(), leads: [] } },
+    });
+
+    await queryInput(wrapper).setValue('padaria');
+    await confirmCuritiba(wrapper);
+    const map = wrapper.findComponent(MapStub);
+    map.vm.$emit('viewportChange', {
+      center: { lat: -25.3, lng: -49.1 },
+      bounds: { north: -25.2, south: -25.4, east: -49.0, west: -49.2 },
+    });
+    await flushPromises();
+    const circleCenter = wrapper.findComponent(MapStub).props('center');
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    const [payload] = AutonomiaProspectingAPI.createSearch.mock.calls[0];
+    expect(circleCenter).toEqual({ lat: -25.4284, lng: -49.2733 });
+    expect(payload.area_config.center).toEqual(circleCenter);
+  });
+
   it('envia o payload exato da busca por área visível', async () => {
     const wrapper = await openFormWithoutHistory();
     AutonomiaProspectingAPI.createSearch.mockResolvedValue({

@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  include ::Autonomia::Prospecting::LeadExport
+
   before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
 
   def index
@@ -17,6 +19,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
 
+  # CSV ou Excel dos leads da lista (#682), na ordem em que a lista os mostra, com a nota do próprio lead.
+  def export
+    list = lists_scope.find(params[:id])
+    leads = list.leads.includes(:company_profile, :contact).order(created_at: :desc).to_a
+    send_leads_export(leads, scoring: {}, filename: "lista-#{list.id}")
+  end
+
   def add_lead
     list = lists_scope.find(params[:id])
     lead = leads_scope.find(params.require(:lead_id))
@@ -27,8 +36,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     lead.ready_for_campaign! unless lead.ready_for_campaign?
 
     render json: { payload: list_payload(list.reload, include_leads: true) }, status: was_new ? :created : :ok
-  rescue ActionController::ParameterMissing => e
-    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActionController::ParameterMissing
+    render json: { error: I18n.t('autonomia.prospecting.errors.lead_required') }, status: :unprocessable_entity
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   end
@@ -59,11 +68,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
       }
     }, status: :created
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'prospecting.campaign.not_found' }, status: :not_found
+    render_campaign_error('prospecting.campaign.not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   rescue ::Autonomia::Prospecting::CampaignSegmentBuilder::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    render_campaign_error(e.message)
   end
 
   private

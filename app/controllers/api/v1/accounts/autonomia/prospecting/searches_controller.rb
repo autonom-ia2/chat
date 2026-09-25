@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  include ::Autonomia::Prospecting::LeadExport
+
   DEFAULT_PER_PAGE = 20
   MAX_PER_PAGE = 50
 
@@ -73,9 +75,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
     render json: { payload: search_payload(search.reload) }
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
+    render_crm_send_error('pipeline_not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  # CSV ou Excel dos leads da busca (#682), na ordem de prioridade dela, como o export do Orth.
+  def export
+    search = searches_scope.find(params[:id])
+    scoring = search.metadata.to_h['lead_scoring'].to_h
+    send_leads_export(by_priority_position(leads_for_search(search), scoring), scoring: scoring, filename: "busca-#{search.id}")
   end
 
   def destroy
@@ -271,6 +280,14 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     scoring.slice('score', 'score_breakdown', 'priority_score', 'priority_position').to_h do |key, value|
       [key, ::Autonomia::Prospecting::Lead.type_for_attribute(key).cast(value).as_json]
     end
+  end
+
+  # Posição de prioridade da busca, senão a do lead; sem posição, no fim, na ordem da busca.
+  def by_priority_position(leads, scoring)
+    leads.each_with_index.sort_by do |lead, index|
+      position = scoring.dig(lead.id.to_s, 'priority_position') || lead.priority_position
+      [position.nil? ? 1 : 0, position.to_i, index]
+    end.map(&:first)
   end
 
   def page
