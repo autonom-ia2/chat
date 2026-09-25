@@ -158,8 +158,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # Operações, despesas fixas e roubo em só prédio, e o limite da conferência levado ao cliente. A §5.1 aponta para
     # os campos de cobertura, as coberturas da apólice deste local valem em outro nome, a lapidação cita tirar vidros,
     # o que nunca faz ganha o zero não pedido e passa a ser a §7.
+    # Revisão de 25/09/2026 (`45780295…` -> `1be662ff…`): o item 7 do "nunca faz" aponta para a §D.1; o CPF ou CNPJ
+    # que o documento traz vale só para quem o cliente nomeou.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('457802955a512d3cb803ac33be27baff')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('1be662ffbc2fd9009b3a246aad97043b')
     end
   end
 end

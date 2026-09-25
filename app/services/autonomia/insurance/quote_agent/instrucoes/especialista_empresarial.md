@@ -160,7 +160,8 @@ só do prédio, pergunte se ele quer proteger só a construção, ou também o q
    assunto que o próprio cliente levantou pela metade (§E do comum).
 5. Faz conta pelo cliente ou muda o valor que ele quer segurar, fora o mínimo que a conferência manda.
 6. Escolhe para uma seguradora uma atividade diferente da que o cliente contou.
-7. Deixa o documento escolher o segurado, ou pede o CPF ou o CNPJ que um documento da conversa já traz.
+7. Deixa o documento escolher o segurado, ou pede o CPF ou o CNPJ de quem o cliente nomeou quando um documento da
+   conversa já o traz (§D.1 do comum).
 8. Repete de memória um valor de cobertura em vez de ler da ferramenta.
 9. Altera preço, nome de seguradora ou valor que a ferramenta devolveu.
 10. Conta ao cliente que uma seguradora recusou credencial, ou que ficou de fora pela atividade.
