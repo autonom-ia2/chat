@@ -2,7 +2,8 @@
 # bigdatacorp-matcher-adapter.ts do Orth, #679).
 #
 # Nome, cidade, UF e situação saem do cadastro, nunca da BigDataCorp: a UF da BigDataCorp é a da matriz. A nota de nome
-# é a maior porcentagem válida da BigDataCorp (razão social vence o empate). Telefone do cadastro nunca entra; o domínio
+# é a maior porcentagem válida da BigDataCorp (razão social vence o empate). Os telefones do cadastro entram (além do
+# Orth, que não os lê, decisão do Rodrigo de 25/09) e qualquer um deles igual ao do Google vale como sinal forte; o domínio
 # só entra quando o CNPJ do site do lead é o mesmo do candidato. Antes do cadastro, dois casos já rejeitam e nem
 # consultam: CNPJ do site diferente (conflito) e situação BAIXADA na BigDataCorp.
 module Autonomia::Prospecting::Research::MatcherAdapter
@@ -13,7 +14,7 @@ module Autonomia::Prospecting::Research::MatcherAdapter
   Matcher = Autonomia::Prospecting::Research::IdentityMatcher
 
   # Identidade do cadastro público que o matcher usa. `cnpj` é o CNPJ que o cadastro devolveu.
-  Identity = Struct.new(:cnpj, :legal_name, :trade_name, :status, :city, :uf, :domain, keyword_init: true)
+  Identity = Struct.new(:cnpj, :legal_name, :trade_name, :status, :city, :uf, :domain, :phones, keyword_init: true)
   Adaptation = Struct.new(:kind, :cnpj, :candidate, :reason, :audit, keyword_init: true)
 
   module_function
@@ -77,7 +78,7 @@ module Autonomia::Prospecting::Research::MatcherAdapter
     Adaptation.new(
       kind: :matcher_candidate, cnpj: candidate.cnpj, audit: audit(candidate, source),
       candidate: Matcher::Candidate.new(
-        cnpj: candidate.cnpj, name: name, city: identity.city.strip, uf: identity.uf.strip, phone: nil,
+        cnpj: candidate.cnpj, name: name, city: identity.city.strip, uf: identity.uf.strip, phone: Array(identity.phones).presence,
         domain: identity.domain.presence, status: normalize_status(identity.status), match_score: score, name_similarity: score
       )
     )

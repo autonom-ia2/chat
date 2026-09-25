@@ -19,8 +19,12 @@ module Autonomia::Prospecting::Research::IdentityMatcher
 
   module_function
 
+  # Telefone igual ao do lead em mais de um candidato não identifica nenhum: é o telefone de quem cadastra os outros
+  # (escritório de contabilidade no CNPJ dos clientes, central, dono com dois CNPJs). Aí o telefone deixa de ser sinal
+  # forte para todos e vale só o nome, como sem telefone (#679).
   def match(place, candidates)
-    entries = candidates.each_with_index.map { |candidate, index| qualify(place, candidate, index) }
+    entries = qualify_all(place, candidates)
+    entries = qualify_all(Place.new(**place.to_h, phone: nil), candidates) if shared_phone?(entries)
     qualified = entries.select { |entry| entry[:qualified] }
                        .sort_by { |entry| [-entry[:candidate].match_score, entry[:index]] }
     return unqualified_result(entries) if qualified.empty?
@@ -49,6 +53,15 @@ module Autonomia::Prospecting::Research::IdentityMatcher
     empty(:not_found, 'no_qualified_candidate')
   end
 
+  # Candidato já rejeitado (CNPJ antigo inativo do mesmo dono) não conta.
+  def shared_phone?(entries)
+    entries.count { |entry| entry[:phone_exact] && entry[:hard_reject].nil? } > 1
+  end
+
+  def qualify_all(place, candidates)
+    candidates.each_with_index.map { |candidate, index| qualify(place, candidate, index) }
+  end
+
   def qualify(place, candidate, index)
     found = signals(place, candidate)
     reject = hard_reject(candidate, found)
@@ -67,7 +80,7 @@ module Autonomia::Prospecting::Research::IdentityMatcher
     candidate_uf = Normalization.uf(candidate.uf)
     place_city = Normalization.text(place.city)
     {
-      phone_exact: place_phone.present? && place_phone == Normalization.phone(candidate.phone),
+      phone_exact: place_phone.present? && Array(candidate.phone).any? { |phone| Normalization.phone(phone) == place_phone },
       domain_exact: place_domain.present? && place_domain == candidate_domain,
       city_uf_match: place_city.present? && place_uf.present? && place_city == Normalization.text(candidate.city) && place_uf == candidate_uf,
       place_domain: place_domain, candidate_domain: candidate_domain, place_uf: place_uf, candidate_uf: candidate_uf

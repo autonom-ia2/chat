@@ -4,10 +4,12 @@
 # decisor. O que se grava é storable_qsa: sem menor, e cada pessoa só com os campos da lista fechada.
 Autonomia::Prospecting::Research::Registry::Company = Data.define(
   :cnpj, :legal_name, :trade_name, :registration_status, :registration_state, :city, :legal_nature_code,
-  :legal_nature_text, :opened_on, :cnae, :provider, :sources, :qsa
+  :legal_nature_text, :opened_on, :cnae, :provider, :sources, :qsa, :phones
 ) do
-  def initialize(sources:, qsa:, **attributes)
-    super(sources: sources.map { |source| source.dup.freeze }.freeze, qsa: qsa.dup.freeze, **attributes)
+  # phones: telefones da empresa no cadastro (dígitos E.164, sem fax). O Orth não lê; aqui confirmam a identidade
+  # e ficam no perfil (#679, decisão do Rodrigo de 25/09).
+  def initialize(sources:, qsa:, phones: [], **attributes)
+    super(sources: sources.map { |source| source.dup.freeze }.freeze, qsa: qsa.dup.freeze, phones: phones.dup.freeze, **attributes)
   end
 
   def failed? = false
