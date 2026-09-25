@@ -149,9 +149,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       provider_place_id: place['id'],
       name: place.dig('displayName', 'text').presence || 'Google Places lead',
       phone: place['internationalPhoneNumber'].presence || place['nationalPhoneNumber'],
-      website: place['websiteUri'],
       address: place['formattedAddress'].to_s,
-      google_maps_uri: place['googleMapsUri'],
       latitude: place.dig('location', 'latitude'),
       longitude: place.dig('location', 'longitude'),
       rating: place['rating'],
@@ -159,7 +157,15 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       category: Array(place['types']).first,
       metadata: reviews.present? ? { reviews_snapshot: reviews } : {},
       raw_payload: place
-    }.merge(address_attributes(place)).merge(place_signals(place))
+    }.merge(url_attributes(place)).merge(address_attributes(place)).merge(place_signals(place))
+  end
+
+  # URLs que cabem na coluna, sem derrubar a busca (#723).
+  def url_attributes(place)
+    {
+      website: Autonomia::Prospecting::Providers::PlaceUrl.fit(place['websiteUri']),
+      google_maps_uri: Autonomia::Prospecting::Providers::PlaceUrl.fit(place['googleMapsUri'])
+    }
   end
 
   def address_attributes(place)
