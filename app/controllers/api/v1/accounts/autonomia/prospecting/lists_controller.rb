@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
+  include ::Autonomia::Prospecting::LeadExport
+
   before_action -> { authorize_campaign_update!(campaign_segment_params[:campaign_id]) }, only: [:campaign_segment]
 
   def index
@@ -15,6 +17,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     render json: { payload: list_payload(list) }, status: :created
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
+  # CSV ou Excel dos leads da lista (#682), na ordem em que a lista os mostra, com a nota do próprio lead.
+  def export
+    list = lists_scope.find(params[:id])
+    leads = list.leads.includes(:company_profile, :contact).order(created_at: :desc).to_a
+    send_leads_export(leads, scoring: {}, filename: "lista-#{list.id}")
   end
 
   def add_lead

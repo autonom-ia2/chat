@@ -38,6 +38,22 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.delete(`${this.url}/searches/${searchId}`);
   }
 
+  // Exportação pelo servidor (#682): format é csv ou xlsx; leadIds, opcional,
+  // limita aos leads da tela (seleção ou filtro), na ordem dela.
+  exportSearch(searchId, { format, leadIds } = {}) {
+    return axios.get(`${this.url}/searches/${searchId}/export`, {
+      params: { format, lead_ids: leadIds },
+      responseType: 'blob',
+    });
+  }
+
+  exportList(listId, { format, leadIds } = {}) {
+    return axios.get(`${this.url}/lists/${listId}/export`, {
+      params: { format, lead_ids: leadIds },
+      responseType: 'blob',
+    });
+  }
+
   getLeads(params = {}) {
     return axios.get(`${this.url}/leads`, { params });
   }

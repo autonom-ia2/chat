@@ -1,5 +1,5 @@
 // Trabalho com os leads da busca aberta: envio ao CRM, enriquecimento, seleção
-// e ações em lote. WhatsApp (useLeadWhatsApp) e CSV (useLeadCsv) têm arquivo
+// e ações em lote. WhatsApp (useLeadWhatsApp) e exportação (useLeadExport) têm arquivo
 // próprio.
 import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -27,7 +27,7 @@ const pickSearchScopedFields = lead =>
     ])
   );
 import { useLeadResearch } from './useLeadResearch';
-import { useLeadCsv } from './useLeadCsv';
+import { useLeadExport } from './useLeadExport';
 import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
 
@@ -163,6 +163,6 @@ export const useSearchLeads = (state, { canManage }) => {
     useLeadResearch(state, { replaceLead }),
     useLeadSelection(state),
     useCrmSend(state),
-    useLeadCsv(state, t)
+    useLeadExport(state, t)
   );
 };
