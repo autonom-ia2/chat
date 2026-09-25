@@ -183,7 +183,12 @@ class Autonomia::Prospecting::SearchRunner
       break if partial || advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
-    { attributes: last_attributes, radius: last_radius, api_units: @consumed_api_units, partial: partial }
+    {
+      attributes: last_attributes,
+      radius: last_radius,
+      api_units: @consumed_api_units,
+      partial: partial
+    }
   end
 
   # Raio maior completo sempre substitui o anterior. Parcial só substitui se trouxe pelo menos tantos lugares que passam
