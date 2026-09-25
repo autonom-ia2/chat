@@ -404,7 +404,8 @@
         "RESULTS": "Leads",
         "CREATED_AT": "Criada em"
       },
-      "SEND_TO_CRM": "Enviar ao CRM"
+      "SEND_TO_CRM": "Enviar ao CRM",
+      "ADD_TO_CAMPAIGN": "Adicionar à campanha"
     },
     "LISTS": {
       "TITLE": "Listas",
@@ -690,6 +691,34 @@
         "NOT_FOUND": "Lead não encontrado nesta conta.",
         "REQUEST_FAILED": "Não foi possível enviar. Tente de novo.",
         "DEFAULT": "Não foi possível enviar este lead."
+      }
+    },
+    "CAMPAIGN_SELECTION": {
+      "TITLE": "Adicionar à campanha",
+      "SELECTED": "{count} lead(s) selecionado(s).",
+      "RULE": "Entram no segmento os leads prontos para campanha, com WhatsApp verificado e sem bloqueio no contato. Os outros aparecem no resumo, com o motivo.",
+      "CAMPAIGN": "Campanha",
+      "SEGMENT_ONLY": "Só criar o segmento, sem campanha",
+      "SEGMENT_NAME": "Nome do segmento",
+      "CAMPAIGNS_LOAD_ERROR": "Não foi possível carregar as campanhas. Dá para criar só o segmento e ligar a campanha depois.",
+      "SUBMIT": "Adicionar",
+      "SUBMITTING": "Adicionando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "ERROR": "Não foi possível adicionar os leads à campanha.",
+      "RESULT": {
+        "ELIGIBLE": "{count} lead(s) entraram no segmento {label}.",
+        "CAMPAIGN": "Campanha: {title}",
+        "CONTACTS_CREATED": "{count} contato(s) criado(s) no caminho.",
+        "BLOCKED": "{count} ficaram de fora"
+      },
+      "BLOCK_REASONS": {
+        "NO_PHONE": "Sem telefone",
+        "NO_WHATSAPP": "Sem WhatsApp verificado",
+        "OPTED_OUT": "Pediu para não receber mensagens",
+        "CONTACT_BLOCKED": "Contato bloqueado",
+        "DISCARDED": "Descartado",
+        "DEFAULT": "Não pode entrar na campanha"
       }
     }
   }
