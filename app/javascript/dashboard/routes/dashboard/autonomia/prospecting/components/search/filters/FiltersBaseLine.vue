@@ -4,6 +4,7 @@
 // jogada a desmarca; o modo decide como a busca pontua.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { presetName } from '../../../utils/searchPresets';
 
 const props = defineProps({
   preset: { type: Object, default: null },
@@ -27,7 +28,7 @@ const modeLabel = computed(() =>
     <span v-if="preset">
       {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.BASE_PRESET') }}
       <strong class="font-medium text-n-slate-12">
-        {{ t(`PROSPECTING.SEARCH.PRESETS.ITEMS.${preset.i18nKey}.NAME`) }}
+        {{ presetName(preset, t) }}
       </strong>
     </span>
     <span v-else>

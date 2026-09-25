@@ -59,7 +59,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       scoring_profiles: scoring_profiles_payload(current_setting),
       active_scoring_weights: current_setting.active_scoring_weights,
       usage: usage_payload
-    ).merge(score_engine_payload(current_setting), permissions_payload)
+    ).merge(score_engine_payload(current_setting), permissions_payload, saved_presets: saved_presets_payload)
+  end
+
+  # Jogadas salvas da conta (#732), para a grade da busca e para editar e excluir aqui nas configurações.
+  def saved_presets_payload
+    ::Autonomia::Prospecting::SavedPreset.where(account: Current.account).newest_first.map(&:as_payload)
   end
 
   # A tela esconde o que o servidor recusaria (#682): Enviar ao CRM pela mesma regra de authorize_crm_card_create! e

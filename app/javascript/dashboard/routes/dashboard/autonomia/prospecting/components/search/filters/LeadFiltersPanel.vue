@@ -2,7 +2,9 @@
 // Conteúdo da gaveta de filtros (Orth, FiltersDrawerV2): 4 grupos por intenção
 // comercial, editados num rascunho. Nada muda para quem usa até "Aplicar";
 // "Limpar tudo" aplica os filtros vazios na hora. O rascunho nasce dos filtros
-// aplicados e volta para eles quando eles mudam por fora.
+// aplicados e volta para eles quando eles mudam por fora. "Salvar como jogada"
+// (#732, só no formulário e para quem gerencia) manda o rascunho para salvar;
+// na edição da jogada salva o botão de aplicar vira o de salvar.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -13,15 +15,19 @@ import RatingOperatorField from './RatingOperatorField.vue';
 import {
   RANK_SLIDER_MAX,
   RANK_SLIDER_MIN,
+  activeAdvancedLeadFiltersCount,
   advancedFilterGroupCounts,
   defaultAdvancedLeadFilters,
 } from '../../../utils/advancedLeadFilters';
 
 const props = defineProps({
   filters: { type: Object, required: true },
+  canSave: { type: Boolean, default: false },
+  canClear: { type: Boolean, default: true },
+  applyLabel: { type: String, default: '' },
 });
 
-const emit = defineEmits(['apply']);
+const emit = defineEmits(['apply', 'save']);
 
 const { t } = useI18n();
 
@@ -38,6 +44,9 @@ watch(
 );
 
 const groupCounts = computed(() => advancedFilterGroupCounts(draft.value));
+const hasActiveFilters = computed(
+  () => activeAdvancedLeadFiltersCount(draft.value) > 0
+);
 
 const hasChoices = computed(() => [
   { value: '', label: t('PROSPECTING.SEARCH.FILTERS.ANY') },
@@ -88,6 +97,7 @@ const toggleYesOnly = (key, checked) => {
 
 const apply = () => emit('apply', { ...draft.value });
 const clearAll = () => emit('apply', defaultAdvancedLeadFilters());
+const save = () => emit('save', { ...draft.value });
 </script>
 
 <template>
@@ -194,21 +204,38 @@ const clearAll = () => emit('apply', defaultAdvancedLeadFilters());
       </label>
     </FilterGroupCard>
 
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
       <button
+        v-if="canClear"
         type="button"
         class="h-11 rounded-md px-2 text-sm font-medium text-n-ruby-11 hover:bg-n-ruby-3"
         @click="clearAll"
       >
         {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.CLEAR_ALL') }}
       </button>
-      <button
-        type="button"
-        class="h-11 rounded-md bg-n-brand px-4 text-sm font-medium text-white"
-        @click="apply"
-      >
-        {{ t('PROSPECTING.SEARCH.FILTER_DRAWER.APPLY') }}
-      </button>
+      <div class="ml-auto flex items-center gap-2">
+        <button
+          v-if="canSave"
+          type="button"
+          class="h-11 rounded-md px-3 text-sm font-medium text-n-slate-12 hover:bg-n-solid-2 disabled:cursor-not-allowed disabled:opacity-60"
+          :disabled="!hasActiveFilters"
+          :title="
+            hasActiveFilters
+              ? ''
+              : t('PROSPECTING.SEARCH.SAVED_PRESETS.SAVE_AS_EMPTY')
+          "
+          @click="save"
+        >
+          {{ t('PROSPECTING.SEARCH.SAVED_PRESETS.SAVE_AS') }}
+        </button>
+        <button
+          type="button"
+          class="h-11 rounded-md bg-n-brand px-4 text-sm font-medium text-white"
+          @click="apply"
+        >
+          {{ applyLabel || t('PROSPECTING.SEARCH.FILTER_DRAWER.APPLY') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

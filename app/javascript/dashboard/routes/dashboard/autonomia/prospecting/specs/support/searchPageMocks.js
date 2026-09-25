@@ -20,6 +20,7 @@ export const prospectingApiMock = () => ({
     discardLeads: vi.fn(),
     createLeadContacts: vi.fn(),
     updateLead: vi.fn(),
+    createSavedPreset: vi.fn(),
   },
 });
 

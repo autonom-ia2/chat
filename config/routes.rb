@@ -407,6 +407,8 @@ Rails.application.routes.draw do
                 get :export, on: :member
               end
               resource :settings, only: [:show, :update]
+              # Jogadas salvas (#732): a lista vai no payload das configurações.
+              resources :saved_presets, only: [:create, :update, :destroy]
             end
           end
           namespace :email_campaigns do

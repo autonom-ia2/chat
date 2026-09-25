@@ -413,7 +413,33 @@
         "CREATED_AT": "Criada em"
       },
       "SEND_TO_CRM": "Enviar ao CRM",
-      "ADD_TO_CAMPAIGN": "Adicionar à campanha"
+      "ADD_TO_CAMPAIGN": "Adicionar à campanha",
+      "SAVED_PRESETS": {
+        "SAVE_AS": "Salvar como jogada",
+        "SAVE_AS_EMPTY": "Escolha pelo menos um filtro para salvar a jogada.",
+        "TITLE": "Salvar filtros como jogada",
+        "DESCRIPTION": "Dê um nome para usar estes filtros de novo. A jogada fica na grade da conta, no modo desta busca.",
+        "NAME": "Nome da jogada",
+        "NAME_PLACEHOLDER": "ex.: Sem site e bem avaliadas",
+        "SAVE": "Salvar jogada",
+        "CANCEL": "Cancelar",
+        "ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "TAGS": {
+          "HAS_WEBSITE_YES": "Com site",
+          "HAS_WEBSITE_NO": "Sem site",
+          "HAS_PHOTOS_YES": "Com fotos",
+          "HAS_PHOTOS_NO": "Sem fotos",
+          "REVIEWS_MIN": "{value}+ avaliações",
+          "RATING_MIN": "Nota acima de {value}",
+          "RATING_MAX": "Nota abaixo de {value}",
+          "OUTSIDE_TOP": "Fora do top {value} do Google",
+          "SEARCH_RANK_MAX": "Até a posição {value} do Google",
+          "HAS_PHONE_YES": "Com telefone",
+          "HAS_PHONE_NO": "Sem telefone",
+          "OPEN_NOW": "Aberto agora",
+          "HAS_OPENING_HOURS": "Com horário"
+        }
+      }
     },
     "LISTS": {
       "TITLE": "Listas",
@@ -568,7 +594,8 @@
       "UNLIMITED": "sem limite",
       "TABS": {
         "GENERAL": "Geral",
-        "SCORE": "Score"
+        "SCORE": "Score",
+        "PRESETS": "Jogadas"
       },
       "PROVIDERS": {
         "MOCK": "Demonstração",
@@ -609,6 +636,23 @@
         "RESEARCH_TITLE": "Pesquisa de empresa e decisor",
         "RESEARCH_ENABLED": "Pesquisa liberada pelo superadmin para esta conta.",
         "RESEARCH_DISABLED": "Pesquisa não liberada para esta conta. Fale com o suporte para contratar."
+      },
+      "SAVED_PRESETS": {
+        "TITLE": "Jogadas salvas",
+        "HINT": "Jogadas que a conta salvou na busca, em Filtros avançados. Aparecem na grade de jogadas, no modo em que foram salvas.",
+        "EMPTY": "Nenhuma jogada salva ainda. Na busca, abra Filtros avançados, escolha os filtros e use Salvar como jogada.",
+        "EDIT": "Editar",
+        "DELETE": "Excluir",
+        "CONFIRM_DELETE": "Confirmar exclusão",
+        "CANCEL": "Cancelar",
+        "EDIT_TITLE": "Editar jogada",
+        "NAME": "Nome da jogada",
+        "SAVE": "Salvar jogada",
+        "CLOSE": "Fechar",
+        "SAVE_ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "DELETE_ERROR": "Não foi possível excluir a jogada. Tente de novo.",
+        "DELETED": "Jogada excluída.",
+        "SAVED": "Jogada salva."
       }
     },
     "MOCK_PROVIDER": {

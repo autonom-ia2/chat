@@ -155,6 +155,23 @@ class AutonomiaProspectingAPI extends ApiClient {
   updateSettings(settings) {
     return axios.patch(`${this.url}/settings`, { settings });
   }
+
+  // Jogadas salvas da conta (#732). A lista vem em getSettings (saved_presets).
+  createSavedPreset(savedPreset) {
+    return axios.post(`${this.url}/saved_presets`, {
+      saved_preset: savedPreset,
+    });
+  }
+
+  updateSavedPreset(savedPresetId, savedPreset) {
+    return axios.patch(`${this.url}/saved_presets/${savedPresetId}`, {
+      saved_preset: savedPreset,
+    });
+  }
+
+  deleteSavedPreset(savedPresetId) {
+    return axios.delete(`${this.url}/saved_presets/${savedPresetId}`);
+  }
 }
 
 export default new AutonomiaProspectingAPI();
