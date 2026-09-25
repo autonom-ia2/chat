@@ -7,6 +7,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadCardActions from './LeadCardActions.vue';
+import LeadResearchSummary from './LeadResearchSummary.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -57,6 +58,11 @@ const isChecked = computed(() =>
   selectedLeadIds.value.map(Number).includes(Number(props.lead.id))
 );
 const isOpen = computed(() => selectedLeadDetailId.value === props.lead.id);
+// Com a pesquisa (#679), o decisor vem dela; o do enriquecimento por IA fica
+// só para lead antigo, sem o bloco research.
+const legacyDecisionName = computed(() =>
+  props.lead.research ? null : props.lead.decision_name
+);
 
 const toggleDetails = event => {
   if (event.target.closest(NESTED_INTERACTIVE)) return;
@@ -173,10 +179,16 @@ const toggleDetails = event => {
       </span>
     </div>
 
+    <LeadResearchSummary
+      v-if="lead.research"
+      :research="lead.research"
+      :research-enabled="Boolean(settings?.research_enabled)"
+    />
+
     <div
       v-if="
         lead.enrichment_status === 'completed' ||
-        lead.decision_name ||
+        legacyDecisionName ||
         lead.enrichment_summary
       "
       class="mx-4 mb-3 grid gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-950"
@@ -192,11 +204,11 @@ const toggleDetails = event => {
           {{ t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED') }}
         </span>
       </div>
-      <div v-if="lead.decision_name" class="leading-relaxed">
+      <div v-if="legacyDecisionName" class="leading-relaxed">
         <span class="font-semibold text-emerald-950">
           {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
         </span>
-        {{ lead.decision_name }}
+        {{ legacyDecisionName }}
         <span v-if="lead.decision_role">
           {{ `· ${lead.decision_role}` }}
         </span>

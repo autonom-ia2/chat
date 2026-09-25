@@ -17,6 +17,7 @@ const createFlags = () => ({
   isSearching: ref(false),
   convertingCrmLeadId: ref(null),
   enrichingLeadId: ref(null),
+  researchRequestLeadId: ref(null),
   verifyingWhatsAppLeadIds: ref([]),
   bulkAction: ref(''),
   showNewSearch: ref(false),
@@ -36,6 +37,8 @@ const createData = () => ({
     has_more: false,
   }),
   leads: ref([]),
+  // research_progress da busca aberta (#679), até os leads trazerem o bloco.
+  openSearchResearchProgress: ref(null),
   settings: ref(null),
   crmPipelines: ref([]),
   crmStages: ref([]),
