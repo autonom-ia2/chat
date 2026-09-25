@@ -31,6 +31,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   # como no Orth (lib/services/search/search-filters.ts).
   NEIGHBORHOOD_TYPES = %w[sublocality_level_1 sublocality neighborhood].freeze
   CITY_TYPES = %w[locality administrative_area_level_2].freeze
+  # Colunas string do lead que recebem texto livre do Google (#723).
+  TEXT_COLUMNS = %i[name address category neighborhood city].freeze
 
   attr_reader :api_units
 
@@ -143,15 +145,18 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   end
 
   def lead_for(place)
+    attributes = place_attributes(place).merge(url_attributes(place)).merge(address_attributes(place)).merge(place_signals(place))
+    fit_text_columns(attributes)
+  end
+
+  def place_attributes(place)
     reviews = Array(place['reviews']).first(5)
     {
       provider: 'google_places',
       provider_place_id: place['id'],
       name: place.dig('displayName', 'text').presence || 'Google Places lead',
       phone: place['internationalPhoneNumber'].presence || place['nationalPhoneNumber'],
-      website: place['websiteUri'],
       address: place['formattedAddress'].to_s,
-      google_maps_uri: place['googleMapsUri'],
       latitude: place.dig('location', 'latitude'),
       longitude: place.dig('location', 'longitude'),
       rating: place['rating'],
@@ -159,7 +164,20 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       category: Array(place['types']).first,
       metadata: reviews.present? ? { reviews_snapshot: reviews } : {},
       raw_payload: place
-    }.merge(address_attributes(place)).merge(place_signals(place))
+    }
+  end
+
+  # Texto do Google maior que a coluna é cortado em vez de derrubar a busca (#723).
+  def fit_text_columns(attributes)
+    attributes.merge(TEXT_COLUMNS.index_with { |column| Autonomia::Prospecting::ColumnFit.text(attributes[column]) })
+  end
+
+  # URLs que cabem na coluna, sem derrubar a busca (#723).
+  def url_attributes(place)
+    {
+      website: Autonomia::Prospecting::ColumnFit.url(place['websiteUri']),
+      google_maps_uri: Autonomia::Prospecting::ColumnFit.url(place['googleMapsUri'], drop_query: false)
+    }
   end
 
   def address_attributes(place)
