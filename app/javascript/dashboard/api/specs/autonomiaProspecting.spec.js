@@ -44,4 +44,36 @@ describe('#AutonomiaProspectingAPI', () => {
       { force: true }
     );
   });
+
+  // Envio ao CRM em lote, campanha da seleção e sócio como contato (#680).
+  it('manda os leads ao CRM em lote com funil e estágio', () => {
+    prospecting.createCrmCards({ leadIds: [1, 2], pipelineId: 3, stageId: 31 });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/crm_cards',
+      { lead_ids: [1, 2], pipeline_id: 3, stage_id: 31 }
+    );
+  });
+
+  it('adiciona os leads da seleção a uma campanha', () => {
+    prospecting.addLeadsToCampaign({
+      leadIds: [1, 2],
+      campaignId: 8,
+      segmentName: 'Padarias',
+    });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
+      { lead_ids: [1, 2], campaign_id: 8, segment_name: 'Padarias' }
+    );
+  });
+
+  it('adota um sócio da pesquisa como contato do lead', () => {
+    prospecting.adoptOwner(7, 'MARIA DA SILVA');
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/7/adopt_owner',
+      { owner_name: 'MARIA DA SILVA' }
+    );
+  });
 });

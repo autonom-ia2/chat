@@ -46,9 +46,30 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.post(`${this.url}/leads/${leadId}/contact`);
   }
 
-  createLeadCrmCard(leadId, crmCard) {
-    return axios.post(`${this.url}/leads/${leadId}/crm_card`, {
-      crm_card: crmCard,
+  // Envio ao CRM (#680): até 30 leads por pedido, resultado por lead
+  // (created, existing, failed). Um lead só também vai por aqui.
+  createCrmCards({ leadIds, pipelineId, stageId }) {
+    return axios.post(`${this.url}/leads/crm_cards`, {
+      lead_ids: leadIds,
+      pipeline_id: pipelineId,
+      stage_id: stageId,
+    });
+  }
+
+  // Campanha a partir da seleção da busca (#680): devolve o segmento, com o
+  // motivo de cada lead bloqueado.
+  addLeadsToCampaign({ leadIds, campaignId, segmentName }) {
+    return axios.post(`${this.url}/leads/campaign_segment`, {
+      lead_ids: leadIds,
+      campaign_id: campaignId,
+      segment_name: segmentName,
+    });
+  }
+
+  // Um dos sócios da pesquisa vira o decisor e o contato do lead (#680).
+  adoptOwner(leadId, ownerName) {
+    return axios.post(`${this.url}/leads/${leadId}/adopt_owner`, {
+      owner_name: ownerName,
     });
   }
 
