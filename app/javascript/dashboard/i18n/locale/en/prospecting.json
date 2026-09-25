@@ -502,6 +502,22 @@
       "SCORING_PROFILE_HINT": "Pesos definidos pelo perfil selecionado. Para alterar, escolha Customizado.",
       "SCORING_CUSTOM_HINT": "Edite os pesos que serão usados apenas nesta conta.",
       "SCORING_WEIGHTS_TITLE": "Pesos do perfil",
+      "SCORING_PROFILE_RESTRICTED": "Perfil exclusivo desta conta",
+      "ORTH": {
+        "WEIGHTS_TITLE": "Componentes da nota",
+        "WEIGHTS_HINT": "Pesos efetivos do perfil escolhido, numa busca sem filtros. Filtro que já garante um sinal, como ter site, zera o peso dele e redistribui o resto.",
+        "CUSTOM_HINT": "Pesos próprios desta conta, convertidos para os 6 componentes. Posição no Google e relevância da busca não entram na nota; a posição conta na prioridade.",
+        "READING_GBP": "Google Meu Negócio: nota alta indica lacuna no perfil. De 65 para cima é oportunidade alta, de 40 a 64 é média e abaixo de 40 é baixa.",
+        "READING_GENERAL": "Geral: nota alta indica empresa bem estruturada. De 70 para cima é lead bem qualificado, de 50 a 69 é qualificado e abaixo de 50 a qualificação é fraca.",
+        "COMPONENTS": {
+          "website": "Site",
+          "phone": "Telefone",
+          "rating": "Nota no Google",
+          "volume": "Volume de avaliações",
+          "activity": "Atividade recente",
+          "photos": "Fotos"
+        }
+      },
       "CRM_EMPTY": "Nenhum funil padrão",
       "CRM_STAGE_EMPTY": "Nenhuma etapa padrão",
       "USAGE_DAILY": "Consumo diário",

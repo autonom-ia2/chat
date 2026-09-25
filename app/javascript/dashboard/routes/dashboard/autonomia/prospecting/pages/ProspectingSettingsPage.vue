@@ -8,6 +8,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.vue';
 import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
 import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
+import ProspectingOrthScoreWeights from '../components/ProspectingOrthScoreWeights.vue';
 import ProspectingSearchCountryField from '../components/ProspectingSearchCountryField.vue';
 import { DEFAULT_SEARCH_COUNTRY } from '../utils/searchCountries';
 
@@ -105,6 +106,28 @@ const selectedScoringProfile = computed(() =>
 const isCustomScoringProfile = computed(
   () => form.value.scoring_profile_option === CUSTOM_SCORING_PROFILE_VALUE
 );
+
+// Conta virada para a nota do Orth (#681). Conta legacy não recebe pesos do
+// Orth no payload e vê a aba como sempre foi.
+const isOrthEngine = computed(() => settings.value?.score_engine === 'orth');
+
+const orthScoringWeights = computed(() => {
+  if (isCustomScoringProfile.value) return settings.value?.orth_scoring_weights;
+
+  return (
+    selectedScoringProfile.value?.orth_weights ||
+    settings.value?.orth_scoring_weights
+  );
+});
+
+const scoringProfileBadge = computed(() => {
+  if (isCustomScoringProfile.value) {
+    return t('PROSPECTING.SETTINGS.SCORING_PROFILE_CUSTOM');
+  }
+  return selectedScoringProfile.value?.restricted
+    ? t('PROSPECTING.SETTINGS.SCORING_PROFILE_RESTRICTED')
+    : t('PROSPECTING.SETTINGS.SCORING_PROFILE_GLOBAL');
+});
 
 const displayedScoringWeights = computed(() => {
   if (isCustomScoringProfile.value) {
@@ -434,11 +457,7 @@ onMounted(fetchSettings);
                     : 'border-n-teal-5 bg-n-teal-2 text-n-teal-11'
                 "
               >
-                {{
-                  isCustomScoringProfile
-                    ? t('PROSPECTING.SETTINGS.SCORING_PROFILE_CUSTOM')
-                    : t('PROSPECTING.SETTINGS.SCORING_PROFILE_GLOBAL')
-                }}
+                {{ scoringProfileBadge }}
               </span>
             </div>
 
@@ -478,7 +497,14 @@ onMounted(fetchSettings);
             </label>
           </div>
 
+          <ProspectingOrthScoreWeights
+            v-if="isOrthEngine"
+            :weights="orthScoringWeights || {}"
+            :mode="form.search_score_mode"
+            :is-custom="isCustomScoringProfile"
+          />
           <div
+            v-else
             class="overflow-hidden rounded-lg border border-n-weak bg-n-solid-1 shadow-sm"
           >
             <div class="border-b border-n-weak px-4 py-3">
