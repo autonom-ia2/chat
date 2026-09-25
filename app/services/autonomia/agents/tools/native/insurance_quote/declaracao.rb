@@ -50,7 +50,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
               'CEP de pernoite; o resto do que o cliente contou vai nos blocos (vehicle, ' \
               'coverage, quotation…), cada campo explicado nele; a ferramenta consulta a placa por ' \
               'conta própria. Nos ' \
-              'outros ramos, informe o que o cliente já deu em `dados`; se faltar algo, a ' \
+              'outros ramos, informe o que o cliente já deu em dados; se faltar algo, a ' \
               'ferramenta responde exatamente o que perguntar, sem consumir cotação.'.freeze
 
   # A DESCRIÇÃO DO ESPECIALISTA DE UM RAMO COM FORMULÁRIO (revisão da chat#592). Ele não recebe `dados`, e a

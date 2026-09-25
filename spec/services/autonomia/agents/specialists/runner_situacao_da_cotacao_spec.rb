@@ -21,7 +21,7 @@ RSpec.describe Autonomia::Agents::Specialists::Runner do
     Autonomia::Agents::Specialist.create!(agent: agent, name: 'Especialista de Automóvel', slug: 'auto',
                                           description: 'cotação de automóvel', instruction: 'Você cota automóvel.')
   end
-  let(:recusa) { 'Antes de cotar, corrija ou complete: coverage.assistance24h — 2000 não existe nesta cobertura.' }
+  let(:recusa) { 'Antes de cotar, corrija ou complete: coverage.assistance24h: 2000 não existe nesta cobertura.' }
   let(:resposta) { { resposta: 'Já estou cuidando da renovação.', dados_faltando: [] }.to_json }
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
