@@ -719,7 +719,10 @@ class Autonomia::Prospecting::SearchRunner
                           'lead_scoring' => search.metadata.to_h['lead_scoring'],
                           'results_count' => leads.size,
                           'cached_from_search_id' => search.id,
-                          'search_filters' => search_filters
+                          'search_filters' => search_filters,
+                          # O raio gravado é o que a busca de origem alcançou; Repetir precisa do que a pessoa pediu (#678).
+                          'requested_radius' => radius,
+                          'radius_expanded' => search.metadata.to_h['radius_expanded'] == true
                         )
     )
 

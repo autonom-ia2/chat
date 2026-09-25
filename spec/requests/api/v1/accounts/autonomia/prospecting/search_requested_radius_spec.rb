@@ -33,4 +33,23 @@ RSpec.describe 'Autonomia prospecting search requested radius', type: :request d
 
     expect(response.parsed_body['payload']).to include('radius' => 4000, 'requested_radius' => 1000)
   end
+
+  it 'mantém o raio pedido quando a busca repetida vem do cache' do
+    Autonomia::Prospecting::Setting.for_account(account).update!(cache_ttl_seconds: 3600)
+    params = {
+      search: {
+        query: 'padaria', location: 'Curitiba, PR', radius: 1000, requested_limit: 5,
+        metadata: { filters: { auto_expand_radius: true } }
+      }
+    }
+    post searches_path, params: params, headers: auth_headers(admin), as: :json
+    post searches_path, params: params, headers: auth_headers(admin), as: :json
+    cached = Autonomia::Prospecting::Search.find(response.parsed_body.dig('payload', 'search', 'id'))
+
+    get "#{searches_path}/#{cached.id}", headers: auth_headers(admin)
+
+    expect(cached.status).to eq('cached')
+    expect(response.parsed_body['payload']).to include('radius' => 4000, 'requested_radius' => 1000)
+    expect(cached.metadata['radius_expanded']).to be(true)
+  end
 end
