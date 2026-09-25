@@ -1,40 +1,24 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import ButtonGroup from 'dashboard/components-next/buttonGroup/ButtonGroup.vue';
-import { useUISettings } from 'dashboard/composables/useUISettings';
-import { useMapGetter } from 'dashboard/composables/store';
 import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
+import { useGuiaDescoberta } from './useGuiaDescoberta';
+import GuideDot from './GuideDot.vue';
 
-// V1 — global launcher for the "Guia da Plataforma" (onboarding/suporte). GLOBAL: shows on every
-// screen (including conversations) for EVERY role (admin + atendente) — the guide is role-aware.
-// Gate = `autonomia_guide_available` (the backend's EXACT eligibility: master ENV + account flag +
-// a resolvable AI credential), so the launcher never appears when the guide would be unavailable.
-// Own uiSetting key (is_autonomia_guide_panel_open). Sits above the copilot launcher.
+// Botão flutuante do "Guia da Plataforma", SÓ NO CELULAR (md:hidden). No computador a
+// entrada fica no pé da barra lateral (GuideSidebarEntry, #697): um botão flutuante no
+// canto cobria paginação e a última linha das listas. No celular não há barra lateral
+// fixa, então fica a bolinha azul de 44 px, sem balão (na tela pequena ele cobriria o
+// conteúdo); o ponto avisa até a primeira abertura.
 // #646 — a fixed panel (e.g. CrmCardDrawer) can share this same bottom-right corner;
 // `isFixedPanelOpen` lifts the launcher above that panel's footer instead of letting
 // it cover the footer's buttons.
-const { uiSettings, updateUISettings } = useUISettings();
-const currentAccount = useMapGetter('accounts/getAccount');
-const accountId = useMapGetter('getCurrentAccountId');
-
-const isEnabled = computed(
-  () =>
-    currentAccount.value(accountId.value)?.autonomia_guide_available === true
-);
+const { guiaDisponivel, painelAberto, mostrarPonto, alternarGuia } =
+  useGuiaDescoberta();
 
 const showLauncher = computed(
-  () => isEnabled.value && !uiSettings.value.is_autonomia_guide_panel_open
+  () => guiaDisponivel.value && !painelAberto.value
 );
-
-const toggleSidebar = () => {
-  updateUISettings({
-    is_autonomia_guide_panel_open:
-      !uiSettings.value.is_autonomia_guide_panel_open,
-    is_autonomia_copilot_panel_open: false,
-    is_contact_sidebar_open: false,
-  });
-};
 
 const launcherRef = ref(null);
 
@@ -53,23 +37,23 @@ watch(showLauncher, async visivel => {
 <template>
   <div
     v-if="showLauncher"
-    class="fixed ltr:right-4 rtl:left-4 z-50 transition-[bottom] duration-200 ease-out"
+    class="md:hidden fixed ltr:right-4 rtl:left-4 z-50 transition-[bottom] duration-200 ease-out"
     :class="isFixedPanelOpen ? 'bottom-24' : 'bottom-4'"
   >
-    <ButtonGroup
-      class="rounded-full bg-n-alpha-2 backdrop-blur-lg p-1 shadow hover:shadow-md"
-    >
+    <div class="relative">
       <Button
         ref="launcherRef"
-        icon="i-lucide-life-buoy"
+        data-guia-abrir
+        icon="i-lucide-circle-help"
+        :title="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
+        :aria-label="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
+        color="blue"
         no-animation
-        :title="$t('AUTONOMIA_GUIDE.LAUNCHER')"
-        :aria-label="$t('AUTONOMIA_GUIDE.LAUNCHER')"
-        class="!rounded-full !bg-n-solid-3 dark:!bg-n-alpha-2 !text-n-slate-12 text-xl transition-all duration-200 ease-out hover:brightness-110"
-        lg
-        @click="toggleSidebar"
+        class="!size-11 !rounded-full shadow-md hover:shadow-lg"
+        @click="alternarGuia"
       />
-    </ButtonGroup>
+      <GuideDot v-if="mostrarPonto" />
+    </div>
   </div>
   <template v-else />
 </template>

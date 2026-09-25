@@ -64,9 +64,10 @@ class Autonomia::CentralDeAjuda::Leitura
                                .first(LIMITE_DA_BUSCA).map { |*, artigo| resumo(artigo) }
   end
 
+  # `rota`: a tela que o artigo explica (o "Me leve até lá"); o Guia sugere os artigos da tela aberta (#697).
   def resumo(artigo)
     { id: central(artigo)['id'], ref: self.class.ref_de(central(artigo)['id']), titulo: artigo.title,
-      descricao: artigo.description, capitulo: artigo.category&.name }
+      descricao: artigo.description, capitulo: artigo.category&.name, rota: central(artigo).dig('me_leve_ate_la', 'rota') }
   end
 
   def central(artigo) = artigo.meta.to_h['central'] || {}

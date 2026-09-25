@@ -1713,6 +1713,14 @@
       "NEW_CONVERSATION": "Start a new chat",
       "CLOSE": "Close the Guide",
       "SEND": "Send message"
-    }
+    },
+    "LAUNCHER_LABEL": "Ask the Guide",
+    "INTRO": {
+      "TEXT": "Not sure how to do something? Ask here: I explain it and take you to the right screen.",
+      "OK": "Got it",
+      "LATER": "Later"
+    },
+    "SUGGESTIONS_THIS_SCREEN": "About this screen",
+    "SUGGESTION_ARTICLE": "Explain: {titulo}"
   }
 }
