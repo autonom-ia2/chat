@@ -13,7 +13,7 @@ const presetText = (preset, field) =>
 </script>
 
 <template>
-  <section class="grid gap-2">
+  <section class="grid gap-2" data-tour="search-presets">
     <div>
       <h3 class="text-xs font-medium text-n-slate-11">
         {{ t('PROSPECTING.SEARCH.PRESETS.TITLE') }}

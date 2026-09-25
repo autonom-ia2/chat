@@ -2,7 +2,7 @@
 // Filtros do formulário de nova busca: um botão com a contagem e a gaveta
 // lateral dos 4 grupos. Só o que for aplicado vai no pedido; fechar sem
 // aplicar descarta o rascunho. O refino da busca aberta é outro estado.
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { useI18n } from 'vue-i18n';
 import FiltersBaseLine from './filters/FiltersBaseLine.vue';
@@ -12,9 +12,13 @@ import { activeAdvancedLeadFiltersCount } from '../../utils/advancedLeadFilters'
 import { findPreset } from '../../utils/searchPresets';
 
 const { t } = useI18n();
-const { formFilters, form } = useProspectingSearchContext();
+const { formFilters, form, tourFiltersOpen } = useProspectingSearchContext();
 
 const isOpen = ref(false);
+// O passo de filtros do tour (#682) abre a gaveta e a fecha ao sair.
+watch(tourFiltersOpen, open => {
+  isOpen.value = open;
+});
 // A gaveta cobre o canto direito, onde fica o lançador do Guia (#646): sinaliza
 // que está aberta para ele sair de cima do Aplicar.
 useFixedPanelPresence(isOpen);

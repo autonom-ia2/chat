@@ -16,6 +16,7 @@ defineProps({
 const { t } = useI18n();
 const {
   canManage,
+  canSendToCrm,
   settings,
   selectedLeadDetailId,
   enrichingLeadId,
@@ -120,7 +121,7 @@ const toggleDetails = lead => {
       {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
     </a>
     <button
-      v-else-if="canManage"
+      v-else-if="canSendToCrm"
       type="button"
       class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
       @click="openCrmSend([lead])"
@@ -128,5 +129,6 @@ const toggleDetails = lead => {
       <span class="i-lucide-kanban-square size-3.5" aria-hidden="true" />
       {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
     </button>
+    <slot />
   </div>
 </template>

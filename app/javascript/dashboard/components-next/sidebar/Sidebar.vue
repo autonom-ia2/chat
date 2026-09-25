@@ -32,6 +32,7 @@ import SidebarProfileMenu from './SidebarProfileMenu.vue';
 import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
+import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
@@ -799,33 +800,11 @@ const menuItems = computed(() => {
           },
         ]
       : []),
-    ...(autonomiaProspectingEnabled.value
-      ? [
-          {
-            name: 'Prospecting',
-            label: t('SIDEBAR.PROSPECTING'),
-            icon: 'i-lucide-search',
-            activeOn: [
-              'autonomia_prospecting_search',
-              'autonomia_prospecting_lists',
-            ],
-            children: [
-              {
-                name: 'Prospecting Search',
-                label: t('SIDEBAR.PROSPECTING_SEARCH'),
-                to: accountScopedRoute('autonomia_prospecting_search'),
-                activeOn: ['autonomia_prospecting_search'],
-              },
-              {
-                name: 'Prospecting Lists',
-                label: t('SIDEBAR.PROSPECTING_LISTS'),
-                to: accountScopedRoute('autonomia_prospecting_lists'),
-                activeOn: ['autonomia_prospecting_lists'],
-              },
-            ],
-          },
-        ]
-      : []),
+    ...prospectingSidebarItems({
+      isVisible: autonomiaProspectingEnabled.value,
+      t,
+      accountScopedRoute,
+    }),
     ...(autonomiaInsuranceEnabled.value
       ? [
           {

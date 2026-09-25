@@ -779,14 +779,14 @@ pt_BR:
             gbp:
               website: { strong: 'sem site', weak: 'site presente' }
               phone: { strong: 'sem telefone', weak: 'tem telefone' }
-              rating: { strong: 'rating fraco', weak: 'rating bom' }
-              volume: { strong: 'poucas reviews', weak: 'volume saudável' }
+              rating: { strong: 'nota fraca', weak: 'nota boa' }
+              volume: { strong: 'poucas avaliações', weak: 'volume saudável' }
               activity: { strong: 'GMN inativo', weak: 'GMN ativo' }
               photos: { strong: 'sem fotos', weak: 'fotos ok' }
             general:
               website: { strong: 'site', weak: 'sem site' }
               phone: { strong: 'telefone', weak: 'sem telefone' }
-              rating: { strong: 'rating alto', weak: 'rating fraco' }
+              rating: { strong: 'nota alta', weak: 'nota fraca' }
               volume: { strong: 'volume bom', weak: 'pouco volume' }
               activity: { strong: 'ativo', weak: 'pouco ativo' }
               photos: { strong: 'boa presença visual', weak: 'sem fotos' }
@@ -796,11 +796,11 @@ pt_BR:
           contacted_days_ago: 'Contatado há %{days}d'
           contacted_recently: 'Contatado recentemente'
           old_reviews:
-            one: 'Última review há %{count} ano'
-            other: 'Última review há %{count} anos'
+            one: 'Última avaliação há %{count} ano'
+            other: 'Última avaliação há %{count} anos'
           low_rating_low_volume:
-            one: 'Rating %{rating} com apenas %{count} review'
-            other: 'Rating %{rating} com apenas %{count} reviews'
+            one: 'Nota %{rating} com apenas %{count} avaliação'
+            other: 'Nota %{rating} com apenas %{count} avaliações'
       crm_send:
         failures:
           not_found: 'Lead não encontrado nesta conta.'
@@ -828,12 +828,71 @@ pt_BR:
         not_ready: 'Lead ainda não está pronto para campanha.'
       campaign_errors:
         forbidden: 'Seu perfil não pode alterar campanhas. Peça a um administrador a permissão de gerenciar campanhas.'
+        # Recusas do público de campanha (#682): a tela mostra a frase; o código segue em `code`.
+        not_found: 'A campanha escolhida não existe mais. Escolha outra.'
+        empty_list: 'Esta lista ainda não tem leads. Adicione leads antes de criar o público.'
+        no_eligible_leads: 'Nenhum lead da seleção pode entrar na campanha.'
+        label_collision_visible_on_sidebar: 'Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.'
+        unsupported_campaign: 'Só campanhas de envio único recebem leads da prospecção.'
+        campaign_not_active: 'A campanha escolhida não está ativa. Escolha outra ou crie só o segmento.'
+        too_many_leads: 'Selecione até %{max} leads por vez.'
+        empty_selection: 'Selecione pelo menos um lead.'
       selection_list_name: 'Seleção da busca %{date}'
       score_bands:
         very_hot: 'Lead muito quente'
         high: 'Oportunidade alta'
         warm: 'Lead morno'
         low: 'Prioridade baixa'
+      # Exportação em CSV e Excel (#682): cabeçalho da planilha, valores e erros do pedido.
+      export:
+        columns:
+          place_id: 'ID do Google'
+          name: 'Nome'
+          score: 'Nota'
+          priority: 'Prioridade'
+          band: 'Faixa'
+          rating: 'Nota no Google'
+          reviews_count: 'Avaliações'
+          category: 'Categoria'
+          address: 'Endereço'
+          neighborhood: 'Bairro'
+          website: 'Site'
+          phone: 'Telefone'
+          whatsapp: 'WhatsApp'
+          whatsapp_verified: 'WhatsApp verificado'
+          email: 'E-mail'
+          instagram: 'Instagram'
+          facebook: 'Facebook'
+          linkedin: 'LinkedIn'
+          cnpj: 'CNPJ'
+          legal_name: 'Razão social'
+          trade_name: 'Nome fantasia'
+          registration_status: 'Situação'
+          registration_state: 'UF'
+          decision_name: 'Decisor'
+          decision_role: 'Cargo do decisor'
+          decision_confidence: 'Confiança do decisor'
+          decision_linkedin: 'LinkedIn do decisor'
+          decision_instagram: 'Instagram do decisor'
+          owners: 'Sócios'
+          researched_at: 'Pesquisado em'
+          google_maps: 'Maps'
+          latitude: 'Latitude'
+          longitude: 'Longitude'
+          status: 'Status'
+          source: 'Fonte'
+        statuses:
+          new_lead: 'Novo'
+          qualified: 'Qualificado'
+          discarded: 'Descartado'
+          no_consent: 'Sem consentimento'
+          ready_for_campaign: 'Pronto para campanha'
+        values:
+          'yes': 'Sim'
+          'no': 'Não'
+        errors:
+          invalid_format: 'Escolha CSV ou Excel para exportar.'
+          invalid_lead_ids: 'Não foi possível exportar: a seleção de leads veio inválida. Recarregue a página e tente de novo.'
       errors:
         google_unavailable: 'A busca no Google está indisponível no momento. Fale com o suporte.'
         score_unavailable: 'A nota da busca está indisponível no momento. Fale com o suporte.'
@@ -850,3 +909,10 @@ pt_BR:
         enrichment_in_progress: 'Este lead já está sendo enriquecido. O card se atualiza sozinho quando terminar.'
         research_disabled: 'A pesquisa de empresa e decisor está desligada nesta conta. Fale com o suporte para ligar.'
         owner_not_found: 'Essa pessoa não está entre os sócios que a pesquisa achou para esta empresa. Atualize o painel e escolha um nome da lista.'
+        disabled: 'A Prospecção não está ligada nesta conta. Fale com o suporte.'
+        enrichment_disabled: 'A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.'
+        query_required: 'Informe o segmento ou termo da busca.'
+        limit_invalid: 'Escolha quantos leads a busca deve trazer.'
+        limit_too_high: 'Peça até %{max} leads por busca.'
+        unsupported_provider: 'A fonte de busca desta conta não está disponível. Fale com o suporte.'
+        lead_required: 'Escolha o lead para adicionar à lista.'

@@ -119,6 +119,18 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
       expect(response).to have_http_status(:created)
     end
 
+    # A tela da busca mostra Adicionar à campanha a quem só tem a prospecção e, sem campaign_manage, esconde só a escolha
+    # da campanha (#682): esta é a regra que o botão segue.
+    it 'seleção sem campaign_id, só com a prospecção, cria o segmento e não toca campanha nenhuma' do
+      post "#{base_url}/leads/campaign_segment", params: { lead_ids: [create_lead(4).id], segment_name: 'Só segmento' },
+                                                 headers: auth_headers(agent_with(['prospecting_manage'])), as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body.dig('payload', 'segment', 'campaign')).to be_nil
+      expect(response.parsed_body.dig('payload', 'segment', 'eligible_count')).to eq(1)
+      expect(campaign.reload.audience).to eq([])
+    end
+
     it 'com campaign_manage a seleção entra na campanha' do
       post "#{base_url}/leads/campaign_segment",
            params: { lead_ids: [create_lead(1).id], campaign_id: campaign.display_id, segment_name: 'Sel' },

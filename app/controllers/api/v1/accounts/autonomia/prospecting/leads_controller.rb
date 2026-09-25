@@ -48,10 +48,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     return render json: { payload: payload }, status: result.created.any? ? :created : :ok if result.failed.empty?
 
     render_single_failure(result.failed.first, payload)
-  rescue ActionController::ParameterMissing, ::Autonomia::Prospecting::CrmCardConverter::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+  rescue ActionController::ParameterMissing
+    render_crm_send_error('pipeline_not_found')
+  rescue ::Autonomia::Prospecting::CrmCardConverter::Error
+    render_crm_send_error('crm_disabled')
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'crm.pipeline_or_stage_not_found' }, status: :not_found
+    render_crm_send_error('pipeline_not_found', status: :not_found)
   end
 
   # Envio ao CRM em lote (#680): até 30 leads, cada um na própria transação.
@@ -78,12 +80,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     ).perform
     render json: { payload: selection_segment_payload(result) }, status: :created
   rescue ActiveRecord::RecordNotFound
-    render json: { error: 'prospecting.campaign.not_found' }, status: :not_found
+    render_campaign_error('prospecting.campaign.not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
   rescue ::Autonomia::Prospecting::SelectionCampaignSegment::Error => e
     segment = ::Autonomia::Prospecting::CampaignSegmentPayload.blocked_only(e.blocked_leads, missing_lead_ids: e.missing_lead_ids)
-    render json: { error: e.message, payload: { segment: segment } }, status: :unprocessable_entity
+    render_campaign_error(e.message, payload: { segment: segment })
   end
 
   def verify_whatsapp
@@ -93,10 +95,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
     render json: {
       payload: {
-        lead: lead_payload(result.lead),
+        # Apagado enquanto o WAHA respondia: o mesmo 404 do lead que já não existia.
+        lead: lead_payload(result.lead || raise(ActiveRecord::RecordNotFound)),
         exists: result.exists,
         phone: result.phone,
-        chat_id: result.chat_id
+        # pending: o telefone do lead mudou durante a consulta; nada vale para o número novo, que voltou à fila (ENRIQ-69).
+        chat_id: result.chat_id, pending: result.pending == true
       }
     }
   rescue ::Autonomia::Prospecting::WhatsappVerifier::Error => e
@@ -106,7 +110,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   # Responde 202 na hora: site + IA rodam no EnrichLeadJob e o lead volta pelo evento prospecting.lead.updated (#678).
   def enrich
     lead = leads_scope.find(params[:id])
-    return render json: { error: 'prospecting.enrichment.disabled' }, status: :unprocessable_entity unless research_enabled?
+    unless research_enabled?
+      return render json: { error: I18n.t('autonomia.prospecting.errors.enrichment_disabled'), code: 'prospecting.enrichment.disabled' },
+                    status: :unprocessable_entity
+    end
 
     unless ::Autonomia::Prospecting::LeadWorkQueue.enqueue_enrichment(lead)
       return render json: { error: I18n.t('autonomia.prospecting.errors.enrichment_in_progress') }, status: :conflict
@@ -201,14 +208,6 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
       list: list_summary_payload(result.segment.list),
       segment: ::Autonomia::Prospecting::CampaignSegmentPayload.build(result.segment, missing_lead_ids: result.missing_lead_ids)
     }
-  end
-
-  # A tela mostra `error` como veio: o texto é sempre do I18n; `code` é para quem trata o caso.
-  def render_crm_send_error(code, status: :unprocessable_entity)
-    render json: {
-      error: I18n.t("autonomia.prospecting.crm_send.errors.#{code}", max: ::Autonomia::Prospecting::CrmCardBatch::MAX_LEADS),
-      code: "prospecting.crm_send.#{code}"
-    }, status: status
   end
 
   def crm_card_params

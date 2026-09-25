@@ -44,6 +44,7 @@ const {
         </div>
         <button
           type="submit"
+          data-tour="search-submit"
           class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-n-brand px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="!canSearch"
         >
@@ -60,7 +61,9 @@ const {
     <section class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div class="grid content-start gap-5">
         <div class="grid gap-4">
-          <SearchWhereFields />
+          <div class="grid gap-4" data-tour="search-where">
+            <SearchWhereFields />
+          </div>
           <SearchAreaFields />
           <SearchModeFields />
           <SearchQuantityFields />

@@ -18,7 +18,9 @@ class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
   def verify(lead)
     verify_source(lead, :google) if Autonomia::Prospecting::LeadWorkQueue.google_phone_pending?(lead) || google_queued?(lead)
     verify_source(lead, :site) if Autonomia::Prospecting::LeadWorkQueue.site_whatsapp_pending?(lead)
-    Autonomia::Prospecting::LeadBroadcaster.updated(lead.reload)
+    # Apagado durante a consulta, não há o que avisar à tela; o lote segue.
+    current = Autonomia::Prospecting::Lead.find_by(id: lead.id)
+    Autonomia::Prospecting::LeadBroadcaster.updated(current) if current
   end
 
   # Falha do WAHA fica gravada no lead pelo verificador; o resto do lote segue. Sem número válido não há o que
@@ -27,7 +29,9 @@ class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
     Autonomia::Prospecting::WhatsappVerifier.new(lead: lead, source: source).perform
   rescue Autonomia::Prospecting::WhatsappVerifier::Error => e
     Rails.logger.info("[Autonomia::Prospecting::VerifyWhatsappJob] lead_id=#{lead.id} source=#{source} error=#{e.message}")
-    release_queued_marker(lead) if source == :google && google_queued?(lead.reload)
+    # Lead apagado durante o lote não tem marca a soltar, e o resto do lote segue.
+    current = Autonomia::Prospecting::Lead.find_by(id: lead.id)
+    release_queued_marker(current) if source == :google && current && google_queued?(current)
   end
 
   def google_queued?(lead)

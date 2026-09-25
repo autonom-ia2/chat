@@ -206,7 +206,8 @@ RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', 
                                            headers: auth_headers(admin), as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to eq('prospecting.campaign.no_eligible_leads')
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.campaign_errors.no_eligible_leads'))
+      expect(response.parsed_body['code']).to eq('prospecting.campaign.no_eligible_leads')
       expect(response.parsed_body.dig('payload', 'segment', 'blocked_leads', 0, 'reason_code')).to eq('no_whatsapp')
       expect(account.autonomia_prospecting_lists.count).to eq(0)
       expect(lead.reload).to be_new_lead

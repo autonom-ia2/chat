@@ -3,11 +3,16 @@
 // useProspectingSearchContext(). O contexto é juntado com mergeDisjoint: se dois
 // composables devolverem a mesma chave, a montagem quebra em vez de o último
 // sobrescrever o outro em silêncio.
-import { inject, onMounted, provide } from 'vue';
+import { computed, inject, onMounted, provide } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+import {
+  canAddToCampaign,
+  canChooseCampaign,
+  canSendToCrm,
+} from '../utils/prospectingPermissions';
 import { createSearchState } from './createSearchState';
 import { useSearchCrm } from './useSearchCrm';
 import { useSearchForm } from './useSearchForm';
@@ -16,8 +21,15 @@ import { useSearchLeads } from './useSearchLeads';
 import { useSearchLocation } from './useSearchLocation';
 import { useSearchPresets } from './useSearchPresets';
 import { useSearchRepeat } from './useSearchRepeat';
+import { useSearchTour } from './useSearchTour';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
+
+// O card, o painel e as ações do lead leem este contexto. A tela de Listas
+// (#682) entrega o dela, com os leads da lista, para usar os mesmos
+// componentes da busca.
+export const provideProspectingLeadContext = context =>
+  provide(PROSPECTING_SEARCH_KEY, context);
 
 export const useProspectingSearch = () => {
   const { t } = useI18n();
@@ -41,9 +53,25 @@ export const useProspectingSearch = () => {
     applyCrmTarget: crm.applyCrmTarget,
     submitSearch: searchForm.submitSearch,
   });
+  const tour = useSearchTour(state, {
+    canManage,
+    toggleNewSearch: searchForm.toggleNewSearch,
+    handleLocationInput: location.handleLocationInput,
+  });
+
+  const permissions = {
+    canManage,
+    canSendToCrm: computed(() =>
+      canSendToCrm(canManage.value, state.settings.value)
+    ),
+    canAddToCampaign: computed(() => canAddToCampaign(canManage.value)),
+    canChooseCampaign: computed(() =>
+      canChooseCampaign(canManage.value, state.settings.value)
+    ),
+  };
 
   const context = mergeDisjoint(
-    { canManage },
+    permissions,
     state,
     crm,
     leadActions,
@@ -51,9 +79,10 @@ export const useProspectingSearch = () => {
     searchForm,
     location,
     presets,
-    repeat
+    repeat,
+    tour
   );
-  provide(PROSPECTING_SEARCH_KEY, context);
+  provideProspectingLeadContext(context);
 
   onMounted(async () => {
     const { isLoading, searches } = state;
@@ -68,6 +97,7 @@ export const useProspectingSearch = () => {
     } finally {
       isLoading.value = false;
     }
+    tour.autoStartTour();
   });
 
   return context;
