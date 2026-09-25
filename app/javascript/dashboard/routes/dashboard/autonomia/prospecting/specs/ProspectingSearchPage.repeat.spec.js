@@ -12,6 +12,7 @@ import {
   gymSearch,
   historyCards,
   mountSearchPage,
+  settingsFixture,
 } from './support/searchPageHarness';
 import { locationInput, queryInput } from './support/searchFormHelpers';
 import { openFormFilters } from './support/filtersHelpers';
@@ -145,6 +146,50 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
       fresh: true,
     });
     expect(AutonomiaProspectingAPI.getSearches).toHaveBeenCalledTimes(2);
+  });
+
+  // Jogada salva excluída nas Configurações (#732): a busca feita com ela
+  // repete sem jogada, com os filtros que a busca pediu. Com o id morto no
+  // pedido, o servidor recusava e o Repetir falhava para sempre.
+  it('Repetir uma busca cuja jogada salva foi excluída vai sem jogada, com os filtros dela', async () => {
+    const wrapper = await mountWithHistory([
+      bakerySearch(),
+      { ...savedRadiusSearch(), preset_id: 'saved-7' },
+    ]);
+
+    await clickOnCard(wrapper, 1, REPEAT);
+
+    const [request] = AutonomiaProspectingAPI.createSearch.mock.calls[0];
+    expect(request.metadata.preset_id).toBeNull();
+    expect(request.metadata.advanced_filters.has_website).toBe('no');
+  });
+
+  it('Repetir uma busca com jogada salva que ainda existe mantém a jogada', async () => {
+    AutonomiaProspectingAPI.createSearch.mockResolvedValue({
+      data: { payload: { search: bakerySearch({ id: 99 }), leads: [] } },
+    });
+    const wrapper = await mountSearchPage({
+      searches: [
+        bakerySearch(),
+        { ...savedRadiusSearch(), preset_id: 'saved-7' },
+      ],
+      settings: settingsFixture({
+        saved_presets: [
+          {
+            id: 7,
+            preset_id: 'saved-7',
+            name: 'Sem site',
+            score_mode: 'gbp',
+            filters: { has_website: 'no' },
+          },
+        ],
+      }),
+    });
+
+    await clickOnCard(wrapper, 1, REPEAT);
+
+    const [request] = AutonomiaProspectingAPI.createSearch.mock.calls[0];
+    expect(request.metadata.preset_id).toBe('saved-7');
   });
 
   // Expansão de raio do Orth (#732 item 4): ligada por padrão. A caixa
