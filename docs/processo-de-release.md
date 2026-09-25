@@ -13,7 +13,8 @@ da instância nova e 5,5 minutos o desligamento da antiga.
 ## Regras
 
 1. **Um lote aberto por vez.** `release/<data>-loteN` sai da `main`. Cada sessão faz squash nele **só** do que já tem
-   OK do Rodrigo, com a própria suíte verde lida antes. PR de lote tem base no branch do lote, não na `main`.
+   OK do Rodrigo, com a própria suíte verde lida antes. PR com mais de 30 linhas ou que mexa em arquitetura também
+   chega com a revisão independente já feita: CI e suíte verdes não substituem revisão. PR de lote tem base no branch do lote, não na `main`.
 2. **Quem fecha o lote** roda, em cima do lote inteiro:
    - RSpec de `spec/services/autonomia`, `spec/requests/api/v1/accounts/autonomia`, `spec/models/autonomia`,
      `spec/jobs/autonomia`, `spec/services/crm`, `spec/controllers/super_admin`, `spec/configs` e `spec/lib`;
@@ -21,6 +22,9 @@ da instância nova e 5,5 minutos o desligamento da antiga.
    - por último `pnpm guia:build`, `pnpm guia:check` e `pnpm central:check`, porque arquivos gerados (`guia-produto.md`,
      `guideRouteRegistry.js`, `mapa-de-artigos.json`, `cobertura.json`, evidências com número de linha) conflitam
      entre PRs. O que mudar entra como commit do próprio lote.
+
+   Um PR que quebra a bateria sai do lote: o squash dele é revertido no branch do lote (`git revert`), e ele vai no
+   próximo, sem segurar os outros nem virar correção às pressas dentro do lote.
 
    A saída vai para as outras sessões antes do merge. O merge para a `main` é **um só**, com merge commit (não
    squash), para os PRs do lote aparecerem como mergeados.
