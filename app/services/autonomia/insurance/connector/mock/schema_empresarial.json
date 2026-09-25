@@ -187,9 +187,20 @@
     {
       "campo": "configuracoes.imovelLocalizacao",
       "tipo": "numero",
-      "origem": "escolha",
+      "origem": "cliente",
       "obrigatorio": false,
-      "padrao": 2
+      "padrao": 1,
+      "descricao": "Onde fica o local da empresa. Térreo, ou até o primeiro andar de edifício, é o padrão. Use Em edifício a partir do segundo andar quando o cliente disser que o local fica do segundo andar para cima; Em Shopping Center, Em condomínio comercial, Em Supermercado, Em aeroporto ou Em casa/ mercado quando ele disser que fica ali. Se você perguntou se o local é térreo ou andar, use a resposta aqui. Sem o cliente dizer, deixe nulo. Valores: 1=Térreo, ou até o 1º andar de edifício; 2=Em edifício a partir do 2º andar; 3=Em Shopping Center; 4=Em aeroporto; 5=Em casa/ mercado; 6=Em condomínio comercial; 7=Em Supermercado; 8=Outros.",
+      "valores": {
+        "1": "Térreo, ou até o 1º andar de edifício",
+        "2": "Em edifício a partir do 2º andar",
+        "3": "Em Shopping Center",
+        "4": "Em aeroporto",
+        "5": "Em casa/ mercado",
+        "6": "Em condomínio comercial",
+        "7": "Em Supermercado",
+        "8": "Outros"
+      }
     },
     {
       "campo": "configuracoes.isDanosIncendioRaioExplosao",
@@ -198,6 +209,76 @@
       "obrigatorio": true,
       "padrao": 200000,
       "descricao": "Quanto vale o que a empresa quer proteger no local, em reais: a construção, o que está dentro, ou os dois, conforme o que o cliente escolheu proteger. Aceite o valor aproximado do jeito que ele disser (\"uns 500 mil\"). É obrigatório: se ele não disse, pergunte quanto vale, e se não souber, peça uma estimativa."
+    },
+    {
+      "campo": "configuracoes.responsabilidadeCivilOperacoes",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "RC Operações, a responsabilidade civil da empresa: danos que ela causa a clientes, visitantes ou vizinhos no local ou por causa do trabalho dela (\"quero 150 mil de RC\" é 150000). As seguradoras aceitam até metade do valor a segurar. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosRoubo",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Roubo e furto com arrombamento dos bens de dentro do local da empresa, como mercadorias, móveis e máquinas (\"quero 30 mil de roubo\" é 30000). Não existe em seguro só do prédio, que é só a construção. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosVendaval",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vendaval, furacão, ciclone, tornado e granizo: estragos no local da empresa por vento forte ou chuva de pedra (\"quero 20 mil de vendaval\" é 20000). Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosEletricos",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Danos elétricos: máquinas, aparelhos e instalação elétrica danificados por raio, curto-circuito ou pico de energia (\"quero 15 mil de danos elétricos\" é 15000). Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosDespesasFixas",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Despesas fixas: as contas que a empresa continua pagando, como aluguel, salários e impostos, enquanto fica parada depois de um estrago coberto (\"quero 50 mil de despesas fixas\" é 50000). As seguradoras aceitam até 20% do valor a segurar. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.vidros",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vidros: quebra de vidros, vitrines, espelhos e fachada de vidro do local da empresa (\"quero 10 mil de vidros\" é 10000). Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosImpactoVeiculo",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Impacto de veículos: carro ou caminhão que bate no local da empresa, no muro ou no portão. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosVazamentoTanquesTubulacoes",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Vazamento de tanques e tubulações: estrago por água que vaza de cano, caixa d'água, tanque ou aquecedor. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosAluguel",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Perda ou pagamento de aluguel: o aluguel que o dono do imóvel deixa de receber, ou que a empresa passa a pagar em outro lugar, enquanto o local é consertado depois de um estrago coberto. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
+    },
+    {
+      "campo": "configuracoes.isDanosDesmoronamento",
+      "tipo": "numero",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "descricao": "Desmoronamento: queda de paredes, teto ou do imóvel. Fica fora do padrão porque há seguradora que não aceita esta cobertura para alguns negócios. Não pergunte por esta cobertura. Quando o cliente pedir um valor, ou mandar a apólice anterior com esta cobertura, use esse valor em reais, só o número; o que ele pedir vence a apólice. Sem pedido e sem apólice, deixe nulo; 0 só quando ele pedir para tirá-la."
     }
   ]
 }
