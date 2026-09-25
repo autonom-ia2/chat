@@ -68,6 +68,33 @@ RSpec.describe Autonomia::Prospecting::CrmCardBatch do
     expect(card.description).to include('Resumo da empresa 0')
   end
 
+  it 'o card carrega prioridade, nota, decisor e empresa onde o quadro e o painel do card mostram' do
+    hot, cold, unknown = create_leads(3)
+    hot.update!(priority_score: 95, score: 90.4, decision_name: 'ANA SOUZA', decision_role: 'Sócia administradora')
+    cold.update!(priority_score: 10)
+    unknown.update!(priority_score: nil)
+
+    perform([hot, cold, unknown].map(&:id))
+
+    cards = [hot, cold, unknown].map { |lead| lead.reload.crm_card }
+    expect(cards.map(&:priority)).to eq(%w[urgent low medium])
+    expect(cards.first.score).to eq(0)
+    expect(cards.first.description).to include(
+      I18n.t('autonomia.prospecting.crm_send.card_description.score', score: 90),
+      I18n.t('autonomia.prospecting.crm_send.card_description.decision_with_role', name: 'ANA SOUZA', role: 'Sócia administradora'),
+      I18n.t('autonomia.prospecting.crm_send.card_description.cnpj', cnpj: '11222333000181')
+    )
+  end
+
+  it 'a faixa de prioridade é a mesma do anel da tela: 75 urgente, 50 alta, 25 média, abaixo baixa' do
+    leads = create_leads(4)
+    [75, 50, 25, 24.4].zip(leads).each { |value, lead| lead.update!(priority_score: value) }
+
+    perform(leads.map(&:id))
+
+    expect(leads.map { |lead| lead.reload.crm_card.priority }).to eq(%w[urgent high medium low])
+  end
+
   it 'reenviar devolve os mesmos cards como já existentes e não cria nada' do
     leads = create_leads(30)
     first = perform(leads.map(&:id))

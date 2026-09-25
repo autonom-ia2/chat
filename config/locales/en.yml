@@ -518,6 +518,12 @@ en:
           too_many_leads: 'Envie até %{max} leads por vez.'
           pipeline_not_found: 'O funil ou o estágio escolhido não existe mais. Escolha outro e envie de novo.'
           crm_disabled: 'O CRM está desligado nesta conta.'
+        card_description:
+          score: 'Nota da prospecção: %{score}'
+          decision: 'Decisor: %{name}'
+          decision_with_role: 'Decisor: %{name}, %{role}'
+          legal_name: 'Razão social: %{legal_name}'
+          cnpj: 'CNPJ: %{cnpj}'
       campaign_blocked:
         not_found: 'Lead não encontrado nesta conta.'
         discarded: 'Lead descartado.'
