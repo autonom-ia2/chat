@@ -21,7 +21,8 @@ Autonomia::Prospecting::Research::Registry::Company = Data.define(
   # Colunas de autonomia_prospecting_company_profiles que vêm do cadastro (owners e verified_at são de quem grava).
   def profile_attributes
     {
-      'cnpj' => cnpj, 'legal_name' => legal_name, 'trade_name' => trade_name, 'registration_status' => registration_status,
+      'cnpj' => cnpj, 'legal_name' => Autonomia::Prospecting::Research::ProfileAttributes.legal_name(self),
+      'trade_name' => trade_name, 'registration_status' => registration_status,
       'registration_state' => registration_state, 'legal_nature_code' => legal_nature_code, 'legal_nature_text' => legal_nature_text,
       'data' => { 'city' => city, 'opened_on' => opened_on&.iso8601, 'cnae' => cnae, 'provider' => provider },
       'qsa' => storable_qsa, 'sources' => sources

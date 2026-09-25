@@ -25,7 +25,12 @@ module Autonomia::Prospecting::Research::Registry::BrasilApiParser
 
     Autonomia::Prospecting::Research::Registry::Partner.build(
       name: name, qualification: member['qualificacao_socio'], person_type: PERSON_TYPES.fetch(member['identificador_de_socio'], 'UNKNOWN'),
-      is_minor: Support.minor?(member['faixa_etaria']), entered_on: Support.date(member['data_entrada_sociedade'])
+      is_minor: minor?(member), entered_on: Support.date(member['data_entrada_sociedade'])
     )
+  end
+
+  def minor?(member)
+    representative = Support.representative_qualification(member['qualificacao_representante_legal'])
+    Support.minor?(member['faixa_etaria'], age_code: member['codigo_faixa_etaria'], representative: representative)
   end
 end

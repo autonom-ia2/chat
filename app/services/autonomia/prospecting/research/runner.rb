@@ -31,9 +31,11 @@ class Autonomia::Prospecting::Research::Runner
 
   def research
     mark(R::States::RESEARCHING, started: true)
-    # Outra pesquisa da mesma empresa pode ter gravado enquanto este pedido esperava a trava.
+    # Outra pesquisa da mesma empresa pode ter gravado enquanto este pedido esperava a trava, com empresa ou sem.
     reusable = reuse.find(since: @force ? @lead.research_requested_at || Time.current : reuse_cutoff)
-    finish(reusable ? reused(reusable) : discover)
+    return finish(reused(reusable)) if reusable
+
+    finish(reuse.without_company(since: @lead.research_requested_at) || discover)
   rescue R::PersonFields::Violation
     finish(R::Outcome.failure('failed', 'person_fields_violation'))
   end

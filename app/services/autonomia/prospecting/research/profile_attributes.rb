@@ -5,14 +5,19 @@
 # um campo de pessoa a mais vindo da montagem levanta Violation, e a pesquisa vira falha sem gravar nada. A frente B já
 # confere cada sócio em Partner#storable; esta fronteira confere de novo o que vai para o banco, sem depender dela.
 # Menor de idade nunca entra, mesmo que a fonte o traga.
+#
+# No Empresário Individual (MEI incluso) a razão social da Receita carrega o CPF do titular no fim ("FULANO 12345678909").
+# O que se grava e se mostra é a razão social sem os números das pontas, o mesmo nome que a regra do dono usa. A
+# original só vive em memória, no matcher da descoberta.
 module Autonomia::Prospecting::Research::ProfileAttributes
   PersonFields = Autonomia::Prospecting::Research::PersonFields
+  OwnerPolicy = Autonomia::Prospecting::Research::OwnerPolicy
 
   module_function
 
   def build(company, selection:, requested_role:, verified_at:)
     {
-      cnpj: digits(company.cnpj), legal_name: company.legal_name, trade_name: company.trade_name,
+      cnpj: digits(company.cnpj), legal_name: legal_name(company), trade_name: company.trade_name,
       registration_status: company.registration_status, registration_state: company.registration_state,
       legal_nature_code: company.legal_nature_code&.to_s, legal_nature_text: company.legal_nature_text,
       data: {
@@ -21,6 +26,10 @@ module Autonomia::Prospecting::Research::ProfileAttributes
       },
       qsa: partners(company.qsa), owners: owners(selection.owners), sources: Array(company.sources).as_json, verified_at: verified_at
     }
+  end
+
+  def legal_name(company)
+    OwnerPolicy.sole_proprietor_nature?(company) ? OwnerPolicy.holder_name(company.legal_name) : company.legal_name
   end
 
   # Nome e qualificação de cada dono, na ordem da regra do dono; dono sem nome não é dono.

@@ -1,7 +1,9 @@
 # Grava o desfecho da pesquisa no lead (#679), só nas colunas da pesquisa e do decisor, com a linha travada: o
 # enriquecimento e a verificação de WhatsApp gravam o mesmo lead em paralelo.
 #
-# - enriched_cnpj só quando vazio (o do site fica; a tela mostra o do cadastro pelo perfil da empresa);
+# - enriched_cnpj não é tocado: é o CNPJ que o site mostrou. O do cadastro fica no perfil da empresa (company_profile_id),
+#   e é dele que a tela mostra. Gravar o CNPJ aceito ali fazia a próxima pesquisa lê-lo como sinal do site e se
+#   corroborar sozinha, travando um CNPJ errado no "verificar novamente";
 # - confiança só com nome, e a do decisor é a da identificação da empresa;
 # - decision_source_url nunca é a rede da empresa: a fonte do dono é o cadastro, sem link;
 # - decisor novo solta as redes do decisor anterior daquele lead; nada de limpeza em massa;
@@ -44,9 +46,7 @@ class Autonomia::Prospecting::Research::LeadWriter
   def profile_attributes(profile)
     return {} if profile.nil?
 
-    attributes = { company_profile_id: profile.id }
-    attributes[:enriched_cnpj] = profile.cnpj if @lead.enriched_cnpj.blank?
-    attributes
+    { company_profile_id: profile.id }
   end
 
   def decision_attributes(outcome)

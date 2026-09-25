@@ -68,7 +68,7 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
       lead.reload
       expect(lead).to have_attributes(
         company_research_status: 'confirmed', decision_research_status: 'confirmed', research_reused: false,
-        research_error: nil, enriched_cnpj: cnpj, decision_name: 'ANA SOUZA', decision_role: 'SOCIO ADMINISTRADOR',
+        research_error: nil, enriched_cnpj: nil, decision_name: 'ANA SOUZA', decision_role: 'SOCIO ADMINISTRADOR',
         decision_source_url: nil
       )
       expect(lead.decision_confidence.to_f).to eq(0.92)
@@ -120,7 +120,7 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
       expect(lead.reload.company_profile.qsa.pluck('name')).to eq(['ANA SOUZA'])
     end
 
-    it 'não troca o CNPJ que o site já trouxe: o cadastro aparece pelo perfil da empresa' do
+    it 'não grava o CNPJ do cadastro em enriched_cnpj nem troca o do site: o cadastro aparece pelo perfil da empresa' do
       lead.update!(enriched_cnpj: '12.345.678/0001-90')
 
       run
@@ -325,5 +325,37 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
 
     expect(lead.reload).to have_attributes(company_research_status: 'blocked', research_error: 'research_disabled')
     expect(research::CnpjDiscovery).not_to have_received(:new)
+  end
+
+  # No Empresário Individual (MEI incluso) a Receita põe o CPF do titular no fim da razão social. O CPF não é gravado no
+  # perfil da empresa (sem conta, compartilhado) nem sai no bloco research da API e do evento.
+  describe 'empresário individual com CPF na razão social' do
+    let(:company) do
+      research::Registry::Company.new(
+        cnpj: cnpj, legal_name: 'FULANO DE TAL 12345678909', trade_name: nil, registration_status: 'ATIVA', registration_state: 'PR',
+        city: 'Curitiba', legal_nature_code: 2135, legal_nature_text: 'Empresário (Individual)', opened_on: nil, cnae: nil,
+        provider: 'BrasilAPI', sources: [], qsa: []
+      )
+    end
+
+    def longest_digit_run(text)
+      digit = ->(char) { char.between?('0', '9') }
+      text.each_char.chunk_while { |left, right| digit.call(left) && digit.call(right) }
+          .select { |chunk| digit.call(chunk.first) }.map(&:size).max.to_i
+    end
+
+    before { allow(research::OwnerPolicy).to receive(:select).and_call_original }
+
+    it 'grava e mostra a razão social sem o CPF, com o titular como decisor' do
+      run
+
+      lead.reload
+      expect(lead.company_profile.legal_name).to eq('FULANO DE TAL')
+      expect(lead.decision_name).to eq('FULANO DE TAL')
+      payload = research::Payload.build(lead)
+      expect(payload.dig(:company, 'legal_name')).to eq('FULANO DE TAL')
+      expect(longest_digit_run(payload.except(:company).merge(company: payload[:company].except('cnpj')).to_json)).to be < 11
+      expect(longest_digit_run(lead.company_profile.attributes.except('cnpj', 'sources').to_json)).to be < 11
+    end
   end
 end

@@ -59,12 +59,15 @@ module Autonomia::Prospecting::Research::OwnerPolicy
   end
 
   def sole_proprietor(company)
-    by_code = company.legal_nature_code == SOLE_PROPRIETOR_NATURE_CODE
-    by_text = Normalization.key(company.legal_nature_text) == SOLE_PROPRIETOR_NATURE_KEY
-    return nil unless by_code || by_text
+    return nil unless sole_proprietor_nature?(company)
 
     name = holder_name(company.legal_name)
     name && owner(name, SOLE_PROPRIETOR_QUALIFICATION)
+  end
+
+  def sole_proprietor_nature?(company)
+    company.legal_nature_code == SOLE_PROPRIETOR_NATURE_CODE ||
+      Normalization.key(company.legal_nature_text) == SOLE_PROPRIETOR_NATURE_KEY
   end
 
   # Tira da razão social os números da ponta ("12.345.678 FULANO" e "FULANO 12345678901" viram "FULANO").

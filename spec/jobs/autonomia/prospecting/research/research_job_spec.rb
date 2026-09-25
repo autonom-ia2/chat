@@ -106,6 +106,45 @@ RSpec.describe Autonomia::Prospecting::Research::ResearchJob do
       expect(second.reload).to have_attributes(company_research_status: 'confirmed', research_reused: true, decision_name: 'ANA SOUZA')
     end
 
+    [
+      [:not_found, 'no_result', 'company_not_found'],
+      [:ambiguous, 'ambiguous', 'company_ambiguous']
+    ].each do |status, state, reason|
+      it "fazem uma chamada só à descoberta também quando a primeira termina sem empresa (#{state})" do
+        allow(discovery).to receive(:perform) do
+          research::CnpjDiscovery::Result.new(status: status, cnpj: nil, confidence: 0.7, candidates: [cnpj], error_code: nil,
+                                              evidence: [{ source: 'bigdatacorp', signal: 'candidates', value: 1 }])
+        end
+        enqueue(first)
+        enqueue(second)
+        with_company_lock_held_elsewhere(research::CompanyLock.key_for(second)) { described_class.perform_now(second.id, false) }
+
+        described_class.perform_now(first.id, false)
+        described_class.perform_now(second.id, false)
+
+        expect(research::CnpjDiscovery).to have_received(:new).once
+        expect(first.reload).to have_attributes(company_research_status: state, research_reused: false)
+        expect(second.reload).to have_attributes(company_research_status: state, decision_research_status: state, research_reused: true)
+        expect(second.metadata.dig('research', 'no_decision_reason')).to eq(reason)
+        expect(second.metadata.dig('research', 'candidates')).to eq([cnpj])
+      end
+    end
+
+    it 'um "não achei" anterior ao pedido não impede pesquisar de novo' do
+      allow(discovery).to receive(:perform) do
+        research::CnpjDiscovery::Result.new(status: :not_found, cnpj: nil, confidence: 0.0, candidates: [], error_code: nil, evidence: [])
+      end
+      enqueue(first)
+      described_class.perform_now(first.id, false)
+      travel 1.minute
+      enqueue(second)
+
+      described_class.perform_now(second.id, false)
+
+      expect(research::CnpjDiscovery).to have_received(:new).twice
+      expect(second.reload).to have_attributes(company_research_status: 'no_result', research_reused: false)
+    end
+
     it 'a chave da trava é a mesma para o mesmo lugar em contas diferentes' do
       expect(research::CompanyLock.key_for(first)).to eq(research::CompanyLock.key_for(second))
       expect(research::CompanyLock.key_for(create_lead(account, 'places/outra'))).not_to eq(research::CompanyLock.key_for(first))

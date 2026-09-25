@@ -26,10 +26,11 @@ module Autonomia::Prospecting::Research::Registry::CnpjWsParser
     return nil unless name && member.key?('tipo')
 
     qualification = member['qualificacao_socio']
+    representative = Support.representative_qualification(member['qualificacao_representante'])
     Autonomia::Prospecting::Research::Registry::Partner.build(
       name: name, qualification: Support.text(qualification) || Support.nested(qualification, 'descricao'),
       person_type: PERSON_TYPES.fetch(Autonomia::Prospecting::Research::Normalization.key(member['tipo']), 'UNKNOWN'),
-      is_minor: Support.minor?(member['faixa_etaria']), entered_on: Support.date(member['data_entrada'])
+      is_minor: Support.minor?(member['faixa_etaria'], representative: representative), entered_on: Support.date(member['data_entrada'])
     )
   end
 end

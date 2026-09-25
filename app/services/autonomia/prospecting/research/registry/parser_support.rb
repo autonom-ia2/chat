@@ -11,6 +11,11 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
   CNAE_LENGTH = 7
   DATE_LENGTH = 10
   QSA_FAILURES = { 'missing' => 'qsa_missing', 'malformed' => 'qsa_malformed' }.freeze
+  # Código da faixa etária da Receita (BrasilAPI e OpenCNPJ): 1 = 0 a 12 anos, 2 = 13 a 20 anos.
+  MINOR_AGE_CODES = Set[1, 2].freeze
+  # Qualificação do representante legal que só existe para quem não responde sozinho pelos próprios atos (menor ou
+  # incapaz), comparada pela chave da Receita (Normalization.key). Procurador e administrador não entram.
+  INCAPABLE_REPRESENTATIVES = Set['MAE', 'PAI', 'TUTOR', 'TUTORA', 'CURADOR', 'CURADORA', 'ASSISTENTE'].freeze
 
   module_function
 
@@ -58,14 +63,38 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
     nil
   end
 
-  # Menor quando a faixa diz "menor" ou começa abaixo de 18. Faixa que cruza os 18 (13 a 20) conta como menor: na
-  # dúvida, a pessoa fica fora dos donos e do quadro gravado. O Orth deixava essa faixa como "não sei" e elegível.
-  def minor?(age_band)
+  # Menor (ou incapaz) por qualquer um dos três sinais da fonte, e a guarda não depende de a fonte preencher o texto:
+  # - faixa que diz "menor" ou começa abaixo de 18. Faixa que cruza os 18 (13 a 20) conta como menor: na dúvida, a
+  #   pessoa fica fora dos donos e do quadro gravado. O Orth deixava essa faixa como "não sei" e elegível;
+  # - código da faixa da Receita 1 ou 2, mesmo com o texto vazio;
+  # - representante legal de incapaz (mãe, pai, tutor, curador, assistente).
+  def minor?(age_band, age_code: nil, representative: nil)
+    minor_band?(age_band) || MINOR_AGE_CODES.include?(age_code_number(age_code)) ||
+      INCAPABLE_REPRESENTATIVES.include?(Normalization.key(representative))
+  end
+
+  def minor_band?(age_band)
     key = Normalization.key(age_band)
     return true if key.include?('MENOR')
 
     ages = Normalization.numbers(key)
     ages.any? && ages.min < ADULT_AGE
+  end
+
+  def age_code_number(value)
+    return nil unless value.is_a?(String) || value.is_a?(Integer)
+
+    digits = Normalization.digits(value)
+    digits.empty? ? nil : digits.to_i
+  end
+
+  # Qualificação do representante como texto ou como objeto { descricao } (OpenCNPJ e CNPJ.ws mandam os dois jeitos).
+  def representative_qualification(*values)
+    values.each do |value|
+      found = text(value) || text(nested(value, 'descricao'))
+      return found if found
+    end
+    nil
   end
 
   # [estado, membros]. Chave ausente é 'missing'; não-lista é 'malformed'; um membro ruim estraga o quadro inteiro.

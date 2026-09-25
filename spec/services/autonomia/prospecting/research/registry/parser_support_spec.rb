@@ -63,6 +63,73 @@ RSpec.describe Autonomia::Prospecting::Research::Registry::ParserSupport do
     expect(parse(registry::CnpjaParser, fixture('cnpja-success')).company.qsa[0].is_minor).to be(false)
   end
 
+  # A guarda de menor não pode depender de a fonte preencher o texto da faixa: com a faixa vazia ou ausente, o código da
+  # Receita (BrasilAPI e OpenCNPJ) e o representante legal de incapaz também marcam menor, nas quatro fontes.
+  describe 'faixa etária ausente' do
+    def brasil_api(member)
+      payload = fixture('brasilapi-success')
+      payload['qsa'][0] = payload['qsa'][0].except('faixa_etaria', 'nome_representante_legal', 'qualificacao_representante_legal').merge(member)
+      parse(registry::BrasilApiParser, payload).company.qsa[0]
+    end
+
+    def open_cnpj(member)
+      payload = fixture('opencnpj-success')
+      payload['QSA'][0] = payload['QSA'][0].except('faixa_etaria', 'nome_representante_legal', 'qualificacao_representante_legal').merge(member)
+      parse(registry::OpenCnpjParser, payload).company.qsa[0]
+    end
+
+    def cnpj_ws(member)
+      payload = fixture('cnpjws-success')
+      payload['socios'][0] = payload['socios'][0].except('faixa_etaria', 'nome_representante', 'qualificacao_representante').merge(member)
+      parse(registry::CnpjWsParser, payload).company.qsa[0]
+    end
+
+    def cnpja(person_age, agent_role)
+      payload = fixture('cnpja-success')
+      member = payload['company']['members'][0]
+      member['person']['age'] = person_age
+      agent_role ? member['agent']['role']['text'] = agent_role : member.delete('agent')
+      parse(registry::CnpjaParser, payload).company.qsa[0]
+    end
+
+    it 'marca menor pelo código da faixa da Receita (1 e 2) com o texto nulo, na BrasilAPI e no OpenCNPJ' do
+      expect(brasil_api('faixa_etaria' => nil, 'codigo_faixa_etaria' => 1).is_minor).to be(true)
+      expect(brasil_api('faixa_etaria' => '', 'codigo_faixa_etaria' => 2).is_minor).to be(true)
+      expect(open_cnpj('faixa_etaria' => nil, 'codigo_faixa_etaria' => '1').is_minor).to be(true)
+      expect(brasil_api('faixa_etaria' => nil, 'codigo_faixa_etaria' => 3).is_minor).to be(false)
+      expect(brasil_api('faixa_etaria' => nil, 'codigo_faixa_etaria' => 0).is_minor).to be(false)
+    end
+
+    it 'marca menor quando o representante legal é mãe, pai ou tutor, nas quatro fontes' do
+      expect(brasil_api('faixa_etaria' => nil, 'nome_representante_legal' => 'MAE SINTETICA', 'qualificacao_representante_legal' => 'Mãe').is_minor)
+        .to be(true)
+      expect(open_cnpj('nome_representante' => 'PAI SINTETICO', 'qualificacao_representante' => { 'codigo' => '10', 'descricao' => 'Pai' })
+        .is_minor).to be(true)
+      expect(cnpj_ws('qualificacao_representante' => { 'id' => 11, 'descricao' => 'Tutor' }).is_minor).to be(true)
+      expect(cnpja(nil, 'Curador').is_minor).to be(true)
+    end
+
+    it 'o caso do achado: faixa nula, código 1 e representante mãe na BrasilAPI não vira dono nem entra no quadro gravado' do
+      payload = fixture('brasilapi-success')
+      payload['qsa'][0] = payload['qsa'][0].merge('nome_socio' => 'CRIANCA SINTETICA', 'faixa_etaria' => nil, 'codigo_faixa_etaria' => 1,
+                                                  'nome_representante_legal' => 'MAE SINTETICA', 'qualificacao_representante_legal' => 'Mãe',
+                                                  'qualificacao_socio' => 'Sócio-Administrador')
+      company = parse(registry::BrasilApiParser, payload).company
+      selection = Autonomia::Prospecting::Research::OwnerPolicy.select(company: company, requested_role: 'owner')
+
+      expect(selection.owners.pluck('name')).not_to include('CRIANCA SINTETICA')
+      expect(company.storable_qsa.pluck('name')).not_to include('CRIANCA SINTETICA')
+    end
+
+    it 'sem faixa, sem código e com procurador (ou sem representante) continua adulto, como antes' do
+      expect(brasil_api('faixa_etaria' => nil, 'qualificacao_representante_legal' => 'Procurador').is_minor).to be(false)
+      expect(open_cnpj({}).is_minor).to be(false)
+      expect(cnpj_ws({}).is_minor).to be(false)
+      expect(cnpja(nil, 'Procurador').is_minor).to be(false)
+      expect(cnpja(nil, nil).is_minor).to be(false)
+    end
+  end
+
   it 'lê a qualificação aninhada do CNPJ.ws e o papel do CNPJá' do
     expect(parse(registry::CnpjWsParser, fixture('cnpjws-success')).company.qsa[0].qualification).to eq('Sócio-Administrador')
     expect(parse(registry::CnpjaParser, fixture('cnpja-success')).company.qsa[1].qualification).to eq('Sócio')

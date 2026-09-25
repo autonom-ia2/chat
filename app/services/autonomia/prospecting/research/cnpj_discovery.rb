@@ -1,8 +1,10 @@
 # Descobre o CNPJ do lead (#679, frente A). Não grava nada: devolve um Result para o Runner da frente C.
 #
 # 1. BigDataCorp basic_data por nome e telefone do lead (até 3 candidatos). Sem credencial: not_configured, sem HTTP.
-# 2. O CNPJ que o site do lead mostra (enriched_cnpj, da E2) corrobora: candidato com outro CNPJ é rejeitado sem ir ao
-#    cadastro, e o candidato igual ganha o domínio do site como sinal e SITE_CORROBORATION_BONUS na confiança.
+# 2. O CNPJ que o site do lead mostra corrobora: candidato com outro CNPJ é rejeitado sem ir ao cadastro, e o candidato
+#    igual ganha o domínio do site como sinal e SITE_CORROBORATION_BONUS na confiança. O CNPJ do site é lido pela própria
+#    pesquisa (Research::SiteCnpj), como no Orth, e nunca vem de enriched_cnpj: um CNPJ aceito antes não corrobora a si
+#    mesmo no "verificar novamente".
 #    Como no Orth, o CNPJ do site sozinho não vira empresa: sem candidato da BigDataCorp não há empresa.
 # 3. Cada candidato restante vai ao cadastro público (hydrator; por padrão Research::Registry.fetch, da frente B) para
 #    cidade, UF, razão social, nome fantasia e situação. Cadastro que falha ou vem sem cidade derruba a descoberta.
@@ -30,10 +32,13 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
 
   DEFAULT_HYDRATOR = ->(cnpj) { Autonomia::Prospecting::Research::Registry.fetch(cnpj) }
 
-  def initialize(lead:, client: nil, hydrator: DEFAULT_HYDRATOR)
+  DEFAULT_SITE_READER = ->(lead) { Autonomia::Prospecting::Research::SiteCnpj.read(lead) }
+
+  def initialize(lead:, client: nil, hydrator: DEFAULT_HYDRATOR, site_reader: DEFAULT_SITE_READER)
     @lead = lead
     @client = client
     @hydrator = hydrator
+    @site_reader = site_reader
     @evidence = []
   end
 
@@ -136,7 +141,7 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
   def site_cnpj
     return @site_cnpj if defined?(@site_cnpj)
 
-    @site_cnpj = Research::Cnpj.normalize(@lead.enriched_cnpj)
+    @site_cnpj = Research::Cnpj.normalize(@site_reader.call(@lead))
   end
 
   def site_domain

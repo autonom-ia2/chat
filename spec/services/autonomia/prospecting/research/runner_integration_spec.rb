@@ -5,6 +5,9 @@ require 'rails_helper'
 # escolhe o decisor, o perfil da empresa é gravado, o lead é atualizado e o evento vai para a tela. A segunda pesquisa do
 # mesmo lugar, em outra conta, reaproveita o perfil sem nenhuma chamada HTTP. O pedido entra pela fila (Research::Queue)
 # e roda no ResearchJob real, que chama o Runner e emite o evento final.
+#
+# O lead chega como sai da busca: com site e sem enriched_cnpj, porque o enriquecimento roda em paralelo. A própria
+# pesquisa lê o CNPJ no site (DNS dublado, página pelo WebMock), como no Orth.
 RSpec.describe Autonomia::Prospecting::Research::Runner do
   include ActiveJob::TestHelper
 
@@ -14,7 +17,9 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
   let(:registry_url) { "https://api.opencnpj.org/#{cnpj}" }
   let(:env) { { BIGDATACORP_USER: 'fixture-user-secret', BIGDATACORP_PASSWORD: 'fixture-password-secret' } }
   let(:account) { create(:account) }
-  let(:lead) { create_lead(account, enriched_cnpj: '11.222.333/0001-81') }
+  let(:other_cnpj) { '11444777000161' }
+  let(:site_url) { 'https://www.alfa-sintetica.com.br/' }
+  let(:lead) { create_lead(account, website: site_url) }
 
   def create_lead(owner_account, **attributes)
     Autonomia::Prospecting::Lead.create!(
@@ -26,6 +31,29 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
   def enable(target_account)
     Autonomia::Prospecting::Config.enable_for!(target_account)
     Autonomia::Prospecting::Config.enable_research_for!(target_account)
+  end
+
+  def bigdatacorp_row(tax_id, percentage)
+    { 'MatchKeys' => 'name{Alf*********ca},phone{********0001}',
+      'BasicData' => { 'TaxIdNumber' => tax_id, 'OfficialName' => 'Empresa Alfa Sintetica Ltda', 'TradeName' => 'Alfa Sintetica',
+                       'TaxIdStatus' => 'ATIVA', 'OfficialNameInputNameMatchPercentage' => percentage,
+                       'TradeNameInputNameMatchPercentage' => percentage } }
+  end
+
+  def stub_bigdatacorp(rows)
+    stub_request(:post, companies_url).to_return(
+      status: 200, body: { QueryId: 'query-2', Status: { basic_data: [{ Code: 0, Message: 'OK' }] }, Result: rows }.to_json
+    )
+  end
+
+  # Cadastro de outra empresa do mesmo nome e da mesma cidade (um homônimo), com outro sócio.
+  def stub_other_registry
+    payload = JSON.parse(Rails.root.join('spec/fixtures/prospecting/registry/opencnpj-success.json').read)
+    payload['cnpj'] = other_cnpj
+    payload['QSA'][0]['nome_socio'] = 'OUTRA PESSOA SINTETICA'
+    stub_request(:get, "https://api.opencnpj.org/#{other_cnpj}").to_return(
+      status: 200, body: payload.to_json, headers: { 'Content-Type' => 'application/json' }
+    )
   end
 
   def stub_http
@@ -59,6 +87,8 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
   end
 
   before do
+    allow(Resolv).to receive(:getaddresses).and_return(['93.184.216.34'])
+    stub_request(:get, site_url).to_return(status: 200, body: '<html><body><p>Alfa Sintetica. CNPJ 11.222.333/0001-81</p></body></html>')
     # Quem pode ver a Prospecção na conta recebe o evento prospecting.lead.updated.
     create(:user, :administrator, account: account)
     enable(account)
@@ -70,6 +100,8 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
 
     expect(a_request(:post, companies_url)).to have_been_made.once
     expect(a_request(:get, registry_url)).to have_been_made.once
+    # O CNPJ do site foi lido pela própria pesquisa, sem esperar o enriquecimento.
+    expect(a_request(:get, site_url)).to have_been_made.once
 
     profile = Autonomia::Prospecting::CompanyProfile.find_by!(cnpj: cnpj)
     expect(profile).to have_attributes(legal_name: 'EMPRESA ALFA SINTETICA LTDA', trade_name: 'ALFA SINTETICA',
@@ -91,7 +123,7 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
     lead.reload
     expect(lead).to have_attributes(
       company_research_status: 'confirmed', decision_research_status: 'confirmed', research_reused: false, research_error: nil,
-      company_profile_id: profile.id, enriched_cnpj: '11.222.333/0001-81', decision_name: 'PESSOA FISICA SINTETICA',
+      company_profile_id: profile.id, enriched_cnpj: nil, decision_name: 'PESSOA FISICA SINTETICA',
       decision_role: 'Sócio-Administrador', decision_source_url: nil, research_attempts: 1
     )
     expect(lead.decision_confidence.to_f).to be_between(0.65, 1.0)
@@ -118,8 +150,34 @@ RSpec.describe Autonomia::Prospecting::Research::Runner do
     expect(WebMock::RequestRegistry.instance.requested_signatures.hash).to be_empty
     expect(same_place.reload).to have_attributes(
       research_reused: true, company_research_status: 'confirmed', decision_research_status: 'confirmed',
-      decision_name: 'PESSOA FISICA SINTETICA', company_profile_id: lead.reload.company_profile_id, enriched_cnpj: cnpj
+      decision_name: 'PESSOA FISICA SINTETICA', company_profile_id: lead.reload.company_profile_id, enriched_cnpj: nil
     )
     expect(Autonomia::Prospecting::CompanyProfile.count).to eq(1)
+  end
+
+  it 'o site com o CNPJ de um homônimo rejeita o candidato da BigDataCorp mesmo sem o enriquecimento ter rodado' do
+    stub_bigdatacorp([bigdatacorp_row(other_cnpj, 100)])
+
+    research(lead)
+
+    expect(a_request(:get, "https://api.opencnpj.org/#{other_cnpj}")).not_to have_been_made
+    expect(lead.reload).to have_attributes(company_research_status: 'no_result', company_profile_id: nil, decision_name: nil)
+    expect(lead.metadata.dig('research', 'discovery_evidence')).to include({ 'source' => 'official_site', 'signal' => 'cnpj_conflict' })
+  end
+
+  it 'verificar novamente pode trocar o CNPJ: o aceito antes não se corrobora como se fosse do site' do
+    no_site = create_lead(account, provider_place_id: 'places/alfa-sem-site')
+    stub_other_registry
+    research(no_site)
+    expect(no_site.reload.company_profile.cnpj).to eq(cnpj)
+
+    stub_bigdatacorp([bigdatacorp_row(other_cnpj, 100), bigdatacorp_row(cnpj, 85)])
+    Autonomia::Prospecting::Research::Queue.enqueue(no_site, force: true)
+    with_modified_env(**env) { Autonomia::Prospecting::Research::ResearchJob.perform_now(no_site.id, true) }
+
+    no_site.reload
+    expect(no_site.company_profile.cnpj).to eq(other_cnpj)
+    expect(no_site).to have_attributes(company_research_status: 'confirmed', decision_name: 'OUTRA PESSOA SINTETICA', enriched_cnpj: nil)
+    expect(no_site.metadata.dig('research', 'discovery_evidence')).not_to include(hash_including('source' => 'official_site'))
   end
 end

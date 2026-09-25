@@ -26,9 +26,11 @@ module Autonomia::Prospecting::Research::Registry::CnpjaParser
     name = Support.text(person&.[]('name'))
     return nil unless name && person.key?('type')
 
+    representative = Support.nested(Support.record(member['agent'])&.[]('role'), 'text')
+
     Autonomia::Prospecting::Research::Registry::Partner.build(
       name: name, qualification: Support.nested(member['role'], 'text'), person_type: PERSON_TYPES.fetch(person['type'], 'UNKNOWN'),
-      is_minor: Support.minor?(person['age']), entered_on: Support.date(member['since'])
+      is_minor: Support.minor?(person['age'], representative: representative), entered_on: Support.date(member['since'])
     )
   end
 end

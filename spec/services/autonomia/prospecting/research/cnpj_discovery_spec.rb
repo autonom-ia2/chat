@@ -8,6 +8,9 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
   let(:env) { { BIGDATACORP_USER: 'fixture-user-secret', BIGDATACORP_PASSWORD: 'fixture-password-secret' } }
   let(:account) { create(:account) }
   let(:lead_attributes) { {} }
+  # O que o site do lead mostra, lido pela pesquisa (Research::SiteCnpj, com spec próprio).
+  let(:site_cnpj) { nil }
+  let(:site_reader) { ->(_lead) { site_cnpj } }
   let(:lead) do
     Autonomia::Prospecting::Lead.create!(
       account: account, provider: 'mock', provider_place_id: 'places/alfa', name: 'Alfa Oficina',
@@ -48,7 +51,7 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
   end
 
   def perform
-    with_modified_env(**env) { described_class.new(lead: lead, hydrator: hydrator).perform }
+    with_modified_env(**env) { described_class.new(lead: lead, hydrator: hydrator, site_reader: site_reader).perform }
   end
 
   it 'sem credencial devolve not_configured sem nenhuma chamada HTTP' do
@@ -100,7 +103,7 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
   end
 
   context 'when o site do lead mostra o CNPJ de um candidato' do
-    let(:lead_attributes) { { enriched_cnpj: '11.222.333/0001-81' } }
+    let(:site_cnpj) { '11.222.333/0001-81' }
 
     it 'corrobora o candidato igual, desfaz a ambiguidade e sobe a confiança' do
       stub_bigdatacorp([row('11222333000181', official: 70, trade: 85), row('11444777000161', official: 70, trade: 84)])
@@ -121,7 +124,7 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
   end
 
   context 'when o site do lead mostra um CNPJ diferente de todos os candidatos' do
-    let(:lead_attributes) { { enriched_cnpj: '11.444.777/0001-61' } }
+    let(:site_cnpj) { '11.444.777/0001-61' }
 
     it 'rejeita por conflito e devolve not_found' do
       stub_bigdatacorp([row('11222333000181', official: 70, trade: 95)])
@@ -134,14 +137,46 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
     end
   end
 
-  it 'ignora CNPJ do site com dígito inválido' do
-    lead.update!(enriched_cnpj: '11.222.333/0001-80')
-    stub_bigdatacorp([row('11222333000181', official: 70, trade: 95)])
+  context 'when o lead já tem enriched_cnpj, gravado por uma pesquisa anterior, e o site não mostra CNPJ' do
+    let(:lead_attributes) { { enriched_cnpj: '11.222.333/0001-81' } }
 
-    result = perform
+    it 'não trata a coluna como sinal do site: o outro candidato continua podendo ser aceito' do
+      stub_bigdatacorp([row('11444777000161', official: 70, trade: 100), row('11222333000181', official: 70, trade: 85)])
 
-    expect(result.to_h).to include(status: :found, confidence: 0.95)
-    expect(result.evidence).not_to include(hash_including(source: 'official_site'))
+      result = perform
+
+      expect(result.to_h).to include(status: :found, cnpj: '11444777000161')
+      expect(result.evidence).not_to include(hash_including(source: 'official_site'))
+      expect(hydrated).to contain_exactly('11444777000161', '11222333000181')
+    end
+  end
+
+  it 'lê o site só quando há candidato, e uma vez' do
+    reads = []
+    reader = lambda { |target|
+      reads << target.id
+      nil
+    }
+    stub_bigdatacorp([])
+    with_modified_env(**env) { described_class.new(lead: lead, hydrator: hydrator, site_reader: reader).perform }
+    expect(reads).to be_empty
+
+    stub_bigdatacorp([row('11222333000181', official: 70, trade: 95), row('11444777000161', official: 70, trade: 60)])
+    with_modified_env(**env) { described_class.new(lead: lead, hydrator: hydrator, site_reader: reader).perform }
+    expect(reads).to eq([lead.id])
+  end
+
+  context 'when o site mostra um CNPJ com dígito inválido' do
+    let(:site_cnpj) { '11.222.333/0001-80' }
+
+    it 'ignora o CNPJ do site' do
+      stub_bigdatacorp([row('11222333000181', official: 70, trade: 95)])
+
+      result = perform
+
+      expect(result.to_h).to include(status: :found, confidence: 0.95)
+      expect(result.evidence).not_to include(hash_including(source: 'official_site'))
+    end
   end
 
   it 'candidato BAIXADA na BigDataCorp não vai ao cadastro e não é aceito' do
@@ -199,7 +234,7 @@ RSpec.describe Autonomia::Prospecting::Research::CnpjDiscovery do
     stub_bigdatacorp([row('11222333000181', official: 70, trade: 95)])
     failing = ->(_cnpj) { raise Net::ReadTimeout }
 
-    result = with_modified_env(**env) { described_class.new(lead: lead, hydrator: failing).perform }
+    result = with_modified_env(**env) { described_class.new(lead: lead, hydrator: failing, site_reader: site_reader).perform }
 
     expect(result.to_h).to include(status: :failed, error_code: 'REGISTRY_HYDRATION_INCOMPLETE')
   end

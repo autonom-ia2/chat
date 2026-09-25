@@ -1,4 +1,5 @@
-# Trava por empresa da pesquisa (#679): duas pesquisas simultâneas do mesmo lugar fazem uma chamada paga só.
+# Trava por empresa da pesquisa (#679): duas pesquisas simultâneas do mesmo lugar fazem uma chamada paga só, termine a
+# primeira com empresa ou sem (Research::Reuse#find e #without_company, dentro da trava).
 #
 # Trava de sessão do Postgres, sem transação nem trava de linha durante a chamada de rede (mesmo desenho de
 # EmailCampaigns::Reputation::CampaignDeliveryLock). Quem não pega a trava não espera segurando conexão: volta como
