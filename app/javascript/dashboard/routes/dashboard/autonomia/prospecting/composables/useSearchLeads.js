@@ -7,6 +7,23 @@ import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+
+// Campos que o servidor grava por busca (lead_ranks e lead_scoring, #678).
+const SEARCH_SCOPED_FIELDS = [
+  'search_rank',
+  'score',
+  'score_breakdown',
+  'priority_score',
+  'priority_position',
+];
+
+const pickSearchScopedFields = lead =>
+  Object.fromEntries(
+    SEARCH_SCOPED_FIELDS.filter(field => field in lead).map(field => [
+      field,
+      lead[field],
+    ])
+  );
 import { useLeadCsv } from './useLeadCsv';
 import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
@@ -57,11 +74,17 @@ export const useSearchLeads = (state, { canManage }) => {
     );
   };
 
-  // O evento traz o lead da conta; a posição no Google é desta busca e fica.
+  // O evento e a resposta do enriquecimento trazem o lead da conta; posição,
+  // nota e prioridade são desta busca (#678) e ficam.
+  const keepSearchFields = (updatedLead, current) => ({
+    ...updatedLead,
+    ...pickSearchScopedFields(current),
+  });
+
   useLeadLiveUpdates(updatedLead => {
     const current = leads.value.find(item => item.id === updatedLead.id);
     if (!current) return;
-    replaceLead({ ...updatedLead, search_rank: current.search_rank });
+    replaceLead(keepSearchFields(updatedLead, current));
   });
 
   const createCrmCard = async (lead, options = {}) => {
@@ -104,7 +127,7 @@ export const useSearchLeads = (state, { canManage }) => {
 
     try {
       const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
-      replaceLead({ ...data.payload?.lead, search_rank: lead.search_rank });
+      replaceLead(keepSearchFields(data.payload?.lead, lead));
       useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
     } catch (e) {
       alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));

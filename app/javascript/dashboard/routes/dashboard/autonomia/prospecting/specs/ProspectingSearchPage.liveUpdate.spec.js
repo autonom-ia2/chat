@@ -81,6 +81,36 @@ describe('ProspectingSearchPage · lead atualizado pelo evento', () => {
     expect(mapLead).toMatchObject({ name: 'Padaria Sol Nova', search_rank: 2 });
   });
 
+  // A nota e a prioridade também são desta busca (frente A): o evento traz as
+  // da última busca que tocou o lead, e a ordem da fila não pode mudar sozinha.
+  it('mantém nota, detalhe da nota e prioridade desta busca', async () => {
+    const wrapper = await mountSearchPage();
+
+    await leadUpdated(
+      sunLead({
+        search_rank: 40,
+        score: 12,
+        priority_score: 5,
+        priority_position: 9,
+        score_breakdown: { components: {} },
+        enrichment_summary: 'Resumo novo',
+      })
+    );
+
+    const mapLead = wrapper
+      .findComponent(MapStub)
+      .props('leads')
+      .find(lead => lead.id === 101);
+    expect(mapLead).toMatchObject({
+      enrichment_summary: 'Resumo novo',
+      search_rank: 2,
+      score: 70,
+      priority_score: 82,
+      priority_position: 1,
+      score_breakdown: sunLead().score_breakdown,
+    });
+  });
+
   it('ignora lead que não está na busca aberta', async () => {
     const wrapper = await mountSearchPage();
     const before = leadCards(wrapper).length;
@@ -153,6 +183,13 @@ describe('ProspectingSearchPage · enriquecer em fila', () => {
     expect(useAlert).not.toHaveBeenCalledWith(
       'PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'
     );
+    // Na fila do servidor o card continua em andamento: sem isso o botão
+    // voltava a "Enriquecer" e o clique só recebia a recusa (409).
+    const pending = buttonWithText(
+      leadCard(wrapper, 'Padaria Sol'),
+      'PROSPECTING.SEARCH.ENRICHING'
+    );
+    expect(pending.element.disabled).toBe(true);
 
     await leadUpdated(
       sunLead({ enrichment_status: 'completed', enriched_cnpj: '12.345' })

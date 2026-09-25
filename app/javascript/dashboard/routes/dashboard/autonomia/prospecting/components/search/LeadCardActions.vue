@@ -24,6 +24,12 @@ const {
 } = useProspectingSearchContext();
 
 const isLeadEnriched = lead => lead?.enrichment_status === 'completed';
+// Pedido aceito fica na fila do servidor (queued/running, #678) até o evento
+// ao vivo trazer o resultado; o card segue em andamento nesse tempo.
+const ENRICHMENT_IN_PROGRESS = ['queued', 'running'];
+const isLeadEnriching = lead =>
+  enrichingLeadId.value === lead.id ||
+  ENRICHMENT_IN_PROGRESS.includes(lead.enrichment_status);
 // Link oficial do lugar no Google quando o provider trouxe; senão, busca por
 // coordenadas ou nome.
 const googleMapsLeadUrl = lead =>
@@ -68,7 +74,7 @@ const toggleDetails = lead => {
       "
       :disabled="
         isLeadEnriched(lead) ||
-        enrichingLeadId === lead.id ||
+        isLeadEnriching(lead) ||
         !settings?.research_enabled ||
         !lead.website
       "
@@ -86,7 +92,7 @@ const toggleDetails = lead => {
       <span
         class="size-3.5"
         :class="
-          enrichingLeadId === lead.id
+          isLeadEnriching(lead)
             ? 'animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11'
             : isLeadEnriched(lead)
               ? 'i-lucide-check-circle-2'
@@ -94,7 +100,7 @@ const toggleDetails = lead => {
         "
       />
       {{
-        enrichingLeadId === lead.id
+        isLeadEnriching(lead)
           ? t('PROSPECTING.SEARCH.ENRICHING')
           : isLeadEnriched(lead)
             ? t('PROSPECTING.SEARCH.ENRICHED')
