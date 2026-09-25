@@ -211,6 +211,14 @@
       "descricao": "Quanto vale o que a empresa quer proteger no local, em reais: a construção, o que está dentro, ou os dois, conforme o que o cliente escolheu proteger. Aceite o valor aproximado do jeito que ele disser (\"uns 500 mil\"). É obrigatório: se ele não disse, pergunte quanto vale, e se não souber, peça uma estimativa."
     },
     {
+      "campo": "configuracoes.imovelConstrucaoReforma",
+      "tipo": "booleano",
+      "origem": "cliente",
+      "obrigatorio": false,
+      "padrao": false,
+      "descricao": "true quando o local da empresa está em obra: em construção ou passando por reforma (\"estamos reformando a loja\", \"o prédio ainda está em obra\"). O padrão é false. Não pergunte por isso. Use true só quando o cliente disser que o local está em construção ou reforma, e false quando ele disser que a obra acabou ou que não há obra. Sem o cliente dizer, deixe nulo."
+    },
+    {
       "campo": "configuracoes.responsabilidadeCivilOperacoes",
       "tipo": "numero",
       "origem": "cliente",
