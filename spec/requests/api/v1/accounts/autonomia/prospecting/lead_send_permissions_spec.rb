@@ -88,6 +88,37 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
       expect(campaign.reload.audience).to eq([])
     end
 
+    # A campanha one-off decide quem recebe pelas etiquetas na hora do envio. Reaplicar a etiqueta de uma lista que já
+    # está na audiência, mesmo sem campaign_id, aumenta quem recebe: também exige campaign_manage.
+    it 'lista já ligada a uma campanha, sem campaign_id e sem campaign_manage, responde 403 e ninguém ganha a etiqueta' do
+      list = Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Lista')
+      list.list_leads.create!(account: account, lead: create_lead(1).tap { |lead| lead.update!(status: 'ready_for_campaign') })
+      post "#{base_url}/lists/#{list.id}/campaign_segment",
+           params: { campaign_segment: { campaign_id: campaign.display_id, segment_name: 'Lista' } },
+           headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:created)
+      label_title = response.parsed_body.dig('payload', 'segment', 'label', 'title')
+      tagged_before = Contact.where(account: account).tagged_with(label_title).count
+
+      list.list_leads.create!(account: account, lead: create_lead(2).tap { |lead| lead.update!(status: 'ready_for_campaign') })
+      post "#{base_url}/lists/#{list.id}/campaign_segment", params: { campaign_segment: { segment_name: 'Lista' } },
+                                                            headers: auth_headers(agent_with(['prospecting_manage'])), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['code']).to eq('prospecting.campaign.forbidden')
+      expect(Contact.where(account: account).tagged_with(label_title).count).to eq(tagged_before)
+    end
+
+    it 'lista que não está em campanha nenhuma continua podendo gerar o segmento só com a prospecção' do
+      list = Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Lista solta')
+      list.list_leads.create!(account: account, lead: create_lead(3).tap { |lead| lead.update!(status: 'ready_for_campaign') })
+
+      post "#{base_url}/lists/#{list.id}/campaign_segment", params: { campaign_segment: { segment_name: 'Lista solta' } },
+                                                            headers: auth_headers(agent_with(['prospecting_manage'])), as: :json
+
+      expect(response).to have_http_status(:created)
+    end
+
     it 'com campaign_manage a seleção entra na campanha' do
       post "#{base_url}/leads/campaign_segment",
            params: { lead_ids: [create_lead(1).id], campaign_id: campaign.display_id, segment_name: 'Sel' },

@@ -105,6 +105,24 @@ RSpec.describe 'Autonomia prospecting lead adopt owner', type: :request do
     expect(card.description).not_to include('ANA SOUZA')
   end
 
+  it 'papel sem permissão de editar card troca o decisor do lead, mas não mexe no card do CRM' do
+    allow(Crm::Config).to receive(:enabled?).and_return(true)
+    lead.update!(decision_research_status: 'confirmed', company_research_status: 'confirmed')
+    _pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    card = Autonomia::Prospecting::CrmCardConverter.new(lead: lead, user: admin, pipeline_id: stage.pipeline_id, stage_id: stage.id)
+                                                   .perform.card
+    agent = create(:user, account: account, role: :agent)
+    agent.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account,
+                                                                                            permissions: ['prospecting_manage']))
+
+    post path, params: { owner_name: 'BRUNO LIMA' }, headers: auth_headers(agent), as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(lead.reload.decision_name).to eq('BRUNO LIMA')
+    expect(card.reload.description).to include('ANA SOUZA')
+    expect(card.metadata.dig('autonomia_prospecting', 'decision', 'name')).to eq('ANA SOUZA')
+  end
+
   it 'recusa nome fora da lista da pesquisa com 422, sem mexer no lead' do
     adopt('CARLOS INVENTADO')
 

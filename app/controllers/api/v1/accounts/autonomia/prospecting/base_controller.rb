@@ -21,8 +21,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
   # campanhas (CampaignPolicy#update?). Sem campanha escolhida, o segmento só etiqueta contatos.
   def authorize_campaign_update!(campaign_id)
     return if campaign_id.blank?
-    return if Current.account_user&.permission_granted?('campaign_manage')
+    return if campaign_manage?
 
+    render_campaign_forbidden
+  end
+
+  def campaign_manage?
+    Current.account_user&.permission_granted?('campaign_manage') || false
+  end
+
+  def render_campaign_forbidden
     render json: { error: I18n.t('autonomia.prospecting.campaign_errors.forbidden'), code: 'prospecting.campaign.forbidden' },
            status: :forbidden
   end

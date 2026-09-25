@@ -132,7 +132,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   # o que aconteceu com o contato (contact_outcome), para a tela não dizer que trocou o contato quando não trocou.
   def adopt_owner
     lead = leads_scope.find(params[:id])
-    result = ::Autonomia::Prospecting::OwnerAdoption.new(lead: lead, user: Current.user, owner_name: params[:owner_name]).perform
+    result = ::Autonomia::Prospecting::OwnerAdoption.new(
+      lead: lead, user: Current.user, owner_name: params[:owner_name],
+      can_update_card: lead.crm_card.nil? || Pundit.policy!(pundit_user, lead.crm_card).update?
+    ).perform
 
     render json: { payload: lead_payload(lead.reload), contact_outcome: result.contact_outcome, shared_lead_name: result.shared_lead_name }
   rescue ::Autonomia::Prospecting::OwnerAdoption::NotAnOwner

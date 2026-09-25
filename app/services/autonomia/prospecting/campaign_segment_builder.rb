@@ -13,6 +13,20 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     @segment_name = segment_name.presence || list.name
   end
 
+  # A etiqueta desta lista já está na audiência de alguma campanha da conta. A campanha one-off decide quem recebe pelas
+  # etiquetas na hora do envio, então reaplicar a etiqueta aumenta a audiência mesmo sem campaign_id (#680).
+  def feeds_existing_campaign?
+    label = @account.labels.find_by(title: label_title)
+    return false if label.nil?
+
+    @account.campaigns.any? do |campaign|
+      Array(campaign.audience).any? do |item|
+        item = item.to_h.stringify_keys
+        item['type'] == 'Label' && item['id'].to_s == label.id.to_s
+      end
+    end
+  end
+
   def perform
     raise Error, 'prospecting.campaign.empty_list' if leads.empty?
     raise Error, 'prospecting.campaign.no_eligible_leads' if eligible_leads.empty?

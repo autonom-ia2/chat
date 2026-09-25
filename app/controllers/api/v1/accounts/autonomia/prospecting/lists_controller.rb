@@ -41,12 +41,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   end
 
   def campaign_segment
-    result = ::Autonomia::Prospecting::CampaignSegmentBuilder.new(
+    builder = ::Autonomia::Prospecting::CampaignSegmentBuilder.new(
       list: lists_scope.find(params[:id]),
       user: Current.user,
       campaign_id: campaign_segment_params[:campaign_id],
       segment_name: campaign_segment_params[:segment_name]
-    ).perform
+    )
+    # Lista já na audiência de uma campanha: reaplicar a etiqueta aumenta quem recebe, mesmo sem campaign_id (#680).
+    return render_campaign_forbidden if builder.feeds_existing_campaign? && !campaign_manage?
+
+    result = builder.perform
 
     render json: {
       payload: {

@@ -17,9 +17,12 @@ class Autonomia::Prospecting::OwnerAdoption
 
   FOUND = Autonomia::Prospecting::Research::Payload::FOUND
 
-  def initialize(lead:, user:, owner_name:)
+  # can_update_card: quem pede pode editar o card do CRM (Crm::CardPolicy#update?). Sem isso, só o lead troca de decisor;
+  # o card fica como está, porque escrever nele é do CRM (#680).
+  def initialize(lead:, user:, owner_name:, can_update_card: true)
     @lead = lead
     @user = user
+    @can_update_card = can_update_card
     @owner_name = Autonomia::Prospecting::Research::Normalization.squish(owner_name.to_s)
   end
 
@@ -82,7 +85,7 @@ class Autonomia::Prospecting::OwnerAdoption
 
   def refresh_card!(previous_line)
     card = @lead.crm_card
-    return if card.nil?
+    return if card.nil? || !@can_update_card
 
     snapshot = card_converter(card).decision_snapshot
     metadata = card.metadata.to_h
