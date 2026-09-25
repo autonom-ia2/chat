@@ -19,15 +19,15 @@ class Autonomia::Prospecting::LeadEnricher
           items: { type: 'string' }
         }
       },
-      required: [
-        'decision_name',
-        'decision_role',
-        'decision_confidence',
-        'decision_source_url',
-        'decision_linkedin',
-        'decision_instagram',
-        'summary',
-        'signals'
+      required: %w[
+        decision_name
+        decision_role
+        decision_confidence
+        decision_source_url
+        decision_linkedin
+        decision_instagram
+        summary
+        signals
       ]
     }
   }.freeze
@@ -57,11 +57,7 @@ class Autonomia::Prospecting::LeadEnricher
   def perform
     raise Error, 'prospecting.enrichment.disabled' unless research_allowed?
 
-    @lead.update!(
-      enrichment_status: 'running',
-      enrichment_requested_at: Time.current,
-      enrichment_error: nil
-    )
+    start!
 
     scraped_data = scrape_website
     return record_failed_attempt(scraped_data['error']) if scraped_data['error'].present?
@@ -70,16 +66,28 @@ class Autonomia::Prospecting::LeadEnricher
     return record_failed_attempt('empty_result') unless merge.useful?
 
     @lead.update!(merge.attributes)
+    log_event('enrichment.completed', status: @lead.enrichment_source)
     @lead.reload
   rescue Error => e
-    mark_failed(e.message)
+    record_error(e.message, reason: e.message)
     raise
   rescue StandardError => e
-    mark_failed(e.message, count_attempt: true)
+    record_error(e.message, reason: e, count_attempt: true)
     raise Error, e.message
   end
 
   private
+
+  def start!
+    @lead.update!(enrichment_status: 'running', enrichment_requested_at: Time.current, enrichment_error: nil)
+    log_event('enrichment.started')
+  end
+
+  # Recusa ou quebra no meio: o lead fica failed e o evento sai com o código, ou com a classe de uma exceção.
+  def record_error(message, reason:, count_attempt: false)
+    mark_failed(message, count_attempt: count_attempt)
+    log_event('enrichment.failed', reason: reason, level: :warn)
+  end
 
   # O enriquecimento é pesquisa: só roda com o módulo e a pesquisa ligados pelo superadmin (#683).
   def research_allowed?
@@ -112,10 +120,12 @@ class Autonomia::Prospecting::LeadEnricher
     parsed = JSON.parse(raw[:text])
     parsed.is_a?(Hash) ? parsed : {}
   rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
-    Rails.logger.warn(
-      "[Autonomia::Prospecting] lead enrichment AI skipped lead_id=#{@lead.id} error=#{e.class.name}"
-    )
+    log_event('enrichment.ai_skipped', reason: e, level: :warn)
     {}
+  end
+
+  def log_event(event, **)
+    Autonomia::Prospecting::EventLog.emit(event, lead: @lead, **)
   end
 
   def instructions
@@ -163,6 +173,7 @@ class Autonomia::Prospecting::LeadEnricher
 
   def record_failed_attempt(code)
     mark_failed(code, count_attempt: true)
+    log_event('enrichment.failed', reason: code)
     @lead.reload
   end
 
