@@ -199,34 +199,35 @@ class Autonomia::Prospecting::SearchRunner
   # parcial. Só a primeira chamada da busca derruba tudo.
   def search_provider_results
     @consumed_api_units = 0
-    last_attributes = []
-    last_radius = radius
-    partial = false
+    attributes, partial = search_radius(radius, first: true)
+    result = { attributes: attributes, radius: radius, partial: partial }
+    result = expand_radius(result) if expand_radius?(result)
 
-    (auto_expand_radius? ? expansion_radii : [radius]).each_with_index do |radius_value, index|
-      attributes, partial = search_radius(radius_value, first: index.zero?)
-      if use_radius_result?(attributes, partial, last_attributes)
-        last_attributes = attributes
-        last_radius = radius_value
-      end
-      break if partial || advanced_filtered_attributes_count(last_attributes) >= expansion_goal
-    end
-
-    {
-      attributes: last_attributes,
-      radius: last_radius,
-      api_units: @consumed_api_units,
-      partial: partial
-    }
+    result.merge(api_units: @consumed_api_units)
   end
 
-  # Raio maior completo sempre substitui o anterior. Parcial só substitui se trouxe pelo menos tantos lugares que passam
-  # nos filtros quanto o raio anterior.
-  def use_radius_result?(attributes, partial, last_attributes)
-    return false if attributes.nil?
-    return true unless partial
+  # Expansão como a do Orth (#732 item 4): só quando o raio pedido terminou sem completar o pedido, e uma tentativa só.
+  def expand_radius?(result)
+    auto_expand_radius? && expanded_radius.present? && !result[:partial] &&
+      advanced_filtered_attributes_count(result[:attributes]) < expansion_goal
+  end
 
-    advanced_filtered_attributes_count(attributes) >= advanced_filtered_attributes_count(last_attributes)
+  # A busca só fica com o raio maior se ele trouxe mais lugares que passam nos filtros; empate ou menos mantém o raio
+  # pedido. A chamada da tentativa é paga e entra no uso de qualquer jeito. Tentativa que falhou no meio deixa a busca
+  # parcial, para ela não virar cache: a próxima igual tenta de novo.
+  def expand_radius(result)
+    attributes, partial = search_radius(expanded_radius, first: false)
+    kept = result.merge(partial: partial)
+    return kept if attributes.nil?
+    return kept if advanced_filtered_attributes_count(attributes) <= advanced_filtered_attributes_count(result[:attributes])
+
+    { attributes: attributes, radius: expanded_radius, partial: partial }
+  end
+
+  def expanded_radius
+    return @expanded_radius if defined?(@expanded_radius)
+
+    @expanded_radius = Autonomia::Prospecting::SearchArea.expanded_radius(area_type, area_config, radius)
   end
 
   # [lugares, parcial]. Lugares nil quando o raio maior falhou já na primeira página e a busca fica com o raio anterior.
@@ -253,7 +254,7 @@ class Autonomia::Prospecting::SearchRunner
 
   # O raio só cresce enquanto falta lugar para o pedido. A faixa de posição corta as mesmas posições em qualquer raio,
   # então o que ela tira não é falta que raio maior resolva: sem descontar, a meta nunca era alcançada e a busca
-  # expandia sempre até 4x (#677).
+  # expandia sempre (#677).
   def expansion_goal
     outside_top = number_or_nil(advanced_filters['outside_top']).to_i
 
@@ -578,17 +579,9 @@ class Autonomia::Prospecting::SearchRunner
     nil
   end
 
+  # Ligada por padrão, como no Orth (allowRadiusExpansion !== false): só a caixa desmarcada desliga.
   def auto_expand_radius?
-    area_type == 'radius' &&
-      ActiveModel::Type::Boolean.new.cast(search_filters['auto_expand_radius'])
-  end
-
-  def expansion_radii
-    [
-      radius,
-      [radius * 2, 50_000].min,
-      [radius * 4, 50_000].min
-    ].uniq
+    ActiveModel::Type::Boolean.new.cast(search_filters['auto_expand_radius']) != false
   end
 
   def provider_name

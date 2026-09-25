@@ -27,9 +27,9 @@ class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
   # verificar: solta a marca de fila para a tela não ficar em "Verificando".
   def verify_source(lead, source)
     Autonomia::Prospecting::WhatsappVerifier.new(lead: lead, source: source).perform
-  rescue Autonomia::Prospecting::WhatsappVerifier::Error => e
-    Rails.logger.info("[Autonomia::Prospecting::VerifyWhatsappJob] lead_id=#{lead.id} source=#{source} error=#{e.message}")
-    # Lead apagado durante o lote não tem marca a soltar, e o resto do lote segue.
+  rescue Autonomia::Prospecting::WhatsappVerifier::Error
+    # O motivo já foi para o registro de eventos pelo verificador (ENRIQ-60). Lead apagado durante o lote não tem marca
+    # a soltar, e o resto do lote segue.
     current = Autonomia::Prospecting::Lead.find_by(id: lead.id)
     release_queued_marker(current) if source == :google && current && google_queued?(current)
   end
@@ -41,5 +41,6 @@ class Autonomia::Prospecting::VerifyWhatsappJob < MutexApplicationJob
   def release_queued_marker(lead)
     Autonomia::Prospecting::Lead.where(id: lead.id)
                                 .update_all(["metadata = metadata - 'whatsapp_verification', updated_at = ?", Time.current]) # rubocop:disable Rails/SkipsModelValidations
+    Autonomia::Prospecting::EventLog.emit('whatsapp.marker_released', lead: lead, source: :google)
   end
 end

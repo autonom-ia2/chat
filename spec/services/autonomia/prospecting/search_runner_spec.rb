@@ -428,16 +428,22 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       end
 
       # Antes o Google entregava no máximo 20 e o raio nunca crescia por isso (#683). Com a paginação, faltar lugar
-      # depois de o Google parar de mandar token é falta de verdade, e o raio cresce (#678).
+      # depois de o Google parar de mandar token é falta de verdade, e o raio cresce (#678). Desde o #732, uma
+      # tentativa com o dobro, que só fica se trouxer mais.
       it 'expande o raio quando o Google acaba antes de completar o pedido' do
         use_google_places!
-        stub_google_places(Array.new(20) { |index| google_place.merge('id' => "places/google-#{index}") })
+        stub_request(:post, google_endpoint).to_return do |request|
+          count = JSON.parse(request.body).dig('locationBias', 'circle', 'radius') == 1000 ? 20 : 25
+          places = Array.new(count) { |index| google_place.merge('id' => "places/google-#{index}") }
+          { status: 200, body: { places: places }.to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
 
         result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60, radius: 1000,
+                            metadata: { location_latitude: -25.43, location_longitude: -49.27 },
                             filters: { auto_expand_radius: true })
 
-        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
-        expect(result.search.radius).to eq(4000)
+        expect(a_request(:post, google_endpoint)).to have_been_made.times(2)
+        expect(result.search.radius).to eq(2000)
       end
     end
 
@@ -458,10 +464,11 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         setting.update!(daily_limit: 1)
         Autonomia::Prospecting::Search.create!(account: account, user: user, query: 'padaria', requested_limit: 1, consumed_api_units: 1)
 
-        result = run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 2, filters: { auto_expand_radius: true })
+        result = run_search(query: 'hotel', location: 'Curitiba, PR', requested_limit: 2, filters: { auto_expand_radius: true },
+                            metadata: { location_latitude: -25.43, location_longitude: -49.27 })
 
         expect(result.search).to be_completed
-        expect(result.search.consumed_api_units).to eq(3)
+        expect(result.search.consumed_api_units).to eq(2)
       end
 
       it 'não trava o provider mock, que não consome unidade' do

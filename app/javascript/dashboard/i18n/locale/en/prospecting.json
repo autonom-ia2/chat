@@ -190,7 +190,7 @@
         "UNDO_POINT": "Desfazer último ponto",
         "CLEAR": "Limpar desenho"
       },
-      "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, amplia o raio automaticamente em até 3 tentativas.",
+      "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, tenta uma vez com o dobro do raio, até 10 km, e só fica com essa tentativa se ela trouxer mais.",
       "PRIORITY_GOOGLE_RANK": "G #{rank}",
       "PRIORITY_POSITION": "Posição {position}",
       "PRIORITY_POSITION_IN_LIST": "Posição {position} da lista",
@@ -220,6 +220,7 @@
       "RATING_LABEL": "{rating} estrelas",
       "REVIEWS_LABEL": "{count} avaliações",
       "RADIUS_KM_VALUE": "{value} km",
+      "RADIUS_EXPANDED_VALUE": "{value} km, ampliado de {requested} km",
       "CONTACT_DATA": "Contato",
       "REPUTATION": "Reputação",
       "LATEST_REVIEWS_TITLE": "Últimas {count} avaliações",

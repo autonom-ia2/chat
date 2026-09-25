@@ -52,7 +52,7 @@ describe('Pedido da busca · frente de local', () => {
         location_latitude: LOCATION_DETAILS.latitude,
         location_longitude: LOCATION_DETAILS.longitude,
         location_label: LOCATION_DETAILS.label,
-        filters: { auto_expand_radius: false },
+        filters: { auto_expand_radius: true },
         decision_maker_type: 'owner',
       },
     });

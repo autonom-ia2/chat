@@ -232,4 +232,55 @@ RSpec.describe Autonomia::Prospecting::WhatsappVerifier do
       expect(other_lead.reload.metadata).not_to have_key('whatsapp_verification')
     end
   end
+
+  # Registro de eventos (#732 item 13, ENRIQ-60): log estruturado com lead, conta e motivo. O número, o chat e a sessão
+  # do WhatsApp nunca vão para o log.
+  describe 'registro de eventos' do
+    include ProspectingEventLogHelpers
+
+    let(:personal_data) { %w[5541999990000 99999-0000 sessao-prospeccao chave-waha-teste] }
+
+    it 'registra o número confirmado com a origem e o desfecho, sem o número nem o chat' do
+      stub_check(phone: '+5541999990000', body: { numberExists: true, chatId: '5541999990000@c.us' })
+
+      log = capture_prospecting_events { verify }
+
+      expect(log.events).to eq(
+        [{ 'event' => 'whatsapp.checked', 'lead_id' => lead.id, 'account_id' => account.id, 'source' => 'google', 'status' => 'verified' }]
+      )
+      expect(log.text).not_to include(*personal_data)
+    end
+
+    it 'registra o número que não é WhatsApp' do
+      stub_check(phone: '+5541999990000', body: { numberExists: false })
+
+      log = capture_prospecting_events { verify }
+
+      expect(log.events.last).to include('event' => 'whatsapp.checked', 'status' => 'not_whatsapp')
+    end
+
+    it 'registra a falha do WAHA com a classe do erro, sem a URL que leva o número' do
+      stub_request(:get, check_url).with(query: hash_including({})).to_return(status: 500, body: 'erro interno')
+
+      log = capture_prospecting_events { expect { verify }.to raise_error(described_class::Error) }
+
+      expect(log.events).to eq(
+        [{ 'event' => 'whatsapp.failed', 'lead_id' => lead.id, 'account_id' => account.id, 'source' => 'google',
+           'reason' => 'Waha::Client::Error' }]
+      )
+      expect(log.text).not_to include(*personal_data)
+    end
+
+    it 'registra a recusa por falta de sessão com o código' do
+      log = capture_prospecting_events do
+        expect { with_modified_env(waha_env.merge('WAHA_API_URL' => '')) { described_class.new(lead: lead).perform } }
+          .to raise_error(described_class::Error)
+      end
+
+      expect(log.events).to eq(
+        [{ 'event' => 'whatsapp.skipped', 'lead_id' => lead.id, 'account_id' => account.id, 'source' => 'google',
+           'reason' => 'prospecting.whatsapp.waha_not_configured' }]
+      )
+    end
+  end
 end
