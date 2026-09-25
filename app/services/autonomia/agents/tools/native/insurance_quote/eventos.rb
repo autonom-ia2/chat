@@ -19,11 +19,19 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     'ramo_desconhecido' => 'ramo_desconhecido', 'formulario_indisponivel' => 'falhou'
   }.freeze
 
+  # Dito ao modelo junto de todo fato que fala de arquivo enviado: a ordem entre o arquivo e a mensagem, no canal, não
+  # é a ordem em que foram gravados.
+  ORDEM_DO_ARQUIVO = 'O arquivo pode chegar à pessoa antes ou depois da sua mensagem: não diga em que ponto da conversa ' \
+                     'ele está.'.freeze
+
   FATOS = {
     'cotacao_comecou' => 'A cotação pedida nesta conversa foi recebida e está sendo feita agora. Ainda não se sabe o que as ' \
                          'seguradoras vão responder, e o resultado chega nesta conversa quando ficar pronto.',
-    'concluida' => 'A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta conversa, logo ' \
-                   'acima. Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
+    # A ORDEM DO ARQUIVO NÃO É GARANTIDA (chat#641, 25/09/2026). O comparativo é gravado antes da fala da Lia, mas no
+    # WhatsApp o upload do PDF atrasa a entrega, e ele chega depois do texto. "Logo acima" aqui virou "está no PDF
+    # acima" na fala, e a fala mentia. O fato diz que o arquivo foi enviado, e não onde ele aparece.
+    'concluida' => "A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta conversa. #{ORDEM_DO_ARQUIVO} " \
+                   'Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
     # A LIA RESOLVE SOZINHA (conversa 7057, 24/09/2026): sem o PDF ela mandava a pessoa pedir os valores, e a pessoa
     # ficava sem o que pediu. O turno de evento pode consultar o especialista (`ResponderAoEvento`), e é isso que ela faz.
     'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Consulte agora o ' \
@@ -46,8 +54,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                        'de aceitação nem de motivo, e não ofereça cotar de novo. Diga que vai encaminhar para alguém da ' \
                        'equipe olhar a melhor alternativa, sem prazo.',
     'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta ' \
-                             'conversa, logo acima. Os valores de cada seguradora estão com o especialista, que os lê ' \
-                             'sem cotar de novo.'
+                             "conversa. #{ORDEM_DO_ARQUIVO} Os valores de cada seguradora estão com o especialista, que " \
+                             'os lê sem cotar de novo.'
   }.freeze
   # QUEM FICOU SEM PROPOSTA NÃO É ASSUNTO DO CLIENTE (chat#638, decisão do CEO de 24/09/2026): nem recusa, nem prazo, nem
   # instabilidade. A frase "não responderam a tempo, não foi recusa do risco" que estava nos fatos chegava ao cliente

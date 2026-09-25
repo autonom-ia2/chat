@@ -85,6 +85,9 @@ class Autonomia::Insurance::Connector::Mock < Autonomia::Insurance::Connector::C
   # commit e3aeb7b):
   #   (no autonomia-adapters) npx tsx -e "import {schemaDoRamo} from './src/platforms/agger/ramos/schema.ts';
   #     console.log(JSON.stringify(schemaDoRamo('18'),null,2))"
+  # Regenerado de novo em 25/09/2026 na branch `fix/ajustes-pos-empresarial` (adapters#106, commit f8b2cdb): entra o
+  # campo do cliente `imovelConstrucaoReforma` (opcional, padrão false), que ia fixo nos campos da impressão. Só ele
+  # mudou; o de residencial regenerado no mesmo commit saiu idêntico.
   # Regenerar quando o adapter mudar; a mesma lacuna de envelhecimento do de auto (#412) vale aqui.
   SCHEMA_EMPRESARIAL = JSON.parse(File.read(File.expand_path('mock/schema_empresarial.json', __dir__))).freeze
 

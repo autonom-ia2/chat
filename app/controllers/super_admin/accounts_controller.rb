@@ -98,6 +98,19 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     )
   end
 
+  # Motor da nota da prospecção da conta (#681): 'legacy' ou 'orth'. Só o superadmin vira, conta a conta, depois de o
+  # Rodrigo aprovar a comparação (rake prospecting:score_shadow_report). Virar não reescreve lead nem busca antiga.
+  def toggle_prospecting_score_engine
+    setting = Autonomia::Prospecting::Setting.for_account(requested_resource)
+    setting.score_engine = params[:engine]
+
+    if setting.save
+      redirect_back(fallback_location: [namespace, requested_resource], notice: "Prospecting score engine: #{setting.score_engine}")
+    else
+      redirect_back(fallback_location: [namespace, requested_resource], flash: { error: setting.errors[:metadata].to_sentence })
+    end
+  end
+
   def toggle_insurance
     enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
 

@@ -60,8 +60,10 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
   validates :scoring_mode, inclusion: { in: %w[profile custom] }
   validates :account_id, uniqueness: true
   validate :search_score_mode_must_be_supported
+  validate :score_engine_must_be_supported
   validate :search_country_must_be_supported
   validate :custom_scoring_weights_must_be_supported_numbers
+  validate :scoring_profile_must_be_available_to_account, if: :scoring_profile_id_changed?
   validate :default_crm_records_must_belong_to_account
 
   before_validation :normalize_scoring_configuration
@@ -94,8 +96,11 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     google_maps_browser_api_key.present?
   end
 
+  # Perfil que o superadmin restringiu a outras contas depois da escolha deixa de valer aqui: a conta cai no padrão (#681).
   def active_scoring_profile
-    scoring_profile || Autonomia::Prospecting::ScoringProfile.default_profile
+    return scoring_profile if scoring_profile&.available_to?(account)
+
+    Autonomia::Prospecting::ScoringProfile.default_profile
   end
 
   def active_scoring_weights
@@ -110,6 +115,31 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
 
   def search_score_mode=(value)
     self.metadata = metadata.to_h.merge('search_score_mode' => normalized_search_score_mode(value))
+  end
+
+  # Motor da nota da conta (#681): 'legacy' até o superadmin virar a conta para o Orth. A conta não troca pela API de
+  # configurações, que não aceita metadata; só o console do superadmin grava.
+  SCORE_ENGINES = %w[legacy orth].freeze
+
+  def score_engine
+    metadata.to_h['score_engine'].presence || 'legacy'
+  end
+
+  def score_engine=(value)
+    self.metadata = metadata.to_h.merge('score_engine' => value.to_s)
+  end
+
+  def orth_score_engine?
+    score_engine == 'orth'
+  end
+
+  # Pesos da nota do Orth (#681, decisão do Rodrigo de 25/09): o que a conta personalizou, e o perfil do catálogo que não
+  # é o padrão, ficam como estão, mapeados para os componentes do Orth. O perfil padrão passa a ser o do Orth (nil).
+  def orth_scoring_weights
+    return Autonomia::Prospecting::Scoring::WeightMapping.from_legacy(active_scoring_weights) if scoring_mode == 'custom'
+    return if active_scoring_profile.default?
+
+    Autonomia::Prospecting::Scoring::WeightMapping.from_legacy(active_scoring_profile.weights_with_defaults)
   end
 
   # País da busca no Google (#677). Sem escolha é o Brasil; valor gravado fora da lista também, com aviso no log.
@@ -155,10 +185,23 @@ class Autonomia::Prospecting::Setting < ApplicationRecord
     end
   end
 
+  # Só na troca de perfil: a conta que já usava um perfil depois restringido continua salvando o resto da configuração.
+  def scoring_profile_must_be_available_to_account
+    return if scoring_profile.blank? || scoring_profile.available_to?(account)
+
+    errors.add(:base, I18n.t('autonomia.prospecting.errors.scoring_profile_unavailable'))
+  end
+
   def search_score_mode_must_be_supported
     return if %w[gbp general].include?(search_score_mode)
 
     errors.add(:metadata, 'search_score_mode must be gbp or general')
+  end
+
+  def score_engine_must_be_supported
+    return if SCORE_ENGINES.include?(score_engine)
+
+    errors.add(:metadata, 'score_engine must be legacy or orth')
   end
 
   def search_country_must_be_supported

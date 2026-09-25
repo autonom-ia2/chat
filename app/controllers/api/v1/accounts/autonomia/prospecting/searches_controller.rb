@@ -2,6 +2,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   DEFAULT_PER_PAGE = 20
   MAX_PER_PAGE = 50
 
+  rescue_from ::Autonomia::Prospecting::SearchRunner::ScoreEngineError, with: :render_score_unavailable
+
   def index
     ordered_scope = searches_scope.order(created_at: :desc)
     total_count = ordered_scope.count
@@ -84,6 +86,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   end
 
   private
+
+  # Conta virada para a nota do Orth (#681) com a nota fora do ar: o detalhe vai para o log, a tela recebe a frase. Aqui,
+  # fora da ação, Current já foi limpo: a conta vem da rota.
+  def render_score_unavailable(error)
+    Rails.logger.warn("[Prospecting::Searches] score_engine_failed account_id=#{params[:account_id]} error=#{error.message}")
+    render json: { error: I18n.t('autonomia.prospecting.errors.score_unavailable') }, status: :unprocessable_entity
+  end
 
   def search_params
     params.require(:search).permit(

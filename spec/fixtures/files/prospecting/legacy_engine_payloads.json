@@ -1,0 +1,3501 @@
+{
+  "gbp": {
+    "search": {
+      "id": "<id>",
+      "query": "padaria",
+      "location": "Curitiba, PR",
+      "radius": 1000,
+      "provider": "google_places",
+      "status": "completed",
+      "requested_limit": 8,
+      "area_type": "radius",
+      "area_config": {
+        "label": "Curitiba, PR",
+        "radius": 1000
+      },
+      "created_at": "<created_at>",
+      "updated_at": "<updated_at>",
+      "results_count": 8,
+      "requested_radius": 1000,
+      "crm_pipeline_id": "<crm_pipeline_id>",
+      "crm_stage_id": "<crm_stage_id>",
+      "crm_count": 0,
+      "contact_count": 0,
+      "average_score": 46.2,
+      "ready_count": 0,
+      "location_place_id": null,
+      "location_latitude": null,
+      "location_longitude": null,
+      "location_label": null,
+      "search_filters": {},
+      "advanced_filters": {},
+      "sort_key": null,
+      "score_mode": "gbp",
+      "scoring_profile_id": "<scoring_profile_id>",
+      "preset_id": null,
+      "decision_maker_type": "owner",
+      "summary": {
+        "results_count": 8,
+        "contact_count": 0,
+        "crm_count": 0,
+        "ready_count": 0,
+        "average_score": 46.2,
+        "consumed_api_units": 1,
+        "radius_expanded": false,
+        "cached_from_search_id": "<cached_from_search_id>",
+        "partial_results": false
+      },
+      "research_progress": {
+        "total": 0,
+        "done": 0,
+        "running": 0,
+        "queued": 0,
+        "failed": 0
+      }
+    },
+    "leads": [
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroA0000000000000001",
+        "name": "Padaria Exemplo A",
+        "phone": "+55 41 3000-0001",
+        "website": "https://padaria-a.example.com.br/",
+        "address": "R. Exemplo Um, 100 - Centro, Curitiba - PR, 80000-001, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4284",
+        "longitude": "-49.2733",
+        "rating": "4.7",
+        "reviews_count": 812,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "14.5",
+        "priority_score": "14.0",
+        "priority_position": 7,
+        "search_rank": 1,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 14.5,
+          "photos": {
+            "signal": 35.0,
+            "weight": 10.0,
+            "weighted_score": 3.5
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 100,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Perfil GMN mais completo; menor prioridade para oferta de presença digital.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 20:00",
+          "terça-feira: 06:00 – 20:00",
+          "quarta-feira: 06:00 – 20:00",
+          "quinta-feira: 06:00 – 20:00",
+          "sexta-feira: 06:00 – 20:00",
+          "sábado: 06:00 – 14:00",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 3,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 0"
+            },
+            "rating": 5,
+            "publishTime": "2026-09-25T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000001",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroB0000000000000002",
+        "name": "Padaria Exemplo B",
+        "phone": "+55 41 3000-0002",
+        "website": null,
+        "address": "Av. Exemplo Dois, 200 - Batel, Curitiba - PR, 80000-002, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4411",
+        "longitude": "-49.2877",
+        "rating": "4.2",
+        "reviews_count": 143,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "59.0",
+        "priority_score": "71.0",
+        "priority_position": 3,
+        "search_rank": 2,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 59.0,
+          "photos": {
+            "signal": 70.0,
+            "weight": 10.0,
+            "weighted_score": 7.0
+          },
+          "rating": {
+            "signal": 25.0,
+            "weight": 20.0,
+            "weighted_score": 5.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 95,
+            "weight": 5.0,
+            "weighted_score": 4.75
+          },
+          "reviews_count": {
+            "signal": 15.0,
+            "weight": 15.0,
+            "weighted_score": 2.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "inactive_gbp"
+        ],
+        "human_insight": "Oportunidade GMN moderada; valide se a lacuna combina com a oferta.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: 07:00 – 12:00",
+          "terça-feira: 07:00 – 12:00",
+          "quarta-feira: 07:00 – 12:00",
+          "quinta-feira: 07:00 – 12:00",
+          "sexta-feira: 07:00 – 12:00",
+          "sábado: Fechado",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 1,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000002",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroC0000000000000003",
+        "name": "Padaria Exemplo C",
+        "phone": "+55 41 99000-0003",
+        "website": null,
+        "address": "R. Exemplo Três, 300 - Água Verde, Curitiba - PR, 80000-003, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4507",
+        "longitude": "-49.2811",
+        "rating": "3.9",
+        "reviews_count": 27,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "62.75",
+        "priority_score": "100.0",
+        "priority_position": 1,
+        "search_rank": 3,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 62.75,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 55.0,
+            "weight": 20.0,
+            "weighted_score": 11.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 20.0,
+            "weight": 10.0,
+            "weighted_score": 2.0
+          },
+          "google_rank": {
+            "signal": 90,
+            "weight": 5.0,
+            "weighted_score": 4.5
+          },
+          "reviews_count": {
+            "signal": 35.0,
+            "weight": 15.0,
+            "weighted_score": 5.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_photos"
+        ],
+        "human_insight": "Boa oportunidade GMN: há sinais de melhoria em reputação, presença ou atividade.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 2"
+            },
+            "rating": 5,
+            "publishTime": "2026-07-07T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000003",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroD0000000000000004",
+        "name": "Padaria Exemplo D",
+        "phone": null,
+        "website": null,
+        "address": "R. Exemplo Quatro, 400 - Rebouças, Curitiba - PR, 80000-004, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4402",
+        "longitude": "-49.2598",
+        "rating": null,
+        "reviews_count": null,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "97.25",
+        "priority_score": "0.0",
+        "priority_position": 8,
+        "search_rank": 4,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 97.25,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 90.0,
+            "weight": 20.0,
+            "weighted_score": 18.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 85,
+            "weight": 5.0,
+            "weighted_score": 4.25
+          },
+          "reviews_count": {
+            "signal": 100.0,
+            "weight": 15.0,
+            "weighted_score": 15.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_phone",
+          "low_reviews",
+          "missing_photos",
+          "inactive_gbp"
+        ],
+        "human_insight": "Oportunidade GMN alta: perfil com lacunas claras para presença digital.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": null,
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroE0000000000000005",
+        "name": "Padaria Exemplo E",
+        "phone": "+55 41 3000-0005",
+        "website": "https://www.instagram.com/padariaexemploe/",
+        "address": "R. Exemplo Cinco, 500 - Mercês, Curitiba - PR, 80000-005, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4231",
+        "longitude": "-49.2912",
+        "rating": "4.5",
+        "reviews_count": 64,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "17.25",
+        "priority_score": "29.0",
+        "priority_position": 6,
+        "search_rank": 5,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 17.25,
+          "photos": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 50.0,
+            "weight": 10.0,
+            "weighted_score": 5.0
+          },
+          "google_rank": {
+            "signal": 80,
+            "weight": 5.0,
+            "weighted_score": 4.0
+          },
+          "reviews_count": {
+            "signal": 15.0,
+            "weight": 15.0,
+            "weighted_score": 2.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Perfil GMN mais completo; menor prioridade para oferta de presença digital.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 10,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 4"
+            },
+            "rating": 5,
+            "publishTime": "2026-04-18T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000005",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroF0000000000000006",
+        "name": "Padaria Exemplo F",
+        "phone": "+55 41 3000-0006",
+        "website": "https://padaria-f.example.com.br/",
+        "address": "Al. Exemplo Seis, 600 - Bigorrilho, Curitiba - PR, 80000-006, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4344",
+        "longitude": "-49.2951",
+        "rating": "4.8",
+        "reviews_count": 356,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "26.75",
+        "priority_score": "43.0",
+        "priority_position": 5,
+        "search_rank": 6,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 26.75,
+          "photos": {
+            "signal": 70.0,
+            "weight": 10.0,
+            "weighted_score": 7.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 75,
+            "weight": 5.0,
+            "weighted_score": 3.75
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "inactive_gbp"
+        ],
+        "human_insight": "Perfil GMN mais completo; menor prioridade para oferta de presença digital.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: Fechado",
+          "terça-feira: 08:00 – 18:00",
+          "quarta-feira: 08:00 – 18:00",
+          "quinta-feira: 08:00 – 18:00",
+          "sexta-feira: 08:00 – 18:00",
+          "sábado: 08:00 – 13:00",
+          "domingo: 08:00 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 2,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000006",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroG0000000000000007",
+        "name": "Padaria Exemplo G",
+        "phone": "+55 41 99000-0007",
+        "website": null,
+        "address": "R. Exemplo Sete, 700 - Portão, Curitiba - PR, 80000-007, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4755",
+        "longitude": "-49.2917",
+        "rating": "5.0",
+        "reviews_count": 3,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "65.5",
+        "priority_score": "86.0",
+        "priority_position": 2,
+        "search_rank": 7,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 65.5,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 75.0,
+            "weight": 10.0,
+            "weighted_score": 7.5
+          },
+          "google_rank": {
+            "signal": 70,
+            "weight": 5.0,
+            "weighted_score": 3.5
+          },
+          "reviews_count": {
+            "signal": 90.0,
+            "weight": 15.0,
+            "weighted_score": 13.5
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "low_reviews",
+          "missing_photos",
+          "inactive_gbp"
+        ],
+        "human_insight": "Boa oportunidade GMN: há sinais de melhoria em reputação, presença ou atividade.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:30 – 19:30",
+          "terça-feira: 06:30 – 19:30",
+          "quarta-feira: 06:30 – 19:30",
+          "quinta-feira: 06:30 – 19:30",
+          "sexta-feira: 06:30 – 19:30",
+          "sábado: 06:30 – 19:30",
+          "domingo: 06:30 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 6"
+            },
+            "rating": 5,
+            "publishTime": "2026-01-28T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000007",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroH0000000000000008",
+        "name": "Padaria Exemplo H",
+        "phone": "+55 41 3000-0008",
+        "website": "https://padaria-h.example.com.br/",
+        "address": "R. Exemplo Oito, 800 - Juvevê, Curitiba - PR, 80000-008, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4177",
+        "longitude": "-49.2601",
+        "rating": "4.4",
+        "reviews_count": 511,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "26.75",
+        "priority_score": "57.0",
+        "priority_position": 4,
+        "search_rank": 8,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 26.75,
+          "photos": {
+            "signal": 35.0,
+            "weight": 10.0,
+            "weighted_score": 3.5
+          },
+          "rating": {
+            "signal": 25.0,
+            "weight": 20.0,
+            "weighted_score": 5.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 65,
+            "weight": 5.0,
+            "weighted_score": 3.25
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "inactive_gbp"
+        ],
+        "human_insight": "Perfil GMN mais completo; menor prioridade para oferta de presença digital.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 21:00",
+          "terça-feira: 06:00 – 21:00",
+          "quarta-feira: 06:00 – 21:00",
+          "quinta-feira: 06:00 – 21:00",
+          "sexta-feira: 06:00 – 21:00",
+          "sábado: 06:00 – 21:00",
+          "domingo: 06:00 – 21:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 4,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000008",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      }
+    ]
+  },
+  "general": {
+    "search": {
+      "id": "<id>",
+      "query": "padaria no batel",
+      "location": "Curitiba, PR",
+      "radius": 1000,
+      "provider": "google_places",
+      "status": "completed",
+      "requested_limit": 8,
+      "area_type": "radius",
+      "area_config": {
+        "label": "Curitiba, PR",
+        "radius": 1000
+      },
+      "created_at": "<created_at>",
+      "updated_at": "<updated_at>",
+      "results_count": 8,
+      "requested_radius": 1000,
+      "crm_pipeline_id": "<crm_pipeline_id>",
+      "crm_stage_id": "<crm_stage_id>",
+      "crm_count": 0,
+      "contact_count": 0,
+      "average_score": 59.0,
+      "ready_count": 0,
+      "location_place_id": null,
+      "location_latitude": null,
+      "location_longitude": null,
+      "location_label": null,
+      "search_filters": {},
+      "advanced_filters": {},
+      "sort_key": null,
+      "score_mode": "general",
+      "scoring_profile_id": "<scoring_profile_id>",
+      "preset_id": null,
+      "decision_maker_type": "owner",
+      "summary": {
+        "results_count": 8,
+        "contact_count": 0,
+        "crm_count": 0,
+        "ready_count": 0,
+        "average_score": 59.0,
+        "consumed_api_units": 1,
+        "radius_expanded": false,
+        "cached_from_search_id": "<cached_from_search_id>",
+        "partial_results": false
+      },
+      "research_progress": {
+        "total": 0,
+        "done": 0,
+        "running": 0,
+        "queued": 0,
+        "failed": 0
+      }
+    },
+    "leads": [
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroA0000000000000001",
+        "name": "Padaria Exemplo A",
+        "phone": "+55 41 3000-0001",
+        "website": "https://padaria-a.example.com.br/",
+        "address": "R. Exemplo Um, 100 - Centro, Curitiba - PR, 80000-001, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4284",
+        "longitude": "-49.2733",
+        "rating": "4.7",
+        "reviews_count": 812,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "89.3",
+        "priority_score": "100.0",
+        "priority_position": 1,
+        "search_rank": 1,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 89.3,
+          "photos": {
+            "signal": 30.0,
+            "weight": 10.0,
+            "weighted_score": 3.0
+          },
+          "rating": {
+            "signal": 94.0,
+            "weight": 20.0,
+            "weighted_score": 18.8
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 100,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          },
+          "reviews_count": {
+            "signal": 100,
+            "weight": 15.0,
+            "weighted_score": 15.0
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Lead prioritário: boa reputação e dados de contato completos.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 20:00",
+          "terça-feira: 06:00 – 20:00",
+          "quarta-feira: 06:00 – 20:00",
+          "quinta-feira: 06:00 – 20:00",
+          "sexta-feira: 06:00 – 20:00",
+          "sábado: 06:00 – 14:00",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 3,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 0"
+            },
+            "rating": 5,
+            "publishTime": "2026-09-25T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000001",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroB0000000000000002",
+        "name": "Padaria Exemplo B",
+        "phone": "+55 41 3000-0002",
+        "website": null,
+        "address": "Av. Exemplo Dois, 200 - Batel, Curitiba - PR, 80000-002, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4411",
+        "longitude": "-49.2877",
+        "rating": "4.2",
+        "reviews_count": 143,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "47.04",
+        "priority_score": "29.0",
+        "priority_position": 6,
+        "search_rank": 2,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 47.04,
+          "photos": {
+            "signal": 10.0,
+            "weight": 10.0,
+            "weighted_score": 1.0
+          },
+          "rating": {
+            "signal": 84.0,
+            "weight": 20.0,
+            "weighted_score": 16.8
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 95,
+            "weight": 5.0,
+            "weighted_score": 4.75
+          },
+          "reviews_count": {
+            "signal": 79.94,
+            "weight": 15.0,
+            "weighted_score": 11.99
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [
+          "missing_website"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: 07:00 – 12:00",
+          "terça-feira: 07:00 – 12:00",
+          "quarta-feira: 07:00 – 12:00",
+          "quinta-feira: 07:00 – 12:00",
+          "sexta-feira: 07:00 – 12:00",
+          "sábado: Fechado",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 1,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000002",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroC0000000000000003",
+        "name": "Padaria Exemplo C",
+        "phone": "+55 41 99000-0003",
+        "website": null,
+        "address": "R. Exemplo Três, 300 - Água Verde, Curitiba - PR, 80000-003, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4507",
+        "longitude": "-49.2811",
+        "rating": "3.9",
+        "reviews_count": 27,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "48.64",
+        "priority_score": "43.0",
+        "priority_position": 5,
+        "search_rank": 3,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 48.64,
+          "photos": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "rating": {
+            "signal": 78.0,
+            "weight": 20.0,
+            "weighted_score": 15.6
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 80.0,
+            "weight": 10.0,
+            "weighted_score": 8.0
+          },
+          "google_rank": {
+            "signal": 90,
+            "weight": 5.0,
+            "weighted_score": 4.5
+          },
+          "reviews_count": {
+            "signal": 53.6,
+            "weight": 15.0,
+            "weighted_score": 8.04
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 2"
+            },
+            "rating": 5,
+            "publishTime": "2026-07-07T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000003",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroD0000000000000004",
+        "name": "Padaria Exemplo D",
+        "phone": null,
+        "website": null,
+        "address": "R. Exemplo Quatro, 400 - Rebouças, Curitiba - PR, 80000-004, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4402",
+        "longitude": "-49.2598",
+        "rating": null,
+        "reviews_count": null,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "6.75",
+        "priority_score": "0.0",
+        "priority_position": 8,
+        "search_rank": 4,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 6.75,
+          "photos": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "rating": {
+            "signal": 0.0,
+            "weight": 20.0,
+            "weighted_score": 0.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 85,
+            "weight": 5.0,
+            "weighted_score": 4.25
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_phone",
+          "low_reviews",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": null,
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroE0000000000000005",
+        "name": "Padaria Exemplo E",
+        "phone": "+55 41 3000-0005",
+        "website": "https://www.instagram.com/padariaexemploe/",
+        "address": "R. Exemplo Cinco, 500 - Mercês, Curitiba - PR, 80000-005, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4231",
+        "longitude": "-49.2912",
+        "rating": "4.5",
+        "reviews_count": 64,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "84.57",
+        "priority_score": "71.0",
+        "priority_position": 3,
+        "search_rank": 5,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 84.57,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 90.0,
+            "weight": 20.0,
+            "weighted_score": 18.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 50.0,
+            "weight": 10.0,
+            "weighted_score": 5.0
+          },
+          "google_rank": {
+            "signal": 80,
+            "weight": 5.0,
+            "weighted_score": 4.0
+          },
+          "reviews_count": {
+            "signal": 67.15,
+            "weight": 15.0,
+            "weighted_score": 10.07
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Lead prioritário: boa reputação e dados de contato completos.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 10,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 4"
+            },
+            "rating": 5,
+            "publishTime": "2026-04-18T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000005",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroF0000000000000006",
+        "name": "Padaria Exemplo F",
+        "phone": "+55 41 3000-0006",
+        "website": "https://padaria-f.example.com.br/",
+        "address": "Al. Exemplo Seis, 600 - Bigorrilho, Curitiba - PR, 80000-006, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4344",
+        "longitude": "-49.2951",
+        "rating": "4.8",
+        "reviews_count": 356,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "76.63",
+        "priority_score": "57.0",
+        "priority_position": 4,
+        "search_rank": 6,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 76.63,
+          "photos": {
+            "signal": 20.0,
+            "weight": 10.0,
+            "weighted_score": 2.0
+          },
+          "rating": {
+            "signal": 96.0,
+            "weight": 20.0,
+            "weighted_score": 19.2
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 75,
+            "weight": 5.0,
+            "weighted_score": 3.75
+          },
+          "reviews_count": {
+            "signal": 94.55,
+            "weight": 15.0,
+            "weighted_score": 14.18
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Boa oportunidade, mas vale revisar sinais de contato e reputação.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: Fechado",
+          "terça-feira: 08:00 – 18:00",
+          "quarta-feira: 08:00 – 18:00",
+          "quinta-feira: 08:00 – 18:00",
+          "sexta-feira: 08:00 – 18:00",
+          "sábado: 08:00 – 13:00",
+          "domingo: 08:00 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 2,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000006",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroG0000000000000007",
+        "name": "Padaria Exemplo G",
+        "phone": "+55 41 99000-0007",
+        "website": null,
+        "address": "R. Exemplo Sete, 700 - Portão, Curitiba - PR, 80000-007, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4755",
+        "longitude": "-49.2917",
+        "rating": "5.0",
+        "reviews_count": 3,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "41.84",
+        "priority_score": "14.0",
+        "priority_position": 7,
+        "search_rank": 7,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 41.84,
+          "photos": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "rating": {
+            "signal": 100.0,
+            "weight": 20.0,
+            "weighted_score": 20.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 25.0,
+            "weight": 10.0,
+            "weighted_score": 2.5
+          },
+          "google_rank": {
+            "signal": 70,
+            "weight": 5.0,
+            "weighted_score": 3.5
+          },
+          "reviews_count": {
+            "signal": 22.3,
+            "weight": 15.0,
+            "weighted_score": 3.34
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "low_reviews",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:30 – 19:30",
+          "terça-feira: 06:30 – 19:30",
+          "quarta-feira: 06:30 – 19:30",
+          "quinta-feira: 06:30 – 19:30",
+          "sexta-feira: 06:30 – 19:30",
+          "sábado: 06:30 – 19:30",
+          "domingo: 06:30 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 6"
+            },
+            "rating": 5,
+            "publishTime": "2026-01-28T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000007",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroH0000000000000008",
+        "name": "Padaria Exemplo H",
+        "phone": "+55 41 3000-0008",
+        "website": "https://padaria-h.example.com.br/",
+        "address": "R. Exemplo Oito, 800 - Juvevê, Curitiba - PR, 80000-008, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4177",
+        "longitude": "-49.2601",
+        "rating": "4.4",
+        "reviews_count": 511,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "77.35",
+        "priority_score": "86.0",
+        "priority_position": 2,
+        "search_rank": 8,
+        "score_breakdown": {
+          "_mode": "general",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 77.35,
+          "photos": {
+            "signal": 40.0,
+            "weight": 10.0,
+            "weighted_score": 4.0
+          },
+          "rating": {
+            "signal": 88.0,
+            "weight": 20.0,
+            "weighted_score": 17.6
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 65,
+            "weight": 5.0,
+            "weighted_score": 3.25
+          },
+          "reviews_count": {
+            "signal": 100,
+            "weight": 15.0,
+            "weighted_score": 15.0
+          },
+          "query_relevance": {
+            "signal": 50.0,
+            "weight": 5.0,
+            "weighted_score": 2.5
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Boa oportunidade, mas vale revisar sinais de contato e reputação.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 21:00",
+          "terça-feira: 06:00 – 21:00",
+          "quarta-feira: 06:00 – 21:00",
+          "quinta-feira: 06:00 – 21:00",
+          "sexta-feira: 06:00 – 21:00",
+          "sábado: 06:00 – 21:00",
+          "domingo: 06:00 – 21:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 4,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000008",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      }
+    ]
+  },
+  "reopened": {
+    "id": "<id>",
+    "query": "padaria",
+    "location": "Curitiba, PR",
+    "radius": 1000,
+    "provider": "google_places",
+    "status": "completed",
+    "requested_limit": 8,
+    "area_type": "radius",
+    "area_config": {
+      "label": "Curitiba, PR",
+      "radius": 1000
+    },
+    "created_at": "<created_at>",
+    "updated_at": "<updated_at>",
+    "results_count": 8,
+    "requested_radius": 1000,
+    "crm_pipeline_id": "<crm_pipeline_id>",
+    "crm_stage_id": "<crm_stage_id>",
+    "crm_count": 0,
+    "contact_count": 0,
+    "average_score": 59.0,
+    "ready_count": 0,
+    "location_place_id": null,
+    "location_latitude": null,
+    "location_longitude": null,
+    "location_label": null,
+    "search_filters": {},
+    "advanced_filters": {},
+    "sort_key": null,
+    "score_mode": "gbp",
+    "scoring_profile_id": "<scoring_profile_id>",
+    "preset_id": null,
+    "decision_maker_type": "owner",
+    "summary": {
+      "results_count": 8,
+      "contact_count": 0,
+      "crm_count": 0,
+      "ready_count": 0,
+      "average_score": 59.0,
+      "consumed_api_units": 1,
+      "radius_expanded": false,
+      "cached_from_search_id": "<cached_from_search_id>",
+      "partial_results": false
+    },
+    "research_progress": {
+      "total": 0,
+      "done": 0,
+      "running": 0,
+      "queued": 0,
+      "failed": 0
+    },
+    "leads": [
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroA0000000000000001",
+        "name": "Padaria Exemplo A",
+        "phone": "+55 41 3000-0001",
+        "website": "https://padaria-a.example.com.br/",
+        "address": "R. Exemplo Um, 100 - Centro, Curitiba - PR, 80000-001, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4284",
+        "longitude": "-49.2733",
+        "rating": "4.7",
+        "reviews_count": 812,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "14.5",
+        "priority_score": "14.0",
+        "priority_position": 7,
+        "search_rank": 1,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 14.5,
+          "photos": {
+            "signal": 35.0,
+            "weight": 10.0,
+            "weighted_score": 3.5
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "google_rank": {
+            "signal": 100,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Lead prioritário: boa reputação e dados de contato completos.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 20:00",
+          "terça-feira: 06:00 – 20:00",
+          "quarta-feira: 06:00 – 20:00",
+          "quinta-feira: 06:00 – 20:00",
+          "sexta-feira: 06:00 – 20:00",
+          "sábado: 06:00 – 14:00",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 3,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 0"
+            },
+            "rating": 5,
+            "publishTime": "2026-09-25T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000001",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroB0000000000000002",
+        "name": "Padaria Exemplo B",
+        "phone": "+55 41 3000-0002",
+        "website": null,
+        "address": "Av. Exemplo Dois, 200 - Batel, Curitiba - PR, 80000-002, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4411",
+        "longitude": "-49.2877",
+        "rating": "4.2",
+        "reviews_count": 143,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "59.0",
+        "priority_score": "71.0",
+        "priority_position": 3,
+        "search_rank": 2,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 59.0,
+          "photos": {
+            "signal": 70.0,
+            "weight": 10.0,
+            "weighted_score": 7.0
+          },
+          "rating": {
+            "signal": 25.0,
+            "weight": 20.0,
+            "weighted_score": 5.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 95,
+            "weight": 5.0,
+            "weighted_score": 4.75
+          },
+          "reviews_count": {
+            "signal": 15.0,
+            "weight": 15.0,
+            "weighted_score": 2.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: 07:00 – 12:00",
+          "terça-feira: 07:00 – 12:00",
+          "quarta-feira: 07:00 – 12:00",
+          "quinta-feira: 07:00 – 12:00",
+          "sexta-feira: 07:00 – 12:00",
+          "sábado: Fechado",
+          "domingo: Fechado"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 1,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000002",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroC0000000000000003",
+        "name": "Padaria Exemplo C",
+        "phone": "+55 41 99000-0003",
+        "website": null,
+        "address": "R. Exemplo Três, 300 - Água Verde, Curitiba - PR, 80000-003, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4507",
+        "longitude": "-49.2811",
+        "rating": "3.9",
+        "reviews_count": 27,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "62.75",
+        "priority_score": "100.0",
+        "priority_position": 1,
+        "search_rank": 3,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 62.75,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 55.0,
+            "weight": 20.0,
+            "weighted_score": 11.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 20.0,
+            "weight": 10.0,
+            "weighted_score": 2.0
+          },
+          "google_rank": {
+            "signal": 90,
+            "weight": 5.0,
+            "weighted_score": 4.5
+          },
+          "reviews_count": {
+            "signal": 35.0,
+            "weight": 15.0,
+            "weighted_score": 5.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 2"
+            },
+            "rating": 5,
+            "publishTime": "2026-07-07T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000003",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroD0000000000000004",
+        "name": "Padaria Exemplo D",
+        "phone": null,
+        "website": null,
+        "address": "R. Exemplo Quatro, 400 - Rebouças, Curitiba - PR, 80000-004, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4402",
+        "longitude": "-49.2598",
+        "rating": null,
+        "reviews_count": null,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "97.25",
+        "priority_score": "0.0",
+        "priority_position": 8,
+        "search_rank": 4,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "_total": 97.25,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 90.0,
+            "weight": 20.0,
+            "weighted_score": 18.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 85,
+            "weight": 5.0,
+            "weighted_score": 4.25
+          },
+          "reviews_count": {
+            "signal": 100.0,
+            "weight": 15.0,
+            "weighted_score": 15.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "missing_phone",
+          "low_reviews",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": null,
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroE0000000000000005",
+        "name": "Padaria Exemplo E",
+        "phone": "+55 41 3000-0005",
+        "website": "https://www.instagram.com/padariaexemploe/",
+        "address": "R. Exemplo Cinco, 500 - Mercês, Curitiba - PR, 80000-005, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4231",
+        "longitude": "-49.2912",
+        "rating": "4.5",
+        "reviews_count": 64,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "17.25",
+        "priority_score": "29.0",
+        "priority_position": 6,
+        "search_rank": 5,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 17.25,
+          "photos": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 50.0,
+            "weight": 10.0,
+            "weighted_score": 5.0
+          },
+          "google_rank": {
+            "signal": 80,
+            "weight": 5.0,
+            "weighted_score": 4.0
+          },
+          "reviews_count": {
+            "signal": 15.0,
+            "weight": 15.0,
+            "weighted_score": 2.25
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Lead prioritário: boa reputação e dados de contato completos.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": null,
+        "opening_hours_summary": null,
+        "has_opening_hours": false,
+        "neighborhood": null,
+        "photo_count": 10,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 4"
+            },
+            "rating": 5,
+            "publishTime": "2026-04-18T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000005",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroF0000000000000006",
+        "name": "Padaria Exemplo F",
+        "phone": "+55 41 3000-0006",
+        "website": "https://padaria-f.example.com.br/",
+        "address": "Al. Exemplo Seis, 600 - Bigorrilho, Curitiba - PR, 80000-006, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4344",
+        "longitude": "-49.2951",
+        "rating": "4.8",
+        "reviews_count": 356,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "26.75",
+        "priority_score": "43.0",
+        "priority_position": 5,
+        "search_rank": 6,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 26.75,
+          "photos": {
+            "signal": 70.0,
+            "weight": 10.0,
+            "weighted_score": 7.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 75,
+            "weight": 5.0,
+            "weighted_score": 3.75
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Boa oportunidade, mas vale revisar sinais de contato e reputação.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": false,
+        "opening_hours_summary": [
+          "segunda-feira: Fechado",
+          "terça-feira: 08:00 – 18:00",
+          "quarta-feira: 08:00 – 18:00",
+          "quinta-feira: 08:00 – 18:00",
+          "sexta-feira: 08:00 – 18:00",
+          "sábado: 08:00 – 13:00",
+          "domingo: 08:00 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 2,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000006",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroG0000000000000007",
+        "name": "Padaria Exemplo G",
+        "phone": "+55 41 99000-0007",
+        "website": null,
+        "address": "R. Exemplo Sete, 700 - Portão, Curitiba - PR, 80000-007, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4755",
+        "longitude": "-49.2917",
+        "rating": "5.0",
+        "reviews_count": 3,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "65.5",
+        "priority_score": "86.0",
+        "priority_position": 2,
+        "search_rank": 7,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 65.5,
+          "photos": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "rating": {
+            "signal": 5.0,
+            "weight": 20.0,
+            "weighted_score": 1.0
+          },
+          "website": {
+            "signal": 100.0,
+            "weight": 25.0,
+            "weighted_score": 25.0
+          },
+          "activity": {
+            "signal": 75.0,
+            "weight": 10.0,
+            "weighted_score": 7.5
+          },
+          "google_rank": {
+            "signal": 70,
+            "weight": 5.0,
+            "weighted_score": 3.5
+          },
+          "reviews_count": {
+            "signal": 90.0,
+            "weight": 15.0,
+            "weighted_score": 13.5
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [
+          "missing_website",
+          "low_reviews",
+          "missing_photos"
+        ],
+        "human_insight": "Lead com sinais incompletos; priorize após validação manual.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": false,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:30 – 19:30",
+          "terça-feira: 06:30 – 19:30",
+          "quarta-feira: 06:30 – 19:30",
+          "quinta-feira: 06:30 – 19:30",
+          "sexta-feira: 06:30 – 19:30",
+          "sábado: 06:30 – 19:30",
+          "domingo: 06:30 – 12:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 0,
+        "google_maps_uri": null,
+        "reviews_snapshot": [
+          {
+            "text": {
+              "text": "Avaliação 6"
+            },
+            "rating": 5,
+            "publishTime": "2026-01-28T12:00:00Z"
+          }
+        ],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+5541990000007",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      },
+      {
+        "id": "<id>",
+        "contact_id": "<contact_id>",
+        "crm_card_id": "<crm_card_id>",
+        "provider": "google_places",
+        "provider_place_id": "ChIJfiltroH0000000000000008",
+        "name": "Padaria Exemplo H",
+        "phone": "+55 41 3000-0008",
+        "website": "https://padaria-h.example.com.br/",
+        "address": "R. Exemplo Oito, 800 - Juvevê, Curitiba - PR, 80000-008, Brasil",
+        "city": null,
+        "state": null,
+        "country": "BR",
+        "latitude": "-25.4177",
+        "longitude": "-49.2601",
+        "rating": "4.4",
+        "reviews_count": 511,
+        "category": "bakery",
+        "status": "new_lead",
+        "created_at": "<created_at>",
+        "updated_at": "<updated_at>",
+        "discard_reason": null,
+        "score": "26.75",
+        "priority_score": "57.0",
+        "priority_position": 4,
+        "search_rank": 8,
+        "score_breakdown": {
+          "_mode": "gbp",
+          "phone": {
+            "signal": 0.0,
+            "weight": 10.0,
+            "weighted_score": 0.0
+          },
+          "_total": 26.75,
+          "photos": {
+            "signal": 35.0,
+            "weight": 10.0,
+            "weighted_score": 3.5
+          },
+          "rating": {
+            "signal": 25.0,
+            "weight": 20.0,
+            "weighted_score": 5.0
+          },
+          "website": {
+            "signal": 0.0,
+            "weight": 25.0,
+            "weighted_score": 0.0
+          },
+          "activity": {
+            "signal": 100.0,
+            "weight": 10.0,
+            "weighted_score": 10.0
+          },
+          "google_rank": {
+            "signal": 65,
+            "weight": 5.0,
+            "weighted_score": 3.25
+          },
+          "reviews_count": {
+            "signal": 0.0,
+            "weight": 15.0,
+            "weighted_score": 0.0
+          },
+          "query_relevance": {
+            "signal": 100.0,
+            "weight": 5.0,
+            "weighted_score": 5.0
+          }
+        },
+        "negative_factors": [],
+        "human_insight": "Boa oportunidade, mas vale revisar sinais de contato e reputação.",
+        "enrichment_status": "pending",
+        "enrichment_requested_at": null,
+        "enrichment_completed_at": null,
+        "enrichment_source": null,
+        "enrichment_error": null,
+        "enriched_data": {},
+        "decision_name": null,
+        "decision_role": null,
+        "decision_confidence": null,
+        "decision_source_url": null,
+        "decision_linkedin": null,
+        "decision_instagram": null,
+        "enriched_email": null,
+        "enriched_whatsapp": null,
+        "enriched_instagram": null,
+        "enriched_linkedin": null,
+        "enriched_facebook": null,
+        "enriched_cnpj": null,
+        "enrichment_summary": null,
+        "source_label": "Google places",
+        "contact_status": "pending",
+        "crm_status": "pending",
+        "has_photos": true,
+        "open_now": true,
+        "opening_hours_summary": [
+          "segunda-feira: 06:00 – 21:00",
+          "terça-feira: 06:00 – 21:00",
+          "quarta-feira: 06:00 – 21:00",
+          "quinta-feira: 06:00 – 21:00",
+          "sexta-feira: 06:00 – 21:00",
+          "sábado: 06:00 – 21:00",
+          "domingo: 06:00 – 21:00"
+        ],
+        "has_opening_hours": true,
+        "neighborhood": null,
+        "photo_count": 4,
+        "google_maps_uri": null,
+        "reviews_snapshot": [],
+        "whatsapp_verification_status": null,
+        "whatsapp_verified": false,
+        "whatsapp_phone": "+554130000008",
+        "whatsapp_url": null,
+        "research": {
+          "company_status": "not_researched",
+          "decision_status": "not_researched",
+          "reused": false,
+          "requested_at": null,
+          "completed_at": null,
+          "error_code": null,
+          "verified_at": null,
+          "no_decision_reason": null,
+          "company": null,
+          "owners": [],
+          "decision": null
+        },
+        "contact_name": null
+      }
+    ]
+  },
+  "lead": {
+    "id": "<id>",
+    "contact_id": "<contact_id>",
+    "crm_card_id": "<crm_card_id>",
+    "provider": "google_places",
+    "provider_place_id": "ChIJfiltroA0000000000000001",
+    "name": "Padaria Exemplo A",
+    "phone": "+55 41 3000-0001",
+    "website": "https://padaria-a.example.com.br/",
+    "address": "R. Exemplo Um, 100 - Centro, Curitiba - PR, 80000-001, Brasil",
+    "city": null,
+    "state": null,
+    "country": "BR",
+    "latitude": "-25.4284",
+    "longitude": "-49.2733",
+    "rating": "4.7",
+    "reviews_count": 812,
+    "category": "bakery",
+    "status": "new_lead",
+    "created_at": "<created_at>",
+    "updated_at": "<updated_at>",
+    "discard_reason": null,
+    "score": "89.3",
+    "priority_score": "100.0",
+    "priority_position": 1,
+    "search_rank": 1,
+    "score_breakdown": {
+      "_mode": "general",
+      "phone": {
+        "signal": 100.0,
+        "weight": 10.0,
+        "weighted_score": 10.0
+      },
+      "_total": 89.3,
+      "photos": {
+        "signal": 30.0,
+        "weight": 10.0,
+        "weighted_score": 3.0
+      },
+      "rating": {
+        "signal": 94.0,
+        "weight": 20.0,
+        "weighted_score": 18.8
+      },
+      "website": {
+        "signal": 100.0,
+        "weight": 25.0,
+        "weighted_score": 25.0
+      },
+      "activity": {
+        "signal": 100.0,
+        "weight": 10.0,
+        "weighted_score": 10.0
+      },
+      "google_rank": {
+        "signal": 100,
+        "weight": 5.0,
+        "weighted_score": 5.0
+      },
+      "reviews_count": {
+        "signal": 100,
+        "weight": 15.0,
+        "weighted_score": 15.0
+      },
+      "query_relevance": {
+        "signal": 50.0,
+        "weight": 5.0,
+        "weighted_score": 2.5
+      }
+    },
+    "negative_factors": [],
+    "human_insight": "Lead prioritário: boa reputação e dados de contato completos.",
+    "enrichment_status": "pending",
+    "enrichment_requested_at": null,
+    "enrichment_completed_at": null,
+    "enrichment_source": null,
+    "enrichment_error": null,
+    "enriched_data": {},
+    "decision_name": null,
+    "decision_role": null,
+    "decision_confidence": null,
+    "decision_source_url": null,
+    "decision_linkedin": null,
+    "decision_instagram": null,
+    "enriched_email": null,
+    "enriched_whatsapp": null,
+    "enriched_instagram": null,
+    "enriched_linkedin": null,
+    "enriched_facebook": null,
+    "enriched_cnpj": null,
+    "enrichment_summary": null,
+    "source_label": "Google places",
+    "contact_status": "pending",
+    "crm_status": "pending",
+    "has_photos": true,
+    "open_now": true,
+    "opening_hours_summary": [
+      "segunda-feira: 06:00 – 20:00",
+      "terça-feira: 06:00 – 20:00",
+      "quarta-feira: 06:00 – 20:00",
+      "quinta-feira: 06:00 – 20:00",
+      "sexta-feira: 06:00 – 20:00",
+      "sábado: 06:00 – 14:00",
+      "domingo: Fechado"
+    ],
+    "has_opening_hours": true,
+    "neighborhood": null,
+    "photo_count": 3,
+    "google_maps_uri": null,
+    "reviews_snapshot": [
+      {
+        "text": {
+          "text": "Avaliação 0"
+        },
+        "rating": 5,
+        "publishTime": "2026-09-25T12:00:00Z"
+      }
+    ],
+    "whatsapp_verification_status": null,
+    "whatsapp_verified": false,
+    "whatsapp_phone": "+554130000001",
+    "whatsapp_url": null,
+    "research": {
+      "company_status": "not_researched",
+      "decision_status": "not_researched",
+      "reused": false,
+      "requested_at": null,
+      "completed_at": null,
+      "error_code": null,
+      "verified_at": null,
+      "no_decision_reason": null,
+      "company": null,
+      "owners": [],
+      "decision": null
+    },
+    "contact_name": null
+  }
+}

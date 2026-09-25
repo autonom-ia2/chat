@@ -568,8 +568,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # Revisão da chat#718 (`e3894e56…` -> `e468a7e3…`, 25/09/2026): a busca que falhou (`lookup_failed`, adapters#107)
   # sai de novo, e a §I passa a dizer só o que é verdade: "com o mesmo documento, a busca paga do segurado que já teve
   # resposta não se repete".
+  # chat#641 (`15a304f8…` -> `9691f6c3…`, 25/09/2026): a §K diz que o PDF pode chegar antes ou depois de qualquer
+  # mensagem, e que não se diz em que ponto da conversa ele está. A guarda é `builder_posicao_do_anexo_spec`.
+  # Integração de chat#716 com chat#718 no release de 25/09/2026: os dois textos juntos, sem mudança de frase.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('e468a7e3add83e998408acbf519ef3a0')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('6d2535228428c82ec927058ebc404d82')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

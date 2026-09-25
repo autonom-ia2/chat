@@ -46,6 +46,7 @@ class Autonomia::Prospecting::Research::LeadWriter
       'owners' => profile&.owners || [], 'no_decision_reason' => outcome.no_decision_reason,
       'decision_source' => profile&.data&.dig('decision_source'), 'company_confidence' => outcome.confidence,
       'discovery_evidence' => Array(outcome.evidence).as_json, 'candidates' => Array(outcome.candidates),
+      'candidate_scores' => Array(outcome.candidate_scores).as_json,
       'verified_at' => profile&.verified_at&.iso8601,
       'company' => profile&.attributes&.slice(*Autonomia::Prospecting::Research::Payload::COMPANY_FIELDS)
     }

@@ -159,8 +159,11 @@ needs_more_info=true). Nunca devolva texto fora do schema.
 - LIMITE DE PERGUNTAS: `Builder::MAX_INTERVIEW_QUESTIONS` (=6). Ao atingir o teto de turnos `assistant`, o input ganha
   `turn_budget_context` (bloco de CONTEXTO INTERNO mandando fechar) e, como rede, o `force_close?` acima força o
   fechamento.
-- INTENÇÃO DE FECHAR: `Builder#close_intent?` + `CLOSE_INTENT_PATTERNS` (determinístico, lê a última fala do usuário,
-  anulado por `CLOSE_INTENT_NEGATION`) — destrava o portão mesmo que o LLM hesite. Espelha as frases de FECHAR do §4.
+- INTENÇÃO DE FECHAR (#641): `Builder#close_intent?` lê o campo `user_asked_to_close` do schema de saída, a leitura
+  do MODELO sobre a última fala do usuário (`false` = não se aplica; ausente conta como `false`). Substituiu a regex
+  `CLOSE_INTENT_PATTERNS`/`CLOSE_INTENT_NEGATION` (regra do Rodrigo: sem regex para interpretar fala de pessoa). Como é
+  um campo separado de `needs_more_info`, continua destravando o portão quando o modelo entende a ordem mas hesita em
+  fechar. Não entra em `closing_phase?` (a leitura só existe depois da chamada); hoje COLLECT e FINAL são 'medium'.
 - FALLBACK DE NOME: no fechamento, `default_agent_name` deriva um nome pelo tipo (`DEFAULT_NAMES`) se o `name` vier
   vazio, evitando agente "Novo agente"/vazio.
 - REASONING POR FASE: `Builder#reasoning_effort` usa `BUILDER_REASONING_EFFORT_COLLECT` ('low') na coleta e

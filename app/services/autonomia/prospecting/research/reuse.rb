@@ -40,7 +40,7 @@ class Autonomia::Prospecting::Research::Reuse
     Autonomia::Prospecting::Research::Outcome.new(
       company_status: source.company_research_status, decision_status: source.decision_research_status,
       no_decision_reason: research['no_decision_reason'], confidence: research['company_confidence'], reused: true,
-      evidence: research['discovery_evidence'], candidates: research['candidates']
+      evidence: research['discovery_evidence'], candidates: research['candidates'], candidate_scores: research['candidate_scores']
     )
   end
 

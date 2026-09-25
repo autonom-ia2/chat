@@ -145,14 +145,22 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(context).not_to include('pergunte UMA vez')
     end
 
-    it 'does not let a close-intent phrase discard a clarifying question raised during the adjust' do
-      # Arrange — pedido NOVO que casa CLOSE_INTENT_PATTERNS ("pode criar") sem responder a pergunta
-      # pendente: antes isso virava ordem de fechar e a pergunta era descartada.
+    it 'does not let a close reading discard a clarifying question raised during the adjust' do
+      # Arrange — pedido NOVO ("pode criar") sem responder a pergunta pendente. Mesmo que o modelo leia
+      # como ordem de fechar, em AJUSTE não há entrevista para destravar: a pergunta tem de sobreviver.
+      question = 'A saudação nova substitui a atual ou entra só no primeiro contato?'
       thread.append_message!('user', 'pode criar uma saudação nova também')
+      stub_model_output('needs_more_info' => true, 'next_question' => question, 'user_asked_to_close' => true)
 
-      # Act / Assert
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
       expect(builder.send(:close_intent?)).to be(true)
       expect(builder.send(:force_close?)).to be(false)
+      expect(thread.reload.state['needs_more_info']).to be(true)
+      expect(thread.state['next_question']).to eq(question)
+      expect(agent.reload.instruction).to eq('Instrução fechada do agente.')
     end
   end
 
@@ -166,7 +174,7 @@ RSpec.describe Autonomia::Agents::Builder do
         'scaffold' => 'andaime', 'human_card' => 'A Ana faz a pré-venda e encaminha o lead.',
         'greeting' => 'Oi!', 'fallback_message' => 'Vou verificar.', 'handoff_rule' => 'Passa para humano.',
         'starter_questions' => [], 'tone' => 'cordial', 'guardrails' => [], 'voice' => 'feminina',
-        'needs_more_info' => false, 'next_question' => ''
+        'needs_more_info' => false, 'next_question' => '', 'user_asked_to_close' => false
       }.merge(overrides)
     end
 
@@ -176,7 +184,7 @@ RSpec.describe Autonomia::Agents::Builder do
       thread.append_message!('assistant', question)
       thread.update!(state: thread.state.to_h.merge('needs_more_info' => true, 'next_question' => question))
       thread.append_message!('user', 'Terminei, você pode finalizar o agente.')
-      stub_model_output(close_payload)
+      stub_model_output(close_payload('user_asked_to_close' => true))
 
       # Act
       builder.run!(thread.begin_build!)
@@ -191,7 +199,7 @@ RSpec.describe Autonomia::Agents::Builder do
     it 'records the missing knowledge base when the ask-once confirmation never happened' do
       # Arrange — sem material, sem opt-out na abertura e sem a confirmação do §5.4.
       thread.append_message!('user', 'pode fechar')
-      stub_model_output(close_payload)
+      stub_model_output(close_payload('user_asked_to_close' => true))
 
       # Act
       builder.run!(thread.begin_build!)
@@ -212,6 +220,125 @@ RSpec.describe Autonomia::Agents::Builder do
 
       # Assert
       expect(thread.reload.agent.human_card).to eq('A Ana faz a pré-venda e encaminha o lead.')
+    end
+  end
+
+  # #641 — a intenção de fechar era uma lista de palavras (CLOSE_INTENT_PATTERNS) sobre a fala crua do
+  # dono. Agora é a LEITURA do modelo, no campo user_asked_to_close do mesmo turno; false é o "não se
+  # aplica". Os portões continuam os mesmos, só a fonte da decisão mudou.
+  describe 'close intent decided by the model (#641)' do
+    def interview_payload(overrides = {})
+      {
+        'name' => 'Ana', 'agent_type' => 'sdr', 'instruction' => 'Instrução completa da Ana.',
+        'scaffold' => 'andaime', 'human_card' => 'A Ana faz a pré-venda.', 'greeting' => 'Oi!',
+        'fallback_message' => 'Vou verificar.', 'handoff_rule' => 'Passa para humano.', 'starter_questions' => [],
+        'tone' => 'cordial', 'guardrails' => [], 'voice' => 'feminina',
+        'needs_more_info' => true, 'next_question' => 'Qual o horário de atendimento da Ana?',
+        'user_asked_to_close' => false
+      }.merge(overrides)
+    end
+
+    it 'asks the model for the close reading as a required boolean of the strict schema' do
+      # Arrange
+      thread.append_message!('user', 'Quero uma SDR')
+      fake_client = instance_double(Crm::Ai::ResponsesClient, create: { text: interview_payload.to_json })
+      allow(builder).to receive(:client).and_return(fake_client)
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(fake_client).to have_received(:create) do |**kwargs|
+        schema = kwargs[:schema][:schema]
+        expect(schema[:required]).to include('user_asked_to_close')
+        expect(schema[:properties][:user_asked_to_close][:type]).to eq('boolean')
+        expect(schema[:properties][:user_asked_to_close][:description]).to include('nao se aplica')
+      end
+    end
+
+    it 'keeps no word list in the builder' do
+      expect(described_class.constants).not_to include(:CLOSE_INTENT_PATTERNS, :CLOSE_INTENT_NEGATION)
+    end
+
+    it 'closes over a stubborn needs_more_info when the model read an order to close' do
+      # Arrange — o modelo entendeu a ordem mas ainda quis perguntar (loop teimoso T01/T06).
+      thread.persist_start_options!(type: 'sdr', with_knowledge: false)
+      thread.save!
+      thread.append_message!('user', 'chega de pergunta, monta do jeito que está')
+      stub_model_output(interview_payload('user_asked_to_close' => true))
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      agent = thread.reload.agent
+      expect(thread.state['applied']).to be(true)
+      expect(agent.instruction).to eq('Instrução completa da Ana.')
+      expect(agent.human_card).to include('Qual o horário de atendimento da Ana?')
+    end
+
+    it 'keeps the interview open when the model says the close order does not apply' do
+      # Arrange — frase que a regex antiga lia como ordem ("pode fechar"), mas é negação/adiamento.
+      thread.persist_start_options!(type: 'sdr', with_knowledge: false)
+      thread.save!
+      thread.append_message!('user', 'ainda não pode fechar, falta o horário')
+      stub_model_output(interview_payload)
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(thread.reload.state['needs_more_info']).to be(true)
+      expect(thread.state['applied']).to be(false)
+      expect(thread.agent.instruction).to be_blank
+    end
+
+    it 'treats a missing close reading as not applicable' do
+      # Arrange — saída sem o campo: nunca fecha por omissão.
+      thread.append_message!('user', 'pode fechar')
+      stub_model_output(interview_payload.except('user_asked_to_close'))
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(builder.send(:close_intent?)).to be(false)
+      expect(thread.reload.state['needs_more_info']).to be(true)
+    end
+
+    context 'when a knowledge source was sent back by the reviewer' do
+      before do
+        thread.append_message!('user', 'Quero uma SDR')
+        stub_model_output(interview_payload)
+        builder.run!(thread.begin_build!)
+        Autonomia::Agents::Source.create!(account: account, agent: thread.reload.agent, source_type: 'txt',
+                                          status: :ready, review_status: 'needs_resend')
+        thread.append_message!('user', 'pode fechar assim')
+      end
+
+      it 'lets the model close order open the materials gate' do
+        # Arrange
+        stub_model_output(interview_payload('needs_more_info' => false, 'next_question' => '',
+                                            'user_asked_to_close' => true))
+
+        # Act
+        builder.run!(thread.begin_build!)
+
+        # Assert
+        expect(thread.reload.state['applied']).to be(true)
+      end
+
+      it 'keeps the materials gate closed when the model did not read an order to close' do
+        # Arrange
+        stub_model_output(interview_payload('needs_more_info' => false, 'next_question' => ''))
+
+        # Act
+        builder.run!(thread.begin_build!)
+
+        # Assert
+        expect(thread.reload.state['needs_more_info']).to be(true)
+        expect(thread.state['applied']).to be(false)
+      end
     end
   end
 

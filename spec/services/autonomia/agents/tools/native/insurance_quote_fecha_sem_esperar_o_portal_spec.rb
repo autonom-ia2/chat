@@ -104,6 +104,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(progresso).not_to be_done
     end
 
+    # chat#641: o empresarial fecha pela mesma regra, medida em 10 cotações reais do ramo 18. Auto continua fora.
+    it 'em empresarial, parado com preço, encerra e entrega o comparativo como o residencial' do
+      empresarial = described_class.new(agent: agent, params: { 'produto' => 'empresarial' }, run: run)
+      allow(connector).to receive(:quote_result).and_return({ 'quote_id' => 'abc:1', 'status' => 'partial', 'offers' => com_uma_aguardando })
+
+      progresso = empresarial.poll(handle: aguardando_desde(described_class::SEM_NOVIDADE.ago - 1.second), attempt: 5)
+
+      expect(progresso).to be_done
+      expect(pdf_de(progresso).url).to eq(url)
+      expect(described_class::FECHAM_SEM_NOVIDADE).to contain_exactly('residencial', 'empresarial')
+    end
+
     it 'com novidade recente, segue esperando' do
       progresso = consultar('partial', com_uma_aguardando, aguardando_desde(10.seconds.ago))
 
