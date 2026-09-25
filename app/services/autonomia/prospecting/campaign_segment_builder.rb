@@ -39,12 +39,7 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     with_suppressed_contact_events do
       ActiveRecord::Base.transaction do
         label = ensure_label!
-        eligible_leads.each do |lead|
-          result = ensure_contact!(lead)
-          created_contacts_count += 1 if result.created
-          apply_label!(result.contact, label)
-        end
-
+        created_contacts_count = label_segment!(label)
         campaign = attach_to_campaign!(label) if @campaign_id.present?
         persist_segment_metadata!(label, campaign)
       end
@@ -155,13 +150,19 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     end
   end
 
-  def ensure_contact!(lead)
-    Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).perform
-  end
-
   def apply_label!(contact, label)
     contact.label_list.add(label.title)
     contact.save!
+  end
+
+  # Etiqueta os elegíveis e tira a etiqueta de quem ficou fora por recusa (SegmentLabelRemover). Devolve quantos
+  # contatos foram criados agora.
+  def label_segment!(label)
+    converted = eligible_leads.map { |lead| Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).perform }
+    converted.each { |result| apply_label!(result.contact, label) }
+    kept_contact_ids = converted.map { |result| result.contact.id }
+    Autonomia::Prospecting::SegmentLabelRemover.new(label: label, user: @user, kept_contact_ids: kept_contact_ids).perform(blocked_details)
+    converted.count(&:created)
   end
 
   def ensure_segment_possible!

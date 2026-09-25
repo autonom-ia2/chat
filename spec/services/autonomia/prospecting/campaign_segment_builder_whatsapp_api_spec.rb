@@ -53,6 +53,35 @@ RSpec.describe Autonomia::Prospecting::CampaignSegmentBuilder do
     expect(vetoed.reload.contact).to be_nil
   end
 
+  # A etiqueta tem nome estável e a campanha da API resolve o público por ela ao começar: quem foi etiquetado antes e
+  # depois recusou perde a etiqueta quando o segmento é refeito, senão receberia a mensagem.
+  it 'quem foi etiquetado e depois recusou perde a etiqueta e não entra no público da campanha' do
+    add_lead(name: 'Pronto', phone: '+5531999990001')
+    refused = add_lead(name: 'Depois recusou', phone: '+5531999990002')
+    first = described_class.new(list: list, user: user, segment_name: 'Selecao').perform
+    expect(refused.reload.contact.label_list).to include(first.label.title)
+
+    refused.update!(status: :no_consent)
+    result = build.perform
+    WhatsappApiCampaigns::AudienceResolver.new(campaign.reload).perform
+
+    expect(result.blocked_leads.to_h { |row| [row[:lead].name, row[:reason_code]] }).to eq('Depois recusou' => 'opt_out')
+    expect(refused.contact.reload.label_list).not_to include(result.label.title)
+    expect(campaign.whatsapp_api_campaign_recipients.map { |recipient| recipient.contact.name }).to eq(['Pronto'])
+  end
+
+  it 'o contato que outro lead elegível da lista divide não perde a etiqueta' do
+    kept = add_lead(name: 'Pronto', phone: '+5531999990001')
+    other = add_lead(name: 'Sem whatsapp agora', phone: '+5531999990001')
+    described_class.new(list: list, user: user, segment_name: 'Selecao').perform
+    other.update!(status: :discarded, discard_reason: 'Duplicado')
+
+    result = build.perform
+
+    expect(result.blocked_leads.map { |row| row[:reason_code] }).to eq(['discarded'])
+    expect(kept.reload.contact.label_list).to include(result.label.title)
+  end
+
   it 'a etiqueta entra no público que a campanha resolve ao começar' do
     add_lead(name: 'Pronto', phone: '+5531999990001')
 
