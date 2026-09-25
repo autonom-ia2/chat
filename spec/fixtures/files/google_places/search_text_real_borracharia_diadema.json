@@ -1,0 +1,2961 @@
+{
+  "places": [
+    {
+      "id": "ChIJM2OKMERFzpQRnbkv3Q4Cev8",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 98220-2757",
+      "internationalPhoneNumber": "+55 11 98220-2757",
+      "formattedAddress": "Av. Antônio Piranga, 1991 - Canhema, Diadema - SP, 09942-000",
+      "addressComponents": [
+        {
+          "longText": "1991",
+          "shortText": "1991",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Antônio Piranga",
+          "shortText": "Av. Antônio Piranga",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Canhema",
+          "shortText": "Canhema",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09942-000",
+          "shortText": "09942-000",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6829054,
+        "longitude": -46.6057906
+      },
+      "rating": 4.5,
+      "googleMapsUri": "https://maps.google.com/?cid=18409028689694013853&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "websiteUri": "https://instagram.com/borrachariagoes24horas?igshid=NzZlODBkYWE4Ng==",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: 09:00 – 22:00",
+          "quinta-feira: 09:00 – 22:00",
+          "sexta-feira: 09:00 – 22:00",
+          "sábado: 09:00 – 22:00",
+          "domingo: 09:00 – 22:00"
+        ]
+      },
+      "userRatingCount": 94,
+      "displayName": {
+        "text": "Borracharia Góes 24 Horas",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: 09:00 – 22:00",
+          "quinta-feira: 09:00 – 22:00",
+          "sexta-feira: 09:00 – 22:00",
+          "sábado: 09:00 – 22:00",
+          "domingo: 09:00 – 22:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/reviews/ChdDSUhNMG9nS0VJQ0FnSURYZ2FPTzh3RRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2024-10-28T01:07:49.968045Z"
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/reviews/Ci9DQUlRQUNvZENodHljRjlvT2kxSFNtOXVaV1pyU1ZwdmRtRlZWelU0TUhSdVNVRRAB",
+          "relativePublishTimeDescription": "9 meses atrás",
+          "rating": 5,
+          "publishTime": "2025-12-25T22:03:08.077594969Z"
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/reviews/Ci9DQUlRQUNvZENodHljRjlvT25aSlFtMVJkVWg1UVU5V2VqWXhhM05wZEc1blluYxAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-05-09T13:55:01.695265091Z"
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/reviews/ChZDSUhNMG9nS0VJQ0FnTUNvejQ2aFJ3EAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-04-20T21:09:11.275363Z"
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/reviews/Ci9DQUlRQUNvZENodHljRjlvT210eWVVUnNZV2RSUW5SVE1WVXRlVFV4T1hZeldrRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-05-29T00:01:36.460415066Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMZBfq290Lc7NtOjMMGpbDwZTy3tpV6pf9-QYkIFXHdRnPR2DyZWvdufYldk-pNwApscQ76yc7W4f-hUNO3jLi6A46Kgc2-492uIkc6LkZiIp_AuXyhzAzue2juzLYIjHpMTqKwKQyOpfqJjdRNZwUy2z6Ug5jDasFLhXYEBGb-2S0R3usmF6yTbdsFdqfyByTmmSBSTehIYxIYjW_B9YCjHq-E7fLu2YrqFVrUiOXVvU23QblRjmLenf2zODhwX2eaBnK8fSR_bttNPjci76EFUn9fvJ02XnqohC0OBvucoAmoAvICf7JEADSmMcN0bEjThk0eqnmEynHEUd8wrG2iL9Rpu0q0wXb4GYFh7lCwtRPS4oc9aAGK7MSenJdXPHnzzKUrKrYktQzJVQ9xhpKCw7aZUEIEew_yCyyE2fOj0yzLC",
+          "widthPx": 3456,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMYLRcYUnAqrL0yh32bOZJKO_dpQOPAtLb4b0yIdjyrMjH7CSvjaJS1phSXiUBcGq8YQ0ZIBCVie4C4RarZfvsiW3jUWYXOiRHx7Zf0oAWBBCxfaMSbTdeKyn9STrXelE9HiDJfVx2f12ilyLybdg0PlF1j9AQBxSgVZwOpyIeiZg2dl9mNcN_2Gf7143NN0JmdyRT49QwOGkPdG-Bsl9aoeOdmYcIt9kUkZljRTQFavsGSwVLHbfXTmDrcErA4mvVzTcEpPGCUrSKjT00KXdKNDXEABWAjHVIKJo8_WDnjno2ZabjReiIIZtSFkblL7fe6BUnw1_2t0C1osgidHo3UCgpyQa3nf-xHbGayVBHEejmlx0bUOcjUL423TjQ1kK78iBVC1x5C-CvjRFKMzV5McnFxi-hHt1DeqzrnLHU8",
+          "widthPx": 1080,
+          "heightPx": 740
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMYZ9nh1LmfRVLbBfNfmsSDChn5kj9x6HZAiU85pDeLDOkb9MB2xL7Thnh_KjyUFzCm2LktKChBFmdVzMvQ3UCb1IlcmGxOdEKqvpOGsWEzDXJKIFclVnyLwtaRbvJ8iTaJb9OfRC44K1z1aXLSLoobNaa9Lc4Hs0CQAhGUGV7eWu9CG0H8LOU_9JX-1XgQ-mwAJ7BeJFwHioNd8uvdFSm4gXSPgJ9eOET9s7AgOOS2dEpsb-bbQspgdiEaP7rD0hUqXPhvNhUDKExNrENIXUfdB2jaashdzSMtIh_CvQQKkfF8nzlb4DjXjpSbz8rqfsJ5_S0xtkoqnxbwajU1_5RlVuVYwer0D0WskHdjlFxbPzTepqyHUb3tqmXfNd0I6Pn0nTjST9DU_crwSo5yDoRog7IVTDwNQDINA-JoPCtAVzok",
+          "widthPx": 1200,
+          "heightPx": 1600
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMa-y0KAH8fDEKeh_KAsfI1B59Wap5w5d2Eus9ZlUrRuJpkBmwQ308sxPTuz1YEnat8k9YNOU6TF1rzYqgpaDplHTrwYbpyoIWl96L2Cro2oman3jMfjKT4Okw4qzZm5TbUaULCXfrlN6NUtmqeA79qc7JZkzn4d5Ar1-wGjED6NrB-hj9tJ_t7efcHIsm3axOyQUGSyQ8ZKRRP_yR313YJnL9M4mlHSM1BNVt7XFK-_PmGUyhs0_OfHwzfeRmPs5wonydSFSzVUpLCfK2HMqmTu2zyHeOdl8ggJ0Q6CzBoyXIPZS6WxxlkAXRW7i9M_y9pOJ5En5tLa9NO5Im6D2BJ2Gvj1vTX88uYX9CEDDdzWaZGnAI8N90P2sGQMVgWBXj3aOLr2r0FAPXUKqN9dFDSWSLDqGrSVmmRH21hoJocnutmEMV_J50DOIc--t5is",
+          "widthPx": 1920,
+          "heightPx": 1003
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMYMmGWedKlsoJup5aMYB652l60ZM_kAaYUoaAkgIcd4UzO-fwtfHWdQeOfS6L26oMUAp75BcsVZI3PFiKhG2UnKN3iVnjWsP08Fx-PrvRFhNPu8aKfl_QrrhKSA-ZIRUZSNhqCC6c0QF1i57GN_hppC2nmXgNGZ9GVekyVCS0BOR9Qf4dKb0Y9TkkKTwr7psrhUEHuQz_5i8Ldp2Z-jOrYUHQGgP1ddj1OWZPQtHh3xzD8fDq0Cgxh4nER_DzX3mhJpdSzMHfQP9bjNuQk7_6RaWA0BaVLOowa7HL-3vLbMjtF9z3bVtvqDYIfJYKZXnMQBCwl-xIJ9G0JZ2ULID8dVkjYknzMZxu8ufZcHmUMMWLYFi5jYnZWHQiRxSePkSDGtTvk4RNoqLWoOejM-iCTCgZxvvWXxyH3dci_KM3aNFIcp",
+          "widthPx": 607,
+          "heightPx": 1080
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMYRHL_VAqqcMDDkSdY76-Zy1Bhu_q4CFSq6ZDX3csPJYJiU1IryVzIvhCJ6tea1cK_6DFIGrD74pr0e6IwzbL-WfEkovGioBk-lj-iYFjGCTZ3qjyNpFHibJqvyonj38nNbMePcVcczR5p6QeFpb9Xnq-mTLtQpn_fpoT41jswYSlAzWmVibcpGwq99lxFKL0hxUU9aJjbWHaqTftKv9ima8_BUSpBGwCk2CHSUI4ngan-J0TwusupfWp058Pkp4OFMzroNdpnvLoZCrMTrmRuCwuiZL_U9Dw6W6hc2fDJcSpBDpj6wZgnQrshdBTsdpImKhP4OI41aB65HHcKA0sCAotuHY9oiiEFABkVAjopzrxWWesd_m2WPK9ol2Il5Mj0c6nA20sp440EKk2nwamk-QVNhhhGmSpET3ewc3RLh3DVWbTaZ1Gi7DkHPpQ",
+          "widthPx": 432,
+          "heightPx": 270
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMZeiXSBSf00P8J55WwKHGZ0xMKYVM405nBXBqs5IyhopET3Dkp2WwVeLwfatPf7jqexVGxy67YVlMvyTkypaEgIWJHlaA4p_3v2dO67dXk4m7gts7gh3ojdF85rL5bQXR3LwCDq5PF7sC1VVl4iIy5OBCaY_tYuThu6b8dlaTkMKsqd7N0FWXmo2kmJKmG4CV9gybFL3Wtm8QT4RjbYQURAl0kLbV5rcNKQqSbzlVAVuwcY6tBmU3-9F7DDTNoafpYoajmJUMNFiLRWIgPxVotyVu0HrbAwHosdI78Lqx1ZDpsdOi4jtXA2yWqSFA4c7eZQFak3piVWOMf0c1jlkUSAlVpWG3ADn6aJozs3BEpovlUyxzcph4CJggZAyXjc0TTRj64IfwH0lVM7oBTyq2t44ZKZZGa7DKBAlx-IFUhp2wA9",
+          "widthPx": 1080,
+          "heightPx": 809
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMalAeVDeevMevUYy68vlWhnKatBvZn8jBEH11OJOHrg-c8BawExuWxXjV9FAl3QKOJhAQKGZSvZkmAxF5xhvTswUvYhKUAYlGJucGGI9GdxVvl9q_8j8gXX2lBFtmLKCbOrAissY2WbrmA69O24te6IbnRbJhUW1cpVncnDtcsc0hnkpgmv1katUOs5G8uzCFcfJHjNwniRCfJwZlTDjwcAsLBhyadI2MahKreGBCQhOfeSPDXGYM4HbAm4ZbF4W72DLp9ydKdhGz6KOHG1R6MHoE2Ew2u6_RKYXab9rtR3nY5EJN8LTz17Y2KLCEYGbtCLaiKR7Db8p9BohRXo6vd77Ko4y7hLc5qh-Wt7cPryxFOqCLXYqTd_kEXNmHMBhE3ed4wgzR23jQjp5ljoC-W_w2-CejJomKuGkALGrwXBmtFH5n3oilWLw0HhZQBC",
+          "widthPx": 610,
+          "heightPx": 333
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMbhaQ-TBXY2QRlzgAqfqv_IQbfvakdg55QUPVwYzOw__qNf1D5p7Fl_5KyU_Ku2XCXxVFO4ZspIOIx1FFk11QNrrFOPF4EVOFIVhC2qfQoVHt1yKaJV8zN3jFs_aZI3Qyt7WQHk0kydgl_BMGJhR2l5XQCIs6DCRgpepSBWrJoHnjY47YcZ6ASkD8Sz9RrX0l8o844kHlNKjG81K9TM7fuCF3GChVgyx99hN85B9qQiDiRdd5dkB_64jN80UEvZueJ4c6Fg9XtL2XMDMh1USI7JB83EAjKArO6xn26ugSqyiVpe1yJgUAqSxqLX_N5gaWEvhw92lfparcvOcCcPnlOxVJ83ohYIhMeUh2k8yU3b3Ygcci5GhPhVfHtbPftzcE9L14yf_C5haCVyCSujMcg9b-EjNYewR2EsHlkUGv_8yw",
+          "widthPx": 640,
+          "heightPx": 720
+        },
+        {
+          "name": "places/ChIJM2OKMERFzpQRnbkv3Q4Cev8/photos/Aa-ngMaNjOckmem4rS_7Q78sniQ2DmCBVIum6ZsqJJohrP8HC4SlMs64wEH4u7titJ_WDX6U4ZNRQ0AGM99IEX1Xe5Zh8PWBJh3Pl3jFEmZ9JBUOnKkiqJWkSBK-4WbPkMkLu-2sxiuYrq_0gIsn86Pae1TRWcmOnHYrxljXgcco89ZwNXEvYiXNpbxVrigDnhAGQeWfTAo1wn0WULIrQ1mMdogLSuEs8gV376gwHT1iYfvXcpF8aFhdf-dksXK8w4ay2cqTxOPrhxivQokQA3M17vwi7CHBfKUwYHEoxvZkJjXMBGURopKX3haEAKQZIaywn6OAZxODQ16g40V8dTV4XctqWXlTY6SdMvdqMQ7ZkJzPPwoxrERnS03PNwTFY0PtoAD-6WOrSHVotEIJNcgtjqemO7DhdOzAG7QjM4K2lBQYQWpDZDJtZxuwT40B3A",
+          "widthPx": 386,
+          "heightPx": 309
+        }
+      ]
+    },
+    {
+      "id": "ChIJw5dO8WNDzpQRNGMOPDa1_aw",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 98220-2757",
+      "internationalPhoneNumber": "+55 11 98220-2757",
+      "formattedAddress": "Av. Corredor Abd, 1127 - Piraporinha, Diadema - SP, 09950-461",
+      "addressComponents": [
+        {
+          "longText": "1127",
+          "shortText": "1127",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Corredor Abd",
+          "shortText": "Av. Corredor Abd",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Piraporinha",
+          "shortText": "Piraporinha",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09950-461",
+          "shortText": "09950-461",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.675227,
+        "longitude": -46.586951
+      },
+      "rating": 4.1,
+      "googleMapsUri": "https://maps.google.com/?cid=12465318588171838260&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "websiteUri": "https://instagram.com/borrachariagoes24horas?utm_source=qr&igshid=MzNlNGNkZWQ4Mg%3D%3D",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "userRatingCount": 45,
+      "displayName": {
+        "text": "Borracharia 24 horas",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pGWGIzaEdOSHBXU1ZOd1UwcGFYemxPZURWS2RWRRAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-05-01T02:11:55.812544583Z"
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pGTFVrWmhiRWhqYm01aGFITk1RWG90WVdsQ2NYYxAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-09T14:25:39.225123851Z"
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/reviews/Ci9DQUlRQUNvZENodHljRjlvT25GVVEyc3dVbFpUYkRKMFlXMVlTR0kyWWpKdE1rRRAB",
+          "relativePublishTimeDescription": "5 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-04-02T07:35:44.681199384Z"
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tOa2J5MVBielJLYldscGFHcFNlSFZuUVU5VWFWRRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 1,
+          "publishTime": "2025-08-26T11:59:52.624090373Z"
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/reviews/Ci9DQUlRQUNvZENodHljRjlvT21WV1EzTXdRVkYzYVdkbVJXWnNWeTAyWWkxTVIzYxAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 1,
+          "publishTime": "2026-08-11T04:56:35.928326297Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMbUeRkazZCGwGoqUPw6tWhQAb3Vb63qXV06TRI4TkGEK1k91kjnmK4XCcp3OybvImng1fiErur8_lxviOtaKIxymEsbtG7njg7VKr4bSdSegwlpOyNV4XNuMMSCyBykAmQBUQAZPJi3WAq3OXTQgvHDuLa1SeU7uggTI2GX6kUCTLt0lJUFxQotJimOwguHJ_3SkygPZ7qVgRxbXdreWZTWM1Vuh-JuFLvhoLP4KcDqZMys0NzKdnuzclxlFN1Gd7gSK9SWR-ex5wjOW4SDgJTb7BtVHxowhZ8zvM4UKTAQCdTgGyslqqC-2LdFyfxquEjY9FRK_o0f_NlDuHc82_Djft99rKECXtdTeLlTon7TTE1uia_hknmcufygCq9_WqR2sBgnTvuk0m57xtIYPnYgKOZlu9QTdU-VNZ8hbNArfguW",
+          "widthPx": 889,
+          "heightPx": 976
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMZq_p2n0muG4eP1qWYigRNJLwp3OOJ8aJ35zvhLvKtTdAK48I1EQcSdIEpzEruK1JcSAubHrpRaeKYMtVV-JIuvp8NH9iup_LewjAd5QHB3j-3LlLEDVQK9hdsIMIyPJzyvjQ37eSmc2SDD9ypslShqR7Ats4RiujhOUOTit4zXhcbMf0ym966vSNVzdbIbFVjUVW2G-FKREX1T7XIsNbkuIN1QUQLR-VmYi-rNoTElsg9kiLzG_-pJwYW6RqrbzJ8O-QEs2E_8in7nEoCZsFWcQ8oNhKCwpLl0BbDXUCCB5hfz6FRlxckIpw42LvpnD80U4M2OnAaKSDkHsbNryXJ7l1ahwF4hZIyDeuEEJUf0X4m0bkc8e0b-hNN5Hqig4lTdVUmqHM8LasBEIGWFkuSUhBj8dkU6ZYD92HfwdIh2c0yv",
+          "widthPx": 1280,
+          "heightPx": 960
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMYDWsk0vojDQyFVu-KWJ1iko_CDZRHoan3mWG_hPLxi6JQm8qD8iph1LpejalPD0n0svPY2mTXD42vq6s6Iw40gss9Mj8ltwPdL2sn74OYT_lfkAhz5V_oV59Bjo_2VrkpP62nOxyqcB_gsb_oXwlYbPoC6r9psjsxSB0ewkJTgrlw4DhakDvtfw07vQiNY0JI8C-fEtDoQ6ySasp2qjBC0N259MGywejngN8uoDjarNysQDrojLf3b8p34PmXnMTfPv6pMu_7aKvya6H9nsslC5Y6qRKXNNpZG2IwurjFHNcjZyXohKi3QyFevsT3LCmabOk16k1tIKgK_H0NNpkkcs5_Ny2zxbutnMRbBrEkKxyVv_YSRNT_WNJHlORV2CMsKQrkA2-LiwGu-xF0_Ra6Hjb7H_qdGBFe-e62cMraXEg",
+          "widthPx": 640,
+          "heightPx": 360
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMaqBQq8egVjsOpFv5SKPr3DgPuNFw6Qecc6fS-MVsIyvzZlAnlHdFrGGpftQ06CpltJWZjNr4w4e-qVK2Vtp_iF2ucdFSTi7kYq4XLVgYDmjCbGU8E14Yyw2_1JBUAd3QYvHzLS-POuILkht0Ml1D382zDvX77a7wQbbZQyr7khOHrImJbz947csZlCEAaDmCwTt8FE5NMw0dzcVPvyDsrQuwBPu9vpPYX4EyPq2OF2FA6QoThoA5QsUCMBozfNTGxI2utFBlehmpxQKgpz3fshozNCmT1b3U3Zg4PMSxjxAcnu4OTHnI2vIiUInQ_ld00nfcJELzSSDzEHYp5qnsY0NksSDpmuMtSCPNaRTtO8krZs5TBmbancVdaOA7sHpL1zziD_3-qrayQftUGzytS6YLBg6lnhPmSIClcdzpYNog",
+          "widthPx": 1080,
+          "heightPx": 869
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMYbHyG4UZ--C-gMHE9CZYim41bVYJfd3KDQgv4_gMid_pzAN3OsD-0qC1b-5Nx_zB0Bpnl3HBqIF7IyLn308Mt2oabSdhZm6bnNciBL6JaHx8fWVw3Rh4yfuzx-baL0eAM_1L15RbL71eUkMQhXg-qeKT-p5kL5btWe0oNlz04Sek8DRrjOoy6kFd70VFhwU-Iv3eGE9IyC__VYZEQWUsWIpYY5NBCr68CBCnlWbUZi0iZc1ZNks5amFGiKpWLykrXfCasK5ZybDwP9BM_IusgvpxOxagTwr0x-9a47CZgxCqht4zTb9CEwbNnG9wC-4HXl8a2qmoD7FJNQuW265I0-WZ3r1O40VJ9Yp-CyAVyz6uHix1ac4QRByrRhKU_eSMJya7_0ekU9mit91yGJDwyGBFthD25KetjZww6mTHe45A",
+          "widthPx": 3456,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMYvu8YtaOg6CvpmTukYsVx9P_C3ci3pDyT72TReymMlQgfdf6XuDcI68he1I75AqEon8uk7Z8xRcKhdmE-7aq4f3LrocBm4wrznHQXKHvvVggvP95l7O0yc4Oggwmal8lsgsj33mfuE9nr94UFEwpAZ51Sc-5TXe0S81ozrZrCX_m0wu7fSFC0DO7Y1W0IOv3BkPoMQOC2_lHCv7Vyx3w68-wn9zf3yv8_w9o6iVT6q_i6ZcQt7iJFQ2pogMsDvFtZo9xfKTUKDuVTadRX6fx7jEh2QBpliosbOlFsXiKrrnGbUoPNGwS8Xy6FKfQ0vhOBBBwOHdWAVsY5uPRj3Wm-DK-2zTF115WWxEa3LfawV1fEgccF7M-ZMn7lweojRIG6wZWvQNhkcqzO2LkVUu9SIrAYZ_dsMFKyP1FB2kE2s9A",
+          "widthPx": 1080,
+          "heightPx": 560
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMabHjOUirFYwgRiW9zhfszdWv8C5Z1lJLUeFvDyJQTay1lGyQYTooEgP6yMDxcOD0Z_9r58uAiWr6o1fmdaktu8IMPlIRwX3NgvCyg4gYaZjhyWAIHn1gx2Xa8trqcrWUmpgsxvuf7MzhhIOdxEH-8CYWMjdZPuVXoc3EdI4vgqoERgrk6FxKScrIR_lQriumoZ7Lvo0g8cDkUvoSyOaMun8MPDCKANPOeMC3NXdAntZzKTRMXRnsJp5a8-6foaSHvqtp-12I5q-f_hAnclImQPv9YAcoNVCUN_ZejAMg-QP6Gyc1FsQvb-k0tDaxex337eyrLyxk1E83G4OCGQRGkooSpFE1jZhWuP7P0sZdIQEd54Ad3_PfLrA4cZqHaSE5iWX2nK9vVJs-3T7Ovky8UVoJ_JgLvRrRXqWO0OT2zJyg",
+          "widthPx": 3456,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMYP2pmBpOOjFUU_FfZH0ptd2VeXSYSuqVHXRvIBB4xX53px1mlHYwgkKb11W8Yx_S6FvrDp2-yuBWtATz6z7luMBwyWLEVj4qy9wQNEKvzcuJxquP2DErRrMlhKAvdGc8Ti_w_Uqi7nTxd-oC9Oz8YaUbwoolaolmfFzQBaLAZ75Fsb59MocKwAenaJ9J9JcecUBU9nkCH-w0PYxRnQao27o4wKDvjnDIbB4ElmmHBxxJtuU_L9DbJKZyichwy3xNIgARmLwgxmsu_reS0bJuunLJWJs7RJftxwT4AmXvztiE_rtDMmM4migzqTkCF_VXfuaS_tp1GKrYHnlLb_JxHZ2jAPgrFsRQf9uSUuz5DFw2T4nd5iNY1Z68LIPGe-cQmAdc7DDPnfOP03Z0LvxPAyxo8ANPhuYKc8-WCmnDsYOg7m",
+          "widthPx": 768,
+          "heightPx": 1024
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMYFO2gqHSRtBRJZagLAZPHv8pbFDQZ4YJdk7UHWsXq3-rDgAglJVjj5sYDEO1yLlvk7x9Hv7j-RePj3aL1GGvb9GoU-bVODQlbFgN5i9FlojGOmozkFp-SCSIZaf2rU6jstH-tkpvkBM118OsEbliI5PNhSQ-L3KNMYzraG42ptSyd2QTNIQQ5f2BQvHSbZjGI8MlcQvgZggOUDYNxiRUVVieDCMZ1zNXcbqPhOBfMpixFHMVH9BBGBLy-zsrKIvQh2UqP-S75Sj0P79SIFdMjOtoGIAgPlylD6bg0oYJDHQ3Djeet9YIIqih_pdlIGP675JpLS2zWcQpXkipe8iDFefT4IT9guvGKsFxmKbcdXNCjOwTsJWcb_PGvsK41P6qH2o7BGfMJ4IoPvtEnm4_4UrkH1W4ud2j26Jh4wBsU",
+          "widthPx": 417,
+          "heightPx": 304
+        },
+        {
+          "name": "places/ChIJw5dO8WNDzpQRNGMOPDa1_aw/photos/Aa-ngMbYIM1hfDDX-bgIrF6uGRtEpT2PYesvvFG_RSX9v2171XAkEFxAv0Gnf5Z6sMqki7ITbtYNLR2DQiY-A30KXEBX3iXAJ0toygQEfWCyya13p2Hk_VGLQCiSrJeyvGUFXGy8Qn5psvNiXcp9XqE1SiTCYtzyfFueekC19yAy6ykGF5Ogi2PuYTgVcdrZH0KnD9bUJOw--80feKcEUVk37xTC4qLV0d6zBDz8jx_WiS4GAmPYfA9yUdsV_2FvmlBu1RIzy47KeCmCHyjcSY0nhzamvqFInn9B3PkTkn-7hhLD1dm9s8XLrgYxR9LmXo627PgJtaoJsj0JjbT94vchGSa51d6Sh5I1abGPG-3nKALPSGqiBv8oGqqOv6CfrU_BsxJR-4u5yV_xiNGiwyoqBrfvRzEBelO0q0HFYGFQpsE",
+          "widthPx": 302,
+          "heightPx": 323
+        }
+      ]
+    },
+    {
+      "id": "ChIJP-PePzdFzpQRKgpYm53ht_E",
+      "types": [
+        "tire_shop",
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 98600-7288",
+      "internationalPhoneNumber": "+55 11 98600-7288",
+      "formattedAddress": "Av. Dom João VI, 165 - Taboão, Diadema - SP, 09940-150",
+      "addressComponents": [
+        {
+          "longText": "165",
+          "shortText": "165",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Dom João VI",
+          "shortText": "Av. Dom João VI",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Taboão",
+          "shortText": "Taboão",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09940-150",
+          "shortText": "09940-150",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6784763,
+        "longitude": -46.608936199999995
+      },
+      "rating": 4.2,
+      "googleMapsUri": "https://maps.google.com/?cid=17417638150911035946&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 22:00",
+          "terça-feira: 07:00 – 22:00",
+          "quarta-feira: 07:00 – 22:00",
+          "quinta-feira: 07:00 – 22:00",
+          "sexta-feira: 07:00 – 22:00",
+          "sábado: 07:00 – 22:00",
+          "domingo: 07:00 – 22:00"
+        ]
+      },
+      "userRatingCount": 38,
+      "displayName": {
+        "text": "Borracharia Santos Torres",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 22:00",
+          "terça-feira: 07:00 – 22:00",
+          "quarta-feira: 07:00 – 22:00",
+          "quinta-feira: 07:00 – 22:00",
+          "sexta-feira: 07:00 – 22:00",
+          "sábado: 07:00 – 22:00",
+          "domingo: 07:00 – 22:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/reviews/Ci9DQUlRQUNvZENodHljRjlvT21GSFFYTTNja05PTjJKQ2RrUTRWMXBoZEhoNGRGRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-09T01:00:24.856750477Z"
+        },
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/reviews/ChdDSUhNMG9nS0VJQ0FnSUNMaXI2NzNBRRAB",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 1,
+          "publishTime": "2024-06-17T18:48:10.312557Z"
+        },
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/reviews/Ci9DQUlRQUNvZENodHljRjlvT2t4UlkzTkdhRUpuWDFsUFlXNUZaRjlQZUhWRmNIYxAB",
+          "relativePublishTimeDescription": "9 meses atrás",
+          "rating": 5,
+          "publishTime": "2025-12-01T23:51:06.959418114Z"
+        },
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/reviews/ChZDSUhNMG9nS0VJQ0FnSURTdHM3bmRREAE",
+          "relativePublishTimeDescription": "5 anos atrás",
+          "rating": 2,
+          "publishTime": "2020-12-24T22:01:50.549961Z"
+        },
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/reviews/ChZDSUhNMG9nS0VJQ0FnSUQzMW9HOVF3EAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 1,
+          "publishTime": "2024-11-14T22:20:48.814414Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJP-PePzdFzpQRKgpYm53ht_E/photos/Aa-ngMaUC3eEpULCxM2rVpmeUOzH9rLxxQYHYPaxNUU_RWrqglkQaUmTdhsm6khvikNVCHY-ALxNUBxD5ehhoIhJrs3wQ7hyFzb1VF3tYO5FaTWJ9O4KSEPNanbmX7-PtsWjKLk84ZrzXL5LaF-5p16lvfkcF7ozfW0gJMPLspHYJg7D3iT0vTTvV4W89HwnIde_ZWZgh2ZUXW8xUcz4-_osRPwtGIg93_qiYkw7CSRHEacXK40q7LCzmWdiZmLqgkCeC9MAoKPYjcHIT3zW8C6wvk4EUyj8sx4vrvihIgCfsXIjQS5n-crjBK1c5iT-fmmZVhTFXYv5LZM9OvvZ3HcBMIK1MwKMPW508-5Ua_FUQg8idvY0QQNyRlKvGaSUQZsiJ7gd8yPUBs161GjF4xL-_qKjYeLKAbGpW3sdZbGtVom5XBc",
+          "widthPx": 3072,
+          "heightPx": 4080
+        }
+      ]
+    },
+    {
+      "id": "ChIJ-5p5ntpEzpQRISiZZPJcPjE",
+      "types": [
+        "supplier",
+        "store",
+        "point_of_interest",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 98018-6548",
+      "internationalPhoneNumber": "+55 11 98018-6548",
+      "formattedAddress": "R. Baependy - Campanário, Diadema - SP, 09931-090",
+      "addressComponents": [
+        {
+          "longText": "Rua Baependy",
+          "shortText": "R. Baependy",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Campanário",
+          "shortText": "Campanário",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09931-090",
+          "shortText": "09931-090",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6684231,
+        "longitude": -46.623613500000005
+      },
+      "rating": 4,
+      "googleMapsUri": "https://maps.google.com/?cid=3548375752554129441&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 10:00 – 22:00",
+          "terça-feira: 10:00 – 22:00",
+          "quarta-feira: 10:00 – 22:00",
+          "quinta-feira: 10:00 – 22:00",
+          "sexta-feira: 10:00 – 22:00",
+          "sábado: 10:00 – 00:00",
+          "domingo: 11:00 – 00:00"
+        ]
+      },
+      "userRatingCount": 21,
+      "displayName": {
+        "text": "Borracharia Teles ( Socorro 24 horas taxa a combina)",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 10:00 – 22:00",
+          "terça-feira: 10:00 – 22:00",
+          "quarta-feira: 10:00 – 22:00",
+          "quinta-feira: 10:00 – 22:00",
+          "sexta-feira: 10:00 – 22:00",
+          "sábado: 10:00 – 00:00",
+          "domingo: 11:00 – 00:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/reviews/Ci9DQUlRQUNvZENodHljRjlvT25rMVV6UjNNVjh4UlVsaE5FbGxWekJrVTNnMGRXYxAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 2,
+          "publishTime": "2026-05-24T23:07:00.638351022Z"
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/reviews/Ci9DQUlRQUNvZENodHljRjlvT25Vd01UWk9hMVZ5V0V0RGJqVmhNa2wwTm1ScmFsRRAB",
+          "relativePublishTimeDescription": "7 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-02-23T13:02:37.627287162Z"
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/reviews/Ci9DQUlRQUNvZENodHljRjlvT21FMU5sSjRPV05LWWxOTlJVdFJNbU5vYjJ0S1ZtYxAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-07T19:15:35.544981447Z"
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pZNWJuVjNNVVJWYm5wdlFsRXhRVXhWVVRreExVRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-06-14T16:41:26.026370115Z"
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/reviews/ChZDSUhNMG9nS0VJQ0FnSUNzMmNUbEx3EAE",
+          "relativePublishTimeDescription": "6 anos atrás",
+          "rating": 5,
+          "publishTime": "2020-02-07T13:28:40.904167Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMY2Qji8QuN-xbnbRW-0Sirlwn3vf4GKLTKeYHlVPp_G4N5E0iMVd6ItNVSbiWK7w7Qymmmkoi3dAk8ci6X-3bym1hnFRamPaLLnfuR1I6OvkO8N7lDQRu2gkcOLYpuO7iV4-37tvKa33Zh3KPbZuPFRFG39kp1JWWJDqKBCAA8wanYTfk1q6H_wC7ymme7T6WzZb7g25PkV85IBcX9kZgj-_zLcPPEFP0Vq3KVHteZv7urxuwd1iuZWtyVPq9SEpVXCqPp002lomuhwysqvt1jYqxtcsQxiTEm-WCYERuN2Cg-td23shiiZERhNhNiTrFJQUP0V9aBKR97LgBaHbc0ZthxDA02poAUWUVdK2B-Yyg8GFayBhWgIvsYR6WtaZzxf1tWBRAUiNo3PCmx1G716t18i2Mw",
+          "widthPx": 720,
+          "heightPx": 1280
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMYffw_gQ5vqp78pFU6p6GxE9H0cwgdJB1OYOGtHYJPxQH3ivgMyNiHDWmjN3U_f8k26gWdrI-J749Q_Ax1qlbvaPuwWeUd6D_g-mQOdr31hYPSqgsJcGKmLg4dELeigEO2EX5zGqncJYySmMzNnXQee5Hr7hjNgHhe4Qu8FJTkNGCSCsy6eDsgfz2ZWC2GpNFrEtzGom7cq6TXEjVEPLp8KTeBoxlyy_0gOa0mh0nLjtuTOLcjgZsDSxpQ05GU_7XXL_A4Mx5j5eM5tOX5RuCvbqDetOhT8yqybJnT3x_L4SygJkZn5O700ZJgzTrAYSwyBmgf4Zn3oVsX9cGRYw7eXI6RfPqsQb9FNw6WmAujF18CZz2lkldJ24H5BA0epQqXECv24f32ComQFsCpVoK5S4w",
+          "widthPx": 720,
+          "heightPx": 1280
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMY1sk0Cx-QuxXl8ueq-7BXbmUf_Sir9h_-8B-gcSKtd-fELIECELGmpKSL66REus_u06qae08NSQSlRwYiC2ELk4th8EOSg-m6tSrAG58yMMQRBSTN31u2PhhPA0T3DsPSKeOqsr07TDLVxRdNhKk9du6NrqfRqgWRaTkzMBz-WzCAZ0qpzFfUH1ncv02nhb6kPraXc8IBUWe4hjL5WpioCEcqYzoBdQIg03uOEB_L4kpbm4kavRhKrCPlBksxKRq6nVhpvtg8aS-fR8xrhHc9UUH0F73CHGIwQJ4gyzlhX9cumoBoPsZ48_HUx7yTAuNv8tolSHliV03xeCMb35_-MsgsOR62h5F-i0G16vYkNRZnEnsP3fPmf-UNvSrzsDrA0boWw8z6R3wca-ACnixZLulhjIms",
+          "widthPx": 720,
+          "heightPx": 1280
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMav4gGPSZitw0EtbeI_-m1x4jQm_GoMgDgmcMfpLpFbzC0R6uRdnambcTRInBFvp_v9QEHqyNQpD1PTigoGwjiXlME_2YThjS3-VCovMlJPMt22OMTZL-ER-TMc78nsyQCQmhVp65zFe7HQT2m7Q0FHfqKo8OugES8hNtXFlRSbjITCjdN2pfmnaPBK0XW4KW7yW_FQo-w6CvIAMJmJHK8wB9reVzmd4tJM10_MsNOJGWqaNP45mfF6YZ6K7xEKEtipE-lm2uosrDWnLEzyQ_TVrrz7Z5Pd8G3GEgwuYU7RWLqVmvCbgN1pj-qj2tNm45I8-JdfLT6C9J9-o7p1rKt3Z7POsoazmwygyeDGC2HmV4tyhyYVQi8wiHGxyowGGL1I4wLjhLJty2kypl3uLnSBl3o",
+          "widthPx": 720,
+          "heightPx": 1280
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMZntBazTJFoysZDZtnMkWi6SI5-hV-xyxAaTAS7-BusEBfJ8p6ljTNS9GkKCIlT9JTzmIIOvlAqXR9PSvtDubcXvhfkoTqFJQRtVJiMjQPUVOFLiKS-DQq4q5Mwrw4tqdon72QFjaO-gDXrhDSgqrlZTbUOfp4p-UFwWmH9r8WK5IDc3j30SX3M7Cyu1f6_KSL1fYB7-vYW-NnOd9Q4KWSbLBPb7RvgCocOIBEpBhDW8xkt8-6yxwHbulIWDdHVZT420cZ0ws1JaRtkO-jfVYunkkW1tN1CAI54PDdMq_4_21ZzwpOTwbfpbsuqe2dOsCn-V00fzCZDK-8qiq11s9HnNZvsKjdSVq5cSNVvBgHJ4P5niCp1xHSzddabC0Rlj3KgFpn7R-Vb9MUXlCv1MMZX",
+          "widthPx": 3264,
+          "heightPx": 1840
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMaHPqXAhalJ82d2gh8w3dsGxMUGHpacHpX2T3-Z3_aJLgD5EJgPZ_lwm-kXlODOtZHV0BlSkWJjg2pABVNybU42qMplAXAKk3rqiwbTRAMtdwCozvmfPhDSKnTvEUwSVF6Nr0SBZ1E1U8yl8jpgiqIrQPvbr_JpZFc5xHZYNbJoyEB-SDqueg8RG9uTE9S-wMj4FfcYMWmJ4cyJYQI9QPyzkgH2oleKztt9TGcfVw3jJjQWbTDFE7Fd8vRHGvSYfoVUeDGV5Os0NdmjQnWRN0A-96GLn5UJEQ7LNOTyMClztKREktyc6g1Uy8B2AuwX0b9pl2pRSB2yU5ulB20BeNylgpV-cv5QoTtCXsCy5KoN9flfbHy3SgGOJoPeEOo12BpYrmtw9jfINSO3wFQZJ0dZhFs",
+          "widthPx": 3264,
+          "heightPx": 1840
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMaWb5r0ZtXCmdsH1n2IsdHQPywz0hibEyXzn7IFXNTycYdDsMur6xhO59FwEIceOQQAC8ho2i3IARYBA4drnZuVCGpEyvzlnjRaiuY3XUzyhcvkQjzNYd5faAJKF_r0A-gwlmBuCIfPuorXhQWSLphjFgS1fZs2Kg23X0ZZYHIacfhnscwaGzrNL7j1DineyBoQw_GpNLkHT-GQBiUYUiAd-rCGFg9jpBNr93jWCTeUF8fQnYpY9YJfENZDeNnHBHnOTuBd2tyjhJSJ-VV7qvFZqlIGqww_xr5y5KIpvIgcNtuNS1huY-dKLIj28DgOVCmUI16P8cvWtx8ajIEmHLZx6E4vfcWnBi2HWz61ZT-PDPD2Um2XfLLV1OKU6uWSVHrSww5JMmJExq1pJn3KSK_Wtd4",
+          "widthPx": 3264,
+          "heightPx": 1840
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMYPepaXsRAq1VgICrAWMGIV2nfGV5tYbKUdzud8RoIgJJ09rEVLHaIxz36scB6OFXfzL4WfWt2fKgkz_PZVGGr5aHFZWLz8nFuTf3QWsG1ru9-rpRFFEv8yHXtowd7EcDaNTmH5vqPBThFtvpLRGTEIyZP-Qn3YZKh71l047-arfkatWaqPmyppbdYTPeNEC85A6D6KFbY-nKzW6vOxETi7z95zZoFzqjyFMunAhJVME9gWod2Lea5JKUpj2Kj6g3hX0Jw2B2K6LieNBgDaTj1bWuAMetaLU1HeyHWZ36UVhyjXNLIBXE3A68Dj7dZrYOyal_cZljajmXir1sbtLW9blmzEXEOoPyh_INVgZCubee3UZZ410jfcqpE4h_-7PzMvpxwzxGF2vlSp5QNV9aiVJOW4xqI",
+          "widthPx": 1840,
+          "heightPx": 3264
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMbfQy-RUIM4VrdI9-kFoYxR42eg6OC75KGjJiUDw8sseOF9_XVkfkGtit2hqU9ksoCD0C18RmB46CsboGHYq-yrdwIP707916CpSDJtPhc4oyHTzEf184v2VU0b20yV0oHeFo8XODpewIN8VSMiDHxJGF9VCceMHAjsWjb12EW0H_UMKYAPIZm3xyLYbw7JFPrAc9lhycabf3oHTvz5o99XCWL1Diz54cXfXvEcw93BWscpvDNbD1x-DkZxH6l6yq7MVA5C5CohTihUfzx8Mu2-XVxGNohAL4Pko6GeUruqsc--EQXNV_VbovXg8A2mX1B6UJHf4HZuG31GCy-b5dX5dAgcBGhMSK-Eda_UazH7CdVdAbNMx43qsg-mhqE0BKiWNKAWY5PRtOF113Q1yvLybEE",
+          "widthPx": 3264,
+          "heightPx": 1840
+        },
+        {
+          "name": "places/ChIJ-5p5ntpEzpQRISiZZPJcPjE/photos/Aa-ngMYMNzxtu8YXjHfWvk-ZFixiaMvAmakhi0bAH7lw_atmC60RYecJI7qp_osSFSKAcWH8CB34Qz8sOiFfeTBpMPrToSbzpbIYSzT9TOpkw075ZgbFCONLGqn_O6rVxNDRPJ4yd_0XVWHvnb4BFySLMquMAoVMhk-ZpmTaEcbUc1fnDheqbsy28ik-_NhSdcSQ7UIS8UmBm86IgVWaD43xRzNeMrz1VvujOMLkZwg16AVn3D_KM6g1QdJ8j7S-8QT3_kOHb8rO20ynS92w1HCOIqScwoo62JxMeBI0r2ls8VLdBN5oXHhzfFbqR2-daapBkVp-tp0acfkRWBkKKmEy_myCEMln7GIS3TIvFkFCPgowM3gTkixkduhdfzlRpO5PKYCDw5UbYe7LsYUSEIDqtbM4USNWBjs",
+          "widthPx": 539,
+          "heightPx": 550
+        }
+      ]
+    },
+    {
+      "id": "ChIJawGla6NDzpQR8JJaBdOTbK0",
+      "types": [
+        "tire_shop",
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 95935-3402",
+      "internationalPhoneNumber": "+55 11 95935-3402",
+      "formattedAddress": "R. das Camélias, 64 - Piraporinha, Diadema - SP, 09950-530",
+      "addressComponents": [
+        {
+          "longText": "64",
+          "shortText": "64",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Rua das Camélias",
+          "shortText": "R. das Camélias",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Piraporinha",
+          "shortText": "Piraporinha",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09950-530",
+          "shortText": "09950-530",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.674747099999998,
+        "longitude": -46.5865594
+      },
+      "rating": 4.9,
+      "googleMapsUri": "https://maps.google.com/?cid=12496525600583488240&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 11:00 – 22:00",
+          "terça-feira: 11:00 – 22:00",
+          "quarta-feira: 11:00 – 22:00",
+          "quinta-feira: 11:00 – 22:00",
+          "sexta-feira: 11:00 – 22:00",
+          "sábado: 11:00 – 22:00",
+          "domingo: Fechado"
+        ]
+      },
+      "userRatingCount": 115,
+      "displayName": {
+        "text": "Borracharia Souza",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 11:00 – 22:00",
+          "terça-feira: 11:00 – 22:00",
+          "quarta-feira: 11:00 – 22:00",
+          "quinta-feira: 11:00 – 22:00",
+          "sexta-feira: 11:00 – 22:00",
+          "sábado: 11:00 – 22:00",
+          "domingo: Fechado"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/reviews/Ci9DQUlRQUNvZENodHljRjlvT25sdGVqQjNiVFZHVnpoWU4zWktUV1JEWjAxYVpHYxAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-01T22:02:54.882362843Z"
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/reviews/ChdDSUhNMG9nS0VJQ0FnSURKaE92dDVnRRAB",
+          "relativePublishTimeDescription": "3 anos atrás",
+          "rating": 5,
+          "publishTime": "2023-07-11T00:09:24.773515Z"
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2xaSFRWOWtUemh2U1d3NFN5MUtiVmhGY2xoYVFVRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-17T20:45:47.235524919Z"
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2swM1ZXUlZXRkJ4VVZoQmJqUXpZMGRDWVV4U1RFRRAB",
+          "relativePublishTimeDescription": "3 semanas atrás",
+          "rating": 5,
+          "publishTime": "2026-08-29T16:28:12.986838587Z"
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pScGQzWktlVFUyTm5sblpVZG1PREJTUXpZeWFYYxAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-05-15T22:01:45.217952599Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMYsR3TD2YG9O1USJf_rHpf16UOoewmJPQuk4Dp7u_TKdURnD9B0JxU5sv-Z55TDuY5hGPlChVvIaB9SFLf3xRn4IMqWgsF51TNMMl-pLAtd6HlN6ut32k79cELmIVyNXsw2AxHA5iB8fE6cGp5OZ8Lf4IuQXj7lbNpDKJ3b99poUMHuqTggHjoS-kQqXaiy3BMewut-FfOXpQujeA-BBwdrI-2vAcHrE2Htfl3ABv_aTQLhkdTOsF_nyhpLazjJ6z3AdZaow707UeqywBc9ZHLNWl3s0uXAt032NPZJdNA84JrX4_JAEjHCXpf4iD1NoJWnghWEzTY5bLDC7kz2zDx5uAhj_kZZWFtJUZWvfU2yi6YbD0_zBVsW0XQl524mdks3y5gHs1klL-hUflBUrO96Ln9ZSso",
+          "widthPx": 4000,
+          "heightPx": 2250
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMat74aZe79GXYhqkOD3ZuBF4RgoibHixu4AyUvnC1dIg9ikg30-e7PYHv271D02rEPQJYLHSD5Vj47QAJZgX8rDBP_WFRrfXHD8GABcNhG4ChLXjq_zPP0N3zhJiK1pAR9UkiSErFlcg_TACoeaweDiHTop_XF88vlOhxXg5PVvujwsJyBPzVsqww4j6IhcKXCR4PNUUrtmGWQ-R39XoveKaAcsK3m2uuE9HphNd5a8-cJ1fEEcWqKU9XkUAYO4DaC04CuRL_s9aoVXHuig3gzYR1yhUQvLqUdxXADiXADl3zNvtTKw7EN0Q4rwq0yxRRKmlsfkkK6KfVIpKzfKatXTdLtnbYpAXng9OwK5P0CwtOElNrJtT7R3atHyGCd-HxbRz8AAIoAB_JeNs6KBAYV7bEk",
+          "widthPx": 4000,
+          "heightPx": 2250
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMayYUGs0mjgt7lqQRYNGN2-UdqAvNJM21Ft1JMUkdyHUg2k1bMtkPzwAMY-LMd731BuEUxgKhjhfVV6Zj5IUEX4-lEcplFjC1IiBsJyVjz6M18fnRg2Eg9UXAHxzq_82a_Ri3DIVHjTV6-v6_8NRRUmbDEX2CNn7KAMkuBLgENSZXsdxemOg0MVHyK9HZJ2H1tXRHRraqtD79-mNwnSoa1i3XCKICuFREyxuW3wnWPRuPPLcl8nOwsdAzeosxzeW82M_GLNJAKZ6T7WwCzsbAqA7syUNtlaYfcYUrb8GrLiAY1eKARksLZ69v-yG33fbOtFohKvi0FUCSDOWfbx2vtCgtoM-NBq3Py52akZNkvZ8_BISB9LySabuFzc2nPUC4_ZUJBZFRjcsMvtAjl2fPGEkc7Gt2o",
+          "widthPx": 2074,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMawTG4NGPlwnRVB_VWNbjAEqa8J3b58UA0oEaptyXfDAaEUWvsNpl12YL94lqH6W8WzBNfFNTP-1GVDjt5XEPHoBAqjkfCnnFPLZBMjFpMGuJIjGTlRSXQv6e477fhY_ZwkbOhBY3MQg_YjKft6jASkCYLHO9qlWnScsYy5dYkYlwDnRrnI5yOJ1k547fN7g7PrZIK9Zw3Y19zcAL1rRzkay7pkaQAmlKRZXqFDV3GYYJMVS3hKREcV4rce6amqHzlV580e-O30ga8BworZcG0raAlzhtlq41njh2Wm4OFGBCyujStPHi39jYnfQaBScblAVV_hqBUdnmBSyCXjunhTQ4NMnX1pPLHcZjWtMTpXMSGnTWTjOBqIbDdOdnZpxBRWxtosBL9U_edvmh0D3Hx56MY",
+          "widthPx": 2074,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMadjd1lTdAC_9RXG5rqzqO3TDGl_-lIyE5e9ldCbBRc8tKoXmG30INTRXOSEmc3GdD6zkEMYzYtqo2tG4pLq24NuTXmx6C4TE0stLHeCZIaNQU6yBAFsV_KT2vIDEPInF3GSEYrLR_nj7hjl4zT7sJdThzlL672zMU6GCmUhC8-ffZQ-ieNBEGddFexfQ4oFHQDEAg0oUtLc_BbrkR89_2G3qNpXiVzHsWf84PL8hipNkJzQ6LXajPqvyIWxc9HWIOH9u9y7M6QQMruMMbROj1LmhnnYUZXckS87-kb68G0BHlRtqwkEQduixGkE9LBySaj2Q7cdAKcMWllRCfnIbNOWw_qtMnrG-jqY0gyFz6c-mpoh0_sB6MaIH1AOiUAKxCfvLg8WvJEBlABsK4QPaIBXt8QjRs",
+          "widthPx": 550,
+          "heightPx": 780
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMagcR4x5Fwoa7wfme9b32GyjWIewfUkuOvGYDsgdQFL0CZwwypDfrfFJjpj3_mvSRvcql9uX5BIUXPav3Bc73ePe2vnB__yCFZ-GnML0OwrBhnPN_pcCb5wOtNnTg5m1dRl3wFWlSiyZD4aAjKuPmnKRcVlirXgjAqVjdTiy5sYEmmqoAWSFDf2Z3gP9cSzfYJYHPWxH2ZK1vJf9THoBUM_mS_Hc1J5emNYSfnoHTikHRnbzT_hwG9v6mP4H7Rb34LG0hfB32rk6q7nA48B8QJ9TVFY7BcWJ6qigh8InJSQmtjldTcTjPIuReVoPk4JMD0SBwXvBm19ALiwTgK0Pc3GyZxWcLsdfcZIAJxPfGDc-7vHmW0yJsmwCk-_h3GR5S0Wc0pkkAsw2vVAE-_M5QV7SlWC2uw",
+          "widthPx": 2250,
+          "heightPx": 4000
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMZO7mtr4SC3uB76TTCNDGMNvC29k-5Xvb2Mw2QTiprVLzu_trS0KNZxpK074ZMlj4uJiDvUFvEtMJ4imHLxivYv2vmuacFpRbCbmZfQwbFur90UKj5rNQk2lQS5J0SywaVBGgjw6ondEJ9rPpNMQ8G-XTttcp2ihh9dn5I-StJRQoSPpU7A_spoG1B2lh-0nct5JM4tK1EqFpa42OikhVs4tGQr8crv11T9-RzqV3IqN58oUiekZrtv_nDLtW1xPNSMfZO25BATR_Oa7cJlW9RolX7Au-GJ09kkNsB97RV579IJ-lc-QqMOCqmn2RZ3WxclmlrypkZQtuwQ-izoP2-YRaHdTf7gDW8J95rpNh1c2xON3ELNUOzGsPwWHUpKcbT1wgS_MPpAO50R1dWfyesulgM",
+          "widthPx": 3472,
+          "heightPx": 4624
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMb0rJU-MprLA9baPeUwRr2ycvcJkuZy76VslEZYW-l2rIusoXqCagXhN5iusD0tizigxSaoetc4OguVEupxqarUXt9WtSlFmgONyfuA7LCjIkGCGKQB5JKHhPLMA2W3IOl75xwJT30_7GtSt8ucx_FdmVsLh0UVxJRXsz8-mTPgiZiYdJGIuUO-j6Pu0SLG5SPBB98mEbpGjyhmajgSUohKsFBAv5j3_8vb7qRAhaXDjbO64jCOu_kbKprpCeI7VZHmlgiIs7UBfJZLxadVN0XcyLRoAtiiwhdN8d2vqsRSJ2d0VNy-d86yQ1hoOau8yXRB1AYI0Ei1I_8rberOvXzhch64-oRL7Bhx17fzUNouaGBd8aXGHrqtEiIOycpmFEa8z6qt4KK5_eNs2DicsCbjPNEPy8Y",
+          "widthPx": 2592,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMZDGKQf7UhXLHFvCdUbnnrEJiY8l3f_sSvKcM0OAhP8lmC-Y0ePDTSGV0uDa1fQQt-R8Cxj_lF5NDMHWpn_XJQ5UoXSrs_lPWn6Ep41OOWC93X25VY9PHi34iQfrwKmNPoDDZ64vujWpiLxthn6YXH2Y2QEtC6wmx0ED6sWZdeC8OB39Da_MnZmkVBeTlzOT_lK_UGQyt7OjZCDmq2TXhQO58zMH19huc1GkDX_h389tHpt8-3fV-7qmNMjySbn61XTf0F_WVegAFnURdGde88qY88VtlTcSgnbpqQ0gOU2uNyg3VUH5nS6nd10DjqdocUTdkrcK1b3AQMv657L6bbIeQyNUWEMX4TJtT0khQlLNcxRmseCa7LVGERRKxQL-cqc12ElV_PJ9NuEZZoPqqG4Pw",
+          "widthPx": 2592,
+          "heightPx": 4608
+        },
+        {
+          "name": "places/ChIJawGla6NDzpQR8JJaBdOTbK0/photos/Aa-ngMZ-oWyi-gLRXmoK4v0ZqWsXm02pm18wF4bskjJQ63pJAVQbwjyRH4MIZadYRyXCIW-6_Vx2JVfO-dG-crk8WiCDP3ok4zvzSrBSNXHP8FodAsXK4B74FU9aOm6WNbww1xuYVCQ1MhI4dPkaaaYmhAB6ZJZNUEb5jXjXXafzD3DD9UXvRPp3QJc_vOtI-RsSUKbWN1N0UqQtu_8h7nwWczxmhM6Shmes4a_1WSE9UBhLHBT38Wy4G4LkD7ssCHriW4cG30yUuNo31PRxlNi7i9_65hx4Ic3mUcdLtYp1PmL4QvXoU37Idcej2Wly5ZymI-TF93dzYcf-h86pAsfOH7KghKTAtN9wqEdewJMbL30-ZfGVoKrPQor2UexS2C8uluUfJiwcyDCsk7ZHHbkDiMs_Mx-X",
+          "widthPx": 3472,
+          "heightPx": 4624
+        }
+      ]
+    },
+    {
+      "id": "ChIJ8xx-B99FzpQRHmfRK-M-2p0",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 97839-1535",
+      "internationalPhoneNumber": "+55 11 97839-1535",
+      "formattedAddress": "Av. Antonio Sylvio Cunha Bueno - Inamar, Diadema - SP, 09981-105",
+      "addressComponents": [
+        {
+          "longText": "Avenida Antonio Sylvio Cunha Bueno",
+          "shortText": "Av. Antonio Sylvio Cunha Bueno",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Inamar",
+          "shortText": "Inamar",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09981-105",
+          "shortText": "09981-105",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.712934600000004,
+        "longitude": -46.6086439
+      },
+      "rating": 3.3,
+      "googleMapsUri": "https://maps.google.com/?cid=11374472954291250974&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 00:00",
+          "terça-feira: 07:00 – 00:00",
+          "quarta-feira: 07:00 – 00:00",
+          "quinta-feira: 07:00 – 00:00",
+          "sexta-feira: 07:00 – 00:00",
+          "sábado: 07:00 – 00:00",
+          "domingo: 07:00 – 00:00"
+        ]
+      },
+      "userRatingCount": 3,
+      "displayName": {
+        "text": "Parada dos pneus",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 00:00",
+          "terça-feira: 07:00 – 00:00",
+          "quarta-feira: 07:00 – 00:00",
+          "quinta-feira: 07:00 – 00:00",
+          "sexta-feira: 07:00 – 00:00",
+          "sábado: 07:00 – 00:00",
+          "domingo: 07:00 – 00:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/reviews/Ci9DQUlRQUNvZENodHljRjlvT21SVmJEVnlZMFJHYjJaVFlqRk9TRGt3WVVZeFdGRRAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-05-24T21:32:31.229607939Z"
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/reviews/ChdDSUhNMG9nS0VJQ0FnSURCNC1tYmxBRRAB",
+          "relativePublishTimeDescription": "3 anos atrás",
+          "rating": 5,
+          "publishTime": "2023-01-27T17:37:30.886785Z"
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/reviews/ChdDSUhNMG9nS0VJQ0FnSURud3JXRzdRRRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 4,
+          "publishTime": "2024-10-04T12:26:38.693418Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMazVoSkblUVKpvhG7kdhldngL7IrYlNiEHJbfeQu5Kc1I4f-EiSBOpQM0nBPJDwyGFp2OD84kCVfWfzTGrEtHF1dFHOfuO66RzZ8DwQ846itXKujgGp9uOyUV0KZ-VpGI4txDiADtc4vt9U_W7n46mv5302dvk2Ai5J26qNNzwAGRbgjHfUBsCdvR0hwadJbj-GFHICRu1OhqAh_lCdBG4lGmwnNiAI86T6Jpyn57gID2-hoFdVI9lTkalskJOAOxXg9szioJlyBZnJWscVYquYvp9YZDK3a9qW75k1Yq3fkoFw0srdWIaP97iihVWn3yGDX8puB937BslTd2srF4QZ2_RCuOmQ35kqq6LnuxAmdOoIwGpyB948JSVqos5oasUgan17ECibwk1AVpC3vRyEXhxmD7C5e_doWOyiqEAc2ws",
+          "widthPx": 1280,
+          "heightPx": 963
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMaEGqexAidJrHaJ09m_V9g0ZxyA4kJdZf3sTqcKkfMaLQP13Q4bw8uiq1rh7U_1DlfJgQpQFPEGzvyMMFzdyUJRIDY2iHRPttimCuA0LxyGLKFBQRrXVHmoyKvMJCMqvnCE__wuX-POOCeB1a4cYaZmo7eBHgLqyMxSnUFAOA3eh9-xgPScbk5uLgd30j9NWpeAbGAMfeZgLduw1S083q4urNl1aByxEYxH32QnAmB6n0_8us3aOep9ejNmviHK8YOzWstKpy0bTwlIJOv357lSknFbI9fqCwF1A5pflU4Mz79gqYzK848tMYgJ7zfoqhdQQcyyVb5pXDLphC6MhoJpZf4JhLoeOMZFlzvg1YETTfabSFaPl2QnmJxU-3U2il8VRHiwyjFljcE9PqJBV2Yg9OHMpugQhfLUYEnH8rx5Q5E",
+          "widthPx": 1280,
+          "heightPx": 963
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMYg_-LjTJ1icMjTEsDZw1z9l5d55ctOerbQmgPAP6O-6dh1dFkYm5K_dyVb3FjS0xJd9xRWvUfniDbs0gGEdIXXYVNK1bmpEqCKwKaVgbHA3-TGsM57FqOHyskZ2t2ub0JW2M4yL66kIpchzdRRvASWfRlRXW62XnhKJyLhhYmV2BjEV3fCsMTspmx7_LRXNxVMFEylrPRGr8F_d7_yMg-inD7xn9r5Wu8jrMh9wZxflWJ0U4EUCcBzE9apKMpe4xizxs2usY6FoCyiiazVKKzWaJpLvJ5otvdFmoJPUwR3WqHvkQKVil99zu2I_nAQe0DifvFc_IYRSg8vEnJyiqFyHlVqiauRzBDjuTPTOpYQAmUT60_h9gvPOXAwg84p3mWKOKttx00quTdcNP66Kw48pT7VcCUTbSPAkJvsMug",
+          "widthPx": 1280,
+          "heightPx": 963
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMbDo6x2FwbUb3A-7u5Thz74DiccZ0UylYgolIpljGNBBnf20ArN12_vjZ6A0cqspPgp0RTCp32Izl68F2oLdLWwa5hZ4mkd0SPQizKUjrvn7z5flMTVuM0Uo44e5AZZ3klvYdfVfV0ZFKmqParoy5mJvb0nHELbnjDgirZda5cqlzaExBU-kVJMQSUHSkQsIqOxvVLOSo5z7T_YWLad616n-kF_MMkWhcIlvBPvrhRV7mua_pREB_C_Vej1Xl1XgBp8sWYfmoaByZ8ltQyR2nVQacxXaCN7smqCwh3iS1rwm_w2-Y_mGiI6xH8MzGICbnUHseprSHwHjPIscocCxaSRvz-utHWTMtdV8ImQJFcBeK_747ygQgFs5ei1HYvskn34i6PH38bds3j-RWvcgLX1czBtYts73250ij9RVeswTw",
+          "widthPx": 1920,
+          "heightPx": 1080
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMbKePAVMKnbt8cWuO1ghUlKtzxs_8ZZSMkC2RoD63kreSCmyFlykZsx4NmfPuKPzqFYrwv_ztCeRmZtXgVFjEyxkm0OZNsxC0CqbGOv3SctUIaJahVpugPhsixIN8erIhMhjdC378H-X-y5sucdkElNKJaxC5wjdQs9gOfdaI8JFVfORghr1S5FXpBSFGKom6F0OdinYGLk2eg4YtqGeN4JZ5QUJ3ocPucB6fQ_4_7hu5uvyZjILimsqVppxuEstPIo2bQ-Dqn-EI3zUD2NiwyofDimTfwkGxCEvUnI0gQcam-GpbECrOczVl-9RV9_zTIWTRnNfX3kwFPRjKzJrrD9AM3-vh9vcZsdlNXVD67nXR32qruuMGV5pzzU0vx8bm5HVaWXXzO5XoqpypN9iUt-FZmMnQN8w9kxu7GCQsaeLQld",
+          "widthPx": 963,
+          "heightPx": 1280
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMbLiYjLsSEn_z3kYhbbyG3LhCKDDgTj6OGiNSUWz9cMwTJux1GC3U5Qz-GUWCbhvEY-SAz5DoH3SMX6OCDOMn41URxEN3Tj0Bce0uCEp7ML0-sH3ut51POr5JMh17gyaB_rEjFA7jeZSBcf2USQITos-itWfQPbjJTgPTm4_cmSGLkRrpNZpYJ1zIlrGU4eLXM-NDV4iBehTJkk50kGC8qtSe7BAsWixyzZpsDzWZEiD3dlu24F7_7HbXDnG_pcw8JBQLNEp_y3KQpSAgKissMnpVKJhrNYqLfROQEBkAmXfPa8c_Xh7IXYacVrynY-JKxWSl5ESHwO42qOAOR3B8Q2hCeizU2_7JnQxV25j1tWaJ2sfS9OFOKxfvg0B0lcOKG1yzjGONpzMNdAdH79Jx_EK0n-2OWKAM3IzOiVs9fK8xvx",
+          "widthPx": 1920,
+          "heightPx": 1080
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMajLkKzVs6S-bK0W4Q4nuO4zWhdp0BIGkbl3-lBrv3C2nhY6BK3Kxtw5g6YJW_GaLPTd04EGEyuNGYNhrLYujwRAeJF_jwfl2OOU3VD_i2B4ybPP7Ml9jAmZIWvWnaE72rxhWzw06EitCrb5BkqyBy6mmN7XrItqT7_md19RwmEBeBjXxAFWm5kePYDn_qIUKe2OM5nPAc1SoyfPtzLZ_CZS5_6hWdiBHxyiSA_cB7ljZAuuZIvQBxDK_sCm0u8TPr0tqr6fzFo8JcG2JrD40rkN8kp4Vf64EhO_kKxfF0IrI2iiyNIHUtct718Y4ui8DKDVWs3EolyGwRFcU4a_CDkRa_83b3KNz-N3D2XrpVy52caKjX9w0wMrtzrYe96NA2YjVkbTL18WnVxeUNIk8PyCUg5JtO7FMAd2n9OINL8Mw",
+          "widthPx": 1280,
+          "heightPx": 963
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMYqHFJe5-2Q2HQqFndCe4AxZZt9dzrIE6-TDkjn7qSX_h0iHqHxuX2WcMBUlpPB1yN4HiGnPfc494cEQhZrzLTR5JXpPk1FMalXWYrJWbVRFJfFzp_YBEuIlROJVSOJxrth-SgEBP9g3DdiOY96aeifsFuTQ2D4DodGwoLY7KxYB9ulytIOAvwFq2n__c8b2j_jhH8K0zFW3YvpjTx5vzw-qI4kAw41X_daWcfyBMIzucLkxaYlO4awDOuCG_FY56jP2aq29K9V5lpHhAlasXWdwf3Cf85YvPfEM6gvf6PUSOPBOlvXc1x0eiFTm6sCxFwpfPQmDt6_KftuOZUqwnW-qkxB1bZd8KJij1XVbRofuan5m0_DWBPcopEL5hptbi2BWzCvaLtuFejCQ45t8jD2Yl3a_Zo3-0OUkl2VfG8eug",
+          "widthPx": 1280,
+          "heightPx": 963
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMZECaKChZuejhGsrmrsJzkFTDbQCGh4ugRZVQEDORURAJK4TOnYbszhsYdWRI2T9gjXdAIPp3sTCoWkswpILcRZA69X4XOk4042HrvEBiXWzWXtV5IbaHmBm78l5qfZ_I0dvaApF5ID9KtEafdXP7Lz0DLZGb3U9mNDuhwyOtpbh3u9zJiDQyM8dJBRykju1s1GzZu6acYQHZZ4W67C8quOLZohGfvUMnFOZhF6HRdvAzs6vbc2SyjD6Lccvvm6T2_Kx6rir7T3oXvaJqt9rrE35MUxbqUPOB7rO1exJ5Rr6r0ZlohdN6ronj-KTJwzD5kcUJnl8eco3hEXQlxu1lwOXYJyKZqjwJ0_qH4yNUvoxFC7wrTu-IQYDZZWTQzDR7_5ahwKGEvWCbq9O-sqJ0euEpeyeEYbPMCIEFGpjvIABw",
+          "widthPx": 1080,
+          "heightPx": 1920
+        },
+        {
+          "name": "places/ChIJ8xx-B99FzpQRHmfRK-M-2p0/photos/Aa-ngMbLvKa8e_2kAXokN8flt6GWaIX_0GKxQUSUw1XpXPG2l3Q01F1fHVQg4XQlY5U-ngiZmZUNzeeZBCyZtrGVDUrguZmh02YaWYbHJkNeOK73df3pv7rT1TAzwXzq_x_lqSlXEGE5VGF7axDXz-WuNq8K_jqZwCGcVROrEWNTojKD064j1BSvR2T-Rl5kP-Nwex5gUQ0HWnQucA_nM7LeUWxelWrDXKILFnlfzsT545YdE-Twq4jIGnh_OyWwMbE4o0rXGw4cIYYBOrnHwjhfgTGzFEDdv0eF2yAb0PtE3E0T2IcpNOmRIs7c3PUjD6kVBEM7ATTL0cAw_KWte70LnvpQX0uWP1GMpo3t2G12jRi1mJnxblhCwKqQeATiG5JKighURJpjObinppfNhQnrnQIIe8-YLuvlJBLA7YBSbNYtrg",
+          "widthPx": 1280,
+          "heightPx": 963
+        }
+      ]
+    },
+    {
+      "id": "ChIJxxsXRQBFzpQRKsqDl4RwkHY",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 95723-9945",
+      "internationalPhoneNumber": "+55 11 95723-9945",
+      "formattedAddress": "Rua estrada do rufino 308 Serraria Diadema - Vila Santa Antonia, Diadema - SP, 09980-380",
+      "addressComponents": [
+        {
+          "longText": "Rua estrada do rufino 308 Serraria Diadema",
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Vila Santa Antonia",
+          "shortText": "Vila Santa Antonia",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09980-380",
+          "shortText": "09980-380",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.7087018,
+        "longitude": -46.6162306
+      },
+      "rating": 4.4,
+      "googleMapsUri": "https://maps.google.com/?cid=8543452207901821482&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 00:00",
+          "terça-feira: 06:00 – 00:00",
+          "quarta-feira: 06:00 – 00:00",
+          "quinta-feira: 06:00 – 00:00",
+          "sexta-feira: 06:00 – 00:00",
+          "sábado: 07:00 – 00:00",
+          "domingo: 08:00 – 00:00"
+        ]
+      },
+      "userRatingCount": 7,
+      "displayName": {
+        "text": "Gordao Pneus",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 06:00 – 00:00",
+          "terça-feira: 06:00 – 00:00",
+          "quarta-feira: 06:00 – 00:00",
+          "quinta-feira: 06:00 – 00:00",
+          "sexta-feira: 06:00 – 00:00",
+          "sábado: 07:00 – 00:00",
+          "domingo: 08:00 – 00:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/reviews/Ci9DQUlRQUNvZENodHljRjlvT21OcGJ6TTRaMHd0YlVaeFQzQkZhVXQwVmxwUFNtYxAB",
+          "relativePublishTimeDescription": "6 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-03-23T17:24:37.360867540Z"
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/reviews/ChdDSUhNMG9nS0VJQ0FnSURmMWVLWDBBRRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-01-08T20:45:42.024281Z"
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/reviews/ChZDSUhNMG9nS0VJQ0FnTURnc3NpR0tREAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-02-23T18:33:05.729591Z"
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/reviews/ChZDSUhNMG9nS0VJQ0FnSURIc0xqaEF3EAE",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-09-11T14:18:14.411740Z"
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/reviews/Ci9DQUlRQUNvZENodHljRjlvT2t3elNXMVplRVZWUlhJNGRrWkVUemx3TXpoT2NXYxAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 5,
+          "publishTime": "2026-08-18T01:18:18.841639946Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMZSLvuEnvgipEXSxUOnR9dDGewEpJiUxa2UWL85YIfjN4qaT5Ml05gWflwUZdojo1NQPkfWClaJAXsHMmbw78at3eznraXjZK58I85HpsbKQ4T1AzA6ft-BdFKbtqmLOHELMkbvt8bQoRAvb-RNJ8n5jBzOXyoACMs_6PJ1I5NHrDcbSNloGcCHSA5WEZgiCY-wPQaAvPaR9gtyEYueX3ew_6OdbEDThg8REWbXEQSfHqW110CZHWBuP1opKIVSd0Sgcq0eiEmXrA2DtcE27bkxyJ1-QkRg0Lzb0rl_tZdK0sINMV7gAnI6HUqbAsgnWgPRD_7nASn3mXcOrVK4Cyw3fKUuDGDlSipx845Yy4sCw7228JTbafJ0-3orO--FDFoqSNHM0npDl9w9AjcddgBhfBfmHykgEXTNtJ11JskvtUHfl-wC_BzEIMIUOVbg",
+          "widthPx": 4080,
+          "heightPx": 3072
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMZJj52aADDf04BJdgweT48LqigGxPbBcS7g3TUiwrZaMfH0u7IyIvmOa14S8OYEU6eO6VKqGnG-GHOqKWfAFo1JHGu_KdFQMP8PbTMsNIKAUA8n5SORu7yaKAD4seJGABndda2OB0QyPvysWxw5M3WlFfe5C1UEZ9HCBkKklvnA4cBh-is97_1dtCMvMxWB0RRSQTSxi47F8Z7EOgvBCF-BnjffoWSUwXFt4RbAeenLtc9BdMgljK-K9JK3JK73myKEPmFhRSt5mVkoILH6QqdZuHwFqrG1_xe7jbmkHY897NRSr80NO4ImcWdpYC5ugEqNk4isy6nJHUo0d-q96VAoYr1s4kxCFX6THNwy2cYU91bVRJ5cnnQ2-gwUGIiyW4btdbcokF9VIxCHGL_WHTqdN0ELv52UQWT3Bwc9P3r0O3eBh2aHbyBdiacM8UYy",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMbd05KXPvRwjyA_yuFxogzD9FM5Gc9BD4cLz1d-7n42nz8laFERKSKYC8ixa5DQWCQvZ7r6f3sMTZ-BN_k_-0Fc5kAG02xwyJJbhY9ZDPToKBDkhFiVW-EcTtjQuZ76UC1HSL2m-Ayg3KGy6S8F-JGKJlPFvXI0m3FCZqDhJxA7T8oe07M9yMt5LUi-MRu5Ho07pW4365sPHoKLsScUxt9vpuE4VBIN1ifZck8pg4HHASFMaEwXpZuKSuUOrnnc7sOv3uyizheVLmKV55V4HUXAWuq6H80Q915TrPMXBR_vcN0o0RhXw5WTJ_W3lh3tCyNjnqadZFmk3SQNiozDh1aYEg19qnCCTms92i1vmG10XsB3vZ0FpibnKJbbt4atjcGbwjJ5pvnjTQY38ccJ1eCVW7CrsPvm0pNAELAQMsceP2E4aqh57eRX_xkRMaeF",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMYQCmAVwfcgURCUO3ou-6OBfumzhkb6TOmjem_ykhIs0ryYJva2hff5NbjDb6LUmhNdSdVBKbjhLhgVnTAFFeCTDClfUD5grsMs5jUDi4EV-fXBRCWrOBFYGZGLRBn82j9-H6pwXui28eEE9gijcbalIDYag-8ANuc8wBtGtMiXI12sxTilgAUIEmV5fyeuRdWETPtK3LvvlsBiXPccsW_HwcfoJTp-jmbzIUGDE0rmbevdG65fJQ38njm8Phi6Y7fySf_r-U651sQoyZjSCNoUhS_KpALTnB8oclzcG7bQ2hF_EAqPFx70JMB69O8gqgbqKmIYe20RGe41Nz08vKfQ9K7k8G-stqwIXZXTHJvI7Zi91BB7-iBDR3NpP_vvp3crt3uqYcOGW796ee8rtPEM3xrycrhgOi7RoNQG4Q0",
+          "widthPx": 4000,
+          "heightPx": 3000
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMZbZdFeaXY8uGCoPH5l0Z4pM0jWB9UnbIqt78BPBFkv8B6nh1BX5zrr_zd-F8OGjoatO6P2aPXSkg-cRGZF6wFsHbFkPCcDEfUbo3WhxHrh5YaeCUyUCxrctLJofGkSgldp72AjPJTXJDawOTYvNtazCpZugLfbIUkEutXQLe0P5ICwGtXMfrJJbswMkY8QAg3hqmXRFw9b-0xxxdgwrTJ9LYVKuSdhzUVu0Gg-wyuz0PfJ09Ks8YzA7NP9hMqBn1G9_V8H93KdOzGgkzWs3pyDaoGYd4IqNDRlP8aYnfkvb73azIM_GPthjLOq9s502SvKOv4S3GWPOOYCd7wVRONONRyoamyXuzksX3k6TsW1CslPQf01mtqD9r-r15MhgKytH1bKzdeZDew8gZib9uhEyTii75-aefbvk4G8tyN70i2m__MK2XMyCysYBh5J",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMYWWbOkqoj_Mzf_qNpSTCEzc7Ep_kTavWWswaxpz3Qr6JzPL6X__q-XcA1YbiRax-B8ZGFKBqZ3kTon8acJH1GbxvF3a3ZiwK4b7X3iQLjhWpUKfJa6hg8bvW5YoALgC_yqRsBrorpRrCX1nwC-2KEzl_MvY7EsRj4yyO5QpwNRDTVLZAlCWocDPe7F9ObdDgpO_qczQ_qCKzh3uL9Jx18bhtZoYmrQTWBjsr2N10z0wV7GrVu7h1i6jqRgcf7nI3io3xGn51aPQF408tBzyn4uJhuOpreZKh5shFwCOO1jRIEmIkVo4XwjDwj-H-vne3mEwTzOC06Al7yEx2nIW-c7R37teJyv4-e2MuAUstN7qAOaNkH52Iwpue_xQty2S9u0yfR73MrAG_nVFJ7hSufNE8NQ8xNM4tMA5deh04a_1dPRXcGBOwCsdmbEZw",
+          "widthPx": 3024,
+          "heightPx": 4032
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMadz1jGZmnEezJGPv3T2ZgM7RyVM9daOg3QwQhxRh6x3o_vuBL0ihYWIE5SAHCMMnD10MipHb6uxcJrTSB2S51U6GTELWP48Oa2TK1EhBKbNDhk6NaseMBLn85KwZKduS3cT6_SIHmfntMFnQRPnfXVuoBo1nHZXngSUOyqlQuiZf87AOuHcpgIYinzZYfARisQ1TOb23nsEqk7spE0xDQApoIX3St_SfPRtrOTNOKffdUotV4HHI7uWVOcXSgz7HR44iePJ2dzsFM6QAh-b2iRBRUg0tp8EaPPbjg8LNCk_gjA7c-VxUQnzX3Ieh-noPyF1mVxAxLD7wAX5_h-JBf9QXtX2S7e3TDTYJlGCcEq0W5a9L4LA3DykYi7IfrTxzKy66C0pHQReZjCyBrhDaZfR5R51oQY9aaO6BhhgQ7OP9EokQ43VEyX_HtWt05V",
+          "widthPx": 4080,
+          "heightPx": 3072
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMagBeBEQogLyV-etGz5Xvpqqw5O9XnoXdw_tVToUnKNcqUuW2NPO7W02_oAxFYiUhn12RkO5mEybErv5AFwlm5Sdm5lNZZH3Tq5_Dk2MRAm-nFEMsBw_XNHLZQsqsjNeAPCHekDQz4InxmUcIewJsdlUgcdIxQ-XSBU8FmEB-nN-ZoFwAn5brRSwd335jt9dVUbZP4sgRI-f5mNHXcL-FtCvcT81S66zOOb4vd4dtgqlGuniYeKdmtWgIZhhRR-K8cmQIpSicxg49phhy_QmSkWkBDq8lqQjAZ6oSfJNhRatb_-quV8Rgwn6EV08e70cKjXp95yYXwBz4-FA7ve74eO3w1HRCTNGwZzYdYQ4qTK3gWDITDvkrR4_tcQB-tEj84GQLxSgLpk43Nw4DqGBF0fndwx32wkbijrl2XR92WldbZ4Xosq-kdxQtDaRwx0",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMYzRaXb_V7wNF6DSEJOMkuCrBn4YrWC2CGVerJPZlf464rqDE4VfzTJ-0p3KSSP8OAyRbkv38-TRadBtkZcZKKzN18ogzhDxhURMs0UW0z5BSAaoNbX3lORAKuP-2XJFRW3E6Gr3qCAHXj4fnhtAi9C1l-fQ7VS7ZgNsB9BB7wLIKQ5DRwnxUALzEmJUMKt-_KCjwY0uoaeTRHlXWER3OE0mXuyyJTrLi1JVv_Yk_-UT2XNx9zs4aPcpSgxOjicBdwDh4p6LH93CvTlM2PDbDaQYT_AZyYjux-szA0I-znvizqU4DK9d51AxBYzvX1yeMMBNgVGQVfBBo3APf1soXq67PShsKxTltr2-5RANSPBRf7f4RHtfPmJ8GPrxpGSoCCaPZ-RzAhCHH3o-7fsh0OldOr30HEeXxMMkXO6fTzLSfhDnIHMk-hd-E-vjXvO",
+          "widthPx": 3072,
+          "heightPx": 4080
+        },
+        {
+          "name": "places/ChIJxxsXRQBFzpQRKsqDl4RwkHY/photos/Aa-ngMaSMa5SKLLzyhiS68v8jIj9pikykQrLxcXL9PBCjF9Ilnfpw39HuKll5Bo6jumQ9zlOmZ8hNoOYMeh4J43ebcJreDFDEDclTwf5Bt8vzCo0WEV8QS8R0fIPhv8vqCNEvsphOH8Sb3JrgI2Y_xbYRyZ63mly3NjikUP-DwOa6sYIWKYIeIR44NLiZTKgC-OlnnyOgsndQIY8yKoyDh5p0zDIc46pxN6ENfd7gjks3kt_DSLCiFNtvkgV8MUJ0YQ2CNUySmAZ9U2WwZdmsCNL3d3zQu8SnzSN4h4_JrwZepBtymqjsvTT3OTHnVdiSUI2jjOPnFzKsCHJEeQrD2E2m8CwxeXb1xH17TFU6IcfeLSLD0uOFherVTFlHWYh2zaL2ApMkJ0_FdqwMzYkt5nWp8Vva_whvW5xcHNZm8GR_rhRgAxg0ZvLPMMeyb1qakWm",
+          "widthPx": 4080,
+          "heightPx": 3072
+        }
+      ]
+    },
+    {
+      "id": "ChIJTbmbBmZDzpQR0BqE-Djtlbs",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 96319-2638",
+      "internationalPhoneNumber": "+55 11 96319-2638",
+      "formattedAddress": "Av. Pres. Juscelino, 300 - Piraporinha, Diadema - SP, 09950-370",
+      "addressComponents": [
+        {
+          "longText": "300",
+          "shortText": "300",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Presidente Juscelino",
+          "shortText": "Av. Pres. Juscelino",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Piraporinha",
+          "shortText": "Piraporinha",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09950-370",
+          "shortText": "09950-370",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.682202999999998,
+        "longitude": -46.593035
+      },
+      "googleMapsUri": "https://maps.google.com/?cid=13516970685565770448&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 08:00 – 22:00",
+          "terça-feira: 08:00 – 22:00",
+          "quarta-feira: 08:00 – 22:00",
+          "quinta-feira: 08:00 – 22:00",
+          "sexta-feira: 08:00 – 22:00",
+          "sábado: 08:00 – 22:00",
+          "domingo: 08:00 – 22:00"
+        ]
+      },
+      "displayName": {
+        "text": "Borracharia nova vitoria",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 08:00 – 22:00",
+          "terça-feira: 08:00 – 22:00",
+          "quarta-feira: 08:00 – 22:00",
+          "quinta-feira: 08:00 – 22:00",
+          "sexta-feira: 08:00 – 22:00",
+          "sábado: 08:00 – 22:00",
+          "domingo: 08:00 – 22:00"
+        ]
+      },
+      "photos": [
+        {
+          "name": "places/ChIJTbmbBmZDzpQR0BqE-Djtlbs/photos/Aa-ngMbz8P-AdNLO7BE5VnVJtZQMbqD-2F0E_DETtRtxfuST1RmfA-LllWJEC1eApuwG9ugjwl_bWqrwz7aQzSa1rto21zM8Bp7JGU8SBS0JUkfbljVpYfSjBROCr6V9W2FyTzDEKk0w_yINKJ_RuPu0uUA6r4mDcZr9ofYa7U6ewcnyVKNpvmHciiZ3sQMXqoM2b7-LuDEv435Db2mpAdhFKHSv5B_bSfMRq9mMql_epPwzIOESC0lYv_HPUzLlrh5kq8wGdv4Q6oNDxh6LqTLr9WwaRYeNaYOySCgVZ6QjKATKQSvTa-P9hY5jXvVlZP-fOdB0XVGxwwAg-hbsWi-I0L8cGZERPvULPn19B1CScBNWZxOSHiTH18oS4uUqMeC0CY560MnT_GN5d4Gg5JeA1LLcV-zBbtt6vmATM_uVC_vzSXoPGtwHpU-ONZ-nbTk3",
+          "widthPx": 3000,
+          "heightPx": 4000
+        }
+      ]
+    },
+    {
+      "id": "ChIJzYktE5RFzpQRM26FJBGSj20",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 94528-3709",
+      "internationalPhoneNumber": "+55 11 94528-3709",
+      "formattedAddress": "Av. dos Pereiras, 467 - Eldorado, Diadema - SP, 09971-470",
+      "addressComponents": [
+        {
+          "longText": "467",
+          "shortText": "467",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida dos Pereiras",
+          "shortText": "Av. dos Pereiras",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Eldorado",
+          "shortText": "Eldorado",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09971-470",
+          "shortText": "09971-470",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.7320992,
+        "longitude": -46.621401899999995
+      },
+      "rating": 1,
+      "googleMapsUri": "https://maps.google.com/?cid=7894689274128592435&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "userRatingCount": 1,
+      "displayName": {
+        "text": "borracharia vila Paulina",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJzYktE5RFzpQRM26FJBGSj20/reviews/Ci9DQUlRQUNvZENodHljRjlvT21GUlZFRmtjVWw2ZEZCcWRITndSMHRIVlRZdFVuYxAB",
+          "relativePublishTimeDescription": "9 meses atrás",
+          "rating": 1,
+          "publishTime": "2025-12-28T18:39:35.727306215Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJG_bybvdEzpQRVdbrsOT2VYw",
+      "types": [
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 4043-4088",
+      "internationalPhoneNumber": "+55 11 4043-4088",
+      "formattedAddress": "R. Gen. Rondon, 42 - Centro, Diadema - SP, 09912-000",
+      "addressComponents": [
+        {
+          "longText": "42",
+          "shortText": "42",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Rua General Rondon",
+          "shortText": "R. Gen. Rondon",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Centro",
+          "shortText": "Centro",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09912-000",
+          "shortText": "09912-000",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6930121,
+        "longitude": -46.6214136
+      },
+      "rating": 4.3,
+      "googleMapsUri": "https://maps.google.com/?cid=10112260000411539029&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 08:00 – 21:00",
+          "terça-feira: 08:00 – 21:00",
+          "quarta-feira: 08:00 – 21:00",
+          "quinta-feira: 08:00 – 21:00",
+          "sexta-feira: 08:00 – 21:00",
+          "sábado: 08:00 – 21:00",
+          "domingo: Fechado"
+        ]
+      },
+      "userRatingCount": 49,
+      "displayName": {
+        "text": "Borracharia Passo à Frente",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 08:00 – 21:00",
+          "terça-feira: 08:00 – 21:00",
+          "quarta-feira: 08:00 – 21:00",
+          "quinta-feira: 08:00 – 21:00",
+          "sexta-feira: 08:00 – 21:00",
+          "sábado: 08:00 – 21:00",
+          "domingo: Fechado"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJG_bybvdEzpQRVdbrsOT2VYw/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tsMFJXZ3hRMnAyWVRsUU1FTmpjVGN4UkRsWlZsRRAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 5,
+          "publishTime": "2026-08-03T23:58:34.169800257Z"
+        },
+        {
+          "name": "places/ChIJG_bybvdEzpQRVdbrsOT2VYw/reviews/Ci9DQUlRQUNvZENodHljRjlvT25vNFdGZExOMjFMYURGS1dFMUZWVUZMYWxBeVJrRRAB",
+          "relativePublishTimeDescription": "10 meses atrás",
+          "rating": 1,
+          "publishTime": "2025-11-08T23:44:18.461483091Z"
+        },
+        {
+          "name": "places/ChIJG_bybvdEzpQRVdbrsOT2VYw/reviews/ChZDSUhNMG9nS0VJQ0FnSUNid2E2MENnEAE",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-07-27T21:32:51.022633Z"
+        },
+        {
+          "name": "places/ChIJG_bybvdEzpQRVdbrsOT2VYw/reviews/Ci9DQUlRQUNvZENodHljRjlvT21aV2FFZFNNRFpMT1dJNFF6SlNaMkZLY2psMk1sRRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 1,
+          "publishTime": "2025-09-16T16:30:43.356529023Z"
+        },
+        {
+          "name": "places/ChIJG_bybvdEzpQRVdbrsOT2VYw/reviews/ChZDSUhNMG9nS0VJQ0FnTURRcDcyWFZBEAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-03-14T23:33:31.479447Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJWxjDk9xEzpQRaXv_WMXXl_0",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 97603-3965",
+      "internationalPhoneNumber": "+55 11 97603-3965",
+      "formattedAddress": "Av. Luigi Papaiz, 178 - Campanário, Diadema - SP, 09930-630",
+      "addressComponents": [
+        {
+          "longText": "178",
+          "shortText": "178",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Luigi Papaiz",
+          "shortText": "Av. Luigi Papaiz",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Campanário",
+          "shortText": "Campanário",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09930-630",
+          "shortText": "09930-630",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6741085,
+        "longitude": -46.6238646
+      },
+      "googleMapsUri": "https://maps.google.com/?cid=18273311255680744297&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "displayName": {
+        "text": "Borachas Ipê",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      }
+    },
+    {
+      "id": "ChIJJ0YSLJNDzpQRjiCZ2iFGDGA",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 95194-0167",
+      "internationalPhoneNumber": "+55 11 95194-0167",
+      "formattedAddress": "Ao lado da kingstar - Av. Piraporinha, 388 - Piraporinha, Diadema - SP, 09951-550",
+      "addressComponents": [
+        {
+          "longText": "Ao lado da kingstar",
+          "shortText": "Ao lado da kingstar",
+          "types": [
+            "point_of_interest",
+            "establishment"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "388",
+          "shortText": "388",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Piraporinha",
+          "shortText": "Av. Piraporinha",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Piraporinha",
+          "shortText": "Piraporinha",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09951-550",
+          "shortText": "09951-550",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6912251,
+        "longitude": -46.580219299999996
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=6920983838576943246&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "userRatingCount": 1,
+      "displayName": {
+        "text": "MPDNF BORRACHARIA 24 Hrs",
+        "languageCode": "pt"
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJJ0YSLJNDzpQRjiCZ2iFGDGA/reviews/ChZDSUhNMG9nS0VJQ0FnTUNBcTl5RkpREAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-02-04T10:40:30.889598Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJM97AXBpDzpQRGqTmAcy4W2c",
+      "types": [
+        "tire_shop",
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 4368-9880",
+      "internationalPhoneNumber": "+55 11 4368-9880",
+      "formattedAddress": "Av. Senador Vergueiro, 3752 - Rudge Ramos, São Bernardo do Campo - SP, 09600-004",
+      "addressComponents": [
+        {
+          "longText": "3752",
+          "shortText": "3752",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Senador Vergueiro",
+          "shortText": "Avenida Senador Vergueiro",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Rudge Ramos",
+          "shortText": "Rudge Ramos",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Bernardo do Campo",
+          "shortText": "São Bernardo do Campo",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09600-004",
+          "shortText": "09600-004",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6634878,
+        "longitude": -46.5630272
+      },
+      "rating": 4.4,
+      "googleMapsUri": "https://maps.google.com/?cid=7447749595131978778&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "userRatingCount": 1117,
+      "displayName": {
+        "text": "Borracharia 24 horas Lions",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: Atendimento 24 horas",
+          "terça-feira: Atendimento 24 horas",
+          "quarta-feira: Atendimento 24 horas",
+          "quinta-feira: Atendimento 24 horas",
+          "sexta-feira: Atendimento 24 horas",
+          "sábado: Atendimento 24 horas",
+          "domingo: Atendimento 24 horas"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/reviews/Ci9DQUlRQUNvZENodHljRjlvT25CSVdIQTVlbGRPWm1FeWVFOVdVbHAzT1daRFlWRRAB",
+          "relativePublishTimeDescription": "5 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-04-05T06:06:38.408477439Z"
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/reviews/Ci9DQUlRQUNvZENodHljRjlvT25WNVExWTFRMEp4ZVV0SVowVnlTR3hpTTFkdldIYxAB",
+          "relativePublishTimeDescription": "6 meses atrás",
+          "rating": 1,
+          "publishTime": "2026-03-15T23:20:54.265404003Z"
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/reviews/ChdDSUhNMG9nS0VJQ0FnTUNJeG91NTh3RRAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 4,
+          "publishTime": "2025-04-01T13:26:00.553094Z"
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tVMVVuazFUbUZCTWtOMVIxSmtVRFJhUzNjMVZWRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-26T13:16:05.841363720Z"
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/reviews/Ci9DQUlRQUNvZENodHljRjlvT2taMFpUWlBNbTgxZWxKcmNtZGtMWFJKYVVSM1kzYxAB",
+          "relativePublishTimeDescription": "4 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-05-10T01:10:35.923006271Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMYI6Q8F3mojrQnlNs0RolZNB4WuLJdcSx4nzqftjXNUFO_m6aJ-mfg4m0PL7HWbNu8wY_ixcthIfBbhOSL9rBzZeAhi-cFINhh_cbAryvz6_-mAnMY7WfNNIHzW1s-mVi3Udb9rd3yKlMALZrZd2I0i0W5VrIiirPjzdTLQvhmdPjLlGxu9EuYV4bmO0yZnavi1VGDIcxRNb7_zO9pTg0YRFHPOQICpjbvFaQdWKqRRr7u3xbTauphKHWenYVTyPhVSnx0QrQ01Uc-zJpivf4r93aLUPKDrx_m36FZEAISV9GUy3zzJZQncHu5Uo4rn_TUDFLtvb_CJcL4iq10d0ZYrIQONAEjgBINzUUJ-oDuW7mdHHItHLVJ3OPmfv1_4DEokzZv3B2k0ENIkRv4jFAif-c6fACJRbVAl6emJvwN4rLQ",
+          "widthPx": 1920,
+          "heightPx": 1080
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMYoS0SgRLLbf7NJq0r1teNWJVwesO2-7STp0kkM8J6nVX30KUIcuNizGiPFZRbLG8izHMxiXa6aynG5YII3wbi5STHZIJpcxton3_s8i4yb9XUzbeJyhjii2_0Zh-F_hC1HzdVkb6QVtgiNXN1hrG5ZS2F6YDK0QlmnORIHur1_h8ZTVKcktHeEHlk6OLPKCehMwcii4_rfZsIE1ucqSAzz6mtyGZ47El5txxaj1iEKbsEcgr0GLm63HAWNpBwIhUndYZk76sHrQF8U6S7TQaWJ6GSBHWyjgnegX0mB9aOzsCSwlzmPFjMJA1fbiLdAjY_7jGi_LVsfMhBawLla1rNJwiuMxAdfDAeiwMwf2JWJR6lSekq-f1Lylw5siOvfUPMrsk5R61PdbMOWfjv5eJdBSnElTkH0XgqJPLUVfb8",
+          "widthPx": 2592,
+          "heightPx": 1944
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMaKJKRoh2wQz1t37YgDI0e6A4QRtnhUWUu4ZwCjFBzRSGHp47xmpbU_bCQNp7H1yRXygLgBjX3doNyud6m96RQS01o3RuNjfm7P__T7rHqvtM-P4__kGA9OZf2tMY_5Je0fZPkgi9uonyx1jqMWyiP5e40jtPdmwyikp8mdgFIu_1320nVRP1OlDjG0fbJum4jkOFCyEd11hmD5WrBjXd_UtbGYltTivPmdQ10Wpy3QsJeEuF4ZHxvwrQoyifnG5AkItTnA8guEIqgCvkMp82HVggMbhMEINetJ-cuDd5tH_ZI5Y4hIgw45G7vvNrOmSxw5pmRwtio-2aDu7VNhx2nhn1kngdrYoaj9U0uOqwIdmBj8OlUGDgTExtIYd5kMhHHSRe8DVi1pDdVqEspPFi4-ADxQNTahnA6vtWzjJ0r9bvA",
+          "widthPx": 3120,
+          "heightPx": 4160
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMbTSZu1JWhkfpJkA6narcjkI6PiYS-47JbhmY88N15_o19jOMaUrdQ_vzHMpZia9tswjPf40OwJWTnVcSKWZcAPjDhnEl6XxHorHpPaE8p3jYI4PLsS6Ycyrw0Jj2e_DvlqbBFXgKf_mtw0PCg7bUMRScOnbob0JEEWH2CSY2SwWmAM4_vlik_kl3FP-S6WRnJ-DaDGvGcDXHz2Gtcq9bOXCk3OHymqo9zhVY3OzD6yjYZMBN7Z-xomVgX-su80isSqv_ZSeurnOYQqLqWWCUPOWWh4IWdqRzYUyNEjaFuszSHSU_VHpx9W22PqewXId2gkhz40G1QzYQ_JDQrczQ_ZZugmV8oyRagx8y3w26coue6g1t489c3T5q_BB53aCjxrFXxRL0Gz8MCCJMymMRabBn58nqFKXSMGpCfJEA53kps",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMZryD5KsaGRiAEpLA423Tp0M4RtruA7v9OR6kB-iu4ONxSWJZL05AGOLAdi5XUkzErtFRGsfuzUmmocRPiV5-Yrj_Hr3IuKJsnOh85RUxLK2misX9iur-0e4InYuP63TY6iGtW9NtQpk7zEM2zEwr9AKDFxawIXyWPqhNC_YMM6C_SBbkJV4KFs4SiKjNG-8EapTlEBQxAH4evA_84VBKrifrTut_XKLwDu8OAqBCb3L8cj138InUl8Ug-Nx4sdW0ODHBcLg_zJbknGzGBVpi5FsZfIp-Yb2UgGyf052yKz41E-lUftzcHfTTz7TQ5EPKf50x0SlNiod78E5vYHnrmUNyazIrsmClswuJAZBw0JdGpKAJvP5xXzqRxTNu47IlZ8uxb0Zd-653QxvlyXwEzyudYaq4Am_G4GYgk-nTcfSA",
+          "widthPx": 4032,
+          "heightPx": 3024
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMYsyN4mb6W0e7OcRz0E6X1ANEqzUiXF8M7-3t6U_dHxt3bPwPwqAxI8lo65sCf-ZE_Vhou7KH52wuJ-Rke-qDYt_51jux5tEyxpwUAyp7X_SWE16rlsMcLrj_y2YaCDW7sEM2M28fTrcPL0K6vRTwBvYLkyfHO78xH982lh36P_CKcJpKBMZBC4eLIo8yZkze97mjY44VxUvdEs6A1Oi1auqZ0t3Zq59-2btWt-BdR_X9h5oQLhD8JiflPiHD_CjB_9B9zf-RvFeve4dNkKUC1pivy13A1ZnTNDlnSA0nFBwanGBvmOPK1Rqkbwqf7fdYDFF4GfvOFR9OofQBOoUua3vCMV_lkkjwj7QB6et23LYfXRWkHFJsTQA5XTyJHA0G94_owds8K52OS0bt8BJyW6Czi5FiYNu7iLYU4fq5zbQ6_Y",
+          "widthPx": 1600,
+          "heightPx": 1200
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMbgSKeTivsQewZuASVf3k4tQgX60lIkGwWB2PBQJlgA7QpGmAvS85S4F6qwV8ojDaZXcR-zYX-8f-0mGdvb8n18icBqhVqcivUffkO3KPAvyfMQ6HHHVj7kqpCfdR0ndOJjs4CuGshBXuHdAcfOp-kKv4ScNL-KF-f4UkMPi0RJDZOr9gdiFo5tb39TJOdS7VFgC-t9slV7X2eTGGYsNIqLmrNYol77D9i64AEfnIeVzH02BuYUwX-Ujh3pJ1pIDt3DHy4zor44wpnZ6G0F0TqXc5p6HDEJvxqWrarSYrufKO9aKNqnHCGAAqsH9XZQlELup3YxuMyCtxvZbg1ydTbificBe78jdP64li-wuzvgyiTHaJYd3yaW1dITg3HQULATcqw-IdOCNf1XzuekQS1P00V5n1hq6GbPJn5TPhI_Tw",
+          "widthPx": 1080,
+          "heightPx": 1920
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMa-GrQnu0mpiSsAJZTFCViV0Muy5t69TayT0Ii9y6klQoaGOgJJ5Q9ZUIcwwXm6_4S5Z_W489HW9uFHMXaAD2YPHzAJALZKGe4dHygs3xZCGSp5mwVHwOqYJr1Pa-jpvFpS19TkFZT-9cAybx1jiN2V3SQ2hdW9xijzGQuxvA2yBAy1OfV5ysiXzPnfQw4Bf4I8MGq9gnUCg1SEW2snVtppUf-KI_jByy685Co05mChM_IxfPqxsyYgEli0L9_daTFVV0TXZl7pr7JGzw7U8E1Z-z6wP23HRMg1XgxT2B_MBI32oGRezCKtNI_VxzPJ-WTCaNtRSiZJIVnNiCh7HZOrI-bedfdsM8HY9_3RwMIR8N6_lR5aTxA2cJAaq_7_xQQcCWmA6jUytgnzgb0CulVSoN8y5E_nYTdUo0lfPvvARHUH",
+          "widthPx": 3024,
+          "heightPx": 4032
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMa3jXfwMwtoPOnMNgeqb-PoNfx-69VPtUNnE_f1CmzshiV_5VsWw7IG-vzluU706isaMhvoiPReaD260pBS_V76fVAakgQY7sF9WIuR7VCIVSejof8-Xs8qEGSqQOhmygxqKRmAqj_kA9aSWEngijSaD9A6j5JQOIIWs4BHdtd6ulVWI3hp2XiPEwMXOQds2gIy-zAQ8XaK2Jjv9siiSaLm-9EujTp2eMdat-ALxw2w7mtSFaypetMn8lFYx9DWpgpcXt_sW81SUg4iSNfm12y1eYZ6Jk1IBXu4_dw-MLYROyWKKF7PA0dpfkutXjSGRRX20zU7A38jp8KPwRCn7cGOReBd7HfhJg1VjNWd-bTnHzWVHGx1ElVmZjb0Y8wxxOxEOh-4mNGtznRcxjSZmsad6gCDfi3hU0XRKIc899c",
+          "widthPx": 2268,
+          "heightPx": 4032
+        },
+        {
+          "name": "places/ChIJM97AXBpDzpQRGqTmAcy4W2c/photos/Aa-ngMZTX0Tyf2pOyOQq7bft_T_GseZyD8elvfDpofv_RDKlC-7fI7kOHgycgkTWWjswNO0fCRDpmb45hGyvTMJRjYYCIY_oQPFY5GEvfrekPDBU0mxsSFJaY3btu4iF6ZiYgR04zNvyOPTKi_eL0RC86YnkGWSWcwg-5CxGYW2XvrcL7yWqrRfPGJkDbr-bZfCcvzZ9FVFX6VkN9gXy89HH1YZH7lYyE1iXz8UIOzLLyV_BecfWX0Wshx_bRomWbwjpGjw4G7N8q0LgCZUCp-FjVX2IpZesGVP7r-6VZSErhs6YbNneurlUrE8Cv9WgQ_DJOkWkJ5vwB57lctlhAhsKusws9x5uQ-ouJq8q8Jhv7e489jOWf8oEhbwgWQdrz7_bRMzww6ozU-DpNkdfggnXolUjGXXQSy_ZXuOj-eviojfhxzoG",
+          "widthPx": 4000,
+          "heightPx": 3000
+        }
+      ]
+    },
+    {
+      "id": "ChIJBTbN96JHzpQRzk8FxHMchxc",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 95958-2570",
+      "internationalPhoneNumber": "+55 11 95958-2570",
+      "formattedAddress": "R. Osvaldo Pilon - Alvarenga, São Bernardo do Campo - SP, 09854-200",
+      "addressComponents": [
+        {
+          "longText": "Rua Osvaldo Pilon",
+          "shortText": "R. Osvaldo Pilon",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Alvarenga",
+          "shortText": "Alvarenga",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Bernardo do Campo",
+          "shortText": "São Bernardo do Campo",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09854-200",
+          "shortText": "09854-200",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.739067199999997,
+        "longitude": -46.6125554
+      },
+      "rating": 4.3,
+      "googleMapsUri": "https://maps.google.com/?cid=1695355068263780302&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 06:30",
+          "terça-feira: 07:00 – 06:30",
+          "quarta-feira: 07:00 – 06:30",
+          "quinta-feira: 07:00 – 06:30",
+          "sexta-feira: 07:00 – 06:30",
+          "sábado: 07:00 – 05:00",
+          "domingo: Fechado"
+        ]
+      },
+      "userRatingCount": 38,
+      "displayName": {
+        "text": "Borracharia Sítio Joaninha",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 06:30",
+          "terça-feira: 07:00 – 06:30",
+          "quarta-feira: 07:00 – 06:30",
+          "quinta-feira: 07:00 – 06:30",
+          "sexta-feira: 07:00 – 06:30",
+          "sábado: 07:00 – 05:00",
+          "domingo: Fechado"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/reviews/ChZDSUhNMG9nS0VJQ0FnSURmX0tickZREAE",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 1,
+          "publishTime": "2025-01-04T20:32:57.721863Z"
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/reviews/ChZDSUhNMG9nS0VJQ0FnSUNhdFlxcVhREAE",
+          "relativePublishTimeDescription": "5 anos atrás",
+          "rating": 5,
+          "publishTime": "2021-08-05T20:13:33.157018Z"
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/reviews/ChZDSUhNMG9nS0VJQ0FnSURhbU9UYkVREAE",
+          "relativePublishTimeDescription": "5 anos atrás",
+          "rating": 5,
+          "publishTime": "2021-08-14T12:16:19.896395Z"
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/reviews/ChdDSUhNMG9nS0VJQ0FnSUNxcWZ2OHB3RRAB",
+          "relativePublishTimeDescription": "5 anos atrás",
+          "rating": 5,
+          "publishTime": "2021-06-11T11:12:39.062438Z"
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/reviews/ChdDSUhNMG9nS0VJQ0FnSURqMHVHejJ3RRAB",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-05-01T09:12:21.179434Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/photos/Aa-ngMbAYoDRNplm5Lh2bCnm6ha25p1alzKWGyTJyCCReU13z8utW1CvTpgRsX80yTOdnvXFynROLLCL3b71HY_qxJ_4OhnM-HK2l83GANm6NYmFI2QyHfBxJoX_GwEJUEigFKDVNVXA_XLRLrIDHus9jnuiBj-0lmU8kkGd4l5Coe8iv89mXSQ9vP8N5nFESeRJ93Bif1EuqcovXqHyTY4T1mo4jAklrXZvs1EryWjPtQLJzXssu6dqyihm0tPpgIEdBTwLKG17wJl7sO5ylveLdb8e9nf-I9CB8YDOEqCijrn7ZlKU3_ydf7xJZj__o-uKJV_C1mlraikRbs6obbo8cMt5EszNy_1vZ_PXheMwUgmzCbF8Areh2PvnS9C_faP0_niatqpeR5dRwew9qTs1UBT_Y36RwoozJ0ykbDQexqQixQ",
+          "widthPx": 1944,
+          "heightPx": 2592
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/photos/Aa-ngMajKskX-5NZkiRY22ketQiqWCr1PbmKmXiT8ne_PnzxOa4ASXo9e61X3cGco5MXXObig8tdilli1Ggp0P-NVsyEFRQqLaWPrGUvAgNtZgLMAAGttgU12u625w3ZrdhzjylXc3777KfXQ5A3ECl7OHMa0m1jeu8Kiua1tWN9a5gvvi2ThTmj1B0kKlkcFd249bM7DSBzhX44KCbUArEuPQjvmXTmuMvd7j1da7qArxYV6Ka1v-rkuufmNgNGsIGlGisUvNR36AWfYn38TI5R3dYzSvgZHCVBZuRXTOy4BaYt4KLr7BS2O67kG31gnvyJ-rThMXJaKlkHzxqgdFIIi18-4QAvocofAXEFA0IJPsu7VVx8RoCq_8hAWVl3nsYViqef6XtjVIO8zfvxLPjjS4R0QvEMIuyNW_ArgCbwKzdyAu-F",
+          "widthPx": 2592,
+          "heightPx": 1944
+        },
+        {
+          "name": "places/ChIJBTbN96JHzpQRzk8FxHMchxc/photos/Aa-ngMaMIuWlOL9vZMMNidPKDIoXnQzF3tcWoOu1-SSVFzEleOVjaGW183zqGcAXMo0Fg87IxZmnTZMEKbm-yDx2z-NtTtdhxu_T-cE8T2UidAroCNgrqQvi3O_JLK7_6HQfG7EaJeyb6bfx_trv9D6EjqQ6T8WWv1LecqDXXVpRrpYaPqThXAUuN1z-0mDdIoT387Pg43fkSu8zAepe0CD3HGqnFrBJDKSR5DnEl5D-uZTbm1gqYL3lzTXqc6Iv4-prp8-6L4uvjdPrl0JqMIWpZh_UyXGbdraDCOpRMCZy4xaLYxV8KLn1nkl2vIt2NY-Q_4Vi05UwR-O7WLGnbRUYEqywaxe1SyuTbdCwNY00EIXIqYOyTvj9FmOchW870jwZgizDC7jiHNNE6MJBfWiwZeH0HfXqUPWaZSpSF3vPVG1JuMZk",
+          "widthPx": 1944,
+          "heightPx": 2592
+        }
+      ]
+    },
+    {
+      "id": "ChIJdQAqMG9FzpQRt3tAHjiNPts",
+      "types": [
+        "store",
+        "point_of_interest",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 4044-6881",
+      "internationalPhoneNumber": "+55 11 4044-6881",
+      "formattedAddress": "Av. Lico Maia, 969 - Serraria, Diadema - SP, 09981-420",
+      "addressComponents": [
+        {
+          "longText": "969",
+          "shortText": "969",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Lico Maia",
+          "shortText": "Av. Lico Maia",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Serraria",
+          "shortText": "Serraria",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09981-420",
+          "shortText": "09981-420",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.6987411,
+        "longitude": -46.608602600000005
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=15798219815027506103&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 18:00",
+          "terça-feira: 07:00 – 18:00",
+          "quarta-feira: 07:00 – 18:00",
+          "quinta-feira: 07:00 – 18:00",
+          "sexta-feira: 07:00 – 18:00",
+          "sábado: 07:00 – 15:00",
+          "domingo: 08:00 – 15:00"
+        ]
+      },
+      "userRatingCount": 129,
+      "displayName": {
+        "text": "ND Borracharia - Diadema",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": false,
+        "weekdayDescriptions": [
+          "segunda-feira: 07:00 – 18:00",
+          "terça-feira: 07:00 – 18:00",
+          "quarta-feira: 07:00 – 18:00",
+          "quinta-feira: 07:00 – 18:00",
+          "sexta-feira: 07:00 – 18:00",
+          "sábado: 07:00 – 15:00",
+          "domingo: 08:00 – 15:00"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/reviews/Ci9DQUlRQUNvZENodHljRjlvT21aT2VIbEVRMVZFU2w5Q1NreE1lbUpHTUZBMFpHYxAB",
+          "relativePublishTimeDescription": "8 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-01-13T18:10:57.313598129Z"
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/reviews/Ci9DQUlRQUNvZENodHljRjlvT2xkSFVHSm9hbkZTVFZGaVpFNDVZVUo1TlhSVVluYxAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-15T14:16:17.098483232Z"
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/reviews/Ci9DQUlRQUNvZENodHljRjlvT21JNVZXdHFSVEJTWVRGeVkybEZMV2RmU2w4NVZFRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-11T16:29:51.999487871Z"
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/reviews/Ci9DQUlRQUNvZENodHljRjlvT2xacVRWWTVhM3BrY2pOc1ZsOUZSazl2UjJaYWVsRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-12T16:29:57.389347582Z"
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tNeWNXVTRObVpUVlhOR2VsQnBiMnR6VXkxc1JtYxAB",
+          "relativePublishTimeDescription": "7 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-02-18T01:03:29.515666771Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMbudDXM5bAIbMwUHDfwJ2Svxab7Iz8k6lDU47KWpOaIxgAHltO-JiZrgRHYmpVGTsO5ReNdt6c_HJ6UqCrpqFcWF51_ecsx5RHRroDOg-Gqkq1IlHT8tR40cre4FJU48tFSaKtZvpVUHHauGLXV7eFLw7sVYmNpWq0KCNHQ4gOKAh7HzGA7ftPerV1B-3opjlVnTsTQsHkBDJepYXJPkUflZ4sNI9c2HMt6rs729DPt_x5aYtkviZytwrUXneh9qoANBDMWK3Np_hmgkyd710h1m_eeSOsYxjnONz4stgaGv8JfTkhdBAIZ8AeyIMo8dl1DcDgyIWMbM-U3yypFzhf0L-HYdS0m_jOdmwRHjLMDm-DWASvNH4k1igI4XFRoqrjbYll9ks2GTLMCQRPTXNH9GS6vLQU7aGiqLgyLj_a2Qg",
+          "widthPx": 1080,
+          "heightPx": 968
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMbb5bdgdCQqyYIwMPxruTDY8hnLFSSNmGVEHJKUQD3e08qVb3wWfGkLkS4b000JYU6Z9eRFhXUVya_nvA-AEgPdGzLLiEtrUB1LKYVdi3WejDnT4QNSUGsQbXiHEg5jIPkZ1hfujDsfznu3W9SkQXZFpwX9eOpVSdLcVrLIs8XmZktPUs-QC8Ne5QUwbYW79jzM5lPPfyi-0JDbWBTZl2rXvZ7XmOF1fIF7FExezHiSi2WLL6OENNFCmfYlvbHn4zcL-bsA1iEUnD9EW3Dkxx9uwsB7iyGGfDzACrh4Zjmhiu3yP4agED76b4EZ2WiZHumFlTtT9ZU0NIzDbqnuXVFzCIKKSBh_T5NQxrtthMbE91SCUnCqQJn1XWZ9dXdr6zTnH-dzNdZqSQeWI7_zgZD91CgfR-mkjjN5zYt1Pvs",
+          "widthPx": 4624,
+          "heightPx": 2084
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMZW5KMrTsU3zyLuLtbW6vv3yw9qkPlVs9xZAUHqMNrKeActzGPt86jiwl14bzFMGmxI0J6PPr_tvUzSwJRNfdnLasgFLQphThbbBVTf0uBxZWoxBygrTc0E6j0MlrI4olDpkV1ykRfccQDDgSarFZxE6VSlc4sgT4gMOkYtQ1n8flFKTrM6uUC-MAm5erd-pwjVliiDEPHCbP0_voQTyTz9gjhirNJQXMKdMUw6pFNnwVWEhxVNq6pl6SxgosTgjx1Mk_QS-58qmNjklH-7xVxslZm03rlcBNsDIClP5YfSb5TEDjhuPzkujKUGC7sldObuDNwkIt2BBiQF4bJakzKRxg94PzJadgzHb2ZQL942kYhxi3GFY5u1ZCkz557blcpTNBNXoTop60wYhj5p9lS6iuwYGQa_ImKsRkSxwTgg2hMw",
+          "widthPx": 2015,
+          "heightPx": 1904
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMaZvohV9VrOA5srRfIfaQC2CTwRlqyyuf7PV-nQKAU2m_B_tYJGgoTVLTU1BW9jWxAlNktjNic6X1BrDPlNEBykSTWqTVU3sTukgZtkoH-vc_KrZwk_Fs2nRDfZ2icEAsX86ebH12Bj3-CqOvMAeq2qOmAU7l0ZVi6fh2lOIvWYDeVL4rUCnnKH0mmqvfbQwP_Spc9s-PWNtd4zp8GQu3FZoLdHcwFlW42WNVL8uTMIiFt7asdjMXY81EpuFRKhFe34HiD3-FibEsv-6MSyJZ0ZVjdo4NZND3lFs8QCclmzHOnBc0ekuuu6zCfeMz0Rjb8FS4RK6InCjBD-klqJHhMwqpdlhwvE9BRUMKXudo4pYeW2NA4XLjB91eJwCJSLBaFUc0owfya0ShDfQxCC5IJDTOtXUCpAKM_yZ25njZQ",
+          "widthPx": 2160,
+          "heightPx": 3840
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMZhR2R5mBWOAcBpx7tUf0uO2vnbUwGS3pB6oN9hmUtBqK0fYHFier7myYCz8Bl6jDiruJw-AUDq2Dc14DKbBXwd5GuG6w9wSspCo_pW-IjJIxpV2Eqi0pRI1pkNaRkMGszcMZHbodWZ1Ig8YUAFSbwy629bzh0oVkx7a90QYlvukQlybQ0ih1cdK823HTJKxL5c4yUXTbN1W_RT0r9rP1gweCfW1nVjPhMUMSTpao4I0fjx1gh0l_q9p6UjMzgOMjLcmjBWLIlPN5fYn6lggOF6l3eRbBKqMaaw4ZDN-YhulVCXrEBdKvQlqvvOZ7Ig3RdFB9CI91VU-4GchKLRpE18YQ23PlsD8NfV_IqugbDdLOrpdrZkbtXtJFz8A7svR_t3JE2X-epjS1nzduAbj8RnCvjDxf6pZo64t7N-wCkliI96",
+          "widthPx": 3120,
+          "heightPx": 4160
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMbZkm6ao-6MqQbrKs5ontCmmSAtJ98OCx2OemRvWUkUy2_d_SY1Gym3Ky_PuM2rLTvWEWSz_h888I1udIkFhgmMjXDQc_IuuwY3ia7dt3ZgFrO1x4DDH4BoJ9iQB6-t7KP6Y1PQA45fhEkF6eqxjqMwYtjP_s1hnXqtoTyuNqGebQu6GOgZxVvm-5YAeVALtPWL3MpeGgZ3_MLKWSWIP8OJhQsbTnKxPNS0LtY2N5224HiFIRJvaKrlm8ivjqahAZJ7MKpfVQmUItKmp_iDN87WxanPrpc60gtCuW-cNqmNeeG3sL2Z3kOXRGEtBbVfKLMVhGG9Co5T0d-Mu_Z9ZBu-LDzDIqjNpcwrhoZSUK8FkeT44PWQuf3rNbpx5eUKgJxF4zvqE-OP55qRmGQMmBl3xxsiYumoUaVzukoaOz73NhbdR_lRlcOUNUOzcM_N",
+          "widthPx": 2080,
+          "heightPx": 4624
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMZCtc2TNYXZ6Qvp1Psjxnhzsxvmy_rMA_7N4-a7Y_442E3wPlxiBOdYxgxZ996SIBwL_l9nUsuqGeQsRrNUjO5dE4h72tswlp2JixS1PnXq34GE6rl9o7KbxOnRBzM6HZyZGp1r_B3GKdmGqftDaS61FyVcU41zRc4HFOKJzY4ytSwbuITBLSKlAxu2MEvekiSn3jYEPB4ZErN0zC8i068DgcHhb3YfE5dPQADACnB0NIgFIjKLfw6rHi4yy0VvYxAvq8eLo3SX9S-_W_gpo35KvKx0ZW4_EvFLi4v8L5cpB4kAumcVzB8MgDxN2Qf87djVGeShQc0R0Qvol0Z12P7WlHEJxt4rMYvlg2tKxwuqhyFDaQ-94h_Sy6VU8blXQsl1EHRC0oTvOZ0w_74TUBkza3aDoef1uKu5BnK8hss",
+          "widthPx": 1800,
+          "heightPx": 4000
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMaDOV-z-J3HGCNg9skaDKLL6Vxjzt1n8flndkipVYxh9VSBK4TYgw3PbB54Hd8rbdGF38bDmzCAlTmBtanWvKt0uLUNfx9WXPOmBN3agAqeH7IXG_mL-rCFXKuIt1JTWB0gARbcWVVM7rHMehLoA4xNHxBEbQp4k45xHB9i4ztewBgPxCV8puS-sE1go38PyFQ6R0Q2r_w2urGJuFzf5rQdereopNN-CIGwmIhDNakflaQYnWC1zvUsFjnytHGkf6HLoJC27F7xQYYOCW6gezZ43pwjDoxc74KtrWLH2EXlx-7KMBQwxx-56dkiK_0KJJUZ-14vxaFTH6U11awhbwq1z5freRfHIawZOABv_bh9wfl6mBJ-jkN6e6dcziQv8dNSL56DO6j9HONl-AaKohfjtJO7EIIS0Szw9B65YHiUng",
+          "widthPx": 1416,
+          "heightPx": 2324
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMZGW40e3NTOdf1OY8deVp543BK3CCjGCcyJ1HRGnQImV-K6YzggCaIBexiK_qDrkrlfefe_dw8xXfFb_eP4glpUnamuR6KmsGwvH_bcTPImIcUyICod11aUp_n2QuajxJLRYUiKTqtsWHrl66Lpvo_kW2Chm6pYK8FEeMIXJlQgPlYFm4M2w42PcWb99EfurejSplG4ykHgWzBybFj6068xUs1oDN-GXxSOotj7zDtuclFv2CRNPQtzZB03AreKuFi9DF9Pjp0P_wiPbsyouAo0bM4tHfvzaBC-bFPkYJ_Jk77Xzx2TA3kfiUs5ztMFDQYwYbK4YGol22DSFjActDuaJqjHIrRPni3vdSq4jlFq2v9xJV4q8GmhPb-8WFrMfuIqgX86pjm424x8zPLQH8lq5EWmYeJlWybVpAFd4o7-Ow",
+          "widthPx": 4624,
+          "heightPx": 2084
+        },
+        {
+          "name": "places/ChIJdQAqMG9FzpQRt3tAHjiNPts/photos/Aa-ngMYDRr30feHsBktbt0NH1SlCZqP3yc5tcF9HBayx_o6_a87wUIWIwDVpgNiVUC0oPUCoFDNMC-33ovGKHNsXc8di_cwLM8oySLlpIKUr18bEnyE3Iz6wcSVcazCL4hRpdrBfiukIQDjR_cS8MyId7BQIqZJd921UHQUOvScd4jyek99pIuX4Zman1NyXAcg0FDy0AtmIisGB7qgP0RtK2xCShOhbt7npWAAH4TwzhEl55jt0Xrve9OxyU-OmQKDOMg9yb53j81tKjSZuVZZfNgudSkCxiZpOdMHuKr90jOIhM8iYktmSo_UwN1Tyzw68eOB5Y7_2GYC79wGwUwSbWOss1b27xJVbBVqaQj-q7b8cAKXNOTT_BgVYC_HmgKq4lUwsjPQkWsUq1KZ1oIt6eHJS8lyGFw0mGnjNPBNu62DJVWgs",
+          "widthPx": 4624,
+          "heightPx": 2084
+        }
+      ]
+    },
+    {
+      "id": "ChIJZ2WU-VlFzpQRZu1izzDE4Vc",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "nationalPhoneNumber": "(11) 98844-9085",
+      "internationalPhoneNumber": "+55 11 98844-9085",
+      "formattedAddress": "R. da Resistência, 80 - Conceição, Diadema - SP, 09993-180",
+      "addressComponents": [
+        {
+          "longText": "80",
+          "shortText": "80",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Rua da Resistência",
+          "shortText": "R. da Resistência",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Conceição",
+          "shortText": "Conceição",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09993-180",
+          "shortText": "09993-180",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.7033764,
+        "longitude": -46.6190971
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=6332558264976469350&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "regularOpeningHours": {
+        "weekdayDescriptions": [
+          "segunda-feira: 08:30 – 21:00",
+          "terça-feira: 08:30 – 21:00",
+          "quarta-feira: 08:30 – 21:00",
+          "quinta-feira: 08:30 – 21:00",
+          "sexta-feira: 08:30 – 21:00",
+          "sábado: 08:30 – 15:00",
+          "domingo: 09:00 – 13:30"
+        ]
+      },
+      "userRatingCount": 15,
+      "displayName": {
+        "text": "Niko Motos",
+        "languageCode": "pt"
+      },
+      "currentOpeningHours": {
+        "openNow": true,
+        "weekdayDescriptions": [
+          "segunda-feira: 08:30 – 21:00",
+          "terça-feira: 08:30 – 21:00",
+          "quarta-feira: 08:30 – 21:00",
+          "quinta-feira: 08:30 – 21:00",
+          "sexta-feira: 08:30 – 21:00",
+          "sábado: 08:30 – 15:00",
+          "domingo: 09:00 – 13:30"
+        ]
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pkTVpVUktORVIyYnpGNWRXUkliMjEzZEVOVk0zYxAB",
+          "relativePublishTimeDescription": "3 semanas atrás",
+          "rating": 5,
+          "publishTime": "2026-09-01T17:09:16.701486714Z"
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/reviews/Ci9DQUlRQUNvZENodHljRjlvT25aMU1uUlVUV2s0VmpoR1lqbG5WbkJVWTJoUlFXYxAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 5,
+          "publishTime": "2026-07-30T14:49:41.833385911Z"
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/reviews/Ci9DQUlRQUNvZENodHljRjlvT25GTFYzVnFaVXRpWDFoWlFreEZOM05LV1ROTGVtYxAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-08-03T21:06:05.469952171Z"
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/reviews/Ci9DQUlRQUNvZENodHljRjlvT2toV1ZtdDZXbDlNWW1WdVJrWmlZWFExYTFweWMyYxAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 5,
+          "publishTime": "2026-08-21T00:48:15.501119197Z"
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/reviews/Ci9DQUlRQUNvZENodHljRjlvT2pjMVoybEhUbmRvVWxRM1NqSjZka3hIUm1nM1pWRRAB",
+          "relativePublishTimeDescription": "um mês atrás",
+          "rating": 5,
+          "publishTime": "2026-07-30T14:37:29.662594632Z"
+        }
+      ],
+      "photos": [
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/photos/Aa-ngMbt8VtY1iRB-l8hcjMWOlOHSi6a_AgAikod-GOXeN0ZpYo1YsyyvcX5N6qYnBMoHuOYDdwLQ5BKu4nP0YGfKRO_e3QGc-0KtUnZJq0mi7xB2zhpuh2SmEvyRLFPjpJWWDoPSndK-q1DzCdNTbsTqwhJQlUkT0Z5Beh6MMWoeFII0-7ZTF25vcpND82wjQBmBAQFrkCGJ1VGfqB9h0wRLlchUHHvVbg3MZ5cZ2U1_yFyo9AMDTbLjEikjApPYuusyuKLk-Uya1OFJHGiA2Sra_bb43sI5seAqUDGinDBcKRD4-OAPBZouQroT5_J428ZMmGko3r-TqR3TaSttApLcyNFAgn63EzSSkwcYhiE2rqCMTO4k7TxMh_EwjETW85wcyKKFti8fe-1wIbY6FLmY1235zBnlaPqVQXU3jZ8Dt8x",
+          "widthPx": 1170,
+          "heightPx": 2080
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/photos/Aa-ngMa-TdqobX38y09Yj6WhzK8Ci7vY1uwloXrb0n7i5OV5OWKECa6Y91SSogvfy0VAyHP1yNrFRz5BHKGWcrQeTRd9D63lC6MIALI6UvJhPJ_agmKzv6uzvHNKmvuqsFToGSZY_sStK6FTABvDbQO_NswH8BMbIxA20oE3gleOqvuQSMrHqAnc-91Ji0ODE19zIP33IGobTB-DiX33ZXrfPuX8Fb_HeMsJwtoUyDJCm8GwUI1aWFp3LYoUBgebi2rZHm6BvTRyFUxqNF0xphxmhEFxDQkZCAXOlBgwFBw3m_pPLn2uNbHu0R6dXT7x7e9e8EsLSgzxTIjRH82ZQgHH0-3hpN0win4PE50SllCQdBcJcZOqV_1Anov51WpXtCSZm27sydSmfM0Yq4JOglenIf2ogbjzC3w",
+          "widthPx": 1170,
+          "heightPx": 2080
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/photos/Aa-ngMYFENllPcegwzIPaOYEEWMkukw4ojcJ_sxchK-eTclzErR048QllUyQ_lNOsR01XzpGJDTPicWmB5rGw9ex30AKlTqMHBHkl6hJLNbGvavg6twgJVjMRdDd-KIloMzZkMWUpPBa7KyEURuqw9rMTdxgH8RuagCJMjJAi6K-Ay4qxuWuUQFyhxhzc_qkXERYHM4SjKvM4zsOXzw1IAnhJ7qmwOpOT1FFBGkpnGQX-QNoVX4kHq4sZ4k-XQQIMFwa0ITCzzzDizXANPHGRw9Ir2eUzyO_v6esp9McxmKGwmNeKsHsgWZFOKW3_vpMlOOA_MTBRYMyTTOIQps56-ck-m3XPvfQBwZzYhgSMo_H1mV8sAt75y60QmSmJMR2mVWtz71zmIINO80k6NdLyUO97HZFFdg",
+          "widthPx": 1170,
+          "heightPx": 2080
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/photos/Aa-ngMYo3jZt0cnVGY_-o4sWdxc1V5FcQDWu4coh4Krm6Vz0Lds6n3n10zjNqH0BnY_eo7VCZj89dXGbtCtMpPLfbVBiDOj-IX6WFoK-XXNnUV9cY2dplMBXmb5fVqbkNVv-XjG0jF61LdjSEUzENN3Zlp3B77iPZZ_6dsR0n1o23C72n7-6HjMFmgfQgWwIXGIzmhXbII07YGjE_Qevgf7OZfTEz896lGflgAiKt7Ds-C8kN_pn3QtO5JjHNtrWHsxavLwdz3pZRGcvVZaMcvjnPCF03Plq_CkJ8CFV5wXJPHi5RP6soH-NPh_3Wlx7vI1rP0_sV9Y_8VvN5n7E5x4NnUC1UI5Y1N4ObqBi0BxPnDhjfenjsAmT4gkxA9VsNV7_IOzs-Fn1tOs3wBTT0IYrThnhHXr3Sxu6zeXXzJB1Naz9",
+          "widthPx": 1170,
+          "heightPx": 2080
+        },
+        {
+          "name": "places/ChIJZ2WU-VlFzpQRZu1izzDE4Vc/photos/Aa-ngMZv1LHzjo_CQxyPQbNDSFZoHgFz-uTpgMvGVAaqLM31JVTqocdIh1B_IDWskmJgmlVKLicYZaSjVYxgiSH7eeMubKt3NL9VE0jjBXMa6zNT9vHjn56N-969Ef7MZKDpRfiS-2jMBAPOGzyS6A1ZmUNW9O1SKsmndUZyqVNZJ9UDqysLE47hW01tHGKguFeg1C02xD5i8gDV5BPlti4JO2bTp1BPH4HBR1Tn4Nrzus3Blog3sok3X5W0aGujCmYmBjOqnCWwIGKbmOlXliIHyS9dDbXTdTOZBAlfctRq0WfW9tRdv_o9pdVR2D7IN_AtvruGxj_FcKZKWbKpR_L49sHEAvsOzQ4Ci3zgb1awuLw5a7104BjLGIeW67qo2qY9E-F44iratx5O6g9qliAFUcqHkPVxcB8",
+          "widthPx": 2160,
+          "heightPx": 3840
+        }
+      ]
+    },
+    {
+      "id": "ChIJK0n8rVlEzpQRZTotIRKJQVM",
+      "types": [
+        "tire_shop",
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "formattedAddress": "R. Araci - Conceição, Diadema - SP, 09990-240",
+      "addressComponents": [
+        {
+          "longText": "Rua Araci",
+          "shortText": "R. Araci",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Conceição",
+          "shortText": "Conceição",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09990-240",
+          "shortText": "09990-240",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.698497699999997,
+        "longitude": -46.620472199999995
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=5999226889593240165&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "userRatingCount": 2,
+      "displayName": {
+        "text": "Borracharia Araci",
+        "languageCode": "pt"
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJK0n8rVlEzpQRZTotIRKJQVM/reviews/Ci9DQUlRQUNvZENodHljRjlvT21ocFZscFZUSFZaU2tzNFNteHVWa1F6Y2pKQ1MxRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-07T10:37:36.508414826Z"
+        },
+        {
+          "name": "places/ChIJK0n8rVlEzpQRZTotIRKJQVM/reviews/Ci9DQUlRQUNvZENodHljRjlvT2tFNFVFbE9aV1p2Y2xKRGMydFdNMGRyVTNCa1dtYxAB",
+          "relativePublishTimeDescription": "um ano atrás",
+          "rating": 5,
+          "publishTime": "2025-07-19T16:10:17.022965807Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJhQ7cXmtEzpQRXT3hYvCHM2w",
+      "types": [
+        "point_of_interest",
+        "establishment"
+      ],
+      "formattedAddress": "Av. Nossa Sra. das Graças, 878 - Serraria, Diadema - SP, 09960-120",
+      "addressComponents": [
+        {
+          "longText": "878",
+          "shortText": "878",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Nossa Senhora das Graças",
+          "shortText": "Av. Nossa Sra. das Graças",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Serraria",
+          "shortText": "Serraria",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09960-120",
+          "shortText": "09960-120",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.7095784,
+        "longitude": -46.607976300000004
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=7796724846429289821&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "userRatingCount": 1,
+      "displayName": {
+        "text": "BORRACHARIA OBRIGADO DEUS",
+        "languageCode": "pt"
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJhQ7cXmtEzpQRXT3hYvCHM2w/reviews/ChZDSUhNMG9nS0VJQ0FnSUM5el9XVkRREAE",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-03-11T10:59:04.012548Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJ2dCQ_DlEzpQRDVTZ_iBdIlc",
+      "types": [
+        "auto_parts_store",
+        "car_repair",
+        "store",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "formattedAddress": "Av. Nossa Sra. dos Navegantes, 584 - Eldorado, Diadema - SP, 09972-260",
+      "addressComponents": [
+        {
+          "longText": "584",
+          "shortText": "584",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Avenida Nossa Senhora dos Navegantes",
+          "shortText": "Av. Nossa Sra. dos Navegantes",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Eldorado",
+          "shortText": "Eldorado",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09972-260",
+          "shortText": "09972-260",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.719679499999998,
+        "longitude": -46.6220169
+      },
+      "rating": 5,
+      "googleMapsUri": "https://maps.google.com/?cid=6278683226803885069&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "userRatingCount": 1,
+      "displayName": {
+        "text": "BORRACHARIA Alemão",
+        "languageCode": "pt"
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJ2dCQ_DlEzpQRDVTZ_iBdIlc/reviews/ChdDSUhNMG9nS0VJQ0FnSUNPMGJUMmlBRRAB",
+          "relativePublishTimeDescription": "4 anos atrás",
+          "rating": 5,
+          "publishTime": "2022-06-12T14:43:44.485850Z"
+        }
+      ]
+    },
+    {
+      "id": "ChIJIYQvqVNFzpQRc4T6U-O8PjQ",
+      "types": [
+        "car_repair",
+        "point_of_interest",
+        "service",
+        "establishment"
+      ],
+      "formattedAddress": "R. Vinte e Sete de Março, 767 - Canhema, Diadema - SP, 09941-450",
+      "addressComponents": [
+        {
+          "longText": "767",
+          "shortText": "767",
+          "types": [
+            "street_number"
+          ],
+          "languageCode": "pt-BR"
+        },
+        {
+          "longText": "Rua Vinte e Sete de Março",
+          "shortText": "R. Vinte e Sete de Março",
+          "types": [
+            "route"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Canhema",
+          "shortText": "Canhema",
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Diadema",
+          "shortText": "Diadema",
+          "types": [
+            "administrative_area_level_2",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "São Paulo",
+          "shortText": "SP",
+          "types": [
+            "administrative_area_level_1",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "Brasil",
+          "shortText": "BR",
+          "types": [
+            "country",
+            "political"
+          ],
+          "languageCode": "pt"
+        },
+        {
+          "longText": "09941-450",
+          "shortText": "09941-450",
+          "types": [
+            "postal_code"
+          ],
+          "languageCode": "pt-BR"
+        }
+      ],
+      "location": {
+        "latitude": -23.67729,
+        "longitude": -46.6025841
+      },
+      "rating": 4.8,
+      "googleMapsUri": "https://maps.google.com/?cid=3764654023080838259&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQQAhgEIAA",
+      "userRatingCount": 6,
+      "displayName": {
+        "text": "Borracharia",
+        "languageCode": "pt"
+      },
+      "reviews": [
+        {
+          "name": "places/ChIJIYQvqVNFzpQRc4T6U-O8PjQ/reviews/Ci9DQUlRQUNvZENodHljRjlvT2twbWFWRmxSbkpoU1VvNU5sZGZhV05TTUhFNGJFRRAB",
+          "relativePublishTimeDescription": "3 meses atrás",
+          "rating": 5,
+          "publishTime": "2026-06-21T12:19:35.702287813Z"
+        },
+        {
+          "name": "places/ChIJIYQvqVNFzpQRc4T6U-O8PjQ/reviews/ChZDSUhNMG9nS0VJQ0FnSUNwM3JxSWZ3EAE",
+          "relativePublishTimeDescription": "3 anos atrás",
+          "rating": 5,
+          "publishTime": "2023-08-04T12:31:43.894791Z"
+        },
+        {
+          "name": "places/ChIJIYQvqVNFzpQRc4T6U-O8PjQ/reviews/ChdDSUhNMG9nS0VJQ0FnSUNiM09fejZ3RRAB",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-07-24T15:14:58.405292Z"
+        },
+        {
+          "name": "places/ChIJIYQvqVNFzpQRc4T6U-O8PjQ/reviews/ChdDSUhNMG9nS0VJQ0FnSURMcXZERXF3RRAB",
+          "relativePublishTimeDescription": "2 anos atrás",
+          "rating": 5,
+          "publishTime": "2024-06-26T20:55:49.205901Z"
+        },
+        {
+          "name": "places/ChIJIYQvqVNFzpQRc4T6U-O8PjQ/reviews/ChZDSUhNMG9nS0VJQ0FnSUN4bjliN0tREAE",
+          "relativePublishTimeDescription": "3 anos atrás",
+          "rating": 5,
+          "publishTime": "2023-05-29T13:33:24.303082Z"
+        }
+      ]
+    }
+  ]
+}

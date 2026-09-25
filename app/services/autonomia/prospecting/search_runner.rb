@@ -41,6 +41,7 @@ class Autonomia::Prospecting::SearchRunner
       search.area_config = area_config_for_radius(provider_result[:radius])
       search.metadata = search.metadata.to_h.merge(
         'lead_ids' => leads.map(&:id),
+        'lead_ranks' => lead_ranks(leads),
         'results_count' => leads.size,
         'search_filters' => search_filters,
         'requested_radius' => radius,
@@ -65,11 +66,24 @@ class Autonomia::Prospecting::SearchRunner
     raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
     raise UnsupportedProviderError, 'Unsupported prospecting provider' unless %w[mock google_places].include?(provider_name)
     raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
+
     validate_google_places! if provider_name == 'google_places'
 
-    return if requested_limit <= MAX_REQUESTED_LIMIT
+    if requested_limit > MAX_REQUESTED_LIMIT
+      raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+    end
 
-    raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
+    validate_rank_range!
+  end
+
+  # O provider devolve no máximo expansion_target posições. Cortar todas elas deixa a busca sempre vazia e ainda gasta
+  # as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
+  def validate_rank_range!
+    outside_top = number_or_nil(advanced_filters['outside_top'])
+    return if outside_top.nil? || outside_top < expansion_target
+
+    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: expansion_target)
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, message)
   end
 
   def create_search!
@@ -102,7 +116,8 @@ class Autonomia::Prospecting::SearchRunner
         area_config: area_config_value,
         limit: requested_limit,
         api_key: @setting.google_places_api_key,
-        account_id: @account.id
+        account_id: @account.id,
+        country: search_country
       )
     else
       Autonomia::Prospecting::Providers::MockProvider.new(
@@ -111,9 +126,15 @@ class Autonomia::Prospecting::SearchRunner
         radius: radius_value,
         area_type: area_type,
         area_config: area_config_value,
-        limit: requested_limit
+        limit: requested_limit,
+        country: search_country
       )
     end
+  end
+
+  # País da conta (#677): o Google busca e escreve o endereço nele, e o lead sem país no endereço fica com ele.
+  def search_country
+    @search_country ||= @setting.search_country
   end
 
   def search_provider_results
@@ -134,7 +155,7 @@ class Autonomia::Prospecting::SearchRunner
                    else
                      0
                    end
-      break if advanced_filtered_attributes_count(last_attributes) >= expansion_target
+      break if advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
     {
@@ -152,8 +173,22 @@ class Autonomia::Prospecting::SearchRunner
     [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
   end
 
+  # A faixa de posição corta as mesmas posições em qualquer raio, então o que ela tira não é falta que raio maior
+  # resolva. Sem descontar, a meta nunca era alcançada e a busca expandia sempre até 4x, com 3 chamadas pagas (#677).
+  def expansion_goal
+    outside_top = number_or_nil(advanced_filters['outside_top']).to_i
+    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
+    last_rank = search_rank_max ? [expansion_target, search_rank_max.to_i].min : expansion_target
+
+    last_rank - outside_top
+  end
+
+  # Falta de chave é da plataforma, não de quem busca: o detalhe vai para o log e a pessoa lê a frase em português.
   def validate_google_places!
-    raise ProviderError, 'Google Places platform API key is not configured' unless @setting.google_places_configured?
+    return if @setting.google_places_configured?
+
+    Rails.logger.warn("[Prospecting::GooglePlaces] search account_id=#{@account.id} GOOGLE_PLACES_API_KEY não configurada")
+    raise ProviderError, I18n.t('autonomia.prospecting.errors.google_unavailable')
   end
 
   # Grava na ordem da chave do lead, não na do Google: duas buscas simultâneas com os mesmos lugares em ordem diferente
@@ -179,6 +214,12 @@ class Autonomia::Prospecting::SearchRunner
       retried = true
       retry
     end
+  end
+
+  # O lead é um só por conta e o search_rank dele é o da busca mais recente. A busca guarda a posição de cada lead
+  # dela, para o card e o refino por faixa de posição ao reabrir (#677). Prioridade e pontuação ainda são do lead.
+  def lead_ranks(leads)
+    leads.to_h { |lead| [lead.id.to_s, lead.search_rank] }
   end
 
   def lost_race?(error)
@@ -224,7 +265,7 @@ class Autonomia::Prospecting::SearchRunner
     return [] if leads.blank?
 
     ranked = leads.map do |lead|
-      raw_priority = lead.score.to_f * priority_multiplier(lead) - priority_penalty(lead)
+      raw_priority = (lead.score.to_f * priority_multiplier(lead)) - priority_penalty(lead)
       { lead: lead, raw_priority: raw_priority }
     end
 
@@ -334,26 +375,57 @@ class Autonomia::Prospecting::SearchRunner
     end
   end
 
+  # Chaves e regras da gaveta de filtros do Orth (search-filters.ts). has_photos, open_now e has_opening_hours são
+  # atributos que o provider entrega (contrato #677); sem eles o filtro ativo falha alto em vez de zerar a busca.
   def advanced_filter_matches?(attributes, google_rank)
-    return false unless boolean_filter_matches?(attributes[:website], advanced_filters['has_website'])
-    return false unless boolean_filter_matches?(attributes[:phone], advanced_filters['has_phone'])
-    return false unless boolean_filter_matches?(attributes[:has_photos], advanced_filters['has_photos'])
-    return false unless optional_boolean_filter_matches?(attributes[:open_now], advanced_filters['open_now'])
+    presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
+      reviews_filter_matches?(attributes)
+  end
 
+  def presence_filters_match?(attributes)
+    boolean_filter_matches?(attributes[:website], advanced_filters['has_website']) &&
+      boolean_filter_matches?(attributes[:phone], advanced_filters['has_phone']) &&
+      photos_filter_matches?(attributes) &&
+      only_yes_filter_matches?(attributes, :open_now) &&
+      only_yes_filter_matches?(attributes, :has_opening_hours)
+  end
+
+  # "Acima de" descarta quem não tem nota; "abaixo de" deixa passar, como no Orth.
+  def rating_filters_match?(attributes)
     rating = number_or_nil(attributes[:rating])
     rating_min = number_or_nil(advanced_filters['rating_min'])
     return false if rating_min && (rating.nil? || rating < rating_min)
 
     rating_max = number_or_nil(advanced_filters['rating_max'])
-    return false if rating_max && (rating.nil? || rating > rating_max)
+    !(rating_max && rating && rating > rating_max)
+  end
 
-    reviews_min = number_or_nil(advanced_filters['reviews_min'])
-    return false if reviews_min && attributes[:reviews_count].to_i < reviews_min
+  # Faixa da posição no Google: outside_top corta as N primeiras, search_rank_max corta depois da N-ésima.
+  def rank_filters_match?(google_rank)
+    outside_top = number_or_nil(advanced_filters['outside_top'])
+    return false if outside_top && google_rank <= outside_top
 
     search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
-    return false if search_rank_max && google_rank > search_rank_max
+    !(search_rank_max && google_rank > search_rank_max)
+  end
 
-    true
+  def reviews_filter_matches?(attributes)
+    reviews_min = number_or_nil(advanced_filters['reviews_min'])
+    !(reviews_min && attributes[:reviews_count].to_i < reviews_min)
+  end
+
+  def photos_filter_matches?(attributes)
+    filter_value = advanced_filters['has_photos']
+    return true if filter_value.blank?
+
+    attributes.fetch(:has_photos) == (filter_value == 'yes')
+  end
+
+  # Aberto agora e tem horário só têm a opção "sim", como no Orth. Outro valor não filtra.
+  def only_yes_filter_matches?(attributes, key)
+    return true unless advanced_filters[key.to_s] == 'yes'
+
+    attributes.fetch(key) == true
   end
 
   def advanced_filtered_attributes_count(attributes)
@@ -366,13 +438,6 @@ class Autonomia::Prospecting::SearchRunner
     return true if filter_value.blank?
 
     filter_value == 'yes' ? value.present? : value.blank?
-  end
-
-  def optional_boolean_filter_matches?(value, filter_value)
-    return true if filter_value.blank?
-    return false if value.nil?
-
-    filter_value == 'yes' ? value == true : value == false
   end
 
   def number_or_nil(value)
@@ -518,12 +583,25 @@ class Autonomia::Prospecting::SearchRunner
     }.compact
   end
 
+  # Modo, jogada e decisor da busca (#677). A jogada é gravada mesmo nula, para
+  # sobrescrever o valor cru do pedido depois de validada contra o modo.
   def scoring_metadata
     {
       'score_mode' => search_score_mode,
       'scoring_profile_id' =>
         metadata['scoring_profile_id'].presence || @setting.scoring_profile_id
-    }.compact
+    }.compact.merge(
+      'preset_id' => search_preset_id,
+      'decision_maker_type' => Autonomia::Prospecting::DecisionMakerType.normalize(metadata['decision_maker_type'])
+    )
+  end
+
+  def search_preset_id
+    preset_id = metadata['preset_id'].presence
+    return if preset_id.nil?
+    return preset_id.to_s if Autonomia::Prospecting::SearchPresets.valid_for_mode?(preset_id, search_score_mode)
+
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.presets.invalid'))
   end
 
   def search_score_mode
@@ -564,11 +642,12 @@ class Autonomia::Prospecting::SearchRunner
       categories: categories,
       metadata: metadata.merge(crm_target_metadata)
                         .merge(scoring_metadata).merge(
-        'lead_ids' => leads.map(&:id),
-        'results_count' => leads.size,
-        'cached_from_search_id' => search.id,
-        'search_filters' => search_filters
-      )
+                          'lead_ids' => leads.map(&:id),
+                          'lead_ranks' => search.metadata.to_h['lead_ranks'],
+                          'results_count' => leads.size,
+                          'cached_from_search_id' => search.id,
+                          'search_filters' => search_filters
+                        )
     )
 
     Result.new(search: cached_search, leads: leads)
@@ -588,6 +667,7 @@ class Autonomia::Prospecting::SearchRunner
         JSON.generate(advanced_filters),
         requested_limit,
         search_score_mode,
+        search_country,
         @setting.scoring_mode,
         @setting.scoring_profile_id,
         @setting.active_scoring_weights.sort.to_h

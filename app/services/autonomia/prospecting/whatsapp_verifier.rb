@@ -15,7 +15,7 @@ class Autonomia::Prospecting::WhatsappVerifier
 
     response = Waha::Client.new.check_contact_exists(phone: normalized_phone, session: waha_session)
     exists = ActiveModel::Type::Boolean.new.cast(response['numberExists'])
-    chat_id = exists ? response['chatId'].presence || "#{normalized_phone.delete('+')}@c.us" : nil
+    chat_id = exists ? response['chatId'].presence || "#{normalized_phone.delete('+')}#{Autonomia::Prospecting::PhoneContract::CHAT_ID_SUFFIX}" : nil
 
     persist_result!(exists: exists, chat_id: chat_id)
 
@@ -28,26 +28,7 @@ class Autonomia::Prospecting::WhatsappVerifier
   private
 
   def normalized_phone
-    @normalized_phone ||= begin
-      raw = @lead.phone.to_s.strip
-      digits = raw.gsub(/\D/, '')
-      if digits.blank?
-        nil
-      else
-        phone =
-          if raw.start_with?('+')
-            "+#{digits}"
-          elsif digits.start_with?('55')
-            "+#{digits}"
-          elsif digits.length.in?([10, 11])
-            "+55#{digits}"
-          else
-            "+#{digits}"
-          end
-
-        phone.match?(/\A\+[1-9]\d{7,14}\z/) ? phone : nil
-      end
-    end
+    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(@lead.phone, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
   end
 
   def waha_session

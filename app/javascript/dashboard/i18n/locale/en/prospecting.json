@@ -3,6 +3,60 @@
     "STATES": {
       "LOADING": "Loading..."
     },
+    "SEARCH_COUNTRY": {
+      "LABEL": "País da busca",
+      "HINT": "O Google procura cidades, endereços e empresas neste país. O idioma das telas não muda.",
+      "DEFAULT_HINT": "Sem escolha, a busca é no Brasil.",
+      "COUNTRIES": {
+        "BR": "Brasil",
+        "PT": "Portugal",
+        "US": "Estados Unidos",
+        "FR": "França",
+        "ES": "Espanha",
+        "DE": "Alemanha",
+        "IT": "Itália",
+        "GB": "Reino Unido",
+        "MX": "México",
+        "AR": "Argentina",
+        "CL": "Chile",
+        "CO": "Colômbia",
+        "PE": "Peru",
+        "EC": "Equador",
+        "PY": "Paraguai",
+        "UY": "Uruguai",
+        "AT": "Áustria",
+        "IE": "Irlanda",
+        "IN": "Índia"
+      },
+      "GROUPS": {
+        "SOUTH_AMERICA": "América do Sul",
+        "NORTH_AMERICA": "América do Norte e Central",
+        "EUROPE": "Europa",
+        "ASIA": "Ásia",
+        "OTHER": "Outros"
+      }
+    },
+    "DECISION_MAKER": {
+      "LABEL": "Tipo de decisor",
+      "COMING_SOON": "{label} (em breve)",
+      "TYPES": {
+        "OWNER": "Proprietário",
+        "CEO": "CEO",
+        "COMMERCIAL": "Comercial",
+        "FINANCIAL": "Financeiro",
+        "MARKETING": "Marketing",
+        "HR": "RH",
+        "OPERATIONS": "Operações",
+        "TECHNOLOGY": "Tecnologia",
+        "LEGAL": "Jurídico",
+        "COMPLIANCE": "Compliance",
+        "RISK": "Riscos"
+      }
+    },
+    "LOCATION_ERRORS": {
+      "SUGGESTIONS": "Não foi possível buscar sugestões de local agora. Tente de novo em instantes.",
+      "DETAILS": "Não foi possível confirmar este local agora. Escolha a sugestão de novo."
+    },
     "ERRORS": {
       "LOAD_SEARCHES": "Could not load prospect searches.",
       "LOAD_SEARCH": "Could not load this prospect search.",
@@ -144,6 +198,44 @@
       "TIME_MINUTES_AGO": "há {count}min",
       "TIME_HOURS_AGO": "há {count}h",
       "TIME_DAYS_AGO": "há {count}d",
+      "MODE_BADGE": {
+        "GBP": "Modo: GMN (atacar lacunas)",
+        "GENERAL": "Modo: Geral (qualificar leads)",
+        "GBP_TOOLTIP": "Modo GMN: a busca prioriza empresas com lacunas no Google Meu Negócio, que viram oportunidade comercial.",
+        "GENERAL_TOOLTIP": "Modo Geral: a busca prioriza empresas qualificadas, bem estruturadas no Google."
+      },
+      "PRESETS": {
+        "TITLE": "Sua jogada",
+        "HINT": "Escolha a estratégia. Ela define os filtros base e o tipo de lead que a busca vai trazer. Opcional.",
+        "NONE_NAME": "Sem jogada",
+        "NONE_PITCH": "Busca livre",
+        "ITEMS": {
+          "VENDER_SITE": {
+            "NAME": "Vender site",
+            "PITCH": "Empresas sem site no Google"
+          },
+          "GESTAO_REVIEWS": {
+            "NAME": "Gestão de avaliações",
+            "PITCH": "Avaliação fraca, volume relevante"
+          },
+          "OTIMIZACAO_GBP": {
+            "NAME": "Otimização GMN",
+            "PITCH": "Maduras, mas com lacuna no perfil"
+          },
+          "PROVA_SOCIAL": {
+            "NAME": "Prova social",
+            "PITCH": "Empresas bem avaliadas, boa reputação"
+          },
+          "MERCADO_MADURO": {
+            "NAME": "Mercado maduro",
+            "PITCH": "Volume e nota saudáveis"
+          },
+          "PRESENCA_DIGITAL": {
+            "NAME": "Presença digital",
+            "PITCH": "Site, telefone e perfil completo"
+          }
+        }
+      },
       "SECTIONS": {
         "WHERE": "Onde buscar",
         "DECIDER": "Decisor e quantidade",
@@ -154,6 +246,58 @@
         "ANY": "Todos",
         "YES": "Sim",
         "NO": "Não"
+      },
+      "FILTER_DRAWER": {
+        "TITLE": "Filtros avançados",
+        "BASE_PRESET": "Jogada base:",
+        "BASE_MODE": "Modo:",
+        "OPEN": "Filtros avançados",
+        "CLOSE": "Fechar filtros",
+        "APPLY": "Aplicar",
+        "CLEAR_ALL": "Limpar tudo",
+        "GROUP_COUNT": "{count} filtros ativos",
+        "HAS": "Tem",
+        "HAS_NOT": "Não tem",
+        "REVIEWS_PLACEHOLDER": "ex: 10",
+        "OPEN_NOW": "Aberto agora",
+        "HAS_OPENING_HOURS": "Tem horário",
+        "YES": "Sim",
+        "GROUPS": {
+          "PAIN": {
+            "TITLE": "Dor do lead",
+            "SUBTITLE": "O que falta no Google que você vende"
+          },
+          "QUALIFICATION": {
+            "TITLE": "Qualificação mínima",
+            "SUBTITLE": "Corta empresa fantasma e sem volume"
+          },
+          "VISIBILITY": {
+            "TITLE": "Visibilidade no Google",
+            "SUBTITLE": "Quando você vende SEO"
+          },
+          "OPERATIONAL": {
+            "TITLE": "Operacional",
+            "SUBTITLE": "O que precisa para contatar"
+          }
+        },
+        "RATING": {
+          "LABEL": "Avaliação",
+          "OPERATOR": "Operador da avaliação",
+          "VALUE": "Estrelas da avaliação",
+          "ANY": "Qualquer",
+          "ABOVE": "Acima de",
+          "BELOW": "Abaixo de",
+          "VALUE_PLACEHOLDER": "Estrelas",
+          "STARS": "{value} estrelas"
+        },
+        "RANK": {
+          "LABEL": "Posição no Google",
+          "ANY": "{min} a {max} (qualquer)",
+          "RANGE": "{min} a {max}",
+          "MIN_ARIA": "Posição mínima no Google",
+          "MAX_ARIA": "Posição máxima no Google",
+          "REACH": "Com essa quantidade, o Google traz até {limit} posições. A faixa começa em até {limit}."
+        }
       },
       "SCORE_MODES": {
         "GBP": "Google Meu Negócio",

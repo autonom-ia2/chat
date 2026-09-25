@@ -7,6 +7,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     'places.id',
     'places.displayName',
     'places.formattedAddress',
+    'places.addressComponents',
+    'places.googleMapsUri',
     'places.location',
     'places.rating',
     'places.userRatingCount',
@@ -22,14 +24,15 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   ].join(',').freeze
   # Teto do Google por chamada. Pedido maior só chega com a paginação da E2.
   MAX_RESULTS_PER_REQUEST = 20
-  # A chave é da plataforma (#683): o texto do Google fala do nosso projeto no Google Cloud. Ele fica no log do
-  # servidor, e o cliente recebe um destes, em português, pelo i18n do backend.
-  UNAVAILABLE_MESSAGE_KEY = 'autonomia.prospecting.errors.google_unavailable'.freeze
-  BUSY_MESSAGE_KEY = 'autonomia.prospecting.errors.google_busy'.freeze
+  # Tipos de addressComponents, na ordem de preferência. Cidade sem locality é o município (administrative_area_level_2),
+  # como no Orth (lib/services/search/search-filters.ts).
+  NEIGHBORHOOD_TYPES = %w[sublocality_level_1 sublocality neighborhood].freeze
+  CITY_TYPES = %w[locality administrative_area_level_2].freeze
 
   attr_reader :api_units
 
-  def initialize(query:, location:, radius:, area_type: 'radius', area_config: {}, limit:, api_key:, account_id: nil)
+  def initialize(query:, location:, radius:, limit:, api_key:, area_type: 'radius', area_config: {}, account_id: nil,
+                 country: Autonomia::Prospecting::SearchCountry::DEFAULT)
     @query = query.to_s.strip
     @location = location.to_s.strip
     @radius = radius.to_i
@@ -38,6 +41,7 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     @limit = limit.to_i
     @api_key = api_key.to_s
     @account_id = account_id
+    @country = Autonomia::Prospecting::SearchCountry.normalize(country) || Autonomia::Prospecting::SearchCountry::DEFAULT
     @api_units = 0
   end
 
@@ -53,10 +57,9 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     raise provider_error(response) unless response.success?
 
     Array(JSON.parse(response.body)['places']).first(@limit).map { |place| lead_for(place) }
-  rescue JSON::ParserError
-    raise Autonomia::Prospecting::SearchRunner::ProviderError, 'Google Places returned an invalid response'
-  rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED => e
-    raise Autonomia::Prospecting::SearchRunner::ProviderError, "Google Places request failed: #{e.message}"
+  rescue JSON::ParserError, *Autonomia::Prospecting::GoogleErrorMessage::NETWORK_ERRORS => e
+    raise Autonomia::Prospecting::SearchRunner::ProviderError,
+          Autonomia::Prospecting::GoogleErrorMessage.for_exception(e, context: 'search', account_id: @account_id)
   end
 
   private
@@ -65,8 +68,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     {
       textQuery: [@query, @location].compact_blank.join(' '),
       maxResultCount: [@limit, MAX_RESULTS_PER_REQUEST].min,
-      languageCode: 'pt-BR',
-      regionCode: 'BR'
+      languageCode: Autonomia::Prospecting::SearchCountry.language_code(@country),
+      regionCode: @country
     }.merge(location_bias_payload)
   end
 
@@ -120,22 +123,14 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   end
 
   def provider_error(response)
-    google_message = google_error_message(response).presence || 'sem mensagem'
-    Rails.logger.warn(
-      "[Prospecting::GooglePlaces] account_id=#{@account_id} status=#{response.code} google_message=#{google_message}"
+    Autonomia::Prospecting::SearchRunner::ProviderError.new(
+      Autonomia::Prospecting::GoogleErrorMessage.for_response(
+        code: response.code, body: response.body, context: 'search', account_id: @account_id
+      )
     )
-    message_key = response.code.to_i == 429 ? BUSY_MESSAGE_KEY : UNAVAILABLE_MESSAGE_KEY
-    Autonomia::Prospecting::SearchRunner::ProviderError.new(I18n.t(message_key))
-  end
-
-  def google_error_message(response)
-    JSON.parse(response.body.to_s).dig('error', 'message')
-  rescue JSON::ParserError
-    nil
   end
 
   def lead_for(place)
-    address = place['formattedAddress'].to_s
     reviews = Array(place['reviews']).first(5)
     {
       provider: 'google_places',
@@ -143,10 +138,8 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       name: place.dig('displayName', 'text').presence || 'Google Places lead',
       phone: place['internationalPhoneNumber'].presence || place['nationalPhoneNumber'],
       website: place['websiteUri'],
-      address: address,
-      city: city_from(address),
-      state: state_from(address),
-      country: 'BR',
+      address: place['formattedAddress'].to_s,
+      google_maps_uri: place['googleMapsUri'],
       latitude: place.dig('location', 'latitude'),
       longitude: place.dig('location', 'longitude'),
       rating: place['rating'],
@@ -154,18 +147,36 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
       category: Array(place['types']).first,
       metadata: reviews.present? ? { reviews_snapshot: reviews } : {},
       raw_payload: place
+    }.merge(address_attributes(place)).merge(place_signals(place))
+  end
+
+  def address_attributes(place)
+    components = Array(place['addressComponents'])
+    {
+      neighborhood: component_text(components, NEIGHBORHOOD_TYPES, 'longText'),
+      city: component_text(components, CITY_TYPES, 'longText'),
+      state: component_text(components, ['administrative_area_level_1'], 'shortText'),
+      country: component_text(components, ['country'], 'shortText') || @country
     }
   end
 
-  def city_from(address)
-    city_state_match(address)&.[](1)&.strip
+  # Primeiro tipo da lista que aparece no endereço.
+  def component_text(components, types, text_key)
+    types.each do |type|
+      component = components.find { |item| Array(item['types']).include?(type) }
+      return component[text_key].presence || component['longText'] if component
+    end
+    nil
   end
 
-  def state_from(address)
-    city_state_match(address)&.[](2)
-  end
-
-  def city_state_match(address)
-    address.match(/,\s*([^,]+?)\s*-\s*([A-Z]{2})\b/)
+  def place_signals(place)
+    photos = Array(place['photos'])
+    current_hours = place['currentOpeningHours'].to_h
+    {
+      has_photos: photos.any?,
+      photo_count: photos.size,
+      open_now: current_hours.key?('openNow') ? current_hours['openNow'] : nil,
+      has_opening_hours: place['regularOpeningHours'].present?
+    }
   end
 end

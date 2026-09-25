@@ -1,4 +1,4 @@
-# A conta ajusta só o que é dela: funil padrão do CRM, cache e pontuação. Chave do Google, provider, limites e o
+# A conta ajusta só o que é dela: funil padrão do CRM, cache, pontuação e país da busca. Chave do Google, provider, limites e o
 # interruptor da pesquisa são da plataforma e do superadmin (#683): chegam aqui só como leitura.
 class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::Accounts::Autonomia::Prospecting::BaseController
   def show
@@ -24,6 +24,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       :scoring_mode,
       :scoring_profile_id,
       :search_score_mode,
+      :search_country,
       custom_scoring_weights: Autonomia::Prospecting::ScoringProfile::DEFAULT_WEIGHTS.keys
     )
   end
@@ -33,6 +34,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       attributes[:scoring_profile_id] = nil if attributes[:scoring_mode] == 'custom'
       attributes.delete(:scoring_profile_id) if attributes[:scoring_mode] == 'profile' && attributes[:scoring_profile_id].blank?
       attributes.delete(:search_score_mode) if attributes[:search_score_mode].blank?
+      attributes.delete(:search_country) if attributes[:search_country].blank?
     end
   end
 
@@ -52,6 +54,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SettingsController < Api::V1::A
       research_enabled: ::Autonomia::Prospecting::Config.research_enabled?(Current.account),
       ai_credential_configured: ::Autonomia::Prospecting::AiCredential.new(account: Current.account).configured?,
       search_score_mode: current_setting.search_score_mode,
+      search_country: current_setting.search_country,
+      search_countries: Autonomia::Prospecting::SearchCountry::ALLOWED,
       scoring_profiles: scoring_profiles_payload,
       active_scoring_weights: current_setting.active_scoring_weights,
       usage: usage_payload

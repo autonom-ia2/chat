@@ -85,6 +85,56 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
     expect(lead.reload).to be_discarded
   end
 
+  describe 'telefone de WhatsApp no payload pela tabela compartilhada com o front' do
+    def show_lead
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}", headers: auth_headers(admin)
+      response.parsed_body['payload']
+    end
+
+    ProspectingPhoneContractCases.all.each do |item|
+      it "#{item['caso']}: #{item['raw'].inspect} devolve #{item['e164'].inspect}" do
+        ProspectingPhoneContractCases.apply_region!(account, item['region'])
+        lead.update!(phone: item['raw'])
+
+        payload = show_lead
+
+        expect(payload['whatsapp_phone']).to eq(item['e164'])
+        expect(payload['whatsapp_url']).to be_nil
+      end
+    end
+
+    it 'monta o link do WhatsApp verificado a partir do número gravado na verificação' do
+      lead.update!(phone: '(55) 99988-7766', metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5555999887766' } })
+
+      payload = show_lead
+
+      expect(payload['whatsapp_verified']).to be(true)
+      expect(payload['whatsapp_url']).to eq('https://wa.me/5555999887766')
+    end
+  end
+
+  # "Tem horário" do refino na tela usa o mesmo valor que o motor filtrou (#677).
+  describe 'horário cadastrado no payload' do
+    def opening_hours_flag
+      get "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}", headers: auth_headers(admin)
+      response.parsed_body.dig('payload', 'has_opening_hours')
+    end
+
+    it 'devolve a coluna gravada pelo provider' do
+      lead.update!(has_opening_hours: true)
+
+      expect(opening_hours_flag).to be(true)
+    end
+
+    it 'em lead gravado antes da coluna, usa regularOpeningHours do payload guardado' do
+      lead.update!(raw_payload: { 'regularOpeningHours' => { 'weekdayDescriptions' => ['segunda-feira: 08:00'] } })
+      expect(opening_hours_flag).to be(true)
+
+      lead.update!(raw_payload: { 'currentOpeningHours' => { 'openNow' => true } })
+      expect(opening_hours_flag).to be(false)
+    end
+  end
+
   def auth_headers(user)
     { 'api_access_token' => user.access_token.token }
   end

@@ -10,7 +10,7 @@
 // chama a IA/o site do lead de verdade.
 //
 // A checagem de WhatsApp roda sozinha ao abrir a busca
-// (`verifyLeadsWhatsApp`, ver ProspectingSearchPage.vue:803) e chama um
+// (`verifyLeadsWhatsApp`, ver prospecting/composables/useSearchLeads.js) e chama um
 // serviço de fora (WAHA) para qualquer lead sem
 // `metadata['whatsapp_verification']['status']` já preenchido — por isso o
 // preparar grava esse status pronto nos dois leads (evita a chamada, ver
