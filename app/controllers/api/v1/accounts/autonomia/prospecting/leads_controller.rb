@@ -102,6 +102,19 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     render json: { payload: { lead: lead_payload(lead.reload) } }, status: :accepted
   end
 
+  # "Usar como contato" (#680): um sócio da pesquisa vira o decisor e o contato do lead. Responde o lead.
+  def adopt_owner
+    lead = leads_scope.find(params[:id])
+    ::Autonomia::Prospecting::OwnerAdoption.new(lead: lead, user: Current.user, owner_name: params[:owner_name]).perform
+
+    render json: { payload: lead_payload(lead.reload) }
+  rescue ::Autonomia::Prospecting::OwnerAdoption::NotAnOwner
+    render json: { error: I18n.t('autonomia.prospecting.errors.owner_not_found'), code: 'prospecting.owner_not_found' },
+           status: :unprocessable_entity
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+  end
+
   private
 
   def filtered_leads_scope
