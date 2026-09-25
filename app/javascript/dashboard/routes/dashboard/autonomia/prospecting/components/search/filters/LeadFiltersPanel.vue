@@ -19,9 +19,6 @@ import {
 
 const props = defineProps({
   filters: { type: Object, required: true },
-  // Última posição que a nova busca alcança; o refino da busca aberta usa a
-  // faixa inteira.
-  rankReach: { type: Number, default: RANK_SLIDER_MAX },
 });
 
 const emit = defineEmits(['apply']);
@@ -158,16 +155,7 @@ const clearAll = () => emit('apply', defaultAdvancedLeadFilters());
       tone="iris"
       :count="groupCounts.visibility"
     >
-      <RankRangeSlider
-        v-model:min="rankMin"
-        v-model:max="rankMax"
-        :max-start="rankReach"
-      />
-      <p v-if="rankReach < RANK_SLIDER_MAX" class="text-xs text-n-slate-10">
-        {{
-          t('PROSPECTING.SEARCH.FILTER_DRAWER.RANK.REACH', { limit: rankReach })
-        }}
-      </p>
+      <RankRangeSlider v-model:min="rankMin" v-model:max="rankMax" />
     </FilterGroupCard>
 
     <FilterGroupCard

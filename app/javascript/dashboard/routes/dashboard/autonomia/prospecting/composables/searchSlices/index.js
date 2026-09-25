@@ -4,6 +4,8 @@
 //   createState()          refs que só ele usa
 //   reset(state)           o que "Nova busca" limpa
 //   restore(state, search) o que volta ao reabrir uma busca salva
+//   restoreForm(state, search) o que volta ao formulário para repetir ou
+//                          editar uma busca salva (#678)
 //   toPayload(state)       { body, metadata } do pedido de criar a busca
 // Todos os campos são opcionais. Os pedaços são juntados com mergeDisjoint:
 // dois pedaços com a mesma chave quebram a montagem, em vez de um sobrescrever
@@ -35,6 +37,10 @@ export const resetSlices = state => {
 
 export const restoreSlices = (state, search) => {
   SEARCH_SLICES.forEach(slice => slice.restore?.(state, search));
+};
+
+export const restoreFormSlices = (state, search) => {
+  SEARCH_SLICES.forEach(slice => slice.restoreForm?.(state, search));
 };
 
 export const buildSearchRequest = state => {

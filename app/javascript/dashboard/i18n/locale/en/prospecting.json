@@ -144,6 +144,8 @@
       "CRM_TARGET": "Funil CRM",
       "CRM_CONFIG_HINT": "O funil CRM desta busca usa o padrão da conta, exceto quando alterado no histórico.",
       "CONFIGURE_SEARCH": "Configurações",
+      "REPEAT_SEARCH": "Repetir",
+      "EDIT_SEARCH": "Editar e buscar",
       "SAVE_CONFIG": "Salvar",
       "EMPTY": "Nenhuma busca registrada.",
       "RESULTS_EMPTY": "Execute uma busca ou selecione uma busca do histórico.",
@@ -295,8 +297,7 @@
           "ANY": "{min} a {max} (qualquer)",
           "RANGE": "{min} a {max}",
           "MIN_ARIA": "Posição mínima no Google",
-          "MAX_ARIA": "Posição máxima no Google",
-          "REACH": "Com essa quantidade, o Google traz até {limit} posições. A faixa começa em até {limit}."
+          "MAX_ARIA": "Posição máxima no Google"
         }
       },
       "SCORE_MODES": {
@@ -322,13 +323,21 @@
         "INACTIVE_GBP": "Perfil com baixa atividade recente"
       },
       "SORT": {
-        "PRIORITY_DESC": "Maior prioridade",
-        "SCORE_DESC": "Maior score",
-        "CREATED_DESC": "Mais recentes",
-        "CREATED_ASC": "Mais antigos",
-        "RATING_DESC": "Melhor avaliação",
-        "REVIEWS_DESC": "Mais avaliações",
-        "NAME_ASC": "Nome A-Z"
+        "FIELDS": {
+          "PRIORITY": "Prioridade",
+          "SCORE": "Score",
+          "RATING": "Avaliação",
+          "REVIEWS": "Número de avaliações",
+          "DISTANCE": "Distância do centro",
+          "GOOGLE_RANK": "Posição no Google",
+          "CREATED": "Data",
+          "NAME": "Nome"
+        },
+        "DIRECTION": {
+          "ASC": "Crescente",
+          "DESC": "Decrescente"
+        },
+        "INVERT": "Inverter a ordem (agora {direction})"
       },
       "FIELDS": {
         "PROVIDER": "Provider",

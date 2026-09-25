@@ -5,8 +5,7 @@
 // aberta; reabrir uma busca restaura o refino e a ordem salvos nela.
 import { ref } from 'vue';
 import { defaultAdvancedLeadFilters } from '../../utils/advancedLeadFilters';
-
-const DEFAULT_SORT_KEY = 'priority_desc';
+import { DEFAULT_SORT_KEY } from '../../utils/sortLeads';
 
 export const filtersSlice = {
   createState: () => ({
@@ -19,6 +18,14 @@ export const filtersSlice = {
   },
   restore: ({ resultFilters, sortKey }, search) => {
     resultFilters.value = {
+      ...defaultAdvancedLeadFilters(),
+      ...(search?.advanced_filters || {}),
+    };
+    sortKey.value = search?.sort_key || DEFAULT_SORT_KEY;
+  },
+  // Repetir ou editar leva os filtros e a ordem que a busca pediu.
+  restoreForm: ({ formFilters, sortKey }, search) => {
+    formFilters.value = {
       ...defaultAdvancedLeadFilters(),
       ...(search?.advanced_filters || {}),
     };

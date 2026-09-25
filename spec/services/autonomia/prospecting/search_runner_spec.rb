@@ -323,15 +323,16 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       end
 
       # Os providers passaram a devolver has_photos e open_now (#677, E1 frente C): os filtros que zeravam tudo agora
-      # separam quem tem de quem não tem.
-      it 'has_photos yes mantém só quem tem foto no payload do provider mock' do
+      # separam quem tem de quem não tem. Com a paginação (#678) o filtro roda antes do corte: o mock segue gerando
+      # lugares até completar os 8 com foto, em vez de entregar só os que tinham foto entre os 8 primeiros.
+      it 'has_photos yes mantém só quem tem foto no payload do provider mock e completa o pedido' do
         params = { query: 'dentista', location: 'Curitiba, PR', radius: 1000, area_type: 'radius', area_config: {}, limit: 8 }
         with_photos = mock_provider_class.new(**params).search.count { |place| place.dig(:raw_payload, :photos).present? }
         expect(with_photos).to be_between(1, 7)
 
         result = run_search(query: 'dentista', location: 'Curitiba, PR', requested_limit: 8, advanced_filters: { has_photos: 'yes' })
 
-        expect(result.leads.size).to eq(with_photos)
+        expect(result.leads.size).to eq(8)
         expect(result.leads.map(&:has_photos)).to all(be(true))
       end
 
@@ -391,28 +392,48 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
           .to raise_error(ActiveRecord::RecordInvalid, /less than or equal to 60/)
       end
 
-      it 'pede no máximo 20 resultados ao Google Places num pedido de 60' do
+      # Com a paginação (#678) a página é sempre de 20 (pageSize) e o pedido de 60 chega em até 3 páginas.
+      it 'pede páginas de 20 ao Google Places e para quando o Google não manda token' do
         use_google_places!
         stub_google_places([google_place])
 
         run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60)
 
-        expect(a_request(:post, google_endpoint).with { |req| JSON.parse(req.body)['maxResultCount'] == 20 }).to have_been_made.once
+        expect(a_request(:post, google_endpoint).with { |req| JSON.parse(req.body)['pageSize'] == 20 }).to have_been_made.once
       end
 
-      it 'não expande o raio num pedido de 60 quando o primeiro raio já traz os 20 que o Google entrega' do
+      it 'não expande o raio num pedido de 60 quando as três páginas do primeiro raio trazem os 60' do
         use_google_places!
-        twenty_places = Array.new(20) { |index| google_place.merge('id' => "places/google-#{index}") }
-        stub_google_places(twenty_places)
+        pages = Array.new(3) do |page|
+          { 'places' => Array.new(20) { |index| google_place.merge('id' => "places/google-#{page}-#{index}") },
+            'nextPageToken' => (page < 2 ? "token-#{page + 1}" : nil) }.compact
+        end
+        stub_request(:post, google_endpoint).to_return do |request|
+          token = JSON.parse(request.body)['pageToken']
+          { status: 200, body: pages[token.to_s.delete_prefix('token-').to_i].to_json, headers: { 'Content-Type' => 'application/json' } }
+        end
 
         result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60, radius: 1000,
                             filters: { auto_expand_radius: true })
 
-        expect(a_request(:post, google_endpoint)).to have_been_made.once
-        expect(result.search.consumed_api_units).to eq(1)
+        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
+        expect(result.search.consumed_api_units).to eq(3)
         expect(result.search.radius).to eq(1000)
         expect(result.search.metadata['radius_expanded']).to be(false)
-        expect(result.leads.size).to eq(20)
+        expect(result.leads.size).to eq(60)
+      end
+
+      # Antes o Google entregava no máximo 20 e o raio nunca crescia por isso (#683). Com a paginação, faltar lugar
+      # depois de o Google parar de mandar token é falta de verdade, e o raio cresce (#678).
+      it 'expande o raio quando o Google acaba antes de completar o pedido' do
+        use_google_places!
+        stub_google_places(Array.new(20) { |index| google_place.merge('id' => "places/google-#{index}") })
+
+        result = run_search(query: 'clinica', location: 'Curitiba, PR', requested_limit: 60, radius: 1000,
+                            filters: { auto_expand_radius: true })
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
+        expect(result.search.radius).to eq(4000)
       end
     end
 

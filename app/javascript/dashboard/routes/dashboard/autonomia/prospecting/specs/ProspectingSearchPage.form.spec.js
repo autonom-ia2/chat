@@ -462,6 +462,6 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
       choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.SORT').props(
         'modelValue'
       )
-    ).toBe('rating_desc');
+    ).toBe('rating');
   });
 });

@@ -48,4 +48,30 @@ RSpec.describe Autonomia::Prospecting::Providers::MockProvider do
 
     expect(lead[:country]).to eq('PT')
   end
+
+  # Mesmo contrato de paginação do Google Places (#678): o filtro de quem chama decide quem conta para o pedido, e o
+  # provider segue gerando lugares até completar o pedido ou chegar à posição máxima.
+  describe 'paginação' do
+    let(:provider) { described_class.new(query: 'dentista', location: 'Curitiba, PR', radius: 1000, limit: 5) }
+
+    it 'segue gerando lugares até o filtro completar o pedido' do
+      results = provider.search { |attributes, _rank| attributes[:has_photos] }
+
+      expect(results.count { |attributes| attributes[:has_photos] }).to eq(5)
+      expect(results.last[:has_photos]).to be(true)
+      expect(results.size).to be > 5
+    end
+
+    it 'passa a posição de cada lugar ao filtro, de 1 em diante' do
+      ranks = []
+      provider.search { |_attributes, rank| ranks << rank }
+
+      expect(ranks).to eq([1, 2, 3, 4, 5])
+    end
+
+    it 'não passa da posição máxima nem de 60' do
+      expect(provider.search(max_results: 3) { |_attributes, _rank| false }.size).to eq(3)
+      expect(provider.search(max_results: 500) { |_attributes, _rank| false }.size).to eq(60)
+    end
+  end
 end

@@ -34,28 +34,29 @@ RSpec.describe 'Autonomia prospecting search refusals', type: :request do
   describe 'faixa de posição que o Google não alcança' do
     around { |example| with_modified_env('GOOGLE_PLACES_API_KEY' => 'chave-da-plataforma') { example.run } }
 
-    it 'recusa começar a faixa depois da Quantidade, sem chamar o Google nem gravar busca' do
-      stub_request(:post, google_endpoint).to_return(google_places(10))
+    # Com a paginação (#678) o Google alcança até a 60ª posição em qualquer Quantidade: só começar a faixa depois
+    # dela deixa a busca sempre vazia.
+    it 'recusa começar a faixa depois da 60ª, sem chamar o Google nem gravar busca' do
+      stub_request(:post, google_endpoint).to_return(google_places(20))
 
-      create_search(requested_limit: 10, advanced_filters: { outside_top: 10 })
+      create_search(requested_limit: 60, advanced_filters: { outside_top: 60 }, filters: { auto_expand_radius: true })
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq(
-        'O Google traz até 10 posições nesta busca. Comece a faixa de posição em até 10 ou aumente a quantidade.'
+        'O Google traz até 60 posições por busca. Comece a faixa de posição em até 60.'
       )
       expect(a_request(:post, google_endpoint)).not_to have_been_made
       expect(account.autonomia_prospecting_searches.count).to eq(0)
     end
 
-    it 'recusa começar depois da 20ª mesmo com Quantidade 60 e Expandir raio, sem gastar as 3 chamadas' do
+    it 'aceita começar a faixa depois da Quantidade: a página de 20 já traz as posições seguintes' do
       stub_request(:post, google_endpoint).to_return(google_places(20))
 
-      create_search(requested_limit: 60, advanced_filters: { outside_top: 20 }, filters: { auto_expand_radius: true })
+      create_search(requested_limit: 10, advanced_filters: { outside_top: 10 })
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['error']).to include('até 20 posições')
-      expect(a_request(:post, google_endpoint)).not_to have_been_made
-      expect(account.autonomia_prospecting_searches.count).to eq(0)
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body.dig('payload', 'leads').pluck('search_rank')).to eq((11..20).to_a)
+      expect(a_request(:post, google_endpoint)).to have_been_made.once
     end
 
     it 'aceita a faixa que ainda cabe no que o Google devolve' do
