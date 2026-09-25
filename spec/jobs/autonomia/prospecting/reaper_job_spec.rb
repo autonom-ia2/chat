@@ -85,4 +85,41 @@ RSpec.describe Autonomia::Prospecting::ReaperJob do
     expect(recent.reload.metadata.dig('whatsapp_verification', 'status')).to eq('queued')
     expect(Autonomia::Prospecting::LeadBroadcaster).to have_received(:updated).with(have_attributes(id: stuck.id))
   end
+
+  # Pesquisa de empresa e decisor (#679): mesma regra do enriquecimento. Em pesquisa há mais de 15 minutos é worker que
+  # morreu; na fila ou esperando a vez da empresa, só depois da espera máxima da fila.
+  describe 'pesquisa presa' do
+    it 'devolve a failed a pesquisa rodando há mais de 15 minutos e avisa a tela' do
+      stuck = create_lead('pesquisando', company_research_status: 'researching', decision_research_status: 'researching',
+                                         research_started_at: 16.minutes.ago, research_requested_at: 20.minutes.ago)
+
+      described_class.perform_now
+
+      expect(stuck.reload).to have_attributes(company_research_status: 'failed', decision_research_status: 'failed',
+                                              research_error: 'interrupted')
+      expect(stuck.research_completed_at).to be_present
+      expect(Autonomia::Prospecting::LeadBroadcaster).to have_received(:updated).with(have_attributes(id: stuck.id))
+    end
+
+    it 'devolve a failed o que ficou na fila ou esperando a vez além da espera máxima' do
+      too_old = (Autonomia::Prospecting::LeadWorkQueue::QUEUED_STALE_AFTER + 1.minute).ago
+      lost = create_lead('perdida', company_research_status: 'queued', research_requested_at: too_old)
+      waiting = create_lead('esperando', company_research_status: 'waiting_capacity', research_requested_at: too_old)
+
+      described_class.perform_now
+
+      expect([lost.reload, waiting.reload].map(&:company_research_status)).to eq(%w[failed failed])
+    end
+
+    it 'não mexe na pesquisa dentro do prazo nem na terminada' do
+      queued = create_lead('na-fila', company_research_status: 'queued', research_requested_at: 40.minutes.ago)
+      running = create_lead('rodando', company_research_status: 'researching', research_started_at: 5.minutes.ago,
+                                       research_requested_at: 3.hours.ago)
+      done = create_lead('feita', company_research_status: 'confirmed', research_requested_at: 3.hours.ago)
+
+      described_class.perform_now
+
+      expect([queued, running, done].map { |lead| lead.reload.company_research_status }).to eq(%w[queued researching confirmed])
+    end
+  end
 end

@@ -735,3 +735,4 @@ pt_BR:
         drawn_area_required: 'Desenhe a área no mapa antes de buscar: um círculo, um retângulo ou um polígono com pelo menos três pontos.'
         rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'
         enrichment_in_progress: 'Este lead já está sendo enriquecido. O card se atualiza sozinho quando terminar.'
+        research_disabled: 'A pesquisa de empresa e decisor está desligada nesta conta. Fale com o suporte para ligar.'
