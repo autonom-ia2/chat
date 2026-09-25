@@ -49,11 +49,14 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     ).perform
     # Enriquecer e verificar WhatsApp no servidor, sem depender da aba aberta (#678).
     ::Autonomia::Prospecting::LeadWorkQueue.after_search(account: Current.account, leads: result.leads)
+    # A fila marca 'queued' por update_all: sem reler, a tela recebia 'pending', verificava pela aba os mesmos números
+    # que o job verifica e mostrava Enriquecer livre num lead já na fila.
+    leads = result.leads.each(&:reload)
 
     render json: {
       payload: {
         search: search_payload(result.search),
-        leads: result.leads.map { |lead| lead_payload(lead, result.search) }
+        leads: leads.map { |lead| lead_payload(lead, result.search) }
       }
     }, status: :created
   rescue ActiveRecord::RecordInvalid => e
@@ -190,7 +193,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       radius_expanded: ActiveModel::Type::Boolean.new.cast(
         search.metadata.to_h['radius_expanded']
       ),
-      cached_from_search_id: search.metadata.to_h['cached_from_search_id']
+      cached_from_search_id: search.metadata.to_h['cached_from_search_id'],
+      partial_results: search.metadata.to_h['partial_results'] == true
     }
     payload['leads'] = leads.map { |lead| lead_payload(lead, search) } if include_leads
     payload

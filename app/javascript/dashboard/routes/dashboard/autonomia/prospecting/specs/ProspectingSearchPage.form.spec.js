@@ -414,6 +414,35 @@ describe('ProspectingSearchPage · formulário de nova busca', () => {
     expect(leadNames(wrapper)).toEqual(['Padaria Sol']);
   });
 
+  // O Google falhou numa página seguinte (#678): a busca vem com o que chegou
+  // e a tela avisa que pode estar incompleta. Busca inteira não avisa nada.
+  it('avisa quando a busca veio parcial e fica calada na busca completa', async () => {
+    const submitWith = async summary => {
+      useAlert.mockClear();
+      const wrapper = await openFormWithoutHistory();
+      AutonomiaProspectingAPI.createSearch.mockResolvedValue({
+        data: {
+          payload: { search: bakerySearch({ summary }), leads: [sunLead()] },
+        },
+      });
+      await queryInput(wrapper).setValue('padaria');
+      await confirmCuritiba(wrapper);
+      await wrapper.find('form').trigger('submit');
+      await flushPromises();
+      return wrapper;
+    };
+
+    const partial = await submitWith({ partial_results: true });
+    expect(leadNames(partial)).toEqual(['Padaria Sol']);
+    expect(useAlert).toHaveBeenCalledWith('PROSPECTING.SEARCH.PARTIAL_RESULTS');
+    partial.unmount();
+
+    await submitWith({ partial_results: false });
+    expect(useAlert).not.toHaveBeenCalledWith(
+      'PROSPECTING.SEARCH.PARTIAL_RESULTS'
+    );
+  });
+
   it('avisa o erro da API e mantém o formulário aberto quando a busca falha', async () => {
     const wrapper = await openFormWithoutHistory();
     AutonomiaProspectingAPI.createSearch.mockRejectedValueOnce({

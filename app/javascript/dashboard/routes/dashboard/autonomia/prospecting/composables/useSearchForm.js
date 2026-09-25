@@ -3,6 +3,7 @@
 // frente (searchSlices/); o local tem composable próprio (useSearchLocation).
 import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
+import { useAlert } from 'dashboard/composables';
 import { alertError } from './searchAlerts';
 import { buildSearchRequest, resetSlices } from './searchSlices';
 
@@ -49,6 +50,10 @@ export const useSearchForm = (
       await fetchSearches({ page: 1 });
       await selectSearchPayload(payload);
       showNewSearch.value = false;
+      // O Google falhou numa página seguinte: a busca ficou com o que chegou.
+      if (payload.search?.summary?.partial_results) {
+        useAlert(t('PROSPECTING.SEARCH.PARTIAL_RESULTS'));
+      }
     } catch (e) {
       alertError(e, t('PROSPECTING.ERRORS.CREATE_SEARCH'));
     } finally {

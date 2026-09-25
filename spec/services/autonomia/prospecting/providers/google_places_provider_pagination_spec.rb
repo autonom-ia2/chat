@@ -132,7 +132,9 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
     expect(results.size).to eq(60)
   end
 
-  it 'traduz o erro do Google numa página do meio' do
+  # Antes a falha numa página do meio derrubava a busca inteira: os 20 lugares já recebidos e as chamadas já pagas
+  # sumiam. Agora a busca fica com o que chegou e marca que é parcial.
+  def stub_second_page_failure
     WebMock.reset!
     stub_request(:post, described_class::ENDPOINT)
       .with { |request| !JSON.parse(request.body).key?('pageToken') }
@@ -140,8 +142,35 @@ RSpec.describe Autonomia::Prospecting::Providers::GooglePlacesProvider do
     stub_request(:post, described_class::ENDPOINT)
       .with { |request| JSON.parse(request.body).key?('pageToken') }
       .to_return(status: 503, body: { error: { code: 503, status: 'UNAVAILABLE', message: 'fora' } }.to_json)
+  end
 
-    expect { provider(limit: 60).search }
+  it 'falha numa página do meio devolve os lugares já recebidos, conta as duas chamadas e marca parcial' do
+    stub_second_page_failure
+    search_provider = provider(limit: 60)
+
+    results = search_provider.search
+
+    expect(results.pluck(:provider_place_id)).to eq(pages.first['places'].pluck('id'))
+    expect(search_provider.api_units).to eq(2)
+    expect(search_provider).to be_partial
+  end
+
+  it 'busca inteira não fica marcada como parcial' do
+    search_provider = provider(limit: 60)
+
+    search_provider.search
+
+    expect(search_provider).not_to be_partial
+  end
+
+  it 'falha na primeira página continua derrubando a busca, com a frase em português' do
+    WebMock.reset!
+    stub_request(:post, described_class::ENDPOINT)
+      .to_return(status: 503, body: { error: { code: 503, status: 'UNAVAILABLE', message: 'fora' } }.to_json)
+    search_provider = provider(limit: 60)
+
+    expect { search_provider.search }
       .to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError, 'O Google não respondeu a tempo. Tente de novo em alguns minutos.')
+    expect(search_provider.api_units).to eq(1)
   end
 end

@@ -32,7 +32,11 @@ class Autonomia::Prospecting::SearchRunner
 
     Result.new(search: search.reload, leads: leads)
   rescue StandardError => e
-    search&.update!(status: :failed, metadata: search.metadata.to_h.merge('error' => e.message)) if search&.persisted?
+    # As chamadas já feitas ao Google foram pagas e entram no uso mostrado nas Configurações mesmo com a busca falha.
+    if search&.persisted?
+      search.update!(status: :failed, consumed_api_units: @consumed_api_units.to_i,
+                     metadata: search.metadata.to_h.merge('error' => e.message))
+    end
     raise
   end
 
@@ -48,7 +52,8 @@ class Autonomia::Prospecting::SearchRunner
       search.status = :completed
       search.consumed_api_units = provider_result[:api_units]
       search.cache_fingerprint = cache_fingerprint
-      search.cache_expires_at = cache_expires_at
+      # Busca parcial não vira cache: a próxima igual tenta o Google de novo em vez de repetir o resultado incompleto.
+      search.cache_expires_at = provider_result[:partial] ? nil : cache_expires_at
       search.save!
       leads
     end
@@ -72,7 +77,8 @@ class Autonomia::Prospecting::SearchRunner
       'results_count' => leads.size,
       'search_filters' => search_filters,
       'requested_radius' => radius,
-      'radius_expanded' => provider_result[:radius].to_i > radius
+      'radius_expanded' => provider_result[:radius].to_i > radius,
+      'partial_results' => provider_result[:partial] == true
     }
   end
 
@@ -160,30 +166,48 @@ class Autonomia::Prospecting::SearchRunner
     @search_country ||= @setting.search_country
   end
 
+  # Falha do Google depois da primeira página não descarta o que já chegou (#678): a busca termina com o que tem e fica
+  # parcial. Só a primeira chamada da busca derruba tudo.
   def search_provider_results
-    radii = auto_expand_radius? ? expansion_radii : [radius]
-    api_units = 0
+    @consumed_api_units = 0
     last_attributes = []
     last_radius = radius
+    partial = false
 
-    radii.each do |radius_value|
-      provider_instance = provider(
-        radius_value: radius_value,
-        area_config_value: area_config_for_radius(radius_value)
-      )
-      last_attributes = provider_instance.search(max_results: last_reachable_rank) do |attributes, google_rank|
-        advanced_filter_matches?(attributes, google_rank)
+    (auto_expand_radius? ? expansion_radii : [radius]).each_with_index do |radius_value, index|
+      attributes, partial = search_radius(radius_value, first: index.zero?)
+      if use_radius_result?(attributes, partial, last_attributes)
+        last_attributes = attributes
+        last_radius = radius_value
       end
-      last_radius = radius_value
-      api_units += provider_instance.try(:api_units).to_i
-      break if advanced_filtered_attributes_count(last_attributes) >= expansion_goal
+      break if partial || advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
-    {
-      attributes: last_attributes,
-      radius: last_radius,
-      api_units: api_units
-    }
+    { attributes: last_attributes, radius: last_radius, api_units: @consumed_api_units, partial: partial }
+  end
+
+  # Raio maior completo sempre substitui o anterior. Parcial só substitui se trouxe pelo menos tantos lugares que passam
+  # nos filtros quanto o raio anterior.
+  def use_radius_result?(attributes, partial, last_attributes)
+    return false if attributes.nil?
+    return true unless partial
+
+    advanced_filtered_attributes_count(attributes) >= advanced_filtered_attributes_count(last_attributes)
+  end
+
+  # [lugares, parcial]. Lugares nil quando o raio maior falhou já na primeira página e a busca fica com o raio anterior.
+  def search_radius(radius_value, first:)
+    provider_instance = provider(radius_value: radius_value, area_config_value: area_config_for_radius(radius_value))
+    attributes = provider_instance.search(max_results: last_reachable_rank) do |item, google_rank|
+      advanced_filter_matches?(item, google_rank)
+    end
+    [attributes, provider_instance.try(:partial?) || false]
+  rescue ProviderError
+    raise if first
+
+    [nil, true]
+  ensure
+    @consumed_api_units += provider_instance.try(:api_units).to_i
   end
 
   # Última posição que vale ler: depois de search_rank_max o filtro descarta tudo, então as páginas seguintes seriam

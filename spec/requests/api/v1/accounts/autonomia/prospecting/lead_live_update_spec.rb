@@ -48,4 +48,31 @@ RSpec.describe 'Autonomia prospecting lead live update', type: :request do
       expect(leads.map(&:id)).to eq(response.parsed_body.dig('payload', 'leads').pluck('id'))
     end
   end
+
+  # A resposta sai do banco depois da fila: com o lead em memória a tela recebia 'pending' e sem status de WhatsApp,
+  # verificava os mesmos números pela aba enquanto o job verificava no servidor e mostrava Enriquecer livre (409).
+  it 'a resposta da busca traz os leads já marcados na fila, como estão no banco' do
+    Autonomia::Prospecting::Setting.for_account(account).update!(provider: 'mock')
+    Autonomia::Prospecting::Config.enable_research_for!(account)
+    create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha', 'session' => 'sessao-prospeccao' })
+
+    with_modified_env('WAHA_API_URL' => 'https://waha.test', 'WAHA_API_KEY' => 'chave-waha-teste') do
+      post "/api/v1/accounts/#{account.id}/autonomia/prospecting/searches",
+           params: { search: { query: 'clinica', location: 'Curitiba, PR', requested_limit: 3,
+                               metadata: { location_place_id: 'places/curitiba', location_latitude: -25.4, location_longitude: -49.2 } } },
+           headers: auth_headers(admin)
+    end
+
+    expect(response).to have_http_status(:created)
+    expect(response.parsed_body.dig('payload', 'search', 'summary', 'partial_results')).to be(false)
+    api_leads = response.parsed_body.dig('payload', 'leads')
+    expect(api_leads.size).to eq(3)
+    api_leads.each do |api_lead|
+      stored = Autonomia::Prospecting::Lead.find(api_lead['id'])
+      expect(stored).to be_enrichment_queued
+      expect(api_lead['enrichment_status']).to eq('queued')
+      expect(stored.phone).to be_present
+      expect(api_lead['whatsapp_verification_status']).to eq('queued')
+    end
+  end
 end

@@ -46,6 +46,12 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     @account_id = account_id
     @country = Autonomia::Prospecting::SearchCountry.normalize(country) || Autonomia::Prospecting::SearchCountry::DEFAULT
     @api_units = 0
+    @partial = false
+  end
+
+  # true quando uma página depois da primeira falhou e a busca ficou com o que as anteriores trouxeram (#678).
+  def partial?
+    @partial
   end
 
   # Lê páginas de 20 até completar o pedido, até max_results posições ou até o Google parar de mandar token (#678).
@@ -54,13 +60,16 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   # de quem chama. Cada página é uma unidade de api_units.
   def search(max_results: MAX_RESULTS)
     @api_units = 0
+    @partial = false
     max_results = max_results.to_i.clamp(0, MAX_RESULTS)
     results = []
     accepted = 0
     page_token = nil
 
     loop do
-      page = fetch_page(page_token)
+      page = fetch_page_or_stop(page_token)
+      break if page.nil?
+
       Array(page['places']).first(max_results - results.size).each do |place|
         results << lead_for(place)
         accepted += 1 if !block_given? || yield(results.last, results.size)
@@ -73,6 +82,18 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
   end
 
   private
+
+  # A primeira página falha como sempre. Uma página seguinte que falha não joga fora os lugares já recebidos nem as
+  # chamadas já pagas: a busca termina com o que tem e fica marcada como parcial.
+  def fetch_page_or_stop(page_token)
+    fetch_page(page_token)
+  rescue Autonomia::Prospecting::SearchRunner::ProviderError => e
+    raise if page_token.nil?
+
+    Rails.logger.warn("[Prospecting::GooglePlaces] search account_id=#{@account_id} página seguinte falhou, busca parcial: #{e.message}")
+    @partial = true
+    nil
+  end
 
   def next_page?(page_token, accepted, collected, max_results)
     page_token.present? && accepted < @limit && collected < max_results && @api_units < MAX_PAGES

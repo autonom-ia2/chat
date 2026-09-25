@@ -128,6 +128,7 @@
       "ENRICHING": "Enriquecendo...",
       "ENRICHMENT_COMPLETED": "Lead enriquecido.",
       "ENRICHMENT_QUEUED": "Enriquecimento na fila. O card se atualiza sozinho quando terminar.",
+      "PARTIAL_RESULTS": "O Google parou de responder no meio da busca. Mostramos os lugares que chegaram; busque de novo para tentar completar.",
       "ENRICHMENT_DISABLED": "A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.",
       "ENRICHMENT_NO_SITE": "Este lead não possui site para enriquecimento.",
       "ENRICHMENT_TITLE": "Enriquecimento",

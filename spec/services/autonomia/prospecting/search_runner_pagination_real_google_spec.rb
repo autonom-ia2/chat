@@ -119,4 +119,66 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
     )
     expect(scoring.values.pluck('priority_position').sort).to eq((1..20).to_a)
   end
+
+  describe 'quando o Google falha no meio' do
+    let(:unavailable) { { status: 503, body: { error: { code: 503, status: 'UNAVAILABLE', message: 'fora' } }.to_json } }
+
+    def fail_pages(failing)
+      WebMock.reset!
+      stub_request(:post, Autonomia::Prospecting::Providers::GooglePlacesProvider::ENDPOINT).to_return do |request|
+        body = JSON.parse(request.body)
+        requests << body
+        next unavailable if failing.call(body)
+
+        { status: 200, body: page_for(body['pageToken']).to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+    end
+
+    # Antes: a busca inteira falhava, os 20 lugares da página 1 sumiam e as 2 chamadas pagas não entravam no uso.
+    it 'página seguinte fora do ar: a busca termina com a página 1, parcial, e as duas chamadas contadas' do
+      fail_pages(->(body) { body.key?('pageToken') })
+
+      result = run_search(requested_limit: 40)
+
+      expect(requests.size).to eq(2)
+      expect(result.search).to be_completed
+      expect(result.search.consumed_api_units).to eq(2)
+      expect(result.leads.map(&:provider_place_id)).to eq(pages.first['places'].pluck('id'))
+      expect(result.search.metadata['partial_results']).to be(true)
+      expect(result.search.cache_expires_at).to be_nil
+    end
+
+    it 'busca completa não fica marcada como parcial' do
+      result = run_search(requested_limit: 20)
+
+      expect(result.search.metadata['partial_results']).to be(false)
+    end
+
+    it 'primeira página fora do ar: a busca falha, mas a chamada paga entra no uso' do
+      fail_pages(->(_body) { true })
+
+      expect { run_search(requested_limit: 40) }.to raise_error(Autonomia::Prospecting::SearchRunner::ProviderError)
+
+      search = Autonomia::Prospecting::Search.where(account: account).last
+      expect(search).to be_failed
+      expect(search.consumed_api_units).to eq(1)
+    end
+
+    it 'raio maior fora do ar na expansão: fica com o raio anterior, parcial, e soma todas as chamadas' do
+      fail_pages(->(body) { body.dig('locationBias', 'circle', 'radius').to_f > 5000 })
+
+      result = described_class.new(
+        account: account, user: user,
+        params: { query: 'pizzaria', location: 'São Paulo, SP', radius: 5000, requested_limit: 60,
+                  metadata: { location_latitude: -23.55, location_longitude: -46.63, filters: { auto_expand_radius: true } },
+                  advanced_filters: { has_website: 'no' } }
+      ).perform
+
+      expect(result.search).to be_completed
+      expect(result.search.radius).to eq(5000)
+      expect(result.leads.size).to eq(12)
+      expect(result.search.consumed_api_units).to eq(4)
+      expect(result.search.metadata['partial_results']).to be(true)
+    end
+  end
 end
