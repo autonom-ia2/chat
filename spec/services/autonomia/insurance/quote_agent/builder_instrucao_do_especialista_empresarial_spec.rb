@@ -98,8 +98,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # da atividade por seguradora (opção C do Rodrigo: casar por seguradora, deixar de fora a ambígua).
     # Revisão da chat#654 (`288d8321…` -> `aed6c14c…`): nenhuma seguradora com a atividade encaminha para a equipe, em
     # vez de perguntar de novo o que a empresa faz.
+    # Pela paridade da jornada (`aed6c14c…` -> `92573c6a…`, 25/09/2026): mais de um local deixa de ser recusa (§2 e o
+    # item do que nunca faz), porque o bloco comum manda cotar cada bem em paralelo; entra o "cote direto" da §3, só
+    # com a atividade já escolhida; e o que nunca faz ganha o item do segurado, que a §D.1 do bloco comum sustenta.
     it 'é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('aed6c14ce10312a51bae305746c8dd1d')
+      expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeEmpresarial::ARQUIVO.binread)).to eq('92573c6aa9e8fc9fec1f71679e6ec6b4')
     end
   end
 end

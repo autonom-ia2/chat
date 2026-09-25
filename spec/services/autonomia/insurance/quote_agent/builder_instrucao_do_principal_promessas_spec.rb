@@ -420,7 +420,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # A §7.1 proíbe recotar, manda a dúvida GERAL de cobertura às condições gerais e a pergunta sobre o que uma
     # seguradora cotou ao especialista, dono do resultado (revisão da chat#587).
     it 'proíbe recotar e separa a dúvida geral da pergunta sobre o resultado' do
-      expect(texto).to include('não mande cotar de novo: consulte `consultar_condicoes_gerais`')
+      expect(texto).to include('não mande cotar de novo: consulte consultar_condicoes_gerais,')
       expect(texto).to include('o que uma seguradora cotou nesta cotação')
     end
   end
@@ -523,7 +523,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # foi acrescentado entre uma âncora e outra. O md5 da §7.1 é a assinatura da revisão: mudou uma
   # letra da seção, estes exemplos reprovam, e quem os atualiza revisa `PROMESSAS` junto. Reassinado em
   # 21/09/2026 (`b5bbc4c0…` -> `99684ba9…`): a promessa de que a cotação segue virou fala da Lia na
-  # primeira pessoa, e a âncora da tabela foi trocada junto.
+  # primeira pessoa, e a âncora da tabela foi trocada junto. Pela paridade da jornada (`befd61f2…` -> `8d987440…`,
+  # 25/09/2026): saem as crases de consultar_condicoes_gerais e de consultar_produtos_cotacao, com os nomes intactos.
   describe 'a §7.1 é o texto revisado' do
     let(:secao) { ManualDoPrincipal.secao_duvida(texto) }
 
@@ -539,7 +540,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     it 'mudou? revise PROMESSAS e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('befd61f21f2bf7f8dd7713e2c67b3253')
+      expect(Digest::MD5.hexdigest(secao)).to eq('8d987440c707db36ff868f8288d12d23')
     end
 
     # O ARQUIVO É LIDO COM AS ESCOLHAS SUBSTITUÍDAS (#380): a §7.1 não pode trazer marcador novo.
@@ -578,9 +579,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
 
     # 23/09/2026 (`b5984308…` -> `eeba4c92…`): a cotação que abre não pede recibo; não repetir não é mudar o fato.
     # Pela chat#612 (`eeba4c92…` -> `a7b67a0e…`): vários bens de uma vez, e a confirmação nomeia os bens.
+    # Pela paridade da jornada (`a7b67a0e…` -> `62c2a551…`, 25/09/2026): sai a crase de consultar_<ramo>, e os três
+    # travessões viram vírgula e dois pontos, sem mudar o sentido.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('a7b67a0e2399ebf5e36ae91983667692')
+      expect(Digest::MD5.hexdigest(secao)).to eq('62c2a551c9b3463e94d48bf486df8ca3')
     end
 
     it 'não introduz variável para substituir' do
@@ -621,7 +624,8 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'mudou? revise ManualDoPrincipalResultado::PROMESSAS e assine aqui' do
       expect(secao).to be_present
       # chat#638 (`d9b6c6c1…` -> `507f2eab…`): nem instabilidade nem prazo; o motivo de cada uma fica com a equipe.
-      expect(Digest::MD5.hexdigest(secao)).to eq('507f2eaba198568f334deda33fa13327')
+      # Paridade da jornada (`507f2eab…` -> `53a976b0…`, 25/09/2026): sai a crase de ver_resultado_da_cotacao.
+      expect(Digest::MD5.hexdigest(secao)).to eq('53a976b0b1db27daeb441cb78216fffe')
     end
 
     it 'não escreve valor em reais nem introduz variável para substituir' do
@@ -639,7 +643,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # O BLOCO DA PROPOSTA DE UMA SEGURADORA (entrega 8b, #459): assinado por md5 pelo mesmo motivo dos outros. Nasceu
   # entre o bloco do resultado e o dos especialistas, e as assinaturas dos dois não mudaram.
   describe 'o bloco da proposta de uma seguradora da §5 (entrega 8b)' do
-    let(:secao) { texto[/### `enviar_proposta_da_seguradora`.*?(?=\n### )/m] }
+    # Do título até o próximo subtítulo, por posição de texto.
+    let(:secao) do
+      inicio = texto.index('### enviar_proposta_da_seguradora')
+      inicio && texto[inicio...texto.index("\n### ", inicio)]
+    end
 
     it 'está no arquivo, antes do bloco dos especialistas, e a ferramenta é do principal' do
       expect(secao).to be_present
@@ -655,9 +663,10 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).to include('Pedir a proposta não é pedir outra cotação.')
     end
 
+    # Paridade da jornada (`2decd25c…` -> `d845bd66…`, 25/09/2026): o título perde a crase, com o nome intacto.
     it 'mudou? revise este bloco e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('2decd25cc65537a4d55b83c0b300ac6b')
+      expect(Digest::MD5.hexdigest(secao)).to eq('d845bd666177209c6ff0b3b515ca52f7')
     end
 
     it 'não escreve valor em reais, travessão nem variável para substituir' do
@@ -717,5 +726,11 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
       expect(secao).not_to include('*"', '—', '–', 'R$')
       expect(secao.scan(/\$[a-zA-Z]+/)).to be_empty
     end
+  end
+
+  # A VOZ DO MANUAL VIRA A VOZ DO WHATSAPP (regra do Rodrigo): o modelo copia o travessão e a crase que lê. Até a
+  # paridade da jornada (25/09/2026) só alguns blocos tinham esta guarda; agora ela vale para o arquivo inteiro.
+  it 'o manual da Lia não escreve travessão nem crase' do
+    expect(texto).not_to include('—', '–', '`')
   end
 end
