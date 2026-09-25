@@ -4,7 +4,8 @@
 # que `ver_resultado_da_cotacao` devolveu no turno; o código só confere. Este é o único lugar da conferência:
 #
 #   0. a referência é o que a ferramenta devolveu neste turno; sem leitura no turno, o resultado guardado que ela
-#      leria (`InsuranceQuoteResult.referencia_guardada`, revisão adversarial de 24/09/2026);
+#      leria (`InsuranceQuoteResult.referencia_guardada`, revisão adversarial de 24/09/2026), e aí só se confere o
+#      valor posto numa seguradora (`so_atribuidos`);
 #   1. todo valor em reais da fala está no texto que a ferramenta devolveu neste turno, e toda seguradora da
 #      cotação que a fala cita também está nele; e no trecho que cita seguradora, o valor é o DELA, com o
 #      período dela (`trocados`);
@@ -64,9 +65,15 @@ class Autonomia::Agents::ConferenciaDePrecos
     com + sem
   end
 
-  def initialize(dados, conversa: nil)
+  # `so_atribuidos`: a referência é o resultado GUARDADO, e não o que a ferramenta devolveu neste turno (revisão
+  # adversarial da frente 4, 25/09/2026). Sem leitura no turno, a fala tem valor em reais que não é preço de ninguém:
+  # danos materiais de uma recotação, o valor a segurar que a pessoa perguntou, o teto que o especialista informou, a
+  # franquia pedida, o prêmio da apólice atual. Então só se confere o valor POSTO NUMA SEGURADORA da cotação
+  # (`trocados`) e o nome dela; o valor solto passa, como passava antes.
+  def initialize(dados, conversa: nil, so_atribuidos: false)
     @dados = dados
     @conversa = conversa
+    @so_atribuidos = so_atribuidos
   end
 
   # -> o texto que pode sair ao cliente. O bloco recebe o pedido de reescrita e devolve o Hash do
@@ -95,8 +102,10 @@ class Autonomia::Agents::ConferenciaDePrecos
 
   # -> o que a fala escreve e os dados não têm: valores (em centavos), nomes de seguradora e valores postos na
   # seguradora ou no período errados.
+  # Com `so_atribuidos`, o valor que não vem junto de nome de seguradora fica de fora.
   def divergencias(texto)
-    (self.class.valores(texto).uniq - permitidos) + (citadas(texto) - citadas(@dados.texto)) + trocados(texto)
+    soltos = @so_atribuidos ? [] : self.class.valores(texto).uniq - permitidos
+    soltos + (citadas(texto) - citadas(@dados.texto)) + trocados(texto)
   end
 
   # O VALOR É DAQUELA SEGURADORA (revisão da PR #454). Em cada trecho da fala que cita seguradora: com uma só,

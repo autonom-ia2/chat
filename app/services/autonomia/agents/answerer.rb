@@ -144,14 +144,17 @@ module Autonomia
       #
       # SEM LEITURA NO TURNO TAMBÉM (revisão adversarial de 24/09/2026): a fala com valor em reais que ninguém leu
       # neste turno era publicada sem conferência. Agora a referência é o resultado guardado, o mesmo que a
-      # ferramenta leria (`referencia_guardada`). Fala sem valor segue como estava.
+      # ferramenta leria (`referencia_guardada`), e só o valor posto numa seguradora é conferido (`so_atribuidos`):
+      # o valor solto (danos materiais, valor a segurar, franquia pedida) não é preço de ninguém. Fala sem valor segue
+      # como estava.
       def conferir_precos(reply)
         return reply if @delivery.nil? || reply.blank?
 
-        dados = @delivery.resultado_do_turno || referencia_guardada(reply)
+        lido = @delivery.resultado_do_turno
+        dados = lido || referencia_guardada(reply)
         return reply if dados.nil?
 
-        ConferenciaDePrecos.new(dados, conversa: @delivery.conversation&.id).publicavel(reply) do |pedido|
+        ConferenciaDePrecos.new(dados, conversa: @delivery.conversation&.id, so_atribuidos: lido.nil?).publicavel(reply) do |pedido|
           reescrever(reply, pedido)
         end
       end
@@ -165,6 +168,11 @@ module Autonomia
         Tools::Native::InsuranceQuoteResult.referencia_guardada(
           @delivery.conversation&.id, agent: @agent, execucao: @delivery.execucao_do_evento
         )
+      rescue StandardError => e
+        # Falha ao ler a referência não derruba o turno (revisão da frente 4): a fala sai como saía antes, sem esta
+        # conferência, e a cotação aceita no turno não é descartada. O log leva só a classe do erro.
+        Rails.logger.warn("[autonomia][conferencia] referencia guardada indisponivel conversa=#{@delivery.conversation&.id} #{e.class}")
+        nil
       end
 
       # A reescrita pedida pela conferência: a mesma instrução e a mesma conversa do turno, a fala que não

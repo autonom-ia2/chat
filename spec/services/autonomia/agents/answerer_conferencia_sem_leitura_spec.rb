@@ -9,6 +9,15 @@ require 'rails_helper'
 # leria: o da cotação do evento, quando o turno é de evento; senão, o da cotação mais nova de cada bem da conversa.
 #
 # Dublados: o modelo da Lia (a fala e, quando pedida, a reescrita). O resto é o caminho real. Dados sintéticos.
+# Valor em reais que não é preço de seguradora nenhuma (revisão da frente 4).
+VALORES_SOLTOS = {
+  'danos materiais' => 'Posso refazer com danos materiais de R$ 200.000,00.',
+  'valor a segurar perguntado' => 'Se você segurar R$ 300 mil, eu refaço a cotação com esse valor.',
+  'franquia da entrada' => 'A cotação foi feita com a franquia de R$ 3.500,00 que você pediu.',
+  'teto informado' => 'O teto para incêndio nesse tipo de imóvel é de R$ 1.500.000,00.',
+  'prêmio da apólice atual' => 'Hoje você paga R$ 3.100,00 na apólice atual.'
+}.freeze
+
 RSpec.describe Autonomia::Agents::Answerer do
   let(:account) do
     create(:account, internal_attributes: { 'autonomia_agents_enabled' => true, 'autonomia_insurance_enabled' => true })
@@ -161,6 +170,67 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
+  # VALOR SOLTO NÃO É PREÇO (revisão adversarial da frente 4, 25/09/2026). Sem leitura no turno, só o valor posto numa
+  # seguradora da cotação é conferido: danos materiais, valor a segurar, franquia pedida, teto informado e prêmio da
+  # apólice atual passam, em auto e em residencial, e o preço inventado para uma seguradora continua voltando.
+  {
+    'auto' => { faixa: 'auto:carro abc1d23', preco: 2119.18, escrito: 'R$ 2.119,18' },
+    'residencial' => { faixa: 'residencial:apartamento', preco: 412.37, escrito: 'R$ 412,37' }
+  }.each do |ramo, caso|
+    describe "#{ramo}: depois de uma cotação com preço, sem leitura no turno" do
+      let!(:cotada) { cotacao_da_conversa([cotou('8', 'Porto Seguro', caso[:preco]), allianz], faixa: caso[:faixa]) }
+
+      VALORES_SOLTOS.each do |assunto, texto|
+        it "#{assunto} passa" do
+          reescritas = modelo(texto)
+
+          expect(responder.reply).to eq(texto)
+          expect(reescritas).to be_empty
+        end
+      end
+
+      it 'o turno que aceita a recotação passa, com a execução nova ainda pendente' do
+        Autonomia::Agents::ToolRun.create!(
+          account: account, agent: agente, slug: cotacao.slug, status: 'pending', conversation_id: conversation.id,
+          agent_inbox_id: agent_inbox.id, execution_key: SecureRandom.uuid, arguments: {}, faixa: caso[:faixa], handle: {}
+        )
+        texto = 'Comecei a nova cotação com danos materiais de R$ 200.000,00. Assim que sair, te mando aqui.'
+        reescritas = modelo(texto)
+
+        expect(responder.reply).to eq(texto)
+        expect(reescritas).to be_empty
+      end
+
+      it 'Porto com preço inventado continua voltando' do
+        reescritas = modelo('A Porto Seguro ficou em R$ 1.999,00 no total.', reescrita: Crm::Ai::ResponsesClient::Error)
+
+        expect(responder.reply).to eq(conferencia::RECUO_SEM_COMPARATIVO)
+        expect(pedido(reescritas)).to include(caso[:escrito])
+      end
+
+      it 'o preço certo com o nome certo passa' do
+        texto = "A Porto Seguro ficou em #{caso[:escrito]} no total."
+        reescritas = modelo(texto)
+
+        expect(responder.reply).to eq(texto)
+        expect(reescritas).to be_empty
+        expect(cotada).to be_persisted
+      end
+    end
+  end
+
+  # A LEITURA DA REFERÊNCIA QUE FALHA NÃO DERRUBA O TURNO (revisão da frente 4): a fala sai como saía antes.
+  it 'falha de banco ao ler a referência guardada: a fala sai como veio, sem reescrita' do
+    cotacao_da_conversa([porto])
+    allow(Autonomia::Agents::Tools::Native::InsuranceQuoteResult).to receive(:referencia_guardada)
+      .and_raise(ActiveRecord::StatementInvalid, 'conexão perdida')
+    texto = 'A Porto Seguro ficou em R$ 1.999,00 no total.'
+    reescritas = modelo(texto)
+
+    expect(responder.reply).to eq(texto)
+    expect(reescritas).to be_empty
+  end
+
   describe 'duas cotações na conversa' do
     let!(:residencial) { cotacao_da_conversa([porto_residencial], faixa: 'residencial:apartamento', criada: 2.minutes.ago) }
 
@@ -232,6 +302,18 @@ RSpec.describe Autonomia::Agents::Answerer do
 
       expect(responder.reply).to eq(conferencia::RECUO_COM_COMPARATIVO)
       expect(pedido(reescritas)).not_to include('412,37')
+    end
+
+    # Com leitura, o valor solto que não está nos dados continua voltando, como sempre voltou: o modo que deixa
+    # passar valor solto é só o da referência guardada.
+    it 'o valor solto fora dos dados continua voltando' do
+      lido = conferencia::Dados.new(texto: 'Porto Seguro fez proposta: R$ 2.119,18 no total.', seguradoras: ['Porto Seguro'],
+                                    comparativo: true, coberturas: [])
+      delivery.registrar_resultado(lido)
+      reescritas = modelo('Posso refazer com danos materiais de R$ 200.000,00.', reescrita: Crm::Ai::ResponsesClient::Error)
+
+      expect(responder.reply).to eq(conferencia::RECUO_COM_COMPARATIVO)
+      expect(reescritas.size).to eq(1)
     end
 
     it 'e o preço que ela leu sai como está' do
