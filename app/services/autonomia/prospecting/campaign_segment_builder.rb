@@ -93,14 +93,10 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     'not_ready' unless lead.status == ELIGIBLE_STATUS
   end
 
-  # O mesmo contato que o ContactConverter usaria: o do lead ou o da conta com o mesmo telefone.
+  # O mesmo contato que o ContactConverter vai etiquetar: o do lead ou o que ele acha pelo WhatsApp verificado, pelo
+  # telefone, pelo identificador ou pelo e-mail.
   def existing_contact(lead)
-    return lead.contact if lead.contact.present?
-
-    phone = Autonomia::Prospecting::PhoneContract.e164(lead.phone, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
-    return if phone.blank?
-
-    @account.contacts.find_by(phone_number: phone)
+    Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).existing_contact
   end
 
   # Quem respondeu "parar" ao follow-up da IA fica marcado no card (Crm::FollowUps::AutoFollowupCanceler).

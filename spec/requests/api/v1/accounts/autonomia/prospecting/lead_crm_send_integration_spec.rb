@@ -25,7 +25,7 @@ RSpec.describe 'Autonomia prospecting send to CRM, integration of #680', type: :
                                 metadata: { 'research' => { 'owners' => [{ 'name' => 'ANA SOUZA', 'qualification' => 'SOCIO ADMINISTRADOR' }] } })
   end
   let(:domain_lead) do
-    create_lead('beta', name: 'Beta Café', phone: '+55 11 3333-2222', website: 'https://www.betacafe.com.br/contato?x=1',
+    create_lead('beta', name: 'Beta Café', phone: '+55 11 3333-2222', website: 'https://www.betacafe.com.br/?utm_source=gmb',
                         company_research_status: 'no_result', decision_research_status: 'no_result')
   end
   let(:branch_lead) do

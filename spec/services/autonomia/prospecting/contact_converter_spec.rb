@@ -169,6 +169,53 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
     end
   end
 
+  describe 'dois leads com o mesmo telefone ou e-mail (#680, central única, franquia)' do
+    def other_lead(name, **attributes)
+      Autonomia::Prospecting::Lead.create!(
+        { account: account, provider: 'mock', provider_place_id: "places/#{name}", name: name, country: 'BR' }.merge(attributes)
+      )
+    end
+
+    it 'o contato do primeiro lead não é renomeado nem passa a ser do segundo' do
+      alfa = other_lead('Padaria Alfa', phone: '+55 31 3222-1000')
+      beta = other_lead('Oficina Beta', phone: '+55 31 3222-1000')
+
+      first = described_class.new(lead: alfa, user: user).perform
+      second = described_class.new(lead: beta, user: user).perform
+      contact = first.contact.reload
+
+      expect(second.contact).to eq(contact)
+      expect(contact.name).to eq('Padaria Alfa')
+      expect(contact.custom_attributes['autonomia_prospecting_lead_id']).to eq(alfa.id)
+      expect(contact.company).to eq(first.company)
+      expect(second.company).not_to eq(first.company)
+    end
+
+    it 'e-mail compartilhado também não troca o dono do contato' do
+      alfa = other_lead('Padaria Alfa', enriched_email: 'central@shopping.com.br')
+      beta = other_lead('Oficina Beta', enriched_email: 'central@shopping.com.br')
+      described_class.new(lead: alfa, user: user).perform
+
+      contact = described_class.new(lead: beta, user: user).perform.contact.reload
+
+      expect(contact.name).to eq('Padaria Alfa')
+      expect(contact.custom_attributes['autonomia_prospecting_lead_id']).to eq(alfa.id)
+    end
+
+    it 'Usar como contato no segundo lead não renomeia o contato do primeiro, e a empresa do segundo não vira a do primeiro' do
+      alfa = other_lead('Padaria Alfa', phone: '+55 31 3222-1000')
+      beta = other_lead('Oficina Beta', phone: '+55 31 3222-1000')
+      first = described_class.new(lead: alfa, user: user).perform
+      beta_company = described_class.new(lead: beta, user: user).perform.company
+      beta.update!(decision_name: 'JOAO BETA', decision_role: 'Dono', decision_research_status: 'confirmed')
+
+      again = described_class.new(lead: beta.reload, user: user).perform
+
+      expect(first.contact.reload.name).to eq('Padaria Alfa')
+      expect(again.company).to eq(beta_company)
+    end
+  end
+
   describe 'telefone do contato pela tabela compartilhada com o front' do
     ProspectingPhoneContractCases.all.each do |item|
       it "#{item['caso']}: #{item['raw'].inspect} grava #{item['e164'].inspect}" do

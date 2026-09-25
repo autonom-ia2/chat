@@ -14,7 +14,7 @@ RSpec.describe Autonomia::Prospecting::CompanyUpserter do
   let(:lead) do
     Autonomia::Prospecting::Lead.create!(
       account: account, provider: 'mock', provider_place_id: 'places/alpha', name: 'Alpha Restaurante e Bar',
-      phone: '+55 11 3333-4444', website: 'https://www.alpha.com.br/contato?x=1', address: 'Rua das Flores, 123',
+      phone: '+55 11 3333-4444', website: 'https://www.alpha.com.br/?utm_source=gmb&utm_medium=organic', address: 'Rua das Flores, 123',
       enriched_instagram: 'https://instagram.com/alpharest', enriched_linkedin: 'https://www.linkedin.com/company/alpha',
       enriched_facebook: 'https://facebook.com/alpharest'
     )
@@ -136,6 +136,28 @@ RSpec.describe Autonomia::Prospecting::CompanyUpserter do
 
     expect(first.domain).to be_nil
     expect(second).not_to eq(first)
+  end
+
+  it 'site com caminho é página dentro de uma plataforma: dois negócios na mesma plataforma são duas empresas' do
+    lead.update!(name: 'Clinica Sorriso A', website: 'https://www.doctoralia.com.br/clinica/sorriso-a')
+    other = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/centro-c',
+                                                 name: 'Odonto Centro C', website: 'https://www.doctoralia.com.br/clinica/centro-c')
+
+    first = upsert_company.company
+    second = upsert_company(other).company
+
+    expect([first.domain, second.domain]).to eq([nil, nil])
+    expect(second).not_to eq(first)
+    expect(second.name).to eq('Odonto Centro C')
+  end
+
+  it 'plataforma que identifica o negócio pela query também não vira domínio; só utm é ignorado' do
+    lead.update!(website: 'https://pedido.plataforma.com.br/?loja=alpha')
+    expect(upsert_company.company.domain).to be_nil
+
+    other = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/beta',
+                                                 name: 'Beta', website: 'beta.com.br/')
+    expect(upsert_company(other).company.domain).to eq('beta.com.br')
   end
 
   it 'sem pesquisa e sem nome fantasia, o nome é o do lead; com só a razão social, é ela' do

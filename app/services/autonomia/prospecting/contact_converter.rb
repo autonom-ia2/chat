@@ -7,6 +7,9 @@
 # - Contato existente só ganha o que está vazio. O nome só muda quando fomos nós que o escrevemos (o nome gravado em
 #   custom_attributes, o do lead ou o da empresa): assim "Usar como contato" troca a empresa pela pessoa, mas o nome que
 #   o usuário deu fica.
+# - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
+#   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
+#   dados dele.
 class Autonomia::Prospecting::ContactConverter
   Result = Struct.new(:lead, :contact, :created, :company, keyword_init: true)
 
@@ -20,6 +23,13 @@ class Autonomia::Prospecting::ContactConverter
     @company = company
   end
 
+  # Lead da prospecção que gravou o contato (nil em contato que a prospecção não criou nem enriqueceu).
+  def self.owner_lead_id(contact)
+    return if contact.nil? || contact.new_record?
+
+    contact.custom_attributes.to_h['autonomia_prospecting_lead_id'].presence&.to_i
+  end
+
   def perform
     created = false
     contact = nil
@@ -27,7 +37,7 @@ class Autonomia::Prospecting::ContactConverter
     ActiveRecord::Base.transaction do
       @lead.lock!
       @company ||= Autonomia::Prospecting::CompanyUpserter.new(lead: @lead).perform.company
-      contact = @lead.contact || find_existing_contact || build_contact
+      contact = existing_contact || build_contact
       created = contact.new_record?
       enrich_contact(contact)
       contact.save!
@@ -35,6 +45,12 @@ class Autonomia::Prospecting::ContactConverter
     end
 
     Result.new(lead: @lead.reload, contact: contact.reload, created: created, company: @company)
+  end
+
+  # O contato que o perform usaria, sem gravar nada: a guarda da campanha (bloqueado, pediu para parar) olha este mesmo
+  # contato, e não só o do telefone do Google.
+  def existing_contact
+    @lead.contact || find_existing_contact
   end
 
   private
@@ -65,6 +81,8 @@ class Autonomia::Prospecting::ContactConverter
   end
 
   def enrich_contact(contact)
+    return if another_leads_contact?(contact)
+
     rename(contact) if replaceable_name?(contact)
     fill_unique(contact, :phone_number, contact_phone)
     fill_unique(contact, :email, email)
@@ -73,6 +91,11 @@ class Autonomia::Prospecting::ContactConverter
     contact.location = contact.location.presence || location
     contact.additional_attributes = merged_additional_attributes(contact)
     contact.custom_attributes = contact.custom_attributes.to_h.merge(custom_attributes).compact
+  end
+
+  def another_leads_contact?(contact)
+    owner_id = self.class.owner_lead_id(contact)
+    owner_id.present? && owner_id != @lead.id
   end
 
   def rename(contact)

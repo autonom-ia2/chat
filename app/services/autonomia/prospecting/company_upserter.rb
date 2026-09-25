@@ -2,8 +2,10 @@
 #
 # - Reaproveita a empresa da conta pelo CNPJ (additional_attributes['cnpj'], 14 dígitos): o do cadastro que a pesquisa
 #   achou (E3) e, sem ele, o que o site mostrou, só com o dígito verificador fechando. Sem CNPJ, pelo domínio do site.
-# - Domínio é o host do site sem www e sem caminho. Site em rede social, WhatsApp ou encurtador não tem domínio da
-#   empresa: dois negócios no Instagram não são a mesma empresa. Mesmo domínio com outro CNPJ (filial, franquia) é
+# - Domínio é o host do site sem www, e só quando o site é a raiz do domínio. Site com caminho (ou com query que não
+#   seja utm) é página dentro de uma plataforma (doctoralia.com.br/clinica/x, cardápio, agendamento): o host é da
+#   plataforma, não da empresa. Site em rede social, WhatsApp ou encurtador também não tem domínio da empresa: dois
+#   negócios no Instagram não são a mesma empresa. Mesmo domínio com outro CNPJ (filial, franquia) é
 #   outra empresa, criada sem domínio, porque o domínio é único por conta.
 # - Empresa existente só ganha o que está vazio: nunca sobrescreve o que o usuário escreveu, nem o nome, nem a origem.
 # - Concorrência: dois leads da mesma empresa ao mesmo tempo esbarram no índice único (conta e CNPJ, conta e domínio);
@@ -14,7 +16,10 @@ class Autonomia::Prospecting::CompanyUpserter
 
   SOURCE = 'autonomia_prospecting'.freeze
   WWW = 'www.'.freeze
+  ROOT_PATHS = ['', '/'].freeze
+  TRACKING_PARAM_PREFIX = 'utm_'.freeze
   MAX_ATTEMPTS = 3
+  COMPANY_KEY = 'chatwoot_company_id'.freeze
   # Host em que o caminho, e não o domínio, identifica o negócio. Comparado pelo domínio registrável.
   SHARED_HOSTS = %w[
     instagram.com facebook.com fb.com fb.me wa.me whatsapp.com linktr.ee linkedin.com google.com goo.gl youtube.com
@@ -48,19 +53,35 @@ class Autonomia::Prospecting::CompanyUpserter
 
   def upsert
     company = find_existing
-    return Result.new(company: fill_blanks!(company), created: false) if company
-
-    Result.new(company: create!, created: true)
+    result = company ? Result.new(company: fill_blanks!(company), created: false) : Result.new(company: create!, created: true)
+    remember!(result.company)
+    result
   end
 
-  # Sem CNPJ e sem domínio, a empresa do lead é a que já está no contato dele: criar contato e depois enviar ao CRM,
-  # ou trocar o decisor, não pode deixar uma empresa nova a cada passo.
+  # Sem CNPJ e sem domínio, a empresa do lead é a que ele já usou (gravada no lead) ou a que está no contato dele: criar
+  # contato e depois enviar ao CRM, ou trocar o decisor, não pode deixar uma empresa nova a cada passo. Contato que é de
+  # outro lead (mesmo telefone ou e-mail) traz a empresa daquele lead, não a deste.
   def find_existing
-    by_cnpj || by_domain || linked_company
+    by_cnpj || by_domain || remembered_company || linked_company
+  end
+
+  def remembered_company
+    company_id = @lead.metadata.to_h[COMPANY_KEY]
+    companies.find_by(id: company_id) if company_id.present?
+  end
+
+  def remember!(company)
+    return if @lead.metadata.to_h[COMPANY_KEY] == company.id
+
+    @lead.update!(metadata: @lead.metadata.to_h.merge(COMPANY_KEY => company.id))
   end
 
   def linked_company
-    company = @lead.contact&.company
+    contact = @lead.contact
+    owner_id = Autonomia::Prospecting::ContactConverter.owner_lead_id(contact)
+    return if owner_id.present? && owner_id != @lead.id
+
+    company = contact&.company
     company if company&.account_id == @account.id
   end
 
@@ -171,9 +192,21 @@ class Autonomia::Prospecting::CompanyUpserter
     return if raw.empty?
 
     uri = URI.parse(raw.include?('://') ? raw : "https://#{raw}")
+    return unless site_root?(uri)
+
     uri.host.to_s.downcase.delete_prefix(WWW).presence
-  rescue URI::InvalidURIError
+  rescue URI::InvalidURIError, ArgumentError
     nil
+  end
+
+  def site_root?(uri)
+    ROOT_PATHS.include?(uri.path.to_s) && tracking_only_query?(uri.query)
+  end
+
+  def tracking_only_query?(query)
+    return true if query.blank?
+
+    URI.decode_www_form(query).all? { |key, _value| key.downcase.start_with?(TRACKING_PARAM_PREFIX) }
   end
 
   def phone
