@@ -3651,8 +3651,8 @@
      "fontes": [
       "porques: Como o cliente recebe os valores da cotação"
      ],
-     "revisar": false,
-     "nota": "Conteúdo já redigido no Guia da Plataforma (porques.md, bloco 'como_o_cliente_recebe_a_cotacao') — portado para a Central, não escrito do zero."
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/autonomia/agents/tools/native/insurance_quote_proposal.rb:8"
     }
    ]
   },
