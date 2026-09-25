@@ -3751,8 +3751,8 @@
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/autonomia/prospecting/search_runner.rb:8"
     }
    ]
   },
