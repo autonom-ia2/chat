@@ -37,11 +37,12 @@ class Autonomia::Prospecting::SegmentEligibility
     @contacts[lead.id] = Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).existing_contact
   end
 
-  private
-
+  # Um só para a execução: a recusa depois do segmento usa o mesmo para achar os contatos vetados.
   def consent_veto
     @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
   end
+
+  private
 
   def contact_block_reason(contact)
     return if contact.nil?

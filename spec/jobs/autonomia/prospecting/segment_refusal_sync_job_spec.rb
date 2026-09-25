@@ -1,11 +1,16 @@
 require 'rails_helper'
 
-# O job da recusa depois do segmento (#732): roda na fila da Prospecção e entrega a conta e os leads ao sync.
+# O job da recusa depois do segmento (#732): roda antes das filas de campanha e entrega a conta e os leads ao sync.
 RSpec.describe Autonomia::Prospecting::SegmentRefusalSyncJob do
   let(:account) { create(:account) }
 
-  it 'fica na fila da Prospecção' do
-    expect { described_class.perform_later(account.id, [1]) }.to have_enqueued_job(described_class).on_queue('prospecting')
+  # A campanha lê o público em low (envio único, API do WhatsApp) e scheduled_jobs (agendador): a remoção tem de rodar
+  # antes delas, e não atrás do enriquecimento da fila prospecting.
+  it 'roda na fila medium, acima das filas de campanha' do
+    queues = YAML.load(ERB.new(Rails.root.join('config/sidekiq.yml').read).result)[:queues]
+
+    expect { described_class.perform_later(account.id, [1]) }.to have_enqueued_job(described_class).on_queue('medium')
+    expect(queues.index('medium')).to be < [queues.index('low'), queues.index('scheduled_jobs'), queues.index('prospecting')].min
   end
 
   it 'entrega a conta e os leads ao sync' do

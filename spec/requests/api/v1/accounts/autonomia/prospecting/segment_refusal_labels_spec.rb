@@ -22,10 +22,11 @@ RSpec.describe 'Autonomia prospecting refusal after segment', type: :request do
 
   before { Autonomia::Prospecting::Config.enable_for!(account) }
 
-  def create_lead(name, phone, in_list: true)
+  def create_lead(name, phone, in_list: true, **attributes)
     lead = Autonomia::Prospecting::Lead.create!(
       account: account, provider: 'mock', provider_place_id: "refusal-#{name}", name: name, phone: phone, country: 'BR',
-      status: :ready_for_campaign, metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => phone } }
+      status: :ready_for_campaign, metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => phone } },
+      **attributes
     )
     list.list_leads.create!(account: account, lead: lead) if in_list
     lead
@@ -76,7 +77,7 @@ RSpec.describe 'Autonomia prospecting refusal after segment', type: :request do
     patch_status(refused, status: 'no_consent')
 
     expect(response).to have_http_status(:ok)
-    expect(sync_job).to have_been_enqueued.with(account.id, [refused.id]).on_queue('prospecting')
+    expect(sync_job).to have_been_enqueued.with(account.id, [refused.id]).on_queue('medium')
     expect(labels_of(refused)).to include(label_title)
 
     run_sync_jobs
@@ -140,6 +141,31 @@ RSpec.describe 'Autonomia prospecting refusal after segment', type: :request do
     expect(response).to have_http_status(:ok)
     expect(labels_of(in_list)).not_to include(label_title)
     expect(recipients_names).to eq([])
+  end
+
+  it 'recusa pelo WhatsApp do site tira a etiqueta do outro contato da lista com esse número' do
+    unidade = create_lead('Unidade', '+5531999990002')
+    matriz = create_lead('Matriz', '+5531999990001', enriched_whatsapp: '+5531999990002')
+    label_title = generate_segment
+    expect(unidade.reload.contact_id).not_to eq(matriz.reload.contact_id)
+
+    patch_status(matriz, status: 'no_consent')
+    run_sync_jobs
+
+    expect(labels_of(unidade)).not_to include(label_title)
+    expect(labels_of(matriz)).not_to include(label_title)
+    expect(recipients_names).to eq([])
+  end
+
+  it 'lista que ficou sem nenhum lead elegível também perde a etiqueta' do
+    only = create_lead('Unico', '+5531999990001')
+    label_title = generate_segment
+
+    patch_status(only, status: 'no_consent')
+    run_sync_jobs
+
+    expect(labels_of(only)).not_to include(label_title)
+    expect(one_off_audience(label_title)).to eq([])
   end
 
   it 'mudança que não é recusa não enfileira o job nem mexe na etiqueta' do
