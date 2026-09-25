@@ -1,0 +1,12 @@
+{
+  "QueryId": "sanitized-query-error-1",
+  "Status": {
+    "basic_data": [
+      {
+        "Code": 7,
+        "Message": "Sanitized semantic error"
+      }
+    ]
+  },
+  "Result": []
+}
