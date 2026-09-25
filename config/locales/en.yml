@@ -508,6 +508,16 @@ en:
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
+      # Jogadas salvas (#732): frases que a tela mostra como vieram.
+      saved_presets:
+        errors:
+          name_blank: 'Dê um nome para a jogada.'
+          name_too_long: 'O nome da jogada pode ter até %{max} caracteres.'
+          name_taken: 'Já existe uma jogada com esse nome nesta conta. Escolha outro nome.'
+          invalid_score_mode: 'A forma de pesquisa da jogada precisa ser Google Meu Negócio ou Geral.'
+          invalid_filters: 'Algum filtro da jogada não é aceito. Ajuste os filtros avançados e salve de novo.'
+          empty_filters: 'Escolha pelo menos um filtro antes de salvar a jogada.'
+          limit: 'A conta já tem %{max} jogadas salvas. Exclua uma em Configurações da Prospecção para salvar outra.'
       # Nota do Orth (#681): frase de leitura da nota e motivos das penalidades de prioridade.
       scoring:
         human_insight:

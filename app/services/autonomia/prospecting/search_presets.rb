@@ -15,4 +15,12 @@ module Autonomia::Prospecting::SearchPresets
   def self.valid_for_mode?(preset_id, score_mode)
     MODES_BY_ID[preset_id.to_s] == score_mode.to_s
   end
+
+  # Jogada pronta no modo dela, ou jogada salva da conta (#732) no modo em que foi salva.
+  def self.valid_for?(account:, preset_id:, score_mode:)
+    return true if valid_for_mode?(preset_id, score_mode)
+
+    saved = Autonomia::Prospecting::SavedPreset.find_by_preset_id(account, preset_id)
+    saved.present? && saved.score_mode == score_mode.to_s
+  end
 end

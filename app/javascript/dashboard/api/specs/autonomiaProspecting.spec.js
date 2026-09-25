@@ -95,4 +95,28 @@ describe('#AutonomiaProspectingAPI', () => {
       { params: { format: 'csv', lead_ids: undefined }, responseType: 'blob' }
     );
   });
+
+  // Jogadas salvas (#732): criar, editar e excluir; a lista vem nas configurações.
+  it('salva, edita e exclui uma jogada da conta', () => {
+    const filters = { has_website: 'no' };
+    prospecting.createSavedPreset({
+      name: 'Sem site',
+      score_mode: 'gbp',
+      filters,
+    });
+    prospecting.updateSavedPreset(5, { name: 'Sem site nenhum', filters });
+    prospecting.deleteSavedPreset(5);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets',
+      { saved_preset: { name: 'Sem site', score_mode: 'gbp', filters } }
+    );
+    expect(axiosMock.patch).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets/5',
+      { saved_preset: { name: 'Sem site nenhum', filters } }
+    );
+    expect(axiosMock.delete).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets/5'
+    );
+  });
 });
