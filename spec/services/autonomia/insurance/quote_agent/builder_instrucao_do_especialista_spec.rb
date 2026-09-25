@@ -551,8 +551,14 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # residencial e empresarial (os dados saem da apólice, nada se pergunta fora da conferência, nulo é seguro novo,
   # seguradora sem tradução cota como novo), com a ressalva de que auto segue a seção dele. As promessas dela estão em
   # `builder_instrucao_da_renovacao_dos_ramos_spec` (`PromessaDaRenovacaoDosRamos`).
+  # Paridade com a §4.2 de auto, no mesmo dia (`ee215322…` -> `15a304f8…`): a descrição dos campos no adapter mandava
+  # "leia da apólice ou pergunte ao cliente", contra a §D.2; e "quero renovar" sem apólice saía como seguro novo sem
+  # ninguém dizer. Agora a §D.2 oferece ler a apólice, tira tudo dela em silêncio, pede só o que a conferência cobrar,
+  # nunca chuta a seguradora, e sem apólice cota como seguro novo e avisa uma vez. E, por decisão do Rodrigo, sem a
+  # classe de bônus (nem na apólice nem com o cliente) também é seguro novo, nunca bônus 0, com o mesmo aviso.
+  # Âncoras trocadas na mesma tabela.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('ee21532290fbbda022c54b08f49b75db')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('15a304f8ef6ff5e61ee5245ac0ad7233')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

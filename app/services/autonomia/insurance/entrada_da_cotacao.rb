@@ -136,9 +136,18 @@ class Autonomia::Insurance::EntradaDaCotacao
   # `renovacao` (ramos) o pedido foi ao portal como seguro novo. Por isso esta linha nunca diz "sem informação".
   def tipo_de_seguro
     return [::Autonomia::Insurance::AutoRenewal.new(entrada).renovacao? ? RENOVACAO : SEGURO_NOVO] if produto == AUTO
-    return [SEGURO_NOVO] if entrada['renovacao'].blank?
+    return [SEGURO_NOVO] unless renovacao_do_ramo?
 
     [RENOVACAO, *CAMPOS_DA_RENOVACAO_DOS_RAMOS.map { |caminho, rotulo, forma| linha(caminho, rotulo, forma) }]
+  end
+
+  # A MESMA REGRA DO ADAPTER (`ehRenovacao`): é renovação quando o grupo é objeto e traz ao menos um campo informado,
+  # e informado é o que não é nulo nem texto vazio. `{"bonus": null}` o adapter cota como seguro novo, e o resumo
+  # dizia renovação (revisão de 25/09/2026). Não é `compact_blank`: ele tiraria `false` e texto só de espaço, que o
+  # adapter conta como informados.
+  def renovacao_do_ramo?
+    grupo = entrada['renovacao']
+    grupo.is_a?(Hash) && grupo.values.any? { |valor| !valor.nil? && valor != '' }
   end
 
   def linha(caminho, rotulo, forma)

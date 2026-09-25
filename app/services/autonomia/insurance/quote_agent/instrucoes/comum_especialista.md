@@ -146,19 +146,37 @@ o padrão: o segurado é o cliente, com o CPF ou o CNPJ que ele informou.
 **Auto não segue esta subseção:** a renovação de auto está no manual de auto, e vale só ela. Aqui é a
 renovação dos ramos de imóvel, a casa ou o local da empresa.
 
-**Quando o cliente diz que já tem seguro e está renovando, ou quando a apólice anterior chega**, os
-dados de renovação saem dela, cada um no seu campo do grupo da renovação: a seguradora, a classe de
-bônus, se houve sinistro na vigência, o número da apólice e o dia em que a vigência termina.
+**Os dados da renovação vêm da apólice que vence.** Quando o cliente diz que já tem seguro e está
+renovando, **ofereça ler a apólice**: basta ele mandar o PDF, você tira tudo de lá e ele não digita
+nada.
+
+**Com a apólice, tudo sai dela, em silêncio**, cada um no seu campo do grupo da renovação: a
+seguradora, a classe de bônus exatamente como está escrita nela, sem recalcular, se houve sinistro na
+vigência, o número da apólice e o dia em que a vigência termina.
 
 **A seguradora vai pelo nome que está na apólice**, escolhido da lista do campo: o código dela quem
-acha é a ferramenta.
+acha é a ferramenta. **Nunca chute a seguradora anterior:** ela vem da apólice, e de nenhum outro
+lugar.
 
-**Nada disso se pergunta por iniciativa própria.** Leia da apólice o que ela traz. Ao cliente só vai
-a pergunta que a conferência devolver como faltando; o número da apólice ela não cobra, e sem ele a
-cotação sai do mesmo jeito.
+**Nada disso se pergunta por iniciativa própria.** Se a apólice não trouxer um dado, deixe o campo
+em branco. Ao cliente só vai a pergunta que a conferência devolver como faltando, e só aquela;
+o número da apólice ela não cobra, e sem ele a cotação sai do mesmo jeito.
 
-**Sem apólice e sem o cliente dizer que é renovação, o grupo da renovação vai nulo:** é seguro novo.
-A apólice em nome de outra pessoa também deixa o grupo nulo (§F): ela dá as coberturas, não a renovação.
+**Sem a apólice, o grupo da renovação vai nulo, e a cotação sai como seguro novo.** Vale quando o
+cliente não fala em renovar, e vale quando fala mas não tem a apólice ou não quer mandar: não monte a
+renovação com o que ele lembrar de cabeça.
+
+**Sem a classe de bônus, também seguro novo.** Se a apólice não traz a classe e o cliente, perguntado
+porque a conferência cobrou, não sabe dizer, mande o grupo da renovação nulo e cote como seguro novo.
+Nunca mande 0 no lugar da classe que falta.
+
+**Quando ele disse que renova e a cotação saiu como seguro novo, avise uma vez**, junto do comparativo:
+a cotação saiu sem o bônus da apólice atual, e com a apólice, ou com a classe de bônus, em mãos você
+refaz. Vale para as duas faltas, a da apólice e a da classe. Diga isso ao principal, para o cliente,
+e não repita nas mensagens seguintes.
+
+**A apólice em nome de outra pessoa também deixa o grupo nulo (§F):** ela dá as coberturas, não a
+renovação.
 
 **Se a conferência disser que a seguradora anterior não tem tradução**, mande o grupo da renovação
 nulo e cote como seguro novo. Diga ao principal, para o cliente, o que a conferência disse: que a

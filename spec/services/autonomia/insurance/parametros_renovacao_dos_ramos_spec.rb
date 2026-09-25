@@ -134,6 +134,23 @@ RSpec.describe Autonomia::Insurance::Parametros do
         end
       end
 
+      # A regra do adapter (`ehRenovacao`): grupo só com nulo ou texto vazio é seguro novo, e o resumo diz o mesmo.
+      # Pelo formulário o vazio já sai (`QuoteInput#sem_vazios`); pelo `dados`, que vai como veio, não saía, e
+      # `{"renovacao":{"bonus":null}}` aparecia como renovação no resumo (revisão de 25/09/2026).
+      it "em #{ramo}, o grupo só com nulo ou vazio é seguro novo, como o adapter cota" do
+        grupos = [{ 'bonus' => nil }, { 'sinistros' => '' }, { 'bonus' => nil, 'numeroApolice' => '' }]
+        textos = grupos.flat_map do |grupo|
+          [resumo(ramo, 'renovacao' => grupo), resumo(ramo, 'dados' => { 'renovacao' => grupo }.to_json)]
+        end
+
+        textos.each do |texto|
+          expect(texto).to include(Autonomia::Insurance::EntradaDaCotacao::SEGURO_NOVO)
+          expect(texto).not_to include(Autonomia::Insurance::EntradaDaCotacao::RENOVACAO, 'Seguradora anterior')
+        end
+        expect(resumo(ramo, 'dados' => { 'renovacao' => { 'bonus' => 0 } }.to_json))
+          .to include(Autonomia::Insurance::EntradaDaCotacao::RENOVACAO)
+      end
+
       it "em #{ramo}, a seguradora que não é nome da lista não sai crua" do
         texto = resumo(ramo, 'renovacao' => { 'seguradoraAnterior' => '7', 'bonus' => 1 })
 
