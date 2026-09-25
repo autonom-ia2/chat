@@ -169,6 +169,75 @@ describe('ProspectingSearchPage · repetir e editar busca do histórico', () => 
     });
   });
 
+  // Área desenhada (frente B): sem o desenho restaurado a busca repetida ia
+  // sem área e o servidor recusava com drawn_area_required.
+  const PATH = [
+    { lat: -25.42, lng: -49.28 },
+    { lat: -25.42, lng: -49.26 },
+    { lat: -25.44, lng: -49.27 },
+  ];
+  const drawnSearches = {
+    polygon: {
+      config: {
+        path: PATH,
+        bounds: { north: -25.42, south: -25.44, east: -49.26, west: -49.28 },
+        center: { lat: -25.43, lng: -49.27 },
+      },
+      expected: { path: PATH },
+      radius: 1000,
+    },
+    rectangle: {
+      config: {
+        bounds: { north: -25.42, south: -25.44, east: -49.26, west: -49.28 },
+        center: { lat: -25.43, lng: -49.27 },
+      },
+      expected: {
+        bounds: { north: -25.42, south: -25.44, east: -49.26, west: -49.28 },
+      },
+      radius: 1000,
+    },
+    circle: {
+      config: { center: { lat: -25.43, lng: -49.27 }, radius: 1800 },
+      expected: { center: { lat: -25.43, lng: -49.27 }, radius: 1800 },
+      radius: 1800,
+    },
+  };
+
+  it.each(Object.keys(drawnSearches))(
+    'Repetir uma busca de área desenhada (%s) manda o mesmo desenho',
+    async areaType => {
+      const { config, expected, radius } = drawnSearches[areaType];
+      const search = savedRadiusSearch();
+      const wrapper = await mountWithHistory([
+        bakerySearch(),
+        {
+          ...search,
+          area_type: areaType,
+          radius,
+          requested_radius: radius,
+          search_filters: {},
+          area_config: {
+            ...config,
+            label: 'Curitiba, PR, Brasil',
+            place_id: 'place-cwb',
+          },
+        },
+      ]);
+
+      await clickOnCard(wrapper, 1, REPEAT);
+
+      expect(AutonomiaProspectingAPI.createSearch).toHaveBeenCalledTimes(1);
+      const [request] = AutonomiaProspectingAPI.createSearch.mock.calls[0];
+      expect(request.area_type).toBe(areaType);
+      expect(request.radius).toBe(radius);
+      expect(request.area_config).toEqual({
+        ...expected,
+        label: 'Curitiba, PR, Brasil',
+        place_id: 'place-cwb',
+      });
+    }
+  );
+
   it('Editar abre o formulário com tudo preenchido e envia o mesmo pedido', async () => {
     const wrapper = await mountWithHistory([
       bakerySearch(),

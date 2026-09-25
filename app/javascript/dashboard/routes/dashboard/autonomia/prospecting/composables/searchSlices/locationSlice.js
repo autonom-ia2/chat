@@ -4,7 +4,7 @@
 // descreve onde buscar.
 import { ref } from 'vue';
 import { DEFAULT_DECISION_MAKER_TYPE } from '../../utils/decisionMakerTypes';
-import { isDrawnAreaType } from '../../utils/drawnArea';
+import { drawnAreaFromSaved, isDrawnAreaType } from '../../utils/drawnArea';
 
 export const locationCenter = locationDetails => {
   if (!locationDetails?.latitude || !locationDetails?.longitude) return null;
@@ -67,6 +67,7 @@ const restoreLocationForm = (
     previewViewport,
     locationSuggestions,
     locationError,
+    drawnArea,
   },
   search
 ) => {
@@ -94,6 +95,7 @@ const restoreLocationForm = (
     : null;
   locationSuggestions.value = [];
   locationError.value = '';
+  drawnArea.value = drawnAreaFromSaved(form.value.area_type, area, radius);
 };
 
 export const locationSlice = {

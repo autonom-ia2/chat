@@ -121,11 +121,12 @@ export const useSearchLocation = state => {
   };
 
   // Trocar o tipo de área tira a forma do mapa; o desenho antigo não pode
-  // continuar valendo quando a pessoa volta ao mesmo tipo.
+  // continuar valendo quando a pessoa volta ao mesmo tipo. O desenho que já é
+  // do tipo novo (busca salva restaurada para repetir ou editar) fica.
   watch(
     () => form.value.area_type,
-    () => {
-      drawnArea.value = null;
+    areaType => {
+      if (drawnArea.value?.type !== areaType) drawnArea.value = null;
     }
   );
 

@@ -70,5 +70,21 @@ export const rectangleAround = (latLng, halfSizeMeters) => {
   };
 };
 
+// Desenho de uma busca salva (area_config gravado pelo servidor), para
+// repetir ou editar (#678). O raio do círculo cai no raio da busca quando a
+// área não o guardou. Sem a geometria do tipo, não há desenho.
+const SAVED_GEOMETRY = {
+  circle: (config, radius) =>
+    config.center && { center: config.center, radius: config.radius || radius },
+  rectangle: config => config.bounds && { bounds: config.bounds },
+  polygon: config =>
+    config.path?.length >= MIN_POLYGON_POINTS && { path: config.path },
+};
+
+export const drawnAreaFromSaved = (areaType, config, radius) => {
+  const geometry = SAVED_GEOMETRY[areaType]?.(config || {}, radius);
+  return geometry ? { type: areaType, config: geometry } : null;
+};
+
 export const isDrawnAreaReady = (areaType, drawnArea) =>
   !isDrawnAreaType(areaType) || drawnArea?.type === areaType;

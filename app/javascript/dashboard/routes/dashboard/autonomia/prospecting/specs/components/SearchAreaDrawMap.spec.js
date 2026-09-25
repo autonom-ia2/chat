@@ -306,6 +306,46 @@ describe('SearchAreaDrawMap', () => {
     expect(wrapper.text()).toContain('PROSPECTING.SEARCH.AREA_DRAW.READY');
   });
 
+  // Editar uma busca salva (#678): o desenho dela aparece no mapa, editável,
+  // em vez de o mapa abrir vazio dizendo que a área está pronta.
+  it('desenha a área salva recebida e continua editável', async () => {
+    const path = [
+      { lat: -25.5, lng: -49.3 },
+      { lat: -25.5, lng: -49.2 },
+      { lat: -25.4, lng: -49.25 },
+    ];
+    const wrapper = await mountDrawMap({
+      shape: 'polygon',
+      modelValue: { type: 'polygon', config: { path } },
+    });
+
+    expect(created.polygons).toHaveLength(1);
+    expect(created.polygons[0].options).toMatchObject({
+      editable: true,
+      paths: path,
+    });
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+
+    await clickMap(-25.45, -49.35);
+    expect(lastEmitted(wrapper).config.path).toHaveLength(4);
+  });
+
+  it('desenha o círculo salvo com o raio dele', async () => {
+    await mountDrawMap({
+      modelValue: {
+        type: 'circle',
+        config: { center: { lat: -25.4, lng: -49.2 }, radius: 1800 },
+      },
+    });
+
+    expect(created.circles).toHaveLength(1);
+    expect(created.circles[0].options).toMatchObject({
+      center: { lat: -25.4, lng: -49.2 },
+      radius: 1800,
+      editable: true,
+    });
+  });
+
   it('sem chave de navegador avisa em vez de abrir o mapa', async () => {
     const wrapper = await mountDrawMap({ apiKey: '' });
 

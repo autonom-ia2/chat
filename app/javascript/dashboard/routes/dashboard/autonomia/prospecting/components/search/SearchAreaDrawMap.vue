@@ -78,44 +78,70 @@ const listen = (target, events, handler) => {
   events.forEach(event => listeners.push(target.addListener(event, handler)));
 };
 
-const createCircle = latLng => {
+// Cada forma nasce de uma geometria { center, radius } | { bounds } | { path }:
+// a do clique ou a de uma busca salva que volta para editar (#678).
+const drawCircle = ({ center, radius }) => {
   overlay = new window.google.maps.Circle({
     ...SHAPE_STYLE,
     map,
-    center: { lat: latLng.lat(), lng: latLng.lng() },
-    radius: props.defaultRadius,
+    center,
+    radius,
     editable: true,
     draggable: true,
   });
   const update = () => emit('update:modelValue', circleArea(overlay));
   listen(overlay, ['radius_changed', 'center_changed'], update);
   pointsCount.value = 1;
-  update();
+  return update;
 };
 
-const createRectangle = latLng => {
+const drawRectangle = ({ bounds }) => {
   overlay = new window.google.maps.Rectangle({
     ...SHAPE_STYLE,
     map,
-    bounds: rectangleAround(latLng, props.defaultRadius),
+    bounds,
     editable: true,
     draggable: true,
   });
   const update = () => emit('update:modelValue', rectangleArea(overlay));
   listen(overlay, ['bounds_changed'], update);
   pointsCount.value = 1;
-  update();
+  return update;
 };
 
-const createPolygon = latLng => {
+const drawPolygon = ({ path }) => {
   overlay = new window.google.maps.Polygon({
     ...SHAPE_STYLE,
     map,
-    paths: [{ lat: latLng.lat(), lng: latLng.lng() }],
+    paths: path,
     editable: true,
   });
   listen(overlay.getPath(), ['insert_at', 'set_at', 'remove_at'], emitPolygon);
-  emitPolygon();
+  pointsCount.value = path.length;
+  return emitPolygon;
+};
+
+const DRAWERS = {
+  circle: drawCircle,
+  rectangle: drawRectangle,
+  polygon: drawPolygon,
+};
+
+const geometryAtClick = latLng => {
+  const point = { lat: latLng.lat(), lng: latLng.lng() };
+  if (props.shape === 'circle') {
+    return { center: point, radius: props.defaultRadius };
+  }
+  if (props.shape === 'rectangle') {
+    return { bounds: rectangleAround(latLng, props.defaultRadius) };
+  }
+  return { path: [point] };
+};
+
+// Área recebida do formulário (busca salva) e ainda sem forma no mapa.
+const drawSavedArea = () => {
+  if (!map || overlay || props.modelValue?.type !== props.shape) return;
+  DRAWERS[props.shape]?.(props.modelValue.config);
 };
 
 const handleMapClick = event => {
@@ -126,9 +152,7 @@ const handleMapClick = event => {
   }
   if (overlay) return;
 
-  if (props.shape === 'circle') createCircle(event.latLng);
-  if (props.shape === 'rectangle') createRectangle(event.latLng);
-  if (props.shape === 'polygon') createPolygon(event.latLng);
+  DRAWERS[props.shape]?.(geometryAtClick(event.latLng))();
 };
 
 const undoPolygonPoint = () => {
@@ -164,12 +188,24 @@ onMounted(async () => {
     clickableIcons: false,
   });
   mapClickListener = map.addListener('click', handleMapClick);
+  drawSavedArea();
 });
 
+// Trocar a forma apaga o desenho, a menos que a área recebida já seja da forma
+// nova (busca salva restaurada com o formulário aberto).
 watch(
   () => props.shape,
-  () => clearDrawing()
+  () => {
+    if (props.modelValue?.type === props.shape) {
+      clearOverlay();
+      drawSavedArea();
+      return;
+    }
+    clearDrawing();
+  }
 );
+
+watch(() => props.modelValue, drawSavedArea);
 
 watch(
   () => [props.center?.lat, props.center?.lng],
