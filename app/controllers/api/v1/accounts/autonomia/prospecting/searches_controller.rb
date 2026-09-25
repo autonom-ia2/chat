@@ -7,7 +7,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   rescue_from ::Autonomia::Prospecting::SearchRunner::ScoreEngineError, with: :render_score_unavailable
 
   def index
-    ordered_scope = searches_scope.order(created_at: :desc)
+    ordered_scope = visible_searches_scope.order(created_at: :desc)
     total_count = ordered_scope.count
     searches = ordered_scope.offset((page - 1) * per_page).limit(per_page)
 
@@ -41,7 +41,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   end
 
   def show
-    search = searches_scope.find(params[:id])
+    search = visible_searches_scope.find(params[:id])
     render json: { payload: search_payload(search, include_leads: true) }
   end
 
@@ -70,7 +70,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   end
 
   def update
-    search = searches_scope.find(params[:id])
+    search = visible_searches_scope.find(params[:id])
     search.update!(metadata: search.metadata.to_h.merge(search_settings_metadata))
 
     render json: { payload: search_payload(search.reload) }
@@ -82,13 +82,13 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
 
   # CSV ou Excel dos leads da busca (#682), na ordem de prioridade dela, como o export do Orth.
   def export
-    search = searches_scope.find(params[:id])
+    search = visible_searches_scope.find(params[:id])
     scoring = search.metadata.to_h['lead_scoring'].to_h
     send_leads_export(by_priority_position(leads_for_search(search), scoring), scoring: scoring, filename: "busca-#{search.id}")
   end
 
   def destroy
-    search = searches_scope.find(params[:id])
+    search = visible_searches_scope.find(params[:id])
     search.destroy!
 
     render json: { payload: { id: search.id } }
@@ -234,7 +234,12 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
     leads_scope.includes(:company_profile, :contact).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
   end
 
+  # O bloco técnico da nota (componentes, pesos, fatores negativos) só vai para o administrador (#732, item 9).
   def lead_payload(lead, search = nil)
+    visible_lead_payload(full_lead_payload(lead, search))
+  end
+
+  def full_lead_payload(lead, search)
     lead.as_json(
       only: [
         :id, :provider, :provider_place_id, :name, :phone, :website, :address, :city, :state, :country,

@@ -6,6 +6,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { withFullI18n } from 'test-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CampaignsAPI from 'dashboard/api/campaigns';
+import WhatsappApiCampaignsAPI from 'dashboard/api/whatsappApiCampaigns';
 import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 import CampaignSelectionModal from '../../components/campaign/CampaignSelectionModal.vue';
 import { ChoiceSelectStub, deferred } from '../support/searchPageHarness';
@@ -14,6 +15,9 @@ vi.mock('dashboard/api/autonomiaProspecting', () => ({
   default: { addLeadsToCampaign: vi.fn() },
 }));
 vi.mock('dashboard/api/campaigns', () => ({ default: { get: vi.fn() } }));
+vi.mock('dashboard/api/whatsappApiCampaigns', () => ({
+  default: { get: vi.fn() },
+}));
 
 withFullI18n();
 
@@ -42,6 +46,14 @@ const CAMPAIGNS = [
     campaign_type: 'ongoing',
     campaign_status: 'active',
   },
+];
+
+// Campanhas da API do WhatsApp (#732, item 11): só a agendada ainda recebe
+// público, porque ele é lido quando a campanha começa.
+const WHATSAPP_API_CAMPAIGNS = [
+  { id: 8, title: 'Retomada de clientes', status: 'scheduled' },
+  { id: 12, title: 'Já enviando', status: 'running' },
+  { id: 13, title: 'Terminada', status: 'completed' },
 ];
 
 const segmentResponse = (extra = {}) => ({
@@ -74,8 +86,14 @@ const segmentResponse = (extra = {}) => ({
   },
 });
 
-const mountModal = async ({ campaigns = CAMPAIGNS } = {}) => {
+const mountModal = async ({
+  campaigns = CAMPAIGNS,
+  whatsappApiCampaigns = [],
+} = {}) => {
   CampaignsAPI.get.mockResolvedValue({ data: campaigns });
+  WhatsappApiCampaignsAPI.get.mockResolvedValue({
+    data: { payload: whatsappApiCampaigns },
+  });
   const wrapper = mount(CampaignSelectionModal, {
     props: { leads: LEADS, defaultSegmentName: 'padaria' },
     global: { stubs: { ChoiceSelect: ChoiceSelectStub } },
@@ -113,7 +131,7 @@ describe('CampaignSelectionModal', () => {
 
     expect(campaignChoice(wrapper).props('options')).toEqual([
       { value: '', label: 'Só criar o segmento, sem campanha' },
-      { value: 8, label: 'Café da manhã' },
+      { value: 'one_off:8', label: 'Envio único · Café da manhã' },
     ]);
     expect(campaignChoice(wrapper).props('modelValue')).toBe('');
     expect(wrapper.find('input[type="text"]').element.value).toBe('padaria');
@@ -126,7 +144,7 @@ describe('CampaignSelectionModal', () => {
       segmentResponse()
     );
 
-    campaignChoice(wrapper).vm.$emit('update:modelValue', 8);
+    campaignChoice(wrapper).vm.$emit('update:modelValue', 'one_off:8');
     await wrapper.find('input[type="text"]').setValue('Padarias do centro');
     await submit(wrapper).trigger('click');
     await flushPromises();
@@ -134,6 +152,7 @@ describe('CampaignSelectionModal', () => {
     expect(AutonomiaProspectingAPI.addLeadsToCampaign).toHaveBeenCalledWith({
       leadIds: [101, 102, 103],
       campaignId: 8,
+      campaignType: 'one_off',
       segmentName: 'Padarias do centro',
     });
     const text = result(wrapper).text();
@@ -147,6 +166,69 @@ describe('CampaignSelectionModal', () => {
       'Confeitaria Lua · Pediu para não receber mensagens',
     ]);
     expect(wrapper.emitted('done')[0][0].eligible_count).toBe(1);
+  });
+
+  it('mostra os dois tipos, com a campanha da API do WhatsApp primeiro, e só a agendada dela', async () => {
+    const wrapper = await mountModal({
+      whatsappApiCampaigns: WHATSAPP_API_CAMPAIGNS,
+    });
+
+    expect(campaignChoice(wrapper).props('options')).toEqual([
+      { value: '', label: 'Só criar o segmento, sem campanha' },
+      {
+        value: 'whatsapp_api:8',
+        label: 'WhatsApp API · Retomada de clientes',
+      },
+      { value: 'one_off:8', label: 'Envio único · Café da manhã' },
+    ]);
+  });
+
+  it('manda a campanha da API do WhatsApp com o tipo, mesmo com id igual ao de outra campanha', async () => {
+    const wrapper = await mountModal({
+      whatsappApiCampaigns: WHATSAPP_API_CAMPAIGNS,
+    });
+    AutonomiaProspectingAPI.addLeadsToCampaign.mockResolvedValue(
+      segmentResponse({
+        campaign: {
+          id: 8,
+          title: 'Retomada de clientes',
+          type: 'whatsapp_api',
+        },
+      })
+    );
+
+    campaignChoice(wrapper).vm.$emit('update:modelValue', 'whatsapp_api:8');
+    await submit(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaProspectingAPI.addLeadsToCampaign).toHaveBeenCalledWith({
+      leadIds: [101, 102, 103],
+      campaignId: 8,
+      campaignType: 'whatsapp_api',
+      segmentName: 'padaria',
+    });
+    expect(result(wrapper).text()).toContain('Campanha: Retomada de clientes');
+  });
+
+  it('campanha da API desligada na instalação (404) não é erro: fica a de envio único', async () => {
+    CampaignsAPI.get.mockResolvedValue({ data: CAMPAIGNS });
+    WhatsappApiCampaignsAPI.get.mockRejectedValue({
+      response: { status: 404 },
+    });
+    const wrapper = mount(CampaignSelectionModal, {
+      props: { leads: LEADS, defaultSegmentName: 'padaria' },
+      global: { stubs: { ChoiceSelect: ChoiceSelectStub } },
+    });
+    await flushPromises();
+
+    expect(
+      campaignChoice(wrapper)
+        .props('options')
+        .map(option => option.value)
+    ).toEqual(['', 'one_off:8']);
+    expect(wrapper.text()).not.toContain(
+      'Não foi possível carregar as campanhas.'
+    );
   });
 
   it('cada motivo de bloqueio tem texto próprio, e motivo desconhecido não some', async () => {
@@ -293,6 +375,9 @@ describe('CampaignSelectionModal', () => {
 
   it('campanhas que não carregam deixam criar só o segmento', async () => {
     CampaignsAPI.get.mockRejectedValue(new Error('fora'));
+    WhatsappApiCampaignsAPI.get.mockRejectedValue({
+      response: { status: 500 },
+    });
     const wrapper = mount(CampaignSelectionModal, {
       props: { leads: LEADS, defaultSegmentName: 'padaria' },
       global: { stubs: { ChoiceSelect: ChoiceSelectStub } },
@@ -323,6 +408,7 @@ describe('CampaignSelectionModal', () => {
     );
 
     expect(CampaignsAPI.get).not.toHaveBeenCalled();
+    expect(WhatsappApiCampaignsAPI.get).not.toHaveBeenCalled();
     expect(campaignChoice(wrapper)).toBeUndefined();
     expect(wrapper.text()).not.toContain('Campanha');
     await submit(wrapper).trigger('click');

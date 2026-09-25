@@ -113,7 +113,8 @@ RSpec.describe 'Autonomia prospecting lead adopt owner', type: :request do
                                                    .perform.card
     agent = create(:user, account: account, role: :agent)
     agent.account_users.find_by(account: account).update!(custom_role: create(:custom_role, account: account,
-                                                                                            permissions: ['prospecting_manage']))
+                                                                                            permissions: %w[prospecting_manage
+                                                                                                            prospecting_view_all_searches]))
 
     post path, params: { owner_name: 'BRUNO LIMA' }, headers: auth_headers(agent), as: :json
 

@@ -54,6 +54,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
       list: lists_scope.find(params[:id]),
       user: Current.user,
       campaign_id: campaign_segment_params[:campaign_id],
+      campaign_type: campaign_segment_params[:campaign_type],
       segment_name: campaign_segment_params[:segment_name]
     )
     # Lista já na audiência de uma campanha: reaplicar a etiqueta aumenta quem recebe, mesmo sem campaign_id (#680).
@@ -84,7 +85,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
   def campaign_segment_params
     return {} if params[:campaign_segment].blank?
 
-    params.require(:campaign_segment).permit(:campaign_id, :segment_name)
+    params.require(:campaign_segment).permit(:campaign_id, :campaign_type, :segment_name)
   end
 
   def list_payload(list, include_leads: false)
@@ -92,7 +93,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::ListsController < Api::V1::Acco
     return payload unless include_leads
 
     payload.merge(
-      leads: list.leads.includes(:company_profile, :contact).order(created_at: :desc).map { |lead| lead_payload(lead) }
+      leads: list.leads.includes(:company_profile, :contact).order(created_at: :desc).map { |lead| visible_lead_payload(lead_payload(lead)) }
     )
   end
 

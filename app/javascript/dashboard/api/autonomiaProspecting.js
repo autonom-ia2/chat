@@ -74,10 +74,12 @@ class AutonomiaProspectingAPI extends ApiClient {
 
   // Campanha a partir da seleção da busca (#680): devolve o segmento, com o
   // motivo de cada lead bloqueado.
-  addLeadsToCampaign({ leadIds, campaignId, segmentName }) {
+  // campaignType: 'whatsapp_api' ou 'one_off' (#732); sem ele, envio único.
+  addLeadsToCampaign({ leadIds, campaignId, campaignType, segmentName }) {
     return axios.post(`${this.url}/leads/campaign_segment`, {
       lead_ids: leadIds,
       campaign_id: campaignId,
+      campaign_type: campaignType,
       segment_name: segmentName,
     });
   }

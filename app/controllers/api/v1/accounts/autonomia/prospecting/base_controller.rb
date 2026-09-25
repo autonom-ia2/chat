@@ -66,6 +66,19 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     ::Autonomia::Prospecting::List.where(account: Current.account)
   end
 
+  # Quem vê o quê (#732): o agente só as próprias buscas e os leads delas; o bloco técnico da nota só o administrador.
+  def visibility
+    @visibility ||= ::Autonomia::Prospecting::Visibility.new(Current.account_user)
+  end
+
+  def visible_searches_scope
+    visibility.searches(searches_scope)
+  end
+
+  def visible_lead_payload(payload)
+    visibility.lead_payload(payload)
+  end
+
   def setting
     ::Autonomia::Prospecting::Setting.for_account(Current.account)
   end

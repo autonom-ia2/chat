@@ -727,6 +727,8 @@
       "RULE": "Entram no segmento os leads prontos para campanha, com WhatsApp verificado e sem bloqueio no contato. Os outros aparecem no resumo, com o motivo.",
       "CAMPAIGN": "Campanha",
       "SEGMENT_ONLY": "Só criar o segmento, sem campanha",
+      "CHOICE_WHATSAPP_API": "WhatsApp API · {title}",
+      "CHOICE_ONE_OFF": "Envio único · {title}",
       "SEGMENT_NAME": "Nome do segmento",
       "CAMPAIGNS_LOAD_ERROR": "Não foi possível carregar as campanhas. Dá para criar só o segmento e ligar a campanha depois.",
       "SUBMIT": "Adicionar",
@@ -737,8 +739,8 @@
       "ERRORS": {
         "NO_ELIGIBLE": "Nenhum lead da seleção pode entrar na campanha.",
         "CAMPAIGN_NOT_FOUND": "A campanha escolhida não existe mais. Escolha outra.",
-        "CAMPAIGN_NOT_ACTIVE": "A campanha escolhida não está ativa. Escolha outra ou crie só o segmento.",
-        "UNSUPPORTED_CAMPAIGN": "Só campanhas de envio único recebem leads da prospecção.",
+        "CAMPAIGN_NOT_ACTIVE": "A campanha escolhida não está ativa ou já começou a enviar. Escolha outra ou crie só o segmento.",
+        "UNSUPPORTED_CAMPAIGN": "Só campanhas de envio único ou da API do WhatsApp recebem leads da prospecção.",
         "LABEL_COLLISION": "Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.",
         "TOO_MANY_LEADS": "Selecione até 500 leads por vez.",
         "EMPTY_SELECTION": "Selecione pelo menos um lead."
