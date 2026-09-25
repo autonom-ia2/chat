@@ -36,6 +36,34 @@ Um ramo novo mexe em dois repositórios, e esquecer um deles é a falha mais bar
 | Em que conta o ramo está ligado | `chat2you` | `Insurance::Config` (`autonomia_insurance_ramos_liberados`, por conta) |
 | A prova com conversa real | `chat2you` | `tools/cotacao-smoke/` |
 
+## O padrão do agente especialista
+
+Auto, residencial e empresarial chegaram ao mesmo esqueleto sem ninguém escrevê-lo, e o empresarial esqueceu
+cinco peças que o residencial tinha. O padrão agora é escrito e conferido por guarda.
+
+**O manual** (`especialista_<ramo>.md`), lido depois do bloco comum, tem estas seções, nesta ordem:
+1. Quem você é.
+2. O que você cota, e o que recusa.
+3. O mínimo do ramo (medido, R3).
+4. A particularidade do ramo, quando existe (a atividade no empresarial, a profissão em vida).
+5. A jornada: a apólice atual; coleta, na ordem do mínimo; cotar, sem pedir licença; lapidação.
+6. As regras que ligam um campo a outro.
+7. O que você nunca faz.
+
+Preço, comparativo, escolha, quem é o segurado, os três níveis de cobertura, a renovação dos ramos de imóvel,
+o que nunca vai ao cliente e o que fazer quando algo dá errado ficam **no bloco comum**, uma vez só. O manual do
+ramo não os repete e não os contradiz. Auto é a exceção histórica: tem renovação, preços e escolha no próprio
+manual (4.1, 4.2, 4.5 e 4.7). Guarda: `padrao_do_especialista_spec.rb`.
+
+**As peças**, que todo ramo fora de auto tem ou justifica por escrito:
+
+| Onde | Peça |
+|---|---|
+| adapter | schema com descrição e origem de cada campo; `DOMINIOS_POR_RAMO`; `RAMOS_PRONTOS`; `COBERTURAS_DO_CLIENTE`; tetos pela base; `CAMPOS_DA_IMPRESSAO`; `PACOTE_POR_OBJETO`; `RUIDO_POR_RAMO`; deduzidos do ramo; renovação, se o ramo tem; mínimos |
+| chat | manual assinado (md5) e tabela de promessas; resumo em `EntradaDaCotacao`; mock do schema; rótulo do item; migration que insere o especialista; fecho sem novidade; nota da equipe |
+
+Guardas: `paridade-dos-ramos.test.ts` no adapter e `paridade_das_pecas_spec.rb` no chat.
+
 ## Estado de partida, medido em 24/09/2026
 
 Com auto e residencial em produção, o que era trabalho de verdade na versão 1 virou caminho pronto. Um ramo
@@ -106,6 +134,9 @@ Construir um especialista custa dias e cotação paga. Não entra ramo por compl
 Se o item 2 falhar por credencial da corretora na seguradora (é o caso de vida global), o ramo não
 entra: isso é cadastro, e nenhum código resolve.
 
+**O orçamento de cotações pagas do ramo é aprovado aqui** (regra do Rodrigo, 25/09): um teto por ramo para a
+Fase 1 e a Fase 3, registrado no piloto. Passou do teto, para e traz ao Rodrigo o que falta medir e por quê.
+
 **Medir em lote, sem travar a conta.** Abrir várias cotações no mesmo segundo derruba a conferência de login
 das seguradoras (cada abertura confere umas 15) e, em 23/09/2026, fez o firewall do portal bloquear a conta 16.
 Abra **uma cotação por vez**, espere ela aparecer no portal antes da próxima e leia os resultados em paralelo:
@@ -118,6 +149,20 @@ da API ao vivo, o formulário de residencial, vida e empresarial: payload, campo
 pacote de coberturas, tabelas de código e armadilhas (`~/dev/projetos.noindex/agger-descoberta/ramos/<ramo>/*-campos.json`
 e o README ao lado). Em 24/09 treze cotações de empresarial redescobriram o que estava lá (modo F8). Meça só o que a
 descoberta não responde.
+
+**A descoberta tem duas camadas, e só a segunda custa dinheiro:**
+1. **Catálogo completo, de graça.** Todo parâmetro que o ramo aceita, com os valores e os limites que o portal
+   declara, sai do código do portal e da conferência grátis (`quote/validate`). Critério: 100% dos parâmetros do
+   ramo no schema do adapter, com descrição e origem (`cliente`, `derivado` ou `escolha`). Completude aqui não
+   tem desculpa.
+2. **Limites por seguradora, pagos e priorizados.** Mínimo e máximo de cada cobertura, seguradora por
+   seguradora, por bisseção: primeiro a base (incêndio, capital de morte), depois as coberturas que o cliente
+   mais pede, depois o resto, até o orçamento. Cada limite medido vira tabela no adapter com a data: limite de
+   seguradora muda.
+
+**O mínimo do ramo é medido, não escolhido.** É o menor conjunto de dados que traz preço na maioria das
+seguradoras prontas. Tudo o mais é buscado (CPF, CNPJ, CEP) ou tem padrão com motivo. A tabela do mínimo, com
+as execuções, fica no piloto antes da primeira linha do manual.
 
 Antes de mexer no chat2you, prove a ponta que custa dinheiro.
 
@@ -257,6 +302,19 @@ Arquivo `quote_agent/instrucoes/especialista_<ramo>.md`, lido **depois** do bloc
 - **Sem contradição com o bloco comum nem dentro do próprio arquivo.** Regra nova numa seção e regra
   oposta noutra seção, mais perto da ação: o modelo segue a mais perto. Procure no arquivo inteiro, e também nas
   descrições dos campos e nas mensagens de conferência do adapter para o ramo.
+- **As seis rodadas.** A Lia e o especialista têm até seis rodadas de ferramenta no turno (`RODADAS_DE_FERRAMENTA`,
+  decisão do Rodrigo de 22/09). A recusa da conferência, que é grátis, se corrige nelas: ler a recusa, ajustar o
+  valor, conferir de novo. Ao cliente só vai o que não der para resolver. O bloco comum e o principal dizem isso ao
+  modelo; um modelo que não sabe que pode tentar de novo pergunta ao cliente na primeira recusa.
+- **Recusa paga de seguradora por valor: o sistema recota uma vez, sozinho**, só as seguradoras que recusaram por
+  valor e com o valor corrigido (decisão do Rodrigo de 25/09, opção a). Ela chega fora do turno, então não cabe
+  nas seis rodadas. *Ainda não implementado:* até existir, o manual não promete o recote.
+- **Nada de regex para entender o cliente.** Quem interpreta o que a pessoa escreveu é o modelo, com a saída
+  "não se aplica". Fora disso, regex só como último recurso e com o OK do Rodrigo. Guarda: `sem_regex_spec.rb`,
+  com a lista de exceções e o motivo de cada uma.
+- **Fala humanizada, nunca texto pronto.** O código publica ao cliente só o anexo, sem texto; quem fala é o modelo.
+  Texto fixo existe só na nota privada da equipe. Guarda: `sem_texto_fixo_ao_cliente_spec.rb`, com cada ponto que
+  cria mensagem classificado. Teste não prova voz: a conversa real é lida por gente (Fase 6).
 - **Nenhum texto fala da posição do anexo** ("no PDF acima"). O canal não garante a ordem: no WhatsApp o PDF
   chega depois do texto (25/09). Guarda por teste, com método de string.
 - O manual é assinado (md5) como os outros dois: mudou uma letra, a suíte reprova até alguém reler.
@@ -309,9 +367,29 @@ para a rodada, a não ser que já dada para o piloto em curso.
 - O caminho da rodada: a sessão do WhatsApp do Rodrigo no WAHA (`5511937016094`) para a Lia (`555196569128`),
   e a telemetria ligada antes (mensagens, execuções, notas internas, fila do worker e a Lambda).
 
+**A bateria de roteamento**, que roda a cada ramo novo **e também contra os ramos que já estão no ar**, com o
+veredito lido do banco (qual especialista foi chamado), nunca do texto:
+- o ramo sozinho, e depois de outro ramo na mesma conversa;
+- o ramo com auto e residencial na mesma mensagem, com dado novo (pedido repetido em 24 h não cota);
+- os ambíguos: "seguro da minha loja" (empresarial ou residencial), "seguro de vida" (vida ou acidentes
+  pessoais), "o carro da empresa" (auto PJ ou empresarial);
+- a conta sem o ramo: a Lia diz que não cota e não abre cotação;
+- a troca de ramo no meio da conversa.
+
+**Coberturas e renovação são duas provas separadas, com documento real:**
+- os três níveis de cobertura (o pedido do cliente, depois a apólice, depois o padrão), com uma apólice real
+  que tenha coberturas e o cliente pedindo uma cobertura diferente;
+- a renovação, se o ramo tem: com apólice anterior real, e sem apólice (seguro novo com aviso uma vez).
+
+Sem apólice real disponível, o item fica **aberto** e o ramo não é liberado.
+
 ## Fase 7 — Operação
 
 **Critério de passagem:**
+- **Toda falha da cotação vira nota privada à equipe.** O mapa das falhas (seguradora sem proposta, passagem à
+  equipe, IA que falhou, rodadas esgotadas, portal fora, busca de atividade ou profissão que falhou, PDF não
+  gerado, conferência em laço) tem, para cada uma, a nota e um teste que provoca a falha. Guarda:
+  `falha_vira_nota_privada_spec.rb`. Falha sem nota é a equipe cega com o cliente esperando.
 - A medição conta as cotações do ramo por corretora (`/super_admin/insurance_measurement`).
 - A seguradora que recusa a credencial da corretora aparece na tela de Conexões, nunca para o cliente.
 - Toda recusa de cotar do ramo deixa registro com conversa, agente, motivo e o que faltava.
@@ -370,28 +448,38 @@ o ramo na conta.
 
 | # | Item | Fase | Evidência esperada |
 |---|---|---|---|
-| R1 | Decisão do Rodrigo e descoberta de 04/09 lida antes de medir | 0 e 1 | a data da decisão; o arquivo da descoberta citado |
+| R1 | Decisão do Rodrigo, orçamento de cotações do ramo aprovado e descoberta de 04/09 lida | 0 | a data da decisão, o teto, o arquivo da descoberta |
 | R2 | Jornada de auto preenchida, todas as linhas, sem "depois" | antes do código | a tabela no piloto, mostrada ao Rodrigo |
-| R3 | Cota pelo caminho do produto, lida de volta, em três faixas de valor, com dado real | 1 | ids das execuções |
-| R4 | Formulário gerado do schema; todo campo atravessa; descrições sem crase nem travessão | 2 | specs de travessia e de descrição |
-| R5 | Ferramenta nova testada com a resposta do `Connector::Http` e o tempo medido | 2 | spec com snake_case e o número medido |
-| R6 | Travas de regra com saída "não se aplica"; PF e PJ separados; mínimo cota com o mínimo | 3 | testes que falham sem a trava |
-| R7 | Pacote, tetos pela base e ruído do ramo medidos | 3 | tabelas no adapter e as execuções |
-| R8 | Nenhum fato do cliente fixo no código; o pedido vence o padrão | 3 | busca por constante do ramo; spec |
-| R9 | Comparativo **e** proposta de uma seguradora abertos e lidos | 3 e 6 | os dois PDFs de uma execução |
-| R10 | Coberturas nos três níveis (pedido, apólice, padrão) | 3 e 4 | spec e conversa real |
-| R11 | Renovação, se o ramo tem, ou o motivo de não ter | 3 e 4 | spec e conversa real, ou a linha na jornada |
-| R12 | Manual sem contradição (arquivo, comum, descrições e conferências), sem posição de anexo, com promessas ligadas | 4 | spec das promessas e md5 |
-| R13 | Especialista nos agentes existentes, só onde a corretora cota | 5 | a migration e `disponivel?` |
-| R14 | Guarda de paridade do adapter verde, exceções com motivo | antes do ar | o teste de paridade |
-| R15 | Roteiro real inteiro: sozinho; depois de outro ramo; dois bens; com auto e residencial na mesma mensagem; apólice com coberturas; cliente pedindo cobertura; dado mudado entre rodadas | 6 | números das conversas |
-| R16 | Recusas conhecidas registradas, com o dono de cada uma | 6 | a lista no piloto |
-| R17 | Revisão adversarial sem `test/contract`, suíte local lida, mutação | antes do merge | o relatório do revisor |
-| R18 | Ordem do deploy escrita no PR e vez combinada com as outras sessões | deploy | o PR |
+| R3 | Mínimo medido: preço na maioria das seguradoras prontas, o resto buscado ou com padrão | 1 | a tabela do mínimo e as execuções |
+| R4 | Catálogo grátis completo: 100% dos parâmetros no schema, com descrição e origem | 1 e 2 | o schema e o teste de ramo pronto |
+| R5 | Limites pagos por seguradora, por bisseção, priorizados, com data | 1 e 3 | as tabelas no adapter e as execuções |
+| R6 | Cota pelo caminho do produto, lida de volta, em três faixas de valor, com dado real | 1 | ids das execuções |
+| R7 | Formulário gerado; todo campo atravessa; descrições sem crase nem travessão | 2 | specs de travessia e de descrição |
+| R8 | Ferramenta nova testada com a resposta do `Connector::Http` e o tempo medido | 2 | spec com snake_case e o número medido |
+| R9 | Travas com saída "não se aplica"; PF e PJ separados; abaixo do mínimo cota com o mínimo | 3 | testes que falham sem a trava |
+| R10 | Pacote, tetos pela base e ruído do ramo | 3 | tabelas no adapter e as execuções |
+| R11 | Nenhum fato do cliente fixo no código; o pedido vence o padrão | 3 | spec |
+| R12 | Comparativo **e** proposta exclusiva de uma seguradora, abertos e lidos | 3 e 6 | os dois PDFs de uma execução |
+| R13 | Coberturas nos três níveis, provadas com apólice real | 3 e 6 | spec e conversa real |
+| R14 | Renovação, se o ramo tem, provada com e sem apólice; ou o motivo de não ter | 3 e 6 | spec e conversa real, ou a linha na jornada |
+| R15 | Manual no padrão do especialista | 4 | `padrao_do_especialista_spec.rb` |
+| R16 | Manual sem contradição (arquivo, comum, descrições e conferências), sem posição de anexo, promessas ligadas, md5 | 4 | spec das promessas e md5 |
+| R17 | Seis rodadas usadas na conferência; recote pago uma vez por valor (quando existir) | 4 | promessa ligada à constante |
+| R18 | Nada de regex para entender o cliente | todas | `sem_regex_spec.rb` |
+| R19 | Nenhum texto fixo ao cliente; conversa real lida por gente | todas e 6 | `sem_texto_fixo_ao_cliente_spec.rb` e a conversa |
+| R20 | Toda falha do ramo vira nota privada à equipe | 7 | `falha_vira_nota_privada_spec.rb` |
+| R21 | Peças em paridade no adapter e no chat, exceções com motivo | antes do ar | `paridade-dos-ramos.test.ts` e `paridade_das_pecas_spec.rb` |
+| R22 | Especialista nos agentes existentes, só onde a corretora cota | 5 | a migration e `disponivel?` |
+| R23 | Roteiro real: sozinho; depois de outro ramo; dois bens; com auto e residencial; dado mudado entre rodadas | 6 | números das conversas |
+| R24 | Bateria de roteamento, também contra os ramos no ar, com veredito do banco | 6 | números das conversas e o especialista chamado |
+| R25 | Recusas conhecidas registradas, com o dono de cada uma | 6 | a lista no piloto |
+| R26 | Revisão adversarial sem `test/contract`, suíte local lida, mutação; ordem do deploy e vez combinada | antes do merge | o relatório do revisor e o PR |
 
 **Como o checklist é garantido.** Não depende de memória, nem da minha:
-1. **Guarda no código.** Um spec reprova o especialista de ramo novo em `ESPECIALISTAS` sem o `piloto-<ramo>.md`
-   com os dezoito itens, cada um com evidência ou exceção com motivo. Ramo sem checklist não entra no build.
+1. **Guardas no código.** `checklist_do_ramo_spec.rb` reprova o especialista em `ESPECIALISTAS` (fora auto) sem o
+   `piloto-<ramo>.md` com os vinte e seis itens, cada um `ok` com evidência ou `aberto` com motivo. Seis itens
+   têm guarda própria, que vale para todo ramo e também para os que já estão no ar: R15 (padrão do manual),
+   R17 (rodadas no manual), R18 (regex), R19 (texto fixo), R20 (falha vira nota) e R21 (paridade das peças).
 2. **A liberação na conta é o portão.** Liberar o ramo é escrita em produção e exige o OK do Rodrigo; o pedido de
    OK vem com o checklist, e item aberto é motivo para negar.
 3. **O revisor audita pelo checklist**, item por item, e não só o diff.
