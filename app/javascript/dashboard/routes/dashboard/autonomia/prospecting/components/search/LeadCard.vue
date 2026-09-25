@@ -3,6 +3,8 @@
 // selos de posição, bairro, sinais, telefone com selo de verificado e ações.
 // O card inteiro abre e fecha o painel; clique em botão, link ou caixa de
 // seleção dentro dele segue com a própria ação.
+// A tela de Listas (#682) usa o mesmo card, sem a caixa de seleção e com as
+// ações dela no slot "actions".
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
@@ -20,6 +22,7 @@ import * as formatters from '../../utils/searchFormatters';
 
 const props = defineProps({
   lead: { type: Object, required: true },
+  selectable: { type: Boolean, default: true },
 });
 
 const DOT_SEPARATOR = '·';
@@ -136,6 +139,7 @@ const toggleDetails = event => {
         </div>
       </div>
       <input
+        v-if="selectable"
         type="checkbox"
         class="mt-1 size-4 shrink-0"
         :checked="isChecked"
@@ -204,7 +208,11 @@ const toggleDetails = event => {
           {{ t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED') }}
         </span>
       </div>
-      <div v-if="legacyDecisionName" class="leading-relaxed">
+      <div
+        v-if="legacyDecisionName"
+        data-test="lead-legacy-decision"
+        class="leading-relaxed"
+      >
         <span class="font-semibold text-emerald-950">
           {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
         </span>
@@ -221,6 +229,8 @@ const toggleDetails = event => {
       </div>
     </div>
 
-    <LeadCardActions :lead="lead" />
+    <LeadCardActions :lead="lead">
+      <slot name="actions" />
+    </LeadCardActions>
   </article>
 </template>

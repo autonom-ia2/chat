@@ -1,16 +1,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CampaignsAPI from 'dashboard/api/campaigns';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
-import LeadResearchSummary from '../components/search/LeadResearchSummary.vue';
+import LeadCard from '../components/search/LeadCard.vue';
+import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
-import { useLeadLiveUpdates } from '../composables/useLeadLiveUpdates';
+import { useListLeadsContext } from '../composables/useListLeadsContext';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -21,27 +21,14 @@ import {
   priorityTheme,
   priorityValue,
 } from '../utils/prospectingPriority';
-import {
-  leadPhoneUrl as leadPhoneUrlFor,
-  leadWhatsAppUrl as leadWhatsAppUrlFor,
-  normalizedLeadPhone as normalizedLeadPhoneFor,
-} from '../utils/leadPhone';
-import { phoneRegionFromSettings } from '../utils/phoneContract';
-import {
-  isLeadEnriched,
-  isLeadEnriching as isEnriching,
-} from '../utils/leadEnrichment';
 
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
-const route = useRoute();
 const DOT_SEPARATOR = '·';
 
 const isLoading = ref(true);
 const isCreating = ref(false);
 const busyLeadId = ref(null);
-const enrichingLeadId = ref(null);
-const verifyingWhatsAppLeadIds = ref([]);
 const isCreatingCampaignSegment = ref(false);
 const isAddingSelectedLeads = ref(false);
 const lists = ref([]);
@@ -66,7 +53,6 @@ const form = ref({
   name: '',
   description: '',
 });
-const whatsappVerificationRequested = new Set();
 const listAdvancedFilters = ref(defaultAdvancedLeadFilters());
 const addLeadAdvancedFilters = ref(defaultAdvancedLeadFilters());
 
@@ -115,7 +101,6 @@ const activeAddLeadFiltersCount = computed(() =>
 );
 const hasSelectedList = computed(() => Boolean(selectedList.value?.id));
 const leadHasVerifiedWhatsApp = lead => lead?.whatsapp_verified === true;
-const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
 const campaignReadyLeads = computed(() =>
   (selectedList.value?.leads || []).filter(
     lead =>
@@ -176,96 +161,23 @@ const leadPriorityTheme = lead => {
   return priority === null ? null : priorityTheme(priority);
 };
 const leadSignals = lead => leadPrioritySignals(lead, { t });
-// O decisor da lista é o mesmo da busca (#679): com o bloco research, vem da
-// pesquisa; o nome gravado antes dela só aparece em lead sem esse bloco.
-const legacyDecisionName = lead => (lead.research ? null : lead.decision_name);
 
-const contactUrl = contactId =>
-  `/app/accounts/${route.params.accountId}/contacts/${contactId}`;
-
-const crmCardUrl = cardId =>
-  `/app/accounts/${route.params.accountId}/crm?card_id=${cardId}`;
-
-const googleMapsLeadUrl = lead => {
-  const query =
-    lead.latitude && lead.longitude
-      ? `${lead.latitude},${lead.longitude}`
-      : [lead.name, formatLeadAddress(lead)].filter(Boolean).join(' ');
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-};
-
-// Telefone pelo contrato único (utils/phoneContract.js), com o país da busca da conta.
-const phoneRegion = computed(() => phoneRegionFromSettings(settings.value));
-const normalizedLeadPhone = lead =>
-  normalizedLeadPhoneFor(lead, phoneRegion.value);
-const leadPhoneUrl = lead => leadPhoneUrlFor(lead, phoneRegion.value);
-const leadWhatsAppUrl = lead => leadWhatsAppUrlFor(lead, phoneRegion.value);
-
-const isWhatsAppVerified = leadHasVerifiedWhatsApp;
-const isWhatsAppUnavailable = lead =>
-  lead?.whatsapp_verification_status === 'not_whatsapp';
-const isWhatsAppChecking = lead =>
-  lead?.whatsapp_verification_status === 'queued' ||
-  verifyingWhatsAppLeadIds.value.map(Number).includes(Number(lead?.id));
-
-const shouldVerifyWhatsApp = lead =>
-  lead?.id &&
-  normalizedLeadPhone(lead) &&
-  !lead?.whatsapp_verification_status &&
-  !whatsappVerificationRequested.has(Number(lead.id));
+// Card, painel, WhatsApp, pesquisa e destino no CRM são os da busca (#682).
+const {
+  selectedLeadDetail,
+  selectedLeadDetailId,
+  fetchCrmPipelines,
+  verifyLeadsWhatsApp,
+} = useListLeadsContext({
+  canManage,
+  settings,
+  allLeads,
+  selectedList,
+  crmSendLeads,
+});
 
 const alertError = (error, fallbackMessage) => {
   useAlert(error?.response?.data?.error || fallbackMessage);
-};
-
-const replaceLead = updatedLead => {
-  if (!updatedLead?.id) return;
-
-  allLeads.value = allLeads.value.map(lead =>
-    lead.id === updatedLead.id ? updatedLead : lead
-  );
-
-  if (selectedList.value?.leads) {
-    selectedList.value = {
-      ...selectedList.value,
-      leads: selectedList.value.leads.map(lead =>
-        lead.id === updatedLead.id ? updatedLead : lead
-      ),
-    };
-  }
-};
-
-// Enriquecimento e WhatsApp terminam no servidor e chegam pelo evento (#678).
-useLeadLiveUpdates(replaceLead);
-
-const verifyLeadWhatsApp = async lead => {
-  if (!shouldVerifyWhatsApp(lead)) return;
-
-  const leadId = Number(lead.id);
-  whatsappVerificationRequested.add(leadId);
-  verifyingWhatsAppLeadIds.value = [...verifyingWhatsAppLeadIds.value, leadId];
-
-  try {
-    const { data } = await AutonomiaProspectingAPI.verifyLeadWhatsApp(lead.id);
-    replaceLead(data.payload?.lead);
-  } catch {
-    // Falha de WAHA/configuração não deve bloquear listas.
-  } finally {
-    verifyingWhatsAppLeadIds.value = verifyingWhatsAppLeadIds.value.filter(
-      id => Number(id) !== leadId
-    );
-  }
-};
-
-const verifyLeadsWhatsApp = leadsToVerify => {
-  if (!canManage.value) return;
-  leadsToVerify
-    .filter(shouldVerifyWhatsApp)
-    .slice(0, 25)
-    .reduce(
-      (promise, lead) => promise.then(() => verifyLeadWhatsApp(lead)),
-      Promise.resolve()
-    );
 };
 
 const fetchLists = async () => {
@@ -298,6 +210,7 @@ const selectList = async list => {
 
   try {
     const { data } = await AutonomiaProspectingAPI.getList(list.id);
+    selectedLeadDetailId.value = null;
     selectedList.value = data.payload || null;
     verifyLeadsWhatsApp(selectedList.value?.leads || []);
     campaignSegmentForm.value = {
@@ -313,7 +226,12 @@ const loadPage = async () => {
   isLoading.value = true;
   try {
     await fetchSettings();
-    await Promise.all([fetchLists(), fetchAllLeads(), fetchCampaigns()]);
+    await Promise.all([
+      fetchLists(),
+      fetchAllLeads(),
+      fetchCampaigns(),
+      fetchCrmPipelines(),
+    ]);
     if (lists.value.length) {
       await selectList(lists.value[0]);
     }
@@ -479,22 +397,6 @@ const applyCrmSendResult = ({ created, existing }) => {
       ...selectedList.value,
       leads: selectedList.value.leads.map(withCard),
     };
-  }
-};
-
-const enrichLead = async lead => {
-  if (!lead?.id || enrichingLeadId.value) return;
-
-  enrichingLeadId.value = lead.id;
-
-  try {
-    const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
-    replaceLead(data.payload?.lead);
-    useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
-  } catch (e) {
-    alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
-  } finally {
-    enrichingLeadId.value = null;
   }
 };
 
@@ -896,283 +798,13 @@ onMounted(loadPage);
               {{ t('PROSPECTING.LISTS.LEADS_EMPTY') }}
             </div>
             <div v-else class="grid min-w-0 gap-3 p-4">
-              <article
+              <LeadCard
                 v-for="lead in listLeads"
                 :key="lead.id"
-                class="grid min-w-0 gap-3 overflow-hidden rounded-lg border border-n-weak bg-n-solid-1 text-sm transition-colors hover:border-n-slate-5"
+                :lead="lead"
+                :selectable="false"
               >
-                <div class="flex min-w-0 items-start gap-3 p-4 pb-2">
-                  <ProspectingPriorityRing
-                    :priority="leadPriority(lead)"
-                    :size="56"
-                  />
-                  <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-1.5">
-                      <span
-                        v-if="lead.search_rank"
-                        class="inline-flex items-center rounded bg-n-amber-2 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-n-amber-11 ring-1 ring-n-amber-5"
-                      >
-                        {{
-                          t('PROSPECTING.SEARCH.PRIORITY_GOOGLE_RANK', {
-                            rank: lead.search_rank,
-                          })
-                        }}
-                      </span>
-                      <span
-                        v-if="lead.priority_position"
-                        class="text-[11px] text-n-slate-10"
-                      >
-                        {{
-                          t('PROSPECTING.SEARCH.PRIORITY_POSITION', {
-                            position: lead.priority_position,
-                          })
-                        }}
-                      </span>
-                      <span
-                        v-if="lead.priority_position === 1"
-                        class="inline-flex items-center gap-0.5 rounded-full bg-n-teal-2 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-n-teal-11 ring-1 ring-n-teal-5"
-                      >
-                        <span class="i-lucide-zap size-3" />
-                        {{ t('PROSPECTING.SEARCH.PRIORITY_FIRST_CALL_SHORT') }}
-                      </span>
-                    </div>
-                    <h3
-                      class="mt-1 break-words text-base font-semibold leading-tight text-n-slate-12"
-                    >
-                      {{ lead.name }}
-                    </h3>
-                    <div
-                      class="mt-1 grid min-w-0 max-w-full grid-cols-[auto_auto_minmax(0,1fr)] items-baseline gap-1.5 overflow-hidden"
-                    >
-                      <span
-                        v-if="leadPriorityTheme(lead)"
-                        class="text-xs font-medium"
-                        :class="leadPriorityTheme(lead).titleClass"
-                      >
-                        {{ leadPriorityTheme(lead).title }}
-                      </span>
-                      <span
-                        v-if="leadPriorityTheme(lead)"
-                        class="text-n-slate-6"
-                      >
-                        {{ DOT_SEPARATOR }}
-                      </span>
-                      <span
-                        class="min-w-0 flex-1 truncate text-sm text-n-slate-10"
-                      >
-                        {{ formatLeadAddress(lead) || '-' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  v-if="leadSignals(lead).length"
-                  class="flex flex-wrap gap-1.5 px-4 pb-2"
-                >
-                  <a
-                    v-for="signal in leadSignals(lead)"
-                    v-show="signal.key === 'website' && lead.website"
-                    :key="`${signal.key}-link`"
-                    :href="lead.website"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium hover:underline"
-                    :class="signal.card"
-                  >
-                    <span
-                      :class="[signal.icon, signal.iconClass]"
-                      class="size-3"
-                    />
-                    {{ signal.label }}
-                  </a>
-                  <span
-                    v-for="signal in leadSignals(lead).filter(
-                      item => item.key !== 'website' || !lead.website
-                    )"
-                    :key="signal.key"
-                    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-                    :class="signal.card"
-                  >
-                    <span
-                      :class="[signal.icon, signal.iconClass]"
-                      class="size-3"
-                    />
-                    {{ signal.label }}
-                  </span>
-                </div>
-
-                <LeadResearchSummary
-                  v-if="lead.research"
-                  :research="lead.research"
-                  :research-enabled="Boolean(settings?.research_enabled)"
-                />
-
-                <div
-                  v-if="
-                    lead.enrichment_status === 'completed' ||
-                    legacyDecisionName(lead) ||
-                    lead.enrichment_summary
-                  "
-                  class="mx-4 mb-3 grid gap-2 rounded-md border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-950"
-                >
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 ring-1 ring-emerald-200"
-                    >
-                      <span class="i-lucide-sparkles size-3" />
-                      {{ t('PROSPECTING.SEARCH.ENRICHMENT_TITLE') }}
-                    </span>
-                    <span class="text-[11px] font-medium text-emerald-700">
-                      {{ t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED') }}
-                    </span>
-                  </div>
-                  <div
-                    v-if="legacyDecisionName(lead)"
-                    data-test="list-lead-legacy-decision"
-                    class="leading-relaxed"
-                  >
-                    <span class="font-semibold text-emerald-950">
-                      {{ `${t('PROSPECTING.SEARCH.DECISION_MAKER')}:` }}
-                    </span>
-                    {{ legacyDecisionName(lead) }}
-                    <span v-if="lead.decision_role">
-                      {{ `· ${lead.decision_role}` }}
-                    </span>
-                  </div>
-                  <div
-                    v-if="lead.enrichment_summary"
-                    class="whitespace-pre-line break-words leading-relaxed"
-                  >
-                    {{ lead.enrichment_summary }}
-                  </div>
-                </div>
-
-                <div
-                  class="flex flex-wrap items-center gap-2 border-t border-n-weak px-4 pb-4 pt-3"
-                >
-                  <a
-                    :href="googleMapsLeadUrl(lead)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-solid-2"
-                  >
-                    <span class="i-lucide-map-pin size-3.5" />
-                    {{ t('PROSPECTING.SEARCH.OPEN_MAP') }}
-                  </a>
-                  <button
-                    v-if="canManage"
-                    type="button"
-                    class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed"
-                    :class="
-                      isLeadEnriched(lead)
-                        ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200'
-                        : 'border border-n-weak text-n-slate-12 hover:bg-n-solid-2 disabled:opacity-60'
-                    "
-                    :disabled="
-                      isLeadEnriched(lead) ||
-                      isLeadEnriching(lead) ||
-                      !settings?.research_enabled ||
-                      !lead.website
-                    "
-                    :title="
-                      isLeadEnriched(lead)
-                        ? t('PROSPECTING.SEARCH.ENRICHED')
-                        : !settings?.research_enabled
-                          ? t('PROSPECTING.SEARCH.ENRICHMENT_DISABLED')
-                          : !lead.website
-                            ? t('PROSPECTING.SEARCH.ENRICHMENT_NO_SITE')
-                            : t('PROSPECTING.SEARCH.ENRICH_LEAD')
-                    "
-                    @click="enrichLead(lead)"
-                  >
-                    <span
-                      class="size-3.5"
-                      :class="
-                        isLeadEnriching(lead)
-                          ? 'animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11'
-                          : isLeadEnriched(lead)
-                            ? 'i-lucide-check-circle-2'
-                            : 'i-lucide-sparkles'
-                      "
-                    />
-                    {{
-                      isLeadEnriching(lead)
-                        ? t('PROSPECTING.SEARCH.ENRICHING')
-                        : isLeadEnriched(lead)
-                          ? t('PROSPECTING.SEARCH.ENRICHED')
-                          : t('PROSPECTING.SEARCH.ENRICH_LEAD')
-                    }}
-                  </button>
-                  <span
-                    v-if="lead.phone && isWhatsAppChecking(lead)"
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-2 px-3 text-xs font-medium text-n-slate-10"
-                  >
-                    <span
-                      class="size-3 animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11"
-                    />
-                    {{ t('PROSPECTING.SEARCH.CHECKING_WHATSAPP') }}
-                  </span>
-                  <a
-                    v-else-if="
-                      lead.phone &&
-                      !isWhatsAppUnavailable(lead) &&
-                      leadWhatsAppUrl(lead)
-                    "
-                    :href="leadWhatsAppUrl(lead)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center gap-1 rounded-md px-3 text-xs font-semibold transition-colors"
-                    :class="
-                      isWhatsAppVerified(lead)
-                        ? 'bg-n-teal-9 text-white shadow-sm hover:bg-n-teal-10'
-                        : 'border border-n-teal-5 bg-n-solid-1 text-n-teal-11 hover:bg-n-teal-2'
-                    "
-                  >
-                    <span class="i-lucide-message-circle size-3.5" />
-                    {{ t('PROSPECTING.SEARCH.WHATSAPP') }}
-                  </a>
-                  <span
-                    v-else
-                    class="inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-md border border-n-weak bg-n-solid-2 px-3 text-xs font-medium text-n-slate-8"
-                  >
-                    <span class="i-lucide-message-circle size-3.5" />
-                    {{ t('PROSPECTING.SEARCH.NO_WHATSAPP') }}
-                  </span>
-                  <a
-                    v-if="leadPhoneUrl(lead)"
-                    :href="leadPhoneUrl(lead)"
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-weak bg-n-solid-1 px-3 text-xs font-semibold text-n-slate-12 transition-colors hover:bg-n-solid-2"
-                  >
-                    <span class="i-lucide-phone size-3.5" />
-                    {{ t('PROSPECTING.SEARCH.CALL') }}
-                  </a>
-                  <a
-                    v-if="lead.contact_id"
-                    :href="contactUrl(lead.contact_id)"
-                    class="inline-flex h-8 items-center rounded-md border border-n-weak px-3 text-xs font-medium text-n-brand underline"
-                  >
-                    {{ t('PROSPECTING.SEARCH.OPEN_CONTACT') }}
-                  </a>
-                  <a
-                    v-if="lead.crm_card_id"
-                    :href="crmCardUrl(lead.crm_card_id)"
-                    class="inline-flex h-8 items-center rounded-md border border-n-weak px-3 text-xs font-medium text-n-brand underline"
-                  >
-                    {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
-                  </a>
-                  <button
-                    v-else-if="canManage"
-                    type="button"
-                    class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
-                    @click="crmSendLeads = [lead]"
-                  >
-                    <span
-                      class="i-lucide-kanban-square size-3.5"
-                      aria-hidden="true"
-                    />
-                    {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
-                  </button>
+                <template #actions>
                   <button
                     v-if="canManage"
                     type="button"
@@ -1184,8 +816,8 @@ onMounted(loadPage);
                     <span class="i-lucide-trash-2 size-3.5" />
                     {{ t('PROSPECTING.LISTS.REMOVE_LEAD') }}
                   </button>
-                </div>
-              </article>
+                </template>
+              </LeadCard>
             </div>
           </div>
         </section>
@@ -1684,6 +1316,8 @@ onMounted(loadPage);
         </div>
       </section>
     </div>
+
+    <LeadDetailDrawer v-if="selectedLeadDetail" />
 
     <CrmSendModal
       v-if="crmSendLeads"

@@ -128,5 +128,6 @@ const toggleDetails = lead => {
       <span class="i-lucide-kanban-square size-3.5" aria-hidden="true" />
       {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
     </button>
+    <slot />
   </div>
 </template>

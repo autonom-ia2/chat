@@ -19,6 +19,12 @@ import { useSearchRepeat } from './useSearchRepeat';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
 
+// O card, o painel e as ações do lead leem este contexto. A tela de Listas
+// (#682) entrega o dela, com os leads da lista, para usar os mesmos
+// componentes da busca.
+export const provideProspectingLeadContext = context =>
+  provide(PROSPECTING_SEARCH_KEY, context);
+
 export const useProspectingSearch = () => {
   const { t } = useI18n();
   const canManage = useCanManage('prospecting_manage');
@@ -53,7 +59,7 @@ export const useProspectingSearch = () => {
     presets,
     repeat
   );
-  provide(PROSPECTING_SEARCH_KEY, context);
+  provideProspectingLeadContext(context);
 
   onMounted(async () => {
     const { isLoading, searches } = state;
