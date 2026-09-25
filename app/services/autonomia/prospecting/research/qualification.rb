@@ -23,6 +23,6 @@ module Autonomia::Prospecting::Research::Qualification
   def key(raw) = Autonomia::Prospecting::Research::Normalization.key(raw)
 
   def label(raw)
-    LABELS.fetch(key(raw)) { Autonomia::Prospecting::Research::Normalization.text(raw) }
+    LABELS.fetch(key(raw)) { Autonomia::Prospecting::Research::Normalization.squish(raw) }
   end
 end

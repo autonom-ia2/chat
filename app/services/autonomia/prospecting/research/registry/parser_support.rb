@@ -16,7 +16,7 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
 
   def record(value) = value.is_a?(Hash) ? value : nil
 
-  def text(value) = Normalization.text(value)
+  def text(value) = Normalization.squish(value)
 
   def nested(value, key) = record(value)&.[](key)
 
