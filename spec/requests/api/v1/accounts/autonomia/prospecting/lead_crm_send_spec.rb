@@ -10,7 +10,6 @@ RSpec.describe 'Autonomia prospecting send to CRM and campaign from selection', 
   let(:base_url) { "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads" }
 
   before do
-    stub_prospecting_company_upserter
     Autonomia::Prospecting::Config.enable_for!(account)
     allow(Crm::Config).to receive(:enabled?).and_return(true)
   end

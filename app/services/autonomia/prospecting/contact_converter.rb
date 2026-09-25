@@ -115,16 +115,21 @@ class Autonomia::Prospecting::ContactConverter
     decision_maker? ? @lead.decision_name : @company.name
   end
 
-  # O WhatsApp confirmado vale mais que o telefone do Google (mesma regra do botão de WhatsApp do card).
+  # O WhatsApp confirmado vale mais que o telefone do Google (mesma regra do botão de WhatsApp do card). O telefone do
+  # contato é sempre E.164, que o modelo Contact exige: a verificação do site pode ter gravado o número como veio.
   def contact_phone
     @contact_phone ||= begin
       whatsapp = Autonomia::Prospecting::LeadPayload.new(account: @account).whatsapp(@lead)
-      whatsapp[:whatsapp_verified] ? whatsapp[:whatsapp_phone] : normalized_phone
+      (whatsapp[:whatsapp_verified] && e164(whatsapp[:whatsapp_phone])) || normalized_phone
     end
   end
 
   def normalized_phone
-    @normalized_phone ||= Autonomia::Prospecting::PhoneContract.e164(@lead.phone, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
+    @normalized_phone ||= e164(@lead.phone)
+  end
+
+  def e164(raw)
+    Autonomia::Prospecting::PhoneContract.e164(raw, region: Autonomia::Prospecting::PhoneContract.region_for(@account))
   end
 
   # Mesma validação do modelo Contact: e-mail que ele recusaria não entra.

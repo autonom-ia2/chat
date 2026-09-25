@@ -44,7 +44,7 @@ class Autonomia::Prospecting::CrmCardConverter
   def create_all(stage)
     ActiveRecord::Base.transaction do
       company = Autonomia::Prospecting::CompanyUpserter.new(lead: @lead).perform.company
-      contact = Autonomia::Prospecting::ContactConverter.new(lead: @lead, user: @user).perform.contact
+      contact = Autonomia::Prospecting::ContactConverter.new(lead: @lead, user: @user, company: company).perform.contact
       card = create_card(stage: stage, contact: contact, company: company)
       @lead.update!(crm_card: card)
 

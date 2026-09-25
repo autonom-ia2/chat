@@ -44,7 +44,6 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
   end
 
   it 'creates a CRM card from a prospecting lead' do
-    stub_prospecting_company_upserter
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
 
     post "/api/v1/accounts/#{account.id}/autonomia/prospecting/leads/#{lead.id}/crm_card",
@@ -61,7 +60,6 @@ RSpec.describe 'Autonomia prospecting leads API', type: :request do
   end
 
   it 'does not create a duplicate CRM card when called twice' do
-    stub_prospecting_company_upserter
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
 
     2.times do

@@ -10,7 +10,6 @@ RSpec.describe Autonomia::Prospecting::CrmCardBatch do
   let(:stage) { pipeline_and_stage.last }
 
   before do
-    stub_prospecting_company_upserter
     allow(Crm::Config).to receive(:enabled?).and_return(true)
   end
 
@@ -29,7 +28,8 @@ RSpec.describe Autonomia::Prospecting::CrmCardBatch do
         priority_score: 60.5,
         search_rank: index + 1,
         enrichment_summary: "Resumo da empresa #{index}",
-        enriched_cnpj: format('11222333%<n>06d', n: index)
+        # Só o primeiro tem CNPJ válido no site; os outros, sem CNPJ nem site, viram cada um a sua empresa.
+        enriched_cnpj: index.zero? ? '11222333000181' : nil
       )
     end
   end
@@ -64,7 +64,7 @@ RSpec.describe Autonomia::Prospecting::CrmCardBatch do
     expect(item[:company_id]).to be_present
     meta = card.metadata['autonomia_prospecting']
     expect(meta).to include('score' => 70.0, 'priority_score' => 60.5, 'search_rank' => 1, 'summary' => 'Resumo da empresa 0')
-    expect(meta['company']).to include('id' => item[:company_id], 'cnpj' => '11222333000000', 'legal_name' => 'Empresa 0 LTDA')
+    expect(meta['company']).to eq('id' => item[:company_id], 'cnpj' => '11222333000181', 'legal_name' => nil)
     expect(card.description).to include('Resumo da empresa 0')
   end
 

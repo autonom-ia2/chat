@@ -30,6 +30,12 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
     expect(result.lead.contact_id).to eq(result.contact.id)
   end
 
+  it 'WhatsApp verificado gravado como veio vira E.164 no contato, sem quebrar a gravação' do
+    lead.update!(metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+55 11 99999-7777' } })
+
+    expect(described_class.new(lead: lead, user: user).perform.contact.phone_number).to eq('+5511999997777')
+  end
+
   it 'reuses an existing account contact by normalized phone number' do
     contact = create(:contact, account: account, phone_number: '+5511999998888')
 

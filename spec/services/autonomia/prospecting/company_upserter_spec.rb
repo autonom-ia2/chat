@@ -163,4 +163,16 @@ RSpec.describe Autonomia::Prospecting::CompanyUpserter do
     expect(second.created).to be(false)
     expect(second.company).to eq(first)
   end
+
+  it 'sem CNPJ e sem domínio, reaproveita a empresa já ligada ao contato do lead: reenvio não cria outra' do
+    lead.update!(website: nil)
+    first = upsert_company.company
+    lead.update!(contact: account.contacts.create!(name: lead.name, company: first))
+
+    second = upsert_company
+
+    expect(second.created).to be(false)
+    expect(second.company).to eq(first)
+    expect(account.companies.count).to eq(1)
+  end
 end

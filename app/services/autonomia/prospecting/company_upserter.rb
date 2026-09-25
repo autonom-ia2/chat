@@ -53,8 +53,15 @@ class Autonomia::Prospecting::CompanyUpserter
     Result.new(company: create!, created: true)
   end
 
+  # Sem CNPJ e sem domínio, a empresa do lead é a que já está no contato dele: criar contato e depois enviar ao CRM,
+  # ou trocar o decisor, não pode deixar uma empresa nova a cada passo.
   def find_existing
-    by_cnpj || by_domain
+    by_cnpj || by_domain || linked_company
+  end
+
+  def linked_company
+    company = @lead.contact&.company
+    company if company&.account_id == @account.id
   end
 
   def by_cnpj
