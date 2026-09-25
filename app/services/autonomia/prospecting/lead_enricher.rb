@@ -32,11 +32,15 @@ class Autonomia::Prospecting::LeadEnricher
     }
   }.freeze
 
-  def initialize(lead:, user:)
+  # `user` fica por compatibilidade com o controller; o enriquecimento não depende de quem pediu.
+  def initialize(lead:, user: nil)
     @lead = lead
     @user = user
   end
 
+  # Site fora do ar, bloqueado ou vazio, ou nada útil nem do site nem da IA: o lead fica `failed` com o código em
+  # `enrichment_error` e a tentativa contada, sem apagar o que um enriquecimento anterior achou. Não levanta: é um
+  # desfecho, não uma quebra.
   def perform
     raise Error, 'prospecting.enrichment.disabled' unless research_allowed?
 
@@ -47,14 +51,18 @@ class Autonomia::Prospecting::LeadEnricher
     )
 
     scraped_data = scrape_website
-    ai_data = enrich_with_ai(scraped_data)
-    persist_result(scraped_data, ai_data)
+    return record_failed_attempt(scraped_data['error']) if scraped_data['error'].present?
+
+    merge = Autonomia::Prospecting::EnrichmentMerge.new(lead: @lead, scraped: scraped_data, ai_data: enrich_with_ai(scraped_data))
+    return record_failed_attempt('empty_result') unless merge.useful?
+
+    @lead.update!(merge.attributes)
     @lead.reload
   rescue Error => e
     mark_failed(e.message)
     raise
   rescue StandardError => e
-    mark_failed(e.message)
+    mark_failed(e.message, count_attempt: true)
     raise Error, e.message
   end
 
@@ -140,46 +148,21 @@ class Autonomia::Prospecting::LeadEnricher
     }.to_json
   end
 
-  def persist_result(scraped_data, ai_data)
-    data = scraped_data.merge('ai' => ai_data.compact)
-    @lead.update!(
-      enrichment_status: 'completed',
-      enrichment_completed_at: Time.current,
-      enrichment_source: ai_data.present? ? 'site_and_autonomia_ai' : 'site',
-      enriched_data: data,
-      enriched_email: scraped_data['email'],
-      enriched_whatsapp: scraped_data['whatsapp'],
-      enriched_instagram: scraped_data['instagram'],
-      enriched_facebook: scraped_data['facebook'],
-      enriched_linkedin: scraped_data['linkedin'],
-      enriched_cnpj: scraped_data['cnpj'],
-      decision_name: confident_decision?(ai_data) ? ai_data['decision_name'] : nil,
-      decision_role: confident_decision?(ai_data) ? ai_data['decision_role'] : nil,
-      decision_confidence: ai_data['decision_confidence'],
-      decision_source_url: confident_decision?(ai_data) ? ai_data['decision_source_url'] : nil,
-      decision_linkedin: ai_data['decision_linkedin'].presence || scraped_data['linkedin'],
-      decision_instagram: ai_data['decision_instagram'].presence || scraped_data['instagram'],
-      enrichment_summary: ai_data['summary'].presence || summary_from_scrape(scraped_data)
-    )
+  def record_failed_attempt(code)
+    mark_failed(code, count_attempt: true)
+    @lead.reload
   end
 
-  def confident_decision?(ai_data)
-    ai_data['decision_name'].present? && ai_data['decision_confidence'].to_f >= 0.6
-  end
-
-  def summary_from_scrape(scraped_data)
-    return if scraped_data.blank? || scraped_data['error'].present?
-
-    [scraped_data['title'], scraped_data['description']].compact_blank.join(' - ').presence
-  end
-
-  def mark_failed(message)
+  # Só muda status, erro e contador: os dados achados antes ficam.
+  def mark_failed(message, count_attempt: false)
     @lead.update_columns(
       enrichment_status: 'failed',
       enrichment_completed_at: Time.current,
       enrichment_error: message.to_s.truncate(255),
       updated_at: Time.current
     )
+    # Soma no próprio UPDATE do banco: duas falhas ao mesmo tempo contam duas.
+    Autonomia::Prospecting::Lead.update_counters(@lead.id, enrichment_failed_attempts: 1) if count_attempt # rubocop:disable Rails/SkipsModelValidations
   rescue StandardError
     nil
   end

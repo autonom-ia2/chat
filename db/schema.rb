@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_25_110000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_25_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -652,6 +652,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_110000) do
     t.integer "photo_count"
     t.boolean "open_now"
     t.boolean "has_opening_hours"
+    t.integer "enrichment_failed_attempts", default: 0, null: false
     t.index ["account_id", "dedupe_key"], name: "index_autonomia_prospecting_leads_on_account_id_and_dedupe_key", unique: true
     t.index ["account_id", "enrichment_completed_at"], name: "idx_autonomia_prospecting_leads_account_enriched_at"
     t.index ["account_id", "enrichment_status"], name: "idx_autonomia_prospecting_leads_account_enrichment"
