@@ -97,6 +97,23 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
     nil
   end
 
+  # Telefones da empresa (#679, além do Orth). Cada parser entrega o número já com DDD, sem o fax; aqui vira dígitos
+  # E.164 pelo contrato de telefone da prospecção, sem repetir. Número que não é telefone brasileiro válido some e
+  # não derruba o cadastro.
+  def phones(values)
+    Array(values).filter_map do |value|
+      raw = text(value.is_a?(Integer) ? value.to_s : value)
+      raw && Autonomia::Prospecting::PhoneContract.parse(raw, region: 'BR')&.digits
+    end.uniq
+  end
+
+  # DDD e número em campos separados (OpenCNPJ, CNPJ.ws, CNPJá) viram um texto só.
+  def ddd_phone(ddd, number)
+    ddd = text(ddd.is_a?(Integer) ? ddd.to_s : ddd)
+    number = text(number.is_a?(Integer) ? number.to_s : number)
+    ddd && number ? "#{ddd}#{number}" : nil
+  end
+
   # [estado, membros]. Chave ausente é 'missing'; não-lista é 'malformed'; um membro ruim estraga o quadro inteiro.
   def qsa(container, key)
     return ['missing', []] unless container.key?(key)
@@ -127,6 +144,7 @@ module Autonomia::Prospecting::Research::Registry::ParserSupport
       cnpj: returned, legal_name: text(parts[:legal_name]), trade_name: text(parts[:trade_name]), registration_status: status(parts[:status]),
       registration_state: uf(parts[:uf]), city: text(parts[:city]), legal_nature_code: legal_nature_code(parts[:nature_code]),
       legal_nature_text: text(parts[:nature_text]), opened_on: date(parts[:opened_on]), cnae: cnae(parts[:cnae]), provider: provider,
+      phones: phones(parts[:phones]),
       sources: returned ? [{ 'provider' => provider, 'url' => Registry.source_url(provider, returned), 'fetched_at' => fetched_at.utc.iso8601 }] : []
     }
   end

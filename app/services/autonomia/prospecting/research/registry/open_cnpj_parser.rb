@@ -17,8 +17,21 @@ module Autonomia::Prospecting::Research::Registry::OpenCnpjParser
                     cnpj: payload['cnpj'], legal_name: payload['razao_social'], trade_name: payload['nome_fantasia'],
                     status: payload['situacao_cadastral'], city: payload['municipio'], uf: payload['uf'],
                     nature_code: nil, nature_text: payload['natureza_juridica'], opened_on: payload['data_inicio_atividade'],
-                    cnae: payload['cnae_principal'], qsa: Support.qsa(payload, 'QSA') { |member| partner(member) }
+                    cnae: payload['cnae_principal'], phones: phones(payload['telefones']),
+                    qsa: Support.qsa(payload, 'QSA') { |member| partner(member) }
                   })
+  end
+
+  # telefones: [{ ddd, numero, is_fax }]. O fax não é telefone de contato (#679).
+  def phones(values)
+    return [] unless values.is_a?(Array)
+
+    values.filter_map do |entry|
+      entry = Support.record(entry)
+      next if entry.nil? || entry['is_fax'] == true
+
+      Support.ddd_phone(entry['ddd'], entry['numero'])
+    end
   end
 
   def partner(member)

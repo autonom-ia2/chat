@@ -16,9 +16,19 @@ module Autonomia::Prospecting::Research::Registry::CnpjaParser
                     cnpj: payload['taxId'], legal_name: company['name'], trade_name: payload['alias'],
                     status: Support.nested(payload['status'], 'text'), city: address['city'], uf: address['state'],
                     nature_code: Support.nested(company['nature'], 'id'), nature_text: Support.nested(company['nature'], 'text'),
-                    opened_on: payload['founded'], cnae: Support.nested(payload['mainActivity'], 'id'),
+                    opened_on: payload['founded'], cnae: Support.nested(payload['mainActivity'], 'id'), phones: phones(payload['phones']),
                     qsa: Support.qsa(company, 'members') { |member| partner(member) }
                   })
+  end
+
+  # phones: [{ type, area, number }] (#679).
+  def phones(values)
+    return [] unless values.is_a?(Array)
+
+    values.filter_map do |entry|
+      entry = Support.record(entry)
+      entry && Support.ddd_phone(entry['area'], entry['number'])
+    end
   end
 
   def partner(member)

@@ -15,6 +15,7 @@ module Autonomia::Prospecting::Research::Registry::BrasilApiParser
                     status: payload['descricao_situacao_cadastral'], city: payload['municipio'], uf: payload['uf'],
                     nature_code: payload['codigo_natureza_juridica'], nature_text: payload['natureza_juridica'],
                     opened_on: payload['data_inicio_atividade'], cnae: payload['cnae_fiscal'],
+                    phones: [payload['ddd_telefone_1'], payload['ddd_telefone_2']],
                     qsa: Support.qsa(payload, 'qsa') { |member| partner(member) }
                   })
   end

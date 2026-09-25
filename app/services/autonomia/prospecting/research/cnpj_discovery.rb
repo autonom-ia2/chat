@@ -116,7 +116,8 @@ class Autonomia::Prospecting::Research::CnpjDiscovery
     returned = Research::Cnpj.digits(company.try(:cnpj))
     Adapter::Identity.new(
       cnpj: returned, legal_name: company.legal_name, trade_name: company.try(:trade_name), status: company.try(:registration_status),
-      city: company.try(:city), uf: company.try(:registration_state), domain: returned == requested_cnpj && site_cnpj == returned ? site_domain : nil
+      city: company.try(:city), uf: company.try(:registration_state), phones: Array(company.try(:phones)),
+      domain: returned == requested_cnpj && site_cnpj == returned ? site_domain : nil
     )
   end
 

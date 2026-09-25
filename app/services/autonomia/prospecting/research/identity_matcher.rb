@@ -67,7 +67,7 @@ module Autonomia::Prospecting::Research::IdentityMatcher
     candidate_uf = Normalization.uf(candidate.uf)
     place_city = Normalization.text(place.city)
     {
-      phone_exact: place_phone.present? && place_phone == Normalization.phone(candidate.phone),
+      phone_exact: place_phone.present? && Array(candidate.phone).any? { |phone| Normalization.phone(phone) == place_phone },
       domain_exact: place_domain.present? && place_domain == candidate_domain,
       city_uf_match: place_city.present? && place_uf.present? && place_city == Normalization.text(candidate.city) && place_uf == candidate_uf,
       place_domain: place_domain, candidate_domain: candidate_domain, place_uf: place_uf, candidate_uf: candidate_uf
