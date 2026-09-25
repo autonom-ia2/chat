@@ -20,10 +20,13 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     'places.photos',
     'places.currentOpeningHours.openNow',
     'places.currentOpeningHours.weekdayDescriptions',
-    'places.regularOpeningHours.weekdayDescriptions'
+    'places.regularOpeningHours.weekdayDescriptions',
+    'nextPageToken'
   ].join(',').freeze
-  # Teto do Google por chamada. Pedido maior só chega com a paginação da E2.
+  # Teto do Google por página e por busca: 3 páginas de 20, encadeadas pelo nextPageToken (#678).
   MAX_RESULTS_PER_REQUEST = 20
+  MAX_PAGES = 3
+  MAX_RESULTS = MAX_RESULTS_PER_REQUEST * MAX_PAGES
   # Tipos de addressComponents, na ordem de preferência. Cidade sem locality é o município (administrative_area_level_2),
   # como no Orth (lib/services/search/search-filters.ts).
   NEIGHBORHOOD_TYPES = %w[sublocality_level_1 sublocality neighborhood].freeze
@@ -43,75 +46,84 @@ class Autonomia::Prospecting::Providers::GooglePlacesProvider
     @account_id = account_id
     @country = Autonomia::Prospecting::SearchCountry.normalize(country) || Autonomia::Prospecting::SearchCountry::DEFAULT
     @api_units = 0
+    @partial = false
   end
 
-  def search
-    response = HTTParty.post(
-      ENDPOINT,
-      body: request_body.to_json,
-      headers: headers,
-      timeout: 10
-    )
-    @api_units = 1
+  # true quando uma página depois da primeira falhou e a busca ficou com o que as anteriores trouxeram (#678).
+  def partial?
+    @partial
+  end
 
+  # Lê páginas de 20 até completar o pedido, até max_results posições ou até o Google parar de mandar token (#678).
+  # O bloco, quando vem, diz se o lugar na posição rank passa nos filtros de quem chama: só os aceitos contam para
+  # o pedido. Devolve todos os lugares lidos, na ordem do Google (posição = índice + 1); filtrar e cortar no pedido é
+  # de quem chama. Cada página é uma unidade de api_units.
+  def search(max_results: MAX_RESULTS)
+    @api_units = 0
+    @partial = false
+    max_results = max_results.to_i.clamp(0, MAX_RESULTS)
+    results = []
+    accepted = 0
+    page_token = nil
+
+    loop do
+      page = fetch_page_or_stop(page_token)
+      break if page.nil?
+
+      Array(page['places']).first(max_results - results.size).each do |place|
+        results << lead_for(place)
+        accepted += 1 if !block_given? || yield(results.last, results.size)
+      end
+      page_token = page['nextPageToken'].presence
+      break unless next_page?(page_token, accepted, results.size, max_results)
+    end
+
+    results
+  end
+
+  private
+
+  # A primeira página falha como sempre. Uma página seguinte que falha não joga fora os lugares já recebidos nem as
+  # chamadas já pagas: a busca termina com o que tem e fica marcada como parcial.
+  def fetch_page_or_stop(page_token)
+    fetch_page(page_token)
+  rescue Autonomia::Prospecting::SearchRunner::ProviderError => e
+    raise if page_token.nil?
+
+    Rails.logger.warn("[Prospecting::GooglePlaces] search account_id=#{@account_id} página seguinte falhou, busca parcial: #{e.message}")
+    @partial = true
+    nil
+  end
+
+  def next_page?(page_token, accepted, collected, max_results)
+    page_token.present? && accepted < @limit && collected < max_results && @api_units < MAX_PAGES
+  end
+
+  def fetch_page(page_token)
+    response = HTTParty.post(ENDPOINT, body: request_body(page_token).to_json, headers: headers, timeout: 10)
+    @api_units += 1
     raise provider_error(response) unless response.success?
 
-    Array(JSON.parse(response.body)['places']).first(@limit).map { |place| lead_for(place) }
+    JSON.parse(response.body)
   rescue JSON::ParserError, *Autonomia::Prospecting::GoogleErrorMessage::NETWORK_ERRORS => e
     raise Autonomia::Prospecting::SearchRunner::ProviderError,
           Autonomia::Prospecting::GoogleErrorMessage.for_exception(e, context: 'search', account_id: @account_id)
   end
 
-  private
-
-  def request_body
+  # Página sempre cheia: o filtro de quem chama descarta parte dela, e pedir só o que falta cortaria lugares que
+  # passariam (#678). As páginas seguintes repetem o pedido e acrescentam o token.
+  def request_body(page_token)
     {
       textQuery: [@query, @location].compact_blank.join(' '),
-      maxResultCount: [@limit, MAX_RESULTS_PER_REQUEST].min,
+      pageSize: MAX_RESULTS_PER_REQUEST,
       languageCode: Autonomia::Prospecting::SearchCountry.language_code(@country),
       regionCode: @country
-    }.merge(location_bias_payload)
+    }.merge(location_bias_payload).merge(page_token ? { pageToken: page_token } : {})
   end
 
+  # Viés ou restrição conforme o tipo de área (#678): a geometria mora em SearchArea.
   def location_bias_payload
-    rectangle = rectangle_bias
-    return { locationBias: { rectangle: rectangle } } if rectangle.present?
-
-    circle = circle_bias
-    return { locationBias: { circle: circle } } if circle.present?
-
-    {}
-  end
-
-  def rectangle_bias
-    return unless @area_type == 'viewport'
-
-    bounds = @area_config['bounds']
-    return if bounds.blank?
-
-    {
-      low: {
-        latitude: bounds['south'].to_f,
-        longitude: bounds['west'].to_f
-      },
-      high: {
-        latitude: bounds['north'].to_f,
-        longitude: bounds['east'].to_f
-      }
-    }
-  end
-
-  def circle_bias
-    center = @area_config['center']
-    return if center.blank?
-
-    {
-      center: {
-        latitude: center['lat'].to_f,
-        longitude: center['lng'].to_f
-      },
-      radius: [@radius, 50_000].min
-    }
+    Autonomia::Prospecting::SearchArea.google_location(@area_type, @area_config, radius: @radius)
   end
 
   def headers

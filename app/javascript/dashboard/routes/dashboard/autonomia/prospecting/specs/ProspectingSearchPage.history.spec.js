@@ -124,7 +124,7 @@ describe('ProspectingSearchPage · histórico de buscas', () => {
       choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.SORT').props(
         'modelValue'
       )
-    ).toBe('name_asc');
+    ).toBe('name');
     expect(
       choiceSelect(wrapper, 'PROSPECTING.SEARCH.FIELDS.HAS_PHONE').props(
         'modelValue'

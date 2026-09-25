@@ -21,13 +21,14 @@ const {
   previewAreaBounds,
   submitSearch,
   handlePreviewViewportChange,
+  isDrawnArea,
 } = useProspectingSearchContext();
 </script>
 
 <template>
   <form
     class="min-h-0 overflow-y-auto rounded-lg border border-n-weak bg-n-solid-1"
-    @submit.prevent="submitSearch"
+    @submit.prevent="submitSearch()"
   >
     <section class="border-b border-n-weak px-5 py-4">
       <div
@@ -67,7 +68,7 @@ const {
         </div>
 
         <ProspectingGoogleMap
-          v-if="confirmedLocation && previewMapCenter"
+          v-if="confirmedLocation && previewMapCenter && !isDrawnArea"
           :api-key="googleMapsApiKey"
           :center="previewMapCenter"
           :radius="previewMapRadius"

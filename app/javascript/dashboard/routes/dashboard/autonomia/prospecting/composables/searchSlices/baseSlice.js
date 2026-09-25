@@ -4,6 +4,15 @@ export const baseSlice = {
     query: '',
     requested_limit: 20,
   }),
+  // O destino no CRM volta pelo useSearchCrm (applyCrmTarget).
+  restoreForm: ({ form }, search) => {
+    form.value = {
+      ...form.value,
+      query: search.query || '',
+      requested_limit:
+        Number(search.requested_limit) || form.value.requested_limit,
+    };
+  },
   toPayload: ({ form, crmForm }) => ({
     body: {
       query: form.value.query.trim(),

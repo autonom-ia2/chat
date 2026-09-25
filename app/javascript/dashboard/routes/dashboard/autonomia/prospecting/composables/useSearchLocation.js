@@ -1,12 +1,13 @@
 // Frente de local: autocomplete do local, confirmação pelo detalhe do Google e
-// a área desenhada no mapa de prévia. O estado, o reset de "Nova busca" e o
+// a área no mapa: a área visível da prévia e a área desenhada (#678). O estado, o reset de "Nova busca" e o
 // pedaço do pedido ficam em searchSlices/locationSlice.js.
 // Erro do Google aparece no campo (locationError), com a frase em português
 // que o backend manda; antes a lista sumia e ninguém sabia por quê (#677).
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import { locationCenter } from './searchSlices/locationSlice';
+import { currentDrawnArea, locationCenter } from './searchSlices/locationSlice';
+import { isDrawnAreaType } from '../utils/drawnArea';
 
 const LOCATION_SUGGESTION_DELAY_MS = 280;
 const LOCATION_QUERY_MIN_LENGTH = 3;
@@ -21,6 +22,7 @@ export const useSearchLocation = state => {
     confirmedLocation,
     previewViewport,
     locationError,
+    drawnArea,
   } = state;
   let locationSuggestionTimer;
 
@@ -58,6 +60,7 @@ export const useSearchLocation = state => {
     confirmedLocation.value = '';
     locationDetails.value = null;
     previewViewport.value = null;
+    drawnArea.value = null;
     locationError.value = '';
     fetchLocationSuggestions();
   };
@@ -113,10 +116,35 @@ export const useSearchLocation = state => {
     previewViewport.value = viewport;
   };
 
+  const handleDrawnAreaChange = area => {
+    drawnArea.value = area;
+  };
+
+  // Trocar o tipo de área tira a forma do mapa; o desenho antigo não pode
+  // continuar valendo quando a pessoa volta ao mesmo tipo. O desenho que já é
+  // do tipo novo (busca salva restaurada para repetir ou editar) fica.
+  watch(
+    () => form.value.area_type,
+    areaType => {
+      if (drawnArea.value?.type !== areaType) drawnArea.value = null;
+    }
+  );
+
+  const isDrawnArea = computed(() => isDrawnAreaType(form.value.area_type));
+
   return {
     handleLocationInput,
     confirmLocationSuggestion,
     handlePreviewViewportChange,
+    handleDrawnAreaChange,
+    isDrawnArea,
+    // Raio do resumo: o do círculo desenhado, nenhum no retângulo e no
+    // polígono, e o do formulário no raio e na área visível.
+    summaryRadiusKm: computed(() => {
+      if (!isDrawnArea.value) return form.value.radius_km;
+      const drawn = currentDrawnArea(state);
+      return drawn?.type === 'circle' ? drawn.config.radius / 1000 : null;
+    }),
     previewMapCenter: computed(() => locationCenter(locationDetails.value)),
     previewAreaBounds: computed(() =>
       form.value.area_type === 'viewport' ? previewViewport.value?.bounds : null

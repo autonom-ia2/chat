@@ -7,7 +7,25 @@ import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { alertError } from './searchAlerts';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+
+// Campos que o servidor grava por busca (lead_ranks e lead_scoring, #678).
+const SEARCH_SCOPED_FIELDS = [
+  'search_rank',
+  'score',
+  'score_breakdown',
+  'priority_score',
+  'priority_position',
+];
+
+const pickSearchScopedFields = lead =>
+  Object.fromEntries(
+    SEARCH_SCOPED_FIELDS.filter(field => field in lead).map(field => [
+      field,
+      lead[field],
+    ])
+  );
 import { useLeadCsv } from './useLeadCsv';
+import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
 
 const useLeadSelection = state => {
@@ -49,12 +67,19 @@ export const useSearchLeads = (state, { canManage }) => {
     selectedLeadObjects,
   } = state;
 
+  // Toda resposta da API (evento, enriquecimento, card no CRM, WhatsApp) traz
+  // o lead da conta, com posição, nota e prioridade da última busca que o
+  // tocou. Esses campos são desta busca (#678) e ficam.
   const replaceLead = updatedLead => {
     if (!updatedLead?.id) return;
     leads.value = leads.value.map(item =>
-      item.id === updatedLead.id ? updatedLead : item
+      item.id === updatedLead.id
+        ? { ...updatedLead, ...pickSearchScopedFields(item) }
+        : item
     );
   };
+
+  useLeadLiveUpdates(replaceLead);
 
   const createCrmCard = async (lead, options = {}) => {
     if (
@@ -87,18 +112,18 @@ export const useSearchLeads = (state, { canManage }) => {
     }
   };
 
+  // O servidor aceita o pedido (202) e enriquece em fila; o resultado chega
+  // pelo evento ao vivo (#678). Pedido recusado deixa o lead como estava.
   const enrichLead = async lead => {
     if (!lead?.id || enrichingLeadId.value) return;
 
     enrichingLeadId.value = lead.id;
-    replaceLead({ ...lead, enrichment_status: 'running' });
 
     try {
       const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
       replaceLead(data.payload?.lead);
-      useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'));
+      useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
     } catch (e) {
-      replaceLead({ ...lead, enrichment_status: 'failed' });
       alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
     } finally {
       enrichingLeadId.value = null;

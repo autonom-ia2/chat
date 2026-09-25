@@ -8,14 +8,11 @@ import { useI18n } from 'vue-i18n';
 import FiltersBaseLine from './filters/FiltersBaseLine.vue';
 import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
-import {
-  activeAdvancedLeadFiltersCount,
-  reachableRankLimit,
-} from '../../utils/advancedLeadFilters';
+import { activeAdvancedLeadFiltersCount } from '../../utils/advancedLeadFilters';
 import { findPreset } from '../../utils/searchPresets';
 
 const { t } = useI18n();
-const { formFilters, form, settings } = useProspectingSearchContext();
+const { formFilters, form } = useProspectingSearchContext();
 
 const isOpen = ref(false);
 // A gaveta cobre o canto direito, onde fica o lançador do Guia (#646): sinaliza
@@ -25,21 +22,6 @@ const activeCount = computed(() =>
   activeAdvancedLeadFiltersCount(formFilters.value)
 );
 const formPreset = computed(() => findPreset(form.value.preset_id));
-// A faixa de posição não começa depois do que o Google devolve nesta busca.
-const rankReach = computed(() =>
-  reachableRankLimit({
-    requestedLimit: form.value.requested_limit,
-    isMockProvider: Boolean(settings.value?.mock_provider),
-  })
-);
-
-// Quantidade diminuída depois de aplicar a faixa: o início aplicado passa do
-// que o Google alcança e o motor recusaria a busca. Avisa fora da gaveta, sem
-// mexer no filtro (a Quantidade pode estar no meio da digitação).
-const isRankOutOfReach = computed(
-  () => Number(formFilters.value.outside_top || 0) >= rankReach.value
-);
-
 const applyFilters = next => {
   formFilters.value = next;
   isOpen.value = false;
@@ -66,16 +48,6 @@ const applyFilters = next => {
     </div>
     <p class="mt-1 text-xs text-n-slate-10">
       {{ t('PROSPECTING.SEARCH.ADVANCED_FILTERS_HINT') }}
-    </p>
-    <p
-      v-if="isRankOutOfReach"
-      data-test="rank-reach-warning"
-      role="alert"
-      class="mt-1 text-xs font-medium text-n-ruby-11"
-    >
-      {{
-        t('PROSPECTING.SEARCH.FILTER_DRAWER.RANK.REACH', { limit: rankReach })
-      }}
     </p>
 
     <div
@@ -113,11 +85,7 @@ const applyFilters = next => {
           </button>
         </header>
         <div class="min-h-0 flex-1 overflow-y-auto p-5">
-          <LeadFiltersPanel
-            :filters="formFilters"
-            :rank-reach="rankReach"
-            @apply="applyFilters"
-          />
+          <LeadFiltersPanel :filters="formFilters" @apply="applyFilters" />
         </div>
       </aside>
     </div>

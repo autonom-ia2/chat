@@ -47,11 +47,16 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       user: Current.user,
       params: search_params
     ).perform
+    # Enriquecer e verificar WhatsApp no servidor, sem depender da aba aberta (#678).
+    ::Autonomia::Prospecting::LeadWorkQueue.after_search(account: Current.account, leads: result.leads)
+    # A fila marca 'queued' por update_all: sem reler, a tela recebia 'pending', verificava pela aba os mesmos números
+    # que o job verifica e mostrava Enriquecer livre num lead já na fila.
+    leads = result.leads.each(&:reload)
 
     render json: {
       payload: {
         search: search_payload(result.search),
-        leads: result.leads.map { |lead| lead_payload(lead, result.search) }
+        leads: leads.map { |lead| lead_payload(lead, result.search) }
       }
     }, status: :created
   rescue ActiveRecord::RecordInvalid => e
@@ -92,6 +97,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       :limit,
       :crm_pipeline_id,
       :crm_stage_id,
+      :fresh,
       categories: [],
       area_config: {},
       metadata: [
@@ -155,6 +161,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       else
         leads.count
       end
+    # Raio pedido, para repetir a busca (#678): com "Expandir raio", radius é o que a expansão alcançou.
+    payload['requested_radius'] = search.metadata.to_h['requested_radius'] || search.radius
     payload['crm_pipeline_id'] = search.metadata.to_h['crm_pipeline_id']
     payload['crm_stage_id'] = search.metadata.to_h['crm_stage_id']
     payload['crm_count'] = leads.count { |lead| lead.crm_card_id.present? }
@@ -186,7 +194,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       radius_expanded: ActiveModel::Type::Boolean.new.cast(
         search.metadata.to_h['radius_expanded']
       ),
-      cached_from_search_id: search.metadata.to_h['cached_from_search_id']
+      cached_from_search_id: search.metadata.to_h['cached_from_search_id'],
+      partial_results: search.metadata.to_h['partial_results'] == true
     }
     payload['leads'] = leads.map { |lead| lead_payload(lead, search) } if include_leads
     payload
@@ -223,6 +232,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       whatsapp_payload(lead)
     ).merge(
       search_rank_payload(lead, search)
+    ).merge(
+      search_scoring_payload(lead, search)
     )
   end
 
@@ -230,6 +241,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   def search_rank_payload(lead, search)
     rank = search&.metadata.to_h.dig('lead_ranks', lead.id.to_s)
     rank.nil? ? {} : { 'search_rank' => rank }
+  end
+
+  # Nota e prioridade do lead nesta busca (#678), no mesmo formato do atributo do lead. Busca anterior a isso não tem:
+  # ficam os valores do lead.
+  def search_scoring_payload(lead, search)
+    scoring = search&.metadata.to_h.dig('lead_scoring', lead.id.to_s)
+    return {} if scoring.blank?
+
+    scoring.slice('score', 'score_breakdown', 'priority_score', 'priority_position').to_h do |key, value|
+      [key, ::Autonomia::Prospecting::Lead.type_for_attribute(key).cast(value).as_json]
+    end
   end
 
   def page

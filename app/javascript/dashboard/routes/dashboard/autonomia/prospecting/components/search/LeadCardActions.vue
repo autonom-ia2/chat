@@ -1,8 +1,13 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
 import LeadPhoneActions from './LeadPhoneActions.vue';
+import LeadSocialLinks from './LeadSocialLinks.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
+import {
+  isLeadEnriched,
+  isLeadEnriching as isEnriching,
+} from '../../utils/leadEnrichment';
 
 defineProps({
   lead: { type: Object, required: true },
@@ -22,8 +27,15 @@ const {
   crmCardUrl,
 } = useProspectingSearchContext();
 
-const isLeadEnriched = lead => lead?.enrichment_status === 'completed';
-const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
+const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
+// Link oficial do lugar no Google quando o provider trouxe; senão, busca por
+// coordenadas ou nome.
+const googleMapsLeadUrl = lead =>
+  lead.google_maps_uri || formatters.googleMapsLeadUrl(lead, t);
+const toggleDetails = lead => {
+  selectedLeadDetailId.value =
+    selectedLeadDetailId.value === lead.id ? null : lead.id;
+};
 </script>
 
 <template>
@@ -42,7 +54,9 @@ const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
     <button
       type="button"
       class="inline-flex h-8 items-center gap-1.5 rounded-md border border-n-brand/30 bg-n-brand-2 px-3 text-xs font-semibold text-n-brand hover:bg-n-brand-3"
-      @click="selectedLeadDetailId = lead.id"
+      :aria-expanded="selectedLeadDetailId === lead.id ? 'true' : 'false'"
+      aria-haspopup="dialog"
+      @click="toggleDetails(lead)"
     >
       <span class="i-lucide-panel-right-open size-3.5" />
       {{ t('PROSPECTING.SEARCH.OPEN_DETAILS') }}
@@ -58,7 +72,7 @@ const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
       "
       :disabled="
         isLeadEnriched(lead) ||
-        enrichingLeadId === lead.id ||
+        isLeadEnriching(lead) ||
         !settings?.research_enabled ||
         !lead.website
       "
@@ -76,7 +90,7 @@ const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
       <span
         class="size-3.5"
         :class="
-          enrichingLeadId === lead.id
+          isLeadEnriching(lead)
             ? 'animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11'
             : isLeadEnriched(lead)
               ? 'i-lucide-check-circle-2'
@@ -84,7 +98,7 @@ const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
         "
       />
       {{
-        enrichingLeadId === lead.id
+        isLeadEnriching(lead)
           ? t('PROSPECTING.SEARCH.ENRICHING')
           : isLeadEnriched(lead)
             ? t('PROSPECTING.SEARCH.ENRICHED')
@@ -92,6 +106,7 @@ const googleMapsLeadUrl = lead => formatters.googleMapsLeadUrl(lead, t);
       }}
     </button>
     <LeadPhoneActions :lead="lead" />
+    <LeadSocialLinks :lead="lead" />
     <a
       v-if="lead.contact_id"
       :href="contactUrl(lead.contact_id)"

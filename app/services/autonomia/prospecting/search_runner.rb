@@ -2,10 +2,10 @@ require 'digest'
 require 'json'
 
 class Autonomia::Prospecting::SearchRunner
-  AREA_TYPES = %w[radius viewport].freeze
+  AREA_TYPES = Autonomia::Prospecting::SearchArea::TYPES
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
-  # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
-  MAX_REQUESTED_LIMIT = 60
+  # Teto de produto do pedido (#683): 3 páginas de 20 no Google (#678).
+  MAX_REQUESTED_LIMIT = Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -21,46 +21,67 @@ class Autonomia::Prospecting::SearchRunner
 
   def perform
     validate!
-    cached = cached_result
+    # Repetir do histórico chama o Google de novo, como no Orth, que não tem cache de busca (#678).
+    cached = fresh? ? nil : cached_result
     return cached if cached
 
     search = create_search!
-    leads = []
-
-    ActiveRecord::Base.transaction do
-      provider_result = search_provider_results
-      filtered_attributes = provider_result[:attributes].each_with_index.filter_map do |attributes, index|
-        google_rank = index + 1
-        next unless advanced_filter_matches?(attributes, google_rank)
-
-        [attributes, google_rank]
-      end
-      leads = upsert_leads!(search, filtered_attributes)
-      assign_priority_positions!(leads)
-      search.radius = provider_result[:radius]
-      search.area_config = area_config_for_radius(provider_result[:radius])
-      search.metadata = search.metadata.to_h.merge(
-        'lead_ids' => leads.map(&:id),
-        'lead_ranks' => lead_ranks(leads),
-        'results_count' => leads.size,
-        'search_filters' => search_filters,
-        'requested_radius' => radius,
-        'radius_expanded' => provider_result[:radius].to_i > radius
-      )
-      search.status = :completed
-      search.consumed_api_units = provider_result[:api_units]
-      search.cache_fingerprint = cache_fingerprint
-      search.cache_expires_at = cache_expires_at
-      search.save!
-    end
+    # Todas as chamadas ao Google acontecem antes da transação (#678): com a paginação são até 3 páginas por raio, e
+    # segurar a conexão do banco enquanto o Google responde trava outras telas.
+    provider_result = search_provider_results
+    leads = persist_results!(search, provider_result)
 
     Result.new(search: search.reload, leads: leads)
   rescue StandardError => e
-    search&.update!(status: :failed, metadata: search.metadata.to_h.merge('error' => e.message)) if search&.persisted?
+    # As chamadas já feitas ao Google foram pagas e entram no uso mostrado nas Configurações mesmo com a busca falha.
+    if search&.persisted?
+      search.update!(status: :failed, consumed_api_units: @consumed_api_units.to_i,
+                     metadata: search.metadata.to_h.merge('error' => e.message))
+    end
     raise
   end
 
   private
+
+  def persist_results!(search, provider_result)
+    ActiveRecord::Base.transaction do
+      leads = upsert_leads!(search, accepted_with_rank(provider_result[:attributes]))
+      assign_priority_positions!(leads)
+      search.radius = provider_result[:radius]
+      search.area_config = area_config_for_radius(provider_result[:radius])
+      search.metadata = search.metadata.to_h.merge(results_metadata(leads, provider_result))
+      search.status = :completed
+      search.consumed_api_units = provider_result[:api_units]
+      search.cache_fingerprint = cache_fingerprint
+      # Busca parcial não vira cache: a próxima igual tenta o Google de novo em vez de repetir o resultado incompleto.
+      search.cache_expires_at = provider_result[:partial] ? nil : cache_expires_at
+      search.save!
+      leads
+    end
+  end
+
+  # Filtra antes de cortar no pedido (#678). A posição é a do Google entre as páginas, dada antes de filtrar.
+  def accepted_with_rank(attributes_list)
+    attributes_list.each_with_index.filter_map do |attributes, index|
+      google_rank = index + 1
+      next unless advanced_filter_matches?(attributes, google_rank)
+
+      [attributes, google_rank]
+    end.first(requested_limit)
+  end
+
+  def results_metadata(leads, provider_result)
+    {
+      'lead_ids' => leads.map(&:id),
+      'lead_ranks' => lead_ranks(leads),
+      'lead_scoring' => lead_scoring(leads),
+      'results_count' => leads.size,
+      'search_filters' => search_filters,
+      'requested_radius' => radius,
+      'radius_expanded' => provider_result[:radius].to_i > radius,
+      'partial_results' => provider_result[:partial] == true
+    }
+  end
 
   def validate!
     raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
@@ -68,6 +89,7 @@ class Autonomia::Prospecting::SearchRunner
     raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, 'must be greater than 0')) if requested_limit <= 0
 
     validate_google_places! if provider_name == 'google_places'
+    validate_drawn_area!
 
     if requested_limit > MAX_REQUESTED_LIMIT
       raise ActiveRecord::RecordInvalid.new(search_with_error(:requested_limit, "must be less than or equal to #{MAX_REQUESTED_LIMIT}"))
@@ -76,14 +98,22 @@ class Autonomia::Prospecting::SearchRunner
     validate_rank_range!
   end
 
-  # O provider devolve no máximo expansion_target posições. Cortar todas elas deixa a busca sempre vazia e ainda gasta
-  # as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
+  # O provider alcança no máximo MAX_REQUESTED_LIMIT posições (3 páginas de 20, #678). Cortar todas elas deixa a busca
+  # sempre vazia e ainda gasta as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
   def validate_rank_range!
     outside_top = number_or_nil(advanced_filters['outside_top'])
-    return if outside_top.nil? || outside_top < expansion_target
+    return if outside_top.nil? || outside_top < MAX_REQUESTED_LIMIT
 
-    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: expansion_target)
+    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: MAX_REQUESTED_LIMIT)
     raise ActiveRecord::RecordInvalid, search_with_error(:base, message)
+  end
+
+  # Área desenhada sem desenho que sirva (centro, limites ou três pontos) não vira busca (#678).
+  def validate_drawn_area!
+    return unless Autonomia::Prospecting::SearchArea.drawn?(area_type)
+    return if Autonomia::Prospecting::SearchArea.normalize(area_type, raw_area_config, radius: radius)
+
+    raise ActiveRecord::RecordInvalid, search_with_error(:base, I18n.t('autonomia.prospecting.errors.drawn_area_required'))
   end
 
   def create_search!
@@ -137,50 +167,69 @@ class Autonomia::Prospecting::SearchRunner
     @search_country ||= @setting.search_country
   end
 
+  # Falha do Google depois da primeira página não descarta o que já chegou (#678): a busca termina com o que tem e fica
+  # parcial. Só a primeira chamada da busca derruba tudo.
   def search_provider_results
-    radii = auto_expand_radius? ? expansion_radii : [radius]
-    api_units = 0
+    @consumed_api_units = 0
     last_attributes = []
     last_radius = radius
+    partial = false
 
-    radii.each do |radius_value|
-      provider_instance = provider(
-        radius_value: radius_value,
-        area_config_value: area_config_for_radius(radius_value)
-      )
-      last_attributes = provider_instance.search
-      last_radius = radius_value
-      api_units += if provider_instance.respond_to?(:api_units)
-                     provider_instance.api_units.to_i
-                   else
-                     0
-                   end
-      break if advanced_filtered_attributes_count(last_attributes) >= expansion_goal
+    (auto_expand_radius? ? expansion_radii : [radius]).each_with_index do |radius_value, index|
+      attributes, partial = search_radius(radius_value, first: index.zero?)
+      if use_radius_result?(attributes, partial, last_attributes)
+        last_attributes = attributes
+        last_radius = radius_value
+      end
+      break if partial || advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
     {
       attributes: last_attributes,
       radius: last_radius,
-      api_units: api_units
+      api_units: @consumed_api_units,
+      partial: partial
     }
   end
 
-  # O raio só cresce enquanto o provider ainda pode trazer mais. O Google entrega no máximo 20 por chamada: um pedido de
-  # 60 nunca chegaria a 60 e expandiria sempre até o raio máximo, descartando o raio que a pessoa escolheu (#683).
-  def expansion_target
-    return requested_limit unless provider_name == 'google_places'
+  # Raio maior completo sempre substitui o anterior. Parcial só substitui se trouxe pelo menos tantos lugares que passam
+  # nos filtros quanto o raio anterior.
+  def use_radius_result?(attributes, partial, last_attributes)
+    return false if attributes.nil?
+    return true unless partial
 
-    [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
+    advanced_filtered_attributes_count(attributes) >= advanced_filtered_attributes_count(last_attributes)
   end
 
-  # A faixa de posição corta as mesmas posições em qualquer raio, então o que ela tira não é falta que raio maior
-  # resolva. Sem descontar, a meta nunca era alcançada e a busca expandia sempre até 4x, com 3 chamadas pagas (#677).
+  # [lugares, parcial]. Lugares nil quando o raio maior falhou já na primeira página e a busca fica com o raio anterior.
+  def search_radius(radius_value, first:)
+    provider_instance = provider(radius_value: radius_value, area_config_value: area_config_for_radius(radius_value))
+    attributes = provider_instance.search(max_results: last_reachable_rank) do |item, google_rank|
+      advanced_filter_matches?(item, google_rank)
+    end
+    [attributes, provider_instance.try(:partial?) || false]
+  rescue ProviderError
+    raise if first
+
+    [nil, true]
+  ensure
+    @consumed_api_units += provider_instance.try(:api_units).to_i
+  end
+
+  # Última posição que vale ler: depois de search_rank_max o filtro descarta tudo, então as páginas seguintes seriam
+  # chamadas pagas à toa (#678).
+  def last_reachable_rank
+    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
+    search_rank_max ? search_rank_max.to_i.clamp(0, MAX_REQUESTED_LIMIT) : MAX_REQUESTED_LIMIT
+  end
+
+  # O raio só cresce enquanto falta lugar para o pedido. A faixa de posição corta as mesmas posições em qualquer raio,
+  # então o que ela tira não é falta que raio maior resolva: sem descontar, a meta nunca era alcançada e a busca
+  # expandia sempre até 4x (#677).
   def expansion_goal
     outside_top = number_or_nil(advanced_filters['outside_top']).to_i
-    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
-    last_rank = search_rank_max ? [expansion_target, search_rank_max.to_i].min : expansion_target
 
-    last_rank - outside_top
+    [requested_limit, last_reachable_rank - outside_top].min
   end
 
   # Falta de chave é da plataforma, não de quem busca: o detalhe vai para o log e a pessoa lê a frase em português.
@@ -217,9 +266,25 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   # O lead é um só por conta e o search_rank dele é o da busca mais recente. A busca guarda a posição de cada lead
-  # dela, para o card e o refino por faixa de posição ao reabrir (#677). Prioridade e pontuação ainda são do lead.
+  # dela, para o card e o refino por faixa de posição ao reabrir (#677).
   def lead_ranks(leads)
     leads.to_h { |lead| [lead.id.to_s, lead.search_rank] }
+  end
+
+  # Nota, detalhe da nota e prioridade também são da busca (#678): a posição de prioridade só faz sentido entre os
+  # leads da mesma busca, e a nota muda com o modo e a posição no Google dela.
+  def lead_scoring(leads)
+    leads.to_h do |lead|
+      [
+        lead.id.to_s,
+        {
+          'score' => lead.score&.to_f,
+          'score_breakdown' => lead.score_breakdown,
+          'priority_score' => lead.priority_score&.to_f,
+          'priority_position' => lead.priority_position
+        }
+      ]
+    end
   end
 
   def lost_race?(error)
@@ -377,9 +442,14 @@ class Autonomia::Prospecting::SearchRunner
 
   # Chaves e regras da gaveta de filtros do Orth (search-filters.ts). has_photos, open_now e has_opening_hours são
   # atributos que o provider entrega (contrato #677); sem eles o filtro ativo falha alto em vez de zerar a busca.
+  # O recorte do polígono (#678) entra aqui: roda depois de a posição no Google já estar atribuída pelo índice.
   def advanced_filter_matches?(attributes, google_rank)
-    presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
+    within_drawn_area?(attributes) && presence_filters_match?(attributes) && rating_filters_match?(attributes) && rank_filters_match?(google_rank) &&
       reviews_filter_matches?(attributes)
+  end
+
+  def within_drawn_area?(attributes)
+    Autonomia::Prospecting::SearchArea.contains?(area_type, area_config, attributes[:latitude], attributes[:longitude])
   end
 
   def presence_filters_match?(attributes)
@@ -491,37 +561,40 @@ class Autonomia::Prospecting::SearchRunner
     end
   end
 
-  def normalized_area_config
-    raw_config = @params[:area_config].presence || {}
-    raw_config = raw_config.to_unsafe_h if raw_config.respond_to?(:to_unsafe_h)
-    raw_config = raw_config.to_h if raw_config.respond_to?(:to_h)
-    raw_config = raw_config.deep_stringify_keys
+  def raw_area_config
+    @raw_area_config ||= begin
+      raw_config = @params[:area_config].presence || {}
+      raw_config = raw_config.to_unsafe_h if raw_config.respond_to?(:to_unsafe_h)
+      raw_config = raw_config.to_h if raw_config.respond_to?(:to_h)
+      raw_config.deep_stringify_keys
+    end
+  end
 
-    center = normalize_center(raw_config['center']) || metadata_center
+  def normalized_area_config
     base = {
       'label' => metadata['location_label'].presence || location.presence,
       'place_id' => metadata['location_place_id'].presence
     }.compact
+    geometry = if Autonomia::Prospecting::SearchArea.drawn?(area_type)
+                 Autonomia::Prospecting::SearchArea.normalize(area_type, raw_area_config, radius: radius).to_h
+               else
+                 located_area_config(raw_area_config)
+               end
+    base.merge(geometry)
+  end
+
+  # Raio e área visível: a área parte do local escolhido.
+  def located_area_config(raw_config)
+    center = normalize_center(raw_config['center']) || metadata_center
 
     if area_type == 'viewport'
       bounds = normalize_bounds(raw_config['bounds'])
       center ||= center_from_bounds(bounds)
 
-      return base.merge(
-        {
-          'bounds' => bounds,
-          'center' => center,
-          'radius' => radius
-        }.compact
-      )
+      return { 'bounds' => bounds, 'center' => center, 'radius' => radius }.compact
     end
 
-    base.merge(
-      {
-        'center' => center,
-        'radius' => radius
-      }.compact
-    )
+    { 'center' => center, 'radius' => radius }.compact
   end
 
   def metadata_center
@@ -611,6 +684,10 @@ class Autonomia::Prospecting::SearchRunner
     end
   end
 
+  def fresh?
+    ActiveModel::Type::Boolean.new.cast(@params[:fresh]) == true
+  end
+
   def cached_result
     return if @setting.cache_ttl_seconds.to_i <= 0
 
@@ -644,9 +721,13 @@ class Autonomia::Prospecting::SearchRunner
                         .merge(scoring_metadata).merge(
                           'lead_ids' => leads.map(&:id),
                           'lead_ranks' => search.metadata.to_h['lead_ranks'],
+                          'lead_scoring' => search.metadata.to_h['lead_scoring'],
                           'results_count' => leads.size,
                           'cached_from_search_id' => search.id,
-                          'search_filters' => search_filters
+                          'search_filters' => search_filters,
+                          # O raio gravado é o que a busca de origem alcançou; Repetir precisa do que a pessoa pediu (#678).
+                          'requested_radius' => radius,
+                          'radius_expanded' => search.metadata.to_h['radius_expanded'] == true
                         )
     )
 

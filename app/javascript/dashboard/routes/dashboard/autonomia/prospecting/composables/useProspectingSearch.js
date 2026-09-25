@@ -15,6 +15,7 @@ import { useSearchHistory } from './useSearchHistory';
 import { useSearchLeads } from './useSearchLeads';
 import { useSearchLocation } from './useSearchLocation';
 import { useSearchPresets } from './useSearchPresets';
+import { useSearchRepeat } from './useSearchRepeat';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
 
@@ -36,6 +37,10 @@ export const useProspectingSearch = () => {
 
   const location = useSearchLocation(state);
   const presets = useSearchPresets(state);
+  const repeat = useSearchRepeat(state, {
+    applyCrmTarget: crm.applyCrmTarget,
+    submitSearch: searchForm.submitSearch,
+  });
 
   const context = mergeDisjoint(
     { canManage },
@@ -45,7 +50,8 @@ export const useProspectingSearch = () => {
     history,
     searchForm,
     location,
-    presets
+    presets,
+    repeat
   );
   provide(PROSPECTING_SEARCH_KEY, context);
 

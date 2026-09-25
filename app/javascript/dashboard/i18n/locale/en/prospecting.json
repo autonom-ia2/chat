@@ -127,6 +127,8 @@
       "ENRICHED": "Enriquecido",
       "ENRICHING": "Enriquecendo...",
       "ENRICHMENT_COMPLETED": "Lead enriquecido.",
+      "ENRICHMENT_QUEUED": "Enriquecimento na fila. O card se atualiza sozinho quando terminar.",
+      "PARTIAL_RESULTS": "O Google parou de responder no meio da busca. Mostramos os lugares que chegaram; busque de novo para tentar completar.",
       "ENRICHMENT_DISABLED": "A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.",
       "ENRICHMENT_NO_SITE": "Este lead não possui site para enriquecimento.",
       "ENRICHMENT_TITLE": "Enriquecimento",
@@ -144,6 +146,7 @@
       "CRM_TARGET": "Funil CRM",
       "CRM_CONFIG_HINT": "O funil CRM desta busca usa o padrão da conta, exceto quando alterado no histórico.",
       "CONFIGURE_SEARCH": "Configurações",
+      "EDIT_SEARCH": "Editar e buscar",
       "SAVE_CONFIG": "Salvar",
       "EMPTY": "Nenhuma busca registrada.",
       "RESULTS_EMPTY": "Execute uma busca ou selecione uma busca do histórico.",
@@ -170,12 +173,50 @@
       "AREA_VIEWPORT": "Área visível",
       "AREA_VIEWPORT_SHORT": "Área do mapa",
       "AREA_VIEWPORT_HINT": "Mova ou aplique zoom no mapa. A busca usará a área visível no momento de executar.",
+      "AREA_DRAW": {
+        "CIRCLE": "Círculo desenhado",
+        "RECTANGLE": "Retângulo desenhado",
+        "POLYGON": "Polígono desenhado",
+        "SHORT_CIRCLE": "Área desenhada · círculo",
+        "SHORT_RECTANGLE": "Área desenhada · retângulo",
+        "SHORT_POLYGON": "Área desenhada · polígono",
+        "HINT": "Desenhe no mapa a área onde a busca deve procurar. Só entram empresas dentro dela.",
+        "HINT_NEEDS_LOCATION": "Escolha o local para abrir o mapa e desenhar a área.",
+        "HINT_CIRCLE": "Clique no mapa para pôr o centro do círculo. Arraste a borda para mudar o raio e o meio para mover.",
+        "HINT_RECTANGLE": "Clique no mapa para criar o retângulo. Arraste os cantos para ajustar e o meio para mover.",
+        "HINT_POLYGON": "Clique no mapa para marcar cada ponto do contorno, pelo menos três. Arraste um ponto para ajustar.",
+        "MAP_LABEL": "Mapa para desenhar a área da busca",
+        "READY": "Área pronta para a busca.",
+        "PENDING": "Desenhe a área para liberar a busca.",
+        "POINTS": "{count} pontos marcados.",
+        "UNDO_POINT": "Desfazer último ponto",
+        "CLEAR": "Limpar desenho"
+      },
       "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, amplia o raio automaticamente em até 3 tentativas.",
       "PRIORITY_GOOGLE_RANK": "G #{rank}",
       "PRIORITY_POSITION": "Posição {position}",
       "PRIORITY_POSITION_IN_LIST": "Posição {position} da lista",
       "PRIORITY_FIRST_CALL_SHORT": "Ligar 1º",
       "PRIORITY_FIRST_CALL": "Ligar primeiro",
+      "CARD_SIGNALS": {
+        "HAS_SITE": "Tem site",
+        "NO_SITE": "Sem site",
+        "HAS_PHONE": "Tem fone",
+        "NO_PHONE": "Sem fone",
+        "NO_PHOTO": "Sem foto",
+        "FEW_PHOTOS": "Pouca foto",
+        "PHOTOS": "{count} fotos",
+        "GOOGLE_RANK": "#{rank} Google",
+        "RATING": "★ {value}",
+        "REVIEWS": "{count} avaliações"
+      },
+      "CARD_SOCIAL": {
+        "INSTAGRAM": "Abrir Instagram",
+        "FACEBOOK": "Abrir Facebook",
+        "LINKEDIN": "Abrir LinkedIn"
+      },
+      "SELECT_LEAD": "Selecionar lead",
+      "DESELECT_LEAD": "Desmarcar lead",
       "SCORE_BASE": "Score base {score}",
       "ADDRESS_SEPARATOR": " - ",
       "RATING_LABEL": "{rating} estrelas",
@@ -295,8 +336,7 @@
           "ANY": "{min} a {max} (qualquer)",
           "RANGE": "{min} a {max}",
           "MIN_ARIA": "Posição mínima no Google",
-          "MAX_ARIA": "Posição máxima no Google",
-          "REACH": "Com essa quantidade, o Google traz até {limit} posições. A faixa começa em até {limit}."
+          "MAX_ARIA": "Posição máxima no Google"
         }
       },
       "SCORE_MODES": {
@@ -322,13 +362,21 @@
         "INACTIVE_GBP": "Perfil com baixa atividade recente"
       },
       "SORT": {
-        "PRIORITY_DESC": "Maior prioridade",
-        "SCORE_DESC": "Maior score",
-        "CREATED_DESC": "Mais recentes",
-        "CREATED_ASC": "Mais antigos",
-        "RATING_DESC": "Melhor avaliação",
-        "REVIEWS_DESC": "Mais avaliações",
-        "NAME_ASC": "Nome A-Z"
+        "FIELDS": {
+          "PRIORITY": "Prioridade",
+          "SCORE": "Score",
+          "RATING": "Avaliação",
+          "REVIEWS": "Número de avaliações",
+          "DISTANCE": "Distância do centro",
+          "GOOGLE_RANK": "Posição no Google",
+          "CREATED": "Data",
+          "NAME": "Nome"
+        },
+        "DIRECTION": {
+          "ASC": "Crescente",
+          "DESC": "Decrescente"
+        },
+        "INVERT": "Inverter a ordem (agora {direction})"
       },
       "FIELDS": {
         "PROVIDER": "Provider",

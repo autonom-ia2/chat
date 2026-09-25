@@ -9,6 +9,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
+import { useLeadLiveUpdates } from '../composables/useLeadLiveUpdates';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -25,6 +26,10 @@ import {
   normalizedLeadPhone as normalizedLeadPhoneFor,
 } from '../utils/leadPhone';
 import { phoneRegionFromSettings } from '../utils/phoneContract';
+import {
+  isLeadEnriched,
+  isLeadEnriching as isEnriching,
+} from '../utils/leadEnrichment';
 
 const { t } = useI18n();
 const canManage = useCanManage('prospecting_manage');
@@ -117,7 +122,7 @@ const canCreateCrmCard = computed(() =>
   Boolean(crmForm.value.pipeline_id && crmForm.value.stage_id)
 );
 const leadHasVerifiedWhatsApp = lead => lead?.whatsapp_verified === true;
-const isLeadEnriched = lead => lead?.enrichment_status === 'completed';
+const isLeadEnriching = lead => isEnriching(lead, enrichingLeadId.value);
 const campaignReadyLeads = computed(() =>
   (selectedList.value?.leads || []).filter(
     lead =>
@@ -177,7 +182,7 @@ const leadPriorityTheme = lead => {
   const priority = leadPriority(lead);
   return priority === null ? null : priorityTheme(priority);
 };
-const leadSignals = lead => leadPrioritySignals(lead);
+const leadSignals = lead => leadPrioritySignals(lead, { t });
 
 const contactUrl = contactId =>
   `/app/accounts/${route.params.accountId}/contacts/${contactId}`;
@@ -204,6 +209,7 @@ const isWhatsAppVerified = leadHasVerifiedWhatsApp;
 const isWhatsAppUnavailable = lead =>
   lead?.whatsapp_verification_status === 'not_whatsapp';
 const isWhatsAppChecking = lead =>
+  lead?.whatsapp_verification_status === 'queued' ||
   verifyingWhatsAppLeadIds.value.map(Number).includes(Number(lead?.id));
 
 const shouldVerifyWhatsApp = lead =>
@@ -232,6 +238,9 @@ const replaceLead = updatedLead => {
     };
   }
 };
+
+// Enriquecimento e WhatsApp terminam no servidor e chegam pelo evento (#678).
+useLeadLiveUpdates(replaceLead);
 
 const verifyLeadWhatsApp = async lead => {
   if (!shouldVerifyWhatsApp(lead)) return;
@@ -516,14 +525,12 @@ const enrichLead = async lead => {
   if (!lead?.id || enrichingLeadId.value) return;
 
   enrichingLeadId.value = lead.id;
-  replaceLead({ ...lead, enrichment_status: 'running' });
 
   try {
     const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
     replaceLead(data.payload?.lead);
-    useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'));
+    useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
   } catch (e) {
-    replaceLead({ ...lead, enrichment_status: 'failed' });
     alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
   } finally {
     enrichingLeadId.value = null;
@@ -1077,7 +1084,7 @@ onMounted(loadPage);
                     "
                     :disabled="
                       isLeadEnriched(lead) ||
-                      enrichingLeadId === lead.id ||
+                      isLeadEnriching(lead) ||
                       !settings?.research_enabled ||
                       !lead.website
                     "
@@ -1095,7 +1102,7 @@ onMounted(loadPage);
                     <span
                       class="size-3.5"
                       :class="
-                        enrichingLeadId === lead.id
+                        isLeadEnriching(lead)
                           ? 'animate-spin rounded-full border-2 border-n-slate-5 border-t-n-slate-11'
                           : isLeadEnriched(lead)
                             ? 'i-lucide-check-circle-2'
@@ -1103,7 +1110,7 @@ onMounted(loadPage);
                       "
                     />
                     {{
-                      enrichingLeadId === lead.id
+                      isLeadEnriching(lead)
                         ? t('PROSPECTING.SEARCH.ENRICHING')
                         : isLeadEnriched(lead)
                           ? t('PROSPECTING.SEARCH.ENRICHED')

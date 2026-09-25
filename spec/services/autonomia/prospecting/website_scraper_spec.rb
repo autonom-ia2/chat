@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Caracterização do raspador de site antes da E0 (#683). Nenhuma chamada de
-# rede real: o DNS é dublado e o HTTP passa pelo WebMock.
+# Caracterização do raspador de site (#683) e guarda de destino (#476). O DNS é dublado e o HTTP passa
+# pelo WebMock, menos no bloco "conexão real", que usa um servidor em 127.0.0.1.
 RSpec.describe Autonomia::Prospecting::WebsiteScraper do
   let(:public_ip) { '93.184.216.34' }
   let(:html) do
@@ -82,43 +82,179 @@ RSpec.describe Autonomia::Prospecting::WebsiteScraper do
     expect(scrape('https://sorriso.example.com/')).to include('error' => 'http_404')
   end
 
-  it 'bloqueia localhost e endereço de rede interna' do
-    allow(Resolv).to receive(:getaddresses).with('interno.example.com').and_return(['10.0.0.5'])
+  it 'manda User-Agent de navegador' do
+    stub_request(:get, 'https://sorriso.example.com/').to_return(status: 200, body: '<title>Sorriso</title>')
 
-    expect(scrape('http://localhost:3000')).to include('error' => 'argument_error', 'message' => 'blocked_host')
-    expect(scrape('https://interno.example.com')).to include('error' => 'argument_error', 'message' => 'blocked_host')
+    scrape('https://sorriso.example.com/')
+
+    expect(WebMock).to have_requested(:get, 'https://sorriso.example.com/')
+      .with(headers: { 'User-Agent' => described_class::USER_AGENT })
+    expect(described_class::USER_AGENT).to start_with('Mozilla/5.0')
   end
 
-  it 'bloqueia redirecionamento para rede interna' do
-    allow(Resolv).to receive(:getaddresses).with('interno.example.com').and_return(['192.168.0.10'])
+  it 'devolve empty_page quando o site responde sem conteúdo' do
+    stub_request(:get, 'https://sorriso.example.com/').to_return(status: 200, body: '<html><body> </body></html>')
+
+    expect(scrape('https://sorriso.example.com/')).to include('error' => 'empty_page')
+  end
+
+  it 'recusa conteúdo que não é página (PDF, imagem)' do
     stub_request(:get, 'https://sorriso.example.com/')
-      .to_return(status: 302, headers: { 'Location' => 'https://interno.example.com/admin' })
+      .to_return(status: 200, body: '%PDF-1.4', headers: { 'Content-Type' => 'application/pdf' })
 
-    expect(scrape('https://sorriso.example.com/')).to include('error' => 'argument_error', 'message' => 'blocked_host')
+    expect(scrape('https://sorriso.example.com/')).to include('error' => 'unsupported_content_type')
   end
 
-  it 'segue até dois redirecionamentos e desiste no terceiro' do
-    stub_request(:get, 'https://a.example.com/').to_return(status: 301, headers: { 'Location' => 'https://b.example.com/' })
-    stub_request(:get, 'https://b.example.com/').to_return(status: 301, headers: { 'Location' => 'https://c.example.com/' })
-    stub_request(:get, 'https://c.example.com/').to_return(status: 200, body: '<title>Final</title>')
-
-    expect(scrape('https://a.example.com/')).to include('title' => 'Final')
-
-    stub_request(:get, 'https://c.example.com/').to_return(status: 301, headers: { 'Location' => 'https://d.example.com/' })
-
-    expect(scrape('https://a.example.com/')).to include('error' => 'argument_error', 'message' => 'too_many_redirects')
-  end
-
-  it 'chama de too_many_redirects um redirecionamento sem Location' do
-    stub_request(:get, 'https://sorriso.example.com/').to_return(status: 302)
-
-    expect(scrape('https://sorriso.example.com/')).to include('message' => 'too_many_redirects')
-  end
-
-  it 'aceita host que não resolve no DNS e devolve o erro da conexão' do
-    allow(Resolv).to receive(:getaddresses).and_return([])
+  it 'devolve timeout quando o site não responde a tempo' do
     stub_request(:get, 'https://sumiu.example.com/').to_timeout
 
-    expect(scrape('https://sumiu.example.com/')).to include('error' => 'open_timeout')
+    expect(scrape('https://sumiu.example.com/')).to include('error' => 'timeout')
+  end
+
+  describe 'guarda de destino (#476)' do
+    it 'bloqueia localhost e endereço de rede interna' do
+      allow(Resolv).to receive(:getaddresses).with('interno.example.com').and_return(['10.0.0.5'])
+
+      expect(scrape('http://localhost:3000')).to include('error' => 'blocked_url', 'message' => 'blocked_host')
+      expect(scrape('https://interno.example.com')).to include('error' => 'blocked_url', 'message' => 'blocked_host')
+      expect(WebMock).not_to have_requested(:any, /.*/)
+    end
+
+    it 'bloqueia a faixa CGNAT 100.64.0.0/10' do
+      allow(Resolv).to receive(:getaddresses).with('cgnat.example.com').and_return(['100.64.0.1'])
+
+      expect(scrape('https://cgnat.example.com/')).to include('error' => 'blocked_url')
+    end
+
+    it 'bloqueia IPv4 mapeado em IPv6 (::ffff:169.254.169.254), escrito na URL ou vindo do DNS' do
+      allow(Resolv).to receive(:getaddresses).with('mapeado.example.com').and_return(['::ffff:169.254.169.254'])
+
+      expect(scrape('http://[::ffff:169.254.169.254]/latest/meta-data/')).to include('error' => 'blocked_url')
+      expect(scrape('https://mapeado.example.com/')).to include('error' => 'blocked_url')
+      expect(WebMock).not_to have_requested(:any, /.*/)
+    end
+
+    it 'bloqueia URL com usuário embutido' do
+      expect(scrape('http://user@sorriso.example.com/')).to include('error' => 'blocked_url', 'message' => 'invalid_url')
+      expect(scrape('https://user:senha@sorriso.example.com/')).to include('error' => 'blocked_url', 'message' => 'invalid_url')
+      expect(WebMock).not_to have_requested(:any, /.*/)
+    end
+
+    it 'bloqueia host que não resolve no DNS, sem tentar conectar' do
+      allow(Resolv).to receive(:getaddresses).and_return([])
+
+      expect(scrape('https://sumiu.example.com/')).to include('error' => 'blocked_url')
+      expect(WebMock).not_to have_requested(:any, /.*/)
+    end
+
+    it 'bloqueia DNS que responde público na validação e interno na conexão' do
+      allow(Resolv).to receive(:getaddresses).with('troca.example.com').and_return([public_ip], ['169.254.169.254'])
+      stub_request(:get, 'https://troca.example.com/').to_return(status: 200, body: '<title>Nao devia</title>')
+
+      expect(scrape('https://troca.example.com/')).to include('error' => 'blocked_url', 'message' => 'blocked_host')
+      expect(WebMock).not_to have_requested(:get, 'https://troca.example.com/')
+    end
+
+    it 'bloqueia redirecionamento para rede interna' do
+      allow(Resolv).to receive(:getaddresses).with('interno.example.com').and_return(['192.168.0.10'])
+      stub_request(:get, 'https://sorriso.example.com/')
+        .to_return(status: 302, headers: { 'Location' => 'https://interno.example.com/admin' })
+
+      expect(scrape('https://sorriso.example.com/')).to include('error' => 'blocked_url', 'message' => 'blocked_host')
+      expect(WebMock).not_to have_requested(:get, 'https://interno.example.com/admin')
+    end
+
+    it 'bloqueia redirecionamento para IP interno escrito na URL e para URL com usuário' do
+      stub_request(:get, 'https://sorriso.example.com/')
+        .to_return(status: 302, headers: { 'Location' => 'http://169.254.169.254/latest/meta-data/' })
+      expect(scrape('https://sorriso.example.com/')).to include('error' => 'blocked_url')
+
+      stub_request(:get, 'https://sorriso.example.com/')
+        .to_return(status: 302, headers: { 'Location' => 'https://user@outro.example.com/' })
+      expect(scrape('https://sorriso.example.com/')).to include('error' => 'blocked_url', 'message' => 'invalid_url')
+    end
+
+    it 'segue até dois redirecionamentos e desiste no terceiro' do
+      stub_request(:get, 'https://a.example.com/').to_return(status: 301, headers: { 'Location' => 'https://b.example.com/' })
+      stub_request(:get, 'https://b.example.com/').to_return(status: 301, headers: { 'Location' => '/c' })
+      stub_request(:get, 'https://b.example.com/c').to_return(status: 200, body: '<title>Final</title>')
+
+      expect(scrape('https://a.example.com/')).to include('title' => 'Final')
+
+      stub_request(:get, 'https://b.example.com/c').to_return(status: 301, headers: { 'Location' => 'https://d.example.com/' })
+
+      expect(scrape('https://a.example.com/')).to include('error' => 'too_many_redirects')
+    end
+
+    it 'chama de invalid_redirect um redirecionamento sem Location' do
+      stub_request(:get, 'https://sorriso.example.com/').to_return(status: 302)
+
+      expect(scrape('https://sorriso.example.com/')).to include('error' => 'invalid_redirect')
+    end
+  end
+
+  describe 'conexão real, sem WebMock' do
+    let(:resolver_local) { ->(_host) { ['127.0.0.1'] } }
+
+    # O servidor local está em 127.0.0.1, que a guarda recusa; aqui ela é liberada para medir a conexão.
+    before do
+      guarda = instance_double(Autonomia::Agents::Knowledge::UrlGuard, validate!: true)
+      allow(Autonomia::Agents::Knowledge::UrlGuard).to receive(:new).and_return(guarda)
+      allow(Autonomia::Agents::Knowledge::UrlGuard).to receive(:blocked_ip?).and_return(false)
+    end
+
+    it 'conecta no IP fixado mesmo com um nome que o DNS não conhece' do
+      servidor = servidor_http_local do |srv, cliente|
+        corpo = '<title>Fixado</title>'
+        srv.escrever(cliente, srv.cabecalhos('200 OK', 'text/html; charset=utf-8', corpo.bytesize) + corpo)
+      end
+      porta = URI(servidor.url('/')).port
+
+      data = sem_webmock { described_class.new(url: "http://fixado.invalid:#{porta}/", resolver: resolver_local).perform.data }
+      servidor.parar
+
+      expect(data).to include('title' => 'Fixado')
+    end
+
+    it 'para de ler no limite de tamanho e analisa só o que leu' do
+      total = 4 * described_class::MAX_BODY_BYTES
+      servidor = servidor_http_local do |srv, cliente|
+        next unless srv.escrever(cliente, "#{srv.cabecalhos('200 OK', 'text/html', total)}<title>Grande</title>")
+
+        pedaco = 'a' * 16.kilobytes
+        (total / pedaco.bytesize).times { break unless srv.escrever(cliente, pedaco) }
+      end
+      porta = URI(servidor.url('/')).port
+
+      data = sem_webmock { described_class.new(url: "http://grande.invalid:#{porta}/", resolver: resolver_local).perform.data }
+      servidor.parar
+
+      expect(data).to include('title' => 'Grande', 'truncated' => true)
+      expect(data).not_to have_key('error')
+      expect(servidor.bytes_escritos).to be < total
+    end
+
+    # O prazo total valia só entre pedaços do corpo. Um site que manda um cabeçalho a cada poucos segundos (cada linha
+    # abaixo do read_timeout) segurava a thread do Sidekiq pelo tempo que quisesse: medido 60 s com prazo de 20 s.
+    it 'o prazo total vale também para os cabeçalhos que chegam devagar' do
+      stub_const("#{Autonomia::Prospecting::SafePageFetcher}::TOTAL_TIMEOUT_SECONDS", 1)
+      servidor = servidor_http_local do |srv, cliente|
+        next unless srv.escrever(cliente, "HTTP/1.1 200 OK\r\n")
+
+        20.times do
+          sleep 0.3
+          break unless srv.escrever(cliente, "X-A: a\r\n")
+        end
+      end
+      porta = URI(servidor.url('/')).port
+
+      inicio = segundos_monotonicos
+      data = sem_webmock { described_class.new(url: "http://devagar.invalid:#{porta}/", resolver: resolver_local).perform.data }
+      decorrido = segundos_monotonicos - inicio
+      servidor.parar
+
+      expect(data).to include('error' => 'timeout')
+      expect(decorrido).to be < 3, "levou #{decorrido.round(2)} s"
+    end
   end
 end

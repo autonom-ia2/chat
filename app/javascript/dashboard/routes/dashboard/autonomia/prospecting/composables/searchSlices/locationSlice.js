@@ -1,8 +1,10 @@
 // Frente de local, país e endereço: o local digitado e confirmado, a área
-// (raio ou área visível do mapa), o erro do Google ao sugerir ou confirmar o
-// local, o tipo de decisor e o pedaço do pedido que descreve onde buscar.
+// (raio, área visível do mapa ou área desenhada, #678), o erro do Google ao
+// sugerir ou confirmar o local, o tipo de decisor e o pedaço do pedido que
+// descreve onde buscar.
 import { ref } from 'vue';
 import { DEFAULT_DECISION_MAKER_TYPE } from '../../utils/decisionMakerTypes';
+import { drawnAreaFromSaved, isDrawnAreaType } from '../../utils/drawnArea';
 
 export const locationCenter = locationDetails => {
   if (!locationDetails?.latitude || !locationDetails?.longitude) return null;
@@ -15,17 +17,33 @@ export const locationCenter = locationDetails => {
 
 const radiusInMeters = form => Number(form.value.radius_km) * 1000;
 
-const areaConfig = ({
-  form,
-  locationDetails,
-  previewViewport,
-  selectedLocationLabel,
-}) => {
+// Desenho que vale para o tipo de área escolhido; o de outro tipo não conta.
+export const currentDrawnArea = ({ form, drawnArea }) =>
+  drawnArea.value?.type === form.value.area_type ? drawnArea.value : null;
+
+// O círculo desenhado leva o próprio raio; o resto usa o raio do formulário.
+const searchRadius = state => {
+  const drawn = currentDrawnArea(state);
+  return drawn?.type === 'circle'
+    ? drawn.config.radius
+    : radiusInMeters(state.form);
+};
+
+const areaConfig = state => {
+  const { form, locationDetails, previewViewport, selectedLocationLabel } =
+    state;
+  const label = selectedLocationLabel.value || form.value.location.trim();
+  const placeId = locationDetails.value?.place_id;
+
+  if (isDrawnAreaType(form.value.area_type)) {
+    return { ...currentDrawnArea(state)?.config, label, place_id: placeId };
+  }
+
   const base = {
     center:
       previewViewport.value?.center || locationCenter(locationDetails.value),
-    label: selectedLocationLabel.value || form.value.location.trim(),
-    place_id: locationDetails.value?.place_id,
+    label,
+    place_id: placeId,
     radius: radiusInMeters(form),
   };
 
@@ -34,6 +52,50 @@ const areaConfig = ({
   }
 
   return base;
+};
+
+const isChecked = value => value === true || value === 'true';
+
+// Repetir ou editar uma busca salva (#678): o local volta confirmado, sem
+// consultar o Google, com o ponto e a área gravados. O raio é o que a pessoa
+// pediu, não o que a expansão automática alcançou.
+const restoreLocationForm = (
+  {
+    form,
+    locationDetails,
+    confirmedLocation,
+    previewViewport,
+    locationSuggestions,
+    locationError,
+    drawnArea,
+  },
+  search
+) => {
+  const area = search.area_config || {};
+  const label = search.location_label || search.location || '';
+  const radius = Number(search.requested_radius || search.radius);
+  form.value = {
+    ...form.value,
+    location: search.location || '',
+    area_type: search.area_type || 'radius',
+    radius_km: radius > 0 ? radius / 1000 : form.value.radius_km,
+    auto_expand_radius: isChecked(search.search_filters?.auto_expand_radius),
+    decision_maker_type:
+      search.decision_maker_type || DEFAULT_DECISION_MAKER_TYPE,
+  };
+  locationDetails.value = {
+    label,
+    place_id: search.location_place_id || area.place_id || '',
+    latitude: search.location_latitude ?? area.center?.lat,
+    longitude: search.location_longitude ?? area.center?.lng,
+  };
+  confirmedLocation.value = label;
+  previewViewport.value = area.center
+    ? { center: area.center, bounds: area.bounds }
+    : null;
+  locationSuggestions.value = [];
+  locationError.value = '';
+  drawnArea.value = drawnAreaFromSaved(form.value.area_type, area, radius);
 };
 
 export const locationSlice = {
@@ -51,6 +113,7 @@ export const locationSlice = {
     confirmedLocation: ref(''),
     previewViewport: ref(null),
     locationError: ref(''),
+    drawnArea: ref(null),
   }),
   reset: ({
     locationSuggestions,
@@ -58,19 +121,22 @@ export const locationSlice = {
     confirmedLocation,
     previewViewport,
     locationError,
+    drawnArea,
   }) => {
     locationSuggestions.value = [];
     locationDetails.value = null;
     confirmedLocation.value = '';
     previewViewport.value = null;
     locationError.value = '';
+    drawnArea.value = null;
   },
+  restoreForm: (state, search) => restoreLocationForm(state, search),
   toPayload: state => {
     const { form, locationDetails, selectedLocationLabel } = state;
     return {
       body: {
         location: form.value.location.trim(),
-        radius: radiusInMeters(form),
+        radius: searchRadius(state),
         area_type: form.value.area_type,
         area_config: areaConfig(state),
       },

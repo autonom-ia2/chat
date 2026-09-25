@@ -2,6 +2,8 @@
 import { flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import { useAlert } from 'dashboard/composables';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { emitter } from 'shared/helpers/mitt';
 import {
   MapStub,
   buttonWithText,
@@ -78,7 +80,12 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     expect(panel.text()).toContain('Bem avaliada e sem reservas online');
     expect(
       panel.findAll('span.rounded-full.border').map(signal => signal.text())
-    ).toEqual(['Abrir site', 'Tem fone', '#2 Google', '4.7 estrelas']);
+    ).toEqual([
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_SITE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.HAS_PHONE',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.GOOGLE_RANK',
+      'PROSPECTING.SEARCH.CARD_SIGNALS.RATING',
+    ]);
 
     expect(panel.text()).toContain('PROSPECTING.SEARCH.SCORE_EVALUATION_TITLE');
     expect(panel.text()).toContain('PROSPECTING.SEARCH.SCORE_VALUE');
@@ -261,6 +268,8 @@ describe('ProspectingSearchPage · enriquecer lead', () => {
     permission.canManage = true;
   });
 
+  // #678: o pedido volta 202 com o lead na fila e o resultado chega pelo evento
+  // prospecting.lead.updated (antes vinha na própria resposta).
   it('enriquece pelo card, mostra o andamento e o painel passa a exibir o resultado', async () => {
     const wrapper = await mountSearchPage();
     const pending = deferred();
@@ -281,21 +290,23 @@ describe('ProspectingSearchPage · enriquecer lead', () => {
     expect(running.element.disabled).toBe(true);
 
     pending.resolve({
-      data: {
-        payload: {
-          lead: sunLead({
-            enrichment_status: 'completed',
-            decision_name: 'Carlos',
-            enriched_cnpj: '12.345.678/0001-90',
-          }),
-        },
-      },
+      data: { payload: { lead: sunLead({ enrichment_status: 'queued' }) } },
     });
     await flushPromises();
 
     expect(useAlert).toHaveBeenCalledWith(
-      'PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'
+      'PROSPECTING.SEARCH.ENRICHMENT_QUEUED'
     );
+
+    emitter.emit(BUS_EVENTS.PROSPECTING_LEAD_UPDATED, {
+      account_id: 1,
+      lead: sunLead({
+        enrichment_status: 'completed',
+        decision_name: 'Carlos',
+        enriched_cnpj: '12.345.678/0001-90',
+      }),
+    });
+    await flushPromises();
     expect(
       buttonWithText(
         leadCard(wrapper, 'Padaria Sol'),
@@ -308,7 +319,9 @@ describe('ProspectingSearchPage · enriquecer lead', () => {
     expect(panel.text()).toContain('12.345.678/0001-90');
   });
 
-  it('marca falha e avisa o erro da API quando o enriquecimento falha', async () => {
+  // #678: pedido recusado (pesquisa desligada, já na fila) deixa o lead como
+  // estava; a falha do trabalho em si chega pelo evento, como failed.
+  it('avisa o erro da API quando o pedido é recusado e libera nova tentativa', async () => {
     const wrapper = await mountSearchPage();
     AutonomiaProspectingAPI.enrichLead.mockRejectedValue({
       response: { data: { error: 'Site fora do ar' } },

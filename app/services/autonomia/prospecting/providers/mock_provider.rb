@@ -32,11 +32,20 @@ class Autonomia::Prospecting::Providers::MockProvider
     @country = Autonomia::Prospecting::SearchCountry.normalize(country) || Autonomia::Prospecting::SearchCountry::DEFAULT
   end
 
-  def search
+  # Mesmo contrato do GooglePlacesProvider#search (#678): o bloco diz se o lugar na posição rank passa nos filtros de
+  # quem chama, e só os aceitos contam para o pedido. Sem bloco, devolve o pedido inteiro.
+  def search(max_results: Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS)
     return [] if @query.blank?
     return [] if empty_query?
 
-    Array.new(@limit) { |index| lead_for(index) }
+    max_results = max_results.to_i.clamp(0, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS)
+    results = []
+    accepted = 0
+    while accepted < @limit && results.size < max_results
+      results << lead_for(results.size)
+      accepted += 1 if !block_given? || yield(results.last, results.size)
+    end
+    results
   end
 
   private
@@ -153,7 +162,7 @@ class Autonomia::Prospecting::Providers::MockProvider
   end
 
   def viewport_bounds?
-    @area_type == 'viewport' && @area_config['bounds'].present?
+    %w[viewport rectangle polygon].include?(@area_type) && @area_config['bounds'].present?
   end
 
   def viewport_coordinate(seed, axis)

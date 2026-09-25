@@ -194,13 +194,161 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
       expect(result.enrichment_source).to eq('site_and_autonomia_ai')
     end
 
-    it 'marca failed com a mensagem e levanta Error quando algo inesperado quebra' do
+    it 'marca failed com a mensagem, conta a tentativa e levanta Error quando algo inesperado quebra' do
       allow(scraper).to receive(:perform).and_raise(RuntimeError, 'quebrou no meio')
 
       expect { enrich }.to raise_error(described_class::Error, 'quebrou no meio')
       expect(lead.reload).to be_enrichment_failed
       expect(lead.enrichment_error).to eq('quebrou no meio')
       expect(lead.enrichment_completed_at).to be_present
+      expect(lead.enrichment_failed_attempts).to eq(1)
+    end
+
+    it 'aceita a assinatura sem usuário, como o job chama' do
+      expect(described_class.new(lead: lead).perform).to be_enrichment_completed
+    end
+  end
+
+  # Falha honesta (#678 frente D): site fora do ar, bloqueado ou vazio não vira "enriquecido" vazio.
+  describe 'falha honesta' do
+    let(:previous_data) do
+      {
+        enrichment_status: 'completed',
+        enriched_data: { 'title' => 'Clinica Antiga', 'ai' => { 'summary' => 'Resumo antigo' } },
+        enriched_email: 'antigo@clinicasorriso.example.com',
+        enriched_whatsapp: '+5541911112222',
+        enriched_instagram: 'https://instagram.com/antiga',
+        enriched_facebook: 'https://facebook.com/antiga',
+        enriched_linkedin: 'https://linkedin.com/company/antiga',
+        enriched_cnpj: '11.111.111/0001-11',
+        decision_name: 'Bruno Lima',
+        decision_role: 'Diretor',
+        decision_confidence: 0.9,
+        decision_source_url: 'https://clinicasorriso.example.com/sobre',
+        enrichment_summary: 'Resumo antigo'
+      }
+    end
+
+    before { create_kanban_hook({ 'api_key' => 'chave-da-conta' }) }
+
+    def scrape_returns(data)
+      allow(scraper).to receive(:perform).and_return(Autonomia::Prospecting::WebsiteScraper::Result.new(data: data))
+    end
+
+    %w[timeout blocked_url empty_page http_503].each do |code|
+      it "marca failed com o código #{code}, conta a tentativa e não chama a IA" do
+        scrape_returns('error' => code, 'scraped_at' => Time.current.iso8601)
+
+        result = enrich
+
+        expect(result).to be_enrichment_failed
+        expect(result.enrichment_error).to eq(code)
+        expect(result.enrichment_failed_attempts).to eq(1)
+        expect(result.enrichment_completed_at).to be_present
+        expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+      end
+    end
+
+    it 'soma as tentativas que falharam e zera quando uma dá certo' do
+      scrape_returns('error' => 'timeout')
+
+      enrich
+      expect(enrich.enrichment_failed_attempts).to eq(2)
+
+      scrape_returns(scraped)
+      result = enrich
+
+      expect(result).to be_enrichment_completed
+      expect(result.enrichment_failed_attempts).to eq(0)
+      expect(result.enrichment_error).to be_nil
+    end
+
+    it 'falha sem apagar o que um enriquecimento anterior achou' do
+      lead.update!(previous_data)
+      scrape_returns('error' => 'timeout')
+
+      result = enrich
+
+      expect(result).to be_enrichment_failed
+      expect(result).to have_attributes(
+        enriched_email: 'antigo@clinicasorriso.example.com',
+        enriched_whatsapp: '+5541911112222',
+        enriched_instagram: 'https://instagram.com/antiga',
+        enriched_facebook: 'https://facebook.com/antiga',
+        enriched_linkedin: 'https://linkedin.com/company/antiga',
+        enriched_cnpj: '11.111.111/0001-11',
+        decision_name: 'Bruno Lima',
+        enrichment_summary: 'Resumo antigo'
+      )
+      expect(result.enriched_data).to include('title' => 'Clinica Antiga')
+    end
+
+    it 'marca failed com empty_result quando nem o site nem a IA trazem nada' do
+      lead.update!(website: nil)
+      allow(ai_client).to receive(:create).and_return(
+        { text: ai_payload.merge('decision_name' => nil, 'decision_confidence' => 0, 'summary' => nil, 'signals' => []).to_json }
+      )
+
+      result = enrich
+
+      expect(result).to be_enrichment_failed
+      expect(result.enrichment_error).to eq('empty_result')
+      expect(result.enrichment_failed_attempts).to eq(1)
+    end
+  end
+
+  describe 'segundo enriquecimento' do
+    before { create_kanban_hook({ 'api_key' => 'chave-da-conta' }) }
+
+    it 'mantém WhatsApp, CNPJ, e-mail, redes e decisor achados antes quando o novo não os traz' do
+      lead.update!(
+        enriched_email: 'antigo@clinicasorriso.example.com',
+        enriched_whatsapp: '+5541911112222',
+        enriched_instagram: 'https://instagram.com/antiga',
+        enriched_facebook: 'https://facebook.com/antiga',
+        enriched_linkedin: 'https://linkedin.com/company/antiga',
+        enriched_cnpj: '11.111.111/0001-11',
+        decision_name: 'Bruno Lima',
+        decision_role: 'Diretor',
+        decision_confidence: 0.9,
+        decision_source_url: 'https://clinicasorriso.example.com/sobre',
+        decision_linkedin: 'https://linkedin.com/in/brunolima',
+        enriched_data: { 'cnpj' => '11.111.111/0001-11', 'error' => 'timeout' }
+      )
+      allow(scraper).to receive(:perform).and_return(
+        Autonomia::Prospecting::WebsiteScraper::Result.new(data: { 'title' => 'Clinica Nova', 'text_excerpt' => 'Clinica' })
+      )
+      allow(ai_client).to receive(:create).and_return(
+        { text: ai_payload.merge('decision_name' => nil, 'decision_confidence' => 0).to_json }
+      )
+
+      result = enrich
+
+      expect(result).to be_enrichment_completed
+      expect(result).to have_attributes(
+        enriched_email: 'antigo@clinicasorriso.example.com',
+        enriched_whatsapp: '+5541911112222',
+        enriched_instagram: 'https://instagram.com/antiga',
+        enriched_facebook: 'https://facebook.com/antiga',
+        enriched_linkedin: 'https://linkedin.com/company/antiga',
+        enriched_cnpj: '11.111.111/0001-11',
+        decision_name: 'Bruno Lima',
+        decision_role: 'Diretor',
+        decision_source_url: 'https://clinicasorriso.example.com/sobre',
+        decision_linkedin: 'https://linkedin.com/in/brunolima'
+      )
+      expect(result.decision_confidence.to_f).to eq(0.9)
+      expect(result.enriched_data).to include('title' => 'Clinica Nova', 'cnpj' => '11.111.111/0001-11')
+      expect(result.enriched_data).not_to have_key('error')
+    end
+
+    it 'troca pelo valor novo quando o site traz outro' do
+      lead.update!(enriched_whatsapp: '+5541911112222', decision_name: 'Bruno Lima', decision_confidence: 0.9)
+
+      result = enrich
+
+      expect(result.enriched_whatsapp).to eq('+5541999990000')
+      expect(result.decision_name).to eq('Ana Souza')
     end
   end
 end

@@ -1,96 +1,56 @@
-require 'ipaddr'
-require 'resolv'
-require 'uri'
-
+# Extrai contatos da página do site do lead. O download é do SafePageFetcher, que passa todo destino pela
+# UrlGuard e conecta no IP checado (#476).
 class Autonomia::Prospecting::WebsiteScraper
-  MAX_BODY_BYTES = 1.megabyte
-  TIMEOUT_SECONDS = 8
-  USER_AGENT = 'AutonomiaProspectingBot/1.0'.freeze
-  BLOCKED_HOSTS = %w[localhost].freeze
-  BLOCKED_NETWORKS = [
-    IPAddr.new('0.0.0.0/8'),
-    IPAddr.new('10.0.0.0/8'),
-    IPAddr.new('127.0.0.0/8'),
-    IPAddr.new('169.254.0.0/16'),
-    IPAddr.new('172.16.0.0/12'),
-    IPAddr.new('192.168.0.0/16'),
-    IPAddr.new('::1/128'),
-    IPAddr.new('fc00::/7'),
-    IPAddr.new('fe80::/10')
+  MAX_BODY_BYTES = Autonomia::Prospecting::SafePageFetcher::MAX_BODY_BYTES
+  USER_AGENT = Autonomia::Prospecting::SafePageFetcher::USER_AGENT
+  FetchFailed = Autonomia::Prospecting::SafePageFetcher::FetchFailed
+  BlockedUrl = Autonomia::Agents::Knowledge::UrlGuard::BlockedUrl
+  NETWORK_ERRORS = [
+    SocketError, SystemCallError, IOError, OpenSSL::SSL::SSLError, Net::HTTPBadResponse, Net::ProtocolError, Zlib::Error
   ].freeze
 
   Result = Struct.new(:data, keyword_init: true)
 
-  def initialize(url:)
+  def initialize(url:, resolver: Autonomia::Prospecting::SafePageFetcher::DEFAULT_RESOLVER)
     @url = url.to_s.strip
+    @resolver = resolver
   end
 
   def perform
     return Result.new(data: empty_payload('missing_website')) if @url.blank?
 
-    uri = normalized_uri
-    validate_uri!(uri)
-
-    response = fetch_uri(uri)
-    return Result.new(data: empty_payload("http_#{response.code}")) unless response.success?
-
-    html = response.body.to_s.byteslice(0, MAX_BODY_BYTES)
-    parse_html(html, uri)
-  rescue StandardError => e
-    Result.new(data: empty_payload(e.class.name.demodulize.underscore, e.message.to_s.truncate(160)))
+    parse_html(Autonomia::Prospecting::SafePageFetcher.new(resolver: @resolver).fetch(normalized_uri))
+  rescue FetchFailed => e
+    Result.new(data: empty_payload(e.code))
+  rescue BlockedUrl => e
+    Result.new(data: empty_payload('blocked_url', e.message))
+  rescue URI::InvalidURIError
+    Result.new(data: empty_payload('invalid_url'))
+  rescue Net::OpenTimeout, Net::ReadTimeout
+    Result.new(data: empty_payload('timeout'))
+  rescue *NETWORK_ERRORS => e
+    Result.new(data: empty_payload('connection_failed', e.message.to_s.truncate(160)))
   end
 
   private
 
   def normalized_uri
-    raw = @url.match?(%r{\Ahttps?://}i) ? @url : "https://#{@url}"
+    raw = @url.downcase.start_with?('http://', 'https://') ? @url : "https://#{@url}"
     URI.parse(raw)
   end
 
-  def validate_uri!(uri)
-    raise ArgumentError, 'invalid_url' unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
-    raise ArgumentError, 'invalid_host' if uri.host.blank?
-    raise ArgumentError, 'blocked_host' if BLOCKED_HOSTS.include?(uri.host.downcase)
-
-    addresses_for(uri.host).each do |address|
-      ip = IPAddr.new(address)
-      raise ArgumentError, 'blocked_host' if BLOCKED_NETWORKS.any? { |network| network.include?(ip) }
-    end
-  end
-
-  def fetch_uri(uri)
-    current_uri = uri
-    3.times do
-      validate_uri!(current_uri)
-      response = HTTParty.get(
-        current_uri.to_s,
-        headers: { 'User-Agent' => USER_AGENT, 'Accept' => 'text/html,application/xhtml+xml' },
-        timeout: TIMEOUT_SECONDS,
-        follow_redirects: false
-      )
-      return response unless response.code.to_i.between?(300, 399)
-
-      location = response.headers['location'].to_s
-      break if location.blank?
-
-      current_uri = URI.join(current_uri, location)
-    end
-
-    raise ArgumentError, 'too_many_redirects'
-  end
-
-  def addresses_for(host)
-    Resolv.getaddresses(host)
-  rescue Resolv::ResolvError
-    []
-  end
-
-  def parse_html(html, uri)
-    doc = Nokogiri::HTML(html)
+  def parse_html(page)
+    doc = Nokogiri::HTML(page.body, nil, page_encoding(page))
     text = normalized_text(doc)
-    links = normalized_links(doc, uri)
-    data = {
-      'website' => uri.to_s,
+    links = normalized_links(doc, page.uri)
+    return Result.new(data: empty_payload('empty_page')) if text.blank? && links.empty? && title_for(doc).blank?
+
+    Result.new(data: page_data(doc, text, links, page))
+  end
+
+  def page_data(doc, text, links, page)
+    {
+      'website' => page.uri.to_s,
       'title' => title_for(doc),
       'description' => meta_content(doc, 'description'),
       'email' => extract_email(text, links),
@@ -102,10 +62,14 @@ class Autonomia::Prospecting::WebsiteScraper
       'cnpj' => extract_cnpj(text),
       'source_urls' => links.first(20),
       'text_excerpt' => text.first(3000),
+      'truncated' => (true if page.truncated),
       'scraped_at' => Time.current.iso8601
     }.compact
+  end
 
-    Result.new(data: data)
+  # Charset do cabeçalho; sem ele, o da própria página (meta); sem os dois, UTF-8.
+  def page_encoding(page)
+    page.charset.presence || Nokogiri::HTML4::EncodingReader.detect_encoding(page.body) || 'UTF-8'
   end
 
   def normalized_text(doc)

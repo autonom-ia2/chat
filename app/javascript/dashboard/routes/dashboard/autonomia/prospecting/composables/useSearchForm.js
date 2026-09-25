@@ -3,6 +3,7 @@
 // frente (searchSlices/); o local tem composable próprio (useSearchLocation).
 import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
+import { useAlert } from 'dashboard/composables';
 import { alertError } from './searchAlerts';
 import { buildSearchRequest, resetSlices } from './searchSlices';
 
@@ -34,21 +35,27 @@ export const useSearchForm = (
     }
   };
 
-  const submitSearch = async () => {
+  // fresh: Repetir do histórico chama o Google de novo, sem cache, como no Orth.
+  const submitSearch = async ({ fresh = false } = {}) => {
     if (!canSearch.value) return;
 
     isSearching.value = true;
     leads.value = [];
 
     try {
+      const request = buildSearchRequest(state);
       const { data } = await AutonomiaProspectingAPI.createSearch(
-        buildSearchRequest(state)
+        fresh ? { ...request, fresh: true } : request
       );
 
       const payload = data.payload || {};
       await fetchSearches({ page: 1 });
       await selectSearchPayload(payload);
       showNewSearch.value = false;
+      // O Google falhou numa página seguinte: a busca ficou com o que chegou.
+      if (payload.search?.summary?.partial_results) {
+        useAlert(t('PROSPECTING.SEARCH.PARTIAL_RESULTS'));
+      }
     } catch (e) {
       alertError(e, t('PROSPECTING.ERRORS.CREATE_SEARCH'));
     } finally {

@@ -4,7 +4,7 @@ import SearchSummaryLocation from './SearchSummaryLocation.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 
 const { t } = useI18n();
-const { form } = useProspectingSearchContext();
+const { form, summaryRadiusKm } = useProspectingSearchContext();
 </script>
 
 <template>
@@ -35,7 +35,7 @@ const { form } = useProspectingSearchContext();
             {{ t('PROSPECTING.SEARCH.FIELDS.RADIUS_KM') }}
           </dt>
           <dd class="font-medium text-n-slate-12">
-            {{ form.radius_km }}
+            {{ summaryRadiusKm ?? '-' }}
           </dd>
         </div>
         <div>

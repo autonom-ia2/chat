@@ -18,6 +18,16 @@ export const modeSlice = {
     openSearchScoreMode.value = search?.score_mode || null;
     openSearchPresetId.value = search?.preset_id || null;
   },
+  restoreForm: ({ form, settings }, search) => {
+    form.value = {
+      ...form.value,
+      score_mode:
+        search.score_mode ||
+        settings.value?.search_score_mode ||
+        DEFAULT_SCORE_MODE,
+      preset_id: search.preset_id || null,
+    };
+  },
   toPayload: ({ form, settings }) => ({
     metadata: {
       score_mode:

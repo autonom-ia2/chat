@@ -44,57 +44,35 @@ const dragMinRankTo = async (wrapper, value) => {
   await rankInput(wrapper, 'MIN_ARIA').setValue(String(value));
 };
 
+// Com a paginação (#678) o Google alcança até a 60ª posição em qualquer
+// Quantidade, além do fim do controle (40): a faixa começa onde a pessoa
+// quiser e não há mais aviso de alcance. Antes o teto era a Quantidade, até 20.
 describe('Busca · faixa de posição que o Google alcança', () => {
-  it('com Quantidade 10 a faixa começa no máximo em 10 e o pedido corta 9', async () => {
+  it('com Quantidade 10 a faixa começa depois da 10ª e o pedido corta até ela', async () => {
     const wrapper = await openNewSearchForm();
     await setQuantityAndOpenFilters(wrapper, 10);
 
-    await dragMinRankTo(wrapper, 21);
-
-    expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('10');
-    expect(filtersPanel(wrapper).text()).toContain(`${DRAWER}.RANK.REACH`);
-    await applyFilters(wrapper);
-    const payload = await submitMinimalSearch(wrapper);
-    expect(payload.metadata.advanced_filters.outside_top).toBe(9);
-  });
-
-  it('com Quantidade 60 no Google a faixa começa no máximo em 20', async () => {
-    const wrapper = await openNewSearchForm();
-    await setQuantityAndOpenFilters(wrapper, 60);
-
     await dragMinRankTo(wrapper, 30);
 
-    expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('20');
-  });
-
-  // Antes o aviso só existia dentro da gaveta, e a busca voltava 422 sem a
-  // pessoa ver a faixa. O filtro não muda sozinho: a Quantidade pode estar no
-  // meio da digitação.
-  it('diminuir a Quantidade depois de aplicar a faixa avisa fora da gaveta', async () => {
-    const reachWarning = wrapper =>
-      wrapper.find('[data-test="rank-reach-warning"]');
-    const wrapper = await openNewSearchForm();
-    await setQuantityAndOpenFilters(wrapper, 20);
-    await dragMinRankTo(wrapper, 20);
+    expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('30');
+    expect(filtersPanel(wrapper).text()).not.toContain(`${DRAWER}.RANK.REACH`);
     await applyFilters(wrapper);
-    expect(reachWarning(wrapper).exists()).toBe(false);
-
-    await quantityInput(wrapper).setValue('10');
-
-    expect(reachWarning(wrapper).text()).toContain(`${DRAWER}.RANK.REACH`);
-    await quantityInput(wrapper).setValue('20');
-    expect(reachWarning(wrapper).exists()).toBe(false);
+    expect(wrapper.find('[data-test="rank-reach-warning"]').exists()).toBe(
+      false
+    );
+    const payload = await submitMinimalSearch(wrapper);
+    expect(payload.metadata.advanced_filters.outside_top).toBe(29);
   });
 
-  it('no provider fictício o teto é a própria Quantidade', async () => {
+  it('no provider fictício vale a mesma faixa', async () => {
     const wrapper = await openNewSearchForm({
       settings: settingsFixture({ mock_provider: true }),
     });
-    await setQuantityAndOpenFilters(wrapper, 30);
+    await setQuantityAndOpenFilters(wrapper, 5);
 
     await dragMinRankTo(wrapper, 35);
 
-    expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('30');
+    expect(rankInput(wrapper, 'MIN_ARIA').element.value).toBe('35');
   });
 });
 

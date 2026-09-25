@@ -7,7 +7,9 @@ import {
   filterLeadsByAdvancedFilters,
 } from '../utils/advancedLeadFilters';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
+import { searchCenter } from '../utils/leadDistance';
 import { sortLeads } from '../utils/sortLeads';
+import { isDrawnAreaReady } from '../utils/drawnArea';
 import { createSliceState, sliceFormDefaults } from './searchSlices';
 
 const createFlags = () => ({
@@ -70,12 +72,23 @@ const createLeadDerived = state => {
   const filteredLeads = computed(() =>
     filterLeadsByAdvancedFilters(state.leads.value, state.resultFilters.value)
   );
+  // Centro da busca aberta, para ordenar por distância (#678).
+  const openSearchCenter = computed(() =>
+    searchCenter(
+      state.searches.value.find(
+        search => search.id === state.selectedSearchId.value
+      )
+    )
+  );
   const sortedLeads = computed(() =>
-    sortLeads(filteredLeads.value, state.sortKey.value)
+    sortLeads(filteredLeads.value, state.sortKey.value, {
+      center: openSearchCenter.value,
+    })
   );
 
   return {
     hasResults: computed(() => state.leads.value.length > 0),
+    openSearchCenter,
     filteredLeads,
     sortedLeads,
     selectedLeadDetail: computed(() =>
@@ -117,6 +130,7 @@ const createSearchDerived = state => ({
     () =>
       state.form.value.query.trim().length > 0 &&
       state.confirmedLocation.value.trim().length > 0 &&
+      isDrawnAreaReady(state.form.value.area_type, state.drawnArea.value) &&
       !state.isSearching.value
   ),
   selectedLocationLabel: computed(
