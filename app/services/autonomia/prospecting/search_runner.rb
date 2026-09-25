@@ -4,8 +4,8 @@ require 'json'
 class Autonomia::Prospecting::SearchRunner
   AREA_TYPES = %w[radius viewport].freeze
   LOCATION_COORDINATE_KEYS = %w[location_latitude location_longitude].freeze
-  # Teto de produto do pedido (#683). O provider pode devolver menos: a paginação do Google é da E2.
-  MAX_REQUESTED_LIMIT = 60
+  # Teto de produto do pedido (#683): 3 páginas de 20 no Google (#678).
+  MAX_REQUESTED_LIMIT = Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS
 
   Result = Struct.new(:search, :leads, keyword_init: true)
 
@@ -25,34 +25,10 @@ class Autonomia::Prospecting::SearchRunner
     return cached if cached
 
     search = create_search!
-    leads = []
-
-    ActiveRecord::Base.transaction do
-      provider_result = search_provider_results
-      filtered_attributes = provider_result[:attributes].each_with_index.filter_map do |attributes, index|
-        google_rank = index + 1
-        next unless advanced_filter_matches?(attributes, google_rank)
-
-        [attributes, google_rank]
-      end
-      leads = upsert_leads!(search, filtered_attributes)
-      assign_priority_positions!(leads)
-      search.radius = provider_result[:radius]
-      search.area_config = area_config_for_radius(provider_result[:radius])
-      search.metadata = search.metadata.to_h.merge(
-        'lead_ids' => leads.map(&:id),
-        'lead_ranks' => lead_ranks(leads),
-        'results_count' => leads.size,
-        'search_filters' => search_filters,
-        'requested_radius' => radius,
-        'radius_expanded' => provider_result[:radius].to_i > radius
-      )
-      search.status = :completed
-      search.consumed_api_units = provider_result[:api_units]
-      search.cache_fingerprint = cache_fingerprint
-      search.cache_expires_at = cache_expires_at
-      search.save!
-    end
+    # Todas as chamadas ao Google acontecem antes da transação (#678): com a paginação são até 3 páginas por raio, e
+    # segurar a conexão do banco enquanto o Google responde trava outras telas.
+    provider_result = search_provider_results
+    leads = persist_results!(search, provider_result)
 
     Result.new(search: search.reload, leads: leads)
   rescue StandardError => e
@@ -61,6 +37,43 @@ class Autonomia::Prospecting::SearchRunner
   end
 
   private
+
+  def persist_results!(search, provider_result)
+    ActiveRecord::Base.transaction do
+      leads = upsert_leads!(search, accepted_with_rank(provider_result[:attributes]))
+      assign_priority_positions!(leads)
+      search.radius = provider_result[:radius]
+      search.area_config = area_config_for_radius(provider_result[:radius])
+      search.metadata = search.metadata.to_h.merge(results_metadata(leads, provider_result))
+      search.status = :completed
+      search.consumed_api_units = provider_result[:api_units]
+      search.cache_fingerprint = cache_fingerprint
+      search.cache_expires_at = cache_expires_at
+      search.save!
+      leads
+    end
+  end
+
+  # Filtra antes de cortar no pedido (#678). A posição é a do Google entre as páginas, dada antes de filtrar.
+  def accepted_with_rank(attributes_list)
+    attributes_list.each_with_index.filter_map do |attributes, index|
+      google_rank = index + 1
+      next unless advanced_filter_matches?(attributes, google_rank)
+
+      [attributes, google_rank]
+    end.first(requested_limit)
+  end
+
+  def results_metadata(leads, provider_result)
+    {
+      'lead_ids' => leads.map(&:id),
+      'lead_ranks' => lead_ranks(leads),
+      'results_count' => leads.size,
+      'search_filters' => search_filters,
+      'requested_radius' => radius,
+      'radius_expanded' => provider_result[:radius].to_i > radius
+    }
+  end
 
   def validate!
     raise ActiveRecord::RecordInvalid.new(search_with_error(:query, "can't be blank")) if query.blank?
@@ -76,13 +89,13 @@ class Autonomia::Prospecting::SearchRunner
     validate_rank_range!
   end
 
-  # O provider devolve no máximo expansion_target posições. Cortar todas elas deixa a busca sempre vazia e ainda gasta
-  # as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
+  # O provider alcança no máximo MAX_REQUESTED_LIMIT posições (3 páginas de 20, #678). Cortar todas elas deixa a busca
+  # sempre vazia e ainda gasta as chamadas ao Google (#677). Recusa antes de gravar busca ou cache.
   def validate_rank_range!
     outside_top = number_or_nil(advanced_filters['outside_top'])
-    return if outside_top.nil? || outside_top < expansion_target
+    return if outside_top.nil? || outside_top < MAX_REQUESTED_LIMIT
 
-    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: expansion_target)
+    message = I18n.t('autonomia.prospecting.errors.rank_out_of_reach', limit: MAX_REQUESTED_LIMIT)
     raise ActiveRecord::RecordInvalid, search_with_error(:base, message)
   end
 
@@ -148,13 +161,11 @@ class Autonomia::Prospecting::SearchRunner
         radius_value: radius_value,
         area_config_value: area_config_for_radius(radius_value)
       )
-      last_attributes = provider_instance.search
+      last_attributes = provider_instance.search(max_results: last_reachable_rank) do |attributes, google_rank|
+        advanced_filter_matches?(attributes, google_rank)
+      end
       last_radius = radius_value
-      api_units += if provider_instance.respond_to?(:api_units)
-                     provider_instance.api_units.to_i
-                   else
-                     0
-                   end
+      api_units += provider_instance.try(:api_units).to_i
       break if advanced_filtered_attributes_count(last_attributes) >= expansion_goal
     end
 
@@ -165,22 +176,20 @@ class Autonomia::Prospecting::SearchRunner
     }
   end
 
-  # O raio só cresce enquanto o provider ainda pode trazer mais. O Google entrega no máximo 20 por chamada: um pedido de
-  # 60 nunca chegaria a 60 e expandiria sempre até o raio máximo, descartando o raio que a pessoa escolheu (#683).
-  def expansion_target
-    return requested_limit unless provider_name == 'google_places'
-
-    [requested_limit, Autonomia::Prospecting::Providers::GooglePlacesProvider::MAX_RESULTS_PER_REQUEST].min
+  # Última posição que vale ler: depois de search_rank_max o filtro descarta tudo, então as páginas seguintes seriam
+  # chamadas pagas à toa (#678).
+  def last_reachable_rank
+    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
+    search_rank_max ? search_rank_max.to_i.clamp(0, MAX_REQUESTED_LIMIT) : MAX_REQUESTED_LIMIT
   end
 
-  # A faixa de posição corta as mesmas posições em qualquer raio, então o que ela tira não é falta que raio maior
-  # resolva. Sem descontar, a meta nunca era alcançada e a busca expandia sempre até 4x, com 3 chamadas pagas (#677).
+  # O raio só cresce enquanto falta lugar para o pedido. A faixa de posição corta as mesmas posições em qualquer raio,
+  # então o que ela tira não é falta que raio maior resolva: sem descontar, a meta nunca era alcançada e a busca
+  # expandia sempre até 4x (#677).
   def expansion_goal
     outside_top = number_or_nil(advanced_filters['outside_top']).to_i
-    search_rank_max = number_or_nil(advanced_filters['search_rank_max'])
-    last_rank = search_rank_max ? [expansion_target, search_rank_max.to_i].min : expansion_target
 
-    last_rank - outside_top
+    [requested_limit, last_reachable_rank - outside_top].min
   end
 
   # Falta de chave é da plataforma, não de quem busca: o detalhe vai para o log e a pessoa lê a frase em português.

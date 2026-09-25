@@ -88,22 +88,31 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
 
     # A faixa corta posições em qualquer raio. Contá-las como falta fazia a busca expandir até 4x e pagar 3 chamadas.
     context 'with auto_expand_radius (expandir raio automaticamente)' do
-      def expanded_search(advanced_filters)
+      def expanded_search(requested_limit: 8, **advanced_filters)
         described_class.new(
           account: account,
           user: user,
-          params: { query: 'padaria', location: 'Curitiba, PR', radius: 1000, requested_limit: 8,
+          params: { query: 'padaria', location: 'Curitiba, PR', radius: 1000, requested_limit: requested_limit,
                     filters: { auto_expand_radius: true }, advanced_filters: advanced_filters }
         ).perform.search
       end
 
-      it 'não expande quando só a alça da esquerda tira posições' do
-        search = expanded_search(outside_top: '2')
+      it 'não expande quando só a alça da esquerda tira posições e o pedido cabe no que sobra' do
+        search = expanded_search(requested_limit: 6, outside_top: '2')
 
         expect(a_request(:post, google_endpoint)).to have_been_made.once
         expect(search.radius).to eq(1000)
         expect(search.metadata['radius_expanded']).to be(false)
         expect(search.metadata['results_count']).to eq(6)
+      end
+
+      # Com a paginação (#678) a busca alcança até a 60ª posição: pedir 8 fora do top 2 quando o Google só tem 8
+      # lugares no raio é falta de lugar de verdade, e o raio cresce.
+      it 'expande quando a alça da esquerda tira posições e o Google acaba antes do pedido' do
+        search = expanded_search(outside_top: '2')
+
+        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
+        expect(search.radius).to eq(4000)
       end
 
       it 'não expande quando só a alça da direita tira posições' do

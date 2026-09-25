@@ -516,7 +516,7 @@ en:
         google_place_not_found: 'O Google não encontrou esse local. Escolha outra sugestão da lista.'
         invalid_search_country: 'Escolha um país da lista.'
         location_required: 'Escolha um local da lista de sugestões.'
-        rank_out_of_reach: 'O Google traz até %{limit} posições nesta busca. Comece a faixa de posição em até %{limit} ou aumente a quantidade.'
+        rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'
   captain:
     copilot_message_required: Message is required
     copilot_error: 'Please connect an assistant to this inbox to use Copilot'
