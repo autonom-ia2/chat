@@ -37,6 +37,9 @@ class Autonomia::Prospecting::SafePageFetcher
     end
   end
 
+  # Estouro do prazo total. Fica só dentro do fetch, que o devolve como Net::ReadTimeout.
+  class TotalTimeout < StandardError; end
+
   Page = Struct.new(:body, :uri, :charset, :truncated, keyword_init: true)
 
   def initialize(resolver: DEFAULT_RESOLVER)
@@ -44,11 +47,23 @@ class Autonomia::Prospecting::SafePageFetcher
   end
 
   # Devolve a Page. Levanta UrlGuard::BlockedUrl, FetchFailed ou o erro de rede do Net::HTTP.
+  #
+  # O prazo total cobre tudo: DNS, conexão, cabeçalhos, corpo e cada salto. O read_timeout vale por leitura, e um site
+  # que manda um cabeçalho a cada poucos segundos segurava a thread do Sidekiq sem fim (#678). O Timeout só envolve
+  # I/O de rede, sem transação nem escrita no banco. A classe do estouro é própria: o Net::HTTP pega Net::ReadTimeout e
+  # Timeout::Error lá dentro e repete o GET, e a repetição rodava fora do prazo.
   def fetch(uri)
-    deadline = monotonic_now + TOTAL_TIMEOUT_SECONDS
+    Timeout.timeout(TOTAL_TIMEOUT_SECONDS, TotalTimeout) { fetch_following_redirects(uri) }
+  rescue TotalTimeout
+    raise Net::ReadTimeout
+  end
+
+  private
+
+  def fetch_following_redirects(uri)
     current_uri = uri
     (MAX_REDIRECTS + 1).times do
-      outcome = fetch_once(current_uri, deadline)
+      outcome = fetch_once(current_uri)
       return outcome if outcome.is_a?(Page)
 
       current_uri = URI.join(current_uri, outcome)
@@ -57,10 +72,8 @@ class Autonomia::Prospecting::SafePageFetcher
     raise FetchFailed, 'too_many_redirects'
   end
 
-  private
-
   # Devolve a Page, ou o Location de um redirecionamento (que volta à guarda no salto seguinte).
-  def fetch_once(uri, deadline)
+  def fetch_once(uri)
     UrlGuard.new(uri.to_s).validate!
     http = pinned_http(uri)
     http.start do |connection|
@@ -69,7 +82,7 @@ class Autonomia::Prospecting::SafePageFetcher
         return redirect_location(response) if response.is_a?(Net::HTTPRedirection)
         raise FetchFailed, "http_#{response.code}" unless response.is_a?(Net::HTTPSuccess)
 
-        return read_page(response, uri, deadline)
+        return read_page(response, uri)
       end
     end
   end
@@ -83,6 +96,8 @@ class Autonomia::Prospecting::SafePageFetcher
       http.ssl_timeout = OPEN_TIMEOUT_SECONDS
       http.read_timeout = READ_TIMEOUT_SECONDS
       http.write_timeout = READ_TIMEOUT_SECONDS
+      # Sem o GET repetido por dentro do Net::HTTP depois de um erro de leitura: é site de fora, uma tentativa basta.
+      http.max_retries = 0
     end
   end
 
@@ -100,30 +115,24 @@ class Autonomia::Prospecting::SafePageFetcher
     location
   end
 
-  def read_page(response, uri, deadline)
+  def read_page(response, uri)
     mime = response.content_type.to_s.downcase
     raise FetchFailed, 'unsupported_content_type' if mime.present? && PAGE_CONTENT_TYPES.exclude?(mime)
 
-    body, truncated = read_limited_body(response, deadline)
+    body, truncated = read_limited_body(response)
     Page.new(body: body, uri: uri, charset: response.type_params['charset'], truncated: truncated)
   end
 
-  # Lê até MAX_BODY_BYTES e para: o resto nem é baixado. O prazo total vale entre um pedaço e o próximo.
-  def read_limited_body(response, deadline)
+  # Lê até MAX_BODY_BYTES e para: o resto nem é baixado.
+  def read_limited_body(response)
     body = +''
     truncated = catch(:body_limit) do
       response.read_body do |chunk|
-        raise Net::ReadTimeout if monotonic_now > deadline
-
         body << chunk
         throw :body_limit, true if body.bytesize >= MAX_BODY_BYTES
       end
       false
     end
     [body.byteslice(0, MAX_BODY_BYTES), truncated]
-  end
-
-  def monotonic_now
-    Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 end

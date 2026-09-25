@@ -233,5 +233,28 @@ RSpec.describe Autonomia::Prospecting::WebsiteScraper do
       expect(data).not_to have_key('error')
       expect(servidor.bytes_escritos).to be < total
     end
+
+    # O prazo total valia só entre pedaços do corpo. Um site que manda um cabeçalho a cada poucos segundos (cada linha
+    # abaixo do read_timeout) segurava a thread do Sidekiq pelo tempo que quisesse: medido 60 s com prazo de 20 s.
+    it 'o prazo total vale também para os cabeçalhos que chegam devagar' do
+      stub_const("#{Autonomia::Prospecting::SafePageFetcher}::TOTAL_TIMEOUT_SECONDS", 1)
+      servidor = servidor_http_local do |srv, cliente|
+        next unless srv.escrever(cliente, "HTTP/1.1 200 OK\r\n")
+
+        20.times do
+          sleep 0.3
+          break unless srv.escrever(cliente, "X-A: a\r\n")
+        end
+      end
+      porta = URI(servidor.url('/')).port
+
+      inicio = segundos_monotonicos
+      data = sem_webmock { described_class.new(url: "http://devagar.invalid:#{porta}/", resolver: resolver_local).perform.data }
+      decorrido = segundos_monotonicos - inicio
+      servidor.parar
+
+      expect(data).to include('error' => 'timeout')
+      expect(decorrido).to be < 3, "levou #{decorrido.round(2)} s"
+    end
   end
 end
