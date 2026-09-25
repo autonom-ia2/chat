@@ -74,9 +74,12 @@ class Autonomia::Prospecting::Scoring::OrthRanking
     }
   end
 
-  # Contato e decisor da prioridade do Orth (priority-score.ts), lidos do mesmo lugar que a prioridade legada.
+  # Contato e decisor da prioridade do Orth (priority-score.ts), lidos do mesmo lugar que a prioridade legada. Já no
+  # CRM é o lead que virou card (penalidade do negative-factors.ts). Contato recente ainda não tem fonte: fica de fora.
   def action_signals(lead)
     {
+      already_in_crm: lead.crm_card_id.present?,
+      crm_funnel_name: lead.crm_card&.pipeline&.name,
       whatsapp_verified: lead.metadata.to_h.dig('whatsapp_verification', 'status') == 'verified',
       decisor_found: lead.decision_name.present? &&
         Autonomia::Prospecting::Research::Payload::FOUND.include?(lead.decision_research_status),

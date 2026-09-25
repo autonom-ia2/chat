@@ -200,5 +200,19 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       expect(first).to include(website: 'https://alfa.example.com', phone: '+5541999990001', rating: 4.8, reviews_count: 120,
                                search_rank: 1, open_now: true, whatsapp_verified: false, decisor_found: false, decisor_failed: false)
     end
+
+    # Penalidade "já no CRM" do Orth (negative-factors.ts): o lead que a busca reencontra já virou card.
+    it 'marca como já no CRM, com o nome do funil, o lead que já tem card' do
+      run_search
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Alfa Odonto')
+      Autonomia::Prospecting::Lead.find_by!(account: account, name: 'Alfa Odonto').update!(crm_card: card)
+
+      run_search
+
+      leads = orth_calls.last[:leads].index_by { |lead| lead[:name] }
+      expect(leads['Alfa Odonto']).to include(already_in_crm: true, crm_funnel_name: 'Funil Comercial')
+      expect(leads['Beta Odonto']).to include(already_in_crm: false, crm_funnel_name: nil)
+    end
   end
 end
