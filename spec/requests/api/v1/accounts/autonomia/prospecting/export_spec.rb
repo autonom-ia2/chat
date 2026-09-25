@@ -122,7 +122,7 @@ RSpec.describe 'Autonomia prospecting export', type: :request do
                              'Sócios' => nil, 'Faixa' => 'Lead muito quente')
     end
 
-    it 'Excel abre e traz as mesmas células do CSV, com a mesma neutralização' do
+    it 'Excel abre e traz as mesmas células do CSV, com o texto limpo (sem o apóstrofo que o CSV precisa)' do
       get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(admin)
       csv = csv_rows
       get "#{base_path}/searches/#{search.id}/export", params: { format: 'xlsx' }, headers: auth_headers(admin)
@@ -130,11 +130,15 @@ RSpec.describe 'Autonomia prospecting export', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       expect(response.headers['Content-Disposition']).to include('attachment', '.xlsx')
-      # Número vai como número no Excel; no CSV, com vírgula decimal. O resto é a mesma célula, neutralização incluída.
+      # Número vai como número no Excel; no CSV, com vírgula decimal. O resto é a mesma célula: o Excel guarda o texto como
+      # veio (neutralizado pelo estilo quotePrefix) e o CSV põe o apóstrofo na frente do que começa como fórmula.
       xlsx = xlsx_rows
-      expect(xlsx.map { |row| row.map { |value| value.is_a?(Float) ? value.to_s.tr('.', ',') : value&.to_s } }).to eq(csv)
+      as_csv = xlsx.map do |row|
+        row.map { |value| value.is_a?(Float) ? value.to_s.tr('.', ',') : Autonomia::Prospecting::Export::Cell.safe(value)&.to_s }
+      end
+      expect(as_csv).to eq(csv)
       expect(column(xlsx, 'Nota', 'Clinica Sorriso')).to eq(71.5)
-      expect(column(xlsx, 'Telefone', "'=HYPERLINK(\"http://mal\")")).to eq("'+55 41 3333-0002")
+      expect(column(xlsx, 'Telefone', '=HYPERLINK("http://mal")')).to eq('+55 41 3333-0002')
     end
 
     it 'com lead_ids, exporta só esses leads, na ordem pedida (a seleção ou o filtro da tela)' do
@@ -256,7 +260,7 @@ RSpec.describe 'Autonomia prospecting export', type: :request do
 
       get "#{base_path}/lists/#{list.id}/export", params: { format: 'xlsx' }, headers: auth_headers(admin)
 
-      expect(xlsx_rows.drop(1).map { |row| row[1] }).to match_array(rows.drop(1).pluck(1))
+      expect(xlsx_rows.drop(1).map { |row| row[1] }).to contain_exactly('Clinica Sorriso', '=HYPERLINK("http://mal")')
     end
 
     it 'lista de outra conta responde 404' do

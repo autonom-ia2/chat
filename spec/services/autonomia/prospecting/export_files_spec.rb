@@ -1,8 +1,8 @@
 require 'rails_helper'
 require 'roo'
 
-# Arquivos da exportação (#682, frente A): CSV com BOM e ponto e vírgula, Excel mínimo que abre, e a mesma neutralização
-# de célula nos dois formatos.
+# Arquivos da exportação (#682, frente A): CSV com BOM e ponto e vírgula, Excel mínimo que abre. Os dois neutralizam o
+# texto que começa como fórmula: o CSV com o apóstrofo, o Excel com o estilo quotePrefix, sem mexer no texto.
 RSpec.describe Autonomia::Prospecting::Export do
   let(:cell) { Autonomia::Prospecting::Export::Cell }
   let(:rows) do
@@ -59,21 +59,33 @@ RSpec.describe Autonomia::Prospecting::Export do
   describe Autonomia::Prospecting::Export::XlsxFile do
     subject(:xlsx) { described_class.generate(rows) }
 
-    it 'abre como planilha e devolve as mesmas células, com a mesma neutralização do CSV' do
+    it 'abre como planilha e devolve o texto como foi escrito, sem o apóstrofo do CSV (telefone +55 limpo)' do
       read = read_xlsx(xlsx)
 
       expect(read[0]).to eq(%w[Nome Nota Telefone])
-      expect(read[1]).to eq(["'=HYPERLINK(\"http://x\")", 87.5, "'+55 41 99999-0001"])
-      expect(read[2]).to eq(["'@SOMA(A1)\tfim", -25.4284, "'-1\rx"])
-      expect(read[3]).to eq(['Padaria & Cia <Centro> "boa"', 3, "'|cmd"])
-      expect(read[4]).to eq(['Clínica São João', nil, "'%total"])
+      expect(read[1]).to eq(['=HYPERLINK("http://x")', 87.5, '+55 41 99999-0001'])
+      expect(read[2]).to eq(["@SOMA(A1)\tfim", -25.4284, "-1\rx"])
+      expect(read[3]).to eq(['Padaria & Cia <Centro> "boa"', 3, '|cmd'])
+      expect(read[4]).to eq(['Clínica São João', nil, '%total'])
     end
 
-    it 'não grava fórmula: todo texto vai como inlineStr' do
+    it 'tem o estilo quotePrefix e o estilo Normal padrão' do
+      styles = Zip::File.open_buffer(StringIO.new(xlsx)).read('xl/styles.xml')
+
+      expect(styles).to include('<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" quotePrefix="1"/>')
+      expect(styles).to include('<cellStyle name="Normal" xfId="0" builtinId="0"/>')
+    end
+
+    it 'não grava fórmula: todo texto vai como inlineStr, e o que começa como fórmula leva o estilo quotePrefix' do
       sheet = Zip::File.open_buffer(StringIO.new(xlsx)).read('xl/worksheets/sheet1.xml')
 
       expect(sheet).not_to include('<f>')
       expect(sheet).to include('t="inlineStr"')
+      quoted = described_class::QUOTED_STYLE
+      %w[A2 C2 A3 C3 C4 C5].each { |ref| expect(sheet).to include(%(<c r="#{ref}" s="#{quoted}" t="inlineStr">)) }
+      %w[A4 A5].each { |ref| expect(sheet).to include(%(<c r="#{ref}" t="inlineStr">)) }
+      expect(sheet).to include('<c r="B3"><v>-25.4284</v></c>')
+      expect(sheet).not_to include("'+55")
     end
 
     it 'descarta caractere de controle que o XML não aceita, sem perder o resto do texto' do

@@ -1,6 +1,7 @@
 # Excel da exportação (#682): o mínimo de OOXML que o Excel, o LibreOffice e o Google Planilhas abrem, montado com o
-# rubyzip que já está no Gemfile. Texto vai como inlineStr, nunca como fórmula; número vai como número. A célula passa
-# pela mesma neutralização do CSV.
+# rubyzip que já está no Gemfile. Texto vai como inlineStr, nunca como fórmula; número vai como número. O texto sai como
+# o cliente o escreveria: o que começa como fórmula (Cell.formula_start?) leva o estilo quotePrefix em vez do apóstrofo
+# que o CSV precisa, e o telefone +55 aparece limpo.
 module Autonomia::Prospecting::Export::XlsxFile
   CONTENT_TYPES = <<~XML.freeze
     <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -31,7 +32,8 @@ module Autonomia::Prospecting::Export::XlsxFile
       <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
     </Relationships>
   XML
-  # Dois formatos: o comum (0) e o negrito do cabeçalho (1).
+  # Três formatos: o comum (0), o negrito do cabeçalho (1) e o texto com quotePrefix (2). cellStyles dá o estilo
+  # Normal que os leitores esperam.
   STYLES = <<~XML.freeze
     <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -39,10 +41,12 @@ module Autonomia::Prospecting::Export::XlsxFile
       <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
       <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
       <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-      <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>
+      <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" quotePrefix="1"/></cellXfs>
+      <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
     </styleSheet>
   XML
   HEADER_STYLE = 1
+  QUOTED_STYLE = 2
   # Controles que o XML 1.0 não aceita (tudo abaixo do espaço, menos tab, LF e CR), no formato de String#delete.
   INVALID_XML_CHARS = "\u0000-\u0008\u000B\u000C\u000E-\u001F".freeze
 
@@ -73,13 +77,14 @@ module Autonomia::Prospecting::Export::XlsxFile
   end
 
   def cell(value, reference, style)
-    value = Autonomia::Prospecting::Export::Cell.safe(value)
     return if value.nil?
+
+    style ||= QUOTED_STYLE if Autonomia::Prospecting::Export::Cell.formula_start?(value)
 
     style_attribute = style ? %( s="#{style}") : ''
     return %(<c r="#{reference}"#{style_attribute}><v>#{value}</v></c>) if value.is_a?(Numeric)
 
-    %(<c r="#{reference}"#{style_attribute} t="inlineStr"><is><t xml:space="preserve">#{xml_text(value)}</t></is></c>)
+    %(<c r="#{reference}"#{style_attribute} t="inlineStr"><is><t xml:space="preserve">#{xml_text(value.to_s)}</t></is></c>)
   end
 
   # O CR vira entidade: solto no XML, o leitor o troca por LF.
