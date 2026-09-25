@@ -44,6 +44,8 @@ class Autonomia::Prospecting::CrmCardBatch
   def send_lead(lead_id, result)
     lead = leads_by_id[lead_id]
     return result.failed << failure(lead_id, 'not_found') if lead.nil?
+    # Descartado sai das ações de envio (#732): nem card, nem contato.
+    return result.failed << failure(lead_id, 'discarded') if lead.discarded?
 
     record(convert(lead), result)
   rescue ActiveRecord::RecordInvalid

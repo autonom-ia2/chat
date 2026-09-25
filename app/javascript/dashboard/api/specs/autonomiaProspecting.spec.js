@@ -55,6 +55,25 @@ describe('#AutonomiaProspectingAPI', () => {
     );
   });
 
+  // Descartar e criar contatos em lote (#732).
+  it('descarta os leads com o motivo', () => {
+    prospecting.discardLeads({ leadIds: [1, 2], reason: 'Sem interesse' });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/discard',
+      { lead_ids: [1, 2], reason: 'Sem interesse' }
+    );
+  });
+
+  it('cria os contatos dos leads em lote', () => {
+    prospecting.createLeadContacts([1, 2]);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/contacts',
+      { lead_ids: [1, 2] }
+    );
+  });
+
   it('adiciona os leads da seleção a uma campanha', () => {
     prospecting.addLeadsToCampaign({
       leadIds: [1, 2],

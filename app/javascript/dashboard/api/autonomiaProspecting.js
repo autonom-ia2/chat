@@ -82,6 +82,21 @@ class AutonomiaProspectingAPI extends ApiClient {
     });
   }
 
+  // Criar contatos em lote (#732): até 30 leads por pedido, o mesmo contato
+  // de POST leads/:id/contact, com resultado por lead (created, existing,
+  // failed).
+  createLeadContacts(leadIds) {
+    return axios.post(`${this.url}/leads/contacts`, { lead_ids: leadIds });
+  }
+
+  // Descartar com motivo (#732), um lead ou a seleção. Devolve os leads.
+  discardLeads({ leadIds, reason }) {
+    return axios.post(`${this.url}/leads/discard`, {
+      lead_ids: leadIds,
+      reason,
+    });
+  }
+
   // Um dos sócios da pesquisa vira o decisor e o contato do lead (#680).
   adoptOwner(leadId, ownerName) {
     return axios.post(`${this.url}/leads/${leadId}/adopt_owner`, {

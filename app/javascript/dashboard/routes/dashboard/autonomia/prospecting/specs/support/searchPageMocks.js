@@ -17,6 +17,9 @@ export const prospectingApiMock = () => ({
     enrichLead: vi.fn(),
     researchLead: vi.fn(),
     exportSearch: vi.fn(),
+    discardLeads: vi.fn(),
+    createLeadContacts: vi.fn(),
+    updateLead: vi.fn(),
   },
 });
 

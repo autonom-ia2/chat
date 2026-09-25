@@ -223,15 +223,15 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
   # que o job verifica e mostrava Enriquecer livre num lead já na fila. O contato vai junto (nome do contato no lead).
   def reloaded_leads(leads)
     leads.each(&:reload).tap do |reloaded|
-      ActiveRecord::Associations::Preloader.new(records: reloaded, associations: :contact).call
+      ActiveRecord::Associations::Preloader.new(records: reloaded, associations: lead_preloads).call
     end
   end
 
   def leads_for_search(search)
     lead_ids = Array(search.metadata.to_h['lead_ids']).map(&:to_i)
-    return search.leads.includes(:company_profile, :contact).order(created_at: :desc) if lead_ids.blank?
+    return search.leads.includes(*lead_preloads).order(created_at: :desc) if lead_ids.blank?
 
-    leads_scope.includes(:company_profile, :contact).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
+    leads_scope.includes(*lead_preloads).where(id: lead_ids).index_by(&:id).values_at(*lead_ids).compact
   end
 
   def lead_payload(lead, search = nil)
@@ -262,6 +262,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       search_rank_payload(lead, search)
     ).merge(
       search_scoring_payload(lead, search)
+    ).merge(
+      lead_payload_builder.crm_presence(lead)
     )
   end
 

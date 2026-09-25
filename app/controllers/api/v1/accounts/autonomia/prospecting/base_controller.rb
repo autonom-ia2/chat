@@ -98,4 +98,9 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
   def lead_payload_builder
     @lead_payload_builder ||= ::Autonomia::Prospecting::LeadPayload.new(account: Current.account)
   end
+
+  # Associações que o payload do lead lê, carregadas de uma vez na lista (#732: o card do CRM, sem N+1).
+  def lead_preloads
+    ::Autonomia::Prospecting::LeadPayload::PRELOADS
+  end
 end

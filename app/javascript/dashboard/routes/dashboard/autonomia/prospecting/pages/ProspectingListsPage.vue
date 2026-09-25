@@ -11,6 +11,7 @@ import LeadCard from '../components/search/LeadCard.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import { useListLeadsContext } from '../composables/useListLeadsContext';
+import { crmSendableLeads } from '../utils/leadCrmPresence';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -608,8 +609,8 @@ onMounted(loadPage);
                   v-if="canSendToCrm"
                   type="button"
                   class="inline-flex h-9 items-center gap-1.5 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  :disabled="!listLeads.length"
-                  @click="crmSendLeads = listLeads"
+                  :disabled="!crmSendableLeads(listLeads).length"
+                  @click="crmSendLeads = crmSendableLeads(listLeads)"
                 >
                   <span
                     class="i-lucide-kanban-square size-4"

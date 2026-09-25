@@ -12,6 +12,10 @@ class Autonomia::Prospecting::LeadPayload
     :contact_id, :crm_card_id, :created_at, :updated_at
   ].freeze
 
+  # O que o payload lê de outras tabelas. Quem monta a lista de leads carrega junto, para não fazer uma consulta por
+  # lead (#732: o card do CRM, com funil, estágio e responsável).
+  PRELOADS = [:company_profile, :contact, { crm_card: [:pipeline, :stage, :owner] }].freeze
+
   def initialize(account:)
     @account = account
   end
@@ -29,7 +33,23 @@ class Autonomia::Prospecting::LeadPayload
       whatsapp(lead)
     ).merge(
       research(lead)
+    ).merge(
+      crm_presence(lead)
     )
+  end
+
+  # Lead já no CRM (#732): funil, estágio e responsável do card que o lead tem. O lead continua da conta, sem bloqueio
+  # por vendedor nem prazo; a tela usa isto para marcar o card e tirar o lead do envio em lote ao CRM.
+  def crm_presence(lead)
+    card = lead.crm_card
+    return { crm_presence: nil } if card.nil?
+
+    {
+      crm_presence: {
+        card_id: card.id, pipeline_id: card.pipeline_id, pipeline_name: card.pipeline&.name, stage_id: card.stage_id,
+        stage_name: card.stage&.name, owner_id: card.owner_id, owner_name: card.owner&.name, status: card.status
+      }
+    }
   end
 
   # Pesquisa de empresa e decisor (#679), no formato do contrato com a tela. Vai junto o nome do contato real do lead
