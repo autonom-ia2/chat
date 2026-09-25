@@ -17,6 +17,7 @@ import { useProspectingSearch } from '../composables/useProspectingSearch';
 const { t } = useI18n();
 const {
   canManage,
+  canChooseCampaign,
   settings,
   showNewSearch,
   selectedSearchConfig,
@@ -131,6 +132,7 @@ const {
       v-if="campaignLeads"
       :leads="campaignLeads"
       :default-segment-name="selectedSearch?.query || ''"
+      :can-choose-campaign="canChooseCampaign"
       @close="campaignLeads = null"
     />
 

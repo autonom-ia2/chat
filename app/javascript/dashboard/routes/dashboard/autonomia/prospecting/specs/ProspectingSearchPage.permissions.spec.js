@@ -1,8 +1,10 @@
-// Botões pela permissão do módulo que eles alteram (#682): Enviar ao CRM só
-// para quem pode criar card (Crm::CardPolicy#create?) e Adicionar à campanha
-// só para quem tem campaign_manage. O servidor diz as duas coisas no payload
-// das configurações; a permissão de prospecção continua valendo por cima.
+// Botões pela regra do servidor (#682): Enviar ao CRM só para quem pode criar
+// card (Crm::CardPolicy#create?); Adicionar à campanha para quem gerencia a
+// prospecção, e a escolha da campanha, dentro da janela, só com campaign_manage.
+// O servidor diz as duas coisas no payload das configurações.
 import { flushPromises } from '@vue/test-utils';
+import CampaignsAPI from 'dashboard/api/campaigns';
+import CampaignSelectionModal from '../components/campaign/CampaignSelectionModal.vue';
 import BulkActionsBar from '../components/search/BulkActionsBar.vue';
 import {
   buttonWithText,
@@ -29,6 +31,9 @@ vi.mock('dashboard/api/autonomiaProspecting', async () =>
 vi.mock('dashboard/api/crmKanban', async () =>
   (await import('./support/searchPageMocks')).crmKanbanApiMock()
 );
+vi.mock('dashboard/api/campaigns', () => ({
+  default: { get: vi.fn().mockResolvedValue({ data: [] }) },
+}));
 
 const SEND = 'PROSPECTING.SEARCH.SEND_TO_CRM';
 const ADD = 'PROSPECTING.SEARCH.ADD_TO_CAMPAIGN';
@@ -81,21 +86,32 @@ describe('ProspectingSearchPage · botões por permissão', () => {
     });
   });
 
-  it('sem campaign_manage, Adicionar à campanha some da barra de seleção', async () => {
+  // O servidor só exige campaign_manage quando vem uma campanha
+  // (authorize_campaign_update!): sem ela, o segmento sai só com a prospecção.
+  // O botão segue essa regra; a escolha da campanha, dentro da janela, não.
+  it('sem campaign_manage, Adicionar à campanha continua e a janela só cria o segmento, sem pedir as campanhas', async () => {
     const wrapper = await mountWith(true, false);
 
     await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
+    await buttonWithText(wrapper, ADD).trigger('click');
+    await flushPromises();
 
-    expect(buttonWithText(wrapper, ADD)).toBeUndefined();
+    const modal = wrapper.findComponent(CampaignSelectionModal);
+    expect(modal.props('canChooseCampaign')).toBe(false);
+    expect(CampaignsAPI.get).not.toHaveBeenCalled();
     expect(buttonWithText(wrapper, SEND)).toBeTruthy();
   });
 
-  it('com campaign_manage, Adicionar à campanha aparece', async () => {
+  it('com campaign_manage, a janela oferece também a escolha da campanha', async () => {
     const wrapper = await mountWith(false, true);
 
     await leadCheckbox(wrapper, 'Padaria Sol').trigger('change');
+    await buttonWithText(wrapper, ADD).trigger('click');
+    await flushPromises();
 
-    expect(buttonWithText(wrapper, ADD)).toBeTruthy();
+    const modal = wrapper.findComponent(CampaignSelectionModal);
+    expect(modal.props('canChooseCampaign')).toBe(true);
+    expect(CampaignsAPI.get).toHaveBeenCalled();
     expect(buttonWithText(wrapper, SEND)).toBeUndefined();
   });
 

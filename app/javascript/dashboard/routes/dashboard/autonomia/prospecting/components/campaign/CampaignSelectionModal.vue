@@ -14,6 +14,9 @@ import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState'
 const props = defineProps({
   leads: { type: Array, required: true },
   defaultSegmentName: { type: String, default: '' },
+  // Sem campaign_manage a janela só cria o segmento: o servidor recusaria a
+  // campanha (authorize_campaign_update!), então a escolha nem aparece (#682).
+  canChooseCampaign: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['close', 'done']);
@@ -104,6 +107,7 @@ const errorText = error => {
 };
 
 onMounted(async () => {
+  if (!props.canChooseCampaign) return;
   try {
     const { data } = await CampaignsAPI.get();
     campaigns.value = data || [];
@@ -210,7 +214,7 @@ const close = () => {
         <p class="text-xs text-n-slate-10">
           {{ t('PROSPECTING.CAMPAIGN_SELECTION.RULE') }}
         </p>
-        <label class="grid gap-1">
+        <label v-if="canChooseCampaign" class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ t('PROSPECTING.CAMPAIGN_SELECTION.CAMPAIGN') }}
           </span>
@@ -221,7 +225,10 @@ const close = () => {
             :disabled="isSubmitting"
           />
         </label>
-        <p v-if="campaignsFailed" class="text-xs text-n-slate-10">
+        <p
+          v-if="canChooseCampaign && campaignsFailed"
+          class="text-xs text-n-slate-10"
+        >
           {{ t('PROSPECTING.CAMPAIGN_SELECTION.CAMPAIGNS_LOAD_ERROR') }}
         </p>
         <div class="grid gap-1">

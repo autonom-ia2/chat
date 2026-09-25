@@ -10,6 +10,7 @@ import { useCanManage } from 'dashboard/composables/useCanManage';
 import { mergeDisjoint } from '../utils/mergeDisjoint';
 import {
   canAddToCampaign,
+  canChooseCampaign,
   canSendToCrm,
 } from '../utils/prospectingPermissions';
 import { createSearchState } from './createSearchState';
@@ -63,8 +64,9 @@ export const useProspectingSearch = () => {
     canSendToCrm: computed(() =>
       canSendToCrm(canManage.value, state.settings.value)
     ),
-    canAddToCampaign: computed(() =>
-      canAddToCampaign(canManage.value, state.settings.value)
+    canAddToCampaign: computed(() => canAddToCampaign(canManage.value)),
+    canChooseCampaign: computed(() =>
+      canChooseCampaign(canManage.value, state.settings.value)
     ),
   };
 
