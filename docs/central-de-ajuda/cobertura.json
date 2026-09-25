@@ -1345,6 +1345,16 @@
       "nota": null
     },
     {
+      "rota": "campaigns_templates_index",
+      "assuntos": [
+        "05.12-enviar-modelo",
+        "05.13-quais-modelos-aparecem",
+        "05.14-variaveis-do-modelo"
+      ],
+      "situacao": "coberta",
+      "nota": "Mesma tela de settings_templates, pela área de Campanhas (#725)."
+    },
+    {
       "rota": "sla_reports",
       "assuntos": [
         "11.18-relatorios-sla"

@@ -84,7 +84,7 @@ export async function startServer() {
     appType: 'custom',
   });
   server.middlewares.use(async (req, res, next) => {
-    if (!req.url.startsWith('/app/accounts/436/crm/campaign-management'))
+    if (!req.url.startsWith('/app/accounts/436/campaigns/management'))
       return next();
     const html = `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${css}"><link rel="stylesheet" href="${utilities}"></head><body><div id="app"></div><script type="module" src="/tests/qa/email-campaigns/entry.js"></script></body></html>`;
     res.setHeader('Content-Type', 'text/html');
