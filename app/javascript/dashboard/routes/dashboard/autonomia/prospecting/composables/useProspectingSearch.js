@@ -20,8 +20,15 @@ import { useSearchLeads } from './useSearchLeads';
 import { useSearchLocation } from './useSearchLocation';
 import { useSearchPresets } from './useSearchPresets';
 import { useSearchRepeat } from './useSearchRepeat';
+import { useSearchTour } from './useSearchTour';
 
 const PROSPECTING_SEARCH_KEY = Symbol('prospectingSearch');
+
+// O card, o painel e as ações do lead leem este contexto. A tela de Listas
+// (#682) entrega o dela, com os leads da lista, para usar os mesmos
+// componentes da busca.
+export const provideProspectingLeadContext = context =>
+  provide(PROSPECTING_SEARCH_KEY, context);
 
 export const useProspectingSearch = () => {
   const { t } = useI18n();
@@ -45,6 +52,11 @@ export const useProspectingSearch = () => {
     applyCrmTarget: crm.applyCrmTarget,
     submitSearch: searchForm.submitSearch,
   });
+  const tour = useSearchTour(state, {
+    canManage,
+    toggleNewSearch: searchForm.toggleNewSearch,
+    handleLocationInput: location.handleLocationInput,
+  });
 
   const permissions = {
     canManage,
@@ -65,9 +77,10 @@ export const useProspectingSearch = () => {
     searchForm,
     location,
     presets,
-    repeat
+    repeat,
+    tour
   );
-  provide(PROSPECTING_SEARCH_KEY, context);
+  provideProspectingLeadContext(context);
 
   onMounted(async () => {
     const { isLoading, searches } = state;
@@ -82,6 +95,7 @@ export const useProspectingSearch = () => {
     } finally {
       isLoading.value = false;
     }
+    tour.autoStartTour();
   });
 
   return context;

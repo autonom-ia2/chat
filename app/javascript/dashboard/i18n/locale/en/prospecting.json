@@ -760,6 +760,72 @@
         "NOT_FOUND": "Lead não encontrado nesta conta",
         "DEFAULT": "Não pode entrar na campanha"
       }
+    },
+    "TOUR": {
+      "RESTART": "Refazer tour",
+      "RESTART_HINT": "Refazer o tour de boas-vindas da busca",
+      "START": "Vamos lá",
+      "NEXT": "Próximo",
+      "PREV": "Voltar",
+      "FINISH": "Concluir",
+      "SKIP": "Pular tour",
+      "CLOSE": "Fechar tour",
+      "PROGRESS": "Passo {current} de {total}",
+      "SUGGEST_LOCATION": "Ver sugestões do local",
+      "WAITING_LOCATION": "Esperando você escolher uma das sugestões do local.",
+      "WAITING_RESULTS": "Esperando você clicar em Buscar e os resultados chegarem.",
+      "EXAMPLE": {
+        "QUERY": "restaurante",
+        "LOCATION": "Moema, São Paulo"
+      },
+      "STEPS": {
+        "WELCOME": {
+          "EYEBROW": "Primeira busca",
+          "TITLE": "Vamos achar seus primeiros leads juntos.",
+          "BODY_GBP": "Em uns 60 segundos. A busca lê o Google Meu Negócio da sua região e volta com empresas reais que valem a sua próxima ligação.",
+          "BODY_GENERAL": "Em uns 60 segundos. A busca lê o Google na sua região e volta com empresas qualificadas que valem a sua próxima ligação."
+        },
+        "MODE": {
+          "EYEBROW": "Modo de busca",
+          "TITLE_GBP": "Toda busca aqui ataca o Google Meu Negócio.",
+          "TITLE_GENERAL": "Toda busca aqui qualifica leads no Google.",
+          "BODY_GBP": "Você procura quem aparece, mas tem lacunas: sem site, avaliação fraca, perfil pouco cuidado. Não é lista comprada, é oportunidade real.",
+          "BODY_GENERAL": "Você procura quem já está bem estruturado: presença sólida, boa reputação, pronto para uma conversa comercial. O foco é qualificar, não achar problema."
+        },
+        "PRESETS": {
+          "EYEBROW": "Sua jogada",
+          "TITLE": "Cada jogada é uma tese de venda.",
+          "BODY_GBP": "Quer atacar quem não tem site? Quem tem avaliação fraca? Cada jogada monta os filtros e o tipo de lead. Agora vamos de busca livre; depois você experimenta as outras.",
+          "BODY_GENERAL": "Quer empresas com prova social forte? Mercado maduro? Presença digital completa? Cada jogada monta os filtros e o tipo de lead. Agora vamos de busca livre; depois você experimenta as outras."
+        },
+        "WHERE": {
+          "EYEBROW": "Onde buscar",
+          "TITLE": "Já preenchi um exemplo para você.",
+          "BODY": "Nicho, local e raio. Clique em Ver sugestões do local e escolha uma das opções do Google para confirmar. Pode trocar o nicho e o local pelos seus."
+        },
+        "DECISION_MAKER": {
+          "EYEBROW": "Decisor",
+          "TITLE": "Decisor é quem assina o contrato.",
+          "BODY": "Hoje a pesquisa encontra o proprietário; os outros perfis chegam em breve. Comece com poucos leads; dá para pedir até 60 por busca."
+        },
+        "FILTERS": {
+          "EYEBROW": "Refino",
+          "TITLE": "Aqui você afina a sua tese.",
+          "BODY_GBP": "Quatro grupos. Dor do lead: sem site é oportunidade. Qualificação mínima: corta empresa fantasma. Visibilidade: quem está fora das primeiras posições. Operacional: telefone e horário. Combine para mirar a sua dor de venda.",
+          "BODY_GENERAL": "Quatro grupos. Dor do lead: incluir ou excluir quem não tem site. Qualificação mínima: corta empresa sem volume. Visibilidade: priorizar quem já aparece bem. Operacional: telefone e horário. Combine para mirar o seu cliente ideal."
+        },
+        "SUBMIT": {
+          "EYEBROW": "A busca",
+          "TITLE": "Clique em Buscar e veja o que aparece.",
+          "BODY": "Está tudo preenchido. A busca só roda quando você clicar, os leads saem de verdade e leva alguns segundos enquanto o Google da região é lido."
+        },
+        "RESULTS": {
+          "EYEBROW": "Busca concluída",
+          "TITLE": "Esses são reais. Agora é com você.",
+          "BODY_GBP": "Cada card traz telefone, decisor quando encontrado e os pontos fracos do perfil no Google, a sua munição de venda. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp.",
+          "BODY_GENERAL": "Cada card traz telefone, decisor quando encontrado e os pontos fortes que qualificam o lead. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp."
+        }
+      }
     }
   }
 }

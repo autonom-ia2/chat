@@ -77,9 +77,9 @@ describe('ProspectingListsPage: decisor da pesquisa', () => {
     );
 
     expect(wrapper.text()).not.toContain('Joao Palpite IA');
-    expect(
-      wrapper.find('[data-test="list-lead-legacy-decision"]').exists()
-    ).toBe(false);
+    expect(wrapper.find('[data-test="lead-legacy-decision"]').exists()).toBe(
+      false
+    );
     expect(
       wrapper.find('[data-test="lead-research-decision"]').text()
     ).toContain('PROSPECTING.RESEARCH.DECISION_LINE.NOT_CONFIRMED');
@@ -99,8 +99,8 @@ describe('ProspectingListsPage: decisor da pesquisa', () => {
   it('lead sem bloco research mostra o decisor gravado', async () => {
     const wrapper = await mountWith(moonLead());
 
-    expect(
-      wrapper.find('[data-test="list-lead-legacy-decision"]').text()
-    ).toContain('Ana');
+    expect(wrapper.find('[data-test="lead-legacy-decision"]').text()).toContain(
+      'Ana'
+    );
   });
 });

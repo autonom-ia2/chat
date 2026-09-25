@@ -13,7 +13,7 @@ const decisionMakerOptions = computed(() => decisionMakerChoices(t));
 </script>
 
 <template>
-  <div class="grid gap-4 md:grid-cols-2">
+  <div class="grid gap-4 md:grid-cols-2" data-tour="search-decision-maker">
     <label class="grid gap-1">
       <span class="text-xs font-medium text-n-slate-11">
         {{ t('PROSPECTING.SEARCH.FIELDS.RADIUS_KM') }}

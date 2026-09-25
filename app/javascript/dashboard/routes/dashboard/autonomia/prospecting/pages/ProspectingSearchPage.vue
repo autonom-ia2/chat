@@ -8,6 +8,7 @@ import SearchHistory from '../components/search/SearchHistory.vue';
 import SearchModeBadge from '../components/search/SearchModeBadge.vue';
 import SearchResults from '../components/search/SearchResults.vue';
 import SearchConfigModal from '../components/search/SearchConfigModal.vue';
+import SearchTour from '../components/search/SearchTour.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import CampaignSelectionModal from '../components/campaign/CampaignSelectionModal.vue';
@@ -29,6 +30,8 @@ const {
   deleteSearchConfirmModal,
   deleteSearchConfirmConfig,
   toggleNewSearch,
+  tourStep,
+  startTour,
 } = useProspectingSearch();
 </script>
 
@@ -92,6 +95,24 @@ const {
         <SearchResults />
       </div>
     </section>
+
+    <footer
+      v-if="canManage"
+      class="flex items-center justify-end border-t border-n-weak px-6 py-2"
+    >
+      <button
+        type="button"
+        data-test="search-tour-restart"
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-n-slate-11 hover:bg-n-solid-2 hover:text-n-slate-12"
+        :title="t('PROSPECTING.TOUR.RESTART_HINT')"
+        @click="startTour"
+      >
+        <span class="i-lucide-sparkles size-3.5" aria-hidden="true" />
+        {{ t('PROSPECTING.TOUR.RESTART') }}
+      </button>
+    </footer>
+
+    <SearchTour v-if="tourStep" />
 
     <SearchConfigModal v-if="selectedSearchConfig && !showNewSearch" />
 
