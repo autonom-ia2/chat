@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_25_150000) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_25_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -721,6 +721,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_150000) do
     t.index ["account_id", "name"], name: "index_autonomia_prospecting_lists_on_account_id_and_name"
     t.index ["account_id"], name: "index_autonomia_prospecting_lists_on_account_id"
     t.index ["user_id"], name: "index_autonomia_prospecting_lists_on_user_id"
+  end
+
+  create_table "autonomia_prospecting_scoring_profile_accounts", force: :cascade do |t|
+    t.bigint "scoring_profile_id", null: false
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "idx_autonomia_prospecting_scoring_profile_accounts_account"
+    t.index ["scoring_profile_id", "account_id"], name: "idx_autonomia_prospecting_scoring_profile_accounts_unique", unique: true
   end
 
   create_table "autonomia_prospecting_scoring_profiles", force: :cascade do |t|
@@ -3121,6 +3130,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_25_150000) do
   add_foreign_key "autonomia_prospecting_list_leads", "autonomia_prospecting_lists", column: "prospect_list_id", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_lists", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_lists", "users", on_delete: :nullify
+  add_foreign_key "autonomia_prospecting_scoring_profile_accounts", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_prospecting_scoring_profile_accounts", "autonomia_prospecting_scoring_profiles", column: "scoring_profile_id", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_scoring_profiles", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_scoring_profiles", "users", column: "updated_by_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_searches", "accounts", on_delete: :cascade

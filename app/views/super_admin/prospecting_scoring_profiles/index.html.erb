@@ -2,7 +2,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">Prospecting Scoring Profiles</h1>
-      <p class="mt-1 text-sm text-slate-600">Global scoring templates available to all prospecting-enabled accounts.</p>
+      <p class="mt-1 text-sm text-slate-600">Scoring templates for prospecting-enabled accounts. A profile is global unless restricted to specific accounts.</p>
     </div>
     <%= link_to 'New profile', new_super_admin_prospecting_scoring_profile_path, class: 'rounded bg-woot-500 px-4 py-2 text-sm font-medium text-white hover:bg-woot-600' %>
   </div>
@@ -13,6 +13,7 @@
         <tr>
           <th class="px-4 py-3">Name</th>
           <th class="px-4 py-3">Default</th>
+          <th class="px-4 py-3">Accounts</th>
           <th class="px-4 py-3">Weights</th>
           <th class="px-4 py-3 text-right">Actions</th>
         </tr>
@@ -22,6 +23,9 @@
           <tr class="border-b border-slate-100">
             <td class="px-4 py-3 font-medium text-slate-900"><%= profile.name %></td>
             <td class="px-4 py-3 text-slate-700"><%= profile.default? ? 'Yes' : 'No' %></td>
+            <td class="px-4 py-3 text-slate-700">
+              <%= profile.accounts.any? ? "Restricted to: #{profile.accounts.map(&:name).sort.join(', ')}" : 'Global' %>
+            </td>
             <td class="px-4 py-3 text-slate-700">
               <%= profile.weights_with_defaults.map { |key, value| "#{key}: #{value}" }.join(' · ') %>
             </td>

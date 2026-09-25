@@ -1,7 +1,7 @@
 class SuperAdmin::ProspectingScoringProfilesController < SuperAdmin::ApplicationController
   def index
     Autonomia::Prospecting::ScoringProfile.default_profile
-    @profiles = Autonomia::Prospecting::ScoringProfile.order(default: :desc, name: :asc)
+    @profiles = Autonomia::Prospecting::ScoringProfile.includes(:accounts).order(default: :desc, name: :asc)
   end
 
   def new
@@ -9,10 +9,12 @@ class SuperAdmin::ProspectingScoringProfilesController < SuperAdmin::Application
       name: 'Novo perfil',
       weights: Autonomia::Prospecting::ScoringProfile::DEFAULT_WEIGHTS
     )
+    @eligible_accounts = eligible_accounts
   end
 
   def edit
     @profile = profile
+    @eligible_accounts = eligible_accounts
   end
 
   def create
@@ -23,17 +25,22 @@ class SuperAdmin::ProspectingScoringProfilesController < SuperAdmin::Application
 
     redirect_to super_admin_prospecting_scoring_profiles_path, notice: 'Prospecting scoring profile created'
   rescue ActiveRecord::RecordInvalid
+    @eligible_accounts = eligible_accounts
     render :new, status: :unprocessable_entity
   end
 
   def update
     @profile = profile
-    @profile.assign_attributes(profile_attributes)
-    @profile.updated_by = current_super_admin
-    save_profile!
+    # Numa linha já salva, trocar as contas grava na hora: a transação desfaz se o perfil não passar na validação.
+    ActiveRecord::Base.transaction do
+      @profile.assign_attributes(profile_attributes)
+      @profile.updated_by = current_super_admin
+      save_profile!
+    end
 
     redirect_to super_admin_prospecting_scoring_profiles_path, notice: 'Prospecting scoring profile updated'
   rescue ActiveRecord::RecordInvalid
+    @eligible_accounts = eligible_accounts
     render :edit, status: :unprocessable_entity
   end
 
@@ -62,7 +69,21 @@ class SuperAdmin::ProspectingScoringProfilesController < SuperAdmin::Application
       name: profile_params[:name],
       default: ActiveModel::Type::Boolean.new.cast(profile_params[:default]),
       weights: scoring_weights_param
-    }
+    }.merge(account_ids_param)
+  end
+
+  # Nenhuma conta marcada = perfil global. Formulário que não manda o campo mantém as contas como estão (#681).
+  def account_ids_param
+    permitted = params.require(:autonomia_prospecting_scoring_profile).permit(account_ids: [])
+    return {} unless permitted.key?(:account_ids)
+
+    { account_ids: Array(permitted[:account_ids]).compact_blank.map(&:to_i) }
+  end
+
+  # Contas com a prospecção ligada, mais as que já estão no perfil mesmo com a prospecção desligada depois.
+  def eligible_accounts
+    enabled = Account.where("accounts.internal_attributes ->> ? = 'true'", Autonomia::Prospecting::Config::INTERNAL_ATTR_KEY)
+    enabled.or(Account.where(id: @profile.account_ids)).order(:name)
   end
 
   def scoring_weights_param

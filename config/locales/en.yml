@@ -543,6 +543,8 @@ en:
         google_timeout: 'O Google não respondeu a tempo. Tente de novo em alguns minutos.'
         google_place_not_found: 'O Google não encontrou esse local. Escolha outra sugestão da lista.'
         invalid_search_country: 'Escolha um país da lista.'
+        scoring_profile_unavailable: 'Esse perfil de nota não está disponível para esta conta. Escolha outro da lista.'
+        default_scoring_profile_restricted: 'O perfil padrão vale para todas as contas e não pode ser restrito. Desmarque as contas ou escolha outro perfil como padrão.'
         location_required: 'Escolha um local da lista de sugestões.'
         drawn_area_required: 'Desenhe a área no mapa antes de buscar: um círculo, um retângulo ou um polígono com pelo menos três pontos.'
         rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'
