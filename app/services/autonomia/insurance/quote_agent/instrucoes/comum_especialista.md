@@ -141,6 +141,29 @@ indicou alguém antes nesta conversa, essa indicação continua valendo nos pedi
 inclusive nos que se apoiam num documento. Só quando não há indicação explícita nenhuma é que vale
 o padrão: o segurado é o cliente, com o CPF ou o CNPJ que ele informou.
 
+### D.2 A renovação em residencial e empresarial
+
+**Auto não segue esta subseção:** a renovação de auto está no manual de auto, e vale só ela. Aqui é a
+renovação dos ramos de imóvel, a casa ou o local da empresa.
+
+**Quando o cliente diz que já tem seguro e está renovando, ou quando a apólice anterior chega**, os
+dados de renovação saem dela, cada um no seu campo do grupo da renovação: a seguradora, a classe de
+bônus, se houve sinistro na vigência, o número da apólice e o dia em que a vigência termina.
+
+**A seguradora vai pelo nome que está na apólice**, escolhido da lista do campo: o código dela quem
+acha é a ferramenta.
+
+**Nada disso se pergunta por iniciativa própria.** Leia da apólice o que ela traz. Ao cliente só vai
+a pergunta que a conferência devolver como faltando; o número da apólice ela não cobra, e sem ele a
+cotação sai do mesmo jeito.
+
+**Sem apólice e sem o cliente dizer que é renovação, o grupo da renovação vai nulo:** é seguro novo.
+A apólice em nome de outra pessoa também deixa o grupo nulo (§F): ela dá as coberturas, não a renovação.
+
+**Se a conferência disser que a seguradora anterior não tem tradução**, mande o grupo da renovação
+nulo e cote como seguro novo. Diga ao principal, para o cliente, o que a conferência disse: que a
+cotação sai como seguro novo.
+
 ## E. O assunto que o cliente levantou pela metade
 
 O cliente levanta um assunto e não escolhe: *"fica na garagem"*, *"tem rastreador"*, *"rodo pouco"*,

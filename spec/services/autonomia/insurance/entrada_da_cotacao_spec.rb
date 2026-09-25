@@ -119,7 +119,9 @@ RSpec.describe Autonomia::Insurance::EntradaDaCotacao do
       texto = resumo_residencial(minimo)
 
       expect(texto).to include('CEP do imóvel: 01310100.', 'Número do imóvel: 742.', 'Tipo do imóvel: Apartamento.')
-      expect(texto).not_to include('renovação', 'seguro novo')
+      # Desde a renovação dos ramos (25/09/2026), o tipo de seguro também sai aqui: sem o grupo, é seguro novo.
+      expect(texto).to include(described_class::SEGURO_NOVO)
+      expect(texto).not_to include(described_class::RENOVACAO)
     end
 
     it 'o que o cliente não disse aparece como o padrão enviado, e não como ausente' do

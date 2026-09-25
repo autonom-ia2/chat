@@ -547,8 +547,12 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # neutra de ramo (CPF ou CNPJ, pessoa ou empresa), que antes só auto tinha inteira; os 15 travessões viram
   # vírgula, dois pontos, parênteses ou ponto; e as crases de item e de ver_resultado_da_cotacao saem, com os
   # nomes intactos.
+  # Pela renovação dos ramos de imóvel (`2139e030…` -> `ee215322…`, 25/09/2026): entra a §D.2, a renovação em
+  # residencial e empresarial (os dados saem da apólice, nada se pergunta fora da conferência, nulo é seguro novo,
+  # seguradora sem tradução cota como novo), com a ressalva de que auto segue a seção dele. As promessas dela estão em
+  # `builder_instrucao_da_renovacao_dos_ramos_spec` (`PromessaDaRenovacaoDosRamos`).
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('2139e03053e32acc28463498c425d3d2')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('ee21532290fbbda022c54b08f49b75db')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer

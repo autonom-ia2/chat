@@ -37,7 +37,10 @@ class Autonomia::Insurance::Parametros
     'driver' => 'O condutor principal, quando NÃO é o segurado. Obrigatório em cotação de empresa.',
     'truck' => 'Só caminhão: carroceria, carga e circulação.',
     'coverage' => 'Coberturas e franquia. Só o que o cliente pediu; o resto tem padrão seguro.',
-    'quotation' => 'Vigência e apólice anterior (renovação).'
+    'quotation' => 'Vigência e apólice anterior (renovação).',
+    # O GRUPO DA RENOVAÇÃO DOS RAMOS DE IMÓVEL (residencial e empresarial, 25/09/2026). O rótulo genérico dizia
+    # "Campos de renovacao.", que não conta ao modelo que o grupo inteiro é nulo no seguro novo.
+    'renovacao' => 'Renovação: os dados da apólice que vence, lidos dela. Todo o grupo nulo quando é seguro novo.'
   }.freeze
   ROTULO_GENERICO = 'Campos de %s.'.freeze
 

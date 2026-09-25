@@ -78,7 +78,14 @@ class Autonomia::Insurance::EntradaDaCotacao
   # do mesmo jeito, ou diria "padrão" para o número que o cliente deu (revisão da #605).
   ONDE_O_ADAPTER_TAMBEM_LE = { 'configuracoes.imovelNumero' => 'segurado.numero' }.freeze
   # Os grupos em que o formulário dos ramos põe o que o modelo escreveu, os mesmos que o adapter lê.
-  GRUPOS_DOS_RAMOS = %w[segurado configuracoes].freeze
+  GRUPOS_DOS_RAMOS = %w[segurado configuracoes renovacao].freeze
+  # A RENOVAÇÃO NOS RAMOS (25/09/2026): o grupo `renovacao` inteiro nulo é seguro novo, e com qualquer campo é
+  # renovação, como o adapter lê (`ehRenovacao`). Na renovação, o que o cliente pergunta primeiro: a seguradora e o
+  # bônus. O nome da seguradora sai da lista do schema, como a de auto.
+  CAMPOS_DA_RENOVACAO_DOS_RAMOS = [
+    ['renovacao.seguradoraAnterior', 'Seguradora anterior', :lista],
+    ['renovacao.bonus', 'Classe de bônus', :numero]
+  ].freeze
 
   # `argumentos` é o `ToolRun#arguments` da execução de `cotar_seguro`; `schema` é o que o adapter
   # entregou na sincronização da conexão (`Connection#quote_schema`), ou nil.
@@ -93,7 +100,7 @@ class Autonomia::Insurance::EntradaDaCotacao
     return nil if entrada.nil?
 
     linhas = CAMPOS_POR_PRODUTO.fetch(produto).map { |caminho, rotulo, forma| linha(caminho, rotulo, forma) }
-    [ABERTURA, (tipo_de_seguro if produto == AUTO), *linhas, AUSENCIA].compact.join("\n")
+    [ABERTURA, *tipo_de_seguro, *linhas, AUSENCIA].join("\n")
   end
 
   private
@@ -125,10 +132,13 @@ class Autonomia::Insurance::EntradaDaCotacao
     {}
   end
 
-  # A AUSÊNCIA AQUI TEM SIGNIFICADO, e é o que o cliente pergunta primeiro: sem `isRenewal` o pedido
-  # foi ao portal como seguro novo. Por isso esta linha nunca diz "sem informação".
+  # A AUSÊNCIA AQUI TEM SIGNIFICADO, e é o que o cliente pergunta primeiro: sem `isRenewal` (auto) ou sem o grupo
+  # `renovacao` (ramos) o pedido foi ao portal como seguro novo. Por isso esta linha nunca diz "sem informação".
   def tipo_de_seguro
-    ::Autonomia::Insurance::AutoRenewal.new(entrada).renovacao? ? RENOVACAO : SEGURO_NOVO
+    return [::Autonomia::Insurance::AutoRenewal.new(entrada).renovacao? ? RENOVACAO : SEGURO_NOVO] if produto == AUTO
+    return [SEGURO_NOVO] if entrada['renovacao'].blank?
+
+    [RENOVACAO, *CAMPOS_DA_RENOVACAO_DOS_RAMOS.map { |caminho, rotulo, forma| linha(caminho, rotulo, forma) }]
   end
 
   def linha(caminho, rotulo, forma)
