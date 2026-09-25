@@ -341,6 +341,7 @@
       "SCORE_COMPONENTS": {
         "RATING": "Avaliação Google",
         "REVIEWS_COUNT": "Volume de avaliações",
+        "VOLUME": "Volume de avaliações",
         "WEBSITE": "Presença de site",
         "PHONE": "Presença de telefone",
         "ACTIVITY": "Atividade recente",
@@ -354,7 +355,11 @@
         "LOW_RATING": "Avaliação abaixo do esperado",
         "LOW_REVIEWS": "Poucas avaliações",
         "MISSING_PHOTOS": "Sem fotos no perfil",
-        "INACTIVE_GBP": "Perfil com baixa atividade recente"
+        "INACTIVE_GBP": "Perfil com baixa atividade recente",
+        "ALREADY_IN_CRM": "Já está no CRM",
+        "RECENTLY_CONTACTED": "Contatado recentemente",
+        "OLD_REVIEWS": "Avaliação mais recente com mais de 2 anos",
+        "LOW_RATING_LOW_VOLUME": "Nota abaixo de 2 com poucas avaliações"
       },
       "SORT": {
         "FIELDS": {

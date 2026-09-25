@@ -6,6 +6,7 @@ const scoreComponentLabel = (key, t) => {
   const labels = {
     rating: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.RATING'),
     reviews_count: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.REVIEWS_COUNT'),
+    volume: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.VOLUME'),
     website: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.WEBSITE'),
     phone: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.PHONE'),
     activity: t('PROSPECTING.SEARCH.SCORE_COMPONENTS.ACTIVITY'),
@@ -26,6 +27,14 @@ export const negativeFactorLabel = (factor, t) => {
     low_reviews: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.LOW_REVIEWS'),
     missing_photos: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.MISSING_PHOTOS'),
     inactive_gbp: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.INACTIVE_GBP'),
+    already_in_crm: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.ALREADY_IN_CRM'),
+    recently_contacted: t(
+      'PROSPECTING.SEARCH.NEGATIVE_FACTORS.RECENTLY_CONTACTED'
+    ),
+    old_reviews: t('PROSPECTING.SEARCH.NEGATIVE_FACTORS.OLD_REVIEWS'),
+    low_rating_low_volume: t(
+      'PROSPECTING.SEARCH.NEGATIVE_FACTORS.LOW_RATING_LOW_VOLUME'
+    ),
   };
 
   return factor?.reason || labels[key] || key || '-';
@@ -46,6 +55,10 @@ export const scoreWeight = value => {
   return `${scoreNumber(percent)}%`;
 };
 
+// Chave com sublinhado é marca interna do detalhe (_mode, _total e, na nota do
+// Orth, _engine e _effective_weights), não componente da nota.
+const isInternalKey = key => key.startsWith('_');
+
 export const scoreBreakdownEntries = (lead, t) => {
   const breakdown = lead?.score_breakdown || {};
   const components =
@@ -54,7 +67,10 @@ export const scoreBreakdownEntries = (lead, t) => {
       : breakdown;
 
   return Object.entries(components)
-    .filter(([, value]) => value && typeof value === 'object')
+    .filter(
+      ([key, value]) =>
+        !isInternalKey(key) && value && typeof value === 'object'
+    )
     .map(([key, value]) => ({
       key,
       label: scoreComponentLabel(key, t),
