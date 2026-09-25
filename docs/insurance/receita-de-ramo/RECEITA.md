@@ -283,6 +283,27 @@ para a rodada, a não ser que já dada para o piloto em curso.
 
 ## Antes de declarar pronto, em qualquer fase
 
+- **Paridade com o residencial, por guarda e não de memória (25/09/2026).** No empresarial, cinco capacidades
+  que o residencial já tinha faltaram, uma de cada vez, e cada falta só apareceu num teste real do Rodrigo:
+  - o teto pelo incêndio;
+  - os campos da impressão;
+  - o ruído no comparativo;
+  - o tempo e o formato da ferramenta nova;
+  - as coberturas do cliente.
+
+  Os três portões:
+  1. **Guarda de paridade do adapter:** um teste reprova o ramo pronto sem cada tabela por ramo que o
+     residencial tem, salvo exceção escrita com motivo.
+  2. **Promessa do manual ligada ao código:** toda frase que o manual do ramo herda do residencial entra na
+     tabela de promessas do spec do manual, com a capacidade que a sustenta.
+  3. **O roteiro da Fase 6 inteiro, antes do ar**, com dois itens a mais:
+     - uma apólice anterior com coberturas;
+     - o cliente pedindo uma cobertura.
+
+     A proposta de uma seguradora também tem de sair.
+
+  Provar só a cotação não é provar o ramo.
+
 - **O check verde da PR não conta.** O CI de testes completo está desligado por decisão do Rodrigo, e o
   único check que roda pula os testes quando a mudança não é de e-mail. O portão é a suíte local
   inteira do módulo (`spec/models/autonomia`, `spec/requests/api/v1/accounts/autonomia`,
