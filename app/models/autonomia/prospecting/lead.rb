@@ -6,11 +6,13 @@
 #  address                 :string
 #  category                :string
 #  city                    :string
+#  company_research_status :string           default("not_researched"), not null
 #  country                 :string
 #  decision_confidence     :decimal(3, 2)
 #  decision_instagram      :string
 #  decision_linkedin       :string
 #  decision_name           :string
+#  decision_research_status :string          default("not_researched"), not null
 #  decision_role           :string
 #  decision_source_url     :string
 #  dedupe_key              :string           not null
@@ -40,6 +42,12 @@
 #  provider                :string           default("mock"), not null
 #  rating                  :decimal(3, 2)
 #  raw_payload             :jsonb            not null
+#  research_attempts       :integer          default(0), not null
+#  research_completed_at   :datetime
+#  research_error          :string
+#  research_requested_at   :datetime
+#  research_reused         :boolean          default(FALSE), not null
+#  research_started_at     :datetime
 #  reviews_count           :integer
 #  score                   :decimal(5, 2)
 #  score_breakdown         :jsonb            not null
@@ -50,6 +58,7 @@
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  account_id              :bigint           not null
+#  company_profile_id      :bigint
 #  contact_id              :bigint
 #  crm_card_id             :bigint
 #  prospect_search_id      :bigint
@@ -84,6 +93,8 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
   belongs_to :search, class_name: 'Autonomia::Prospecting::Search', foreign_key: :prospect_search_id, optional: true, inverse_of: :leads
   belongs_to :contact, optional: true
   belongs_to :crm_card, class_name: 'Crm::Card', optional: true
+  # Empresa achada pela pesquisa (#679): perfil compartilhado entre contas, por CNPJ.
+  belongs_to :company_profile, class_name: 'Autonomia::Prospecting::CompanyProfile', optional: true
 
   has_many :list_leads, class_name: 'Autonomia::Prospecting::ListLead', foreign_key: :prospect_lead_id, dependent: :destroy,
                         inverse_of: :lead
@@ -107,6 +118,7 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
   validates :dedupe_key, presence: true, uniqueness: { scope: :account_id }
   validates :discard_reason, presence: true, if: :discarded?
   validates :enrichment_status, presence: true
+  validates :company_research_status, :decision_research_status, inclusion: { in: Autonomia::Prospecting::Research::States::ALL }
   validate :linked_records_must_belong_to_account
 
   private
