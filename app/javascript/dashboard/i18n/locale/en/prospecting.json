@@ -145,7 +145,6 @@
       "CRM_TARGET": "Funil CRM",
       "CRM_CONFIG_HINT": "O funil CRM desta busca usa o padrão da conta, exceto quando alterado no histórico.",
       "CONFIGURE_SEARCH": "Configurações",
-      "REPEAT_SEARCH": "Repetir",
       "EDIT_SEARCH": "Editar e buscar",
       "SAVE_CONFIG": "Salvar",
       "EMPTY": "Nenhuma busca registrada.",
