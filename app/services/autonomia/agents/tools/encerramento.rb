@@ -52,8 +52,8 @@ class Autonomia::Agents::Tools::Encerramento
   # da marca, e o que escapar dos passos); cada passo tem o seu.
   def encerrar
     entregou = adquiriu_o_trabalho? && etapa('entregas') { entregar_o_que_resta }
-    etapa('evento') { disparar(fecho(entregou)) }
-    etapa('nota') { anotar_para_a_equipe }
+    tipo = etapa('evento') { fecho(entregou).tap { |desfecho| disparar(desfecho) } }
+    etapa('nota') { anotar_para_a_equipe(tipo) }
     entregou
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool] encerramento falhou slug=#{@run.slug} #{e.class}")
@@ -68,8 +68,9 @@ class Autonomia::Agents::Tools::Encerramento
   # `AsyncRunJob#advance`, que trata a passada como falha e a tenta de novo (`retry_or_fail`) sem
   # chegar ao `finish!`. Engolir aqui fecharia a linha em `done` sem desfecho.
   def concluir(evento = nil)
-    disparar(evento.presence || conclusao)
-    etapa('nota') { anotar_para_a_equipe }
+    tipo = evento.presence || conclusao
+    disparar(tipo)
+    etapa('nota') { anotar_para_a_equipe(tipo) }
     nil
   end
 
@@ -189,9 +190,13 @@ class Autonomia::Agents::Tools::Encerramento
   end
 
   # O que a equipe precisa saber e o cliente não ouve (chat#612): a nota interna, depois do evento. Não levanta
-  # (`etapa`): a nota é cortesia, e o desfecho já saiu.
-  def anotar_para_a_equipe
-    ::Autonomia::Agents::Tools::NotaInterna.postar(@run, ferramenta.nota_da_equipe(handle_da_ferramenta)) if ferramenta.present?
+  # (`etapa`): a nota é cortesia, e o desfecho já saiu. Uma nota por execução (`NotaInterna`): quem ficou sem proposta
+  # e o que o desfecho diz (`tipo`, o evento disparado; false quando a escolha dele caiu) vão juntos.
+  def anotar_para_a_equipe(tipo)
+    return if ferramenta.nil?
+
+    partes = [ferramenta.nota_da_equipe(handle_da_ferramenta), tipo.presence && ferramenta.nota_do_desfecho(tipo)]
+    ::Autonomia::Agents::Tools::NotaInterna.postar(@run, partes.compact_blank.join("\n\n"))
   end
 
   # A ferramenta guardou resultado que não chegou ao cliente? Sem agente não há ferramenta, e a resposta é não.

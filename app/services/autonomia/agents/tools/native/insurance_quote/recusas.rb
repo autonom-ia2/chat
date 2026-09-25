@@ -6,7 +6,7 @@
 module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
   extend ActiveSupport::Concern
 
-  PEDIDO_DE_JSON = 'O campo `dados` não era um JSON válido. Reenvie como objeto JSON, por ' \
+  PEDIDO_DE_JSON = 'O campo dados não era um JSON válido. Reenvie como objeto JSON, por ' \
                    'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
   # Lido pelo MODELO (na conferência e nos fatos do evento `ramo_desconhecido`): o texto volta pelo canal da
   # ferramenta, nunca pelo do cliente. A lista de ramos é do código: um modelo que a digitasse de memória
@@ -55,9 +55,10 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
                  'falar de portal, login ou sistema, e ofereça chamar uma pessoa da equipe.'.freeze
   # O QUE O MODELO LÊ NA CONFERÊNCIA (entrega 2): o campo e o motivo, como o adapter os escreveu —
   # em português, com a regra ("renovação exige a seguradora anterior…"). É o modelo quem traduz
-  # para o cliente; dar a ele o nome do campo é o que o deixa preencher certo na volta.
+  # para o cliente; dar a ele o nome do campo é o que o deixa preencher certo na volta. Campo e motivo
+  # separados por dois pontos, e não por travessão (chat#641): o modelo copia a pontuação que lê.
   def conferencia_para_o_modelo(problemas)
-    itens = problemas.map { |p| "#{p['campo']} — #{p['motivo']}" }
+    itens = problemas.map { |p| "#{p['campo']}: #{p['motivo']}" }
     "Antes de cotar, corrija ou complete: #{itens.join('; ')}"
   end
 

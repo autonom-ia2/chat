@@ -334,6 +334,12 @@ class Autonomia::Agents::Tools::Native::Base
     nil
   end
 
+  # O QUE O DESFECHO DIZ À EQUIPE (receita v3, R20): a falha que o cliente ouve da IA sem o motivo, e que a equipe
+  # precisa saber. Vai na mesma nota interna do fecho, depois de `nota_da_equipe`. -> nil por padrão.
+  def nota_do_desfecho(_tipo)
+    nil
+  end
+
   private
 
   attr_reader :agent, :params, :delivery, :run, :especialista

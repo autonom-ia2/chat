@@ -40,6 +40,20 @@ class Autonomia::Agents::Tools::Delivery
     @evento.present?
   end
 
+  # -> o que identifica ESTE TURNO nos dois caminhos (revisão da chat#718): a mensagem do cliente que o abriu, ou, no
+  # turno de evento, que não tem mensagem de origem, a marca do evento (a execução e o tipo, a mesma de
+  # `Tools::Evento#marca`). A nova tentativa do mesmo turno (o retry do `ReplyJob`, a segunda do `EventoJob`) dá o
+  # mesmo valor; outro turno, ou outro evento, dá outro. Sem nenhum dos dois, um valor só deste objeto.
+  def turno
+    @turno ||= if @origin_message_id.present?
+                 "mensagem:#{@origin_message_id}"
+               elsif turno_de_evento?
+                 "evento:#{@execucao_do_evento&.id}:#{@evento}"
+               else
+                 "entrega:#{SecureRandom.uuid}"
+               end
+  end
+
   def register(run)
     @runs << run if run.present?
     run

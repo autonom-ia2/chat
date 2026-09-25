@@ -33,7 +33,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
   end
 
   def tool_no_turno(params)
-    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params), delivery: instance_double(Autonomia::Agents::Tools::Delivery))
+    described_class.new(agent: agent, params: { 'item' => 'Carro' }.merge(params),
+                        delivery: instance_double(Autonomia::Agents::Tools::Delivery, conversation: nil))
   end
 
   def conector_real
@@ -157,7 +158,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     usado = tool_no_turno(base.merge('vehicle' => { 'plate' => 'HIK9383' })).precheck
 
     expect(conferencia.motivo).to eq('faltam_dados')
-    expect(conferencia.to_s).to include(Date.current.year.to_s, 'Onix 1.0', 'zero-quilômetro', 'vehicle.isZeroKm —')
+    expect(conferencia.to_s).to include(Date.current.year.to_s, 'Onix 1.0', 'zero-quilômetro', 'vehicle.isZeroKm:')
     expect(conferencia.faltando).to eq(['vehicle.isZeroKm'])
     expect(envio['recusa']).to eq('faltam_dados')
     expect(described_class.fatos_do_evento('falta_dado', Autonomia::Agents::ToolRun.new(handle: envio)))
@@ -180,6 +181,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
     conferencia = tool('produto' => 'auto', 'vehicle' => { 'plate' => 'ABC1D23' }).precheck
 
     expect(conferencia.motivo).to eq('faltam_dados')
-    expect(conferencia.to_s).to include('Antes de cotar', 'insured.document —')
+    expect(conferencia.to_s).to include('Antes de cotar', 'insured.document:')
+    expect(conferencia.to_s).not_to include('—') # chat#641: campo e motivo por dois pontos
   end
 end

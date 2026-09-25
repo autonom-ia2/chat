@@ -57,6 +57,15 @@ class Autonomia::Agents::ConferenciaDePrecos
   RECUO_COM_COMPARATIVO = 'Os valores de cada seguradora estão no comparativo em PDF que te mandei.'.freeze
   RECUO_SEM_COMPARATIVO = 'Não consegui conferir os valores por aqui agora. Vou encaminhar para alguém da equipe te mandar as opções.'.freeze
 
+  # As palavras que não distinguem uma seguradora de outra no nome ("Porto Seguro", "Sancor Seguros").
+  PALAVRAS_VAZIAS = %w[a o as os e de da do das dos seguro seguros seguradora seguradoras cia companhia sa].freeze
+
+  # -> as palavras que distinguem um texto: sem acento, em minúsculas, sem repetir e sem `PALAVRAS_VAZIAS`. Sem regex:
+  # o que não é letra ou dígito vira espaço (`tr`), e o espaço separa.
+  def self.palavras(texto)
+    ActiveSupport::Inflector.transliterate(texto.to_s).downcase.tr('^a-z0-9', ' ').split.uniq - PALAVRAS_VAZIAS
+  end
+
   # -> os valores em centavos que o texto escreve.
   def self.valores(texto)
     texto = texto.to_s
@@ -152,12 +161,13 @@ class Autonomia::Agents::ConferenciaDePrecos
     @permitidos ||= self.class.valores([@dados.texto, *Array(@dados.coberturas)].join("\n"))
   end
 
-  # As seguradoras da cotação que o texto cita: todas as palavras que distinguem o nome estão no texto
-  # (`Insurance::ResultadoDaCotacao.palavras`, a mesma leitura da procura por nome da ferramenta).
+  # As seguradoras da cotação que o texto cita: todas as palavras que distinguem o nome estão no texto (`.palavras`).
+  # O texto é a FALA DO MODELO, e não o que o cliente escreveu: aqui se confere o que a Lia vai mandar contra os dados
+  # do turno. Quem decide de qual seguradora o cliente fala é o modelo, na lista fechada da cotação (chat#718).
   def citadas(texto)
-    palavras = ::Autonomia::Insurance::ResultadoDaCotacao.palavras(texto)
+    palavras = self.class.palavras(texto)
     Array(@dados.seguradoras).select do |nome|
-      do_nome = ::Autonomia::Insurance::ResultadoDaCotacao.palavras(nome)
+      do_nome = self.class.palavras(nome)
       do_nome.any? && (do_nome - palavras).empty?
     end
   end

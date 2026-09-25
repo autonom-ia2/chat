@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuoteResult do
   end
 
   def ao_modelo(seguradora)
-    described_class.new(agent: agent, params: { 'seguradora' => seguradora }, delivery: delivery).call
+    described_class.new(agent: agent, params: { 'seguradoras' => [seguradora] }, delivery: delivery).call
   end
 
   describe 'o que a seguradora cotou' do
