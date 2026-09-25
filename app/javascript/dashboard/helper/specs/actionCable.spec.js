@@ -425,6 +425,34 @@ describe('ActionCableConnector - Copilot Tests', () => {
     });
   });
 
+  describe('prospecting lead event handlers', () => {
+    it('emits the updated lead of the current account', () => {
+      const data = {
+        account_id: 1,
+        lead: { id: 101, enrichment_status: 'completed' },
+      };
+
+      actionCable.onReceived({ event: 'prospecting.lead.updated', data });
+
+      expect(emitter.emit).toHaveBeenCalledWith(
+        BUS_EVENTS.PROSPECTING_LEAD_UPDATED,
+        data
+      );
+    });
+
+    it('ignores a lead from another account', () => {
+      actionCable.onReceived({
+        event: 'prospecting.lead.updated',
+        data: { account_id: 2, lead: { id: 101 } },
+      });
+
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        BUS_EVENTS.PROSPECTING_LEAD_UPDATED,
+        expect.anything()
+      );
+    });
+  });
+
   describe('crm ai usage event handlers', () => {
     it('registers and emits CRM AI usage realtime events', () => {
       const usage = {

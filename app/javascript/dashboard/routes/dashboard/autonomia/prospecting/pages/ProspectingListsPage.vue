@@ -9,6 +9,7 @@ import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
+import { useLeadLiveUpdates } from '../composables/useLeadLiveUpdates';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -204,6 +205,7 @@ const isWhatsAppVerified = leadHasVerifiedWhatsApp;
 const isWhatsAppUnavailable = lead =>
   lead?.whatsapp_verification_status === 'not_whatsapp';
 const isWhatsAppChecking = lead =>
+  lead?.whatsapp_verification_status === 'queued' ||
   verifyingWhatsAppLeadIds.value.map(Number).includes(Number(lead?.id));
 
 const shouldVerifyWhatsApp = lead =>
@@ -232,6 +234,9 @@ const replaceLead = updatedLead => {
     };
   }
 };
+
+// Enriquecimento e WhatsApp terminam no servidor e chegam pelo evento (#678).
+useLeadLiveUpdates(replaceLead);
 
 const verifyLeadWhatsApp = async lead => {
   if (!shouldVerifyWhatsApp(lead)) return;
@@ -516,14 +521,12 @@ const enrichLead = async lead => {
   if (!lead?.id || enrichingLeadId.value) return;
 
   enrichingLeadId.value = lead.id;
-  replaceLead({ ...lead, enrichment_status: 'running' });
 
   try {
     const { data } = await AutonomiaProspectingAPI.enrichLead(lead.id);
     replaceLead(data.payload?.lead);
-    useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_COMPLETED'));
+    useAlert(t('PROSPECTING.SEARCH.ENRICHMENT_QUEUED'));
   } catch (e) {
-    replaceLead({ ...lead, enrichment_status: 'failed' });
     alertError(e, t('PROSPECTING.ERRORS.ENRICH_LEAD'));
   } finally {
     enrichingLeadId.value = null;

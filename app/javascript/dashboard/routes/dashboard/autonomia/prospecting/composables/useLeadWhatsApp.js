@@ -10,7 +10,9 @@ export const useLeadWhatsApp = (state, { canManage, replaceLead }) => {
   const { verifyingWhatsAppLeadIds, settings } = state;
   const whatsappVerificationRequested = new Set();
 
+  // "queued": o servidor já pôs a verificação na fila ao fim da busca (#678).
   const isWhatsAppChecking = lead =>
+    lead?.whatsapp_verification_status === 'queued' ||
     verifyingWhatsAppLeadIds.value.map(Number).includes(Number(lead?.id));
 
   const shouldVerifyWhatsApp = lead =>

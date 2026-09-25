@@ -77,4 +77,7 @@ module Events::Types
   # geração de e-mail por IA (assíncrona) concluída/falhou — toast + selo na lista
   EMAIL_CAMPAIGN_AI_READY = 'email_campaign.ai.ready'
   EMAIL_CAMPAIGN_AI_FAILED = 'email_campaign.ai.failed'
+
+  # lead da Prospecção mudou no servidor (enriquecimento, WhatsApp, varredor): o card e o painel se atualizam sozinhos
+  PROSPECTING_LEAD_UPDATED = 'prospecting.lead.updated'
 end

@@ -47,6 +47,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::SearchesController < Api::V1::A
       user: Current.user,
       params: search_params
     ).perform
+    # Enriquecer e verificar WhatsApp no servidor, sem depender da aba aberta (#678).
+    ::Autonomia::Prospecting::LeadWorkQueue.after_search(account: Current.account, leads: result.leads)
 
     render json: {
       payload: {
