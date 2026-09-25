@@ -5,7 +5,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadBatchesController < Api::V1
   # sem o bloco técnico da nota para quem não é administrador (#732, item 9).
   def discard
     result = ::Autonomia::Prospecting::LeadDiscard.new(
-      account: Current.account, lead_ids: params[:lead_ids], reason: params[:reason], leads_scope: leads_scope
+      account: Current.account, user: Current.user, lead_ids: params[:lead_ids], reason: params[:reason], leads_scope: leads_scope
     ).perform
     leads = leads_scope.includes(*lead_preloads).where(id: result.leads.map(&:id))
     render json: { payload: { leads: leads.map { |lead| visible_lead_payload(lead_payload_builder.build(lead)) },

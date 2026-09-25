@@ -55,6 +55,12 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     )
   end
 
+  # Os leads que entram no segmento. Público para a recusa depois do segmento (SegmentRefusalSync) saber quem mantém a
+  # etiqueta.
+  def eligible_leads
+    @eligible_leads ||= leads.select { |lead| block_reason(lead).nil? }
+  end
+
   # Cada lead que fica fora, com o motivo (#680, ACAO-26/27). Público para a tela explicar mesmo quando ninguém entra.
   def blocked_details
     @blocked_details ||= leads.filter_map do |lead|
@@ -69,10 +75,6 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
 
   def leads
     @leads ||= @list.leads.order(:id).to_a
-  end
-
-  def eligible_leads
-    @eligible_leads ||= leads.select { |lead| block_reason(lead).nil? }
   end
 
   def block_reason(lead)

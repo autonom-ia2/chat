@@ -1,7 +1,8 @@
 # A etiqueta do segmento tem nome estável (prospeccao_<lista>_<nome>) e a campanha lê o público por ela: na hora do envio
 # (envio único) ou ao começar (API do WhatsApp). Quem foi etiquetado antes e depois recusou, foi bloqueado ou teve o lead
-# descartado perde a etiqueta quando o segmento é refeito, senão receberia a mensagem mesmo aparecendo como "fica fora"
-# (#732). O contato que um lead elegível da lista também alcança fica com a etiqueta.
+# descartado perde a etiqueta quando o segmento é refeito e também na hora da recusa (SegmentRefusalSync), senão
+# receberia a mensagem mesmo aparecendo como "fica fora" (#732). O contato que um lead elegível da lista também alcança
+# fica com a etiqueta.
 class Autonomia::Prospecting::SegmentLabelRemover
   # O que a pessoa decidiu. Falta de telefone, de WhatsApp ou de status não tira a etiqueta.
   REFUSAL_REASONS = %w[discarded opt_out contact_blocked].freeze
