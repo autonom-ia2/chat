@@ -21,6 +21,7 @@ const {
   previewAreaBounds,
   submitSearch,
   handlePreviewViewportChange,
+  isDrawnArea,
 } = useProspectingSearchContext();
 </script>
 
@@ -67,7 +68,7 @@ const {
         </div>
 
         <ProspectingGoogleMap
-          v-if="confirmedLocation && previewMapCenter"
+          v-if="confirmedLocation && previewMapCenter && !isDrawnArea"
           :api-key="googleMapsApiKey"
           :center="previewMapCenter"
           :radius="previewMapRadius"

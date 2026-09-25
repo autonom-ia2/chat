@@ -2,6 +2,7 @@
 // Frente de local: as linhas de local e tipo de área no resumo da busca.
 import { useI18n } from 'vue-i18n';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
+import { formatAreaType } from '../../utils/searchFormatters';
 
 const { t } = useI18n();
 const { form, selectedLocationLabel } = useProspectingSearchContext();
@@ -21,11 +22,7 @@ const { form, selectedLocationLabel } = useProspectingSearchContext();
       {{ t('PROSPECTING.SEARCH.FIELDS.AREA_TYPE') }}
     </dt>
     <dd class="font-medium text-n-slate-12">
-      {{
-        form.area_type === 'viewport'
-          ? t('PROSPECTING.SEARCH.AREA_VIEWPORT_SHORT')
-          : t('PROSPECTING.SEARCH.AREA_RADIUS')
-      }}
+      {{ formatAreaType(form.area_type, t) }}
     </dd>
   </div>
 </template>

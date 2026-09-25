@@ -732,4 +732,5 @@ pt_BR:
         google_place_not_found: 'O Google não encontrou esse local. Escolha outra sugestão da lista.'
         invalid_search_country: 'Escolha um país da lista.'
         location_required: 'Escolha um local da lista de sugestões.'
+        drawn_area_required: 'Desenhe a área no mapa antes de buscar: um círculo, um retângulo ou um polígono com pelo menos três pontos.'
         rank_out_of_reach: 'O Google traz até %{limit} posições por busca. Comece a faixa de posição em até %{limit}.'

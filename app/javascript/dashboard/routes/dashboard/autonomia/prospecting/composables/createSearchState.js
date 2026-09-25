@@ -9,6 +9,7 @@ import {
 import { mergeDisjoint } from '../utils/mergeDisjoint';
 import { searchCenter } from '../utils/leadDistance';
 import { sortLeads } from '../utils/sortLeads';
+import { isDrawnAreaReady } from '../utils/drawnArea';
 import { createSliceState, sliceFormDefaults } from './searchSlices';
 
 const createFlags = () => ({
@@ -129,6 +130,7 @@ const createSearchDerived = state => ({
     () =>
       state.form.value.query.trim().length > 0 &&
       state.confirmedLocation.value.trim().length > 0 &&
+      isDrawnAreaReady(state.form.value.area_type, state.drawnArea.value) &&
       !state.isSearching.value
   ),
   selectedLocationLabel: computed(
