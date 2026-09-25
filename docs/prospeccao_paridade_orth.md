@@ -6,7 +6,7 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 
 | Destino | Funções |
 |---|---:|
-| **Entregue por PR** | **279** |
+| **Entregue por PR** | **305** |
 | &nbsp;&nbsp;#706 (E2) | 84 |
 | &nbsp;&nbsp;#699 (E1) | 66 |
 | &nbsp;&nbsp;#709 (E3) | 43 |
@@ -20,9 +20,12 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 | &nbsp;&nbsp;#682 (E6): frente A, exportar | 5 |
 | &nbsp;&nbsp;#682 (E6): frente C, pt_BR | 2 |
 | &nbsp;&nbsp;#682 (E6): defeitos do cliente (LOCAL-42, ENRIQ-57, ENRIQ-69) | 3 |
-| **Preservado (já existia no chat2you)** | **90** |
-| **Movido para outra issue (#732 E8, #705 Central e Guia, #713 recusa)** | **28** |
-| &nbsp;&nbsp;#732 (E8), decisão 25/09 | 25 |
+| &nbsp;&nbsp;E8 #732: frente A, já no CRM, descartar e criar contatos | 11 |
+| &nbsp;&nbsp;E8 #732: frente D, quem vê as buscas, detalhe da nota e campanha pela API | 7 |
+| &nbsp;&nbsp;E8 #732: frente B, jogadas salvas | 4 |
+| &nbsp;&nbsp;E8 #732: frente C, raio como o Orth e log estruturado | 4 |
+| **Preservado (já existia no chat2you)** | **89** |
+| **Movido para outra issue (#705 Central e Guia)** | **3** |
 | &nbsp;&nbsp;#705 | 3 |
 | **Fora do escopo por decisão** | **38** |
 | &nbsp;&nbsp;fora (decisão 25/09) | 9 |
@@ -35,37 +38,39 @@ Prestação de contas do épico #676 (E6, #682). Cada função do inventário do
 - **#700** (Guia fora de cima do Aplicar) e **#712** (telefone do cadastro confirma a empresa) corrigem entregas da E1 e da E3 e não têm linha própria no inventário.
 - **#682 (E6)** entregou 18 funções, todas com arquivo e linha conferidos na branch `feat/682-fechamento` (32 referências abertas uma a uma): exportar CSV e Excel pelo servidor, da busca e da lista (frente A); Listas com o mesmo card e painel da busca e o tour guiado (frente B); tela e recusas da prospecção em pt_BR (frente C); e os três defeitos que o cliente sentia, achados na conferência dos pendentes: centro do raio fora do círculo (LOCAL-42), verificação de WhatsApp presa ao número antigo (ENRIQ-69) e busca refeita apagando verificação gravada em paralelo (ENRIQ-57). O número do PR da E6 entra aqui quando ele for aberto.
 - **A E6 também entregou o que o inventário não lista como função própria:** o atalho Configurações no menu Prospecção da barra lateral, visível para administrador ou `prospecting_manage` (`F/utils/prospectingSidebar.js:45`), e os botões Enviar ao CRM e Adicionar à campanha escondidos de quem não tem `Crm::CardPolicy#create?` ou `campaign_manage`, pela mesma regra do servidor (`C/settings_controller.rb:68`; nota em PLAT-48).
+- **E8 #732** entregou 26 funções, conferidas com arquivo e linha na branch `feat/732-decisoes`: lead "já no CRM" no lugar do bloqueio por vendedor, descartar com motivo e criar contatos em lote (frente A); jogadas salvas da conta (frente B); expansão de raio como a do Orth e log estruturado do enriquecimento e do WhatsApp (frente C); agente vê só as próprias buscas, bloco técnico da nota só para administrador e campanha pela API do WhatsApp (frente D). Mudança de comportamento para quem já usa: a expansão de raio passa a vir ligada, com uma tentativa só (dobro do raio, teto de 10 km).
+- **Desvios da E8 registrados:** envio ao CRM e à campanha por id ainda aceita qualquer lead da conta, mesmo o que o agente não vê; a janela de campanha lê só as 25 campanhas da API mais recentes; os motivos prontos de descarte e o limite de 30 jogadas por conta são escolha da E8 (o Orth não tem descarte nem limite).
 - **Desvios da E6 registrados:** o export deixa de fora a coluna Dist km do Orth e o link de WhatsApp tirado do site sem verificação; o tour marca a visita ao abrir, e não ao concluir como no Orth, e só pede sugestões do Google no clique; a tela de Listas ainda não tem botão de exportar (o cliente da API já tem `exportList`).
 
 ### Por parte da tela
 
-| Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Modo e jogadas | 31 | 10 | 1 | 3 | 4 | 2 | 51 |
-| Onde buscar | 24 | 10 | 3 | 1 | 5 | 7 | 50 |
-| Filtros | 24 | 3 | 0 | 3 | 5 | 5 | 40 |
-| Motor da busca | 31 | 12 | 1 | 4 | 4 | 7 | 59 |
-| Enriquecimento e WhatsApp | 37 | 13 | 2 | 1 | 6 | 13 | 72 |
-| Card do lead e resultados | 33 | 15 | 2 | 3 | 1 | 5 | 59 |
-| Painel do lead e pesquisa | 32 | 6 | 2 | 2 | 2 | 3 | 47 |
-| Ações pós-busca, CRM, campanha e tour | 24 | 11 | 5 | 7 | 4 | 6 | 57 |
-| Plataforma, chaves e permissões | 25 | 10 | 2 | 4 | 7 | 3 | 51 |
+| Parte | PR de E0 a E5 e lotes | preservado | #682 (E6) | E8 #732 | outra issue | fora | pendente | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Modo e jogadas | 31 | 10 | 1 | 3 | 0 | 4 | 2 | 51 |
+| Onde buscar | 24 | 10 | 3 | 1 | 0 | 5 | 7 | 50 |
+| Filtros | 24 | 3 | 0 | 3 | 0 | 5 | 5 | 40 |
+| Motor da busca | 31 | 12 | 1 | 4 | 0 | 4 | 7 | 59 |
+| Enriquecimento e WhatsApp | 37 | 13 | 2 | 1 | 0 | 6 | 13 | 72 |
+| Card do lead e resultados | 33 | 15 | 2 | 3 | 0 | 1 | 5 | 59 |
+| Painel do lead e pesquisa | 32 | 5 | 2 | 2 | 1 | 2 | 3 | 47 |
+| Ações pós-busca, CRM, campanha e tour | 24 | 11 | 5 | 6 | 1 | 4 | 6 | 57 |
+| Plataforma, chaves e permissões | 25 | 10 | 2 | 3 | 1 | 7 | 3 | 51 |
 
 ### Por situação original no inventário
 
-| Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | outra issue | fora | pendente | Total |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| ausente no c2 | 111 | 0 | 8 | 14 | 28 | 26 | 187 |
-| divergente | 95 | 10 | 6 | 9 | 8 | 15 | 143 |
-| defasado | 29 | 0 | 4 | 0 | 1 | 3 | 37 |
-| igual | 8 | 40 | 0 | 0 | 1 | 1 | 50 |
-| só no c2 | 18 | 40 | 0 | 5 | 0 | 6 | 69 |
+| Situação original | PR de E0 a E5 e lotes | preservado | #682 (E6) | E8 #732 | outra issue | fora | pendente | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| ausente no c2 | 111 | 0 | 8 | 14 | 0 | 28 | 26 | 187 |
+| divergente | 95 | 10 | 6 | 8 | 1 | 8 | 15 | 143 |
+| defasado | 29 | 0 | 4 | 0 | 0 | 1 | 3 | 37 |
+| igual | 8 | 40 | 0 | 0 | 0 | 1 | 1 | 50 |
+| só no c2 | 18 | 39 | 0 | 4 | 2 | 0 | 6 | 69 |
 
 ## O que está pendente e por quê
 
 **O termo de Evidência da #682 está parcial.** Das 486 funções, 51 continuam sem PR e sem etapa dona. Nenhuma espera mais decisão: as 34 que esperavam foram decididas pelo Rodrigo em 25/09 (issue #732 e comentário no #676), que aprovou todas as recomendações. Por isso o PR da E6 cita a issue com `Refs #682`, e não com `Closes #682`: a #682 só fecha quando cada pendente abaixo tiver uma etapa dona. Até lá, estas são as funções do Orth que o cliente do chat2you ainda não tem.
 
-**Decididas em 25/09 (#732, comentário no #676).** 25 viram código na #732 (E8), com destino `#732 (E8), decisão 25/09`:
+**Decididas em 25/09 (#732, comentário no #676).** As 25 que viravam código foram entregues na E8, com destino `E8 #732` (branch `feat/732-decisoes`, que junta as frentes A, B, C e D). A elas se soma PAINEL-32, que era `preservado` e mudou com a mesma decisão do bloco técnico da nota; por isso a E8 soma 26:
 
 - **Lead "já no CRM" no lugar do bloqueio por vendedor:** MOTOR-17, MOTOR-18, FILTRO-37, CARD-24, PAINEL-29, ACAO-21, ACAO-22, PLAT-21.
 - **Jogadas salvas visíveis na grade:** MODO-25, MODO-26, FILTRO-27, PLAT-17.
@@ -102,9 +107,9 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 
 ## Como ler a tabela
 
-- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `#732 (E8), decisão 25/09`: vira código na E8, pela decisão do Rodrigo de 25/09. `fora (decisão)`: fora do escopo, com a decisão na nota. `fora (decisão 25/09)`: fora do escopo pela decisão do Rodrigo de 25/09. `pendente`: não feito, com o motivo.
-- **Conferido.** Arquivo e linha quando a função foi aberta no código: conferido na `main` (ou na branch `feat/682-fechamento`, para as funções da E6), com o número de linha da branch `feat/682-fechamento`. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
-- **Decisões usadas:** as de 24/09 no épico #676 (sem cobrança, créditos, trava nem gate de plano; chaves Google e BigDataCorp nossas; IA só na credencial do Kanban; nota do Orth inteira), as de 25/09 nas issues #679 (não apagar dado, sai a retenção), #680 (recusa no contato vai para a #713), #681 (perfil restrito a contas, pesos próprios mapeados, relevância e posição saem da nota) e #705 (Central e Guia num lote só), as 34 de 25/09 na #732 e no comentário do #676 (todas as recomendações aprovadas: 25 viram código na E8, 9 ficam fora), e o "não portar" do próprio inventário rev.7 para código morto do Orth.
+- **Destino.** `#NNN (Ex)`: PR que entregou, com a etapa. `preservado`: o inventário mandou manter o que o chat2you já tinha e nenhum PR tirou. `#682 (E6)`: entregue nesta etapa, pela issue enquanto o PR não tem número. `#705`: Central de Ajuda e Guia no lote único do fim. `E8 #732`: entregue na E8, pela decisão do Rodrigo de 25/09, pela issue enquanto o PR não tem número. `fora (decisão)`: fora do escopo, com a decisão na nota. `fora (decisão 25/09)`: fora do escopo pela decisão do Rodrigo de 25/09. `pendente`: não feito, com o motivo.
+- **Conferido.** Arquivo e linha quando a função foi aberta no código: conferido na `main` (ou na branch `feat/682-fechamento`, para as funções da E6), com o número de linha da branch `feat/682-fechamento`; as funções da E8 foram conferidas e têm o número de linha da branch `feat/732-decisoes`. Abreviações: `S/` = `app/services/autonomia/prospecting/`, `C/` = `app/controllers/api/v1/accounts/autonomia/prospecting/`, `M/` = `app/models/autonomia/prospecting/`, `J/` = `app/jobs/autonomia/prospecting/`, `F/` = `app/javascript/dashboard/routes/dashboard/autonomia/prospecting/`.
+- **Decisões usadas:** as de 24/09 no épico #676 (sem cobrança, créditos, trava nem gate de plano; chaves Google e BigDataCorp nossas; IA só na credencial do Kanban; nota do Orth inteira), as de 25/09 nas issues #679 (não apagar dado, sai a retenção), #680 (recusa no contato vai para a #713), #681 (perfil restrito a contas, pesos próprios mapeados, relevância e posição saem da nota) e #705 (Central e Guia num lote só), as 34 de 25/09 na #732 e no comentário do #676 (todas as recomendações aprovadas: 25 viraram código na E8, 9 ficam fora), e o "não portar" do próprio inventário rev.7 para código morto do Orth.
 
 ## Modo e jogadas (51)
 
@@ -134,8 +139,8 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MODO-22 | Jogada muda a leitura da nota: filtros ativos zeram ou reduzem pesos | ausente no c2 | #719 (E5) | Filtros ativos zeram ou reduzem pesos (EffectiveWeights). Visível só em conta virada para o motor orth. | `S/scoring/component_score.rb:2` |
 | MODO-23 | Jogadas não mudam a ordenação | igual | preservado |  |  |
 | MODO-24 | Selo 'Jogada base: X · Modo: GMN/Geral' no painel de filtros | ausente no c2 | #699 (E1) | Linha Jogada base e Modo no topo da gaveta. | `F/components/search/filters/FiltersBaseLine.vue:15` |
-| MODO-25 | 'Salvar como jogada': filtros atuais viram jogada da empresa | ausente no c2 | #732 (E8), decisão 25/09 | Entregue na E8, frente B (branch `feat/732-b-jogadas`): "Salvar como jogada" na gaveta de filtros do formulário, só com prospecting_manage, grava nome, modo da busca e filtros da conta na tabela autonomia_prospecting_saved_presets; a jogada nova fica marcada. | `C/saved_presets_controller.rb:7`, `F/composables/useSearchPresets.js:110` |
-| MODO-26 | Listar, editar e excluir jogadas salvas | ausente no c2 | #732 (E8), decisão 25/09 | Entregue na E8, frente B: a jogada salva aparece na grade do modo dela, depois das prontas, vai na busca como `saved-<id>` (conferida por conta e modo no servidor) e tem selo no histórico. Editar (nome e filtros) e excluir ficam na aba Jogadas das Configurações da Prospecção. | `F/utils/searchPresets.js:84`, `S/search_presets.rb:20`, `F/components/ProspectingSavedPresets.vue:1` |
+| MODO-25 | 'Salvar como jogada': filtros atuais viram jogada da empresa | ausente no c2 | E8 #732 | Entregue na E8, frente B (branch `feat/732-b-jogadas`): "Salvar como jogada" na gaveta de filtros do formulário, só com prospecting_manage, grava nome, modo da busca e filtros da conta na tabela autonomia_prospecting_saved_presets; a jogada nova fica marcada. | `C/saved_presets_controller.rb:7`, `F/composables/useSearchPresets.js:110` |
+| MODO-26 | Listar, editar e excluir jogadas salvas | ausente no c2 | E8 #732 | Entregue na E8, frente B: a jogada salva aparece na grade do modo dela, depois das prontas, vai na busca como `saved-<id>` (conferida por conta e modo no servidor) e tem selo no histórico. Editar (nome e filtros) e excluir ficam na aba Jogadas das Configurações da Prospecção. | `F/utils/searchPresets.js:84`, `S/search_presets.rb:20`, `F/components/ProspectingSavedPresets.vue:1` |
 | MODO-27 | Selo da jogada no histórico de buscas | ausente no c2 | #699 (E1) | Selo da jogada no histórico. | `F/components/search/SearchHistory.vue:29` |
 | MODO-28 | Reabrir ou refazer busca do histórico reaplica jogada e filtros | defasado | #699 (E1) | Reabrir marca a jogada; Repetir e Editar do histórico vieram no #706. |  |
 | MODO-29 | Nota invertida por modo (GMN: nota alta = lacuna; Geral: nota alta = bem estruturado) | defasado | #719 (E5) | Fórmula do Orth com leitura invertida por modo. | `S/scoring/orth_scorer.rb:67` |
@@ -160,7 +165,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MODO-48 | Pesos de score por jogada salva | ausente no c2 | fora (decisão) | Plano rev.7: não portar pesos por jogada salva. |  |
 | MODO-49 | Perfil de score gravado em cada busca | só no c2 | pendente | O runner ainda aceita scoring_profile_id do cliente; pendência registrada pela E5 na #705. | `S/search_runner.rb:725` |
 | MODO-50 | Um só estado de filtro para formulário de nova busca e para refino dos resultados | divergente | #699 (E1) | Filtros da nova busca e refino da busca aberta deixaram de dividir o estado (corpo do #699). |  |
-| MODO-51 | Detalhes técnicos da nota para o superadmin: modo, pesos contextuais e multiplicador de tração | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8: o bloco técnico da nota fica só para administrador. |  |
+| MODO-51 | Detalhes técnicos da nota para o superadmin: modo, pesos contextuais e multiplicador de tração | ausente no c2 | E8 #732 | Entregue na E8, frente D: score_breakdown e negative_factors saem só para o administrador da conta, cortados no servidor (busca, lead, lista, descarte em lote e evento ao vivo). O agente recebe a nota, a prioridade e a frase, e o painel só mostra o bloco técnico com can_view_score_details. | `S/visibility.rb:60`, `F/components/search/LeadDetailDrawer.vue:190` |
 
 ## Onde buscar (50)
 
@@ -183,7 +188,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | LOCAL-15 | Desenho livre (poligono) com filtro ponto dentro do poligono | ausente no c2 | #706 (E2) | Polígono com ponto no polígono. | `S/search_area.rb:42` |
 | LOCAL-16 | Texto de ajuda do modo desenhar | ausente no c2 | #706 (E2) | Ajuda do desenho (Desfazer último ponto, Limpar desenho), segundo a nota da E2 na #705. |  |
 | LOCAL-17 | Seletor do tipo de area | divergente | #706 (E2) | Tipos de área sem select nativo. |  |
-| LOCAL-18 | Expansao automatica de raio quando faltam resultados | igual | #732 (E8, frente C) | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. | `S/search_runner.rb:218` |
+| LOCAL-18 | Expansao automatica de raio quando faltam resultados | divergente | E8 #732 | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. | `S/search_runner.rb:218` |
 | LOCAL-19 | Registro de que o raio foi expandido | só no c2 | preservado |  | `S/search_runner.rb:96` |
 | LOCAL-20 | Cobrir a area com varias paginas do Places (ate 60 lugares) | ausente no c2 | #706 (E2) | Até 3 páginas de 20. | `S/providers/google_places_provider.rb:29` |
 | LOCAL-21 | Cobertura por tiles (varios centros para passar do limite de 60) | ausente no c2 | fora (decisão) | Plano rev.7: não portar ladrilhos, não rodam no Orth. |  |
@@ -237,7 +242,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-14 | Bairro em / Cidade em (gs neighborhoodIn, cityIn) | ausente no c2 | fora (decisão 25/09) | Decisão de 25/09 (#732, comentário no #676): ficam fora, por serem filtros de jogada sem tela. |  |
 | FILTRO-15 | Esconder sinal fraco (gs hideWeakSignal) | ausente no c2 | pendente | hide_weak_signal não existe no motor. |  |
 | FILTRO-16 | Score mínimo (gs scoreMin) | ausente no c2 | pendente | score_min não existe no motor. |  |
-| FILTRO-17 | Expansão automática de raio (gs allowRadiusExpansion, c2 auto_expand_radius) | igual | #732 (E8, frente C) | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. |  |
+| FILTRO-17 | Expansão automática de raio (gs allowRadiusExpansion, c2 auto_expand_radius) | divergente | E8 #732 | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. | `S/search_area.rb:26`, `S/search_runner.rb:218` |
 | FILTRO-18 | Total desejado (quantidade de leads por busca) | defasado | #706 (E2) | Total pedido até 60, com o teto de 20 removido no #691. | `S/providers/google_places_provider.rb:26` |
 | FILTRO-19 | Seletor 'Tipo de decisor' no card 'Decisor e quantidade' | ausente no c2 | #699 (E1) | Tipo de decisor enviado e gravado na busca. | `S/search_runner.rb:728` |
 | FILTRO-20 | Disponibilidade de cada perfil de decisor vinda do backend, com rótulo 'em breve' | ausente no c2 | #699 (E1) | Perfis com rótulo em breve. A lista é fixa no front (valores do backend), não vem da API. | `F/utils/decisionMakerTypes.js:29` |
@@ -247,7 +252,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-24 | Rascunho com Aplicar, Limpar tudo e Salvar como jogada na gaveta | defasado | #699 (E1) | Rascunho com Aplicar e Limpar tudo. | `F/components/search/filters/LeadFiltersPanel.vue:3` |
 | FILTRO-25 | Contador de filtros ativos | divergente | #699 (E1) | Contador de filtros ativos. | `F/components/search/SearchAdvancedFilters.vue:25` |
 | FILTRO-26 | Combinação filtro + preset (jogada) | ausente no c2 | #699 (E1) | Merge com jogada e regra de desmarcar. Jogada salva segue pendente (MODO-25). |  |
-| FILTRO-27 | Salvar filtros atuais como jogada, com resumo em etiquetas | ausente no c2 | #732 (E8), decisão 25/09 | Entregue na E8, frente B: a janela de salvar e a grade mostram o resumo dos filtros em etiquetas. O servidor aceita só as chaves da gaveta, com os valores dela (schema em SavedPresetFilters), exige ao menos um filtro e recusa o resto. | `F/utils/searchPresets.js:112`, `S/saved_preset_filters.rb:24` |
+| FILTRO-27 | Salvar filtros atuais como jogada, com resumo em etiquetas | ausente no c2 | E8 #732 | Entregue na E8, frente B: a janela de salvar e a grade mostram o resumo dos filtros em etiquetas. O servidor aceita só as chaves da gaveta, com os valores dela (schema em SavedPresetFilters), exige ao menos um filtro e recusa o resto. | `F/utils/searchPresets.js:112`, `S/saved_preset_filters.rb:24` |
 | FILTRO-28 | Filtros gravados na busca e restaurados ao reabrir ou reexecutar | igual | #706 (E2) | Repetir e Editar restauram filtros, decisor, jogada, quantidade e ordem (nota da E2 na #705). |  |
 | FILTRO-29 | País e idioma da busca no provider | defasado | #699 (E1) | País por conta no provider. |  |
 | FILTRO-30 | Catálogo completo do FilterBuilder (acordeões, filtros rápidos, aviso min>max) | ausente no c2 | fora (decisão) | Plano rev.7: não portar a tela FilterBuilder. |  |
@@ -257,7 +262,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | FILTRO-34 | Limites diário e mensal de consultas por conta | só no c2 | #691 (E0) | Limites diário e mensal deixaram de barrar (corpo do #691). As colunas ficaram no banco. |  |
 | FILTRO-35 | Os filtros ativos repesam o score: o critério que o filtro já garante deixa de pesar, e os pesos são renormalizados para 100 | ausente no c2 | #719 (E5) | Repeso pelos filtros ativos. | `S/scoring/component_score.rb:4` |
 | FILTRO-36 | O bônus de 'aberto agora' na prioridade é desligado quando o filtro openNow está ativo | divergente | #719 (E5) | Bônus de aberto agora desligado com o filtro. | `S/scoring/priority.rb:20` |
-| FILTRO-37 | Leads 'queimados' (já cliente de outro vendedor da casa) não viram cartão na busca | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| FILTRO-37 | Leads 'queimados' (já cliente de outro vendedor da casa) não viram cartão na busca | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
 | FILTRO-38 | A posição no Google é guardada por busca, e não sobrescrita por buscas seguintes | divergente | #699 (E1) | Nota, posição e prioridade guardadas por busca (corpo do #699; metadata lead_scoring). | `S/search_runner.rb:92` |
 | FILTRO-39 | Teste do motor de filtros | defasado | #699 (E1) | Filtros provados com resposta real gravada do Google (corpo do #699). |  |
 | FILTRO-40 | Modo 'guaranteed' com ladrilhos (tile-generator) e continuação por nextPageToken | ausente no c2 | fora (decisão) | Plano rev.7: não portar, é código morto ou legado que a tela atual do Orth não usa. |  |
@@ -268,7 +273,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 |---|---|---|---|---|---|
 | MOTOR-01 | Paginação no Google Places com pageToken até atingir o total pedido | ausente no c2 | #706 (E2) | Paginação por nextPageToken. | `S/providers/google_places_provider.rb:24` |
 | MOTOR-02 | Teto de leads por busca (60) e tamanho de página (20) | divergente | #706 (E2) | Teto de 60 e página de 20; max_results_per_search deixou de ser lido pelo motor (só o schema o cita). | `S/providers/google_places_provider.rb:120` |
-| MOTOR-03 | Expansão automática de raio quando faltam resultados | igual | #732 (E8, frente C) | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. |  |
+| MOTOR-03 | Expansão automática de raio quando faltam resultados | divergente | E8 #732 | Como no Orth: ligada por padrão, uma tentativa com o dobro do raio, teto de 10 km, só na busca por raio com centro, e a busca fica com a expansão só se ela trouxer mais lugares que passam nos filtros. A caixa desliga, e a busca grava `radius_expanded` e mostra "X km, ampliado de Y km" no histórico e nos resultados. Prova: `spec/services/autonomia/prospecting/search_runner_radius_expansion_spec.rb` com as páginas reais do Google. | `S/search_area.rb:26`, `S/search_runner.rb:218` |
 | MOTOR-04 | Texto da consulta enviado ao Google e viés de localização | divergente | pendente | textQuery ainda leva o local (Fora deste PR do #706). |  |
 | MOTOR-05 | País e idioma da busca vindos da configuração da empresa | ausente no c2 | #699 (E1) | País por conta no provider. | `S/providers/google_places_provider.rb:122` |
 | MOTOR-06 | Campos pedidos ao Google (field mask) | defasado | #699 (E1) | Field mask com addressComponents e googleMapsUri; nextPageToken no #706. |  |
@@ -282,8 +287,8 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MOTOR-14 | Demais filtros aplicados na coleta (horário, fotos mínimas, com avaliações, avaliações recentes, bairro, cidade, sinal fraco) | ausente no c2 | pendente | Tem horário entrou no #699; fotos mínimas, com avaliações, avaliações recentes, bairro e cidade não existem no motor. |  |
 | MOTOR-15 | Filtros do preset (jogada) mesclados aos da tela | ausente no c2 | #699 (E1) | Jogada aceita, validada e mesclada. |  |
 | MOTOR-16 | Deduplicação e persistência do lead preservando o enriquecimento | divergente | preservado | Dedupe por place_id e reserva do c2. |  |
-| MOTOR-17 | Cartão privado por vendedor, herança de dados objetivos entre colegas e contagem de coexistência | divergente | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
-| MOTOR-18 | Bloqueio de lead 'queimado' (já cliente de outro vendedor) | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| MOTOR-17 | Cartão privado por vendedor, herança de dados objetivos entre colegas e contagem de coexistência | divergente | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
+| MOTOR-18 | Bloqueio de lead 'queimado' (já cliente de outro vendedor) | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
 | MOTOR-19 | Cálculo da Prioridade (posição 'ligar primeiro') | defasado | #719 (E5) | Prioridade do Orth (contato, decisor, aberto agora, penalidades, percentil). | `S/scoring/priority.rb:17` |
 | MOTOR-20 | Ordenação na tela: opções | defasado | #706 (E2) | Ordenações novas. | `F/utils/sortLeads.js:50` |
 | MOTOR-21 | Ordenar por distância do centro (distance_km) | ausente no c2 | #706 (E2) | Distância. |  |
@@ -302,7 +307,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | MOTOR-34 | Cancelar a busca anterior ao disparar outra | divergente | preservado |  |  |
 | MOTOR-35 | Mensagens de erro do Google em português | ausente no c2 | #691 (E0) | Erro do Google em português. |  |
 | MOTOR-36 | Histórico de buscas: listar com paginação | igual | preservado | Jogada no card do histórico desde o #699. |  |
-| MOTOR-37 | Visibilidade do histórico por hierarquia | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8: o agente vê só as próprias buscas. Hoje tudo é por conta. |  |
+| MOTOR-37 | Visibilidade do histórico por hierarquia | ausente no c2 | E8 #732 | Entregue na E8, frente D: o agente vê, abre, exporta, muda e exclui só as próprias buscas (a de outra pessoa responde 404). O administrador vê todas, e a chave de função personalizada prospecting_view_all_searches ("Ver buscas de todos") libera a visão completa. O lead segue a busca: o agente vê o lead das próprias buscas ou de uma lista da conta, e o evento ao vivo só vai para quem pode abrir o lead. Envio em lote por id (CRM e campanha) ainda aceita qualquer lead da conta. | `S/visibility.rb:36`, `S/visibility.rb:43`, `C/leads_controller.rb:175` |
 | MOTOR-38 | Abrir o resultado de uma busca antiga | igual | preservado | Valores por busca ao reabrir desde o #699/#706. |  |
 | MOTOR-39 | Reexecutar busca do histórico | ausente no c2 | #706 (E2) | Repetir do histórico com os parâmetros originais, sem cache (decisão do Rodrigo no #706). |  |
 | MOTOR-40 | Cache de busca idêntica por fingerprint e TTL | só no c2 | preservado |  |  |
@@ -389,7 +394,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ENRIQ-57 | Gravação final do enriquecimento não apaga telefones gravados em paralelo | divergente | #682 (E6) | A verificação grava só a sua chave no jsonb desde o #706, a gravação final do enriquecimento não toca o metadata (`S/lead_enricher.rb:72`) e agora a busca refeita também soma no banco só as chaves que traz, em vez de regravar o metadata lido antes; o verificador grava sob a trava da linha. A pesquisa de empresa e decisor (#679) também regrava o metadata do lead, mas depois de `lock!`, que recarrega a linha travada (`S/research/lead_writer.rb:23`): uma verificação que termina no meio espera a trava e soma a sua chave depois, sem se perder. | `S/search_runner.rb:344`, `S/whatsapp_verifier.rb:94` |
 | ENRIQ-58 | Pular número já verificado e tentar de novo após falha | divergente | #706 (E2) | Nova tentativa quando a verificação falhou. | `S/lead_work_queue.rb:58` |
 | ENRIQ-59 | Observabilidade estruturada do enriquecimento | ausente no c2 | pendente | Sem log estruturado de início, fim e duração do enriquecimento. |  |
-| ENRIQ-60 | Registro de eventos em log de aplicação | igual | #732 (E8, frente C) | Log estruturado do Rails, sem tabela: `[Autonomia::Prospecting::Event]` + JSON com evento, lead_id, account_id, motivo, origem e desfecho, no enriquecimento (LeadEnricher, EnrichLeadJob) e na verificação de WhatsApp (WhatsappVerifier, VerifyWhatsappJob). Motivo de exceção é a classe, nunca a mensagem; telefone, e-mail, chat e chave não entram. `S/event_log.rb` |  |
+| ENRIQ-60 | Registro de eventos em log de aplicação | divergente | E8 #732 | Log estruturado do Rails, sem tabela: `[Autonomia::Prospecting::Event]` + JSON com evento, lead_id, account_id, motivo, origem e desfecho, no enriquecimento (LeadEnricher, EnrichLeadJob) e na verificação de WhatsApp (WhatsappVerifier, VerifyWhatsappJob). Motivo de exceção é a classe, nunca a mensagem; telefone, e-mail, chat e chave não entram. | `S/event_log.rb:15` |
 | ENRIQ-61 | Log de depuração da verificação de WhatsApp ligado por variável | ausente no c2 | pendente | O job loga só o erro da verificação, sem chave de depuração. | `J/verify_whatsapp_job.rb:29` |
 | ENRIQ-62 | Consulta avulsa de WhatsApp de qualquer número | ausente no c2 | fora (decisão) | Plano rev.7: uso é do CRM, não da prospecção. |  |
 | ENRIQ-63 | Seletor de país e metadados de telefone da sessão de conexão WhatsApp | divergente | fora (decisão) | Plano rev.7: fora da prospecção. |  |
@@ -430,7 +435,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | CARD-21 | Botões Instagram, Facebook, LinkedIn no card | ausente no c2 | #706 (E2) | Redes no rodapé do card. | `F/components/search/LeadCardActions.vue:108` |
 | CARD-22 | Abrir detalhe: card inteiro clicável e botão Abrir | divergente | #706 (E2) | Card inteiro abre e fecha o painel. | `F/components/search/LeadCard.vue:72` |
 | CARD-23 | Realce visual do card aberto | ausente no c2 | #706 (E2) | Card aberto realçado. | `F/components/search/LeadCard.vue:81` |
-| CARD-24 | Faixa Já é cliente de <vendedor> até <data> e checkbox bloqueado (lead queimado) | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| CARD-24 | Faixa Já é cliente de <vendedor> até <data> e checkbox bloqueado (lead queimado) | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
 | CARD-25 | Selos Empresa: <estado> e Decisor: <estado> | ausente no c2 | #709 (E3) | Selos Empresa e Decisor. | `F/components/search/LeadResearchSummary.vue:62` |
 | CARD-26 | Linha Decisor: com estados (Aguardando capacidade, Pesquisa em andamento, não concluída, nome · cargo, Possível decisor, Não confirmado, Pesquisa desativada, Não pesquisado) | divergente | #709 (E3) | Linha do decisor muda com o estado. |  |
 | CARD-27 | NN% de confiança do decisor | ausente no c2 | #709 (E3) | Confiança em %. |  |
@@ -464,8 +469,8 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | CARD-55 | Barra de progresso da pesquisa em lote acima da lista (N de M itens concluídos, em andamento/concluído) | ausente no c2 | #709 (E3) | Barra de progresso. |  |
 | CARD-56 | Contador de selecionados e Selecionar visíveis coerentes com o filtro aplicado | divergente | #714 (E4) | Contador coerente com o filtro. |  |
 | CARD-57 | Resultado honesto do envio em lote ao CRM | divergente | #714 (E4) | Resumo criados, existentes e falhas. | `F/components/crm/CrmSendModal.vue:14` |
-| CARD-58 | Mudar status do lead (qualificado, descartado com motivo) e criar contato a partir do resultado | só no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com descartar o lead e criar contatos a partir do resultado. |  |
-| CARD-59 | Escopo de visibilidade dos resultados e da exportação por hierarquia | divergente | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8: o agente vê só as próprias buscas. Hoje tudo é por conta. |  |
+| CARD-58 | Mudar status do lead (qualificado, descartado com motivo) e criar contato a partir do resultado | só no c2 | E8 #732 | Entregue na E8, frente A: descartar com motivo obrigatório (POST leads/discard, até 500 leads), pelo painel e pela barra de seleção. O descartado continua visível, esmaecido e com a faixa do motivo, e o servidor o recusa no envio ao CRM e na criação de contatos. "Desfazer descarte" no painel volta o lead a novo. Criar contato a partir do resultado também vale em lote (POST leads/contacts). | `S/lead_discard.rb:22`, `C/lead_batches_controller.rb:6`, `S/crm_card_batch.rb:48`, `S/contact_batch.rb:19` |
+| CARD-59 | Escopo de visibilidade dos resultados e da exportação por hierarquia | divergente | E8 #732 | Entregue na E8, frente D: o agente vê, abre, exporta, muda e exclui só as próprias buscas (a de outra pessoa responde 404). O administrador vê todas, e a chave de função personalizada prospecting_view_all_searches ("Ver buscas de todos") libera a visão completa. O lead segue a busca: o agente vê o lead das próprias buscas ou de uma lista da conta, e o evento ao vivo só vai para quem pode abrir o lead. Envio em lote por id (CRM e campanha) ainda aceita qualquer lead da conta. | `S/visibility.rb:36`, `S/visibility.rb:43`, `C/leads_controller.rb:175` |
 
 ## Painel do lead e pesquisa (47)
 
@@ -499,10 +504,10 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | PAINEL-26 | Texto de cobrança nos cards (billingCopy), créditos cobrados, 'Cobrança em apuração', 'Saldo insuficiente', 'Orçamento bloqueado', aguardando capacidade por AI_SPEND_* | ausente no c2 | fora (decisão) | Decisão do Rodrigo (24/09): sem cobrança, sem créditos, sem trava de consumo e sem gate de plano. |  |
 | PAINEL-27 | Dados do site: WhatsApp, Instagram, Facebook e LinkedIn como ícones clicáveis, CNPJ do site e estados 'coletando' / erro de acesso | defasado | #706 (E2) | Redes e WhatsApp como links. A coleta ao abrir o painel não existe; ela roda ao fim da busca. |  |
 | PAINEL-28 | Verificação de WhatsApp ao abrir o drawer, testando todos os telefones candidatos (incluindo o WhatsApp do site) | defasado | #706 (E2) | Verificação inclui o WhatsApp do site, no job. |  |
-| PAINEL-29 | Banner de lead queimado (cliente de outro vendedor) e aviso de coexistência (colegas trabalhando o mesmo lead) | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| PAINEL-29 | Banner de lead queimado (cliente de outro vendedor) e aviso de coexistência (colegas trabalhando o mesmo lead) | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
 | PAINEL-30 | Sinais do GBP em grade 4 colunas com rating e total de reviews no cabeçalho | divergente | pendente | Grade de 4 colunas do Orth não conferida no painel; nenhum PR cita. |  |
 | PAINEL-31 | Últimas 5 avaliações | igual | preservado |  |  |
-| PAINEL-32 | Detalhes técnicos do score (modo, score base, priority, traction, componentes, pesos, penalizações, flags) só para hiper_admin | só no c2 | preservado | Card técnico mantido aberto por enquanto; pela decisão de 25/09 (MODO-51, PLAT-05), o bloco técnico passa a ser só do administrador na #732 (E8). |  |
+| PAINEL-32 | Detalhes técnicos do score (modo, score base, priority, traction, componentes, pesos, penalizações, flags) só para hiper_admin | só no c2 | E8 #732 | Era preservado (card técnico aberto a todos). Entregue na E8, frente D: score_breakdown e negative_factors saem só para o administrador da conta, cortados no servidor (busca, lead, lista, descarte em lote e evento ao vivo). O agente recebe a nota, a prioridade e a frase, e o painel só mostra o bloco técnico com can_view_score_details. | `S/visibility.rb:60`, `F/components/search/LeadDetailDrawer.vue:190` |
 | PAINEL-33 | Resumo de IA do lead (enrichment_summary) e e-mail do site (enriched_email) | só no c2 | preservado |  |  |
 | PAINEL-34 | Categoria, etapa do CRM, coordenadas, motivo de descarte e links Abrir contato / Abrir card no drawer | só no c2 | preservado | A etapa do CRM no painel ainda é a da busca, não a do card (ver ACAO-15). |  |
 | PAINEL-35 | Adicionar ao CRM no drawer com escolha de funil e etapa | divergente | #714 (E4) | Enviar ao CRM no painel abre funil e estágio. |  |
@@ -543,8 +548,8 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ACAO-18 | Automação de estágio ao entrar no CRM | igual | #714 (E4) | Automação de entrada roda uma vez para card novo. | `S/crm_card_converter.rb:79` |
 | ACAO-19 | Permissão e escopo no envio | divergente | #714 (E4) | Servidor exige Crm::CardPolicy#create?; esconder o botão é a frente C desta E6. | `C/base_controller.rb:16` |
 | ACAO-20 | Seleção: selecionar todos e limpar seleção | defasado | pendente | Não existe Limpar seleção (ver CARD-37). |  |
-| ACAO-21 | Lead queimado (já é cliente de outro vendedor): selo, bloqueio de seleção e ações | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
-| ACAO-22 | Liberação manual de lead queimado por admin/gestor | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| ACAO-21 | Lead queimado (já é cliente de outro vendedor): selo, bloqueio de seleção e ações | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
+| ACAO-22 | Liberação manual de lead queimado por admin/gestor | ausente no c2 | E8 #732 | Pela decisão de 25/09 não existe bloqueio de lead, então não há liberação manual (frente A). O que ocupa esse lugar é o "Desfazer descarte" no painel do lead. | `F/components/search/LeadDetailDrawer.vue:335` |
 | ACAO-23 | Coexistência: "Mais N colegas também trabalham esse lead" | ausente no c2 | fora (decisão) | Plano rev.7: não portar como está. |  |
 | ACAO-24 | Painel de duplicatas | ausente no c2 | fora (decisão) | Plano rev.7: não portar; gate de plano fora e o c2 não gera duplicata. |  |
 | ACAO-25 | "Adicionar à campanha" direto dos resultados selecionados | ausente no c2 | #714 (E4) | Adicionar à campanha a partir da seleção. |  |
@@ -555,7 +560,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ACAO-30 | Métricas do histórico: leads e "N enviados ao CRM" | igual | preservado |  |  |
 | ACAO-31 | "Ver leads" (reabrir resultado salvo sem custo) e "Repetir busca" | ausente no c2 | #706 (E2) | Repetir e Editar. |  |
 | ACAO-32 | Excluir busca do histórico e "Ver mais" | igual | preservado |  |  |
-| ACAO-33 | Escopo do histórico por usuário/hierarquia | divergente | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8: o agente vê só as próprias buscas. Hoje tudo é por conta. |  |
+| ACAO-33 | Escopo do histórico por usuário/hierarquia | divergente | E8 #732 | Entregue na E8, frente D: o agente vê, abre, exporta, muda e exclui só as próprias buscas (a de outra pessoa responde 404). O administrador vê todas, e a chave de função personalizada prospecting_view_all_searches ("Ver buscas de todos") libera a visão completa. O lead segue a busca: o agente vê o lead das próprias buscas ou de uma lista da conta, e o evento ao vivo só vai para quem pode abrir o lead. Envio em lote por id (CRM e campanha) ainda aceita qualquer lead da conta. | `S/visibility.rb:36`, `S/visibility.rb:43`, `C/leads_controller.rb:175` |
 | ACAO-34 | Listas de prospecção: criar, abrir, remover lead | só no c2 | preservado | Listas preservadas; a #682 (E6) troca card e painel pelos da busca e mantém remover da lista e campanha. |  |
 | ACAO-35 | Adicionar lead à lista muda status para ready_for_campaign | só no c2 | pendente | Adicionar à lista ainda muda qualquer status para ready_for_campaign. | `C/lists_controller.rb:36` |
 | ACAO-36 | Modal "adicionar leads" limitado aos 100 leads mais recentes | só no c2 | pendente | Modal de adicionar leads segue limitado; adicionar à lista direto da busca só existe pelo caminho da campanha (#714). |  |
@@ -573,12 +578,12 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | ACAO-X01 | Criar card do CRM também na tela de Listas, por lead | só no c2 | #714 (E4) | Enviar lista ao CRM nas Listas. |  |
 | ACAO-X02 | O contador de seleção e o que é enviado ou exportado divergem quando há filtro | divergente | #714 (E4) | Seleção coerente com o filtro. |  |
 | ACAO-X03 | Escolha de funil, estágio e campanha feita com <select> nativo | divergente | #714 (E4) | Janela com ChoiceSelect; os selects das telas saíram nos #670 e #671. |  |
-| ACAO-X04 | Criar só o contato (sem card) a partir do lead | só no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com descartar o lead e criar contatos a partir do resultado. |  |
-| ACAO-X05 | Descartar lead ou mudar status do lead | só no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com descartar o lead e criar contatos a partir do resultado. |  |
+| ACAO-X04 | Criar só o contato (sem card) a partir do lead | só no c2 | E8 #732 | Entregue na E8, frente A: criar contatos em lote (POST leads/contacts, até 30 por pedido, o mesmo ContactConverter do contato avulso), com resumo de criados, existentes e falhas; o card troca para "Abrir contato". Descartado fica de fora. | `S/contact_batch.rb:19`, `C/lead_batches_controller.rb:16` |
+| ACAO-X05 | Descartar lead ou mudar status do lead | só no c2 | E8 #732 | Entregue na E8, frente A: descartar com motivo obrigatório (POST leads/discard, até 500 leads), pelo painel e pela barra de seleção. O descartado continua visível, esmaecido e com a faixa do motivo, e o servidor o recusa no envio ao CRM e na criação de contatos. "Desfazer descarte" no painel volta o lead a novo. | `S/lead_discard.rb:22`, `C/lead_batches_controller.rb:6`, `S/crm_card_batch.rb:48` |
 | ACAO-X06 | Gestão da lista: excluir, renomear e adicionar leads em lote de verdade | só no c2 | pendente | Excluir e renomear lista e adicionar em lote não estão em nenhuma etapa. |  |
 | ACAO-X07 | Score, prioridade e dono do card criado pela prospecção | divergente | #714 (E4) | Card com nota e prioridade. |  |
 | ACAO-X08 | IA do gs coloca lead em funil e dispara campanha | divergente | #705 | Casos na bateria do Guia (lote da #705). |  |
-| ACAO-X09 | Campanha pela API do WhatsApp alimentada pela prospecção | divergente | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com a campanha pela API oficial do WhatsApp. O #714 usa campanhas one_off. |  |
+| ACAO-X09 | Campanha pela API do WhatsApp alimentada pela prospecção | divergente | E8 #732 | Entregue na E8, frente D: a janela "Adicionar à campanha" da busca e das Listas mostra primeiro as campanhas da API do WhatsApp agendadas e depois as de envio único. Na campanha da API a etiqueta entra na audiência sob lock enquanto ela está agendada, com a mesma recusa por consentimento, bloqueio e opt-out. A janela lê só a primeira página (25) das campanhas da API. | `S/campaign_segment_builder.rb:185`, `F/utils/campaignChoices.js:8` |
 | ACAO-X10 | Métricas do histórico calculadas sem carregar todos os leads | divergente | pendente | Métricas do histórico ainda carregam os leads de cada busca. |  |
 
 ## Plataforma, chaves e permissões (51)
@@ -589,7 +594,7 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | PLAT-02 | Quem pode usar a busca: papel fixo no gs, papel customizado Ver/Editar no c2 | divergente | preservado | Papel customizado (decisão de 24/09); interruptor de papéis no console no #691. |  |
 | PLAT-03 | Semântica de 'Ver' na prospecção: ler sim, buscar não | divergente | preservado | Leitura por GET e escrita por não-GET. |  |
 | PLAT-04 | Quem altera a configuração da busca (score, modo GMN, país, chaves) | divergente | preservado | Corte por manage mantido no #719. |  |
-| PLAT-05 | Detalhes técnicos do score no drawer do lead (modo, score bruto, fatores negativos) | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8: o bloco técnico da nota fica só para administrador. |  |
+| PLAT-05 | Detalhes técnicos do score no drawer do lead (modo, score bruto, fatores negativos) | ausente no c2 | E8 #732 | Entregue na E8, frente D: score_breakdown e negative_factors saem só para o administrador da conta, cortados no servidor (busca, lead, lista, descarte em lote e evento ao vivo). O agente recebe a nota, a prioridade e a frase, e o painel só mostra o bloco técnico com can_view_score_details. | `S/visibility.rb:60`, `F/components/search/LeadDetailDrawer.vue:190` |
 | PLAT-06 | Tour guiado da busca na primeira vez | ausente no c2 | #682 (E6) | Marca prospecting_search_tour_seen_at no ui_settings do usuário. | `F/utils/searchTour.js:8` |
 | PLAT-07 | Gate de plano no botão 'Adicionar à campanha' | divergente | #714 (E4) | Sem gate de plano; pôr numa campanha exige campaign_manage, criar só o segmento pede a prospecção (a janela da busca esconde a escolha da campanha sem campaign_manage). | `C/base_controller.rb:32` |
 | PLAT-08 | Cota e medição de chamadas ao Google Places | divergente | #691 (E0) | Limites fora; consumed_api_units segue como medição. |  |
@@ -601,11 +606,11 @@ Não sobrou nenhum **a confirmar**. Os 8 que a primeira versão deixou sem prova
 | PLAT-14 | Fila de pesquisa e projeção de capacidade por lead | ausente no c2 | #709 (E3) | Fila por Sidekiq e estado por lead. |  |
 | PLAT-15 | Guarda cifrada da resposta bruta dos provedores de pesquisa | ausente no c2 | #709 (E3) | Não se aplica mais: a pesquisa não guarda resposta bruta de provedor, só a lista fechada de campos do cadastro e dos sócios, que o inventário pedia para proteger. Se um dia guardar, vale a nota da revisão (encrypts do Rails com a configuração exigida). | `S/research/profile_attributes.rb:18` |
 | PLAT-16 | Registro da busca (histórico) | defasado | #699 (E1) | preset_id no metadata; custo estimado fora por decisão. |  |
-| PLAT-17 | Presets de filtros salvos por empresa | ausente no c2 | #732 (E8), decisão 25/09 | Entregue na E8, frente B: tabela própria por conta (nome único na conta sem diferenciar maiúsculas, até 30 por conta, criada sob lock da configuração da conta). Não usa o metadata das configurações porque ele é regravado inteiro pela tela e pelo superadmin. | `M/saved_preset.rb:26` |
+| PLAT-17 | Presets de filtros salvos por empresa | ausente no c2 | E8 #732 | Entregue na E8, frente B: tabela própria por conta (nome único na conta sem diferenciar maiúsculas, até 30 por conta, criada sob lock da configuração da conta). Não usa o metadata das configurações porque ele é regravado inteiro pela tela e pelo superadmin. | `M/saved_preset.rb:26` |
 | PLAT-18 | Configuração de score por empresa (ofertas ativas, pesos, nichos sugeridos, modo) | defasado | fora (decisão 25/09) | Decisão de 25/09 (#732, comentário no #676): fica fora; as ofertas viram perfis do catálogo. |  |
 | PLAT-19 | Catálogo global de critérios de score | divergente | #719 (E5) | Mapeamento dos pesos para os 6 componentes (volume a partir de reviews_count). Ofertas seguem pendentes. |  |
 | PLAT-20 | País principal da busca por empresa | ausente no c2 | #699 (E1) | País por conta. |  |
-| PLAT-21 | Lead queimado (cliente fechado por outro vendedor bloqueia o place) | ausente no c2 | #732 (E8), decisão 25/09 | Decisão de 25/09 (#732, comentário no #676): vira código na E8, com o lead "já no CRM" no lugar do bloqueio por vendedor. |  |
+| PLAT-21 | Lead queimado (cliente fechado por outro vendedor bloqueia o place) | ausente no c2 | E8 #732 | Entregue na E8, frente A, pela decisão de 25/09: no lugar do bloqueio por vendedor, o lead que já tem card mostra a faixa "Já está no CRM: funil, estágio, responsável" no card e no painel (crm_presence no payload, carregado sem N+1) e fica fora do envio em lote ao CRM, na busca e nas Listas. Continua selecionável para campanha, exportação, descarte e contatos. Não há tabela de bloqueio nem prazo: o lead continua da conta. | `S/lead_payload.rb:43`, `F/components/search/LeadStatusBanner.vue:1`, `F/utils/leadCrmPresence.js:9` |
 | PLAT-22 | Chave do Google Places (busca, autocomplete, detalhes) | divergente | #691 (E0) | GOOGLE_PLACES_API_KEY só de plataforma. |  |
 | PLAT-23 | Chave do mapa no navegador | divergente | #691 (E0) | GOOGLE_MAPS_BROWSER_API_KEY da plataforma. |  |
 | PLAT-24 | IA do score, sugestões e enriquecimento: de quem é a credencial | divergente | #691 (E0) | Só crm_kanban_ai, sem CAPTAIN_OPEN_AI_API_KEY. | `S/ai_credential.rb:4` |
