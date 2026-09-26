@@ -145,6 +145,30 @@ describe ContactMergeAction do
         expect(base_contact.opt_out_source).to eq('manual')
       end
 
+      it 'leva os leads da Prospecção do absorvido para o contato que fica, e a recusa continua sustentada' do
+        mergee_contact.update!(phone_number: '+5531988887051')
+        base_contact.update!(phone_number: '+5531977777052')
+        lead = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'merge-lead',
+                                                    name: 'Lead absorvido', phone: '+5531988887051', country: 'BR',
+                                                    contact: mergee_contact)
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).refuse!(lead, user: admin)
+
+        contact_merge
+
+        expect(lead.reload.contact_id).to eq(base_contact.id)
+        expect(Autonomia::Prospecting::ConsentVeto.new(account: account).contact_vetoed?(base_contact.reload)).to be(true)
+      end
+
+      it 'não move lead de outra conta que aponte para o id do absorvido' do
+        foreign = Autonomia::Prospecting::Lead.create!(account: create(:account), provider: 'mock', provider_place_id: 'merge-foreign',
+                                                       name: 'Lead de outra conta', phone: '+5531988887053', country: 'BR')
+        foreign.update_columns(contact_id: mergee_contact.id) # rubocop:disable Rails/SkipsModelValidations
+
+        contact_merge
+
+        expect(foreign.reload.contact_id).to be_nil
+      end
+
       it 'sem recusa dos dois lados, o contato que fica continua sem recusa' do
         contact_merge
 

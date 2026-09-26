@@ -9,8 +9,9 @@
 # - Recusa desfeita de propósito (withdraw!, consent_refused_at volta a nulo): tira só a marca de origem 'prospecting'
 #   dos mesmos contatos, e só onde nenhum outro lead recusado da conta ainda alcança o contato (vários leads podem
 #   dividir o número: central, franquia). Recusa manual ou de descadastro de e-mail nunca sai por aqui; descadastro
-#   feito enquanto a marca da Prospecção valia vira a origem. Sai também a marca da Prospecção que nenhum lead recusado
-#   alcança mais (posta com um número que o lead deixou de ter).
+#   feito enquanto a marca da Prospecção valia vira a origem. Só saem os contatos que o próprio lead alcança hoje: a
+#   marca posta com um número que o lead deixou de ter, ou que chegou a um contato por mescla ou pelo converter, fica.
+#   Marca que sobra é o erro conservador; quem recusou não volta a receber por engano.
 # - Lead recusado que ganha telefone, WhatsApp ou e-mail novo: o callback do Lead chama mark_contacts! de novo.
 #
 # Tudo roda na mesma transação que grava o lead: a recusa e a marca entram ou saem juntas.
@@ -66,7 +67,7 @@ class Autonomia::Prospecting::ContactOptOutSync
   # recusa continua, agora com a origem do descadastro.
   def release(lead)
     inheritance = Contacts::OptOutInheritance.new(account: @account, consent_veto: veto)
-    (reached_contacts(lead) + unsupported_marks).uniq(&:id).each do |contact|
+    reached_contacts(lead).each do |contact|
       next if contact.opt_out_source != SOURCE
 
       source = inheritance.source_for(contact)
@@ -81,13 +82,6 @@ class Autonomia::Prospecting::ContactOptOutSync
   def reached_contacts(lead)
     own = Autonomia::Prospecting::ContactConverter.new(lead: lead, user: nil).existing_contact
     [own, *veto.contacts_vetoed_by(lead)].compact.uniq(&:id)
-  end
-
-  # A marca da Prospecção que nenhum lead recusado da conta alcança mais: a posta com um número ou e-mail que o lead
-  # deixou de ter (busca refeita, enriquecimento). Os números atuais do lead não a acham, e o painel do contato só desfaz
-  # a recusa manual; sem isto ela ficaria para sempre.
-  def unsupported_marks
-    @account.contacts.where(opt_out_source: SOURCE).find_each.reject { |contact| veto.contact_vetoed?(contact) }
   end
 
   # Lido depois de a recusa nova estar gravada: o lead que acabou de desfazer a recusa já não conta.

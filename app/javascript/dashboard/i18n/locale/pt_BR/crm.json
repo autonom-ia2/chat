@@ -1011,7 +1011,7 @@
         "RESET": "Atualizar - reiniciar ciclo",
         "REACTIVATE": "Reativar follow-up",
         "REACTIVATE_CONFIRM_TITLE": "Reativar mesmo com pedido de parada?",
-        "REACTIVATE_CONFIRM_BODY": "Este contato pediu para não receber mais mensagens automáticas. Reativar volta a enviar follow-up para ele. A ação fica registrada com seu nome.",
+        "REACTIVATE_CONFIRM_BODY": "Este contato pediu para não receber mais mensagens automáticas. Reativar volta a enviar follow-up para ele, a não ser que o contato tenha recusa de mensagens ativas gravada: nesse caso o follow-up automático continua parado até a recusa ser desfeita no contato. A ação fica registrada com seu nome.",
         "REACTIVATE_CONFIRM_OK": "Reativar mesmo assim",
         "RESET_SUCCESS": "Ciclo reiniciado.",
         "RESET_ERROR": "Não foi possível reiniciar.",

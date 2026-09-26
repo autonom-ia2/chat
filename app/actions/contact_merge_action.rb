@@ -17,6 +17,7 @@ class ContactMergeAction
       merge_contact_inboxes
       merge_contact_notes
       merge_calls
+      merge_prospecting_leads
       merge_and_remove_mergee_contact
     end
     @base_contact
@@ -52,6 +53,13 @@ class ContactMergeAction
 
   def merge_calls
     # overridden in enterprise/app/actions/enterprise/contact_merge_action.rb
+  end
+
+  # chat#713: o lead da Prospecção é o que sustenta a recusa de origem 'prospecting' no contato. Sem isto a FK anularia o
+  # contact_id ao apagar o absorvido, e a recusa herdada ficaria sem lead que a sustente.
+  def merge_prospecting_leads
+    Autonomia::Prospecting::Lead.where(account_id: @account.id, contact_id: @mergee_contact.id)
+                                .update_all(contact_id: @base_contact.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   end
 
   def merge_and_remove_mergee_contact
