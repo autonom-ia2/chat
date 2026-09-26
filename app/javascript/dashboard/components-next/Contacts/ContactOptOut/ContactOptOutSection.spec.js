@@ -52,11 +52,11 @@ describe('ContactOptOutSection', () => {
     );
   });
 
-  it('com recusa mostra o selo com a origem e oferece desfazer', () => {
+  it('com recusa manual mostra o selo com a origem e oferece desfazer', () => {
     const wrapper = mountSection({
       id: 7,
       optedOutAt: 1790000000,
-      optOutSource: 'email_unsubscribe',
+      optOutSource: 'manual',
     });
 
     expect(wrapper.get('[data-test="opt-out-badge"]').text()).toContain(
@@ -69,6 +69,62 @@ describe('ContactOptOutSection', () => {
     expect(wrapper.get('[data-test="dialog"]').attributes('data-title')).toBe(
       `${PREFIX}.UNDO_DIALOG.TITLE`
     );
+    expect(wrapper.find('[data-test="opt-out-origin-hint"]').exists()).toBe(
+      false
+    );
+  });
+
+  it.each([
+    ['prospecting', 'PROSPECTING'],
+    ['email_unsubscribe', 'EMAIL_UNSUBSCRIBE'],
+  ])(
+    'recusa da origem %s não oferece desfazer aqui e diz onde ela sai',
+    (source, key) => {
+      const wrapper = mountSection({
+        id: 7,
+        optedOutAt: 1790000000,
+        optOutSource: source,
+      });
+
+      expect(wrapper.get('[data-test="opt-out-badge"]').exists()).toBe(true);
+      expect(wrapper.find('[data-test="opt-out-action"]').exists()).toBe(false);
+      expect(wrapper.find('[data-test="dialog"]').exists()).toBe(false);
+      expect(wrapper.get('[data-test="opt-out-origin-hint"]').text()).toBe(
+        `${PREFIX}.ORIGIN_HINT.${key}`
+      );
+    }
+  );
+
+  it('desfazer a manual com outra origem ainda valendo avisa que a recusa continua', async () => {
+    dispatch.mockResolvedValue({
+      id: 7,
+      opted_out_at: 1790000000,
+      opt_out_source: 'email_unsubscribe',
+    });
+    const wrapper = mountSection({
+      id: 7,
+      optedOutAt: 1790000000,
+      optOutSource: 'manual',
+    });
+
+    await wrapper.get('[data-test="confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(alert).toHaveBeenCalledWith(`${PREFIX}.API.UNDO_KEPT`);
+  });
+
+  it('desfazer a manual sem outra origem avisa que a recusa saiu', async () => {
+    dispatch.mockResolvedValue({ id: 7, opted_out_at: null });
+    const wrapper = mountSection({
+      id: 7,
+      optedOutAt: 1790000000,
+      optOutSource: 'manual',
+    });
+
+    await wrapper.get('[data-test="confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(alert).toHaveBeenCalledWith(`${PREFIX}.API.UNDO_SUCCESS`);
   });
 
   it('confirmar marca a recusa pelo store e avisa', async () => {

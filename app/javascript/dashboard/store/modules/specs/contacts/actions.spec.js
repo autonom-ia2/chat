@@ -401,7 +401,7 @@ describe('#actions', () => {
     });
     it('desfaz a recusa e atualiza o contato', async () => {
       axios.delete.mockResolvedValue({ data: { payload: contactList[0] } });
-      await actions.setOptOut(
+      const result = await actions.setOptOut(
         { commit },
         { id: contactList[0].id, optedOut: false }
       );
@@ -409,6 +409,7 @@ describe('#actions', () => {
         `/api/v1/contacts/${contactList[0].id}/opt_out`
       );
       expect(commit.mock.calls).toEqual([[types.EDIT_CONTACT, contactList[0]]]);
+      expect(result).toEqual(contactList[0]);
     });
     it('repassa o erro sem mexer no contato', async () => {
       axios.post.mockRejectedValue({ message: 'Incorrect header' });

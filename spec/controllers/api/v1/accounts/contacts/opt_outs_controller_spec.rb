@@ -71,8 +71,15 @@ RSpec.describe 'Contact opt-out API', type: :request do
   end
 
   describe 'DELETE /api/v1/accounts/:account_id/contacts/:contact_id/opt_out' do
-    it 'desfaz a recusa, de qualquer origem, e devolve o contato sem a marca' do
-      contact.opt_out!(source: 'prospecting')
+    include ActiveJob::TestHelper
+
+    def unsubscribe_email!(email)
+      EmailCampaigns::SuppressionRegistry.new(account: account, email: email)
+                                         .block!(reason: 'unsubscribe', source: 'link', event_key: "unsubscribe:#{email}")
+    end
+
+    it 'desfaz a recusa manual e devolve o contato sem a marca' do
+      contact.opt_out!(source: 'manual', by: agent)
 
       delete url, headers: agent.create_new_auth_token, as: :json
 
@@ -80,9 +87,65 @@ RSpec.describe 'Contact opt-out API', type: :request do
       contact.reload
       expect(contact).not_to be_opted_out
       expect(contact.opt_out_source).to be_nil
+      expect(contact.opted_out_by_id).to be_nil
       payload = response.parsed_body['payload']
       expect(payload['opted_out_at']).to be_nil
       expect(payload['opt_out_source']).to be_nil
+    end
+
+    it 'não desfaz a recusa da Prospecção: ela sai pelo status do lead' do
+      contact.opt_out!(source: 'prospecting')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to be_present
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('prospecting')
+    end
+
+    it 'não desfaz a recusa do descadastro de e-mail, e editar o contato depois não muda a marca' do
+      contact.update!(email: 'ana@example.com')
+      unsubscribe_email!('ana@example.com')
+      expect(contact.reload.opt_out_source).to eq('email_unsubscribe')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      perform_enqueued_jobs(only: Contacts::OptOutInheritanceJob) { contact.reload.update!(phone_number: '+5511988887777') }
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+    end
+
+    it 'desfazer a manual com o e-mail descadastrado deixa a recusa com a origem do e-mail, sem sumir e voltar' do
+      contact.update!(email: 'ana@example.com')
+      contact.opt_out!(source: 'manual', by: agent)
+      unsubscribe_email!('ana@example.com')
+      expect(contact.reload.opt_out_source).to eq('manual')
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']['opt_out_source']).to eq('email_unsubscribe')
+      perform_enqueued_jobs(only: Contacts::OptOutInheritanceJob) { contact.reload.update!(phone_number: '+5511988887777') }
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+      expect(contact.opted_out_by_id).to be_nil
+    end
+
+    it 'desfazer a manual e depois editar telefone e e-mail não re-marca' do
+      Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'places/outro',
+                                           name: 'Outra', phone: '+5511900001111', status: :no_consent)
+      unsubscribe_email!('outra@example.com')
+      contact.opt_out!(source: 'manual', by: agent)
+
+      delete url, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      perform_enqueued_jobs(only: Contacts::OptOutInheritanceJob) do
+        contact.reload.update!(phone_number: '+5511988887777', email: 'nova@example.com')
+      end
+      expect(contact.reload).not_to be_opted_out
     end
 
     it 'sem recusa não muda nada' do

@@ -247,6 +247,7 @@ export const actions = {
         ? await ContactAPI.markOptOut(id)
         : await ContactAPI.removeOptOut(id);
       commit(types.EDIT_CONTACT, response.data.payload);
+      return response.data.payload;
     } catch (error) {
       throw new Error(error);
     }

@@ -8,6 +8,7 @@
 #   uma recusa manual não é trocada pela da Prospecção, e remover depois a da Prospecção não apaga a manual.
 # - opt_in! limpa as três colunas. Com source:, só limpa se a recusa gravada veio daquela origem.
 # - transfer_opt_out! troca a origem sem tirar a recusa, quando a origem gravada sai e outra ainda vale.
+# - Quem grava desfaz só o que é seu: o painel desfaz só a manual (release_manual_opt_out!), a Prospecção só a dela.
 # - As três gravam sem rodar as validações do contato, para dado antigo (e-mail ou telefone fora do formato)
 #   não impedir o registro da recusa. Rodam os callbacks, então o evento de contato atualizado sai normalmente.
 # - As colunas não entram na edição comum do contato (ContactsController#permitted_params); só por estes métodos.
@@ -58,6 +59,15 @@ module ContactOptOut
       log_opt_out_change('opt_in', removed_source, by)
       true
     end
+  end
+
+  # Desfaz a recusa manual. Se outra origem ainda sustenta a recusa (e-mail descadastrado ou lead recusado que alcança o
+  # contato), a recusa fica com essa origem em vez de sumir e voltar sozinha na próxima edição do contato.
+  def release_manual_opt_out!(by:)
+    remaining_source = Contacts::OptOutInheritance.new(account: account).source_for(self)
+    return transfer_opt_out!(from: 'manual', to: remaining_source) if remaining_source
+
+    opt_in!(by: by, source: 'manual')
   end
 
   # A recusa gravada com a origem from continua, agora com a origem to; a data da recusa fica a original.

@@ -1,6 +1,7 @@
 <script setup>
 // Recusa de mensagens ativas no contato (chat#713): mostra o selo com data e origem, e marca ou desfaz pela rota
 // própria, sempre com confirmação. Resposta a quem escreve não muda; só campanhas e follow-ups automáticos respeitam.
+// Aqui só se desfaz a recusa manual: a da Prospecção e a do descadastro de e-mail saem na origem, e a tela diz onde.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { format, fromUnixTime } from 'date-fns';
@@ -20,6 +21,7 @@ const props = defineProps({
 
 const PREFIX = 'CONTACTS_LAYOUT.DETAILS.OPT_OUT';
 const KNOWN_SOURCES = ['prospecting', 'email_unsubscribe', 'manual'];
+const ORIGIN_HINT_SOURCES = ['prospecting', 'email_unsubscribe'];
 
 const { t, locale } = useI18n();
 const store = useStore();
@@ -42,23 +44,39 @@ const sourceLabel = computed(() => {
   return t(`${PREFIX}.SOURCES.${source.toUpperCase()}`);
 });
 
+const canUndo = computed(
+  () => isOptedOut.value && props.contact?.optOutSource === 'manual'
+);
+
+const showAction = computed(() => !isOptedOut.value || canUndo.value);
+
+const originHint = computed(() => {
+  const source = props.contact?.optOutSource;
+  if (!isOptedOut.value || !ORIGIN_HINT_SOURCES.includes(source)) return '';
+  return t(`${PREFIX}.ORIGIN_HINT.${source.toUpperCase()}`);
+});
+
 const dialogKey = computed(() =>
   isOptedOut.value ? `${PREFIX}.UNDO_DIALOG` : `${PREFIX}.MARK_DIALOG`
 );
 
 const openDialog = () => dialogRef.value?.open();
 
+// Desfazer a manual pode deixar a recusa de pé, com a origem que ainda vale (por exemplo, o e-mail descadastrado).
+const resultKey = (optedOut, payload) => {
+  if (optedOut) return 'MARK_SUCCESS';
+  return payload?.opted_out_at ? 'UNDO_KEPT' : 'UNDO_SUCCESS';
+};
+
 const confirmChange = async () => {
   const optedOut = !isOptedOut.value;
   isSaving.value = true;
   try {
-    await store.dispatch('contacts/setOptOut', {
+    const payload = await store.dispatch('contacts/setOptOut', {
       id: props.contact.id,
       optedOut,
     });
-    useAlert(
-      t(optedOut ? `${PREFIX}.API.MARK_SUCCESS` : `${PREFIX}.API.UNDO_SUCCESS`)
-    );
+    useAlert(t(`${PREFIX}.API.${resultKey(optedOut, payload)}`));
     dialogRef.value?.close();
   } catch {
     useAlert(t(`${PREFIX}.API.ERROR`));
@@ -91,11 +109,19 @@ const confirmChange = async () => {
       >
         {{ t(`${PREFIX}.SINCE`, { date: optedOutDate, source: sourceLabel }) }}
       </span>
+      <span
+        v-if="originHint"
+        data-test="opt-out-origin-hint"
+        class="text-sm text-n-slate-11"
+      >
+        {{ originHint }}
+      </span>
       <span class="text-sm text-n-slate-11">
         {{ t(`${PREFIX}.DESCRIPTION`) }}
       </span>
     </div>
     <Button
+      v-if="showAction"
       data-test="opt-out-action"
       :label="isOptedOut ? t(`${PREFIX}.UNDO`) : t(`${PREFIX}.MARK`)"
       size="sm"
@@ -105,6 +131,7 @@ const confirmChange = async () => {
       @click="openDialog"
     />
     <Dialog
+      v-if="showAction"
       ref="dialogRef"
       type="alert"
       :title="t(`${dialogKey}.TITLE`)"

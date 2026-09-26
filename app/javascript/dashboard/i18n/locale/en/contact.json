@@ -528,6 +528,10 @@
           "DESCRIPTION": "This contact will stop receiving campaigns and automatic follow-ups in this account. Conversations the contact starts continue as usual.",
           "CONFIRM": "Yes, mark"
         },
+        "ORIGIN_HINT": {
+          "PROSPECTING": "This opt-out came from Prospecting. It is removed when the lead status is no longer refused.",
+          "EMAIL_UNSUBSCRIBE": "This opt-out came from an email unsubscribe made by the person and cannot be undone here."
+        },
         "UNDO_DIALOG": {
           "TITLE": "Undo opt-out",
           "DESCRIPTION": "This contact asked not to receive outbound messages. Undo only if the contact authorized it again. Campaigns and automatic follow-ups will reach the contact again.",
@@ -536,6 +540,7 @@
         "API": {
           "MARK_SUCCESS": "Opt-out recorded",
           "UNDO_SUCCESS": "Opt-out undone",
+          "UNDO_KEPT": "The team mark was removed, but the opt-out stays because of another origin.",
           "ERROR": "Could not save. Please try again."
         }
       }

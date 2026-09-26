@@ -377,6 +377,8 @@ pt_BR:
   contacts:
     online:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
+    opt_out:
+      undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe. A da Prospecção sai quando o status do lead muda; o descadastro de e-mail não se desfaz por aqui.'
   integration_apps:
     #Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:
