@@ -16,7 +16,9 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   # também é `falhou`.
   EVENTO_DA_RECUSA = {
     'faltam_dados' => 'falta_dado', 'json_invalido' => 'falta_dado', 'sem_veiculo' => 'falta_dado',
-    'ramo_desconhecido' => 'ramo_desconhecido', 'formulario_indisponivel' => 'falhou'
+    'ramo_desconhecido' => 'ramo_desconhecido', 'formulario_indisponivel' => 'falhou',
+    # Conversa 7150: o ramo sem especialista vai para a equipe, como a falha (`RamoSemEspecialista`).
+    'ramo_sem_especialista' => 'falhou'
   }.freeze
 
   # Dito ao modelo junto de todo fato que fala de arquivo enviado: a ordem entre o arquivo e a mensagem, no canal, não
@@ -78,6 +80,14 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
   SEM_BONUS = 'Esta renovação foi cotada sem a classe de bônus da apólice atual: os preços são os de quem faz o primeiro ' \
               'seguro. Com a classe de bônus, que está na apólice, a cotação pode ser refeita, e costuma sair melhor.'.freeze
 
+  # RAMO SEM ESPECIALISTA NO ENVIO (conversa 7150, 26/09/2026): a conferência não rodou e o envio recusou. Quem cuida
+  # do seguro é a equipe, e a fala da Lia de que vai encaminhar é o gatilho da passagem no CRM.
+  FATOS_SEM_ESPECIALISTA = 'A cotação não foi aberta: este tipo de seguro não é cotado pela IA nesta conta, e quem ' \
+                           'cuida dele é a equipe da corretora. Nenhuma opção chegou à pessoa. Não peça dados e não ' \
+                           'ofereça cotar: diga que vai encaminhar para alguém da equipe, sem prazo.'.freeze
+  # A recusa do envio que vira `falhou` e tem fatos próprios. O resto usa os de `falhou`.
+  FATOS_DA_FALHA = { 'formulario_indisponivel' => SEM_FORMULARIO, 'ramo_sem_especialista' => FATOS_SEM_ESPECIALISTA }.freeze
+
   FALTA_JSON = 'A cotação não foi aberta: os dados do ramo que o especialista mandou não puderam ser lidos. Confira com o ' \
                'especialista o que falta e pergunte à pessoa só o que ninguém disse ainda.'.freeze
   FALTA_PREFIXO = 'A cotação não foi aberta: falta dado que a pessoa precisa dar. O que a conferência apontou:'.freeze
@@ -136,7 +146,7 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
 
     # Formulário indisponível recusaria de novo: não se oferece pedir outra vez.
     def fatos_da_falha(handle)
-      (handle['recusa'] || handle['motivo']).to_s == 'formulario_indisponivel' ? SEM_FORMULARIO : FATOS['falhou']
+      FATOS_DA_FALHA.fetch((handle['recusa'] || handle['motivo']).to_s, FATOS['falhou'])
     end
 
     # A recusa desta versão traz os `problemas` (campo e motivo, como a conferência os produz); a da versão

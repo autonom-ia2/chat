@@ -190,7 +190,7 @@
         "UNDO_POINT": "Desfazer último ponto",
         "CLEAR": "Limpar desenho"
       },
-      "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, amplia o raio automaticamente em até 3 tentativas.",
+      "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, tenta uma vez com o dobro do raio, até 10 km, e só fica com essa tentativa se ela trouxer mais.",
       "PRIORITY_GOOGLE_RANK": "G #{rank}",
       "PRIORITY_POSITION": "Posição {position}",
       "PRIORITY_POSITION_IN_LIST": "Posição {position} da lista",
@@ -220,6 +220,7 @@
       "RATING_LABEL": "{rating} estrelas",
       "REVIEWS_LABEL": "{count} avaliações",
       "RADIUS_KM_VALUE": "{value} km",
+      "RADIUS_EXPANDED_VALUE": "{value} km, ampliado de {requested} km",
       "CONTACT_DATA": "Contato",
       "REPUTATION": "Reputação",
       "LATEST_REVIEWS_TITLE": "Últimas {count} avaliações",
@@ -413,7 +414,33 @@
         "CREATED_AT": "Criada em"
       },
       "SEND_TO_CRM": "Enviar ao CRM",
-      "ADD_TO_CAMPAIGN": "Adicionar à campanha"
+      "ADD_TO_CAMPAIGN": "Adicionar à campanha",
+      "SAVED_PRESETS": {
+        "SAVE_AS": "Salvar como jogada",
+        "SAVE_AS_EMPTY": "Escolha pelo menos um filtro para salvar a jogada.",
+        "TITLE": "Salvar filtros como jogada",
+        "DESCRIPTION": "Dê um nome para usar estes filtros de novo. A jogada fica na grade da conta, no modo desta busca.",
+        "NAME": "Nome da jogada",
+        "NAME_PLACEHOLDER": "ex.: Sem site e bem avaliadas",
+        "SAVE": "Salvar jogada",
+        "CANCEL": "Cancelar",
+        "ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "TAGS": {
+          "HAS_WEBSITE_YES": "Com site",
+          "HAS_WEBSITE_NO": "Sem site",
+          "HAS_PHOTOS_YES": "Com fotos",
+          "HAS_PHOTOS_NO": "Sem fotos",
+          "REVIEWS_MIN": "{value}+ avaliações",
+          "RATING_MIN": "Nota acima de {value}",
+          "RATING_MAX": "Nota abaixo de {value}",
+          "OUTSIDE_TOP": "Fora do top {value} do Google",
+          "SEARCH_RANK_MAX": "Até a posição {value} do Google",
+          "HAS_PHONE_YES": "Com telefone",
+          "HAS_PHONE_NO": "Sem telefone",
+          "OPEN_NOW": "Aberto agora",
+          "HAS_OPENING_HOURS": "Com horário"
+        }
+      }
     },
     "LISTS": {
       "TITLE": "Listas",
@@ -493,6 +520,40 @@
         "ready_for_campaign": "Pronto para campanha"
       }
     },
+    "LEAD_STATUS": {
+      "IN_CRM": "Já está no CRM",
+      "NO_OWNER": "sem responsável",
+      "DISCARDED": "Descartado",
+      "RESTORE": "Desfazer descarte",
+      "RESTORED": "Descarte desfeito. O lead voltou a novo.",
+      "RESTORE_ERROR": "Não foi possível desfazer o descarte."
+    },
+    "DISCARD": {
+      "ACTION": "Descartar",
+      "TITLE": "Descartar leads",
+      "DESCRIPTION": "{count} lead(s) saem do envio ao CRM, dos contatos e da campanha. Continuam na busca, marcados como descartados.",
+      "REASON": "Motivo",
+      "OTHER_REASON": "Escreva o motivo",
+      "REASONS": {
+        "NO_INTEREST": "Sem interesse",
+        "OUT_OF_PROFILE": "Fora do perfil",
+        "ALREADY_CUSTOMER": "Já é cliente",
+        "WRONG_DATA": "Dados errados",
+        "CLOSED": "Empresa fechada",
+        "OTHER": "Outro motivo"
+      },
+      "SUBMIT": "Descartar",
+      "SUBMITTING": "Descartando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "DONE": "{count} lead(s) descartado(s).",
+      "ERROR": "Não foi possível descartar os leads."
+    },
+    "BULK": {
+      "CRM_EXCLUDED": "{count} já no CRM ou descartado(s) ficam fora do envio.",
+      "CREATING_CONTACTS": "Criando contatos...",
+      "CONTACTS_RESULT": "Contatos: {created} criado(s), {existing} já existia(m), {failed} falha(s)."
+    },
     "SETTINGS": {
       "TITLE": "Prospecção",
       "DESCRIPTION": "Configure o funil padrão, o cache e os critérios de score usados nas buscas de leads.",
@@ -534,7 +595,8 @@
       "UNLIMITED": "sem limite",
       "TABS": {
         "GENERAL": "Geral",
-        "SCORE": "Score"
+        "SCORE": "Score",
+        "PRESETS": "Jogadas"
       },
       "PROVIDERS": {
         "MOCK": "Demonstração",
@@ -575,6 +637,23 @@
         "RESEARCH_TITLE": "Pesquisa de empresa e decisor",
         "RESEARCH_ENABLED": "Pesquisa liberada pelo superadmin para esta conta.",
         "RESEARCH_DISABLED": "Pesquisa não liberada para esta conta. Fale com o suporte para contratar."
+      },
+      "SAVED_PRESETS": {
+        "TITLE": "Jogadas salvas",
+        "HINT": "Jogadas que a conta salvou na busca, em Filtros avançados. Aparecem na grade de jogadas, no modo em que foram salvas.",
+        "EMPTY": "Nenhuma jogada salva ainda. Na busca, abra Filtros avançados, escolha os filtros e use Salvar como jogada.",
+        "EDIT": "Editar",
+        "DELETE": "Excluir",
+        "CONFIRM_DELETE": "Confirmar exclusão",
+        "CANCEL": "Cancelar",
+        "EDIT_TITLE": "Editar jogada",
+        "NAME": "Nome da jogada",
+        "SAVE": "Salvar jogada",
+        "CLOSE": "Fechar",
+        "SAVE_ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "DELETE_ERROR": "Não foi possível excluir a jogada. Tente de novo.",
+        "DELETED": "Jogada excluída.",
+        "SAVED": "Jogada salva."
       }
     },
     "MOCK_PROVIDER": {
@@ -727,6 +806,8 @@
       "RULE": "Entram no segmento os leads prontos para campanha, com WhatsApp verificado e sem bloqueio no contato. Os outros aparecem no resumo, com o motivo.",
       "CAMPAIGN": "Campanha",
       "SEGMENT_ONLY": "Só criar o segmento, sem campanha",
+      "CHOICE_WHATSAPP_API": "WhatsApp API · {title}",
+      "CHOICE_ONE_OFF": "Envio único · {title}",
       "SEGMENT_NAME": "Nome do segmento",
       "CAMPAIGNS_LOAD_ERROR": "Não foi possível carregar as campanhas. Dá para criar só o segmento e ligar a campanha depois.",
       "SUBMIT": "Adicionar",
@@ -737,8 +818,8 @@
       "ERRORS": {
         "NO_ELIGIBLE": "Nenhum lead da seleção pode entrar na campanha.",
         "CAMPAIGN_NOT_FOUND": "A campanha escolhida não existe mais. Escolha outra.",
-        "CAMPAIGN_NOT_ACTIVE": "A campanha escolhida não está ativa. Escolha outra ou crie só o segmento.",
-        "UNSUPPORTED_CAMPAIGN": "Só campanhas de envio único recebem leads da prospecção.",
+        "CAMPAIGN_NOT_ACTIVE": "A campanha escolhida não está ativa ou já começou a enviar. Escolha outra ou crie só o segmento.",
+        "UNSUPPORTED_CAMPAIGN": "Só campanhas de envio único ou da API do WhatsApp recebem leads da prospecção.",
         "LABEL_COLLISION": "Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.",
         "TOO_MANY_LEADS": "Selecione até 500 leads por vez.",
         "EMPTY_SELECTION": "Selecione pelo menos um lead."

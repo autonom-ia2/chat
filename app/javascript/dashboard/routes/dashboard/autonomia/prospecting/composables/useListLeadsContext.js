@@ -13,6 +13,7 @@ import { provideProspectingLeadContext } from './useProspectingSearch';
 import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadResearch } from './useLeadResearch';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
+import { useLeadStatusActions } from './useLeadStatusActions';
 import { useSearchCrm } from './useSearchCrm';
 
 // Troca o lead onde ele aparece na tela: na lista aberta e no catálogo do
@@ -110,6 +111,8 @@ export const useListLeadsContext = ({
     requestLeadResearch,
     adoptOwner,
     isWhatsAppChecking: whatsapp.isWhatsAppChecking,
+    // Descartar e desfazer o descarte no painel (#732), como na busca.
+    ...useLeadStatusActions({ replaceLead }),
     openCrmSend: leadsToSend => {
       crmSendLeads.value = leadsToSend;
     },

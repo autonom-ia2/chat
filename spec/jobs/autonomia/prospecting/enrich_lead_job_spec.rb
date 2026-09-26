@@ -78,4 +78,32 @@ RSpec.describe Autonomia::Prospecting::EnrichLeadJob do
   it 'ignora lead apagado' do
     expect { described_class.perform_now(0) }.not_to raise_error
   end
+
+  # Registro de eventos (#732 item 13, ENRIQ-60).
+  describe 'registro de eventos' do
+    include ProspectingEventLogHelpers
+
+    it 'registra o trabalho interrompido com a classe do erro, sem a mensagem' do
+      allow(enricher).to receive(:perform).and_raise(ActiveRecord::ConnectionTimeoutError, 'pool esgotado em db-secreto.internal')
+
+      log = capture_prospecting_events { described_class.perform_now(lead.id) }
+
+      expect(log.events).to eq(
+        [{ 'event' => 'enrichment.interrupted', 'lead_id' => lead.id, 'account_id' => account.id,
+           'reason' => 'ActiveRecord::ConnectionTimeoutError' }]
+      )
+      expect(log.text).not_to include('db-secreto.internal')
+    end
+
+    it 'registra a verificação do WhatsApp do site posta na fila, sem o número' do
+      allow(enricher).to receive(:perform) { lead.update!(enrichment_status: 'completed', enriched_whatsapp: '+5541988887777') }
+
+      log = capture_prospecting_events { described_class.perform_now(lead.id) }
+
+      expect(log.events).to eq(
+        [{ 'event' => 'whatsapp.queued', 'lead_id' => lead.id, 'account_id' => account.id, 'source' => 'site' }]
+      )
+      expect(log.text).not_to include('5541988887777')
+    end
+  end
 end

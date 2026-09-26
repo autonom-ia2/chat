@@ -30,24 +30,40 @@ class Autonomia::Prospecting::WhatsappVerifier
   end
 
   def perform
-    raise Error, 'prospecting.whatsapp.phone_missing' if normalized_phone.blank?
-    raise Error, 'prospecting.whatsapp.waha_not_configured' unless Waha::Config.enabled?
-    raise Error, 'prospecting.whatsapp.session_missing' if waha_session.blank?
+    refuse!('prospecting.whatsapp.phone_missing') if normalized_phone.blank?
+    refuse!('prospecting.whatsapp.waha_not_configured') unless Waha::Config.enabled?
+    refuse!('prospecting.whatsapp.session_missing') if waha_session.blank?
 
     response = Waha::Client.new.check_contact_exists(phone: normalized_phone, session: waha_session)
     record_result(ActiveModel::Type::Boolean.new.cast(response['numberExists']), response['chatId'])
   rescue Waha::Client::Error => e
     return number_changed_result unless persist_failure!(e.message)
 
+    # A mensagem do WAHA traz a URL com o número: no log vai só a classe.
+    log_event('whatsapp.failed', reason: e, level: :warn)
     raise Error, 'prospecting.whatsapp.verification_failed'
   end
 
   private
 
+  def refuse!(code)
+    log_event('whatsapp.skipped', reason: code)
+    raise Error, code
+  end
+
+  def log_event(event, **)
+    Autonomia::Prospecting::EventLog.emit(event, lead: @lead, source: source_name, **)
+  end
+
+  def source_name
+    SOURCES.key(@source)
+  end
+
   def record_result(exists, waha_chat_id)
     chat_id = exists ? waha_chat_id.presence || "#{normalized_phone.delete('+')}#{Autonomia::Prospecting::PhoneContract::CHAT_ID_SUFFIX}" : nil
     return number_changed_result unless persist_result!(exists: exists, chat_id: chat_id)
 
+    log_event('whatsapp.checked', status: exists ? 'verified' : 'not_whatsapp')
     Result.new(lead: @lead.reload, exists: exists, phone: normalized_phone, chat_id: chat_id)
   end
 
@@ -110,6 +126,7 @@ class Autonomia::Prospecting::WhatsappVerifier
   # recoloca, porque "queued" não conta como pendente (LeadWorkQueue.google_phone_pending?).
   # Lead apagado no meio: nada a recolocar na fila, e o resultado sai sem lead.
   def number_changed_result
+    log_event('whatsapp.number_changed')
     requeue_google_phone! if @source == SOURCES[:google]
     Result.new(lead: Autonomia::Prospecting::Lead.find_by(id: @lead.id), exists: nil, phone: nil, chat_id: nil, pending: true)
   end

@@ -10,8 +10,10 @@ class Autonomia::Prospecting::CrmCardBatch
   class TooManyLeads < Error; end
   class NoLeads < Error; end
 
-  def initialize(account:, user:, lead_ids:, pipeline_id:, stage_id:)
+  # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6). O controller sempre passa; sem ele, a conta.
+  def initialize(account:, user:, lead_ids:, pipeline_id:, stage_id:, leads_scope: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
+    @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @user = user
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
     @pipeline_id = pipeline_id
@@ -38,12 +40,14 @@ class Autonomia::Prospecting::CrmCardBatch
   end
 
   def leads_by_id
-    @leads_by_id ||= Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).index_by(&:id)
+    @leads_by_id ||= @leads_scope.where(id: @lead_ids).index_by(&:id)
   end
 
   def send_lead(lead_id, result)
     lead = leads_by_id[lead_id]
     return result.failed << failure(lead_id, 'not_found') if lead.nil?
+    # Descartado sai das ações de envio (#732): nem card, nem contato.
+    return result.failed << failure(lead_id, 'discarded') if lead.discarded?
 
     record(convert(lead), result)
   rescue ActiveRecord::RecordInvalid

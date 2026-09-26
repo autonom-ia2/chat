@@ -65,7 +65,10 @@ const areaConfig = state => {
   return base;
 };
 
-const isChecked = value => value === true || value === 'true';
+// Expansão de raio ligada por padrão, como no Orth (allowRadiusExpansion !== false,
+// #732 item 4): só a caixa desmarcada desliga, e a busca salva sem a chave
+// repete com ela ligada.
+const isExpansionOn = value => value !== false && value !== 'false';
 
 // Repetir ou editar uma busca salva (#678): o local volta confirmado, sem
 // consultar o Google, com o ponto e a área gravados. O raio é o que a pessoa
@@ -91,7 +94,9 @@ const restoreLocationForm = (
     location: search.location || '',
     area_type: search.area_type || 'radius',
     radius_km: radius > 0 ? radius / 1000 : form.value.radius_km,
-    auto_expand_radius: isChecked(search.search_filters?.auto_expand_radius),
+    auto_expand_radius: isExpansionOn(
+      search.search_filters?.auto_expand_radius
+    ),
     decision_maker_type:
       search.decision_maker_type || DEFAULT_DECISION_MAKER_TYPE,
   };
@@ -117,7 +122,7 @@ export const locationSlice = {
     location: '',
     area_type: 'radius',
     radius_km: 1,
-    auto_expand_radius: false,
+    auto_expand_radius: true,
     decision_maker_type: DEFAULT_DECISION_MAKER_TYPE,
   }),
   createState: () => ({

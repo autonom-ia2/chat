@@ -58,12 +58,28 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
     ::Autonomia::Prospecting::Search.where(account: Current.account)
   end
 
+  # O agente só vê e mexe nos leads das próprias buscas e das listas da conta (#732, item 6). Vale para toda ação que
+  # acha o lead pelo id, inclusive os lotes (descartar, contatos, CRM, campanha) e o "adicionar à lista": um lead posto
+  # numa lista fica visível para a conta, então a lista não pode ser o atalho para o lead de outro agente.
   def leads_scope
-    ::Autonomia::Prospecting::Lead.where(account: Current.account)
+    visibility.leads(::Autonomia::Prospecting::Lead.where(account: Current.account))
   end
 
   def lists_scope
     ::Autonomia::Prospecting::List.where(account: Current.account)
+  end
+
+  # Quem vê o quê (#732): o agente só as próprias buscas e os leads delas; o bloco técnico da nota só o administrador.
+  def visibility
+    @visibility ||= ::Autonomia::Prospecting::Visibility.new(Current.account_user)
+  end
+
+  def visible_searches_scope
+    visibility.searches(searches_scope)
+  end
+
+  def visible_lead_payload(payload)
+    visibility.lead_payload(payload)
   end
 
   def setting
@@ -97,5 +113,10 @@ class Api::V1::Accounts::Autonomia::Prospecting::BaseController < Api::V1::Accou
   # Um por requisição: o país da busca da conta é lido uma vez.
   def lead_payload_builder
     @lead_payload_builder ||= ::Autonomia::Prospecting::LeadPayload.new(account: Current.account)
+  end
+
+  # Associações que o payload do lead lê, carregadas de uma vez na lista (#732: o card do CRM, sem N+1).
+  def lead_preloads
+    ::Autonomia::Prospecting::LeadPayload::PRELOADS
   end
 end

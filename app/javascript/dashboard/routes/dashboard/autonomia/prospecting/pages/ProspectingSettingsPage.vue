@@ -9,6 +9,7 @@ import BaseSettingsHeader from '../../../settings/components/BaseSettingsHeader.
 import ProspectingAiCredentialNotice from '../components/ProspectingAiCredentialNotice.vue';
 import ProspectingMockProviderNotice from '../components/ProspectingMockProviderNotice.vue';
 import ProspectingOrthScoreWeights from '../components/ProspectingOrthScoreWeights.vue';
+import ProspectingSavedPresets from '../components/ProspectingSavedPresets.vue';
 import ProspectingSearchCountryField from '../components/ProspectingSearchCountryField.vue';
 import { DEFAULT_SEARCH_COUNTRY } from '../utils/searchCountries';
 
@@ -22,6 +23,8 @@ const crmPipelines = ref([]);
 const crmStages = ref([]);
 const scoringProfiles = ref([]);
 const activeSettingsTab = ref('general');
+// Jogadas salvas (#732): lista própria, salva jogada a jogada, fora do Salvar da tela.
+const savedPresets = ref([]);
 const CUSTOM_SCORING_PROFILE_VALUE = 'custom';
 const scoringWeightKeys = [
   'website',
@@ -143,6 +146,7 @@ const displayedScoringWeights = computed(() => {
 
 const syncForm = payload => {
   settings.value = payload;
+  savedPresets.value = payload.saved_presets || [];
   scoringProfiles.value = payload.scoring_profiles || [];
   const defaultProfile =
     scoringProfiles.value.find(profile => profile.default) ||
@@ -287,6 +291,18 @@ onMounted(fetchSettings);
             @click="activeSettingsTab = 'score'"
           >
             {{ t('PROSPECTING.SETTINGS.TABS.SCORE') }}
+          </button>
+          <button
+            type="button"
+            class="relative px-4 py-2 text-sm font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:rounded-full after:transition-all after:duration-200"
+            :class="
+              activeSettingsTab === 'presets'
+                ? 'text-n-blue-11 after:bg-n-brand after:opacity-100'
+                : 'text-n-slate-11 after:bg-transparent after:opacity-0 hover:text-n-slate-12'
+            "
+            @click="activeSettingsTab = 'presets'"
+          >
+            {{ t('PROSPECTING.SETTINGS.TABS.PRESETS') }}
           </button>
         </div>
 
@@ -556,7 +572,13 @@ onMounted(fetchSettings);
           </div>
         </div>
 
+        <ProspectingSavedPresets
+          v-if="activeSettingsTab === 'presets'"
+          v-model="savedPresets"
+        />
+
         <button
+          v-if="activeSettingsTab !== 'presets'"
           type="submit"
           class="h-10 w-fit rounded-md bg-n-brand px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="isSaving"

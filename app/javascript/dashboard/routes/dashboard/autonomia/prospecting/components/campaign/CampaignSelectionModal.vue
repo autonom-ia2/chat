@@ -1,15 +1,21 @@
 <script setup>
 // Janela "Adicionar à campanha" a partir da seleção da busca (#680). Como no
 // Orth (ACAO-25/37), a seleção vira um segmento: uma lista, uma etiqueta nos
-// contatos e, se escolhida, a campanha de envio único ativa. Quem decide quem
-// entra é o servidor; a janela mostra quem entrou e quem ficou de fora, com o
-// motivo de cada lead (ACAO-26/27).
+// contatos e, se escolhida, a campanha: a da API do WhatsApp que ainda não
+// começou, primeiro, ou a de envio único ativa (#732, item 11). Quem decide
+// quem entra é o servidor, com a mesma recusa para os dois tipos; a janela
+// mostra quem entrou e quem ficou de fora, com o motivo de cada lead
+// (ACAO-26/27).
 import { computed, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import CampaignsAPI from 'dashboard/api/campaigns';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
+import {
+  campaignChoices as buildCampaignChoices,
+  loadCampaigns,
+  parseCampaignChoice,
+} from '../../utils/campaignChoices';
 
 const props = defineProps({
   leads: { type: Array, required: true },
@@ -29,6 +35,7 @@ const titleId = useId();
 const segmentFieldId = useId();
 
 const campaigns = ref([]);
+const whatsappApiCampaigns = ref([]);
 const campaignsFailed = ref(false);
 const campaignId = ref('');
 const segmentName = ref(props.defaultSegmentName);
@@ -40,13 +47,11 @@ const rejectedLeads = ref([]);
 
 const campaignChoices = computed(() => [
   { value: '', label: t('PROSPECTING.CAMPAIGN_SELECTION.SEGMENT_ONLY') },
-  ...campaigns.value
-    .filter(
-      campaign =>
-        campaign.campaign_type === 'one_off' &&
-        campaign.campaign_status === 'active'
-    )
-    .map(campaign => ({ value: campaign.id, label: campaign.title })),
+  ...buildCampaignChoices({
+    campaigns: campaigns.value,
+    whatsappApiCampaigns: whatsappApiCampaigns.value,
+    t,
+  }),
 ]);
 const canSubmit = computed(
   () => Boolean(segmentName.value.trim()) && !isSubmitting.value
@@ -108,12 +113,10 @@ const errorText = error => {
 
 onMounted(async () => {
   if (!props.canChooseCampaign) return;
-  try {
-    const { data } = await CampaignsAPI.get();
-    campaigns.value = data || [];
-  } catch {
-    campaignsFailed.value = true;
-  }
+  const loaded = await loadCampaigns();
+  campaigns.value = loaded.campaigns;
+  whatsappApiCampaigns.value = loaded.whatsappApiCampaigns;
+  campaignsFailed.value = loaded.failed;
 });
 
 const submit = async () => {
@@ -125,7 +128,7 @@ const submit = async () => {
   try {
     const { data } = await AutonomiaProspectingAPI.addLeadsToCampaign({
       leadIds: props.leads.map(lead => lead.id),
-      campaignId: campaignId.value,
+      ...parseCampaignChoice(campaignId.value),
       segmentName: segmentName.value.trim(),
     });
     segment.value = data.payload.segment;

@@ -581,7 +581,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'está no arquivo e é extraído inteiro' do
       expect(secao).to be_present
       expect(secao).to start_with('### Os especialistas de ramo')
-      expect(secao).to end_with("a corretora não atende esse seguro e ofereça o que ela atende.\n")
+      expect(secao).to end_with("do que você cota. O resto a corretora trabalha, e quem cuida é a equipe.\n")
     end
 
     # 23/09/2026 (`b5984308…` -> `eeba4c92…`): a cotação que abre não pede recibo; não repetir não é mudar o fato.
@@ -599,13 +599,17 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # `lookup_failed` da adapters#107) sai de novo, e a frase passa a dizer só o que é verdade: "com o mesmo documento, a
     # busca paga do segurado que já teve resposta não se repete". A recusa de seguradora vai para a linha seguinte, sem
     # mudar o sentido.
-    # Voz da Lia, item 9 (`b3cae4f5…` -> `6154f1f5…`, 26/09/2026): o especialista devolve fatos, não fala, e a mensagem
-    # é da Lia, reagindo ao que a pessoa disse. Promessas em `builder_voz_da_lia_promessas_spec` (`DO_PRINCIPAL`).
-    # Revisão adversarial no mesmo dia (`6154f1f5…` -> `61939007…`): "o que foi pedido às seguradoras" no lugar de "o que
-    # do pedido entrou", e a SITUAÇÃO vale mais que os fatos dele, não que a prosa.
+    # Conversa 7150 (`b3cae4f5…` -> `0e278c8f…`, 26/09/2026): "você não cota" deixa de ser "a corretora não atende". O
+    # ramo que a corretora trabalha e a IA não cota vai para a equipe; só o que está fora das duas listas de
+    # consultar_produtos_cotacao a corretora não atende. As promessas novas estão em
+    # `builder_instrucao_ramo_sem_especialista_spec` (`ManualDoRamoSemEspecialista::PROMESSAS_DA_CONDUTA`), exercitadas.
+    # Voz da Lia, item 9, com a revisão adversarial, integrada à conversa 7150 (`0e278c8f…` -> `13e38571…`, 26/09/2026):
+    # o especialista devolve fatos, não fala ("o que foi pedido às seguradoras", o que não coube, o que falta), a
+    # mensagem é da Lia, reagindo ao que a pessoa disse, e a SITUAÇÃO vale mais que os fatos dele. Promessas em
+    # `builder_voz_da_lia_promessas_spec` (`DO_PRINCIPAL`).
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('61939007e3306170ea7e1e05070962ec')
+      expect(Digest::MD5.hexdigest(secao)).to eq('13e38571aede42a1c67b2274af46ee67')
     end
 
     it 'não introduz variável para substituir' do

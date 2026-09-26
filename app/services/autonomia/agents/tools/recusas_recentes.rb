@@ -18,13 +18,30 @@ module Autonomia::Agents::Tools::RecusasRecentes
                especialista_nao_concluiu consulta_de_placa_indisponivel consulta_de_cep_indisponivel
                busca_de_atividade_indisponivel].freeze
 
+  # O RAMO QUE A PESSOA PEDIU E A IA NÃO COTA (conversa 7150, 26/09/2026): a Lia encaminha para a equipe, e a equipe
+  # precisa saber qual seguro a pessoa quer. Guardado como `ramo_pedido:<ramo>`, na mesma lista, para sair na mesma nota.
+  PREFIXO_DO_RAMO = 'ramo_pedido:'.freeze
+
   module_function
 
   def anotar(conversa_id, motivo)
     return if conversa_id.blank? || NA_NOTA.exclude?(motivo)
 
+    guardar(conversa_id, motivo)
+  end
+
+  # `ramo` é o código do produto como a conexão o escreve (`vida`, `vida_global`), nunca texto da pessoa: quem chama
+  # confere que ele está na lista da conexão. O que não tem forma de código não é guardado. Nunca levanta.
+  def anotar_ramo(conversa_id, ramo)
+    codigo = ::Autonomia::Agents::Tools::Recusa.codigo(ramo)
+    return if conversa_id.blank? || codigo == '-'
+
+    guardar(conversa_id, "#{PREFIXO_DO_RAMO}#{codigo}")
+  end
+
+  def guardar(conversa_id, valor)
     chave = format(CHAVE, conversa: conversa_id)
-    Redis::Alfred.lpush(chave, motivo)
+    Redis::Alfred.lpush(chave, valor)
     Redis::Alfred.with { |redis| redis.ltrim(chave, 0, TETO - 1) }
     Redis::Alfred.expire(chave, VALIDADE.to_i)
     nil

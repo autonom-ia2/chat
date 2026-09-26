@@ -21,11 +21,14 @@ class Autonomia::Prospecting::SelectionCampaignSegment
     end
   end
 
-  def initialize(account:, user:, lead_ids:, campaign_id: nil, segment_name: nil)
+  # campaign: { id:, type: }, a campanha escolhida e o tipo dela (#732, item 11); vazio cria só o segmento.
+  # leads_scope: os leads que quem pede enxerga (Visibility, #732 item 6); o que fica de fora volta em missing_lead_ids.
+  def initialize(account:, user:, lead_ids:, campaign: {}, segment_name: nil, leads_scope: nil) # rubocop:disable Metrics/ParameterLists
     @account = account
+    @leads_scope = leads_scope || Autonomia::Prospecting::Lead.where(account: account)
     @user = user
     @lead_ids = Array(lead_ids).map(&:to_i).uniq
-    @campaign_id = campaign_id
+    @campaign = campaign.to_h.symbolize_keys
     @segment_name = segment_name.to_s.strip.presence || default_name
   end
 
@@ -43,7 +46,7 @@ class Autonomia::Prospecting::SelectionCampaignSegment
   private
 
   def leads
-    @leads ||= Autonomia::Prospecting::Lead.where(account: @account, id: @lead_ids).order(:id).to_a
+    @leads ||= @leads_scope.where(id: @lead_ids).order(:id).to_a
   end
 
   def missing_lead_ids
@@ -72,7 +75,7 @@ class Autonomia::Prospecting::SelectionCampaignSegment
 
   def build_segment(list)
     builder = Autonomia::Prospecting::CampaignSegmentBuilder.new(
-      list: list, user: @user, campaign_id: @campaign_id, segment_name: @segment_name
+      list: list, user: @user, campaign_id: @campaign[:id], campaign_type: @campaign[:type], segment_name: @segment_name
     )
     builder.perform
   rescue Autonomia::Prospecting::CampaignSegmentBuilder::Error => e

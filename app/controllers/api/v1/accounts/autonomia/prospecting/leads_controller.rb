@@ -3,7 +3,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   before_action -> { authorize_campaign_update!(params[:campaign_id]) }, only: [:create_campaign_segment]
 
   def index
-    leads = filtered_leads_scope.includes(:company_profile, :contact).order(created_at: :desc).limit(100)
+    leads = filtered_leads_scope.includes(*lead_preloads).order(created_at: :desc).limit(100)
     render json: { payload: leads.map { |lead| lead_payload(lead) } }
   end
 
@@ -14,6 +14,8 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
   def update
     lead = leads_scope.find(params[:id])
     lead.update!(lead_params)
+    # Recusa ou descarte depois do segmento: a etiqueta sai no job da Prospecção, antes de a campanha ler o público por ela.
+    ::Autonomia::Prospecting::SegmentRefusalSync.enqueue(account: Current.account, leads: [lead]) if lead.saved_change_to_status?
 
     render json: { payload: lead_payload(lead.reload) }
   rescue ActiveRecord::RecordInvalid => e
@@ -74,11 +76,7 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
   # "Adicionar à campanha" a partir da seleção (#680, ACAO-25/26/27): a seleção vira lista e segue o segmento das Listas.
   def create_campaign_segment
-    result = ::Autonomia::Prospecting::SelectionCampaignSegment.new(
-      account: Current.account, user: Current.user, lead_ids: params[:lead_ids],
-      campaign_id: params[:campaign_id], segment_name: params[:segment_name]
-    ).perform
-    render json: { payload: selection_segment_payload(result) }, status: :created
+    render json: { payload: selection_segment_payload(selection_campaign_segment.perform) }, status: :created
   rescue ActiveRecord::RecordNotFound
     render_campaign_error('prospecting.campaign.not_found', status: :not_found)
   rescue ActiveRecord::RecordInvalid => e
@@ -167,17 +165,14 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     scope.where(status: params[:status])
   end
 
-  def lead_payload(lead)
-    lead_payload_builder.build(lead)
-  end
+  # O bloco técnico da nota só vai para o administrador (#732, item 9).
+  def lead_payload(lead) = visible_lead_payload(lead_payload_builder.build(lead))
 
   def research_enabled?
     ::Autonomia::Prospecting::Config.research_enabled?(Current.account)
   end
 
-  def contact_payload(contact)
-    contact.as_json(only: [:id, :name, :email, :phone_number, :identifier])
-  end
+  def contact_payload(contact) = contact.as_json(only: [:id, :name, :email, :phone_number, :identifier])
 
   def crm_card_payload(card)
     card.as_json(
@@ -185,9 +180,17 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
     )
   end
 
+  # Só os leads que a pessoa vê (leads_scope) entram na lista nova; os outros voltam em missing_lead_ids.
+  def selection_campaign_segment
+    ::Autonomia::Prospecting::SelectionCampaignSegment.new(
+      account: Current.account, user: Current.user, lead_ids: params[:lead_ids], leads_scope: leads_scope,
+      campaign: { id: params[:campaign_id], type: params[:campaign_type] }, segment_name: params[:segment_name]
+    )
+  end
+
   def run_crm_send(lead_ids, pipeline_id, stage_id)
     ::Autonomia::Prospecting::CrmCardBatch.new(
-      account: Current.account, user: Current.user, lead_ids: lead_ids, pipeline_id: pipeline_id, stage_id: stage_id
+      account: Current.account, user: Current.user, lead_ids: lead_ids, leads_scope: leads_scope, pipeline_id: pipeline_id, stage_id: stage_id
     ).perform
   end
 
