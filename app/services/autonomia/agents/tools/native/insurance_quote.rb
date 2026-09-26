@@ -104,6 +104,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   include Fecho
   include Resultado
   include NotaDaEquipe
+  include RamoSemEspecialista
 
   # -> Hash serializável guardado na execução. Volta rápido: quem espera é o job.
   #
@@ -115,9 +116,8 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # `tool_failed` — o cliente esperava tudo isso por "não consegui", e nada dizia o motivo.
   # CADA RECUSA VIRA EVENTO (PR C): o `poll` a devolve como `done` com o evento, e quem fala é a Lia.
   def start
-    return recusa('json_invalido', faltando: ['dados']) if dados.nil?
-    return recusa('formulario_indisponivel', faltando: []) if sem_formulario?
-    return recusa('sem_veiculo', faltando: [PLACA]) if sem_veiculo?
+    antes = recusa_do_envio
+    return antes if antes
 
     faltantes = validar
     return recusa('faltam_dados', faltando: campos(faltantes), problemas: faltantes) if faltantes.any?
@@ -154,7 +154,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   # Devolve a `Conferencia` inteira, não só a frase: o registro de recusa (entrega 6) precisa saber
   # QUAIS campos faltaram, e a frase em português já traduziu os nomes.
   def precheck
-    recusa_de_entrada || conferencia_dos_dados
+    conferencia_sem_especialista || recusa_de_entrada || conferencia_dos_dados
   rescue ::Autonomia::Insurance::Connector::Error => e
     # Ramo desconhecido é a única falha de validação que a conferência NÃO deixa passar: aceitar
     # abriria uma execução que o `start` recusaria de qualquer jeito, minutos depois.
@@ -205,6 +205,15 @@ class Autonomia::Agents::Tools::Native::InsuranceQuote < Autonomia::Agents::Tool
   end
 
   private
+
+  # O que recusa o envio antes de olhar os dados, na ordem da conferência (`recusa_de_entrada`).
+  def recusa_do_envio
+    return recusa('ramo_sem_especialista', faltando: ['produto']) if ramo_sem_especialista?
+    return recusa('json_invalido', faltando: ['dados']) if dados.nil?
+    return recusa('formulario_indisponivel', faltando: []) if sem_formulario?
+
+    recusa('sem_veiculo', faltando: [PLACA]) if sem_veiculo?
+  end
 
   # O QUE FALTA, PERGUNTADO DE GRAÇA. Só `erro` vira pedido: `aviso` fala de tabela possivelmente
   # velha do nosso lado, e mandar o agente perguntar por causa disso seria atrito sem causa. Os

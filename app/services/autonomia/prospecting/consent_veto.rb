@@ -15,6 +15,16 @@ class Autonomia::Prospecting::ConsentVeto
     refused_phones.intersect?(phones.to_set) || refused_emails.intersect?(emails.to_set)
   end
 
+  # Os contatos da conta que a recusa deste lead veta: o ligado a ele, os do mesmo telefone ou WhatsApp (os números de
+  # phones_of) e o do mesmo e-mail. É a mesma conta de vetoed?, olhada do lado de quem recusou.
+  def contacts_vetoed_by(lead)
+    email = email_of(lead)
+    contacts = @account.contacts
+    scope = contacts.where(id: lead.contact_id).or(contacts.where(phone_number: phones_of(lead)))
+    scope = scope.or(contacts.where('LOWER(contacts.email) = ?', email)) if email
+    scope.to_a
+  end
+
   private
 
   def refused_leads

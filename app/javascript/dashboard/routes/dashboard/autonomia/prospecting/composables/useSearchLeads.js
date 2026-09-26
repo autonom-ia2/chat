@@ -30,6 +30,7 @@ import { useLeadResearch } from './useLeadResearch';
 import { useLeadExport } from './useLeadExport';
 import { useLeadLiveUpdates } from './useLeadLiveUpdates';
 import { useLeadWhatsApp } from './useLeadWhatsApp';
+import { useLeadStatusActions } from './useLeadStatusActions';
 
 const useLeadSelection = state => {
   const { selectedLeadIds, sortedLeads } = state;
@@ -163,6 +164,7 @@ export const useSearchLeads = (state, { canManage }) => {
     useLeadResearch(state, { replaceLead }),
     useLeadSelection(state),
     useCrmSend(state),
+    useLeadStatusActions({ replaceLead }),
     useLeadExport(state, t)
   );
 };

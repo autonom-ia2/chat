@@ -4,6 +4,7 @@ import LeadPhoneActions from './LeadPhoneActions.vue';
 import LeadSocialLinks from './LeadSocialLinks.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import * as formatters from '../../utils/searchFormatters';
+import { isLeadDiscarded } from '../../utils/leadCrmPresence';
 import {
   isLeadEnriched,
   isLeadEnriching as isEnriching,
@@ -121,7 +122,7 @@ const toggleDetails = lead => {
       {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
     </a>
     <button
-      v-else-if="canSendToCrm"
+      v-else-if="canSendToCrm && !isLeadDiscarded(lead)"
       type="button"
       class="inline-flex h-8 items-center gap-1.5 rounded-md bg-n-brand px-3 text-xs font-semibold text-white shadow-sm"
       @click="openCrmSend([lead])"

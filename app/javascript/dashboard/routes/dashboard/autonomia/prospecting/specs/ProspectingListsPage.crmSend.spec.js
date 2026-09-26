@@ -119,7 +119,8 @@ describe('ProspectingListsPage · enviar ao CRM', () => {
     expect(sendModal(wrapper).props('suggestedStageId')).toBe(31);
   });
 
-  it('enviar a lista manda todos os leads dela e troca o botão pelo link do card', async () => {
+  // #732: lead que já está no CRM (Pão Quente, card 555) fica fora do envio.
+  it('enviar a lista manda os leads dela que ainda não estão no CRM e troca o botão pelo link do card', async () => {
     const wrapper = await mountLists();
     AutonomiaProspectingAPI.createCrmCards.mockResolvedValue({
       data: {
@@ -128,7 +129,7 @@ describe('ProspectingListsPage · enviar ao CRM', () => {
             { lead_id: 101, card_id: 1010, contact_id: 900 },
             { lead_id: 103, card_id: 1030, contact_id: 930 },
           ],
-          existing: [{ lead_id: 102, card_id: 555 }],
+          existing: [],
           failed: [],
         },
       },
@@ -142,7 +143,7 @@ describe('ProspectingListsPage · enviar ao CRM', () => {
     await flushPromises();
 
     expect(AutonomiaProspectingAPI.createCrmCards).toHaveBeenCalledWith({
-      leadIds: [101, 102, 103],
+      leadIds: [101, 103],
       pipelineId: 3,
       stageId: 31,
     });

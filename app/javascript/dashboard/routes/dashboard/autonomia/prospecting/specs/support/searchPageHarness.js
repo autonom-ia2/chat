@@ -77,6 +77,8 @@ export const settingsFixture = (extra = {}) => ({
   // Quem abre a tela nos testes pode criar card e mexer em campanha (#682).
   can_send_to_crm: true,
   can_manage_campaigns: true,
+  // E é administrador da conta: vê o detalhe técnico da nota (#732, item 9).
+  can_view_score_details: true,
   ...extra,
 });
 

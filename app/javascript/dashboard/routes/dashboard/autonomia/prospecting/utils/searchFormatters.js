@@ -23,12 +23,21 @@ export const formatRelativeTime = (value, t) => {
   return formatShortDate(value);
 };
 
-export const formatRadius = (radius, t) => {
+const radiusKm = radius => {
   const kilometers = Number(radius || 0) / 1000;
-  return t('PROSPECTING.SEARCH.RADIUS_KM_VALUE', {
-    value: Number.isInteger(kilometers) ? kilometers : kilometers.toFixed(1),
-  });
+  return Number.isInteger(kilometers) ? kilometers : kilometers.toFixed(1);
 };
+
+export const formatRadius = (radius, t) =>
+  t('PROSPECTING.SEARCH.RADIUS_KM_VALUE', { value: radiusKm(radius) });
+
+// Busca que ficou com a expansão de raio do Orth (#732 item 4): o raio que ela
+// alcançou e o que a pessoa pediu.
+const formatExpandedRadius = (search, t) =>
+  t('PROSPECTING.SEARCH.RADIUS_EXPANDED_VALUE', {
+    value: radiusKm(search.radius),
+    requested: radiusKm(search.requested_radius),
+  });
 
 const DRAWN_AREA_SHORT = {
   circle: t => t('PROSPECTING.SEARCH.AREA_DRAW.SHORT_CIRCLE'),
@@ -49,6 +58,9 @@ export const formatSearchArea = (search, t) => {
   const areaType = search?.area_type;
   if (areaType === 'viewport' || DRAWN_AREA_SHORT[areaType]) {
     return formatAreaType(areaType, t);
+  }
+  if (search?.summary?.radius_expanded && search.requested_radius) {
+    return formatExpandedRadius(search, t);
   }
 
   return formatRadius(search?.radius || 0, t);

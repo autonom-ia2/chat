@@ -80,4 +80,31 @@ RSpec.describe 'Autonomia prospecting search mode metadata', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.presets.invalid'))
   end
+
+  # Jogada salva (#732): vale na busca como as prontas, só na conta e no modo dela.
+  describe 'jogada salva' do
+    def saved_preset(target_account, score_mode: 'gbp')
+      Autonomia::Prospecting::SavedPreset.create!(account: target_account, name: 'Sem site', score_mode: score_mode,
+                                                  filters: { 'has_website' => 'no' })
+    end
+
+    it 'grava a jogada salva da conta no modo dela' do
+      preset = saved_preset(account)
+
+      create_search(score_mode: 'gbp', preset_id: preset.preset_id)
+
+      expect(response).to have_http_status(:created)
+      expect(account.autonomia_prospecting_searches.last.metadata['preset_id']).to eq(preset.preset_id)
+    end
+
+    it 'recusa a jogada salva de outro modo ou de outra conta' do
+      create_search(score_mode: 'general', preset_id: saved_preset(account).preset_id)
+      expect(response).to have_http_status(:unprocessable_entity)
+
+      create_search(score_mode: 'gbp', preset_id: saved_preset(create(:account)).preset_id)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.prospecting.presets.invalid'))
+      expect(account.autonomia_prospecting_searches.count).to eq(0)
+    end
+  end
 end

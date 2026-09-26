@@ -34,6 +34,15 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
     )
   end
 
+  # O agente só age sobre os leads das próprias buscas (#732, item 6): o lead nasce numa busca dele.
+  def own_lead(agent, index)
+    create_lead(index).tap do |lead|
+      search = Autonomia::Prospecting::Search.create!(account: account, user: agent, query: "busca #{index}", provider: 'mock',
+                                                      status: 'completed', metadata: { 'lead_ids' => [lead.id] })
+      lead.update!(search: search)
+    end
+  end
+
   describe 'envio ao CRM' do
     it 'papel só com a prospecção não cria card em lote (403) e nada é gravado' do
       post "#{base_url}/leads/crm_cards", params: { lead_ids: [create_lead(1).id], pipeline_id: pipeline.id, stage_id: stage.id },
@@ -57,8 +66,9 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
     end
 
     it 'papel com a prospecção e com crm_manage_cards envia' do
-      post "#{base_url}/leads/crm_cards", params: { lead_ids: [create_lead(1).id], pipeline_id: pipeline.id, stage_id: stage.id },
-                                          headers: auth_headers(agent_with(%w[prospecting_manage crm_manage_cards])), as: :json
+      agent = agent_with(%w[prospecting_manage crm_manage_cards])
+      post "#{base_url}/leads/crm_cards", params: { lead_ids: [own_lead(agent, 1).id], pipeline_id: pipeline.id, stage_id: stage.id },
+                                          headers: auth_headers(agent), as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.dig('payload', 'created').size).to eq(1)
@@ -122,8 +132,9 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
     # A tela da busca mostra Adicionar à campanha a quem só tem a prospecção e, sem campaign_manage, esconde só a escolha
     # da campanha (#682): esta é a regra que o botão segue.
     it 'seleção sem campaign_id, só com a prospecção, cria o segmento e não toca campanha nenhuma' do
-      post "#{base_url}/leads/campaign_segment", params: { lead_ids: [create_lead(4).id], segment_name: 'Só segmento' },
-                                                 headers: auth_headers(agent_with(['prospecting_manage'])), as: :json
+      agent = agent_with(['prospecting_manage'])
+      post "#{base_url}/leads/campaign_segment", params: { lead_ids: [own_lead(agent, 4).id], segment_name: 'Só segmento' },
+                                                 headers: auth_headers(agent), as: :json
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body.dig('payload', 'segment', 'campaign')).to be_nil
@@ -132,9 +143,10 @@ RSpec.describe 'Autonomia prospecting send permissions', type: :request do
     end
 
     it 'com campaign_manage a seleção entra na campanha' do
+      agent = agent_with(%w[prospecting_manage campaign_manage])
       post "#{base_url}/leads/campaign_segment",
-           params: { lead_ids: [create_lead(1).id], campaign_id: campaign.display_id, segment_name: 'Sel' },
-           headers: auth_headers(agent_with(%w[prospecting_manage campaign_manage])), as: :json
+           params: { lead_ids: [own_lead(agent, 1).id], campaign_id: campaign.display_id, segment_name: 'Sel' },
+           headers: auth_headers(agent), as: :json
 
       expect(response).to have_http_status(:created)
       expect(campaign.reload.audience.size).to eq(1)

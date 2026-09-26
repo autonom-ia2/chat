@@ -1,15 +1,19 @@
 <script setup>
-// "Sua jogada" (#677): as três jogadas do modo escolhido para a nova busca e o
-// cartão "Sem jogada", como a JogadasGrid do Orth.
+// "Sua jogada" (#677): as três jogadas do modo escolhido para a nova busca, as
+// salvas pela conta nesse modo (#732) e o cartão "Sem jogada", como a
+// JogadasGrid do Orth. A salva mostra o resumo dos filtros no lugar da frase.
 import { useI18n } from 'vue-i18n';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import SearchPresetCard from './SearchPresetCard.vue';
+import { filterSummaryTags, presetName } from '../../utils/searchPresets';
 
 const { t } = useI18n();
 const { form, formPresets, selectPreset } = useProspectingSearchContext();
 
-const presetText = (preset, field) =>
-  t(`PROSPECTING.SEARCH.PRESETS.ITEMS.${preset.i18nKey}.${field}`);
+const presetPitch = preset =>
+  preset.isSaved
+    ? filterSummaryTags(preset.filters, t).join(' · ')
+    : t(`PROSPECTING.SEARCH.PRESETS.ITEMS.${preset.i18nKey}.PITCH`);
 </script>
 
 <template>
@@ -31,8 +35,8 @@ const presetText = (preset, field) =>
       <SearchPresetCard
         v-for="preset in formPresets"
         :key="preset.id"
-        :name="presetText(preset, 'NAME')"
-        :pitch="presetText(preset, 'PITCH')"
+        :name="presetName(preset, t)"
+        :pitch="presetPitch(preset)"
         :icon="preset.icon"
         :icon-class="preset.iconClass"
         :selected="form.preset_id === preset.id"

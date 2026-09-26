@@ -14,8 +14,21 @@ module Autonomia::Prospecting::SearchArea
   MAX_POLYGON_POINTS = 100
   MIN_POLYGON_POINTS = 3
   COORDINATE_DIGITS = 6
+  # Expansão de raio do Orth (#732 item 4; app/api/search/route.ts): uma tentativa com o dobro do raio, até 10 km.
+  RADIUS_EXPANSION_FACTOR = 2
+  MAX_EXPANDED_RADIUS = 10_000
 
   module_function
+
+  # Raio da única tentativa de expansão, ou nil quando não há o que expandir. Só a busca por raio com centro expande:
+  # sem centro o pedido vai sem círculo e o raio não muda o que o Google devolve, e a área desenhada é a que a pessoa
+  # escolheu. Raio que já está no teto (ou acima) não expande.
+  def expanded_radius(area_type, config, radius)
+    return unless area_type.to_s == 'radius' && config.to_h['center'].present?
+
+    candidate = [radius.to_i * RADIUS_EXPANSION_FACTOR, MAX_EXPANDED_RADIUS].min
+    candidate if candidate > radius.to_i
+  end
 
   def drawn?(area_type)
     DRAWN_TYPES.include?(area_type.to_s)

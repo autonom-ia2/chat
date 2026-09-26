@@ -287,9 +287,22 @@ RSpec.describe 'Autonomia prospecting export', type: :request do
       expect(response.body).not_to include('Clinica Sorriso')
     end
 
-    it 'com prospecting_view exporta' do
-      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent_with(['prospecting_view']))
+    # O agente exporta a própria busca; a de outra pessoa só com "Ver buscas de todos" (#732, item 6).
+    it 'com prospecting_view exporta a própria busca' do
+      agent = agent_with(['prospecting_view'])
+      search.update!(user: agent)
 
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'com prospecting_view não exporta a busca de outra pessoa, e com "Ver buscas de todos" exporta' do
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent_with(['prospecting_view']))
+      expect(response).to have_http_status(:not_found)
+
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' },
+                                                       headers: auth_headers(agent_with(%w[prospecting_view prospecting_view_all_searches]))
       expect(response).to have_http_status(:ok)
     end
 

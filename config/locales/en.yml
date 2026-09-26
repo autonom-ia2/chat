@@ -508,6 +508,16 @@ en:
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
+      # Jogadas salvas (#732): frases que a tela mostra como vieram.
+      saved_presets:
+        errors:
+          name_blank: 'Dê um nome para a jogada.'
+          name_too_long: 'O nome da jogada pode ter até %{max} caracteres.'
+          name_taken: 'Já existe uma jogada com esse nome nesta conta. Escolha outro nome.'
+          invalid_score_mode: 'A forma de pesquisa da jogada precisa ser Google Meu Negócio ou Geral.'
+          invalid_filters: 'Algum filtro da jogada não é aceito. Ajuste os filtros avançados e salve de novo.'
+          empty_filters: 'Escolha pelo menos um filtro antes de salvar a jogada.'
+          limit: 'A conta já tem %{max} jogadas salvas. Exclua uma em Configurações da Prospecção para salvar outra.'
       # Nota do Orth (#681): frase de leitura da nota e motivos das penalidades de prioridade.
       scoring:
         human_insight:
@@ -552,6 +562,7 @@ en:
           not_found: 'Lead não encontrado nesta conta.'
           invalid_data: 'O CRM recusou os dados deste lead. Confira nome e telefone e tente de novo.'
           unexpected_error: 'Não foi possível enviar este lead agora. Tente de novo; se continuar, fale com o suporte.'
+          discarded: 'Lead descartado. Desfaça o descarte para enviar ao CRM.'
         errors:
           no_leads: 'Escolha pelo menos um lead para enviar ao CRM.'
           too_many_leads: 'Envie até %{max} leads por vez.'
@@ -564,6 +575,22 @@ en:
           decision_with_role: 'Decisor: %{name}, %{role}'
           legal_name: 'Razão social: %{legal_name}'
           cnpj: 'CNPJ: %{cnpj}'
+      # Descartar e criar contatos em lote (#732, item 10).
+      lead_discard:
+        errors:
+          no_leads: 'Escolha pelo menos um lead para descartar.'
+          too_many_leads: 'Descarte até %{max} leads por vez.'
+          missing_reason: 'Informe o motivo do descarte.'
+          reason_too_long: 'O motivo do descarte é longo demais. Resuma em uma frase.'
+      contact_batch:
+        failures:
+          not_found: 'Lead não encontrado nesta conta.'
+          discarded: 'Lead descartado. Desfaça o descarte para criar o contato.'
+          invalid_data: 'O contato foi recusado. Confira nome, telefone e e-mail do lead.'
+          unexpected_error: 'Não foi possível criar este contato agora. Tente de novo; se continuar, fale com o suporte.'
+        errors:
+          no_leads: 'Escolha pelo menos um lead para criar contatos.'
+          too_many_leads: 'Crie até %{max} contatos por vez.'
       campaign_blocked:
         not_found: 'Lead não encontrado nesta conta.'
         discarded: 'Lead descartado.'
@@ -579,8 +606,8 @@ en:
         empty_list: 'Esta lista ainda não tem leads. Adicione leads antes de criar o público.'
         no_eligible_leads: 'Nenhum lead da seleção pode entrar na campanha.'
         label_collision_visible_on_sidebar: 'Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.'
-        unsupported_campaign: 'Só campanhas de envio único recebem leads da prospecção.'
-        campaign_not_active: 'A campanha escolhida não está ativa. Escolha outra ou crie só o segmento.'
+        unsupported_campaign: 'Só campanhas de envio único ou da API do WhatsApp recebem leads da prospecção.'
+        campaign_not_active: 'A campanha escolhida não está ativa ou já começou a enviar. Escolha outra ou crie só o segmento.'
         too_many_leads: 'Selecione até %{max} leads por vez.'
         empty_selection: 'Selecione pelo menos um lead.'
       selection_list_name: 'Seleção da busca %{date}'
