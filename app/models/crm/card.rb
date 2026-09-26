@@ -130,19 +130,35 @@ class Crm::Card < ApplicationRecord
   # O `id` desempata, e não é enfeite: duas conversas do mesmo contato podem ter o mesmo
   # `last_activity_at`, e sem ele a escolha mudava de uma execução para outra. Sem nenhuma de pé,
   # a primária é o melhor palpite que existe.
+  # EM MEMÓRIA QUANDO O CHAMADOR JÁ CARREGOU, e é isso que deixa o Kanban usá-la: o board pré-carrega
+  # `linked_conversations` de todos os cards de uma vez, e uma consulta por card aqui devolveria o
+  # N+1 pela porta dos fundos, num lugar que desenha centenas de cards.
   def conversa_em_atendimento
+    return de_pe(linked_conversations).max_by { |c| [c.last_activity_at, c.id] } || primary_conversation if
+      linked_conversations.loaded?
+
     linked_conversations
       .where(status: [Conversation.statuses[:open], Conversation.statuses[:pending]])
       .order(last_activity_at: :desc, id: :desc)
       .first || primary_conversation
   end
 
+  def de_pe(conversas)
+    vivos = [Conversation.statuses[:open], Conversation.statuses[:pending]]
+    conversas.select { |conversa| vivos.include?(Conversation.statuses[conversa.status]) }
+  end
+
   # Real-time "responsible" for the card, derived (never a stored snapshot):
   #   1. human assignee of the linked conversation (or owner for standalone) -> agent
   #   2. otherwise the active AgentBot connected to the inbox -> bot
   #   3. otherwise nobody
+  # A CONVERSA QUE MANDA AQUI É A VIVA, a mesma que a escalada atribui (issue #553). Enquanto isto
+  # lia a primária, o card mostrava quem atendeu o cliente semanas atrás — ou o bot — enquanto o
+  # atendimento estava com outra pessoa, e o filtro por responsável perdia justamente os cards
+  # escalados (issue #555). O cliente não ficava sem ninguém; quem mentia era o quadro.
   def responsible_descriptor
-    agent = primary_conversation ? primary_conversation.assignee : owner
+    conversa = conversa_em_atendimento
+    agent = conversa ? conversa.assignee : owner
     return { type: 'agent', id: agent.id, name: agent.name } if agent.present?
 
     bot = responsible_agent_bot
@@ -152,7 +168,7 @@ class Crm::Card < ApplicationRecord
   end
 
   def responsible_agent_bot
-    resolved_inbox = primary_conversation&.inbox || inbox
+    resolved_inbox = conversa_em_atendimento&.inbox || inbox
     return if resolved_inbox.blank?
 
     resolved_inbox.agent_bot_inbox&.active? ? resolved_inbox.agent_bot : nil
