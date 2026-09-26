@@ -278,9 +278,9 @@ RSpec.describe 'R20: toda falha da cotação chega à equipe em nota privada' do
     def modelo_de_seis_rodadas
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'cred'))
       client = instance_double(Crm::Ai::ResponsesClient)
-      allow(client).to receive(:create_with_tool_executor) do |**_kwargs, &executor|
+      allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
         6.times { |i| executor.call([{ 'name' => 'cotar_teste', 'arguments' => '{}', 'call_id' => "c#{i}" }]) }
-        { text: { resposta: 'Ainda falta um dado.', dados_faltando: [] }.to_json }
+        { text: resposta_do_especialista(kwargs[:schema], resposta: 'Ainda falta um dado.') }
       end
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     end

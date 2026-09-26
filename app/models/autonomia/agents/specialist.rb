@@ -34,9 +34,10 @@
 #
 # O especialista é exposto ao modelo como uma FUNÇÃO (`consultar_<slug>`). Quando o principal a
 # chama, o Specialists::Runner roda um ciclo próprio — instrução própria, tools próprias — e
-# devolve TEXTO CORRIDO. O principal parafraseia; não interpreta estrutura. Esse contrato em prosa
+# devolve TEXTO. O principal não interpreta estrutura. Esse contrato em prosa
 # é deliberado: é o que funciona nos fluxos de cotação em produção e evita que o principal precise
-# entender o payload de um ramo inteiro.
+# entender o payload de um ramo inteiro. O especialista de cotação devolve os FATOS rotulados, em texto, e não
+# frase para parafrasear (`Insurance::QuoteAgent::RetornoDoEspecialista`, item 9 da auditoria de voz de 26/09/2026).
 class Autonomia::Agents::Specialist < ApplicationRecord
   self.table_name = 'autonomia_agent_specialists'
 

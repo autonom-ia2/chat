@@ -68,11 +68,17 @@ RSpec.describe Autonomia::Insurance::Parametros do
 
     # AUTO IDÊNTICO: o formulário de auto é o mesmo de antes da renovação dos ramos, byte a byte. O md5 foi tirado do
     # código da main (84c8964027) e conferido de novo com a mudança aplicada.
+    # Voz da Lia, item 6 (`1a15e8d5…` -> `e49be23c…`, 26/09/2026): entram, em todo ramo, os dois parâmetros comuns do
+    # pedido (`pedido_que_entrou` e `pedido_que_nao_coube`, texto ou nulo), que ficam na execução e não vão ao portal.
+    # Conferido: sem os dois, o md5 volta a ser `1a15e8d5…`; o resto do formulário de auto não mudou.
     it 'auto não muda: o formulário de auto não tem o grupo e é o mesmo de antes' do
       formulario = strict('cotacao_auto')
 
       expect(formulario[:properties]).not_to have_key('renovacao')
-      expect(Digest::MD5.hexdigest(JSON.generate(formulario))).to eq('1a15e8d5b531509a7db10256927df08d')
+      expect(Digest::MD5.hexdigest(JSON.generate(formulario))).to eq('e49be23c7087a668033ee972c1c0d90c')
+      pedido = %w[pedido_que_entrou pedido_que_nao_coube]
+      sem_o_pedido = formulario.merge(properties: formulario[:properties].except(*pedido), required: formulario[:required] - pedido)
+      expect(Digest::MD5.hexdigest(JSON.generate(sem_o_pedido))).to eq('1a15e8d5b531509a7db10256927df08d')
     end
   end
 

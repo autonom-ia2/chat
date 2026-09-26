@@ -452,7 +452,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       expect(fatos('falhou', faixa: 'residencial')).to start_with('Cotação de residencial. ')
       expect(fatos('concluida')).to start_with('Cotação de auto. ')
       com_bem = Autonomia::Agents::ToolRun.new(handle: {}, faixa: 'auto:nivus fvu2f42', arguments: { 'item' => 'Nivus FVU2F42' })
-      expect(described_class.fatos_do_evento('concluida', com_bem)).to start_with('Cotação de auto, Nivus FVU2F42 (produto: auto:nivus fvu2f42). ')
+      # O nome do bem é nosso (item 5A da auditoria de voz, 26/09/2026): identificador, e a frase de como chamá-lo.
+      expect(described_class.fatos_do_evento('concluida', com_bem))
+        .to start_with('Cotação de auto, bem de identificador Nivus FVU2F42 (produto: auto:nivus fvu2f42). ' \
+                       "#{Autonomia::Insurance::Faixa::NOME_NA_CONVERSA} ")
     end
   end
 end

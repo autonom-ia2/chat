@@ -354,7 +354,7 @@ module Autonomia
       end
 
       # O especialista devolve TEXTO (nunca levanta — ver Specialists::Runner). Vai direto como saída
-      # da função, para o principal parafrasear.
+      # da função: prosa, ou os fatos rotulados do especialista de cotação, com que o principal escreve.
       # O especialista recebe a MESMA conversa e os MESMOS documentos que o principal (entrega 1):
       # o bilhete deixa de ser a única fonte do que o cliente disse.
       def run_specialist(specialist, call)
