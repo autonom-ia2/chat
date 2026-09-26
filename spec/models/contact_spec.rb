@@ -208,4 +208,122 @@ RSpec.describe Contact do
       end
     end
   end
+
+  describe 'recusa de mensagens ativas (opt-out)' do
+    let(:account) { create(:account) }
+    let(:contact) { create(:contact, account: account) }
+    let(:user) { create(:user, account: account) }
+
+    it 'nasce sem recusa' do
+      expect(contact.opted_out?).to be(false)
+      expect(contact.opted_out_at).to be_nil
+      expect(contact.opt_out_source).to be_nil
+      expect(contact.opted_out_by_id).to be_nil
+    end
+
+    it 'grava data, origem e quem marcou' do
+      freeze_time do
+        contact.opt_out!(source: 'manual', by: user)
+
+        contact.reload
+        expect(contact.opted_out?).to be(true)
+        expect(contact.opted_out_at).to eq(Time.current)
+        expect(contact.opt_out_source).to eq('manual')
+        expect(contact.opted_out_by).to eq(user)
+      end
+    end
+
+    it 'aceita as três origens conhecidas' do
+      %w[prospecting email_unsubscribe manual].each do |source|
+        other = create(:contact, account: account)
+        other.opt_out!(source: source)
+        expect(other.reload.opt_out_source).to eq(source)
+      end
+    end
+
+    it 'recusa origem desconhecida sem gravar nada' do
+      expect { contact.opt_out!(source: 'qualquer') }.to raise_error(ArgumentError)
+      expect(contact.reload.opted_out?).to be(false)
+    end
+
+    it 'é idempotente e não sobrescreve uma recusa já gravada, mesmo de outra origem' do
+      contact.opt_out!(source: 'manual', by: user)
+      first_at = contact.reload.opted_out_at
+
+      travel 1.hour do
+        expect(contact.opt_out!(source: 'prospecting')).to be(false)
+      end
+
+      contact.reload
+      expect(contact.opted_out_at).to eq(first_at)
+      expect(contact.opt_out_source).to eq('manual')
+      expect(contact.opted_out_by).to eq(user)
+    end
+
+    it 'grava mesmo quando o contato tem dado antigo que não passaria na validação' do
+      contact.update_columns(email: 'email-invalido') # rubocop:disable Rails/SkipsModelValidations
+
+      expect(contact.opt_out!(source: 'prospecting')).to be(true)
+      expect(contact.reload.opted_out?).to be(true)
+    end
+
+    it 'opt_in! limpa as três colunas' do
+      contact.opt_out!(source: 'manual', by: user)
+
+      expect(contact.opt_in!(by: user)).to be(true)
+
+      contact.reload
+      expect(contact.opted_out?).to be(false)
+      expect(contact.opted_out_at).to be_nil
+      expect(contact.opt_out_source).to be_nil
+      expect(contact.opted_out_by_id).to be_nil
+    end
+
+    it 'opt_in! é idempotente em quem não recusou' do
+      expect(contact.opt_in!).to be(false)
+      expect(contact.reload.opted_out?).to be(false)
+    end
+
+    it 'opt_in! com origem só remove a recusa daquela origem' do
+      contact.opt_out!(source: 'manual', by: user)
+
+      expect(contact.opt_in!(source: 'prospecting')).to be(false)
+      expect(contact.reload.opt_out_source).to eq('manual')
+
+      expect(contact.opt_in!(source: 'manual')).to be(true)
+      expect(contact.reload.opted_out?).to be(false)
+    end
+
+    it 'transfer_opt_out! troca só a origem gravada, mantendo a data da recusa' do
+      contact.opt_out!(source: 'prospecting')
+      refused_at = contact.reload.opted_out_at
+
+      expect(contact.transfer_opt_out!(from: 'manual', to: 'email_unsubscribe')).to be(false)
+      expect(contact.transfer_opt_out!(from: 'prospecting', to: 'email_unsubscribe')).to be(true)
+
+      contact.reload
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+      expect(contact.opted_out_at).to eq(refused_at)
+      expect { contact.transfer_opt_out!(from: 'email_unsubscribe', to: 'outra') }.to raise_error(ArgumentError)
+    end
+
+    it 'escopos separam quem recusou de quem não recusou, sem cruzar contas' do
+      contact.opt_out!(source: 'manual')
+      other = create(:contact, account: account)
+      other_account_contact = create(:contact)
+      other_account_contact.opt_out!(source: 'manual')
+
+      expect(account.contacts.opted_out).to contain_exactly(contact)
+      expect(account.contacts.not_opted_out).to contain_exactly(other)
+    end
+
+    it 'apagar o usuário que marcou mantém a recusa e esquece o autor' do
+      contact.opt_out!(source: 'manual', by: user)
+      user.destroy!
+
+      contact.reload
+      expect(contact.opted_out?).to be(true)
+      expect(contact.opted_out_by_id).to be_nil
+    end
+  end
 end

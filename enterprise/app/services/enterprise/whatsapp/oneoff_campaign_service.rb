@@ -1,4 +1,7 @@
 module Enterprise::Whatsapp::OneoffCampaignService
+  # Motivo gravado no destinatário pulado porque o contato recusou mensagens ativas (chat#737).
+  OPTED_OUT_REASON = 'opted_out'.freeze
+
   def perform
     validate_campaign!
     recipients = create_recipients(extract_audience_labels)
@@ -11,6 +14,7 @@ module Enterprise::Whatsapp::OneoffCampaignService
   def process_recipient(recipient)
     contact = recipient.contact
     Rails.logger.info "Processing contact: #{contact.name} (#{contact.phone_number})"
+    return recipient.mark_skipped!(OPTED_OUT_REASON) if contact_opted_out_now?(contact)
 
     destination, destination_error = campaign_destination(contact)
     if destination.blank?
@@ -18,6 +22,16 @@ module Enterprise::Whatsapp::OneoffCampaignService
       return
     end
 
+    processed_template_params = recipient_template_params(recipient, contact)
+    return if processed_template_params.nil?
+
+    recipient.update!(message_content: rendered_message_content(contact))
+
+    send_whatsapp_template_message(recipient: recipient, to: destination, template_params: processed_template_params)
+  end
+
+  # Parâmetros do template já resolvidos para o contato, ou nil com o destinatário marcado como pulado.
+  def recipient_template_params(recipient, contact)
     if campaign.template_params.blank?
       Rails.logger.error "Skipping contact #{contact.name} - no template_params found for WhatsApp campaign"
       recipient.mark_skipped!('Template parameters are missing')
@@ -25,14 +39,8 @@ module Enterprise::Whatsapp::OneoffCampaignService
     end
 
     processed_template_params = process_liquid_template_params(contact)
-    if processed_template_params.nil?
-      recipient.mark_skipped!('Template parameters could not be resolved')
-      return
-    end
-
-    recipient.update!(message_content: rendered_message_content(contact))
-
-    send_whatsapp_template_message(recipient: recipient, to: destination, template_params: processed_template_params)
+    recipient.mark_skipped!('Template parameters could not be resolved') if processed_template_params.nil?
+    processed_template_params
   end
 
   def create_recipients(audience_labels)

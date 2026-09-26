@@ -35,11 +35,22 @@ module Autonomia::Insurance::Faixa
     ramo.present? && (faixa.to_s == ramo.to_s || faixa.to_s.start_with?("#{ramo}#{SEPARADOR}"))
   end
 
-  # -> como a cotação aparece ao modelo (aviso, situação): o ramo e, havendo, o nome do bem como o modelo o escreveu e o
-  # identificador que o parâmetro `produto` das leituras aceita ("auto, Nivus (produto: auto:nivus)").
+  # O NOME DO BEM É NOSSO (item 5A da auditoria de voz, 26/09/2026). O `item` continua sendo a chave da faixa, mas o
+  # modelo o escreve curto e distintivo ("apto 302 ubatuba", "nivus fvu2f42"), e a Lia o copiava na fala: o aviso o
+  # apresentava como o nome do bem. Agora ele aparece como identificador, e quem mostra a descrição ao modelo põe esta
+  # frase depois dela, uma vez.
+  NOME_NA_CONVERSA = 'O identificador é nosso: na conversa, chame esse bem como a pessoa chama.'.freeze
+
+  # -> como a cotação aparece ao modelo (aviso, situação): o ramo e, havendo, o identificador do bem como o modelo o
+  # escreveu e o que o parâmetro `produto` das leituras aceita ("auto, bem de identificador nivus (produto: auto:nivus)").
   def descricao(run)
-    item = run.arguments.to_h.stringify_keys['item'].to_s.squish.presence
+    item = item(run)
     ramo = ramo(run.faixa).presence || 'auto'
-    item ? "#{ramo}, #{item} (produto: #{run.faixa})" : ramo
+    item ? "#{ramo}, bem de identificador #{item} (produto: #{run.faixa})" : ramo
+  end
+
+  # -> o nome que o modelo deu ao bem desta execução, ou nil nas de antes da chat#612.
+  def item(run)
+    run.arguments.to_h.stringify_keys['item'].to_s.squish.presence
   end
 end

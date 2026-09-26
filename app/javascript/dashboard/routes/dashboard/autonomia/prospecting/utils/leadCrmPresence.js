@@ -6,6 +6,11 @@ export const isLeadInCrm = lead => Boolean(lead?.crm_card_id);
 
 export const isLeadDiscarded = lead => lead?.status === 'discarded';
 
+// A pessoa não quer ser contatada (chat#713): vale com qualquer status. O
+// status antigo no_consent também é recusa.
+export const isLeadConsentRefused = lead =>
+  Boolean(lead?.consent_refused_at) || lead?.status === 'no_consent';
+
 // Quem mostra a faixa (LeadStatusBanner) no card e no painel.
 export const hasLeadStatus = lead => isLeadInCrm(lead) || isLeadDiscarded(lead);
 

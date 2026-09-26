@@ -215,15 +215,25 @@ module Crm
       end
 
       # Cliente pediu para sair (card) ou o contato foi excluído do follow-up de IA.
+      # Recusa no card (pedido de parar), recusa gravada no contato (chat#737) ou contato excluído do follow-up de IA.
       def consent_stop_reason
-        return 'opt_out' if state['opted_out']
+        return 'opt_out' if state['opted_out'] || contact_opted_out?
 
         CONTACT_DISABLED_REASON if contact_followup_disabled?
       end
 
       def contact_followup_disabled?
-        contact = @follow_up.conversation&.contact || @card.contact
-        Crm::Ai::Config.contact_followup_disabled?(contact)
+        Crm::Ai::Config.contact_followup_disabled?(followup_contact)
+      end
+
+      # Lido do banco: roda de novo depois da chamada à IA, e a recusa pode ter chegado nesse meio tempo.
+      def contact_opted_out?
+        contact = followup_contact
+        contact.present? && Contact.opted_out.exists?(id: contact.id)
+      end
+
+      def followup_contact
+        @follow_up.conversation&.contact || @card.contact
       end
 
       # A newer inbound message than the last touch we sent (or, before the first
@@ -489,6 +499,8 @@ module Crm
           # Already delivered (idempotent guard inside MessageSender). Treat as sent
           # for cadence purposes without re-logging a new send.
           Result.skipped(@follow_up)
+        when :opted_out
+          stop_cadence('opt_out')
         else
           on_failed(send_result.error)
         end

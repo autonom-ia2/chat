@@ -32,8 +32,12 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     # A ORDEM DO ARQUIVO NÃO É GARANTIDA (chat#641, 25/09/2026). O comparativo é gravado antes da fala da Lia, mas no
     # WhatsApp o upload do PDF atrasa a entrega, e ele chega depois do texto. "Logo acima" aqui virou "está no PDF
     # acima" na fala, e a fala mentia. O fato diz que o arquivo foi enviado, e não onde ele aparece.
-    'concluida' => "A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta conversa. #{ORDEM_DO_ARQUIVO} " \
-                   'Os valores de cada seguradora estão com o especialista, que os lê sem cotar de novo.',
+    #
+    # DADO SECO, NÃO PROSA (item 6 da auditoria de voz, 26/09/2026). "O comparativo em PDF com as opções acabou de ser
+    # enviado" era uma frase pronta, e a Lia a devolvia quase igual a cada cotação. Agora são fatos rotulados, e o que
+    # só vale para esta cotação (quantas trouxeram preço, o pedido, as outras do mesmo pedido) vem de `fatos_do_resultado`.
+    'concluida' => "Situação: terminou. Arquivo enviado nesta conversa: o comparativo em PDF das seguradoras. #{ORDEM_DO_ARQUIVO} " \
+                   'Valores de cada seguradora: com o especialista, que os lê sem cotar de novo.',
     # A LIA RESOLVE SOZINHA (conversa 7057, 24/09/2026): sem o PDF ela mandava a pessoa pedir os valores, e a pessoa
     # ficava sem o que pediu. O turno de evento pode consultar o especialista (`ResponderAoEvento`), e é isso que ela faz.
     'valores_guardados' => 'A cotação terminou com preços, mas o comparativo em PDF não pôde ser enviado. Consulte agora o ' \
@@ -55,15 +59,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
     'sem_aceitacao' => 'A cotação terminou, e nenhuma seguradora trouxe proposta desta vez. Não fale de recusa, de risco, ' \
                        'de aceitação nem de motivo, e não ofereça cotar de novo. Diga que vai encaminhar para alguém da ' \
                        'equipe olhar a melhor alternativa, sem prazo.',
-    'encerrada_por_prazo' => 'A cotação terminou, e o comparativo em PDF com as opções acabou de ser enviado nesta ' \
-                             "conversa. #{ORDEM_DO_ARQUIVO} Os valores de cada seguradora estão com o especialista, que " \
-                             'os lê sem cotar de novo.'
+    'encerrada_por_prazo' => 'Situação: terminou. Arquivo enviado nesta conversa: o comparativo em PDF das seguradoras. ' \
+                             "#{ORDEM_DO_ARQUIVO} Valores de cada seguradora: com o especialista, que os lê sem cotar de novo."
   }.freeze
   # QUEM FICOU SEM PROPOSTA NÃO É ASSUNTO DO CLIENTE (chat#638, decisão do CEO de 24/09/2026): nem recusa, nem prazo, nem
   # instabilidade. A frase "não responderam a tempo, não foi recusa do risco" que estava nos fatos chegava ao cliente
   # quase igual. Quem fica sabendo é a equipe, pela nota interna (`NotaDaEquipe`).
   SEM_QUEM_FICOU_DE_FORA = 'Não fale de seguradora que ficou sem proposta, nem de prazo, recusa ou motivo.'.freeze
   COM_RESULTADO = %w[concluida valores_guardados encerrada_por_prazo].freeze
+  PEDIDO_AS_SEGURADORAS = 'Pedido às seguradoras, a partir do que a pessoa pediu:'.freeze
+  NEM_SEMPRE_COTADO = 'O que cada seguradora cotou pode ser diferente do pedido, e está com o especialista.'.freeze
 
   # FORMULÁRIO INDISPONÍVEL (revisão da chat#608): pedir de novo daria a mesma recusa, então não se oferece.
   SEM_FORMULARIO = 'A cotação não pôde ser aberta agora: o formulário deste tipo de seguro não está disponível. Nenhuma ' \
@@ -87,23 +92,56 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Eventos
                'especialista o que falta e pergunte à pessoa só o que ninguém disse ainda.'.freeze
   FALTA_PREFIXO = 'A cotação não foi aberta: falta dado que a pessoa precisa dar. O que a conferência apontou:'.freeze
 
-  class_methods do
+  # `module ClassMethods` em vez de `class_methods do`, como em `Declaracao`: mesmo efeito no concern, e um módulo não
+  # tem o teto de linhas de bloco (os fatos do resultado, item 6 da auditoria de voz, passaram dele).
+  module ClassMethods
     # -> os fatos do evento `tipo` desta execução, para o modelo (`Native::Base.fatos_do_evento`), começando pelo
-    # seguro e pelo bem (chat#612): com vários bens cotados na conversa, a Lia precisa saber de qual é a notícia.
+    # seguro e pelo bem (chat#612): com vários bens cotados na conversa, a Lia precisa saber de qual é a notícia. O
+    # identificador do bem é nosso, e a frase que segue diz como chamá-lo (item 5A, `Faixa::NOME_NA_CONVERSA`).
     def fatos_do_evento(tipo, run)
-      "Cotação de #{::Autonomia::Insurance::Faixa.descricao(run)}. #{fatos_do_tipo(tipo.to_s, run.handle.to_h)}"
+      faixa = ::Autonomia::Insurance::Faixa
+      ["Cotação de #{faixa.descricao(run)}.", (faixa::NOME_NA_CONVERSA if faixa.item(run)),
+       fatos_do_tipo(tipo.to_s, run)].compact.join(' ')
     end
 
     private
 
-    def fatos_do_tipo(tipo, handle)
+    def fatos_do_tipo(tipo, run)
+      handle = run.handle.to_h
       case tipo
       when 'falta_dado' then fatos_da_falta(handle)
       when 'ramo_desconhecido' then "A cotação não foi aberta. #{self::RAMO_DESCONHECIDO}"
       when 'falhou' then fatos_da_falha(handle)
-      else [FATOS[tipo], (SEM_BONUS if COM_RESULTADO.include?(tipo) && handle[self::SEM_BONUS_KEY].present?),
-            (SEM_QUEM_FICOU_DE_FORA if COM_RESULTADO.include?(tipo))].compact.join(' ')
+      else COM_RESULTADO.include?(tipo) ? fatos_com_resultado(tipo, run) : FATOS[tipo].to_s
       end
+    end
+
+    # O desfecho com resultado: o fato do tipo, o que só vale para esta cotação, o aviso sem bônus quando houver, e por
+    # último o que a Lia não diz de quem ficou sem proposta.
+    def fatos_com_resultado(tipo, run)
+      sem_bonus = run.handle.to_h[self::SEM_BONUS_KEY].present?
+      [FATOS[tipo], *fatos_do_resultado(run), (SEM_BONUS if sem_bonus), SEM_QUEM_FICOU_DE_FORA].compact.join(' ')
+    end
+
+    # O QUE SÓ VALE PARA ESTA COTAÇÃO (item 6 da auditoria de voz, 26/09/2026): quantas seguradoras trouxeram preço
+    # (`DELIVERED_KEY`, a união das consultas), o que a pessoa pediu para este bem e entrou ou não coube (os parâmetros
+    # `pedido_que_entrou` e `pedido_que_nao_coube`, gravados na execução) e as outras cotações do mesmo pedido.
+    # O PEDIDO NÃO É O QUE FOI COTADO (revisão adversarial, 26/09/2026): o especialista o escreve antes de o adapter
+    # transformar a entrada e antes de as seguradoras responderem. O fato diz o que foi pedido, e que o cotado de cada
+    # uma pode ser outro e está com o especialista.
+    def fatos_do_resultado(run)
+      com_preco = Array(run.handle.to_h[self::DELIVERED_KEY]).size
+      pedido = run.arguments.to_h.stringify_keys
+      [("Seguradoras que trouxeram preço: #{com_preco}." if com_preco.positive?),
+       fato_do_pedido(PEDIDO_AS_SEGURADORAS, pedido['pedido_que_entrou']),
+       (NEM_SEMPRE_COTADO if pedido['pedido_que_entrou'].present?),
+       fato_do_pedido('Do pedido da pessoa, não coube:', pedido['pedido_que_nao_coube']),
+       ::Autonomia::Insurance::CotacoesDoMesmoPedido.fatos(run)]
+    end
+
+    def fato_do_pedido(rotulo, texto)
+      texto = texto.to_s.squish
+      texto.empty? ? nil : "#{rotulo} #{texto.delete_suffix('.')}."
     end
 
     # Formulário indisponível recusaria de novo: não se oferece pedir outra vez.

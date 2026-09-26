@@ -11,6 +11,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
+import ContactOptOutSection from 'dashboard/components-next/Contacts/ContactOptOut/ContactOptOutSection.vue';
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
@@ -161,7 +162,7 @@ const handleAvatarDelete = async () => {
                 $t('CONTACTS_LAYOUT.DETAILS.CREATED_AT', { date: createdAt })
               }}
             </span>
-            •
+            {{ $t('CONTACTS_LAYOUT.DETAILS.DATES_SEPARATOR') }}
             <span
               v-tooltip.top="{
                 content: exactTimestamp(contactData?.lastActivityAt),
@@ -194,6 +195,7 @@ const handleAvatarDelete = async () => {
         @click="updateContact"
       />
     </div>
+    <ContactOptOutSection :contact="selectedContact" />
     <Policy :permissions="['administrator']">
       <div
         class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"

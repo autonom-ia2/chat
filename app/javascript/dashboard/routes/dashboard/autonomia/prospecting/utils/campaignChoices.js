@@ -1,7 +1,8 @@
 // Campanhas que recebem o segmento da Prospecção pela etiqueta (#732, item 11;
-// ACAO-X09): primeiro as da API do WhatsApp que ainda não começaram (o público
-// delas é lido quando começam), depois as de envio único ativas. O valor da
-// escolha leva o tipo, porque os ids das duas tabelas se repetem.
+// ACAO-X09): primeiro as de envio único ativas (WhatsApp Oficial, decisão do
+// Rodrigo de 26/09), depois as da API do WhatsApp que ainda não começaram (o
+// público delas é lido quando começam). O valor da escolha leva o tipo, porque
+// os ids das duas tabelas se repetem.
 import CampaignsAPI from 'dashboard/api/campaigns';
 import WhatsappApiCampaignsAPI from 'dashboard/api/whatsappApiCampaigns';
 
@@ -31,14 +32,6 @@ export const campaignChoices = ({
   whatsappApiCampaigns = [],
   t,
 }) => [
-  ...whatsappApiCampaigns
-    .filter(campaign => campaign.status === 'scheduled')
-    .map(campaign => ({
-      value: campaignChoiceValue(WHATSAPP_API, campaign.id),
-      label: t('PROSPECTING.CAMPAIGN_SELECTION.CHOICE_WHATSAPP_API', {
-        title: campaign.title,
-      }),
-    })),
   ...campaigns
     .filter(
       campaign =>
@@ -48,6 +41,14 @@ export const campaignChoices = ({
     .map(campaign => ({
       value: campaignChoiceValue(ONE_OFF, campaign.id),
       label: t('PROSPECTING.CAMPAIGN_SELECTION.CHOICE_ONE_OFF', {
+        title: campaign.title,
+      }),
+    })),
+  ...whatsappApiCampaigns
+    .filter(campaign => campaign.status === 'scheduled')
+    .map(campaign => ({
+      value: campaignChoiceValue(WHATSAPP_API, campaign.id),
+      label: t('PROSPECTING.CAMPAIGN_SELECTION.CHOICE_WHATSAPP_API', {
         title: campaign.title,
       }),
     })),

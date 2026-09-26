@@ -11,7 +11,14 @@ class Crm::FollowUps::MessageSender
     def self.skipped
       new(status: :skipped)
     end
+
+    # O contato recusou mensagens ativas (chat#737). Não é falha: cada chamador encerra do seu jeito.
+    def self.opted_out
+      new(status: :opted_out, error: OPTED_OUT_REASON)
+    end
   end
+
+  OPTED_OUT_REASON = 'opt_out'.freeze
 
   def initialize(follow_up:)
     @follow_up = follow_up
@@ -19,6 +26,7 @@ class Crm::FollowUps::MessageSender
 
   def perform
     return Result.skipped unless deliverable?
+    return Result.opted_out if contact_opted_out?
     return delivery_failure('conversation_required') if @follow_up.conversation.blank?
     return delivery_failure('not_whatsapp_capable') unless whatsapp_window.whatsapp_capable?
     return delivery_failure('sender_required') if sender.blank?
@@ -32,6 +40,12 @@ class Crm::FollowUps::MessageSender
 
   def deliverable?
     @follow_up.auto_send_message? && sent_message_id.blank?
+  end
+
+  # Relido do banco a cada envio: a recusa pode ter sido gravada depois de o follow-up ser agendado.
+  def contact_opted_out?
+    contact_id = @follow_up.conversation&.contact_id || @follow_up.contact_id
+    contact_id.present? && Contact.opted_out.exists?(id: contact_id)
   end
 
   def deliver_message!

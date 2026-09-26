@@ -42,6 +42,16 @@ class EmailSuppression < ApplicationRecord
       EmailSuppressionState.blocking.exists?(account_id: account.id, email: normalized)
   end
 
+  # A pessoa se descadastrou (chat#713): o descadastro vale também para as outras mensagens ativas da conta.
+  # Só o motivo 'unsubscribe' conta; bounce, reclamação ou supressão do provedor não são pedido da pessoa.
+  def self.unsubscribed?(account, email)
+    normalized = email.to_s.strip.downcase
+    return false if normalized.blank?
+
+    where(account_id: account.id, reason: 'unsubscribe').exists?(['lower(email) = ?', normalized]) ||
+      EmailSuppressionState.blocking.exists?(account_id: account.id, email: normalized, reason: 'unsubscribe')
+  end
+
   # Two bounded queries; legacy presence wins regardless of newer state's expiry.
   # Unknown legacy reason strings are exposed as a bounded permanent code.
   def self.blocking_reasons_for(account, emails)

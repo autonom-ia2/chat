@@ -6,6 +6,7 @@ import { useStore } from 'dashboard/composables/store';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { whatsappApiSkipLines } from './whatsappApiSkips';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -247,6 +248,13 @@ onBeforeUnmount(() => {
                       count: campaign.failed_count,
                     })
                   }}
+                </p>
+                <p
+                  v-for="line in whatsappApiSkipLines(campaign, t)"
+                  :key="line"
+                  class="mb-0 text-xs text-n-slate-11"
+                >
+                  {{ line }}
                 </p>
               </td>
               <td class="px-4 py-4 align-top text-n-slate-12">

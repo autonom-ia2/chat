@@ -10,7 +10,13 @@ import LeadDetailResearch from './LeadDetailResearch.vue';
 import LeadDetailReviews from './LeadDetailReviews.vue';
 import LeadStatusBanner from './LeadStatusBanner.vue';
 import DiscardLeadsModal from './DiscardLeadsModal.vue';
-import { hasLeadStatus, isLeadDiscarded } from '../../utils/leadCrmPresence';
+import LeadConsentRefusalAction from './LeadConsentRefusalAction.vue';
+import LeadConsentRefusedBadge from './LeadConsentRefusedBadge.vue';
+import {
+  hasLeadStatus,
+  isLeadConsentRefused,
+  isLeadDiscarded,
+} from '../../utils/leadCrmPresence';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -45,6 +51,8 @@ const {
   adoptOwner,
   discardLeads,
   restoreLead,
+  refuseConsent,
+  withdrawConsentRefusal,
 } = useProspectingSearchContext();
 
 // Descartar e desfazer o descarte (#732): quem gerencia a prospecção.
@@ -109,6 +117,9 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
               <span class="i-lucide-zap size-3" />
               {{ t('PROSPECTING.SEARCH.PRIORITY_FIRST_CALL') }}
             </span>
+            <LeadConsentRefusedBadge
+              v-if="isLeadConsentRefused(selectedLeadDetail)"
+            />
           </div>
           <h2 class="break-words text-lg font-semibold text-n-slate-12">
             {{ selectedLeadDetail.name }}
@@ -345,6 +356,11 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
           >
             {{ t('PROSPECTING.DISCARD.ACTION') }}
           </button>
+          <LeadConsentRefusalAction
+            :lead="selectedLeadDetail"
+            :refuse="refuseConsent"
+            :withdraw="withdrawConsentRefusal"
+          />
         </template>
       </footer>
       <DiscardLeadsModal

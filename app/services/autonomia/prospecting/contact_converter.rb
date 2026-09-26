@@ -10,6 +10,8 @@
 # - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
 #   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
 #   dados dele.
+# - Lead recusado (consent_refused?), ou do mesmo número ou e-mail de um lead recusado da conta (ConsentVeto), passa a recusa
+#   para o contato, criado agora ou já existente (chat#713). Recusa que o contato já tinha fica como está.
 class Autonomia::Prospecting::ContactConverter
   Result = Struct.new(:lead, :contact, :created, :company, keyword_init: true)
 
@@ -17,11 +19,13 @@ class Autonomia::Prospecting::ContactConverter
   WRITTEN_NAME_KEY = 'autonomia_prospecting_contact_name'.freeze
   WRITTEN_JOB_TITLE_KEY = 'autonomia_prospecting_contact_job_title'.freeze
 
-  def initialize(lead:, user:, company: nil)
+  # consent_veto: quem converte vários leads passa um só, para não reler as recusas da conta a cada lead.
+  def initialize(lead:, user:, company: nil, consent_veto: nil)
     @lead = lead
     @account = lead.account
     @user = user
     @company = company
+    @consent_veto = consent_veto
   end
 
   # Lead da prospecção que gravou o contato (nil em contato que a prospecção não criou nem enriqueceu).
@@ -42,6 +46,7 @@ class Autonomia::Prospecting::ContactConverter
       created = contact.new_record?
       enrich_contact(contact)
       contact.save!
+      inherit_opt_out(contact)
       @lead.update!(contact: contact) if @lead.contact_id != contact.id
     end
 
@@ -75,6 +80,15 @@ class Autonomia::Prospecting::ContactConverter
     return if email.nil?
 
     @account.contacts.from_email(email)
+  end
+
+  def inherit_opt_out(contact)
+    return if contact.opted_out?
+
+    @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
+    return unless @lead.consent_refused? || @consent_veto.vetoed?(lead: @lead, contact: contact)
+
+    contact.opt_out!(source: Autonomia::Prospecting::ContactOptOutSync::SOURCE)
   end
 
   def build_contact

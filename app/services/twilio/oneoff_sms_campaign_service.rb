@@ -19,6 +19,8 @@ class Twilio::OneoffSmsCampaignService
   def process_audience(audience_labels)
     campaign.account.contacts.tagged_with(audience_labels, any: true).each do |contact|
       next if contact.phone_number.blank?
+      # chat#737: quem recusou mensagens ativas não recebe; relido do banco a cada contato, durante o disparo.
+      next if Contact.opted_out.exists?(id: contact.id)
 
       content = Liquid::CampaignTemplateService.new(campaign: campaign, contact: contact).call(campaign.message)
 

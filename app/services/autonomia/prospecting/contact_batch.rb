@@ -29,6 +29,10 @@ class Autonomia::Prospecting::ContactBatch
 
   private
 
+  def consent_veto
+    @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
+  end
+
   def leads_by_id
     @leads_by_id ||= @leads_scope.where(id: @lead_ids).index_by(&:id)
   end
@@ -38,7 +42,7 @@ class Autonomia::Prospecting::ContactBatch
     return result.failed << failure(lead_id, 'not_found') if lead.nil?
     return result.failed << failure(lead_id, 'discarded') if lead.discarded?
 
-    record(Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).perform, result)
+    record(Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user, consent_veto: consent_veto).perform, result)
   rescue ActiveRecord::RecordInvalid
     result.failed << failure(lead_id, 'invalid_data')
   rescue StandardError => e
