@@ -32,6 +32,14 @@ RSpec.describe Contacts::OptOutInheritance do
     expect(contact.opt_out_source).to eq('prospecting')
   end
 
+  it 'lead recusado e depois descartado ainda passa a recusa ao contato que nasce com o telefone dele' do
+    refuse_by_prospecting('+5531999997003').update!(status: :discarded, discard_reason: 'Sem interesse')
+
+    contact = inheriting { account.contacts.create!(name: 'Escreveu depois', phone_number: '+5531999997003') }
+
+    expect(contact.reload.opt_out_source).to eq('prospecting')
+  end
+
   it 'contato criado depois com um e-mail descadastrado nasce com a recusa do descadastro' do
     unsubscribe('saiu@exemplo.com.br')
 

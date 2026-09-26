@@ -11,6 +11,7 @@ import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
 import LeadCardActions from './LeadCardActions.vue';
 import LeadResearchSummary from './LeadResearchSummary.vue';
 import LeadStatusBanner from './LeadStatusBanner.vue';
+import LeadConsentRefusedBadge from './LeadConsentRefusedBadge.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -18,7 +19,11 @@ import {
   priorityValue,
 } from '../../utils/prospectingPriority';
 import { isWhatsAppVerified, leadPhoneDisplay } from '../../utils/leadPhone';
-import { hasLeadStatus, isLeadDiscarded } from '../../utils/leadCrmPresence';
+import {
+  hasLeadStatus,
+  isLeadConsentRefused,
+  isLeadDiscarded,
+} from '../../utils/leadCrmPresence';
 import { phoneRegionFromSettings } from '../../utils/phoneContract';
 import * as formatters from '../../utils/searchFormatters';
 
@@ -118,6 +123,7 @@ const toggleDetails = event => {
             <span class="i-lucide-zap size-3" />
             {{ t('PROSPECTING.SEARCH.PRIORITY_FIRST_CALL_SHORT') }}
           </span>
+          <LeadConsentRefusedBadge v-if="isLeadConsentRefused(lead)" />
         </div>
         <h3
           class="mt-1 break-words text-base font-semibold leading-tight text-n-slate-12"

@@ -13,9 +13,11 @@ class Api::V1::Accounts::Autonomia::Prospecting::LeadsController < Api::V1::Acco
 
   def update
     lead = leads_scope.find(params[:id])
-    # A recusa (no_consent) entra e sai dos contatos na mesma transação do status (chat#713).
+    # O status no_consent grava a recusa do lead, e ela entra nos contatos na mesma transação (chat#713). Nenhuma troca de
+    # status a tira: descartar mantém a recusa; só o "Desfazer" (LeadConsentRefusalsController#destroy) a solta.
     ::Autonomia::Prospecting::ContactOptOutSync.new(account: Current.account).update_lead!(lead, lead_params)
-    # Recusa ou descarte depois do segmento: a etiqueta sai no job da Prospecção, antes de a campanha ler o público por ela.
+    # Recusa ou descarte depois do segmento: no job da Prospecção a etiqueta sai, antes de a campanha ler o público por
+    # ela, e o descartado sai dos pendentes da campanha em andamento.
     ::Autonomia::Prospecting::SegmentRefusalSync.enqueue(account: Current.account, leads: [lead]) if lead.saved_change_to_status?
 
     render json: { payload: lead_payload(lead.reload) }

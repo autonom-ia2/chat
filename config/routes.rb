@@ -395,6 +395,8 @@ Rails.application.routes.draw do
                 post :enrichment, on: :member, action: :enrich
                 post :research, on: :member
                 post :adopt_owner, on: :member
+                post :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :create
+                delete :consent_refusal, on: :member, controller: :lead_consent_refusals, action: :destroy
                 post :crm_cards, on: :collection, action: :create_crm_cards
                 post :campaign_segment, on: :collection, action: :create_campaign_segment
                 post :discard, on: :collection, controller: :lead_batches, action: :discard

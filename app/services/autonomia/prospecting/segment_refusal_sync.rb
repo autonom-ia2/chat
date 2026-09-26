@@ -9,17 +9,20 @@
 # a etiqueta. Só os leads que podem alcançar esses contatos são avaliados, com um ConsentVeto e um contato por lead para
 # a execução inteira. Nada é etiquetado e nenhum contato é criado aqui.
 #
-# Limitação conhecida: a campanha da API do WhatsApp que já começou resolveu o público antes e guarda os destinatários
-# pendentes; tirar a etiqueta não os remove. Isso é do núcleo de campanhas (AudienceResolver/DeliveryEngine), fora daqui.
+# A campanha da API do WhatsApp que já começou resolveu o público antes e guarda os destinatários pendentes; tirar a
+# etiqueta não os remove. Quem recusou é pulado na hora do envio (DeliveryEngine confere a recusa do contato); o
+# descartado sai dos pendentes aqui mesmo, pelo DiscardedCampaignRecipients.
 class Autonomia::Prospecting::SegmentRefusalSync
-  REFUSAL_STATUSES = %w[discarded no_consent].freeze
-
-  # Chamado depois de a recusa estar gravada: só enfileira quem de fato ficou recusado.
+  # Chamado depois de a recusa estar gravada: só enfileira quem de fato ficou descartado ou recusado.
   def self.enqueue(account:, leads:)
-    lead_ids = Array(leads).select { |lead| REFUSAL_STATUSES.include?(lead.status) }.map(&:id).sort
+    lead_ids = Array(leads).select { |lead| refused?(lead) }.map(&:id).sort
     return if lead_ids.empty?
 
     Autonomia::Prospecting::SegmentRefusalSyncJob.perform_later(account.id, lead_ids)
+  end
+
+  def self.refused?(lead)
+    lead.discarded? || lead.consent_refused?
   end
 
   def initialize(account:)
@@ -27,9 +30,17 @@ class Autonomia::Prospecting::SegmentRefusalSync
     @eligibility = Autonomia::Prospecting::SegmentEligibility.new(account: account, user: nil)
   end
 
-  # O status é relido: o lead que voltou atrás antes do job não perde a etiqueta.
+  # O status e a recusa são relidos: o lead que voltou atrás antes do job não perde a etiqueta nem sai da campanha.
   def perform(lead_ids)
-    reached = refused_leads(lead_ids).flat_map { |lead| refused_contacts(lead).map { |contact| [lead, contact] } }
+    leads = refused_leads(lead_ids)
+    remove_labels(leads)
+    Autonomia::Prospecting::DiscardedCampaignRecipients.new(account: @account, eligibility: @eligibility).perform(leads)
+  end
+
+  private
+
+  def remove_labels(leads)
+    reached = leads.flat_map { |lead| refused_contacts(lead).map { |contact| [lead, contact] } }
     return if reached.empty?
 
     tagged_lists(reached.map(&:last)).each do |list, label, tagged_contact_ids|
@@ -38,19 +49,17 @@ class Autonomia::Prospecting::SegmentRefusalSync
     end
   end
 
-  private
-
   # O descartado tira só o próprio contato. O pedido para parar vale para o número e o e-mail (ConsentVeto): sai de todo
   # contato da conta que ele veta, mesmo que seja o de outro lead, como a unidade com o WhatsApp que a matriz recusou.
   def refused_contacts(lead)
     own = @eligibility.existing_contact(lead)
-    contacts = lead.no_consent? ? [own, *@eligibility.consent_veto.contacts_vetoed_by(lead)] : [own]
+    contacts = lead.consent_refused? ? [own, *@eligibility.consent_veto.contacts_vetoed_by(lead)] : [own]
     contacts.compact.uniq(&:id)
   end
 
   def refused_leads(lead_ids)
-    Autonomia::Prospecting::Lead.where(account: @account, id: Array(lead_ids), status: REFUSAL_STATUSES)
-                                .includes(:contact).order(:id).to_a
+    leads = Autonomia::Prospecting::Lead.where(account: @account, id: Array(lead_ids))
+    leads.discarded.or(leads.consent_refused).includes(:contact).order(:id).to_a
   end
 
   # [lista, etiqueta, ids dos contatos recusados que têm a etiqueta] das listas com segmento gerado.
@@ -85,25 +94,9 @@ class Autonomia::Prospecting::SegmentRefusalSync
   end
 
   def remove_label(list, label, targets)
-    kept = kept_contact_ids(list, targets.to_set { |_lead, contact| contact.id })
+    kept = @eligibility.contact_ids_kept_in(list, targets.to_set { |_lead, contact| contact.id })
     remover = Autonomia::Prospecting::SegmentLabelRemover.new(label: label, user: nil, kept_contact_ids: kept)
     targets.each { |lead, contact| remover.remove(lead: lead, contact: contact) }
-  end
-
-  # Dos contatos recusados, os que um lead elegível da lista ainda alcança. Só entram na conta os leads ligados a um
-  # desses contatos e os sem contato que estão prontos (que acham o contato pelo telefone, identificador ou e-mail).
-  def kept_contact_ids(list, target_ids)
-    list.leads.includes(:contact).to_a.filter_map do |lead|
-      next unless may_reach?(lead, target_ids)
-
-      contact_id = @eligibility.existing_contact(lead)&.id
-      contact_id if target_ids.include?(contact_id) && @eligibility.block_reason(lead).nil?
-    end
-  end
-
-  # Sem consulta: o lead ligado a outro contato não alcança os recusados, e o que não está pronto não é elegível.
-  def may_reach?(lead, target_ids)
-    (lead.contact.nil? || target_ids.include?(lead.contact_id)) && @eligibility.lead_ready?(lead)
   end
 
   def segment_label_id(list)

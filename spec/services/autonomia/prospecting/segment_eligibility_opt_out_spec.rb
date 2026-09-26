@@ -25,6 +25,19 @@ RSpec.describe Autonomia::Prospecting::SegmentEligibility do
     end
   end
 
+  # A recusa do lead não depende do status (26/09): quem recusou pelo botão fica fora, e veta o outro lead do número.
+  it 'lead recusado pelo botão, com qualquer status, fica fora como opt_out e veta outro lead do mesmo número' do
+    lead.update!(consent_refused_at: Time.current)
+    other = Autonomia::Prospecting::Lead.create!(
+      account: account, provider: 'mock', provider_place_id: 'eligibility-optout-2', name: 'Outro', phone: '+5531999998001',
+      country: 'BR', status: :ready_for_campaign, metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => '+5531999998001' } }
+    )
+
+    expect(eligibility.block_reason(lead)).to eq('opt_out')
+    expect(eligibility.lead_ready?(lead)).to be(false)
+    expect(eligibility.block_reason(other)).to eq('opt_out')
+  end
+
   it 'contato bloqueado continua com o motivo de bloqueio' do
     contact.update!(blocked: true)
     contact.opt_out!(source: 'manual')

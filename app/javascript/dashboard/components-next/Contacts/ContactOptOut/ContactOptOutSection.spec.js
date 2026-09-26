@@ -158,4 +158,21 @@ describe('ContactOptOutSection', () => {
     });
     expect(alert).toHaveBeenCalledWith(`${PREFIX}.API.ERROR`);
   });
+
+  it('quando o servidor explica a recusa do pedido, mostra a frase dele', async () => {
+    const serverError = {
+      response: { data: { error: 'Aqui só se desfaz a recusa manual.' } },
+    };
+    dispatch.mockRejectedValue(new Error('falhou', { cause: serverError }));
+    const wrapper = mountSection({
+      id: 7,
+      optedOutAt: 1790000000,
+      optOutSource: 'manual',
+    });
+
+    await wrapper.get('[data-test="confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(alert).toHaveBeenCalledWith('Aqui só se desfaz a recusa manual.');
+  });
 });

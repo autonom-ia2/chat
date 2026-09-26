@@ -530,7 +530,7 @@
           "CONFIRM": "Yes, mark"
         },
         "ORIGIN_HINT": {
-          "PROSPECTING": "This opt-out came from Prospecting. It is removed when the lead status is no longer refused.",
+          "PROSPECTING": "This opt-out came from Prospecting. It is removed only on the lead in Prospecting, by undoing the refusal there.",
           "EMAIL_UNSUBSCRIBE": "This opt-out came from an email unsubscribe made by the person and cannot be undone here."
         },
         "UNDO_DIALOG": {

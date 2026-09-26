@@ -418,6 +418,16 @@ describe('#actions', () => {
       ).rejects.toThrow(Error);
       expect(commit.mock.calls).toEqual([]);
     });
+    it('guarda a resposta do servidor no erro, para a tela mostrar a frase', async () => {
+      const serverError = { response: { data: { error: 'Só a manual' } } };
+      axios.delete.mockRejectedValue(serverError);
+      await expect(
+        actions.setOptOut(
+          { commit },
+          { id: contactList[0].id, optedOut: false }
+        )
+      ).rejects.toMatchObject({ cause: serverError });
+    });
   });
 
   describe('#initiateCall', () => {

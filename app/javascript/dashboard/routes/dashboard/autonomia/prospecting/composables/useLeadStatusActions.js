@@ -1,6 +1,6 @@
-// Descartar, desfazer o descarte e criar contatos em lote (#732, item 10). A
-// busca e as Listas usam o mesmo: cada uma entrega o replaceLead dela, que
-// troca o lead onde ele aparece na tela.
+// Descartar, desfazer o descarte, "Não quer ser contatado" (chat#713) e criar
+// contatos em lote (#732, item 10). A busca e as Listas usam o mesmo: cada uma
+// entrega o replaceLead dela, que troca o lead onde ele aparece na tela.
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -35,6 +35,23 @@ export const useLeadStatusActions = ({ replaceLead }) => {
     }
   };
 
+  // "Não quer ser contatado" e o desfazer (chat#713). A confirmação é da tela;
+  // aqui só o pedido, a troca do lead e o aviso.
+  const setConsentRefusal = async (lead, refused) => {
+    const key = refused ? 'REFUSE' : 'WITHDRAW';
+    try {
+      const { data } = refused
+        ? await AutonomiaProspectingAPI.refuseLeadConsent(lead.id)
+        : await AutonomiaProspectingAPI.withdrawLeadConsentRefusal(lead.id);
+      replaceLead(data.payload);
+      useAlert(t(`PROSPECTING.CONSENT_REFUSAL.${key}.DONE`));
+    } catch (e) {
+      alertError(e, t(`PROSPECTING.CONSENT_REFUSAL.${key}.ERROR`));
+    }
+  };
+  const refuseConsent = lead => setConsentRefusal(lead, true);
+  const withdrawConsentRefusal = lead => setConsentRefusal(lead, false);
+
   // Lotes de até 30, como o envio ao CRM. Descartado não vira contato (o
   // servidor também recusa). O lead que ganhou contato mostra "Abrir contato".
   const createContacts = async leads => {
@@ -64,5 +81,12 @@ export const useLeadStatusActions = ({ replaceLead }) => {
     }
   };
 
-  return { creatingContacts, discardLeads, restoreLead, createContacts };
+  return {
+    creatingContacts,
+    discardLeads,
+    restoreLead,
+    refuseConsent,
+    withdrawConsentRefusal,
+    createContacts,
+  };
 };

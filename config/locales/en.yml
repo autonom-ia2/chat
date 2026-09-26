@@ -404,7 +404,7 @@ en:
     online:
       delete: '%{contact_name} is Online, please try again later'
     opt_out:
-      undo_only_manual: 'Only an opt-out marked by the team can be undone here. Opt-outs from Prospecting are undone by changing the lead status; email unsubscribes are not undone here.'
+      undo_only_manual: 'Only an opt-out marked by the team can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; email unsubscribes are not undone here.'
   integration_apps:
     # Note: webhooks and dashboard_apps don't need short_description as they use different modal components
     dashboard_apps:

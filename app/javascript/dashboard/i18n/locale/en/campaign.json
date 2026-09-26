@@ -334,7 +334,8 @@
         "ACTIONS": "Actions",
         "MEDIA_ONLY": "Media only",
         "FAILURES": "{count} failures",
-        "OPTED_OUT": "Opted out of outbound messages: {count}"
+        "OPTED_OUT": "Opted out of outbound messages: {count}",
+        "DISCARDED": "Discarded in Prospecting: {count}"
       },
       "ACTIONS": {
         "PAUSE_SUCCESS": "Campaign paused",

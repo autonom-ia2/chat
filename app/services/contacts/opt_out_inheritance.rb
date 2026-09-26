@@ -2,7 +2,7 @@
 # nasce depois (mensagem no inbox, importação, criação manual, API) ou que passa a ter o telefone ou o e-mail de quem
 # recusou herda a recusa que ainda vale na conta:
 # - 'email_unsubscribe': o e-mail do contato se descadastrou das campanhas de e-mail da conta;
-# - 'prospecting': um lead recusado (no_consent) da conta alcança o contato (ConsentVeto#contact_vetoed?).
+# - 'prospecting': um lead recusado da conta (consent_refused_at ou no_consent) alcança o contato (ConsentVeto#contact_vetoed?).
 #
 # source_for também diz, quando a recusa da Prospecção sai, se outra recusa ainda sustenta a marca (ContactOptOutSync).
 class Contacts::OptOutInheritance
@@ -13,7 +13,7 @@ class Contacts::OptOutInheritance
   def self.possible_for?(contact)
     return false if contact.phone_number.blank? && contact.email.blank?
 
-    Autonomia::Prospecting::Lead.exists?(account_id: contact.account_id, status: :no_consent) ||
+    Autonomia::Prospecting::Lead.where(account_id: contact.account_id).consent_refused.exists? ||
       EmailSuppression.unsubscribed?(contact.account, contact.email)
   end
 

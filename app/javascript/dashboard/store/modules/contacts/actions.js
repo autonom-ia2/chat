@@ -249,7 +249,8 @@ export const actions = {
       commit(types.EDIT_CONTACT, response.data.payload);
       return response.data.payload;
     } catch (error) {
-      throw new Error(error);
+      // A resposta fica em `cause`: a tela mostra a frase que o servidor mandou.
+      throw new Error(error, { cause: error });
     }
   },
 

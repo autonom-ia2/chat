@@ -78,8 +78,9 @@ const confirmChange = async () => {
     });
     useAlert(t(`${PREFIX}.API.${resultKey(optedOut, payload)}`));
     dialogRef.value?.close();
-  } catch {
-    useAlert(t(`${PREFIX}.API.ERROR`));
+  } catch (error) {
+    // A frase do servidor (por exemplo, por que a recusa não se desfaz aqui) vale mais que a genérica.
+    useAlert(error?.cause?.response?.data?.error || t(`${PREFIX}.API.ERROR`));
   } finally {
     isSaving.value = false;
   }

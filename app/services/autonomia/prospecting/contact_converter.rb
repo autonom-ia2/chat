@@ -10,7 +10,7 @@
 # - O mesmo telefone ou e-mail pode ser de mais de um negócio (central única, franquia, escritório). Contato que a
 #   prospecção gravou para outro lead continua daquele lead: este passa a apontar para ele, sem renomear nem mexer nos
 #   dados dele.
-# - Lead recusado (no_consent), ou do mesmo número ou e-mail de um lead recusado da conta (ConsentVeto), passa a recusa
+# - Lead recusado (consent_refused?), ou do mesmo número ou e-mail de um lead recusado da conta (ConsentVeto), passa a recusa
 #   para o contato, criado agora ou já existente (chat#713). Recusa que o contato já tinha fica como está.
 class Autonomia::Prospecting::ContactConverter
   Result = Struct.new(:lead, :contact, :created, :company, keyword_init: true)
@@ -86,7 +86,7 @@ class Autonomia::Prospecting::ContactConverter
     return if contact.opted_out?
 
     @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
-    return unless @lead.no_consent? || @consent_veto.vetoed?(lead: @lead, contact: contact)
+    return unless @lead.consent_refused? || @consent_veto.vetoed?(lead: @lead, contact: contact)
 
     contact.opt_out!(source: Autonomia::Prospecting::ContactOptOutSync::SOURCE)
   end

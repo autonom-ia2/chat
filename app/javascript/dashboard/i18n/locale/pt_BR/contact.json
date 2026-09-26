@@ -528,7 +528,7 @@
           "CONFIRM": "Sim, marcar"
         },
         "ORIGIN_HINT": {
-          "PROSPECTING": "Esta recusa veio da Prospecção. Ela sai quando o status do lead deixa de ser recusado.",
+          "PROSPECTING": "Esta recusa veio da Prospecção. Ela só sai no lead, pelo \"Desfazer: pode ser contatado\".",
           "EMAIL_UNSUBSCRIBE": "Esta recusa veio do descadastro de e-mail feito pela própria pessoa e não se desfaz por aqui."
         },
         "UNDO_DIALOG": {

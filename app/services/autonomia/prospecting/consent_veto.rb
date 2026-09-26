@@ -1,7 +1,8 @@
-# Quem pediu para não receber mensagem é a pessoa do outro lado do número, não o lead (#680). Um lead em no_consent
-# veta a campanha para qualquer outro lead da conta que chegue ao mesmo contato: o contato ligado a ele, o mesmo
-# telefone ou WhatsApp (E.164) ou o mesmo e-mail. Assim a guarda da campanha não deixa a mensagem chegar a quem recusou
-# por um segundo lead do mesmo número (central única, franquia, outra unidade).
+# Quem pediu para não receber mensagem é a pessoa do outro lado do número, não o lead (#680). Um lead recusado
+# (consent_refused_at, com qualquer status, ou o status no_consent; chat#713) veta a campanha para qualquer outro lead da
+# conta que chegue ao mesmo contato: o contato ligado a ele, o mesmo telefone ou WhatsApp (E.164) ou o mesmo e-mail.
+# Assim a guarda da campanha não deixa a mensagem chegar a quem recusou por um segundo lead do mesmo número (central
+# única, franquia, outra unidade).
 class Autonomia::Prospecting::ConsentVeto
   def initialize(account:)
     @account = account
@@ -35,7 +36,7 @@ class Autonomia::Prospecting::ConsentVeto
   private
 
   def refused_leads
-    @refused_leads ||= Autonomia::Prospecting::Lead.where(account: @account, status: :no_consent).to_a
+    @refused_leads ||= Autonomia::Prospecting::Lead.where(account: @account).consent_refused.to_a
   end
 
   def refused_contact_ids

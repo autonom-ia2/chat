@@ -171,4 +171,20 @@ RSpec.describe 'WhatsApp API campaigns API', type: :request do
 
     expect(response.parsed_body['payload']['opted_out_count']).to eq(1)
   end
+
+  it 'mostra quantos destinatários saíram porque o lead foi descartado na Prospecção' do
+    account, user, inbox, label = create_account_user_inbox_and_label
+    create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')
+    create_labelled_contact(account: account, label: label, name: 'Bia Descartada', phone_number: '+5521987654321')
+    campaign = create_whatsapp_api_campaign(account: account, user: user, inbox: inbox, label: label)
+    WhatsappApiCampaigns::AudienceResolver.new(campaign).perform
+    campaign.whatsapp_api_campaign_recipients.order(:id).last
+            .update!(status: :cancelled, cancelled_at: Time.current, last_error_message: WhatsappApiCampaignRecipient::DISCARDED_REASON)
+
+    get "/api/v1/accounts/#{account.id}/whatsapp_api_campaigns", headers: auth_headers(user)
+
+    listed = response.parsed_body['payload'].find { |item| item['id'] == campaign.id }
+    expect(listed['discarded_count']).to eq(1)
+    expect(listed['opted_out_count']).to eq(0)
+  end
 end

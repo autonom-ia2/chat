@@ -334,7 +334,8 @@
         "ACTIONS": "Ações",
         "MEDIA_ONLY": "Somente mídia",
         "FAILURES": "{count} falhas",
-        "OPTED_OUT": "Recusaram mensagens ativas: {count}"
+        "OPTED_OUT": "Recusaram mensagens ativas: {count}",
+        "DISCARDED": "Descartados na Prospecção: {count}"
       },
       "ACTIONS": {
         "PAUSE_SUCCESS": "Campanha pausada",

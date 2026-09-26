@@ -16,7 +16,7 @@ class Autonomia::Prospecting::SegmentEligibility
   # A recusa de outro lead com o mesmo contato, telefone ou e-mail também vale (ConsentVeto).
   def block_reason(lead)
     return 'discarded' if lead.discarded?
-    return 'opt_out' if lead.no_consent?
+    return 'opt_out' if lead.consent_refused?
 
     contact = existing_contact(lead)
     return 'opt_out' if consent_veto.vetoed?(lead: lead, contact: contact)
@@ -26,7 +26,7 @@ class Autonomia::Prospecting::SegmentEligibility
 
   # O que o próprio lead decide, sem consultar contato: não recusou, tem telefone, WhatsApp verificado e está pronto.
   def lead_ready?(lead)
-    !lead.discarded? && !lead.no_consent? && lead_block_reason(lead).nil?
+    !lead.discarded? && !lead.consent_refused? && lead_block_reason(lead).nil?
   end
 
   # O mesmo contato que o ContactConverter vai etiquetar: o do lead ou o que ele acha pelo WhatsApp verificado, pelo
@@ -37,12 +37,30 @@ class Autonomia::Prospecting::SegmentEligibility
     @contacts[lead.id] = Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).existing_contact
   end
 
+  # Dos contatos (target_ids), os que um lead elegível da lista ainda alcança: esses ficam com a etiqueta do segmento e na
+  # campanha. Só entram na conta os leads ligados a um desses contatos e os sem contato que estão prontos (que acham o
+  # contato pelo telefone, identificador ou e-mail).
+  def contact_ids_kept_in(list, target_ids)
+    target_ids = target_ids.to_set
+    list.leads.includes(:contact).to_a.filter_map do |lead|
+      next unless may_reach?(lead, target_ids)
+
+      contact_id = existing_contact(lead)&.id
+      contact_id if target_ids.include?(contact_id) && block_reason(lead).nil?
+    end
+  end
+
   # Um só para a execução: a recusa depois do segmento usa o mesmo para achar os contatos vetados.
   def consent_veto
     @consent_veto ||= Autonomia::Prospecting::ConsentVeto.new(account: @account)
   end
 
   private
+
+  # Sem consulta: o lead ligado a outro contato não alcança os alvos, e o que não está pronto não é elegível.
+  def may_reach?(lead, target_ids)
+    (lead.contact.nil? || target_ids.include?(lead.contact_id)) && lead_ready?(lead)
+  end
 
   def contact_block_reason(contact)
     return if contact.nil?
