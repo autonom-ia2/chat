@@ -124,6 +124,16 @@ class AutonomiaProspectingAPI extends ApiClient {
     return axios.patch(`${this.url}/leads/${leadId}`, { lead });
   }
 
+  // "Não quer ser contatado" (chat#713): a recusa fica no lead, separada do
+  // status, e vai para os contatos que o número ou o e-mail alcançam.
+  refuseLeadConsent(leadId) {
+    return axios.post(`${this.url}/leads/${leadId}/consent_refusal`);
+  }
+
+  withdrawLeadConsentRefusal(leadId) {
+    return axios.delete(`${this.url}/leads/${leadId}/consent_refusal`);
+  }
+
   getLists() {
     return axios.get(`${this.url}/lists`);
   }

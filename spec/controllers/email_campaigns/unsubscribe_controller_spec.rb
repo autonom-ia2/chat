@@ -31,4 +31,14 @@ RSpec.describe EmailCampaigns::UnsubscribeController, type: :controller do
     expect(recipient.email_events.where(event_type: :unsubscribe).count).to eq(1)
     expect(EmailSuppressionEvent.where(account: campaign.account, reason: 'unsubscribe').count).to eq(1)
   end
+
+  it 'marca a recusa de mensagens ativas no contato da conta com aquele e-mail (chat#713)' do
+    contact = create(:contact, account: campaign.account, email: recipient.email.upcase)
+
+    post :create, params: { token: 'example-token' }
+
+    expect(response).to have_http_status(:ok)
+    expect(contact.reload).to be_opted_out
+    expect(contact.opt_out_source).to eq('email_unsubscribe')
+  end
 end

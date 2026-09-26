@@ -11,6 +11,8 @@ json.recipients_count resource.recipients_count
 json.sent_count resource.sent_count
 json.failed_count resource.failed_count
 json.cancelled_count resource.cancelled_count
+json.opted_out_count resource.opted_out_count
+json.discarded_count resource.discarded_count
 json.last_error_message resource.last_error_message
 json.scheduled_at resource.scheduled_at
 json.started_at resource.started_at

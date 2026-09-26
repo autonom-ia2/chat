@@ -29,4 +29,51 @@ RSpec.describe WhatsappApiCampaigns::AudienceResolver do
     expect(campaign.whatsapp_api_campaign_recipients.failed.count).to eq(1)
     expect(campaign.whatsapp_api_campaign_recipients.failed.first.last_error_message).to eq('duplicate_phone_number')
   end
+
+  describe 'recusa de mensagens ativas (chat#737)' do
+    it 'cancela na resolução o destinatário cujo contato recusou, sem contar como falha' do
+      account, user, inbox, label = create_account_user_inbox_and_label
+      create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')
+      recusou = create_labelled_contact(account: account, label: label, name: 'Bia Recusa', phone_number: '+5521987654321')
+      recusou.opt_out!(source: 'manual')
+      campaign = create_whatsapp_api_campaign(account: account, user: user, inbox: inbox, label: label)
+
+      described_class.new(campaign).perform
+
+      recipient = campaign.whatsapp_api_campaign_recipients.find_by(contact: recusou)
+      expect(recipient).to be_cancelled
+      expect(recipient.cancelled_at).to be_present
+      expect(recipient.last_error_message).to eq('opted_out')
+      expect(campaign.whatsapp_api_campaign_recipients.pending.count).to eq(1)
+      expect(campaign.reload.failed_count).to eq(0)
+      expect(campaign.cancelled_count).to eq(1)
+      expect(campaign.opted_out_count).to eq(1)
+    end
+
+    it 'não deixa o telefone do recusado bloquear outro contato com o mesmo número' do
+      account, user, inbox, label = create_account_user_inbox_and_label
+      recusou = create_labelled_contact(account: account, label: label, name: 'Ana Recusa', phone_number: '+5511987654321')
+      recusou.opt_out!(source: 'manual')
+      outro = create_labelled_contact(account: account, label: label, name: 'Ana Outra', phone_number: '+5511987654322')
+      outro.update_columns(phone_number: '+5511987654321')
+      campaign = create_whatsapp_api_campaign(account: account, user: user, inbox: inbox, label: label)
+
+      described_class.new(campaign).perform
+
+      expect(campaign.whatsapp_api_campaign_recipients.find_by(contact: recusou)).to be_cancelled
+      expect(campaign.whatsapp_api_campaign_recipients.find_by(contact: outro)).to be_pending
+    end
+
+    it 'não muda nada para quem não recusou' do
+      account, user, inbox, label = create_account_user_inbox_and_label
+      create_labelled_contact(account: account, label: label, name: 'Ana Silva', phone_number: '+5511987654321')
+      campaign = create_whatsapp_api_campaign(account: account, user: user, inbox: inbox, label: label)
+
+      described_class.new(campaign).perform
+
+      expect(campaign.whatsapp_api_campaign_recipients.pending.count).to eq(1)
+      expect(campaign.reload.cancelled_count).to eq(0)
+      expect(campaign.opted_out_count).to eq(0)
+    end
+  end
 end

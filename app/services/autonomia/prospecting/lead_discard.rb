@@ -1,8 +1,8 @@
 # Descartar leads (#732, item 10), no painel do lead e em lote, sempre com motivo. Descartado continua visível na busca,
 # marcado, e sai das ações de envio: o CRM (CrmCardBatch), os contatos em lote (ContactBatch) e a campanha
-# (CampaignSegmentBuilder) recusam lead descartado. Na campanha já montada, o contato perde a etiqueta do segmento
-# (SegmentRefusalSync, fora da requisição). Lead fora da conta, ou que a pessoa não vê, volta como não
-# encontrado, sem ser tocado.
+# (CampaignSegmentBuilder) recusam lead descartado. Na campanha já montada, o contato perde a etiqueta do segmento e
+# sai dos pendentes da campanha da API do WhatsApp em andamento (SegmentRefusalSync, fora da requisição). Lead fora da
+# conta, ou que a pessoa não vê, volta como não encontrado, sem ser tocado.
 class Autonomia::Prospecting::LeadDiscard
   MAX_LEADS = 500
   MAX_REASON_LENGTH = 255
@@ -26,10 +26,12 @@ class Autonomia::Prospecting::LeadDiscard
   def perform
     validate!
     leads = @leads_scope.where(id: @lead_ids).to_a
+    # Descartar muda só o status: a recusa da pessoa (consent_refused_at) e a marca no contato ficam (chat#713, 26/09).
     Autonomia::Prospecting::Lead.transaction do
       leads.each { |lead| lead.update!(status: :discarded, discard_reason: @reason) }
     end
-    # Quem já tinha a etiqueta de um segmento sai dela no job da Prospecção: a campanha lê o público pela etiqueta mais tarde.
+    # No job da Prospecção, fora da requisição: quem já tinha a etiqueta de um segmento sai dela (a campanha lê o público
+    # pela etiqueta mais tarde) e os pendentes da campanha em andamento que o segmento alimentou são cancelados.
     Autonomia::Prospecting::SegmentRefusalSync.enqueue(account: @account, leads: leads)
 
     Result.new(leads: leads, missing_lead_ids: @lead_ids - leads.map(&:id))

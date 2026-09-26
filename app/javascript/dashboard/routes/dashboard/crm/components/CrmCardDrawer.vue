@@ -988,10 +988,16 @@ const activityDetail = activity => {
         ? t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_CONTACT', { contact })
         : '';
     }
+    // chat#737: follow-up automático cancelado porque o contato recusou mensagens ativas.
+    case 'follow_up_canceled': {
+      const title = activity.payload?.title || '';
+      if (activity.payload?.reason !== 'opt_out') return title;
+      const reason = t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT');
+      return title ? `${title} · ${reason}` : reason;
+    }
     case 'follow_up_created':
     case 'follow_up_updated':
     case 'follow_up_completed':
-    case 'follow_up_canceled':
     case 'follow_up_overdue':
     case 'follow_up_message_sent':
     case 'follow_up_message_failed': {

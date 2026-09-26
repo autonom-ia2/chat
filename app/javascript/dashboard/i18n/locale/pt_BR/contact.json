@@ -487,6 +487,7 @@
     "DETAILS": {
       "CREATED_AT": "Criado {date}",
       "LAST_ACTIVITY": "Última atividade {date}",
+      "DATES_SEPARATOR": "•",
       "DELETE_CONTACT_DESCRIPTION": "Excluir permanentemente este contato. Esta ação é irreversível",
       "DELETE_CONTACT": "Excluir contato",
       "DELETE_DIALOG": {
@@ -506,6 +507,40 @@
         "DELETE": {
           "SUCCESS_MESSAGE": "Avatar excluído com sucesso",
           "ERROR_MESSAGE": "Não foi possível excluir o avatar. Por favor, tente novamente mais tarde."
+        }
+      },
+      "OPT_OUT": {
+        "TITLE": "Mensagens ativas",
+        "DESCRIPTION": "Quem não quer receber fica fora das campanhas e dos follow-ups automáticos. A resposta a quem escreve segue normal.",
+        "BADGE": "Não quer receber mensagens ativas",
+        "SINCE": "Desde {date} · Origem: {source}",
+        "SOURCES": {
+          "PROSPECTING": "Prospecção",
+          "EMAIL_UNSUBSCRIBE": "Descadastro de e-mail",
+          "MANUAL": "Marcado pela equipe",
+          "UNKNOWN": "Não informada"
+        },
+        "MARK": "Marcar que não quer receber",
+        "UNDO": "Desfazer recusa",
+        "MARK_DIALOG": {
+          "TITLE": "Marcar recusa de mensagens ativas",
+          "DESCRIPTION": "Este contato deixa de receber campanhas e follow-ups automáticos nesta conta. As conversas que ele iniciar seguem normais.",
+          "CONFIRM": "Sim, marcar"
+        },
+        "ORIGIN_HINT": {
+          "PROSPECTING": "Esta recusa veio da Prospecção. Ela só sai no lead, pelo \"Desfazer: pode ser contatado\".",
+          "EMAIL_UNSUBSCRIBE": "Esta recusa veio do descadastro de e-mail feito pela própria pessoa e não se desfaz por aqui."
+        },
+        "UNDO_DIALOG": {
+          "TITLE": "Desfazer recusa",
+          "DESCRIPTION": "Este contato pediu para não receber mensagens ativas. Desfaça só se ele autorizou de novo: ele volta a receber campanhas e follow-ups automáticos.",
+          "CONFIRM": "Sim, desfazer"
+        },
+        "API": {
+          "MARK_SUCCESS": "Recusa registrada",
+          "UNDO_SUCCESS": "Recusa desfeita",
+          "UNDO_KEPT": "A marca da equipe saiu, mas a recusa continua por outra origem.",
+          "ERROR": "Não foi possível salvar. Tente de novo."
         }
       }
     },

@@ -270,7 +270,8 @@ RSpec.describe EmailCampaigns::Presentation do # rubocop:disable RSpec/SpecFileP
       end
       begin
         described_class.new(campaign, rows).call
-        expect(queries.length).to eq(4)
+        # 4 leituras do lote + 1 dos contatos recusados da conta (chat#737), também uma por lote.
+        expect(queries.length).to eq(5)
       ensure
         ActiveSupport::Notifications.unsubscribe(subscriber)
       end

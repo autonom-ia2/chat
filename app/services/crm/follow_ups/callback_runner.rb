@@ -76,13 +76,17 @@ module Crm
         return 'card_archived' if @card&.archived?
         return 'no_conversation' if @follow_up.conversation.blank?
 
-        'contact_disabled' if Crm::Ai::Config.contact_followup_disabled?(@follow_up.conversation.contact)
+        contact = @follow_up.conversation.contact
+        return Crm::FollowUps::MessageSender::OPTED_OUT_REASON if contact.opted_out?
+
+        'contact_disabled' if Crm::Ai::Config.contact_followup_disabled?(contact)
       end
 
       def deliver
         send_result = Crm::FollowUps::MessageSender.new(follow_up: @follow_up).perform
         case send_result.status
         when :sent, :skipped then Result.sent
+        when :opted_out then Result.fallback(send_result.error)
         else fail_or_fallback(send_result.error)
         end
       end

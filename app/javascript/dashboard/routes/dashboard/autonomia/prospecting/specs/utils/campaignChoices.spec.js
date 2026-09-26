@@ -1,5 +1,6 @@
 // Escolha da campanha na Prospecção (#732, item 11): os dois tipos, com a da
-// API do WhatsApp primeiro, e o valor da escolha levando o tipo.
+// WhatsApp Oficial (envio único) primeiro, decisão do Rodrigo de 26/09, e o
+// valor da escolha levando o tipo.
 import CampaignsAPI from 'dashboard/api/campaigns';
 import WhatsappApiCampaignsAPI from 'dashboard/api/whatsappApiCampaigns';
 import {
@@ -19,7 +20,7 @@ const t = (key, { title }) => `${key.split('.').pop()} ${title}`;
 describe('campaignChoices', () => {
   afterEach(() => vi.clearAllMocks());
 
-  it('põe a API do WhatsApp agendada antes da de envio único ativa, e só essas', () => {
+  it('põe o envio único ativo (WhatsApp Oficial) antes da API do WhatsApp agendada, e só essas', () => {
     const choices = campaignChoices({
       t,
       campaigns: [
@@ -43,8 +44,8 @@ describe('campaignChoices', () => {
     });
 
     expect(choices).toEqual([
-      { value: 'whatsapp_api:3', label: 'CHOICE_WHATSAPP_API API' },
       { value: 'one_off:3', label: 'CHOICE_ONE_OFF Único' },
+      { value: 'whatsapp_api:3', label: 'CHOICE_WHATSAPP_API API' },
     ]);
   });
 
