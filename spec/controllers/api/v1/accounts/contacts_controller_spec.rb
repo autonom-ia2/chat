@@ -503,6 +503,29 @@ RSpec.describe 'Contacts API', type: :request do
         expect(response).to conform_schema(200)
         expect(response.body).to include(contact.name)
       end
+
+      it 'mostra a recusa de mensagens ativas só para leitura' do
+        contact.opt_out!(source: 'manual', by: admin)
+
+        get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        payload = response.parsed_body['payload']
+        expect(payload['opted_out_at']).to eq(contact.reload.opted_out_at.to_i)
+        expect(payload['opt_out_source']).to eq('manual')
+        expect(payload).not_to have_key('opted_out_by_id')
+      end
+
+      it 'mostra recusa vazia para quem não recusou' do
+        get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+            headers: admin.create_new_auth_token,
+            as: :json
+
+        payload = response.parsed_body['payload']
+        expect(payload['opted_out_at']).to be_nil
+        expect(payload['opt_out_source']).to be_nil
+      end
     end
   end
 
@@ -707,6 +730,38 @@ RSpec.describe 'Contacts API', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(contact.reload.blocked).to be(false)
+      end
+
+      it 'não aceita marcar a recusa pela edição comum' do
+        patch "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+              params: { name: 'Novo nome', opted_out_at: Time.current.iso8601, opt_out_source: 'manual', opted_out_by_id: admin.id },
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        contact.reload
+        expect(contact.name).to eq('Novo nome')
+        expect(contact.opted_out?).to be(false)
+        expect(contact.opt_out_source).to be_nil
+        expect(contact.opted_out_by_id).to be_nil
+      end
+
+      it 'não apaga nem muda a recusa pela edição comum' do
+        contact.opt_out!(source: 'email_unsubscribe')
+        opted_out_at = contact.reload.opted_out_at
+
+        patch "/api/v1/accounts/#{account.id}/contacts/#{contact.id}",
+              params: { name: 'Outro nome', opted_out_at: nil, opt_out_source: 'manual', opted_out_by_id: admin.id },
+              headers: admin.create_new_auth_token,
+              as: :json
+
+        expect(response).to have_http_status(:success)
+        contact.reload
+        expect(contact.name).to eq('Outro nome')
+        expect(contact.opted_out_at).to eq(opted_out_at)
+        expect(contact.opt_out_source).to eq('email_unsubscribe')
+        expect(contact.opted_out_by_id).to be_nil
+        expect(response.parsed_body['payload']['opt_out_source']).to eq('email_unsubscribe')
       end
     end
   end

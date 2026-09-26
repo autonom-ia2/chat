@@ -5,6 +5,9 @@ json.id resource.id
 json.name resource.name
 json.phone_number resource.phone_number
 json.blocked resource.blocked
+# Recusa de mensagens ativas (chat#713): só leitura aqui; grava-se pelos caminhos próprios, não pela edição comum.
+json.opted_out_at resource.opted_out_at&.to_i
+json.opt_out_source resource.opt_out_source
 json.identifier resource.identifier
 json.company_id resource.company_id if Current.account&.feature_enabled?('companies')
 json.thumbnail resource.avatar_url
