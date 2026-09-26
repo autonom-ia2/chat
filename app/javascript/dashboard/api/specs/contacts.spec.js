@@ -12,6 +12,8 @@ describe('#ContactsAPI', () => {
     expect(contactAPI).toHaveProperty('getConversations');
     expect(contactAPI).toHaveProperty('filter');
     expect(contactAPI).toHaveProperty('destroyAvatar');
+    expect(contactAPI).toHaveProperty('markOptOut');
+    expect(contactAPI).toHaveProperty('removeOptOut');
   });
 
   describe('API calls', () => {
@@ -29,6 +31,18 @@ describe('#ContactsAPI', () => {
 
     afterEach(() => {
       window.axios = originalAxios;
+    });
+
+    it('#markOptOut', () => {
+      contactAPI.markOptOut(1);
+      expect(axiosMock.post).toHaveBeenCalledWith('/api/v1/contacts/1/opt_out');
+    });
+
+    it('#removeOptOut', () => {
+      contactAPI.removeOptOut(1);
+      expect(axiosMock.delete).toHaveBeenCalledWith(
+        '/api/v1/contacts/1/opt_out'
+      );
     });
 
     it('#get', () => {

@@ -16,7 +16,9 @@ class EmailCampaigns::SuppressionRegistry
   def block!(reason:, **attributes)
     raise ArgumentError, 'block requires a strong reason' unless PRIORITY.key?(reason) && reason != 'temporary_failure'
 
-    record!(reason: reason, **attributes)
+    result = record!(reason: reason, **attributes)
+    opt_out_contacts! if reason == 'unsubscribe'
+    result
   end
 
   def record!(reason:, source:, event_key:, occurred_at: Time.current, metadata: {})
@@ -43,6 +45,18 @@ class EmailCampaigns::SuppressionRegistry
   end
 
   private
+
+  # Descadastro vale para as outras mensagens ativas também (chat#713): marca a recusa nos contatos da conta com este
+  # e-mail. Num savepoint próprio: se falhar, a supressão do e-mail, que é o pedido da pessoa, fica gravada, e a falha vai
+  # para o log e o rastreador de erros. Repetir é seguro (opt_out! não muda recusa existente).
+  def opt_out_contacts!
+    Contact.transaction(requires_new: true) do
+      @account.contacts.where('LOWER(contacts.email) = ?', @email).find_each { |contact| contact.opt_out!(source: 'email_unsubscribe') }
+    end
+  rescue StandardError => e
+    Rails.logger.error("[EmailCampaigns::SuppressionRegistry] recusa no contato falhou account=#{@account.id}: #{e.class}")
+    ChatwootExceptionTracker.new(e, account: @account).capture_exception
+  end
 
   def write(attributes)
     key = attributes.fetch(:event_key)

@@ -387,6 +387,38 @@ describe('#actions', () => {
     });
   });
 
+  describe('#setOptOut', () => {
+    it('marca a recusa e atualiza o contato', async () => {
+      axios.post.mockResolvedValue({ data: { payload: contactList[0] } });
+      await actions.setOptOut(
+        { commit },
+        { id: contactList[0].id, optedOut: true }
+      );
+      expect(axios.post).toHaveBeenCalledWith(
+        `/api/v1/contacts/${contactList[0].id}/opt_out`
+      );
+      expect(commit.mock.calls).toEqual([[types.EDIT_CONTACT, contactList[0]]]);
+    });
+    it('desfaz a recusa e atualiza o contato', async () => {
+      axios.delete.mockResolvedValue({ data: { payload: contactList[0] } });
+      await actions.setOptOut(
+        { commit },
+        { id: contactList[0].id, optedOut: false }
+      );
+      expect(axios.delete).toHaveBeenCalledWith(
+        `/api/v1/contacts/${contactList[0].id}/opt_out`
+      );
+      expect(commit.mock.calls).toEqual([[types.EDIT_CONTACT, contactList[0]]]);
+    });
+    it('repassa o erro sem mexer no contato', async () => {
+      axios.post.mockRejectedValue({ message: 'Incorrect header' });
+      await expect(
+        actions.setOptOut({ commit }, { id: contactList[0].id, optedOut: true })
+      ).rejects.toThrow(Error);
+      expect(commit.mock.calls).toEqual([]);
+    });
+  });
+
   describe('#initiateCall', () => {
     const contactId = 123;
     const inboxId = 456;

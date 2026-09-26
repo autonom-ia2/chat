@@ -98,6 +98,15 @@ class ContactAPI extends ApiClient {
     return axios.delete(`${this.url}/${contactId}/avatar`);
   }
 
+  // Recusa de mensagens ativas (chat#713): rota própria, fora da edição comum.
+  markOptOut(contactId) {
+    return axios.post(`${this.url}/${contactId}/opt_out`);
+  }
+
+  removeOptOut(contactId) {
+    return axios.delete(`${this.url}/${contactId}/opt_out`);
+  }
+
   exportContacts(queryPayload) {
     return axios.post(`${this.url}/export`, queryPayload);
   }

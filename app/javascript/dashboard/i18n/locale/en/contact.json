@@ -509,6 +509,35 @@
           "SUCCESS_MESSAGE": "Avatar deleted successfully",
           "ERROR_MESSAGE": "Could not delete avatar. Please try again later."
         }
+      },
+      "OPT_OUT": {
+        "TITLE": "Outbound messages",
+        "DESCRIPTION": "A contact who opted out is left out of campaigns and automatic follow-ups. Replies to messages the contact sends are not affected.",
+        "BADGE": "Does not want outbound messages",
+        "SINCE": "Since {date} · Source: {source}",
+        "SOURCES": {
+          "PROSPECTING": "Prospecting",
+          "EMAIL_UNSUBSCRIBE": "Email unsubscribe",
+          "MANUAL": "Marked by the team",
+          "UNKNOWN": "Not informed"
+        },
+        "MARK": "Mark as not wanting messages",
+        "UNDO": "Undo opt-out",
+        "MARK_DIALOG": {
+          "TITLE": "Mark opt-out",
+          "DESCRIPTION": "This contact will stop receiving campaigns and automatic follow-ups in this account. Conversations the contact starts continue as usual.",
+          "CONFIRM": "Yes, mark"
+        },
+        "UNDO_DIALOG": {
+          "TITLE": "Undo opt-out",
+          "DESCRIPTION": "This contact asked not to receive outbound messages. Undo only if the contact authorized it again. Campaigns and automatic follow-ups will reach the contact again.",
+          "CONFIRM": "Yes, undo"
+        },
+        "API": {
+          "MARK_SUCCESS": "Opt-out recorded",
+          "UNDO_SUCCESS": "Opt-out undone",
+          "ERROR": "Could not save. Please try again."
+        }
       }
     },
     "SIDEBAR": {

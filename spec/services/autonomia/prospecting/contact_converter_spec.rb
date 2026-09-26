@@ -280,4 +280,42 @@ RSpec.describe Autonomia::Prospecting::ContactConverter do
       expect(described_class.new(lead: lead, user: user).perform.contact.phone_number).to eq('+551133334444')
     end
   end
+
+  describe 'recusa gravada no contato (chat#713)' do
+    it 'contato criado a partir de lead recusado nasce com a recusa da Prospecção' do
+      lead.update!(status: :no_consent)
+
+      contact = described_class.new(lead: lead, user: user).perform.contact
+
+      expect(contact).to be_opted_out
+      expect(contact.opt_out_source).to eq('prospecting')
+      expect(contact.opted_out_by_id).to be_nil
+    end
+
+    it 'contato criado para outro lead do mesmo número que um lead recusado herda a recusa' do
+      Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'mock-place-recusou',
+                                           name: 'Matriz', phone: '+55 11 99999-8888', country: 'BR', status: :no_consent)
+
+      contact = described_class.new(lead: lead, user: user).perform.contact
+
+      expect(contact).to be_opted_out
+      expect(contact.opt_out_source).to eq('prospecting')
+    end
+
+    it 'lead sem recusa não marca o contato' do
+      contact = described_class.new(lead: lead, user: user).perform.contact
+
+      expect(contact).not_to be_opted_out
+    end
+
+    it 'não troca a recusa manual do contato existente' do
+      existing = create(:contact, account: account, phone_number: '+5511999998888')
+      existing.opt_out!(source: 'manual', by: user)
+      lead.update!(status: :no_consent)
+
+      described_class.new(lead: lead, user: user).perform
+
+      expect(existing.reload.opt_out_source).to eq('manual')
+    end
+  end
 end
