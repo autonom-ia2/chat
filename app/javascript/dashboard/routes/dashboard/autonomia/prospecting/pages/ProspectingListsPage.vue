@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
-import CampaignsAPI from 'dashboard/api/campaigns';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ProspectingPriorityRing from '../components/ProspectingPriorityRing.vue';
@@ -11,6 +10,13 @@ import LeadCard from '../components/search/LeadCard.vue';
 import LeadDetailDrawer from '../components/search/LeadDetailDrawer.vue';
 import CrmSendModal from '../components/crm/CrmSendModal.vue';
 import { useListLeadsContext } from '../composables/useListLeadsContext';
+import { crmSendableLeads } from '../utils/leadCrmPresence';
+import {
+  campaignChoices as buildCampaignChoices,
+  loadCampaigns,
+  parseCampaignChoice,
+  savedCampaignChoice,
+} from '../utils/campaignChoices';
 import {
   activeAdvancedLeadFiltersCount,
   defaultAdvancedLeadFilters,
@@ -35,6 +41,7 @@ const lists = ref([]);
 const selectedList = ref(null);
 const allLeads = ref([]);
 const campaigns = ref([]);
+const whatsappApiCampaigns = ref([]);
 const settings = ref(null);
 // Leads da janela Enviar ao CRM (#680); null com a janela fechada.
 const crmSendLeads = ref(null);
@@ -113,19 +120,14 @@ const campaignBlockedLeads = computed(() =>
       lead.status !== 'ready_for_campaign' || !leadHasVerifiedWhatsApp(lead)
   )
 );
-const availableCampaigns = computed(() =>
-  campaigns.value.filter(
-    campaign =>
-      campaign.campaign_type === 'one_off' &&
-      campaign.campaign_status === 'active'
-  )
-);
+// Os dois tipos de campanha, a da API do WhatsApp primeiro (#732, item 11).
 const campaignChoices = computed(() => [
   { value: '', label: t('PROSPECTING.LISTS.CAMPAIGN_SEGMENT_ONLY_LABEL') },
-  ...availableCampaigns.value.map(campaign => ({
-    value: campaign.id,
-    label: campaign.title,
-  })),
+  ...buildCampaignChoices({
+    campaigns: campaigns.value,
+    whatsappApiCampaigns: whatsappApiCampaigns.value,
+    t,
+  }),
 ]);
 const yesNoAnyChoices = computed(() => [
   { value: '', label: t('PROSPECTING.SEARCH.FILTERS.ANY') },
@@ -193,12 +195,9 @@ const fetchAllLeads = async () => {
 };
 
 const fetchCampaigns = async () => {
-  try {
-    const { data } = await CampaignsAPI.get();
-    campaigns.value = data || [];
-  } catch {
-    campaigns.value = [];
-  }
+  const loaded = await loadCampaigns();
+  campaigns.value = loaded.campaigns;
+  whatsappApiCampaigns.value = loaded.whatsappApiCampaigns;
 };
 
 const fetchSettings = async () => {
@@ -215,7 +214,7 @@ const selectList = async list => {
     selectedList.value = data.payload || null;
     verifyLeadsWhatsApp(selectedList.value?.leads || []);
     campaignSegmentForm.value = {
-      campaign_id: currentCampaignSegment.value?.campaign_id || '',
+      campaign_id: savedCampaignChoice(currentCampaignSegment.value),
       segment_name: selectedList.value?.name || '',
     };
   } catch {
@@ -285,7 +284,7 @@ const openCampaignModal = async list => {
     await selectList(list);
   }
   campaignSegmentForm.value = {
-    campaign_id: currentCampaignSegment.value?.campaign_id || '',
+    campaign_id: savedCampaignChoice(currentCampaignSegment.value),
     segment_name: selectedList.value?.name || '',
   };
   showCampaignModal.value = true;
@@ -411,11 +410,15 @@ const createCampaignSegment = async () => {
   }
 
   isCreatingCampaignSegment.value = true;
+  const { campaignId, campaignType } = parseCampaignChoice(
+    campaignSegmentForm.value.campaign_id
+  );
   try {
     const { data } = await AutonomiaProspectingAPI.createCampaignSegment(
       selectedList.value.id,
       {
-        campaign_id: campaignSegmentForm.value.campaign_id,
+        campaign_id: campaignId,
+        campaign_type: campaignType,
         segment_name:
           campaignSegmentForm.value.segment_name || selectedList.value.name,
       }
@@ -608,8 +611,8 @@ onMounted(loadPage);
                   v-if="canSendToCrm"
                   type="button"
                   class="inline-flex h-9 items-center gap-1.5 rounded-md bg-n-brand px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  :disabled="!listLeads.length"
-                  @click="crmSendLeads = listLeads"
+                  :disabled="!crmSendableLeads(listLeads).length"
+                  @click="crmSendLeads = crmSendableLeads(listLeads)"
                 >
                   <span
                     class="i-lucide-kanban-square size-4"

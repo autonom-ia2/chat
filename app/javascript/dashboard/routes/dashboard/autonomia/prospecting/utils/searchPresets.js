@@ -63,19 +63,75 @@ export const SEARCH_PRESETS = Object.freeze([
   },
 ]);
 
-export const presetsForScoreMode = scoreMode =>
-  SEARCH_PRESETS.filter(preset => preset.scoreMode === scoreMode);
+const isAbsent = value => value === undefined || value === null || value === '';
 
-export const findPreset = presetId =>
-  SEARCH_PRESETS.find(preset => preset.id === presetId);
+// Jogada salva pela conta (#732): vem de saved_presets das configurações e
+// entra no formato das prontas, com o nome dado em vez da chave do i18n. O id
+// é o que a busca grava ("saved-<id>"); o servidor confere conta e modo.
+export const savedPresetToPreset = saved => ({
+  id: saved.preset_id,
+  savedId: saved.id,
+  scoreMode: saved.score_mode,
+  name: saved.name,
+  filters: saved.filters || {},
+  icon: 'i-lucide-bookmark',
+  iconClass: 'bg-n-slate-3 text-n-slate-12',
+  chipClass: 'border-n-slate-6 bg-n-slate-2 text-n-slate-12',
+  isSaved: true,
+});
+
+// Prontas primeiro, depois as salvas da conta, só as do modo.
+export const presetsForScoreMode = (scoreMode, savedPresets = []) =>
+  [...SEARCH_PRESETS, ...savedPresets].filter(
+    preset => preset.scoreMode === scoreMode
+  );
+
+export const findPreset = (presetId, savedPresets = []) =>
+  [...SEARCH_PRESETS, ...savedPresets].find(preset => preset.id === presetId);
+
+// Nome da jogada: o dado pela conta ou o do catálogo.
+export const presetName = (preset, t) =>
+  preset.isSaved
+    ? preset.name
+    : t(`PROSPECTING.SEARCH.PRESETS.ITEMS.${preset.i18nKey}.NAME`);
+
+const TAGS = 'PROSPECTING.SEARCH.SAVED_PRESETS.TAGS';
+
+// "Sem site", "Com telefone": a etiqueta muda com a resposta.
+const presenceTag = (key, value) =>
+  value === 'yes' || value === 'no'
+    ? { key: `${key}_${value.toUpperCase()}` }
+    : null;
+const yesOnlyTag = (key, value) => (value === 'yes' ? { key } : null);
+// "Avaliação acima de 4": a etiqueta leva o número.
+const valueTag = (key, value) =>
+  isAbsent(value) ? null : { key, values: { value } };
+
+// Resumo dos filtros em etiquetas (Orth, FILTRO-27), na ordem dos grupos da
+// gaveta: dor, qualificação, visibilidade e operacional.
+export const filterSummaryTags = (filters, t) =>
+  [
+    presenceTag('HAS_WEBSITE', filters.has_website),
+    presenceTag('HAS_PHOTOS', filters.has_photos),
+    valueTag('REVIEWS_MIN', filters.reviews_min),
+    valueTag('RATING_MIN', filters.rating_min),
+    valueTag('RATING_MAX', filters.rating_max),
+    valueTag('OUTSIDE_TOP', filters.outside_top),
+    valueTag('SEARCH_RANK_MAX', filters.search_rank_max),
+    presenceTag('HAS_PHONE', filters.has_phone),
+    yesOnlyTag('OPEN_NOW', filters.open_now),
+    yesOnlyTag('HAS_OPENING_HOURS', filters.has_opening_hours),
+  ]
+    .filter(Boolean)
+    .map(({ key, values }) =>
+      values ? t(`${TAGS}.${key}`, values) : t(`${TAGS}.${key}`)
+    );
 
 // Filtros do formulário quando a jogada é escolhida: os dela sobre os vazios.
 export const presetFilters = preset => ({
   ...defaultAdvancedLeadFilters(),
   ...preset.filters,
 });
-
-const isAbsent = value => value === undefined || value === null || value === '';
 
 const asNumber = value => {
   if (typeof value === 'number') return value;

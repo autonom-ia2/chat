@@ -121,4 +121,30 @@ RSpec.describe Autonomia::Prospecting::SearchArea do
       expect(described_class.google_location('radius', {}, radius: 2000)).to eq({})
     end
   end
+
+  # Expansão de raio do Orth (#732 item 4): dobro do raio, teto de 10 km, só na busca por raio com centro.
+  describe '.expanded_radius' do
+    let(:centered) { { 'center' => { 'lat' => -25.43, 'lng' => -49.27 } } }
+
+    it 'dobra o raio' do
+      expect(described_class.expanded_radius('radius', centered, 1000)).to eq(2000)
+      expect(described_class.expanded_radius('radius', centered, 4999)).to eq(9998)
+    end
+
+    it 'para no teto de 10 km' do
+      expect(described_class.expanded_radius('radius', centered, 6000)).to eq(10_000)
+    end
+
+    it 'não expande o raio que já está no teto ou acima dele' do
+      expect(described_class.expanded_radius('radius', centered, 10_000)).to be_nil
+      expect(described_class.expanded_radius('radius', centered, 25_000)).to be_nil
+    end
+
+    it 'não expande sem centro, nem área visível ou desenhada' do
+      expect(described_class.expanded_radius('radius', {}, 1000)).to be_nil
+      %w[viewport circle rectangle polygon].each do |area_type|
+        expect(described_class.expanded_radius(area_type, centered, 1000)).to be_nil
+      end
+    end
+  end
 end

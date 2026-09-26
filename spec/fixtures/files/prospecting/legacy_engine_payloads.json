@@ -189,7 +189,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -321,7 +322,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -461,7 +463,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -588,7 +591,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -717,7 +721,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -848,7 +853,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -990,7 +996,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1121,7 +1128,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       }
     ]
   },
@@ -1315,7 +1323,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1446,7 +1455,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1586,7 +1596,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1712,7 +1723,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1841,7 +1853,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -1970,7 +1983,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2111,7 +2125,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2240,7 +2255,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       }
     ]
   },
@@ -2432,7 +2448,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2563,7 +2580,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2703,7 +2721,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2829,7 +2848,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -2958,7 +2978,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -3087,7 +3108,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -3228,7 +3250,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       },
       {
         "id": "<id>",
@@ -3357,7 +3380,8 @@
           "owners": [],
           "decision": null
         },
-        "contact_name": null
+        "contact_name": null,
+        "crm_presence": null
       }
     ]
   },
@@ -3496,6 +3520,7 @@
       "owners": [],
       "decision": null
     },
-    "contact_name": null
+    "contact_name": null,
+    "crm_presence": null
   }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { useI18n } from 'vue-i18n';
 import ProspectingPriorityRing from '../ProspectingPriorityRing.vue';
@@ -8,6 +8,9 @@ import LeadDetailScore from './LeadDetailScore.vue';
 import LeadDetailEnrichment from './LeadDetailEnrichment.vue';
 import LeadDetailResearch from './LeadDetailResearch.vue';
 import LeadDetailReviews from './LeadDetailReviews.vue';
+import LeadStatusBanner from './LeadStatusBanner.vue';
+import DiscardLeadsModal from './DiscardLeadsModal.vue';
+import { hasLeadStatus, isLeadDiscarded } from '../../utils/leadCrmPresence';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import {
   leadPrioritySignals,
@@ -40,7 +43,12 @@ const {
   requestLeadResearch,
   adoptingOwner,
   adoptOwner,
+  discardLeads,
+  restoreLead,
 } = useProspectingSearchContext();
+
+// Descartar e desfazer o descarte (#732): quem gerencia a prospecção.
+const discardTarget = ref(null);
 
 const selectedStageName = computed(() => {
   const stage = crmStages.value.find(
@@ -121,6 +129,12 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
 
       <div class="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         <section class="grid gap-3">
+          <LeadStatusBanner
+            v-if="hasLeadStatus(selectedLeadDetail)"
+            :lead="selectedLeadDetail"
+            :show-reason="false"
+            class="rounded-lg"
+          />
           <div
             class="rounded-xl border border-n-weak px-5 py-4"
             :class="[
@@ -172,10 +186,13 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
             </span>
           </div>
 
+          <!-- Bloco técnico da nota só para o administrador (#732, item 9): o
+            servidor nem manda os componentes para os outros. -->
           <LeadDetailScore
             v-if="
-              scoreBreakdownEntries(selectedLeadDetail).length ||
-              negativeFactors(selectedLeadDetail).length
+              settings?.can_view_score_details &&
+              (scoreBreakdownEntries(selectedLeadDetail).length ||
+                negativeFactors(selectedLeadDetail).length)
             "
             :lead="selectedLeadDetail"
           />
@@ -304,14 +321,39 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
           {{ t('PROSPECTING.SEARCH.OPEN_CRM_CARD') }}
         </a>
         <button
-          v-else-if="canSendToCrm"
+          v-else-if="canSendToCrm && !isLeadDiscarded(selectedLeadDetail)"
           type="button"
           class="h-9 rounded-md bg-n-brand px-3 text-sm font-medium text-white"
           @click="openCrmSend([selectedLeadDetail])"
         >
           {{ t('PROSPECTING.SEARCH.SEND_TO_CRM') }}
         </button>
+        <template v-if="canManage">
+          <button
+            v-if="isLeadDiscarded(selectedLeadDetail)"
+            type="button"
+            class="h-9 rounded-md border border-n-weak px-3 text-sm font-medium text-n-slate-12 hover:bg-n-solid-2"
+            @click="restoreLead(selectedLeadDetail)"
+          >
+            {{ t('PROSPECTING.LEAD_STATUS.RESTORE') }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="h-9 rounded-md border border-n-weak px-3 text-sm font-medium text-n-ruby-11 hover:bg-n-solid-2"
+            @click="discardTarget = [selectedLeadDetail]"
+          >
+            {{ t('PROSPECTING.DISCARD.ACTION') }}
+          </button>
+        </template>
       </footer>
+      <DiscardLeadsModal
+        v-if="discardTarget"
+        :leads="discardTarget"
+        :discard="discardLeads"
+        @close="discardTarget = null"
+        @discarded="discardTarget = null"
+      />
     </aside>
   </div>
 </template>

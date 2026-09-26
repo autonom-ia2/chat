@@ -1,6 +1,7 @@
 <script setup>
-// Selo de uma jogada do catálogo (#677): cor, ícone e nome.
+// Selo de uma jogada (#677), pronta ou salva pela conta (#732): cor, ícone e nome.
 import { useI18n } from 'vue-i18n';
+import { presetName } from '../../utils/searchPresets';
 
 defineProps({
   preset: { type: Object, required: true },
@@ -17,7 +18,7 @@ const { t } = useI18n();
   >
     <span class="size-3 shrink-0" :class="preset.icon" aria-hidden="true" />
     <span class="truncate">
-      {{ t(`PROSPECTING.SEARCH.PRESETS.ITEMS.${preset.i18nKey}.NAME`) }}
+      {{ presetName(preset, t) }}
     </span>
   </span>
 </template>

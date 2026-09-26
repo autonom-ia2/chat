@@ -2,19 +2,23 @@
 // Filtros do formulário de nova busca: um botão com a contagem e a gaveta
 // lateral dos 4 grupos. Só o que for aplicado vai no pedido; fechar sem
 // aplicar descarta o rascunho. O refino da busca aberta é outro estado.
+// "Salvar como jogada" (#732, só quem gerencia a prospecção) aplica o rascunho
+// e abre a janela do nome.
 import { computed, ref, watch } from 'vue';
 import { useFixedPanelPresence } from 'dashboard/composables/useFixedPanelState';
 import { useI18n } from 'vue-i18n';
 import FiltersBaseLine from './filters/FiltersBaseLine.vue';
 import LeadFiltersPanel from './filters/LeadFiltersPanel.vue';
+import SavePresetModal from './SavePresetModal.vue';
 import { useProspectingSearchContext } from '../../composables/useProspectingSearch';
 import { activeAdvancedLeadFiltersCount } from '../../utils/advancedLeadFilters';
-import { findPreset } from '../../utils/searchPresets';
 
 const { t } = useI18n();
-const { formFilters, form, tourFiltersOpen } = useProspectingSearchContext();
+const { formFilters, form, tourFiltersOpen, canManage, findSearchPreset } =
+  useProspectingSearchContext();
 
 const isOpen = ref(false);
+const isSaveOpen = ref(false);
 // O passo de filtros do tour (#682) abre a gaveta e a fecha ao sair.
 watch(tourFiltersOpen, open => {
   isOpen.value = open;
@@ -25,10 +29,14 @@ useFixedPanelPresence(isOpen);
 const activeCount = computed(() =>
   activeAdvancedLeadFiltersCount(formFilters.value)
 );
-const formPreset = computed(() => findPreset(form.value.preset_id));
+const formPreset = computed(() => findSearchPreset(form.value.preset_id));
 const applyFilters = next => {
   formFilters.value = next;
   isOpen.value = false;
+};
+const saveFilters = next => {
+  applyFilters(next);
+  isSaveOpen.value = true;
 };
 </script>
 
@@ -89,9 +97,15 @@ const applyFilters = next => {
           </button>
         </header>
         <div class="min-h-0 flex-1 overflow-y-auto p-5">
-          <LeadFiltersPanel :filters="formFilters" @apply="applyFilters" />
+          <LeadFiltersPanel
+            :filters="formFilters"
+            :can-save="canManage"
+            @apply="applyFilters"
+            @save="saveFilters"
+          />
         </div>
       </aside>
     </div>
+    <SavePresetModal v-if="isSaveOpen" @close="isSaveOpen = false" />
   </div>
 </template>

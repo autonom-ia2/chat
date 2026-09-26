@@ -55,6 +55,25 @@ describe('#AutonomiaProspectingAPI', () => {
     );
   });
 
+  // Descartar e criar contatos em lote (#732).
+  it('descarta os leads com o motivo', () => {
+    prospecting.discardLeads({ leadIds: [1, 2], reason: 'Sem interesse' });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/discard',
+      { lead_ids: [1, 2], reason: 'Sem interesse' }
+    );
+  });
+
+  it('cria os contatos dos leads em lote', () => {
+    prospecting.createLeadContacts([1, 2]);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/contacts',
+      { lead_ids: [1, 2] }
+    );
+  });
+
   it('adiciona os leads da seleção a uma campanha', () => {
     prospecting.addLeadsToCampaign({
       leadIds: [1, 2],
@@ -65,6 +84,25 @@ describe('#AutonomiaProspectingAPI', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(
       '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
       { lead_ids: [1, 2], campaign_id: 8, segment_name: 'Padarias' }
+    );
+  });
+
+  it('manda o tipo da campanha quando é a da API do WhatsApp (#732)', () => {
+    prospecting.addLeadsToCampaign({
+      leadIds: [1],
+      campaignId: 8,
+      campaignType: 'whatsapp_api',
+      segmentName: 'Padarias',
+    });
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/leads/campaign_segment',
+      {
+        lead_ids: [1],
+        campaign_id: 8,
+        campaign_type: 'whatsapp_api',
+        segment_name: 'Padarias',
+      }
     );
   });
 
@@ -93,6 +131,30 @@ describe('#AutonomiaProspectingAPI', () => {
     expect(axiosMock.get).toHaveBeenCalledWith(
       '/api/v1/accounts/85/autonomia/prospecting/lists/4/export',
       { params: { format: 'csv', lead_ids: undefined }, responseType: 'blob' }
+    );
+  });
+
+  // Jogadas salvas (#732): criar, editar e excluir; a lista vem nas configurações.
+  it('salva, edita e exclui uma jogada da conta', () => {
+    const filters = { has_website: 'no' };
+    prospecting.createSavedPreset({
+      name: 'Sem site',
+      score_mode: 'gbp',
+      filters,
+    });
+    prospecting.updateSavedPreset(5, { name: 'Sem site nenhum', filters });
+    prospecting.deleteSavedPreset(5);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets',
+      { saved_preset: { name: 'Sem site', score_mode: 'gbp', filters } }
+    );
+    expect(axiosMock.patch).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets/5',
+      { saved_preset: { name: 'Sem site nenhum', filters } }
+    );
+    expect(axiosMock.delete).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/autonomia/prospecting/saved_presets/5'
     );
   });
 });

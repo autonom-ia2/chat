@@ -86,13 +86,16 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       expect(names_with(outside_top: '3', search_rank_max: '6')).to eq(exemplos('D', 'E', 'F'))
     end
 
-    # A faixa corta posições em qualquer raio. Contá-las como falta fazia a busca expandir até 4x e pagar 3 chamadas.
+    # A faixa corta posições em qualquer raio. Contá-las como falta fazia a busca expandir sempre e pagar chamadas à toa.
+    # A fixture devolve os mesmos 8 lugares em qualquer raio: quando a busca tenta o dobro (#732), empata e fica com o
+    # raio pedido.
     context 'with auto_expand_radius (expandir raio automaticamente)' do
       def expanded_search(requested_limit: 8, **advanced_filters)
         described_class.new(
           account: account,
           user: user,
           params: { query: 'padaria', location: 'Curitiba, PR', radius: 1000, requested_limit: requested_limit,
+                    metadata: { location_latitude: -25.43, location_longitude: -49.27 },
                     filters: { auto_expand_radius: true }, advanced_filters: advanced_filters }
         ).perform.search
       end
@@ -107,12 +110,13 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
       end
 
       # Com a paginação (#678) a busca alcança até a 60ª posição: pedir 8 fora do top 2 quando o Google só tem 8
-      # lugares no raio é falta de lugar de verdade, e o raio cresce.
-      it 'expande quando a alça da esquerda tira posições e o Google acaba antes do pedido' do
+      # lugares no raio é falta de lugar de verdade, e a busca tenta o dobro do raio.
+      it 'tenta o dobro quando a alça da esquerda tira posições e o Google acaba antes do pedido' do
         search = expanded_search(outside_top: '2')
 
-        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
-        expect(search.radius).to eq(4000)
+        expect(a_request(:post, google_endpoint)).to have_been_made.twice
+        expect(search.radius).to eq(1000)
+        expect(search.metadata['radius_expanded']).to be(false)
       end
 
       it 'não expande quando só a alça da direita tira posições' do
@@ -123,11 +127,11 @@ RSpec.describe Autonomia::Prospecting::SearchRunner do
         expect(search.metadata['results_count']).to eq(5)
       end
 
-      it 'continua expandindo quando um filtro de atributo deixa a janela incompleta' do
+      it 'tenta o dobro quando um filtro de atributo deixa a janela incompleta' do
         search = expanded_search(outside_top: '2', has_photos: 'yes')
 
-        expect(a_request(:post, google_endpoint)).to have_been_made.times(3)
-        expect(search.radius).to eq(4000)
+        expect(a_request(:post, google_endpoint)).to have_been_made.twice
+        expect(search.radius).to eq(1000)
       end
     end
   end

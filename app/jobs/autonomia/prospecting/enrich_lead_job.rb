@@ -23,7 +23,7 @@ class Autonomia::Prospecting::EnrichLeadJob < ApplicationJob
   rescue Autonomia::Prospecting::LeadEnricher::Error
     nil
   rescue StandardError => e
-    Rails.logger.warn("[Autonomia::Prospecting::EnrichLeadJob] lead_id=#{lead.id} interrupted error=#{e.class.name}")
+    Autonomia::Prospecting::EventLog.emit('enrichment.interrupted', lead: lead, reason: e, level: :warn)
     lead.update_columns( # rubocop:disable Rails/SkipsModelValidations -- mesmo registro de falha do LeadEnricher#mark_failed
       enrichment_status: 'failed', enrichment_completed_at: Time.current, enrichment_error: INTERRUPTED, updated_at: Time.current
     )
@@ -33,5 +33,6 @@ class Autonomia::Prospecting::EnrichLeadJob < ApplicationJob
     return unless Autonomia::Prospecting::LeadWorkQueue.site_whatsapp_pending?(lead)
 
     Autonomia::Prospecting::VerifyWhatsappJob.perform_later(lead.account_id, [lead.id])
+    Autonomia::Prospecting::EventLog.emit('whatsapp.queued', lead: lead, source: :site)
   end
 end

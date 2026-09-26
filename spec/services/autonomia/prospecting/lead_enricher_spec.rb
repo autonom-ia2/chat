@@ -367,4 +367,63 @@ RSpec.describe Autonomia::Prospecting::LeadEnricher do
       expect(result.decision_name).to eq('Bruno Lima')
     end
   end
+
+  # Registro de eventos (#732 item 13, ENRIQ-60): log estruturado com lead, conta e motivo, sem dado pessoal.
+  describe 'registro de eventos' do
+    include ProspectingEventLogHelpers
+
+    let(:personal_data) { ['5541999990000', 'contato@clinicasorriso.example.com', 'chave-da-conta', 'Ana Souza'] }
+
+    before { create_kanban_hook({ 'api_key' => 'chave-da-conta' }) }
+
+    it 'registra o início e a conclusão do enriquecimento, sem telefone, e-mail, chave nem decisor' do
+      log = capture_prospecting_events { enrich }
+
+      expect(log.events).to eq(
+        [
+          { 'event' => 'enrichment.started', 'lead_id' => lead.id, 'account_id' => account.id },
+          { 'event' => 'enrichment.completed', 'lead_id' => lead.id, 'account_id' => account.id, 'status' => 'site_and_autonomia_ai' }
+        ]
+      )
+      expect(log.text).not_to include(*personal_data)
+    end
+
+    it 'registra a falha com o código do site' do
+      allow(scraper).to receive(:perform)
+        .and_return(Autonomia::Prospecting::WebsiteScraper::Result.new(data: { 'error' => 'timeout' }))
+
+      log = capture_prospecting_events { enrich }
+
+      expect(log.events.last).to eq('event' => 'enrichment.failed', 'lead_id' => lead.id, 'account_id' => account.id, 'reason' => 'timeout')
+    end
+
+    it 'registra a recusa com a pesquisa desligada' do
+      Autonomia::Prospecting::Config.disable_research_for!(account)
+
+      log = capture_prospecting_events { expect { enrich }.to raise_error(described_class::Error) }
+
+      expect(log.events).to eq(
+        [{ 'event' => 'enrichment.failed', 'lead_id' => lead.id, 'account_id' => account.id, 'reason' => 'prospecting.enrichment.disabled' }]
+      )
+    end
+
+    it 'de um erro inesperado, registra só a classe: a mensagem pode trazer dado pessoal' do
+      allow(scraper).to receive(:perform).and_raise(RuntimeError, 'falhou em contato@clinicasorriso.example.com +5541999990000')
+
+      log = capture_prospecting_events { expect { enrich }.to raise_error(described_class::Error) }
+
+      expect(log.events.last).to eq('event' => 'enrichment.failed', 'lead_id' => lead.id, 'account_id' => account.id, 'reason' => 'RuntimeError')
+      expect(log.text).not_to include(*personal_data)
+    end
+
+    it 'registra a IA pulada com a classe do erro e segue com o site' do
+      allow(ai_client).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'chave-da-conta recusada')
+
+      log = capture_prospecting_events { enrich }
+
+      expect(log.events.pluck('event')).to eq(%w[enrichment.started enrichment.ai_skipped enrichment.completed])
+      expect(log.events.second).to include('reason' => 'Crm::Ai::ResponsesClient::Error')
+      expect(log.text).not_to include(*personal_data)
+    end
+  end
 end

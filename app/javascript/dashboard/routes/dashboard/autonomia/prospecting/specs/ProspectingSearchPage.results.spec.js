@@ -222,6 +222,25 @@ describe('ProspectingSearchPage · resultados', () => {
     expect(wrapper.text()).toContain('PROSPECTING.SEARCH.RADIUS_KM_VALUE');
   });
 
+  // Expansão de raio do Orth (#732 item 4): a busca que ficou com o raio maior
+  // mostra no histórico e nos resultados o raio alcançado e o pedido.
+  it('mostra o raio ampliado da busca que ficou com a expansão', async () => {
+    const search = bakerySearch({
+      radius: 2000,
+      requested_radius: 1000,
+      summary: { radius_expanded: true },
+    });
+    const wrapper = await mountSearchPage({
+      searches: [search],
+      payloads: { 11: { search, leads: [] } },
+    });
+
+    expect(wrapper.text()).toContain(
+      'PROSPECTING.SEARCH.RADIUS_EXPANDED_VALUE'
+    );
+    expect(wrapper.text()).not.toContain('PROSPECTING.SEARCH.RADIUS_KM_VALUE');
+  });
+
   it('o mapa segue o refino local', async () => {
     const wrapper = await mountSearchPage();
     await openResultFilters(wrapper);

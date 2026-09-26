@@ -3,6 +3,8 @@ require 'rails_helper'
 # Verificação de WhatsApp em lote no servidor (#678, frente C): cobre o telefone do Google e o WhatsApp achado no
 # site, sem depender da aba aberta. O cliente WAHA é o real; só o HTTP passa pelo WebMock.
 RSpec.describe Autonomia::Prospecting::VerifyWhatsappJob do
+  include ProspectingEventLogHelpers
+
   let(:account) { create(:account) }
   let(:waha_url) { 'https://waha.test' }
   let(:waha_env) { { 'WAHA_API_URL' => waha_url, 'WAHA_API_KEY' => 'chave-waha-teste' } }
@@ -121,6 +123,22 @@ RSpec.describe Autonomia::Prospecting::VerifyWhatsappJob do
 
     expect(google_lead.reload.metadata).not_to have_key('whatsapp_verification')
     expect(Autonomia::Prospecting::LeadBroadcaster).to have_received(:updated).with(have_attributes(id: google_lead.id))
+  end
+
+  # Registro de eventos (#732 item 13, ENRIQ-60): a recusa sai do verificador, e o job registra a marca de fila solta.
+  it 'registra a recusa e a marca de fila solta, sem o número' do
+    google_lead.update!(phone: '(41) 777')
+
+    log = capture_prospecting_events { perform([google_lead.id]) }
+
+    expect(log.events).to eq(
+      [
+        { 'event' => 'whatsapp.skipped', 'lead_id' => google_lead.id, 'account_id' => account.id, 'source' => 'google',
+          'reason' => 'prospecting.whatsapp.phone_missing' },
+        { 'event' => 'whatsapp.marker_released', 'lead_id' => google_lead.id, 'account_id' => account.id, 'source' => 'google' }
+      ]
+    )
+    expect(log.text).not_to include('(41) 777', 'sessao-prospeccao')
   end
 
   it 'só toca leads da conta do lote' do

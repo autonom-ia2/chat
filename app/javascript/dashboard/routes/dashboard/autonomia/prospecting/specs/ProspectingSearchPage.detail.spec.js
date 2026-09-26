@@ -11,6 +11,7 @@ import {
   detailPanel,
   leadCard,
   mountSearchPage,
+  settingsFixture,
   sunLead,
   toggleNewSearch,
 } from './support/searchPageHarness';
@@ -123,6 +124,31 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     );
     expect(panel.text()).not.toContain('PROSPECTING.QUALITY.DISCARD_REASON');
     expect(panel.text()).not.toContain('PROSPECTING.SEARCH.ENRICHMENT_TITLE');
+  });
+
+  // #732, item 9 (MODO-51, PLAT-05): o bloco técnico da nota é do
+  // administrador. O agente vê a faixa e a frase, sem componentes nem pesos.
+  it('quem não é administrador vê a faixa e a frase, sem o bloco técnico da nota', async () => {
+    const wrapper = await mountSearchPage({
+      settings: settingsFixture({ can_view_score_details: false }),
+    });
+    await openDetails(wrapper, 'Padaria Sol');
+    const panel = detailPanel(wrapper);
+
+    expect(panel.find('svg[role="img"]').attributes('aria-label')).toBe(
+      'Prioridade 82 de 100'
+    );
+    expect(panel.text()).toContain('Lead muito quente');
+    expect(panel.text()).toContain('Bem avaliada e sem reservas online');
+    expect(panel.text()).not.toContain(
+      'PROSPECTING.SEARCH.SCORE_EVALUATION_TITLE'
+    );
+    expect(panel.text()).not.toContain(
+      'PROSPECTING.SEARCH.SCORE_COMPONENTS.RATING'
+    );
+    expect(panel.text()).not.toContain(
+      'PROSPECTING.SEARCH.NEGATIVE_FACTORS.MISSING_PHOTOS'
+    );
   });
 
   it('mostra só as 5 avaliações mais recentes, com autor, tempo e texto em cada formato', async () => {
