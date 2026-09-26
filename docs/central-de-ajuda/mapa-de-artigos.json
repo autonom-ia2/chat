@@ -3682,8 +3682,8 @@
      "fontes": [
       "porques: Procurar empresas por região e transformar em contato ou card"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/searchSlices/locationSlice.js:18; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:173; evidência sumiu: app/services/autonomia/prospecting/search_runner.rb:456; evidência sumiu: app/services/autonomia/prospecting/search_runner.rb:162; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/components/search/SearchAdvancedFilters.vue:72; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/components/search/filters/LeadFiltersPanel.vue:166"
     },
     {
      "id": "16.02",
@@ -3704,8 +3704,8 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:59; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/composables/useSearchLeads.js:108; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:113; evidência sumiu: app/javascript/dashboard/i18n/locale/en/prospecting.json:114"
     },
     {
      "id": "16.03",
@@ -3728,8 +3728,8 @@
      "fontes": [
       "porques: Juntar leads em listas e preparar um público de campanha"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingListsPage.vue:136; evidência sumiu: app/javascript/dashboard/routes/dashboard/autonomia/prospecting/pages/ProspectingListsPage.vue:197"
     },
     {
      "id": "16.04",
@@ -3752,8 +3752,8 @@
      "fontes": [
       "porques: Ajustar chaves, limites e critérios de score da prospecção"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/autonomia/prospecting/search_runner.rb:8"
     }
    ]
   },
