@@ -90,7 +90,8 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
       schema = Autonomia::Agents::Tools::Native::InsuranceQuote.openai_schema
       opcionais = schema[:parameters][:properties].select { |_, v| v['type'].is_a?(Array) }
 
-      expect(opcionais.keys).to match_array(%w[cpf nome cep numero dados])
+      # O pedido do cliente para o bem (item 6 da auditoria de voz, 26/09/2026) também é opcional: nulo quando não houve.
+      expect(opcionais.keys).to match_array(%w[cpf nome cep numero dados pedido_que_entrou pedido_que_nao_coube])
       expect(schema[:parameters][:required]).to include(*opcionais.keys)
     end
 

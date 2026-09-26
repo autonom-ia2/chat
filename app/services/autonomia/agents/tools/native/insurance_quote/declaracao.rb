@@ -22,6 +22,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
                        'houver dois do mesmo modelo), o imóvel pelo que o distingue. Para recotar ou corrigir um bem ' \
                        'que já tem cotação nesta conversa, repita exatamente o nome que ele já tem; bem diferente, nome ' \
                        'novo. Dois bens são duas chamadas, cada uma com o seu nome.' },
+    # O QUE O CLIENTE PEDIU PARA ESTE BEM (item 6 da auditoria de voz, 26/09/2026). Não vai ao portal (`QuoteInput`
+    # só lê os grupos e os campos que nomeia) nem à identidade do pedido (`Insurance::Pedido`, que lê a entrada do
+    # adapter): fica na execução, e o aviso de fim da cotação o conta à Lia (`Eventos#fatos_do_pedido`), para ela
+    # dizer algo que só vale para esta cotação.
+    { 'name' => 'pedido_que_entrou', 'type' => 'string', 'required' => false,
+      'description' => 'O que você pediu às seguradoras para este bem a partir do que o cliente pediu, em poucas ' \
+                       'palavras. Nulo se ele não pediu nada além de cotar.' },
+    { 'name' => 'pedido_que_nao_coube', 'type' => 'string', 'required' => false,
+      'description' => 'O que ele pediu para este bem e não coube, com o motivo em linguagem de gente. Nulo se tudo ' \
+                       'coube.' },
     { 'name' => 'cpf', 'type' => 'string', 'required' => false,
       'description' => 'CPF ou CNPJ do segurado, só números ou formatado.' },
     { 'name' => 'nome', 'type' => 'string', 'required' => false,
@@ -75,11 +85,16 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Declaracao
   # aqui assim que tiver notícia". O especialista, que não fala com o cliente, escrevia essa frase para a Lia, e ela a
   # repassava com os dados do pedido: "Peguei o seguro do carro, placa tal, no CEP tal. Volto com as opções por aqui",
   # igual a cada cotação da conversa. Agora o texto diz o FATO e o que devolver ao atendente; a fala é dela.
+  #
+  # FATOS, NÃO FALA (item 9 da auditoria de voz, 26/09/2026): o especialista devolve ao atendente as partes do retorno
+  # dele (`QuoteAgent::RetornoDoEspecialista`), e é o atendente quem escreve. O aceite diz o mesmo, com as mesmas
+  # partes, para a regra mais perto da ação não contradizer o manual.
   ACEITA = 'A cotação abriu e está sendo feita. O resultado chega sozinho nesta conversa, sem ninguém pedir. ' \
-           'Devolva ao atendente só o que ele ainda não sabe e o cliente precisa ouvir: uma troca que você fez, ' \
-           'uma ressalva, algo que ficou de fora. Não repita os dados do pedido, não escreva frase pronta para o ' \
-           'cliente e não afirme que já chegou às seguradoras (ainda não chegou). Sem vocabulário de sistema ' \
-           '("em conferência", "processando", "em análise") e sem inventar valor, prazo ou nome de seguradora.'.freeze
+           'Devolva ao atendente, nos seus fatos, o que ele ainda não sabe e o cliente precisa ouvir: uma troca que ' \
+           'você fez, uma ressalva, o que foi pedido às seguradoras e o que ficou de fora. Não repita os dados do pedido, não ' \
+           'escreva frase pronta para o cliente e não afirme que já chegou às seguradoras (ainda não chegou). Sem ' \
+           'vocabulário de sistema ("em conferência", "processando", "em análise") e sem inventar valor, prazo ou ' \
+           'nome de seguradora.'.freeze
 
   # AS FRASES AO CLIENTE SAÍRAM DAQUI (PR C). Havia seis constantes de desfecho e o nó `frases_ao_cliente`, em que
   # o especialista escrevia no pedido as doze frases que o motor publicava. Agora o motor dispara um evento e a

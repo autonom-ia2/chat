@@ -82,7 +82,8 @@ RSpec.describe Autonomia::Agents::Answerer do
       used_snippet_ids: [], answered_from_knowledge: false }.to_json
   end
 
-  # Os modelos dublados, separados pelo esquema da resposta: o ESPECIALISTA (`Runner::RESULT_SCHEMA`) recebe o
+  # Os modelos dublados, separados pelo esquema da resposta: o ESPECIALISTA (o de fatos, `RetornoDoEspecialista`, ou a
+  # prosa, `Runner::RESULT_SCHEMA`) recebe o
   # catálogo dele, executa as chamadas da rodada (uma, ou várias em `chamadas`) e repassa o que leu; a LIA recebe o
   # catálogo dela e, havendo chamadas, consulta o especialista. `capturado` guarda o que cada um recebeu, e
   # `outputs` é o que a ferramenta devolveu ao especialista.
@@ -95,7 +96,7 @@ RSpec.describe Autonomia::Agents::Answerer do
     client = instance_double(Crm::Ai::ResponsesClient)
     allow(client).to receive(:create_with_tool_executor) do |**kwargs, &executor|
       nomes = Array(kwargs[:tools]).filter_map { |tool| tool[:name] }
-      next especialista(capturado, nomes, lista, executor) if do_especialista?(kwargs)
+      next especialista(capturado, nomes, lista, executor, kwargs[:schema]) if do_especialista?(kwargs)
 
       lia(capturado, nomes, lista, executor)
       { text: fala(texto) }
@@ -103,10 +104,6 @@ RSpec.describe Autonomia::Agents::Answerer do
     dublar_reescrita(client, capturado, reescrita)
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     capturado
-  end
-
-  def do_especialista?(kwargs)
-    kwargs.dig(:schema, :name) == Autonomia::Agents::Specialists::Runner::RESULT_SCHEMA[:name]
   end
 
   def lia(capturado, nomes, lista, executor)
@@ -118,10 +115,15 @@ RSpec.describe Autonomia::Agents::Answerer do
     nomes.include?(consulta['name']) ? executor.call([consulta]) : capturado[:outputs] = executor.call(lista)
   end
 
-  def especialista(capturado, nomes, lista, executor)
+  def do_especialista?(kwargs)
+    schema_do_especialista?(kwargs[:schema])
+  end
+
+  # O especialista de cotação devolve o que leu como o resultado lido (item 9 da auditoria de voz).
+  def especialista(capturado, nomes, lista, executor, schema)
     capturado[:tools_do_especialista] = nomes
     capturado[:outputs] = executor.call(lista) if lista.any? && executor
-    { text: { resposta: Array(capturado[:outputs]).pluck(:output).join("\n"), dados_faltando: [] }.to_json }
+    { text: resposta_do_especialista(schema, resposta: '', lido: Array(capturado[:outputs]).pluck(:output).join("\n")) }
   end
 
   def consulta_ao_especialista
