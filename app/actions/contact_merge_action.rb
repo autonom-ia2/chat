@@ -2,6 +2,9 @@ class ContactMergeAction
   include Events::Types
   pattr_initialize [:account!, :base_contact!, :mergee_contact!]
 
+  # chat#713: da origem de recusa mais firme para a mais fraca, na mescla de dois contatos que recusaram.
+  OPT_OUT_PRECEDENCE = %w[manual email_unsubscribe prospecting].freeze
+
   def perform
     # This case happens when an agent updates a contact email in dashboard,
     # while the contact also update his email via email collect box
@@ -68,11 +71,23 @@ class ContactMergeAction
   end
 
   # chat#713: a recusa de mensagens ativas é da pessoa. Se só o contato absorvido tinha recusado, a recusa (data, origem
-  # e autor) passa para o que fica; a recusa que o contato que fica já tinha vale.
+  # e autor) passa para o que fica. Se os dois recusaram, fica a origem mais firme (a manual, depois o descadastro de
+  # e-mail, depois a da Prospecção, que o "Desfazer" do lead solta sozinho) e a data mais antiga. Assim a mescla não
+  # apaga uma recusa manual atrás de uma da Prospecção.
   def inherited_opt_out
-    return {} if @base_contact.opted_out? || !@mergee_contact.opted_out?
+    return {} unless @mergee_contact.opted_out?
+    return opt_out_attributes(@mergee_contact) unless @base_contact.opted_out?
 
-    @mergee_contact.attributes.slice('opted_out_at', 'opt_out_source', 'opted_out_by_id')
+    kept = opt_out_rank(@mergee_contact) < opt_out_rank(@base_contact) ? @mergee_contact : @base_contact
+    opt_out_attributes(kept).merge('opted_out_at' => [@base_contact.opted_out_at, @mergee_contact.opted_out_at].min)
+  end
+
+  def opt_out_attributes(contact)
+    contact.attributes.slice('opted_out_at', 'opt_out_source', 'opted_out_by_id')
+  end
+
+  def opt_out_rank(contact)
+    OPT_OUT_PRECEDENCE.index(contact.opt_out_source) || OPT_OUT_PRECEDENCE.size
   end
 end
 

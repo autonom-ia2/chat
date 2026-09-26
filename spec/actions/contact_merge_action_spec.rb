@@ -96,13 +96,53 @@ describe ContactMergeAction do
         expect(base_contact.opted_out_at).to be_within(1.second).of(refused_at)
       end
 
-      it 'mantém a recusa que o contato que fica já tinha' do
-        base_contact.opt_out!(source: 'prospecting')
-        mergee_contact.opt_out!(source: 'manual', by: admin)
+      it 'mantém a recusa que o contato que fica já tinha quando a do absorvido não é mais firme' do
+        base_contact.opt_out!(source: 'manual', by: admin)
+        mergee_contact.opt_out!(source: 'prospecting')
 
         contact_merge
 
+        base_contact.reload
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+      end
+
+      it 'recusa manual do absorvido vence a da Prospecção do que fica, com a data mais antiga' do
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+        mergee_contact.update_columns(opted_out_at: 2.days.ago) # rubocop:disable Rails/SkipsModelValidations
+        base_contact.opt_out!(source: 'prospecting')
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+        expect(base_contact.opted_out_at).to be_within(1.second).of(mergee_contact.opted_out_at)
+      end
+
+      it 'descadastro de e-mail do absorvido vence a recusa da Prospecção do que fica' do
+        mergee_contact.opt_out!(source: 'email_unsubscribe')
+        base_contact.opt_out!(source: 'prospecting')
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('email_unsubscribe')
+      end
+
+      it 'desfazer a recusa do lead depois da mescla não tira a recusa manual que veio do absorvido' do
+        base_contact.update!(phone_number: '+5531988887002')
+        lead = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'merge-optout',
+                                                    name: 'Lead mescla', phone: '+5531988887002', country: 'BR')
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).refuse!(lead, user: admin)
         expect(base_contact.reload.opt_out_source).to eq('prospecting')
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+
+        contact_merge
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).withdraw!(lead.reload)
+
+        base_contact.reload
+        expect(base_contact).to be_opted_out
+        expect(base_contact.opt_out_source).to eq('manual')
       end
 
       it 'sem recusa dos dois lados, o contato que fica continua sem recusa' do
