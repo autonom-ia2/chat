@@ -123,6 +123,14 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
 
   before_validation :ensure_dedupe_key
   before_save :record_consent_refusal, if: -> { will_save_change_to_status? && no_consent? }
+  # Os campos pelos quais a recusa alcança um contato (ConsentVeto#contacts_vetoed_by). O metadata entra pela
+  # verificação de WhatsApp, cujo número também conta.
+  REFUSAL_REACH_ATTRIBUTES = %w[phone enriched_whatsapp enriched_email contact_id metadata].freeze
+
+  # A recusa segue os números do lead: o recusado que ganha telefone, WhatsApp ou e-mail novo (enriquecimento, busca
+  # refeita) marca o contato que já existia com ele, na mesma transação. A mudança da própria recusa é do
+  # ContactOptOutSync#update_lead!.
+  after_save :mark_refusal_on_new_reach, if: :refusal_reach_changed?
 
   def consent_refused?
     consent_refused_at.present? || no_consent?
@@ -140,6 +148,14 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
 
   def record_consent_refusal
     self.consent_refused_at ||= Time.current
+  end
+
+  def refusal_reach_changed?
+    consent_refused? && saved_changes.keys.intersect?(REFUSAL_REACH_ATTRIBUTES)
+  end
+
+  def mark_refusal_on_new_reach
+    Autonomia::Prospecting::ContactOptOutSync.new(account: account).mark_contacts!(self)
   end
 
   def ensure_dedupe_key

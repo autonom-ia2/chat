@@ -9,10 +9,12 @@ RSpec.describe Contacts::OptOutBackfill do
   def legacy_refused_lead(phone, contact: nil, target_account: account)
     lead = Autonomia::Prospecting::Lead.create!(
       account: target_account, provider: 'mock', provider_place_id: "backfill-#{phone}", name: 'Lead antigo', phone: phone,
-      country: 'BR', status: :no_consent, contact: contact
+      country: 'BR', contact: contact
     )
-    # O backfill da migration da recusa do lead: consent_refused_at = updated_at, sem passar pelo ContactOptOutSync.
-    lead.update_columns(consent_refused_at: lead.updated_at) # rubocop:disable Rails/SkipsModelValidations
+    # Dado de antes da coluna no contato: o status e o backfill da migration da recusa do lead (consent_refused_at =
+    # updated_at) gravados sem passar pelo ContactOptOutSync nem pelo callback do lead.
+    legacy = { status: Autonomia::Prospecting::Lead.statuses[:no_consent], consent_refused_at: lead.updated_at }
+    lead.update_columns(legacy) # rubocop:disable Rails/SkipsModelValidations
     lead
   end
 
