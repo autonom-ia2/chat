@@ -252,4 +252,51 @@ RSpec.describe EmailCampaigns::SuppressionRegistry do
     expect(EmailSuppressionEvent.where(account: account)).to be_empty
     expect(EmailSuppression.where(account: account)).to be_empty
   end
+
+  describe 'recusa no contato (chat#713)' do
+    it 'descadastro marca a recusa nos contatos da conta com o mesmo e-mail, sem olhar maiúsculas' do
+      contact = create(:contact, account: account, email: 'person+tag@example.org')
+      other_account = create(:contact, account: create(:account), email: 'person+tag@example.org')
+      other_email = create(:contact, account: account, email: 'person@example.org')
+
+      registry.block!(reason: 'unsubscribe', source: 'link', event_key: 'unsubscribe:1')
+
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+      expect(other_account.reload).not_to be_opted_out
+      expect(other_email.reload).not_to be_opted_out
+    end
+
+    it 'repetir o descadastro não muda a data nem troca recusa de outra origem' do
+      manual = create(:contact, account: account, email: 'person+tag@example.org')
+      manual.opt_out!(source: 'manual')
+      opted_out_at = manual.reload.opted_out_at
+
+      2.times { registry.block!(reason: 'unsubscribe', source: 'link', event_key: 'unsubscribe:1') }
+
+      expect(manual.reload.opt_out_source).to eq('manual')
+      expect(manual.opted_out_at).to eq(opted_out_at)
+    end
+
+    it 'bloqueio que não é descadastro não marca o contato' do
+      contact = create(:contact, account: account, email: 'person+tag@example.org')
+
+      registry.block!(reason: 'hard_bounce', source: 'ses', event_key: 'hard:1')
+      registry.block!(reason: 'complaint', source: 'ses', event_key: 'spam:1')
+
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'falha ao marcar o contato não desfaz a supressão do e-mail e vai para o rastreador' do
+      create(:contact, account: account, email: 'person+tag@example.org')
+      allow_any_instance_of(Contact).to receive(:opt_out!).and_raise(ActiveRecord::StatementInvalid, 'falhou') # rubocop:disable RSpec/AnyInstance
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      ActiveRecord::Base.transaction { registry.block!(reason: 'unsubscribe', source: 'link', event_key: 'unsubscribe:1') }
+
+      expect(EmailSuppression.suppressed?(account, 'person+tag@example.org')).to be true
+      expect(tracker).to have_received(:capture_exception)
+    end
+  end
 end

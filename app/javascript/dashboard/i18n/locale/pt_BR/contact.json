@@ -507,6 +507,35 @@
           "SUCCESS_MESSAGE": "Avatar excluído com sucesso",
           "ERROR_MESSAGE": "Não foi possível excluir o avatar. Por favor, tente novamente mais tarde."
         }
+      },
+      "OPT_OUT": {
+        "TITLE": "Mensagens ativas",
+        "DESCRIPTION": "Quem não quer receber fica fora das campanhas e dos follow-ups automáticos. A resposta a quem escreve segue normal.",
+        "BADGE": "Não quer receber mensagens ativas",
+        "SINCE": "Desde {date} · Origem: {source}",
+        "SOURCES": {
+          "PROSPECTING": "Prospecção",
+          "EMAIL_UNSUBSCRIBE": "Descadastro de e-mail",
+          "MANUAL": "Marcado pela equipe",
+          "UNKNOWN": "Não informada"
+        },
+        "MARK": "Marcar que não quer receber",
+        "UNDO": "Desfazer recusa",
+        "MARK_DIALOG": {
+          "TITLE": "Marcar recusa de mensagens ativas",
+          "DESCRIPTION": "Este contato deixa de receber campanhas e follow-ups automáticos nesta conta. As conversas que ele iniciar seguem normais.",
+          "CONFIRM": "Sim, marcar"
+        },
+        "UNDO_DIALOG": {
+          "TITLE": "Desfazer recusa",
+          "DESCRIPTION": "Este contato pediu para não receber mensagens ativas. Desfaça só se ele autorizou de novo: ele volta a receber campanhas e follow-ups automáticos.",
+          "CONFIRM": "Sim, desfazer"
+        },
+        "API": {
+          "MARK_SUCCESS": "Recusa registrada",
+          "UNDO_SUCCESS": "Recusa desfeita",
+          "ERROR": "Não foi possível salvar. Tente de novo."
+        }
       }
     },
     "SIDEBAR": {

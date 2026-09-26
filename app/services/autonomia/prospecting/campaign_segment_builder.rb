@@ -115,7 +115,9 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
   # Etiqueta os elegíveis e tira a etiqueta de quem ficou fora por recusa (SegmentLabelRemover). Devolve quantos
   # contatos foram criados agora.
   def label_segment!(label)
-    converted = eligible_leads.map { |lead| Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user).perform }
+    converted = eligible_leads.map do |lead|
+      Autonomia::Prospecting::ContactConverter.new(lead: lead, user: @user, consent_veto: eligibility.consent_veto).perform
+    end
     converted.each { |result| apply_label!(result.contact, label) }
     kept_contact_ids = converted.map { |result| result.contact.id }
     Autonomia::Prospecting::SegmentLabelRemover.new(label: label, user: @user, kept_contact_ids: kept_contact_ids).perform(blocked_details)

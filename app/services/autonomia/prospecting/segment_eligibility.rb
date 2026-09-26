@@ -48,7 +48,7 @@ class Autonomia::Prospecting::SegmentEligibility
     return if contact.nil?
     return 'contact_blocked' if contact.blocked?
 
-    'opt_out' if contact_opted_out?(contact)
+    'opt_out' if contact.opted_out? || card_opted_out?(contact)
   end
 
   def lead_block_reason(lead)
@@ -58,8 +58,9 @@ class Autonomia::Prospecting::SegmentEligibility
     'not_ready' unless lead.status == ELIGIBLE_STATUS
   end
 
-  # Quem respondeu "parar" ao follow-up da IA fica marcado no card (Crm::FollowUps::AutoFollowupCanceler).
-  def contact_opted_out?(contact)
+  # A recusa gravada no contato (chat#713) vale de qualquer origem. Quem respondeu "parar" ao follow-up da IA ainda fica
+  # marcado só no card (Crm::FollowUps::AutoFollowupCanceler).
+  def card_opted_out?(contact)
     @account.crm_cards.where(contact_id: contact.id)
             .exists?(["metadata->'ai'->'auto_followup_state'->>'opted_out' = 'true'"])
   end

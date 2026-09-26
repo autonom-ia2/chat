@@ -8,11 +8,17 @@ class Autonomia::Prospecting::ConsentVeto
   end
 
   def vetoed?(lead:, contact:)
-    return true if contact.present? && refused_contact_ids.include?(contact.id)
+    return true if contact.present? && contact_vetoed?(contact)
 
-    phones = phones_of(lead) + [contact&.phone_number].compact
-    emails = [email_of(lead), contact&.email&.downcase].compact
-    refused_phones.intersect?(phones.to_set) || refused_emails.intersect?(emails.to_set)
+    refused_phones.intersect?(phones_of(lead).to_set) || refused_emails.include?(email_of(lead))
+  end
+
+  # O contato sozinho, sem lead: é o de um lead recusado, ou tem o telefone ou o e-mail de um. Decide se a recusa da
+  # Prospecção gravada no contato (ContactOptOutSync) ainda tem quem a sustente.
+  def contact_vetoed?(contact)
+    refused_contact_ids.include?(contact.id) ||
+      refused_phones.include?(contact.phone_number) ||
+      refused_emails.include?(contact.email&.downcase)
   end
 
   # Os contatos da conta que a recusa deste lead veta: o ligado a ele, os do mesmo telefone ou WhatsApp (os números de
