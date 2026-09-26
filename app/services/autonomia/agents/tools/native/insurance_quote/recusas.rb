@@ -10,7 +10,8 @@ module Autonomia::Agents::Tools::Native::InsuranceQuote::Recusas
                    'exemplo {"configuracoes":{"marca":"Caloi"}}.'.freeze
   # Lido pelo MODELO (na conferência e nos fatos do evento `ramo_desconhecido`): o texto volta pelo canal da
   # ferramenta, nunca pelo do cliente. A lista de ramos é do código: um modelo que a digitasse de memória
-  # listaria um ramo que a corretora não cota.
+  # listaria um ramo que a corretora não cota. No Agente de Cotação este texto não é alcançado: a guarda do ramo sem
+  # especialista (`RamoSemEspecialista`, conversa 7150) recusa antes. Ele vale para o agente comum.
   RAMO_DESCONHECIDO = 'Esse tipo de seguro não é cotado por aqui. Os ramos que esta corretora cota: automóvel, residencial, ' \
                       'condomínio, empresarial, aluguel/fiança, viagem, acidentes pessoais, vida, vida em grupo, celular e bicicleta.'.freeze
 

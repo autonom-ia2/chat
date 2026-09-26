@@ -292,7 +292,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         dispara: -> { rodar_especialista(texto: { resposta: '', dados_faltando: [] }.to_json) }
       },
       # A ferramenta de cotação DE VERDADE: no envio (o job registra) e no turno (o Bound registra).
-      'insurance_quote.rb#start#1' => {
+      'insurance_quote.rb#recusa_do_envio#2' => {
         espera: { motivo: 'json_invalido', slug: 'cotar_seguro', onde: 'envio', faltando: 'dados' },
         dispara: lambda {
           ready_connection
@@ -300,7 +300,7 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       # Auto sem formulário (entrega 2): a conexão não tem o schema e o adapter não o dá agora.
-      'insurance_quote.rb#start#2' => {
+      'insurance_quote.rb#recusa_do_envio#3' => {
         espera: { motivo: 'formulario_indisponivel', slug: 'cotar_seguro', onde: 'envio' },
         dispara: lambda {
           ready_connection
@@ -309,14 +309,14 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         }
       },
       # Sem placa, chassi nem FIPE não há veículo (entrega 2, termo 10): no envio e no turno.
-      'insurance_quote.rb#start#3' => {
+      'insurance_quote.rb#recusa_do_envio#4' => {
         espera: { motivo: 'sem_veiculo', slug: 'cotar_seguro', onde: 'envio', faltando: 'vehicle.plate' },
         dispara: lambda {
           ready_connection
           rodar_job(cotacao, arguments: { 'produto' => 'auto', 'cpf' => '04297912678' })
         }
       },
-      'insurance_quote.rb#start#4' => {
+      'insurance_quote.rb#start#1' => {
         espera: { motivo: 'faltam_dados', slug: 'cotar_seguro', onde: 'envio', faltando: /[a-zA-Z.,]*insured\.document[a-zA-Z.,]*/ },
         dispara: lambda {
           ready_connection
@@ -491,11 +491,31 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
           expect(Autonomia::Agents::ToolRun.count).to be_zero
         }
       },
-      'insurance_quote.rb#start#5' => {
+      'insurance_quote.rb#start#2' => {
         espera: { motivo: 'ramo_desconhecido', slug: 'cotar_seguro', onde: 'envio', faltando: 'produto' },
         dispara: lambda {
           ready_connection
           rodar_job(cotacao, arguments: { 'produto' => 'drone', 'dados' => '{}' })
+        }
+      },
+      # Conversa 7150 (26/09/2026): no Agente de Cotação, ramo sem especialista nesta conta é recusado na conferência
+      # (nenhuma execução aberta) e no envio, antes do adapter.
+      'ramo_sem_especialista.rb#conferencia_sem_especialista#1' => {
+        espera: { motivo: 'ramo_sem_especialista', slug: 'cotar_seguro', faltando: 'produto' },
+        dispara: lambda {
+          ready_connection
+          agent.update_columns(agent_type: 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations
+          bound_para(cotacao).execute({ 'name' => 'cotar_seguro', 'arguments' => { item: 'Bem', produto: 'vida', dados: '{}' }.to_json },
+                                      delivery: delivery)
+          expect(Autonomia::Agents::ToolRun.count).to be_zero
+        }
+      },
+      'insurance_quote.rb#recusa_do_envio#1' => {
+        espera: { motivo: 'ramo_sem_especialista', slug: 'cotar_seguro', onde: 'envio', faltando: 'produto' },
+        dispara: lambda {
+          ready_connection
+          agent.update_columns(agent_type: 'insurance_quote') # rubocop:disable Rails/SkipsModelValidations
+          rodar_job(cotacao, arguments: { 'produto' => 'vida', 'dados' => '{}' })
         }
       },
       # #470: o `quote/start` recusa a entrada (a consulta de CPF não achou a pessoa).
