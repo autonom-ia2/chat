@@ -294,7 +294,8 @@
           "MESSAGE": "Mensagem",
           "MESSAGE_NOT_GENERATED": "Não gerado",
           "REASON": "Motivo",
-          "ERROR_CODE": "Código {code}"
+          "ERROR_CODE": "Código {code}",
+          "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas"
         }
       }
     },
@@ -331,7 +332,8 @@
         "SCHEDULED_AT": "Agendada para",
         "ACTIONS": "Ações",
         "MEDIA_ONLY": "Somente mídia",
-        "FAILURES": "{count} falhas"
+        "FAILURES": "{count} falhas",
+        "OPTED_OUT": "Recusaram mensagens ativas: {count}"
       },
       "ACTIONS": {
         "PAUSE_SUCCESS": "Campanha pausada",

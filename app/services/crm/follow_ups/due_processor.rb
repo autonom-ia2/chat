@@ -149,6 +149,8 @@ class Crm::FollowUps::DueProcessor
       log_message_sent(follow_up, result.message)
     when :skipped
       complete_already_sent_follow_up(follow_up)
+    when :opted_out
+      cancel_opted_out_follow_up(follow_up, result.error)
     when :failed
       follow_up.update!(
         status: :overdue,
@@ -159,6 +161,12 @@ class Crm::FollowUps::DueProcessor
     end
 
     finalize_follow_up(follow_up)
+  end
+
+  # chat#737: o contato recusou mensagens ativas. Não é falha: sem overdue e sem aviso de falha ao responsável.
+  def cancel_opted_out_follow_up(follow_up, reason)
+    follow_up.update!(status: :canceled, metadata: follow_up.metadata.merge('canceled_reason' => reason.to_s))
+    Rails.logger.info("[crm][follow_ups][due_processor] follow_up_id=#{follow_up.id} canceled reason=#{reason}")
   end
 
   def complete_already_sent_follow_up(follow_up)

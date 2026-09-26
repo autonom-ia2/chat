@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import DeliveryStatusBadge from './DeliveryStatusBadge.vue';
+import { deliveryReason, rawDeliveryReason } from './deliveryReason';
 import {
   BaseTable,
   BaseTableRow,
@@ -36,12 +37,11 @@ const headers = computed(() => [
   t('CAMPAIGN.WHATSAPP.ANALYTICS.TABLE.REASON'),
 ]);
 
-const errorReason = delivery =>
-  delivery.error_message || delivery.error_title || delivery.error_code || '';
+const errorReason = delivery => deliveryReason(delivery, t);
 
 const errorCode = delivery =>
   delivery.error_code &&
-  String(delivery.error_code) !== String(errorReason(delivery))
+  String(delivery.error_code) !== String(rawDeliveryReason(delivery))
     ? delivery.error_code
     : '';
 
