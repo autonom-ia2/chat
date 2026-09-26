@@ -74,14 +74,15 @@ class Autonomia::Prospecting::SegmentRefusalSync
     end
   end
 
+  # [lista, etiqueta] para cada etiqueta que o segmento de cada lista já gerou (List#segment_label_ids): a campanha que
+  # começou com a etiqueta antiga de um segmento refeito com outro nome ainda a tem na audiência.
   def segmented_lists
     lists = Autonomia::Prospecting::List.where(account: @account)
                                         .where("metadata -> 'campaign_segment' ->> 'label_id' IS NOT NULL").to_a
-    labels = @account.labels.where(id: lists.map { |list| segment_label_id(list) }).index_by(&:id)
+    labels = @account.labels.where(id: lists.flat_map(&:segment_label_ids)).index_by(&:id)
 
-    lists.filter_map do |list|
-      label = labels[segment_label_id(list)]
-      [list, label] if label
+    lists.flat_map do |list|
+      list.segment_label_ids.filter_map { |label_id| [list, labels[label_id]] if labels[label_id] }
     end
   end
 
@@ -97,9 +98,5 @@ class Autonomia::Prospecting::SegmentRefusalSync
     kept = @eligibility.contact_ids_kept_in(list, targets.to_set { |_lead, contact| contact.id })
     remover = Autonomia::Prospecting::SegmentLabelRemover.new(label: label, user: nil, kept_contact_ids: kept)
     targets.each { |lead, contact| remover.remove(lead: lead, contact: contact) }
-  end
-
-  def segment_label_id(list)
-    list.metadata.to_h.dig('campaign_segment', 'label_id').to_i
   end
 end

@@ -4,8 +4,9 @@
 # com o motivo 'discarded'. Cancelado não é falha: a campanha não termina com falhas por isso.
 #
 # Quais campanhas: as da API do WhatsApp em andamento (ou pausadas) cuja audiência tem a etiqueta do segmento de uma lista
-# do lead descartado. É o vínculo que o AudienceResolver usou de fato; o campaign_id do metadata da lista guarda só a
-# última campanha e muda quando o segmento é refeito.
+# do lead descartado, qualquer uma das que o segmento da lista já gerou (List#segment_label_ids). É o vínculo que o
+# AudienceResolver usou de fato; o campaign_id do metadata da lista guarda só a última campanha e muda quando o segmento
+# é refeito, e refazer o segmento com outro nome troca a etiqueta atual sem tirar a antiga da campanha que já começou.
 #
 # A regra é a da etiqueta: o contato que ainda tem alguma etiqueta da audiência da campanha continua nela (outro lead
 # elegível que mantém a etiqueta do segmento, a etiqueta de outra lista na mesma campanha, uma etiqueta comum escolhida na
@@ -38,27 +39,25 @@ class Autonomia::Prospecting::DiscardedCampaignRecipients
 
   private
 
-  # { id da etiqueta do segmento => [ids dos contatos dos descartados que estão na lista daquele segmento] }.
+  # { id da etiqueta do segmento => [ids dos contatos dos descartados que estão na lista daquele segmento] }. Cada lista
+  # entra com todas as etiquetas que o segmento dela já gerou (List#segment_label_ids).
   def discarded_contact_ids_by_segment_label(leads)
     contact_by_lead = contact_id_by_lead(leads)
     rows = Autonomia::Prospecting::ListLead.where(account_id: @account.id, prospect_lead_id: contact_by_lead.keys)
                                            .pluck(:prospect_list_id, :prospect_lead_id)
-    label_by_list = segment_label_by_list(rows.map(&:first).uniq)
-    rows.select { |list_id, _lead_id| label_by_list.key?(list_id) }
-        .group_by { |list_id, _lead_id| label_by_list[list_id] }
-        .transform_values { |pairs| pairs.map { |_list_id, lead_id| contact_by_lead[lead_id] }.uniq }
+    labels_by_list = segment_labels_by_list(rows.map(&:first).uniq)
+    rows.each_with_object({}) do |(list_id, lead_id), result|
+      labels_by_list.fetch(list_id, []).each { |label_id| result[label_id] = result.fetch(label_id, []) | [contact_by_lead[lead_id]] }
+    end
   end
 
   def contact_id_by_lead(leads)
     leads.to_h { |lead| [lead.id, @eligibility.existing_contact(lead)&.id] }.compact
   end
 
-  # { id da lista => id da etiqueta do segmento } das listas com segmento gerado.
-  def segment_label_by_list(list_ids)
-    Autonomia::Prospecting::List.where(account: @account, id: list_ids).each_with_object({}) do |list, result|
-      label_id = list.metadata.to_h.dig('campaign_segment', 'label_id').to_i
-      result[list.id] = label_id if label_id.positive?
-    end
+  # { id da lista => ids das etiquetas do segmento } das listas com segmento gerado.
+  def segment_labels_by_list(list_ids)
+    Autonomia::Prospecting::List.where(account: @account, id: list_ids).to_h { |list| [list.id, list.segment_label_ids] }
   end
 
   def active_campaigns

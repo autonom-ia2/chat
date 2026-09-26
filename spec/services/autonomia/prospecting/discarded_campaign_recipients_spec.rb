@@ -167,6 +167,23 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
     expect(recipient.last_error_message).to eq('discarded')
   end
 
+  it 'segmento refeito com outro nome: a campanha que começou com a etiqueta antiga ainda perde o descartado' do
+    discarded = add_lead(1, '+5531999970091')
+    add_lead(2, '+5531999970092')
+    campaign = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
+    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin, campaign_id: campaign.id, campaign_type: 'whatsapp_api',
+                                                       segment_name: 'Padarias').perform
+    old_title = list.reload.metadata.dig('campaign_segment', 'label_title')
+    start(campaign)
+    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin, segment_name: 'Padarias SP').perform
+    expect(list.reload.metadata.dig('campaign_segment', 'label_title')).not_to eq(old_title)
+
+    discard(discarded)
+
+    expect(recipient_of(campaign, discarded)).to be_cancelled
+    expect(discarded.reload.contact.label_list).not_to include(old_title)
+  end
+
   it 'segmento refeito sem campanha: a campanha em andamento com a etiqueta ainda perde o descartado' do
     discarded = add_lead(1, '+5531999970081')
     add_lead(2, '+5531999970082')

@@ -172,6 +172,7 @@ class Autonomia::Prospecting::CampaignSegmentBuilder
     reference = Autonomia::Prospecting::CampaignSegmentPayload.campaign(campaign).to_h
     metadata['campaign_segment'] = {
       'label_id' => label.id,
+      'label_ids' => (@list.segment_label_ids + [label.id]).uniq,
       'label_title' => label.title,
       'campaign_id' => reference[:id],
       'campaign_type' => reference[:type],
