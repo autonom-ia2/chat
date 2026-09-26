@@ -163,10 +163,29 @@ class Crm::FollowUps::DueProcessor
     finalize_follow_up(follow_up)
   end
 
-  # chat#737: o contato recusou mensagens ativas. Não é falha: sem overdue e sem aviso de falha ao responsável.
+  # chat#737: o contato recusou mensagens ativas. Não é falha: sem overdue e sem aviso de falha ao responsável. O
+  # cancelamento fica na linha do tempo do card, com o motivo, para o responsável saber por que a mensagem não saiu.
   def cancel_opted_out_follow_up(follow_up, reason)
-    follow_up.update!(status: :canceled, metadata: follow_up.metadata.merge('canceled_reason' => reason.to_s))
+    follow_up.update!(status: :canceled, canceled_at: @now, metadata: follow_up.metadata.merge('canceled_reason' => reason.to_s))
+    log_opted_out_cancel(follow_up, reason)
     Rails.logger.info("[crm][follow_ups][due_processor] follow_up_id=#{follow_up.id} canceled reason=#{reason}")
+  end
+
+  def log_opted_out_cancel(follow_up, reason)
+    Crm::ActivityLogger.new(
+      card: follow_up.card,
+      actor: nil,
+      event_type: 'follow_up_canceled',
+      conversation: follow_up.conversation,
+      payload: {
+        follow_up_id: follow_up.id,
+        title: follow_up.title,
+        status: follow_up.status,
+        automation_mode: follow_up.automation_mode,
+        reason: reason.to_s,
+        due_at: follow_up.due_at&.iso8601
+      }
+    ).perform
   end
 
   def complete_already_sent_follow_up(follow_up)

@@ -7,9 +7,11 @@
 # - opt_out! é idempotente e a primeira recusa vale. Se o contato já recusou, por qualquer origem, nada muda:
 #   uma recusa manual não é trocada pela da Prospecção, e remover depois a da Prospecção não apaga a manual.
 # - opt_in! limpa as três colunas. Com source:, só limpa se a recusa gravada veio daquela origem.
-# - As duas gravam sem rodar as validações do contato, para dado antigo (e-mail ou telefone fora do formato)
+# - transfer_opt_out! troca a origem sem tirar a recusa, quando a origem gravada sai e outra ainda vale.
+# - As três gravam sem rodar as validações do contato, para dado antigo (e-mail ou telefone fora do formato)
 #   não impedir o registro da recusa. Rodam os callbacks, então o evento de contato atualizado sai normalmente.
 # - As colunas não entram na edição comum do contato (ContactsController#permitted_params); só por estes métodos.
+# - Contato novo, ou que muda de telefone ou e-mail, herda a recusa viva da conta (Contacts::OptOutInheritance).
 module ContactOptOut
   extend ActiveSupport::Concern
 
@@ -22,6 +24,8 @@ module ContactOptOut
 
     scope :opted_out, -> { where.not(opted_out_at: nil) }
     scope :not_opted_out, -> { where(opted_out_at: nil) }
+
+    after_commit :inherit_opt_out_later, on: [:create, :update], if: :opt_out_inheritance_trigger?
   end
 
   def opted_out?
@@ -30,8 +34,7 @@ module ContactOptOut
 
   # Retorna true quando gravou a recusa e false quando o contato já tinha recusado.
   def opt_out!(source:, by: nil)
-    source = source.to_s
-    raise ArgumentError, "origem de recusa desconhecida: #{source}" unless OPT_OUT_SOURCES.include?(source)
+    source = validated_opt_out_source(source)
 
     with_lock do
       next false if opted_out?
@@ -57,7 +60,41 @@ module ContactOptOut
     end
   end
 
+  # A recusa gravada com a origem from continua, agora com a origem to; a data da recusa fica a original.
+  # Retorna false quando a recusa gravada não é da origem from.
+  def transfer_opt_out!(from:, to:)
+    to = validated_opt_out_source(to)
+
+    with_lock do
+      next false unless opted_out? && opt_out_source == from.to_s
+
+      assign_attributes(opt_out_source: to, opted_out_by_id: nil)
+      save!(validate: false)
+      log_opt_out_change("transfer_from_#{from}", to, nil)
+      true
+    end
+  end
+
   private
+
+  def validated_opt_out_source(source)
+    source = source.to_s
+    raise ArgumentError, "origem de recusa desconhecida: #{source}" unless OPT_OUT_SOURCES.include?(source)
+
+    source
+  end
+
+  def opt_out_inheritance_trigger?
+    return false if opted_out?
+
+    previously_new_record? || saved_change_to_phone_number? || saved_change_to_email?
+  end
+
+  def inherit_opt_out_later
+    return unless Contacts::OptOutInheritance.possible_for?(self)
+
+    Contacts::OptOutInheritanceJob.perform_later(account, [id])
+  end
 
   def log_opt_out_change(action, source, by)
     Rails.logger.info("[contact_opt_out] #{action} account=#{account_id} contact=#{id} source=#{source} by=#{by&.id}")

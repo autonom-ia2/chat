@@ -294,6 +294,19 @@ RSpec.describe Contact do
       expect(contact.reload.opted_out?).to be(false)
     end
 
+    it 'transfer_opt_out! troca só a origem gravada, mantendo a data da recusa' do
+      contact.opt_out!(source: 'prospecting')
+      refused_at = contact.reload.opted_out_at
+
+      expect(contact.transfer_opt_out!(from: 'manual', to: 'email_unsubscribe')).to be(false)
+      expect(contact.transfer_opt_out!(from: 'prospecting', to: 'email_unsubscribe')).to be(true)
+
+      contact.reload
+      expect(contact.opt_out_source).to eq('email_unsubscribe')
+      expect(contact.opted_out_at).to eq(refused_at)
+      expect { contact.transfer_opt_out!(from: 'email_unsubscribe', to: 'outra') }.to raise_error(ArgumentError)
+    end
+
     it 'escopos separam quem recusou de quem não recusou, sem cruzar contas' do
       contact.opt_out!(source: 'manual')
       other = create(:contact, account: account)

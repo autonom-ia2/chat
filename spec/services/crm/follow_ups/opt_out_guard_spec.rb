@@ -84,6 +84,18 @@ RSpec.describe 'Recusa de mensagens ativas nos follow-ups do CRM' do # rubocop:d
       expect(ActionCableBroadcastJob).not_to have_received(:perform_later)
         .with(anything, Events::Types::CRM_FOLLOW_UP_DUE, anything)
     end
+
+    it 'registra no card o cancelamento com o motivo, para o responsável ver por que a mensagem não saiu' do
+      follow_up = build_follow_up(metadata: { message_body: 'Olá' })
+      follow_up.conversation.contact.opt_out!(source: 'email_unsubscribe')
+
+      Crm::FollowUps::DueProcessor.new(now: Time.current).perform
+
+      expect(follow_up.reload.canceled_at).to be_present
+      activity = follow_up.card.activities.find_by!(event_type: 'follow_up_canceled')
+      expect(activity.actor_id).to be_nil
+      expect(activity.payload).to include('follow_up_id' => follow_up.id, 'title' => 'Retomar', 'reason' => 'opt_out')
+    end
   end
 
   describe Crm::FollowUps::CallbackRunner do

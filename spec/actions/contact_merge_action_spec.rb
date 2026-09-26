@@ -80,6 +80,38 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when um dos contatos recusou mensagens ativas (chat#713)' do
+      let(:admin) { create(:user, account: account) }
+
+      it 'leva para o contato que fica a recusa do contato absorvido, com data, origem e autor' do
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+        refused_at = mergee_contact.reload.opted_out_at
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact).to be_opted_out
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+        expect(base_contact.opted_out_at).to be_within(1.second).of(refused_at)
+      end
+
+      it 'mantém a recusa que o contato que fica já tinha' do
+        base_contact.opt_out!(source: 'prospecting')
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('prospecting')
+      end
+
+      it 'sem recusa dos dois lados, o contato que fica continua sem recusa' do
+        contact_merge
+
+        expect(base_contact.reload).not_to be_opted_out
+      end
+    end
+
     context 'when contacts belong to a different account' do
       it 'throws an exception' do
         new_account = create(:account)

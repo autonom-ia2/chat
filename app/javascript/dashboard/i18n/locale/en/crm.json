@@ -921,6 +921,7 @@
       "ACTIVITY_DETAIL_AUTONOMIA_HANDOFF_TEAM": "Routed to team {team}",
       "ACTIVITY_DETAIL_CONTACT": "Contact: {contact}",
       "ACTIVITY_DETAIL_MEETING": "Meeting: {title}",
+      "ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT": "the contact does not want to receive active messages",
       "TITLE_LABEL": "Title",
       "TITLE_PLACEHOLDER": "Opportunity name",
       "REQUIRED": "Required",

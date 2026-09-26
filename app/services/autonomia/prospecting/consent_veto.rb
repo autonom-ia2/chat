@@ -15,6 +15,7 @@ class Autonomia::Prospecting::ConsentVeto
 
   # O contato sozinho, sem lead: é o de um lead recusado, ou tem o telefone ou o e-mail de um. Decide se a recusa da
   # Prospecção gravada no contato (ContactOptOutSync) ainda tem quem a sustente.
+  # Os conjuntos de recusa não guardam telefone nem e-mail em branco: dois contatos sem telefone não são a mesma pessoa.
   def contact_vetoed?(contact)
     refused_contact_ids.include?(contact.id) ||
       refused_phones.include?(contact.phone_number) ||
@@ -42,13 +43,13 @@ class Autonomia::Prospecting::ConsentVeto
   end
 
   def refused_phones
-    @refused_phones ||= (refused_leads.flat_map { |lead| phones_of(lead) } + refused_contacts.filter_map(&:phone_number)).to_set
+    @refused_phones ||= (refused_leads.flat_map { |lead| phones_of(lead) } + refused_contacts.map(&:phone_number)).compact_blank.to_set
   end
 
   def refused_emails
     @refused_emails ||= (
-      refused_leads.filter_map { |lead| email_of(lead) } + refused_contacts.filter_map { |contact| contact.email&.downcase }
-    ).to_set
+      refused_leads.filter_map { |lead| email_of(lead) } + refused_contacts.map { |contact| contact.email.to_s.downcase }
+    ).compact_blank.to_set
   end
 
   def refused_contacts

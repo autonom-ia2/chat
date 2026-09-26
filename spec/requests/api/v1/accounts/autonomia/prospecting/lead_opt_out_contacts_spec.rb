@@ -107,6 +107,51 @@ RSpec.describe 'Autonomia prospecting lead refusal on contacts', type: :request 
     expect(shared.reload).not_to be_opted_out
   end
 
+  it 'descadastro de e-mail feito depois da recusa da Prospecção continua valendo quando o lead sai de no_consent' do
+    contact = new_contact(phone: '+5531999997002', email: 'pessoa@exemplo.com.br')
+    lead = create_lead(9, '+5531999997002', contact: contact)
+    patch_status(lead, 'no_consent')
+    refused_at = contact.reload.opted_out_at
+    EmailCampaigns::SuppressionRegistry.new(account: account, email: 'Pessoa@Exemplo.com.br')
+                                       .block!(reason: 'unsubscribe', source: 'link', event_key: 'unsubscribe:optout-9')
+    expect(contact.reload.opt_out_source).to eq('prospecting')
+
+    patch_status(lead, 'qualified')
+
+    contact.reload
+    expect(contact).to be_opted_out
+    expect(contact.opt_out_source).to eq('email_unsubscribe')
+    expect(contact.opted_out_at).to be_within(1.second).of(refused_at)
+  end
+
+  it 'supressão de e-mail que não é descadastro não segura a recusa da Prospecção' do
+    contact = new_contact(phone: '+5531999997003', email: 'bounce@exemplo.com.br')
+    lead = create_lead(10, '+5531999997003', contact: contact)
+    patch_status(lead, 'no_consent')
+    EmailCampaigns::SuppressionRegistry.new(account: account, email: 'bounce@exemplo.com.br')
+                                       .block!(reason: 'hard_bounce', source: 'ses', event_key: 'hard:optout-10')
+
+    patch_status(lead, 'qualified')
+
+    expect(contact.reload).not_to be_opted_out
+  end
+
+  it 'telefone vazio não vira telefone recusado: outro contato sem telefone não é marcado' do
+    refused = new_contact(email: 'recusou@exemplo.com.br')
+    innocent = new_contact(email: 'inocente@exemplo.com.br')
+    [refused, innocent].each { |contact| contact.update_columns(phone_number: '') } # rubocop:disable Rails/SkipsModelValidations
+    lead = create_lead(11, '+5531999997004', contact: refused)
+    patch_status(lead, 'no_consent')
+
+    veto = Autonomia::Prospecting::ConsentVeto.new(account: account)
+    expect(veto.contact_vetoed?(innocent.reload)).to be(false)
+
+    other = create_lead(12, nil, enriched_email: 'inocente@exemplo.com.br')
+    Autonomia::Prospecting::ContactConverter.new(lead: other, user: admin).perform
+
+    expect(innocent.reload).not_to be_opted_out
+  end
+
   it 'marca o contato com e-mail antigo fora do formato' do
     contact = new_contact(phone: '+5531999997001')
     contact.update_columns(email: 'nao-e-email') # rubocop:disable Rails/SkipsModelValidations

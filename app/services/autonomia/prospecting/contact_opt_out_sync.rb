@@ -5,7 +5,7 @@
 #   alcança pelo telefone ou pelo e-mail (ConsentVeto#contacts_vetoed_by). Recusa que o contato já tinha fica como está.
 # - Lead que sai de no_consent: tira só a marca de origem 'prospecting' dos mesmos contatos, e só onde nenhum outro lead
 #   recusado da conta ainda alcança o contato (vários leads podem dividir o número: central, franquia). Recusa manual ou
-#   de descadastro de e-mail nunca sai por aqui.
+#   de descadastro de e-mail nunca sai por aqui; descadastro feito enquanto a marca da Prospecção valia vira a origem.
 #
 # update_lead! roda na mesma transação que grava o status do lead: a recusa e a marca entram ou saem juntas.
 class Autonomia::Prospecting::ContactOptOutSync
@@ -35,11 +35,18 @@ class Autonomia::Prospecting::ContactOptOutSync
 
   private
 
+  # A marca de origem 'prospecting' só sai quando nenhuma outra recusa viva a sustenta. Se a pessoa se descadastrou do
+  # e-mail enquanto a marca da Prospecção valia (a primeira recusa vale, então o descadastro não trocou a origem), a
+  # recusa continua, agora com a origem do descadastro.
   def release(lead)
+    inheritance = Contacts::OptOutInheritance.new(account: @account, consent_veto: veto)
     reached_contacts(lead).each do |contact|
-      next if contact.opt_out_source != SOURCE || veto.contact_vetoed?(contact)
+      next if contact.opt_out_source != SOURCE
 
-      contact.opt_in!(source: SOURCE)
+      source = inheritance.source_for(contact)
+      next if source == SOURCE
+
+      source ? contact.transfer_opt_out!(from: SOURCE, to: source) : contact.opt_in!(source: SOURCE)
     end
   end
 
