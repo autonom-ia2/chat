@@ -168,18 +168,18 @@ describe('CampaignSelectionModal', () => {
     expect(wrapper.emitted('done')[0][0].eligible_count).toBe(1);
   });
 
-  it('mostra os dois tipos, com a campanha da API do WhatsApp primeiro, e só a agendada dela', async () => {
+  it('mostra os dois tipos, com o envio único (WhatsApp Oficial) primeiro, e só a agendada da API do WhatsApp', async () => {
     const wrapper = await mountModal({
       whatsappApiCampaigns: WHATSAPP_API_CAMPAIGNS,
     });
 
     expect(campaignChoice(wrapper).props('options')).toEqual([
       { value: '', label: 'Só criar o segmento, sem campanha' },
+      { value: 'one_off:8', label: 'Envio único · Café da manhã' },
       {
         value: 'whatsapp_api:8',
         label: 'WhatsApp API · Retomada de clientes',
       },
-      { value: 'one_off:8', label: 'Envio único · Café da manhã' },
     ]);
   });
 
