@@ -603,9 +603,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # ramo que a corretora trabalha e a IA não cota vai para a equipe; só o que está fora das duas listas de
     # consultar_produtos_cotacao a corretora não atende. As promessas novas estão em
     # `builder_instrucao_ramo_sem_especialista_spec` (`ManualDoRamoSemEspecialista::PROMESSAS_DA_CONDUTA`), exercitadas.
+    # Voz da Lia, item 9, com a revisão adversarial, integrada à conversa 7150 (`0e278c8f…` -> `13e38571…`, 26/09/2026):
+    # o especialista devolve fatos, não fala ("o que foi pedido às seguradoras", o que não coube, o que falta), a
+    # mensagem é da Lia, reagindo ao que a pessoa disse, e a SITUAÇÃO vale mais que os fatos dele. Promessas em
+    # `builder_voz_da_lia_promessas_spec` (`DO_PRINCIPAL`).
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('0e278c8f72a0485e32313748ee7c1674')
+      expect(Digest::MD5.hexdigest(secao)).to eq('13e38571aede42a1c67b2274af46ee67')
     end
 
     it 'não introduz variável para substituir' do
@@ -761,8 +765,16 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # na mesma mensagem, em vez de dizer à pessoa que ela pode pedir.
     # chat#641 (`dac25b9f…` -> `966780d8…`, 25/09/2026): "com o comparativo acima" vira "com o comparativo enviado", e
     # a Lia não diz em que ponto da conversa o PDF está: no WhatsApp ele chegou depois da fala que o chamava de "acima".
+    # Voz da Lia, item 6 (`966780d8…` -> `6b5d72eb…`, 26/09/2026): o comparativo enviado ganha direção, não exemplo
+    # (contar que saiu pelo nome que a pessoa dá ao bem, algo que só vale para esta cotação, dos fatos do aviso e do que a
+    # pessoa contou, não repetir a forma da mensagem anterior, pergunta de verdade e nunca instrução de uso do
+    # arquivo). O resto da §14 não mudou. Promessas em `builder_voz_da_lia_promessas_spec` (`DO_PRINCIPAL`).
+    # Revisão adversarial no mesmo dia (`6b5d72eb…` -> `b586b10a…`): o que foi pedido não é o que cada seguradora cotou,
+    # e a contagem de seguradoras com preço do aviso é a única exceção à regra do número que não veio de ferramenta.
+    # Avaliação paga no mesmo dia (`b586b10a…` -> `83c3fe7a…`): o contexto é o que a pessoa contou no pedido, e não só deste
+    # bem; no último aviso ela ignorava que o apê, outro bem, era o urgente.
     it 'mudou? revise este bloco e assine aqui' do
-      expect(Digest::MD5.hexdigest(secao)).to eq('966780d8d944be1151dfefa8de963c0b')
+      expect(Digest::MD5.hexdigest(secao)).to eq('83c3fe7a177642fc10e4294303c6aef8')
     end
 
     it 'não traz frase de exemplo, travessão, valor em reais nem variável' do

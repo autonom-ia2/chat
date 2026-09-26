@@ -1,21 +1,25 @@
 # Roda UM turno do especialista (#311) e devolve TEXTO para o agente principal.
 #
 # O principal chama `consultar_<slug>` com um pedido em português. Aqui o especialista roda seu
-# próprio ciclo — instrução própria, ferramentas próprias — e responde em prosa. O principal
-# parafraseia; nunca vê estrutura, nunca vê as ferramentas do especialista.
+# próprio ciclo — instrução própria, ferramentas próprias — e responde em texto. O principal
+# nunca vê estrutura nem as ferramentas do especialista.
+#
+# O DE COTAÇÃO DEVOLVE FATOS, NÃO PROSA (item 9 da auditoria de voz, 26/09/2026): o que fez, o que entrou, o que não
+# coube, o que falta e o que a pessoa revelou, rotulados (`Insurance::QuoteAgent::RetornoDoEspecialista`), e a fala é
+# da Lia. O principal continua recebendo texto; os especialistas de fora da cotação seguem com a prosa.
 #
 # NUNCA LEVANTA. Qualquer falha vira uma frase curta que volta ao principal como saída da
 # função, do mesmo jeito que `Autonomia::Agents::Tools::HttpExecutor` faz: o turno segue e o cliente recebe
 # resposta, em vez de silêncio. A mensagem nunca carrega o prompt nem detalhe de credencial.
 class Autonomia::Agents::Specialists::Runner
-  # O especialista responde em prosa, mas com formato garantido — assim ele não devolve JSON
-  # cru para o principal parafrasear nem inventa um formato diferente a cada turno.
+  # O especialista de fora da cotação responde em prosa, com formato garantido — assim ele não devolve JSON cru ao
+  # principal nem inventa um formato diferente a cada turno. O de cotação usa `RetornoDoEspecialista::SCHEMA`.
   RESULT_SCHEMA = {
     name: 'autonomia_specialist_result',
     schema: {
       type: 'object',
       properties: {
-        # O que o principal vai parafrasear. Texto corrido, em português.
+        # O que o principal lê. Texto corrido, em português.
         resposta: { type: 'string' },
         # O que ainda falta para concluir. O principal usa isto para saber o que perguntar ao
         # cliente — sem ter que conhecer os campos do ramo.
@@ -99,7 +103,7 @@ class Autonomia::Agents::Specialists::Runner
       model: Autonomia::Agents::Config::ANSWERER_MODEL,
       instructions: @specialist.effective_instruction,
       input: entrada,
-      schema: RESULT_SCHEMA,
+      schema: fatos? ? ::Autonomia::Insurance::QuoteAgent::RetornoDoEspecialista::SCHEMA : RESULT_SCHEMA,
       reasoning_effort: Autonomia::Agents::Config::ANSWERER_REASONING_EFFORT,
       tools: tool_schemas,
       timeout: SEGUNDOS_POR_CHAMADA,
@@ -208,19 +212,34 @@ class Autonomia::Agents::Specialists::Runner
   # OS BENS QUE ABRIRAM (revisão da chat#615): com dois carros pedidos e um barrado por falta de dado, "a cotação foi
   # aberta" fazia a Lia prometer os dois. A lista diz quais abriram; o bem que não está nela não foi cotado.
   def cotacao_aberta(novas)
-    bens = novas.map { |run| ::Autonomia::Insurance::Faixa.descricao(run) }.join('; ')
-    "#{COTACAO_ABERTA} Bens com cotação aberta: #{bens}. Bem pedido que não está nesta lista não foi cotado: não diga " \
-      'ao cliente que ele está sendo cotado.'
+    faixa = ::Autonomia::Insurance::Faixa
+    bens = novas.map { |run| faixa.descricao(run) }.join('; ')
+    nome = (faixa::NOME_NA_CONVERSA if novas.any? { |run| faixa.item(run) })
+    ["#{COTACAO_ABERTA} Bens com cotação aberta: #{bens}.", nome,
+     'Bem pedido que não está nesta lista não foi cotado: não diga ao cliente que ele está sendo cotado.'].compact.join(' ')
   end
 
-  # Junta resposta e pendências numa string só — o principal recebe texto, não estrutura.
+  # O ESPECIALISTA DE COTAÇÃO DEVOLVE FATOS, e a fala é da Lia (item 9 da auditoria de voz, 26/09/2026): o contrato
+  # mora em `Insurance::QuoteAgent::RetornoDoEspecialista`. Os outros especialistas seguem com a prosa.
+  def fatos?
+    return @fatos if defined?(@fatos)
+
+    @fatos = ::Autonomia::Insurance::QuoteAgent::RetornoDoEspecialista.aplica?(@specialist)
+  end
+
+  # O principal recebe texto, não estrutura: os fatos rotulados, ou a resposta com as pendências.
   def format_result(parsed)
+    texto = fatos? ? ::Autonomia::Insurance::QuoteAgent::RetornoDoEspecialista.texto(parsed) : prosa(parsed)
+    return recusar('especialista_nao_concluiu', 'O especialista não conseguiu concluir.') if texto.blank?
+
+    Autonomia::Agents::Config.truncate_text(texto, MAX_OUTPUT_CHARS)
+  end
+
+  def prosa(parsed)
     resposta = parsed['resposta'].to_s.strip
     faltando = Array(parsed['dados_faltando']).map { |item| item.to_s.strip }.reject(&:blank?)
-    return recusar('especialista_nao_concluiu', 'O especialista não conseguiu concluir.') if resposta.blank? && faltando.empty?
-
     parts = [resposta.presence]
     parts << "Ainda falta: #{faltando.join(', ')}." if faltando.any?
-    Autonomia::Agents::Config.truncate_text(parts.compact.join(' '), MAX_OUTPUT_CHARS)
+    parts.compact.join(' ').presence
   end
 end

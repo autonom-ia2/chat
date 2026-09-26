@@ -571,8 +571,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
   # chat#641 (`15a304f8…` -> `9691f6c3…`, 25/09/2026): a §K diz que o PDF pode chegar antes ou depois de qualquer
   # mensagem, e que não se diz em que ponto da conversa ele está. A guarda é `builder_posicao_do_anexo_spec`.
   # Integração de chat#716 com chat#718 no release de 25/09/2026: os dois textos juntos, sem mudança de frase.
+  # Voz da Lia, item 9 (`6d253522…` -> `3f28fcc0…`, 26/09/2026): o especialista devolve FATOS nas partes do retorno
+  # (`QuoteAgent::RetornoDoEspecialista`), e não mais "texto pronto, que ele vai parafrasear"; as ordens de dizer ao
+  # cliente, aqui e no manual do ramo, vão nessas partes. Promessas em `builder_voz_da_lia_promessas_spec`. Os manuais
+  # de ramo não mudaram. Revisão adversarial no mesmo dia (`3f28fcc0…` -> `19980fb3…`): o pedido vira "o que foi pedido
+  # às seguradoras" (o cotado de cada uma pode ser outro), e §H, §I e §L mandam dúvida, falha e escolha no que fez.
   it 'o bloco comum é o texto revisado — mudou? revise PROMESSAS e assine aqui' do
-    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('6d2535228428c82ec927058ebc404d82')
+    expect(Digest::MD5.hexdigest(ManualDoEspecialistaDeAuto::BLOCO_COMUM.binread)).to eq('19980fb3a39133615bfeafebef34e011')
   end
 
   # O BLOCO COMUM E O MANUAL DO RAMO (#525). A decisão do CEO foi que a regra que vale em qualquer
