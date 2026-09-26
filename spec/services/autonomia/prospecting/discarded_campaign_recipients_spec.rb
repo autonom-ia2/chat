@@ -32,6 +32,17 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
     campaign
   end
 
+  def segment_into(campaign, segment_list)
+    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: segment_list, user: admin, campaign_id: campaign.id,
+                                                       campaign_type: 'whatsapp_api').perform
+  end
+
+  def start(campaign)
+    WhatsappApiCampaigns::AudienceResolver.new(campaign.reload).perform
+    campaign.update!(status: :running, started_at: Time.current)
+    campaign
+  end
+
   def discard(*leads)
     perform_enqueued_jobs(only: Autonomia::Prospecting::SegmentRefusalSyncJob) do
       Autonomia::Prospecting::LeadDiscard.new(account: account, lead_ids: leads.map(&:id), reason: 'Sem interesse').perform
@@ -111,5 +122,59 @@ RSpec.describe Autonomia::Prospecting::DiscardedCampaignRecipients do
     described_class.new(account: account).perform([lead])
 
     expect(recipient_of(campaign, lead)).to be_pending
+  end
+
+  it 'contato que um lead elegível de outra lista na mesma campanha ainda alcança continua pendente' do
+    other_list = Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Outra')
+    discarded = add_lead(1, '+5531999970051')
+    add_lead(2, '+5531999970051', target_list: other_list)
+    campaign = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
+    segment_into(campaign, list)
+    segment_into(campaign, other_list)
+    start(campaign)
+    expect(recipient_of(campaign, discarded)).to be_pending
+
+    discard(discarded)
+
+    expect(recipient_of(campaign, discarded)).to be_pending
+  end
+
+  it 'contato que a campanha ainda alcança por uma etiqueta comum da audiência continua pendente' do
+    discarded = add_lead(1, '+5531999970061')
+    campaign = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
+    segment_into(campaign, list)
+    discarded.reload.contact.add_labels(base_label.title)
+    start(campaign)
+
+    discard(discarded)
+
+    expect(discarded.reload.contact.label_list).to eq([base_label.title])
+    expect(recipient_of(campaign, discarded)).to be_pending
+  end
+
+  it 'segmento refeito para outra campanha: a que já começou com a etiqueta ainda perde o descartado' do
+    discarded = add_lead(1, '+5531999970071')
+    add_lead(2, '+5531999970072')
+    first = running_campaign_from(list)
+    second = create_whatsapp_api_campaign(account: account, user: admin, inbox: inbox, label: base_label)
+    segment_into(second, list)
+    expect(list.reload.metadata.dig('campaign_segment', 'campaign_id')).to eq(second.id)
+
+    discard(discarded)
+
+    recipient = recipient_of(first, discarded)
+    expect(recipient).to be_cancelled
+    expect(recipient.last_error_message).to eq('discarded')
+  end
+
+  it 'segmento refeito sem campanha: a campanha em andamento com a etiqueta ainda perde o descartado' do
+    discarded = add_lead(1, '+5531999970081')
+    add_lead(2, '+5531999970082')
+    campaign = running_campaign_from(list)
+    Autonomia::Prospecting::CampaignSegmentBuilder.new(list: list, user: admin).perform
+
+    discard(discarded)
+
+    expect(recipient_of(campaign, discarded)).to be_cancelled
   end
 end

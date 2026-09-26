@@ -1,13 +1,17 @@
 # Descarte tira da campanha em andamento (chat#713, decisão de 26/09). A campanha da API do WhatsApp resolve o público
 # quando começa e guarda os destinatários; tirar a etiqueta do segmento não os remove. Aqui, no SegmentRefusalSyncJob que
-# o descarte já enfileira, os destinatários ainda pendentes da campanha em andamento (ou pausada) que recebeu o segmento
-# da lista do lead descartado (metadata campaign_segment da lista) viram cancelados com o motivo 'discarded'. Cancelado
-# não é falha: a campanha não termina com falhas por isso.
+# o descarte já enfileira, depois de tirar as etiquetas, os destinatários ainda pendentes do descartado viram cancelados
+# com o motivo 'discarded'. Cancelado não é falha: a campanha não termina com falhas por isso.
 #
-# A regra é a da etiqueta: o contato que outro lead elegível da mesma lista ainda alcança continua na campanha. Só sai
-# quem está pendente; o que já está sendo enviado ou foi enviado fica como está (o UPDATE confere o status na hora).
+# Quais campanhas: as da API do WhatsApp em andamento (ou pausadas) cuja audiência tem a etiqueta do segmento de uma lista
+# do lead descartado. É o vínculo que o AudienceResolver usou de fato; o campaign_id do metadata da lista guarda só a
+# última campanha e muda quando o segmento é refeito.
+#
+# A regra é a da etiqueta: o contato que ainda tem alguma etiqueta da audiência da campanha continua nela (outro lead
+# elegível que mantém a etiqueta do segmento, a etiqueta de outra lista na mesma campanha, uma etiqueta comum escolhida na
+# campanha). Só sai quem está pendente; o que já está sendo enviado ou foi enviado fica como está (o UPDATE confere o
+# status na hora).
 class Autonomia::Prospecting::DiscardedCampaignRecipients
-  CAMPAIGN_TYPE = Autonomia::Prospecting::CampaignSegmentBuilder::WHATSAPP_API
   ACTIVE_CAMPAIGN_STATUSES = %i[running paused].freeze
 
   def initialize(account:, eligibility: nil)
@@ -20,36 +24,62 @@ class Autonomia::Prospecting::DiscardedCampaignRecipients
     discarded = Array(leads).select(&:discarded?)
     return if discarded.empty?
 
-    campaign_lists(discarded).each do |campaign, list|
-      contact_ids = discarded_contact_ids(list, discarded)
-      next if contact_ids.empty?
+    contact_ids_by_label = discarded_contact_ids_by_segment_label(discarded)
+    return if contact_ids_by_label.empty?
 
-      cancel!(campaign, contact_ids - @eligibility.contact_ids_kept_in(list, contact_ids))
+    active_campaigns.each do |campaign|
+      label_ids = audience_label_ids(campaign)
+      candidates = contact_ids_by_label.slice(*label_ids).values.flatten.uniq
+      next if candidates.empty?
+
+      cancel!(campaign, candidates - contact_ids_still_tagged(candidates, label_ids))
     end
   end
 
   private
 
-  # [campanha, lista]: as listas dos leads cujo segmento foi posto numa campanha da API ainda em andamento.
-  def campaign_lists(leads)
-    lists = lists_with_campaign(leads)
-    campaigns = @account.whatsapp_api_campaigns.where(status: ACTIVE_CAMPAIGN_STATUSES, id: lists.map { |list| campaign_id(list) })
-                        .index_by(&:id)
-    lists.filter_map do |list|
-      campaign = campaigns[campaign_id(list)]
-      [campaign, list] if campaign
+  # { id da etiqueta do segmento => [ids dos contatos dos descartados que estão na lista daquele segmento] }.
+  def discarded_contact_ids_by_segment_label(leads)
+    contact_by_lead = contact_id_by_lead(leads)
+    rows = Autonomia::Prospecting::ListLead.where(account_id: @account.id, prospect_lead_id: contact_by_lead.keys)
+                                           .pluck(:prospect_list_id, :prospect_lead_id)
+    label_by_list = segment_label_by_list(rows.map(&:first).uniq)
+    rows.select { |list_id, _lead_id| label_by_list.key?(list_id) }
+        .group_by { |list_id, _lead_id| label_by_list[list_id] }
+        .transform_values { |pairs| pairs.map { |_list_id, lead_id| contact_by_lead[lead_id] }.uniq }
+  end
+
+  def contact_id_by_lead(leads)
+    leads.to_h { |lead| [lead.id, @eligibility.existing_contact(lead)&.id] }.compact
+  end
+
+  # { id da lista => id da etiqueta do segmento } das listas com segmento gerado.
+  def segment_label_by_list(list_ids)
+    Autonomia::Prospecting::List.where(account: @account, id: list_ids).each_with_object({}) do |list, result|
+      label_id = list.metadata.to_h.dig('campaign_segment', 'label_id').to_i
+      result[list.id] = label_id if label_id.positive?
     end
   end
 
-  def lists_with_campaign(leads)
-    list_ids = Autonomia::Prospecting::ListLead.where(account_id: @account.id, prospect_lead_id: leads.map(&:id)).select(:prospect_list_id)
-    Autonomia::Prospecting::List.where(account: @account, id: list_ids)
-                                .where("metadata -> 'campaign_segment' ->> 'campaign_type' = ?", CAMPAIGN_TYPE).to_a
+  def active_campaigns
+    @account.whatsapp_api_campaigns.where(status: ACTIVE_CAMPAIGN_STATUSES).to_a
   end
 
-  def discarded_contact_ids(list, leads)
-    in_list = list.list_leads.where(prospect_lead_id: leads.map(&:id)).pluck(:prospect_lead_id).to_set
-    leads.select { |lead| in_list.include?(lead.id) }.filter_map { |lead| @eligibility.existing_contact(lead)&.id }.uniq
+  def audience_label_ids(campaign)
+    Array(campaign.audience).filter_map do |item|
+      item = item.to_h.stringify_keys
+      item['id'].to_i if item['type'] == 'Label' && item['id'].present?
+    end
+  end
+
+  # Os contatos que ainda têm alguma etiqueta da audiência (lidos depois de o SegmentRefusalSync tirar as etiquetas).
+  def contact_ids_still_tagged(contact_ids, label_ids)
+    titles = @account.labels.where(id: label_ids).pluck(:title)
+    return [] if titles.empty?
+
+    ActsAsTaggableOn::Tagging.joins(:tag)
+                             .where(context: 'labels', taggable_type: 'Contact', taggable_id: contact_ids, tags: { name: titles })
+                             .distinct.pluck(:taggable_id)
   end
 
   def cancel!(campaign, contact_ids)
@@ -61,9 +91,5 @@ class Autonomia::Prospecting::DiscardedCampaignRecipients
       last_error_message: WhatsappApiCampaignRecipient::DISCARDED_REASON, updated_at: now
     )
     campaign.refresh_counters! if cancelled.positive?
-  end
-
-  def campaign_id(list)
-    list.metadata.to_h.dig('campaign_segment', 'campaign_id').to_i
   end
 end
