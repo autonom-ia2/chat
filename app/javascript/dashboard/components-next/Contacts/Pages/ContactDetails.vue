@@ -162,7 +162,7 @@ const handleAvatarDelete = async () => {
                 $t('CONTACTS_LAYOUT.DETAILS.CREATED_AT', { date: createdAt })
               }}
             </span>
-            •
+            {{ $t('CONTACTS_LAYOUT.DETAILS.DATES_SEPARATOR') }}
             <span
               v-tooltip.top="{
                 content: exactTimestamp(contactData?.lastActivityAt),

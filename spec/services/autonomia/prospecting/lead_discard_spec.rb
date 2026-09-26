@@ -46,6 +46,61 @@ RSpec.describe Autonomia::Prospecting::LeadDiscard do
     expect(lead.reload.discard_reason).to eq('Novo motivo')
   end
 
+  # chat#713: descartar lead recusado passa pelo ContactOptOutSync. A marca da Prospecção sai do contato, a menos que
+  # outro lead recusado da conta ainda o alcance.
+  context 'when o lead descartado estava em no_consent' do
+    def refused_lead(index, phone, contact: nil)
+      lead = create_lead(index, phone: phone, country: 'BR', contact: contact,
+                                metadata: { 'whatsapp_verification' => { 'status' => 'verified', 'phone' => phone } })
+      Autonomia::Prospecting::ContactOptOutSync.new(account: account).update_lead!(lead, status: :no_consent)
+      lead
+    end
+
+    it 'tira a marca da Prospecção do contato' do
+      contact = create(:contact, account: account, phone_number: '+5531999981001')
+      lead = refused_lead(1, '+5531999981001', contact: contact)
+      expect(contact.reload.opt_out_source).to eq('prospecting')
+
+      perform([lead.id])
+
+      expect(lead.reload.status).to eq('discarded')
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'mantém a marca enquanto outro lead recusado alcança o contato' do
+      contact = create(:contact, account: account, phone_number: '+5531999981002')
+      lead = refused_lead(2, '+5531999981002')
+      refused_lead(3, '+5531999981002')
+      expect(contact.reload.opt_out_source).to eq('prospecting')
+
+      perform([lead.id])
+
+      expect(contact.reload).to be_opted_out
+      expect(contact.opt_out_source).to eq('prospecting')
+    end
+
+    it 'descartar juntos os leads recusados que dividem o contato tira a marca' do
+      contact = create(:contact, account: account, phone_number: '+5531999981004')
+      first = refused_lead(5, '+5531999981004')
+      second = refused_lead(6, '+5531999981004')
+      expect(contact.reload.opt_out_source).to eq('prospecting')
+
+      perform([first.id, second.id])
+
+      expect(contact.reload).not_to be_opted_out
+    end
+
+    it 'não tira recusa manual' do
+      contact = create(:contact, account: account, phone_number: '+5531999981003')
+      contact.opt_out!(source: 'manual')
+      lead = refused_lead(4, '+5531999981003', contact: contact)
+
+      perform([lead.id])
+
+      expect(contact.reload.opt_out_source).to eq('manual')
+    end
+  end
+
   it 'sem motivo não descarta nada' do
     lead = create_lead(1)
 

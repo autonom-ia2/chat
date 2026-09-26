@@ -164,4 +164,79 @@ RSpec.describe 'Contact opt-out API', type: :request do
       expect(contact.reload).to be_opted_out
     end
   end
+
+  # A recusa é decisão de quem atende o contato: token de integração do CRM (RestrictIntegrationTokenToCrm, que nega
+  # por padrão fora do CRM) e token de agent bot (BOT_ACCESSIBLE_ENDPOINTS) não marcam nem desfazem.
+  describe 'tokens de API' do
+    let(:admin) { create(:user, account: account, role: :administrator) }
+
+    def api_headers(token)
+      { api_access_token: token }
+    end
+
+    context 'with token de integração do CRM' do
+      let(:token) do
+        skip 'Crm::IntegrationToken is EE-only in this fork' unless defined?(Crm::IntegrationToken)
+
+        Crm::IntegrationToken.create!(account: account, created_by: admin, name: 'n8n', scopes: ['crm_admin']).access_token.token
+      end
+
+      it 'POST recebe 401 e não marca' do
+        post url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(contact.reload).not_to be_opted_out
+      end
+
+      it 'DELETE recebe 401 e não desfaz' do
+        contact.opt_out!(source: 'manual', by: admin)
+
+        delete url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(contact.reload.opt_out_source).to eq('manual')
+      end
+    end
+
+    context 'with token de agent bot' do
+      let(:token) { create(:agent_bot, account: account).access_token.token }
+
+      it 'POST recebe 401 e não marca' do
+        post url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(contact.reload).not_to be_opted_out
+      end
+
+      it 'DELETE recebe 401 e não desfaz' do
+        contact.opt_out!(source: 'manual', by: admin)
+
+        delete url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(contact.reload.opt_out_source).to eq('manual')
+      end
+    end
+
+    context 'with token de usuário' do
+      let(:token) { agent.access_token.token }
+
+      it 'POST marca a recusa manual' do
+        post url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(contact.reload.opt_out_source).to eq('manual')
+        expect(contact.opted_out_by_id).to eq(agent.id)
+      end
+
+      it 'DELETE desfaz a recusa manual' do
+        contact.opt_out!(source: 'manual', by: agent)
+
+        delete url, headers: api_headers(token), as: :json
+
+        expect(response).to have_http_status(:ok)
+        expect(contact.reload).not_to be_opted_out
+      end
+    end
+  end
 end

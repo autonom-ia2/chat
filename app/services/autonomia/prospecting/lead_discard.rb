@@ -26,8 +26,12 @@ class Autonomia::Prospecting::LeadDiscard
   def perform
     validate!
     leads = @leads_scope.where(id: @lead_ids).to_a
+    # Pelo ContactOptOutSync: lead que sai de no_consent tira a marca da Prospecção que nenhum outro lead sustenta (chat#713).
+    # Um sync por lead: o ConsentVeto guarda os leads recusados que leu, e o lote muda essa lista a cada descarte.
     Autonomia::Prospecting::Lead.transaction do
-      leads.each { |lead| lead.update!(status: :discarded, discard_reason: @reason) }
+      leads.each do |lead|
+        Autonomia::Prospecting::ContactOptOutSync.new(account: @account).update_lead!(lead, status: :discarded, discard_reason: @reason)
+      end
     end
     # Quem já tinha a etiqueta de um segmento sai dela no job da Prospecção: a campanha lê o público pela etiqueta mais tarde.
     Autonomia::Prospecting::SegmentRefusalSync.enqueue(account: @account, leads: leads)

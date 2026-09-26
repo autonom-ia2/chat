@@ -153,7 +153,9 @@ const isEmpty = computed(() => props.deliveries.length === 0);
                     }}
                   </span>
                 </div>
-                <span v-else class="text-body-main text-n-slate-10">-</span>
+                <span v-else class="text-body-main text-n-slate-10">
+                  {{ t('CAMPAIGN.WHATSAPP.ANALYTICS.TABLE.EMPTY_REASON') }}
+                </span>
               </BaseTableCell>
             </template>
           </BaseTableRow>

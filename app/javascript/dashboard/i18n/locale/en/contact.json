@@ -489,6 +489,7 @@
     "DETAILS": {
       "CREATED_AT": "Created {date}",
       "LAST_ACTIVITY": "Last active {date}",
+      "DATES_SEPARATOR": "•",
       "DELETE_CONTACT_DESCRIPTION": "Permanently delete this contact. This action is irreversible",
       "DELETE_CONTACT": "Delete contact",
       "DELETE_DIALOG": {

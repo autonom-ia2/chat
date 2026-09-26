@@ -295,6 +295,7 @@
           "MESSAGE_NOT_GENERATED": "Não gerado",
           "REASON": "Motivo",
           "ERROR_CODE": "Código {code}",
+          "EMPTY_REASON": "-",
           "REASON_OPTED_OUT": "Contato não quer receber mensagens ativas"
         }
       }

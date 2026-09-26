@@ -135,6 +135,40 @@ RSpec.describe EmailCampaigns::Sns::EventProcessor do
     expect(campaign.reload.unsubscribed_count).to eq(1)
   end
 
+  # chat#713: descadastro que chega pelo SES vale para as outras mensagens ativas, igual ao link de descadastro.
+  it 'marks the account contacts with that e-mail as refused when SES reports UnsubscribedRecipient' do
+    same = create(:contact, account: campaign.account, email: recipient.email.upcase)
+    other_account = create(:contact, email: recipient.email)
+    unrelated = create(:contact, account: campaign.account, email: 'outra@exemplo.com.br')
+    event['bounce'].merge!('bounceType' => 'Permanent', 'bounceSubType' => 'UnsubscribedRecipient')
+
+    described_class.new(event).process
+
+    expect(same.reload).to be_opted_out
+    expect(same.opt_out_source).to eq('email_unsubscribe')
+    expect(other_account.reload).not_to be_opted_out
+    expect(unrelated.reload).not_to be_opted_out
+  end
+
+  { 'Permanent' => 'General', 'Transient' => 'MailboxFull' }.each do |bounce_type, subtype|
+    it "does not mark the contact as refused after a #{bounce_type}/#{subtype} bounce" do
+      contact = create(:contact, account: campaign.account, email: recipient.email)
+      event['bounce'].merge!('bounceType' => bounce_type, 'bounceSubType' => subtype)
+
+      described_class.new(event).process
+
+      expect(contact.reload).not_to be_opted_out
+    end
+  end
+
+  it 'does not mark the contact as refused after a complaint' do
+    contact = create(:contact, account: campaign.account, email: recipient.email)
+
+    described_class.new(event.merge('eventType' => 'Complaint', 'complaint' => {})).process
+
+    expect(contact.reload).not_to be_opted_out
+  end
+
   it 'promotes provider protection to opt-out and keeps it after a later provider bounce' do
     registry = EmailCampaigns::SuppressionRegistry.new(account: campaign.account, email: recipient.email)
     registry.block!(reason: 'provider_suppression', source: 'ses', event_key: 'earlier-provider-block')

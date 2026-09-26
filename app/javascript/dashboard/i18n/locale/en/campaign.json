@@ -295,6 +295,7 @@
           "MESSAGE_NOT_GENERATED": "Not generated",
           "REASON": "Reason",
           "ERROR_CODE": "Code {code}",
+          "EMPTY_REASON": "-",
           "REASON_OPTED_OUT": "Contact does not want outbound messages"
         }
       }
