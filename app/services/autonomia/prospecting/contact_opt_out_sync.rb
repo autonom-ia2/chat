@@ -43,11 +43,17 @@ class Autonomia::Prospecting::ContactOptOutSync
     update_lead!(lead, attributes)
   end
 
+  # Marca a recusa do lead nos contatos que ela alcança. Também é o que passa para o contato a recusa gravada antes da
+  # coluna no contato existir (Contacts::OptOutBackfill). Recusa que o contato já tem fica como está.
+  def mark_contacts!(lead)
+    reached_contacts(lead).each { |contact| contact.opt_out!(source: SOURCE) }
+  end
+
   private
 
   def apply(lead, was_refused:)
     if lead.consent_refused?
-      reached_contacts(lead).each { |contact| contact.opt_out!(source: SOURCE) } unless was_refused
+      mark_contacts!(lead) unless was_refused
     elsif was_refused
       release(lead)
     end
