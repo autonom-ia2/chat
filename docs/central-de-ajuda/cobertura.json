@@ -231,7 +231,15 @@
       "rota": "autonomia_prospecting_search",
       "assuntos": [
         "09.26-prospeccao-montar-uma-busca",
-        "09.27-prospeccao-trabalhar-os-resultados"
+        "09.27-prospeccao-trabalhar-os-resultados",
+        "09.30-prospeccao-desenhar-area",
+        "09.31-prospeccao-filtros-e-jogadas",
+        "09.32-prospeccao-historico-de-buscas",
+        "09.33-prospeccao-pesquisa-empresa-decisor",
+        "09.34-prospeccao-enviar-ao-crm",
+        "09.35-prospeccao-leads-na-campanha",
+        "09.36-prospeccao-descartar-e-criar-contatos",
+        "09.37-prospeccao-exportar-leads"
       ],
       "situacao": "coberta",
       "nota": null
@@ -787,7 +795,8 @@
       "assuntos": [
         "02.15-criar-funcao-personalizada",
         "02.16-permissoes-uma-a-uma",
-        "02.18-editar-excluir-funcao"
+        "02.18-editar-excluir-funcao",
+        "09.39-prospeccao-quem-ve-o-que"
       ],
       "situacao": "coberta",
       "nota": "02.16 é referência de 20/09 (véspera do estudo); as permissões novas de Prospecção, Cotação, Autonomia, Campanhas e Conexões (commits fc1c912db7 e 920263697f, ambos pós-estudo) não estão na lista — ver 'obsoletos'."
@@ -1269,7 +1278,8 @@
     {
       "rota": "settings_prospecting_index",
       "assuntos": [
-        "09.29-prospeccao-configuracoes"
+        "09.29-prospeccao-configuracoes",
+        "09.38-prospeccao-jogadas-salvas"
       ],
       "situacao": "coberta",
       "nota": null
