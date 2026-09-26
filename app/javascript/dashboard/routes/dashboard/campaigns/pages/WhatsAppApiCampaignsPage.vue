@@ -248,6 +248,16 @@ onBeforeUnmount(() => {
                     })
                   }}
                 </p>
+                <p
+                  v-if="campaign.opted_out_count"
+                  class="mb-0 text-xs text-n-slate-11"
+                >
+                  {{
+                    t('CAMPAIGN.WHATSAPP_API.TABLE.OPTED_OUT', {
+                      count: campaign.opted_out_count,
+                    })
+                  }}
+                </p>
               </td>
               <td class="px-4 py-4 align-top text-n-slate-12">
                 <p class="mb-0 truncate">{{ campaign.inbox?.name }}</p>

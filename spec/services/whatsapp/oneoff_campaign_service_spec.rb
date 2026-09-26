@@ -330,4 +330,32 @@ describe Whatsapp::OneoffCampaignService do
       end
     end
   end
+
+  # Com enterprise/ presente, perform e o envio são os do overlay (com outra assinatura); aqui exercitamos o
+  # process_contact da versão community e usamos a montagem dos parâmetros, passo seguinte à guarda, como sinal.
+  describe 'recusa de mensagens ativas no caminho community (chat#737)' do
+    let(:service) { described_class.new(campaign: campaign) }
+
+    before do
+      account.enable_features!(:whatsapp_campaign)
+      allow(service).to receive(:process_liquid_template_params).and_return(nil)
+    end
+
+    it 'não envia ao contato que recusou' do
+      contact = create(:contact, :with_phone_number, account: account)
+      contact.opt_out!(source: 'manual')
+
+      service.send(:process_contact, contact)
+
+      expect(service).not_to have_received(:process_liquid_template_params)
+    end
+
+    it 'envia ao contato que não recusou' do
+      contact = create(:contact, :with_phone_number, account: account)
+
+      service.send(:process_contact, contact)
+
+      expect(service).to have_received(:process_liquid_template_params).with(contact).once
+    end
+  end
 end
