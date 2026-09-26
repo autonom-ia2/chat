@@ -9,7 +9,7 @@ class Autonomia::Prospecting::LeadPayload
     :enriched_data, :decision_name, :decision_role, :decision_confidence, :decision_source_url, :decision_linkedin,
     :decision_instagram, :enriched_email, :enriched_whatsapp, :enriched_instagram, :enriched_linkedin,
     :enriched_facebook, :enriched_cnpj, :enrichment_summary,
-    :contact_id, :crm_card_id, :created_at, :updated_at
+    :consent_refused_at, :contact_id, :crm_card_id, :created_at, :updated_at
   ].freeze
 
   # O que o payload lê de outras tabelas. Quem monta a lista de leads carrega junto, para não fazer uma consulta por

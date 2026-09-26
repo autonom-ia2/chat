@@ -52,11 +52,18 @@ module EmailCampaigns
                  else 'unknown_bounce'
                  end
         reason = evidence['reason_code'] if %w[provider_suppression unsubscribe].include?(evidence['reason_code'])
-        registry(recipient).record!(reason: reason, source: 'ses', event_key: "ses:#{message_id}:bounce",
-                                    occurred_at: event_time('bounce'), metadata: evidence)
+        register_bounce(recipient, reason, evidence)
         return on_unsubscribe(recipient) if reason == 'unsubscribe'
 
         recipient.mark_bounced! unless recipient.unsubscribed? || recipient.complained?
+      end
+
+      # Descadastro pelo SES segue o caminho do link (block!): também marca a recusa nos contatos da conta (chat#713).
+      # Os outros bounces só registram.
+      def register_bounce(recipient, reason, evidence)
+        write = reason == 'unsubscribe' ? :block! : :record!
+        registry(recipient).public_send(write, reason: reason, source: 'ses', event_key: "ses:#{message_id}:bounce",
+                                               occurred_at: event_time('bounce'), metadata: evidence)
       end
 
       def on_unsubscribe(recipient)

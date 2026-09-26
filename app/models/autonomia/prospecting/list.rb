@@ -36,4 +36,12 @@ class Autonomia::Prospecting::List < ApplicationRecord
   enum status: { active: 0, archived: 1 }
 
   validates :name, presence: true
+
+  # Todas as etiquetas que o segmento desta lista já gerou (chat#713). Refazer o segmento com outro nome cria outra
+  # etiqueta, e a campanha que começou com a antiga continua com ela na audiência: descarte e recusa precisam achar as
+  # duas. Lista gravada antes do histórico só tem a última etiqueta.
+  def segment_label_ids
+    segment = metadata.to_h['campaign_segment'].to_h
+    [*segment['label_ids'], segment['label_id']].map(&:to_i).select(&:positive?).uniq
+  end
 end

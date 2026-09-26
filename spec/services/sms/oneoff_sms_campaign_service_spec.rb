@@ -82,5 +82,18 @@ describe Sms::OneoffSmsCampaignService do
       sms_campaign_service.perform
       expect(campaign.reload.completed?).to be true
     end
+
+    it 'não envia para o contato que recusou mensagens ativas (chat#737)' do
+      refused, accepted = FactoryBot.create_list(:contact, 2, :with_phone_number, account: account)
+      refused.update_labels([label1.title])
+      accepted.update_labels([label1.title])
+      refused.opt_out!(source: 'manual')
+
+      expect(sms_channel).not_to receive(:send_text_message).with(refused.phone_number, anything)
+      expect(sms_channel).to receive(:send_text_message).with(accepted.phone_number, anything).once
+
+      sms_campaign_service.perform
+      expect(campaign.reload.completed?).to be true
+    end
   end
 end

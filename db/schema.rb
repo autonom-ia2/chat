@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_26_180000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -680,6 +680,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
     t.string "research_error"
     t.bigint "company_profile_id"
     t.integer "research_attempts", default: 0, null: false
+    t.datetime "consent_refused_at"
+    t.bigint "consent_refused_by_id"
     t.index ["account_id", "dedupe_key"], name: "index_autonomia_prospecting_leads_on_account_id_and_dedupe_key", unique: true
     t.index ["account_id", "enrichment_completed_at"], name: "idx_autonomia_prospecting_leads_account_enriched_at"
     t.index ["account_id", "enrichment_status"], name: "idx_autonomia_prospecting_leads_account_enrichment"
@@ -688,6 +690,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
     t.index ["account_id", "score"], name: "idx_autonomia_prospecting_leads_account_score"
     t.index ["account_id", "search_rank"], name: "idx_autonomia_prospecting_leads_account_search_rank"
     t.index ["account_id", "status"], name: "index_autonomia_prospecting_leads_on_account_id_and_status"
+    t.index ["account_id"], name: "idx_autonomia_prospecting_leads_consent_refused", where: "(consent_refused_at IS NOT NULL)"
     t.index ["account_id"], name: "index_autonomia_prospecting_leads_on_account_id"
     t.index ["company_profile_id"], name: "idx_autonomia_prospecting_leads_company_profile"
     t.index ["company_research_status"], name: "idx_autonomia_prospecting_leads_research_status", where: "((company_research_status)::text = ANY ((ARRAY['queued'::character varying, 'researching'::character varying, 'waiting_capacity'::character varying])::text[]))"
@@ -1396,11 +1399,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
     t.string "country_code", default: ""
     t.boolean "blocked", default: false, null: false
     t.bigint "company_id"
+    t.datetime "opted_out_at"
+    t.string "opt_out_source"
+    t.bigint "opted_out_by_id"
     t.index "lower((email)::text), account_id", name: "index_contacts_on_lower_email_account_id"
     t.index ["account_id", "contact_type"], name: "index_contacts_on_account_id_and_contact_type"
     t.index ["account_id", "email", "phone_number", "identifier"], name: "index_contacts_on_nonempty_fields", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["account_id", "last_activity_at"], name: "index_contacts_on_account_id_and_last_activity_at", order: { last_activity_at: "DESC NULLS LAST" }
     t.index ["account_id"], name: "index_contacts_on_account_id"
+    t.index ["account_id"], name: "index_contacts_on_account_id_opted_out", where: "(opted_out_at IS NOT NULL)"
     t.index ["account_id"], name: "index_resolved_contact_account_id", where: "(((email)::text <> ''::text) OR ((phone_number)::text <> ''::text) OR ((identifier)::text <> ''::text))"
     t.index ["blocked"], name: "index_contacts_on_blocked"
     t.index ["company_id"], name: "index_contacts_on_company_id"
@@ -3137,6 +3144,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_searches", column: "prospect_search_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "contacts", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_leads", "crm_cards", on_delete: :nullify
+  add_foreign_key "autonomia_prospecting_leads", "users", column: "consent_refused_by_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_list_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_list_leads", "autonomia_prospecting_leads", column: "prospect_lead_id", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_list_leads", "autonomia_prospecting_lists", column: "prospect_list_id", on_delete: :cascade
@@ -3159,6 +3167,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_26_120500) do
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
+  add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade

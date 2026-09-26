@@ -528,6 +528,26 @@
       "RESTORED": "Descarte desfeito. O lead voltou a novo.",
       "RESTORE_ERROR": "Não foi possível desfazer o descarte."
     },
+    "CONSENT_REFUSAL": {
+      "BADGE": "Não quer ser contatado",
+      "CANCEL": "Voltar",
+      "REFUSE": {
+        "ACTION": "Não quer ser contatado",
+        "CONFIRM_TITLE": "Marcar que não quer ser contatado?",
+        "CONFIRM_DESCRIPTION": "A recusa fica no lead, mesmo que ele seja descartado depois, e vai para o contato dele e para os contatos com o mesmo telefone ou e-mail. Campanhas e follow-ups automáticos deixam de enviar mensagem para eles.",
+        "CONFIRM": "Marcar recusa",
+        "DONE": "Recusa marcada. Ninguém mais envia mensagem ativa para este contato.",
+        "ERROR": "Não foi possível marcar a recusa."
+      },
+      "WITHDRAW": {
+        "ACTION": "Desfazer: pode ser contatado",
+        "CONFIRM_TITLE": "Desfazer a recusa?",
+        "CONFIRM_DESCRIPTION": "A pessoa volta a poder receber campanhas e follow-ups. A recusa sai dos contatos, a menos que outro lead recusado, um descadastro de e-mail ou uma marcação manual ainda a sustente.",
+        "CONFIRM": "Desfazer recusa",
+        "DONE": "Recusa desfeita.",
+        "ERROR": "Não foi possível desfazer a recusa."
+      }
+    },
     "DISCARD": {
       "ACTION": "Descartar",
       "TITLE": "Descartar leads",

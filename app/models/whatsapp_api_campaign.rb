@@ -113,7 +113,25 @@ class WhatsappApiCampaign < ApplicationRecord
     )
   end
 
+  # Destinatários pulados porque o contato recusou mensagens ativas (já contados em cancelled_count).
+  # Usa a associação carregada quando a listagem já a trouxe, para não fazer uma consulta por linha.
+  def opted_out_count
+    skipped_count(WhatsappApiCampaignRecipient::OPTED_OUT_REASON)
+  end
+
+  # Destinatários tirados porque o lead da Prospecção foi descartado com a campanha em andamento (chat#713).
+  def discarded_count
+    skipped_count(WhatsappApiCampaignRecipient::DISCARDED_REASON)
+  end
+
   private
+
+  def skipped_count(reason)
+    recipients = whatsapp_api_campaign_recipients
+    return recipients.count { |recipient| recipient.skipped_for?(reason) } if recipients.loaded?
+
+    recipients.skipped_for(reason).count
+  end
 
   def count_for_status(counts, status_name)
     counts.fetch(status_name, counts.fetch(WhatsappApiCampaignRecipient.statuses[status_name], 0))

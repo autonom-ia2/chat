@@ -80,6 +80,102 @@ describe ContactMergeAction do
       end
     end
 
+    context 'when um dos contatos recusou mensagens ativas (chat#713)' do
+      let(:admin) { create(:user, account: account) }
+
+      it 'leva para o contato que fica a recusa do contato absorvido, com data, origem e autor' do
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+        refused_at = mergee_contact.reload.opted_out_at
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact).to be_opted_out
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+        expect(base_contact.opted_out_at).to be_within(1.second).of(refused_at)
+      end
+
+      it 'mantém a recusa que o contato que fica já tinha quando a do absorvido não é mais firme' do
+        base_contact.opt_out!(source: 'manual', by: admin)
+        mergee_contact.opt_out!(source: 'prospecting')
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+      end
+
+      it 'recusa manual do absorvido vence a da Prospecção do que fica, com a data mais antiga' do
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+        mergee_contact.update_columns(opted_out_at: 2.days.ago) # rubocop:disable Rails/SkipsModelValidations
+        base_contact.opt_out!(source: 'prospecting')
+
+        contact_merge
+
+        base_contact.reload
+        expect(base_contact.opt_out_source).to eq('manual')
+        expect(base_contact.opted_out_by_id).to eq(admin.id)
+        expect(base_contact.opted_out_at).to be_within(1.second).of(mergee_contact.opted_out_at)
+      end
+
+      it 'descadastro de e-mail do absorvido vence a recusa da Prospecção do que fica' do
+        mergee_contact.opt_out!(source: 'email_unsubscribe')
+        base_contact.opt_out!(source: 'prospecting')
+
+        contact_merge
+
+        expect(base_contact.reload.opt_out_source).to eq('email_unsubscribe')
+      end
+
+      it 'desfazer a recusa do lead depois da mescla não tira a recusa manual que veio do absorvido' do
+        base_contact.update!(phone_number: '+5531988887002')
+        lead = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'merge-optout',
+                                                    name: 'Lead mescla', phone: '+5531988887002', country: 'BR')
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).refuse!(lead, user: admin)
+        expect(base_contact.reload.opt_out_source).to eq('prospecting')
+        mergee_contact.opt_out!(source: 'manual', by: admin)
+
+        contact_merge
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).withdraw!(lead.reload)
+
+        base_contact.reload
+        expect(base_contact).to be_opted_out
+        expect(base_contact.opt_out_source).to eq('manual')
+      end
+
+      it 'leva os leads da Prospecção do absorvido para o contato que fica, e a recusa continua sustentada' do
+        mergee_contact.update!(phone_number: '+5531988887051')
+        base_contact.update!(phone_number: '+5531977777052')
+        lead = Autonomia::Prospecting::Lead.create!(account: account, provider: 'mock', provider_place_id: 'merge-lead',
+                                                    name: 'Lead absorvido', phone: '+5531988887051', country: 'BR',
+                                                    contact: mergee_contact)
+        Autonomia::Prospecting::ContactOptOutSync.new(account: account).refuse!(lead, user: admin)
+
+        contact_merge
+
+        expect(lead.reload.contact_id).to eq(base_contact.id)
+        expect(Autonomia::Prospecting::ConsentVeto.new(account: account).contact_vetoed?(base_contact.reload)).to be(true)
+      end
+
+      it 'não move lead de outra conta que aponte para o id do absorvido' do
+        foreign = Autonomia::Prospecting::Lead.create!(account: create(:account), provider: 'mock', provider_place_id: 'merge-foreign',
+                                                       name: 'Lead de outra conta', phone: '+5531988887053', country: 'BR')
+        foreign.update_columns(contact_id: mergee_contact.id) # rubocop:disable Rails/SkipsModelValidations
+
+        contact_merge
+
+        expect(foreign.reload.contact_id).to be_nil
+      end
+
+      it 'sem recusa dos dois lados, o contato que fica continua sem recusa' do
+        contact_merge
+
+        expect(base_contact.reload).not_to be_opted_out
+      end
+    end
+
     context 'when contacts belong to a different account' do
       it 'throws an exception' do
         new_account = create(:account)

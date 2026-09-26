@@ -7,6 +7,7 @@
 #  category                :string
 #  city                    :string
 #  company_research_status :string           default("not_researched"), not null
+#  consent_refused_at      :datetime
 #  country                 :string
 #  decision_confidence     :decimal(3, 2)
 #  decision_instagram      :string
@@ -59,6 +60,7 @@
 #  updated_at              :datetime         not null
 #  account_id              :bigint           not null
 #  company_profile_id      :bigint
+#  consent_refused_by_id   :bigint
 #  contact_id              :bigint
 #  crm_card_id             :bigint
 #  prospect_search_id      :bigint
@@ -71,6 +73,7 @@
 #  idx_autonomia_prospecting_leads_account_priority                (account_id,priority_score)
 #  idx_autonomia_prospecting_leads_account_score                   (account_id,score)
 #  idx_autonomia_prospecting_leads_account_search_rank             (account_id,search_rank)
+#  idx_autonomia_prospecting_leads_consent_refused                 (account_id) WHERE (consent_refused_at IS NOT NULL)
 #  idx_autonomia_prospecting_leads_provider_place                  (account_id,provider,provider_place_id) UNIQUE WHERE (provider_place_id IS NOT NULL)
 #  index_autonomia_prospecting_leads_on_account_id                 (account_id)
 #  index_autonomia_prospecting_leads_on_account_id_and_dedupe_key  (account_id,dedupe_key) UNIQUE
@@ -82,6 +85,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id) ON DELETE => cascade
+#  fk_rails_...  (consent_refused_by_id => users.id) ON DELETE => nullify
 #  fk_rails_...  (contact_id => contacts.id) ON DELETE => nullify
 #  fk_rails_...  (crm_card_id => crm_cards.id) ON DELETE => nullify
 #  fk_rails_...  (prospect_search_id => autonomia_prospecting_searches.id) ON DELETE => nullify
@@ -111,7 +115,27 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
     skipped: 'skipped'
   }, _prefix: :enrichment
 
+  # A recusa da pessoa (chat#713, 26/09) não depende do status: descartar ou requalificar não a apaga. Só o "Desfazer"
+  # do painel (ContactOptOutSync#withdraw!) volta consent_refused_at a nulo. no_consent segue valendo como recusa, e
+  # marcar esse status grava a data.
+  belongs_to :consent_refused_by, class_name: 'User', optional: true
+  scope :consent_refused, -> { where.not(consent_refused_at: nil).or(where(status: :no_consent)) }
+
   before_validation :ensure_dedupe_key
+  before_save :record_consent_refusal, if: -> { will_save_change_to_status? && no_consent? }
+  # Os campos pelos quais a recusa alcança um contato (ConsentVeto#contacts_vetoed_by). O WhatsApp verificado, que fica
+  # no metadata, não passa por aqui: o WhatsappVerifier o grava com update_all, sem callback. A guarda da campanha
+  # (ConsentVeto#vetoed?) lê esse número na hora do envio.
+  REFUSAL_REACH_ATTRIBUTES = %w[phone enriched_whatsapp enriched_email contact_id].freeze
+
+  # A recusa segue os números do lead: o recusado que ganha telefone, WhatsApp ou e-mail novo (enriquecimento, busca
+  # refeita) marca o contato que já existia com ele, na mesma transação. A mudança da própria recusa é do
+  # ContactOptOutSync#update_lead!.
+  after_save :mark_refusal_on_new_reach, if: :refusal_reach_changed?
+
+  def consent_refused?
+    consent_refused_at.present? || no_consent?
+  end
 
   validates :name, presence: true
   validates :provider, presence: true
@@ -122,6 +146,18 @@ class Autonomia::Prospecting::Lead < ApplicationRecord
   validate :linked_records_must_belong_to_account
 
   private
+
+  def record_consent_refusal
+    self.consent_refused_at ||= Time.current
+  end
+
+  def refusal_reach_changed?
+    consent_refused? && saved_changes.keys.intersect?(REFUSAL_REACH_ATTRIBUTES)
+  end
+
+  def mark_refusal_on_new_reach
+    Autonomia::Prospecting::ContactOptOutSync.new(account: account).mark_contacts!(self)
+  end
 
   def ensure_dedupe_key
     self.dedupe_key ||= [provider, provider_place_id.presence || name.to_s.downcase.strip].join(':')

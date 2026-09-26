@@ -20,6 +20,8 @@ export const prospectingApiMock = () => ({
     discardLeads: vi.fn(),
     createLeadContacts: vi.fn(),
     updateLead: vi.fn(),
+    refuseLeadConsent: vi.fn(),
+    withdrawLeadConsentRefusal: vi.fn(),
     createSavedPreset: vi.fn(),
   },
 });

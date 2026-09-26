@@ -89,3 +89,32 @@ describe('CrmCardDrawer form reset vs realtime churn', () => {
     expect(wrapper.vm.form.description).toBe('detalhe');
   });
 });
+
+describe('CrmCardDrawer timeline', () => {
+  it('mostra por que o follow-up foi cancelado quando o contato recusou mensagens ativas', () => {
+    const wrapper = mountDrawer();
+
+    const { detail } = wrapper.vm.describeActivity({
+      event_type: 'follow_up_canceled',
+      payload: { title: 'Retomar', reason: 'opt_out' },
+      created_at: new Date().toISOString(),
+    });
+
+    expect(detail).toContain('Retomar');
+    expect(detail).toContain(
+      'CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_OPT_OUT'
+    );
+  });
+
+  it('cancelamento comum continua mostrando só o título', () => {
+    const wrapper = mountDrawer();
+
+    const { detail } = wrapper.vm.describeActivity({
+      event_type: 'follow_up_canceled',
+      payload: { title: 'Retomar' },
+      created_at: new Date().toISOString(),
+    });
+
+    expect(detail).toBe('Retomar');
+  });
+});

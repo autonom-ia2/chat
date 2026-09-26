@@ -76,6 +76,14 @@ class DataImportJob < ApplicationJob
     # <struct ActiveRecord::Import::Result failed_instances=[], num_inserts=1, ids=[444, 445], results=[]>
     Contact.import(contacts, synchronize: contacts, on_duplicate_key_ignore: true, track_validation_failures: true, validate: true, batch_size: 1000)
     apply_labels_to_contacts(contacts_with_labels)
+    inherit_opt_out(contacts)
+  end
+
+  # chat#713: Contact.import não roda os callbacks do contato. A herança da recusa de mensagens ativas (telefone ou e-mail
+  # de quem já recusou na conta) vai num job só para o lote importado.
+  def inherit_opt_out(contacts)
+    contact_ids = contacts.filter_map(&:id)
+    Contacts::OptOutInheritanceJob.perform_later(@data_import.account, contact_ids) if contact_ids.any?
   end
 
   def apply_labels_to_contacts(contacts_with_labels)

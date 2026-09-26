@@ -119,5 +119,18 @@ describe Twilio::OneoffSmsCampaignService do
       sms_campaign_service.perform
       expect(campaign.reload.completed?).to be true
     end
+
+    it 'não envia para o contato que recusou mensagens ativas (chat#737)' do
+      refused, accepted = FactoryBot.create_list(:contact, 2, :with_phone_number, account: account)
+      refused.update_labels([label1.title])
+      accepted.update_labels([label1.title])
+      refused.opt_out!(source: 'manual')
+
+      expect(twilio_messages).to receive(:create).with(hash_including(to: accepted.phone_number)).once
+      expect(twilio_messages).not_to receive(:create).with(hash_including(to: refused.phone_number))
+
+      sms_campaign_service.perform
+      expect(campaign.reload.completed?).to be true
+    end
   end
 end
