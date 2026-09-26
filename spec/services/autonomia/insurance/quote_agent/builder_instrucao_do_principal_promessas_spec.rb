@@ -581,7 +581,7 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     it 'está no arquivo e é extraído inteiro' do
       expect(secao).to be_present
       expect(secao).to start_with('### Os especialistas de ramo')
-      expect(secao).to end_with("a corretora não atende esse seguro e ofereça o que ela atende.\n")
+      expect(secao).to end_with("do que você cota. O resto a corretora trabalha, e quem cuida é a equipe.\n")
     end
 
     # 23/09/2026 (`b5984308…` -> `eeba4c92…`): a cotação que abre não pede recibo; não repetir não é mudar o fato.
@@ -599,9 +599,13 @@ RSpec.describe Autonomia::Insurance::QuoteAgent::Builder do
     # `lookup_failed` da adapters#107) sai de novo, e a frase passa a dizer só o que é verdade: "com o mesmo documento, a
     # busca paga do segurado que já teve resposta não se repete". A recusa de seguradora vai para a linha seguinte, sem
     # mudar o sentido.
+    # Conversa 7150 (`b3cae4f5…` -> `0e278c8f…`, 26/09/2026): "você não cota" deixa de ser "a corretora não atende". O
+    # ramo que a corretora trabalha e a IA não cota vai para a equipe; só o que está fora das duas listas de
+    # consultar_produtos_cotacao a corretora não atende. As promessas novas estão em
+    # `builder_instrucao_ramo_sem_especialista_spec` (`ManualDoRamoSemEspecialista::PROMESSAS_DA_CONDUTA`), exercitadas.
     it 'mudou? revise PROMESSAS_DO_DOCUMENTO e assine aqui' do
       expect(secao).to be_present
-      expect(Digest::MD5.hexdigest(secao)).to eq('b3cae4f5b7a714f5de0231c92d88e423')
+      expect(Digest::MD5.hexdigest(secao)).to eq('0e278c8f72a0485e32313748ee7c1674')
     end
 
     it 'não introduz variável para substituir' do

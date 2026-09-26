@@ -3,7 +3,8 @@
 # nenhum modelo lê. É o par da nota de quem ficou sem proposta (`Tools::NotaInterna`), para o caso em que nem houve
 # cotação: a busca que não respondeu, a conferência que recusou.
 #
-# O texto é só a frase de `Recusa::MOTIVOS` de cada código, com a contagem. Uma vez por encaminhamento: a lista é
+# O texto é o ramo que a pessoa pediu e a IA não cota, quando houve (conversa 7150), e a frase de `Recusa::MOTIVOS` de
+# cada código, com a contagem. Uma vez por encaminhamento: a lista é
 # apagada ao ser lida. Nunca levanta: não pode derrubar o encaminhamento.
 class Autonomia::Agents::NotaDoEncaminhamento
   CHAVE = 'autonomia_nota_do_encaminhamento'.freeze
@@ -23,12 +24,26 @@ class Autonomia::Agents::NotaDoEncaminhamento
     nil
   end
 
+  # O ramo que a pessoa pediu e a IA não cota (conversa 7150): uma linha por ramo, sem contagem, antes das falhas.
+  LINHA_DO_RAMO = '- cotar %<ramo>s: a pessoa pediu este seguro, que a corretora trabalha e a IA não cota nesta conta'.freeze
+
   def self.texto(motivos)
-    linhas = motivos.tally.map do |motivo, vezes|
+    ramos, falhas = motivos.partition { |motivo| motivo.start_with?(::Autonomia::Agents::Tools::RecusasRecentes::PREFIXO_DO_RAMO) }
+    [TITULO, *linhas_dos_ramos(ramos), *linhas_das_falhas(falhas)].join("\n")
+  end
+
+  def self.linhas_dos_ramos(ramos)
+    ramos.uniq.map do |valor|
+      ramo = valor.delete_prefix(::Autonomia::Agents::Tools::RecusasRecentes::PREFIXO_DO_RAMO)
+      format(LINHA_DO_RAMO, ramo: ramo.tr('_', ' '))
+    end
+  end
+
+  def self.linhas_das_falhas(falhas)
+    falhas.tally.map do |motivo, vezes|
       frase = ::Autonomia::Agents::Tools::Recusa::MOTIVOS.fetch(motivo, ::Autonomia::Agents::Tools::Recusa::SEM_DESCRICAO)
       vezes > 1 ? "- #{frase} (#{vezes} vezes)" : "- #{frase}"
     end
-    [TITULO, *linhas].join("\n")
   end
 
   def self.criar(conversation, texto)
@@ -43,5 +58,5 @@ class Autonomia::Agents::NotaDoEncaminhamento
     ).perform
   end
 
-  private_class_method :texto, :criar
+  private_class_method :texto, :linhas_dos_ramos, :linhas_das_falhas, :criar
 end

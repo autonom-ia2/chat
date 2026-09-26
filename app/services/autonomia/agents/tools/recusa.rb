@@ -58,6 +58,8 @@ module Autonomia::Agents::Tools::Recusa
     'condicoes_sem_seguradora' => 'a consulta às condições gerais veio sem o nome da seguradora',
     'condicoes_sem_pergunta' => 'a consulta às condições gerais veio sem a dúvida do cliente',
     'ramo_desconhecido' => 'o ramo pedido não existe no adapter; a cotação não foi aberta',
+    # Conversa 7150 (26/09/2026): a corretora trabalha com o ramo, mas não há especialista dele nesta conta.
+    'ramo_sem_especialista' => 'o ramo pedido não tem especialista nesta conta; a IA não cota e a cotação não foi aberta',
     'pedido_repetido' => 'o pedido tem os mesmos dados da última consulta desta conversa; nenhuma execução nova foi aberta',
     # Fatia 2 do #420: a ferramenta da Lia lê a cotação da conversa; desde a fatia 3, a fala dela é conferida no turno.
     'lista_indisponivel_nesta_superficie' => 'não há conversa para ler a cotação nem turno para conferir a resposta ' \

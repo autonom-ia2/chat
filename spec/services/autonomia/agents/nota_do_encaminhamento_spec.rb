@@ -88,6 +88,31 @@ RSpec.describe Autonomia::Agents::NotaDoEncaminhamento do
       expect(notas.count).to eq(1)
     end
 
+    # Conversa 7150 (26/09/2026): a pessoa pediu seguro de vida, que a corretora trabalha e a IA não cota. A equipe que
+    # recebe a conversa precisa saber qual seguro ela quer; o ramo sai uma vez, antes das falhas, sem contagem.
+    it 'diz à equipe o ramo que a pessoa pediu e a IA não cota, uma vez, junto das falhas' do
+      2.times { recentes.anotar_ramo(conversation.id, 'vida_global') }
+      recusar('busca_de_atividade_indisponivel')
+
+      nota = described_class.postar(conversation)
+
+      expect(nota.content).to eq(
+        "#{described_class::TITULO}\n" \
+        '- cotar vida global: a pessoa pediu este seguro, que a corretora trabalha e a IA não cota nesta conta' \
+        "\n- #{Autonomia::Agents::Tools::Recusa::MOTIVOS['busca_de_atividade_indisponivel']}"
+      )
+      expect(nota).to have_attributes(private: true)
+    end
+
+    it 'só o ramo, sem falha nenhuma, já basta para a nota; código fora da forma não é guardado' do
+      recentes.anotar_ramo(conversation.id, 'Seguro de Vida!')
+      recentes.anotar_ramo(nil, 'vida')
+      expect(described_class.postar(conversation)).to be_nil
+
+      recentes.anotar_ramo(conversation.id, 'vida')
+      expect(described_class.postar(conversation).content).to include('- cotar vida: a pessoa pediu este seguro')
+    end
+
     it 'Redis fora do ar: sem nota e sem erro' do
       recusar('busca_de_atividade_indisponivel')
       allow(Redis::Alfred).to receive(:with).and_raise(Redis::CannotConnectError)

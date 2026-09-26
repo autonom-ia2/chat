@@ -183,6 +183,12 @@ class Autonomia::Insurance::QuoteAgent::Builder
     ::Autonomia::Insurance::Config.ramo_liberado?(account, dados[:ramo]) && ramo_habilitado?(account, dados[:ramo])
   end
 
+  # OS RAMOS QUE A IA COTA NESTA CONTA (conversa 7150, 26/09/2026): os dos especialistas que atendem aqui, pela mesma
+  # regra que decide se a Lia os enxerga (`atende?`). O resto do que a conexão traz a corretora trabalha, mas a IA não
+  # cota: `consultar_produtos_cotacao` separa as duas listas e `cotar_seguro` recusa o que não está nesta.
+  # -> Array de ramos (`auto` sempre).
+  def self.ramos_que_a_ia_cota(account) = ESPECIALISTAS.select { |dados| atende?(account, dados) }.pluck(:ramo)
+
   # Os ramos que o SuperAdmin pode liberar por conta: os dos especialistas mantidos, fora auto.
   def self.ramos_liberaveis
     ESPECIALISTAS.pluck(:ramo) - ['auto']
