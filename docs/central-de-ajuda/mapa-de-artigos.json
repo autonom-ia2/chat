@@ -3664,8 +3664,8 @@
     {
      "id": "16.01",
      "titulo": "Montar e rodar uma busca de leads",
-     "para_que_serve": "Configurar termo, localização, área e limite, e executar a primeira busca.",
-     "publico": "admin",
+     "para_que_serve": "Montar a busca (termo, lugar, área, quantidade, jogada) e rodar pelo Buscar; refazer o tour.",
+     "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
       "09.26-prospeccao-montar-uma-busca"
@@ -3680,16 +3680,16 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Procurar empresas por região e transformar em contato ou card"
+      "porques: Montar e rodar uma busca de leads"
      ],
      "revisar": false,
      "nota": null
     },
     {
      "id": "16.02",
-     "titulo": "Trabalhar os resultados: enriquecer, contato, card, CSV",
-     "para_que_serve": "Transformar um resultado de busca em contato, card do CRM ou planilha.",
-     "publico": "admin",
+     "titulo": "Ler e trabalhar os resultados da busca",
+     "para_que_serve": "Ler mapa, cards e nota dos leads, filtrar, ordenar e escolher o que fazer com cada um.",
+     "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
       "09.27-prospeccao-trabalhar-os-resultados"
@@ -3703,15 +3703,17 @@
      },
      "requer": "autonomia_prospecting",
      "prints": [],
-     "fontes": [],
+     "fontes": [
+      "porques: Ler e trabalhar os resultados da busca"
+     ],
      "revisar": false,
      "nota": null
     },
     {
      "id": "16.03",
      "titulo": "Listas de leads e público de campanha",
-     "para_que_serve": "Organizar leads em listas e gerar um público etiquetado para usar numa campanha existente.",
-     "publico": "admin",
+     "para_que_serve": "Juntar leads em listas e gerar, a partir delas, o público etiquetado de uma campanha.",
+     "publico": "ambos",
      "prioridade": "P2",
      "assuntos": [
       "09.28-prospeccao-listas-e-publico-de-campanha"
@@ -3726,7 +3728,7 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Juntar leads em listas e preparar um público de campanha"
+      "porques: Juntar leads em listas e preparar um publico de campanha"
      ],
      "revisar": false,
      "nota": null
@@ -3734,9 +3736,9 @@
     {
      "id": "16.04",
      "titulo": "Configurações da Prospecção",
-     "para_que_serve": "Consultar o que precisa estar configurado para a Prospecção funcionar: chaves do Google, enriquecimento e score.",
+     "para_que_serve": "Ajustar o que vale para a conta toda: funil sugerido, país da busca, cache, nota e consumo.",
      "publico": "admin",
-     "prioridade": "P3",
+     "prioridade": "P2",
      "assuntos": [
       "09.29-prospeccao-configuracoes"
      ],
@@ -3750,8 +3752,246 @@
      "requer": "autonomia_prospecting",
      "prints": [],
      "fontes": [
-      "porques: Ajustar chaves, limites e critérios de score da prospecção"
+      "porques: Ajustar funil sugerido, pais da busca, cache e nota da prospeccao"
      ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.05",
+     "titulo": "Desenhar a área da busca no mapa",
+     "para_que_serve": "Desenhar círculo, retângulo ou polígono no mapa e saber qual deles recorta a área de verdade.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.30-prospeccao-desenhar-area"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Desenhar a area da busca no mapa"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.06",
+     "titulo": "Filtros avançados e jogadas",
+     "para_que_serve": "Usar os filtros avançados e a jogada que preenche os filtros por uma estratégia de venda.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.31-prospeccao-filtros-e-jogadas"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Usar os filtros avancados e salvar uma jogada"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.07",
+     "titulo": "Repetir, editar e excluir uma busca do histórico",
+     "para_que_serve": "Reabrir, repetir, editar e excluir buscas em Buscas recentes, sabendo o que cada ação gasta.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.32-prospeccao-historico-de-buscas"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Repetir, editar e excluir uma busca do historico"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.08",
+     "titulo": "Pesquisa de empresa e decisor",
+     "para_que_serve": "Pesquisar CNPJ, sócios e decisor de um lead e ler os estados da pesquisa.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.33-prospeccao-pesquisa-empresa-decisor"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Pesquisar a empresa e o decisor de um lead"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.09",
+     "titulo": "Enviar leads ao CRM e usar um sócio como contato",
+     "para_que_serve": "Mandar leads como cards para um funil do CRM e escolher um sócio como contato.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.34-prospeccao-enviar-ao-crm"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Enviar leads da prospeccao ao CRM"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.10",
+     "titulo": "Colocar leads da busca numa campanha",
+     "para_que_serve": "Levar leads da busca para uma campanha nova ou existente e entender quem fica de fora.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.35-prospeccao-leads-na-campanha"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Colocar leads da busca numa campanha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.11",
+     "titulo": "Descartar leads, desfazer e criar contatos em lote",
+     "para_que_serve": "Descartar leads com motivo, desfazer o descarte e criar contatos em lote.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.36-prospeccao-descartar-e-criar-contatos"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Descartar leads, desfazer o descarte e criar contatos em lote"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.12",
+     "titulo": "Exportar os leads em CSV ou Excel",
+     "para_que_serve": "Baixar os leads da busca aberta em CSV ou Excel e saber o que vai no arquivo.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.37-prospeccao-exportar-leads"
+     ],
+     "rotas": [
+      "autonomia_prospecting_search"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_search",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Exportar os leads da busca em CSV ou Excel"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.13",
+     "titulo": "Jogadas salvas: editar e excluir",
+     "para_que_serve": "Editar e excluir as jogadas salvas da conta nas Configurações da Prospecção.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.38-prospeccao-jogadas-salvas"
+     ],
+     "rotas": [
+      "settings_prospecting_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "settings_prospecting_index",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [
+      "porques: Editar e excluir as jogadas salvas"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.14",
+     "titulo": "Quem vê o quê na Prospecção",
+     "para_que_serve": "Entender o que Ver, Editar e Ver buscas de todos liberam na Prospecção para uma função personalizada.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "09.39-prospeccao-quem-ve-o-que"
+     ],
+     "rotas": [
+      "custom_roles_list"
+     ],
+     "me_leve_ate_la": {
+      "rota": "custom_roles_list",
+      "destaque": null
+     },
+     "requer": "autonomia_prospecting",
+     "prints": [],
+     "fontes": [],
      "revisar": false,
      "nota": null
     }

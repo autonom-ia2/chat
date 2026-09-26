@@ -1338,35 +1338,151 @@
 - nav_target: `autonomia_invite_connection`
 
 ### buscar_leads
-- titulo: Procurar empresas por região e transformar em contato ou card
+- titulo: Montar e rodar uma busca de leads
 - rota: autonomia_prospecting_search
-- intent: Como acho empresas de um segmento na minha cidade?; Como priorizo quem ligar primeiro?; Como viro esse lead em contato?; Dá para criar card no CRM a partir da busca?; O que é a jogada da busca?; Onde ficam os filtros avançados da busca?; O que significa o selo de modo no topo da busca?; Por que a jogada desmarcou sozinha?
-- onde_fica: Prospecção > Buscar leads
-- pre_requisitos: módulo de Prospecção habilitado pelo suporte; a chave do Google é da plataforma, a conta não cola chave
-- passos: 1. Abra Prospecção > Buscar leads e clique em nova busca; 2. Escreva o segmento e a localização e escolha uma sugestão, que vem só do país da busca da conta; 3. Defina a área, o limite e o tipo de decisor (por enquanto só Proprietário); 4. Escolha a forma de pesquisa e, se quiser, uma jogada, que preenche os filtros avançados; 5. Ajuste os filtros avançados na gaveta de quatro grupos e clique em Aplicar; 6. Busque e ordene por maior prioridade; 7. Refine os resultados pelo botão Filtros, também com Aplicar; 8. Abra os detalhes de um lead para ver reputação e fatores de atenção; 9. Use criar card, que já cria o contato junto, ou selecione vários e crie os cards em lote.
-- gotchas: a busca aceita até 60 resultados por pedido, mas o Google ainda devolve no máximo 20 por busca; não há limite diário nem mensal; sem a chave de plataforma configurada pelo suporte, as sugestões não aparecem e a busca não roda; o mapa usa uma segunda chave de plataforma e, sem ela, a busca funciona mas o mapa não abre; o botão Enriquecer só libera com a pesquisa liberada pelo suporte; sem a chave de IA da integração CRM Kanban AI, a tela avisa e o enriquecimento traz só o que está no site; criar card exige um funil ativo configurado; excluir uma busca do histórico não apaga os leads já salvos; o selo no topo mostra o modo, GMN (atacar lacunas) ou Geral (qualificar leads), da nova busca ou da busca aberta; são três jogadas por modo mais Sem jogada, que sempre volta os filtros ao padrão; a jogada desmarca sozinha quando um filtro fica diferente dela, e trocar a forma de pesquisa com a jogada marcada tira a jogada e os filtros dela; o topo da gaveta de filtros mostra a jogada base e o modo; filtro só vale depois de Aplicar, e fechar a gaveta sem aplicar descarta o rascunho; Aberto agora e Tem horário só filtram por sim; na nova busca a faixa de posição começa no máximo no Limite, até 20, a gaveta sempre mostra esse aviso com o Google e o aviso aparece também fora da gaveta se o Limite diminuir depois; no refino da busca aberta a faixa vai de 1 a 40; cortar as primeiras N posições deixa no máximo o Limite, até 20, menos N empresas; a busca guarda a posição de cada lead nela, e reabrir uma busca antiga mostra a posição daquela busca; erro do Google aparece em português com o que fazer, e o erro de local fica abaixo do campo Localização; os telefones são lidos no formato do país da busca, e número que não vale nele nem como internacional fica sem link de ligar e de WhatsApp.
+- intent: Como acho empresas de um segmento na minha cidade?; Quantos leads uma busca traz?; O que e a jogada da busca?; O que significa o selo de modo no topo?; Para que serve Expandir raio automaticamente?; Por que apareceu que a busca ficou incompleta?; Por que a busca deu erro do Google?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > Nova busca
+- perfil: montar e rodar busca exige administrador ou funcao com Editar prospeccao; quem tem so Ver prospeccao abre a tela e os resultados, mas nao ve Nova busca nem o tour. Atendente sem funcao nao ve o menu Prospeccao. Se o perfil nao puder, diga que buscar pede Editar prospeccao e que um administrador ajusta a funcao.
+- pre_requisitos: Prospeccao ligada na conta pelo suporte; chaves do Google da plataforma configuradas pelo suporte (sem elas a busca no Google fica indisponivel ate o suporte configurar)
+- passos: 1. Abra Prospeccao > Buscar leads e clique em Nova busca; 2. Em Onde buscar, escreva o Termo e a Localizacao e escolha uma sugestao ate aparecer Localizacao confirmada; 3. Escolha a Area de busca (Raio, Area visivel ou uma area desenhada) e o Raio (km); 4. Escolha a Forma de pesquisa, Google Meu Negocio ou Geral, e, se quiser, Sua jogada; 5. Defina o Limite, de 1 a 60, e o Tipo de decisor (hoje so Proprietario); 6. Deixe Expandir raio automaticamente como esta ou desmarque; 7. Se quiser, abra Filtros avancados e clique em Aplicar; 8. Clique em Buscar.
+- gotchas: uma busca traz no maximo 60 leads, em ate 3 paginas de 20 do Google, e pedir mais e recusado; o botao Buscar so libera com termo, local confirmado e, na area desenhada, a area pronta; as sugestoes de local e a busca seguem o pais da busca da conta, e sem escolha e o Brasil; o selo no topo mostra o modo, Modo: GMN (atacar lacunas) ou Modo: Geral (qualificar leads), da nova busca ou da busca aberta; a jogada e opcional e so preenche os filtros avancados, com tres jogadas prontas por modo, as jogadas salvas da conta e Sem jogada; Expandir raio automaticamente vem ligado e so vale na area Raio: se o raio pedido nao completar o Limite depois dos filtros, tenta uma vez com o dobro do raio, ate 10 km, e so fica com essa tentativa se ela trouxer mais, e a tentativa conta no consumo mesmo quando descartada; no historico o raio aparece como ampliado de X km quando a expansao ficou; os filtros avancados valem antes do corte do Limite, entao a busca le mais posicoes do Google ate achar quem passa; se o Google parar no meio, a tela avisa que a busca ficou incompleta e mostra o que chegou, e buscar de novo tenta completar; busca concluida igual, feita pelo Buscar dentro da validade do cache, devolve o resultado guardado, mas o Repetir do historico sempre chama o Google de novo; cada pagina de resultados do Google conta no consumo, inclusive a da busca que falhou e a do raio maior; erro do Google aparece em portugues com o que fazer, e o erro de local fica abaixo do campo Localizacao; ao terminar, a busca poe na fila o enriquecimento e a pesquisa de empresa e decisor (so com a pesquisa liberada) e a verificacao de WhatsApp (so com sessao de WhatsApp na conta); Refazer tour, no rodape da tela, reabre o tour de 8 passos.
 - nav_target: `autonomia_prospecting_search`
 
 ### listas_de_leads
-- titulo: Juntar leads em listas e preparar um público de campanha
+- titulo: Juntar leads em listas e preparar um publico de campanha
 - rota: autonomia_prospecting_lists
-- intent: Como separo os leads por praça ou campanha?; Como adiciono leads a uma lista?; Como uso esses leads numa campanha?; Quantos leads da lista estão prontos para campanha?
-- onde_fica: Prospecção > Listas
-- pre_requisitos: já ter leads salvos por uma busca de prospecção
-- passos: 1. Abra Prospecção > Listas e crie uma nova lista; 2. Dê um nome de campanha, praça ou segmento; 3. Selecione a lista para ver os leads e os números de prontos, contatos, CRM e bloqueados; 4. Busque e adicione leads; 5. Em campanha, dê nome ao público e crie o público.
-- gotchas: criar o público só gera o segmento por etiqueta, nada é disparado automaticamente e a campanha continua sendo você quem dispara; lead bloqueado por status ou consentimento entra na conta de bloqueados e fica de fora do público; a busca de leads disponíveis só mostra quem ainda não está na lista; remover um lead da lista não apaga o lead nem o contato criado a partir dele; nos filtros da lista, Aberto agora só tem a opção sim; os telefones seguem o formato do país da busca da conta.
+- intent: Como separo leads por praca ou campanha?; Como adiciono leads a uma lista?; Como envio a lista inteira ao CRM?; Como uso a lista numa campanha?; Quantos estao prontos para campanha?; Por que a lista de disponiveis nao mostra todos?
+- onde_fica: Barra lateral > Prospeccao > Listas
+- perfil: ver as listas e os leads delas: administrador ou funcao com Ver prospeccao ou Editar prospeccao. Nova Lista, Adicionar leads, Remover e Campanha exigem Editar prospeccao. Enviar lista ao CRM exige tambem a permissao de cards do CRM (Editar na linha CRM da funcao, ou Administrador do CRM). Ligar a uma campanha existente exige tambem Editar campanhas.
+- pre_requisitos: ter leads salvos por uma busca
+- passos: 1. Abra Prospeccao > Listas e clique em Nova Lista; 2. De o Nome e, se quiser, a Descricao, e clique em Criar lista; 3. Em Adicionar leads, busque, marque ou use Selecionar visiveis e clique em Adicionar selecionados; 4. Abra a lista para ver Leads, Prontos, Contatos e CRM, e abra um lead no mesmo painel da busca; 5. Use Enviar lista ao CRM para mandar os leads; 6. Em Campanha, confira Prontos e Bloqueados, de o Nome do publico, escolha a Campanha existente ou Criar apenas etiqueta e clique em Criar publico.
+- gotchas: as listas sao da conta e todos que veem a Prospeccao veem todas; ao entrar na lista, um lead novo ou qualificado fica pronto para campanha; conta como pronto quem esta pronto para campanha e tem WhatsApp verificado; Adicionar leads mostra no maximo os 100 leads mais recentes que voce enxerga, fora os que ja estao na lista, entao use a busca por nome, telefone ou endereco; Enviar lista ao CRM manda os leads visiveis da lista, sem os que ja estao no CRM ou foram descartados; criar o publico so gera a etiqueta do segmento, nada e disparado; na Campanha existente as campanhas da API do WhatsApp agendadas aparecem primeiro, depois as de envio unico ativas; ligar a lista a uma campanha pede Editar campanhas; fica de fora do publico o descartado, o contato bloqueado, quem esta sem telefone ou sem WhatsApp verificado e quem nao esta pronto; descartar um lead depois tira a etiqueta do contato, mas campanha da API do WhatsApp ja iniciada continua enviando aos pendentes; Remover tira o lead da lista sem apagar o lead nem o contato; nos filtros da lista Aberto agora so tem Sim; a lista nao tem botao de exportar.
 - nav_target: `autonomia_prospecting_lists`
+<!-- RECUSA #713/#737: completar -->
 
 ### configurar_prospeccao
-- titulo: Ajustar funil padrão, país da busca, cache e critérios de score da prospecção
+- titulo: Ajustar funil sugerido, pais da busca, cache e nota da prospeccao
 - rota: settings_prospecting_index
 - cobre: autonomia_prospecting_settings
-- intent: Onde coloco a chave do Google?; Por que o mapa não aparece na busca?; Por que o botão Enriquecer está desligado?; Como mudo o funil padrão dos cards?; Como mudo o peso do score dos leads?; Como busco empresas em outro país?
-- onde_fica: Configurações > Prospecção
-- pre_requisitos: ser administrador ou ter a permissão de gerenciar prospecção
-- passos: 1. Abra Configurações > Prospecção; 2. Na aba geral, confira se as chaves da plataforma estão prontas, se a pesquisa está liberada e se há aviso de IA; 3. Defina o funil e a etapa padrão usados ao criar cards; 4. Escolha o país da busca, agrupado por continente; 5. Ajuste o cache; 6. Na aba score, escolha um perfil ou mude para customizado para editar os pesos; 7. Salve.
-- gotchas: a conta não cola chave do Google nem ajusta limite: as chaves são da plataforma e quem configura é o suporte; a pesquisa de empresa e decisor, que libera o botão Enriquecer, também é ligada pelo suporte, conta a conta; a IA da prospecção usa só a chave da integração CRM Kanban AI da conta, nunca a da plataforma, e a tela avisa quando ela falta, mas só com a pesquisa liberada, porque sem a pesquisa a IA não roda; os pesos do score só ficam editáveis no modo customizado; a forma de pesquisa muda o sentido do score, priorizando quem tem lacunas no perfil ou quem já é mais estruturado; o país da busca vale para a conta toda, muda sugestões de local, resultados do Google e o formato dos telefones, não o idioma da tela, e sem escolha é o Brasil; país fora da lista não é aceito ao salvar.
-- nav_target: `autonomia_prospecting_settings`
+- intent: Onde coloco a chave do Google?; Por que o mapa nao aparece?; Por que o botao Enriquecer esta desligado?; Como mudo o funil sugerido?; Como mudo o peso da nota dos leads?; Como busco em outro pais?; Onde vejo o consumo?; Por que nao consigo editar os pesos?
+- onde_fica: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
+- perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao nao ve o atalho nem abre a tela; diga que ajustar a Prospeccao pede Editar prospeccao.
+- pre_requisitos: Prospeccao ligada na conta pelo suporte
+- passos: 1. Abra Prospeccao > Configuracoes; 2. Na aba Geral, confira as Chaves do Google, a Pesquisa de empresa e decisor e os avisos; 3. Escolha o Funil CRM padrao e a Etapa CRM padrao; 4. Escolha o Pais da busca; 5. Ajuste a Validade do cache (segundos) e confira o Consumo diario e o Consumo mensal; 6. Clique em Salvar; 7. Na aba Score, escolha a Forma padrao de pesquisa e o Perfil de score e clique em Salvar; 8. Para as jogadas salvas, use a aba Jogadas.
+- gotchas: a conta nao cola chave do Google: as chaves sao da plataforma, e quem configura e o suporte; sem elas a busca no Google fica indisponivel ate o suporte configurar; sem a chave de mapa a busca funciona e o mapa nao aparece; a pesquisa de empresa e decisor, que libera Enriquecer e Pesquisar, e ligada pelo suporte, conta a conta; a IA da prospeccao usa so a chave da integracao CRM Kanban AI da conta, e a tela avisa quando ela falta; o funil e a etapa padrao sao o destino sugerido, e cada busca pode ter o proprio em Configuracoes da busca; o pais da busca vale para a conta toda, muda sugestoes de local, resultados do Google e formato dos telefones, e sem escolha e o Brasil; a validade do cache vem em 86400 segundos, um dia, e so vale para busca nova igual pelo Buscar, nunca para o Repetir; o consumo soma as chamadas pagas ao Google, uma por pagina lida, e mostra sem limite porque nao ha teto; qual motor da nota a conta usa e decisao do suporte: no motor antigo os Pesos do perfil so ficam editaveis em Customizado; no motor novo a aba mostra os Componentes da nota (Site, Telefone, Nota no Google, Volume de avaliacoes, Atividade recente e Fotos) so para leitura; Perfil exclusivo desta conta marca perfil restrito a ela; a Forma padrao de pesquisa muda o sentido da nota: no GMN nota alta e lacuna no perfil, no Geral e empresa bem estruturada; a aba Jogadas nao tem Salvar geral; pais fora da lista nao e aceito ao salvar.
+- nav_target: `settings_prospecting_index`
+
+### desenhar_area_da_busca
+- titulo: Desenhar a area da busca no mapa
+- rota: autonomia_prospecting_search
+- intent: Como desenho a area da busca no mapa?; Por que veio empresa fora do meu desenho?; Por que o botao Buscar nao libera com a area desenhada?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > Nova busca > Onde buscar > Area de busca
+- perfil: administrador ou funcao com Editar prospeccao, porque so quem monta busca abre o formulario. Quem tem so Ver prospeccao ve a area das buscas ja feitas no mapa dos resultados, mas nao desenha.
+- pre_requisitos: Localizacao confirmada na busca; mapa da plataforma configurado pelo suporte
+- passos: 1. Abra Nova busca e confirme a Localizacao; 2. Em Area de busca, escolha Circulo desenhado, Retangulo desenhado ou Poligono desenhado; 3. Clique no mapa para marcar o centro do circulo, criar o retangulo ou marcar cada ponto do poligono; 4. Arraste a borda, os cantos ou os pontos para ajustar e o meio para mover; 5. No poligono, use Desfazer ultimo ponto para corrigir, e Limpar desenho para recomecar; 6. Quando aparecer Area pronta para a busca, clique em Buscar.
+- gotchas: o mapa de desenho so abre depois do local confirmado; enquanto a area nao esta pronta aparece Desenhe a area para liberar a busca e o Buscar fica travado; o poligono precisa de pelo menos 3 pontos e aceita ate 100; o raio do circulo vai ate 50 km; so o poligono recorta o resultado: empresa fora dele sai, e lugar sem coordenada tambem; circulo, retangulo, Raio e Area visivel so orientam o Google para aquela regiao, entao pode vir empresa um pouco fora do desenho; se quiser corte exato, desenhe um poligono; Expandir raio automaticamente fica desligado em qualquer area que nao seja Raio, e nunca mexe no desenho; sem a chave de mapa da plataforma o mapa nao carrega e nao da para desenhar.
+- nav_target: `autonomia_prospecting_search`
+
+### filtros_e_jogadas_da_busca
+- titulo: Usar os filtros avancados e salvar uma jogada
+- rota: autonomia_prospecting_search
+- intent: Onde ficam os filtros avancados?; Por que a jogada desmarcou sozinha?; Como salvo meus filtros como jogada?; Por que nao consigo salvar mais jogadas?; Por que Aberto agora nao tem a opcao Nao?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > Nova busca > Filtros avancados; na busca aberta, o icone Filtros no topo dos resultados
+- perfil: filtrar a busca nova e Salvar como jogada exigem administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao usa o icone Filtros para refinar e ordenar os resultados ja trazidos, sem salvar jogada.
+- pre_requisitos: nenhum alem da Prospeccao ligada
+- passos: 1. Em Nova busca, escolha a jogada, se quiser, e clique em Filtros avancados; 2. Confira no topo da gaveta a Jogada base e o Modo; 3. Ajuste os quatro grupos: Dor do lead, Qualificacao minima, Visibilidade no Google e Operacional; 4. Clique em Aplicar; 5. Para guardar os filtros, use Salvar como jogada, de o Nome da jogada e clique em Salvar jogada; 6. Na busca aberta, o icone Filtros refina e ordena os leads na tela.
+- gotchas: o filtro so vale depois de Aplicar, e fechar a gaveta sem aplicar descarta o rascunho; Limpar tudo aplica os filtros vazios na hora; a Posicao no Google vai de 1 a 40, nas duas pontas; Aberto agora e Tem horario so filtram por Sim; na busca nova os filtros valem antes do corte do Limite; no icone Filtros da busca aberta o refino so esconde leads da tela, nao refaz a busca, e o lead escondido sai da selecao; a jogada desmarca sozinha quando um filtro fica diferente dela, e trocar a Forma de pesquisa tira a jogada de outro modo e os filtros dela; Salvar como jogada fica travado sem pelo menos um filtro; o nome tem ate 60 caracteres e nao pode repetir outra jogada da conta; a conta guarda ate 30 jogadas salvas, e para salvar outra e preciso excluir uma em Configuracoes > Prospeccao > Jogadas; a jogada salva fica no modo em que foi salva e so aparece na grade desse modo.
+- nav_target: `autonomia_prospecting_search`
+
+### historico_de_buscas
+- titulo: Repetir, editar e excluir uma busca do historico
+- rota: autonomia_prospecting_search
+- intent: Como repito uma busca?; Como edito uma busca antiga?; Por que nao vejo as buscas do meu colega?; Excluir a busca apaga os leads?; Como troco o funil so de uma busca?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > Buscas recentes
+- perfil: ver o historico: administrador ou funcao com Ver prospeccao ou Editar prospeccao. Repetir, Editar e buscar, Configuracoes da busca e Excluir busca exigem administrador ou Editar prospeccao. Ver as buscas dos colegas exige ser administrador ou ter Ver buscas de todos na funcao; sem isso a pessoa ve so as proprias.
+- pre_requisitos: ter feito pelo menos uma busca
+- passos: 1. Abra Prospeccao > Buscar leads e olhe Buscas recentes; 2. Clique numa busca para abrir os resultados, e use Carregar mais para ver as antigas; 3. Use Repetir para rodar a mesma busca de novo na hora; 4. Use Editar e buscar para abrir o formulario preenchido, mudar o que quiser e clicar em Buscar; 5. No icone Configuracoes da busca, escolha o Funil CRM e a Etapa CRM so daquela busca e salve; 6. Use Excluir busca e confirme para tirar do historico.
+- gotchas: Repetir sempre chama o Google de novo e conta no consumo, sem usar o cache; Repetir e Editar e buscar restauram termo, local confirmado, area e desenho, raio pedido, expansao, modo, jogada, filtros, limite, decisor e destino no CRM; cada linha mostra leads, contatos, CRM e score da busca; quem nao e administrador ve, exporta, edita e exclui so as proprias buscas, a menos que a funcao tenha Ver buscas de todos; as listas sao da conta e todos veem todas; excluir a busca tira do historico mas nao apaga os leads.
+- nav_target: `autonomia_prospecting_search`
+
+### trabalhar_resultados_da_busca
+- titulo: Ler e trabalhar os resultados da busca
+- rota: autonomia_prospecting_search
+- intent: Como priorizo quem ligar primeiro?; O que significam as cores e os sinais do card?; Como ordeno por distancia ou posicao no Google?; Por que o lead esta Enriquecendo?; Por que o WhatsApp mostra Verificando?; O que sao os numeros e grupos de pinos no mapa?; Por que nao vejo a avaliacao do score?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca
+- perfil: ler resultados, ordenar, filtrar, abrir o painel e ver o mapa: administrador ou funcao com Ver prospeccao ou Editar prospeccao. Enriquecer exige administrador ou Editar prospeccao. Avaliacao do score e Fatores de atencao, no painel, so aparecem para o administrador da conta, qualquer que seja a funcao.
+- pre_requisitos: uma busca concluida que voce enxerga
+- passos: 1. Abra a busca em Buscas recentes; 2. Leia os cards na ordem de Prioridade: o anel, G #, Posicao e Ligar 1o; 3. Use o icone Filtros para trocar o campo em Ordenar e inverter a ordem; 4. Clique num pino do mapa ou no card para abrir o painel do lead; 5. No card, use Mapa, Detalhes, WhatsApp, Ligar e os links das redes; 6. Clique em Enriquecer num lead com site para buscar mais dados.
+- gotchas: a faixa de cor do card segue a prioridade: 75 ou mais e Lead muito quente, 50 ou mais Oportunidade alta, 25 ou mais Lead morno e abaixo disso Prioridade baixa; Ligar 1o marca a posicao 1; o card mostra ate 4 sinais, como Tem site ou Sem site, fotos, posicao no Google, nota e avaliacoes; nota alta e oportunidade no modo GMN e ponto positivo no Geral; o numero do pino e a posicao do lead na busca, e com varios pinos proximos eles se agrupam; Distancia do centro so aparece quando a busca tem centro; ao trocar o campo de ordenar, a ordem volta a mostrar o melhor primeiro; o telefone vem no formato internacional e prefere o WhatsApp verificado, com o selo verificado; Verificando aparece enquanto a conta confere o numero pela sessao de WhatsApp dela; a verificacao precisa de um numero conectado por QR code (WhatsApp API) na conta, e sem ele nenhum lead fica verificado e a campanha fica sem quem incluir; so o selo verificado confirma o numero, o botao WhatsApp aparece mesmo sem verificacao; Enriquecer entra na fila e o card se atualiza sozinho, e pedir de novo com o lead na fila e recusado; Enriquecer fica desligado sem a pesquisa liberada pelo suporte ou sem site; sem a chave da integracao CRM Kanban AI a tela avisa e o enriquecimento traz so o que esta no site; enriquecimento parado volta a falha depois de 15 minutos rodando ou 2 horas na fila; para quem nao e administrador o painel mostra a prioridade e a frase da nota, sem os componentes; sem a chave de mapa da plataforma aparece que o mapa ainda nao esta disponivel, e o resto funciona.
+- nav_target: `autonomia_prospecting_search`
+
+### pesquisa_empresa_e_decisor
+- titulo: Pesquisar a empresa e o decisor de um lead
+- rota: autonomia_prospecting_search
+- intent: Como descubro o dono da empresa?; O que significa Aguardando capacidade?; Por que o decisor nao foi encontrado?; Como refaco a pesquisa?; O que e resultado reutilizado?; Como uso um socio como contato?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > abrir o lead > Empresa e decisor
+- perfil: ver os selos, a barra de progresso e o painel Empresa e decisor: administrador ou funcao com Ver prospeccao ou Editar prospeccao. Pesquisar, Verificar novamente e Usar como contato exigem administrador ou Editar prospeccao.
+- pre_requisitos: pesquisa de empresa e decisor liberada para a conta pelo suporte (confira em Configuracoes > Prospeccao > Geral)
+- passos: 1. Abra a busca e acompanhe a barra X de Y concluidos; 2. Leia no card os selos Empresa e Decisor; 3. Clique no card para abrir o painel e desca ate Empresa e decisor; 4. Em Quem atende, veja os socios e a qualificacao de cada um; 5. Em Empresa, confira razao social, nome fantasia, CNPJ, situacao e UF; 6. Use Pesquisar, ou Verificar novamente e confirme em Refazer pesquisa; 7. Para trocar o decisor, clique em Usar como contato no socio certo.
+- gotchas: com a pesquisa liberada, ao terminar a busca cada lead nunca pesquisado entra sozinho na fila; os estados sao Nao pesquisado, Na fila, Em pesquisa, Aguardando capacidade, Confirmado, Possivel, Ambiguo, Nenhum resultado, Falha tecnica e Bloqueado; Aguardando capacidade quer dizer que outra pesquisa da mesma empresa esta rodando, e a retomada e automatica; pesquisa parada volta a falha depois de 15 minutos em pesquisa ou 2 horas na fila ou aguardando; o mesmo lugar pesquisado ha menos de 90 dias e reaproveitado, sem nova consulta paga, e o painel mostra resultado reutilizado; Verificar novamente pesquisa de novo sem o resultado guardado, e o atual fica na tela ate o novo chegar; hoje so o tipo de decisor Proprietario tem pesquisa; quando nao ha decisor o painel diz o motivo, como empresa nao encontrada, mais de uma empresa possivel, sem quadro de socios, socios que sao empresas ou orgao publico; empresa com situacao irregular na Receita ganha alerta; Usar como contato torna o socio decisor e contato do lead, mas o contato do CRM nao muda quando e compartilhado com outro negocio ou ja existia com outro nome; com a pesquisa desligada o painel avisa e os botoes ficam travados, e o lead pode aparecer como Bloqueado.
+- nav_target: `autonomia_prospecting_search`
+
+### enviar_leads_ao_crm
+- titulo: Enviar leads da prospeccao ao CRM
+- rota: autonomia_prospecting_search
+- intent: Como mando leads para o CRM?; Por que alguns leads ficaram de fora do envio?; Por que nao aparece Enviar ao CRM?; O que o card do CRM leva do lead?; O envio roda a automacao do estagio?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > selecionar leads > Enviar ao CRM (tambem no card, no painel do lead e em Listas > Enviar lista ao CRM)
+- perfil: exige as duas permissoes: administrador ou Editar prospeccao, e a permissao de cards do CRM (Editar na linha CRM ou Administrador do CRM na funcao). Sem qualquer uma delas o botao nao aparece; diga para pedir ao administrador que ajuste a funcao.
+- pre_requisitos: CRM ligado na conta e pelo menos um funil ativo com estagio
+- passos: 1. Abra a busca e marque os leads, ou use Selecionar visiveis; 2. Clique em Enviar ao CRM na barra de selecao; 3. Escolha o Funil e o Estagio; 4. Confira a frase de confirmacao e clique em Enviar; 5. Leia o resumo com criados, ja existentes e falhas; 6. No card do lead enviado, use Abrir card ou Abrir contato.
+- gotchas: lead que ja esta no CRM ou foi descartado fica fora do envio, e a barra avisa quantos; o card mostra a faixa Ja esta no CRM com funil, estagio e responsavel, ou sem responsavel; o envio vai em lotes de 30 e mostra o andamento; reenviar lead com card nao cria outro; o lead enviado sai da selecao e o que falhou continua selecionado para tentar de novo; o card nasce com empresa e contato, na prioridade da faixa do lead e com a linha do decisor na descricao; a automacao de entrada do estagio roda uma vez, so para o card criado agora; sem funil aparece Nenhum funil no CRM com o atalho Criar funil no CRM; se o CRM estiver desligado a tela nao carrega os funis; lead descartado so vai ao CRM depois de Desfazer descarte.
+- nav_target: `autonomia_prospecting_search`
+
+### leads_na_campanha
+- titulo: Colocar leads da busca numa campanha
+- rota: autonomia_prospecting_search
+- intent: Como coloco leads da busca numa campanha?; Por que alguns leads ficaram de fora da campanha?; Por que nao consigo escolher a campanha?; Lead descartado ainda recebe a campanha?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > selecionar leads > Adicionar a campanha
+- perfil: Adicionar a campanha e So criar o segmento exigem administrador ou Editar prospeccao. Escolher uma campanha existente exige tambem Editar campanhas na funcao; sem ela o campo Campanha nao aparece e da para criar so o segmento.
+- pre_requisitos: leads prontos para campanha com WhatsApp verificado; para ligar a uma campanha, uma campanha da API do WhatsApp agendada ou uma de envio unico ativa
+- passos: 1. Selecione os leads na busca; 2. Clique em Adicionar a campanha; 3. Em Campanha, escolha uma campanha ou So criar o segmento, sem campanha; 4. Confira o Nome do segmento, que vem com o termo da busca; 5. Clique em Adicionar; 6. Leia o resumo: quem entrou, a campanha, os contatos criados e quem ficou de fora, com o motivo.
+- gotchas: nada e disparado aqui, a selecao vira uma lista e uma etiqueta de segmento nos contatos, e a campanha le essa etiqueta quando envia; entram so leads prontos para campanha, com telefone e WhatsApp verificado e sem bloqueio no contato; ficam de fora, com o motivo no resumo, descartado, contato bloqueado, sem telefone, sem WhatsApp verificado e ainda nao pronto; as campanhas da API do WhatsApp agendadas aparecem primeiro, depois as de envio unico ativas; vao ate 500 leads por vez; nome de segmento igual a etiqueta que ja existe e recusado; descartar um lead depois tira a etiqueta do contato dele, e campanha agendada ou de envio unico que ainda nao disparou deixa de alcanca-lo; limitacao: campanha da API do WhatsApp que ja comecou a enviar continua mandando aos destinatarios pendentes, mesmo depois do descarte.
+- nav_target: `autonomia_prospecting_search`
+<!-- RECUSA #713/#737: completar -->
+
+### descartar_e_criar_contatos
+- titulo: Descartar leads, desfazer o descarte e criar contatos em lote
+- rota: autonomia_prospecting_search
+- intent: Como descarto um lead?; Como desfaco um descarte?; Como crio contatos de varios leads de uma vez?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > selecionar leads > Descartar ou Criar contatos; Desfazer descarte fica no painel do lead
+- perfil: Descartar, Desfazer descarte e Criar contatos exigem administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve o lead descartado e o motivo, sem os botoes.
+- pre_requisitos: uma busca com leads que voce enxerga
+- passos: 1. Selecione os leads; 2. Para descartar, clique em Descartar, escolha o Motivo e confirme em Descartar; 3. Para desfazer, abra o lead descartado e clique em Desfazer descarte; 4. Para criar contatos, selecione os leads e clique em Criar contatos; 5. Leia o resumo de criados, ja existentes e falhas.
+- gotchas: os motivos sao Sem interesse, Fora do perfil, Ja e cliente, Dados errados, Empresa fechada e Outro motivo, que pede o texto; da para descartar ate 500 leads por vez; o descartado continua na busca, esmaecido e com a faixa Descartado e o motivo; ele sai do envio ao CRM, dos contatos em lote e da campanha, e o contato perde a etiqueta de segmento que ja tinha; Desfazer descarte so existe no painel do lead e devolve o lead a Novo; Criar contatos vai em lotes de 30 e pula os descartados; nao existe criar contato de um lead so no card: o contato tambem nasce ao Enviar ao CRM e em Usar como contato.
+- nav_target: `autonomia_prospecting_search`
+<!-- RECUSA #713/#737: completar -->
+
+### exportar_leads
+- titulo: Exportar os leads da busca em CSV ou Excel
+- rota: autonomia_prospecting_search
+- intent: Como exporto os leads para planilha?; Da para baixar em Excel?; Por que o arquivo veio com menos leads?
+- onde_fica: Barra lateral > Prospeccao > Buscar leads > abrir uma busca > icone Exportar leads no topo dos resultados
+- perfil: administrador ou funcao com Ver prospeccao ou Editar prospeccao, so nas buscas que a pessoa enxerga (as proprias, ou todas com Ver buscas de todos).
+- pre_requisitos: uma busca aberta com pelo menos um lead na tela
+- passos: 1. Abra a busca; 2. Se quiser so alguns, selecione os leads; 3. Clique no icone Exportar leads; 4. Escolha CSV ou Excel (.xlsx); 5. Abra o arquivo baixado.
+- gotchas: com leads selecionados o arquivo leva so eles; sem selecao leva os visiveis, entao o refino do icone Filtros reduz o arquivo; o arquivo segue a ordem da tela (na ordem padrao, a de prioridade); o botao fica travado sem leads na tela; as Listas nao tem botao de exportar; o arquivo sai com o numero da busca no nome.
+- nav_target: `autonomia_prospecting_search`
+
+### jogadas_salvas
+- titulo: Editar e excluir as jogadas salvas
+- rota: settings_prospecting_index
+- intent: Onde edito ou apago uma jogada salva?; Quantas jogadas posso salvar?
+- onde_fica: Barra lateral > Prospeccao > Configuracoes > aba Jogadas
+- perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao ve as jogadas salvas na grade da busca, mas nao edita nem exclui.
+- pre_requisitos: ter salvo pelo menos uma jogada na busca, em Filtros avancados > Salvar como jogada
+- passos: 1. Abra Prospeccao > Configuracoes; 2. Entre na aba Jogadas; 3. Para mudar, clique em Editar, ajuste o Nome da jogada e os filtros e clique em Salvar jogada; 4. Para apagar, clique em Excluir e depois em Confirmar exclusao.
+- gotchas: a conta guarda ate 30 jogadas salvas, e o teto so aparece como recusa ao tentar salvar mais uma na busca; excluir uma jogada libera a vaga; o nome tem ate 60 caracteres e nao pode repetir; cada jogada fica no modo em que foi salva, que a tela mostra, e so aparece na grade desse modo; as jogadas sao da conta, entao a mudanca vale para todos; jogada nova so nasce na busca, pelo Salvar como jogada; a aba nao tem Salvar geral: cada jogada se salva no proprio Editar jogada.
+- nav_target: `settings_prospecting_index`
 
 ### area_de_cotacao
 - titulo: Entrar na área de Cotação da corretora
