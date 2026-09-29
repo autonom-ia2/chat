@@ -136,7 +136,6 @@ A lista abaixo é local e não representa commits ou staging.
 - `tests/playwright/relationships.config.ts`
 - `tests/playwright/tests/relationships/fields.spec.ts`
 
-
 ## Retomada autorizada — 29/09/2026
 
 A revisão inicial e supervisor-feedback foram lidos antes das correções. A instrução mais
@@ -198,3 +197,27 @@ confirmar a imagem exata, sem qualquer publicação.
 
 A seleção ampliada local passou458 casos em459 exemplos, com uma quarentena antiga
 explicitamente preservada. Report: expanded-final-rspec.json. Nenhum teste novo em skip.
+
+## Retomada final — lint cumulativo / sem alteração de produção
+
+PR #760, base8396d7255e, candidato anterior6718569456. O CI de regressão do recurso
+passou; o gate de Email detectou6infrações cumulativas de RuboCop. Corrigido o extractor
+com classe compacta e helper de item, preservando ordem, lock e coerções; diagnóstico de
+runtime usa `$stderr`. Não houve mudança de limites ou afrouxamento de gates.
+
+Validações: `resume-all-rubocop.log` =44arquivos, zero infrações;
+`resume-backend.json` =87exemplos/zero falhas;
+`resume-expanded-rspec.json` =471exemplos/zero falhas/1quarentena preexistente.
+AST sem regex nova passou. A revisão `lint-delta-review.md` não encontrou P0/P1/P2 e
+comparou71cenários diferenciais sem divergência. Arquivos de evidência ficam no diretório
+local ignorado `.codex/relationships/`, sem dados reais ou credenciais no repositório.
+
+Project Autonom.ia Dev foi consultado novamente e retornou404; campos exatos permanecem
+em rollout-rollback.md e na PR. Nenhum merge, deploy, edição de conta real ou gatilho de
+produção foi executado. A execução Linux no HEAD final continua condição de liberação.
+
+Rodada final de navegador `resume-final-browser.log`:14/14 aprovados em2,6minutos,
+com backend real, autenticação normal e limites de timeout mantidos. Nenhuma limpeza
+ou mudança de sessões/política de autenticação foi executada nesta retomada. O frontend
+não mudou desde a versão já revisada. A confirmação final do CI fica registrada na PR
+para conservar o SHA exato da versão testada.

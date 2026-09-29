@@ -40,7 +40,7 @@ begin
         limits = { rlimit_cpu: 10, rlimit_fsize: Relationships::PreviewRenderer::MAX_OUTPUT,
                    rlimit_nofile: 64, rlimit_as: Relationships::PreviewRenderer::MAX_MEMORY }
         pid = Process.spawn({ 'VIPS_CONCURRENCY' => '1', 'VIPS_BLOCK_UNTRUSTED' => '1', 'OMP_NUM_THREADS' => '1' },
-                            *command, out: File::NULL, err: STDERR, **limits)
+                            *command, out: File::NULL, err: $stderr, **limits)
         Timeout.timeout(Relationships::PreviewRenderer::TIMEOUT) { Process.wait(pid) }
       end
       ensure_true.call(rendered, "#{type} did not render")

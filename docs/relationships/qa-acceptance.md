@@ -8,7 +8,7 @@ SHA efetivamente revisado continuam obrigatórios. Registros anteriores de agent
 históricos; não substituem os resultados abaixo nem o status atual da PR.
 
 Base funcional: `8396d7255e097ba79507a22081701eb41ddb6ce5`.
-O SHA candidato é o HEAD da PR #760; os checks e o relatório da imagem registram o SHA exato. O snapshot de frontend `cad28d3772` foi mantido; o delta posterior corrige apenas o conversor nativo e o teste do mapa de flags.
+O SHA candidato é o HEAD da PR #760; os checks e o relatório da imagem registram o SHA exato. O snapshot de frontend `cad28d3772` foi mantido. Os deltas posteriores corrigem o conversor nativo, o teste do mapa de flags e a organização do extractor legado para cumprir o lint estrito, sem mudar suas regras.
 Worktree exclusivo: `chat2you-757-relacionamentos`, branch `feat/757-relacionamentos`.
 
 ## Ambiente e isolamento
@@ -26,17 +26,18 @@ Worktree exclusivo: `chat2you-757-relacionamentos`, branch `feat/757-relacioname
 
 ## Evidências executadas
 
-| Gate                                  | Evidência local concluída                                                                                                 |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Frontend completo                     | 6.771 testes aprovados, zero falhas/pendentes; `approved-candidate-vitest.json`.                                          |
-| Backend integrado + contratos antigos | 459 exemplos: 458 aprovados, zero falhas, uma quarentena preexistente; `expanded-final-rspec.json`.                       |
-| Conversores nativos                   | 18 exemplos aprovados; PNG/JPEG/WebP/PDF/vídeo, limites mantidos, sem upscale, formatos disfarçados/corruptos e fallback. |
-| Fluxos reais no navegador             | 14/14 na rodada consolidada `current-browser-suite.log`, com backend real e sem alterar os timeouts.                      |
-| Responsividade                        | 390, 1.024 e 1.630 px; light/dark, modal, foco, cancelamento e retorno.                                                   |
-| Lint estrito                          | 54 arquivos, zero bloqueios; somente 13 avisos de chaves dinâmicas que o gate existente permite.                          |
-| AST sem regex nova                    | Fontes/testes/scripts alterados analisados por AST; nenhum novo padrão ou matcher.                                        |
-| Revisão independente                  | `release-review.md` e `native-renderer-review.md`: nenhum P0/P1/P2 demonstrável restante; condicionado ao CI final.       |
-| Build/Guia/Central                    | Build Vite executado; Guia/Central conferidos com os geradores próprios.                                                  |
+| Gate                                  | Evidência local concluída                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend completo                     | 6.771 testes aprovados, zero falhas/pendentes; `approved-candidate-vitest.json`.                                                            |
+| Backend integrado + contratos antigos | 471 exemplos: 470 aprovados, zero falhas, uma quarentena preexistente; `resume-expanded-rspec.json`.                                        |
+| Conversores nativos                   | 18 exemplos aprovados; PNG/JPEG/WebP/PDF/vídeo, limites mantidos, sem upscale, formatos disfarçados/corruptos e fallback.                   |
+| Fluxos reais no navegador             | 14/14 na retomada consolidada `resume-final-browser.log`, com backend real e sem alterar os timeouts.                                       |
+| Responsividade                        | 390, 1.024 e 1.630 px; light/dark, modal, foco, cancelamento e retorno.                                                                     |
+| Lint estrito                          | 54 arquivos, zero bloqueios; somente 13 avisos de chaves dinâmicas que o gate existente permite.                                            |
+| Lint Ruby cumulativo                  | 44 arquivos alterados inspecionados, zero infrações; `resume-all-rubocop.log`.                                                              |
+| AST sem regex nova                    | Fontes/testes/scripts alterados analisados por AST; nenhum novo padrão ou matcher.                                                          |
+| Revisão independente                  | `release-review.md`, `native-renderer-review.md` e `lint-delta-review.md`: nenhum P0/P1/P2 demonstrável restante; condicionado ao CI final. |
+| Build/Guia/Central                    | Build Vite executado; Guia/Central conferidos com os geradores próprios.                                                                    |
 
 Os totais identificam rodadas concluídas, não uma promessa de inexistência de bugs.
 A imagem Linux é um gate separado: aprovação local do macOS não comprova limites ou
@@ -80,12 +81,12 @@ novo usa comparação/revisão e os escritores internos alterados mesclam sob lo
 O teste usa 1.000 ocorrências em 50 contatos e 20 amostras por tamanho de página, com
 rota aquecida. Limiar declarado antes da medição: p95 inferior a 500 ms e diferença de
 no máximo duas consultas SQL ao dobrar a página. Conversão de preview não faz parte da
-listagem. Os números locais não são previsão de latência em produção.
+listagem. Os números locais não são previsão de latência em produção. A tabela registra a rodada ampliada desta retomada, com carga concorrente da máquina, sem selecionar apenas a medição mais rápida.
 
 | Página | p95 local | Máximo de SQL | Amostras |
 | ------ | --------: | ------------: | -------: |
-| 25     |  83.37 ms |            14 |       20 |
-| 50     |  91.65 ms |            14 |       20 |
+| 25     | 472.37 ms |            14 |       20 |
+| 50     | 446.52 ms |            14 |       20 |
 
 ## Reexecução
 
@@ -134,3 +135,16 @@ local também na base. Isso não é tratado como teste da funcionalidade nem esc
 A ausência de P0/P1/P2 conhecidos e os checks verdes são critérios de aprovação, não
 uma garantia absoluta. Nenhum gate vermelho deve ser contornado ou substituído por
 um build verde isolado.
+
+### Fechamento do lint cumulativo na retomada
+
+O run36588125727 passou os testes de backend, mas bloqueou no RuboCop cumulativo:
+cinco infrações no extractor legado tocado para coordenar gravações e uma no diagnóstico
+do smoke. A correção compacta a classe, extrai o processamento de cada item mantendo o
+lock e a ordem, elimina um ramo idêntico ao fallback e usa `$stderr`. Não alteramos
+limites, exclusões ou configurações dos verificadores para liberar a PR.
+
+Doze casos de coerção foram acrescentados; a seleção ampliada passou com471 exemplos
+(470 aprovados e a mesma quarentena anterior). A revisão independente comparou71 cenários
+nas duas versões, com resultados, gravações e sequência de locks idênticos. O gate da
+imagem e o lint remoto precisam estar verdes no HEAD final antes da aprovação.
