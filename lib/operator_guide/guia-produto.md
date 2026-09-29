@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (167 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (169 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1768,3 +1768,23 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. O cliente pede a cotação pelo WhatsApp e responde o que o agente perguntar; 2. A cotação fecha quando todas as seguradoras tiveram desfecho; 3. O comparativo chega como arquivo PDF na conversa, com o que respondeu; 4. Se o cliente pedir uma seguradora, ele recebe o documento daquela seguradora; 5. A equipe assume a conversa no horário configurado.
 - gotchas: os valores não saem conforme cada seguradora responde, o comparativo chega quando a cotação inteira termina, o que costuma levar de 1 a 2 minutos, e passando disso sai um aviso de espera escrito pelo agente, nunca uma lista de preços solta; o que vai ao cliente é o arquivo, nunca o link do portal, porque aquele endereço abre sem senha e traz o nome do segurado, e quando o arquivo falha nada é enviado no lugar; a proposta de uma seguradora é outro documento, gerado pela própria seguradora com o mesmo preço informado, e pedir duas seguradoras gera dois arquivos sem abrir cotação nova; seguradora que recusou não é anunciada ao cliente, e se ele perguntar o motivo sai por categoria, como veículo ou região, nunca o texto do portal; problema de credencial da corretora nunca chega ao cliente, ele aparece em Cotação > Conexões; na cotação de empresa o condutor deixa de ser opcional, precisa ser pessoa física com CPF e vínculo real, e a razão social não é perguntada, o sistema busca pelo CNPJ.
 - nav_target: `autonomia_insurance_agent`
+
+### Abrir Relacionamentos
+- intent: Onde ficam contatos e empresas?; Como configuro campos personalizados?; Onde estão os segmentos?
+- onde_fica: Menu lateral > Relacionamentos, quando a nova navegação está habilitada na conta
+- rota: `relationships_home` - `/app/accounts/:accountId/relationships`
+- gate: feature flag `relationships_navigation`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage` ou `attribute_manage`
+- pre_requisitos: nova navegação de Relacionamentos habilitada; cada destino mantém suas permissões e recursos
+- passos: 1. Abra Relacionamentos; 2. Escolha Contatos, Empresas ou Atributos personalizados; 3. Em Contatos, use o seletor de visão para Todos, Ativos, Segmentos ou Etiquetas; 4. Use o link Relacionamentos para voltar à home.
+- gotchas: os endereços antigos continuam funcionando; a home não concede acesso adicional; atributos de Conversa continuam na Central; navegação, campos e mídias são habilitações independentes.
+- nav_target: `relationships_home`
+
+### Consultar mídias da empresa
+- intent: Onde vejo arquivos de uma empresa?; Como busco mídia pelo nome?; Como vejo a conversa de origem do arquivo?
+- onde_fica: Empresas > ficha da empresa > Mídias > Visualizar tudo
+- rota: `relationships_company_media` - `/app/accounts/:accountId/companies/:companyId/media`
+- gate: feature flag `relationships_company_media`; papel `administrator` ou `agent`
+- pre_requisitos: Empresas e mídias de Relacionamentos habilitadas na conta; acesso às conversas de origem
+- passos: 1. Abra Mídias na lateral da empresa; 2. Busque pelo nome e combine contato, tipo e período; 3. Abra Visualizar tudo para a tabela; 4. Agrupe por contato e navegue nas páginas; 5. Use Visualizar, Baixar original ou Ir à mensagem.
+- gotchas: considera o vínculo atual do contato com a empresa; mudar esse vínculo move a visualização do histórico permitido; ocorrências repetidas continuam separadas; previews são gerados sob demanda e podem ficar indisponíveis sem impedir o original; a lateral mostra cinco recentes; o catálogo cobre arquivos armazenados, incluindo notas autorizadas, e anexos externos ficam na conversa de origem; o período usa o fuso de relatórios da conta, UTC quando não configurado.
+- nav_target: `relationships_company_media`

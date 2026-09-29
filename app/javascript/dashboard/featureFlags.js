@@ -1,4 +1,7 @@
 export const FEATURE_FLAGS = {
+  RELATIONSHIPS_ATTRIBUTES: 'relationships_attributes',
+  RELATIONSHIPS_COMPANY_MEDIA: 'relationships_company_media',
+  RELATIONSHIPS_NAVIGATION: 'relationships_navigation',
   AGENT_BOTS: 'agent_bots',
   AGENT_MANAGEMENT: 'agent_management',
   ASSIGNMENT_V2: 'assignment_v2',

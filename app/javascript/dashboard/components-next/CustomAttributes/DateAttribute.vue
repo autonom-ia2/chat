@@ -1,6 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { parseISO } from 'date-fns';
+import { ref, computed, watch } from 'vue';
+import {
+  attributeDate,
+  formatAttributeDate,
+} from 'dashboard/helper/attributeDate';
 import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
@@ -23,12 +26,19 @@ const emit = defineEmits(['update', 'delete']);
 const { t } = useI18n();
 
 const isEditingValue = ref(false);
-const editedValue = ref(props.attribute.value || '');
+const editedValue = ref(attributeDate(props.attribute.value));
+
+watch(
+  () => props.attribute.value,
+  value => {
+    if (!isEditingValue.value) editedValue.value = attributeDate(value);
+  }
+);
 
 const rules = {
   editedValue: {
     required,
-    isDate: value => new Date(value).toISOString(),
+    isDate: value => Boolean(attributeDate(value)),
   },
 };
 
@@ -36,7 +46,7 @@ const v$ = useVuelidate(rules, { editedValue });
 
 const formattedDate = computed(() => {
   return props.attribute.value
-    ? new Date(props.attribute.value).toLocaleDateString()
+    ? formatAttributeDate(props.attribute.value)
     : t('CONTACTS_LAYOUT.SIDEBAR.ATTRIBUTES.TRIGGER.INPUT');
 });
 
@@ -45,13 +55,13 @@ const hasError = computed(() => v$.value.$errors.length > 0);
 const defaultDateValue = computed({
   get() {
     const existingDate = editedValue.value ?? props.attribute.value;
-    if (existingDate) return new Date(existingDate).toISOString().slice(0, 10);
+    if (existingDate) return attributeDate(existingDate);
     return isEditingValue.value && !hasError.value
       ? new Date().toISOString().slice(0, 10)
       : '';
   },
   set(value) {
-    editedValue.value = value ? new Date(value).toISOString() : value;
+    editedValue.value = value;
   },
 });
 
@@ -59,9 +69,11 @@ const toggleEditValue = value => {
   isEditingValue.value =
     typeof value === 'boolean' ? value : !isEditingValue.value;
 
-  if (isEditingValue.value && !editedValue.value) {
+  if (isEditingValue.value) {
     v$.value.$reset();
-    editedValue.value = new Date().toISOString();
+    editedValue.value =
+      attributeDate(props.attribute.value) ||
+      new Date().toISOString().slice(0, 10);
   }
 };
 
@@ -69,7 +81,7 @@ const handleInputUpdate = async () => {
   const isValid = await v$.value.$validate();
   if (!isValid) return;
 
-  emit('update', parseISO(editedValue.value));
+  emit('update', attributeDate(editedValue.value));
   isEditingValue.value = false;
 };
 </script>

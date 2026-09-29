@@ -8,6 +8,7 @@ import { debounce } from '@chatwoot/utils';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
 
+import ContactViewSelect from 'dashboard/components-next/Relationships/ContactViewSelect.vue';
 import ContactsListLayout from 'dashboard/components-next/Contacts/ContactsListLayout.vue';
 import ContactEmptyState from 'dashboard/components-next/Contacts/EmptyState/ContactEmptyState.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -497,6 +498,7 @@ onMounted(async () => {
   <div
     class="flex flex-col justify-between flex-1 h-full m-0 overflow-auto bg-n-surface-1"
   >
+    <ContactViewSelect />
     <ContactsListLayout
       :search-value="searchValue"
       :header-title="headerTitle"

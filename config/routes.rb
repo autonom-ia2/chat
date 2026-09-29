@@ -529,6 +529,10 @@ Rails.application.routes.draw do
                   get :search
                 end
               end
+              resources :media, only: [:index, :show] do
+                collection { get :contacts }
+                member { get :preview }
+              end
               resources :conversations, only: [:index]
               resources :notes, only: [:index]
             end
@@ -600,6 +604,10 @@ Rails.application.routes.draw do
             end
           end
 
+          namespace :relationships do
+            resource :configuration, only: [:show, :update], controller: 'configurations'
+            patch ':entity/:id/values', to: 'values#update'
+          end
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resource :branded_email_layout, only: [:show, :update]

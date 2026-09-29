@@ -42,7 +42,7 @@ class Autonomia::Prospecting::ContactConverter
     ActiveRecord::Base.transaction do
       @lead.lock!
       @company ||= Autonomia::Prospecting::CompanyUpserter.new(lead: @lead).perform.company
-      contact = existing_contact || build_contact
+      contact = existing_contact&.lock! || build_contact
       created = contact.new_record?
       enrich_contact(contact)
       contact.save!

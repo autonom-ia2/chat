@@ -5,6 +5,7 @@ import camelcaseKeys from 'camelcase-keys';
 
 export const state = {
   records: [],
+  revision: 0,
   uiFlags: {
     isFetching: false,
     isCreating: false,
@@ -14,6 +15,7 @@ export const state = {
 };
 
 export const getters = {
+  getRevision: currentState => currentState.revision,
   getUIFlags(_state) {
     return _state.uiFlags;
   },
@@ -43,11 +45,13 @@ export const getters = {
 };
 
 export const actions = {
-  get: async function getAttributesByModel({ commit }) {
+  get: async function getAttributesByModel({ commit, state: currentState }) {
     commit(types.SET_CUSTOM_ATTRIBUTE_UI_FLAG, { isFetching: true });
     try {
+      const revision = currentState.revision;
       const response = await AttributeAPI.getAttributesByModel();
-      commit(types.SET_CUSTOM_ATTRIBUTE, response.data);
+      if (revision === currentState.revision)
+        commit(types.SET_CUSTOM_ATTRIBUTE, response.data);
     } catch (error) {
       // Ignore error
     } finally {
@@ -99,10 +103,22 @@ export const mutations = {
     };
   },
 
-  [types.ADD_CUSTOM_ATTRIBUTE]: MutationHelpers.create,
-  [types.SET_CUSTOM_ATTRIBUTE]: MutationHelpers.set,
-  [types.EDIT_CUSTOM_ATTRIBUTE]: MutationHelpers.update,
-  [types.DELETE_CUSTOM_ATTRIBUTE]: MutationHelpers.destroy,
+  [types.ADD_CUSTOM_ATTRIBUTE](_state, data) {
+    _state.revision += 1;
+    MutationHelpers.create(_state, data);
+  },
+  [types.SET_CUSTOM_ATTRIBUTE](_state, data) {
+    _state.revision += 1;
+    MutationHelpers.set(_state, data);
+  },
+  [types.EDIT_CUSTOM_ATTRIBUTE](_state, data) {
+    _state.revision += 1;
+    MutationHelpers.update(_state, data);
+  },
+  [types.DELETE_CUSTOM_ATTRIBUTE](_state, data) {
+    _state.revision += 1;
+    MutationHelpers.destroy(_state, data);
+  },
 };
 
 export default {

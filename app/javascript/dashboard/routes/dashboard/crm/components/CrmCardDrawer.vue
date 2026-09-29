@@ -572,20 +572,32 @@ const contactDirty = computed(
 // Send ONLY the keys the drawer manages — the server shallow-merges additional/
 // custom attributes, so every other key (incl. nested social_profiles) is preserved
 // untouched. Avoids re-writing stale values for fields we don't edit here.
-const buildContactPayload = () => ({
-  name: contactForm.name.trim(),
-  email: contactForm.email.trim(),
-  phone_number: contactForm.phoneNumber.trim(),
-  additional_attributes: {
-    company_name: contactForm.company.trim(),
-    city: contactForm.city.trim(),
-    country: contactForm.country.trim(),
-  },
-  custom_attributes: {
-    address: contactForm.address.trim(),
-    job_title: contactForm.jobTitle.trim(),
-  },
-});
+const buildContactPayload = () => {
+  const initial = JSON.parse(contactSnapshot.value);
+  const changedAttributes = Object.fromEntries(
+    [
+      ['address', 'address'],
+      ['job_title', 'jobTitle'],
+    ]
+      .filter(
+        ([, field]) => contactForm[field].trim() !== initial[field].trim()
+      )
+      .map(([key, field]) => [key, contactForm[field].trim()])
+  );
+  return {
+    name: contactForm.name.trim(),
+    email: contactForm.email.trim(),
+    phone_number: contactForm.phoneNumber.trim(),
+    additional_attributes: {
+      company_name: contactForm.company.trim(),
+      city: contactForm.city.trim(),
+      country: contactForm.country.trim(),
+    },
+    ...(Object.keys(changedAttributes).length && {
+      custom_attributes: changedAttributes,
+    }),
+  };
+};
 
 const persistContactIfChanged = async () => {
   const contact = props.card?.contact;

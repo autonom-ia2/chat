@@ -28,31 +28,33 @@ module Crm
       def apply_group(target, record, attribute_model)
         return reject_group(target, 'missing_record') if record.blank?
 
-        current = record.custom_attributes.to_h.deep_dup
-        updates = {}
+        record.with_lock do
+          current = record.custom_attributes.to_h.deep_dup
+          updates = {}
 
-        Array(@extracted_attributes[target]).each do |item|
-          normalized = normalize_item(item)
-          key = normalized[:key]
-          definition = definitions_for(attribute_model)[key]
+          Array(@extracted_attributes[target]).each do |item|
+            normalized = normalize_item(item)
+            key = normalized[:key]
+            definition = definitions_for(attribute_model)[key]
 
-          rejection = rejection_reason(normalized, definition, current.merge(updates))
-          if rejection.present?
-            reject_item(target, key, rejection)
-            next
+            rejection = rejection_reason(normalized, definition, current.merge(updates))
+            if rejection.present?
+              reject_item(target, key, rejection)
+              next
+            end
+
+            value = coerce_value(normalized[:value], definition)
+            if value == :invalid
+              reject_item(target, key, 'invalid_value')
+              next
+            end
+
+            updates[key] = value
+            track_applied(target, key, value, normalized)
           end
 
-          value = coerce_value(normalized[:value], definition)
-          if value == :invalid
-            reject_item(target, key, 'invalid_value')
-            next
-          end
-
-          updates[key] = value
-          track_applied(target, key, value, normalized)
+          record.update!(custom_attributes: current.merge(updates)) if updates.any?
         end
-
-        record.update!(custom_attributes: current.merge(updates)) if updates.any?
       end
 
       def normalize_item(item)
@@ -132,8 +134,8 @@ module Crm
       def definitions_for(attribute_model)
         @definitions_for ||= {}
         @definitions_for[attribute_model] ||= @account.custom_attribute_definitions
-                                                 .where(attribute_model: attribute_model)
-                                                 .index_by(&:attribute_key)
+                                                      .where(attribute_model: attribute_model)
+                                                      .index_by(&:attribute_key)
       end
 
       def reject_group(target, reason)
@@ -160,20 +162,22 @@ module Crm
       def persist_audit!
         return if @applied.empty?
 
-        metadata = (@card.metadata || {}).deep_dup
-        metadata['ai'] ||= {}
-        metadata['ai']['extracted_attributes'] ||= {}
-        @applied.each do |item|
-          metadata['ai']['extracted_attributes'][item[:key]] = {
-            'target' => item[:target],
-            'value' => item[:value],
-            'confidence' => item[:confidence],
-            'evidence' => item[:evidence],
-            'source' => 'ai',
-            'updated_at' => Time.current.iso8601
-          }
+        @card.with_lock do
+          metadata = (@card.metadata || {}).deep_dup
+          metadata['ai'] ||= {}
+          metadata['ai']['extracted_attributes'] ||= {}
+          @applied.each do |item|
+            metadata['ai']['extracted_attributes'][item[:key]] = {
+              'target' => item[:target],
+              'value' => item[:value],
+              'confidence' => item[:confidence],
+              'evidence' => item[:evidence],
+              'source' => 'ai',
+              'updated_at' => Time.current.iso8601
+            }
+          end
+          @card.update!(metadata: metadata)
         end
-        @card.update!(metadata: metadata)
       end
     end
   end

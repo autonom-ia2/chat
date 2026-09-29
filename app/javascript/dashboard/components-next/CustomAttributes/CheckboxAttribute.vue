@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
@@ -19,6 +19,13 @@ const emit = defineEmits(['update', 'delete']);
 
 const attributeValue = ref(Boolean(props.attribute.value));
 
+watch(
+  () => props.attribute.value,
+  value => {
+    attributeValue.value = Boolean(value);
+  }
+);
+
 const handleChange = value => {
   emit('update', value);
 };
@@ -32,7 +39,7 @@ const handleChange = value => {
       'justify-end': !isEditingView,
     }"
   >
-    <Switch v-model="attributeValue" @change="handleChange" />
+    <Switch v-model="attributeValue" @update:model-value="handleChange" />
     <Button
       v-if="isEditingView"
       variant="faded"

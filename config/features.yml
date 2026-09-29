@@ -279,3 +279,18 @@
   enabled: false
   premium: true
   column: feature_flags_ext_1
+
+- name: relationships_attributes
+  display_name: Relationships attributes
+  enabled: false
+  column: feature_flags_ext_1
+
+- name: relationships_company_media
+  display_name: Relationships company media
+  enabled: false
+  column: feature_flags_ext_1
+
+- name: relationships_navigation
+  display_name: Relationships navigation
+  enabled: false
+  column: feature_flags_ext_1

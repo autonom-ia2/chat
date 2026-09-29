@@ -37,15 +37,17 @@ class Api::V1::Accounts::CompaniesController < Api::V1::Accounts::EnterpriseAcco
   end
 
   def update
-    @company.update!(company_update_params)
+    @company.with_lock { @company.update!(company_update_params) }
   end
 
   def destroy_custom_attributes
     custom_attributes = custom_attributes_to_destroy
     return if performed?
 
-    @company.custom_attributes = @company.custom_attributes.excluding(*custom_attributes)
-    @company.save!
+    @company.with_lock do
+      @company.custom_attributes = @company.custom_attributes.excluding(*custom_attributes)
+      @company.save!
+    end
   end
 
   def destroy

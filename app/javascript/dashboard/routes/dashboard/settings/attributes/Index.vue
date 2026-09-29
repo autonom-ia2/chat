@@ -1,8 +1,11 @@
 <script setup>
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useToggle } from '@vueuse/core';
 import { useAlert } from 'dashboard/composables';
 import { picoSearch } from '@chatwoot/pico-search';
+import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import AddAttribute from './AddAttribute.vue';
 import EditAttribute from './EditAttribute.vue';
@@ -20,6 +23,8 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { t } = useI18n();
+const { attributesEnabled, load: reloadRelationships } = useRelationships();
+const relationshipEditor = ref(null);
 
 const getters = useStoreGetters();
 const store = useStore();
@@ -45,6 +50,10 @@ const hasCompaniesFeature = computed(
 );
 
 const openAddPopup = () => {
+  if (attributesEnabled.value) {
+    relationshipEditor.value.open(null, true);
+    return;
+  }
   toggleAddPopup(true);
 };
 const hideAddPopup = () => {
@@ -103,6 +112,10 @@ const onClickTabChange = tab => {
 };
 
 const handleEditAttribute = attribute => {
+  if (attributesEnabled.value) {
+    relationshipEditor.value.open(attribute);
+    return;
+  }
   selectedAttribute.value = attribute;
   toggleEditPopup(true);
 };
@@ -115,6 +128,7 @@ const handleDeleteAttribute = attribute => {
 const confirmDeleteAttribute = async () => {
   try {
     await store.dispatch('attributes/delete', selectedAttribute.value.id);
+    await reloadRelationships();
     useAlert(t('ATTRIBUTES_MGMT.DELETE.API.SUCCESS_MESSAGE'));
     closeDelete();
   } catch (error) {
@@ -185,6 +199,11 @@ const filteredAttributes = computed(() => {
     :loading-message="$t('ATTRIBUTES_MGMT.LOADING')"
   >
     <template #header>
+      <RelationshipBreadcrumb />
+      <FieldConfigurator
+        ref="relationshipEditor"
+        :entity="attributeModel.replace('_attribute', '')"
+      />
       <BaseSettingsHeader
         v-model:search-query="searchQuery"
         :title="$t('ATTRIBUTES_MGMT.HEADER')"

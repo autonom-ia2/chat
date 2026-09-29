@@ -5,7 +5,7 @@ class DataImport::ContactManager
 
   def build_contact(params)
     contact = find_or_initialize_contact(params)
-    update_contact_attributes(params, contact)
+    update_contact_attributes(params, contact) if contact.new_record?
     contact
   end
 
@@ -22,7 +22,7 @@ class DataImport::ContactManager
     contact ||= find_contact_by_email(params)
     contact ||= find_contact_by_phone_number(params)
 
-    update_contact_with_merged_attributes(params, contact) if contact.present? && contact.valid?
+    update_contact_with_merged_attributes(params, contact) if contact.present?
     contact
   end
 
@@ -49,11 +49,15 @@ class DataImport::ContactManager
   end
 
   def update_contact_with_merged_attributes(params, contact)
-    contact.identifier = params[:identifier] if params[:identifier].present?
-    contact.email = params[:email] if params[:email].present?
-    contact.phone_number = format_phone_number(params[:phone_number]) if params[:phone_number].present?
-    update_contact_attributes(params, contact)
-    contact.save
+    contact.with_lock do
+      next unless contact.valid?
+
+      contact.identifier = params[:identifier] if params[:identifier].present?
+      contact.email = params[:email] if params[:email].present?
+      contact.phone_number = format_phone_number(params[:phone_number]) if params[:phone_number].present?
+      update_contact_attributes(params, contact)
+      contact.save
+    end
   end
 
   private

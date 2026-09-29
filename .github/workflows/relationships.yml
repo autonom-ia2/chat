@@ -1,0 +1,149 @@
+name: Relationships - isolated regression and Linux runtime
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'enterprise/**'
+      - 'spec/**relationships**/**'
+      - 'tests/playwright/**'
+      - 'scripts/relationships/**'
+      - 'docker/Dockerfile'
+      - 'config/features.yml'
+      - 'config/routes.rb'
+      - 'package.json'
+      - '.github/workflows/relationships.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relationships-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+  RAILS_ENV: test
+  RACK_ENV: test
+  TZ: UTC
+  CW_EDITION: ee
+  HUSKY: '0'
+  SECRET_KEY_BASE: relationships-synthetic-ci-only-000000000000000000000000000000000000000000000000000000
+  FRONTEND_URL: http://127.0.0.1:34757
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_SHARED_CREDENTIALS_FILE: /dev/null
+  AWS_CONFIG_FILE: /dev/null
+  AWS_SDK_LOAD_CONFIG: 'false'
+  EMAIL_CAMPAIGN_ENABLED: 'false'
+  EMAIL_CAMPAIGN_HYGIENE_DNS_ENABLED: 'false'
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: synthetic-ci-only
+          POSTGRES_DB: relationships_757_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: '5432'
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: synthetic-ci-only
+      POSTGRES_DATABASE: relationships_757_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.4'
+          bundler-cache: true
+      - name: Disposable runner converter dependencies
+        run: sudo apt-get update && sudo apt-get install -y libvips42 poppler-utils ffmpeg
+      - run: pnpm install --frozen-lockfile
+      - name: No new regex AST gate
+        run: pnpm relationships:check
+      - name: Full frontend regression
+        run: pnpm test --maxWorkers=2 --minWorkers=2
+      - name: Schema on disposable local PostgreSQL
+        run: bundle exec rails db:schema:load
+      - name: Backend and legacy compatibility
+        run: >-
+          bundle exec rspec
+          spec/services/relationships spec/requests/relationships
+          spec/enterprise/services/relationships spec/enterprise/requests/relationships
+          spec/enterprise/jobs/relationships spec/models/custom_attribute_definition_spec.rb
+          spec/controllers/api/v1/accounts/contacts_controller_spec.rb
+          spec/controllers/api/v1/accounts_controller_spec.rb
+          spec/enterprise/controllers/api/v1/accounts/companies_controller_spec.rb
+          --format progress --format json --out tmp/relationships-rspec.json
+      - name: Real native converter tests
+        run: bundle exec rspec spec/relationships_unit
+      - name: Guide and help center consistency
+        run: pnpm guia:check && pnpm central:check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relationships-backend-results
+          path: tmp/relationships-rspec.json
+          if-no-files-found: ignore
+
+  production-image-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image locally in CI only - no registry or deployment
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          push: false
+          tags: relationships-runtime:ci
+          build-args: |
+            RAILS_ENV=production
+      - name: Confirm converters and bounded rendering in the exact final runtime
+        env:
+          EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p tmp
+          docker run --rm --network none --read-only --memory 1g --cpus 2 \
+            --tmpfs /tmp:rw,nosuid,size=128m \
+            -e EXPECTED_COMMIT="$EXPECTED_COMMIT" \
+            -v "$PWD/spec/assets:/qa-assets:ro" \
+            -v "$PWD/scripts/relationships/runtime_smoke.rb:/qa-smoke.rb:ro" \
+            relationships-runtime:ci ruby /qa-smoke.rb | tee tmp/relationships-runtime.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relationships-production-runtime-results
+          path: tmp/relationships-runtime.json
+          if-no-files-found: ignore

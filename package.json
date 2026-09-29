@@ -3,6 +3,8 @@
   "version": "4.18.0",
   "license": "MIT",
   "scripts": {
+    "relationships:check": "node scripts/relationships/check-no-regex.mjs",
+    "relationships:test": "pnpm relationships:check && pnpm test app/javascript/dashboard/components-next/Relationships/specs",
     "guia:build": "node scripts/guide-map/build.mjs",
     "guia:check": "node scripts/guide-map/check.mjs",
     "central:prints": "node scripts/central-de-ajuda/roteiro-prints.mjs",

@@ -1,4 +1,5 @@
 <script setup>
+import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import CompanySortMenu from './components/CompanySortMenu.vue';
@@ -17,6 +18,7 @@ const emit = defineEmits(['search', 'update:sort', 'create']);
 
 <template>
   <header class="sticky top-0 z-10 px-6">
+    <RelationshipBreadcrumb />
     <div
       class="flex items-start sm:items-center justify-between w-full py-6 gap-2 mx-auto max-w-5xl"
     >
