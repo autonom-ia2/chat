@@ -1,0 +1,80 @@
+name: Relationships - controlled production operations
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [preflight, enable, verify, disable]
+        default: preflight
+        required: true
+      tenant:
+        type: choice
+        options: [both, hub2you, autonomia]
+        default: both
+        required: true
+      expected_sha:
+        description: Exact deployed application commit, not a branch name
+        type: string
+        required: true
+      confirm_production:
+        description: Authorize the selected operation on eligible active accounts
+        type: boolean
+        default: false
+        required: true
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: relationships-production-operations
+  cancel-in-progress: false
+jobs:
+  operation:
+    if: github.ref == 'refs/heads/main' && (inputs.action == 'preflight' || inputs.confirm_production == true)
+    environment: production
+    concurrency:
+      group: deploy-${{ matrix.tenant }}-blue-green
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tenant: hub2you
+            account: '354307071110'
+          - tenant: autonomia
+            account: '140023375763'
+    steps:
+      - name: Select stack
+        id: selection
+        env:
+          CHOICE: ${{ inputs.tenant }}
+          TENANT: ${{ matrix.tenant }}
+        run: |
+          if [ "$CHOICE" = both ] || [ "$CHOICE" = "$TENANT" ]; then
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.selection.outputs.run == 'true'
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.selection.outputs.run == 'true'
+        with:
+          role-to-assume: arn:aws:iam::${{ matrix.account }}:role/chatwoot-autonomia-prod-github-actions-deploy
+          aws-region: us-east-1
+      - name: Check exact runtime, perform bounded operation and capture rollback
+        if: steps.selection.outputs.run == 'true'
+        env:
+          OP_ACTION: ${{ inputs.action }}
+          OP_TENANT: ${{ matrix.tenant }}
+          OP_ACCOUNT: ${{ matrix.account }}
+          OP_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          AWS_PAGER: ''
+        run: python3 .github/scripts/relationships_operations.py
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.selection.outputs.run == 'true'
+        with:
+          name: relationships-operations-${{ matrix.tenant }}-${{ inputs.action }}
+          path: artifacts/relationships-operations-*.json
+          if-no-files-found: warn
