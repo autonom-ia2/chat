@@ -122,6 +122,34 @@ RSpec.describe Autonomia::Sso::Provisioner do
       end
     end
 
+    context 'with a confirmed checkout account link' do
+      let!(:invited_account) { nil }
+      let!(:confirmed_account) { create(:account, name: 'Cliente confirmado') }
+      let!(:confirmed_link) do
+        Autonomia::AccountLink.create!(
+          account: confirmed_account,
+          identity_organization_id: "registration:chat2you:#{identity_user_id}",
+          metadata: {
+            'registration_checkout' => {
+              'auth_user_id' => identity_user_id,
+              'checkout_status' => 'provisioned'
+            }
+          }
+        )
+      end
+
+      it 'reuses the account without consulting the product owner organization id' do
+        provisioned_user = nil
+
+        expect do
+          provisioned_user = described_class.new(context: context).perform
+        end.not_to change(Account, :count)
+
+        expect(confirmed_link.reload.account).to eq(confirmed_account)
+        expect(AccountUser.find_by!(account: confirmed_account, user: provisioned_user).role).to eq('administrator')
+      end
+    end
+
     context 'when the account was created by the registration callback' do
       let!(:invited_account) { nil }
       let(:identity_email) { 'roberto+hub2@noktua.io' }
@@ -165,7 +193,7 @@ RSpec.describe Autonomia::Sso::Provisioner do
         }
       end
 
-      it 'reuses the registration account and repoints the fallback account link' do
+      it 'reuses the registration account without mapping the product owner organization' do
         provisioned_user = nil
 
         expect do
@@ -173,7 +201,7 @@ RSpec.describe Autonomia::Sso::Provisioner do
         end.not_to change(Account, :count)
 
         expect(AccountUser.find_by!(account: registration_account, user: provisioned_user).role).to eq('administrator')
-        expect(duplicate_account_link.reload.account).to eq(registration_account)
+        expect(duplicate_account_link.reload.account).to eq(duplicate_account)
       end
     end
   end
