@@ -47,7 +47,13 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
   describe 'GET /auth/autonomia/callback' do
     let(:code) { SecureRandom.urlsafe_base64(24) }
     let(:user) { create(:user, email: 'maria+vip@example.com') }
-    let(:token) { Autonomia::Sso::Client::Token.new(access_token: 'identity-access-token', id_token: 'identity-id-token') }
+    let(:token) do
+      Autonomia::Sso::Client::Token.new(
+        access_token: 'identity-access-token',
+        id_token: 'identity-id-token',
+        organization_id: 'customer-org'
+      )
+    end
     let(:client) { instance_double(Autonomia::Sso::Client) }
     let(:provisioner) { instance_double(Autonomia::Sso::Provisioner, perform: user, post_login_redirect_path: nil) }
 
@@ -65,7 +71,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:exchange_code!).and_return(token)
-      allow(client).to receive(:fetch_context!).with('identity-id-token').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'customer-org').and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
 
       with_modified_env sso_env do
@@ -77,7 +83,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
         redirect_uri: callback_url,
         code_verifier: be_present
       )
-      expect(client).to have_received(:fetch_context!).with('identity-id-token')
+      expect(client).to have_received(:fetch_context!).with('identity-id-token', organization_id: 'customer-org')
       expect(Autonomia::Sso::Provisioner).to have_received(:new).with(context: {}, token: token)
       redirect = URI.parse(response.location)
       params = Rack::Utils.parse_query(redirect.query)
@@ -103,7 +109,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:exchange_code!).and_return(token)
-      allow(client).to receive(:fetch_context!).with('identity-id-token').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'customer-org').and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(redirecting_provisioner)
 
       with_modified_env sso_env do
@@ -125,7 +131,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       allow(client).to receive(:exchange_code!).and_return(
         Autonomia::Sso::Client::Token.new(access_token: 'identity-access-token')
       )
-      allow(client).to receive(:fetch_context!).with('identity-access-token').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-access-token', organization_id: nil).and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
 
       with_modified_env sso_env do
