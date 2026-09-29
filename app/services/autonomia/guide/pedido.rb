@@ -22,7 +22,7 @@ class Autonomia::Guide::Pedido
   PREFIXO = 'autonomia:guide:pedido:'.freeze
   # Folga larga sobre o tempo máximo do laço (`MAX_SEGUNDOS_DE_FERRAMENTA`, 180s)
   # para a tela ainda achar a resposta se demorar a buscar.
-  VALIDADE = 10.minutes
+  VALIDADE = 30.minutes
 
   PENDENTE = 'pending'.freeze
   PRONTO = 'done'.freeze

@@ -1,5 +1,6 @@
 /* global axios */
 import ApiClient from './ApiClient';
+import { pollAiRequest } from '../helper/aiRequestPolling';
 
 class EmailCampaignAiAPI extends ApiClient {
   constructor() {
@@ -17,7 +18,9 @@ class EmailCampaignAiAPI extends ApiClient {
   }
 
   rewrite({ text, instruction }) {
-    return axios.post(`${this.url}/rewrite`, { text, instruction });
+    return pollAiRequest(
+      axios.post(`${this.url}/rewrite`, { text, instruction })
+    );
   }
 
   // Polling de fallback do estado da geração assíncrona (o caminho feliz é o ActionCable).

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
@@ -21,6 +21,8 @@ const { t, locale } = useI18n();
 const summary = ref(props.card?.ai_summary || null);
 const isLoading = ref(false);
 const error = ref('');
+let scopeSequence = 0;
+let requestSequence = 0;
 
 const cardId = computed(() => props.card?.id || null);
 const hasConversation = computed(() =>
@@ -35,10 +37,21 @@ const lastUpdated = computed(() =>
 
 const generateSummary = async () => {
   if (!cardId.value || isLoading.value) return;
+  const requestCardId = cardId.value;
+  const requestScope = scopeSequence;
+  requestSequence += 1;
+  const requestId = requestSequence;
   isLoading.value = true;
   error.value = '';
   try {
-    const response = await CrmKanbanAPI.summarizeCardConversation(cardId.value);
+    const response =
+      await CrmKanbanAPI.summarizeCardConversation(requestCardId);
+    if (
+      requestId !== requestSequence ||
+      requestScope !== scopeSequence ||
+      requestCardId !== cardId.value
+    )
+      return;
     const payload = response.data.payload || {};
     if (payload.ai_summary?.text) {
       summary.value = payload.ai_summary;
@@ -46,9 +59,14 @@ const generateSummary = async () => {
       error.value = t('CRM_KANBAN.AI_SUMMARY.ERROR');
     }
   } catch {
-    error.value = t('CRM_KANBAN.AI_SUMMARY.ERROR');
+    if (
+      requestId === requestSequence &&
+      requestScope === scopeSequence &&
+      requestCardId === cardId.value
+    )
+      error.value = t('CRM_KANBAN.AI_SUMMARY.ERROR');
   } finally {
-    isLoading.value = false;
+    if (requestId === requestSequence) isLoading.value = false;
   }
 };
 
@@ -58,6 +76,9 @@ const generateSummary = async () => {
 watch(
   () => [cardId.value, props.detailLoaded, props.card?.ai_summary],
   () => {
+    scopeSequence += 1;
+    requestSequence += 1;
+    isLoading.value = false;
     summary.value = props.card?.ai_summary || null;
     error.value = '';
     if (
@@ -72,8 +93,14 @@ watch(
   },
   { immediate: true }
 );
+
+onBeforeUnmount(() => {
+  scopeSequence += 1;
+  requestSequence += 1;
+});
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <section
     v-if="aiEnabled && hasConversation"

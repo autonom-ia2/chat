@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { OnClickOutside } from '@vueuse/components';
 import { useAlert } from 'dashboard/composables';
@@ -19,6 +19,7 @@ const { selectedComponent, getSelectedText, setSelectedText } =
 
 const isMenuOpen = ref(false);
 const isRewriting = ref(false);
+let rewriteRequestId = 0;
 
 const INSTRUCTIONS = {
   rewrite: 'Reescreva o texto mantendo o sentido e o tom.',
@@ -64,19 +65,43 @@ const handleAction = async ({ action }) => {
     return;
   }
 
+  rewriteRequestId += 1;
+  const requestId = rewriteRequestId;
+  const requestComponent = selectedComponent.value;
   isRewriting.value = true;
   try {
     const { data } = await EmailCampaignAiAPI.rewrite({
       text,
       instruction: INSTRUCTIONS[action],
     });
+    if (
+      requestId !== rewriteRequestId ||
+      requestComponent !== selectedComponent.value ||
+      text !== getSelectedText().trim()
+    )
+      return;
     setSelectedText(data.text);
   } catch (error) {
+    if (
+      requestId !== rewriteRequestId ||
+      requestComponent !== selectedComponent.value ||
+      text !== getSelectedText().trim()
+    )
+      return;
     useAlert(humanizeError(error));
   } finally {
-    isRewriting.value = false;
+    if (requestId === rewriteRequestId) isRewriting.value = false;
   }
 };
+
+watch(selectedComponent, () => {
+  rewriteRequestId += 1;
+  isRewriting.value = false;
+});
+
+onBeforeUnmount(() => {
+  rewriteRequestId += 1;
+});
 </script>
 
 <template>

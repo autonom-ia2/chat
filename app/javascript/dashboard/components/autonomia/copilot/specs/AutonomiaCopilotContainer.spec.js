@@ -1,14 +1,17 @@
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaCopilotAPI from 'dashboard/api/autonomiaCopilot';
 import { useAutonomiaCopilotStore } from 'dashboard/store/modules/autonomiaCopilot';
 import AutonomiaCopilotContainer from '../AutonomiaCopilotContainer.vue';
 
+const currentAccountId = ref(1);
+const uiSettings = ref({ is_autonomia_copilot_panel_open: true });
+
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
-    uiSettings: ref({ is_autonomia_copilot_panel_open: true }),
+    uiSettings,
     updateUISettings: vi.fn(),
   }),
 }));
@@ -18,6 +21,7 @@ vi.mock('dashboard/composables/store', () => ({
       return ref({ crmKanbanEnabled: true, crmCopilotEnabled: true });
     }
     if (getter === 'getSelectedChat') return ref({ id: 42 });
+    if (getter === 'getCurrentAccountId') return currentAccountId;
     return ref(null);
   },
 }));
@@ -47,6 +51,8 @@ describe('AutonomiaCopilotContainer', () => {
   let wrapper;
 
   beforeEach(() => {
+    currentAccountId.value = 1;
+    uiSettings.value = { is_autonomia_copilot_panel_open: true };
     AutonomiaCopilotAPI.listAgents.mockResolvedValue({
       data: { agents: [{ id: 7, name: 'Lia' }] },
     });
@@ -91,5 +97,69 @@ describe('AutonomiaCopilotContainer', () => {
 
     expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledOnce();
     expect(textarea.element.value).toBe('Segunda');
+  });
+
+  it('ignores a reply that settles after the panel unmounts', async () => {
+    let resolveChat;
+    AutonomiaCopilotAPI.chat.mockReturnValue(
+      new Promise(resolve => {
+        resolveChat = resolve;
+      })
+    );
+    wrapper = await mountCopilot();
+    await send(wrapper.find('textarea'), 'Resuma a conversa');
+
+    wrapper.unmount();
+    resolveChat({ data: { available: true, text: 'Resposta tardia.' } });
+    await flushPromises();
+
+    expect(useAutonomiaCopilotStore().messages).toHaveLength(1);
+  });
+
+  it('ignores an agent list that settles after the account changes', async () => {
+    let resolveAccountA;
+    AutonomiaCopilotAPI.listAgents
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveAccountA = resolve;
+        })
+      )
+      .mockResolvedValueOnce({
+        data: { agents: [{ id: 8, name: 'Bia' }] },
+      });
+
+    wrapper = await mountCopilot();
+    currentAccountId.value = 2;
+    await nextTick();
+    await flushPromises();
+
+    resolveAccountA({ data: { agents: [{ id: 7, name: 'Lia' }] } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Bia');
+    expect(wrapper.text()).not.toContain('Lia');
+  });
+
+  it('keeps a reply alive when the panel is closed and reopened', async () => {
+    let resolveChat;
+    AutonomiaCopilotAPI.chat.mockReturnValue(
+      new Promise(resolve => {
+        resolveChat = resolve;
+      })
+    );
+    wrapper = await mountCopilot();
+    await send(wrapper.find('textarea'), 'Resuma a conversa');
+
+    uiSettings.value = { is_autonomia_copilot_panel_open: false };
+    await nextTick();
+    uiSettings.value = { is_autonomia_copilot_panel_open: true };
+    await nextTick();
+    await flushPromises();
+
+    resolveChat({ data: { available: true, text: 'Resumo.' } });
+    await flushPromises();
+
+    expect(useAutonomiaCopilotStore().messages).toHaveLength(2);
+    expect(wrapper.text()).not.toContain('CAPTAIN.COPILOT.LOADER');
   });
 });

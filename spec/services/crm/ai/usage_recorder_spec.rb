@@ -29,13 +29,13 @@ RSpec.describe Crm::Ai::UsageRecorder do
       )
     end
 
-    it 'persists cache write tokens reported by the 5.6 API and prices them at their own rate' do
+    it 'persists cache write tokens reported by the GPT-6 API and prices them at their own rate' do
       account, = create_account_and_user
 
       described_class.record(
         account: account,
         feature: 'agente_resposta',
-        model: 'gpt-5.6-luna',
+        model: 'gpt-6-luna',
         usage: {
           'input_tokens' => 4176,
           'output_tokens' => 5,
@@ -45,8 +45,8 @@ RSpec.describe Crm::Ai::UsageRecorder do
 
       event = Crm::AiUsageEvent.last
       expect(event).to have_attributes(input_tokens: 4176, cached_tokens: 0, cache_write_tokens: 4173, output_tokens: 5)
-      # (3*1.0 + 4173*1.25 + 5*6.0) / 1_000_000
-      expect(event.cost_estimate.to_f).to be_within(1e-6).of(0.00524925)
+      # (3*0.1 + 4173*0.125 + 5*0.5) / 1_000_000
+      expect(event.cost_estimate.to_f).to be_within(1e-6).of(0.000524425)
     end
 
     it 'defaults cache write tokens to zero when the model does not report them' do

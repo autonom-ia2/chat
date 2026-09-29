@@ -17,6 +17,7 @@ module RestrictIntegrationTokenToCrm
   # reports live outside /crm/ — integration tokens only ever reach CRM
   # controllers, and report access is gated on its own scope (B-T1).
   CRM_SCOPE_MAP = {
+    'api/v1/accounts/ai_requests' => { 'show' => 'crm_manage_ai' },
     'api/v1/accounts/crm/cards' => {
       'index' => 'crm_view', 'show' => 'crm_view', 'by_conversation' => 'crm_view',
       'card_stages' => 'crm_view', 'current_ai_suggestion' => 'crm_view',

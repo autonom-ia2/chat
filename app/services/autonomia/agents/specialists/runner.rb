@@ -41,7 +41,7 @@ class Autonomia::Agents::Specialists::Runner
   # (a faixa, chat#615), e o mesmo pedido com outro nome também é recusado. Bens diferentes cotam em paralelo, de
   # propósito. Roda no ReplyJob, fora de requisição web.
   RODADAS_DE_FERRAMENTA = 6
-  SEGUNDOS_POR_CHAMADA = 120
+  SEGUNDOS_POR_CHAMADA = Crm::Ai::ResponsesClient::REQUEST_TIMEOUT
   SEGUNDOS_DE_FERRAMENTA = RODADAS_DE_FERRAMENTA * SEGUNDOS_POR_CHAMADA
   FEATURE = 'agente_especialista'.freeze
   INDISPONIVEL = 'Especialista indisponível no momento.'.freeze

@@ -2,6 +2,7 @@ require 'net/http'
 
 class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseController
   include Crm::IdempotentRequests
+  include DeferInteractiveAi
 
   before_action :ensure_calendar_meetings_enabled
   before_action :fetch_meeting, only: [:show, :sync, :update, :destroy, :record_outcome, :summarize]
@@ -111,16 +112,10 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def suggest_times
     authorize card, :update?
 
-    suggestions = Crm::Ai::SuggestMeetingTimeService.new(
-      card: card,
-      inbox: inbox,
-      date: params[:date],
-      duration_minutes: params[:duration_minutes],
-      timezone: params[:timezone],
-      agent: Current.user
-    ).perform
-
-    render json: { suggestions: suggestions, ai_available: ai_credential_present? }, status: :ok
+    defer_interactive_ai('meeting_times', {
+                           card_id: card.id, inbox_id: inbox.id, date: params[:date],
+                           duration_minutes: params[:duration_minutes], timezone: params[:timezone]
+                         })
   end
 
   # AI: draft the meeting description/agenda from the deal context. Collection
@@ -128,9 +123,7 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def draft_invite
     authorize card, :update?
 
-    result = Crm::Ai::DraftInviteService.new(card: card, title: params[:title]).perform
-
-    render json: result, status: :ok
+    defer_interactive_ai('meeting_invite', { card_id: card.id, title: params[:title] })
   end
 
   # AI: summarize a HELD meeting's outcome notes into a recap + next steps, stored
@@ -138,16 +131,10 @@ class Api::V1::Accounts::Crm::MeetingsController < Api::V1::Accounts::Crm::BaseC
   def summarize
     authorize @meeting.card, :update?
 
-    result = Crm::Ai::MeetingSummaryService.new(meeting: @meeting).perform
-
-    render json: result, status: :ok
+    defer_interactive_ai('meeting_summary', { meeting_id: @meeting.id })
   end
 
   private
-
-  def ai_credential_present?
-    Crm::Ai::Config.enabled? && Crm::Ai::CredentialResolver.new(account: Current.account).configured?
-  end
 
   def outcome_params
     parameter_set(:meeting).permit(:outcome, :notes).to_h.with_indifferent_access

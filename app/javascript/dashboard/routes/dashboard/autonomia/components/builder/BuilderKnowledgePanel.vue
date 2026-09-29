@@ -37,6 +37,8 @@ const hasMediaKind = useMapGetter('autonomiaSources/hasMediaKind');
 // que não passa pelo Revisor, não deve manter o poll rodando até o cap).
 const allReviewed = useMapGetter('autonomiaSources/getKnowledgeReviewed');
 const uiFlags = useMapGetter('autonomiaSources/getUIFlags');
+const CONFIDENCE_POLL_INTERVAL_MS = 3000;
+const CONFIDENCE_POLL_MAX_ATTEMPTS = 600; // ~30 minutes ceiling
 
 // Live base confidence (0..1) recomputed by the Revisor after each review. The
 // draft agent carries it in config.knowledge_confidence; we read it off the
@@ -228,8 +230,11 @@ const pollConfidence = async (attempt = 0) => {
   }
   const settled = confidence.value != null && allReviewed.value;
   confidenceTimer =
-    !settled && attempt < 8
-      ? setTimeout(() => pollConfidence(attempt + 1), 3000)
+    !settled && attempt < CONFIDENCE_POLL_MAX_ATTEMPTS
+      ? setTimeout(
+          () => pollConfidence(attempt + 1),
+          CONFIDENCE_POLL_INTERVAL_MS
+        )
       : null;
 };
 
