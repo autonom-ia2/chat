@@ -43,9 +43,12 @@ it('loads only visible rows, polls beyond converter timeout and stops when leavi
 it('keeps a permanently unavailable preview on the file fallback without retry', async () => {
   axios.get.mockResolvedValue({
     status: 200,
-    data: new Blob([JSON.stringify({ status: 'unavailable' })], {
+    data: {
       type: 'application/json; charset=utf-8',
-    }),
+      text: vi
+        .fn()
+        .mockResolvedValue(JSON.stringify({ status: 'unavailable' })),
+    },
   });
   const wrapper = mount(MediaThumbnail, {
     props: { url: '/preview/1', name: 'audio.mp3', type: 'audio' },
