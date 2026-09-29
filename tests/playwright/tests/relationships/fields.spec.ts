@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { session, openContact } from './helpers';
 
 const required = (key: string) => {
   const value = process.env[key];
@@ -7,12 +8,11 @@ const required = (key: string) => {
   return value;
 };
 
-test('creates through the actual modal, saves a field explicitly, and survives reload', async ({
+test('logs in through the actual UI and reaches the contact without changing authentication', async ({
   page,
 }) => {
   const account = required('RELATIONSHIPS_TEST_ACCOUNT_ID');
   const contact = required('RELATIONSHIPS_TEST_CONTACT_ID');
-  const name = `Teste relacionamento ${Date.now()}`;
   await page.route('**/*', route => {
     const url = new URL(route.request().url());
     return ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) ||
@@ -31,7 +31,21 @@ test('creates through the actual modal, saves a field explicitly, and survives r
   await page.waitForURL(url => url.pathname.startsWith('/app/accounts/'), {
     waitUntil: 'domcontentloaded',
   });
-  await page.goto(`/app/accounts/${account}/contacts/${contact}`);
+  await openContact(page, account, contact);
+  await expect(
+    page.getByRole('button', { name: 'Configurar campos', exact: true })
+  ).toBeVisible();
+});
+
+test('creates through the actual modal, saves a field explicitly, and survives reload', async ({
+  page,
+  request,
+}) => {
+  const account = required('RELATIONSHIPS_TEST_ACCOUNT_ID');
+  const contact = required('RELATIONSHIPS_TEST_CONTACT_ID');
+  const name = `Teste relacionamento ${Date.now()}`;
+  await session(page, request);
+  await openContact(page, account, contact);
   await page
     .getByRole('button', { name: 'Configurar campos', exact: true })
     .click();
@@ -72,16 +86,21 @@ test('creates through the actual modal, saves a field explicitly, and survives r
     .click();
   expect((await valueResponse).ok()).toBeTruthy();
   await expect(field.getByRole('status')).toHaveText('Salvo');
+  const reloadedConfiguration = page.waitForResponse(
+    response =>
+      new URL(response.url()).pathname ===
+        `/api/v1/accounts/${account}/relationships/configuration` &&
+      response.request().method() === 'GET'
+  );
+  const reloadedContact = page.waitForResponse(
+    response =>
+      new URL(response.url()).pathname ===
+        `/api/v1/accounts/${account}/contacts/${contact}` &&
+      response.request().method() === 'GET'
+  );
   await page.reload();
+  expect((await reloadedContact).ok()).toBeTruthy();
+  expect((await reloadedConfiguration).ok()).toBeTruthy();
   await expect(fieldsSection.getByText(name, { exact: true })).toBeVisible();
   await expect(page.getByText('CEO', { exact: true }).first()).toBeVisible();
-  await page.screenshot({
-    path: '../../.codex/relationships/contact-desktop.png',
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: '../../.codex/relationships/contact-mobile.png',
-    fullPage: true,
-  });
 });

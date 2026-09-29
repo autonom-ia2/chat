@@ -17,6 +17,7 @@ renderer = Relationships::PreviewRenderer.new
 results = []
 check = lambda do |name, &assertion|
   start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+  warn "RUNTIME_CHECK #{name}"
   assertion.call
   results << { name: name, passed: true, seconds: (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start).round(3) }
 end
@@ -31,7 +32,18 @@ begin
       input = "/qa-assets/sample.#{extension}"
       original_digest = Digest::SHA256.file(input).hexdigest
       output = File.join(directory, "#{extension}.jpg")
-      ensure_true.call(renderer.render(type, input, output), "#{type} did not render")
+      rendered = renderer.render(type, input, output)
+      unless rendered
+        command = renderer.send(:command_for, type, input, output)
+        warn "CONVERTER_DIAGNOSTIC #{type}"
+        # Synthetic CI fixtures only. Preserve the same resource limits while surfacing stderr.
+        limits = { rlimit_cpu: 10, rlimit_fsize: Relationships::PreviewRenderer::MAX_OUTPUT,
+                   rlimit_nofile: 64, rlimit_as: Relationships::PreviewRenderer::MAX_MEMORY }
+        pid = Process.spawn({ 'VIPS_CONCURRENCY' => '1', 'VIPS_BLOCK_UNTRUSTED' => '1', 'OMP_NUM_THREADS' => '1' },
+                            *command, out: File::NULL, err: STDERR, **limits)
+        Timeout.timeout(Relationships::PreviewRenderer::TIMEOUT) { Process.wait(pid) }
+      end
+      ensure_true.call(rendered, "#{type} did not render")
       image = Vips::Image.jpegload(output)
       ensure_true.call(image.width <= 320 && image.height <= 320, 'preview dimensions exceeded')
       ensure_true.call(File.size(output) <= Relationships::PreviewRenderer::MAX_OUTPUT, 'preview size exceeded')

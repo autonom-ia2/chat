@@ -4,9 +4,7 @@ import { createRequire } from 'node:module';
 import { extname } from 'node:path';
 
 const require = createRequire(import.meta.url);
-const babel = createRequire(require.resolve('@vitejs/plugin-vue'))(
-  '@babel/parser'
-);
+const babel = require('@babel/parser');
 const vue = createRequire(require.resolve('eslint-plugin-vue'))(
   'vue-eslint-parser'
 );
@@ -15,10 +13,26 @@ const git = args =>
   execFileSync('git', args, {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'ignore'],
+    maxBuffer: 16 * 1024 * 1024,
   });
 const names = new Set([
   ...git(['diff', '--name-only', '-z', BASE]).split('\0'),
-  ...git(['ls-files', '--others', '--exclude-standard', '-z']).split('\0'),
+  // Dependencies installed by CI are not authored source. Exclude them at Git's
+  // boundary, before materializing its output; tracked changes remain checked above.
+  ...git([
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '-z',
+    '--',
+    '.',
+    ':(exclude)vendor/bundle/**',
+    ':(exclude)node_modules/**',
+    ':(exclude)tests/playwright/node_modules/**',
+    ':(exclude).codex/**',
+    ':(exclude)tmp/**',
+    ':(exclude)log/**',
+  ]).split('\0'),
 ]);
 const files = [...names].filter(
   file =>

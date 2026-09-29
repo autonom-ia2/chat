@@ -132,9 +132,22 @@ test('global sidebar configuration stays inside the actual accordion and an empt
   await configure(api, f.account_id, {
     contact_sidebar: { mode: 'custom', ids: [f.definitions.job_title] },
   });
+  const inboxes = page.waitForResponse(
+    response =>
+      new URL(response.url()).pathname ===
+        `/api/v1/accounts/${f.account_id}/inboxes` &&
+      response.request().method() === 'GET'
+  );
   await page.goto(
     `/app/accounts/${f.account_id}/conversations/${f.conversation_id}`
   );
+  expect((await inboxes).ok()).toBeTruthy();
+  await expect(
+    page.getByRole('heading', {
+      name: 'Carregando caixas de entrada',
+      exact: true,
+    })
+  ).not.toBeVisible();
   const panel = page.locator('.conversation--details').filter({
     has: page.getByRole('button', { name: 'Configurar campos', exact: true }),
   });

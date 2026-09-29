@@ -62,6 +62,7 @@ it('uses the real shared dialog, requires description, and saves definition and 
   const wrapper = await mountEditor();
   await click(wrapper, 'RELATIONSHIPS.CREATE');
   await wrapper.find('input[type="text"]').setValue('Cargo');
+  expect(wrapper.text()).not.toContain('RELATIONSHIPS.KEY');
   expect(
     wrapper.find('button[type="submit"]').attributes('disabled')
   ).toBeDefined();

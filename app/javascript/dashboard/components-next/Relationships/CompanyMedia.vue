@@ -313,9 +313,9 @@ onBeforeUnmount(() => {
         <div class="min-w-0">
           <p class="text-sm break-all">{{ row.filename }}</p>
           <p class="text-xs text-n-slate-11">
-            {{ row.content_type }} ·
             {{
-              t('RELATIONSHIPS.MEDIA.BYTES', {
+              t('RELATIONSHIPS.MEDIA.FILE_METADATA', {
+                type: row.content_type,
                 size: row.byte_size.toLocaleString(),
               })
             }}
@@ -360,8 +360,9 @@ onBeforeUnmount(() => {
         :disabled="filters.page <= 1 || loading"
         :label="t('RELATIONSHIPS.BACK')"
         @click="changePage(-1)"
-      /><span>{{ filters.page }}</span
-      ><Button
+      />
+      <span>{{ filters.page }}</span>
+      <Button
         xs
         faded
         :disabled="filters.page * 25 >= total || loading"

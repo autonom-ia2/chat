@@ -265,15 +265,16 @@ defineExpose({ open });
         />
         <p v-if="error" role="alert" class="text-n-ruby-11">{{ error }}</p>
         <p class="text-sm">
-          {{ t('RELATIONSHIPS.ENTITY') }}:
           {{
-            t(
-              activeEntity === 'company'
-                ? 'RELATIONSHIPS.COMPANIES'
-                : activeEntity === 'contact'
-                  ? 'RELATIONSHIPS.CONTACTS'
-                  : 'ATTRIBUTES_MGMT.TABS.CONVERSATION'
-            )
+            t('RELATIONSHIPS.ENTITY_VALUE', {
+              name: t(
+                activeEntity === 'company'
+                  ? 'RELATIONSHIPS.COMPANIES'
+                  : activeEntity === 'contact'
+                    ? 'RELATIONSHIPS.CONTACTS'
+                    : 'ATTRIBUTES_MGMT.TABS.CONVERSATION'
+              ),
+            })
           }}
         </p>
         <template v-if="draft">
@@ -295,9 +296,6 @@ defineExpose({ open });
               :required="!draft.id"
             />
           </label>
-          <p class="text-sm text-n-slate-11">
-            {{ t('RELATIONSHIPS.KEY') }}: {{ key }}
-          </p>
           <ChoiceSelect
             v-model="draft.attribute_display_type"
             :options="types"
@@ -409,4 +407,5 @@ defineExpose({ open });
       </div>
     </Dialog>
   </div>
+  <template v-else />
 </template>

@@ -26,4 +26,5 @@ const { mediaEnabled, accountId } = useRelationships();
     </h1>
     <CompanyMedia :company-id="Number(route.params.companyId)" expanded />
   </main>
+  <template v-else />
 </template>

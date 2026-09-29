@@ -37,4 +37,5 @@ const fields = computed(() =>
       :entity="entity"
     />
   </section>
+  <template v-else />
 </template>

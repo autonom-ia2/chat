@@ -62,4 +62,5 @@ const change = value => {
       @update:model-value="change"
     />
   </div>
+  <template v-else />
 </template>

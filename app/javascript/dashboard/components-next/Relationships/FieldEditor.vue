@@ -320,8 +320,9 @@ onBeforeUnmount(() => {
           target="_blank"
           rel="noopener noreferrer"
           class="break-all underline"
-          >{{ value }}</a
         >
+          {{ value }}
+        </a>
         <span v-else class="break-all">{{
           value === undefined || value === null || value === ''
             ? t('RELATIONSHIPS.EMPTY')

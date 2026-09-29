@@ -82,3 +82,30 @@ export const fieldsSection = (page: Page) =>
   });
 export const fieldByName = (page: Page, name: string) =>
   fieldsSection(page).getByRole('group', { name, exact: true });
+
+// Wait for the actual authenticated data boundary, then assert the rendered controls.
+// This avoids timing assertions against the application's initial loading screen.
+export async function openContact(
+  page: Page,
+  account: number | string,
+  contact: number | string
+) {
+  const configuration = page.waitForResponse(
+    response =>
+      new URL(response.url()).pathname ===
+        `/api/v1/accounts/${account}/relationships/configuration` &&
+      response.request().method() === 'GET'
+  );
+  const record = page.waitForResponse(
+    response =>
+      new URL(response.url()).pathname ===
+        `/api/v1/accounts/${account}/contacts/${contact}` &&
+      response.request().method() === 'GET'
+  );
+  await page.goto(`/app/accounts/${account}/contacts/${contact}`);
+  expect((await record).ok()).toBeTruthy();
+  expect((await configuration).ok()).toBeTruthy();
+  await expect(
+    page.getByRole('button', { name: 'Atualizar contato', exact: true })
+  ).toBeVisible();
+}

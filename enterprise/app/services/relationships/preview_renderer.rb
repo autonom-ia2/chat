@@ -10,7 +10,7 @@ class Relationships::PreviewRenderer
   IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
   IMAGE_LOADERS = { 'image/jpeg' => 'jpegload', 'image/png' => 'pngload', 'image/webp' => 'webpload' }.freeze
   VIDEO_FORMATS = { 'video/mp4' => 'mov', 'video/quicktime' => 'mov', 'video/webm' => 'matroska', 'video/x-matroska' => 'matroska' }.freeze
-  IMAGE_SCRIPT = ['require "vips"', 'Vips.cache_set_max_mem(33554432)',
+  IMAGE_SCRIPT = ['require "bundler/setup"', 'require "vips"', 'Vips.cache_set_max_mem(33554432)',
                   'Vips::Image.public_send(ARGV[2], ARGV[0], access: :sequential)' \
                   '.thumbnail_image(320, height: 240, size: :down).write_to_file(ARGV[1], strip: true)'].join('; ').freeze
 

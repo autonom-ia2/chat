@@ -53,3 +53,21 @@ escritores internos tocados usam atualização/merge sob lock sem substituir val
   antes do smoke. A preparação agora libera SDKs não usados exclusivamente no runner hospedado
   descartável; não altera máquina do desenvolvedor, aplicação ou servidor compartilhado.
   O gate de runtime permanece pendente até concluir a nova execução.
+
+## Retomada — gates de CI e navegador
+
+- Rodada local `resume-browser-suite.log`: **14/14 fluxos de navegador com backend real**;
+  login pela interface foi separado do teste de criação para dar a cada fluxo o mesmo limite
+  original de 30 segundos. Nenhum timeout ou asserção de persistência foi afrouxado.
+  As verificações aguardam as respostas autenticadas de contato/configuração antes da UI.
+- Conversores nativos locais: **16/16** após bootstrap explícito do bundle no subprocesso
+  de imagens. O smoke da imagem Alpine falhava no PNG; a correção e o diagnóstico limitado
+  do runner ainda precisam ser comprovados pelo próximo CI.
+- Gate estrito já existente de e-mail foi executado sobre todos os JS/Vue/MJS alterados:
+  **zero bloqueios**, somente avisos permitidos de chaves dinâmicas. Não foi modificada sua regra.
+- Gate AST exclui dependências não versionadas instaladas pelo runner na origem da listagem,
+  mas continua examinando todo arquivo de fonte alterado/versionado. Não admite regex nova.
+- A janela contextual mantém nome e descrição sem exibir a chave técnica; geração automática
+  e preservação de `job_title` continuam testadas no payload.
+- PR de revisão: **#760**, ainda rascunho. As execuções anteriores com falhas não representam
+  release aprovado. Nenhum merge/deploy foi executado. Project retornou404 nesta retomada.

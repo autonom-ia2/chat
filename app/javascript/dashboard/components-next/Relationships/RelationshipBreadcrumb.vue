@@ -11,4 +11,5 @@ const { navigationEnabled, accountId } = useRelationships();
   >
     {{ $t('RELATIONSHIPS.TITLE') }}
   </RouterLink>
+  <template v-else />
 </template>

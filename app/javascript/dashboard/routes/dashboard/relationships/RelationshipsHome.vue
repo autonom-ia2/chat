@@ -64,4 +64,5 @@ const cards = computed(() =>
       </Policy>
     </div>
   </main>
+  <template v-else />
 </template>

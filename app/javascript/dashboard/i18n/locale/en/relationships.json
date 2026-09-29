@@ -20,7 +20,6 @@
     "CONFLICT": "Someone else changed these records. Reload and review before saving again.",
     "NAME": "Name",
     "DESCRIPTION": "Description",
-    "KEY": "Key (read only)",
     "TYPE": "Type",
     "ENTITY": "Entity",
     "OPTIONS": "Options (one per line)",
@@ -75,10 +74,12 @@
       "ALL_CONTACTS": "All contacts",
       "SIZE": "Size",
       "SCOPE": "Stored files from authorized conversations, including notes. External attachments remain in the original conversation.",
-      "BYTES": "{size} B"
+      "BYTES": "{size} B",
+      "FILE_METADATA": "{type} · {size} B"
     },
     "LOAD_ERROR": "Unable to load configuration. Please try again.",
     "LOCATION": "Display location",
-    "COPY": "Copy"
+    "COPY": "Copy",
+    "ENTITY_VALUE": "Entity: {name}"
   }
 }
