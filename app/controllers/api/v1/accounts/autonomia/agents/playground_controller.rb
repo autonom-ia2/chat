@@ -1,26 +1,26 @@
 class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Accounts::Autonomia::BaseController
   # Herda BaseController: gate de feature flag (404 com flag off) + check_autonomia_permission +
   # agents_scope (isolamento por conta). Sandbox puro: nada é persistido, não há conversa/inbox real.
+  include DeferInteractiveAi
+
   before_action :fetch_agent
 
   # POST .../agents/:id/test -> Playground (Testar)
-  # MULTIMODAL: aceita `images` (array de data-urls) anexadas à mensagem atual. Síncrono e volátil — as
+  # MULTIMODAL: aceita `images` (array de data-urls) anexadas à mensagem atual. Temporário — as
   # imagens chegam inline em base64 (sem ActiveStorage); o modelo as lê como input_image neste turno.
   def test
     return render_unprocessable('message_required') if message_param.blank?
 
-    @result = Autonomia::Agents::Playground.new(
-      agent: @agent, message: message_param, history: history_param, images: images_param
-    ).run
-    render :test
+    defer_interactive_ai('agent_test', {
+                           agent_id: @agent.id, message: message_param, history: history_param, images: images_param
+                         })
   end
 
   # POST .../agents/:id/suggest -> Copilot (rascunho ao atendente; sempre devolve reply)
   def suggest
     return render_unprocessable('message_required') if message_param.blank?
 
-    @result = Autonomia::Agents::Copilot.new(agent: @agent, message: message_param, history: history_param).suggest
-    render :suggest
+    defer_interactive_ai('agent_suggest', { agent_id: @agent.id, message: message_param, history: history_param })
   end
 
   private
@@ -32,6 +32,7 @@ class Api::V1::Accounts::Autonomia::Agents::PlaygroundController < Api::V1::Acco
 
   def fetch_agent
     @agent = agents_scope.find(params[:id])
+    @agent.instrucao_do_sistema # Preserva o 422 de configuração incompleta antes de enfileirar.
   end
 
   def message_param

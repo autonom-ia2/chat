@@ -3,19 +3,16 @@
 # Autonomia::BaseController. Gated by the KANBAN key ("kanban on => copilot") plus an
 # ENV kill-switch, so it stays inert until the customer has the kanban feature.
 class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Accounts::BaseController
+  include DeferInteractiveAi
+
   before_action :ensure_copilot_enabled
   before_action :set_conversation
 
   def create
-    result = ::Autonomia::Copilot::ConversationCopilot.new(
-      conversation: @conversation,
-      task: params[:task],
-      draft: params[:draft],
-      tone: params[:tone],
-      instruction: params[:instruction]
-    ).perform
-
-    render json: { text: result.text, grounded: result.grounded, available: result.available }
+    defer_interactive_ai('copilot_run', {
+                           conversation_id: @conversation.id, task: params[:task], draft: params[:draft],
+                           tone: params[:tone], instruction: params[:instruction]
+                         })
   end
 
   # V2.3 — INTERNAL/BOTH agents of the account, usable as team copilots in the chat widget.
@@ -40,19 +37,10 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   # V2.3 — chat turn against the selected internal/both agent, grounded on its knowledge with the
   # live conversation transcript fed as untrusted context. Best-effort: never 500s.
   def chat
-    result = ::Autonomia::Copilot::ConversationChat.new(
-      conversation: @conversation,
-      agent_id: params[:agent_id],
-      message: params[:message],
-      history: params[:history]
-    ).perform
-
-    render json: {
-      text: result.text,
-      grounded: result.grounded,
-      available: result.available,
-      reply_suggestion: result.reply_suggestion
-    }
+    defer_interactive_ai('copilot_chat', {
+                           conversation_id: @conversation.id, agent_id: params[:agent_id],
+                           message: params[:message], history: params.permit(history: [:role, :content])[:history] || []
+                         })
   end
 
   private

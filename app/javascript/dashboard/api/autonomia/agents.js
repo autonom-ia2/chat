@@ -1,5 +1,6 @@
 /* global axios */
 import ApiClient from '../ApiClient';
+import { pollAiRequest } from '../../helper/aiRequestPolling';
 
 class AutonomiaAgentsAPI extends ApiClient {
   constructor() {
@@ -11,11 +12,13 @@ class AutonomiaAgentsAPI extends ApiClient {
   // `images` (optional) are base64 data-urls read inline by the model in this
   // turn only (multimodal). Empty/absent → identical to the text-only request.
   test(agentId, { message, history, images = [] }) {
-    return axios.post(`${this.url}/${agentId}/test`, {
-      message,
-      history,
-      images,
-    });
+    return pollAiRequest(
+      axios.post(`${this.url}/${agentId}/test`, {
+        message,
+        history,
+        images,
+      })
+    );
   }
 
   updateAvatar(agentId, avatar) {
@@ -31,7 +34,9 @@ class AutonomiaAgentsAPI extends ApiClient {
   }
 
   suggest(agentId, { message, history }) {
-    return axios.post(`${this.url}/${agentId}/suggest`, { message, history });
+    return pollAiRequest(
+      axios.post(`${this.url}/${agentId}/suggest`, { message, history })
+    );
   }
 
   analytics(agentId, { range = '7d' } = {}) {

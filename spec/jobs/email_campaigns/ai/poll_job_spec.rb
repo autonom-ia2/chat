@@ -23,13 +23,14 @@ RSpec.describe EmailCampaigns::Ai::PollJob do
 
   it 'prices an in-flight old generation using its actual model after the default changes' do
     expect(Crm::Ai::Config::MODEL_EMAIL).to eq('gpt-6-sol')
+    expect(EmailCampaigns::Ai::Broadcaster).to receive(:ready).with(campaign).ordered
+    expect(client).to receive(:delete).with('resp_old').ordered
 
     expect { described_class.perform_now(123, 'generation', 'resp_old', 0) }.to change(Crm::AiUsageEvent, :count).by(1)
 
     event = Crm::AiUsageEvent.last
     expect(event.model).to eq('gpt-5.6-sol')
     expect(event.cost_estimate.to_f).to be_within(1e-9).of(0.006)
-    expect(client).to have_received(:delete).with('resp_old').once
   end
 
   it 'does not charge twice when another polling job already persisted the generation' do
@@ -37,5 +38,15 @@ RSpec.describe EmailCampaigns::Ai::PollJob do
 
     expect { described_class.perform_now(123, 'generation', 'resp_old', 0) }.not_to change(Crm::AiUsageEvent, :count)
     expect(EmailCampaigns::Ai::Broadcaster).not_to have_received(:ready)
+  end
+
+  it 'broadcasts a won failure before deleting the retained response' do
+    allow(client).to receive(:retrieve).and_return(status: 'failed', error: 'provider failed')
+    allow(campaign).to receive(:ai_fail!).and_return(true)
+    allow(EmailCampaigns::Ai::Broadcaster).to receive(:failed)
+    expect(EmailCampaigns::Ai::Broadcaster).to receive(:failed).with(campaign).ordered
+    expect(client).to receive(:delete).with('resp_failed').ordered
+
+    described_class.perform_now(123, 'generation', 'resp_failed', 0)
   end
 end

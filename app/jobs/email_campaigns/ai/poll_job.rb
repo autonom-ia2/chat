@@ -80,8 +80,8 @@ module EmailCampaigns
             usage: usage, reasoning_effort: 'high'
           )
         end
+        EmailCampaigns::Ai::Broadcaster.ready(campaign) if won
         client.delete(response_id)
-        Broadcaster.ready(campaign) if won
       end
 
       def parse_output(text)
@@ -95,8 +95,8 @@ module EmailCampaigns
 
       def finish_failed(campaign, token, response_id, message, client = nil)
         won = campaign.ai_fail!(token, message)
+        EmailCampaigns::Ai::Broadcaster.failed(campaign) if won
         client&.delete(response_id)
-        Broadcaster.failed(campaign) if won
       end
     end
   end

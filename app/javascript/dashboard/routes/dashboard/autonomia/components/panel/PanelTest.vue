@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -53,6 +53,7 @@ const restoreMessages = () => {
 const messages = ref(restoreMessages());
 const isSending = ref(false);
 const scrollRef = ref(null);
+let requestSequence = 0;
 
 const persistMessages = () => {
   try {
@@ -111,7 +112,9 @@ const promptRequestConfig = prompt => {
 };
 
 const resetConversation = () => {
+  requestSequence += 1;
   messages.value = [];
+  isSending.value = false;
   persistMessages();
 };
 
@@ -159,7 +162,7 @@ const sleep = ms =>
 // its own bubble. The confidence/handoff/knowledge meta renders only under the
 // LAST bubble (`meta: true`); intermediate chunks are plain bubbles. Without
 // chunks (handoff / humanize off) it falls back to a single bubble.
-const pushAssistantTurn = async data => {
+const pushAssistantTurn = async (data, requestId) => {
   const meta = {
     confidence: data.confidence,
     handoff: data.handoff,
@@ -170,10 +173,12 @@ const pushAssistantTurn = async data => {
 
   if (data.humanized && Array.isArray(data.chunks) && data.chunks.length) {
     for (let i = 0; i < data.chunks.length; i += 1) {
+      if (requestId !== requestSequence) return;
       const chunk = data.chunks[i];
       isSending.value = true; // typing bubble during the pause
       // eslint-disable-next-line no-await-in-loop
       await sleep(Math.max(0, Number(chunk.delay_ms) || 0));
+      if (requestId !== requestSequence) return;
       isSending.value = false;
       const isLast = i === data.chunks.length - 1;
       messages.value.push({
@@ -186,6 +191,7 @@ const pushAssistantTurn = async data => {
     return;
   }
 
+  if (requestId !== requestSequence) return;
   messages.value.push({ role: 'assistant', content: data.reply, ...meta });
   persistMessages();
 };
@@ -193,25 +199,34 @@ const pushAssistantTurn = async data => {
 const onSend = async ({ content, images = [] }) => {
   if (isSending.value) return;
 
+  requestSequence += 1;
+  const requestId = requestSequence;
+
   messages.value.push({ role: 'user', content });
   persistMessages();
 
   try {
     isSending.value = true;
     const imageDataUrls = await Promise.all(images.map(fileToDataUrl));
+    if (requestId !== requestSequence) return;
     const data = await store.dispatch('autonomiaAgents/test', {
       agentId: props.agentId,
       message: content,
       history: history.value,
       images: imageDataUrls,
     });
-    await pushAssistantTurn(data);
+    if (requestId !== requestSequence) return;
+    await pushAssistantTurn(data, requestId);
   } catch (error) {
-    useAlert(t('AGENTS.TEST.ERROR'));
+    if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
   } finally {
-    isSending.value = false;
+    if (requestId === requestSequence) isSending.value = false;
   }
 };
+
+onBeforeUnmount(() => {
+  requestSequence += 1;
+});
 </script>
 
 <template>

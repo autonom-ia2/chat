@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { emitter } from 'shared/helpers/mitt';
@@ -18,6 +18,7 @@ const loadingTask = ref('');
 const result = ref('');
 const tone = ref('professional');
 const refineText = ref('');
+let requestSequence = 0;
 const toneOptions = computed(() => [
   { value: 'professional', label: t('CRM_KANBAN.COPILOT.TONE_PROFESSIONAL') },
   { value: 'casual', label: t('CRM_KANBAN.COPILOT.TONE_CASUAL') },
@@ -30,23 +31,49 @@ const isLoading = computed(() => !!loadingTask.value);
 
 const run = async (task, opts = {}) => {
   if (isLoading.value) return;
+  requestSequence += 1;
+  const requestId = requestSequence;
+  const requestConversation = props.conversationId;
   loadingTask.value = task;
   try {
-    const { data } = await AutonomiaCopilotAPI.run(props.conversationId, {
+    const { data } = await AutonomiaCopilotAPI.run(requestConversation, {
       task,
       ...opts,
     });
+    if (
+      requestId !== requestSequence ||
+      props.conversationId !== requestConversation
+    )
+      return;
     if (data.available && data.text) {
       result.value = data.text;
     } else {
       useAlert(t('CRM_KANBAN.COPILOT.UNAVAILABLE'));
     }
   } catch {
+    if (
+      requestId !== requestSequence ||
+      props.conversationId !== requestConversation
+    )
+      return;
     useAlert(t('CRM_KANBAN.COPILOT.ERROR'));
   } finally {
-    loadingTask.value = '';
+    if (requestId === requestSequence) loadingTask.value = '';
   }
 };
+
+watch(
+  () => props.conversationId,
+  () => {
+    requestSequence += 1;
+    loadingTask.value = '';
+    result.value = '';
+  }
+);
+
+onBeforeUnmount(() => {
+  requestSequence += 1;
+});
 
 const rewrite = () => run('rewrite', { draft: result.value, tone: tone.value });
 

@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
   include Crm::IdempotentRequests
+  include DeferInteractiveAi
 
   before_action :fetch_card, only: [
     :show, :update, :destroy, :move, :close, :link_conversation, :unlink_conversation, :link_contact, :unlink_contact,
@@ -191,14 +192,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def evaluate_ai
-    result = Crm::Ai::Evaluator.new(card: @card, trigger: 'manual').perform
-    @ai_suggestion = result.suggestion
-    render json: {
-      payload: {
-        status: result.status,
-        suggestion: ai_suggestion_payload(@ai_suggestion)
-      }
-    }
+    defer_interactive_ai('card_evaluate', { card_id: @card.id })
   end
 
   def summarize
@@ -206,14 +200,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # same conversation visibility used elsewhere to avoid leaking content to
     # agents who cannot see the underlying conversation.
     authorize_crm_conversation!(@card.primary_conversation) if @card.primary_conversation.present?
-    result = Crm::Ai::ConversationSummarizer.new(card: @card, force: true).perform
-    render json: {
-      payload: {
-        status: result.status,
-        error: result.error,
-        ai_summary: result.text.present? ? { text: result.text, generated_at: result.generated_at } : nil
-      }
-    }
+    defer_interactive_ai('card_summary', { card_id: @card.id })
   end
 
   # Re-arms a fresh AI auto-follow-up cadence on a card whose previous cycle was

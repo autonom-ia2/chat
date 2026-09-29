@@ -265,10 +265,10 @@ const confirmarAcao = async item => {
 // própria requisição, que o servidor mata aos 15 segundos: pergunta que pedia
 // duas leituras morria com erro 500.
 //
-// O tempo total de busca fica acima do teto de trabalho do Guia (180s no
-// servidor), para a tela nunca desistir de uma resposta que ainda vai chegar.
+// A janela acompanha o TTL de 30 minutos do pedido no servidor, para a tela
+// nunca desistir de uma resposta que ainda vai chegar.
 const ESPERA_ENTRE_BUSCAS_MS = 1500;
-const MAX_BUSCAS = 140;
+const MAX_BUSCAS = Math.floor((30 * 60 * 1000) / ESPERA_ENTRE_BUSCAS_MS);
 const PENDENTE = 'pending';
 const PRONTO = 'done';
 
@@ -287,8 +287,8 @@ onBeforeUnmount(() => {
 // depois do intervalo — nunca duas no ar ao mesmo tempo.
 //
 // Para sozinha quando a resposta deixou de interessar: o painel saiu da tela,
-// ou a pessoa trocou de conta. Sem isso a tela seguia consultando por até três
-// minutos uma resposta que não ia mostrar a ninguém. -> null quando parou.
+// ou a pessoa trocou de conta. Sem isso a tela seguiria consultando por até
+// trinta minutos uma resposta que não ia mostrar a ninguém. -> null quando parou.
 const buscarResposta = async (id, requestAccount, tentativa = 0) => {
   if (tentativa >= MAX_BUSCAS) return { status: 'failed' };
   await esperar(ESPERA_ENTRE_BUSCAS_MS);
@@ -312,7 +312,7 @@ const requestReply = async (requestAccount, message) => {
       routeContext: route.name,
     });
     const data = await buscarResposta(pedido.id, requestAccount);
-    if (!data || accountId.value !== requestAccount) return;
+    if (desmontado || !data || accountId.value !== requestAccount) return;
     if (data.status !== PRONTO) {
       avisarFalha();
     } else if (data.available && data.text) {
@@ -333,7 +333,7 @@ const requestReply = async (requestAccount, message) => {
       useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
     }
   } catch {
-    if (accountId.value !== requestAccount) return;
+    if (desmontado || accountId.value !== requestAccount) return;
     avisarFalha();
   } finally {
     isSending.value = false;

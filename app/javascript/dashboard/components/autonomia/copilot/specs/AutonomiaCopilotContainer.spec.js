@@ -92,4 +92,21 @@ describe('AutonomiaCopilotContainer', () => {
     expect(AutonomiaCopilotAPI.chat).toHaveBeenCalledOnce();
     expect(textarea.element.value).toBe('Segunda');
   });
+
+  it('ignores a reply that settles after the panel unmounts', async () => {
+    let resolveChat;
+    AutonomiaCopilotAPI.chat.mockReturnValue(
+      new Promise(resolve => {
+        resolveChat = resolve;
+      })
+    );
+    wrapper = await mountCopilot();
+    await send(wrapper.find('textarea'), 'Resuma a conversa');
+
+    wrapper.unmount();
+    resolveChat({ data: { available: true, text: 'Resposta tardia.' } });
+    await flushPromises();
+
+    expect(useAutonomiaCopilotStore().messages).toHaveLength(1);
+  });
 });
