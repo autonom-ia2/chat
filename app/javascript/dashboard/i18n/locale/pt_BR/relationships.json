@@ -51,8 +51,8 @@
       "ATTRIBUTES": "Defina campos compartilhados nesta conta."
     },
     "MEDIA": {
-      "TITLE": "Mídias",
-      "SEARCH": "Buscar nome de arquivo",
+      "TITLE": "Mídias da empresa",
+      "SEARCH": "Buscar por nome do arquivo",
       "ALL_TYPES": "Todos os tipos",
       "FROM": "De",
       "TO": "Até",
@@ -64,7 +64,7 @@
       "DOWNLOAD": "Baixar original",
       "PREVIEW": "Visualizar",
       "ORIGIN": "Ir à mensagem",
-      "EMPTY": "Nenhuma mídia encontrada.",
+      "EMPTY": "Ainda não há mídias",
       "ALL": "Visualizar tudo",
       "image": "Imagem",
       "video": "Vídeo",
@@ -75,11 +75,95 @@
       "SIZE": "Tamanho",
       "SCOPE": "Arquivos armazenados no sistema de conversas autorizadas, incluindo notas. Anexos externos permanecem na conversa de origem.",
       "BYTES": "{size} B",
-      "FILE_METADATA": "{type} · {size} B"
+      "FILE_METADATA": "{type} · {size} B",
+      "SUBTITLE": "Arquivos compartilhados nas conversas.",
+      "FILTERS": "Filtros",
+      "APPLY": "Aplicar filtros",
+      "CLEAR": "Limpar",
+      "PDF": "PDF",
+      "CONTACT_SELECTED": "Contato selecionado",
+      "CONTACT_ERROR": "Não foi possível buscar os contatos. Tente novamente.",
+      "NO_CONTACTS": "Nenhum contato encontrado.",
+      "FILTER_TIMEZONE": "O período usa o fuso de relatório da conta; sem configuração, UTC.",
+      "LOCAL_TIMEZONE": "Datas exibidas no fuso local do seu navegador.",
+      "LOAD_ERROR": "Não foi possível carregar as mídias. Tente novamente para atualizar a lista.",
+      "ACTION_ERROR": "Não foi possível abrir este arquivo. Tente novamente para verificar o acesso.",
+      "NO_RESULTS": "Nenhum arquivo encontrado",
+      "NO_RESULTS_HINT": "Ajuste a busca ou limpe os filtros para ver mais arquivos.",
+      "EMPTY_HINT": "Os arquivos das conversas autorizadas desta empresa aparecerão aqui.",
+      "RESULT_COUNT": "Mostrando {shown} de {total} arquivos",
+      "PAGE_COUNT": "Página {page} de {pages}",
+      "BREADCRUMB": "Caminho da página",
+      "BACK_TO_COMPANY": "Voltar à empresa",
+      "COMPANY_ERROR": "Não foi possível carregar o nome da empresa. Tente novamente.",
+      "METADATA": "{type} · {size}",
+      "TAB": "Mídias"
     },
     "LOAD_ERROR": "Não foi possível carregar a configuração. Tente novamente.",
     "LOCATION": "Local de exibição",
     "COPY": "Copiar",
-    "ENTITY_VALUE": "Entidade: {name}"
+    "ENTITY_VALUE": "Entidade: {name}",
+    "SUBTITLE": "Centralize e organize pessoas, empresas e informações personalizadas para fortalecer seus relacionamentos.",
+    "HOME_SUPPORT_TITLE": "Relacionamentos mais fortes geram mais oportunidades",
+    "HOME_SUPPORT_DESCRIPTION": "Mantenha seus dados organizados e atualizados para uma comunicação mais inteligente e resultados consistentes.",
+    "OPEN_CONTACTS": "Abrir contatos",
+    "OPEN_COMPANIES": "Abrir empresas",
+    "OPEN_ATTRIBUTES": "Configurar atributos",
+    "CARD_DETAILS": {
+      "CONTACTS": {
+        "SUBTITLE": "Gerencie suas pessoas",
+        "DESCRIPTION": "Cadastre e gerencie seus contatos, com histórico de interações, mídias e atributos personalizados. Tenha uma visão completa de cada relacionamento.",
+        "PROFILE": "Dados completos e histórico",
+        "MEDIA": "Mídias das conversas",
+        "FIELDS": "Atributos personalizados",
+        "BASIC_DESCRIPTION": "Cadastre e gerencie pessoas e acompanhe o histórico dos seus relacionamentos."
+      },
+      "COMPANIES": {
+        "SUBTITLE": "Gerencie suas empresas",
+        "DESCRIPTION": "Organize empresas, vincule contatos e consulte suas informações, mídias e atributos em um só lugar.",
+        "PROFILE": "Contatos vinculados",
+        "MEDIA": "Mídias dos contatos",
+        "FIELDS": "Atributos da empresa",
+        "BASIC_DESCRIPTION": "Organize empresas, vincule seus contatos e centralize as informações comerciais."
+      },
+      "ATTRIBUTES": {
+        "SUBTITLE": "Personalize do seu jeito",
+        "DESCRIPTION": "Crie campos personalizados e defina onde eles aparecem. Adapte os detalhes de contatos e empresas à realidade da sua operação.",
+        "PROFILE": "Campos globais nesta conta",
+        "MEDIA": "Defina onde aparecem",
+        "FIELDS": "Descrições para dar contexto",
+        "BASIC_DESCRIPTION": "Crie e gerencie definições de campos personalizados para a sua conta."
+      }
+    },
+    "EDIT_ATTRIBUTE": "Editar atributo",
+    "CREATE_COMPANY_ATTRIBUTE": "Criar atributo da empresa",
+    "EDIT_COMPANY_ATTRIBUTE": "Editar atributo da empresa",
+    "SAVE_ATTRIBUTE": "Salvar atributo",
+    "SAVE_CONFIGURATION": "Salvar configuração",
+    "CLOSE": "Fechar",
+    "CREATE_DESCRIPTION": "Crie uma definição compartilhada nesta conta. Os valores são preenchidos em cada registro.",
+    "EDIT_DESCRIPTION": "Atualize a definição sem alterar a chave ou os valores já salvos.",
+    "CONFIGURE_DESCRIPTION": "Escolha quais campos a equipe visualiza em cada local.",
+    "GLOBAL_TITLE": "Configuração compartilhada nesta conta",
+    "DESCRIPTION_HINT": "Descreva o objetivo do campo e como ele deve ser preenchido.",
+    "TYPE_HINT": "Escolha o formato das informações que serão preenchidas.",
+    "DISPLAY_TITLE": "Onde exibir este atributo",
+    "SURFACE_HELP": {
+      "contact_sidebar": "Mostra o campo dentro de Atributos do contato no atendimento.",
+      "contact_details": "Destaca o campo na seção Campos personalizados da ficha do contato.",
+      "company_details": "Destaca o campo na seção Campos personalizados da ficha da empresa."
+    },
+    "ENTITY_LABELS": {
+      "contact": "Contato",
+      "company": "Empresa",
+      "conversation": "Conversa"
+    },
+    "FIELDS_DESCRIPTION": "Informações adicionais deste registro. Configure os campos e preencha os valores abaixo.",
+    "FIELDS_EMPTY": "Nenhum campo destacado nesta ficha.",
+    "FIELDS_EMPTY_DESCRIPTION": "A seleção de exibição não apaga os dados. Os atributos existentes continuam disponíveis na aba Atributos.",
+    "NO_DEFINITIONS": "Nenhum atributo encontrado.",
+    "SELECTION_SUMMARY": "{selected} de {total} campos selecionados",
+    "BREADCRUMB_LABEL": "Navegação de Relacionamentos",
+    "GLOBAL_NOTE": "Válido para a equipe desta conta. Ocultar não apaga valores nem restringe acesso."
   }
 }

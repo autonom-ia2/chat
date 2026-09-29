@@ -6,6 +6,7 @@ import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 defineProps({
+  relationshipsLayout: { type: Boolean, default: false },
   breadcrumbItems: {
     type: Array,
     default: () => [],
@@ -35,14 +36,17 @@ const closeMobileSidebar = () => {
     class="flex w-full h-full overflow-hidden justify-evenly bg-n-surface-1"
   >
     <div
-      class="flex flex-col w-full h-full transition-all duration-300 ltr:2xl:ml-56 rtl:2xl:mr-56"
+      class="flex min-w-0 flex-col w-full h-full transition-all duration-300"
+      :class="relationshipsLayout ? '' : 'ltr:2xl:ml-56 rtl:2xl:mr-56'"
     >
       <header class="sticky top-0 z-10 px-6 3xl:px-0">
         <div class="w-full mx-auto max-w-[40.625rem]">
           <div
             class="flex flex-col xs:flex-row items-start xs:items-center justify-between w-full py-7 gap-2"
           >
-            <Breadcrumb :items="breadcrumbItems" @click="emit('back')" />
+            <slot name="breadcrumb">
+              <Breadcrumb :items="breadcrumbItems" @click="emit('back')" />
+            </slot>
           </div>
         </div>
       </header>
@@ -74,7 +78,12 @@ const closeMobileSidebar = () => {
       <div
         v-on-click-outside="[
           closeMobileSidebar,
-          { ignore: ['#details-sidebar-content'] },
+          {
+            ignore: [
+              '#details-sidebar-content',
+              '[data-relationships-media-popover]',
+            ],
+          },
         ]"
         class="flex items-start p-1 w-fit h-fit relative order-1 xs:top-24 top-28 transition-all bg-n-solid-2 border border-n-weak duration-500 ease-in-out"
         :class="[

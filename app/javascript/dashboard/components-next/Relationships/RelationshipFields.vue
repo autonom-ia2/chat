@@ -25,17 +25,42 @@ const fields = computed(() =>
 <template>
   <section
     v-if="attributesEnabled && (entity !== 'company' || companiesEnabled)"
-    class="w-full flex flex-col gap-2"
+    class="w-full min-w-0 flex flex-col gap-5 border-t border-n-weak pt-6"
   >
-    <h3 class="text-base font-medium">{{ $t('RELATIONSHIPS.FIELDS') }}</h3>
-    <FieldConfigurator :entity="entity" :surface="surface" />
-    <FieldEditor
-      v-for="definition in fields"
-      :key="`${accountId}-${record.id}-${definition.id}`"
-      :definition="definition"
-      :record="record"
-      :entity="entity"
-    />
+    <div class="flex flex-col gap-4">
+      <div>
+        <h3 class="text-lg font-semibold text-n-slate-12">
+          {{ $t('RELATIONSHIPS.FIELDS') }}
+        </h3>
+        <p class="mt-1 text-sm leading-relaxed text-n-slate-11">
+          {{ $t('RELATIONSHIPS.FIELDS_DESCRIPTION') }}
+        </p>
+      </div>
+      <FieldConfigurator :entity="entity" :surface="surface" />
+    </div>
+    <div
+      v-if="fields.length"
+      class="grid min-w-0 grid-cols-1 gap-3 2xl:grid-cols-2"
+    >
+      <FieldEditor
+        v-for="definition in fields"
+        :key="`${accountId}-${record.id}-${definition.id}`"
+        :definition="definition"
+        :record="record"
+        :entity="entity"
+      />
+    </div>
+    <div
+      v-else-if="!state.error && !state.loading"
+      class="rounded-xl border border-dashed border-n-strong bg-n-background px-5 py-6"
+    >
+      <p class="text-sm font-medium text-n-slate-12">
+        {{ $t('RELATIONSHIPS.FIELDS_EMPTY') }}
+      </p>
+      <p class="mt-1 text-sm leading-relaxed text-n-slate-11">
+        {{ $t('RELATIONSHIPS.FIELDS_EMPTY_DESCRIPTION') }}
+      </p>
+    </div>
   </section>
   <template v-else />
 </template>

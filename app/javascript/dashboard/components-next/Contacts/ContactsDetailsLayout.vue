@@ -10,6 +10,7 @@ import ComposeConversation from 'dashboard/components-next/NewConversation/Compo
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 
 const props = defineProps({
+  relationshipsLayout: { type: Boolean, default: false },
   selectedContact: {
     type: Object,
     default: () => ({}),
@@ -76,18 +77,21 @@ const closeMobileSidebar = () => {
     class="flex w-full h-full overflow-hidden justify-evenly bg-n-surface-1"
   >
     <div
-      class="flex flex-col w-full h-full transition-all duration-300 ltr:2xl:ml-56 rtl:2xl:mr-56"
+      class="flex min-w-0 flex-col w-full h-full transition-all duration-300"
+      :class="relationshipsLayout ? '' : 'ltr:2xl:ml-56 rtl:2xl:mr-56'"
     >
       <header class="sticky top-0 z-10 px-6 3xl:px-0">
         <div class="w-full mx-auto max-w-[40.625rem]">
           <div
             class="flex flex-col xs:flex-row items-start xs:items-center justify-between w-full py-7 gap-2"
           >
-            <Breadcrumb
-              :items="breadcrumbItems"
-              @click="handleBreadcrumbClick"
-            />
-            <div class="flex items-center gap-2">
+            <slot name="breadcrumb">
+              <Breadcrumb
+                :items="breadcrumbItems"
+                @click="handleBreadcrumbClick"
+              />
+            </slot>
+            <div class="flex flex-wrap items-center gap-2">
               <Button
                 :label="
                   !isContactBlocked

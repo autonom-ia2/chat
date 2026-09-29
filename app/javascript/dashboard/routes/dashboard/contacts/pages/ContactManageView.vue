@@ -2,6 +2,8 @@
 import { onMounted, computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -15,6 +17,7 @@ import ContactMedia from 'dashboard/components-next/Contacts/ContactsSidebar/Con
 import ContactMerge from 'dashboard/components-next/Contacts/ContactsSidebar/ContactMerge.vue';
 import ContactCustomAttributes from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributes.vue';
 
+const { navigationEnabled, accountId } = useRelationships();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -132,6 +135,7 @@ onMounted(() => {
     class="flex flex-col justify-between flex-1 h-full m-0 overflow-auto bg-n-surface-1"
   >
     <ContactsDetailsLayout
+      :relationships-layout="navigationEnabled"
       :button-label="$t('CONTACTS_LAYOUT.HEADER.SEND_MESSAGE')"
       :selected-contact="selectedContact"
       is-detail-view
@@ -140,6 +144,17 @@ onMounted(() => {
       @go-to-contacts-list="goToContactsList"
       @toggle-block="toggleContactBlock"
     >
+      <template v-if="navigationEnabled" #breadcrumb>
+        <RelationshipBreadcrumb
+          :items="[
+            {
+              key: 'CONTACTS',
+              to: { name: 'contacts_dashboard_index', params: { accountId } },
+            },
+            ...(selectedContact?.name ? [{ label: selectedContact.name }] : []),
+          ]"
+        />
+      </template>
       <div
         v-if="showSpinner"
         class="flex items-center justify-center py-10 text-n-slate-11"

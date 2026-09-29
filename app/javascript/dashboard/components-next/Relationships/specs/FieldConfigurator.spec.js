@@ -67,7 +67,7 @@ it('uses the real shared dialog, requires description, and saves definition and 
     wrapper.find('button[type="submit"]').attributes('disabled')
   ).toBeDefined();
   await wrapper.find('textarea').setValue('Função na empresa');
-  await wrapper.find('input[type="checkbox"]').setValue(true);
+  await wrapper.find('[role="switch"]').trigger('click');
   axios.patch.mockResolvedValue({
     data: {
       configuration: { version: 1, revision: 5, surfaces: {} },
@@ -273,4 +273,39 @@ it('associates visible creation labels with unique real input IDs across surface
     first.find(`label[for="${first.find('textarea').attributes('id')}"]`).text()
   ).toContain('RELATIONSHIPS.DESCRIPTION');
   parent.unmount();
+});
+
+it('shows a contextual title and save label when the shared dialog changes from selection to creation', async () => {
+  const wrapper = await mountEditor();
+  expect(wrapper.find('dialog h3').text()).toBe('RELATIONSHIPS.CONFIGURE');
+  await click(wrapper, 'RELATIONSHIPS.CREATE');
+  expect(wrapper.find('dialog h3').text()).toBe('RELATIONSHIPS.CREATE');
+  expect(wrapper.find('button[type="submit"]').text()).toBe(
+    'RELATIONSHIPS.SAVE_ATTRIBUTE'
+  );
+  expect(wrapper.findAll('[role="switch"]')).toHaveLength(2);
+  wrapper.unmount();
+});
+
+it('lets the central header own its actions without rendering duplicate creation buttons', async () => {
+  const wrapper = mount(FieldConfigurator, {
+    props: { entity: 'company', showActions: false },
+    global: { stubs: { teleport: true } },
+  });
+  await flushPromises();
+  expect(
+    wrapper
+      .findAll('button')
+      .filter(button => !button.element.closest('dialog'))
+  ).toHaveLength(0);
+  await wrapper.vm.open(null, true);
+  await flushPromises();
+  expect(wrapper.find('dialog h3').text()).toBe(
+    'RELATIONSHIPS.CREATE_COMPANY_ATTRIBUTE'
+  );
+  expect(wrapper.findAll('[role="switch"]')).toHaveLength(1);
+  expect(wrapper.find('[role="switch"]').attributes('aria-label')).toBe(
+    'RELATIONSHIPS.SURFACES.company_details'
+  );
+  wrapper.unmount();
 });

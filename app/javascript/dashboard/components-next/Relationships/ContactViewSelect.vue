@@ -52,7 +52,10 @@ const change = value => {
 </script>
 
 <template>
-  <div v-if="navigationEnabled" class="flex items-center gap-3 px-4 py-2">
+  <div
+    v-if="navigationEnabled"
+    class="flex flex-wrap items-center justify-between gap-3 px-6 pt-6 pb-2"
+  >
     <RelationshipBreadcrumb />
     <ChoiceSelect
       :model-value="selected"

@@ -283,6 +283,7 @@ const evenClass = [
   <div class="conversation--details">
     <FieldConfigurator
       v-if="relationshipSidebar"
+      compact
       entity="contact"
       surface="contact_sidebar"
     />

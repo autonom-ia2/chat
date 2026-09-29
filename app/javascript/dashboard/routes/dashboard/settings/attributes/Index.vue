@@ -23,7 +23,11 @@ import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { t } = useI18n();
-const { attributesEnabled, load: reloadRelationships } = useRelationships();
+const {
+  attributesEnabled,
+  state: relationshipState,
+  load: reloadRelationships,
+} = useRelationships();
 const relationshipEditor = ref(null);
 
 const getters = useStoreGetters();
@@ -202,6 +206,7 @@ const filteredAttributes = computed(() => {
       <RelationshipBreadcrumb />
       <FieldConfigurator
         ref="relationshipEditor"
+        :show-actions="false"
         :entity="attributeModel.replace('_attribute', '')"
       />
       <BaseSettingsHeader
@@ -225,6 +230,18 @@ const filteredAttributes = computed(() => {
           />
         </template>
         <template #actions>
+          <Button
+            v-if="
+              attributesEnabled &&
+              relationshipState.can_manage &&
+              attributeModel !== 'conversation_attribute'
+            "
+            outline
+            sm
+            icon="i-lucide-settings-2"
+            :label="$t('RELATIONSHIPS.CONFIGURE')"
+            @click="relationshipEditor.open()"
+          />
           <Button
             :label="$t('ATTRIBUTES_MGMT.HEADER_BTN_TXT')"
             size="sm"
