@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Autonomia::Sso::Provisioner
-  DEFAULT_ACCOUNT_LOCALE = 'pt_BR'
-
   pattr_initialize [:context!, { token: nil }]
 
   attr_reader :post_login_redirect_path
@@ -17,7 +15,6 @@ class Autonomia::Sso::Provisioner
       account = find_or_create_account
       pending_invitation = pending_agent_invitation(account)
       link_user(user)
-      link_account(account)
       ensure_account_user(user, account, pending_invitation)
     end
 
