@@ -1,4 +1,9 @@
-import { expect, type Page, type APIRequestContext } from '@playwright/test';
+import {
+  expect,
+  type Page,
+  type Locator,
+  type APIRequestContext,
+} from '@playwright/test';
 import fs from 'node:fs/promises';
 
 export async function fixtures() {
@@ -108,4 +113,11 @@ export async function openContact(
   await expect(
     page.getByRole('button', { name: 'Atualizar contato', exact: true })
   ).toBeVisible();
+}
+
+export async function setSwitch(control: Locator, enabled: boolean) {
+  await expect(control).toBeVisible();
+  if ((await control.getAttribute('aria-checked')) !== String(enabled))
+    await control.click();
+  await expect(control).toHaveAttribute('aria-checked', String(enabled));
 }

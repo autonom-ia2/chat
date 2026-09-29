@@ -96,7 +96,7 @@ test('the same fields and dialog remain usable in the existing dark theme', asyn
     .getByRole('textbox', { name: 'Descrição', exact: true })
     .fill('Descrição sintética não salva');
   await expect(
-    dialog.getByRole('button', { name: 'Salvar', exact: true })
+    dialog.getByRole('button', { name: 'Salvar atributo', exact: true })
   ).toBeEnabled();
   await page.screenshot({
     path: '../../.codex/relationships/modal-dark-real.png',
