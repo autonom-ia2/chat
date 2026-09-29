@@ -73,3 +73,22 @@ Dockerfile roda `git rev-parse HEAD`), e sem isso o token do checkout ficaria nu
 
 Voltar ao comportamento anterior: `cache-from`/`cache-to` com `type=gha`, `mode=min` e os escopos antigos
 (`chatwoot-autonomia-prod-linux-amd64` e `chatwoot-autonomia-hub2you-linux-amd64`).
+
+
+## Fonte das imagens-base do Dockerfile
+
+Os blue/green não reescrevem mais as linhas `FROM` para o registry público da AWS.
+O Dockerfile versionado é a fonte de verdade e usa as imagens oficiais de Ruby/Node via
+Docker Hub. O ECR privado de cada stack continua sendo o destino da imagem final e do
+cache `buildcache`; essa mudança não altera autenticação, tags, SSM, EC2, ALB ou rollback.
+
+Motivo operacional: em 29/09/2026 o deploy Autonom.ia do SHA
+`585712e44ae2f083a86f2ede4bc8608cf954e199` falhou antes de criar o green porque
+`public.ecr.aws` respondeu HTTP 429 (`Data limit exceeded`) para Ruby/Node. Um retry
+reproduziu a mesma causa. No gate Linux do mesmo release, o Dockerfile original foi
+construído com sucesso via `docker.io` usando os mesmos digests das imagens-base:
+Ruby `5bdfa2312f3f0bc9bd077e954c943652155a093db228af978873ff92389300d3` e
+Node `ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1`.
+
+Rollback desta política: restaurar explicitamente a reescrita de registry nos workflows.
+Isso não altera uma imagem já implantada; afeta somente builds futuros.
