@@ -1,3 +1,5 @@
+> Registro histórico de uma rodada de implementação. Para o estado consolidado, consultar [QA e aceite](qa-acceptance.md) e a PR #760.
+
 # Issue 757 — correções da revisão final de frontend
 
 29/09/2026. Entrega local para revisão do supervisor; **não é aprovação de release**. Fontes lidas: `.codex/relationships/review-ui-final.md`, `.codex/relationships/review-backend-final.md` e implementação atual dos callers, stores, composables e componentes. Alterações pré-existentes preservadas.

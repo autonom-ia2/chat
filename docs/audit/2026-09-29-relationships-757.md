@@ -1,4 +1,7 @@
-# Trilha local — Relacionamentos / Issue #757 — 2026-09-29
+# Trilha — Relacionamentos / Issue #757 — 2026-09-29
+
+> Registro cronológico: os primeiros blocos descrevem rodadas anteriores de agentes.
+> O status consolidado está em `docs/relationships/qa-acceptance.md` e na PR #760.
 
 ## Limites respeitados
 
@@ -156,3 +159,26 @@ sandbox; logs ficaram em `/private/tmp/relationships-*`, sem tentar contornar pe
 Build final `pnpm exec vite build --mode test --logLevel warn`: exit 0. Prettier passou
 e `git diff --check` permaneceu limpo após a documentação final. Artefatos de build estão
 no diretório ignorado escolhido pelo Vite; não houve publicação.
+
+## Consolidação pelo supervisor
+
+A PR #760 foi aberta como rascunho para CI/revisão, sem merge/deploy. Commits de aplicação
+permanecem na branch `feat/757-relacionamentos`; main e ambientes reais não foram alterados.
+A base é8396d7255e e o candidato de código desta rodada écad28d3772.
+
+Reexecução local:6.771 testes frontend e385 exemplos integrados PostgreSQL, todos aprovados;
+16 testes nativos e14 fluxos de navegador aprovados. Performance, visuais, limitações
+e comandos reproduzíveis constam em qa-acceptance.md. Revisão independente final não
+apontou P0/P1/P2 demonstrável; o aceite continua condicionado ao CI no SHA atual.
+
+As falhas de CI anteriores foram investigadas, não suprimidas: parser transitivo e vendor
+no gate AST, disco do runner descartável, lint estrito e bootstrap do processo de imagem.
+Foi preservada a restrição de zero regex nova. A chave automática deixou de ser exposta
+no modal; sua geração e imutabilidade permanecem no contrato/testes.
+
+O hook de commit chegou a chamar o Ruby2.6 do sistema; a execução não foi contada como
+validação Ruby. Os specs foram reexecutados com Ruby3.4.4 explícito, sem alterar instalação
+global. Os avisos e rodadas históricas permanecem registrados, sem inventar aprovação.
+
+O conector do Project retornou404; os sete campos pendentes estão em rollout-rollback.md.
+Nenhuma autorização anterior de deploy da PR#756 foi reutilizada para esta entrega.

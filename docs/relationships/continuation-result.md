@@ -1,3 +1,5 @@
+> Registro histórico de uma rodada de implementação. Para o estado consolidado, consultar [QA e aceite](qa-acceptance.md) e a PR #760.
+
 # Retomada da Issue #757 — resultado local
 
 Base/HEAD confirmados: `8396d7255e097ba79507a22081701eb41ddb6ce5`.
