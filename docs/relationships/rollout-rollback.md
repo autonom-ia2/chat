@@ -68,10 +68,13 @@ Perda/sobrescrita indevida, vazamento de acesso, falha de salvamento, regressão
 atendimento, conversão fora dos limites ou indisponibilidade do alvo impedem liberação.
 Falha administrativa de Project não autoriza ignorar revisão nem gates técnicos.
 
-## Project update pendente
+## Project atualizado
 
 Board: Autonom.ia Dev — https://github.com/users/autonom-ia/projects/3
-O conector retornou404 novamente na retomada. Issue/PR seguem acessíveis.
+O conector dedicado retornou404, mas o acesso existente pelo GitHub CLI funcionou.
+A Issue #757 e a PR #760 foram adicionadas ao board e receberam os sete campos abaixo.
+Uma leitura posterior confirmou os valores dos dois itens; não há atualização manual
+pendente. Nenhuma permissão ou credencial foi alterada para obter esse acesso.
 
 Projeto: Hub2You
 Status: Em review

@@ -221,3 +221,14 @@ com backend real, autenticação normal e limites de timeout mantidos. Nenhuma l
 ou mudança de sessões/política de autenticação foi executada nesta retomada. O frontend
 não mudou desde a versão já revisada. A confirmação final do CI fica registrada na PR
 para conservar o SHA exato da versão testada.
+
+## Project — contingência concluída
+
+Após a falha404do conector dedicado, o GitHub CLI já autorizado conseguiu ler o Project3
+Autonom.ia Dev. A Issue757e a PR760não estavam associadas; foram adicionadas e receberam
+Projeto=Hub2You, Status=Em review, Tipo=Feature, Prioridade=P2, Risco=Médio, Ambiente=Local
+e a próxima ação de finalizar os checks e obter aprovação antes de publicar.
+Uma consulta posterior verificou7/7campos em cada item. Nenhum escopo OAuth, token ou
+configuração de acesso foi alterado. Evidências locais: `project-updated-items.json`
+e `project-verified.json`. A pendência administrativa está resolvida; autorização de
+merge/deploy continua exclusivamente com Rodrigo.
