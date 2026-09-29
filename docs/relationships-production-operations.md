@@ -46,3 +46,11 @@ Para rollback do binário, desabilitar as extensões e aguardar/esvaziar somente
 jobs de thumbnail Relationships::CompanyPreviewJob antes de retornar ao código
 anterior, que não conhece essa classe. Não esvaziar filas inteiras nem jobs de IA,
 mensagens ou clientes. Os originais não são apagados; derivados podem ser refeitos.
+
+
+## Contrato do papel de deploy
+
+O primeiro preflight OIDC interrompeu antes de enviar comandos SSM: a consulta em lote
+GetParameters não está no contrato utilizado pelos workflows de deploy. A operação
+passou a usar as quatro leituras GetParameter singulares já existentes. Nenhuma
+permissão foi acrescentada. Teste unitário cobre o conjunto e os alvos de rollback.
