@@ -105,8 +105,8 @@ jobs:
 
       - name: Prepare Chatwoot image
         run: |
-          sed -i 's|FROM node:24-alpine as node|FROM public.ecr.aws/docker/library/node:24-alpine as node|' docker/Dockerfile
-          sed -i 's|FROM ruby:3.4.4-alpine3.21|FROM public.ecr.aws/docker/library/ruby:3.4.4-alpine3.21|g' docker/Dockerfile
+          # Keep the versioned Dockerfile as the source of the base-image registry.
+          # The isolated Linux runtime gate builds the same Ruby/Node digests from docker.io.
           echo 'ENV CW_EDITION="ee"' >> docker/Dockerfile
 
       - name: Set up Docker Buildx
