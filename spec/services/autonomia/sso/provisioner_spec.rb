@@ -54,65 +54,10 @@ RSpec.describe Autonomia::Sso::Provisioner do
       expect(invited_account.reload.custom_attributes.fetch('autonomia_pending_agent_invitations')).to eq({})
 
       expect(Autonomia::UserLink.find_by!(identity_user_id: identity_user_id).user).to eq(provisioned_user)
-      expect(Autonomia::AccountLink.find_by!(identity_organization_id: identity_organization_id).account).to eq(invited_account)
+      expect(Autonomia::AccountLink.find_by(identity_organization_id: identity_organization_id)).to be_nil
     end
 
-    it 'uses user companyName as organization name when Auth has no active organization' do
-      provisioner = described_class.new(
-        context: {
-          'user' => {
-            'id' => identity_user_id,
-            'email' => identity_email,
-            'fullName' => 'Atendimento Autonomia',
-            'companyName' => 'Noktua'
-          }
-        }
-      )
-
-      expect(provisioner.send(:organization_name)).to eq('Noktua')
-      expect(provisioner.send(:identity_name)).to eq('Atendimento Autonomia')
-      expect(provisioner.send(:identity_organization_metadata)).to include(
-        'id' => identity_email,
-        'name' => 'Noktua',
-        'fallback' => true
-      )
-    end
-
-    it 'keeps active organization name before user companyName' do
-      provisioner = described_class.new(
-        context: context.deep_merge(
-          'user' => { 'companyName' => 'Noktua' }
-        )
-      )
-
-      expect(provisioner.send(:organization_name)).to eq('Nova organizacao criada no Auth')
-      expect(provisioner.send(:identity_organization_metadata)).to include(
-        'id' => identity_organization_id,
-        'name' => 'Nova organizacao criada no Auth'
-      )
-      expect(provisioner.send(:identity_organization_metadata)).not_to include('fallback' => true)
-    end
-
-    it 'does not use the first unscoped organization as the active tenant' do
-      provisioner = described_class.new(
-        context: {
-          'user' => {
-            'id' => identity_user_id,
-            'email' => identity_email
-          },
-          'organizations' => [
-            {
-              'id' => 'operator-org',
-              'name' => 'Product operator'
-            }
-          ]
-        }
-      )
-
-      expect(provisioner.send(:identity_organization)).to eq({})
-    end
-
-    context 'without a trusted account or active product organization' do
+    context 'without a trusted customer account relationship' do
       let!(:invited_account) { nil }
       let(:context) do
         {
@@ -120,23 +65,22 @@ RSpec.describe Autonomia::Sso::Provisioner do
             'id' => identity_user_id,
             'email' => identity_email,
             'name' => 'Atendimento Autonomia'
+          },
+          'activeOrganization' => {
+            'id' => 'hub2you-owner-org',
+            'name' => 'Hub2You'
           }
         }
       end
 
-      it 'does not create an account or administrator' do
+      it 'does not turn the product owner organization into an account or administrator' do
         expect do
           expect { described_class.new(context: context).perform }
-            .to raise_error('Autonomia Identity did not return an active product organization.')
+            .to raise_error('Autonomia SSO requires an invitation, provisioned checkout, or confirmed account link.')
         end.not_to change(Account, :count)
+
+        expect(Autonomia::AccountLink.find_by(identity_organization_id: 'hub2you-owner-org')).to be_nil
       end
-    end
-
-    it 'creates new accounts in Portuguese without forcing Chatwoot onboarding' do
-      account = described_class.new(context: context).send(:create_account)
-
-      expect(account.locale).to eq('pt_BR')
-      expect(account.custom_attributes).not_to include('onboarding_step')
     end
 
     context 'when the account link uses a fallback organization' do
@@ -168,12 +112,13 @@ RSpec.describe Autonomia::Sso::Provisioner do
         }
       end
 
-      it 'does not overwrite the account name from user companyName' do
-        provisioned_user = described_class.new(context: context).perform
+      it 'does not trust an unconfirmed fallback account link' do
+        expect do
+          described_class.new(context: context).perform
+        end.to raise_error('Autonomia SSO requires an invitation, provisioned checkout, or confirmed account link.')
 
         expect(fallback_account_link.reload.account).to eq(linked_account)
-        expect(linked_account.reload.name).to eq('GTA')
-        expect(AccountUser.find_by!(account: linked_account, user: provisioned_user).role).to eq('administrator')
+        expect(AccountUser.find_by(account: linked_account)).to be_nil
       end
     end
 
