@@ -17,12 +17,13 @@ import {
   useMapGetter,
 } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 const { t } = useI18n();
 
 const getters = useStoreGetters();
 const store = useStore();
-const { currentAccount } = useAccount();
+const { currentAccount, isCloudFeatureEnabled } = useAccount();
 const inboxes = useMapGetter('inboxes/getInboxes');
 
 const [showAddPopup, toggleAddPopup] = useToggle(false);
@@ -32,7 +33,16 @@ const uiFlags = computed(() => getters['attributes/getUIFlags'].value);
 const [showEditPopup, toggleEditPopup] = useToggle(false);
 const [showDeletePopup, toggleDeletePopup] = useToggle(false);
 const selectedAttribute = ref({});
-const attributeModels = ['conversation_attribute', 'contact_attribute'];
+const attributeModels = [
+  'conversation_attribute',
+  'contact_attribute',
+  'company_attribute',
+];
+
+const hasCompaniesFeature = computed(
+  () =>
+    currentAccount.value?.id && isCloudFeatureEnabled(FEATURE_FLAGS.COMPANIES)
+);
 
 const openAddPopup = () => {
   toggleAddPopup(true);
@@ -50,7 +60,7 @@ const closeDelete = () => {
 };
 
 const tabs = computed(() => {
-  return [
+  const items = [
     {
       key: 0,
       name: t('ATTRIBUTES_MGMT.TABS.CONVERSATION'),
@@ -60,6 +70,15 @@ const tabs = computed(() => {
       name: t('ATTRIBUTES_MGMT.TABS.CONTACT'),
     },
   ];
+
+  if (hasCompaniesFeature.value) {
+    items.push({
+      key: 2,
+      name: t('ATTRIBUTES_MGMT.TABS.COMPANY'),
+    });
+  }
+
+  return items;
 });
 
 const tabsForTabBar = computed(() =>
@@ -229,6 +248,7 @@ const filteredAttributes = computed(() => {
       v-model:show="showAddPopup"
       :on-close="hideAddPopup"
       :selected-attribute-model-tab="selectedTabIndex"
+      :show-company-model="hasCompaniesFeature"
     />
     <woot-modal v-model:show="showEditPopup" :on-close="hideEditPopup">
       <EditAttribute
