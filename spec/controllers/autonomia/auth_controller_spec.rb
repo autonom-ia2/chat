@@ -51,7 +51,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       Autonomia::Sso::Client::Token.new(
         access_token: 'identity-access-token',
         id_token: 'identity-id-token',
-        organization_id: 'customer-org'
+        organization_id: 'product-owner-org'
       )
     end
     let(:client) { instance_double(Autonomia::Sso::Client) }
@@ -71,7 +71,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:exchange_code!).and_return(token)
-      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'customer-org').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'product-owner-org').and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
 
       with_modified_env sso_env do
@@ -83,7 +83,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
         redirect_uri: callback_url,
         code_verifier: be_present
       )
-      expect(client).to have_received(:fetch_context!).with('identity-id-token', organization_id: 'customer-org')
+      expect(client).to have_received(:fetch_context!).with('identity-id-token', organization_id: 'product-owner-org')
       expect(Autonomia::Sso::Provisioner).to have_received(:new).with(context: {}, token: token)
       redirect = URI.parse(response.location)
       params = Rack::Utils.parse_query(redirect.query)
@@ -109,7 +109,7 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
       allow(client).to receive(:exchange_code!).and_return(token)
-      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'customer-org').and_return({})
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'product-owner-org').and_return({})
       allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(redirecting_provisioner)
 
       with_modified_env sso_env do
