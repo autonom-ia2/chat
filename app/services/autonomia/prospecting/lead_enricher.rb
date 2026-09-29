@@ -155,17 +155,8 @@ class Autonomia::Prospecting::LeadEnricher
         reviews_count: @lead.reviews_count
       },
       scraped_site_data: scraped_data.slice(
-        'title',
-        'description',
-        'email',
-        'phone',
-        'whatsapp',
-        'instagram',
-        'facebook',
-        'linkedin',
-        'cnpj',
-        'text_excerpt',
-        'source_urls'
+        'title', 'description', 'email', 'phone', 'whatsapp', 'instagram',
+        'facebook', 'linkedin', 'cnpj', 'text_excerpt', 'source_urls'
       )
     }.to_json
   end
@@ -176,9 +167,10 @@ class Autonomia::Prospecting::LeadEnricher
     @lead.reload
   end
 
-  # Só muda status, erro e contador: os dados achados antes ficam.
+  # Só muda status, erro e contador: os dados achados antes ficam. A falha precisa ser gravada
+  # sem validar novamente o lead nem disparar seus callbacks.
   def mark_failed(message, count_attempt: false)
-    @lead.update_columns(
+    @lead.update_columns( # rubocop:disable Rails/SkipsModelValidations
       enrichment_status: 'failed',
       enrichment_completed_at: Time.current,
       enrichment_error: message.to_s.truncate(255),
