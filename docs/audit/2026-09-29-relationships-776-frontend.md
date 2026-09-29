@@ -12,6 +12,10 @@ deploy, mudança de flags produtivas, dados reais, secrets, autenticação, bill
 DNS ou infraestrutura. As 28 alterações e os 10 arquivos novos herdados foram
 preservados. Nenhuma outra worktree foi editada, nenhum reset/rebase foi executado.
 
+Na continuação, Rodrigo autorizou merge e deploy após implementação, revisão e
+testes verdes. Os resultados deste arquivo são do candidato antes da publicação;
+CI, SHA efetivamente publicado, saúde e rollback das stacks são gates posteriores.
+
 As exceções de escopo e o catálogo próprio en/pt_BR seguem a Issue #776 e o
 [contrato visual](../relationships/visual-contract.md), sem resolver a governança
 de tradução separada da #772. Backend, dependências e o hotfix #771 permanecem
@@ -93,6 +97,14 @@ A primeira tentativa com `HUSKY=0` foi bloqueada antes de executar o hook porque
 ocorreu. O bypass é aplicado somente ao comando de commit com
 `git -c core.hooksPath=/dev/null commit`, sem mudar configuração global ou hooks
 versionados. Os resultados manuais acima continuam sendo o gate do candidato.
+
+A captura extensa encontrou crash nativo do Chromium no macOS. O relatório local
+mostra `EXC_BAD_ACCESS`/`SIGBUS` no caminho `PNGReadPlugin` → `CopyEmojiImage`,
+sem erro JavaScript registrado. Chrome instalado 154.0.8037.58 renderizou fichas
+e modais. O processo de evidências usa contexto novo por tela, respostas reais de
+registro/configuração e seletores específicos para seção e lateral responsiva,
+sem aumentar timeout, remover asserção ou ocultar conteúdo. Tentativas incompletas
+não entram na matriz final. Os manifestos registram SHA e navegador utilizados.
 
 ## Limites e liberação
 

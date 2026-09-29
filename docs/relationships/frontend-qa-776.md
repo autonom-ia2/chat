@@ -8,6 +8,10 @@ testar, revisar e preparar a PR na retomada. Não houve merge, auto-merge, deplo
 flags nem escrita produtiva nesta etapa. Backend, APIs, modelos, banco produtivo,
 SSO, credenciais, infraestrutura e conversor de previews não fazem parte do diff.
 
+Na continuação, Rodrigo autorizou merge e deploy condicionados a implementação,
+revisão e testes verdes. Essa autorização será executada após fechar o candidato
+e os checks remotos; este documento registra o checkpoint anterior à publicação.
+
 ## Referência e diferenças deliberadas
 
 O [contrato visual](visual-contract.md) identifica as imagens de origem e as
@@ -80,6 +84,11 @@ Nenhum logo foi redesenhado. Novas capturas são evidências candidatas até o a
   existência de origem conferidos. Nenhum placeholder conta como miniatura aprovada.
 - Um Chromium da captura extensa encerrou a página (Target crashed). A evidência
   dessa tentativa não é considerada aprovada; repetir em processos curtos sem suites pesadas concorrentes.
+- Na matriz final, o relatório nativo do macOS registrou `SIGBUS` em
+  `CopyEmojiImage`/`PNGReadPlugin` no Chromium de testes. O Chrome instalado
+  154.0.8037.58 renderizou as fichas e os modais; as capturas usam esse navegador,
+  com contexto isolado por tela. Os manifestos registram canal/versão. Nenhum emoji,
+  dado, fonte ou controle do produto foi ocultado para obter a evidência.
 - Na retomada, a primeira rodada completa do E2E passou 17 casos e falhou em dois
   antes da navegação: faltava `RELATIONSHIPS_TEST_ACCOUNT_ID` no ambiente. Os quatro
   valores necessários ao teste de login são carregados da fixture sintética no
@@ -138,4 +147,6 @@ binário usa o alvo anterior verificado. Nenhuma operação de rollback foi exec
 Project Autonom.ia Dev: Projeto Hub2You, Tipo Bug, Prioridade P2, Risco Médio,
 Ambiente Local. O status e a próxima ação devem refletir a PR e o gate real.
 
-Aprovação final visual e merge/deploy: **pendentes de Rodrigo**.
+Merge/deploy: **autorizados por Rodrigo, condicionados aos gates verdes**.
+Comparação com mockups originais não certificada; limites visuais e resultados
+da publicação devem ser informados junto às evidências.
