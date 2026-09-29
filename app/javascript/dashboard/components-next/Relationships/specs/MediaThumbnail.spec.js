@@ -39,6 +39,25 @@ it('loads only visible rows, polls beyond converter timeout and stops when leavi
   expect(axios.get.mock.calls.length).toBe(5);
   wrapper.unmount();
 });
+
+it('keeps a permanently unavailable preview on the file fallback without retry', async () => {
+  axios.get.mockResolvedValue({
+    status: 200,
+    data: new Blob([JSON.stringify({ status: 'unavailable' })], {
+      type: 'application/json; charset=utf-8',
+    }),
+  });
+  const wrapper = mount(MediaThumbnail, {
+    props: { url: '/preview/1', name: 'audio.mp3', type: 'audio' },
+  });
+  observer.callback([{ isIntersecting: true }]);
+  await flushPromises();
+  await flushPromises();
+  expect(wrapper.find('.i-lucide-music').exists()).toBe(true);
+  expect(wrapper.find('button').exists()).toBe(false);
+  wrapper.unmount();
+});
+
 it('offers an explicit retry and never creates an object URL for a late response', async () => {
   axios.get.mockRejectedValueOnce(new Error('offline'));
   const wrapper = mount(MediaThumbnail, {

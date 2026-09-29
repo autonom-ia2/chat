@@ -39,11 +39,20 @@ class Relationships::CompanyPreviewJob < ApplicationJob
 
   def perform(id, blob_id)
     attachment = Attachment.find_by(id: id)
+    return unless attachment
+    unless preview_features_enabled?(attachment)
+      clear_pending_request(attachment, blob_id)
+      return
+    end
     return unless eligible?(attachment, blob_id)
 
     with_processing_slot(attachment, blob_id) do
       attachment.reload
-      generate(attachment, blob_id) if eligible?(attachment, blob_id)
+      if preview_features_enabled?(attachment)
+        generate(attachment, blob_id) if eligible?(attachment, blob_id)
+      else
+        clear_pending_request(attachment, blob_id)
+      end
     end
   rescue StandardError => e
     Rails.logger.info("Relationship preview retry attachment=#{id} error=#{e.class.name}")
@@ -58,7 +67,22 @@ class Relationships::CompanyPreviewJob < ApplicationJob
     return false if self.class.ready?(attachment)
     return false unless retry_due?(attachment)
 
+    preview_features_enabled?(attachment)
+  end
+
+  def preview_features_enabled?(attachment)
     attachment.account.feature_enabled?('companies') && attachment.account.feature_enabled?('relationships_company_media')
+  end
+
+  def clear_pending_request(attachment, blob_id)
+    attachment.with_lock do
+      next unless attachment.file.blob_id == blob_id
+
+      preview = attachment.meta.to_h.fetch('relationship_preview', {})
+      next unless preview['status'] == 'pending' && preview['blob_id'] == blob_id
+
+      attachment.update!(meta: attachment.meta.to_h.except('relationship_preview'))
+    end
   end
 
   def retry_due?(attachment)

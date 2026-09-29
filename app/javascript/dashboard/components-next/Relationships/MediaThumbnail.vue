@@ -43,9 +43,15 @@ const load = async () => {
         timer = setTimeout(() => request(attempt + 1), POLL_INTERVAL);
         return;
       }
-      if (response.data.type === 'image/jpeg')
+      if (response.data.type === 'image/jpeg') {
         image.value = URL.createObjectURL(response.data);
-      else retryable.value = true;
+        return;
+      }
+      if (response.data.type?.startsWith('application/json')) {
+        const payload = JSON.parse(await response.data.text());
+        if (payload.status === 'unavailable') return;
+      }
+      retryable.value = true;
     } catch {
       if (current === generation) retryable.value = true;
     }

@@ -34,6 +34,19 @@ RSpec.describe Relationships::CompanyPreviewJob do
 
     before { account.enable_features!('companies', 'relationships_company_media') }
 
+    it 'clears pending demand after a flag is disabled and re-enqueues immediately when enabled again' do
+      described_class.request(attachment)
+      blob_id = attachment.file.blob_id
+      account.disable_features!('relationships_company_media')
+      expect(Relationships::PreviewRenderer).not_to receive(:new)
+
+      described_class.perform_now(attachment.id, blob_id)
+
+      expect(attachment.reload.meta).not_to have_key('relationship_preview')
+      account.enable_features!('relationships_company_media')
+      expect { expect(described_class.request(attachment.reload)).to eq('pending') }.to have_enqueued_job(described_class)
+    end
+
     it 'keeps 25 valid files pending when the conversion slot is busy beyond three attempts' do
       blob = attachment.file.blob
       files = [attachment] + Array.new(24) { message.attachments.create!(account: account, file: blob) }
