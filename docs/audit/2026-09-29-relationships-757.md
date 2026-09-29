@@ -299,3 +299,17 @@ registrada corretamente.
 O reviewer Codex do PR #771 não executou por limite de uso da conta. Isso não foi tratado
 como aprovação: o delta foi revisado manualmente e continua sujeito aos workflows de CI,
 incluindo regressão de Relacionamentos, imagem Linux, Email protection e Guia.
+
+
+### Reclassificação do finding i18n
+
+A investigação posterior encontrou precedentes próprios do fork posteriores à existência
+da regra do AGENTS.md. O PR #660 / commit
+`a044c4d876c2c4687ba17301ea6f18dc964b4a81` criou deliberadamente
+`pt_BR/insurance.json` em 24/09/2026; também existem catálogos custom de proteção de
+campanhas e importação. Isso demonstra uma inconsistência de governança do fork, não um
+defeito funcional específico de Relacionamentos.
+
+A thread P1 do #768 foi respondida com essa evidência e resolvida sem apagar a tradução.
+A Issue #772 passa a tratar a definição da fonte de verdade para módulos exclusivos.
+O hotfix #771 continua responsável somente pelos dois P2 funcionais confirmados.

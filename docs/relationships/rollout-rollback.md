@@ -112,9 +112,10 @@ O PR #768 foi mesclado em `main` no SHA
   HTTP 429 (`Data limit exceeded`) ao resolver as imagens-base no `public.ecr.aws`.
   Repetir o job sem mudança de condição reproduziu o mesmo bloqueio.
 - As três flags de Relacionamentos continuam desligadas enquanto a Issue #770 / PR #771
-  fecha findings pós-merge.
-- O finding de i18n do #768 é tratado separadamente: remover a tradução pt-BR sem um
-  fluxo válido de Crowdin degradaria a interface para inglês. Não considerar a thread
-  resolvida apenas apagando o catálogo.
-- Antes de habilitar, exigir: #771 verde, revisão do delta, solução registrada para o
-  fluxo pt-BR, Autonom.ia no mesmo SHA de aplicação e novo preflight/verify das duas stacks.
+  fecha os dois findings funcionais pós-merge.
+- O finding de i18n do #768 foi reclassificado como inconsistência de governança do fork:
+  o histórico comprova módulos próprios com pt_BR mantido localmente (por exemplo #660),
+  apesar da regra genérica do AGENTS.md. Remover o catálogo agora degradaria a interface.
+  A política futura fica na Issue #772, sem mascarar o conflito nem bloquear este hotfix.
+- Antes de habilitar, exigir: #771 verde, revisão do delta, Autonom.ia no mesmo SHA de
+  aplicação e novo preflight/verify das duas stacks.
