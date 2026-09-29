@@ -1145,8 +1145,8 @@
      "requer": "integrations",
      "prints": [],
      "fontes": [],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/services/crm/ai/config.rb:13"
     },
     {
      "id": "06.04",
