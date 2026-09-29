@@ -30,7 +30,7 @@ class Autonomia::AuthController < ApplicationController
       redirect_uri: callback_url,
       code_verifier: state[:code_verifier]
     )
-    context = client.fetch_context!(token.context_token)
+    context = client.fetch_context!(token.context_token, organization_id: token.organization_id)
     provisioner = Autonomia::Sso::Provisioner.new(context: context, token: token)
     user = provisioner.perform
 
