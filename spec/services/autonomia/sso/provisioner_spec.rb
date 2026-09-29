@@ -93,6 +93,45 @@ RSpec.describe Autonomia::Sso::Provisioner do
       expect(provisioner.send(:identity_organization_metadata)).not_to include('fallback' => true)
     end
 
+    it 'does not use the first unscoped organization as the active tenant' do
+      provisioner = described_class.new(
+        context: {
+          'user' => {
+            'id' => identity_user_id,
+            'email' => identity_email
+          },
+          'organizations' => [
+            {
+              'id' => 'operator-org',
+              'name' => 'Product operator'
+            }
+          ]
+        }
+      )
+
+      expect(provisioner.send(:identity_organization)).to eq({})
+    end
+
+    context 'without a trusted account or active product organization' do
+      let!(:invited_account) { nil }
+      let(:context) do
+        {
+          'user' => {
+            'id' => identity_user_id,
+            'email' => identity_email,
+            'name' => 'Atendimento Autonomia'
+          }
+        }
+      end
+
+      it 'does not create an account or administrator' do
+        expect do
+          expect { described_class.new(context: context).perform }
+            .to raise_error('Autonomia Identity did not return an active product organization.')
+        end.not_to change(Account, :count)
+      end
+    end
+
     it 'creates new accounts in Portuguese without forcing Chatwoot onboarding' do
       account = described_class.new(context: context).send(:create_account)
 
