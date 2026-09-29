@@ -279,6 +279,7 @@ const esperar = ms =>
 
 // Quem desmonta o painel não quer mais a resposta.
 let desmontado = false;
+let requestSequence = 0;
 onBeforeUnmount(() => {
   desmontado = true;
 });
@@ -289,13 +290,30 @@ onBeforeUnmount(() => {
 // Para sozinha quando a resposta deixou de interessar: o painel saiu da tela,
 // ou a pessoa trocou de conta. Sem isso a tela seguiria consultando por até
 // trinta minutos uma resposta que não ia mostrar a ninguém. -> null quando parou.
-const buscarResposta = async (id, requestAccount, tentativa = 0) => {
-  if (tentativa >= MAX_BUSCAS) return { status: 'failed' };
+const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
+  if (
+    tentativa >= MAX_BUSCAS ||
+    desmontado ||
+    requestId !== requestSequence ||
+    accountId.value !== requestAccount
+  )
+    return tentativa >= MAX_BUSCAS ? { status: 'failed' } : null;
   await esperar(ESPERA_ENTRE_BUSCAS_MS);
-  if (desmontado || accountId.value !== requestAccount) return null;
+  if (
+    desmontado ||
+    requestId !== requestSequence ||
+    accountId.value !== requestAccount
+  )
+    return null;
   const { data } = await AutonomiaGuideAPI.resposta(id);
+  if (
+    desmontado ||
+    requestId !== requestSequence ||
+    accountId.value !== requestAccount
+  )
+    return null;
   if (data.status !== PENDENTE) return data;
-  return buscarResposta(id, requestAccount, tentativa + 1);
+  return buscarResposta(id, requestAccount, requestId, tentativa + 1);
 };
 
 // A falha fica ESCRITA na conversa. Antes era um aviso que sumia sozinho em
@@ -304,15 +322,27 @@ const buscarResposta = async (id, requestAccount, tentativa = 0) => {
 const avisarFalha = () =>
   store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
 
-const requestReply = async (requestAccount, message) => {
+const requestReply = async (requestAccount, message, requestId) => {
   try {
     const { data: pedido } = await AutonomiaGuideAPI.chat({
       message,
       history: store.toHistory(),
       routeContext: route.name,
     });
-    const data = await buscarResposta(pedido.id, requestAccount);
-    if (desmontado || !data || accountId.value !== requestAccount) return;
+    if (
+      desmontado ||
+      requestId !== requestSequence ||
+      accountId.value !== requestAccount
+    )
+      return;
+    const data = await buscarResposta(pedido.id, requestAccount, requestId);
+    if (
+      desmontado ||
+      requestId !== requestSequence ||
+      !data ||
+      accountId.value !== requestAccount
+    )
+      return;
     if (data.status !== PRONTO) {
       avisarFalha();
     } else if (data.available && data.text) {
@@ -333,11 +363,22 @@ const requestReply = async (requestAccount, message) => {
       useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
     }
   } catch {
-    if (desmontado || accountId.value !== requestAccount) return;
+    if (
+      desmontado ||
+      requestId !== requestSequence ||
+      accountId.value !== requestAccount
+    )
+      return;
     avisarFalha();
   } finally {
-    isSending.value = false;
+    if (requestId === requestSequence) isSending.value = false;
   }
+};
+
+const resetConversation = () => {
+  requestSequence += 1;
+  isSending.value = false;
+  store.reset();
 };
 
 // GuideComposer clears the field only when this returns true. Accept = the question is in the
@@ -352,9 +393,11 @@ const sendMessage = message => {
   // Pin the account this request belongs to: if the user switches accounts before the reply lands,
   // the late response must NOT be appended into the now-current account's thread (cross-account leak).
   const requestAccount = accountId.value;
+  requestSequence += 1;
+  const requestId = requestSequence;
   store.addUserMessage(message);
   isSending.value = true;
-  requestReply(requestAccount, message);
+  requestReply(requestAccount, message, requestId);
   return true;
 };
 
@@ -389,7 +432,11 @@ watch(showPanel, async aberto => {
 
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
-watch(accountId, () => store.reset());
+watch(accountId, () => {
+  requestSequence += 1;
+  isSending.value = false;
+  store.reset();
+});
 </script>
 
 <template>
@@ -406,7 +453,7 @@ watch(accountId, () => store.reset());
       <GuideHeader
         :title="$t('AUTONOMIA_GUIDE.TITLE')"
         :can-reset="hasMessages"
-        @reset="store.reset()"
+        @reset="resetConversation"
         @close="closePanel"
       />
 

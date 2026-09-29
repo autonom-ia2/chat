@@ -32,6 +32,7 @@ const { t } = useI18n();
 const { uiSettings, updateUISettings } = useUISettings();
 const globalConfig = useMapGetter('globalConfig/get');
 const currentChat = useMapGetter('getSelectedChat');
+const currentAccountId = useMapGetter('getCurrentAccountId');
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaCopilotStore();
@@ -42,6 +43,7 @@ const selectedAgentId = ref(null);
 const isSending = ref(false);
 const chatContainer = ref(null);
 let requestSequence = 0;
+let agentsRequestSequence = 0;
 
 const isSmallScreen = computed(
   () => windowWidth.value < wootConstants.SMALL_SCREEN_BREAKPOINT
@@ -135,18 +137,37 @@ const setAgent = async agent => {
 };
 
 const fetchAgents = async () => {
-  if (!conversationDisplayId.value) {
+  agentsRequestSequence += 1;
+  const requestId = agentsRequestSequence;
+  const requestAccountId = currentAccountId.value;
+  const requestConversationId = conversationDisplayId.value;
+
+  if (!requestConversationId) {
     agents.value = [];
+    selectedAgentId.value = null;
     return;
   }
   try {
     const { data } = await AutonomiaCopilotAPI.listAgents(
-      conversationDisplayId.value
+      requestConversationId
     );
+    if (
+      requestId !== agentsRequestSequence ||
+      currentAccountId.value !== requestAccountId ||
+      conversationDisplayId.value !== requestConversationId
+    )
+      return;
     agents.value = data.agents || [];
     resolveDefaultAgent();
   } catch {
-    agents.value = [];
+    if (
+      requestId === agentsRequestSequence &&
+      currentAccountId.value === requestAccountId &&
+      conversationDisplayId.value === requestConversationId
+    ) {
+      agents.value = [];
+      selectedAgentId.value = null;
+    }
   }
 };
 
@@ -211,8 +232,21 @@ watch(showPanel, opened => {
 // copilot on conversation B. Same-conversation close/reopen keeps its thread.
 watch(conversationDisplayId, () => {
   requestSequence += 1;
+  agentsRequestSequence += 1;
   isSending.value = false;
   store.reset();
+  agents.value = [];
+  selectedAgentId.value = null;
+  if (showPanel.value) fetchAgents();
+});
+
+watch(currentAccountId, () => {
+  requestSequence += 1;
+  agentsRequestSequence += 1;
+  isSending.value = false;
+  store.reset();
+  agents.value = [];
+  selectedAgentId.value = null;
   if (showPanel.value) fetchAgents();
 });
 
@@ -227,6 +261,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   requestSequence += 1;
+  agentsRequestSequence += 1;
 });
 </script>
 
