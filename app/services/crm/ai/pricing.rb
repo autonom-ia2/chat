@@ -3,10 +3,10 @@ module Crm
     # Tabela de preço por modelo p/ ESTIMAR custo (USD por 1M tokens).
     #
     # Valores DEFAULT = preço de tabela "Standard" da OpenAI (developers.openai.com/api/docs/pricing,
-    # família 5.6 consultada 2026-07-25). Modelos novos/preços alterados: ajustar aqui OU sem deploy
+    # Sol/Luna 5.6 e 6 consultados em 2026-09-29). Modelos novos/preços alterados: ajustar aqui OU sem deploy
     # via ENV (1M tokens, "input,cached,output" com 4o campo OPCIONAL "cache_write"):
     #   CRM_AI_PRICE_GPT_5_4="2.5,0.25,15"
-    #   CRM_AI_PRICE_GPT_5_6_LUNA="1,0.1,6,1.25"
+    #   CRM_AI_PRICE_GPT_6_LUNA="0.1,0.01,0.5,0.125"
     # A chave da ENV é o modelo em UPPER, com tudo que não for [A-Z0-9] virando "_".
     # Não cobre Batch (-50%), Flex/Priority, nem áudio/TTS — só os modelos de texto em uso no CRM.
     module Pricing
@@ -15,15 +15,17 @@ module Crm
       # USD / 1M tokens. TRÊS tarifas de INPUT:
       #   input       = token novo, não cacheado
       #   cached      = LEITURA de cache (90% de desconto)
-      #   cache_write = ESCRITA no cache. A família 5.6 cobra 1,25x o input; os modelos 5.4 não têm
+      #   cache_write = ESCRITA no cache. As famílias 5.6 e 6 cobram 1,25x o input; os modelos 5.4 não têm
       #                 tarifa própria e caem no `input` (preserva o comportamento histórico).
       # Família 5.6 (Sol/Terra/Luna) incluída para a página de gestão de IA precificar qualquer
       # modelo em uso: modelo AUSENTE daqui cai em ZERO_RATE e o custo é gravado como 0 SEM erro
       # (falha silenciosa). Terra tem a MESMA tarifa do gpt-5.4 — troca de geração sem custo extra.
       DEFAULT_RATES = {
-        'gpt-5.6-sol' => { input: 5.0, cached: 0.5, cache_write: 6.25, output: 30.0 },
+        'gpt-6-sol' => { input: 2.0, cached: 0.2, cache_write: 2.5, output: 10.0 },
+        'gpt-6-luna' => { input: 0.1, cached: 0.01, cache_write: 0.125, output: 0.5 },
+        'gpt-5.6-sol' => { input: 4.0, cached: 0.4, cache_write: 5.0, output: 20.0 },
         'gpt-5.6-terra' => { input: 2.5, cached: 0.25, cache_write: 3.125, output: 15.0 },
-        'gpt-5.6-luna' => { input: 1.0, cached: 0.1, cache_write: 1.25, output: 6.0 },
+        'gpt-5.6-luna' => { input: 0.2, cached: 0.02, cache_write: 0.25, output: 1.2 },
         'gpt-5.4' => { input: 2.5, cached: 0.25, output: 15.0 },
         'gpt-5.4-mini' => { input: 0.75, cached: 0.075, output: 4.5 },
         'gpt-5.4-nano' => { input: 0.2, cached: 0.02, output: 1.25 }

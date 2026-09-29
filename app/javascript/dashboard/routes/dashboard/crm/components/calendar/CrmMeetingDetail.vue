@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   differenceInMinutes,
@@ -39,6 +39,7 @@ const isCanceling = ref(false);
 const isRecordingOutcome = ref(false);
 const cancelDialogRef = ref(null);
 const isSummarizing = ref(false);
+let summarizeRequestId = 0;
 // AI (S5): gated on the install flag; backend enforces + degrades gracefully.
 const aiEnabled = computed(
   () => window.globalConfig?.CRM_AI_ENABLED === 'true'
@@ -368,25 +369,47 @@ const canSummarize = computed(
 const onSummarize = async () => {
   if (isSummarizing.value || !meetingId.value || !accountId.value) return;
 
+  summarizeRequestId += 1;
+  const requestId = summarizeRequestId;
+  const requestMeetingId = meetingId.value;
+  const requestAccountId = accountId.value;
   isSummarizing.value = true;
   try {
     const response = await crmMeetingsAPI.summarize(
-      accountId.value,
-      meetingId.value
+      requestAccountId,
+      requestMeetingId
     );
+    if (
+      requestId !== summarizeRequestId ||
+      requestMeetingId !== meetingId.value ||
+      requestAccountId !== accountId.value ||
+      !props.show
+    )
+      return;
     if (response.data?.summary) {
       detail.value = { ...meeting.value, summary: response.data.summary };
     } else if (response.data?.ai_available === false) {
       useAlert(t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.AI_UNAVAILABLE'));
     }
   } catch {
-    useAlert(t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.AI_UNAVAILABLE'));
+    if (
+      requestId === summarizeRequestId &&
+      requestMeetingId === meetingId.value &&
+      requestAccountId === accountId.value &&
+      props.show
+    )
+      useAlert(t('CRM_KANBAN.CALENDAR.MEETING_DETAIL.AI_UNAVAILABLE'));
   } finally {
-    isSummarizing.value = false;
+    if (requestId === summarizeRequestId) isSummarizing.value = false;
   }
 };
+
+onBeforeUnmount(() => {
+  summarizeRequestId += 1;
+});
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <div
     v-if="show"

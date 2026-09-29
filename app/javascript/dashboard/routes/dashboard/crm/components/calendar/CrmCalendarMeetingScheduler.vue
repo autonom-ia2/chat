@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { format } from 'date-fns';
@@ -72,6 +72,15 @@ const isSuggestingTimes = ref(false);
 const suggestionsLoaded = ref(false);
 const isDraftingInvite = ref(false);
 const descriptionFromAi = ref(false);
+let suggestionsRequestId = 0;
+let draftRequestId = 0;
+
+const invalidateAiRequests = () => {
+  suggestionsRequestId += 1;
+  draftRequestId += 1;
+  isSuggestingTimes.value = false;
+  isDraftingInvite.value = false;
+};
 
 const pad = value => String(value).padStart(2, '0');
 
@@ -415,6 +424,7 @@ const hydrateFromMeeting = meeting => {
 };
 
 const resetForm = () => {
+  invalidateAiRequests();
   if (isReschedule.value) {
     hydrateFromMeeting(props.meeting);
     return;
@@ -477,22 +487,56 @@ const onSuggestTimes = async () => {
     return;
   }
 
+  suggestionsRequestId += 1;
+  const requestId = suggestionsRequestId;
+  const requestContext = {
+    accountId: currentAccountId.value,
+    cardId: props.cardId,
+    inboxId: selectedInboxId.value,
+    date: pickedDate.value,
+    duration: Number(duration.value),
+    timezone: userTimezone.value,
+  };
   isSuggestingTimes.value = true;
   suggestionsLoaded.value = false;
   try {
-    const { data } = await crmMeetingsAPI.suggestTimes(currentAccountId.value, {
-      cardId: props.cardId,
-      inboxId: selectedInboxId.value,
-      date: pickedDate.value,
-      durationMinutes: Number(duration.value),
-      timezone: userTimezone.value,
-    });
+    const { data } = await crmMeetingsAPI.suggestTimes(
+      requestContext.accountId,
+      {
+        cardId: requestContext.cardId,
+        inboxId: requestContext.inboxId,
+        date: requestContext.date,
+        durationMinutes: requestContext.duration,
+        timezone: requestContext.timezone,
+      }
+    );
+    if (
+      requestId !== suggestionsRequestId ||
+      requestContext.accountId !== currentAccountId.value ||
+      requestContext.cardId !== props.cardId ||
+      requestContext.inboxId !== selectedInboxId.value ||
+      requestContext.date !== pickedDate.value ||
+      requestContext.duration !== Number(duration.value) ||
+      requestContext.timezone !== userTimezone.value
+    )
+      return;
     aiSuggestions.value = (data?.suggestions || []).filter(s => s?.starts_at);
   } catch (exception) {
-    aiSuggestions.value = [];
+    if (
+      requestId === suggestionsRequestId &&
+      requestContext.accountId === currentAccountId.value &&
+      requestContext.cardId === props.cardId &&
+      requestContext.inboxId === selectedInboxId.value &&
+      requestContext.date === pickedDate.value &&
+      requestContext.duration === Number(duration.value) &&
+      requestContext.timezone === userTimezone.value
+    )
+      aiSuggestions.value = [];
   } finally {
-    suggestionsLoaded.value = true;
-    isSuggestingTimes.value = false;
+    if (requestId === suggestionsRequestId) {
+      suggestionsLoaded.value = true;
+      isSuggestingTimes.value = false;
+    }
   }
 };
 
@@ -517,12 +561,31 @@ const onDraftInvite = async () => {
     return;
   }
 
+  draftRequestId += 1;
+  const requestId = draftRequestId;
+  const requestContext = {
+    accountId: currentAccountId.value,
+    cardId: props.cardId,
+    title: title.value.trim(),
+    description: description.value,
+  };
   isDraftingInvite.value = true;
   try {
-    const { data } = await crmMeetingsAPI.draftInvite(currentAccountId.value, {
-      cardId: props.cardId,
-      title: title.value.trim(),
-    });
+    const { data } = await crmMeetingsAPI.draftInvite(
+      requestContext.accountId,
+      {
+        cardId: requestContext.cardId,
+        title: requestContext.title,
+      }
+    );
+    if (
+      requestId !== draftRequestId ||
+      requestContext.accountId !== currentAccountId.value ||
+      requestContext.cardId !== props.cardId ||
+      requestContext.title !== title.value.trim() ||
+      requestContext.description !== description.value
+    )
+      return;
     if (data?.description) {
       description.value = data.description;
       descriptionFromAi.value = true;
@@ -530,7 +593,7 @@ const onDraftInvite = async () => {
   } catch (exception) {
     // Fail-safe: leave the description untouched; backend never 500s.
   } finally {
-    isDraftingInvite.value = false;
+    if (requestId === draftRequestId) isDraftingInvite.value = false;
   }
 };
 
@@ -747,6 +810,7 @@ watch(
       nextTick(() => dialogRef.value?.open());
       fetchAvailability();
     } else {
+      invalidateAiRequests();
       dialogRef.value?.close();
     }
   }
@@ -755,6 +819,7 @@ watch(
 // Re-fetch availability whenever the mailbox or day changes (debounced) so the
 // busy markings always reflect the current selection.
 watch([pickedDate, selectedInboxId], () => {
+  invalidateAiRequests();
   if (props.show) scheduleAvailabilityFetch();
   // Suggestions are tied to the mailbox + day; drop them when either changes so a
   // stale chip can't be picked against a different context.
@@ -769,6 +834,14 @@ watch(
   },
   { immediate: true }
 );
+
+watch([() => props.cardId, currentAccountId], invalidateAiRequests);
+
+onBeforeUnmount(() => {
+  if (availabilityTimer) clearTimeout(availabilityTimer);
+  availabilityRequestId += 1;
+  invalidateAiRequests();
+});
 </script>
 
 <template>

@@ -75,7 +75,8 @@ RSpec.describe 'Autonomia agent playground with incomplete quote-agent choices',
     post "/api/v1/accounts/#{account.id}/autonomia/agents/#{lia.id}/test",
          params: { message: 'oi' }, headers: administrator.create_new_auth_token, as: :json
 
-    expect(response).not_to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:accepted)
+    Crm::Ai::InteractiveJob.perform_now(response.parsed_body['id'])
     expect(cliente_de_ia).to have_received(:create_with_tool_executor)
   end
 end
