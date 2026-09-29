@@ -22,11 +22,15 @@ export default {
       type: Function,
       default: () => {},
     },
-    // Passes 0 or 1 based on the selected AttributeModel tab selected in the UI
+    // Passes 0, 1 or 2 based on the selected AttributeModel tab selected in the UI
     // Needs a better data type, todo: refactor this component later
     selectedAttributeModelTab: {
       type: Number,
       default: 0,
+    },
+    showCompanyModel: {
+      type: Boolean,
+      default: false,
     },
   },
   setup() {
@@ -56,7 +60,9 @@ export default {
       uiFlags: 'getUIFlags',
     }),
     models() {
-      return ATTRIBUTE_MODELS.map(item => ({
+      return ATTRIBUTE_MODELS.filter(
+        item => item.key !== 'COMPANY' || this.showCompanyModel
+      ).map(item => ({
         ...item,
         option: this.$t(`ATTRIBUTES_MGMT.ATTRIBUTE_MODELS.${item.key}`),
       }));
