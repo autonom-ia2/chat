@@ -63,6 +63,7 @@ class ContactMergeAction
   end
 
   def merge_and_remove_mergee_contact
+    [@base_contact, @mergee_contact].sort_by(&:id).each(&:lock!)
     mergable_attribute_keys = %w[identifier name email phone_number additional_attributes custom_attributes]
     base_contact_attributes = base_contact.attributes.slice(*mergable_attribute_keys).compact_blank
     mergee_contact_attributes = mergee_contact.attributes.slice(*mergable_attribute_keys).compact_blank

@@ -1,5 +1,8 @@
 <script>
-import { format, parseISO } from 'date-fns';
+import {
+  attributeDate,
+  formatAttributeDate,
+} from 'dashboard/helper/attributeDate';
 import { required, url } from '@vuelidate/validators';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import MultiselectDropdown from 'shared/components/ui/MultiselectDropdown.vue';
@@ -10,8 +13,6 @@ import { useVuelidate } from '@vuelidate/core';
 import { emitter } from 'shared/helpers/mitt';
 
 import NextButton from 'dashboard/components-next/button/Button.vue';
-
-const DATE_FORMAT = 'yyyy-MM-dd';
 
 export default {
   components: {
@@ -47,9 +48,7 @@ export default {
   computed: {
     displayValue() {
       if (this.isAttributeTypeDate) {
-        return this.value
-          ? new Date(this.value || new Date()).toLocaleDateString()
-          : '---';
+        return this.value ? formatAttributeDate(this.value) : '---';
       }
       if (this.isAttributeTypeCheckbox) {
         return this.value === 'false' ? false : this.value;
@@ -58,7 +57,7 @@ export default {
     },
     formattedValue() {
       return this.isAttributeTypeDate
-        ? format(this.value ? new Date(this.value) : new Date(), DATE_FORMAT)
+        ? attributeDate(this.value) || new Date().toISOString().slice(0, 10)
         : this.value;
     },
     listOptions() {
@@ -182,7 +181,7 @@ export default {
     onUpdate() {
       const updatedValue =
         this.attributeType === 'date'
-          ? parseISO(this.editedValue)
+          ? attributeDate(this.editedValue)
           : this.editedValue;
       this.v$.$touch();
       if (this.v$.$invalid) {

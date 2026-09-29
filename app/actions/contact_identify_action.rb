@@ -98,6 +98,7 @@ class ContactIdentifyAction
   end
 
   def update_contact
+    @contact.lock! if @contact.persisted?
     @contact.attributes = params.slice(*@attributes_to_update).reject do |_k, v|
       v.blank?
     end.merge({ custom_attributes: custom_attributes, additional_attributes: additional_attributes })

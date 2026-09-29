@@ -1,3 +1,5 @@
+import store from 'dashboard/store';
+import { recordRequest } from 'dashboard/components-next/Relationships/confirmedValues';
 import camelcaseKeys from 'camelcase-keys';
 import CompanyAPI from 'dashboard/api/companies';
 import { createStore } from 'dashboard/store/storeFactory';
@@ -136,6 +138,12 @@ export const useCompaniesStore = createStore({
     },
 
     async show(id) {
+      const request = recordRequest(
+        store,
+        CompanyAPI.accountIdFromRoute,
+        'company',
+        id
+      );
       this.setUIFlag({ fetchingItem: true });
       this.setActiveCompanyId(id);
       const activeCompanyId = Number(id);
@@ -148,12 +156,17 @@ export const useCompaniesStore = createStore({
         const company = camelizeCompany(payload);
 
         if (
+          !request.valid() ||
           this.companyDetailRequestToken !== requestToken ||
           this.activeCompanyId !== activeCompanyId
         ) {
           return company;
         }
 
+        company.customAttributes = request.mergeRead(
+          company.customAttributes,
+          this.getRecord(id).customAttributes
+        );
         this.upsertCompanyRecord(company);
         this.setActiveCompanyId(company.id);
         return company;
@@ -167,6 +180,15 @@ export const useCompaniesStore = createStore({
     },
 
     async update({ id, ...companyAttrs }) {
+      const request = recordRequest(
+        store,
+        CompanyAPI.accountIdFromRoute,
+        'company',
+        id
+      );
+      const confirm = request.write(
+        Object.keys(companyAttrs.customAttributes || {})
+      );
       this.setUIFlag({ updatingItem: true });
       try {
         const {
@@ -176,7 +198,25 @@ export const useCompaniesStore = createStore({
           buildCompanyRequestPayload(companyAttrs)
         );
         const company = camelizeCompany(payload);
-        this.upsertCompanyRecord(company);
+        if (request.valid()) {
+          const patch = Object.fromEntries(
+            Object.keys(companyAttrs)
+              .filter(
+                key => key !== 'customAttributes' && Object.hasOwn(company, key)
+              )
+              .map(key => [key, company[key]])
+          );
+          if (companyAttrs.avatar) patch.avatarUrl = company.avatarUrl;
+          this.upsertCompanyRecord({
+            ...this.getRecord(id),
+            id: company.id,
+            ...patch,
+            customAttributes: confirm(
+              this.getRecord(id).customAttributes,
+              company.customAttributes
+            ),
+          });
+        }
         return company;
       } catch (error) {
         return throwErrorMessage(error);
@@ -232,6 +272,12 @@ export const useCompaniesStore = createStore({
     },
 
     async deleteCompanyAvatar(companyId) {
+      const request = recordRequest(
+        store,
+        CompanyAPI.accountIdFromRoute,
+        'company',
+        companyId
+      );
       this.setUIFlag({ deletingAvatar: true });
       this.ensureActiveCompanyContext(companyId);
       try {
@@ -239,7 +285,12 @@ export const useCompaniesStore = createStore({
           data: { payload },
         } = await CompanyAPI.destroyAvatar(companyId);
         const company = camelizeCompany(payload);
-        this.upsertCompanyRecord(company);
+        if (request.valid())
+          this.upsertCompanyRecord({
+            ...this.getRecord(companyId),
+            id: company.id,
+            avatarUrl: company.avatarUrl,
+          });
         return company;
       } catch (error) {
         return throwErrorMessage(error);
@@ -437,13 +488,25 @@ export const useCompaniesStore = createStore({
     },
 
     async deleteCustomAttributes({ id, customAttributes }) {
+      const request = recordRequest(
+        store,
+        CompanyAPI.accountIdFromRoute,
+        'company',
+        id
+      );
+      const confirm = request.write(customAttributes);
       this.setUIFlag({ deletingCustomAttributes: true });
       try {
         const {
           data: { payload },
         } = await CompanyAPI.destroyCustomAttributes(id, customAttributes);
         const company = camelizeCompany(payload);
-        this.upsertCompanyRecord(company);
+        if (request.valid())
+          this.upsertCompanyRecord({
+            ...this.getRecord(id),
+            id: company.id,
+            customAttributes: confirm(this.getRecord(id).customAttributes),
+          });
         return company;
       } catch (error) {
         return throwErrorMessage(error);

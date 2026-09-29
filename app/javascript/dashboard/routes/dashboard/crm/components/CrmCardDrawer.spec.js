@@ -1,3 +1,4 @@
+import ContactAPI from 'dashboard/api/contacts';
 import { mount } from '@vue/test-utils';
 import CrmCardDrawer from './CrmCardDrawer.vue';
 
@@ -18,7 +19,10 @@ vi.mock('dashboard/composables/useKeyboardEvents', () => ({
   useKeyboardEvents: () => {},
 }));
 vi.mock('dashboard/api/contacts', () => ({
-  default: { search: vi.fn().mockResolvedValue({ data: { payload: [] } }) },
+  default: {
+    search: vi.fn().mockResolvedValue({ data: { payload: [] } }),
+    update: vi.fn().mockResolvedValue({}),
+  },
 }));
 vi.mock('dashboard/api/crmKanban', () => ({
   default: {
@@ -117,4 +121,45 @@ describe('CrmCardDrawer timeline', () => {
 
     expect(detail).toBe('Retomar');
   });
+});
+
+it('sends no stale custom attributes when editing only native contact details', async () => {
+  const wrapper = mountDrawer({
+    card: {
+      id: 5,
+      title: 'Card A',
+      stage_id: 10,
+      contact: {
+        id: 42,
+        name: 'Original',
+        custom_attributes: { address: 'Old address', job_title: 'Old title' },
+      },
+    },
+  });
+  wrapper.vm.contactForm.name = 'Edited name';
+  await wrapper.vm.persistContactIfChanged();
+  expect(ContactAPI.update.mock.lastCall[1]).not.toHaveProperty(
+    'custom_attributes'
+  );
+  wrapper.unmount();
+});
+it('sends only the custom attribute actually edited in the CRM drawer', async () => {
+  const wrapper = mountDrawer({
+    card: {
+      id: 5,
+      title: 'Card A',
+      stage_id: 10,
+      contact: {
+        id: 42,
+        name: 'Original',
+        custom_attributes: { address: 'Old address', job_title: 'Old title' },
+      },
+    },
+  });
+  wrapper.vm.contactForm.jobTitle = 'Edited title';
+  await wrapper.vm.persistContactIfChanged();
+  expect(ContactAPI.update.mock.lastCall[1].custom_attributes).toEqual({
+    job_title: 'Edited title',
+  });
+  wrapper.unmount();
 });

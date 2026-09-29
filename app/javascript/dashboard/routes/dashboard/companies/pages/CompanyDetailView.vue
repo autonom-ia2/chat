@@ -4,6 +4,10 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import CompanyMedia from 'dashboard/components-next/Relationships/CompanyMedia.vue';
+import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
+import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Policy from 'dashboard/components/policy.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CompaniesDetailsLayout from 'dashboard/components-next/Companies/CompaniesDetailsLayout.vue';
@@ -17,6 +21,7 @@ import CompanyProfileCard from 'dashboard/components-next/Companies/CompanyDetai
 import ConfirmCompanyDeleteDialog from 'dashboard/components-next/Companies/CompanyDetail/ConfirmCompanyDeleteDialog.vue';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
+const { mediaEnabled } = useRelationships();
 const route = useRoute();
 const router = useRouter();
 const companiesStore = useCompaniesStore();
@@ -24,7 +29,9 @@ const { t } = useI18n();
 
 const confirmDeleteDialogRef = ref(null);
 const selectedCandidate = ref(null);
-const activeSidebarTab = ref('history');
+const activeSidebarTab = ref(
+  mediaEnabled.value && route.query.media ? 'media' : 'history'
+);
 
 const companyId = computed(() => Number(route.params.companyId));
 const company = computed(() => companiesStore.getRecord(companyId.value));
@@ -71,8 +78,12 @@ const SIDEBAR_TABS_OPTIONS = [
 ];
 
 const sidebarTabs = computed(() =>
-  SIDEBAR_TABS_OPTIONS.map(tab => ({
+  [
+    ...SIDEBAR_TABS_OPTIONS,
+    ...(mediaEnabled.value ? [{ key: 'MEDIA', value: 'media' }] : []),
+  ].map(tab => ({
     label: {
+      media: t('RELATIONSHIPS.MEDIA.TITLE'),
       notes: t('COMPANIES.DETAIL.SIDEBAR.TABS.NOTES'),
       history: t('COMPANIES.DETAIL.SIDEBAR.TABS.HISTORY'),
       contacts: `${t('COMPANIES.DETAIL.SIDEBAR.TABS.CONTACTS')} (${Number(companyContactsMeta.value.totalCount || 0)})`,
@@ -83,7 +94,7 @@ const sidebarTabs = computed(() =>
 );
 
 const activeSidebarTabIndex = computed(() =>
-  SIDEBAR_TABS_OPTIONS.findIndex(tab => tab.value === activeSidebarTab.value)
+  sidebarTabs.value.findIndex(tab => tab.value === activeSidebarTab.value)
 );
 
 const goToCompaniesIndex = () => {
@@ -188,11 +199,12 @@ const handleDeleteCompany = async () => {
 };
 
 watch(
-  companyId,
-  async id => {
+  [companyId, () => route.params.accountId],
+  async ([id]) => {
     companiesStore.resetCompanyDetailState();
     clearSelectedCandidate();
-    activeSidebarTab.value = 'history';
+    activeSidebarTab.value =
+      mediaEnabled.value && route.query.media ? 'media' : 'history';
     if (!id) return;
     await Promise.allSettled([
       companiesStore.show(id),
@@ -202,6 +214,15 @@ watch(
   },
   { immediate: true }
 );
+
+watch(mediaEnabled, enabled => {
+  if (enabled && route.query.media) {
+    activeSidebarTab.value = 'media';
+  } else if (!enabled && activeSidebarTab.value === 'media') {
+    activeSidebarTab.value = 'history';
+    loadSidebarTab('history');
+  }
+});
 
 onBeforeUnmount(() => {
   companiesStore.resetCompanyDetailState();
@@ -234,8 +255,14 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="flex flex-col gap-6">
+      <RelationshipBreadcrumb />
       <CompanyProfileCard :company="company" :is-loading="isFetchingCompany" />
 
+      <RelationshipFields
+        :record="company"
+        entity="company"
+        surface="company_details"
+      />
       <Policy :permissions="['administrator']">
         <section
           class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
@@ -269,6 +296,10 @@ onBeforeUnmount(() => {
       </div>
     </template>
     <template v-if="hasCompany" #sidebar>
+      <CompanyMedia
+        v-if="mediaEnabled && activeSidebarTab === 'media'"
+        :company-id="companyId"
+      />
       <CompanyNotesSidebar
         v-if="activeSidebarTab === 'notes'"
         :notes="companyNotes"

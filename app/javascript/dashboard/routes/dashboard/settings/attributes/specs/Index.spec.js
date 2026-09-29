@@ -1,5 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 import Index from '../Index.vue';
 import AddAttribute from '../AddAttribute.vue';
 
@@ -13,6 +13,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
+    accountId: ref(16),
     currentAccount: { value: { id: 16, settings: {} } },
     isCloudFeatureEnabled: feature =>
       feature === 'companies' && testState.companiesEnabled,
@@ -20,7 +21,11 @@ vi.mock('dashboard/composables/useAccount', () => ({
 }));
 
 vi.mock('dashboard/composables/store', () => ({
-  useStore: () => ({ dispatch: vi.fn() }),
+  useStore: () => ({
+    dispatch: vi.fn(),
+    subscribe: vi.fn(),
+    getters: { getCurrentUserID: 1 },
+  }),
   useMapGetter: () => ({ value: [] }),
   useStoreGetters: () => ({
     'attributes/getUIFlags': {

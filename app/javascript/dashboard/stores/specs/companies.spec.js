@@ -1,3 +1,4 @@
+import store from 'dashboard/store';
 import { setActivePinia, createPinia } from 'pinia';
 import CompanyAPI from 'dashboard/api/companies';
 import { useCompaniesStore } from '../companies';
@@ -30,6 +31,7 @@ const createDeferred = () => {
 
 describe('companies store', () => {
   beforeEach(() => {
+    store.state.route = { params: { accountId: '31' } };
     setActivePinia(createPinia());
     vi.clearAllMocks();
   });
@@ -193,6 +195,10 @@ describe('companies store', () => {
 
     const companiesStore = useCompaniesStore();
 
+    companiesStore.upsertCompanyRecord({
+      id: 1,
+      customAttributes: { plan: 'basic', region: 'us' },
+    });
     await companiesStore.deleteCustomAttributes({
       id: 1,
       customAttributes: ['plan'],

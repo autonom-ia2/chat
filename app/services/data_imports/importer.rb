@@ -300,21 +300,23 @@ class DataImports::Importer
   end
 
   def update_existing_contact(contact, contact_payload)
-    attrs = contact_attributes(contact_payload)
-    updates = {}
-    updates[:name] = attrs[:name] if contact.name.blank? && attrs[:name].present?
-    updates[:email] = attrs[:email] if contact_email_available?(contact, attrs[:email])
-    updates[:phone_number] = attrs[:phone_number] if contact_phone_number_available?(contact, attrs[:phone_number])
-    updates[:identifier] = attrs[:identifier] if contact.identifier.blank? && attrs[:identifier].present?
-    updates[:last_activity_at] = attrs[:last_activity_at] if contact.last_activity_at.blank? && attrs[:last_activity_at].present?
-    updates[:additional_attributes] = contact.additional_attributes.to_h.deep_merge(attrs[:additional_attributes])
-    updates[:custom_attributes] = contact.custom_attributes.to_h.deep_merge(attrs[:custom_attributes])
-    if contact.visitor? && attrs[:contact_type].present? && contact_resolved_after_update?(contact, updates)
-      updates[:contact_type] = attrs[:contact_type]
+    contact.with_lock do
+      attrs = contact_attributes(contact_payload)
+      updates = {}
+      updates[:name] = attrs[:name] if contact.name.blank? && attrs[:name].present?
+      updates[:email] = attrs[:email] if contact_email_available?(contact, attrs[:email])
+      updates[:phone_number] = attrs[:phone_number] if contact_phone_number_available?(contact, attrs[:phone_number])
+      updates[:identifier] = attrs[:identifier] if contact.identifier.blank? && attrs[:identifier].present?
+      updates[:last_activity_at] = attrs[:last_activity_at] if contact.last_activity_at.blank? && attrs[:last_activity_at].present?
+      updates[:additional_attributes] = contact.additional_attributes.to_h.deep_merge(attrs[:additional_attributes])
+      updates[:custom_attributes] = contact.custom_attributes.to_h.deep_merge(attrs[:custom_attributes])
+      if contact.visitor? && attrs[:contact_type].present? && contact_resolved_after_update?(contact, updates)
+        updates[:contact_type] = attrs[:contact_type]
+      end
+      updates[:updated_at] = Time.current
+      contact.update_columns(updates) if updates.present?
+      contact.reload
     end
-    updates[:updated_at] = Time.current
-    contact.update_columns(updates) if updates.present?
-    contact.reload
   end
 
   def contact_email_available?(contact, email)

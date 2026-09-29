@@ -1,4 +1,5 @@
 <script setup>
+import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -6,6 +7,7 @@ import { useAlert } from 'dashboard/composables';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 
+import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
@@ -195,6 +197,12 @@ const handleAvatarDelete = async () => {
         @click="updateContact"
       />
     </div>
+    <RelationshipBreadcrumb />
+    <RelationshipFields
+      :record="selectedContact"
+      entity="contact"
+      surface="contact_details"
+    />
     <ContactOptOutSection :contact="selectedContact" />
     <Policy :permissions="['administrator']">
       <div

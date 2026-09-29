@@ -143,6 +143,7 @@ RUN apk update && apk add --no-cache \
   tesseract-ocr \
   tesseract-ocr-data-por \
   poppler-utils \
+  ffmpeg \
   && gem install bundler -v "$BUNDLER_VERSION"
 
 # Restrict libvips to its trusted image loaders when generating variants

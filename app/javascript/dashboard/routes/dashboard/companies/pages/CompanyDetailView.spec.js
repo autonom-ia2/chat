@@ -1,8 +1,10 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
 import CompanyDetailView from './CompanyDetailView.vue';
 
 const testState = vi.hoisted(() => ({
+  flags: null,
+  query: {},
   company: {
     id: 42,
     name: 'Autonom.ia',
@@ -11,12 +13,32 @@ const testState = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    accountId: ref(16),
+    currentAccount: ref({ id: 16 }),
+    isCloudFeatureEnabled: name =>
+      ['companies', 'relationships_company_media'].includes(name) &&
+      testState.flags.value,
+  }),
+}));
+vi.mock('dashboard/composables/store', () => ({
+  useStore: () => ({
+    commit: vi.fn(),
+    subscribe: vi.fn(),
+    getters: { getCurrentUserID: 1 },
+  }),
+}));
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: key => key }),
 }));
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { accountId: '16', companyId: '42' } }),
+  useRoute: () => ({
+    params: { accountId: '16', companyId: '42' },
+    query: testState.query,
+  }),
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
 }));
 
@@ -58,6 +80,7 @@ const mountView = async () => {
   const wrapper = mount(CompanyDetailView, {
     global: {
       stubs: {
+        RouterLink: true,
         CompaniesDetailsLayout: {
           template:
             '<div><slot /><slot name="sidebarHeader" /><slot name="sidebar" /></div>',
@@ -69,6 +92,7 @@ const mountView = async () => {
         },
         Button: true,
         CompanyProfileCard: true,
+        CompanyMedia: { template: '<div class="company-media" />' },
         ConfirmCompanyDeleteDialog: true,
         CompanyNotesSidebar: {
           template: '<div class="notes-sidebar" />',
@@ -109,6 +133,11 @@ const mountView = async () => {
   return wrapper;
 };
 
+beforeEach(() => {
+  testState.flags = ref(false);
+  testState.query = {};
+});
+
 describe('CompanyDetailView custom attributes', () => {
   it('keeps History as default and exposes the existing Attributes sidebar', async () => {
     const wrapper = await mountView();
@@ -126,4 +155,42 @@ describe('CompanyDetailView custom attributes', () => {
       wrapper.find('.company-attributes').attributes('data-company-id')
     ).toBe('42');
   });
+});
+
+it('restores Media from the detail return query and exits Media when flags turn off', async () => {
+  testState.flags.value = true;
+  testState.query = {
+    media: JSON.stringify({ q: 'proposal', contact_id: '4', page: 2 }),
+  };
+  const wrapper = await mountView();
+  expect(wrapper.find('.company-media').exists()).toBe(true);
+  expect(wrapper.find('.history-sidebar').exists()).toBe(false);
+  expect(JSON.parse(testState.query.media)).toEqual({
+    q: 'proposal',
+    contact_id: '4',
+    page: 2,
+  });
+  testState.flags.value = false;
+  await nextTick();
+  expect(wrapper.find('.company-media').exists()).toBe(false);
+  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  wrapper.unmount();
+});
+it('ignores media query when media flags are off', async () => {
+  testState.query = { media: '{}' };
+  const wrapper = await mountView();
+  expect(wrapper.find('.company-media').exists()).toBe(false);
+  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  wrapper.unmount();
+});
+
+it('restores the media return context when the account flags finish loading', async () => {
+  testState.query = { media: JSON.stringify({ q: 'proposal', page: 2 }) };
+  const wrapper = await mountView();
+  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  testState.flags.value = true;
+  await nextTick();
+  expect(wrapper.find('.company-media').exists()).toBe(true);
+  expect(wrapper.find('.history-sidebar').exists()).toBe(false);
+  wrapper.unmount();
 });

@@ -9,6 +9,10 @@ import { useI18n } from 'vue-i18n';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CustomAttribute from 'dashboard/components/CustomAttribute.vue';
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
+import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue';
+import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
@@ -39,14 +43,33 @@ const route = useRoute();
 const { t } = useI18n();
 const { uiSettings, updateUISettings } = useUISettings();
 
+const {
+  attributesEnabled,
+  state: relationshipState,
+  accountId,
+} = useRelationships();
+const relationshipSidebar = computed(
+  () =>
+    attributesEnabled.value &&
+    props.attributeFrom === 'conversation_contact_panel'
+);
 const dragging = ref(false);
 
 const [showAllAttributes, toggleShowAllAttributes] = useToggle(false);
 
 const currentChat = computed(() => getters.getSelectedChat.value);
-const attributes = computed(() =>
-  getters['attributes/getAttributesByModel'].value(props.attributeType)
-);
+const attributes = computed(() => {
+  if (relationshipSidebar.value) {
+    return selectDefinitions(
+      relationshipState.value.definitions.filter(
+        item => item.attribute_model === 'contact_attribute'
+      ),
+      relationshipState.value.configuration,
+      'contact_sidebar'
+    );
+  }
+  return getters['attributes/getAttributesByModel'].value(props.attributeType);
+});
 
 const contactIdentifier = computed(
   () =>
@@ -206,9 +229,9 @@ const onUpdate = async (key, value) => {
         customAttributes: updatedAttributes,
       });
     } else {
-      store.dispatch('contacts/update', {
-        id: props.contactId,
-        customAttributes: updatedAttributes,
+      await store.dispatch('contacts/update', {
+        id: contactIdentifier.value,
+        customAttributes: { [key]: value },
       });
     }
     useAlert(t('CUSTOM_ATTRIBUTES.FORM.UPDATE.SUCCESS'));
@@ -228,7 +251,7 @@ const onDelete = async key => {
         customAttributes: updatedAttributes,
       });
     } else {
-      store.dispatch('contacts/deleteCustomAttributes', {
+      await store.dispatch('contacts/deleteCustomAttributes', {
         id: props.contactId,
         customAttributes: [key],
       });
@@ -258,6 +281,11 @@ const evenClass = [
 
 <template>
   <div class="conversation--details">
+    <FieldConfigurator
+      v-if="relationshipSidebar"
+      entity="contact"
+      surface="contact_sidebar"
+    />
     <Draggable
       :list="displayedElements"
       :disabled="!showAllAttributes"
@@ -284,7 +312,21 @@ const evenClass = [
           </template>
 
           <template v-else>
+            <FieldEditor
+              v-if="
+                relationshipSidebar &&
+                !element.regex_pattern &&
+                relationshipState.configuration?.surfaces?.contact_sidebar
+                  ?.mode === 'custom'
+              "
+              :key="`${accountId}-${contact.id}-${element.id}`"
+              compact
+              :definition="element"
+              :record="contact"
+              entity="contact"
+            />
             <CustomAttribute
+              v-else
               :key="element.id"
               :attribute-key="element.attribute_key"
               :attribute-type="element.attribute_display_type"
@@ -306,7 +348,11 @@ const evenClass = [
     </Draggable>
 
     <p
-      v-if="!displayedElements.length && emptyStateMessage"
+      v-if="
+        !displayedElements.length &&
+        emptyStateMessage &&
+        !(relationshipSidebar && relationshipState.error)
+      "
       class="p-3 text-center"
     >
       {{ emptyStateMessage }}
