@@ -118,6 +118,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+      - name: Reserve disk on the disposable GitHub-hosted runner
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          df -h /
+          # This job builds Linux Ruby/Node only; these hosted-runner SDKs are unused.
+          # No cleanup runs on a developer machine, application host, or shared runner.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          df -h /
       - uses: docker/setup-buildx-action@v3
       - name: Build image locally in CI only - no registry or deployment
         uses: docker/build-push-action@v6

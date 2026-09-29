@@ -38,3 +38,18 @@ O rascunho de PR poderá executar CI, mas permanece bloqueado para merge.
 Não se promete que uma API legada sem versão detecte a intenção de payloads externos completos
 obsoletos: seu contrato continua last-write-wins. O protocolo novo controla concorrência, e os
 escritores internos tocados usam atualização/merge sob lock sem substituir valores de outras chaves.
+
+## Correções verificadas após a primeira revisão da PR
+
+- Leitura/remoção de atributos pelo Widget passou a usar o mesmo lock do contato;
+  teste com duas conexões PostgreSQL comprovou a sobreposição e preservou o valor recém-confirmado.
+- Upload parcial de uma miniatura agora mantém a referência do blob para agendar sua limpeza;
+  teste grava no storage de teste, simula falha posterior, executa a limpeza e preserva o original.
+- A rodada conjunta dessas correções, contratos do Widget e entrega autorizada de mídia passou:
+  **38 exemplos, zero falhas**, incluindo expiração do original e reautorização após desvincular contato.
+- Primeiro CI interrompeu no gate AST por dependência transitiva não declarada; `@babel/parser`
+  foi declarado diretamente, fixado na versão já usada no lockfile. A execução local não bastava.
+- A primeira construção da imagem no GitHub Actions esgotou o disco do runner (`ENOSPC`),
+  antes do smoke. A preparação agora libera SDKs não usados exclusivamente no runner hospedado
+  descartável; não altera máquina do desenvolvedor, aplicação ou servidor compartilhado.
+  O gate de runtime permanece pendente até concluir a nova execução.

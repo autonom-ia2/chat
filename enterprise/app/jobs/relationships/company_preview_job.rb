@@ -126,8 +126,11 @@ class Relationships::CompanyPreviewJob < ApplicationJob
   def persist_preview(attachment, blob_id, output)
     # Upload before publishing ready: attach(io:) defers upload until after commit,
     # when the file may already be closed and a storage failure cannot roll back status.
-    preview_blob = File.open(output) do |file|
-      ActiveStorage::Blob.create_and_upload!(io: file, filename: 'preview.jpg', content_type: 'image/jpeg')
+    preview_blob = nil
+    File.open(output) do |file|
+      # Keep the persisted reference before upload so a partial storage failure can be purged.
+      preview_blob = ActiveStorage::Blob.create_after_unfurling!(io: file, filename: 'preview.jpg', content_type: 'image/jpeg')
+      preview_blob.upload_without_unfurling(file)
     end
     attachment.with_lock do
       next unless eligible?(attachment, blob_id)

@@ -83,6 +83,29 @@ RSpec.describe Relationships::CompanyPreviewJob do
       end
     end
 
+    it 'purges the persisted derivative after a partial storage upload failure' do
+      described_class.request(attachment)
+      original_blob_id = attachment.file.blob_id
+      service = attachment.file.blob.service
+      failed_key = nil
+      allow(service).to receive(:upload).and_wrap_original do |original, *args, **kwargs, &block|
+        failed_key = args.first
+        original.call(*args, **kwargs, &block)
+        raise IOError, 'Synthetic failure after storage wrote the derivative'
+      end
+
+      described_class.perform_now(attachment.id, original_blob_id)
+      orphan = ActiveStorage::Blob.find_by!(key: failed_key)
+      expect(orphan.filename.to_s).to eq('preview.jpg')
+      expect(service.exist?(failed_key)).to be(true)
+      expect(ActiveStorage::PurgeJob).to have_been_enqueued.with(orphan)
+      expect(attachment.reload.meta['relationship_preview']).to include('failure' => 'transient', 'failure_count' => 1)
+      expect(described_class.ready?(attachment)).to be(false)
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob)
+      expect({ record: ActiveStorage::Blob.exists?(orphan.id), stored_file: service.exist?(failed_key) }).to eq(record: false, stored_file: false)
+      expect(attachment.reload.file.blob_id).to eq(original_blob_id)
+    end
+
     it 'bounds transient retries with backoff and permits GET demand after the TTL' do
       described_class.request(attachment)
       blob_id = attachment.file.blob_id

@@ -43,6 +43,7 @@
     "@amplitude/analytics-browser": "^2.11.10",
     "@breezystack/lamejs": "^1.2.7",
     "@chatwoot/ninja-keys": "1.2.3",
+    "@chatwoot/pico-search": "0.6.2",
     "@chatwoot/prosemirror-schema": "1.4.5",
     "@chatwoot/utils": "^0.0.57",
     "@chatwoot/viz": "^0.1.5",
@@ -58,7 +59,6 @@
     "@radix-ui/colors": "^3.0.0",
     "@rails/actioncable": "6.1.3",
     "@rails/ujs": "^7.1.400",
-    "@chatwoot/pico-search": "0.6.2",
     "@sentry/vue": "^8.55.0",
     "@sindresorhus/slugify": "2.2.1",
     "@tailwindcss/typography": "^0.5.19",
@@ -121,6 +121,7 @@
     "wavesurfer.js": "7.8.6"
   },
   "devDependencies": {
+    "@babel/parser": "7.26.2",
     "@egoist/tailwindcss-icons": "^1.9.2",
     "@histoire/plugin-vue": "0.17.15",
     "@iconify-json/logos": "^1.2.10",
