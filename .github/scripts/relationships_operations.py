@@ -32,10 +32,10 @@ def preflight(account):
     if aws("sts", "get-caller-identity")["Account"] != account:
         raise RuntimeError("AWS account does not match the selected stack")
     keys = ["current-instance-id", "previous-instance-id", "current-target-group-arn", "previous-target-group-arn"]
-    parameters = aws("ssm", "get-parameters", "--names", *[PREFIX + key for key in keys])
-    if parameters.get("InvalidParameters"):
-        raise RuntimeError("Rollback metadata is missing")
-    values = {p["Name"].split("/")[-1]: p["Value"] for p in parameters["Parameters"]}
+    # Match the four singular GetParameter reads used by the existing deploy role.
+    # Missing parameters fail closed; no bulk-read permission or IAM change is needed.
+    parameters = [aws("ssm", "get-parameter", "--name", PREFIX + key)["Parameter"] for key in keys]
+    values = {parameter["Name"].split("/")[-1]: parameter["Value"] for parameter in parameters}
     ids = [values["current-instance-id"], values["previous-instance-id"]]
     instances = aws("ec2", "describe-instances", "--instance-ids", *ids)
     states = {i["InstanceId"]: i["State"]["Name"] for r in instances["Reservations"] for i in r["Instances"]}
