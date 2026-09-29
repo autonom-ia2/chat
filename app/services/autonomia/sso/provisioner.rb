@@ -50,6 +50,8 @@ class Autonomia::Sso::Provisioner
   end
 
   def create_account
+    raise 'Autonomia Identity did not return an active product organization.' if identity_organization_fallback?
+
     Account.create!(
       name: organization_name.presence || identity_email.split('@').last,
       locale: DEFAULT_ACCOUNT_LOCALE,
@@ -211,7 +213,7 @@ class Autonomia::Sso::Provisioner
   end
 
   def identity_organization
-    context['activeOrganization'] || context['active_organization'] || Array(context['organizations']).first || {}
+    context['activeOrganization'] || context['active_organization'] || {}
   end
 
   def identity_user_id
