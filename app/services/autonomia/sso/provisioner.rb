@@ -16,7 +16,6 @@ class Autonomia::Sso::Provisioner
       user = find_or_create_user
       account = find_or_create_account
       pending_invitation = pending_agent_invitation(account)
-      sync_account_name(account)
       link_user(user)
       link_account(account)
       ensure_account_user(user, account, pending_invitation)
@@ -34,7 +33,11 @@ class Autonomia::Sso::Provisioner
   end
 
   def find_or_create_account
-    pending_agent_invitation_account || registration_checkout_account || linked_account || create_account
+    pending_agent_invitation_account ||
+      registration_checkout_account ||
+      confirmed_account_link ||
+      invited_linked_account ||
+      raise_untrusted_account!
   end
 
   def create_user
@@ -49,25 +52,6 @@ class Autonomia::Sso::Provisioner
     user
   end
 
-  def create_account
-    raise 'Autonomia Identity did not return an active product organization.' if identity_organization_fallback?
-
-    Account.create!(
-      name: organization_name.presence || identity_email.split('@').last,
-      locale: DEFAULT_ACCOUNT_LOCALE,
-      custom_attributes: {}
-    )
-  end
-
-  def sync_account_name(account)
-    return if pending_agent_invitation(account).present?
-    return if identity_organization_fallback?
-    return if organization_name.blank?
-    return if account.name == organization_name
-
-    account.update!(name: organization_name)
-  end
-
   def link_user(user)
     Autonomia::UserLink.find_or_initialize_by(identity_user_id: identity_user_id).tap do |link|
       link.user = user
@@ -75,14 +59,6 @@ class Autonomia::Sso::Provisioner
       link.metadata = (link.metadata || {}).merge('identity_user' => identity_user)
       link.save!
       Autonomia::Sso::TokenStore.write!(link, token) if token.present?
-    end
-  end
-
-  def link_account(account)
-    Autonomia::AccountLink.find_or_initialize_by(identity_organization_id: identity_organization_id).tap do |link|
-      link.account = account
-      link.metadata = { 'identity_organization' => identity_organization_metadata }
-      link.save!
     end
   end
 
@@ -192,13 +168,27 @@ class Autonomia::Sso::Provisioner
     Autonomia::UserLink.find_by(identity_user_id: identity_user_id)&.user
   end
 
-  def linked_account
-    Autonomia::AccountLink.find_by(identity_organization_id: identity_organization_id)&.account
+  def confirmed_account_link
+    Autonomia::AccountLink
+      .where("metadata -> 'registration_checkout' ->> 'auth_user_id' = ?", identity_user_id)
+      .includes(:account)
+      .first
+      &.account
+  end
+
+  def invited_linked_account
+    user = linked_user
+    return if user.blank?
+
+    memberships = user.account_users.human.where.not(inviter_id: nil).includes(:account).limit(2).to_a
+    memberships.one? ? memberships.first.account : nil
+  end
+
+  def raise_untrusted_account!
+    raise 'Autonomia SSO requires an invitation, provisioned checkout, or confirmed account link.'
   end
 
   def registration_checkout_account
-    return unless identity_organization_fallback?
-
     Account
       .where(
         "LOWER(custom_attributes -> 'autonomia_registration_checkout' ->> 'email') = :email",
@@ -210,10 +200,6 @@ class Autonomia::Sso::Provisioner
 
   def identity_user
     context['user'] || {}
-  end
-
-  def identity_organization
-    context['activeOrganization'] || context['active_organization'] || {}
   end
 
   def identity_user_id
@@ -230,38 +216,6 @@ class Autonomia::Sso::Provisioner
       identity_user['full_name'] ||
       identity_user['displayName'] ||
       identity_user['display_name']
-  end
-
-  def identity_organization_id
-    identity_organization['id'] || identity_organization['organizationId'] || identity_organization['organization_id'] || identity_email
-  end
-
-  def identity_organization_fallback?
-    identity_organization.blank? ||
-      (
-        identity_organization['id'].blank? &&
-          identity_organization['organizationId'].blank? &&
-          identity_organization['organization_id'].blank?
-      )
-  end
-
-  def organization_name
-    identity_organization['name'] ||
-      identity_organization['displayName'] ||
-      identity_organization['display_name'] ||
-      identity_user['companyName'] ||
-      identity_user['company_name'] ||
-      identity_user['organizationName'] ||
-      identity_user['organization_name']
-  end
-
-  def identity_organization_metadata
-    metadata = identity_organization.presence || {}
-    metadata = metadata.with_indifferent_access
-    metadata['id'] ||= identity_organization_id
-    metadata['name'] ||= organization_name if organization_name.present?
-    metadata['fallback'] = true if identity_organization.blank? && organization_name.present?
-    metadata
   end
 
   def random_password
