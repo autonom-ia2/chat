@@ -38,7 +38,7 @@ Original único; derivado associado por ActiveStorage. Status por blob em Attach
 idempotência por derivado e deduplicação de pedidos por dez minutos. O slot é global
 entre workers ligados ao mesmo banco; não altera configuração de Sidekiq.
 
-Imagens JPEG/PNG/WebP: libvips com loaders não confiáveis bloqueados e concorrência 1.
+Imagens JPEG/PNG/WebP: assinatura real conferida antes de executar FFmpeg, com demuxer fixo (`jpeg_pipe`, `png_pipe`, `webp_pipe`), protocolo apenas arquivo local e uma thread. Imagens pequenas não são ampliadas. O limite de endereço virtual permanece em 512 MiB, sem depender de iniciar Ruby/libvips dentro do processo limitado. O libvips existente permanece disponível para o restante da aplicação e para conferir as fixtures de teste.
 PDF: pdftoppm, primeira página. Vídeo: ffmpeg, um frame, uma thread, protocolo file e demuxer fixo mov/matroska conforme tipo declarado; playlists disfarçadas são recusadas.
 Áudio/formatos ativos como SVG: ícone neutro. Não há serviço externo, OCR ou leitura de
 conteúdo. Falhas/corrupção/limites mantêm original disponível. O cliente solicita ao entrar no viewport, consulta a cada 5 s por até 11 minutos e oferece

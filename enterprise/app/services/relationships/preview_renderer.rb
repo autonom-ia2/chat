@@ -1,5 +1,4 @@
 require 'timeout'
-require 'rbconfig'
 
 # Local converters receive bounded regular files, never shell commands or URLs.
 class Relationships::PreviewRenderer
@@ -8,11 +7,8 @@ class Relationships::PreviewRenderer
   MAX_MEMORY = 512 * 1024 * 1024
   TIMEOUT = 15
   IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
-  IMAGE_LOADERS = { 'image/jpeg' => 'jpegload', 'image/png' => 'pngload', 'image/webp' => 'webpload' }.freeze
+  IMAGE_FORMATS = { 'image/jpeg' => 'jpeg_pipe', 'image/png' => 'png_pipe', 'image/webp' => 'webp_pipe' }.freeze
   VIDEO_FORMATS = { 'video/mp4' => 'mov', 'video/quicktime' => 'mov', 'video/webm' => 'matroska', 'video/x-matroska' => 'matroska' }.freeze
-  IMAGE_SCRIPT = ['require "bundler/setup"', 'require "vips"', 'Vips.cache_set_max_mem(33554432)',
-                  'Vips::Image.public_send(ARGV[2], ARGV[0], access: :sequential)' \
-                  '.thumbnail_image(320, height: 240, size: :down).write_to_file(ARGV[1], strip: true)'].join('; ').freeze
 
   def self.supported?(content_type)
     IMAGE_TYPES.include?(content_type) || content_type == 'application/pdf' || VIDEO_FORMATS.key?(content_type)
@@ -36,11 +32,7 @@ class Relationships::PreviewRenderer
   end
 
   def command_for(content_type, input, output)
-    if IMAGE_TYPES.include?(content_type)
-      return unless image_signature?(content_type, input)
-
-      return [RbConfig.ruby, '-e', IMAGE_SCRIPT, input, output, IMAGE_LOADERS.fetch(content_type)]
-    end
+    return if IMAGE_TYPES.include?(content_type) && !image_signature?(content_type, input)
 
     if content_type == 'application/pdf'
       return unless File.binread(input, 5) == '%PDF-'
@@ -48,15 +40,22 @@ class Relationships::PreviewRenderer
       return ['pdftoppm', '-f', '1', '-singlefile', '-scale-to', '320', '-jpeg', input, output.delete_suffix('.jpg')]
     end
 
-    format = VIDEO_FORMATS[content_type]
+    format = IMAGE_FORMATS[content_type] || VIDEO_FORMATS[content_type]
     return unless format
 
+    ffmpeg_command(format, input, output)
+  end
+
+  def ffmpeg_command(format, input, output)
     # Force the demuxer: an uploaded playlist cannot activate HLS/concat or nested inputs.
     # Explicitly disable MOV external data references, including absolute file paths.
     input_options = format == 'mov' ? %w[-enable_drefs 0 -use_absolute_path 0] : []
+    # The same native converter handles images and video under the unchanged 512 MiB limit.
+    # A Ruby/vips bootstrap must not consume the image worker's bounded address space.
     ['ffmpeg', '-nostdin', '-v', 'error', '-protocol_whitelist', 'file', '-format_whitelist', format,
      '-f', format, *input_options, '-threads', '1', '-filter_threads', '1', '-filter_complex_threads', '1', '-i', input,
-     '-map', '0:v:0', '-frames:v', '1', '-vf', 'scale=320:240:force_original_aspect_ratio=decrease', '-threads', '1', output]
+     '-map', '0:v:0', '-frames:v', '1', '-vf', "scale=w='min(320,iw)':h='min(240,ih)':force_original_aspect_ratio=decrease",
+     '-threads', '1', output]
   end
 
   def image_signature?(content_type, input)

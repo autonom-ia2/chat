@@ -95,6 +95,7 @@ jobs:
           spec/services/relationships spec/requests/relationships
           spec/enterprise/services/relationships spec/enterprise/requests/relationships
           spec/enterprise/jobs/relationships spec/models/custom_attribute_definition_spec.rb
+          spec/models/account_spec.rb
           spec/controllers/api/v1/accounts/contacts_controller_spec.rb
           spec/controllers/api/v1/accounts_controller_spec.rb
           spec/enterprise/controllers/api/v1/accounts/companies_controller_spec.rb

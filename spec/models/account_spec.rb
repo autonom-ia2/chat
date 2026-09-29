@@ -44,7 +44,7 @@ RSpec.describe Account do
     it 'does not fail when the configured default user does not exist' do
       with_modified_env AUTONOMIA_ACCOUNT_DEFAULTS_ENABLED: 'true',
                         AUTONOMIA_DEFAULT_ACCOUNT_USER_ID: '-1' do
-        expect { create(:account) }.to change(Account, :count).by(1)
+        expect { create(:account) }.to change(described_class, :count).by(1)
       end
     end
   end
@@ -188,11 +188,31 @@ RSpec.describe Account do
         feature_whatsapp_reconfigure: 1 << 3,
         feature_whatsapp_embedded_signup_inbox_creation: 1 << 4,
         feature_delayed_automations: 1 << 5,
-        feature_audit_log_ip_address: 1 << 6
+        feature_audit_log_ip_address: 1 << 6,
+        feature_relationships_attributes: 1 << 7,
+        feature_relationships_company_media: 1 << 8,
+        feature_relationships_navigation: 1 << 9
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
+    end
+
+    it 'keeps Relationships opt-in and each extension independent of existing flags' do
+      flags = %w[relationships_attributes relationships_company_media relationships_navigation]
+      flags.each { |flag| expect(account.feature_enabled?(flag)).to be(false) }
+      account.enable_features('data_import', 'audit_log_ip_address')
+      legacy_mask = account.feature_flags_ext_1
+
+      flags.each_with_index do |flag, index|
+        account.enable_features(flag)
+        expect(account.feature_flags_ext_1).to eq(legacy_mask | (1 << (index + 7)))
+        expect(account).to be_feature_data_import
+        expect(account).to be_feature_audit_log_ip_address
+        (flags - [flag]).each { |other| expect(account.feature_enabled?(other)).to be(false) }
+        account.disable_features(flag)
+        expect(account.feature_flags_ext_1).to eq(legacy_mask)
+      end
     end
 
     it 'keeps existing feature flags on the original column' do

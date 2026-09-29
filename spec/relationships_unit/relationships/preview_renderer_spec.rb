@@ -18,7 +18,7 @@ RSpec.describe Relationships::PreviewRenderer do
   end
 
   %w[jpg webp].each do |extension|
-    it "converts a real #{extension} image using only its explicit loader" do
+    it "converts a real #{extension} image using only its explicit decoder" do
       require 'vips'
       Dir.mktmpdir do |directory|
         input = File.join(directory, "input.#{extension}")
@@ -28,6 +28,31 @@ RSpec.describe Relationships::PreviewRenderer do
         expect(renderer.render(content_type, input, output)).to be(true)
         expect(File.binread(output, 2)).to eq("\xFF\xD8".b)
       end
+    end
+  end
+
+  it 'uses fixed native demuxers and keeps the original memory and time bounds' do
+    expect(described_class::MAX_MEMORY).to eq(512 * 1024 * 1024)
+    expect(described_class::TIMEOUT).to eq(15)
+    path = File.expand_path('../../assets/sample.png', __dir__)
+    command = renderer.send(:command_for, 'image/png', path, '/tmp/synthetic-preview.jpg')
+    expect(command.first).to eq('ffmpeg')
+    expect(command[command.index('-f') + 1]).to eq('png_pipe')
+    expect(command[command.index('-format_whitelist') + 1]).to eq('png_pipe')
+    expect(command[command.index('-protocol_whitelist') + 1]).to eq('file')
+    expect(command[command.index('-threads') + 1]).to eq('1')
+  end
+
+  it 'never upscales a small valid image' do
+    require 'vips'
+    Dir.mktmpdir do |directory|
+      input = File.join(directory, 'small.png')
+      Vips::Image.black(8, 6).write_to_file(input)
+      output = File.join(directory, 'preview.jpg')
+      expect(renderer.render('image/png', input, output)).to be(true)
+      image = Vips::Image.jpegload(output)
+      expect(image.width).to eq(8)
+      expect(image.height).to eq(6)
     end
   end
 

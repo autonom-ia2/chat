@@ -8,7 +8,7 @@ SHA efetivamente revisado continuam obrigatórios. Registros anteriores de agent
 históricos; não substituem os resultados abaixo nem o status atual da PR.
 
 Base funcional: `8396d7255e097ba79507a22081701eb41ddb6ce5`.
-Candidato de código validado nesta retomada: `cad28d3772744ec907e61e7e0d94b3e6beea28d4`.
+O SHA candidato é o HEAD da PR #760; os checks e o relatório da imagem registram o SHA exato. O snapshot de frontend `cad28d3772` foi mantido; o delta posterior corrige apenas o conversor nativo e o teste do mapa de flags.
 Worktree exclusivo: `chat2you-757-relacionamentos`, branch `feat/757-relacionamentos`.
 
 ## Ambiente e isolamento
@@ -26,17 +26,17 @@ Worktree exclusivo: `chat2you-757-relacionamentos`, branch `feat/757-relacioname
 
 ## Evidências executadas
 
-| Gate                                  | Evidência local concluída                                                                                              |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Frontend completo                     | 6.771 testes aprovados, zero falhas/pendentes; `approved-candidate-vitest.json`.                                       |
-| Backend integrado + contratos antigos | 385 exemplos aprovados, zero falhas/pendentes; `approved-candidate-rspec.json`.                                        |
-| Conversores nativos                   | 16 exemplos aprovados; PNG/JPEG/WebP/PDF/vídeo, formatos disfarçados/corruptos e fallback.                             |
-| Fluxos reais no navegador             | Última rodada consolidada: 14/14; `resume-browser-suite.log`; nova rodada no SHA atual em `current-browser-suite.log`. |
-| Responsividade                        | 390, 1.024 e 1.630 px; light/dark, modal, foco, cancelamento e retorno.                                                |
-| Lint estrito                          | 54 arquivos, zero bloqueios; somente 13 avisos de chaves dinâmicas que o gate existente permite.                       |
-| AST sem regex nova                    | 101 fontes/testes/scripts alterados analisados; nenhum novo padrão ou matcher.                                         |
-| Revisão independente                  | `release-review.md`: nenhum P0/P1/P2 demonstrável restante; condicionado ao CI final.                                  |
-| Build/Guia/Central                    | Build Vite executado; Guia/Central conferidos com os geradores próprios.                                               |
+| Gate                                  | Evidência local concluída                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Frontend completo                     | 6.771 testes aprovados, zero falhas/pendentes; `approved-candidate-vitest.json`.                                          |
+| Backend integrado + contratos antigos | 459 exemplos: 458 aprovados, zero falhas, uma quarentena preexistente; `expanded-final-rspec.json`.                       |
+| Conversores nativos                   | 18 exemplos aprovados; PNG/JPEG/WebP/PDF/vídeo, limites mantidos, sem upscale, formatos disfarçados/corruptos e fallback. |
+| Fluxos reais no navegador             | 14/14 na rodada consolidada `current-browser-suite.log`, com backend real e sem alterar os timeouts.                      |
+| Responsividade                        | 390, 1.024 e 1.630 px; light/dark, modal, foco, cancelamento e retorno.                                                   |
+| Lint estrito                          | 54 arquivos, zero bloqueios; somente 13 avisos de chaves dinâmicas que o gate existente permite.                          |
+| AST sem regex nova                    | Fontes/testes/scripts alterados analisados por AST; nenhum novo padrão ou matcher.                                        |
+| Revisão independente                  | `release-review.md` e `native-renderer-review.md`: nenhum P0/P1/P2 demonstrável restante; condicionado ao CI final.       |
+| Build/Guia/Central                    | Build Vite executado; Guia/Central conferidos com os geradores próprios.                                                  |
 
 Os totais identificam rodadas concluídas, não uma promessa de inexistência de bugs.
 A imagem Linux é um gate separado: aprovação local do macOS não comprova limites ou
@@ -84,8 +84,8 @@ listagem. Os números locais não são previsão de latência em produção.
 
 | Página | p95 local | Máximo de SQL | Amostras |
 | ------ | --------: | ------------: | -------: |
-| 25     | 128.54 ms |            14 |       20 |
-| 50     | 106.41 ms |            14 |       20 |
+| 25     |  83.37 ms |            14 |       20 |
+| 50     |  91.65 ms |            14 |       20 |
 
 ## Reexecução
 
@@ -104,7 +104,7 @@ pnpm guia:check
 pnpm central:check
 ```
 
-Contratos antigos adicionais estão na seleção de 29 arquivos do relatório integrado.
+Contratos antigos adicionais estão na seleção ampliada de 30 arquivos do relatório integrado.
 O workflow independente executa regressão sem depender do workflow antigo manualmente
 desabilitado. A imagem final é construída apenas no runner descartável, sem push de
 imagem, AWS ou deploy, e testada com rede desligada e limites de recursos.
@@ -115,8 +115,17 @@ O navegador identificou o uso inicial do axios não autenticado; os novos caller
 a usar o cliente de sessão/apiHost existente. A revisão encontrou escritores legados e
 respostas antigas que podiam sobrescrever valores; foram corrigidos com testes reais.
 O gate de CI identificou resolução de parser/listagem de dependências e warnings estritos;
-foram corrigidos sem relaxar o verificador. O PNG na imagem exigiu explicitar o bootstrap
-do bundle no processo filho; só o CI da imagem pode certificar a correção no alvo.
+foram corrigidos sem relaxar o verificador. O diagnóstico da imagem exata no run36584352561
+confirmou `Vips::Error: out of memory` no filho de imagem. O bootstrap de Ruby/Gems
+foi eliminado desse filho: JPEG/PNG/WebP usam o FFmpeg já empregado para vídeos, com
+demuxers explícitos, assinatura real, sem upscale e os mesmos limites de512MiB/15s.
+Somente o check da imagem final no SHA candidato certifica a execução em Alpine.
+
+O teste fechado do mapa de flags foi expandido para os três novos bits, sem alterar
+nenhum identificador antigo nem trocar igualdade exata por inclusão parcial. Outro
+teste comprova opt-in e independência. A quarentena de `Account has_many
+autonomia_account_links` já existia na base e continua explicitamente não aprovada;
+nenhum teste foi colocado em skip nesta entrega.
 
 Sourcemap ausente de uma dependência, Browserslist e depreciações Rails/Rack foram
 registrados. O endpoint `/enterprise/api/v1/accounts/.../limits` retorna404 no harness

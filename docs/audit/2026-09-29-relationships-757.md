@@ -182,3 +182,19 @@ global. Os avisos e rodadas históricas permanecem registrados, sem inventar apr
 
 O conector do Project retornou404; os sete campos pendentes estão em rollout-rollback.md.
 Nenhuma autorização anterior de deploy da PR#756 foi reutilizada para esta entrega.
+
+## Fechamento dos gates Linux e do mapa de recursos
+
+O gate de e-mail encontrou somente uma expectativa antiga do mapa de flags, que ainda
+não incluía os três novos bits. A expectativa continua uma igualdade exata; preserva
+todos os bits anteriores e agora fixa os novos bits e testa sua independência/opt-in.
+
+O run36584352561 da imagem exata confirmou `Vips::Error: out of memory` no processo filho
+com512MiB. Em vez de ampliar memória ou afrouxar o teste, o preview das três imagens
+foi levado ao FFmpeg já presente para vídeos, com assinatura e demuxer fixos. Os limites
+de memória/CPU/tempo/entrada/saída foram mantidos.18 testes nativos passaram e a revisão
+estática independente do delta não encontrou P0/P1/P2; o próximo CI ainda precisa
+confirmar a imagem exata, sem qualquer publicação.
+
+A seleção ampliada local passou458 casos em459 exemplos, com uma quarentena antiga
+explicitamente preservada. Report: expanded-final-rspec.json. Nenhum teste novo em skip.
