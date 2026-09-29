@@ -264,3 +264,38 @@ somente .github e docs, sem deploy de aplicação ou mudança de IAM. Smoke loca
 nas APIs: nove verificações e rollback de todos os registros sintéticos; sete contratos
 Python aprovados. Conferência Hub2You via SSM no SHA14a8d040d3 confirmou web/worker,
 alvo saudável e rollback preservado. Preflight Autonom.ia será obtido pelo mesmo fluxo.
+
+
+## Pós-merge #768 — findings e hotfix #770/#771
+
+O release #768 foi mesclado no SHA
+`585712e44ae2f083a86f2ede4bc8608cf954e199`. Hub2You concluiu o blue/green.
+Autonom.ia permaneceu no binário anterior porque o build falhou antes da criação do green
+e antes de qualquer troca de tráfego: o registry público da AWS respondeu HTTP 429
+(`Data limit exceeded`) para as imagens-base Ruby/Node. Um retry controlado reproduziu
+a mesma causa e o cleanup do workflow concluiu; não houve rollback de tráfego porque não
+houve shift.
+
+A revisão automática do PR #768 deixou três threads: um P1 de governança i18n e dois P2
+funcionais. A inspeção do código confirmou os dois P2:
+
+1. resposta JSON `unavailable` do preview era classificada pelo cliente como retryable;
+2. um preview `pending` podia permanecer sem job útil quando a flag era desligada entre
+   enqueue e execução, atrasando nova demanda até o TTL.
+
+A Issue #770 e o PR #771 tratam os P2 em branch isolada
+`fix/770-relationships-post-merge-findings`. O cliente agora distingue
+`application/json` com status `unavailable` de falha transitória. O job limpa somente
+o metadata `pending` da mesma solicitação/blob quando perde elegibilidade por flag e
+permite novo enqueue imediato após reativação. Foram adicionados testes direcionados.
+
+O P1 de tradução não foi mascarado: `pt_BR/relationships.json` foi introduzido
+manualmente, enquanto AGENTS.md determina que traduções não inglesas venham do Crowdin.
+O fork possui `crowdin.yml`, mas não foi comprovado nesta retomada um mecanismo
+autorizado capaz de sincronizar esse novo catálogo. Remover a tradução agora introduziria
+regressão visível para pt-BR. A ativação permanece bloqueada até essa decisão ficar
+registrada corretamente.
+
+O reviewer Codex do PR #771 não executou por limite de uso da conta. Isso não foi tratado
+como aprovação: o delta foi revisado manualmente e continua sujeito aos workflows de CI,
+incluindo regressão de Relacionamentos, imagem Linux, Email protection e Guia.

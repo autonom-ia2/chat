@@ -100,3 +100,21 @@ A habilitação e verificação nas duas stacks usa uma operação manual revisa
 concorrência compartilhada com cada blue/green, SHA exato em web/worker, transação de
 QA revertida e habilitação somente nas contas ativas elegíveis. Nenhuma alteração de
 Companies/custom_attributes/CRM, licença, credenciais ou padrões de contas futuras.
+
+
+## Estado de produção após o merge #768
+
+O PR #768 foi mesclado em `main` no SHA
+`585712e44ae2f083a86f2ede4bc8608cf954e199`.
+
+- Hub2You concluiu o blue/green nesse SHA e preservou a geração anterior como rollback.
+- Autonom.ia não trocou tráfego: o build foi interrompido antes de criar o green por
+  HTTP 429 (`Data limit exceeded`) ao resolver as imagens-base no `public.ecr.aws`.
+  Repetir o job sem mudança de condição reproduziu o mesmo bloqueio.
+- As três flags de Relacionamentos continuam desligadas enquanto a Issue #770 / PR #771
+  fecha findings pós-merge.
+- O finding de i18n do #768 é tratado separadamente: remover a tradução pt-BR sem um
+  fluxo válido de Crowdin degradaria a interface para inglês. Não considerar a thread
+  resolvida apenas apagando o catálogo.
+- Antes de habilitar, exigir: #771 verde, revisão do delta, solução registrada para o
+  fluxo pt-BR, Autonom.ia no mesmo SHA de aplicação e novo preflight/verify das duas stacks.
