@@ -67,6 +67,28 @@ class OperationsContracts(unittest.TestCase):
         with self.assertRaises(ValueError):
             ops.decode_report(text)
 
+    def test_preflight_matches_existing_singular_parameter_permission(self):
+        parameters = {"current-instance-id": "i-current", "previous-instance-id": "i-previous",
+                      "current-target-group-arn": "tg-current", "previous-target-group-arn": "tg-previous"}
+        calls = []
+        def fake(*args):
+            calls.append(args)
+            if args[0] == "sts": return {"Account": "354307071110"}
+            if args[0] == "ssm":
+                self.assertEqual(args[1], "get-parameter")
+                key = args[-1].split("/")[-1]
+                return {"Parameter": {"Name": ops.PREFIX + key, "Value": parameters[key]}}
+            if args[0] == "ec2":
+                return {"Reservations": [{"Instances": [{"InstanceId": "i-current", "State": {"Name": "running"}}, {"InstanceId": "i-previous", "State": {"Name": "stopped"}}]}]}
+            if args[1] == "describe-target-health":
+                current = args[-1] == "tg-current"
+                return {"TargetHealthDescriptions": [{"Target": {"Id": "i-current" if current else "i-previous"}, "TargetHealth": {"State": "healthy" if current else "unused"}}]}
+            if args[1] == "describe-load-balancers": return {"LoadBalancers": [{"LoadBalancerArn": "lb"}]}
+            return {"Listeners": [{"Port": 443, "DefaultActions": [{"TargetGroupArn": "tg-current"}]}]}
+        with patch.object(ops, "aws", side_effect=fake):
+            self.assertTrue(ops.preflight("354307071110")["https_target_confirmed"])
+        self.assertEqual(sum(call[0] == "ssm" for call in calls), 4)
+
     def test_failed_runtime_cannot_be_reported_as_success(self):
         def fake(*args):
             if args[1] == "send-command":
