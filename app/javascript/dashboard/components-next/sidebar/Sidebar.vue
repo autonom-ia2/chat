@@ -1,4 +1,5 @@
 <script setup>
+import { useRelationships } from 'dashboard/composables/useRelationships';
 import { h, ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { provideSidebarContext, useSidebarResize } from './provider';
@@ -522,8 +523,9 @@ const newReportRoutes = () => [
 
 const reportRoutes = computed(() => newReportRoutes());
 
+const { navigationEnabled } = useRelationships();
 const menuItems = computed(() => {
-  return [
+  const items = [
     // Trilha de onboarding: fica no topo para quem administra, e continua
     // acessível depois que a conta já está de pé.
     ...(isAdministrator.value
@@ -1293,6 +1295,41 @@ const menuItems = computed(() => {
       ],
     },
   ];
+  if (!navigationEnabled.value) return items;
+  const result = items.filter(
+    item => !['Contacts', 'Companies'].includes(item.name)
+  );
+  result.forEach(item => {
+    if (item.children)
+      item.children = item.children.filter(
+        child => child.to?.name !== 'attributes_list'
+      );
+  });
+  result.splice(
+    items.findIndex(item => item.name === 'Contacts'),
+    0,
+    {
+      name: 'Relationships',
+      label: t('RELATIONSHIPS.TITLE'),
+      icon: 'i-lucide-contact',
+      to: accountScopedRoute('relationships_home'),
+      activeOn: [
+        'relationships_home',
+        'relationships_company_media',
+        'attributes_list',
+        'companies_dashboard_index',
+        'companies_dashboard_show',
+        'contacts_dashboard_index',
+        'contacts_dashboard_active',
+        'contacts_dashboard_segments_index',
+        'contacts_dashboard_labels_index',
+        'contacts_edit',
+        'contacts_edit_segment',
+        'contacts_edit_label',
+      ],
+    }
+  );
+  return result;
 });
 </script>
 

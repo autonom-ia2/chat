@@ -2168,6 +2168,48 @@
      "fontes": [],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "09.11",
+     "titulo": "Relacionamentos e campos compartilhados",
+     "para_que_serve": "Relacionamentos e campos compartilhados",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relationships_home"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relationships_home",
+      "destaque": null
+     },
+     "requer": "relationships_navigation",
+     "prints": [],
+     "fontes": [
+      "Issue #757 — implementação local"
+     ],
+     "revisar": true
+    },
+    {
+     "id": "09.12",
+     "titulo": "Mídias das empresas",
+     "para_que_serve": "Mídias das empresas",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "relationships_company_media"
+     ],
+     "me_leve_ate_la": {
+      "rota": "relationships_company_media",
+      "destaque": null
+     },
+     "requer": "relationships_company_media",
+     "prints": [],
+     "fontes": [
+      "Issue #757 — implementação local"
+     ],
+     "revisar": true
     }
    ]
   },

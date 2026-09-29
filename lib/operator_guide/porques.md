@@ -1701,3 +1701,21 @@
 - labels_wrapper: casca de roteamento, não é tela
 - macros_wrapper: casca de roteamento, não é tela
 - onboarding_inbox_setup: etapa do cadastro, fora do painel
+
+### abrir_relacionamentos
+- titulo: Abrir Relacionamentos
+- rota: relationships_home
+- intent: Onde ficam contatos e empresas?; Como configuro campos personalizados?; Onde estão os segmentos?
+- onde_fica: Menu lateral > Relacionamentos, quando a nova navegação está habilitada na conta
+- pre_requisitos: nova navegação de Relacionamentos habilitada; cada destino mantém suas permissões e recursos
+- passos: 1. Abra Relacionamentos; 2. Escolha Contatos, Empresas ou Atributos personalizados; 3. Em Contatos, use o seletor de visão para Todos, Ativos, Segmentos ou Etiquetas; 4. Use o link Relacionamentos para voltar à home.
+- gotchas: os endereços antigos continuam funcionando; a home não concede acesso adicional; atributos de Conversa continuam na Central; navegação, campos e mídias são habilitações independentes.
+
+### consultar_midias_da_empresa
+- titulo: Consultar mídias da empresa
+- rota: relationships_company_media
+- intent: Onde vejo arquivos de uma empresa?; Como busco mídia pelo nome?; Como vejo a conversa de origem do arquivo?
+- onde_fica: Empresas > ficha da empresa > Mídias > Visualizar tudo
+- pre_requisitos: Empresas e mídias de Relacionamentos habilitadas na conta; acesso às conversas de origem
+- passos: 1. Abra Mídias na lateral da empresa; 2. Busque pelo nome e combine contato, tipo e período; 3. Abra Visualizar tudo para a tabela; 4. Agrupe por contato e navegue nas páginas; 5. Use Visualizar, Baixar original ou Ir à mensagem.
+- gotchas: considera o vínculo atual do contato com a empresa; mudar esse vínculo move a visualização do histórico permitido; ocorrências repetidas continuam separadas; previews são gerados sob demanda e podem ficar indisponíveis sem impedir o original; a lateral mostra cinco recentes; o catálogo cobre arquivos armazenados, incluindo notas autorizadas, e anexos externos ficam na conversa de origem; o período usa o fuso de relatórios da conta, UTC quando não configurado.

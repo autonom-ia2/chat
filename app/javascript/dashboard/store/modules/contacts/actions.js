@@ -1,3 +1,4 @@
+import { recordRequest } from 'dashboard/components-next/Relationships/confirmedValues';
 import {
   DuplicateContactException,
   ExceptionWithMessage,
@@ -29,7 +30,7 @@ const buildContactFormData = contactParams => {
       additionalAttributesProperties[key]
     );
   });
-  Object.keys(social_profiles).forEach(key => {
+  Object.keys(social_profiles || {}).forEach(key => {
     formData.append(
       `additional_attributes[social_profiles][${key}]`,
       social_profiles[key]
@@ -103,11 +104,24 @@ export const actions = {
     }
   },
 
-  show: async ({ commit }, { id }) => {
+  async show({ commit, getters }, { id }) {
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
     commit(types.SET_CONTACT_UI_FLAG, { isFetchingItem: true });
     try {
       const response = await ContactAPI.show(id);
-      commit(types.SET_CONTACT_ITEM, response.data.payload);
+      if (request.valid())
+        commit(types.SET_CONTACT_ITEM, {
+          ...response.data.payload,
+          custom_attributes: request.mergeRead(
+            response.data.payload.custom_attributes,
+            getters.getContact(id).custom_attributes
+          ),
+        });
       commit(types.SET_CONTACT_UI_FLAG, {
         isFetchingItem: false,
       });
@@ -131,13 +145,25 @@ export const actions = {
     }
   },
 
-  update: async ({ commit }, { id, isFormData = false, ...contactParams }) => {
+  async update(
+    { commit, getters },
+    { id, isFormData = false, ...contactParams }
+  ) {
     const { avatar, customAttributes, ...paramsToDecamelize } = contactParams;
     const decamelizedContactParams = {
       ...snakecaseKeys(paramsToDecamelize, { deep: true }),
       ...(customAttributes && { custom_attributes: customAttributes }),
       ...(avatar && { avatar }),
     };
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
+    const confirm = request.write(
+      Object.keys(decamelizedContactParams.custom_attributes || {})
+    );
     commit(types.SET_CONTACT_UI_FLAG, { isUpdating: true });
     try {
       const response = await ContactAPI.update(
@@ -146,7 +172,31 @@ export const actions = {
           ? buildContactFormData(decamelizedContactParams)
           : decamelizedContactParams
       );
-      commit(types.EDIT_CONTACT, response.data.payload);
+      if (request.valid()) {
+        const payload = response.data.payload;
+        const patch = Object.fromEntries(
+          Object.keys(decamelizedContactParams)
+            .filter(
+              key => key !== 'custom_attributes' && Object.hasOwn(payload, key)
+            )
+            .map(key => [key, payload[key]])
+        );
+        if (avatar) {
+          patch.thumbnail = payload.thumbnail;
+          patch.avatar_url = payload.avatar_url;
+        }
+        // Native company selection also returns the resolved company object.
+        if (Object.hasOwn(decamelizedContactParams, 'company_id'))
+          patch.company = payload.company;
+        commit(types.SET_CONTACT_ITEM, {
+          id: payload.id,
+          ...patch,
+          custom_attributes: confirm(
+            getters.getContact(id).custom_attributes,
+            payload.custom_attributes
+          ),
+        });
+      }
       commit(types.SET_CONTACT_UI_FLAG, { isUpdating: false });
     } catch (error) {
       commit(types.SET_CONTACT_UI_FLAG, { isUpdating: false });
@@ -220,33 +270,63 @@ export const actions = {
     }
   },
 
-  deleteCustomAttributes: async ({ commit }, { id, customAttributes }) => {
+  async deleteCustomAttributes({ commit, getters }, { id, customAttributes }) {
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
+    const confirm = request.write(customAttributes);
     try {
-      const response = await ContactAPI.destroyCustomAttributes(
-        id,
-        customAttributes
-      );
-      commit(types.EDIT_CONTACT, response.data.payload);
+      await ContactAPI.destroyCustomAttributes(id, customAttributes);
+      if (request.valid())
+        commit(types.SET_CONTACT_ITEM, {
+          id,
+          custom_attributes: confirm(getters.getContact(id).custom_attributes),
+        });
     } catch (error) {
       throw new Error(error);
     }
   },
 
-  deleteAvatar: async ({ commit }, id) => {
+  async deleteAvatar({ commit }, id) {
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
     try {
       const response = await ContactAPI.destroyAvatar(id);
-      commit(types.EDIT_CONTACT, response.data.payload);
+      if (request.valid())
+        commit(types.SET_CONTACT_ITEM, {
+          id,
+          thumbnail: response.data.payload.thumbnail,
+          avatar_url: response.data.payload.avatar_url,
+        });
     } catch (error) {
       throw new Error(error);
     }
   },
 
-  setOptOut: async ({ commit }, { id, optedOut }) => {
+  async setOptOut({ commit }, { id, optedOut }) {
+    const request = recordRequest(
+      this,
+      ContactAPI.accountIdFromRoute,
+      'contact',
+      id
+    );
     try {
       const response = optedOut
         ? await ContactAPI.markOptOut(id)
         : await ContactAPI.removeOptOut(id);
-      commit(types.EDIT_CONTACT, response.data.payload);
+      if (request.valid())
+        commit(types.SET_CONTACT_ITEM, {
+          id,
+          opted_out_at: response.data.payload.opted_out_at,
+          opt_out_source: response.data.payload.opt_out_source,
+        });
       return response.data.payload;
     } catch (error) {
       // A resposta fica em `cause`: a tela mostra a frase que o servidor mandou.

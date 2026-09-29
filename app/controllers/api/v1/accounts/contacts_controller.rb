@@ -78,8 +78,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
   # TODO : refactor this method into dedicated contacts/custom_attributes controller class and routes
   def destroy_custom_attributes
-    @contact.custom_attributes = @contact.custom_attributes.excluding(params[:custom_attributes])
-    @contact.save!
+    @contact.with_lock do
+      @contact.custom_attributes = @contact.custom_attributes.excluding(params[:custom_attributes])
+      @contact.save!
+    end
   end
 
   def create
@@ -92,8 +94,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   def update
-    @contact.assign_attributes(contact_update_params)
-    @contact.save!
+    @contact.with_lock do
+      @contact.assign_attributes(contact_update_params)
+      @contact.save!
+    end
     process_avatar_from_url
   end
 

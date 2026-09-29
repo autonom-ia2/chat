@@ -141,3 +141,20 @@ Thanks goes to all these [wonderful people](https://www.chatwoot.com/docs/contri
 
 
 *Chatwoot* &copy; 2017-2026, Chatwoot Inc - Released under the MIT License.
+
+### Relacionamentos (Issue #757, extensão opcional)
+
+A implementação local reúne Contatos, Empresas e Atributos sem alterar seus endereços antigos.
+As flags por conta `relationships_attributes`, `relationships_company_media` e
+`relationships_navigation` começam desligadas e são independentes. Empresas continua
+exigindo `companies`. Não há migração de valores nem ativação automática.
+
+Contratos, limitações e aceite: [docs/relationships](docs/relationships/qa-acceptance.md).
+O conjunto ainda requer homologação, revisão independente e aprovação antes de qualquer
+merge/deploy. Desligar as flags restaura os caminhos legados e preserva os dados.
+
+Na retomada #757, a criação de atributos dispensa regex; validações históricas continuam
+no editor legado. `pnpm relationships:check` verifica ASTs contra a base aprovada, incluindo
+os testes. Executar com Ruby/Bundler do projeto via rbenv. Datas e confirmações por chave
+são compartilhadas entre superfícies. Mídias de empresas cobrem arquivos armazenados de
+conversas autorizadas, incluindo notas; anexos externos permanecem na origem.
