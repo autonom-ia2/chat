@@ -83,3 +83,20 @@ Prioridade: P2
 Risco: Médio
 Próxima ação: Conferir os checks da PR #760 e obter aprovação do SHA, stacks e conta piloto antes de merge/deploy.
 Ambiente: Local
+
+## Complemento operacional antes da publicação aprovada
+
+A main foi atualizada pela release #761 (GPT-6 Sol/Luna e IA interativa assíncrona),
+seguida da auditoria #763. Relacionamentos preserva essa atualização; o rollback
+imediato desta publicação aponta para a imagem14a8d040d3087044071935d11c0b655bacc8ec3c,
+não para a imagem anterior ao GPT-6. Conferir o ponteiro real novamente ao trocar tráfego.
+
+Antes de rollback de binário, desligar as três extensões e concluir/remover somente
+os jobs Relationships::CompanyPreviewJob pendentes, reagendados ou em retry. A imagem
+anterior não conhece essa classe. Não esvaziar filas inteiras nem interromper mensagens
+ou InteractiveJobs de IA. Derivados podem ser regenerados; não apagar originais.
+
+A habilitação e verificação nas duas stacks usa uma operação manual revisada, com
+concorrência compartilhada com cada blue/green, SHA exato em web/worker, transação de
+QA revertida e habilitação somente nas contas ativas elegíveis. Nenhuma alteração de
+Companies/custom_attributes/CRM, licença, credenciais ou padrões de contas futuras.

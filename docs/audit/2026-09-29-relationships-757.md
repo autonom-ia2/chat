@@ -232,3 +232,35 @@ Uma consulta posterior verificou7/7campos em cada item. Nenhum escopo OAuth, tok
 configuração de acesso foi alterado. Evidências locais: `project-updated-items.json`
 e `project-verified.json`. A pendência administrativa está resolvida; autorização de
 merge/deploy continua exclusivamente com Rodrigo.
+
+## Publicação aprovada — integração da atualização GPT-6
+
+Rodrigo autorizou merge/deploy com as três extensões ligadas e testes posteriores.
+Antes da publicação, a conferência independente por Git/CLI detectou main a97e4a9e5b,
+com a release #761/#759 em produção (14a8d040d3). A metadata anterior da PR ainda
+mostrava a base antiga. Atualização integrada na branch sem conflitos; único arquivo
+sobreposto config/routes.rb acrescenta ai_requests e mantém as rotas de Relacionamentos.
+
+A suíte conjunta detectou contaminação por fixtures de testes de concorrência que
+não usam transações: blobs sample.pdf/preview.jpg e configuração MAXIMUM_FILE_UPLOAD_SIZE
+sobreviviam aos exemplos e alteravam contagens absolutas em specs de arquivos/ConfigLoader.
+A correção é restrita aos cinco grupos de teste envolvidos: remover os registros auxiliares
+criados por esses próprios exemplos (blobs já desvinculados e configurações) ao finalizar.
+Não foi modificada nenhuma regra de modelo, comportamento de produção ou asserção legada.
+Nova suíte em banco dedicado limpo deve confirmar o fechamento; não atribuir as falhas
+à migração de modelo sem evidência.
+
+### Fechamento da bateria integrada após isolamento de fixtures
+
+Banco dedicado novo `relationships_757_release2` (somente loopback): 5.624 exemplos,
+zero falhas e sete quarentenas já existentes. A lista reúne o trem de release e os
+contratos adicionais de Relacionamentos e da atualização GPT-6. Frontend da árvore
+integrada: 6.782 testes aprovados. Nenhuma alteração de lógica GPT-6 foi necessária.
+A correção de isolamento foi aprovada pelo RuboCop nos seis arquivos de teste; gate AST
+sem regex aprovado. Guia build/check e Central check sem delta gerado.
+
+PR operacional #766 revisada e testada para ativação/validação via OIDC existente,
+somente .github e docs, sem deploy de aplicação ou mudança de IAM. Smoke local real
+nas APIs: nove verificações e rollback de todos os registros sintéticos; sete contratos
+Python aprovados. Conferência Hub2You via SSM no SHA14a8d040d3 confirmou web/worker,
+alvo saudável e rollback preservado. Preflight Autonom.ia será obtido pelo mesmo fluxo.

@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'timeout'
 
-RSpec.describe Relationships::ValuePatch do
+RSpec.describe Relationships::ValuePatch, :relationships_committed_fixtures do
   self.use_transactional_tests = false
 
   let!(:account) { create(:account) }

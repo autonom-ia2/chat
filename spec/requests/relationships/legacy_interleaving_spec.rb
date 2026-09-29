@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'timeout'
 
-RSpec.describe 'Relationships and legacy writers under real PostgreSQL interleaving', type: :request do
+RSpec.describe 'Relationships and legacy writers under real PostgreSQL interleaving', :relationships_committed_fixtures, type: :request do
   self.use_transactional_tests = false
 
   let!(:account) { create(:account) }

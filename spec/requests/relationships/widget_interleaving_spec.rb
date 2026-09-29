@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'timeout'
 
-RSpec.describe 'Widget deletion and relationships writes', type: :request do
+RSpec.describe 'Widget deletion and relationships writes', :relationships_committed_fixtures, type: :request do
   self.use_transactional_tests = false
 
   let!(:account) { create(:account) }
