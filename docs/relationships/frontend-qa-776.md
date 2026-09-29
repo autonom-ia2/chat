@@ -27,16 +27,16 @@ um campo obrigatório do novo formulário.
 
 ## Mudanças por superfície
 
-| Superfície       | Implementação                                                                                                        | Proteção funcional                                                                               |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Home             | Cabeçalho, subtítulo, ícones com fundos cromáticos, três cards de capacidades e ações explícitas; apoio contextual.  | Permissões/flags do destino preservadas; capacidades indisponíveis não são anunciadas.           |
-| Navegação        | Breadcrumbs com hierarquia e registro atual, sem marcador de lista; eliminação do recuo excessivo nas fichas opt-in. | URLs/names e links legados intactos; layout anterior é default quando a extensão está desligada. |
-| Central          | Uma ação de criar e uma ação de configurar, sem duplicação acima do título.                                          | Modelos de Conversa/Contato/Empresa e autorização mantidos.                                      |
-| Editor           | Criar/editar/configurar com títulos e confirmações distintos, entidade fixa, explicações e switches de exibição.     | Salvamento transacional, revisão, rascunho em falha, chave e valores inalterados.                |
-| Fichas           | Campos em grade responsiva, nome/valor/descrição, ícone de tipo e ações discretas.                                   | Zero e falso não são vazio; gravação continua por campo, separada do cadastro nativo.            |
-| Atendimento      | Controles pequenos dentro do conteúdo do accordion existente.                                                        | Mensagens, compositor, Resolver e ordem das seções preservados.                                  |
-| Mídias compactas | Busca principal, filtros recolhíveis, contato pesquisável, miniatura/nome e ações contextuais.                       | Autorizações, consulta no servidor, origens e preview limitado mantidos.                         |
-| Mídias ampliadas | Empresa identificada, tabela do produto, tipo e tamanho legíveis, grupos de contato e paginação claros.              | Sem deduplicar por nome, reordenar páginas no cliente ou expor dados de outra conta.             |
+| Superfície       | Implementação                                                                                                              | Proteção funcional                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Home             | Cabeçalho, subtítulo, ícones com fundos cromáticos, três cards de capacidades e ações explícitas; apoio contextual.        | Permissões/flags do destino preservadas; capacidades indisponíveis não são anunciadas.           |
+| Navegação        | Breadcrumbs com hierarquia e registro atual, sem marcador de lista; eliminação do recuo excessivo nas fichas opt-in.       | URLs/names e links legados intactos; layout anterior é default quando a extensão está desligada. |
+| Central          | Uma ação de criar e uma de configurar, sem duplicação; faixa com quebra de linha para manter os botões visíveis no mobile. | Modelos de Conversa/Contato/Empresa e autorização mantidos.                                      |
+| Editor           | Criar/editar/configurar com títulos e confirmações distintos, entidade fixa, explicações e switches de exibição.           | Salvamento transacional, revisão, rascunho em falha, chave e valores inalterados.                |
+| Fichas           | Campos em grade responsiva, nome/valor/descrição, ícone de tipo e ações discretas.                                         | Zero e falso não são vazio; gravação continua por campo, separada do cadastro nativo.            |
+| Atendimento      | Controles pequenos dentro do conteúdo do accordion existente.                                                              | Mensagens, compositor, Resolver e ordem das seções preservados.                                  |
+| Mídias compactas | Busca principal, filtros recolhíveis, contato pesquisável, miniatura/nome e ações contextuais.                             | Autorizações, consulta no servidor, origens e preview limitado mantidos.                         |
+| Mídias ampliadas | Empresa identificada, tabela do produto, tipo e tamanho legíveis, grupos de contato e paginação claros.                    | Sem deduplicar por nome, reordenar páginas no cliente ou expor dados de outra conta.             |
 
 ## Revisão independente
 
@@ -55,12 +55,18 @@ A segunda leitura do delta não encontrou achados demonstráveis restantes. O re
 não executou as suítes e não comparou os pixels com os originais; essas evidências
 são separadas. A revisão técnica não substitui a aprovação visual do Rodrigo.
 
+A inspeção das capturas encontrou também o botão de criar da Central cortado em
+390 px. Uma opção de quebra de ações, habilitada somente nessa tela, corrige a
+faixa. Três cenários reais conferem os dois botões dentro do viewport e abrem e
+cancelam ambos os diálogos. Revisão independente desse delta não encontrou achados.
+
 ## Ambiente reproduzido
 
 Worktree exclusivo `chat2you-776-frontend`, Rails em `127.0.0.1:34776`, Vite em
 `127.0.0.1:35776`. PostgreSQL isolado de testes em `127.0.0.1:55757`, banco
 `relationships_776_e2e`, clonado exclusivamente da fixture sintética anterior.
-Redis de testes em `127.0.0.1:56757/6`. Nenhum serviço produtivo foi utilizado.
+Redis de testes em `127.0.0.1:56757/6`. Produção não foi usada como fixture.
+O preflight de liberação usa somente leitura nas duas stacks, registrado na auditoria.
 
 Playwright instalado pelo lock existente. Credenciais,
 logs detalhados e scripts privados ficam em `.codex/visual-776/`, ignorado pelo Git.
@@ -106,40 +112,46 @@ nova só para apresentação. A interface e os testes distinguem essas duas regr
 
 ## Gates para entrega
 
-| Gate                  | Resultado da retomada                                                 | Evidência privada                 |
-| --------------------- | --------------------------------------------------------------------- | --------------------------------- |
-| FieldEditor           | 9 testes aprovados, zero falhas                                       | `field-editor-final.log`          |
-| Regressão direcionada | 13 arquivos / 112 testes aprovados                                    | `relationships-review-final.log`  |
-| Frontend completo     | 614 arquivos / 6.826 testes aprovados; zero falhas, pendentes ou todo | `full-frontend-review-final.json` |
-| Snapshots existentes  | 11 aprovados; nenhum atualizado                                       | `full-frontend-review-final.json` |
-| Contrato visual       | 5 aprovados, incluindo 390/1024/1630 e popovers reais                 | `e2e-review-final.log`            |
-| E2E completo          | 19 testes aprovados; zero falhas                                      | `e2e-review-final.log`            |
-| AST                   | Nenhuma regex nova; 182 arquivos cumulativos analisados               | `ast-review-final.log`            |
-| ESLint                | 28 arquivos; zero erros / 214 avisos                                  | `lint-review-final.json`          |
-| ESLint Playwright     | Zero erros / 14 avisos                                                | `playwright-lint-final-2.log`     |
-| Prettier              | Todos os arquivos alterados conferidos                                | `format-review-final.log`         |
-| Guia                  | 169 fluxos / 170 telas; nenhuma sem explicação                        | `guia-final.log`                  |
-| Central               | 174 artigos / 170 telas; avisos de referências históricas             | `central-final.log`               |
-| Build Vite            | Aprovado; 6.025 módulos, 36,47 s, avisos de tamanho de chunks         | `build-review-final.log`          |
-| Revisão independente  | P2 corrigido; sem achados demonstráveis restantes                     | Trilha de auditoria               |
+| Gate                  | Resultado da retomada                                                   | Evidência privada                 |
+| --------------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| FieldEditor           | 9 testes aprovados, zero falhas                                         | `field-editor-final.log`          |
+| Regressão direcionada | 14 arquivos / 115 testes aprovados                                      | `relationships-central-final.log` |
+| Frontend completo     | 614 arquivos / 6.826 testes aprovados; zero falhas, pendentes ou todo   | `full-frontend-review-final.json` |
+| Snapshots existentes  | 11 aprovados; nenhum atualizado                                         | `full-frontend-review-final.json` |
+| Contrato visual       | 8 aprovados, incluindo ações da Central, 390/1024/1630 e popovers reais | `e2e-central-final-2.log`         |
+| E2E completo          | 22 testes aprovados; zero falhas                                        | `e2e-central-final-2.log`         |
+| AST                   | Nenhuma regex nova; 183 arquivos cumulativos analisados                 | `ast-central-final.log`           |
+| ESLint                | 29 arquivos; zero erros / 214 avisos                                    | `lint-central-final.json`         |
+| ESLint Playwright     | Zero erros / 14 avisos                                                  | `playwright-lint-final-2.log`     |
+| Prettier              | Todos os arquivos alterados conferidos                                  | `format-central-final.log`        |
+| Guia                  | 169 fluxos / 170 telas; nenhuma sem explicação                          | `guia-final.log`                  |
+| Central               | 174 artigos / 170 telas; avisos de referências históricas               | `central-final.log`               |
+| Build Vite            | Aprovado; 6.025 módulos, 30,75 s, avisos de tamanho de chunks           | `build-central-final.log`         |
+| Revisão independente  | P2 corrigido; sem achados demonstráveis restantes                       | Trilha de auditoria               |
 
 Os logs ficam em `.codex/visual-776/`, ignorados pelo Git. As capturas finais
 recebem um manifesto com o SHA exato de `HEAD`, viewport, tema e erros de navegador.
 O código/testes conferidos e o candidato da PR devem corresponder; documentação
 não altera os resultados dos testes. CI remoto e runtime Linux são gates separados,
-exigidos antes de qualquer aprovação para merge.
+exigidos antes de executar a autorização de merge.
+
+A suite completa local foi executada após corrigir a paginação. Após o ajuste final
+da faixa mobile, a regressão direcionada e o E2E completo foram repetidos.
+A suite remota completa deve passar no SHA final da PR.
 
 Os mockups originais citados no contrato não foram encontrados nas pastas consultadas
 durante a retomada. A composição foi conferida contra o contrato escrito; isso não
 certifica igualdade visual com os arquivos originais. As capturas finais devem ser
-comparadas com eles e aprovadas pelo Rodrigo. Não considerar esse gate concluído
-apenas porque os testes de geometria estão verdes.
+comparadas com eles para certificar igualdade. A revisão de composição usa o
+contrato escrito e a inspeção das imagens; não conta apenas a geometria automática.
+A autorização condicional de liberação não é apresentada como aprovação de pixels
+contra arquivos que não estavam disponíveis.
 
 ## Rollback e próximo gate
 
-Sem migration, backfill ou alteração de contrato. Antes de uma publicação futura,
-obter aprovação do SHA e das stacks autorizadas: o merge de aplicação em `main`
-pode disparar os dois workflows blue/green. Preparar o alvo anterior de cada stack
+Sem migration, backfill ou alteração de contrato. Antes da publicação autorizada,
+conferir o candidato e as stacks autorizadas: o merge de aplicação em `main`
+dispara os dois workflows blue/green. Preparar o alvo anterior de cada stack
 conforme [rollout-rollback.md](rollout-rollback.md). O rollback funcional autorizado
 desliga as extensões preservando definições, valores e originais; o rollback do
 binário usa o alvo anterior verificado. Nenhuma operação de rollback foi executada.

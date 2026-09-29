@@ -216,6 +216,7 @@ const filteredAttributes = computed(() => {
         :link-text="$t('ATTRIBUTES_MGMT.LEARN_MORE')"
         :search-placeholder="$t('ATTRIBUTES_MGMT.SEARCH_PLACEHOLDER')"
         feature-name="custom_attributes"
+        wrap-actions
       >
         <template v-if="attributes?.length" #count>
           <span class="text-body-main text-n-slate-11 truncate min-w-0">

@@ -31,6 +31,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  wrapActions: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const slots = useSlots();
@@ -90,7 +94,8 @@ const helpURL = getHelpUrlForFeature(props.featureName);
   </div>
   <div
     v-if="searchPlaceholder || slots.actions || slots.tabs"
-    class="gap-3 flex flex-wrap sm:flex-nowrap justify-between sm:mt-4 min-w-0"
+    class="gap-3 flex flex-wrap justify-between sm:mt-4 min-w-0"
+    :class="{ 'sm:flex-nowrap': !wrapActions }"
   >
     <div
       v-if="slots.tabs || searchPlaceholder"
@@ -118,12 +123,16 @@ const helpURL = getHelpUrlForFeature(props.featureName);
     </div>
     <div
       class="flex items-center gap-3 shrink-0"
-      :class="{ 'flex-row-reverse sm:flex-row': !slots.tabs }"
+      :class="{
+        'flex-row-reverse sm:flex-row': !slots.tabs,
+        'flex-wrap w-full sm:w-auto max-w-full': wrapActions,
+      }"
     >
       <slot name="count" />
       <div
         v-if="slots.count && slots.actions"
         class="w-px h-3 rounded-lg bg-n-weak ltr:ml-1 ltr:mr-2 rtl:ml-2 rtl:mr-1 flex-shrink-0"
+        :class="{ 'hidden sm:block': wrapActions }"
       />
       <slot name="actions" />
     </div>

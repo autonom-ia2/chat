@@ -2,6 +2,38 @@ import { test, expect } from '@playwright/test';
 import { session } from './helpers';
 
 for (const width of [390, 1024, 1630]) {
+  test(`attribute central actions remain visible and usable at ${width}px`, async ({
+    page,
+    request,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const { fixture: f } = await session(page, request);
+    await page.goto(
+      `/app/accounts/${f.account_id}/settings/custom-attributes/list`
+    );
+    await page.getByRole('button', { name: 'Contato', exact: true }).click();
+    for (const { button, title } of [
+      { button: 'Configurar campos', title: 'Configurar campos' },
+      { button: 'Criar atributo personalizado', title: 'Criar atributo' },
+    ]) {
+      const action = page.getByRole('button', { name: button, exact: true });
+      await expect(action).toBeVisible();
+      const box = await action.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      await action.click();
+      const dialog = page.getByRole('dialog');
+      await expect(
+        dialog.getByText(title, { exact: true }).first()
+      ).toBeVisible();
+      await dialog
+        .getByRole('button', { name: 'Cancelar', exact: true })
+        .click();
+      await expect(dialog).toBeHidden();
+    }
+  });
+
   test(`the relationship home keeps its reference structure at ${width}px`, async ({
     page,
     request,

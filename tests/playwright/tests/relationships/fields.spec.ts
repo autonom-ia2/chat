@@ -71,12 +71,13 @@ test('creates through the actual modal, saves a field explicitly, and survives r
     .click();
   expect((await definitionResponse).ok()).toBeTruthy();
   await expect(dialog).not.toBeVisible();
-  const fieldsSection = page.locator('section').filter({
+  const fieldsSection = page.locator('section.border-t').filter({
     has: page.getByRole('heading', {
       name: 'Campos personalizados',
       exact: true,
     }),
   });
+  await expect(fieldsSection).toHaveCount(1);
   // Anchor the field on its persistent accessible name, not on a button removed during editing.
   const field = fieldsSection.getByRole('group', { name, exact: true });
   await field.getByRole('button', { name: 'Editar', exact: true }).click();

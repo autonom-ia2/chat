@@ -2,7 +2,7 @@
 
 ## Autorização e base
 
-Rodrigo aprovou o plano de auditoria e autorizou implementar, revisar e testar. Sem merge, auto-merge, deploy, flags ou dados produtivos. Base 6c89c4bc5dd3826c81a68cf72e6f7809d10eb351. Trabalho exclusivo em fix/776-relationships-visual-alignment.
+Rodrigo aprovou o plano de auditoria e autorizou implementar, revisar e testar. Na continuação, autorizou merge e deploy após implementação, revisão e testes verdes. Não autorizou alteração de flags ou dados produtivos. Base 6c89c4bc5dd3826c81a68cf72e6f7809d10eb351. Trabalho exclusivo em fix/776-relationships-visual-alignment.
 
 ## Referências reconciliadas
 
@@ -42,4 +42,4 @@ Navegador real isolado com dados fictícios, 1630×930, 1024×930, 390×844 e cl
 
 ## Gate técnico
 
-Testes unitários/componentes, fluxos reais de criar/salvar/recarregar/selecionar valores, permissões e contexto. Preservar todos os cenários existentes; atualizar apenas seletores de controles aprovados. AST sem regex, lint, build, Guia/Central e CI. Falhas/limites explícitos. Esta entrega retorna antes de merge/deploy.
+Testes unitários/componentes, fluxos reais de criar/salvar/recarregar/selecionar valores, permissões e contexto. Preservar todos os cenários existentes; atualizar apenas seletores de controles aprovados. AST sem regex, lint, build, Guia/Central e CI. Falhas/limites explícitos. Merge e deploy exigem o candidato revisado, evidências de navegador e CI verdes; confirmar o SHA publicado, saúde e rollback das duas stacks.
