@@ -42,9 +42,11 @@ RSpec.describe Crm::Reports::AiUsage do
 
     result = payload(account: account)
 
-    # leitura: 1000 * (1.0 - 0.1) = 900 ; escrita: 800 * (1.25 - 1.0) = 200
-    # líquido = (900 - 200) / 1_000_000 = 0.0007
-    expect(result.dig(:totals, :cache_savings, :cost_usd)).to be_within(0.000001).of(0.0007)
+    expect(result.dig(:totals, :period_spend, :cost_usd)).to eq(0.01) # custo histórico persistido permanece
+
+    # leitura: 1000 * (0.2 - 0.02) = 180 ; escrita: 800 * (0.25 - 0.2) = 40
+    # líquido = (180 - 40) / 1_000_000 = 0.00014
+    expect(result.dig(:totals, :cache_savings, :cost_usd)).to be_within(0.000001).of(0.00014)
   end
 
   it 'keeps cache savings untouched for models without a cache write rate' do

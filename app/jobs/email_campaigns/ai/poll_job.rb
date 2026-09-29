@@ -8,7 +8,7 @@ module EmailCampaigns
       queue_as :medium
 
       POLL_INTERVAL = 8.seconds
-      # ~15 min de teto: a geração típica leva ~2-3 min, mas a fila da OpenAI (gpt-5.6-sol high em
+      # ~15 min de teto: a geração típica leva ~2-3 min, mas a fila da OpenAI (modelo de e-mail high em
       # background) pode passar de 10 min em picos — headroom evita timeout falso. Ticks são baratos.
       MAX_ATTEMPTS = 113
 
@@ -37,7 +37,7 @@ module EmailCampaigns
       def handle_status(campaign, client, token, response_id, attempt, result)
         case result[:status]
         when 'completed'
-          finish_completed(campaign, client, token, response_id, result[:text], result[:usage])
+          finish_completed(campaign, client, token, response_id, result[:text], result[:usage], result.fetch(:model))
         when 'failed', 'cancelled', 'incomplete'
           finish_failed(campaign, token, response_id, result[:error].presence || result[:status], client)
         else # queued, in_progress
@@ -59,7 +59,7 @@ module EmailCampaigns
         self.class.set(wait: POLL_INTERVAL).perform_later(campaign_id, token, response_id, attempt + 1)
       end
 
-      def finish_completed(campaign, client, token, response_id, text, usage = {})
+      def finish_completed(campaign, client, token, response_id, text, usage, model)
         parsed = parse_output(text)
         # Resposta completa mas sem mjml utilizável: NÃO marca pronto (o Sanitizer transformaria
         # nil num e-mail só com rodapé). Trata como falha p/ o usuário poder tentar de novo.
@@ -76,7 +76,7 @@ module EmailCampaigns
         # se dois ticks vissem 'completed'). Os tokens já foram gastos na geração concluída.
         if won
           Crm::Ai::UsageRecorder.record(
-            account: campaign.account, feature: 'email', model: Crm::Ai::Config::MODEL_EMAIL,
+            account: campaign.account, feature: 'email', model: model,
             usage: usage, reasoning_effort: 'high'
           )
         end

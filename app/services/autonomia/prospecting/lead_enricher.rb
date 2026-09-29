@@ -114,8 +114,7 @@ class Autonomia::Prospecting::LeadEnricher
       input: ai_input(scraped_data),
       schema: AI_SCHEMA,
       reasoning_effort: Crm::Ai::Config::SUMMARY_REASONING_EFFORT,
-      tools: Crm::Ai::WebSearch.tools,
-      timeout: 90
+      tools: Crm::Ai::WebSearch.tools
     )
     parsed = JSON.parse(raw[:text])
     parsed.is_a?(Hash) ? parsed : {}

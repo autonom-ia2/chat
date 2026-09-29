@@ -6,6 +6,12 @@ module Crm
     class ResponsesClient
       class Error < StandardError; end
 
+      REQUEST_TIMEOUT = 180
+      MAX_RETRIES = 2
+      RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504].freeze
+      NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, EOFError,
+                        Errno::ECONNRESET, Errno::ECONNREFUSED, Errno::ETIMEDOUT, SocketError].freeze
+
       # Teto duro de rodadas COM ferramenta, acima do que qualquer chamador pede.
       # Dez, por decisão do Rodrigo em 21/09/2026 — número que ele já operava em
       # produção no n8n com resultado bom.
@@ -43,7 +49,7 @@ module Crm
         @cache_key_scope = cache_key_scope
       end
 
-      def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: 120)
+      def create(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil, timeout: REQUEST_TIMEOUT)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: false)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = post_responses(body, timeout: timeout, operation: 'responses.create', started_at: started_at)
@@ -63,7 +69,7 @@ module Crm
       # A última rodada SEMPRE vai sem ferramenta — é isso que garante que o laço
       # termina, mesmo com um modelo que insista em chamar.
       def create_with_tool_executor(model:, instructions:, input:, schema:, reasoning_effort: 'low', tools: nil,
-                                    timeout: 120, max_rodadas: 1, max_segundos: MAX_SEGUNDOS_DE_FERRAMENTA)
+                                    timeout: REQUEST_TIMEOUT, max_rodadas: 1, max_segundos: MAX_SEGUNDOS_DE_FERRAMENTA)
         unless block_given? && tools.present?
           return create(model: model, instructions: instructions, input: input, schema: schema,
                         reasoning_effort: reasoning_effort, tools: tools, timeout: timeout)
@@ -99,7 +105,7 @@ module Crm
       def create_background(model:, instructions:, input:, schema: nil, reasoning_effort: 'low', tools: nil)
         body = base_body(model, instructions, input, schema, reasoning_effort, tools).merge(store: true, background: true)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        response = post_responses(body, timeout: 120, operation: 'responses.create_background', started_at: started_at)
+        response = post_responses(body, timeout: REQUEST_TIMEOUT, operation: 'responses.create_background', started_at: started_at)
         payload = parse_raw(response, operation: 'responses.create_background', model: model, started_at: started_at)
         { id: payload['id'], status: payload['status'] }
       end
@@ -109,11 +115,12 @@ module Crm
       def retrieve(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         response = with_timeout_guard(operation: 'responses.retrieve', response_id: response_id, started_at: started_at) do
-          HTTParty.get("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: 30)
+          HTTParty.get("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: REQUEST_TIMEOUT, max_retries: 0)
         end
         payload = parse_raw(response, operation: 'responses.retrieve', response_id: response_id, started_at: started_at)
         {
           status: payload['status'],
+          model: payload.fetch('model'),
           text: payload['output_text'].presence || extract_output_text(payload),
           usage: payload['usage'] || {},
           error: payload.dig('error', 'message') || payload.dig('incomplete_details', 'reason')
@@ -124,7 +131,7 @@ module Crm
       def delete(response_id)
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         with_timeout_guard(operation: 'responses.delete', response_id: response_id, started_at: started_at) do
-          HTTParty.delete("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: 30)
+          HTTParty.delete("#{api_base}/v1/responses/#{response_id}", headers: auth_headers, timeout: REQUEST_TIMEOUT, max_retries: 0)
         end
         true
       rescue Error => e
@@ -200,20 +207,31 @@ module Crm
 
       def post_responses(body, timeout:, operation:, started_at:)
         with_timeout_guard(operation: operation, model: body[:model], started_at: started_at) do
-          HTTParty.post("#{api_base}/v1/responses", headers: auth_headers, body: body.to_json, timeout: timeout)
+          HTTParty.post("#{api_base}/v1/responses", headers: auth_headers, body: body.to_json, timeout: timeout, max_retries: 0)
         end
       rescue Error => e
         log_exception(operation, e, model: body[:model], started_at: started_at) unless e.message.start_with?('network_timeout:')
         raise
       end
 
-      # Encapsula timeouts de rede como Error (antes vazavam como Net::ReadTimeout → HTTP 500 cru
-      # no controller, que só rescue-ava Error). Agora o chamador trata graciosamente.
+      # Até duas novas tentativas só do HTTP; nunca repete o executor de ferramentas.
+      # Erros permanentes (400/401/403/404/422) seguem direto ao tratamento existente.
       def with_timeout_guard(operation: nil, model: nil, response_id: nil, started_at: nil)
-        yield
-      rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, Errno::ETIMEDOUT, SocketError => e
-        log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
-        raise Error, "network_timeout: #{e.class.name.demodulize.underscore}"
+        retries = 0
+        loop do
+          begin
+            response = yield
+            return response unless RETRYABLE_STATUS_CODES.include?(response.code.to_i) && retries < MAX_RETRIES
+          rescue *NETWORK_ERRORS => e
+            if retries >= MAX_RETRIES
+              log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
+              raise Error, "network_timeout: #{e.class.name.demodulize.underscore}"
+            end
+          end
+
+          retries += 1
+          sleep(retries)
+        end
       end
 
       def parse_raw(response, operation: 'openai.request', model: nil, response_id: nil, started_at: nil)
