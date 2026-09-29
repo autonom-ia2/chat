@@ -74,7 +74,7 @@ module Autonomia
       def generic(model, instructions, input)
         return unavailable if input.to_s.strip.blank?
 
-        response = @client.create(model: model, instructions: instructions, input: input, reasoning_effort: 'low', timeout: 25)
+        response = @client.create(model: model, instructions: instructions, input: input, reasoning_effort: 'low')
         text = clean(response[:text])
         text.present? ? Result.new(text: text, grounded: false, available: true) : unavailable
       end

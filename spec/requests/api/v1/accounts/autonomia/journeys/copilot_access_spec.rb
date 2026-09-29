@@ -86,6 +86,11 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
       post "/api/v1/accounts/#{account.id}/autonomia/conversations/#{conversation_id}/copilot/chat",
            params: { agent_id: agent_id, message: message },
            headers: administrator.create_new_auth_token, as: :json
+      return unless response.status == 202
+
+      request = response.parsed_body
+      Crm::Ai::InteractiveJob.perform_now(request['id'])
+      get request['poll_url'], headers: administrator.create_new_auth_token
     end
 
     it 'returns 404 for a nonexistent conversation' do
@@ -122,8 +127,8 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
 
       # Assert — best-effort: nunca 500/404 aqui; o chat responde indisponível.
       expect(response).to have_http_status(:success)
-      expect(response.parsed_body['available']).to be(false)
-      expect(response.parsed_body['text']).to be_nil
+      expect(response.parsed_body['result']['available']).to be(false)
+      expect(response.parsed_body['result']['text']).to be_nil
     end
 
     it 'flows normally for an agent declared without a knowledge base (with_knowledge=false)' do
@@ -145,7 +150,7 @@ RSpec.describe 'Autonomia journeys - conversation copilot access', type: :reques
 
       # Assert — disponível, com sugestão de resposta, e SEM grounding (sem base).
       expect(response).to have_http_status(:success)
-      body = response.parsed_body
+      body = response.parsed_body['result']
       expect(body['available']).to be(true)
       expect(body['text']).to eq('Resumo: cliente pediu troca.')
       expect(body['grounded']).to be(false)

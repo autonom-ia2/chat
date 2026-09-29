@@ -49,8 +49,7 @@ module Crm
           instructions: instructions,
           input: user_input,
           schema: DRAFT_SCHEMA,
-          reasoning_effort: REASONING_EFFORT,
-          timeout: 20
+          reasoning_effort: REASONING_EFFORT
         )
 
         description = sanitize(JSON.parse(response[:text])['description'])

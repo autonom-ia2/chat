@@ -1,5 +1,6 @@
 /* global axios */
 import ApiClient from './ApiClient';
+import { pollAiRequest } from '../helper/aiRequestPolling';
 
 class CrmKanbanAPI extends ApiClient {
   constructor() {
@@ -255,11 +256,11 @@ class CrmKanbanAPI extends ApiClient {
   }
 
   evaluateCardAi(cardId) {
-    return axios.post(`${this.url}/cards/${cardId}/evaluate_ai`);
+    return pollAiRequest(axios.post(`${this.url}/cards/${cardId}/evaluate_ai`));
   }
 
   summarizeCardConversation(cardId) {
-    return axios.post(`${this.url}/cards/${cardId}/summarize`);
+    return pollAiRequest(axios.post(`${this.url}/cards/${cardId}/summarize`));
   }
 
   // POST /crm/cards/:id/reset_auto_followup — re-arms the AI auto-follow-up

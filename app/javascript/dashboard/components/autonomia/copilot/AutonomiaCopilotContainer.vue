@@ -1,5 +1,12 @@
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -25,6 +32,7 @@ const { t } = useI18n();
 const { uiSettings, updateUISettings } = useUISettings();
 const globalConfig = useMapGetter('globalConfig/get');
 const currentChat = useMapGetter('getSelectedChat');
+const currentAccountId = useMapGetter('getCurrentAccountId');
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaCopilotStore();
@@ -34,6 +42,8 @@ const agents = ref([]);
 const selectedAgentId = ref(null);
 const isSending = ref(false);
 const chatContainer = ref(null);
+let requestSequence = 0;
+let agentsRequestSequence = 0;
 
 const isSmallScreen = computed(
   () => windowWidth.value < wootConstants.SMALL_SCREEN_BREAKPOINT
@@ -100,7 +110,11 @@ const handleClickOutside = () => {
 };
 
 const handleHeaderAction = action => {
-  if (action === 'reset') store.reset();
+  if (action === 'reset') {
+    requestSequence += 1;
+    isSending.value = false;
+    store.reset();
+  }
 };
 
 // Default agent = the inbox's linked agent when it is internal/both, else the first agent.
@@ -115,35 +129,60 @@ const resolveDefaultAgent = () => {
 };
 
 const setAgent = async agent => {
+  requestSequence += 1;
+  isSending.value = false;
   selectedAgentId.value = agent.id;
   store.reset();
   await updateUISettings({ preferred_autonomia_copilot_agent_id: agent.id });
 };
 
 const fetchAgents = async () => {
-  if (!conversationDisplayId.value) {
+  agentsRequestSequence += 1;
+  const requestId = agentsRequestSequence;
+  const requestAccountId = currentAccountId.value;
+  const requestConversationId = conversationDisplayId.value;
+
+  if (!requestConversationId) {
     agents.value = [];
+    selectedAgentId.value = null;
     return;
   }
   try {
     const { data } = await AutonomiaCopilotAPI.listAgents(
-      conversationDisplayId.value
+      requestConversationId
     );
+    if (
+      requestId !== agentsRequestSequence ||
+      currentAccountId.value !== requestAccountId ||
+      conversationDisplayId.value !== requestConversationId
+    )
+      return;
     agents.value = data.agents || [];
     resolveDefaultAgent();
   } catch {
-    agents.value = [];
+    if (
+      requestId === agentsRequestSequence &&
+      currentAccountId.value === requestAccountId &&
+      conversationDisplayId.value === requestConversationId
+    ) {
+      agents.value = [];
+      selectedAgentId.value = null;
+    }
   }
 };
 
-const requestReply = async (requestConversation, message) => {
+const requestReply = async (requestConversation, message, requestId) => {
   try {
     const { data } = await AutonomiaCopilotAPI.chat(requestConversation, {
       agentId: activeAgent.value.id,
       message,
       history: store.toHistory(),
     });
-    if (conversationDisplayId.value !== requestConversation) return;
+    if (
+      requestId !== requestSequence ||
+      conversationDisplayId.value !== requestConversation
+    )
+      return;
     if (data.available && data.text) {
       store.addAssistantMessage({
         content: data.text,
@@ -154,13 +193,15 @@ const requestReply = async (requestConversation, message) => {
       useAlert(t('AUTONOMIA_COPILOT.UNAVAILABLE'));
     }
   } catch {
-    if (conversationDisplayId.value !== requestConversation) return;
+    if (
+      requestId !== requestSequence ||
+      conversationDisplayId.value !== requestConversation
+    )
+      return;
     store.addAssistantMessage({ content: '' });
     useAlert(t('AUTONOMIA_COPILOT.ERROR'));
   } finally {
-    // isSending is a single global flag (one request at a time) — always clear it,
-    // even if the conversation changed mid-flight, so the new conversation isn't stuck.
-    isSending.value = false;
+    if (requestId === requestSequence) isSending.value = false;
   }
 };
 
@@ -174,9 +215,11 @@ const sendMessage = message => {
   // another conversation before the response lands, the late reply must NOT be
   // appended into the now-current conversation's thread (cross-conversation leak).
   const requestConversation = conversationDisplayId.value;
+  requestSequence += 1;
+  const requestId = requestSequence;
   store.addUserMessage(message);
   isSending.value = true;
-  requestReply(requestConversation, message);
+  requestReply(requestConversation, message, requestId);
   return true;
 };
 
@@ -188,7 +231,22 @@ watch(showPanel, opened => {
 // conversation A never lingers — or rides as `history` — when you later open the
 // copilot on conversation B. Same-conversation close/reopen keeps its thread.
 watch(conversationDisplayId, () => {
+  requestSequence += 1;
+  agentsRequestSequence += 1;
+  isSending.value = false;
   store.reset();
+  agents.value = [];
+  selectedAgentId.value = null;
+  if (showPanel.value) fetchAgents();
+});
+
+watch(currentAccountId, () => {
+  requestSequence += 1;
+  agentsRequestSequence += 1;
+  isSending.value = false;
+  store.reset();
+  agents.value = [];
+  selectedAgentId.value = null;
   if (showPanel.value) fetchAgents();
 });
 
@@ -199,6 +257,11 @@ watch(
 
 onMounted(() => {
   if (showPanel.value) fetchAgents();
+});
+
+onBeforeUnmount(() => {
+  requestSequence += 1;
+  agentsRequestSequence += 1;
 });
 </script>
 

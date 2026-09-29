@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
@@ -53,6 +53,7 @@ const restoreMessages = () => {
 const messages = ref(restoreMessages());
 const isSending = ref(false);
 const scrollRef = ref(null);
+let requestSequence = 0;
 
 const persistMessages = () => {
   try {
@@ -91,27 +92,10 @@ const confidenceClass = confidence => {
   return 'bg-n-ruby-9';
 };
 
-const prettyJson = value => {
-  if (value === undefined || value === null) return '';
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (error) {
-    return String(value);
-  }
-};
-
-const promptRequestConfig = prompt => {
-  if (!prompt) return null;
-  return {
-    model: prompt.model,
-    reasoning_effort: prompt.reasoning_effort,
-    tools: prompt.tools || [],
-    schema: prompt.schema,
-  };
-};
-
 const resetConversation = () => {
+  requestSequence += 1;
   messages.value = [];
+  isSending.value = false;
   persistMessages();
 };
 
@@ -159,21 +143,22 @@ const sleep = ms =>
 // its own bubble. The confidence/handoff/knowledge meta renders only under the
 // LAST bubble (`meta: true`); intermediate chunks are plain bubbles. Without
 // chunks (handoff / humanize off) it falls back to a single bubble.
-const pushAssistantTurn = async data => {
+const pushAssistantTurn = async (data, requestId) => {
   const meta = {
     confidence: data.confidence,
     handoff: data.handoff,
     usedKnowledge: data.used_knowledge || [],
-    prompt: data.prompt || null,
     meta: true,
   };
 
   if (data.humanized && Array.isArray(data.chunks) && data.chunks.length) {
     for (let i = 0; i < data.chunks.length; i += 1) {
+      if (requestId !== requestSequence) return;
       const chunk = data.chunks[i];
       isSending.value = true; // typing bubble during the pause
       // eslint-disable-next-line no-await-in-loop
       await sleep(Math.max(0, Number(chunk.delay_ms) || 0));
+      if (requestId !== requestSequence) return;
       isSending.value = false;
       const isLast = i === data.chunks.length - 1;
       messages.value.push({
@@ -186,6 +171,7 @@ const pushAssistantTurn = async data => {
     return;
   }
 
+  if (requestId !== requestSequence) return;
   messages.value.push({ role: 'assistant', content: data.reply, ...meta });
   persistMessages();
 };
@@ -193,25 +179,34 @@ const pushAssistantTurn = async data => {
 const onSend = async ({ content, images = [] }) => {
   if (isSending.value) return;
 
+  requestSequence += 1;
+  const requestId = requestSequence;
+
   messages.value.push({ role: 'user', content });
   persistMessages();
 
   try {
     isSending.value = true;
     const imageDataUrls = await Promise.all(images.map(fileToDataUrl));
+    if (requestId !== requestSequence) return;
     const data = await store.dispatch('autonomiaAgents/test', {
       agentId: props.agentId,
       message: content,
       history: history.value,
       images: imageDataUrls,
     });
-    await pushAssistantTurn(data);
+    if (requestId !== requestSequence) return;
+    await pushAssistantTurn(data, requestId);
   } catch (error) {
-    useAlert(t('AGENTS.TEST.ERROR'));
+    if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
   } finally {
-    isSending.value = false;
+    if (requestId === requestSequence) isSending.value = false;
   }
 };
+
+onBeforeUnmount(() => {
+  requestSequence += 1;
+});
 </script>
 
 <template>
@@ -326,42 +321,6 @@ const onSend = async ({ content, images = [] }) => {
                   </span>
                 </li>
               </ul>
-            </Accordion>
-
-            <Accordion
-              v-if="message.prompt"
-              :title="t('AGENTS.TEST.PROMPT_USED')"
-            >
-              <div class="flex flex-col gap-3">
-                <section class="flex flex-col gap-1">
-                  <span class="text-xs font-medium text-n-slate-12">
-                    {{ t('AGENTS.TEST.PROMPT_INSTRUCTIONS') }}
-                  </span>
-                  <pre
-                    class="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-n-weak bg-n-alpha-1 p-3 text-[11px] leading-relaxed text-n-slate-11"
-                  ><code>{{ message.prompt.instructions }}</code></pre>
-                </section>
-
-                <section class="flex flex-col gap-1">
-                  <span class="text-xs font-medium text-n-slate-12">
-                    {{ t('AGENTS.TEST.PROMPT_INPUT') }}
-                  </span>
-                  <pre
-                    class="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-n-weak bg-n-alpha-1 p-3 text-[11px] leading-relaxed text-n-slate-11"
-                  ><code>{{ prettyJson(message.prompt.input) }}</code></pre>
-                </section>
-
-                <section class="flex flex-col gap-1">
-                  <span class="text-xs font-medium text-n-slate-12">
-                    {{ t('AGENTS.TEST.PROMPT_REQUEST') }}
-                  </span>
-                  <pre
-                    class="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-n-weak bg-n-alpha-1 p-3 text-[11px] leading-relaxed text-n-slate-11"
-                  ><code>{{
-                    prettyJson(promptRequestConfig(message.prompt))
-                  }}</code></pre>
-                </section>
-              </div>
             </Accordion>
           </div>
         </template>

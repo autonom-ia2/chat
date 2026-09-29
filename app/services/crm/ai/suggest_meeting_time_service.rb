@@ -91,8 +91,7 @@ module Crm
           instructions: instructions,
           input: user_input(slots),
           schema: SUGGEST_SCHEMA,
-          reasoning_effort: REASONING_EFFORT,
-          timeout: 20
+          reasoning_effort: REASONING_EFFORT
         )
 
         parse_ai(response, slots)

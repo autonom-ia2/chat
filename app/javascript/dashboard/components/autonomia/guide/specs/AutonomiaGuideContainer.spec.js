@@ -217,6 +217,32 @@ describe('AutonomiaGuideContainer', () => {
     expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores a response that settles after starting a new conversation', async () => {
+    pedidoAberto();
+    let resolveResposta;
+    AutonomiaGuideAPI.resposta.mockReturnValue(
+      new Promise(resolve => {
+        resolveResposta = resolve;
+      })
+    );
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'resposta antiga');
+    await esperarUmaBusca();
+    await flushPromises();
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledOnce();
+
+    await wrapper
+      .get('button[aria-label="AUTONOMIA_GUIDE.A11Y.NEW_CONVERSATION"]')
+      .trigger('click');
+    resolveResposta({
+      data: { status: 'done', available: true, text: 'Resposta antiga.' },
+    });
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages).toHaveLength(0);
+  });
+
   // Antes a falha era um aviso que sumia em segundos: quem voltava a olhar
   // via a pergunta sem resposta nenhuma. Agora ela fica escrita na conversa.
   it('writes the failure into the thread when the guide fails', async () => {

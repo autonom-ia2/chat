@@ -1,5 +1,6 @@
 /* global axios */
 import ApiClient from './ApiClient';
+import { pollAiRequest } from '../helper/aiRequestPolling';
 
 const generateIdempotencyKey = () =>
   (typeof window !== 'undefined' && window.crypto?.randomUUID?.()) ||
@@ -51,25 +52,27 @@ class CrmMeetingsApi extends ApiClient {
     { cardId, inboxId, date, durationMinutes, timezone } = {}
   ) {
     const url = `${this.meetingsUrl(accountId)}/suggest_times`;
-    return axios.post(url, {
-      card_id: cardId,
-      inbox_id: inboxId,
-      date,
-      duration_minutes: durationMinutes,
-      timezone,
-    });
+    return pollAiRequest(
+      axios.post(url, {
+        card_id: cardId,
+        inbox_id: inboxId,
+        date,
+        duration_minutes: durationMinutes,
+        timezone,
+      })
+    );
   }
 
   // AI (S5): draft the meeting description/agenda from deal context (collection route).
   draftInvite(accountId, { cardId, title } = {}) {
     const url = `${this.meetingsUrl(accountId)}/draft_invite`;
-    return axios.post(url, { card_id: cardId, title });
+    return pollAiRequest(axios.post(url, { card_id: cardId, title }));
   }
 
   // AI (S5): summarize a held meeting's outcome notes (member route).
   summarize(accountId, meetingId) {
     const url = `${this.meetingsUrl(accountId)}/${meetingId}/summarize`;
-    return axios.post(url, null);
+    return pollAiRequest(axios.post(url, null));
   }
 
   // Free/busy lookup lives on the calendar controller (crm/calendar), not crm/meetings.

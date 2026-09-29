@@ -1,7 +1,7 @@
 json.reply (@result.reply.presence || @result.raw_reply)
 json.confidence @result.confidence
 json.handoff do
-  json.should @result.handoff[:should]
+  json.set! :should, @result.handoff[:should]
   json.reason @result.handoff[:reason]
 end
 json.answered_from_knowledge @result.answered_from_knowledge

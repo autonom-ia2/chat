@@ -1,4 +1,6 @@
 class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::EmailCampaigns::BaseController
+  include DeferInteractiveAi
+
   before_action :ensure_ai_enabled
   before_action :ensure_ai_credential
 
@@ -6,16 +8,6 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
   # Limite do MJML base alimentado no prompt de adaptação (mesmo do Generator) — validado já no
   # controller p/ rejeitar cedo, sem enfileirar.
   MAX_BASE_MJML_BYTES = 120_000
-
-  REWRITE_SCHEMA = {
-    name: 'email_campaign_rewrite',
-    schema: {
-      type: 'object',
-      properties: { text: { type: 'string' } },
-      required: ['text'],
-      additionalProperties: false
-    }
-  }.freeze
 
   # Builder copilot ASSÍNCRONO: enfileira a geração (OpenAI background) e retorna 202 na hora — o
   # SubmitJob/PollJob fazem o trabalho de minutos sem segurar a thread web, persistem o resultado
@@ -38,19 +30,10 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
     render json: { ai_status: campaign.ai_status, ai_error: campaign.ai_error, ai_completed_at: campaign.ai_completed_at }
   end
 
-  # Reescrita de trecho — rápida (modelo mini, low effort), permanece SÍNCRONA.
+  # Reescrita também roda fora do limite de tempo da requisição web.
   def rewrite
     authorize EmailCampaign, :create?
-
-    response = client.create(
-      model: Crm::Ai::Config::MODEL_FOLLOWUP,
-      instructions: EmailCampaigns::Ai::PromptBuilder.rewrite(instruction: params[:instruction].to_s),
-      input: params[:text].to_s,
-      schema: REWRITE_SCHEMA
-    )
-    render json: { text: JSON.parse(response[:text])['text'] }
-  rescue Crm::Ai::ResponsesClient::Error => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    defer_interactive_ai('email_rewrite', { text: params[:text].to_s, instruction: params[:instruction].to_s })
   end
 
   private
@@ -80,9 +63,5 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
   def ensure_ai_credential
     @credential = Crm::Ai::CredentialResolver.new(account: Current.account).resolve
     render json: { error: 'ai_not_configured' }, status: :unprocessable_entity if @credential.blank?
-  end
-
-  def client
-    @client ||= Crm::Ai::ResponsesClient.new(credential: @credential, feature: 'email', account: Current.account)
   end
 end

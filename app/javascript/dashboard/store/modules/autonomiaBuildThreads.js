@@ -23,7 +23,7 @@ import { throwErrorMessage } from 'dashboard/store/utils/api';
 // IP OCULTO: we only ever surface messages + the filtered `state`; the backend
 // never emits instruction/scaffold here.
 const POLL_INTERVAL = 3000;
-const POLL_MAX_ATTEMPTS = 120; // ~6 minutes ceiling
+const POLL_MAX_ATTEMPTS = 600; // ~30 minutes ceiling
 
 let pollTimer = null;
 

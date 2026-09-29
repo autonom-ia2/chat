@@ -15,7 +15,6 @@ module Crm
       # Kept under the jsonb_attributes_length validator cap (1500/key) so longer
       # summaries persist instead of silently failing validation.
       MAX_SUMMARY_LENGTH = 1400
-      AI_TIMEOUT = 25
       METADATA_KEY = 'ai_summary'.freeze
       METADATA_AT_KEY = 'ai_summary_at'.freeze
       MODEL = Crm::Ai::Config::MODEL_SUMMARY
@@ -59,8 +58,7 @@ module Crm
           instructions: instructions,
           input: user_input,
           schema: SUMMARY_SCHEMA,
-          reasoning_effort: REASONING_EFFORT,
-          timeout: AI_TIMEOUT
+          reasoning_effort: REASONING_EFFORT
         )
 
         summary = sanitize(JSON.parse(response[:text])['summary'])
