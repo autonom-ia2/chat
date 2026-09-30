@@ -8,9 +8,9 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
       id: 'table_0_candidate_0', table_name: 'Base', header_row_number: 1,
       headers: ['SEGURADO', 'MAIL PRINCIPAL', 'BROKER'],
       profiles: [
-        { non_blank_count: 2, email_like_count: 0 },
-        { non_blank_count: 2, email_like_count: 2 },
-        { non_blank_count: 2, email_like_count: 0 }
+        { non_blank_count: 2, total_valid_emails: 0 },
+        { non_blank_count: 2, total_valid_emails: 2 },
+        { non_blank_count: 2, total_valid_emails: 0 }
       ]
     }
   end
@@ -45,7 +45,7 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
         'model' => 'jev-1.13.0',
         'answers' => {
           'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 0.9 },
-          'name_column' => { 'type' => 'choice', 'choice' => 'none', 'confidence' => 0.8 },
+          'name_column' => { 'type' => 'choice', 'choice' => 'none', 'confidence' => 0.79 },
           'schema_valid' => { 'type' => 'noul', 'noul' => 0.9 }
         }
       }
@@ -54,9 +54,48 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
     expect(resolver.resolve(candidate)[:name_index]).to be_nil
   end
 
+  it 'separates column evidence from row quality when valid addresses are rare' do
+    sparse = candidate.deep_dup
+    sparse[:profiles][1] = {
+      total_rows: 120, sampled_rows: 50, non_blank_count: 50, email_like_count: 0,
+      total_valid_emails: 1, examples: ['[email address]', 'aaa-aaaaa-0']
+    }
+    expect(client).to receive(:evaluate) do |request|
+      expect(request.fetch(:state).fetch(:profiles)[1]).to eq(contains_valid_email: true, examples: ['[email address]'])
+      expect(request.fetch(:questions).fetch(:email_column).fetch(:criteria).fetch('column_1').fetch(:profile))
+        .to eq(contains_valid_email: true, examples: ['[email address]'])
+      expect(request.to_json).not_to include('total_rows', 'email_like_count', 'non_blank_count', 'total_valid_emails')
+      {
+        'model' => 'jev-1.13.0',
+        'answers' => {
+          'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 0.99 },
+          'name_column' => { 'type' => 'choice', 'choice' => 'column_0', 'confidence' => 0.99 },
+          'schema_valid' => { 'type' => 'noul', 'noul' => 0.99 }
+        }
+      }
+    end
+
+    expect(resolver.resolve(sparse)).to include(email_index: 1, name_index: 0)
+  end
+
+  it 'imports a reliable email column while leaving an uncertain optional name unmapped' do
+    allow(client).to receive(:evaluate).and_return(
+      {
+        'model' => 'jev-1.13.0',
+        'answers' => {
+          'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 0.95 },
+          'name_column' => { 'type' => 'choice', 'choice' => 'column_0', 'confidence' => 0.79 },
+          'schema_valid' => { 'type' => 'noul', 'noul' => 0.95 }
+        }
+      }
+    )
+
+    expect(resolver.resolve(candidate)).to include(email_index: 1, name_index: nil)
+  end
+
   it 'rejects a Jev email choice that has no deterministic email evidence below the header' do
     no_email_evidence = candidate.deep_dup
-    no_email_evidence[:profiles][1][:email_like_count] = 0
+    no_email_evidence[:profiles][1][:total_valid_emails] = 0
     allow(client).to receive(:evaluate).and_return(
       {
         'model' => 'jev-1.13.0',

@@ -6,6 +6,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -29,10 +36,11 @@
         4,
         5
       ],
-      "name_confidence": 1.0,
+      "name_confidence": 0.99,
       "email_confidence": 1.0,
-      "schema_probability": 0.96
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "91a775d5e71b85f83621a3467f23e6c81194042dc0f83d51d584ec0b83111b68",
     "pass": true
   },
   {
@@ -42,6 +50,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -67,8 +82,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "99dd685e5447ef863ea26b269c10c73bcd80b02f6492bdd565b1744d52c16020",
     "pass": true
   },
   {
@@ -78,6 +94,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 1,
+      "invalid": 1,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -101,9 +124,10 @@
         4
       ],
       "name_confidence": 1.0,
-      "email_confidence": 0.99,
-      "schema_probability": 0.94
+      "email_confidence": 1.0,
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "5cf643856d3186119324997b1e2b993a7c6fcd3472cdeb42d8674bcc0362e4fc",
     "pass": true
   },
   {
@@ -113,6 +137,13 @@
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -138,10 +169,11 @@
         6,
         7
       ],
-      "name_confidence": 0.83,
+      "name_confidence": 0.9,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "26e0d8967f2bf799404d85ce94dea9a17bb92f8d83f817b5b10723bb64019881",
     "pass": true
   },
   {
@@ -151,6 +183,13 @@
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 1,
+    "expected_counts": {
+      "imported": 1,
+      "invalid": 0,
+      "duplicates": 1,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -173,10 +212,11 @@
         3,
         4
       ],
-      "name_confidence": 1.0,
+      "name_confidence": 0.85,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.96
     },
+    "provider_request_sha256": "3d5df2fc7a937f885fe3098522b0144b5d6481620ec1a67bc832c9519097018b",
     "pass": true
   },
   {
@@ -186,6 +226,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -209,8 +256,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "238af3d239b55fc19b88d1d0ce8c33e8fbc8583ff9e1b0c09aeed6c4e7cada3c",
     "pass": true
   },
   {
@@ -220,6 +268,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -243,8 +298,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.96
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "238af3d239b55fc19b88d1d0ce8c33e8fbc8583ff9e1b0c09aeed6c4e7cada3c",
     "pass": true
   },
   {
@@ -254,6 +310,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -277,8 +340,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.96
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "238af3d239b55fc19b88d1d0ce8c33e8fbc8583ff9e1b0c09aeed6c4e7cada3c",
     "pass": true
   },
   {
@@ -288,6 +352,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -311,8 +382,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.96
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "238af3d239b55fc19b88d1d0ce8c33e8fbc8583ff9e1b0c09aeed6c4e7cada3c",
     "pass": true
   },
   {
@@ -322,74 +394,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
-    "observed_status": "completed",
-    "observed_error": null,
-    "observed_counts": {
+    "expected_counts": {
       "imported": 2,
       "invalid": 0,
       "duplicates": 0,
       "suppressed": 0,
       "total": 2
     },
-    "schema": {
-      "model": "jev-1.13.0",
-      "format": "csv",
-      "method": "jev",
-      "delimiter": ",",
-      "header_row": 1,
-      "name_column": 0,
-      "table_index": 0,
-      "email_column": 1,
-      "custom_columns": [
-        2
-      ],
-      "name_confidence": 1.0,
-      "email_confidence": 1.0,
-      "schema_probability": 0.95
-    },
-    "pass": true
-  },
-  {
-    "id": "11_csv_utf16le",
-    "file": "11_csv_utf16le.csv",
-    "sha256": "1a851c8ab96299de3feab2b5e0199ce576dd196e8a0b4aced4ace7f64c25cd21",
-    "expected_error": null,
-    "expected_email_column": 1,
-    "expected_name_column": 0,
-    "observed_status": "completed",
-    "observed_error": null,
-    "observed_counts": {
-      "imported": 2,
-      "invalid": 0,
-      "duplicates": 0,
-      "suppressed": 0,
-      "total": 2
-    },
-    "schema": {
-      "model": "jev-1.13.0",
-      "format": "csv",
-      "method": "jev",
-      "delimiter": ",",
-      "header_row": 1,
-      "name_column": 0,
-      "table_index": 0,
-      "email_column": 1,
-      "custom_columns": [
-        2
-      ],
-      "name_confidence": 1.0,
-      "email_confidence": 1.0,
-      "schema_probability": 0.95
-    },
-    "pass": true
-  },
-  {
-    "id": "12_csv_utf16be",
-    "file": "12_csv_utf16be.csv",
-    "sha256": "7b5aadc548304afac0c9436b8aa062d7d7b7b81e51c9ba632e41b2e357adbd4c",
-    "expected_error": null,
-    "expected_email_column": 1,
-    "expected_name_column": 0,
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -415,6 +426,91 @@
       "email_confidence": 1.0,
       "schema_probability": 0.96
     },
+    "provider_request_sha256": "67015d7f58238e751bd5f78852e3f842912878591fe577dc819ea8e89e7c51e0",
+    "pass": true
+  },
+  {
+    "id": "11_csv_utf16le",
+    "file": "11_csv_utf16le.csv",
+    "sha256": "1a851c8ab96299de3feab2b5e0199ce576dd196e8a0b4aced4ace7f64c25cd21",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "provider_request_sha256": "67015d7f58238e751bd5f78852e3f842912878591fe577dc819ea8e89e7c51e0",
+    "pass": true
+  },
+  {
+    "id": "12_csv_utf16be",
+    "file": "12_csv_utf16be.csv",
+    "sha256": "7b5aadc548304afac0c9436b8aa062d7d7b7b81e51c9ba632e41b2e357adbd4c",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "provider_request_sha256": "67015d7f58238e751bd5f78852e3f842912878591fe577dc819ea8e89e7c51e0",
     "pass": true
   },
   {
@@ -424,6 +520,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -447,8 +550,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.96
     },
+    "provider_request_sha256": "67015d7f58238e751bd5f78852e3f842912878591fe577dc819ea8e89e7c51e0",
     "pass": true
   },
   {
@@ -458,6 +562,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -481,17 +592,25 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "fef74993c673bc7c2b768e4560d79a879f709ae2944f36c2d60f2fb6d4c09efc",
     "pass": true
   },
   {
     "id": "15_xlsx_titulo",
     "file": "15_xlsx_titulo.xlsx",
-    "sha256": "7b46f101cb31b0912563ad79f205d23deddf7a5e1e2f262c023b887117649718",
+    "sha256": "cc987e3f2ecbc7e8e74184cfadc62692b9360b4f14aa2542afaa2eabc66f62ee",
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -514,17 +633,25 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "c880f655cd19ec7eb2313f4e3fce53763bfc0a574278bc2fe56bc53eda4a654e",
     "pass": true
   },
   {
     "id": "16_xlsx_multiplas_abas",
     "file": "16_xlsx_multiplas_abas.xlsx",
-    "sha256": "e6295b1bfaa9edd7710fd98db0b3d0d1bed22c4e3156c655a69c50df64d017e1",
+    "sha256": "363dd8f00997599fb116c6825b2fa0c320960d106b738f25c6821e41a5afddbd",
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -547,17 +674,25 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.96
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "15e0d983414cada71c24fb508f01564f60324a9981cf6bfd47e28d52be8581a4",
     "pass": true
   },
   {
     "id": "17_xlsx_colunas_reordenadas",
     "file": "17_xlsx_colunas_reordenadas.xlsx",
-    "sha256": "73d22b1be590d635d9641fffe548781b170ffb3b2d80098ce8d803724ef6ee93",
+    "sha256": "4f655254814eda78cba162f171d5ecf425e20dfbbfbdc437c6a74884e192b717",
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 3,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -581,17 +716,25 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "1c73a66bf466d5baaafa5e35d6fcb57215e2d3e148eeca7189237f0a4f42055e",
     "pass": true
   },
   {
     "id": "18_xlsx_linhas_vazias",
     "file": "18_xlsx_linhas_vazias.xlsx",
-    "sha256": "5a91a1a1b6a15dfc63b088ca33d69be99fde3ed4053961f4e4bffa05f1cce8df",
+    "sha256": "c63a1bedcd08124b7e225b54ef1f0b28bbb35e1af8c848cd256c35b588957554",
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -612,17 +755,25 @@
       "custom_columns": [],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "57e874b68d233514ecb5149cda90b9b467f35040a0edb0ea79991fcd170f84e6",
     "pass": true
   },
   {
     "id": "19_apenas_email",
     "file": "19_apenas_email.xlsx",
-    "sha256": "2366c06d4616527d4c6f3753145b8bdfc4cff1e96d36de0f6e987a7f35d888f9",
+    "sha256": "d3ba4bf7f3d400c6b272aff5a90f2c36af3b99493ea2087a8196d638f184ec32",
     "expected_error": null,
     "expected_email_column": 0,
     "expected_name_column": null,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -640,19 +791,27 @@
       "table_index": 0,
       "email_column": 0,
       "custom_columns": [],
-      "name_confidence": 0.99,
-      "email_confidence": 0.94,
-      "schema_probability": 0.94
+      "name_confidence": 0.98,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
     },
+    "provider_request_sha256": "89a70400cfc60197e11aa940cbea7d261b193e153a8969405ce41c1e13e803cf",
     "pass": true
   },
   {
     "id": "20_nome_empresa_contato",
     "file": "20_nome_empresa_contato.xlsx",
-    "sha256": "e0e65397dfe893957daf92f410fddaa9d5904bd3196e2f3dcd68662e12ef92ad",
+    "sha256": "0594375400c798297903512bc9cbf7a2f67be7cb776555c1375eead24e084a6a",
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 1,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -675,8 +834,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "f9af28b4f36a61d772ef2344f0d8a846b9fb5480ff7348c9291aaf9959a87e75",
     "pass": true
   },
   {
@@ -686,6 +846,13 @@
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 1,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -709,8 +876,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.94
     },
+    "provider_request_sha256": "ca8eb5f7648c21c6f22e6ad7cc04524a785e778d6a4fbf9faf16b6fc538b5027",
     "pass": true
   },
   {
@@ -720,6 +888,13 @@
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -743,8 +918,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.72
+      "schema_probability": 0.85
     },
+    "provider_request_sha256": "026e7768d1c97f58d9140ee3522fa8ab6b7772df62b91e3a403c253aa3dcc843",
     "pass": true
   },
   {
@@ -754,10 +930,12 @@
     "expected_error": "schema_not_resolved",
     "expected_email_column": null,
     "expected_name_column": 0,
+    "expected_counts": null,
     "observed_status": "failed",
     "observed_error": "schema_not_resolved",
     "observed_counts": {},
     "schema": {},
+    "provider_request_sha256": "97b1db341258831cd7385cb403610dad8164a067e9549ca15f0ac2e6e0358ff4",
     "pass": true
   },
   {
@@ -767,10 +945,12 @@
     "expected_error": "missing_email_header",
     "expected_email_column": null,
     "expected_name_column": 0,
+    "expected_counts": null,
     "observed_status": "failed",
     "observed_error": "missing_email_header",
     "observed_counts": {},
     "schema": {},
+    "provider_request_sha256": null,
     "pass": true
   },
   {
@@ -780,10 +960,12 @@
     "expected_error": "no_valid_emails",
     "expected_email_column": null,
     "expected_name_column": 0,
+    "expected_counts": null,
     "observed_status": "failed",
     "observed_error": "no_valid_emails",
     "observed_counts": {},
     "schema": {},
+    "provider_request_sha256": null,
     "pass": true
   },
   {
@@ -793,42 +975,12 @@
     "expected_error": "empty_file",
     "expected_email_column": null,
     "expected_name_column": 0,
+    "expected_counts": null,
     "observed_status": "failed",
     "observed_error": "empty_file",
     "observed_counts": {},
     "schema": {},
-    "pass": true
-  },
-  {
-    "id": "27_endereco_duplicado_normalizado",
-    "file": "27_endereco_duplicado_normalizado.csv",
-    "sha256": "bcaf351197d7fd9dcde86a5cc2361cd2e1058f6fa08832edf151c85f8ec4edec",
-    "expected_error": null,
-    "expected_email_column": 1,
-    "expected_name_column": 0,
-    "observed_status": "completed",
-    "observed_error": null,
-    "observed_counts": {
-      "imported": 1,
-      "invalid": 0,
-      "duplicates": 1,
-      "suppressed": 0,
-      "total": 2
-    },
-    "schema": {
-      "model": "jev-1.13.0",
-      "format": "csv",
-      "method": "jev",
-      "delimiter": ",",
-      "header_row": 1,
-      "name_column": 0,
-      "table_index": 0,
-      "email_column": 1,
-      "custom_columns": [],
-      "name_confidence": 1.0,
-      "email_confidence": 1.0,
-      "schema_probability": 0.95
-    },
+    "provider_request_sha256": null,
     "pass": true
   },
   {
@@ -838,6 +990,13 @@
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 1,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 3,
+      "total": 4
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -857,19 +1016,27 @@
       "table_index": 0,
       "email_column": 1,
       "custom_columns": [],
-      "name_confidence": 0.83,
-      "email_confidence": 0.98,
-      "schema_probability": 0.93
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.97
     },
+    "provider_request_sha256": "787ac62c31f90fd60c86feb8f03f8bc6584e3efe51edcda9e87a1af94e836050",
     "pass": true
   },
   {
     "id": "29_campos_customizados",
     "file": "29_campos_customizados.xlsx",
-    "sha256": "fb640abde3e4ad04d1063beb52512761fc5fbd4bc50e6055bc4e7944c3dd1311",
+    "sha256": "1fd9a0348c5ecc4199d0c582dddd6605e6f2b9c4b7f9ba9433eb04417dd097ea",
     "expected_error": null,
     "expected_email_column": 1,
     "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -895,8 +1062,9 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.96
     },
+    "provider_request_sha256": "ed1d473fe950b88a674159135ad9c08b8af1054c83176a770330e0e2e229455b",
     "pass": true
   },
   {
@@ -906,6 +1074,13 @@
     "expected_error": null,
     "expected_email_column": 2,
     "expected_name_column": 1,
+    "expected_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
     "observed_status": "completed",
     "observed_error": null,
     "observed_counts": {
@@ -929,8 +1104,49 @@
       ],
       "name_confidence": 1.0,
       "email_confidence": 1.0,
-      "schema_probability": 0.95
+      "schema_probability": 0.96
     },
+    "provider_request_sha256": "c9348a954ceec9d2fd1d756bd5b5e5a5f64f9d060d53a72206fc2a18714e4a7b",
+    "pass": true
+  },
+  {
+    "id": "31_email_valido_fora_amostra",
+    "file": "31_email_valido_fora_amostra.csv",
+    "sha256": "c68fe84626946ec566dee859b0e09351e14a9d36b842a6184f357cbf1cc29a0b",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "expected_counts": {
+      "imported": 1,
+      "invalid": 119,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 120
+    },
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 1,
+      "invalid": 119,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 120
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [],
+      "name_confidence": 0.99,
+      "email_confidence": 1.0,
+      "schema_probability": 0.97
+    },
+    "provider_request_sha256": "ff6207addb26cbdb9639056b2a3cc11d13dfdc9731b13d968f4303e2c9f2f3ed",
     "pass": true
   }
 ]

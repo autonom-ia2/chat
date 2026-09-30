@@ -65,6 +65,10 @@
       "ADDRESSES": {
         "REASON": "Este arquivo não contém endereços de e-mail válidos para envio.",
         "CORRECTION": "Confira se essa é a coluna de e-mail desejada e corrija os endereços. Exemplo: pessoa{'@'}example.com. Depois envie o arquivo aqui."
+      },
+      "REQUEST": {
+        "REASON": "O serviço de análise da lista recusou esta solicitação.",
+        "CORRECTION": "Peça ao administrador para verificar o serviço de análise. Repetir a mesma solicitação não resolve esse erro; seu rascunho está salvo."
       }
     }
   }

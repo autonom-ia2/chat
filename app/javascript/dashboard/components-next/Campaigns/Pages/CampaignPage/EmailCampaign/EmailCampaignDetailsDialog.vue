@@ -95,17 +95,6 @@ const hasCampaignBody = computed(() => Boolean(liveCampaign.value.body_html));
 const isImporting = computed(
   () => uiFlags.value.isImporting || isRecipientImportActive(liveCampaign.value)
 );
-const isRetrying = ref(false);
-const retryImport = async () => {
-  isRetrying.value = true;
-  try {
-    await store.dispatch('emailCampaigns/retryImport', props.campaign.id);
-  } catch (error) {
-    useAlert(recipientImportError(t, error.response?.data?.error));
-  } finally {
-    isRetrying.value = false;
-  }
-};
 watch(
   [
     () => liveCampaign.value.recipient_import?.id,
@@ -216,15 +205,6 @@ onMounted(() => {
           :campaign="healthCampaign || liveCampaign"
           @updated="onHealthUpdated"
           @problems="recipientsPanel?.showProblems()"
-        />
-        <Button
-          v-if="
-            canManage && isDraft && liveCampaign.recipient_import?.retryable
-          "
-          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.IMPORT.RETRY')"
-          :disabled="isRetrying || isImporting"
-          :is-loading="isRetrying"
-          @click="retryImport"
         />
         <div v-if="canManage" class="flex flex-wrap items-center gap-3">
           <input

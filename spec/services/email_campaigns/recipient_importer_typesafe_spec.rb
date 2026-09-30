@@ -5,7 +5,7 @@ RSpec.describe EmailCampaigns::RecipientImporter, :aggregate_failures do
     let(:campaign) { create(:email_campaign) }
     let(:import) { campaign.email_campaign_imports.create! }
 
-    it 'uses the TypeSafe client with a small semantic sample while masking email addresses' do
+    it 'uses the TypeSafe client with a small semantic sample while masking all row values' do
       allow(TypesafeAi::Config).to receive_messages(
         enabled?: true, configured?: true, api_key: 'ts_mocked_http', model: 'jev-1.13.0'
       )
@@ -46,8 +46,8 @@ RSpec.describe EmailCampaigns::RecipientImporter, :aggregate_failures do
       )
       expect(import.reload.schema_resolution).to include('method' => 'jev', 'model' => 'jev-1.13.0')
       serialized_requests = requests.to_json
-      expect(requests.first.fetch('state').fetch('profiles')[0].fetch('examples')).to eq(['Ana Pessoa', 'Bia Pessoa'])
-      expect(serialized_requests).not_to include('ana@example.org')
+      expect(requests.first.fetch('state').fetch('profiles')[0].fetch('examples')).to eq(['Aaa Aaaaaa'])
+      expect(serialized_requests).not_to include('Ana Pessoa', 'Bia Pessoa', 'ana@example.org', 'ABC', 'XYZ')
       expect(serialized_requests).not_to include('bia@example.org')
       expect(requests.size).to eq(1)
     end

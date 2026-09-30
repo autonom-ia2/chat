@@ -23,7 +23,7 @@ export const recipientImportRecovery = (t, code) => {
     typesafe_overloaded: 'SERVICE',
     typesafe_unavailable: 'SERVICE',
     typesafe_invalid_response: 'SERVICE',
-    typesafe_invalid_request: 'SERVICE',
+    typesafe_invalid_request: 'REQUEST',
   };
   const key = reasons[code] || 'UNKNOWN';
   const prefix = `EMAIL_CAMPAIGN_IMPORT_RECOVERY.CAUSES.${key}`;

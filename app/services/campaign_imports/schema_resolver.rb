@@ -3,10 +3,6 @@ class CampaignImports::SchemaResolver
   Result = Struct.new(:headers, :rows, :mapper, :metadata, keyword_init: true)
 
   HEADER_SCAN_LIMIT = 100
-  PROFILE_SAMPLE_SIZE = 50
-  EXAMPLE_COUNT = 3
-  EXAMPLE_LENGTH = 80
-
   def initialize(parsed, ai_resolver: nil)
     @parsed = parsed
     @ai_resolver = ai_resolver
@@ -36,8 +32,9 @@ class CampaignImports::SchemaResolver
 
   def build_candidates
     tables.flat_map.with_index do |table, table_index|
+      profiler = CampaignImports::ColumnProfiler.new(table.rows)
       candidate_positions(table).map.with_index do |row_index, candidate_index|
-        build_candidate(table, table_index, row_index, candidate_index)
+        build_candidate(table, table_index, row_index, candidate_index, profiler)
       end
     end
   end
@@ -48,7 +45,7 @@ class CampaignImports::SchemaResolver
          .first(HEADER_SCAN_LIMIT)
   end
 
-  def build_candidate(table, table_index, row_index, candidate_index)
+  def build_candidate(table, table_index, row_index, candidate_index, profiler)
     header_row = table.rows.fetch(row_index)
     headers = normalize_headers(header_row.values)
     data_rows = table.rows.drop(row_index + 1).reject { |row| row.values.all? { |value| blank_valid_value?(value.to_s) } }
@@ -57,7 +54,7 @@ class CampaignImports::SchemaResolver
       table_name: table.name, delimiter: table.delimiter, header_row_number: header_row.row_number,
       headers: headers, rows: data_rows,
       mapper: CampaignImports::HeaderMapper.new(headers, mode: :email).perform,
-      profiles: column_profiles(headers.length, data_rows)
+      profiles: profiler.profiles(headers.length, data_rows, row_index)
     }
   end
 
@@ -72,7 +69,7 @@ class CampaignImports::SchemaResolver
     known_table_headers(candidates).max_by do |candidate|
       email_index = candidate.fetch(:mapper).mapping.fetch(:email)
       profile = candidate.fetch(:profiles).fetch(email_index)
-      [profile.fetch(:email_like_count), profile.fetch(:non_blank_count), candidate.fetch(:rows).length,
+      [profile.fetch(:total_valid_emails), profile.fetch(:non_blank_count), candidate.fetch(:rows).length,
        candidate.fetch(:mapper).mapping.key?(:name) ? 1 : 0, -candidate.fetch(:table_index),
        -candidate.fetch(:header_row_number)]
     end
@@ -107,9 +104,7 @@ class CampaignImports::SchemaResolver
   def validate_ai_input!(candidate)
     raise Error, 'missing_email_header' unless candidate
     raise Error, 'empty_file' if candidate.fetch(:rows).empty?
-    if !candidate_has_email_evidence?(candidate) && candidate.fetch(:rows).none? { |row| row.values.any? { |value| email_like?(value.to_s.strip) } }
-      raise Error, 'no_valid_emails'
-    end
+    raise Error, 'no_valid_emails' unless candidate_has_email_evidence?(candidate)
   end
 
   def ai_resolver
@@ -124,11 +119,11 @@ class CampaignImports::SchemaResolver
   end
 
   def candidate_has_email_evidence?(candidate)
-    candidate.fetch(:profiles).any? { |profile| profile.fetch(:email_like_count).positive? }
+    candidate.fetch(:profiles).any? { |profile| profile.fetch(:total_valid_emails).positive? }
   end
 
   def ai_candidate_score(candidate)
-    strongest_email_profile = candidate.fetch(:profiles).map { |profile| profile.fetch(:email_like_count) }.max.to_i
+    strongest_email_profile = candidate.fetch(:profiles).map { |profile| profile.fetch(:total_valid_emails) }.max.to_i
     [strongest_email_profile, candidate.fetch(:headers).count(&:present?), candidate.fetch(:rows).length,
      -candidate.fetch(:table_index), -candidate.fetch(:header_row_number)]
   end
@@ -149,44 +144,13 @@ class CampaignImports::SchemaResolver
     @ai_resolver.present? || (TypesafeAi::Config.enabled? && TypesafeAi::Config.configured?)
   end
 
-  def column_profiles(column_count, rows)
-    sample = profile_sample(rows)
-    Array.new(column_count) do |index|
-      values = profiled_values(sample, index)
-      {
-        non_blank_count: values.length,
-        email_like_count: values.count { |value| email_like?(value) },
-        examples: values.uniq.first(EXAMPLE_COUNT).map { |value| example_value(value) }
-      }
-    end
-  end
-
-  def example_value(value)
-    return '[email address]' if email_like?(value)
-    return '[malformed email address]' if value.include?('@')
-
-    value.first(EXAMPLE_LENGTH)
-  end
-
-  def profile_sample(rows)
-    return rows if rows.length <= PROFILE_SAMPLE_SIZE
-
-    step = (rows.length - 1).fdiv(PROFILE_SAMPLE_SIZE - 1)
-    Array.new(PROFILE_SAMPLE_SIZE) { |index| rows[(index * step).round] }.uniq
-  end
-
-  def profiled_values(rows, index)
-    rows.filter_map do |row|
-      value = row.values[index].to_s
-      value.strip if profile_value?(value)
-    end.reject(&:empty?)
-  end
-
   def profile_value?(value)
     value.valid_encoding? && value.exclude?("\0")
   end
 
   def email_like?(value)
+    return false unless profile_value?(value)
+
     EmailCampaigns::EmailNormalizer.normalize!(value)
     true
   rescue EmailCampaigns::EmailNormalizer::Error

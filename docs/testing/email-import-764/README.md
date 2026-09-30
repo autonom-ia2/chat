@@ -2,7 +2,7 @@
 
 O arquivo `30-planilhas-sinteticas.zip` contém 30 CSV/XLSX com dados fictícios e o relatório `results.json`. Os cinco primeiros são os arquivos originais do pacote de teste fornecido pelo operador, incluindo o XLSX cuja importação falhou na conta 16. O relatório identifica cada arquivo por SHA-256, registra o resultado esperado e o observado e indica as colunas escolhidas pelo Jev.
 
-Em 30/09/2026, os 30 casos tiveram o resultado esperado: 26 importações concluídas e quatro recusas justificadas. Os casos de recusa são parte do teste: duas colunas igualmente plausíveis, ausência de e-mail, todos os endereços inválidos e arquivo vazio. Nenhum e-mail foi enviado.
+Em 30/09/2026, os 30 casos tiveram o resultado esperado: 26 importações concluídas e quatro recusas justificadas. Os casos de recusa são parte do teste: duas colunas igualmente plausíveis, ausência de e-mail, todos os endereços inválidos e arquivo vazio. Nenhum e-mail foi enviado. O caso 31 comprova a importação de um contato válido e a identificação de 119 linhas inválidas, sem confundir qualidade das linhas com identificação da coluna. A duplicidade já está coberta pelo XLSX original 05; por isso o conjunto tem 30 arquivos e não usa o número 27.
 
 ## Cobertura
 
@@ -13,7 +13,9 @@ Em 30/09/2026, os 30 casos tiveram o resultado esperado: 26 importações conclu
 | 15–18 | XLSX com título antes da tabela, múltiplas abas, colunas reordenadas e linhas vazias |
 | 19–22 | Nome opcional, empresa versus pessoa, consentimento versus endereço e e-mail principal versus secundário |
 | 23–26 | Recusas esperadas com motivo específico e nenhum contato adicionado |
-| 27–30 | Duplicidade, falha permanente/spam/descadastro, campos adicionais e instrução maliciosa em cabeçalho |
+| 28–31 | Falha permanente/spam/descadastro, campos adicionais, instrução maliciosa em cabeçalho e endereço válido fora da amostra |
+
+A rodada final usou 27 avaliações novas do Jev real e três recusas estruturais locais. As avaliações foram feitas em um lote após encerrar a conexão com o banco da instalação que guarda a credencial. Cada resposta foi usada uma única vez no fluxo local de upload/job/leitura pública, vinculada ao SHA-256 do arquivo e da requisição. Não é teste de rede a partir do worker produtivo.
 
 ## Repetição pelo produto
 

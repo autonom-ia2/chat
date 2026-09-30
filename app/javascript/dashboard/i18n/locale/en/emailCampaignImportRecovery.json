@@ -65,6 +65,10 @@
       "ADDRESSES": {
         "REASON": "This file has no valid recipient email addresses.",
         "CORRECTION": "Check that this is the intended email column and correct the addresses. For example: person{'@'}example.com. Then upload the file here."
+      },
+      "REQUEST": {
+        "REASON": "The list analysis service rejected this request.",
+        "CORRECTION": "Ask your administrator to review the analysis service. Repeating the same request will not resolve this error; your draft is saved."
       }
     }
   }

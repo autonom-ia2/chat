@@ -138,3 +138,24 @@ it('keeps a failed upload actionable inside the dialog without displaying raw se
   expect(wrapper.text()).not.toContain('private internal detail');
   expect(wrapper.get('dialog').element.open).toBe(true);
 });
+
+it('does not offer repeated original-file analysis when the service rejects the request', async () => {
+  wrapper = mount(RecipientImportRecoveryDialog, {
+    ...options,
+    props: {
+      campaign: {
+        ...campaign,
+        recipient_import: {
+          ...campaign.recipient_import,
+          error_code: 'typesafe_invalid_request',
+        },
+      },
+    },
+  });
+  wrapper.vm.open();
+  await flushPromises();
+  expect(wrapper.text()).toContain(text.CAUSES.REQUEST.REASON);
+  expect(wrapper.text()).toContain(text.CAUSES.REQUEST.CORRECTION);
+  expect(wrapper.text()).not.toContain(text.RETRY);
+  expect(dispatch).not.toHaveBeenCalled();
+});

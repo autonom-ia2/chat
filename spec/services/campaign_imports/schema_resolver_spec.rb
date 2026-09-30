@@ -63,7 +63,7 @@ RSpec.describe CampaignImports::SchemaResolver do
     ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
     allow(ai_resolver).to receive(:resolve) do |candidate|
       expect(candidate[:headers]).to eq(['SEGURADO', 'MAIL PRINCIPAL', 'BROKER'])
-      expect(candidate.fetch(:profiles)[0][:examples]).to eq(['Ana'])
+      expect(candidate.fetch(:profiles)[0][:examples]).to eq(['Aaa'])
       expect(candidate.fetch(:profiles)[1][:examples]).to eq(['[email address]'])
       {
         candidate_id: candidate.fetch(:id),
@@ -119,6 +119,50 @@ RSpec.describe CampaignImports::SchemaResolver do
     expect { described_class.new(parsed, ai_resolver: ai_resolver).perform }.to raise_error(described_class::Error, 'no_valid_emails')
   end
 
+  it 'includes real address evidence when the only valid row is outside the initial profile sample' do
+    rows = Array.new(120) { |index| "Pessoa #{index},sem-email-#{index}" }
+    rows[1] = 'Pessoa válida,valida@example.org'
+    parsed = CampaignImports::Parser.new(StringIO.new("Nome,Email\n#{rows.join("\n")}\n"), filename: 'base.csv').perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve) do |candidate|
+      expect(candidate.fetch(:profiles)[1].fetch(:total_valid_emails)).to eq(1)
+      { email_index: 1, name_index: 0, metadata: {} }
+    end
+
+    result = described_class.new(parsed, ai_resolver: ai_resolver).perform
+    expect(result.rows.size).to eq(120)
+  end
+
+  it 'keeps per-column evidence when another column contains addresses in every sampled row' do
+    rows = Array.new(120) { |index| "Pessoa #{index},sem-email-#{index},nota#{index}@example.org" }
+    rows[1] = 'Pessoa válida,valida@example.org,nota1@example.org'
+    parsed = CampaignImports::Parser.new(StringIO.new("Nome,Email,Nota\n#{rows.join("\n")}\n"), filename: 'base.csv').perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve) do |candidate|
+      expect(candidate.fetch(:profiles)[1]).to include(total_valid_emails: 1, email_like_count: 0)
+      expect(candidate.fetch(:profiles)[2]).to include(total_valid_emails: 120)
+      { email_index: 1, name_index: 0, metadata: {} }
+    end
+
+    expect(described_class.new(parsed, ai_resolver: ai_resolver).perform.rows.size).to eq(120)
+  end
+
+  it 'sends only character shapes for names, phones and notes, never raw row values' do
+    parsed = CampaignImports::Parser.new(
+      StringIO.new("Nome,Email,Telefone,Nota\nAna Pessoa,ana@example.org,+55 (11) 98765-4321,Informação pessoal confidencial\n"), filename: 'base.csv'
+    ).perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve) do |candidate|
+      examples = candidate.fetch(:profiles).map { |profile| profile.fetch(:examples) }
+      expect(examples[0]).to eq(['Aaa Aaaaaa'])
+      expect(examples[2]).to eq(['+00 (00) 00000-0000'])
+      expect(candidate.to_json).not_to include('Ana Pessoa', 'ana@example.org', '98765', 'confidencial')
+      { email_index: 1, name_index: 0, metadata: {} }
+    end
+
+    described_class.new(parsed, ai_resolver: ai_resolver).perform
+  end
+
   it 'masks malformed addresses while retaining examples for meaningful column identification' do
     parsed = CampaignImports::Parser.new(
       StringIO.new("Nome,Email,Empresa\nAna,ana@example.org,Atlas\nBia,bia@@example.org,Orion\n"), filename: 'base.csv'
@@ -126,7 +170,7 @@ RSpec.describe CampaignImports::SchemaResolver do
     ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
     expect(ai_resolver).to receive(:resolve) do |candidate|
       expect(candidate.fetch(:profiles)[1][:examples]).to eq(['[email address]', '[malformed email address]'])
-      expect(candidate.fetch(:profiles)[2][:examples]).to eq(%w[Atlas Orion])
+      expect(candidate.fetch(:profiles)[2][:examples]).to eq(%w[Aaaaa Aaaaa])
       { email_index: 1, name_index: 0, metadata: {} }
     end
 
