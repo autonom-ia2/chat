@@ -104,6 +104,8 @@ Capturas em `docs/campaigns/workspace-800/previews/`: lista, editor, biblioteca,
 
 O catálogo pt_BR novo não foi alterado: o AGENTS.md enviado nesta tarefa limita produto ao inglês, enquanto o repositório permite a exceção para chaves próprias do fork. Foi solicitada autorização específica para en/pt_BR das campanhas; sem resposta, não presumir autorização. Esses textos novos precisam da tradução aprovada antes da liberação em português.
 
-Não há evidência de entrega real por SES nesta rodada. Os resultados locais e o parecer QA não garantem ausência absoluta de regressão. O CI do commit de documentação anterior não comprova o código implementado: a versão atual do PR deve ser verificada novamente.
+Não há evidência de entrega real por SES nesta rodada. Os resultados locais e o parecer QA não garantem ausência absoluta de regressão. O CI do commit de documentação anterior não comprova o código implementado: a versão atual do PR deve ser verificada novamente. Consulta ao GitHub após publicar `e85b9745b0` confirmou os workflows de e-mail, Guia e traduções em `disabled_manually`, sem checks no novo HEAD. Essa configuração não foi alterada nesta tarefa; não declarar CI remoto verde. O Project foi movido para Review e o PR #801 permanece draft.
+
+Prettier cumulativo dos 14 arquivos JS/Vue selecionados pelo script de CI passou. `pnpm i18n:fork:check` também passou: 9 catálogos e 15.864 mensagens existentes compiladas. Esses resultados não incluem tradução pt_BR das novas chaves WORKSPACE.
 
 Plano de publicação/restauração e rollback: `docs/campaigns/email-workspace-release-800.md`. Não executado em produção nesta etapa.

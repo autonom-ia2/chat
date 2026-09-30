@@ -25,3 +25,5 @@ O agente `/root/qa_800` revisou os fluxos e a aparência em desktop, 390 e 768 p
 - Conferência final do parent: em 390 px, lista/biblioteca têm largura de documento igual ao viewport e nenhum botão/input ultrapassando seus limites; o mesmo em 768 px para a biblioteca.
 
 Os totais do QA direcionado são subconjuntos/repetições dos checks finais, não testes extras somados. Isso comprova a versão local, sem garantir ausência absoluta de regressão ou entrega real de e-mail. Merge, deploy e seed de produção estão pendentes; o plano está em `docs/campaigns/email-workspace-release-800.md`.
+
+Os workflows de testes de e-mail, Guia e traduções estão desativados manualmente no GitHub. O commit implementado não tem CI remoto; os resultados acima são locais. Resolver essa condição antes de declarar o release aprovado.
