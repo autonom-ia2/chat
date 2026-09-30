@@ -42,7 +42,8 @@ Uma mudança de vínculo observada durante a edição bloqueia salvar e conserva
 | Regressão real dos fluxos da parte 4 no código atual | 12 verificações de atributos/configuração/mídias aprovadas, zero erros de JavaScript. |
 | Build Vite em modo de teste | Aprovado; avisos existentes de tamanho de bundle permanecem. Não é deploy. |
 | ESLint estrito dos arquivos da parte | Zero achados bloqueadores; somente avisos de chaves dinâmicas previstos pela política existente. |
-| RuboCop do request spec novo | Sem infrações. |
+| RuboCop do request spec novo | Sem infrações, inclusive na revalidação pós-commit com o Ruby do projeto. |
+| Pós-commit | 56 testes focados aprovados; hashes das fontes conferidos contra as capturas. |
 | Catálogos do fork | Oito catálogos, 15.984 mensagens; en/pt_BR e parâmetros conferidos. |
 | Guia | 169 fluxos e 170 telas; mapa em dia. |
 | Ausência de regex novos | Checker de AST aprovado. |
@@ -74,6 +75,7 @@ Browser plugin não disponível nesta sessão. Foi utilizado Playwright já inst
 - Os testes de rodapé precisaram de um stub reativo que preservasse o ref montado; Ganhar/Perder exigiam a permissão do card no cenário. As verificações foram mantidas e passaram com o contrato real do componente.
 - O primeiro request spec usava uma factory de card inexistente. Foi substituída pelo helper de pipeline e criação nativa já utilizados no repositório. Não houve correção de backend para acomodar esse problema do teste.
 - Edições de specs durante dois ensaios exploratórios acionaram recarregamentos/HMR do Vite e invalidaram a navegação. Houve inclusive erro de inicialização do roteador. As alterações foram concluídas, somente o Vite desta worktree foi reiniciado e a execução estável final passou com zero erros de JavaScript. Não se alterou o roteador nem se suprimiu a coleta de erros.
+- No commit, o hook Ruby tentou usar o Ruby do macOS e não localizou a versão de Bundler do projeto. O hook já é não bloqueante no repositório; sua política não foi alterada. A verificação foi executada explicitamente com rbenv/Ruby do projeto e passou, antes e depois do commit. Não se instalou Bundler global nem se alterou o lockfile.
 - A execução final registra o 422 intencional do domínio duplicado e o 404 local de limites Enterprise já documentado nas partes anteriores. Os dois casos não são apresentados como HTTPs bem-sucedidos.
 - O domínio inválido/duplicado usa o erro nativo; não foi inserido novo validador por expressão regular. Chaves dinâmicas de tradução mantêm a política existente.
 - O cadastro de empresa nova e a Nova oportunidade completa permanecem em outra etapa. A empresa deste incremento é uma empresa existente, editada/vinculada por ID.
