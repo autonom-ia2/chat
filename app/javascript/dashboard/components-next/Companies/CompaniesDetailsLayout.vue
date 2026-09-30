@@ -35,6 +35,10 @@ useEventListener(
   'keydown',
   event => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
+    const openChoice = event.target?.closest?.(
+      '[role="combobox"][aria-expanded="true"]'
+    );
+    if (openChoice) return;
     if (document.querySelector('[data-popover-content], dialog[open]')) return;
     closeMobileSidebar();
   },
@@ -101,7 +105,9 @@ useEventListener(
           {
             ignore: [
               '#details-sidebar-content',
-              '[data-relationships-media-popover]',
+              'dialog.ProseMirror-prompt-backdrop',
+              '[data-popover-content]',
+              '[data-popover-backdrop]',
             ],
           },
         ]"
