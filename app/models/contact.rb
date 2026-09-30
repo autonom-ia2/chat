@@ -137,16 +137,16 @@ class Contact < ApplicationRecord
     )
   }
 
-  # Find contacts that:
-  # 1. Have no identification (email, phone_number, and identifier are NULL or empty string)
-  # 2. Have no conversations
-  # 3. Are older than the specified time period
+  # Clean up only anonymous visitors without conversations or CRM opportunities.
+  # Explicit leads/customers are registrations, even without identifying fields.
+  # They must survive unlinking an opportunity and reaching the cleanup age.
   scope :stale_without_conversations, lambda { |time_period|
-    where('contacts.email IS NULL OR contacts.email = ?', '')
+    where(contact_type: :visitor)
+      .where('contacts.email IS NULL OR contacts.email = ?', '')
       .where('contacts.phone_number IS NULL OR contacts.phone_number = ?', '')
       .where('contacts.identifier IS NULL OR contacts.identifier = ?', '')
       .where('contacts.created_at < ?', time_period)
-      .where.missing(:conversations)
+      .where.missing(:conversations, :crm_cards)
   }
 
   def get_source_id(inbox_id)
@@ -189,7 +189,9 @@ class Contact < ApplicationRecord
   def self.resolved_contacts(use_crm_v2: false)
     return where(contact_type: 'lead') if use_crm_v2
 
-    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''")
+    # Explicitly registered leads may have only a name. Keep them visible in the
+    # classic list too, without promoting anonymous widget visitors to contacts.
+    where("contacts.email <> '' OR contacts.phone_number <> '' OR contacts.identifier <> ''").or(where(contact_type: :lead))
   end
 
   def discard_invalid_attrs

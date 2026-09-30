@@ -218,6 +218,7 @@ Rails.application.routes.draw do
             post 'cards/bulk', to: 'cards/bulk#create'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
+              resource :contact, only: [:create], controller: 'cards/contacts'
               post :from_conversation, on: :collection
               get :export, on: :collection
               member do

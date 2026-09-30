@@ -6,6 +6,8 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
+**Checkpoint atual:** Rodrigo aprovou a parte 1 e autorizou a parte 2 em 30/09/2026. A parte 2 foi executada localmente; aguardar um novo de acordo antes da parte 3. Não houve autorização para merge/deploy.
+
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
 ## Rastreabilidade e estado
@@ -13,10 +15,10 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
 | M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Não iniciada. |
-| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Parte 1 implementa somente a proteção no serviço de vínculo existente. UI e cadastro posterior pendentes. |
+| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1 e 2: proteção do vínculo e API transacional para contato novo no mesmo card. UI de vínculo/cadastro ainda pendente. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Nova experiência não iniciada. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
-| M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Não iniciada. |
+| M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Integração não iniciada. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Integração não iniciada. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Integração não iniciada. |
@@ -49,13 +51,37 @@ Novos cadastros e oportunidade devem ser confirmados pelo backend em uma transa�
 
 Mídias/conversas continuam sujeitas à autorização da origem. A empresa não concede acesso adicional a conversas. Criar/vincular por esse fluxo não envia mensagens ou convites; a criação composta ainda precisará provar isso para seus próprios callbacks. Não introduzir regex, dependência/credencial nova, alteração de branding ou migração em lote.
 
+## Parte 2 — Cadastro novo no mesmo card
+
+`POST /api/v1/accounts/:account_id/crm/cards/:card_id/contact` recebe um objeto `contact` e exige `Idempotency-Key`. Retorna HTTP 201 com o payload de detalhes do MESMO card. Não cria outra oportunidade nem empresa. A chave deve ser mantida no retry da mesma intenção; outra intenção exige outra chave.
+
+Campos aceitos: `name` obrigatório e não vazio; `email` e `phone_number` opcionais como texto/nulo; `additional_attributes` opcional com `city` e `country`; `custom_attributes` opcional como objeto, usando os campos existentes, inclusive `job_title` e `address`. Nome/e-mail/telefone são aparados, o e-mail segue a normalização nativa e o telefone deve chegar no formato internacional E.164, validado pelo modelo existente. Não há novo validador por regex.
+
+Campos de identidade/permissão como `id`, `account_id`, `identifier`, `contact_type` ou `company_id` são recusados neste contrato. Empresa será tratada numa etapa própria. Nome igual não é usado como identificador. E-mail/telefone já cadastrados falham pelas validações existentes, sem sobrescrever/fundir o cadastro; o fluxo de reutilizar um existente permanece em `link_contact`.
+
+A conta, a visibilidade e a permissão de vínculo do card, bem como a permissão de criar contato, são verificadas antes de gravar OU reproduzir uma resposta. O mapa default-deny continua recusando tokens de integração CRM nessa rota nova; nenhum scope/perfil foi ampliado.
+
+`ContactCreator` trava e recarrega o card, recusa um vínculo já preenchido, cria a pessoa real e chama o `ContactLinker` da parte 1. A transação externa também abrange a chave de idempotência e a resposta salva. Se criação, vínculo, auditoria ou captura da resposta falhar, não sobra pessoa parcial nem chave travada. Duas requisições na mesma oportunidade não produzem duas pessoas: chave igual reproduz a resposta; chaves diferentes deixam somente uma criação e a outra recebe 422.
+
+### Contato somente com nome
+
+O cadastro intencional nasce com o tipo nativo `lead`, sem e-mail, telefone ou identificador artificial. A listagem clássica passa a incluir leads explícitos sem identificação, como a listagem `crm_v2` já faz; visitantes anônimos continuam excluídos. Isso também torna visíveis leads antigos explicitamente classificados assim. Foi atualizada somente a expectativa do teste existente que descrevia sua antiga exclusão, como mudança funcional intencional deste requisito, não como ocultação de falha.
+
+A limpeza de visitantes passa a selecionar somente `visitor`, sem conversas e sem cards. Leads/clientes sem identificação são preservados, inclusive após desvincular ou arquivar a oportunidade. Nenhuma base real foi limpa ou migrada.
+
+### Eventos e limites
+
+O broadcast do card é agendado após a confirmação da transação. Os callbacks nativos de criação de contato permanecem após commit: a prova local verificou que já enxergam vínculo e resposta persistidos, e que não executam no rollback. Os eventos/webhooks normais de contato não foram desligados; os efeitos de integrações externas configuradas na AWS ainda precisam ser conferidos antes de anunciar uma promessa global de criação silenciosa. O endpoint não cria conversa, vínculo de inbox, mensagem, follow-up, convite ou oportunidade adicional.
+
+A concorrência comprovada aqui é de requisições deste endpoint sobre o mesmo card. A unicidade global de telefone perante outros cards/escritores, os upserts externos e o protocolo do `ConversationLinker` continuam na revisão transversal futura. A parte 2 não conclui M02 nem M05 completos.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Criar um contato a partir de uma oportunidade sem vínculo e associá-lo ao mesmo card, com transação e autorização, sem criar uma segunda oportunidade. Antes de adicionar novos caminhos de escrita, revisar sua compatibilidade com o serviço de vínculo e a preservação de conversas. A interface completa continua sujeita às etapas e aceites M01–M08.
+Primeiro trecho visual de M01: substituir a aba Contato por Relacionamento e apresentar o contato compartilhado, a empresa realmente vinculada e os estados sem vínculo, na composição do HTML. Não iniciar essa parte antes do novo de acordo. Edição completa, formulário composto, mídia e demais ações continuam sujeitos aos aceites próprios.
 
 ## Validação e publicação
 
-Evidência da parte 1: [auditoria e limites](../audit/2026-09-30-792-crm-relationships-part-1.md).
+Evidência da parte 1: [auditoria e limites](../audit/2026-09-30-792-crm-relationships-part-1.md). Evidência da parte 2: [testes, concorrência e limites](../audit/2026-09-30-792-crm-relationships-part-2.md).
 
 Nenhuma alteração de frontend, migração, flag, infraestrutura, configuração de produção ou dependência foi feita nesta parte. Os testes do protótipo não contam como teste desta implementação. Comparação visual, revisão independente do conjunto, concorrência entre fluxos e validação de produção permanecem exigidos antes da liberação final.
 

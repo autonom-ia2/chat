@@ -75,6 +75,10 @@ en:
 
   errors:
     crm:
+      contact_already_linked: 'is already linked to this opportunity. Use the existing contact or change the link explicitly.'
+      contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this opportunity.'
+      contact_identity_taken: 'A contact with these details already exists. Use the existing contact instead.'
+      invalid_contact_input: 'Provide a contact object with a non-empty name, optional email and phone strings, and valid attribute objects.'
       contact_conversation_conflict: 'cannot be changed while this opportunity has conversations belonging to another contact. Review the conversation links first.'
     account:
       not_authorized: You are not authorized to access this account
