@@ -76,13 +76,13 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="target"
-    class="size-12 shrink-0 relative flex items-center justify-center"
+    class="size-24 shrink-0 relative flex items-center justify-center"
   >
     <img
       v-if="image"
       :src="image"
       :alt="name"
-      class="size-12 rounded object-cover"
+      class="size-24 rounded-lg object-cover"
     />
     <span
       v-else

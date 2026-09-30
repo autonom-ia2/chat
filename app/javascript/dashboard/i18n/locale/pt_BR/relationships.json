@@ -97,7 +97,9 @@
       "BACK_TO_COMPANY": "Voltar à empresa",
       "COMPANY_ERROR": "Não foi possível carregar o nome da empresa. Tente novamente.",
       "METADATA": "{type} · {size}",
-      "TAB": "Mídias"
+      "TAB": "Mídias",
+      "CONTACT_TITLE": "Mídias do contato",
+      "CONTACT_EMPTY_HINT": "Arquivos das conversas autorizadas deste contato aparecerão aqui."
     },
     "LOAD_ERROR": "Não foi possível carregar a configuração. Tente novamente.",
     "LOCATION": "Local de exibição",
@@ -164,6 +166,28 @@
     "NO_DEFINITIONS": "Nenhum atributo encontrado.",
     "SELECTION_SUMMARY": "{selected} de {total} campos selecionados",
     "BREADCRUMB_LABEL": "Navegação de Relacionamentos",
-    "GLOBAL_NOTE": "Válido para a equipe desta conta. Ocultar não apaga valores nem restringe acesso."
+    "GLOBAL_NOTE": "Válido para a equipe desta conta. Ocultar não apaga valores nem restringe acesso.",
+    "MORE_ACTIONS": "Mais ações",
+    "VISIT_SITE": "Ver site",
+    "OPEN_PANEL": "Abrir acompanhamento",
+    "CLOSE_PANEL": "Fechar acompanhamento",
+    "SUMMARY": {
+      "TITLE": "Acompanhamento da base",
+      "PERIOD": "Base inteira · últimos 30 dias",
+      "ERROR": "Não foi possível carregar o resumo. Tente novamente.",
+      "PENDING": "…",
+      "contacts": {
+        "total": "Contatos na base",
+        "new_in_period": "Novos em 30 dias",
+        "active_in_period": "Ativos em 30 dias",
+        "with_company": "Vinculados a empresas"
+      },
+      "companies": {
+        "total": "Empresas na base",
+        "new_in_period": "Novas em 30 dias",
+        "with_contacts": "Com contatos vinculados",
+        "inactive_in_period": "Sem atividade há 30 dias"
+      }
+    }
   }
 }

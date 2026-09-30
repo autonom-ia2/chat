@@ -1,6 +1,6 @@
 /* Protótipo isolado: dados fictícios, sem APIs, gravação ou envio real. */
-const state = { view: new URLSearchParams(location.search).get('view') || 'contacts', tab: 'attributes', currentWidth: false, drawer: false, filter: '', actionsOpen: false };
-state.tab = new URLSearchParams(location.search).get('tab') || (state.view === 'company' ? 'history' : 'attributes');
+const state = { view: new URLSearchParams(location.search).get('view') || 'contacts', tab: 'notes', currentWidth: false, drawer: false, filter: '', actionsOpen: false };
+state.tab = new URLSearchParams(location.search).get('tab') || (state.view === 'company' ? 'contacts' : 'notes');
 let icons = {};
 const escapeAttribute = text => String(text).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 const views = [['contacts','Contatos'],['companies','Empresas'],['contact','Ficha do contato'],['company','Ficha da empresa']];
@@ -44,7 +44,7 @@ const detailView = () => {
 };
 function render() {
  document.getElementById('root').innerHTML=`<div class="flex h-dvh min-h-[30rem] flex-col overflow-hidden">${controlBar()}<div class="flex min-h-0 flex-1">${navigation()}<div class="flex min-w-0 flex-1 flex-col">${['contacts','companies'].includes(state.view)?listView():detailView()}</div></div></div><div id="toast" role="status" class="fixed bottom-6 left-1/2 z-[60] hidden max-w-[90vw] -translate-x-1/2 rounded-lg bg-n-navy px-5 py-4 text-sm text-white shadow-lg">Demonstração visual: nenhuma ação real foi executada.</div>`;
- document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{state.view=b.dataset.view;state.tab=state.view==='company'?'history':'attributes';state.drawer=false;state.actionsOpen=false;state.filter='';history.replaceState(null,'','?view='+state.view);render();}));
+ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{state.view=b.dataset.view;state.tab=state.view==='company'?'contacts':'notes';state.drawer=false;state.actionsOpen=false;state.filter='';history.replaceState(null,'','?view='+state.view);render();}));
  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{state.tab=b.dataset.tab;render();[...document.querySelectorAll(`[data-tab="${state.tab}"]`)].find(tab=>tab.getBoundingClientRect().width>0)?.focus();}));
  document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{const a=b.dataset.action;if(a==='more'){state.actionsOpen=!state.actionsOpen;render();}else if(a==='width'){state.currentWidth=!state.currentWidth;render();}else if(a==='open'||a==='close'){state.drawer=a==='open';render();document.querySelector(state.drawer?'[data-action="close"]':'[data-action="open"]')?.focus();}else{const toast=document.getElementById('toast');toast.classList.remove('hidden');setTimeout(()=>toast.classList.add('hidden'),2500);}}));
  const search=document.getElementById('search');if(search)search.addEventListener('input',()=>{const p=search.selectionStart;state.filter=search.value;render();const next=document.getElementById('search');next.focus();next.setSelectionRange(p,p);});

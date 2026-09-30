@@ -3,6 +3,10 @@ class CompanyPolicy < ApplicationPolicy
     true
   end
 
+  def summary?
+    index?
+  end
+
   def search?
     true
   end

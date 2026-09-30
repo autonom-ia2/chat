@@ -31,3 +31,7 @@ Aceite visual parcial das fichas registrado; aceite da revisão das listas/mídi
 Rodrigo pediu igualdade das mídias de Contatos e Empresas e aumento de 25% para 32% da lateral. A terceira revisão unifica a apresentação dos dois painéis em uma única função do mockup, usando lista de arquivos, contêineres de 96px e controles iguais; substitui a galeria distinta do contato. A largura fica em 37rem (592px), aproximadamente +32% contra 448px. A implementação futura deve compartir apresentação sem misturar escopo de leitura de contato/empresa ou alterar os contratos de origem/autorização.
 
 Capturas e relatório foram refeitos. Lateral 592px medida no desktop; imagens internas de 94px nos dois contextos e nos dois tamanhos inspecionados. Botões desktop alinhados e contidos na faixa de ações em 1280/1440px; reticências preservam o nome acessível Mais ações e a ação Bloquear contato. Dados e ações permanecem simulados. O hook de push também está incompleto nesta worktree; seu único gate bin/validate_push foi lido e executado manualmente antes do push com desativação do hook restrita ao comando.
+
+## Autorização posterior
+
+Após a definição das abas padrão (Notas no contato; Contatos na empresa), Rodrigo aprovou a proposta e autorizou implementar. O histórico acima descreve as etapas anteriores e não é o estado atual. Implementação e evidência real em 2026-09-30-implementacao-relacionamentos-785.md. Merge/deploy seguem sem autorização nesta frente; Rodrigo pediu capturas reais antes de qualquer liberação.

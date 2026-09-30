@@ -179,6 +179,7 @@ const handleUpdateCompany = async () => {
       </div>
     </div>
 
+    <slot name="actions" />
     <div class="flex flex-col items-start w-full gap-6">
       <span class="py-1 text-sm font-medium text-n-slate-12">
         {{ t('COMPANIES.DETAIL.PROFILE.TITLE') }}

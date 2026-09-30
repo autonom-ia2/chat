@@ -97,7 +97,9 @@
       "BACK_TO_COMPANY": "Back to company",
       "COMPANY_ERROR": "Unable to load the company name. Please try again.",
       "METADATA": "{type} · {size}",
-      "TAB": "Media"
+      "TAB": "Media",
+      "CONTACT_TITLE": "Contact media",
+      "CONTACT_EMPTY_HINT": "Files from this contact’s authorized conversations will appear here."
     },
     "LOAD_ERROR": "Unable to load configuration. Please try again.",
     "LOCATION": "Display location",
@@ -164,6 +166,28 @@
     "NO_DEFINITIONS": "No attributes found.",
     "SELECTION_SUMMARY": "{selected} of {total} fields selected",
     "BREADCRUMB_LABEL": "Relationships navigation",
-    "GLOBAL_NOTE": "Shared with your team in this account. Hiding a field does not delete values or restrict access."
+    "GLOBAL_NOTE": "Shared with your team in this account. Hiding a field does not delete values or restrict access.",
+    "MORE_ACTIONS": "More actions",
+    "VISIT_SITE": "Visit website",
+    "OPEN_PANEL": "Open relationship panel",
+    "CLOSE_PANEL": "Close relationship panel",
+    "SUMMARY": {
+      "TITLE": "Relationship overview",
+      "PERIOD": "Entire base · last 30 days",
+      "ERROR": "Unable to load the overview. Try again.",
+      "PENDING": "…",
+      "contacts": {
+        "total": "Contacts in the base",
+        "new_in_period": "New in 30 days",
+        "active_in_period": "Active in 30 days",
+        "with_company": "Linked to companies"
+      },
+      "companies": {
+        "total": "Companies in the base",
+        "new_in_period": "New in 30 days",
+        "with_contacts": "With linked contacts",
+        "inactive_in_period": "No activity for 30 days"
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import { computed, useSlots, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { vOnClickOutside } from '@vueuse/components';
+import { useEventListener } from '@vueuse/core';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
@@ -70,6 +71,9 @@ const closeMobileSidebar = () => {
   if (!isContactSidebarOpen.value) return;
   isContactSidebarOpen.value = false;
 };
+useEventListener(window, 'keydown', event => {
+  if (event.key === 'Escape') closeMobileSidebar();
+});
 </script>
 
 <template>
@@ -91,7 +95,10 @@ const closeMobileSidebar = () => {
                 @click="handleBreadcrumbClick"
               />
             </slot>
-            <div class="flex flex-wrap items-center gap-2">
+            <div
+              v-if="!relationshipsLayout"
+              class="flex flex-wrap items-center gap-2"
+            >
               <Button
                 :label="
                   !isContactBlocked
@@ -132,7 +139,12 @@ const closeMobileSidebar = () => {
     <!-- Desktop sidebar -->
     <div
       v-if="slots.sidebar"
-      class="hidden lg:flex flex-col min-w-52 w-full max-w-md border-l border-n-weak bg-n-solid-2"
+      class="hidden shrink-0 flex-col border-s border-n-weak bg-n-solid-2"
+      :class="
+        relationshipsLayout
+          ? 'xl:flex w-[37rem]'
+          : 'lg:flex min-w-52 w-full max-w-md'
+      "
     >
       <div class="shrink-0">
         <slot name="sidebarHeader" />
@@ -145,8 +157,11 @@ const closeMobileSidebar = () => {
     <!-- Mobile sidebar container -->
     <div
       v-if="slots.sidebar"
-      class="lg:hidden fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end transition-all duration-200 ease-in-out"
-      :class="isContactSidebarOpen ? 'w-full' : 'w-16'"
+      class="fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end transition-all duration-200 ease-in-out"
+      :class="[
+        relationshipsLayout ? 'xl:hidden' : 'lg:hidden',
+        isContactSidebarOpen ? 'w-full' : 'w-16',
+      ]"
     >
       <!-- Toggle button -->
       <div
@@ -173,6 +188,14 @@ const closeMobileSidebar = () => {
               : 'i-lucide-panel-right-open'
           "
           data-contact-sidebar-toggle
+          :aria-expanded="isContactSidebarOpen"
+          :aria-label="
+            $t(
+              isContactSidebarOpen
+                ? 'RELATIONSHIPS.CLOSE_PANEL'
+                : 'RELATIONSHIPS.OPEN_PANEL'
+            )
+          "
           @click="handleConversationSidebarToggle"
         />
       </div>
@@ -188,7 +211,12 @@ const closeMobileSidebar = () => {
         <div
           v-if="isContactSidebarOpen"
           id="contact-sidebar-content"
-          class="order-2 w-[85%] sm:w-[50%] flex flex-col bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak shadow-lg"
+          class="order-2 flex flex-col bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak shadow-lg"
+          :class="
+            relationshipsLayout
+              ? 'w-[calc(100%-3rem)] sm:w-[37rem] max-w-[calc(100%-3rem)]'
+              : 'w-[85%] sm:w-[50%]'
+          "
         >
           <div class="shrink-0">
             <slot name="sidebarHeader" />

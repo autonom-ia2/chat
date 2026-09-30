@@ -15,6 +15,10 @@ class ContactPolicy < ApplicationPolicy
     @account_user.administrator?
   end
 
+  def summary?
+    index?
+  end
+
   def search?
     true
   end

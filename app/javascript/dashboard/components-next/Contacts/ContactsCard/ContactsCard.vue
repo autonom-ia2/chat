@@ -111,6 +111,7 @@ const handleAvatarHover = isHovered => {
 <template>
   <div class="relative">
     <CardLayout
+      class="!rounded-2xl"
       :key="id"
       layout="row"
       :class="{

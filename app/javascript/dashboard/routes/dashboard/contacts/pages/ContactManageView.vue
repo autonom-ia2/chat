@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
+import ContactDetailActions from 'dashboard/components-next/Relationships/ContactDetailActions.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
@@ -17,7 +18,7 @@ import ContactMedia from 'dashboard/components-next/Contacts/ContactsSidebar/Con
 import ContactMerge from 'dashboard/components-next/Contacts/ContactsSidebar/ContactMerge.vue';
 import ContactCustomAttributes from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributes.vue';
 
-const { navigationEnabled, accountId } = useRelationships();
+const { navigationEnabled, mediaEnabled, accountId } = useRelationships();
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -25,7 +26,9 @@ const router = useRouter();
 const contact = useMapGetter('contacts/getContactById');
 const uiFlags = useMapGetter('contacts/getUIFlags');
 
-const activeTab = ref('attributes');
+const activeTab = ref(
+  mediaEnabled.value && route.query.media ? 'media' : 'notes'
+);
 const contactMergeRef = ref(null);
 
 const isFetchingItem = computed(() => uiFlags.value.isFetchingItem);
@@ -122,6 +125,17 @@ const toggleContactBlock = async isBlocked => {
   }
 };
 
+watch([() => route.params.accountId, () => route.params.contactId], () => {
+  activeTab.value = mediaEnabled.value && route.query.media ? 'media' : 'notes';
+  fetchActiveContact();
+  fetchContactNotes();
+  fetchContactConversations();
+});
+
+watch(mediaEnabled, enabled => {
+  if (enabled && route.query.media) activeTab.value = 'media';
+});
+
 onMounted(() => {
   fetchActiveContact();
   fetchContactNotes();
@@ -163,15 +177,24 @@ onMounted(() => {
       </div>
       <ContactDetails
         v-else-if="selectedContact"
+        :key="selectedContact.id"
         :selected-contact="selectedContact"
         @go-to-contacts-list="goToContactsList"
-      />
+      >
+        <template v-if="navigationEnabled" #actions>
+          <ContactDetailActions
+            :contact="selectedContact"
+            :is-updating="isUpdatingContact"
+            @toggle-block="toggleContactBlock"
+          />
+        </template>
+      </ContactDetails>
       <template #sidebarHeader>
-        <div class="px-6 pt-6 pb-3">
+        <div class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
           <TabBar
             :tabs="tabs"
             :initial-active-tab="activeTabIndex"
-            class="w-full [&>button]:w-full bg-n-alpha-black2"
+            class="w-max min-w-full [&>button]:w-auto [&>button]:shrink-0 bg-n-alpha-black2"
             @tab-changed="handleTabChange"
           />
         </div>
@@ -188,7 +211,10 @@ onMounted(() => {
             v-if="activeTab === 'attributes'"
             :selected-contact="selectedContact"
           />
-          <ContactNotes v-if="activeTab === 'notes'" />
+          <ContactNotes
+            v-if="activeTab === 'notes'"
+            :key="`${accountId}:${route.params.contactId}`"
+          />
           <ContactHistory v-if="activeTab === 'history'" />
           <ContactMedia v-if="activeTab === 'media'" />
           <ContactMerge

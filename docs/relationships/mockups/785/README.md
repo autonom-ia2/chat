@@ -1,6 +1,6 @@
 # Proposta visual — Relacionamentos — #785
 
-Terceira versão do mockup para aprovação de Rodrigo. A composição interna das fichas teve aceite visual parcial; as listas foram revistas após o feedback sobre os blocos retos. Não é implementação da aplicação. Os dados são fictícios; nenhuma API da conta, destinatário, mensagem ou credencial é consultada. A marca do exemplo acompanha as capturas; a implementação deve continuar usando branding por instalação.
+Proposta visual aprovada por Rodrigo, que autorizou a implementação em 30/09/2026. As listas foram revistas após o feedback sobre os blocos retos. A implementação e suas validações estão registradas em [auditoria](../../../audit/2026-09-30-implementacao-relacionamentos-785.md). Não é implementação da aplicação. Os dados são fictícios; nenhuma API da conta, destinatário, mensagem ou credencial é consultada. A marca do exemplo acompanha as capturas; a implementação deve continuar usando branding por instalação.
 
 ## Ver
 
@@ -25,6 +25,7 @@ A busca funciona sobre os exemplos locais. Nas fichas, abrir a aba Mídias para 
 - Lateral das fichas: limite atual 28rem (448px) → proposta 37rem (592px), aproximadamente +32% no desktop. Atributos, histórico, notas, mídias e ações atuais seguem disponíveis. Abas completas e rolagem independente.
 - Ações abaixo da identificação: Enviar mensagem e Chamada à vista; Bloquear contato dentro de Mais ações. Desktop em uma linha; telas menores com grade planejada, sem quebra acidental no breadcrumb. Excluir empresa também fica em Mais ações.
 - Mídias da empresa: contêiner de miniatura de 96px, versus size-12 (48px) no componente atual. A borda interna deixa a imagem com 94px no mockup. Contatos e Empresas passam a usar o mesmo painel de mídias em lista, com miniaturas de 96px, pesquisa, filtros, nome/tipo/tamanho e ações Visualizar/Baixar/Abrir conversa. O mockup usa uma única função de apresentação para ambos. Os tamanhos se adaptam à lateral.
+- Ao abrir: Notas no contato e Contatos na empresa. Links explícitos para mídias continuam abrindo Mídias.
 - Abaixo de 1280px, usar painel de acompanhamento sobreposto para não comprimir o formulário. O protótipo demonstra esse comportamento; preservar ações e tratamento de foco do painel existente na implementação.
 
 ## Inclusão e compatibilidade
@@ -37,17 +38,13 @@ Tailwind, tokens e i18n do projeto; branding configurável. O catálogo local pr
 
 ## Dependência dos indicadores
 
-Totais já estão disponíveis em contacts/getMeta e companies/getMeta. As APIs atuais consultadas não fornecem todos os agregados propostos por período e vínculo. Para exibir os quatro indicadores corretamente, será necessário um endpoint adicional somente de leitura, respeitando conta, permissões e timezone, sem alterar endpoints existentes. Esse trabalho é uma dependência explícita do aceite da proposta completa; não foi implementado aqui.
-
-Se o escopo aprovado for estritamente frontend, começar com os totais disponíveis e omitir os indicadores sem agregado real. Nunca extrapolar a primeira página, carregar todos os registros no navegador ou apresentar número fictício em produção.
-
-“Atividade” deve seguir last_activity_at do domínio; “novos” usa created_at. Para empresas, distinguir nunca teve atividade de última atividade anterior a 30 dias na definição do agregado antes de implementar. Não chamar uma empresa sem atividade de oportunidade, tarefa ou pendência comercial sem esses dados.
+A implementação aprovada inclui endpoints adicionais somente de leitura para todos os agregados. O resumo usa a base inteira da conta, independentemente da busca e paginação; não deriva números da primeira página. “Novos” usa created_at; “atividade” usa last_activity_at. A janela é os 30 dias anteriores ao instante da leitura. Empresas sem atividade incluem registros nunca ativos criados há mais de 30 dias, excluindo os novos nunca ativos. Os números são consultados ao abrir a lista e não representam atualização em tempo real.
 
 ## Evidência e limite
 
 Protótipo executado no Chrome headless em larguras 1630, 1440, 1280, 1024 e 390px. Trinta capturas privadas, seis previews preservados, zero erros de JavaScript e nenhuma rolagem horizontal de página nos estados verificados. Lateral medida em 592px e comparação em 448px, aproximadamente +32%. Botões sem corte, alinhados em uma linha e contidos na área de ações no desktop 1280/1440; Mais ações aparece como botão de reticências com nome acessível no desktop. As imagens de miniatura carregadas e medidas. Abas sem corte nos estados verificados; troca de histórico, busca local e abrir/fechar/Escape do painel exercitados. Relatório em browser-report.json.
 
-Isso comprova a proposta local; não valida integração da aplicação, responsividade em toda resolução, tema escuro, permissões ou regressão de produção. Após aceite visual: implementação mínima, revisão, testes e aprovação específica antes de merge/deploy desta nova frente.
+Isso comprova a proposta local; não valida integração da aplicação, responsividade em toda resolução, tema escuro, permissões ou regressão de produção. A implementação foi autorizada; merge/deploy desta nova frente continuam dependendo de revisão, validações e aprovação específica. As imagens acima continuam sendo do protótipo, não da aplicação.
 
 ## Reproduzir
 

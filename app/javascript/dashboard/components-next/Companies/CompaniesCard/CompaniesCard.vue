@@ -42,7 +42,7 @@ const formattedLastActivityAt = computed(() => {
 </script>
 
 <template>
-  <CardLayout layout="row" @click="onClickViewDetails">
+  <CardLayout class="!rounded-2xl" layout="row" @click="onClickViewDetails">
     <div class="flex items-center justify-start flex-1 gap-4 cursor-pointer">
       <Avatar
         :username="displayName"

@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import CompanyMedia from 'dashboard/components-next/Relationships/CompanyMedia.vue';
+import RelationshipActionMenu from 'dashboard/components-next/Relationships/RelationshipActionMenu.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Policy from 'dashboard/components/policy.vue';
@@ -30,7 +31,7 @@ const { t } = useI18n();
 const confirmDeleteDialogRef = ref(null);
 const selectedCandidate = ref(null);
 const activeSidebarTab = ref(
-  mediaEnabled.value && route.query.media ? 'media' : 'history'
+  mediaEnabled.value && route.query.media ? 'media' : 'contacts'
 );
 
 const companyId = computed(() => Number(route.params.companyId));
@@ -204,7 +205,7 @@ watch(
     companiesStore.resetCompanyDetailState();
     clearSelectedCandidate();
     activeSidebarTab.value =
-      mediaEnabled.value && route.query.media ? 'media' : 'history';
+      mediaEnabled.value && route.query.media ? 'media' : 'contacts';
     if (!id) return;
     await Promise.allSettled([
       companiesStore.show(id),
@@ -219,8 +220,8 @@ watch(mediaEnabled, enabled => {
   if (enabled && route.query.media) {
     activeSidebarTab.value = 'media';
   } else if (!enabled && activeSidebarTab.value === 'media') {
-    activeSidebarTab.value = 'history';
-    loadSidebarTab('history');
+    activeSidebarTab.value = 'contacts';
+    loadSidebarTab('contacts');
   }
 });
 
@@ -267,14 +268,45 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="flex flex-col gap-6">
-      <CompanyProfileCard :company="company" :is-loading="isFetchingCompany" />
+      <CompanyProfileCard :company="company" :is-loading="isFetchingCompany">
+        <template v-if="navigationEnabled" #actions>
+          <div
+            data-profile-actions
+            class="flex w-full flex-wrap items-center gap-2"
+          >
+            <a
+              v-if="company.domain"
+              :href="`https://${company.domain}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-n-weak px-4 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-2"
+            >
+              <span class="i-lucide-globe size-4" aria-hidden="true" />
+              {{ t('RELATIONSHIPS.VISIT_SITE') }}
+            </a>
+            <Policy :permissions="['administrator']">
+              <RelationshipActionMenu
+                :actions="[
+                  {
+                    key: 'delete',
+                    label: t('COMPANIES.DETAIL.DELETE.BUTTON'),
+                    icon: 'i-lucide-trash-2',
+                    disabled: isDeletingCompany,
+                  },
+                ]"
+                @select="openDeleteCompanyDialog"
+              />
+            </Policy>
+          </div>
+        </template>
+      </CompanyProfileCard>
 
       <RelationshipFields
         :record="company"
         entity="company"
         surface="company_details"
       />
-      <Policy :permissions="['administrator']">
+      <Policy v-if="!navigationEnabled" :permissions="['administrator']">
         <section
           class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
         >
