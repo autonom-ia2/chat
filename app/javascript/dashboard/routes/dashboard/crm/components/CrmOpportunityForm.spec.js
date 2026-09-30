@@ -32,6 +32,46 @@ let wrapper;
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => wrapper?.unmount());
 
+it('starts a contextual form with the existing person, no invented title and a clean draft', async () => {
+  const person = {
+    id: 42,
+    name: 'Mariana',
+    company: { id: 7, name: 'Empresa atual' },
+  };
+  wrapper = makeForm({ initialContact: person });
+  expect(wrapper.vm.contact).toEqual(person);
+  expect(wrapper.vm.form.title).toBe('');
+  expect(wrapper.vm.mode).toBe('existing');
+  expect(wrapper.vm.dirty).toBe(false);
+  wrapper.vm.form.title = 'Nova negociação';
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  const payload = wrapper.emitted('save')[0][0];
+  expect(payload).toMatchObject({ title: 'Nova negociação', contact_id: 42 });
+  expect(payload).not.toHaveProperty('relationship');
+  expect(payload).not.toHaveProperty('company');
+});
+it('tracks clearing or replacing the contextual contact without altering commercial fields', async () => {
+  wrapper = makeForm({ initialContact: { id: 42, name: 'Mariana' } });
+  wrapper.vm.contact = null;
+  expect(wrapper.vm.dirty).toBe(true);
+  wrapper.vm.form.valueAmount = '250.50';
+  wrapper.vm.contact = { id: 43, name: 'João' };
+  expect(wrapper.vm.dirty).toBe(true);
+  expect(wrapper.vm.form.valueAmount).toBe('250.50');
+  await wrapper.vm.changeMode('none');
+  expect(wrapper.vm.contact).toBeNull();
+  expect(wrapper.vm.dirty).toBe(true);
+});
+it('never restores the contextual contact over a deliberate later selection', async () => {
+  wrapper = makeForm({ initialContact: { id: 42, name: 'Mariana' } });
+  wrapper.vm.contact = { id: 43, name: 'João' };
+  wrapper.vm.form.title = 'Preservado';
+  await wrapper.setProps({ stages: [{ id: 10, name: 'Novo atualizado' }] });
+  expect(wrapper.vm.contact.id).toBe(43);
+  expect(wrapper.vm.form.title).toBe('Preservado');
+});
+
 it('starts with two sections, no validation errors and no fake create-contact control', () => {
   wrapper = makeForm();
   expect(wrapper.find('[data-opportunity-relationship]').exists()).toBe(true);

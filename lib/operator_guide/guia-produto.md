@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (169 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (170 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -356,14 +356,24 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar card ou oportunidade no CRM
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Novo card
+- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: funil e estágio existentes; contato opcional, mas recomendado para histórico e follow-ups.
-- passos: Clique em Novo card; preencha título, estágio, valor, prioridade e previsão; busque ou vincule contato; selecione dono, time e caixa quando necessário; salve.
-- gotchas: cards sem conversa são "standalone" e podem sumir se o filtro "vinculado" estiver ativo; valores são tratados em centavos no backend e exibidos formatados; a caixa influencia visibilidade para agentes.
+- pre_requisitos: CRM habilitado e permissão de criar oportunidades; funil e etapa disponíveis. Contato e empresa são opcionais.
+- passos: Clique em **Nova oportunidade**; em Relacionamento, use um contato existente, **Criar novo** ou **Continuar sem vínculo**. Para contato novo, a empresa pode ficar ausente, ser escolhida ou criada. Preencha título, funil, etapa, valor e responsável; abra **Mais opções da oportunidade** para os dados adicionais; confira o resumo do rodapé e clique em **Criar oportunidade**.
+- gotchas: os cadastros são compartilhados com Relacionamentos, não cópias; reutilizar existente não altera a pessoa ou empresa; identidade/domínio repetidos pedem escolha explícita, nomes iguais não causam fusão; erro de gravação conserva o preenchimento; repetir a mesma solicitação recupera a oportunidade confirmada. Cards sem conversa podem ser ocultados pelo filtro vinculado; a caixa influencia a visibilidade para agentes.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
+
+### Criar uma oportunidade pela ficha do contato
+- intent: "Como crio uma oportunidade para este contato?"; "Como levo o contato de Relacionamentos para o CRM?"
+- onde_fica: Sidebar > Relacionamentos > Contatos > abrir contato > Nova oportunidade
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: navegação de Relacionamentos e CRM habilitados; permissão de visualizar CRM e gerenciar oportunidades; acesso ao contato; funil com etapa disponível.
+- passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados comerciais e confirme **Criar oportunidade**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
+- gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
+- nav_target: `contacts_edit`
 
 ### Mover card, ganhar, perder ou reabrir oportunidade
 - intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"

@@ -1,0 +1,32 @@
+{
+  "result": "passed",
+  "database": "isolated local UI",
+  "data": "synthetic",
+  "before": {
+    "contacts": 36,
+    "companies": 17,
+    "cards": 53,
+    "messages": 33,
+    "conversations": 2
+  },
+  "after": {
+    "contacts": 36,
+    "companies": 17,
+    "cards": 54,
+    "messages": 33,
+    "conversations": 2
+  },
+  "delta": {
+    "contacts": 0,
+    "companies": 0,
+    "cards": 1,
+    "messages": 0,
+    "conversations": 0
+  },
+  "confirmed": [
+    54
+  ],
+  "original_contact_unchanged": true,
+  "original_company_unchanged": true,
+  "timestamp_precision": "ISO8601 UTC, 6 decimal digits on both snapshots"
+}

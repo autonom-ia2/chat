@@ -21,6 +21,7 @@ const props = defineProps({
   agents: { type: Array, default: () => [] },
   inboxes: { type: Array, default: () => [] },
   canManage: { type: Boolean, default: false },
+  initialContact: { type: Object, default: null },
 });
 const emit = defineEmits(['save']);
 const { t } = useI18n();
@@ -28,7 +29,7 @@ const label = key => t(`CRM_KANBAN.OPPORTUNITY.${key}`);
 const formId = `crm-opportunity-${useId()}`;
 const element = ref(null);
 const mode = ref('existing');
-const contact = ref(null);
+const contact = ref(props.initialContact);
 const registration = ref(null);
 const registrationDraft = ref(newRegistrationDraft());
 const registrationInitial = JSON.stringify(registrationDraft.value);
@@ -55,7 +56,10 @@ const form = ref({
 const initial = JSON.stringify(form.value);
 const dirty = computed(
   () =>
-    Boolean(contact.value) ||
+    (props.initialContact
+      ? mode.value !== 'existing' ||
+        contact.value?.id !== props.initialContact.id
+      : Boolean(contact.value)) ||
     JSON.stringify(form.value) !== initial ||
     JSON.stringify(registrationDraft.value) !== registrationInitial
 );

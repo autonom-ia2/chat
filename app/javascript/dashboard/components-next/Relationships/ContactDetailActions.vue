@@ -5,6 +5,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
 import RelationshipActionMenu from './RelationshipActionMenu.vue';
+import ContactOpportunityLink from './ContactOpportunityLink.vue';
 
 const props = defineProps({
   contact: { type: Object, required: true },
@@ -33,6 +34,7 @@ const actions = computed(() => [
     data-profile-actions
     class="grid w-full grid-cols-2 gap-2 xl:flex xl:flex-wrap xl:items-center"
   >
+    <ContactOpportunityLink :contact-id="contact.id" />
     <div class="col-span-2 grid xl:contents">
       <ComposeConversation :contact-id="String(contact.id)">
         <template #trigger>

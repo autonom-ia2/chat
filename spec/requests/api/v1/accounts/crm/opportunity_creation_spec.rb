@@ -19,7 +19,7 @@ RSpec.describe 'CRM opportunity creation from shared relationships', type: :requ
 
   it 'creates only the opportunity and keeps the shared contact unchanged' do
     payload
-    before = contact.attributes
+    before = contact.reload.attributes
     expect { post url, params: payload, headers: headers, as: :json }
       .to change(Crm::Card, :count).by(1).and not_change(Contact, :count).and not_change(Message, :count)
     expect(response).to have_http_status(:created)

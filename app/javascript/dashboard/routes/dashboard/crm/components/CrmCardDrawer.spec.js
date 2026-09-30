@@ -9,9 +9,10 @@ vi.mock('vuex', async importOriginal => ({
   ...(await importOriginal()),
   useStore: () => ({ getters: {}, dispatch: vi.fn() }),
 }));
+const navigate = vi.fn();
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: {} }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRoute: () => ({ params: { accountId: '1' } }),
+  useRouter: () => ({ push: navigate }),
 }));
 vi.mock('dashboard/composables', () => ({
   useAlert: () => () => {},
@@ -103,6 +104,56 @@ describe('CrmCardDrawer form reset vs realtime churn', () => {
     });
 
     expect(wrapper.vm.form.description).toBe('detalhe');
+  });
+});
+
+describe('CrmCardDrawer contextual opportunity', () => {
+  it('returns to the source contact without a discard prompt for an untouched contextual form', async () => {
+    navigate.mockClear();
+    const wrapper = mountDrawer({
+      mode: 'create',
+      card: null,
+      initialContact: { id: 42, name: 'Mariana' },
+      pipelines: [{ id: 1, name: 'Comercial' }],
+      canManageCards: true,
+    });
+    await wrapper
+      .findAll('button')
+      .find(button => button.text() === 'CRM_KANBAN.OPPORTUNITY.CONTEXT.BACK')
+      .trigger('click');
+    expect(navigate).toHaveBeenCalledWith({
+      name: 'contacts_edit',
+      params: { accountId: '1', contactId: 42 },
+    });
+    expect(wrapper.vm.discardOpen).toBe(false);
+    expect(wrapper.emitted('save')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('requires discarding commercial changes before returning to the source contact', async () => {
+    navigate.mockClear();
+    const wrapper = mountDrawer({
+      mode: 'create',
+      card: null,
+      initialContact: { id: 42, name: 'Mariana' },
+      pipelines: [{ id: 1, name: 'Comercial' }],
+      canManageCards: true,
+    });
+    wrapper.findComponent({ name: 'CrmOpportunityForm' }).vm.form.title =
+      'Não perder';
+    await wrapper.vm.$nextTick();
+    await wrapper
+      .findAll('button')
+      .find(button => button.text() === 'CRM_KANBAN.OPPORTUNITY.CONTEXT.BACK')
+      .trigger('click');
+    expect(navigate).not.toHaveBeenCalled();
+    expect(wrapper.vm.discardOpen).toBe(true);
+    wrapper.vm.confirmDiscard();
+    expect(navigate).toHaveBeenCalledWith({
+      name: 'contacts_edit',
+      params: { accountId: '1', contactId: 42 },
+    });
+    expect(wrapper.emitted('save')).toBeUndefined();
+    wrapper.unmount();
   });
 });
 

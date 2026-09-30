@@ -21,6 +21,7 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
 import CrmCardDrawer from '../components/CrmCardDrawer.vue';
+import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
 import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
 import CrmBookingProfilesDrawer from '../components/CrmBookingProfilesDrawer.vue';
@@ -65,6 +66,7 @@ const teams = useMapGetter('teams/getTeams');
 const accountLabels = useMapGetter('labels/getLabels');
 const {
   canManageCards,
+  canViewCrm,
   canMoveCards,
   canManagePipelines,
   canManageAi,
@@ -94,6 +96,7 @@ watch(isCalendarOnly, only => {
 const filters = ref({ ...storedFilters.value });
 const drawerMode = ref('create');
 const selectedCard = ref(null);
+const creationContact = ref(null);
 const showDrawer = ref(false);
 // Which tab the card drawer lands on when opened ('followups' from the calendar
 // quick-add "Continuar"; null → default summary).
@@ -954,7 +957,14 @@ const deleteStage = async stage => {
   }
 };
 
+const clearContactCreationIntent = () => {
+  if (route.query.new_contact_id === undefined) return;
+  const { new_contact_id: _intent, ...query } = route.query;
+  router.replace({ query });
+};
 const openCreateDrawer = () => {
+  creationContact.value = null;
+  clearContactCreationIntent();
   selectedCard.value = null;
   drawerInitialTab.value = null;
   drawerMode.value = 'create';
@@ -1058,6 +1068,15 @@ const saveCard = async (payload, failed) => {
 };
 
 const cardDrawerRef = ref(null);
+const openOpportunityForContact = contact => {
+  const open = () => {
+    openCreateDrawer();
+    creationContact.value = contact;
+  };
+  if (showDrawer.value) cardDrawerRef.value?.guardNavigation(open);
+  else open();
+};
+
 const openCardFromBoard = card => {
   if (showDrawer.value && drawerMode.value === 'create') {
     cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card));
@@ -1731,6 +1750,13 @@ onMounted(async () => {
 
 <template>
   <main class="flex h-full min-w-0 flex-col overflow-hidden bg-n-background">
+    <CrmOpportunityFromContact
+      v-if="route.query.new_contact_id !== undefined"
+      :ready="Boolean(currentPipelineId && stages.length && !isLoading)"
+      :can-manage="canManageCards && canViewCrm"
+      @open="openOpportunityForContact"
+      @cancel="clearContactCreationIntent"
+    />
     <header
       class="flex flex-col gap-3 border-b border-n-weak px-8 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
     >
@@ -2487,6 +2513,7 @@ onMounted(async () => {
       :mode="drawerMode"
       :card="selectedCard"
       :initial-tab="drawerInitialTab"
+      :initial-contact="creationContact"
       :stages="stages"
       :pipelines="pipelines"
       :pipeline-id="currentPipelineId"

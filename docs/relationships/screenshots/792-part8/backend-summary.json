@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "duration": 123.683876,
+    "example_count": 482,
+    "failure_count": 0,
+    "pending_count": 4,
+    "errors_outside_of_examples_count": 0
+  },
+  "pending": [
+    "Account has_many autonomia_account_links",
+    "CRM cards API sanitizes hidden primary conversation data from card index for agents",
+    "CRM cards API includes linked conversation details in Kanban cards",
+    "CRM cards API sanitizes hidden primary conversation data from Kanban cards for agents"
+  ]
+}

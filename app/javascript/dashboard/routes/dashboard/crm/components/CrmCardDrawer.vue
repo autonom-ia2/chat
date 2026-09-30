@@ -31,6 +31,7 @@ const props = defineProps({
   // Tab to land on when the drawer opens (e.g. 'followups' from the calendar
   // quick-add). Null → default 'summary'.
   initialTab: { type: String, default: null },
+  initialContact: { type: Object, default: null },
   stages: { type: Array, default: () => [] },
   pipelines: { type: Array, default: () => [] },
   pipelineId: { type: [String, Number], default: '' },
@@ -1245,6 +1246,27 @@ useFixedPanelPresence(computed(() => props.show));
           <p class="mb-0 text-sm leading-5 text-n-slate-11">
             {{ panelSubtitle }}
           </p>
+          <Button
+            v-if="!isEditing && initialContact"
+            type="button"
+            sm
+            ghost
+            slate
+            icon="i-lucide-arrow-left"
+            class="mt-2"
+            :label="t('CRM_KANBAN.OPPORTUNITY.CONTEXT.BACK')"
+            @click="
+              guardRelationship(() =>
+                router.push({
+                  name: 'contacts_edit',
+                  params: {
+                    accountId: route.params.accountId,
+                    contactId: initialContact.id,
+                  },
+                })
+              )
+            "
+          />
         </div>
         <Button
           icon="i-lucide-x"
@@ -1351,8 +1373,9 @@ useFixedPanelPresence(computed(() => props.show));
 
         <CrmOpportunityForm
           v-if="!isEditing"
-          :key="route.params.accountId"
+          :key="`${route.params.accountId}:${initialContact?.id || 'new'}`"
           ref="creationForm"
+          :initial-contact="initialContact"
           :pipelines="pipelines"
           :pipeline-id="pipelineId"
           :stages="stages"

@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–6. Parte 7 implementada e validada localmente: novo contato, empresa opcional e oportunidade na mesma confirmação. Aguardando aprovação das telas reais; parar antes da criação contextual nas fichas. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–7. Parte 8 implementada: abrir Nova oportunidade pela ficha do contato com o cadastro confirmado selecionado. Validada localmente, aguardando aprovação das telas reais antes do próximo incremento. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -17,9 +17,9 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Trechos visuais até a parte 5 aprovados; revisão transversal pendente. |
 | M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6 aprovada: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; revisão transversal pendente. |
-| M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 implementada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; aceite visual e revisão transversal pendentes. |
+| M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
-| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
+| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre a ficha real; parte 8 cria oportunidade pela ficha com pessoa/empresa confirmadas, preservando a aba de origem. A listagem integrada de oportunidades e a revisão transversal ainda estão pendentes. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
@@ -133,9 +133,19 @@ A validação encontrou um conflito real no cache IndexedDB ao atualizar a aplic
 
 Evidências e limites: [auditoria da parte 7](../audit/2026-09-30-792-crm-relationships-part-7.md) e [11 telas reais](screenshots/792-part7/README.md). Bateria local: 429 testes frontend; 302 backend aprovados e três suspensos antigos; 39 checks funcionais de navegador e conferência direta dos registros. Revisão independente e cobertura integral continuam pendentes.
 
+## Parte 8 — Criar oportunidade pela ficha do contato
+
+A barra de ações da ficha em Relacionamentos agora oferece Nova oportunidade para quem pode visualizar CRM e gerenciar cards. O CRM abre em outra aba, com indicação visual/acessível, preservando campos não salvos na ficha original. Não copia esses rascunhos: consulta contato e empresa confirmados pelas APIs nativas e seleciona o ID existente no mesmo formulário de oportunidade.
+
+A URL leva somente `new_contact_id`, com conta do roteador; a intenção é validada e consumida após abrir o formulário. Contato/empresa indisponível mostra erro e permite tentar novamente ou cancelar, nunca vira cadastro avulso implicitamente. A leitura espera um funil com etapa disponível. Mudança de conta/intenção cancela o uso das respostas antigas. O contato previamente selecionado não é tratado como edição não salva; alterar a seleção ou os campos comerciais é. Voltar ao contato passa pelo guard de descarte existente.
+
+A largura continua igual à de Editar funil. Não foram adicionados endpoints, modelos, novas dependências ou permissão implícita. A consulta não grava dados; confirmar cria somente a oportunidade usando o contato escolhido. Mensagem/chamada/menu da ficha permanecem disponíveis como antes. O Guia recebeu instruções do novo caminho.
+
+Evidências: [auditoria da parte 8](../audit/2026-09-30-792-crm-relationships-part-8.md) e [telas reais](screenshots/792-part8/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação visual da parte 7, abordar a criação contextual a partir da ficha do contato, reutilizando o cadastro selecionado. A ficha da empresa e a revisão transversal permanecem no plano. Não iniciar o próximo incremento nem fazer merge/deploy por consequência desta entrega.
+Após aprovação visual da parte 8, abordar primeiro a consulta das oportunidades vinculadas na ficha do contato. A ficha da empresa será tratada depois, reutilizando os vínculos e as permissões existentes. Não iniciar essa etapa nem fazer merge/deploy por consequência desta entrega. A revisão transversal e independente permanece obrigatória antes da liberação final.
 
 ## Validação e publicação
 

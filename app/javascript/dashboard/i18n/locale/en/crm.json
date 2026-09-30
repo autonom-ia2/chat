@@ -1535,6 +1535,18 @@
       }
     },
     "OPPORTUNITY": {
+      "CONTEXT": {
+        "LABEL": "New opportunity",
+        "OPEN_NEW_TAB": "New opportunity — opens CRM in a new tab",
+        "UNAVAILABLE": "You do not have permission to create opportunities here.",
+        "INVALID_LINK": "This contact link is invalid. Open the contact profile and try again.",
+        "LOADING": "Loading the contact for the new opportunity…",
+        "LOAD_ERROR": "The contact could not be loaded. It may be unavailable or you may no longer have access. Try again.",
+        "READY": "The contact is ready. Open the opportunity to continue.",
+        "NEEDS_PIPELINE": "Select or create an available pipeline with a stage to continue.",
+        "OPEN": "Open opportunity",
+        "BACK": "Back to contact"
+      },
       "STEP_ONE": "1",
       "STEP_TWO": "2",
       "RELATIONSHIP": "Relationship",
