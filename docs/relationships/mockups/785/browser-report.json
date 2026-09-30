@@ -17,7 +17,7 @@
       "view": "contact",
       "viewport": 1630,
       "overflow": false,
-      "panel": 560,
+      "panel": 592,
       "tabLabels": [
         {
           "text": "Atributos",
@@ -48,7 +48,7 @@
       "view": "company",
       "viewport": 1630,
       "overflow": false,
-      "panel": 560,
+      "panel": 592,
       "tabLabels": [
         {
           "text": "Histórico",
@@ -390,18 +390,13 @@
       "overflow": false,
       "thumbnails": [
         {
-          "width": 245.5,
-          "height": 245.5,
+          "width": 94,
+          "height": 94,
           "loaded": true
         },
         {
-          "width": 245.5,
-          "height": 245.5,
-          "loaded": true
-        },
-        {
-          "width": 96,
-          "height": 96,
+          "width": 94,
+          "height": 94,
           "loaded": true
         }
       ]
@@ -429,18 +424,13 @@
       "overflow": false,
       "thumbnails": [
         {
-          "width": 164.5,
-          "height": 164.5,
+          "width": 94,
+          "height": 94,
           "loaded": true
         },
         {
-          "width": 164.5,
-          "height": 164.5,
-          "loaded": true
-        },
-        {
-          "width": 96,
-          "height": 96,
+          "width": 94,
+          "height": 94,
           "loaded": true
         }
       ]

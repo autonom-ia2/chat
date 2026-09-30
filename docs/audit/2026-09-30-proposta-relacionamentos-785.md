@@ -25,3 +25,9 @@ Código real consultado adicionalmente: MediaThumbnail.vue, ContactMedia.vue e S
 Validação adicional: ações do desktop em uma linha em 1280 e 1440px, nenhum texto de botão cortado, prévias carregadas e medidas no desktop/celular. Contêiner de 96px possui imagem interna de 94px com borda. Nesta revisão há trinta screenshots privadas e seis previews preservados. O hook local estava indisponível porque .husky/_/husky.sh não existe na worktree sem dependências; o commit documental inicial usou core.hooksPath=/dev/null somente nesse comando após validação de sintaxe, navegador e diff. Nenhuma configuração global de Git ou hook do projeto foi alterada.
 
 Aceite visual parcial das fichas registrado; aceite da revisão das listas/mídias e autorização de implementação ainda pendentes.
+
+## Ajuste final solicitado
+
+Rodrigo pediu igualdade das mídias de Contatos e Empresas e aumento de 25% para 32% da lateral. A terceira revisão unifica a apresentação dos dois painéis em uma única função do mockup, usando lista de arquivos, contêineres de 96px e controles iguais; substitui a galeria distinta do contato. A largura fica em 37rem (592px), aproximadamente +32% contra 448px. A implementação futura deve compartir apresentação sem misturar escopo de leitura de contato/empresa ou alterar os contratos de origem/autorização.
+
+Capturas e relatório foram refeitos. Lateral 592px medida no desktop; imagens internas de 94px nos dois contextos e nos dois tamanhos inspecionados. Botões desktop alinhados e contidos na faixa de ações em 1280/1440px; reticências preservam o nome acessível Mais ações e a ação Bloquear contato. Dados e ações permanecem simulados. O hook de push também está incompleto nesta worktree; seu único gate bin/validate_push foi lido e executado manualmente antes do push com desativação do hook restrita ao comando.
