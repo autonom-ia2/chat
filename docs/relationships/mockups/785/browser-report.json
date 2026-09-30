@@ -1,0 +1,224 @@
+{
+  "errors": [],
+  "report": [
+    {
+      "view": "contacts",
+      "viewport": 1630,
+      "overflow": false,
+      "tabLabels": []
+    },
+    {
+      "view": "companies",
+      "viewport": 1630,
+      "overflow": false,
+      "tabLabels": []
+    },
+    {
+      "view": "contact",
+      "viewport": 1630,
+      "overflow": false,
+      "panel": 560,
+      "tabLabels": [
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        },
+        {
+          "text": "Mesclar",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "currentWidth": 448
+    },
+    {
+      "view": "company",
+      "viewport": 1630,
+      "overflow": false,
+      "panel": 560,
+      "tabLabels": [
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Contatos (8)",
+          "overflow": false
+        },
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "view": "contacts",
+      "viewport": 1024,
+      "overflow": false
+    },
+    {
+      "view": "companies",
+      "viewport": 1024,
+      "overflow": false
+    },
+    {
+      "view": "contact",
+      "viewport": 1024,
+      "overflow": false
+    },
+    {
+      "drawer": "contact",
+      "viewport": 1024,
+      "overflow": false,
+      "tabLabels": [
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        },
+        {
+          "text": "Mesclar",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "view": "company",
+      "viewport": 1024,
+      "overflow": false
+    },
+    {
+      "drawer": "company",
+      "viewport": 1024,
+      "overflow": false,
+      "tabLabels": [
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Contatos (8)",
+          "overflow": false
+        },
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "view": "contacts",
+      "viewport": 390,
+      "overflow": false
+    },
+    {
+      "view": "companies",
+      "viewport": 390,
+      "overflow": false
+    },
+    {
+      "view": "contact",
+      "viewport": 390,
+      "overflow": false
+    },
+    {
+      "drawer": "contact",
+      "viewport": 390,
+      "overflow": false,
+      "tabLabels": [
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        },
+        {
+          "text": "Mesclar",
+          "overflow": false
+        }
+      ]
+    },
+    {
+      "view": "company",
+      "viewport": 390,
+      "overflow": false
+    },
+    {
+      "drawer": "company",
+      "viewport": 390,
+      "overflow": false,
+      "tabLabels": [
+        {
+          "text": "Histórico",
+          "overflow": false
+        },
+        {
+          "text": "Notas",
+          "overflow": false
+        },
+        {
+          "text": "Contatos (8)",
+          "overflow": false
+        },
+        {
+          "text": "Atributos",
+          "overflow": false
+        },
+        {
+          "text": "Mídias",
+          "overflow": false
+        }
+      ]
+    }
+  ]
+}
