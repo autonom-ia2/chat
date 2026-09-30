@@ -21,3 +21,5 @@ Desktop: 1620×928. Notebook: 1366×768. Celular: 390×844. `manifest-initial.js
 Atributos personalizados, mídias, edição empresarial inline e Nova oportunidade completa não estão concluídos nesta parte. A próxima etapa exige aprovação de Rodrigo; nenhum merge/deploy foi autorizado.
 
 Detalhes de testes, comparação visual, avisos e limitações na [auditoria](../../../audit/2026-09-30-792-crm-relationships-part-3.md).
+
+As nove imagens foram recapturadas após confirmar posição, largura e opacidade finais da lateral. A primeira captura de Editar funil pegava a animação de abertura e foi substituída. O relatório inclui `x`, `right`, `opacity` e `transitionSettled` para conferir esse ponto.

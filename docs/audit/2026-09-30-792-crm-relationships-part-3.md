@@ -90,3 +90,12 @@ Tamanhos: desktop 1620×928, notebook 1366×768, celular 390×844. A amostra des
 Parar após apresentar as capturas. Próxima parte proposta: atributos personalizados e mídias no painel, reutilizando as capacidades existentes, após aprovação visual de Rodrigo. O formulário completo de Nova oportunidade ainda terá sua etapa própria.
 
 Nenhum merge/deploy foi autorizado por esta aprovação incremental. A PR permanece em rascunho. As rotinas de publicação podem afetar duas stacks; não fazer merge parcial para demonstrar o resultado. O status do CI remoto deve ser conferido no commit atual, sem reaproveitar o resultado do commit da parte 2.
+
+
+## Correção das evidências visuais — animação de abertura
+
+Na apresentação das capturas foi detectado que a imagem inicial de Editar funil tinha sido obtida durante a animação de abertura: a largura computada era 640px, mas a posição e a opacidade ainda estavam em transição. A imagem não servia como comparação visual e foi substituída.
+
+O script de captura passou a esperar, para cada uma das nove imagens, a posição final da lateral, a largura esperada e opacidade 1 antes de capturar. A execução completa passou, sem erros JavaScript: desktop x=980/right=1620/width=640; notebook x=726/right=1366/width=640; celular x=0/right=390/width=390. A comparação Editar funil/card agora usa imagens estabilizadas, e os hashes foram atualizados. Não houve edição dos pixels ou alteração do código da aplicação nesta correção, somente novas capturas e evidências. As mesmas respostas 404 do endpoint local de limites Enterprise continuam registradas.
+
+Foram inspecionadas a captura estabilizada de Editar funil, os estados vazio e legado, o notebook e a edição mobile. As demais superfícies já tinham sido inspecionadas no ciclo visual anterior e foram recapturadas com o mesmo critério de estabilização. O botão Salvar contato continua fixo no rodapé. O código de produto permanece no commit 2d9b5d83397cfdbe94b2a43dbc6b633be125e8ac; esta atualização não inicia a parte 4.
