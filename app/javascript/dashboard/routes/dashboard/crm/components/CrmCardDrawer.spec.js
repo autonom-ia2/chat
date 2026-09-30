@@ -55,7 +55,12 @@ const mountDrawer = (props = {}) =>
           template: '<div />',
           methods: { open: vi.fn(), close: vi.fn() },
         },
-        CrmCardRelationshipPanel: true,
+        CrmCardRelationshipPanel: {
+          name: 'CrmCardRelationshipPanel',
+          template: '<div />',
+          data: () => ({ companyAction: null, dirty: false, saving: false }),
+          methods: { reset: vi.fn() },
+        },
         CrmCardAiPanel: true,
         CrmCardSummaryPanel: true,
         CrmCardAutoFollowupStatus: true,
@@ -276,3 +281,70 @@ it('does not archive while a relationship field write is in progress', async () 
   expect(wrapper.vm.discardOpen).toBe(false);
   wrapper.unmount();
 });
+
+it('shows company save in the fixed footer without a commercial save or archive action', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.activeTab = 'contact';
+  await wrapper.vm.$nextTick();
+  wrapper.vm.relationshipPanel.companyAction = {
+    formId: 'company-form',
+    label: 'Save company',
+    disabled: false,
+    saving: false,
+  };
+  await wrapper.vm.$nextTick();
+  const submit = wrapper.find('button[type="submit"][form="company-form"]');
+  expect(submit.exists()).toBe(true);
+  expect(submit.text()).toBe('Save company');
+  expect(
+    wrapper
+      .findAll('button')
+      .some(button => button.text() === 'CRM_KANBAN.DRAWER.ARCHIVE')
+  ).toBe(false);
+  wrapper.unmount();
+});
+it('cancels the company editor without closing the opportunity', async () => {
+  const wrapper = mountDrawer();
+  const reset = vi.fn();
+  wrapper.vm.activeTab = 'contact';
+  await wrapper.vm.$nextTick();
+  wrapper.vm.relationshipPanel.companyAction = {
+    formId: 'company-form',
+    label: 'Save company',
+    disabled: true,
+    saving: false,
+  };
+  wrapper.vm.relationshipPanel.reset = reset;
+  await wrapper.vm.$nextTick();
+  await wrapper
+    .findAll('button')
+    .find(button => button.text() === 'CRM_KANBAN.RELATIONSHIP.CANCEL')
+    .trigger('click');
+  expect(reset).toHaveBeenCalled();
+  expect(wrapper.emitted('close')).toBeUndefined();
+  wrapper.unmount();
+});
+
+it.each([
+  ['CRM_KANBAN.DRAWER.WIN_DEAL', 'showWinDialog'],
+  ['CRM_KANBAN.DRAWER.LOSE_DEAL', 'showLoseDialog'],
+])(
+  'guards the %s action while company changes are unsaved',
+  async (label, dialog) => {
+    const wrapper = mountDrawer({ canManageCards: true });
+    wrapper.vm.activeTab = 'contact';
+    await wrapper.vm.$nextTick();
+    wrapper.vm.relationshipPanel.dirty = true;
+    wrapper.vm.relationshipPanel.saving = false;
+    await wrapper.vm.$nextTick();
+    await wrapper
+      .findAll('button')
+      .find(button => button.text() === label)
+      .trigger('click');
+    expect(wrapper.vm[dialog]).toBe(false);
+    expect(wrapper.vm.discardOpen).toBe(true);
+    wrapper.vm.confirmDiscard();
+    expect(wrapper.vm[dialog]).toBe(true);
+    wrapper.unmount();
+  }
+);

@@ -203,3 +203,57 @@ it('binds company custom values to the same Pinia record used in the company pro
       .customAttributes.size
   ).toBe('Enterprise');
 });
+
+it('opens company editing inside the relationship panel and exposes the native footer contract', async () => {
+  wrapper = makePanel();
+  await flushPromises();
+  await wrapper
+    .find(
+      'button[aria-label="CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_TITLE"]'
+    )
+    .trigger('click');
+  expect(wrapper.find('[data-crm-company-form]').exists()).toBe(true);
+  expect(wrapper.vm.companyAction.formId).toBe(
+    wrapper.find('form').attributes('id')
+  );
+  expect(wrapper.vm.companyAction.disabled).toBe(true);
+});
+it('does not offer company mutation controls to a read-only viewer', async () => {
+  wrapper = makePanel({ canManage: false });
+  await flushPromises();
+  expect(
+    wrapper
+      .find(
+        'button[aria-label="CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_TITLE"]'
+      )
+      .exists()
+  ).toBe(false);
+  expect(
+    wrapper
+      .find('button[aria-label="CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.CHANGE"]')
+      .exists()
+  ).toBe(false);
+});
+it('requires an explicit in-card company choice for legacy company text', async () => {
+  ContactAPI.show.mockResolvedValue({
+    data: {
+      payload: {
+        ...person,
+        company_id: null,
+        additional_attributes: { company_name: 'Legacy company' },
+      },
+    },
+  });
+  wrapper = makePanel();
+  await flushPromises();
+  await wrapper
+    .findAll('button')
+    .find(
+      button =>
+        button.text() === 'CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.LINK_TITLE'
+    )
+    .trigger('click');
+  expect(wrapper.find('[data-crm-company-form]').exists()).toBe(true);
+  expect(wrapper.vm.companyAction.disabled).toBe(true);
+  expect(CompanyAPI.show).not.toHaveBeenCalled();
+});

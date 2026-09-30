@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, useId } from 'vue';
+import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import camelcaseKeys from 'camelcase-keys';
@@ -14,6 +15,7 @@ import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmRelationshipLinkForm from './CrmRelationshipLinkForm.vue';
 import CrmRelationshipResources from './CrmRelationshipResources.vue';
+import CrmRelationshipCompanyForm from './CrmRelationshipCompanyForm.vue';
 
 const props = defineProps({
   card: { type: Object, required: true },
@@ -39,18 +41,43 @@ const person = computed(() =>
     : null
 );
 const company = computed(() =>
-  loadedCompanyId.value ? companies.getRecord(loadedCompanyId.value) : null
+  loadedCompanyId.value && person.value?.company_id === loadedCompanyId.value
+    ? companies.getRecord(loadedCompanyId.value)
+    : null
 );
 const resources = ref(null);
 const failed = ref(false);
 const companyFailed = ref(false);
 const mode = ref(null);
 const linkForm = ref(null);
+const companyMode = ref(null);
+const companyForm = ref(null);
+const companyFormId = `crm-company-${useId()}`;
 const dirty = computed(() =>
-  Boolean(linkForm.value?.dirty || resources.value?.dirty)
+  Boolean(
+    linkForm.value?.dirty || resources.value?.dirty || companyForm.value?.dirty
+  )
 );
 const saving = computed(() =>
-  Boolean(linkForm.value?.saving || resources.value?.saving)
+  Boolean(
+    linkForm.value?.saving ||
+      resources.value?.saving ||
+      companyForm.value?.saving
+  )
+);
+const companyActionLabels = { edit: 'SAVE', link: 'LINK', unlink: 'UNLINK' };
+const companyAction = computed(() =>
+  companyMode.value
+    ? {
+        formId: companyFormId,
+        label: t(
+          `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.${companyActionLabels[companyMode.value]}`
+        ),
+        disabled: !companyForm.value?.canSave,
+        saving: Boolean(companyForm.value?.saving),
+        destructive: companyMode.value === 'unlink',
+      }
+    : null
 );
 const contactId = computed(
   () => props.card.contact_id || props.card.contact?.id
@@ -129,7 +156,20 @@ const openProfile = entity => {
 };
 const reset = () => {
   mode.value = null;
+  companyMode.value = null;
   resources.value?.reset();
+};
+const companySaved = async operation => {
+  const origin = identity.value;
+  reset();
+  await reload();
+  if (identity.value !== origin) return;
+  emit('linked');
+  useAlert(
+    t(
+      `CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.${operation === 'edit' ? 'SAVED' : 'LINK_SAVED'}`
+    )
+  );
 };
 const guard = action => emit('guard', action);
 const linked = card => {
@@ -158,7 +198,7 @@ watch(
   },
   { immediate: true, flush: 'sync' }
 );
-defineExpose({ dirty, saving, reset, reload });
+defineExpose({ dirty, saving, reset, reload, companyAction });
 </script>
 
 <template>
@@ -197,7 +237,25 @@ defineExpose({ dirty, saving, reset, reload });
       />
     </div>
     <template v-else>
-      <div v-if="mode" class="rounded-xl border border-n-weak bg-n-solid-1 p-5">
+      <div
+        v-if="companyMode && person"
+        class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
+      >
+        <CrmRelationshipCompanyForm
+          :key="`${identity}:${companyMode}`"
+          ref="companyForm"
+          :contact="person"
+          :company="company"
+          :mode="companyMode"
+          :form-id="companyFormId"
+          :read-only="!canManage"
+          @saved="companySaved"
+        />
+      </div>
+      <div
+        v-else-if="mode"
+        class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
+      >
         <CrmRelationshipLinkForm
           ref="linkForm"
           :key="`${identity}:${mode}`"
@@ -313,17 +371,17 @@ defineExpose({ dirty, saving, reset, reload });
         </div>
       </section>
       <section
-        v-if="person && companiesEnabled && !mode"
+        v-if="person && companiesEnabled && !mode && !companyMode"
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
         data-relationship-company
       >
-        <header class="flex items-center gap-3">
+        <header class="flex flex-wrap items-center gap-3">
           <div
             class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-n-brand/10 text-n-blue-11"
           >
             <span class="i-lucide-building-2 size-5" aria-hidden="true" />
           </div>
-          <div class="min-w-0 flex-1">
+          <div class="min-w-[8rem] flex-1">
             <h3
               class="mb-1 break-words text-base font-semibold text-n-slate-12"
             >
@@ -332,20 +390,47 @@ defineExpose({ dirty, saving, reset, reload });
                 label(companyFailed ? 'COMPANY_UNAVAILABLE' : 'NO_COMPANY')
               }}
             </h3>
-            <p class="mb-0 text-xs leading-5 text-n-slate-11">
-              {{ label(company ? 'LINKED_COMPANY' : 'COMPANY_OPTIONAL') }}
-            </p>
+            <div
+              class="flex flex-wrap items-center gap-2 text-xs leading-5 text-n-slate-11"
+            >
+              <span>{{
+                label(company ? 'LINKED_COMPANY' : 'COMPANY_OPTIONAL')
+              }}</span>
+              <Button
+                v-if="company && canManage"
+                sm
+                link
+                :label="label('CHANGE')"
+                :aria-label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.CHANGE')"
+                :disabled="editing"
+                @click="guard(() => (companyMode = 'link'))"
+              />
+            </div>
           </div>
-          <Button
+          <div
             v-if="company"
-            outline
-            slate
-            sm
-            icon="i-lucide-external-link"
-            :label="label('OPEN')"
-            :aria-label="label('OPEN_COMPANY')"
-            @click="openProfile('company')"
-          />
+            class="flex items-center gap-2 max-[470px]:ms-[3.5rem] max-[470px]:w-full"
+          >
+            <Button
+              v-if="canManage"
+              ghost
+              sm
+              icon="i-lucide-pencil"
+              :label="label('EDIT')"
+              :aria-label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.EDIT_TITLE')"
+              :disabled="editing"
+              @click="guard(() => (companyMode = 'edit'))"
+            />
+            <Button
+              outline
+              slate
+              sm
+              icon="i-lucide-external-link"
+              :label="label('OPEN')"
+              :aria-label="label('OPEN_COMPANY')"
+              @click="openProfile('company')"
+            />
+          </div>
         </header>
         <dl v-if="company" class="mb-0 mt-5 grid gap-3 text-sm">
           <div class="flex flex-wrap gap-x-7 gap-y-1">
@@ -384,15 +469,27 @@ defineExpose({ dirty, saving, reset, reload });
         <Button
           v-else-if="!company && canManage"
           class="mt-4"
-          link
+          outline
           sm
-          icon="i-lucide-external-link"
-          :label="label('MANAGE_COMPANY')"
-          @click="openProfile('contact')"
+          icon="i-lucide-link-2"
+          :label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.LINK_TITLE')"
+          :disabled="editing"
+          @click="guard(() => (companyMode = 'link'))"
+        />
+        <Button
+          v-if="company && canManage"
+          class="mt-4"
+          ghost
+          slate
+          sm
+          icon="i-lucide-unlink"
+          :label="t('CRM_KANBAN.RELATIONSHIP.COMPANY_FORM.UNLINK_TITLE')"
+          :disabled="editing"
+          @click="guard(() => (companyMode = 'unlink'))"
         />
       </section>
       <details
-        v-if="person && !mode && !editing"
+        v-if="person && !mode && !companyMode && !editing"
         class="group rounded-xl border border-n-weak bg-n-solid-1"
       >
         <summary
@@ -425,7 +522,7 @@ defineExpose({ dirty, saving, reset, reload });
         </dl>
       </details>
       <CrmRelationshipResources
-        v-if="person && !mode && !editing"
+        v-if="person && !mode && !companyMode && !editing"
         :key="identity"
         ref="resources"
         :contact="person"

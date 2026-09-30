@@ -104,6 +104,7 @@ const isEditingContact = ref(false);
 const isSavingContact = ref(false);
 const contactError = ref('');
 const relationshipPanel = ref(null);
+const companyAction = computed(() => relationshipPanel.value?.companyAction);
 const discardDialog = ref(null);
 const discardOpen = ref(false);
 let discardAction = null;
@@ -653,7 +654,8 @@ const guardRelationship = action => {
   action();
 };
 const footerCancelLabel = computed(() => {
-  if (isEditingContact.value) return relationshipLabel('CANCEL');
+  if (isEditingContact.value || companyAction.value)
+    return relationshipLabel('CANCEL');
   return isEditing.value && activeTab.value !== 'summary'
     ? relationshipLabel('CLOSE')
     : t('CRM_KANBAN.DRAWER.CANCEL');
@@ -1309,7 +1311,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 icon="i-lucide-trophy"
                 :label="t('CRM_KANBAN.DRAWER.WIN_DEAL')"
-                @click="openWinDialog"
+                @click="guardRelationship(openWinDialog)"
               />
               <Button
                 sm
@@ -1317,7 +1319,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 icon="i-lucide-circle-x"
                 :label="t('CRM_KANBAN.DRAWER.LOSE_DEAL')"
-                @click="openLoseDialog"
+                @click="guardRelationship(openLoseDialog)"
               />
             </template>
             <Button
@@ -1327,7 +1329,7 @@ useFixedPanelPresence(computed(() => props.show));
               faded
               icon="i-lucide-rotate-ccw"
               :label="t('CRM_KANBAN.DRAWER.REOPEN_DEAL')"
-              @click="reopenDeal"
+              @click="guardRelationship(reopenDeal)"
             />
           </div>
         </div>
@@ -2131,7 +2133,7 @@ useFixedPanelPresence(computed(() => props.show));
         class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
       >
         <div
-          v-if="isEditing && !isEditingContact"
+          v-if="isEditing && !isEditingContact && !companyAction"
           class="flex items-center gap-2"
         >
           <Button
@@ -2161,10 +2163,12 @@ useFixedPanelPresence(computed(() => props.show));
             :label="footerCancelLabel"
             slate
             faded
-            :disabled="isSavingContact"
+            :disabled="isSavingContact || companyAction?.saving"
             @click="
               guardRelationship(
-                isEditingContact ? discardRelationship : () => $emit('close')
+                isEditingContact || companyAction
+                  ? discardRelationship
+                  : () => $emit('close')
               )
             "
           />
@@ -2176,6 +2180,18 @@ useFixedPanelPresence(computed(() => props.show));
             :label="relationshipLabel('SAVE_CONTACT')"
             :is-loading="isSavingContact"
             :disabled="isSavingContact || !contactForm.name.trim()"
+          />
+          <Button
+            v-else-if="companyAction"
+            type="submit"
+            :form="companyAction.formId"
+            :icon="
+              companyAction.destructive ? 'i-lucide-unlink' : 'i-lucide-check'
+            "
+            :label="companyAction.label"
+            :ruby="companyAction.destructive"
+            :is-loading="companyAction.saving"
+            :disabled="companyAction.disabled"
           />
           <Button
             v-else-if="!isEditing || activeTab === 'summary'"

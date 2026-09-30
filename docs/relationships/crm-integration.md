@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–3, incluindo as telas reais e a largura igual a Editar funil. Parte 4 integra atributos e mídias no painel e está em validação/aceite visual local. Parar antes da próxima parte e aguardar novo de acordo. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–4 e autorizou editar/vincular empresa no card. Parte 5 implementada e validada localmente, aguardando aceite das telas reais. Parar antes da parte 6 e aguardar novo de acordo. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -14,14 +14,14 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
-| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–4: contato/empresa canônicos, edição de pessoa, atributos e mídias nativos com largura de 40rem. Editor cadastral da empresa inline ainda pendente. |
+| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Aceite visual da parte 5 e revisão transversal pendentes. |
 | M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Nova experiência não iniciada. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
-| M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 integra editores e configurador nativos, superfícies da ficha e stores compartilhados. Aguardar aceite visual e revisão transversal. |
+| M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
 ## Parte 1 — Contrato do vínculo existente
 
@@ -95,9 +95,19 @@ A empresa em Pinia e o contato em Vuex são os mesmos registros das fichas. Leit
 
 Evidências: [auditoria da parte 4](../audit/2026-09-30-792-crm-relationships-part-4.md) e [screenshots reais](screenshots/792-part4/README.md).
 
+## Parte 5 — Cadastro e vínculo da empresa na lateral
+
+Editar empresa altera nome, domínio e descrição do cadastro compartilhado. Salvar empresa tem ação própria no rodapé, sem salvar dados comerciais. Buscar e selecionar empresa existente não grava antes da confirmação. Trocar mantém as empresas existentes; Desvincular remove apenas a associação, após confirmação própria. Nenhuma dessas operações cria outra oportunidade ou exclui arquivos.
+
+O vínculo usa o `company_id` real e é compartilhado pelas oportunidades do contato. Mídias empresariais seguem os contatos atualmente vinculados e as permissões existentes. Empresa textual legada exige seleção explícita. Uma resposta sem `company_id`, possível se Empresas foi desligado, não é tratada como confirmação de desvínculo.
+
+São reutilizadas as APIs nativas e a store de empresa, enviando só os campos editados. O novo formulário participa do guard de rascunhos; as ações de Ganhar/Perder/Reabrir também respeitam essa proteção. Uma mudança de vínculo observada bloqueia salvar e mantém o preenchimento; não foi introduzido protocolo global de versionamento para gravações simultâneas.
+
+Evidências: [auditoria da parte 5](../audit/2026-09-30-792-crm-relationships-part-5.md) e [telas reais](screenshots/792-part5/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação deste trecho visual, implementar edição cadastral e vínculo da empresa dentro da lateral. A Nova oportunidade completa permanece em etapa própria. Não iniciar outra parte nem fazer merge/deploy por consequência desta entrega.
+Após aprovação deste trecho, implementar a primeira parte de Nova oportunidade: usar contato existente ou continuar sem vínculo. A criação composta de contato/empresa/oportunidade permanece em etapa própria. Não iniciar a parte 6 nem fazer merge/deploy por consequência desta entrega.
 
 ## Validação e publicação
 
