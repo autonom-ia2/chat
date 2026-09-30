@@ -1,0 +1,100 @@
+[
+  {
+    "id": 1,
+    "file": "assets/templates/product-launch/01-new-flavor-simple.html",
+    "name": "Lançamento de produto",
+    "description": "Apresente uma novidade com uma imagem de destaque e uma ação principal.",
+    "category": "Lançamentos"
+  },
+  {
+    "id": 2,
+    "file": "assets/templates/newsletter/01-weekly-data-analysis.html",
+    "name": "Newsletter de conteúdo",
+    "description": "Compartilhe novidades, dados e uma seleção de conteúdos.",
+    "category": "Newsletters"
+  },
+  {
+    "id": 3,
+    "file": "assets/templates/reengagement/03-win-back-poll-feedback.html",
+    "name": "Retomar o relacionamento",
+    "description": "Convide clientes que perderam contato a contar o que precisam.",
+    "category": "Relacionamento"
+  },
+  {
+    "id": 4,
+    "file": "assets/templates/account-activation/01-welcome-donation-activation.html",
+    "name": "Boas-vindas",
+    "description": "Receba um novo contato e oriente seus próximos passos.",
+    "category": "Boas-vindas"
+  },
+  {
+    "id": 5,
+    "file": "assets/templates/product-launch/02-teaser-mystery.html",
+    "name": "Vem novidade por aí",
+    "description": "Crie expectativa antes de lançar um produto ou serviço.",
+    "category": "Lançamentos"
+  },
+  {
+    "id": 6,
+    "file": "assets/templates/newsletter/02-newsletter-productivity-tips.html",
+    "name": "Dicas e boas práticas",
+    "description": "Organize dicas úteis em uma mensagem fácil de ler.",
+    "category": "Newsletters"
+  },
+  {
+    "id": 7,
+    "file": "assets/templates/reengagement/02-anniversary-milestone.html",
+    "name": "Uma data para celebrar",
+    "description": "Valorize um aniversário ou marco do relacionamento.",
+    "category": "Relacionamento"
+  },
+  {
+    "id": 8,
+    "file": "assets/templates/reengagement/01-breakup-final.html",
+    "name": "Último convite para voltar",
+    "description": "Faça uma última abordagem clara e respeitosa.",
+    "category": "Relacionamento"
+  },
+  {
+    "id": 9,
+    "file": "assets/templates/abandoned-cart/01-cart-recovery-benefits.html",
+    "name": "Recuperar uma compra",
+    "description": "Relembre os benefícios e facilite a retomada da compra.",
+    "category": "Vendas"
+  },
+  {
+    "id": 10,
+    "file": "assets/templates/upsell/01-order-bump-discount.html",
+    "name": "Uma oferta complementar",
+    "description": "Apresente uma oferta relevante depois de uma compra.",
+    "category": "Vendas"
+  },
+  {
+    "id": 11,
+    "file": "assets/templates/feedback/01-webinar-thank-you-review.html",
+    "name": "Obrigado pela participação",
+    "description": "Agradeça a presença no evento e peça uma avaliação.",
+    "category": "Eventos"
+  },
+  {
+    "id": 12,
+    "file": "assets/templates/shipping-update/01-card-shipped.html",
+    "name": "Atualização de entrega",
+    "description": "Informe o andamento de uma entrega com clareza.",
+    "category": "Transacionais"
+  },
+  {
+    "id": 13,
+    "file": "assets/templates/account-activation/02-email-verification-security.html",
+    "name": "Confirmar endereço de e-mail",
+    "description": "Ajude o usuário a concluir a confirmação do cadastro.",
+    "category": "Transacionais"
+  },
+  {
+    "id": 14,
+    "file": "assets/templates/receipt-invoice/01-review-request-post-delivery.html",
+    "name": "Avaliação após a entrega",
+    "description": "Peça um retorno depois que o cliente receber o pedido.",
+    "category": "Relacionamento"
+  }
+]
