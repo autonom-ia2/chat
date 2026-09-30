@@ -40,4 +40,37 @@ RSpec.describe 'Email campaign intelligent import acceptance', :aggregate_failur
       'status' => 'completed', 'result' => hash_including('imported' => 2, 'total' => 2)
     )
   end
+
+  it 'presents the precise safe failure and accepts a corrected file on the same saved campaign' do
+    allow(TypesafeAi::Config).to receive_messages(enabled?: true, configured?: true)
+    resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    allow(TypesafeAi::ImportSchemaResolver).to receive(:new).and_return(resolver)
+    allow(resolver).to receive(:resolve).and_raise(TypesafeAi::ImportSchemaResolver::Error, 'schema_not_resolved')
+    draft = campaign.body_html
+    upload = Rack::Test::UploadedFile.new(StringIO.new("Nome;Email A;Email B\nAna;ana@example.org;other@example.org\n"),
+                                          'text/csv', original_filename: 'ambiguous.csv')
+    post base, params: { import_file: upload }, headers: headers
+    expect(response).to have_http_status(:accepted)
+    failed_import = campaign.email_campaign_imports.sole
+    EmailCampaigns::RecipientImportJob.perform_now(failed_import.id)
+    get base, headers: headers, as: :json
+    expect(response.parsed_body.dig('payload', 'campaign', 'recipient_import')).to include(
+      'status' => 'failed', 'error_code' => 'schema_not_resolved', 'retryable' => true
+    )
+    expect(campaign.email_campaign_recipients).not_to exist
+
+    allow(resolver).to receive(:resolve).and_return(email_index: 1, name_index: 0, metadata: { 'model' => 'jev-1.13.0' })
+    corrected = Rack::Test::UploadedFile.new(StringIO.new("Nome;Email\nAna;ana@example.org\n"),
+                                             'text/csv', original_filename: 'corrected.csv')
+    post base, params: { import_file: corrected }, headers: headers
+    expect(response).to have_http_status(:accepted)
+    new_import = campaign.email_campaign_imports.order(:id).last
+    expect(new_import.id).not_to eq(failed_import.id)
+    EmailCampaigns::RecipientImportJob.perform_now(new_import.id)
+    expect(new_import.reload).to be_completed
+    expect(new_import.result).to include('imported' => 1, 'total' => 1)
+    expect(campaign.reload.body_html).to eq(draft)
+    expect(campaign).to be_draft
+    expect(failed_import.reload).to be_failed
+  end
 end

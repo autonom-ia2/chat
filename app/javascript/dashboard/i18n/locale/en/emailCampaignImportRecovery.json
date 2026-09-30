@@ -1,0 +1,75 @@
+{
+  "EMAIL_CAMPAIGN_IMPORT_RECOVERY": {
+    "TITLE": "Let’s fix your recipient list",
+    "PRESERVED": "Your campaign and email draft are saved. No recipients from this failed attempt were added.",
+    "REASON": "What happened",
+    "CORRECTION": "Recommended correction",
+    "OPEN": "Review and fix import",
+    "SELECT": "Choose corrected CSV or XLSX",
+    "UPLOAD": "Import corrected file",
+    "RETRY": "Retry original file",
+    "LATER": "Fix later",
+    "CAUSES": {
+      "EMAIL": {
+        "REASON": "We could not find a recipient email column.",
+        "CORRECTION": "Include a column containing recipient email addresses. You can name it Email; a person’s name is optional."
+      },
+      "AMBIGUOUS": {
+        "REASON": "We could not identify the intended recipient column with enough confidence.",
+        "CORRECTION": "If there are multiple address columns, mark the intended one as Primary recipient email or keep only that address column. Check the column labels and upload the file again."
+      },
+      "NAME": {
+        "REASON": "Multiple columns could represent the contact’s name.",
+        "CORRECTION": "Distinguish Contact name from Company name, then upload the corrected file."
+      },
+      "FILE": {
+        "REASON": "The file could not be read as a supported spreadsheet.",
+        "CORRECTION": "Save it as CSV or XLSX, check that it opens correctly, then upload it here."
+      },
+      "WIDTH": {
+        "REASON": "This spreadsheet has too many columns to analyse.",
+        "CORRECTION": "Keep up to 254 columns, including the recipient email column, then upload it again."
+      },
+      "SIZE": {
+        "REASON": "The file exceeds the upload size limit.",
+        "CORRECTION": "Split the list into smaller files and upload one here."
+      },
+      "EMPTY": {
+        "REASON": "No recipient rows were found in this file.",
+        "CORRECTION": "Include a header row and recipient rows below it, then upload the file again."
+      },
+      "ROWS": {
+        "REASON": "The list exceeds 50,000 recipient rows.",
+        "CORRECTION": "Split the list into files with up to 50,000 rows each."
+      },
+      "EXPIRED": {
+        "REASON": "The original uploaded file has expired.",
+        "CORRECTION": "Choose the file again and upload it here."
+      },
+      "UPLOAD": {
+        "REASON": "The uploaded file could not be stored.",
+        "CORRECTION": "Choose your file again and retry the upload here."
+      },
+      "CONFIG": {
+        "REASON": "The list analysis service is not configured or its access key was rejected.",
+        "CORRECTION": "Ask your administrator to review the TypeSafe configuration. Keep this draft and upload the file after access is restored."
+      },
+      "SERVICE": {
+        "REASON": "The list analysis service could not complete this attempt.",
+        "CORRECTION": "Retry the original file. If this continues, ask your administrator to review the service; changing the spreadsheet may not help."
+      },
+      "UNKNOWN": {
+        "REASON": "The import could not be completed. No more specific cause is available for this attempt.",
+        "CORRECTION": "Retry the original file or upload a corrected CSV or XLSX here. If it fails again, contact your administrator."
+      },
+      "ADDRESSES": {
+        "REASON": "This file has no valid recipient email addresses.",
+        "CORRECTION": "Check that this is the intended email column and correct the addresses. For example: person{'@'}example.com. Then upload the file here."
+      },
+      "REQUEST": {
+        "REASON": "The list analysis service rejected this request.",
+        "CORRECTION": "Ask your administrator to review the analysis service. Repeating the same request will not resolve this error; your draft is saved."
+      }
+    }
+  }
+}

@@ -340,6 +340,8 @@ onActivated(() => {
     <RecipientImportStatus
       v-if="campaign"
       :campaign="campaign"
+      :can-recover="canManage"
+      auto-recover
       class="px-4 py-2"
     />
     <!-- Top bar nova: hierarquia clara, "Criar com IA" = HERÓI -->

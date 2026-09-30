@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-A importação de destinatários de campanhas de e-mail aceita CSV e XLSX sem exigir que o arquivo seja reformatado para um único padrão de separador, encoding, aba ou nomenclatura de cabeçalho. O caminho normal continua determinístico; TypeSafe Jev é chamado apenas quando a estrutura tabular é válida, há evidência local de uma coluna de e-mail, mas os aliases conhecidos não conseguem fazer o de/para com segurança.
+A importação de destinatários de campanhas de e-mail aceita CSV e XLSX sem exigir que o arquivo seja reformatado para um único padrão de separador, encoding, aba ou nomenclatura de cabeçalho. Quando habilitado e configurado, TypeSafe Jev interpreta os cabeçalhos antes dos aliases locais, inclusive quando Cliente e Contato parecem nomes ou há e-mails principal e secundário. A estrutura do arquivo e a existência de endereços válidos continuam sendo verificadas localmente antes da chamada. Com Jev desligado, os aliases conhecidos resolvem o arquivo sem chamada externa.
 
 A regra de negócio é: **e-mail é obrigatório; nome é opcional**. Colunas não mapeadas para nome/e-mail continuam em `custom_data`.
 
@@ -10,7 +10,7 @@ A regra de negócio é: **e-mail é obrigatório; nome é opcional**. Colunas n�
 
 A integração fica em **SuperAdmin → Settings → TypeSafe AI**.
 
-- `Enable intelligent imports with Jev`: habilita o fallback semântico. O padrão é desligado.
+- `Enable intelligent imports with Jev`: habilita a interpretação de colunas. O padrão é desligado.
 - `Jev model`: fixado em `jev-1.13.0`; não se usa `jev-latest` em produção.
 - `TypeSafe API Key`: campo de escrita única. Depois de salva, a chave não retorna no HTML e deixar o campo vazio preserva a chave atual.
 - `Test connection`: consulta `GET https://api.typesafe.ai/v1/models` usando a credencial salva.
@@ -24,9 +24,9 @@ A chave não é gravada em `InstallationConfig`. Ela fica em `ai_provider_creden
 3. CSV é normalizado para UTF-8 e suporta UTF-8/BOM, UTF-16 LE/BE com BOM e Windows-1252. O separador é escolhido entre vírgula, ponto e vírgula, TAB e pipe.
 4. XLSX expõe todas as planilhas do workbook, não apenas a primeira.
 5. O resolver examina até 100 linhas candidatas por tabela/aba para encontrar o cabeçalho real, inclusive quando há títulos/linhas informativas antes dele.
-6. Aliases conhecidos resolvem o arquivo sem chamada externa. Duplicidade semântica de cabeçalhos continua bloqueada em vez de ser adivinhada.
-7. Se o mapeamento não for conhecido, mas houver valores que passam pela validação local de e-mail, Jev recebe somente nomes de colunas, número da linha do cabeçalho e perfis derivados (`non_blank_count` e `email_like_count`). Valores dos destinatários não são enviados.
-8. O de/para retornado por Jev é aceito apenas se a coluna escolhida como e-mail também tiver evidência determinística local de endereços válidos.
+6. Com Jev habilitado e configurado, ele interpreta as colunas antes de validar o mapeamento, sem recusar automaticamente os aliases duplicados. Ambiguidades reais de destinatário continuam exigindo correção pelo usuário.
+7. Jev recebe os cabeçalhos, a posição do cabeçalho, a presença de endereços válidos por coluna e até três exemplos estruturais de 80 caracteres por coluna. A verificação de presença cobre todas as linhas, mesmo quando a amostra de até 50 linhas não contém nenhum endereço válido. Colunas com endereço confirmado enviam apenas o marcador de formato válido; contagens e proporções de linhas inválidas ficam locais, separando identificação da coluna e qualidade dos destinatários. Nos exemplos, letras e dígitos são substituídos por `A`, `a`, `0` e `x`; pontuação limitada mantém apenas o formato. Nomes, telefones, notas e endereços reais das linhas não são enviados.
+8. O de/para exige confiança suficiente no e-mail, confirmação do esquema e evidência local na coluna escolhida. Dúvida sobre o nome opcional deixa essa coluna como dado adicional, sem impedir a importação.
 9. O job grava destinatários, issues, contadores e conclusão com os locks/transações existentes.
 10. `email_campaign_imports.schema_resolution` registra apenas metadados não sensíveis da decisão: método, formato, aba, linha do cabeçalho, delimitador, índices de colunas e, quando aplicável, modelo/confianças do Jev.
 
@@ -41,7 +41,7 @@ Cliente direto, sem OpenRouter:
 
 A chamada semântica ocorre antes dos locks de escrita do importador. No job de importação, erros `429`, `529` e `5xx` têm até duas repetições curtas no cliente. O teste de conexão síncrono faz uma única tentativa com timeout, para caber no limite da requisição web. A UI não exibe corpo de resposta de erro nem credenciais.
 
-Quando TypeSafe estiver temporariamente indisponível, o import fica `failed` com código sanitizado, o arquivo permanece anexado e a tentativa fica reutilizável dentro da janela normal de retenção. Arquivos que o parser determinístico resolve não dependem de TypeSafe e continuam importando mesmo com Jev indisponível.
+Quando TypeSafe estiver temporariamente indisponível, o import fica `failed` com código sanitizado, o arquivo permanece anexado e a tentativa fica reutilizável dentro da janela normal de retenção. Com Jev habilitado, não há troca silenciosa para aliases quando o serviço falha. Com a integração desligada, arquivos reconhecidos pelos aliases continuam importando sem TypeSafe.
 
 ## Formatos e casos cobertos
 
@@ -63,7 +63,7 @@ Nomes de abas não são enviados. A resolução estrutural é gravada na mesma t
 
 - A API key nunca deve ser colocada em commit, log, issue, PR ou chat.
 - A chave salva não retorna para a página do SuperAdmin.
-- TypeSafe recebe apenas metadados estruturais e perfis derivados; nomes/e-mails das linhas não são enviados pelo resolver.
+- TypeSafe recebe metadados estruturais, perfis derivados e formatos de exemplos mascarados; valores reais das linhas não são enviados pelo resolver.
 - Não há chamada Jev por destinatário: uma resolução semântica por arquivo selecionado, com até duas repetições de transporte em falhas temporárias.
 - Saída do modelo nunca substitui a validação determinística de e-mail.
 
@@ -76,7 +76,7 @@ Nomes de abas não são enviados. A resolução estrutural é gravada na mesma t
 5. Habilite Jev e faça um upload controlado sem agendar/enviar a campanha.
 6. Confira `recipient_import.status`, resultado e `schema_resolution`; não registre conteúdo de destinatários em logs.
 
-Erros externos são reduzidos a códigos como `typesafe_invalid_key`, `typesafe_rate_limited`, `typesafe_overloaded`, `typesafe_unavailable` e `typesafe_invalid_response`. A interface usa mensagens de importação seguras e não mostra payloads externos.
+Erros externos são reduzidos a códigos como `typesafe_invalid_key`, `typesafe_rate_limited`, `typesafe_overloaded`, `typesafe_unavailable` e `typesafe_invalid_response`. O editor abre um diálogo com motivo, orientação e envio do arquivo corrigido na mesma campanha. Só falhas temporárias ou desconhecidas oferecem a repetição do arquivo original; erros de configuração e solicitação recusada orientam procurar o administrador. A interface não mostra payloads externos. A API exige permissão de gerenciamento para importar ou repetir arquivos, inclusive com funções personalizadas.
 
 ## Atualização do modelo
 
