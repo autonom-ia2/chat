@@ -30,6 +30,9 @@ Não substituir testes por contagens nem declarar review independente. Os dois a
 | Teste síncrono de conexão podia repetir chamadas por mais que o timeout web de 15s | Uma tentativa limitada por timeout; retries ficam no job assíncrono |
 | Erro de cabeçalho ainda dizia que nome era obrigatório e que só a primeira linha/aba servia | Orientação en/pt_BR corrigida para e-mail obrigatório, nome opcional e colunas repetidas |
 | Configurações compartilhadas SuperAdmin/Enterprise poderiam sofrer regressão | Mantido encerramento da gravação no primeiro erro; baseline inclui Shopify Enterprise e ConfigLoader |
+| Um arquivo com cabeçalho reconhecido e todos os endereços inválidos podia perder o relatório das linhas rejeitadas | Cabeçalho continua reconhecido; regressão confirma duas linhas inválidas e nenhum destinatário inserido |
+| A presença de nome numa aba de exemplo podia superar a base principal contendo somente e-mail | Escolha do cabeçalho dentro da aba é separada da escolha da base; regressão seleciona a base maior, com nome opcional |
+| Uma sequência inicial de endereços inválidos podia promover uma linha de contato a cabeçalho enviado ao Jev | Candidata estrutural inicial é preservada por tabela; regressão com 120 linhas confirma cabeçalho original e todos os registros preservados |
 
 A revisão do implementador corrigiu os achados de código acima. O preflight posterior identificou uma decisão de release pendente: o serviço está saudável, mas suas taxas são publicadas de forma esparsa; a exigência atual de ponto recente bloqueia após inatividade. Rodrigo foi consultado sobre usar consulta atual + última taxa oficial ou manter esse bloqueio. Não há sinal verde para release até resolver essa decisão, revisar a regra e repetir os gates afetados. Esta análise não é afirmação de ausência absoluta de regressões nem substitui review externo.
 
@@ -39,7 +42,7 @@ Runtime separado: Ruby 3.4.4, Node 24, PostgreSQL UTF-8 com pgvector e Redis pr�
 
 | Gate | Resultado final local |
 | --- | --- |
-| RSpec EE, seleção cumulativa de 101 arquivos e baseline OSS/Enterprise | 1.025 exemplos, 0 falhas, 2 pendências legadas: undo de labels já em undoing e associação futura de Account |
+| RSpec EE, seleção cumulativa de 101 arquivos e baseline OSS/Enterprise | 1.028 exemplos, 0 falhas, 2 pendências legadas: undo de labels já em undoing e associação futura de Account; inclui as três regressões adicionais de seleção de cabeçalho/aba |
 | Contratos puros, nove processos separados | 56 testes, 50.870 assertions, 0 falhas/erros |
 | Vitest completo em UTC | 615 arquivos, 6.828 testes passando; após quatro casos adicionais da #765, painel focado com 62 testes passando |
 | Copy de importação e mensagens | 215 testes focados passando depois da correção en/pt_BR |
@@ -58,10 +61,12 @@ A execução ampla de frontend concluiu em UTC. A execução anterior em fuso lo
 
 Browser real: Chromium headless-shell 147.0.7727.15 correspondente ao Playwright instalado, componentes reais, VueRouter/Vuex/Pinia e CSS completo; HTTP sintético restrito a loopback. Resultado: 215 checagens, zero falhas e 153 screenshots, incluindo português, outros idiomas, RTL, desktop/mobile e interações. O Chrome completo local havia abortado antes de abrir a primeira página; foi substituído pelo binário headless da mesma instalação sem modificar assertions. Isso valida UI com fixtures, não um envio real nem a API Rails no navegador.
 
+Após os três ajustes finais de seleção de cabeçalho/aba, a suíte cumulativa foi repetida em outro banco vazio: 1.028 exemplos, zero falhas, duas pendências legadas e nenhum erro fora dos exemplos. Os nove processos puros, lint Ruby e gate de regex também passaram novamente. O formato suportado exige cabeçalho; esta entrega não é um detector geral de dados pessoais em arquivos sem cabeçalho ou malformados. A prova de privacidade cobre o payload estrutural e os casos de seleção exercitados.
+
 ## Sobras inventariadas
 
-- #438 e #443 estão mergeadas; heads completos #439, #440, #441 e #442 já são ancestrais da main, confirmados novamente por `git merge-base --is-ancestor`. Não reaplicar essas branches.
-- #429 tem só uma auditoria histórica fora da main. Documento preservado nesta integração com nota contextual: timeout/importação síncrona antigos foram tratados pelas entregas assíncronas posteriores. Branch original preservada.
+- #438 e #443 estão mergeadas; heads completos #439, #440, #441 e #442 já são ancestrais da main, confirmados novamente por `git merge-base --is-ancestor`. Os quatro PRs foram fechados por cobertura integral; branches preservadas. Nenhum código foi reaplicado.
+- #429 tem só uma auditoria histórica fora da main. Documento preservado nesta integração com nota contextual: timeout/importação síncrona antigos foram tratados pelas entregas assíncronas posteriores. PR e branch original preservados até o merge do documento no #781.
 - #430, #432 e #444 já estão fechadas. #436 continua umbrella operacional; não fechar por inferência de cobertura técnica.
 - #328 contém limpeza histórica de configuration_set de remetentes. O runtime já usa o default quando ausente, mas alteração de dados de produção exige escopo e aprovação próprios; nenhum backfill foi executado.
 
@@ -71,7 +76,7 @@ Consultados somente imagem ativa e os flags de envio explicitamente permitidos e
 
 `EMAIL_CAMPAIGN_ENABLED=true`, região us-east-1; `EMAIL_REPUTATION_PROVIDER_MONITOR` e `EMAIL_REPUTATION_AWS_ACCOUNT_ID` estão ausentes. Portanto o monitor global está desligado pelo default atual. Ativá-lo e confirmar telemetria fresca é uma mudança operacional pendente, além do código. A credencial local do perfil default está inválida; a stack Autonom.ia não foi consultada por esse perfil e não deve ser considerada validada. Não alterar autenticação por conta própria.
 
-Uma leitura direta com o perfil Hub2You confirmou SES SendingEnabled=true e EnforcementStatus=HEALTHY. As consultas globais CloudWatch de BounceRate e ComplaintRate não retornaram pontos nos últimos 15 minutos. Isso não prova taxas zero; a conta/região e a disponibilidade/frequência das métricas precisam ser confirmadas antes de ativar o gate. Não relaxar freshness nem fabricar saúde a partir de dados ausentes.
+Uma leitura direta com o perfil Hub2You confirmou SES SendingEnabled=true e EnforcementStatus=HEALTHY. As consultas globais CloudWatch de BounceRate e ComplaintRate não retornaram pontos nos últimos 15 minutos. Uma consulta de 24 horas retornou taxas oficiais de 1,21% e 0,01%, ambas abaixo dos limites, com último ponto às 13h46 de 29/09 em São Paulo. Dados ausentes na janela recente não provam taxas zero. A conta/região usadas pela aplicação precisam ser confirmadas antes de ativar o gate. A decisão sobre consulta atual + última taxa publicada permanece com Rodrigo; nenhum relaxamento foi aplicado enquanto a resposta está pendente.
 
 ## Gates de release e rollback
 

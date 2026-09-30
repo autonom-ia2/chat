@@ -43,6 +43,17 @@ RSpec.describe EmailCampaigns::RecipientImporter do
     expect(import.reload.schema_resolution['header_row']).to eq(4)
   end
 
+  it 'reports invalid rows without falsely blaming recognized headers when all emails are invalid' do
+    csv = "NOME;EMAIL\nAna;sem-email\nBia;outro-invalido\n"
+
+    result = described_class.new(campaign, csv, filename: 'invalid-addresses.csv', import: import).perform
+
+    expect(result.to_h.slice(:imported, :invalid, :total)).to eq(imported: 0, invalid: 2, total: 2)
+    expect(campaign.email_campaign_recipients).not_to exist
+    expect(import.email_campaign_import_issues.order(:row_number).pluck(:row_number)).to eq([2, 3])
+    expect(import.reload.schema_resolution['method']).to eq('deterministic')
+  end
+
   it 'imports a Windows-1252 semicolon file without corrupting accents' do
     csv = "NOME;E-MAIL;CIDADE\nJoão;joao@example.org;São Paulo\n".encode(Encoding::Windows_1252)
 

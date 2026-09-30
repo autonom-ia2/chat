@@ -14,8 +14,8 @@ class CampaignImports::SchemaResolver
     candidates = build_candidates
     raise Error, 'empty_file' if candidates.empty?
 
-    known = known_candidates(candidates)
-    return resolved_known(best_known_candidate(known)) if known.any?
+    known = known_candidate(candidates)
+    return build_result(known) if known
 
     ambiguity = blocking_ambiguity(candidates)
     raise Error, ambiguity if ambiguity
@@ -26,10 +26,12 @@ class CampaignImports::SchemaResolver
 
   private
 
-  def known_candidates(candidates)
-    candidates.select do |candidate|
-      candidate.fetch(:mapper).errors.empty? && candidate_has_email_evidence?(candidate)
-    end
+  def known_candidate(candidates)
+    mapped = candidates.select { |candidate| candidate.fetch(:mapper).errors.empty? }
+    known = mapped.select { |candidate| candidate_has_email_evidence?(candidate) }
+    # Bad address values do not turn recognized columns into a missing header.
+    known = mapped if known.empty? && candidates.none? { |candidate| candidate_has_email_evidence?(candidate) }
+    best_known_candidate(known) unless known.empty?
   end
 
   def build_candidates
@@ -49,7 +51,7 @@ class CampaignImports::SchemaResolver
   def build_candidate(table, table_index, row_index, candidate_index)
     header_row = table.rows.fetch(row_index)
     headers = normalize_headers(header_row.values)
-    data_rows = table.rows.drop(row_index + 1).reject { |row| blank_row?(row) }
+    data_rows = table.rows.drop(row_index + 1).reject { |row| row.values.all? { |value| blank_valid_value?(value.to_s) } }
     {
       id: "table_#{table_index}_candidate_#{candidate_index}",
       table_index: table_index,
@@ -71,17 +73,25 @@ class CampaignImports::SchemaResolver
   end
 
   def best_known_candidate(candidates)
-    candidates.max_by do |candidate|
+    known_table_headers(candidates).max_by do |candidate|
       email_index = candidate.fetch(:mapper).mapping.fetch(:email)
       profile = candidate.fetch(:profiles).fetch(email_index)
-      [candidate.fetch(:mapper).mapping.key?(:name) ? 1 : 0, profile.fetch(:email_like_count),
-       profile.fetch(:non_blank_count), candidate.fetch(:rows).length, -candidate.fetch(:table_index),
+      [profile.fetch(:email_like_count), profile.fetch(:non_blank_count), candidate.fetch(:rows).length,
+       candidate.fetch(:mapper).mapping.key?(:name) ? 1 : 0, -candidate.fetch(:table_index),
        -candidate.fetch(:header_row_number)]
     end
   end
 
-  def resolved_known(candidate)
-    build_result(candidate, candidate.fetch(:mapper), 'deterministic', {})
+  def known_table_headers(candidates)
+    email_aliases = CampaignImports::HeaderMapper::ALIASES.fetch(:email).map { |header| CampaignImports::HeaderMapper.normalize(header) }
+    candidates.group_by { |candidate| candidate.fetch(:table_index) }.values.map do |table_candidates|
+      table_candidates.max_by do |candidate|
+        mapper = candidate.fetch(:mapper)
+        header = candidate.fetch(:headers).fetch(mapper.mapping.fetch(:email))
+        exact_email_header = email_aliases.include?(CampaignImports::HeaderMapper.normalize(header))
+        [exact_email_header ? 1 : 0, mapper.mapping.key?(:name) ? 1 : 0, -candidate.fetch(:header_row_number)]
+      end
+    end
   end
 
   def resolve_with_ai(candidates)
@@ -104,18 +114,9 @@ class CampaignImports::SchemaResolver
   end
 
   def blocking_ambiguity(candidates)
-    candidate = ambiguous_candidates(candidates).max_by { |item| ai_candidate_score(item) }
-    duplicate_error(candidate)
-  end
-
-  def ambiguous_candidates(candidates)
-    candidates.select { |item| duplicated_mapping_error?(item) && candidate_has_email_evidence?(item) }
-  end
-
-  def duplicate_error(candidate)
-    return unless candidate
-
-    candidate.fetch(:mapper).errors.find { |error| error.start_with?('duplicated_') }
+    candidate = candidates.select { |item| duplicated_mapping_error?(item) && candidate_has_email_evidence?(item) }
+                          .max_by { |item| ai_candidate_score(item) }
+    candidate.fetch(:mapper).errors.find { |error| error.start_with?('duplicated_') } if candidate
   end
 
   def duplicated_mapping_error?(candidate)
@@ -123,8 +124,10 @@ class CampaignImports::SchemaResolver
   end
 
   def best_ai_candidate(candidates)
-    candidates.select { |candidate| candidate_has_email_evidence?(candidate) }
-              .max_by { |candidate| ai_candidate_score(candidate) }
+    tables = candidates.select { |candidate| candidate_has_email_evidence?(candidate) }.group_by { |candidate| candidate.fetch(:table_index) }
+    # Invalid recipient rows must not replace the original header sent to Jev.
+    headers = tables.values.map { |group| group.min_by { |candidate| candidate.fetch(:header_row_number) } }
+    headers.max_by { |candidate| ai_candidate_score(candidate) }
   end
 
   def candidate_has_email_evidence?(candidate)
@@ -137,7 +140,7 @@ class CampaignImports::SchemaResolver
      -candidate.fetch(:table_index), -candidate.fetch(:header_row_number)]
   end
 
-  def build_result(candidate, mapper, method, ai_metadata)
+  def build_result(candidate, mapper = candidate.fetch(:mapper), method = 'deterministic', ai_metadata = {})
     metadata = {
       'method' => method,
       'format' => @parsed.format,
@@ -207,9 +210,5 @@ class CampaignImports::SchemaResolver
 
   def blank_valid_value?(value)
     value.valid_encoding? && value.strip.empty?
-  end
-
-  def blank_row?(row)
-    row.values.all? { |value| blank_valid_value?(value.to_s) }
   end
 end

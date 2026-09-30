@@ -42,6 +42,20 @@ RSpec.describe CampaignImports::SchemaResolver do
     expect(result.metadata['method']).to eq('deterministic')
   end
 
+  it 'prefers the stronger recipient base over a named example when name is optional' do
+    content = build_xlsx_sheets(
+      'Exemplo' => [%w[NOME EMAIL], ['Exemplo', 'exemplo@example.org']],
+      'BASE' => [['EMAIL'], ['ana@example.org'], ['bia@example.org']]
+    )
+    parsed = CampaignImports::Parser.new(StringIO.new(content), filename: 'base.xlsx').perform
+
+    result = described_class.new(parsed).perform
+
+    expect(result.rows.size).to eq(2)
+    expect(result.mapper.mapping).to eq(email: 0)
+    expect(result.metadata).to include('table_index' => 1)
+  end
+
   it 'uses Jev only when deterministic aliases cannot resolve the email column' do
     parsed = CampaignImports::Parser.new(
       StringIO.new("SEGURADO;MAIL PRINCIPAL;BROKER\nAna;ana@example.org;ABC\n"), filename: 'base.csv'
@@ -62,6 +76,24 @@ RSpec.describe CampaignImports::SchemaResolver do
     expect(result.mapper.mapping).to eq(email: 1, name: 0)
     expect(result.mapper.extra_columns).to eq('broker' => 2)
     expect(result.metadata).to include('method' => 'jev', 'model' => 'jev-1.13.0')
+  end
+
+  it 'keeps the actual unknown header and never passes invalid recipient names as column labels to Jev' do
+    rows = (1..60).map { |index| "Pessoa #{index};invalido-#{index};ABC" } +
+           (61..120).map { |index| "Pessoa #{index};pessoa#{index}@example.org;ABC" }
+    parsed = CampaignImports::Parser.new(
+      StringIO.new("SEGURADO;MAIL PRINCIPAL;BROKER\n#{rows.join("\n")}\n"), filename: 'base.csv'
+    ).perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    allow(ai_resolver).to receive(:resolve) do |candidate|
+      expect(candidate.fetch(:headers)).to eq(['SEGURADO', 'MAIL PRINCIPAL', 'BROKER'])
+      { email_index: 1, name_index: 0, metadata: {} }
+    end
+
+    result = described_class.new(parsed, ai_resolver: ai_resolver).perform
+
+    expect(result.rows.length).to eq(120)
+    expect(result.metadata['header_row']).to eq(1)
   end
 
   it 'does not call Jev when deterministic headers already resolve safely' do
