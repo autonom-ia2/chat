@@ -30,6 +30,7 @@ class DashboardController < ActionController::Base
     INSTALLATION_PRICING_PLAN
   ].freeze
 
+  before_action :redirect_to_autonomia_sso_if_needed, only: [:index]
   before_action :set_application_pack
   before_action :set_global_config
   before_action :set_dashboard_scripts
@@ -42,6 +43,14 @@ class DashboardController < ActionController::Base
   def index; end
 
   private
+
+  def redirect_to_autonomia_sso_if_needed
+    return unless autonomia_sso_auto_redirect_enabled?
+    return unless dashboard_path_for_autonomia_sso_redirect?
+    return if valid_dashboard_session_cookie?
+
+    redirect_to "/auth/autonomia?#{early_sso_redirect_query}"
+  end
 
   def ensure_html_format
     render json: { error: 'Please use API routes instead of dashboard routes for JSON requests' }, status: :not_acceptable if request.format.json?
@@ -113,6 +122,60 @@ class DashboardController < ActionController::Base
     methods << 'google_oauth' if GlobalConfigService.load('ENABLE_GOOGLE_OAUTH_LOGIN', 'true').to_s != 'false'
     methods << 'saml' if ChatwootHub.pricing_plan != 'community' && GlobalConfigService.load('ENABLE_SAML_SSO_LOGIN', 'true').to_s != 'false'
     methods
+  end
+
+  def autonomia_sso_auto_redirect_enabled?
+    ActiveModel::Type::Boolean.new.cast(ENV.fetch('AUTONOMIA_SSO_AUTO_REDIRECT', false))
+  end
+
+  def dashboard_path_for_autonomia_sso_redirect?
+    return true if request.path == '/'
+    return false unless request.path == '/app' || request.path.start_with?('/app/')
+
+    request.path != '/app/login'
+  end
+
+  def valid_dashboard_session_cookie?
+    auth_cookie = cookies['cw_d_session_info']
+    return false if auth_cookie.blank?
+
+    auth_data = JSON.parse(auth_cookie)
+    return false if auth_data['access-token'].blank?
+    return false if auth_data['client'].blank?
+    return false if auth_data['uid'].blank?
+
+    auth_data['expiry'].to_i > Time.current.to_i
+  rescue JSON::ParserError, TypeError, ArgumentError
+    false
+  end
+
+  def early_sso_redirect_query
+    { return_to: safe_dashboard_return_to }.to_query
+  end
+
+  def safe_dashboard_return_to
+    path = request.path == '/' ? '/app' : request.path
+    return '/app' unless path == '/app' || path.start_with?('/app/')
+
+    query = safe_query_string
+    query.present? ? "#{path}?#{query}" : path
+  end
+
+  def safe_query_string
+    return if request.query_string.blank?
+
+    Rack::Utils.parse_nested_query(request.query_string).each do |key, value|
+      return if key.to_s == 'return_to' && unsafe_redirect_value?(value)
+    end
+
+    request.query_string
+  rescue Rack::QueryParser::InvalidParameterError, Rack::Utils::ParameterTypeError
+    nil
+  end
+
+  def unsafe_redirect_value?(value)
+    value = value.to_s
+    value.match?(%r{\A[A-Za-z][A-Za-z0-9+\-.]*:}) || value.start_with?('//')
   end
 
   def set_application_pack
