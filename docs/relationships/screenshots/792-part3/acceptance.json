@@ -1,0 +1,29 @@
+{
+  "checks": [
+    "contact_saved_to_real_api_with_commercial_draft_preserved",
+    "native_discard_confirmation_preserves_or_discards_explicitly",
+    "native_contact_profile_opened_without_losing_opportunity",
+    "canonical_company_profile_opened",
+    "notebook_1366_drawer_640",
+    "name_only_contact_created_through_real_ui_on_same_card",
+    "existing_contact_search_selection_and_real_link"
+  ],
+  "pageErrors": [],
+  "failedResponses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "data": "synthetic",
+  "backend": "real-local-Rails-PostgreSQL",
+  "browser": "154.0.8037.58"
+}

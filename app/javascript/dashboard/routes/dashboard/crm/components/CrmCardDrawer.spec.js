@@ -50,6 +50,8 @@ const mountDrawer = (props = {}) =>
     },
     global: {
       stubs: {
+        Dialog: true,
+        CrmCardRelationshipPanel: true,
         CrmCardAiPanel: true,
         CrmCardSummaryPanel: true,
         CrmCardAutoFollowupStatus: true,
@@ -161,5 +163,87 @@ it('sends only the custom attribute actually edited in the CRM drawer', async ()
   expect(ContactAPI.update.mock.lastCall[1].custom_attributes).toEqual({
     job_title: 'Edited title',
   });
+  wrapper.unmount();
+});
+
+it('uses the same 40rem width as the pipeline drawer', () => {
+  const wrapper = mountDrawer();
+  expect(wrapper.find('[data-crm-card-drawer]').classes()).toContain(
+    'w-[40rem]'
+  );
+  expect(wrapper.find('[data-crm-card-drawer]').classes()).toContain(
+    'max-w-full'
+  );
+  wrapper.unmount();
+});
+it('retains the active relationship tab when refreshing the same card', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.activeTab = 'contact';
+  await wrapper.setProps({
+    card: { id: 5, title: 'Card A', stage_id: 10, contact_id: 42 },
+  });
+  expect(wrapper.vm.activeTab).toBe('contact');
+  wrapper.unmount();
+});
+it('retains an unsaved opportunity title during a contact refresh', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.form.title = 'Commercial draft';
+  await wrapper.setProps({
+    card: { id: 5, title: 'Server title', stage_id: 10, contact_id: 42 },
+  });
+  expect(wrapper.vm.form.title).toBe('Commercial draft');
+  wrapper.unmount();
+});
+it('does not implicitly save a dirty contact from the opportunity save action', () => {
+  ContactAPI.update.mockClear();
+  const wrapper = mountDrawer({
+    card: {
+      id: 5,
+      title: 'Card A',
+      stage_id: 10,
+      contact: { id: 42, name: 'Original' },
+    },
+  });
+  wrapper.vm.contactForm.name = 'Unsaved person';
+  wrapper.vm.onSubmit();
+  expect(ContactAPI.update).not.toHaveBeenCalled();
+  expect(wrapper.emitted('save')).toHaveLength(1);
+  wrapper.unmount();
+});
+it('saves the contact independently and refreshes the card without saving commercial data', async () => {
+  const wrapper = mountDrawer({
+    card: {
+      id: 5,
+      title: 'Card A',
+      stage_id: 10,
+      contact: { id: 42, name: 'Original' },
+    },
+  });
+  wrapper.vm.contactForm.name = 'Updated person';
+  await wrapper.vm.saveContact();
+  expect(ContactAPI.update.mock.lastCall).toEqual([
+    42,
+    { name: 'Updated person' },
+  ]);
+  expect(wrapper.emitted('save')).toBeUndefined();
+  expect(wrapper.emitted('refreshCard')).toHaveLength(1);
+  wrapper.unmount();
+});
+it('never updates a company name as a substitute for a canonical company association', () => {
+  const wrapper = mountDrawer({
+    card: {
+      id: 5,
+      title: 'Card A',
+      stage_id: 10,
+      contact: {
+        id: 42,
+        name: 'Original',
+        additional_attributes: { company_name: 'Legacy' },
+      },
+    },
+  });
+  wrapper.vm.contactForm.name = 'Updated person';
+  wrapper.vm.contactForm.company = 'Not an association';
+  expect(wrapper.vm.buildContactPayload()).toEqual({ name: 'Updated person' });
   wrapper.unmount();
 });

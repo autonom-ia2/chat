@@ -3,6 +3,8 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -95,7 +97,17 @@ const contactForm = reactive({
   city: '',
   country: '',
 });
+const formSnapshot = ref('');
 const contactSnapshot = ref('');
+const contactEditId = ref(null);
+const isEditingContact = ref(false);
+const isSavingContact = ref(false);
+const contactError = ref('');
+const relationshipPanel = ref(null);
+const discardDialog = ref(null);
+const discardOpen = ref(false);
+let discardAction = null;
+const relationshipLabel = key => t(`CRM_KANBAN.RELATIONSHIP.${key}`);
 const followUpForm = reactive({
   title: '',
   dueAt: '',
@@ -120,18 +132,14 @@ const isSearchingContacts = ref(false);
 const activeTab = ref('summary');
 
 const isEditing = computed(() => props.mode === 'edit');
-const panelTitle = computed(() => {
-  if (!isEditing.value) return t('CRM_KANBAN.DRAWER.CREATE_TITLE');
-  // Pull the card's own title into the header once it has one ("Detalhes do {nome}");
-  // a brand-new/untitled card keeps the generic "Detalhes do card".
-  const name = form.title?.trim();
-  return name
-    ? t('CRM_KANBAN.DRAWER.EDIT_TITLE_NAMED', { name })
-    : t('CRM_KANBAN.DRAWER.EDIT_TITLE');
-});
+const panelTitle = computed(() =>
+  isEditing.value
+    ? relationshipLabel('OPPORTUNITY_DETAILS')
+    : t('CRM_KANBAN.DRAWER.CREATE_TITLE')
+);
 const panelSubtitle = computed(() =>
   isEditing.value
-    ? t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE')
+    ? form.title || t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE')
     : t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE')
 );
 
@@ -168,7 +176,7 @@ const contactChoices = computed(() =>
 );
 const detailTabs = computed(() => [
   { id: 'summary', label: t('CRM_KANBAN.DRAWER.TAB_SUMMARY') },
-  { id: 'contact', label: t('CRM_KANBAN.DRAWER.TAB_CONTACT') },
+  { id: 'contact', label: relationshipLabel('TAB') },
   { id: 'conversations', label: t('CRM_KANBAN.DRAWER.TAB_CONVERSATIONS') },
   { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_FOLLOW_UPS') },
   { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_TIMELINE') },
@@ -356,6 +364,7 @@ const reopenDeal = () => emit('closeDeal', { result: 'reopen' });
 
 const hydrateContactForm = card => {
   const contact = card?.contact || {};
+  contactEditId.value = contact.id || null;
   const add = contact.additional_attributes || {};
   const custom = contact.custom_attributes || {};
   contactForm.name = contact.name || '';
@@ -401,6 +410,7 @@ const resetForm = () => {
   followUpForm.templateNamespace = '';
   followUpMessagingWindow.value = null;
   whatsappApiTemplates.value = [];
+  formSnapshot.value = JSON.stringify({ ...form });
 };
 
 const loadFollowUpMessagingWindow = async () => {
@@ -491,8 +501,21 @@ const onContactSelected = () => {
 // to props.stages directly, so they stay live without a reset.
 watch(
   () => [props.show, props.card],
-  () => {
-    if (props.show) resetForm();
+  (_next, previous) => {
+    if (!props.show) return;
+    const sameCard = previous?.[0] && props.card?.id === previous[1]?.id;
+    const tab = activeTab.value;
+    if (
+      sameCard &&
+      (isEditingContact.value ||
+        JSON.stringify({ ...form }) !== formSnapshot.value)
+    ) {
+      if (!isEditingContact.value) hydrateContactForm(props.card);
+      return;
+    }
+    resetForm();
+    if (sameCard) activeTab.value = tab;
+    else isEditingContact.value = false;
   },
   { immediate: true }
 );
@@ -574,47 +597,100 @@ const contactDirty = computed(
 // untouched. Avoids re-writing stale values for fields we don't edit here.
 const buildContactPayload = () => {
   const initial = JSON.parse(contactSnapshot.value);
-  const changedAttributes = Object.fromEntries(
-    [
-      ['address', 'address'],
-      ['job_title', 'jobTitle'],
-    ]
-      .filter(
-        ([, field]) => contactForm[field].trim() !== initial[field].trim()
-      )
-      .map(([key, field]) => [key, contactForm[field].trim()])
-  );
+  const changed = entries =>
+    Object.fromEntries(
+      entries
+        .filter(
+          ([, field]) => contactForm[field].trim() !== initial[field].trim()
+        )
+        .map(([key, field]) => [key, contactForm[field].trim()])
+    );
+  const custom = changed([
+    ['address', 'address'],
+    ['job_title', 'jobTitle'],
+  ]);
+  const additional = changed([
+    ['city', 'city'],
+    ['country', 'country'],
+  ]);
   return {
-    name: contactForm.name.trim(),
-    email: contactForm.email.trim(),
-    phone_number: contactForm.phoneNumber.trim(),
-    additional_attributes: {
-      company_name: contactForm.company.trim(),
-      city: contactForm.city.trim(),
-      country: contactForm.country.trim(),
-    },
-    ...(Object.keys(changedAttributes).length && {
-      custom_attributes: changedAttributes,
-    }),
+    ...changed([
+      ['name', 'name'],
+      ['email', 'email'],
+      ['phone_number', 'phoneNumber'],
+    ]),
+    ...(Object.keys(additional).length
+      ? { additional_attributes: additional }
+      : {}),
+    ...(Object.keys(custom).length ? { custom_attributes: custom } : {}),
   };
 };
 
 const persistContactIfChanged = async () => {
-  const contact = props.card?.contact;
-  if (!isEditing.value || !contact?.id || !contactDirty.value) return;
-
-  await ContactAPI.update(contact.id, buildContactPayload());
+  if (!isEditing.value || !contactEditId.value || !contactDirty.value) return;
+  await ContactAPI.update(contactEditId.value, buildContactPayload());
 };
 
-const onSubmit = async () => {
-  if (!form.title.trim() || (!isEditing.value && !form.stageId)) return;
-
-  try {
-    await persistContactIfChanged();
-  } catch {
-    useAlert(t('CRM_KANBAN.DRAWER.CONTACT_SAVE_ERROR'));
+const discardRelationship = () => {
+  isEditingContact.value = false;
+  contactError.value = '';
+  if (contactSnapshot.value)
+    Object.assign(contactForm, JSON.parse(contactSnapshot.value));
+  relationshipPanel.value?.reset();
+};
+const guardRelationship = action => {
+  if (isSavingContact.value || relationshipPanel.value?.saving) return;
+  if (
+    (isEditingContact.value && contactDirty.value) ||
+    relationshipPanel.value?.dirty
+  ) {
+    discardAction = action;
+    discardOpen.value = true;
+    discardDialog.value?.open();
     return;
   }
+  discardRelationship();
+  action();
+};
+const footerCancelLabel = computed(() => {
+  if (isEditingContact.value) return relationshipLabel('CANCEL');
+  return isEditing.value && activeTab.value !== 'summary'
+    ? relationshipLabel('CLOSE')
+    : t('CRM_KANBAN.DRAWER.CANCEL');
+});
+const confirmDiscard = () => {
+  const action = discardAction;
+  discardAction = null;
+  discardRelationship();
+  discardDialog.value?.close();
+  action?.();
+};
+const startContactEdit = contact => {
+  hydrateContactForm({ contact });
+  isEditingContact.value = true;
+  contactError.value = '';
+};
+const saveContact = async () => {
+  if (isSavingContact.value || !contactForm.name.trim()) return;
+  const cardIdAtSave = props.card?.id;
+  isSavingContact.value = true;
+  contactError.value = '';
+  try {
+    await persistContactIfChanged();
+    if (props.card?.id !== cardIdAtSave) return;
+    contactSnapshot.value = JSON.stringify({ ...contactForm });
+    isEditingContact.value = false;
+    await relationshipPanel.value?.reload();
+    emit('refreshCard');
+    useAlert(relationshipLabel('SAVED'));
+  } catch {
+    contactError.value = relationshipLabel('SAVE_ERROR');
+  } finally {
+    isSavingContact.value = false;
+  }
+};
+const onSubmit = () => {
+  if (!form.title.trim() || (!isEditing.value && !form.stageId)) return;
   emit('save', buildPayload());
 };
 
@@ -1154,7 +1230,12 @@ const followUpAutomationLabel = followUp => {
 useKeyboardEvents({
   Escape: {
     action: () => {
-      if (props.show) emit('close');
+      if (
+        props.show &&
+        !discardOpen.value &&
+        !document.querySelector('dialog[open]')
+      )
+        guardRelationship(() => emit('close'));
     },
     allowOnFocusedInput: true,
   },
@@ -1166,6 +1247,16 @@ useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>
+  <Dialog
+    ref="discardDialog"
+    type="alert"
+    :title="relationshipLabel('DISCARD_TITLE')"
+    :description="relationshipLabel('DISCARD_HELP')"
+    :confirm-button-label="relationshipLabel('DISCARD')"
+    :cancel-button-label="relationshipLabel('KEEP_EDITING')"
+    @confirm="confirmDiscard"
+    @close="discardOpen = false"
+  />
   <transition
     enter-active-class="transition duration-200 ease-out"
     enter-from-class="ltr:translate-x-full rtl:-translate-x-full opacity-0"
@@ -1174,7 +1265,10 @@ useFixedPanelPresence(computed(() => props.show));
   >
     <div
       v-if="show"
-      class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[34rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
+      data-crm-card-drawer
+      role="dialog"
+      :aria-label="panelTitle"
+      class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
     >
       <div
         class="flex items-start justify-between gap-4 border-b border-n-weak px-6 py-5"
@@ -1187,7 +1281,13 @@ useFixedPanelPresence(computed(() => props.show));
             {{ panelSubtitle }}
           </p>
         </div>
-        <Button icon="i-lucide-x" slate ghost sm @click="$emit('close')" />
+        <Button
+          icon="i-lucide-x"
+          slate
+          ghost
+          sm
+          @click="guardRelationship(() => $emit('close'))"
+        />
       </div>
 
       <div class="flex-1 overflow-y-auto px-6 py-5">
@@ -1263,13 +1363,14 @@ useFixedPanelPresence(computed(() => props.show));
               v-for="tab in detailTabs"
               :key="tab.id"
               type="button"
-              class="h-9 min-w-24 shrink-0 truncate rounded-md px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12"
+              class="h-10 min-w-max flex-none shrink-0 whitespace-nowrap min-[480px]:flex-1 rounded-md px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12"
               :class="
                 activeTab === tab.id
-                  ? 'bg-n-surface-2 text-n-slate-12 shadow-sm'
+                  ? 'bg-n-brand/10 text-n-blue-11 shadow-sm ring-1 ring-inset ring-n-brand/30'
                   : ''
               "
-              @click="activeTab = tab.id"
+              :aria-pressed="activeTab === tab.id"
+              @click="guardRelationship(() => (activeTab = tab.id))"
             >
               {{ tab.label }}
             </button>
@@ -1522,65 +1623,79 @@ useFixedPanelPresence(computed(() => props.show));
           </label>
         </div>
 
-        <section v-else-if="activeTab === 'contact'" class="grid gap-4">
-          <div
-            v-if="card?.contact"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4 md:grid-cols-2"
-          >
-            <Input
-              v-model="contactForm.name"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_NAME')"
-              class="md:col-span-2"
-            />
-            <Input
-              v-model="contactForm.email"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_EMAIL')"
-            />
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.CONTACT_PHONE') }}
-              </span>
-              <!-- Country selector + libphonenumber => always emits E.164 (+digits),
-                   which the contact model requires for messaging. -->
-              <PhoneNumberInput v-model="contactForm.phoneNumber" />
-            </label>
-            <Input
-              v-model="contactForm.company"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_COMPANY')"
-            />
-            <Input
-              v-model="contactForm.jobTitle"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_JOB_TITLE')"
-            />
-            <Input
-              v-model="contactForm.address"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_ADDRESS')"
-              class="md:col-span-2"
-            />
-            <Input
-              v-model="contactForm.city"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_CITY')"
-            />
-            <Input
-              v-model="contactForm.country"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_COUNTRY')"
-            />
-            <p class="mb-0 text-xs leading-5 text-n-slate-11 md:col-span-2">
-              {{ t('CRM_KANBAN.DRAWER.CONTACT_EDIT_HINT') }}
-            </p>
-          </div>
-          <div
-            v-else
-            class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
-          >
-            <p class="mb-1 text-sm font-medium text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.NO_CONTACT_TITLE') }}
-            </p>
-            <p class="mb-0 text-xs leading-5 text-n-slate-11">
-              {{ t('CRM_KANBAN.DRAWER.NO_CONTACT_HELP') }}
-            </p>
-          </div>
-        </section>
+        <CrmCardRelationshipPanel
+          v-else-if="activeTab === 'contact' && card"
+          ref="relationshipPanel"
+          :key="`${route.params.accountId}:${card.id}`"
+          :card="card"
+          :can-manage="canManageCards"
+          :editing="isEditingContact"
+          @edit="startContactEdit"
+          @guard="guardRelationship"
+          @linked="$emit('refreshCard')"
+        >
+          <template #editor>
+            <form
+              :id="`crm-contact-form-${card.id}`"
+              class="grid gap-4"
+              data-contact-editor
+              @submit.prevent="saveContact"
+            >
+              <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                {{ relationshipLabel('EDIT_HELP') }}
+              </p>
+              <p
+                v-if="contactError"
+                role="alert"
+                class="mb-0 rounded-lg bg-n-ruby-3 p-3 text-sm text-n-ruby-11"
+              >
+                {{ contactError }}
+              </p>
+              <div class="grid grid-cols-1 gap-4 min-[440px]:grid-cols-2">
+                <Input
+                  v-model="contactForm.name"
+                  :label="relationshipLabel('NAME')"
+                  required
+                  :disabled="isSavingContact"
+                  class="min-[440px]:col-span-2"
+                />
+                <Input
+                  v-model="contactForm.email"
+                  type="email"
+                  :label="relationshipLabel('EMAIL')"
+                  :disabled="isSavingContact"
+                />
+                <label class="grid gap-2 text-sm text-n-slate-12"
+                  ><span>{{ relationshipLabel('PHONE') }}</span
+                  ><PhoneNumberInput
+                    v-model="contactForm.phoneNumber"
+                    :disabled="isSavingContact"
+                /></label>
+                <Input
+                  v-model="contactForm.jobTitle"
+                  :label="relationshipLabel('ROLE')"
+                  :disabled="isSavingContact"
+                />
+                <Input
+                  v-model="contactForm.city"
+                  :label="relationshipLabel('CITY')"
+                  :disabled="isSavingContact"
+                />
+                <Input
+                  v-model="contactForm.address"
+                  :label="relationshipLabel('ADDRESS')"
+                  :disabled="isSavingContact"
+                  class="min-[440px]:col-span-2"
+                />
+                <Input
+                  v-model="contactForm.country"
+                  :label="relationshipLabel('COUNTRY')"
+                  :disabled="isSavingContact"
+                />
+              </div>
+            </form>
+          </template>
+        </CrmCardRelationshipPanel>
 
         <section v-else-if="activeTab === 'conversations'" class="grid gap-3">
           <CrmCardSummaryPanel
@@ -2011,9 +2126,12 @@ useFixedPanelPresence(computed(() => props.show));
       </div>
 
       <div
-        class="flex items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
       >
-        <div v-if="isEditing" class="flex items-center gap-2">
+        <div
+          v-if="isEditing && !isEditingContact"
+          class="flex items-center gap-2"
+        >
           <Button
             :label="t('CRM_KANBAN.DRAWER.ARCHIVE')"
             icon="i-lucide-archive"
@@ -2034,12 +2152,27 @@ useFixedPanelPresence(computed(() => props.show));
         <span v-else />
         <div class="flex items-center gap-2">
           <Button
-            :label="t('CRM_KANBAN.DRAWER.CANCEL')"
+            :label="footerCancelLabel"
             slate
             faded
-            @click="$emit('close')"
+            :disabled="isSavingContact"
+            @click="
+              guardRelationship(
+                isEditingContact ? discardRelationship : () => $emit('close')
+              )
+            "
           />
           <Button
+            v-if="isEditingContact"
+            type="submit"
+            :form="`crm-contact-form-${card.id}`"
+            icon="i-lucide-check"
+            :label="relationshipLabel('SAVE_CONTACT')"
+            :is-loading="isSavingContact"
+            :disabled="isSavingContact || !contactForm.name.trim()"
+          />
+          <Button
+            v-else-if="!isEditing || activeTab === 'summary'"
             :label="
               isEditing
                 ? t('CRM_KANBAN.DRAWER.SAVE')

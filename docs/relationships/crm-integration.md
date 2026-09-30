@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou a parte 1 e autorizou a parte 2 em 30/09/2026. A parte 2 foi executada localmente; aguardar um novo de acordo antes da parte 3. Não houve autorização para merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1 e 2 e autorizou o primeiro trecho visual, exigindo screenshots reais e largura igual a Editar funil. Parte 3 implementada e testada localmente; aguardar aprovação visual antes da parte 4. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -14,13 +14,13 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
-| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Não iniciada. |
-| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1 e 2: proteção do vínculo e API transacional para contato novo no mesmo card. UI de vínculo/cadastro ainda pendente. |
+| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Parte 3: contato/empresa canônicos, edição de pessoa e largura de 40rem. Atributos/mídias e editor empresarial inline pendentes. |
+| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card. Aceite visual pendente. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Nova experiência não iniciada. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
-| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Integração não iniciada. |
-| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Integração não iniciada. |
+| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
+| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Integração não iniciada. |
 
 ## Parte 1 — Contrato do vínculo existente
@@ -75,14 +75,24 @@ O broadcast do card é agendado após a confirmação da transação. Os callbac
 
 A concorrência comprovada aqui é de requisições deste endpoint sobre o mesmo card. A unicidade global de telefone perante outros cards/escritores, os upserts externos e o protocolo do `ConversationLinker` continuam na revisão transversal futura. A parte 2 não conclui M02 nem M05 completos.
 
+## Parte 3 — Primeiro trecho visual
+
+A aba mantém sua identificação interna e passa a mostrar Relacionamento. `CrmCardRelationshipPanel` e `CrmRelationshipLinkForm` usam as APIs reais. Contato e empresa são consultados por ID; dados textuais de empresa não viram associação por inferência. O editor de pessoa salva separadamente da negociação e tem ação fixa no rodapé. O rascunho comercial não é perdido ao atualizar o contato.
+
+A largura usa os mesmos `40rem` de Editar funil, limitada à tela. Foram medidos 640px no desktop/notebook e 390px no celular. Capturas reais, mapa de validação e limites estão na [auditoria da parte 3](../audit/2026-09-30-792-crm-relationships-part-3.md) e em [screenshots](screenshots/792-part3/README.md).
+
+A abertura das fichas é em nova aba nesta parte. O acesso usa rotas e permissões existentes; não há cópia das fichas ou customização de branding. Criação de oportunidade completa, atributos personalizados, mídias e edição empresarial inline ainda não foram entregues neste painel.
+
+A atenção aos efeitos nativos permanece: `Enterprise::Concerns::Contact` pode associar empresa após commit quando o primeiro e-mail é cadastrado. A seleção empresarial explícita deverá ser conciliada com esse comportamento antes de concluir M04; este incremento não desliga callbacks globais.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Primeiro trecho visual de M01: substituir a aba Contato por Relacionamento e apresentar o contato compartilhado, a empresa realmente vinculada e os estados sem vínculo, na composição do HTML. Não iniciar essa parte antes do novo de acordo. Edição completa, formulário composto, mídia e demais ações continuam sujeitos aos aceites próprios.
+Após aprovação visual, encaixar atributos personalizados e mídias no painel, reutilizando consultas, componentes e autorização existentes. A criação completa de Nova oportunidade permanece em etapa própria. Não iniciar a parte 4 nem fazer merge/deploy por consequência desta entrega.
 
 ## Validação e publicação
 
 Evidência da parte 1: [auditoria e limites](../audit/2026-09-30-792-crm-relationships-part-1.md). Evidência da parte 2: [testes, concorrência e limites](../audit/2026-09-30-792-crm-relationships-part-2.md).
 
-Nenhuma alteração de frontend, migração, flag, infraestrutura, configuração de produção ou dependência foi feita nesta parte. Os testes do protótipo não contam como teste desta implementação. Comparação visual, revisão independente do conjunto, concorrência entre fluxos e validação de produção permanecem exigidos antes da liberação final.
+A parte 3 modifica frontend e seus testes. Não houve migração, nova dependência de produto, flag ou alteração de produção. Os testes do protótipo não contam como teste desta implementação. Comparação visual, revisão independente do conjunto, concorrência entre fluxos e validação de produção permanecem exigidos antes da liberação final.
 
 O merge de código na main pode disparar os dois workflows blue-green; portanto não fazer merge parcial para testar. O checkpoint fica em branch/PR de rascunho. Uma futura reversão de código não apaga cadastros; este incremento não exige exclusão de dados ou reversão de schema. A versão efetiva publicada na AWS e as flags precisam de conferência própria antes da integração visual/publicação: SHA de GitHub não é prova de deploy.

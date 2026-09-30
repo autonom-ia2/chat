@@ -1,0 +1,64 @@
+{
+  "checks": [
+    {
+      "name": "01-relacionamento-desktop",
+      "width": 640
+    },
+    {
+      "name": "02-editar-contato-desktop",
+      "width": 640
+    },
+    {
+      "name": "pipeline-width",
+      "width": 640
+    },
+    {
+      "name": "04-sem-relacionamento-desktop",
+      "width": 640
+    },
+    {
+      "name": "05-criar-contato-desktop",
+      "width": 640
+    },
+    {
+      "name": "06-vinculo-legado-desktop",
+      "width": 640
+    },
+    {
+      "name": "08-relacionamento-notebook",
+      "width": 640
+    },
+    {
+      "name": "07-relacionamento-mobile",
+      "width": 390
+    },
+    {
+      "name": "09-editar-contato-mobile",
+      "width": 390
+    }
+  ],
+  "errors": [],
+  "failures": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "browser": "154.0.8037.58"
+}
