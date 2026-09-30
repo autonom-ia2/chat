@@ -84,10 +84,11 @@ pública em `2026-09-30T00:38:10Z` retornou HTTP 200 em
 [Autonom.ia](https://agents.autonomia.site/). O Project foi atualizado para
 Mergeada / Produção com os links das execuções.
 
-Esta é prova de versão, serviços, tráfego e rollback em produção. A validação
-completa das telas e das gravações aconteceu no ambiente sintético local; não
-houve jornada autenticada com dados de clientes em produção. A comparação de
-pixels com os mockups originais continua sem certificação.
+Esta é prova de versão, serviços, alvo HTTPS e rollback em produção, com um
+smoke HTTP público por stack. A validação completa das telas e das gravações
+aconteceu no ambiente sintético local. Não houve jornada autenticada com dados
+de clientes em produção. A comparação de pixels com os mockups originais
+continua sem certificação.
 
 ## Comandos e preservação
 
