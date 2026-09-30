@@ -441,19 +441,19 @@
 - titulo: Montar e-mail com editor, IA e templates
 - rota: campaigns_email_builder
 - intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Abrir builder
+- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Editor
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
-- passos: Abra o builder; escolha IA, galeria de templates ou começar do zero; ajuste assunto no topo; edite blocos e propriedades; use placeholders disponíveis; envie teste e salve.
+- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
 - gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de disparar.
 
 ### gerenciar_destinatarios_agendar_e_enviar_campanha_de_e_mail
 - titulo: Gerenciar destinatários, agendar e enviar campanha de e-mail
 - rota: campaigns_email_index
-- intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Quando aparece Enviar agora?"
+- intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Onde fica o botão Disparar?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Gerenciar destinatários
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
-- passos: Abra Gerenciar destinatários; importe CSV/XLSX adicional se precisar; confira placeholders e validação de template; agende data/hora ou volte ao builder se não houver corpo; na lista, use Enviar agora, Pausar, Retomar ou Cancelar conforme status.
-- gotchas: Enviar agora só aparece em rascunho com destinatários e corpo; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
+- passos: Abra Destinatários; importe CSV/XLSX adicional se precisar; confira campos e validação; na lista, clique em Disparar; a revisão mostra o que falta, remetente, público e exclusões; escolha enviar agora ou data/hora e confirme na etapa final. Pausar, Retomar e Cancelar ficam nas ações da campanha.
+- gotchas: Disparar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
 
 ### ver_gestao_e_relatorio_de_campanhas_de_e_mail
 - titulo: Ver gestão e relatório de campanhas de e-mail
@@ -1666,9 +1666,9 @@
 - titulo: Escolher um modelo pronto de e-mail
 - rota: campaigns_email_templates
 - intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
-- onde_fica: Campanhas > Campanhas de e-mail > abrir a campanha > galeria de modelos
-- pre_requisitos: campanhas de e-mail liberadas na conta, uma campanha já criada e permissão de gerenciar campanhas
-- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra a campanha no editor; 3. Vá para a galeria de modelos; 4. Filtre pela categoria; 5. Pré-visualize e use o modelo.
+- onde_fica: Campanhas > Campanhas de e-mail > Biblioteca de modelos
+- pre_requisitos: campanhas de e-mail liberadas na conta e permissão de gerenciar campanhas para aplicar modelos
+- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
 - gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
 - nav_target: `campaigns_email_templates`
 

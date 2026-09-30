@@ -27,12 +27,18 @@ vi.mock('dashboard/composables/store', () => ({
               last_error: 'private provider message',
               suppressed_count: 6,
               preflight: {
-                counts: { invalid: 1, review: 2, protected: 3 },
+                counts: { invalid: 1, review: 2, protected: 3, total: 6 },
               },
             },
           ],
         })[name]
     ),
+}));
+vi.mock('dashboard/components-next/dialog/Dialog.vue', () => ({
+  default: {
+    template: '<div><slot /></div>',
+    methods: { open() {}, close() {} },
+  },
 }));
 vi.mock('dashboard/components-next/Campaigns/CampaignLayout.vue', () => ({
   default: { template: '<div><slot /></div>' },
@@ -58,7 +64,14 @@ it('sends the list status filter to the store and keeps unsafe legacy resume hid
   dispatch.mockResolvedValue(undefined);
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+      {
+        path: '/templates',
+        name: 'campaigns_email_templates',
+        component: { template: '<div />' },
+      },
+    ],
   });
   await router.push('/?email_status=paused');
   const i18n = createI18n({
@@ -79,6 +92,20 @@ it('sends the list status filter to the store and keeps unsafe legacy resume hid
     wrapper.findAll('button').some(button => button.text() === 'Resume sending')
   ).toBe(false);
   expect(wrapper.text()).not.toContain('private provider message');
+  expect(wrapper.text()).not.toContain(
+    i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.invalid')
+  );
+  await wrapper
+    .findAll('button')
+    .find(button =>
+      button
+        .text()
+        .includes(
+          i18n.global.t('CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.SEE_DETAILS')
+        )
+    )
+    .trigger('click');
+  await flushPromises();
   expect(wrapper.text()).toContain(
     i18n.global.t('EMAIL_CAMPAIGN_PROTECTION.STATUS.invalid')
   );

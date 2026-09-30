@@ -279,6 +279,10 @@ export function loadLocaleIndex(locale) {
 
 export function assertVisibleInventory() {
   const required = new Set(REQUIRED_LEGACY_KEYS);
+  const sourceMessages = readVisibleLocale('en');
+  const workspaceNamespace = ['CAMPAIGN', 'EMAIL_CAMPAIGN', 'WORKSPACE'].join(
+    '.'
+  );
   assert.equal(
     required.size,
     REQUIRED_LEGACY_KEYS.length,
@@ -290,6 +294,18 @@ export function assertVisibleInventory() {
       /['"]((?:CAMPAIGN\.EMAIL_CAMPAIGN|CAMPAIGN_MANAGEMENT|CRM_KANBAN\.TRACKED_LINKS)\.[A-Z_.]+)['"]/g
     );
     [...references].forEach(([, key]) => {
+      // New product copy follows the source-locale/Crowdin workflow. The
+      // previously translated protection contract remains required everywhere.
+      if (
+        key === workspaceNamespace ||
+        key.startsWith(`${workspaceNamespace}.`)
+      ) {
+        assert(
+          messageAt(sourceMessages, key),
+          `${file}: missing source key ${key}`
+        );
+        return;
+      }
       assert(required.has(key), `${file}: unregistered visible key ${key}`);
     });
     if (file === 'helper/emailCampaignImport.js') {
@@ -501,6 +517,11 @@ export function checkEmailProtectionLocales() {
   assertVisibleInventory();
   const canonical = readLocale('en');
   const visibleCanonical = readVisibleLocale('en');
+  const workspaceMessages = visibleCanonical.CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE;
+  const workspaceKeys = Object.keys(
+    flattenMessages(workspaceMessages, 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE')
+  );
+  validateRuntime('en', loadLocaleIndex('en'), workspaceKeys);
   const keysPerLocale = Object.keys(flattenMessages(canonical)).length;
   metadata.folders.forEach(locale => {
     const messages = readLocale(locale);

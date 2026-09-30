@@ -142,7 +142,7 @@ const campaignsRoutes = {
           component: () => import('./pages/EmailBuilderPage.vue'),
         },
         {
-          path: 'email_campaigns/:campaignId/templates',
+          path: 'email_campaigns/:campaignId?/templates',
           name: 'campaigns_email_templates',
           meta,
           beforeEnter: requireEmailCampaigns,

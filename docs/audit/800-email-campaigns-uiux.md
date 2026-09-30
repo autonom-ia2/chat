@@ -2,7 +2,7 @@
 
 Data: 30/09/2026. Issue: https://github.com/autonom-ia2/chat/issues/800.
 Base inspecionada: `7e62bc97b752418fdae5bce39a2ae366aea8e5d0`.
-Escopo autorizado nesta etapa: revisão e mockups para aprovação, sem implementar no produto.
+Este registro começou na revisão e nos mockups. Após aprovação do Rodrigo, o escopo avançou para a implementação descrita abaixo. Merge, deploy e restauração do catálogo em produção permanecem pendentes.
 
 ## Evidências e limites
 
@@ -70,3 +70,39 @@ Implementação, testes do produto, revisão, capturas reais do produto constru�
 - Capturas JPEG reais, usando `Page.captureScreenshot` pela capacidade CDP do CUA para respeitar as dimensões de teste. A captura comum do painel cortava o viewport temporário; o método CDP resolveu a captura sem alterar o conteúdo. O viewport foi restaurado.
 - A cópia inicial dos HTMLs duplicava arquivos já existentes e trazia os espaços finais desses arquivos ao diff. A preparação foi ajustada para links relativos aos originais, mantendo o pacote portátil completo. `git diff --cached --check` refeito após o ajuste.
 - O hook local de pre-commit não iniciou nesta worktree porque `.husky/_/husky.sh` não existe. Após as validações manuais acima e a leitura do diff, o commit de documentação usa `git -c core.hooksPath=/dev/null commit`, sem alterar a configuração persistente do repositório.
+
+## Implementação após aprovação — 30/09/2026
+
+Autorização: Rodrigo aprovou implementar o desenho, recuperar os modelos prontos, preservar a UI/UX e incluir um agente independente de QA antes de subir. A exigência anterior de capturas reais antes de merge/deploy continua atendida por esta entrega. O checkout principal, antigo e com alterações locais, foi preservado; toda implementação usa a worktree desta issue.
+
+### Entrega
+
+- Lista compacta, resumo contínuo com identidade visual, busca e filtros; Disparar nos rascunhos abre a revisão. Diagnósticos extensos ficam acessíveis sob demanda. Ações destrutivas exigem confirmação.
+- Editor existente reorganizado em assunto/prévia, passos, blocos, canvas e propriedades. Preservadas geração assíncrona, salvamento, teste e edição de campanhas antigas com HTML. O assunto ainda não desfocado é persistido ao salvar/revisar/testar.
+- Revisão com requisitos atuais do servidor, remetente, destinatários aptos, exclusões, envio/agendamento e confirmação final. Falha ao atualizar a prontidão impede a confirmação. Não altera a política de reputação/SES nem a supressão individual.
+- Biblioteca com modelos globais e da conta, categorias, busca, prévias reais e controles completos. Entrar sem campanha permite preparar uma nova campanha com o modelo escolhido. Trocar Desktop/Mobile na prévia não aplica o modelo nem submete o formulário.
+- Catálogo explícito dos 14 designs licenciados originais. Os HTMLs recompilados usam o mesmo conteúdo sanitizado do editor, com rodapé de descadastro protegido. A tarefa de produção lê ativos pré-compilados: não depende de `node_modules`, removido da imagem final Docker. O seed prepara tudo antes da transação e atualiza somente modelos globais pelos nomes originais, sem duplicar nem alterar modelos das contas.
+- Nova rota de biblioteca sem campanha mantém guards/permissões existentes. Pesquisa em OSS e Enterprise não encontrou override correspondente. Explicações humanas do Guia atualizadas; conteúdo gerado reconstruído pela ferramenta.
+
+### Validação e leitura dos resultados
+
+Ambiente Rails exclusivamente local: PostgreSQL em 127.0.0.1:55779, banco novo `email800_workspace`; Redis em 127.0.0.1:56779/8. Não acessou banco, secrets, infraestrutura, dados de clientes, IA ou envios de produção. O ambiente de navegador usa conta fictícia 800 e API em memória; endpoints de envio/agendamento/teste retornam 403.
+
+- `bundle exec rspec spec/services/email_campaigns/presentation spec/services/email_campaigns/template_catalog_spec.rb spec/requests/api/v1/accounts/email_campaigns/templates_workspace_spec.rb spec/models/email_template_spec.rb spec/services/email_campaigns/reputation/provider_gate_spec.rb spec/services/email_campaigns/preflight_decision_suppression_spec.rb spec/services/email_campaigns/resume_integration_spec.rb`: **159 exemplos, 0 falhas**. Inclui catálogo idempotente, isolamento de contas, prontidão e supressão com SES saudável. O primeiro rerun apontou dois caminhos de specs incorretos; caminhos corrigidos antes da execução final, sem falha de produto.
+- `pnpm exec vitest run app/javascript/dashboard/components-next/Campaigns/EmailProtection/specs app/javascript/dashboard/routes/dashboard/campaigns/pages/specs/emailTemplateBody.spec.js --reporter=dot --silent`: **438 testes, 16 arquivos, 0 falhas**. Abrange importação/recuperação, proteção, destinatários, ações, atualização assíncrona, revisão e prévias.
+- ESLint dos arquivos de produto e specs alterados: 0 erros. RuboCop dos sete arquivos Ruby de produto/specs: 0 infrações. `git diff --check`: limpo. Formatadores foram seguidos de leitura do diff e novos testes; nenhum teste foi encadeado com commit.
+- O exportador Ruby do harness também passou no RuboCop e na verificação de sintaxe. O setup `.husky/_/husky.sh` continua ausente nesta worktree; o commit usa `core.hooksPath=/dev/null` somente nessa invocação, após checks manuais e leitura dos resultados, sem alterar Git config persistente.
+- `bundle exec vite build --mode test`: concluído. Avisos existentes de Browserslist, tamanho de chunks e enums Rails não impediram os checks; nenhuma dependência atualizada.
+- Checker de i18n: contrato anterior preservado em 57 locales, novas chaves compiladas no catálogo canônico inglês. `pnpm guia:build` e `pnpm guia:check`: 169 fluxos, 170 rotas, 0 sem explicação; quatro explicações antigas sem rota permanecem como avisos.
+- QA independente `/root/qa_800`: 13 exemplos Ruby e 5 testes Vue sob sua responsabilidade passaram; revisão visual em 390/768/1440 px sem overflow ou comandos cortados; revisão de envio, agendamento, perfil de leitura, galeria e cancelamento. Após ajuste do tooltip, mais 68 testes direcionados passaram.
+- A captura final revelou miniaturas pequenas que o navegador adiava: a lista passou a renderizar seus HTMLs já recebidos sem `loading=lazy`; a biblioteca mantém a busca de conteúdo por visibilidade. Também corrigidos foco da busca, tooltip sem motivo, botão Desktop/Mobile dentro do formulário e contraste/posição da ação de correção. Conferência visual refeita nos componentes reais.
+
+### Evidência visual e limites
+
+Capturas em `docs/campaigns/workspace-800/previews/`: lista, editor, biblioteca, revisão, pendência e telas responsivas. São telas dos componentes de produto executados localmente, com shell externo sintético; não são montagens nem capturas de produção. O harness e sua forma de execução estão em `tests/qa/email-workspace/README.md`.
+
+O catálogo pt_BR novo não foi alterado: o AGENTS.md enviado nesta tarefa limita produto ao inglês, enquanto o repositório permite a exceção para chaves próprias do fork. Foi solicitada autorização específica para en/pt_BR das campanhas; sem resposta, não presumir autorização. Esses textos novos precisam da tradução aprovada antes da liberação em português.
+
+Não há evidência de entrega real por SES nesta rodada. Os resultados locais e o parecer QA não garantem ausência absoluta de regressão. O CI do commit de documentação anterior não comprova o código implementado: a versão atual do PR deve ser verificada novamente.
+
+Plano de publicação/restauração e rollback: `docs/campaigns/email-workspace-release-800.md`. Não executado em produção nesta etapa.
