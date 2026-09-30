@@ -3,8 +3,8 @@ require 'rails_helper'
 RSpec.describe Crm::Ai::ResponsesClient do
   let(:client) { described_class.new(credential: { api_key: 'test-key' }) }
   let(:url) { 'https://api.openai.com/v1/responses' }
-  let(:payload) { { output_text: 'ok', model: 'gpt-6-sol', output: [] }.to_json }
-  let(:params) { { model: 'gpt-6-sol', instructions: 'instruction', input: 'input' } }
+  let(:payload) { { output_text: 'ok', model: 'gpt-6.1-sol', output: [] }.to_json }
+  let(:params) { { model: 'gpt-6.1-sol', instructions: 'instruction', input: 'input' } }
 
   before do
     allow(Resolv).to receive(:getaddresses).with('api.openai.com').and_return(['104.18.1.1'])
@@ -56,7 +56,7 @@ RSpec.describe Crm::Ai::ResponsesClient do
   end
 
   it 'recovers from a timeout without changing the request' do
-    request = stub_request(:post, url).with { |r| JSON.parse(r.body)['model'] == 'gpt-6-sol' }
+    request = stub_request(:post, url).with { |r| JSON.parse(r.body)['model'] == 'gpt-6.1-sol' }
                                       .to_raise(Net::ReadTimeout).then
                                       .to_return(body: payload, headers: { 'Content-Type' => 'application/json' })
     expect(client.create(**params)[:text]).to eq('ok')
