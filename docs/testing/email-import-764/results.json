@@ -1,0 +1,936 @@
+[
+  {
+    "id": "01_padrao_limpo",
+    "file": "01_padrao_limpo.xlsx",
+    "sha256": "e6ef3ed93a2252fba662000ebcc9a92fa337da0340be9bb8f9060e1f856d1dc8",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "02_cabecalhos_nao_padrao",
+    "file": "02_cabecalhos_nao_padrao.xlsx",
+    "sha256": "2cd1e8d8fdd7422a7a4c243e78e65329335ce187224bccf4cd0a099afe2ea5da",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "03_dados_sujos",
+    "file": "03_dados_sujos.xlsx",
+    "sha256": "e891b8984396c4743d65633283661389a3321170d2ab4b6c174710dd0ff57db0",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 1,
+      "invalid": 1,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2,
+        3,
+        4
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 0.99,
+      "schema_probability": 0.94
+    },
+    "pass": true
+  },
+  {
+    "id": "04_campos_fragmentados",
+    "file": "04_campos_fragmentados.xlsx",
+    "sha256": "93b2f7db7be71f6587c60c4f5fc80fdd05392fe35908cd6755f3689d9a404d3f",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "name_confidence": 0.83,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "05_duplicidade_normalizada",
+    "file": "05_duplicidade_normalizada.xlsx",
+    "sha256": "9172ae95b1be49f90425c2bf23c0a0ceac8b37b86d0dfa361a9184e8eda0599d",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 1,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 1,
+      "invalid": 0,
+      "duplicates": 1,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 1,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        0,
+        3,
+        4
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "06_csv_virgula",
+    "file": "06_csv_virgula.csv",
+    "sha256": "5f315b7c28b5669b84e182c4e4668d72b8b0f5a6636980d209e9047d1a88527b",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "07_csv_ponto_virgula",
+    "file": "07_csv_ponto_virgula.csv",
+    "sha256": "b8c22803c8dcdc42a208f7d5cd286beb82cb914471ef674adb7944ff098e20d7",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ";",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "08_csv_tab",
+    "file": "08_csv_tab.csv",
+    "sha256": "76fff81d338961e0717def9dbf25cea3fa8a01a67e6498fa1e4fbab78dab63eb",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": "\t",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "09_csv_pipe",
+    "file": "09_csv_pipe.csv",
+    "sha256": "163bcaaf464222b2dc1db451e183aa7b49dc6e200fae2c8b14d7503c7042c0e6",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": "|",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "10_csv_bom",
+    "file": "10_csv_bom.csv",
+    "sha256": "b9cc1de2961a0476c5576a8e6c2833232f13cf413cc3242b91288c3ce5ef4d1b",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "11_csv_utf16le",
+    "file": "11_csv_utf16le.csv",
+    "sha256": "1a851c8ab96299de3feab2b5e0199ce576dd196e8a0b4aced4ace7f64c25cd21",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "12_csv_utf16be",
+    "file": "12_csv_utf16be.csv",
+    "sha256": "7b5aadc548304afac0c9436b8aa062d7d7b7b81e51c9ba632e41b2e357adbd4c",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "13_csv_cp1252",
+    "file": "13_csv_cp1252.csv",
+    "sha256": "033615822467e1b361b4f76709b62754abdaab55dbbbd9fa4c4f32d0c61fe1fa",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "14_csv_campos_entre_aspas",
+    "file": "14_csv_campos_entre_aspas.csv",
+    "sha256": "93386518b292a44cbc86969311881595273eb5079e8496ddaa50697cf98e866a",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "15_xlsx_titulo",
+    "file": "15_xlsx_titulo.xlsx",
+    "sha256": "7b46f101cb31b0912563ad79f205d23deddf7a5e1e2f262c023b887117649718",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 4,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "16_xlsx_multiplas_abas",
+    "file": "16_xlsx_multiplas_abas.xlsx",
+    "sha256": "e6295b1bfaa9edd7710fd98db0b3d0d1bed22c4e3156c655a69c50df64d017e1",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 1,
+      "email_column": 1,
+      "custom_columns": [
+        2
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.96
+    },
+    "pass": true
+  },
+  {
+    "id": "17_xlsx_colunas_reordenadas",
+    "file": "17_xlsx_colunas_reordenadas.xlsx",
+    "sha256": "73d22b1be590d635d9641fffe548781b170ffb3b2d80098ce8d803724ef6ee93",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 3,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 3,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        0,
+        1
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "18_xlsx_linhas_vazias",
+    "file": "18_xlsx_linhas_vazias.xlsx",
+    "sha256": "5a91a1a1b6a15dfc63b088ca33d69be99fde3ed4053961f4e4bffa05f1cce8df",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "19_apenas_email",
+    "file": "19_apenas_email.xlsx",
+    "sha256": "2366c06d4616527d4c6f3753145b8bdfc4cff1e96d36de0f6e987a7f35d888f9",
+    "expected_error": null,
+    "expected_email_column": 0,
+    "expected_name_column": null,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "table_index": 0,
+      "email_column": 0,
+      "custom_columns": [],
+      "name_confidence": 0.99,
+      "email_confidence": 0.94,
+      "schema_probability": 0.94
+    },
+    "pass": true
+  },
+  {
+    "id": "20_nome_empresa_contato",
+    "file": "20_nome_empresa_contato.xlsx",
+    "sha256": "e0e65397dfe893957daf92f410fddaa9d5904bd3196e2f3dcd68662e12ef92ad",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 1,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 1,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        0
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "21_consentimento_antes_email",
+    "file": "21_consentimento_antes_email.csv",
+    "sha256": "6387aadc6daa1e37d16f73b7b5d18c39b370abff1aba670f5c72345d1ca3e5d0",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 1,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 1,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        0
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "22_email_principal_secundario",
+    "file": "22_email_principal_secundario.csv",
+    "sha256": "0a8108c746ffd14a310597025714c9cf18df49d50d09422083bbb8175741ac0c",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        1
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.72
+    },
+    "pass": true
+  },
+  {
+    "id": "23_duas_colunas_sem_prioridade",
+    "file": "23_duas_colunas_sem_prioridade.csv",
+    "sha256": "4e0135e9a494f18b5e090859705b4d6c0dbb0e8f9dcfe963b1c9b56cb1ce9ae4",
+    "expected_error": "schema_not_resolved",
+    "expected_email_column": null,
+    "expected_name_column": 0,
+    "observed_status": "failed",
+    "observed_error": "schema_not_resolved",
+    "observed_counts": {},
+    "schema": {},
+    "pass": true
+  },
+  {
+    "id": "24_sem_email",
+    "file": "24_sem_email.csv",
+    "sha256": "cd75fb14de1b22352cdd3f23304cddabaa63acf38b0d6fab55b88a6f52070a0a",
+    "expected_error": "missing_email_header",
+    "expected_email_column": null,
+    "expected_name_column": 0,
+    "observed_status": "failed",
+    "observed_error": "missing_email_header",
+    "observed_counts": {},
+    "schema": {},
+    "pass": true
+  },
+  {
+    "id": "25_todos_enderecos_invalidos",
+    "file": "25_todos_enderecos_invalidos.csv",
+    "sha256": "ec7c9cdcd0d373a63b5012f1dc4afc5ed0c67b972f38e4d6a5b27a2696f30e88",
+    "expected_error": "no_valid_emails",
+    "expected_email_column": null,
+    "expected_name_column": 0,
+    "observed_status": "failed",
+    "observed_error": "no_valid_emails",
+    "observed_counts": {},
+    "schema": {},
+    "pass": true
+  },
+  {
+    "id": "26_arquivo_vazio",
+    "file": "26_arquivo_vazio.csv",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "expected_error": "empty_file",
+    "expected_email_column": null,
+    "expected_name_column": 0,
+    "observed_status": "failed",
+    "observed_error": "empty_file",
+    "observed_counts": {},
+    "schema": {},
+    "pass": true
+  },
+  {
+    "id": "27_endereco_duplicado_normalizado",
+    "file": "27_endereco_duplicado_normalizado.csv",
+    "sha256": "bcaf351197d7fd9dcde86a5cc2361cd2e1058f6fa08832edf151c85f8ec4edec",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 1,
+      "invalid": 0,
+      "duplicates": 1,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "28_supressoes",
+    "file": "28_supressoes.csv",
+    "sha256": "c7ca880c4fc8d6db39d049bf392e04cff68d39d47cccbfff00556d1774e7a244",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 1,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 3,
+      "total": 4
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [],
+      "name_confidence": 0.83,
+      "email_confidence": 0.98,
+      "schema_probability": 0.93
+    },
+    "pass": true
+  },
+  {
+    "id": "29_campos_customizados",
+    "file": "29_campos_customizados.xlsx",
+    "sha256": "fb640abde3e4ad04d1063beb52512761fc5fbd4bc50e6055bc4e7944c3dd1311",
+    "expected_error": null,
+    "expected_email_column": 1,
+    "expected_name_column": 0,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "xlsx",
+      "method": "jev",
+      "header_row": 1,
+      "name_column": 0,
+      "table_index": 0,
+      "email_column": 1,
+      "custom_columns": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  },
+  {
+    "id": "30_cabecalho_instrucao_maliciosa",
+    "file": "30_cabecalho_instrucao_maliciosa.csv",
+    "sha256": "6057f8267d41edc6ba71c19f53d8e775559fdd6bf0555b3b0ac54f309f0e4a74",
+    "expected_error": null,
+    "expected_email_column": 2,
+    "expected_name_column": 1,
+    "observed_status": "completed",
+    "observed_error": null,
+    "observed_counts": {
+      "imported": 2,
+      "invalid": 0,
+      "duplicates": 0,
+      "suppressed": 0,
+      "total": 2
+    },
+    "schema": {
+      "model": "jev-1.13.0",
+      "format": "csv",
+      "method": "jev",
+      "delimiter": ",",
+      "header_row": 1,
+      "name_column": 1,
+      "table_index": 0,
+      "email_column": 2,
+      "custom_columns": [
+        0
+      ],
+      "name_confidence": 1.0,
+      "email_confidence": 1.0,
+      "schema_probability": 0.95
+    },
+    "pass": true
+  }
+]

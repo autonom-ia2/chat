@@ -208,7 +208,10 @@ onMounted(() => {
       </div>
 
       <div class="flex flex-col gap-5 p-6 overflow-y-auto">
-        <RecipientImportStatus :campaign="liveCampaign" />
+        <RecipientImportStatus
+          :campaign="liveCampaign"
+          :can-recover="canManage"
+        />
         <EmailCampaignHealth
           :campaign="healthCampaign || liveCampaign"
           @updated="onHealthUpdated"

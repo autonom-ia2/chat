@@ -56,13 +56,15 @@ RSpec.describe CampaignImports::SchemaResolver do
     expect(result.metadata).to include('table_index' => 1)
   end
 
-  it 'uses Jev only when deterministic aliases cannot resolve the email column' do
+  it 'uses Jev with representative examples for unknown columns' do
     parsed = CampaignImports::Parser.new(
       StringIO.new("SEGURADO;MAIL PRINCIPAL;BROKER\nAna;ana@example.org;ABC\n"), filename: 'base.csv'
     ).perform
     ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
     allow(ai_resolver).to receive(:resolve) do |candidate|
       expect(candidate[:headers]).to eq(['SEGURADO', 'MAIL PRINCIPAL', 'BROKER'])
+      expect(candidate.fetch(:profiles)[0][:examples]).to eq(['Ana'])
+      expect(candidate.fetch(:profiles)[1][:examples]).to eq(['[email address]'])
       {
         candidate_id: candidate.fetch(:id),
         email_index: 1,
@@ -96,28 +98,74 @@ RSpec.describe CampaignImports::SchemaResolver do
     expect(result.metadata['header_row']).to eq(1)
   end
 
-  it 'does not call Jev when deterministic headers already resolve safely' do
+  it 'lets configured Jev interpret even recognized columns before applying local aliases' do
     parsed = CampaignImports::Parser.new(
       StringIO.new("NOME;E-MAIL;CORRETORA\nAna;ana@example.org;ABC\n"), filename: 'base.csv'
     ).perform
     ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
-    expect(ai_resolver).not_to receive(:resolve)
+    expect(ai_resolver).to receive(:resolve).and_return(email_index: 1, name_index: 0, metadata: {})
 
     result = described_class.new(parsed, ai_resolver: ai_resolver).perform
 
-    expect(result.metadata['method']).to eq('deterministic')
-    expect(result.mapper.mapping).to eq(name: 0, email: 1)
+    expect(result.metadata['method']).to eq('jev')
+    expect(result.mapper.mapping).to eq(email: 1, name: 0)
   end
 
-  it 'does not let Jev guess between duplicated semantic email columns' do
+  it 'reports an entirely invalid address list without spending a model call' do
+    parsed = CampaignImports::Parser.new(StringIO.new("Nome,Email\nAna,sem-email\nBia,tambem-invalido\n"), filename: 'base.csv').perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).not_to receive(:resolve)
+
+    expect { described_class.new(parsed, ai_resolver: ai_resolver).perform }.to raise_error(described_class::Error, 'no_valid_emails')
+  end
+
+  it 'masks malformed addresses while retaining examples for meaningful column identification' do
+    parsed = CampaignImports::Parser.new(
+      StringIO.new("Nome,Email,Empresa\nAna,ana@example.org,Atlas\nBia,bia@@example.org,Orion\n"), filename: 'base.csv'
+    ).perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve) do |candidate|
+      expect(candidate.fetch(:profiles)[1][:examples]).to eq(['[email address]', '[malformed email address]'])
+      expect(candidate.fetch(:profiles)[2][:examples]).to eq(%w[Atlas Orion])
+      { email_index: 1, name_index: 0, metadata: {} }
+    end
+
+    described_class.new(parsed, ai_resolver: ai_resolver).perform
+  end
+
+  it 'lets Jev distinguish a primary recipient address despite duplicate aliases' do
     parsed = CampaignImports::Parser.new(
       StringIO.new("NOME;EMAIL;E-MAIL PRINCIPAL\nAna;ana@example.org;ana.other@example.org\n"), filename: 'base.csv'
     ).perform
     ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
-    expect(ai_resolver).not_to receive(:resolve)
+    expect(ai_resolver).to receive(:resolve).and_return(email_index: 2, name_index: 0, metadata: {})
 
-    expect { described_class.new(parsed, ai_resolver: ai_resolver).perform }
-      .to raise_error(described_class::Error, 'duplicated_email_header')
+    result = described_class.new(parsed, ai_resolver: ai_resolver).perform
+    expect(result.mapper.mapping).to eq(email: 2, name: 0)
+    expect(result.mapper.extra_columns).to eq('email' => 1)
+  end
+
+  it 'resolves company versus contact names instead of rejecting before Jev' do
+    parsed = CampaignImports::Parser.new(
+      StringIO.new("Cliente;Contato;E-mail;Lista\nEmpresa Alfa;Ana Pessoa;ana@example.org;Base\n"), filename: 'base.csv'
+    ).perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve).with(hash_including(headers: %w[Cliente Contato E-mail Lista]))
+                                            .and_return(email_index: 2, name_index: 1, metadata: {})
+
+    result = described_class.new(parsed, ai_resolver: ai_resolver).perform
+    expect(result.mapper.mapping).to eq(email: 2, name: 1)
+    expect(result.mapper.extra_columns).to eq('cliente' => 0, 'lista' => 3)
+  end
+
+  it 'preserves a safe failure when the model cannot resolve genuine ambiguity' do
+    parsed = CampaignImports::Parser.new(
+      StringIO.new("Contato;Endereço A;Endereço B\nAna;ana@example.org;bia@example.org\n"), filename: 'base.csv'
+    ).perform
+    ai_resolver = instance_double(TypesafeAi::ImportSchemaResolver)
+    expect(ai_resolver).to receive(:resolve).and_raise(TypesafeAi::ImportSchemaResolver::Error, 'schema_not_resolved')
+
+    expect { described_class.new(parsed, ai_resolver: ai_resolver).perform }.to raise_error(described_class::Error, 'schema_not_resolved')
   end
 
   it 'fails with a specific missing-email code when neither deterministic mapping nor Jev is available' do

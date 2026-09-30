@@ -4,6 +4,8 @@ class CampaignImports::SchemaResolver
 
   HEADER_SCAN_LIMIT = 100
   PROFILE_SAMPLE_SIZE = 50
+  EXAMPLE_COUNT = 3
+  EXAMPLE_LENGTH = 80
 
   def initialize(parsed, ai_resolver: nil)
     @parsed = parsed
@@ -13,15 +15,13 @@ class CampaignImports::SchemaResolver
   def perform
     candidates = build_candidates
     raise Error, 'empty_file' if candidates.empty?
+    return resolve_with_ai(candidates) if ai_available?
 
     known = known_candidate(candidates)
     return build_result(known) if known
 
-    ambiguity = blocking_ambiguity(candidates)
-    raise Error, ambiguity if ambiguity
-    return resolve_with_ai(candidates) if ai_available?
-
-    raise Error, candidates.first.fetch(:mapper).errors.first.presence || 'schema_not_resolved'
+    candidate = best_ai_candidate(candidates) || candidates.first
+    raise Error, candidate.fetch(:mapper).errors.first.presence || 'schema_not_resolved'
   end
 
   private
@@ -53,13 +53,9 @@ class CampaignImports::SchemaResolver
     headers = normalize_headers(header_row.values)
     data_rows = table.rows.drop(row_index + 1).reject { |row| row.values.all? { |value| blank_valid_value?(value.to_s) } }
     {
-      id: "table_#{table_index}_candidate_#{candidate_index}",
-      table_index: table_index,
-      table_name: table.name,
-      delimiter: table.delimiter,
-      header_row_number: header_row.row_number,
-      headers: headers,
-      rows: data_rows,
+      id: "table_#{table_index}_candidate_#{candidate_index}", table_index: table_index,
+      table_name: table.name, delimiter: table.delimiter, header_row_number: header_row.row_number,
+      headers: headers, rows: data_rows,
       mapper: CampaignImports::HeaderMapper.new(headers, mode: :email).perform,
       profiles: column_profiles(headers.length, data_rows)
     }
@@ -95,9 +91,8 @@ class CampaignImports::SchemaResolver
   end
 
   def resolve_with_ai(candidates)
-    candidate = best_ai_candidate(candidates)
-    raise Error, 'schema_not_resolved' unless candidate
-
+    candidate = known_candidate(candidates) || best_ai_candidate(candidates)
+    validate_ai_input!(candidate)
     resolution = ai_resolver.resolve(candidate.except(:mapper, :rows))
     mapper = CampaignImports::HeaderMapper.new(candidate.fetch(:headers), mode: :email).perform(
       explicit_mapping: { email: resolution.fetch(:email_index), name: resolution[:name_index] }
@@ -109,18 +104,16 @@ class CampaignImports::SchemaResolver
     raise Error, e.message
   end
 
+  def validate_ai_input!(candidate)
+    raise Error, 'missing_email_header' unless candidate
+    raise Error, 'empty_file' if candidate.fetch(:rows).empty?
+    if !candidate_has_email_evidence?(candidate) && candidate.fetch(:rows).none? { |row| row.values.any? { |value| email_like?(value.to_s.strip) } }
+      raise Error, 'no_valid_emails'
+    end
+  end
+
   def ai_resolver
     @ai_resolver || TypesafeAi::ImportSchemaResolver.new
-  end
-
-  def blocking_ambiguity(candidates)
-    candidate = candidates.select { |item| duplicated_mapping_error?(item) && candidate_has_email_evidence?(item) }
-                          .max_by { |item| ai_candidate_score(item) }
-    candidate.fetch(:mapper).errors.find { |error| error.start_with?('duplicated_') } if candidate
-  end
-
-  def duplicated_mapping_error?(candidate)
-    candidate.fetch(:mapper).errors.any? { |error| error.start_with?('duplicated_') }
   end
 
   def best_ai_candidate(candidates)
@@ -142,13 +135,10 @@ class CampaignImports::SchemaResolver
 
   def build_result(candidate, mapper = candidate.fetch(:mapper), method = 'deterministic', ai_metadata = {})
     metadata = {
-      'method' => method,
-      'format' => @parsed.format,
-      'table_index' => candidate.fetch(:table_index),
-      'header_row' => candidate.fetch(:header_row_number),
+      'method' => method, 'format' => @parsed.format,
+      'table_index' => candidate.fetch(:table_index), 'header_row' => candidate.fetch(:header_row_number),
       'delimiter' => candidate[:delimiter],
-      'email_column' => mapper.mapping[:email],
-      'name_column' => mapper.mapping[:name],
+      'email_column' => mapper.mapping[:email], 'name_column' => mapper.mapping[:name],
       'custom_columns' => mapper.extra_columns.values.sort
     }.compact.merge(ai_metadata)
 
@@ -163,8 +153,19 @@ class CampaignImports::SchemaResolver
     sample = profile_sample(rows)
     Array.new(column_count) do |index|
       values = profiled_values(sample, index)
-      { non_blank_count: values.length, email_like_count: values.count { |value| email_like?(value) } }
+      {
+        non_blank_count: values.length,
+        email_like_count: values.count { |value| email_like?(value) },
+        examples: values.uniq.first(EXAMPLE_COUNT).map { |value| example_value(value) }
+      }
     end
+  end
+
+  def example_value(value)
+    return '[email address]' if email_like?(value)
+    return '[malformed email address]' if value.include?('@')
+
+    value.first(EXAMPLE_LENGTH)
   end
 
   def profile_sample(rows)

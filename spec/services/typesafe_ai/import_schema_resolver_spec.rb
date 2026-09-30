@@ -68,7 +68,7 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
       }
     )
 
-    expect { resolver.resolve(no_email_evidence) }.to raise_error(described_class::Error, 'schema_not_resolved')
+    expect { resolver.resolve(no_email_evidence) }.to raise_error(described_class::Error, 'no_valid_emails')
   end
 
   it 'rejects a mapping when Jev itself does not certify the schema' do
@@ -79,6 +79,36 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
           'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 0.99 },
           'name_column' => { 'type' => 'choice', 'choice' => 'column_0', 'confidence' => 0.99 },
           'schema_valid' => { 'type' => 'noul', 'noul' => 0.49 }
+        }
+      }
+    )
+
+    expect { resolver.resolve(candidate) }.to raise_error(described_class::Error, 'schema_not_resolved')
+  end
+
+  it 'accepts decisive column choices when the independent schema answer is affirmative' do
+    allow(client).to receive(:evaluate).and_return(
+      {
+        'model' => 'jev-1.13.0',
+        'answers' => {
+          'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 1.0 },
+          'name_column' => { 'type' => 'choice', 'choice' => 'column_0', 'confidence' => 1.0 },
+          'schema_valid' => { 'type' => 'noul', 'noul' => 0.72 }
+        }
+      }
+    )
+
+    expect(resolver.resolve(candidate)).to include(email_index: 1, name_index: 0)
+  end
+
+  it 'rejects a low-confidence answer instead of guessing the recipient column' do
+    allow(client).to receive(:evaluate).and_return(
+      {
+        'model' => 'jev-1.13.0',
+        'answers' => {
+          'email_column' => { 'type' => 'choice', 'choice' => 'column_1', 'confidence' => 0.55 },
+          'name_column' => { 'type' => 'choice', 'choice' => 'column_0', 'confidence' => 0.99 },
+          'schema_valid' => { 'type' => 'noul', 'noul' => 0.99 }
         }
       }
     )
@@ -101,7 +131,7 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
     expect { resolver.resolve(candidate) }.to raise_error(described_class::Error, 'typesafe_invalid_response')
   end
 
-  it 'rejects an explicit none email choice' do
+  it 'reports unresolved ambiguity when Jev chooses none despite address evidence' do
     allow(client).to receive(:evaluate).and_return(
       {
         'model' => 'jev-1.13.0',
@@ -113,7 +143,7 @@ RSpec.describe TypesafeAi::ImportSchemaResolver do
       }
     )
 
-    expect { resolver.resolve(candidate) }.to raise_error(described_class::Error, 'missing_email_header')
+    expect { resolver.resolve(candidate) }.to raise_error(described_class::Error, 'schema_not_resolved')
   end
 
   [
