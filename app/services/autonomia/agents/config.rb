@@ -198,7 +198,7 @@ module Autonomia
       MAX_QUERY_CHARS = 6_000
       MAX_COMPOSED_QUERY_CHARS = 16_000
       MAX_HISTORY_ITEM_CHARS = 4_000
-      MAX_HISTORY_TOTAL_CHARS = 40_000 # Bloco A: 24k→40k (modelo com 1,05M de contexto; conversa longa preserva mais contexto)
+      MAX_HISTORY_TOTAL_CHARS = 40_000 # Bloco A: 24k→40k (janela ampla do modelo; conversa longa preserva mais contexto)
       TRUNCATION_SUFFIX = '…'.freeze
 
       # Truncamento CENTRAL: mantém o COMEÇO da string (o fim é descartado) e sinaliza o corte com o

@@ -28,7 +28,7 @@ RSpec.describe Crm::Ai::Pricing do
       expect(described_class.rate('gpt-5.6-luna')).to eq(input: 0.2, cached: 0.02, cache_write: 0.25, output: 1.2)
     end
 
-    it 'prices both GPT-6 models including cache writes' do
+    it 'prices the GPT-6 models including cache writes' do
       expect(described_class.rate('gpt-6.1-sol')).to eq(input: 2.0, cached: 0.1, cache_write: 2.5, output: 10.0)
       expect(described_class.rate('gpt-6-sol')).to eq(input: 2.0, cached: 0.2, cache_write: 2.5, output: 10.0)
       expect(described_class.rate('gpt-6-luna')).to eq(input: 0.1, cached: 0.01, cache_write: 0.125, output: 0.5)

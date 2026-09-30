@@ -372,7 +372,7 @@ module Autonomia
         # Chama o modelo para revisar a fonte. nil em qualquer falha de IA (credencial vazia, erro do
         # cliente, timeout, JSON inválido) → o chamador aplica o fallback conservador.
         # DETERMINISMO: este é um caminho Responses API de raciocínio (reasoning: { effort }); NÃO há
-        # parâmetro `temperature` (o sol da família 6 o rejeita). A estabilidade da nota vem da RUBRICA explícita
+        # parâmetro `temperature` (rejeitado no 6-sol; confirmar no 6.1 no smoke). A estabilidade da nota vem da RUBRICA explícita
         # por eixo + tie-breaker (§4 da REVIEWER_INSTRUCTION) e do effort 'low', não de um knob.
         def request_review
           result = client.create(
