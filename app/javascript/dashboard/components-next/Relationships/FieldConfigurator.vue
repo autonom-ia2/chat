@@ -7,11 +7,15 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { selectDefinitions, attributeKey } from './presentation';
 
 const props = defineProps({
   entity: { type: String, default: 'contact' },
   surface: { type: String, default: '' },
+  compact: { type: Boolean, default: false },
+  showActions: { type: Boolean, default: true },
 });
 const { t } = useI18n();
 const { accountId, attributesEnabled, companiesEnabled, state, load, save } =
@@ -19,6 +23,7 @@ const { accountId, attributesEnabled, companiesEnabled, state, load, save } =
 const dialog = ref(null);
 const inputId = useId();
 const query = ref('');
+const directEntry = ref(false);
 const draft = ref(null);
 const layout = ref({});
 const revision = ref(0);
@@ -98,6 +103,7 @@ const open = async (definition, create = false) => {
   if (state.value.error || !state.value.can_manage) return;
   openedAccount.value = accountId.value;
   activeEntity.value = props.entity;
+  directEntry.value = create || Boolean(definition?.id);
   selectedSurface.value = props.surface || surfaces.value[0] || '';
   revision.value = state.value.configuration.revision;
   layout.value = JSON.parse(JSON.stringify(state.value.configuration.surfaces));
@@ -130,8 +136,59 @@ const toggle = (surface, id, checked) => {
   if (checked) ids.push(id);
   layout.value[surface] = { mode: 'custom', ids };
 };
+const invalidDraft = computed(() =>
+  Boolean(
+    draft.value &&
+      (!draft.value.attribute_display_name.trim() ||
+        (!draft.value.id && !draft.value.attribute_description.trim()))
+  )
+);
+const dialogTitle = computed(() => {
+  if (!draft.value) return t('RELATIONSHIPS.CONFIGURE');
+  if (activeEntity.value === 'company')
+    return t(
+      draft.value.id
+        ? 'RELATIONSHIPS.EDIT_COMPANY_ATTRIBUTE'
+        : 'RELATIONSHIPS.CREATE_COMPANY_ATTRIBUTE'
+    );
+  return t(
+    draft.value.id ? 'RELATIONSHIPS.EDIT_ATTRIBUTE' : 'RELATIONSHIPS.CREATE'
+  );
+});
+const dialogDescription = computed(() => {
+  if (!draft.value) return t('RELATIONSHIPS.CONFIGURE_DESCRIPTION');
+  return t(
+    draft.value.id
+      ? 'RELATIONSHIPS.EDIT_DESCRIPTION'
+      : 'RELATIONSHIPS.CREATE_DESCRIPTION'
+  );
+});
+const confirmLabel = computed(() =>
+  t(
+    draft.value
+      ? 'RELATIONSHIPS.SAVE_ATTRIBUTE'
+      : 'RELATIONSHIPS.SAVE_CONFIGURATION'
+  )
+);
+const displayToggle = (surfaceName, enabled) => {
+  displayOn.value = displayOn.value.filter(value => value !== surfaceName);
+  if (enabled) displayOn.value.push(surfaceName);
+};
+const selectionSummary = surfaceName =>
+  t('RELATIONSHIPS.SELECTION_SUMMARY', {
+    selected: definitions.value.filter(definition =>
+      selected(surfaceName, definition.id)
+    ).length,
+    total: definitions.value.length,
+  });
 const submit = async () => {
-  if (busy.value || !attributesEnabled.value || !state.value.can_manage) return;
+  if (
+    busy.value ||
+    invalidDraft.value ||
+    !attributesEnabled.value ||
+    !state.value.can_manage
+  )
+    return;
   const current = generation;
   busy.value = true;
   error.value = '';
@@ -210,27 +267,35 @@ defineExpose({ open });
 <template>
   <div
     v-if="attributesEnabled && (entity !== 'company' || companiesEnabled)"
-    class="px-2 py-1"
+    :class="showActions ? (compact ? 'px-2 py-1' : 'min-w-0') : 'contents'"
   >
-    <Button
-      v-if="state.can_manage"
-      xs
-      ghost
-      :label="t('RELATIONSHIPS.CONFIGURE')"
-      @click.stop="open"
-    />
-    <Button
-      v-if="state.can_manage"
-      xs
-      ghost
-      :label="t('RELATIONSHIPS.CREATE')"
-      @click.stop="open(null, true)"
-    />
-    <p v-if="state.error" role="alert" class="text-xs text-n-ruby-11">
+    <div
+      v-if="showActions && state.can_manage"
+      class="flex flex-wrap items-center gap-2"
+    >
+      <Button
+        type="button"
+        :size="compact ? 'xs' : 'sm'"
+        :variant="compact ? 'ghost' : 'outline'"
+        :icon="compact ? '' : 'i-lucide-settings-2'"
+        :label="t('RELATIONSHIPS.CONFIGURE')"
+        @click.stop="open"
+      />
+      <Button
+        type="button"
+        :size="compact ? 'xs' : 'sm'"
+        :variant="compact ? 'ghost' : 'solid'"
+        :icon="compact ? '' : 'i-lucide-plus'"
+        :label="t('RELATIONSHIPS.CREATE')"
+        @click.stop="open(null, true)"
+      />
+    </div>
+    <p v-if="state.error" role="alert" class="mt-2 text-xs text-n-ruby-11">
       {{ t('RELATIONSHIPS.LOAD_ERROR') }}
     </p>
     <Button
       v-if="state.error"
+      type="button"
       xs
       ghost
       :label="t('RELATIONSHIPS.RETRY')"
@@ -238,47 +303,80 @@ defineExpose({ open });
     />
     <Dialog
       ref="dialog"
-      :title="t('RELATIONSHIPS.CONFIGURE')"
-      :description="t('RELATIONSHIPS.GLOBAL')"
-      :confirm-button-label="t('RELATIONSHIPS.SAVE')"
+      :title="dialogTitle"
+      :description="dialogDescription"
+      :confirm-button-label="confirmLabel"
       :is-loading="busy"
-      :disable-confirm-button="
-        Boolean(
-          draft &&
-            (!draft.attribute_display_name.trim() ||
-              (!draft.id && !draft.attribute_description.trim()))
-        )
-      "
+      :disable-confirm-button="invalidDraft"
       overflow-y-auto
-      width="2xl"
+      width="xl"
       @confirm="submit"
       @close="onClose"
     >
-      <div class="flex flex-col gap-4 max-h-[65vh] overflow-auto">
-        <p v-if="state.stale" role="alert" class="text-n-ruby-11">
-          {{ t('RELATIONSHIPS.LOAD_ERROR') }}
+      <fieldset
+        :disabled="busy"
+        class="m-0 flex max-h-[65vh] min-w-0 flex-col gap-4 overflow-y-auto border-0 p-0"
+      >
+        <div v-if="state.stale" class="rounded-lg bg-n-amber-3 p-3">
+          <p role="alert" class="text-sm text-n-amber-11">
+            {{ t('RELATIONSHIPS.LOAD_ERROR') }}
+          </p>
+          <Button
+            type="button"
+            xs
+            ghost
+            :label="t('RELATIONSHIPS.RETRY')"
+            @click="load"
+          />
+        </div>
+        <p
+          v-if="error"
+          role="alert"
+          class="rounded-lg bg-n-ruby-3 p-3 text-sm text-n-ruby-11"
+        >
+          {{ error }}
         </p>
-        <Button
-          v-if="state.stale"
-          :label="t('RELATIONSHIPS.RETRY')"
-          @click="load"
-        />
-        <p v-if="error" role="alert" class="text-n-ruby-11">{{ error }}</p>
-        <p class="text-sm">
-          {{
-            t('RELATIONSHIPS.ENTITY_VALUE', {
-              name: t(
+        <div
+          class="flex items-start gap-3 rounded-lg bg-n-blue-3 p-3 text-n-blue-11"
+        >
+          <Icon icon="i-lucide-info" class="mt-0.5 size-5 shrink-0" />
+          <p class="text-xs leading-relaxed">
+            {{ t('RELATIONSHIPS.GLOBAL_NOTE') }}
+          </p>
+        </div>
+        <div class="flex items-center justify-between gap-3 text-sm">
+          <span class="text-n-slate-11">{{ t('RELATIONSHIPS.ENTITY') }}</span>
+          <span
+            class="flex items-center gap-2 rounded-lg bg-n-slate-3 px-3 py-2 font-medium text-n-slate-12"
+          >
+            <Icon
+              :icon="
                 activeEntity === 'company'
-                  ? 'RELATIONSHIPS.COMPANIES'
+                  ? 'i-lucide-building-2'
                   : activeEntity === 'contact'
-                    ? 'RELATIONSHIPS.CONTACTS'
-                    : 'ATTRIBUTES_MGMT.TABS.CONVERSATION'
-              ),
-            })
-          }}
-        </p>
+                    ? 'i-lucide-user-round'
+                    : 'i-lucide-message-square'
+              "
+              class="size-4"
+            />
+            {{ t(`RELATIONSHIPS.ENTITY_LABELS.${activeEntity}`) }}
+          </span>
+        </div>
         <template v-if="draft">
-          <label :for="`${inputId}-name`">
+          <Button
+            v-if="!directEntry"
+            type="button"
+            ghost
+            xs
+            icon="i-lucide-arrow-left"
+            class="self-start"
+            :label="t('RELATIONSHIPS.BACK')"
+            @click="draft = null"
+          />
+          <label
+            :for="`${inputId}-name`"
+            class="flex flex-col gap-2 text-sm font-medium text-n-slate-12"
+          >
             <span>{{ t('RELATIONSHIPS.NAME') }}</span>
             <Input
               :id="`${inputId}-name`"
@@ -288,23 +386,37 @@ defineExpose({ open });
               type="text"
             />
           </label>
-          <label :for="`${inputId}-description`">
+          <label
+            :for="`${inputId}-description`"
+            class="flex flex-col gap-2 text-sm font-medium text-n-slate-12"
+          >
             <span>{{ t('RELATIONSHIPS.DESCRIPTION') }}</span>
             <TextArea
               :id="`${inputId}-description`"
               v-model="draft.attribute_description"
               :required="!draft.id"
+              :placeholder="t('RELATIONSHIPS.DESCRIPTION_HINT')"
             />
           </label>
-          <ChoiceSelect
-            v-model="draft.attribute_display_type"
-            :options="types"
-            :disabled="Boolean(draft.id)"
-            :aria-label="t('RELATIONSHIPS.TYPE')"
-          />
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-n-slate-12">{{
+              t('RELATIONSHIPS.TYPE')
+            }}</span>
+            <ChoiceSelect
+              v-model="draft.attribute_display_type"
+              :options="types"
+              :disabled="Boolean(draft.id) || busy"
+              :aria-label="t('RELATIONSHIPS.TYPE')"
+              class="w-full"
+            />
+            <p class="text-xs text-n-slate-11">
+              {{ t('RELATIONSHIPS.TYPE_HINT') }}
+            </p>
+          </div>
           <label
             v-if="draft.attribute_display_type === 'list'"
             :for="`${inputId}-options`"
+            class="flex flex-col gap-2 text-sm font-medium text-n-slate-12"
           >
             <span>{{ t('RELATIONSHIPS.OPTIONS') }}</span>
             <TextArea
@@ -313,58 +425,93 @@ defineExpose({ open });
               :max-length="10000"
             />
           </label>
-          <label
-            v-for="surfaceName in surfaces"
-            :key="surfaceName"
-            class="flex gap-2 items-center"
+          <section
+            v-if="surfaces.length"
+            class="flex flex-col gap-3 border-t border-n-weak pt-4"
           >
-            <input v-model="displayOn" type="checkbox" :value="surfaceName" />
-            <span>{{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}</span>
-          </label>
-          <Button
-            type="button"
-            faded
-            :label="t('RELATIONSHIPS.BACK')"
-            @click="draft = null"
-          />
+            <h4 class="text-sm font-medium text-n-slate-12">
+              {{ t('RELATIONSHIPS.DISPLAY_TITLE') }}
+            </h4>
+            <div
+              v-for="surfaceName in surfaces"
+              :key="surfaceName"
+              class="flex items-start gap-3 py-1"
+            >
+              <Switch
+                :model-value="displayOn.includes(surfaceName)"
+                :disabled="busy"
+                :aria-label="t(`RELATIONSHIPS.SURFACES.${surfaceName}`)"
+                :aria-describedby="`${inputId}-${surfaceName}-help`"
+                class="mt-1"
+                @update:model-value="value => displayToggle(surfaceName, value)"
+              />
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-n-slate-12">
+                  {{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}
+                </p>
+                <p
+                  :id="`${inputId}-${surfaceName}-help`"
+                  class="mt-1 text-xs leading-relaxed text-n-slate-11"
+                >
+                  {{ t(`RELATIONSHIPS.SURFACE_HELP.${surfaceName}`) }}
+                </p>
+              </div>
+            </div>
+          </section>
         </template>
         <template v-else>
-          <label :for="`${inputId}-search`">
-            <span>{{ t('RELATIONSHIPS.SEARCH') }}</span>
+          <div class="flex flex-col gap-2">
+            <label
+              :for="`${inputId}-search`"
+              class="text-sm font-medium text-n-slate-12"
+              >{{ t('RELATIONSHIPS.SEARCH') }}</label
+            >
             <Input
               :id="`${inputId}-search`"
               v-model="query"
               type="search"
               autofocus
             />
-          </label>
-          <Button
-            type="button"
-            :label="t('RELATIONSHIPS.CREATE')"
-            @click="edit(null)"
-          />
-          <ChoiceSelect
-            v-if="surfaces.length"
-            v-model="selectedSurface"
-            :options="
-              surfaces.map(value => ({
-                value,
-                label: t(`RELATIONSHIPS.SURFACES.${value}`),
-              }))
-            "
-            :aria-label="t('RELATIONSHIPS.LOCATION')"
-          />
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <ChoiceSelect
+              v-if="surfaces.length"
+              v-model="selectedSurface"
+              :options="
+                surfaces.map(value => ({
+                  value,
+                  label: t(`RELATIONSHIPS.SURFACES.${value}`),
+                }))
+              "
+              :aria-label="t('RELATIONSHIPS.LOCATION')"
+              :disabled="busy"
+              class="min-w-0 max-w-full"
+            />
+            <Button
+              type="button"
+              sm
+              icon="i-lucide-plus"
+              :label="t('RELATIONSHIPS.CREATE')"
+              @click="edit(null)"
+            />
+          </div>
           <section
             v-for="surfaceName in visibleSurfaces"
             :key="surfaceName"
-            class="flex flex-col gap-2"
+            class="flex flex-col gap-3"
           >
-            <div class="flex items-center justify-between gap-2">
-              <h4>{{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}</h4>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h4 class="text-sm font-medium text-n-slate-12">
+                {{ t(`RELATIONSHIPS.SURFACES.${surfaceName}`) }}
+              </h4>
+              <p class="text-xs text-n-slate-11">
+                {{ selectionSummary(surfaceName) }}
+              </p>
               <Button
                 type="button"
                 xs
                 ghost
+                icon="i-lucide-rotate-ccw"
                 :label="t('RELATIONSHIPS.RESTORE')"
                 @click="layout[surfaceName] = { mode: 'legacy', ids: [] }"
               />
@@ -372,18 +519,27 @@ defineExpose({ open });
             <div
               v-for="definition in definitions"
               :key="definition.id"
-              class="flex items-center justify-between gap-2"
+              class="flex items-center gap-3 rounded-lg border border-n-weak bg-n-background p-3"
             >
-              <label class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  :checked="selected(surfaceName, definition.id)"
-                  @change="
-                    toggle(surfaceName, definition.id, $event.target.checked)
-                  "
-                />
-                <span>{{ definition.attribute_display_name }}</span>
-              </label>
+              <Switch
+                :model-value="selected(surfaceName, definition.id)"
+                :disabled="busy"
+                :aria-label="definition.attribute_display_name"
+                @update:model-value="
+                  value => toggle(surfaceName, definition.id, value)
+                "
+              />
+              <div class="min-w-0 flex-1">
+                <p class="break-words text-sm font-medium text-n-slate-12">
+                  {{ definition.attribute_display_name }}
+                </p>
+                <p
+                  v-if="definition.attribute_description"
+                  class="mt-1 line-clamp-2 text-xs leading-relaxed text-n-slate-11"
+                >
+                  {{ definition.attribute_description }}
+                </p>
+              </div>
               <Button
                 type="button"
                 xs
@@ -403,8 +559,33 @@ defineExpose({ open });
               @click="edit(definition)"
             />
           </div>
+          <p
+            v-if="!definitions.length"
+            class="py-5 text-center text-sm text-n-slate-11"
+          >
+            {{ t('RELATIONSHIPS.NO_DEFINITIONS') }}
+          </p>
         </template>
-      </div>
+      </fieldset>
+      <template #footer>
+        <div
+          class="flex flex-wrap items-center justify-end gap-3 border-t border-n-weak pt-4"
+        >
+          <Button
+            type="button"
+            faded
+            slate
+            :label="t('DIALOG.BUTTONS.CANCEL')"
+            @click="dialog.close()"
+          />
+          <Button
+            type="submit"
+            :label="confirmLabel"
+            :is-loading="busy"
+            :disabled="busy || invalidDraft"
+          />
+        </div>
+      </template>
     </Dialog>
   </div>
   <template v-else />

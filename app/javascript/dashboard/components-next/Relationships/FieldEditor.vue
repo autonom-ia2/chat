@@ -16,6 +16,7 @@ import {
 } from 'dashboard/helper/attributeDate';
 import { beginFieldWrite } from './confirmedValues';
 import { fieldValue } from './presentation';
+import Icon from 'dashboard/components-next/icon/Icon.vue';
 
 const props = defineProps({
   definition: { type: Object, required: true },
@@ -23,6 +24,19 @@ const props = defineProps({
   entity: { type: String, required: true },
   compact: { type: Boolean, default: false },
 });
+const fieldIcon = computed(
+  () =>
+    ({
+      text: 'i-lucide-text',
+      number: 'i-lucide-hash',
+      currency: 'i-lucide-coins',
+      percent: 'i-lucide-percent',
+      date: 'i-lucide-calendar-days',
+      link: 'i-lucide-link',
+      list: 'i-lucide-list',
+      checkbox: 'i-lucide-check-check',
+    })[props.definition.attribute_display_type] || 'i-lucide-text'
+);
 const { t } = useI18n();
 const { accountId } = useAccount();
 const store = useStore();
@@ -210,7 +224,11 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="editor"
-    :class="compact ? 'px-4 py-3 text-sm' : 'p-2 text-sm'"
+    :class="
+      compact
+        ? 'px-4 py-3 text-sm'
+        : 'min-w-0 rounded-xl border border-n-weak bg-n-solid-2 p-4 text-sm'
+    "
     role="group"
     :aria-label="definition.attribute_display_name"
     class="flex flex-col gap-1"
@@ -236,10 +254,18 @@ onBeforeUnmount(() => {
       />
     </fieldset>
     <template v-else>
-      <div class="flex items-center gap-1.5">
-        <span :id="`${inputId}-label`" class="font-medium text-n-slate-12">{{
-          definition.attribute_display_name
-        }}</span>
+      <div class="flex items-center gap-2">
+        <div
+          v-if="!compact"
+          class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-n-blue-3 text-n-blue-11"
+        >
+          <Icon :icon="fieldIcon" class="size-4" />
+        </div>
+        <span
+          :id="`${inputId}-label`"
+          class="min-w-0 break-words font-medium text-n-slate-12"
+          >{{ definition.attribute_display_name }}</span
+        >
         <details v-if="definition.attribute_description" class="relative">
           <summary
             class="list-none cursor-pointer rounded focus-visible:ring-2"
@@ -249,7 +275,7 @@ onBeforeUnmount(() => {
           </summary>
           <p
             :id="`${inputId}-description`"
-            class="absolute z-20 start-0 top-5 w-48 p-2 text-xs rounded border border-n-weak bg-n-background shadow-md"
+            class="absolute z-20 start-0 top-5 w-48 p-2 text-xs rounded border border-n-weak bg-n-solid-2 shadow-md"
           >
             {{ definition.attribute_description }}
           </p>
@@ -313,7 +339,7 @@ onBeforeUnmount(() => {
           />
         </div>
       </template>
-      <div v-else class="flex items-center justify-between gap-2">
+      <div v-else class="flex flex-wrap items-center justify-between gap-2">
         <a
           v-if="safeLink"
           :href="safeLink"
@@ -323,15 +349,28 @@ onBeforeUnmount(() => {
         >
           {{ value }}
         </a>
-        <span v-else class="break-all">{{
-          value === undefined || value === null || value === ''
-            ? t('RELATIONSHIPS.EMPTY')
-            : typeof value === 'boolean'
-              ? t(value ? 'RELATIONSHIPS.YES' : 'RELATIONSHIPS.NO')
-              : definition.attribute_display_type === 'date'
-                ? formatAttributeDate(value)
-                : value
-        }}</span>
+        <span
+          v-else
+          class="min-w-0 break-words"
+          :class="
+            typeof value === 'boolean'
+              ? value
+                ? 'rounded-md bg-n-teal-3 px-2 py-1 text-xs font-medium text-n-teal-11'
+                : 'rounded-md bg-n-slate-3 px-2 py-1 text-xs font-medium text-n-slate-11'
+              : hasValue
+                ? 'text-n-slate-12'
+                : 'text-n-slate-10'
+          "
+          >{{
+            value === undefined || value === null || value === ''
+              ? t('RELATIONSHIPS.EMPTY')
+              : typeof value === 'boolean'
+                ? t(value ? 'RELATIONSHIPS.YES' : 'RELATIONSHIPS.NO')
+                : definition.attribute_display_type === 'date'
+                  ? formatAttributeDate(value)
+                  : value
+          }}</span
+        >
         <div class="flex gap-1 shrink-0">
           <Button
             v-if="hasValue"
@@ -345,8 +384,8 @@ onBeforeUnmount(() => {
             ref="editButton"
             xs
             ghost
-            :icon="compact ? 'i-lucide-pen' : undefined"
-            :label="compact ? undefined : t('RELATIONSHIPS.EDIT')"
+            icon="i-lucide-pen"
+            :title="t('RELATIONSHIPS.EDIT')"
             :aria-label="t('RELATIONSHIPS.EDIT')"
             @click="start"
           />

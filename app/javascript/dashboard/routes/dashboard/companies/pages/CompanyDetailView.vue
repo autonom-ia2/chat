@@ -21,7 +21,7 @@ import CompanyProfileCard from 'dashboard/components-next/Companies/CompanyDetai
 import ConfirmCompanyDeleteDialog from 'dashboard/components-next/Companies/CompanyDetail/ConfirmCompanyDeleteDialog.vue';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
-const { mediaEnabled } = useRelationships();
+const { mediaEnabled, navigationEnabled, accountId } = useRelationships();
 const route = useRoute();
 const router = useRouter();
 const companiesStore = useCompaniesStore();
@@ -83,7 +83,7 @@ const sidebarTabs = computed(() =>
     ...(mediaEnabled.value ? [{ key: 'MEDIA', value: 'media' }] : []),
   ].map(tab => ({
     label: {
-      media: t('RELATIONSHIPS.MEDIA.TITLE'),
+      media: t('RELATIONSHIPS.MEDIA.TAB'),
       notes: t('COMPANIES.DETAIL.SIDEBAR.TABS.NOTES'),
       history: t('COMPANIES.DETAIL.SIDEBAR.TABS.HISTORY'),
       contacts: `${t('COMPANIES.DETAIL.SIDEBAR.TABS.CONTACTS')} (${Number(companyContactsMeta.value.totalCount || 0)})`,
@@ -231,9 +231,21 @@ onBeforeUnmount(() => {
 
 <template>
   <CompaniesDetailsLayout
+    :relationships-layout="navigationEnabled"
     :breadcrumb-items="breadcrumbItems"
     @back="goToCompaniesList"
   >
+    <template v-if="navigationEnabled" #breadcrumb>
+      <RelationshipBreadcrumb
+        :items="[
+          {
+            key: 'COMPANIES',
+            to: { name: 'companies_dashboard_index', params: { accountId } },
+          },
+          ...(hasCompany ? [{ label: company.name }] : []),
+        ]"
+      />
+    </template>
     <div
       v-if="showInitialLoadingState"
       class="flex flex-col items-center justify-center gap-3 py-24 text-n-slate-11"
@@ -255,7 +267,6 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="flex flex-col gap-6">
-      <RelationshipBreadcrumb />
       <CompanyProfileCard :company="company" :is-loading="isFetchingCompany" />
 
       <RelationshipFields
@@ -286,11 +297,11 @@ onBeforeUnmount(() => {
     </div>
 
     <template #sidebarHeader>
-      <div class="px-6 pt-6 pb-3">
+      <div class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
         <TabBar
           :tabs="sidebarTabs"
           :initial-active-tab="activeSidebarTabIndex"
-          class="w-full [&>button]:w-full bg-n-alpha-black2"
+          class="w-max min-w-full [&>button]:w-auto [&>button]:shrink-0 bg-n-alpha-black2"
           @tab-changed="handleSidebarTabChange"
         />
       </div>

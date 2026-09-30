@@ -44,7 +44,10 @@ const mountField = (type = 'number', value = 0) => {
 const click = async (wrapper, text) =>
   wrapper
     .findAll('button')
-    .find(button => button.text().includes(text))
+    .find(
+      button =>
+        button.attributes('aria-label') === text || button.text() === text
+    )
     .trigger('click');
 
 beforeEach(() => {

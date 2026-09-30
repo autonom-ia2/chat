@@ -18,13 +18,13 @@ const emit = defineEmits(['search', 'update:sort', 'create']);
 
 <template>
   <header class="sticky top-0 z-10 px-6">
-    <RelationshipBreadcrumb />
+    <RelationshipBreadcrumb class="mx-auto max-w-5xl pt-6" />
     <div
       class="flex items-start sm:items-center justify-between w-full py-6 gap-2 mx-auto max-w-5xl"
     >
-      <span class="text-xl font-medium truncate text-n-slate-12">
+      <h1 class="text-xl font-medium truncate text-n-slate-12">
         {{ headerTitle }}
-      </span>
+      </h1>
       <div class="flex items-center flex-col sm:flex-row flex-shrink-0 gap-4">
         <div v-if="showSearch" class="flex items-center gap-2 w-full">
           <Input

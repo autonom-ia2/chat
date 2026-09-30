@@ -1,5 +1,4 @@
 <script setup>
-import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -197,7 +196,6 @@ const handleAvatarDelete = async () => {
         @click="updateContact"
       />
     </div>
-    <RelationshipBreadcrumb />
     <RelationshipFields
       :record="selectedContact"
       entity="contact"

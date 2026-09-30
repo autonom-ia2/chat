@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { session, configure, fieldsSection, fieldByName } from './helpers';
+import {
+  session,
+  configure,
+  fieldsSection,
+  fieldByName,
+  setSwitch,
+} from './helpers';
 
 let pageErrors: string[];
 let missingAuth: string[];
@@ -171,8 +177,13 @@ test('global sidebar configuration stays inside the actual accordion and an empt
     .getByRole('button', { name: 'Configurar campos', exact: true })
     .click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Cargo', { exact: true }).uncheck();
-  await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await setSwitch(
+    dialog.getByRole('switch', { name: 'Cargo', exact: true }),
+    false
+  );
+  await dialog
+    .getByRole('button', { name: 'Salvar configuração', exact: true })
+    .click();
   await expect(dialog).not.toBeVisible();
   await expect(panel.getByText('Cargo', { exact: true })).toHaveCount(0);
   const current = await (
@@ -195,7 +206,9 @@ test('global sidebar configuration stays inside the actual accordion and an empt
   await dialog
     .getByRole('button', { name: 'Restaurar padrão', exact: true })
     .click();
-  await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await dialog
+    .getByRole('button', { name: 'Salvar configuração', exact: true })
+    .click();
   await expect(dialog).not.toBeVisible();
   await expect(
     panel.getByRole('heading', { name: 'Cargo', exact: true })
@@ -253,13 +266,18 @@ test('company definition creation is contextual, global and does not copy its va
   const name = `Contrato QA ${Date.now()}`;
   await dialog.getByLabel('Nome', { exact: true }).fill(name);
   await expect(
-    dialog.getByRole('button', { name: 'Salvar', exact: true })
+    dialog.getByRole('button', { name: 'Salvar atributo', exact: true })
   ).toBeDisabled();
   await dialog
     .getByLabel('Descrição', { exact: true })
     .fill('Identificador de contrato informado pela empresa');
-  await dialog.getByLabel('Ficha da empresa', { exact: true }).check();
-  await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await setSwitch(
+    dialog.getByRole('switch', { name: 'Ficha da empresa', exact: true }),
+    true
+  );
+  await dialog
+    .getByRole('button', { name: 'Salvar atributo', exact: true })
+    .click();
   await expect(dialog).not.toBeVisible();
   const field = fieldByName(page, name);
   await field.getByRole('button', { name: 'Editar', exact: true }).click();
@@ -274,7 +292,8 @@ test('company definition creation is contextual, global and does not copy its va
     )
   ).json();
   const definition = config.definitions.find(
-    (item: any) => item.attribute_display_name === name
+    (item: { attribute_display_name: string }) =>
+      item.attribute_display_name === name
   );
   expect(definition.attribute_model).toBe('company_attribute');
   expect(definition.regex_pattern).toBeNull();
@@ -305,7 +324,7 @@ test('company media search spans all pages and the back link restores the media 
   await expect(page).toHaveURL(url => url.pathname.endsWith('/media'));
   await page
     .getByRole('searchbox', {
-      name: 'Buscar nome de arquivo',
+      name: 'Buscar por nome do arquivo',
       exact: true,
     })
     .fill('Único além');
@@ -315,20 +334,23 @@ test('company media search spans all pages and the back link restores the media 
       .locator('tbody')
       .getByText('Único além da primeira página.pdf', { exact: true })
   ).toBeVisible();
-  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.locator('tbody [data-media-row]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Filtros', exact: true }).click();
   await page.getByLabel('Agrupar por contato', { exact: true }).check();
   await page.getByRole('button', { name: 'Filtrar', exact: true }).click();
-  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.locator('tbody [data-media-row]')).toHaveCount(1);
   await page.screenshot({
     path: '../../.codex/relationships/company-media-search-real.png',
   });
-  await page.getByRole('link', { name: 'Voltar', exact: true }).click();
+  await page
+    .getByRole('link', { name: 'Voltar à empresa', exact: true })
+    .click();
   await expect(
     page.getByRole('button', { name: 'Visualizar tudo', exact: true })
   ).toBeVisible();
   await expect(
     page.getByRole('searchbox', {
-      name: 'Buscar nome de arquivo',
+      name: 'Buscar por nome do arquivo',
       exact: true,
     })
   ).toHaveValue('Único além');

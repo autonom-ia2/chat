@@ -51,8 +51,8 @@
       "ATTRIBUTES": "Define fields shared across this account."
     },
     "MEDIA": {
-      "TITLE": "Media",
-      "SEARCH": "Search filenames",
+      "TITLE": "Company media",
+      "SEARCH": "Search by filename",
       "ALL_TYPES": "All types",
       "FROM": "From",
       "TO": "To",
@@ -64,7 +64,7 @@
       "DOWNLOAD": "Download original",
       "PREVIEW": "Preview",
       "ORIGIN": "Go to message",
-      "EMPTY": "No media found.",
+      "EMPTY": "No media yet",
       "ALL": "View all",
       "image": "Image",
       "video": "Video",
@@ -75,11 +75,95 @@
       "SIZE": "Size",
       "SCOPE": "Stored files from authorized conversations, including notes. External attachments remain in the original conversation.",
       "BYTES": "{size} B",
-      "FILE_METADATA": "{type} · {size} B"
+      "FILE_METADATA": "{type} · {size} B",
+      "SUBTITLE": "Files shared in conversations.",
+      "FILTERS": "Filters",
+      "APPLY": "Apply filters",
+      "CLEAR": "Clear",
+      "PDF": "PDF",
+      "CONTACT_SELECTED": "Selected contact",
+      "CONTACT_ERROR": "Unable to search contacts. Please try again.",
+      "NO_CONTACTS": "No contacts found.",
+      "FILTER_TIMEZONE": "The date range uses the account reporting time zone; when unset, UTC.",
+      "LOCAL_TIMEZONE": "Dates are displayed in your browser’s local time zone.",
+      "LOAD_ERROR": "Unable to load media. Try again to refresh the list.",
+      "ACTION_ERROR": "Unable to open this file. Try again to check access.",
+      "NO_RESULTS": "No files found",
+      "NO_RESULTS_HINT": "Adjust the search or clear filters to see more files.",
+      "EMPTY_HINT": "Files from this company’s authorized conversations will appear here.",
+      "RESULT_COUNT": "Showing {shown} of {total} files",
+      "PAGE_COUNT": "Page {page} of {pages}",
+      "BREADCRUMB": "Page path",
+      "BACK_TO_COMPANY": "Back to company",
+      "COMPANY_ERROR": "Unable to load the company name. Please try again.",
+      "METADATA": "{type} · {size}",
+      "TAB": "Media"
     },
     "LOAD_ERROR": "Unable to load configuration. Please try again.",
     "LOCATION": "Display location",
     "COPY": "Copy",
-    "ENTITY_VALUE": "Entity: {name}"
+    "ENTITY_VALUE": "Entity: {name}",
+    "SUBTITLE": "Organize people, companies, and custom information to build stronger relationships.",
+    "HOME_SUPPORT_TITLE": "Stronger relationships create more opportunities",
+    "HOME_SUPPORT_DESCRIPTION": "Keep your data organized and up to date for better communication and consistent results.",
+    "OPEN_CONTACTS": "Open contacts",
+    "OPEN_COMPANIES": "Open companies",
+    "OPEN_ATTRIBUTES": "Configure attributes",
+    "CARD_DETAILS": {
+      "CONTACTS": {
+        "SUBTITLE": "Manage your people",
+        "DESCRIPTION": "Manage contacts with conversation history, media, and custom attributes. Keep a complete view of each relationship.",
+        "PROFILE": "Contact details and history",
+        "MEDIA": "Conversation media",
+        "FIELDS": "Custom attributes",
+        "BASIC_DESCRIPTION": "Manage people and keep track of your relationship history."
+      },
+      "COMPANIES": {
+        "SUBTITLE": "Manage your companies",
+        "DESCRIPTION": "Organize companies, link contacts, and review information, media, and attributes in one place.",
+        "PROFILE": "Linked contacts",
+        "MEDIA": "Media from linked contacts",
+        "FIELDS": "Company attributes",
+        "BASIC_DESCRIPTION": "Organize companies, link contacts, and keep their business information together."
+      },
+      "ATTRIBUTES": {
+        "SUBTITLE": "Make it your own",
+        "DESCRIPTION": "Create custom fields and choose where they appear. Adapt contact and company details to your operation.",
+        "PROFILE": "Shared fields in this account",
+        "MEDIA": "Choose where fields appear",
+        "FIELDS": "Descriptions for context",
+        "BASIC_DESCRIPTION": "Create and manage custom field definitions for your account."
+      }
+    },
+    "EDIT_ATTRIBUTE": "Edit attribute",
+    "CREATE_COMPANY_ATTRIBUTE": "Create company attribute",
+    "EDIT_COMPANY_ATTRIBUTE": "Edit company attribute",
+    "SAVE_ATTRIBUTE": "Save attribute",
+    "SAVE_CONFIGURATION": "Save configuration",
+    "CLOSE": "Close",
+    "CREATE_DESCRIPTION": "Create a definition shared within this account. Values are filled in for each record.",
+    "EDIT_DESCRIPTION": "Update the definition without changing its key or existing values.",
+    "CONFIGURE_DESCRIPTION": "Choose which fields your team sees in each location.",
+    "GLOBAL_TITLE": "Configuration shared within this account",
+    "DESCRIPTION_HINT": "Describe the purpose of the field and how it should be filled in.",
+    "TYPE_HINT": "Choose the format of the information to be entered.",
+    "DISPLAY_TITLE": "Where to display this attribute",
+    "SURFACE_HELP": {
+      "contact_sidebar": "Shows the field inside Contact attributes in the conversation panel.",
+      "contact_details": "Highlights the field in the contact details Custom fields section.",
+      "company_details": "Highlights the field in the company details Custom fields section."
+    },
+    "ENTITY_LABELS": {
+      "contact": "Contact",
+      "company": "Company",
+      "conversation": "Conversation"
+    },
+    "FIELDS_DESCRIPTION": "Additional information about this record. Configure fields and enter their values below.",
+    "FIELDS_EMPTY": "No fields highlighted in this record.",
+    "FIELDS_EMPTY_DESCRIPTION": "Display selection does not delete data. Existing attributes remain available in the Attributes tab.",
+    "NO_DEFINITIONS": "No attributes found.",
+    "SELECTION_SUMMARY": "{selected} of {total} fields selected",
+    "BREADCRUMB_LABEL": "Relationships navigation",
+    "GLOBAL_NOTE": "Shared with your team in this account. Hiding a field does not delete values or restrict access."
   }
 }

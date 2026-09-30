@@ -98,7 +98,7 @@ const edit = async (entity, key, value) => {
   wrappers.push(wrapper);
   await wrapper
     .findAll('button')
-    .find(button => button.text() === 'RELATIONSHIPS.EDIT')
+    .find(button => button.attributes('aria-label') === 'RELATIONSHIPS.EDIT')
     .trigger('click');
   await wrapper.find('input').setValue(value);
   await wrapper

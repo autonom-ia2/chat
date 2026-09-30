@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { session, openContact } from './helpers';
+import { session, openContact, setSwitch } from './helpers';
 
 const required = (key: string) => {
   const value = process.env[key];
@@ -57,21 +57,27 @@ test('creates through the actual modal, saves a field explicitly, and survives r
   await dialog
     .getByLabel('Descrição', { exact: true })
     .fill('Campo sintético para aceite local da Issue 757');
-  await dialog.getByLabel('Ficha do contato', { exact: true }).check();
+  await setSwitch(
+    dialog.getByRole('switch', { name: 'Ficha do contato', exact: true }),
+    true
+  );
   const definitionResponse = page.waitForResponse(
     response =>
       response.url().endsWith('/relationships/configuration') &&
       response.request().method() === 'PATCH'
   );
-  await dialog.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await dialog
+    .getByRole('button', { name: 'Salvar atributo', exact: true })
+    .click();
   expect((await definitionResponse).ok()).toBeTruthy();
   await expect(dialog).not.toBeVisible();
-  const fieldsSection = page.locator('section').filter({
+  const fieldsSection = page.locator('section.border-t').filter({
     has: page.getByRole('heading', {
       name: 'Campos personalizados',
       exact: true,
     }),
   });
+  await expect(fieldsSection).toHaveCount(1);
   // Anchor the field on its persistent accessible name, not on a button removed during editing.
   const field = fieldsSection.getByRole('group', { name, exact: true });
   await field.getByRole('button', { name: 'Editar', exact: true }).click();
