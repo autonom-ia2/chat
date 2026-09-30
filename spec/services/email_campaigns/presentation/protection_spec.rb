@@ -365,21 +365,29 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
 
     it 'shows healthy only with fresh persisted provider monitoring' do
       state
-      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now)
+      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now, checked_at: now)
       expect(dto[:provider]).to eq(state: 'healthy', observed_at: now)
+      expect(dto[:release_eligible]).to be(true)
+    end
+
+    it 'shows healthy with a current provider check without changing the official metric date' do
+      state
+      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now - 10.hours, checked_at: now)
+      expect(dto[:provider]).to eq(state: 'healthy', observed_at: now - 10.hours)
       expect(dto[:release_eligible]).to be(true)
     end
 
     it 'does not mistake stale provider telemetry for healthy' do
       state
-      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now - 901.seconds)
+      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now - 901.seconds,
+                                 checked_at: now - 901.seconds)
       expect(dto[:provider]).to eq(state: 'blocked', observed_at: now - 901.seconds)
       expect(dto[:release_eligible]).to be(false)
     end
 
     it 'retains the provider latch even when current telemetry is healthy and strips provider private fields' do
       state
-      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now,
+      EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now, checked_at: now,
                                  blocked: true, manual_reason: 'private operator reason', telemetry: { other_tenant: 'private.example.org' })
       expect(dto[:provider]).to eq(state: 'blocked', observed_at: now)
       expect(dto[:release_eligible]).to be(false)
@@ -424,7 +432,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
 
   it 'does not call disabled monitoring healthy even with an old healthy row' do
     state
-    EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now)
+    EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now, checked_at: now)
     expect(dto[:provider]).to eq(state: 'unknown', observed_at: nil)
     expect(dto[:release_eligible]).to be(false)
   end
@@ -440,7 +448,7 @@ RSpec.describe EmailCampaigns::Presentation::Protection do
 
   it 'retains a sticky provider block with monitoring disabled and a healthy manual account' do
     state
-    EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now, blocked: true)
+    EmailProviderState.create!(provider_key: provider_config.provider_key, status: 'healthy', observed_at: now, checked_at: now, blocked: true)
     expect(dto[:provider][:state]).to eq('blocked')
     expect(dto[:state]).to eq('paused')
     expect(dto[:capabilities][:resume]).to be(false)

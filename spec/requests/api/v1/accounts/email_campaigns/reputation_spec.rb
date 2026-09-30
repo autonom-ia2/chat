@@ -154,10 +154,11 @@ RSpec.describe 'Email reputation API', type: :request do
     super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
     ses = instance_double(EmailCampaigns::Ses::Client, get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' })
     cloudwatch = instance_double(Aws::CloudWatch::Client)
-    response_point = Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: Time.current, average: 0)]
+    response_point = Aws::CloudWatch::Types::GetMetricDataOutput.new(
+      metric_data_results: [Aws::CloudWatch::Types::MetricDataResult.new(id: 'rate', status_code: 'Complete',
+                                                                         timestamps: [Time.current], values: [0])]
     )
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(response_point)
+    allow(cloudwatch).to receive(:get_metric_data).and_return(response_point)
     with_modified_env('EMAIL_REPUTATION_PROVIDER_MONITOR' => 'true', 'EMAIL_REPUTATION_AWS_ACCOUNT_ID' => '123456789012') do
       config = EmailCampaigns::Reputation::ProviderConfig.new
       state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true)

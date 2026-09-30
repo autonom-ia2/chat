@@ -12,11 +12,11 @@ Snapshots, auditorias append-only, flags `email_campaigns_paused`, `blocked` e e
 
 ## Proteção global
 
-`ProviderMonitor` consulta SES GetAccount e as métricas globais CloudWatch `AWS/SES`, sem dimensão de tenant/domínio, `Reputation.BounceRate` e `Reputation.ComplaintRate`. Usa o ponto válido mais recente e não soma taxas. A documentação AWS distingue essas métricas oficiais da contagem local: [monitoramento](https://docs.aws.amazon.com/ses/latest/dg/monitor-sending-activity.html) e [alarmes de reputação](https://docs.aws.amazon.com/ses/latest/dg/reputationdashboard-cloudwatch-alarm.html).
+`ProviderMonitor` consulta SES GetAccount e as métricas globais CloudWatch `AWS/SES`, sem dimensão de tenant/domínio, `Reputation.BounceRate` e `Reputation.ComplaintRate`. Usa GetMetricData para buscar o ponto oficial válido mais recente em até 62 dias e não soma taxas. A consulta atual do SES/CloudWatch precisa estar recente (`checked_at`, no máximo 900 segundos); a publicação esparsa de uma taxa não bloqueia sozinha a conta. `observed_at` preserva a data real da taxa. Resposta incompleta, ausência de taxa ou erro de leitura permanece desconhecido; não inventa zero. A documentação AWS distingue essas métricas oficiais da contagem local: [monitoramento](https://docs.aws.amazon.com/ses/latest/dg/monitor-sending-activity.html) e [alarmes de reputação](https://docs.aws.amazon.com/ses/latest/dg/reputationdashboard-cloudwatch-alarm.html).
 
 Bloqueia novos claims se SES desabilita envio, entra em PROBATION/SHUTDOWN ou atinge os limites preventivos globais: bounces ≥5% ou reclamações ≥0,1%. Limites menores permanecem configuráveis; não se aumenta o teto. Uma resposta nociva atrasada ainda adiciona proteção e invalida qualquer recuperação em curso, sem substituir telemetria mais recente.
 
-Recuperação automática exige envio habilitado, status HEALTHY, métricas recentes, ambas abaixo de 80% dos limiares de pausa e duas amostras distintas cobrindo pelo menos 300 segundos. Consultas repetidas ao mesmo ponto não bastam. Falha, dados ausentes ou evidência nociva zeram a janela de recuperação. Pausa manual por configuração ou operador continua manual. A liberação gera auditoria `provider_recovered`.
+Recuperação automática exige envio habilitado, status HEALTHY, ambas as taxas abaixo de 80% dos limiares de pausa e duas consultas atuais bem-sucedidas cobrindo pelo menos 300 segundos. A taxa publicada pode permanecer a mesma entre as consultas. Falha, dados ausentes ou evidência nociva zeram a janela de recuperação. Pausa manual por configuração ou operador continua manual. A liberação gera auditoria `provider_recovered`.
 
 O gate não faz chamadas externas. Usa o estado persistido sob a mesma ordem de locks da reserva final. Uma chamada já autorizada pode terminar; nenhum novo destinatário é reservado após a pausa. Supressão, recusa de contato, higiene e importação ativa são verificadas antes da reserva. DirectInbox não passa pelo gate SES, mantendo seus controles individuais.
 
@@ -24,7 +24,7 @@ A recuperação libera a admissão global. Campanhas já pausadas continuam exig
 
 ## Ativação e rollback
 
-A entrega não muda produção, credenciais, IAM ou configurações remotas. Antes de implantar a troca de política:
+Rodrigo autorizou merge/deploy e o ajuste das duas AWS em 30/09/2026. A preparação usa o papel EC2 da aplicação, com `ses:GetAccount` e `cloudwatch:GetMetricData`, preservando as operações SES necessárias. Hub2You usa us-east-1; Autonom.ia usa sa-east-1. As duas chaves estáticas inválidas específicas de campanhas da Autonom.ia foram retiradas do parâmetro SecureString; a versão anterior permanece no histórico criptografado. As demais configurações foram preservadas. Antes de implantar a troca de política:
 
 1. Confirmar a conta/região SES correta, acesso somente de leitura a GetAccount/CloudWatch e agendamento do monitor existente.
 2. Habilitar `EMAIL_REPUTATION_PROVIDER_MONITOR=true`, configurar `EMAIL_REPUTATION_AWS_ACCOUNT_ID` e manter `EMAIL_REPUTATION_PROVIDER_UNKNOWN_ACTION=block`. Confirmar observação global fresca. Sem isso, não há sinal verde para substituir a proteção local em produção.

@@ -11,9 +11,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do # rubocop:disable 
   let(:cloudwatch) { instance_double(Aws::CloudWatch::Client) }
 
   def stub_safe_cloudwatch(client)
-    allow(client).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+    allow(client).to receive(:get_metric_data) do |args|
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [0]
+          )
+        ]
       )
     end
   end
@@ -40,9 +45,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do # rubocop:disable 
       release.pop
       { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' }
     end
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [0]
+          )
+        ]
       )
     end
     old = described_class.new(config: config, ses: old_ses, cloudwatch: cloudwatch)
@@ -70,9 +80,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do # rubocop:disable 
       release.pop
       { 'SendingEnabled' => true, 'EnforcementStatus' => 'PROBATION' }
     end
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [0]
+          )
+        ]
       )
     end
     harmful = described_class.new(config: config, ses: harmful_ses, cloudwatch: cloudwatch)
@@ -246,9 +261,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do # rubocop:disable 
       end
       found
     end
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [0]
+          )
+        ]
       )
     end
     ses = instance_double(EmailCampaigns::Ses::Client, get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' })

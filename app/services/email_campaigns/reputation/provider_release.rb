@@ -38,7 +38,7 @@ class EmailCampaigns::Reputation::ProviderRelease
 
   def releasable?(state)
     state.status == 'healthy' && state.error_code.nil? &&
-      state.observed_at&.between?(Time.current - @config.max_age, Time.current) &&
+      state.checked_at&.between?(Time.current - @config.max_age, Time.current) &&
       state.telemetry.values_at('sending_enabled', 'enforcement_status') == [true, 'HEALTHY'] &&
       safe_ratio?(state, 'bounce', @config.bounce_ratio) && safe_ratio?(state, 'complaint', @config.complaint_ratio)
   end

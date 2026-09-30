@@ -27,7 +27,7 @@ class EmailCampaigns::Reputation::ProviderGate
     end
 
     def fresh_and_healthy?(state, config, now)
-      state&.status == 'healthy' && state.observed_at&.between?(now - config.max_age, now)
+      state&.status == 'healthy' && state.checked_at&.between?(now - config.max_age, now)
     end
 
     def block_code(state, config, now)

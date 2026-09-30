@@ -11,12 +11,50 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
   let(:cloudwatch) { instance_double(Aws::CloudWatch::Client) }
   let(:monitor) { described_class.new(config: config, ses: ses, cloudwatch: cloudwatch) }
 
+  it 'permits fresh SES health with the last official rates published ten hours earlier' do
+    travel_to now
+    allow(cloudwatch).to receive(:get_metric_data).and_return(
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [Aws::CloudWatch::Types::MetricDataResult.new(id: 'rate', status_code: 'Complete',
+                                                                           timestamps: [now - 10.hours], values: [0.0001])]
+      )
+    )
+
+    state = monitor.call
+
+    expect(state).to have_attributes(status: 'healthy', checked_at: now, observed_at: now - 10.hours)
+    expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config, now: now)).to be_nil
+  end
+
+  it 'keeps incomplete CloudWatch results unknown even when the returned rates look safe' do
+    allow(cloudwatch).to receive(:get_metric_data).and_return(
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [Aws::CloudWatch::Types::MetricDataResult.new(id: 'rate', status_code: 'PartialData',
+                                                                           timestamps: [now], values: [0])]
+      )
+    )
+
+    state = monitor.call
+
+    expect(state.status).to eq('unknown')
+    expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)[:code]).to eq('provider_telemetry_unknown')
+  end
+
   it 'reads the latest CloudWatch ratio instead of summing samples or inventing SES GetAccount fields' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      value = args[:metric_name] == 'Reputation.BounceRate' ? 0.10 : 0.0
-      expect(args).to include(namespace: 'AWS/SES', dimensions: [], statistics: ['Average'])
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now - 300, average: 0.01),
-                                                                         Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: value)])
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      value = args[:metric_data_queries].first[:metric_stat][:metric][:metric_name] == 'Reputation.BounceRate' ? 0.10 : 0.0
+      expect(args).to include(scan_by: 'TimestampDescending')
+      expect(args[:metric_data_queries].first[:metric_stat]).to include(
+        metric: { namespace: 'AWS/SES', metric_name: 'Reputation.BounceRate', dimensions: [] }, period: 300, stat: 'Average'
+      )
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [now - 300, now], values: [0.01, value]
+          )
+        ]
+      )
     end
     monitor.call
     state = EmailProviderState.find_by!(provider_key: config.provider_key)
@@ -26,7 +64,7 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
 
   it 'blocks a disabled account without depending on CloudWatch availability' do
     allow(ses).to receive(:get_account).and_return('SendingEnabled' => false, 'EnforcementStatus' => 'SHUTDOWN')
-    expect(cloudwatch).not_to receive(:get_metric_statistics)
+    expect(cloudwatch).not_to receive(:get_metric_data)
     monitor.call
     expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('blocked')
   end
@@ -56,29 +94,46 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
     disabled = EmailCampaigns::Reputation::ProviderConfig.new({})
     expect(described_class.new(config: disabled, ses: ses, cloudwatch: cloudwatch).call).to be_nil
     expect(ses).not_to have_received(:get_account)
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: []))
+    allow(cloudwatch).to receive(:get_metric_data).and_return(Aws::CloudWatch::Types::GetMetricDataOutput.new(
+                                                                metric_data_results: [
+                                                                  Aws::CloudWatch::Types::MetricDataResult.new(
+                                                                    id: 'rate', status_code: 'Complete',
+                                                                    timestamps: [], values: []
+                                                                  )
+                                                                ]
+                                                              ))
     monitor.call
     expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('unknown')
   end
 
   it 'persists a known critical bounce without depending on the second metric request' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      raise 'complaint metric unavailable' unless args[:metric_name] == 'Reputation.BounceRate'
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      raise 'complaint metric unavailable' unless args[:metric_data_queries].first[:metric_stat][:metric][:metric_name] == 'Reputation.BounceRate'
 
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0.10)]
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [now], values: [0.10]
+          )
+        ]
       )
     end
     monitor.call
     expect(EmailProviderState.find_by!(provider_key: config.provider_key).status).to eq('blocked')
-    expect(cloudwatch).to have_received(:get_metric_statistics).once
+    expect(cloudwatch).to have_received(:get_metric_data).once
   end
 
   it 'updates the same row through healthy, preventive block, unknown and healthy without releasing the latch' do
     ratio = 0.0
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: ratio)]
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [ratio]
+          )
+        ]
       )
     end
     state = monitor.call
@@ -104,9 +159,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
   end
 
   it 'treats a second healthy poll error as unknown on the existing row' do
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-                                                                      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0)]
-                                                                    ))
+    allow(cloudwatch).to receive(:get_metric_data).and_return(Aws::CloudWatch::Types::GetMetricDataOutput.new(
+                                                                metric_data_results: [
+                                                                  Aws::CloudWatch::Types::MetricDataResult.new(
+                                                                    id: 'rate', status_code: 'Complete',
+                                                                    timestamps: [now], values: [0]
+                                                                  )
+                                                                ]
+                                                              ))
     state = monitor.call
     travel 1.second do
       allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
@@ -117,10 +177,15 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
   end
 
   it 'blocks complaint at the preventive boundary and PROBATION regardless of ratios' do
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-      ratio = args[:metric_name] == 'Reputation.ComplaintRate' ? 0.001 : 0.0
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: ratio)]
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
+      ratio = args[:metric_data_queries].first[:metric_stat][:metric][:metric_name] == 'Reputation.ComplaintRate' ? 0.001 : 0.0
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [now], values: [ratio]
+          )
+        ]
       )
     end
     expect(monitor.call).to have_attributes(status: 'blocked', blocked: true)
@@ -134,14 +199,19 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
     let!(:state) { EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true) }
 
     before do
-      allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+      allow(cloudwatch).to receive(:get_metric_data) do |args|
+        Aws::CloudWatch::Types::GetMetricDataOutput.new(
+          metric_data_results: [
+            Aws::CloudWatch::Types::MetricDataResult.new(
+              id: 'rate', status_code: 'Complete',
+              timestamps: [args[:end_time]], values: [0]
+            )
+          ]
         )
       end
     end
 
-    it 'recovers only after two distinct healthy samples spanning a metric period and audits the release' do
+    it 'recovers only after two fresh healthy checks spanning five minutes and audits the release' do
       travel_to now
       monitor.call
       expect(state.reload).to be_blocked
@@ -157,25 +227,35 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
       expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_recovered').count).to eq(1)
     end
 
-    it 'does not treat repeated polls of the same CloudWatch point as recovery' do
-      allow(cloudwatch).to receive(:get_metric_statistics).and_return(
-        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0)]
+    it 'recovers after two fresh healthy checks even when the last published rate is unchanged' do
+      allow(cloudwatch).to receive(:get_metric_data).and_return(
+        Aws::CloudWatch::Types::GetMetricDataOutput.new(
+          metric_data_results: [
+            Aws::CloudWatch::Types::MetricDataResult.new(
+              id: 'rate', status_code: 'Complete',
+              timestamps: [now - 10.hours], values: [0]
+            )
+          ]
         )
       )
       travel_to now
       monitor.call
       travel 300.seconds do
         monitor.call
-        expect(state.reload).to be_blocked
+        expect(state.reload).not_to be_blocked
       end
     end
 
     it 'requires recovery ratios below the pause thresholds with a safety margin' do
-      allow(cloudwatch).to receive(:get_metric_statistics) do |args|
-        ratio = args[:metric_name] == 'Reputation.BounceRate' ? 0.041 : 0
-        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: ratio)]
+      allow(cloudwatch).to receive(:get_metric_data) do |args|
+        ratio = args[:metric_data_queries].first[:metric_stat][:metric][:metric_name] == 'Reputation.BounceRate' ? 0.041 : 0
+        Aws::CloudWatch::Types::GetMetricDataOutput.new(
+          metric_data_results: [
+            Aws::CloudWatch::Types::MetricDataResult.new(
+              id: 'rate', status_code: 'Complete',
+              timestamps: [args[:end_time]], values: [ratio]
+            )
+          ]
         )
       end
       travel_to now

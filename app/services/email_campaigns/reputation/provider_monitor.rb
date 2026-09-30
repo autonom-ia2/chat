@@ -1,7 +1,8 @@
-# Read-only SES GetAccount + CloudWatch GetMetricStatistics. Never called by admission.
+# Read-only SES GetAccount + CloudWatch GetMetricData. Never called by admission.
 class EmailCampaigns::Reputation::ProviderMonitor
   RECOVERY_RATIO = 0.8
   RECOVERY_INTERVAL = 300
+  METRIC_LOOKBACK = 62.days
 
   def initialize(config: EmailCampaigns::Reputation::ProviderConfig.new, ses: nil, cloudwatch: nil)
     @config = config
@@ -66,16 +67,21 @@ class EmailCampaigns::Reputation::ProviderMonitor
   end
 
   def metric(name, now)
-    response = cloudwatch.get_metric_statistics(namespace: 'AWS/SES', metric_name: name, dimensions: [],
-                                                start_time: now - @config.max_age, end_time: now, period: 300,
-                                                statistics: ['Average'])
-    point = response.datapoints.select { |item| item.timestamp.between?(now - @config.max_age, now) }.max_by(&:timestamp)
+    response = cloudwatch.get_metric_data(start_time: now - METRIC_LOOKBACK, end_time: now, scan_by: 'TimestampDescending',
+                                          metric_data_queries: [{ id: 'rate', return_data: true, metric_stat: {
+                                            metric: { namespace: 'AWS/SES', metric_name: name, dimensions: [] }, period: 300, stat: 'Average'
+                                          } }])
+    result = response.metric_data_results.fetch(0)
+    raise ArgumentError, 'incomplete provider metric' unless result.status_code == 'Complete'
+
+    point = result.timestamps.zip(result.values).select { |timestamp, _value| timestamp.between?(now - METRIC_LOOKBACK, now) }.max_by(&:first)
     return unless point
 
-    value = Float(point.average)
+    timestamp, average = point
+    value = Float(average)
     raise ArgumentError, 'invalid provider ratio' unless value.finite? && value.between?(0, 1)
 
-    { ratio: value, observed_at: point.timestamp }
+    { ratio: value, observed_at: timestamp }
   end
 
   def persist(attributes)
@@ -124,28 +130,28 @@ class EmailCampaigns::Reputation::ProviderMonitor
                                  snapshot: { code: 'provider_blocked', checked_at: state.checked_at })
   end
 
-  # Two distinct healthy samples spanning a metric period, below the recovery
+  # Two fresh healthy provider checks spanning five minutes, below the recovery
   # thresholds. Missing/error observations reset recovery; manual blocks stay manual.
   def apply_recovery!(state, attributes) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity -- atomic recovery decision
-    previous_start = state.telemetry['recovery_started_at'] if state.observed_at&.between?(attributes[:checked_at] - @config.max_age,
-                                                                                           attributes[:checked_at])
+    previous_start = state.telemetry['recovery_started_at'] if state.checked_at&.between?(attributes[:checked_at] - @config.max_age,
+                                                                                          attributes[:checked_at])
     telemetry = (attributes[:telemetry] || state.telemetry).deep_stringify_keys.except('recovery_started_at')
     attributes[:telemetry] = telemetry
     return false unless state.latched? && recovery_safe?(state, attributes, telemetry)
 
-    observed_at = attributes.fetch(:observed_at)
-    if previous_start && observed_at >= Time.iso8601(previous_start) + RECOVERY_INTERVAL
+    checked_at = attributes.fetch(:checked_at)
+    if previous_start && checked_at >= Time.iso8601(previous_start) + RECOVERY_INTERVAL
       attributes[:blocked] = false
       return true
     end
 
-    telemetry['recovery_started_at'] = previous_start || observed_at.iso8601
+    telemetry['recovery_started_at'] = previous_start || checked_at.iso8601
     false
   end
 
   def recovery_safe?(state, attributes, telemetry) # rubocop:disable Metrics/CyclomaticComplexity -- keep recovery conditions together
     return false if state.manual_block || @config.manual_block || attributes[:status] != 'healthy'
-    return false unless attributes[:observed_at]&.between?(attributes[:checked_at] - @config.max_age, attributes[:checked_at])
+    return false unless attributes[:checked_at]&.between?(Time.current - @config.max_age, Time.current)
 
     bounce, complaint = telemetry.values_at('bounce', 'complaint')
     telemetry.values_at('sending_enabled', 'enforcement_status') == [true, 'HEALTHY'] &&
