@@ -20,6 +20,17 @@ const FluentIcon = defineAsyncComponent(
   () => import('shared/components/FluentIcon/DashboardIcon.vue')
 );
 
+const mountWhenReady = app => {
+  const mountApp = () => app.mount('#app');
+
+  if (document.readyState === 'complete') {
+    mountApp();
+    return;
+  }
+
+  window.addEventListener('load', mountApp, { once: true });
+};
+
 const startV3App = async () => {
   const { locale, fallbackLocale, messages } = await buildDashboardI18nMessages(
     window.chatwootConfig?.selectedLocale
@@ -69,9 +80,7 @@ const startV3App = async () => {
   initializeAnalyticsEvents();
   initalizeRouter();
 
-  window.onload = () => {
-    app.mount('#app');
-  };
+  mountWhenReady(app);
 };
 
 startV3App();
