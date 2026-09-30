@@ -2,6 +2,8 @@
 
 Aplicação Rails/Vue desta branch em ambiente local isolado, Chrome 1630 × 1000, com dados fictícios. Nenhum mockup, registro de cliente ou alteração em produção. Tema claro e branding padrão da instalação de teste; a implementação preserva configuração de branding por instalação.
 
+Capturas atualizadas após a revisão dos indicadores, avatares, abas e ações. O navegador estabiliza animações para capturar o estado final; não há edição dos pixels. Empresa de exemplo inclui um domínio .invalid para demonstrar Ver site, sem abrir endereço externo.
+
 | Tela | Captura |
 | --- | --- |
 | Lista de contatos | [Abrir](contacts.png) |

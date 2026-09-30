@@ -72,18 +72,19 @@ useEventListener(window, 'keydown', event => {
       "
     >
       <div class="shrink-0">
-        <slot name="sidebarHeader" />
+        <slot name="sidebarHeader" context="desktop" />
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
-        <slot name="sidebar" />
+        <slot name="sidebar" context="desktop" />
       </div>
     </div>
 
     <div
       v-if="slots.sidebar"
-      class="fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end transition-all duration-200 ease-in-out"
+      class="fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end duration-200 ease-in-out"
       :class="[
         relationshipsLayout ? 'xl:hidden' : 'lg:hidden',
+        relationshipsLayout ? 'transition-none' : 'transition-all',
         isSidebarOpen ? 'w-full' : 'w-16',
       ]"
     >
@@ -147,10 +148,10 @@ useEventListener(window, 'keydown', event => {
           "
         >
           <div class="shrink-0">
-            <slot name="sidebarHeader" />
+            <slot name="sidebarHeader" context="mobile" />
           </div>
           <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
-            <slot name="sidebar" />
+            <slot name="sidebar" context="mobile" />
           </div>
         </div>
       </Transition>

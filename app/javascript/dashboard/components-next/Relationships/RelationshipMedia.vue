@@ -612,8 +612,9 @@ onBeforeUnmount(() => {
             <time
               :datetime="row.created_at"
               class="mt-1 block text-xs text-n-slate-11"
-              >{{ formatMediaDate(row.created_at, locale) }}</time
             >
+              {{ formatMediaDate(row.created_at, locale) }}
+            </time>
             <CompanyMediaActions
               class="mt-2"
               @preview="download(row, true)"

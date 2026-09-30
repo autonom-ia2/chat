@@ -187,7 +187,22 @@
         "new_in_period": "New in 30 days",
         "with_contacts": "With linked contacts",
         "inactive_in_period": "No activity for 30 days"
+      },
+      "DESCRIPTIONS": {
+        "contacts": {
+          "total": "All contact records",
+          "new_in_period": "Created during this period",
+          "active_in_period": "With recent activity",
+          "with_company": "With an associated company"
+        },
+        "companies": {
+          "total": "All company records",
+          "new_in_period": "Created during this period",
+          "with_contacts": "With linked people",
+          "inactive_in_period": "Follow up on these relationships"
+        }
       }
-    }
+    },
+    "PANEL_TITLE": "Relationship activity"
   }
 }

@@ -29,23 +29,31 @@ const actions = computed(() => [
 </script>
 
 <template>
-  <div data-profile-actions class="flex w-full flex-wrap items-center gap-2">
-    <ComposeConversation :contact-id="String(contact.id)">
-      <template #trigger>
-        <Button
-          type="button"
-          sm
-          class="min-h-11"
-          icon="i-lucide-message-square"
-          :label="t('CONTACTS_LAYOUT.HEADER.SEND_MESSAGE')"
-        />
-      </template>
-    </ComposeConversation>
+  <div
+    data-profile-actions
+    class="grid w-full grid-cols-2 gap-2 xl:flex xl:flex-wrap xl:items-center"
+  >
+    <div class="col-span-2 grid xl:contents">
+      <ComposeConversation :contact-id="String(contact.id)">
+        <template #trigger>
+          <Button
+            type="button"
+            sm
+            class="min-h-11 w-full xl:w-auto"
+            icon="i-lucide-message-square"
+            :label="t('CONTACTS_LAYOUT.HEADER.SEND_MESSAGE')"
+          />
+        </template>
+      </ComposeConversation>
+    </div>
     <VoiceCallButton
       :phone="contact.phoneNumber"
       :contact-id="contact.id"
       :label="t('CONTACT_PANEL.CALL')"
       size="sm"
+      outline
+      slate
+      icon="i-lucide-phone"
       class="min-h-11"
     />
     <RelationshipActionMenu

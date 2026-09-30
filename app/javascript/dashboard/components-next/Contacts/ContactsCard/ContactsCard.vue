@@ -111,8 +111,8 @@ const handleAvatarHover = isHovered => {
 <template>
   <div class="relative">
     <CardLayout
-      class="!rounded-2xl"
       :key="id"
+      class="!rounded-2xl shadow-sm"
       layout="row"
       :class="{
         'outline-n-weak !bg-n-slate-3 dark:!bg-n-solid-3': isSelected,
@@ -127,7 +127,8 @@ const handleAvatarHover = isHovered => {
           <Avatar
             :name="name"
             :src="thumbnail"
-            :size="42"
+            :size="48"
+            rounded-full
             :status="availabilityStatus"
             hide-offline-status
           >

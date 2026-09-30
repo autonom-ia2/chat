@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import ContactDetailActions from 'dashboard/components-next/Relationships/ContactDetailActions.vue';
+import RelationshipTabs from 'dashboard/components-next/Relationships/RelationshipTabs.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
@@ -71,12 +72,14 @@ const goToContactsList = () => {
 };
 
 const fetchActiveContact = async () => {
-  if (route.params.contactId) {
-    await store.dispatch('contacts/show', { id: route.params.contactId });
-    await store.dispatch(
-      'contacts/fetchContactableInbox',
-      route.params.contactId
-    );
+  const { accountId: requestedAccountId, contactId } = route.params;
+  if (!contactId) return;
+  await store.dispatch('contacts/show', { id: contactId });
+  if (
+    route.params.accountId === requestedAccountId &&
+    route.params.contactId === contactId
+  ) {
+    await store.dispatch('contacts/fetchContactableInbox', contactId);
   }
 };
 
@@ -189,8 +192,15 @@ onMounted(() => {
           />
         </template>
       </ContactDetails>
-      <template #sidebarHeader>
-        <div class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
+      <template #sidebarHeader="{ context = 'desktop' }">
+        <RelationshipTabs
+          v-if="navigationEnabled"
+          :id="`contact-sidebar-${context}`"
+          :tabs="tabs"
+          :initial-active-tab="activeTabIndex"
+          @tab-changed="handleTabChange"
+        />
+        <div v-else class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
           <TabBar
             :tabs="tabs"
             :initial-active-tab="activeTabIndex"
@@ -199,32 +209,44 @@ onMounted(() => {
           />
         </div>
       </template>
-      <template #sidebar>
+      <template #sidebar="{ context = 'desktop' }">
         <div
-          v-if="isFetchingItem"
-          class="flex items-center justify-center py-10 text-n-slate-11"
+          :id="
+            navigationEnabled ? `contact-sidebar-${context}-panel` : undefined
+          "
+          :role="navigationEnabled ? 'tabpanel' : undefined"
+          :aria-labelledby="
+            navigationEnabled
+              ? `contact-sidebar-${context}-${activeTab}`
+              : undefined
+          "
         >
-          <Spinner />
+          <div
+            v-if="isFetchingItem"
+            class="flex items-center justify-center py-10 text-n-slate-11"
+          >
+            <Spinner />
+          </div>
+          <template v-else>
+            <ContactCustomAttributes
+              v-if="activeTab === 'attributes'"
+              :selected-contact="selectedContact"
+            />
+            <ContactNotes
+              v-if="activeTab === 'notes'"
+              :key="`${accountId}:${route.params.contactId}`"
+            />
+            <ContactHistory v-if="activeTab === 'history'" />
+            <ContactMedia v-if="activeTab === 'media'" />
+            <ContactMerge
+              v-if="activeTab === 'merge'"
+              ref="contactMergeRef"
+              :selected-contact="selectedContact"
+              @go-to-contacts-list="goToContactsList"
+              @reset-tab="handleTabChange(CONTACT_TABS_OPTIONS[0])"
+            />
+          </template>
         </div>
-        <template v-else>
-          <ContactCustomAttributes
-            v-if="activeTab === 'attributes'"
-            :selected-contact="selectedContact"
-          />
-          <ContactNotes
-            v-if="activeTab === 'notes'"
-            :key="`${accountId}:${route.params.contactId}`"
-          />
-          <ContactHistory v-if="activeTab === 'history'" />
-          <ContactMedia v-if="activeTab === 'media'" />
-          <ContactMerge
-            v-if="activeTab === 'merge'"
-            ref="contactMergeRef"
-            :selected-contact="selectedContact"
-            @go-to-contacts-list="goToContactsList"
-            @reset-tab="handleTabChange(CONTACT_TABS_OPTIONS[0])"
-          />
-        </template>
       </template>
     </ContactsDetailsLayout>
   </div>

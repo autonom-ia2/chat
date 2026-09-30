@@ -17,13 +17,16 @@ const restoreFocus = () => nextTick(() => trigger.value?.$el.focus());
       <Button
         ref="trigger"
         type="button"
-        ghost
+        outline
         slate
+        sm
         icon="i-lucide-ellipsis"
-        class="min-h-11 min-w-11"
+        class="min-h-11 min-w-11 w-full !px-3 xl:w-auto"
         :aria-label="$t('RELATIONSHIPS.MORE_ACTIONS')"
         :aria-expanded="isOpen"
-      />
+      >
+        <span class="xl:sr-only">{{ $t('RELATIONSHIPS.MORE_ACTIONS') }}</span>
+      </Button>
     </template>
     <template #content="{ hide }">
       <div class="flex w-64 flex-col gap-1 p-2">

@@ -24,7 +24,7 @@ const metrics = computed(() => [
     icon:
       props.entity === 'contacts' ? 'i-lucide-users' : 'i-lucide-building-2',
   },
-  { key: 'new_in_period', icon: 'i-lucide-plus' },
+  { key: 'new_in_period', icon: 'i-lucide-user-round-plus' },
   {
     key: props.entity === 'contacts' ? 'active_in_period' : 'with_contacts',
     icon: 'i-lucide-messages-square',
@@ -34,7 +34,8 @@ const metrics = computed(() => [
         {
           key:
             props.entity === 'contacts' ? 'with_company' : 'inactive_in_period',
-          icon: 'i-lucide-link',
+          icon:
+            props.entity === 'contacts' ? 'i-lucide-link' : 'i-lucide-history',
         },
       ]
     : []),
@@ -68,57 +69,71 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section
-    class="my-5 overflow-hidden rounded-2xl border border-n-weak bg-n-solid-2"
-    :aria-busy="loading"
-  >
-    <header
-      class="flex flex-wrap items-center justify-between gap-2 border-b border-n-weak px-5 py-3"
-    >
+  <section class="my-6" :aria-busy="loading">
+    <header class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <h2 class="m-0 text-sm font-semibold text-n-slate-12">
         {{ t('RELATIONSHIPS.SUMMARY.TITLE') }}
       </h2>
-      <span class="text-xs text-n-slate-11">{{
-        t('RELATIONSHIPS.SUMMARY.PERIOD')
-      }}</span>
+      <span class="flex items-center gap-2 text-xs text-n-slate-11">
+        <span class="i-lucide-calendar-days size-4" aria-hidden="true" />
+        {{ t('RELATIONSHIPS.SUMMARY.PERIOD') }}
+      </span>
     </header>
     <div
       v-if="error"
       role="alert"
-      class="flex flex-wrap items-center gap-3 px-5 py-4 text-sm text-n-slate-11"
+      class="flex flex-wrap items-center gap-3 rounded-3xl border border-n-weak bg-n-solid-2 px-6 py-5 text-sm text-n-slate-11"
     >
       {{ t('RELATIONSHIPS.SUMMARY.ERROR') }}
       <Button ghost slate sm :label="t('RELATIONSHIPS.RETRY')" @click="load" />
     </div>
     <dl
       v-else
-      class="m-0 grid grid-cols-1 divide-y divide-n-weak sm:grid-cols-2 xl:grid-cols-4 xl:divide-y-0"
+      class="m-0 grid grid-cols-2 overflow-hidden rounded-3xl border border-n-blue-5 bg-n-solid-2 shadow-sm xl:grid-cols-4"
     >
       <div
-        v-for="metric in metrics"
+        v-for="(metric, index) in metrics"
         :key="metric.key"
-        class="flex min-w-0 items-center gap-3 px-5 py-5"
+        class="flex min-w-0 flex-col justify-between gap-5 p-5 md:p-6"
+        :class="[
+          index === 0
+            ? 'bg-gradient-to-br from-n-blue-3 to-n-blue-2'
+            : 'border-s border-n-weak',
+          index > 1 ? 'border-t xl:border-t-0' : '',
+          index === 2 ? 'border-s-0 xl:border-s' : '',
+        ]"
       >
-        <span
-          class="flex size-11 shrink-0 items-center justify-center rounded-full bg-n-blue-3 text-n-blue-11"
-          aria-hidden="true"
+        <dt
+          class="flex flex-col items-start gap-3 text-sm font-medium leading-5 sm:flex-row sm:items-center"
         >
-          <span :class="metric.icon" class="size-5" />
-        </span>
-        <div class="min-w-0">
-          <dt class="text-xs text-n-slate-11">
+          <span
+            class="flex size-10 shrink-0 items-center justify-center rounded-full text-n-blue-11"
+            :class="index === 0 ? 'bg-n-solid-2' : 'bg-n-blue-3'"
+            aria-hidden="true"
+          >
+            <span :class="metric.icon" class="size-5" />
+          </span>
+          <span :class="index === 0 ? 'text-n-blue-12' : 'text-n-slate-11'">
             {{ t(`RELATIONSHIPS.SUMMARY.${entity}.${metric.key}`) }}
-          </dt>
-          <dd
-            class="m-0 mt-1 text-2xl font-semibold tabular-nums text-n-slate-12"
+          </span>
+        </dt>
+        <dd class="m-0">
+          <span
+            class="block text-3xl font-semibold leading-none tracking-tight tabular-nums md:text-4xl"
+            :class="index === 0 ? 'text-n-blue-12' : 'text-n-slate-12'"
           >
             {{
               summary
                 ? number(summary[metric.key])
                 : t('RELATIONSHIPS.SUMMARY.PENDING')
             }}
-          </dd>
-        </div>
+          </span>
+          <span class="mt-3 block text-xs leading-5 text-n-slate-11">
+            {{
+              t(`RELATIONSHIPS.SUMMARY.DESCRIPTIONS.${entity}.${metric.key}`)
+            }}
+          </span>
+        </dd>
       </div>
     </dl>
   </section>

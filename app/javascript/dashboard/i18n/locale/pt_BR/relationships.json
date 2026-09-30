@@ -187,7 +187,22 @@
         "new_in_period": "Novas em 30 dias",
         "with_contacts": "Com contatos vinculados",
         "inactive_in_period": "Sem atividade há 30 dias"
+      },
+      "DESCRIPTIONS": {
+        "contacts": {
+          "total": "Todos os cadastros",
+          "new_in_period": "Cadastros no período",
+          "active_in_period": "Com atividade recente",
+          "with_company": "Com empresa associada"
+        },
+        "companies": {
+          "total": "Todas as empresas cadastradas",
+          "new_in_period": "Cadastros no período",
+          "with_contacts": "Com pessoas vinculadas",
+          "inactive_in_period": "Relacionamentos para acompanhar"
+        }
       }
-    }
+    },
+    "PANEL_TITLE": "Acompanhamento"
   }
 }

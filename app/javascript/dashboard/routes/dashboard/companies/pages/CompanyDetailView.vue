@@ -14,6 +14,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import CompaniesDetailsLayout from 'dashboard/components-next/Companies/CompaniesDetailsLayout.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
+import RelationshipTabs from 'dashboard/components-next/Relationships/RelationshipTabs.vue';
 import CompanyContactsSidebar from 'dashboard/components-next/Companies/CompanyDetail/CompanyContactsSidebar.vue';
 import CompanyCustomAttributes from 'dashboard/components-next/Companies/CompanyDetail/CompanyCustomAttributes.vue';
 import CompanyHistorySidebar from 'dashboard/components-next/Companies/CompanyDetail/CompanyHistorySidebar.vue';
@@ -328,8 +329,15 @@ onBeforeUnmount(() => {
       </Policy>
     </div>
 
-    <template #sidebarHeader>
-      <div class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
+    <template #sidebarHeader="{ context = 'desktop' }">
+      <RelationshipTabs
+        v-if="navigationEnabled"
+        :id="`company-sidebar-${context}`"
+        :tabs="sidebarTabs"
+        :initial-active-tab="activeSidebarTabIndex"
+        @tab-changed="handleSidebarTabChange"
+      />
+      <div v-else class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
         <TabBar
           :tabs="sidebarTabs"
           :initial-active-tab="activeSidebarTabIndex"
@@ -338,42 +346,52 @@ onBeforeUnmount(() => {
         />
       </div>
     </template>
-    <template v-if="hasCompany" #sidebar>
-      <CompanyMedia
-        v-if="mediaEnabled && activeSidebarTab === 'media'"
-        :company-id="companyId"
-      />
-      <CompanyNotesSidebar
-        v-if="activeSidebarTab === 'notes'"
-        :notes="companyNotes"
-        :is-loading="isFetchingNotes"
-      />
-      <CompanyHistorySidebar
-        v-if="activeSidebarTab === 'history'"
-        :conversations="companyConversations"
-        :is-loading="isFetchingConversations"
-      />
-      <CompanyContactsSidebar
-        v-if="activeSidebarTab === 'contacts'"
-        :company="company"
-        :contacts="companyContacts"
-        :meta="companyContactsMeta"
-        :is-loading="isFetchingContacts"
-        :is-busy="isManagingContacts"
-        :search-results="contactSearchResults"
-        :is-searching="isSearchingContacts"
-        :selected-contact="selectedCandidate"
-        @cancel-contact-selection="clearSelectedCandidate"
-        @confirm-contact-selection="handleConfirmContactSelection"
-        @search="handleContactSearch"
-        @select-contact="contact => (selectedCandidate = contact)"
-        @remove-contact="handleRemoveContact"
-        @update:current-page="loadCompanyContactsPage"
-      />
-      <CompanyCustomAttributes
-        v-if="activeSidebarTab === 'attributes'"
-        :company="company"
-      />
+    <template v-if="hasCompany" #sidebar="{ context = 'desktop' }">
+      <div
+        :id="navigationEnabled ? `company-sidebar-${context}-panel` : undefined"
+        :role="navigationEnabled ? 'tabpanel' : undefined"
+        :aria-labelledby="
+          navigationEnabled
+            ? `company-sidebar-${context}-${activeSidebarTab}`
+            : undefined
+        "
+      >
+        <CompanyMedia
+          v-if="mediaEnabled && activeSidebarTab === 'media'"
+          :company-id="companyId"
+        />
+        <CompanyNotesSidebar
+          v-if="activeSidebarTab === 'notes'"
+          :notes="companyNotes"
+          :is-loading="isFetchingNotes"
+        />
+        <CompanyHistorySidebar
+          v-if="activeSidebarTab === 'history'"
+          :conversations="companyConversations"
+          :is-loading="isFetchingConversations"
+        />
+        <CompanyContactsSidebar
+          v-if="activeSidebarTab === 'contacts'"
+          :company="company"
+          :contacts="companyContacts"
+          :meta="companyContactsMeta"
+          :is-loading="isFetchingContacts"
+          :is-busy="isManagingContacts"
+          :search-results="contactSearchResults"
+          :is-searching="isSearchingContacts"
+          :selected-contact="selectedCandidate"
+          @cancel-contact-selection="clearSelectedCandidate"
+          @confirm-contact-selection="handleConfirmContactSelection"
+          @search="handleContactSearch"
+          @select-contact="contact => (selectedCandidate = contact)"
+          @remove-contact="handleRemoveContact"
+          @update:current-page="loadCompanyContactsPage"
+        />
+        <CompanyCustomAttributes
+          v-if="activeSidebarTab === 'attributes'"
+          :company="company"
+        />
+      </div>
     </template>
 
     <ConfirmCompanyDeleteDialog
