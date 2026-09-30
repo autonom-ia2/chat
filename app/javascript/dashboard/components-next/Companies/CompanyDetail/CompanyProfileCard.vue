@@ -159,7 +159,9 @@ const handleUpdateCompany = async () => {
         </h3>
         <span class="text-sm leading-6 text-n-slate-11">
           <template v-for="(item, index) in summary" :key="item.key">
-            <span v-if="index">&nbsp;•&nbsp;</span>
+            <span v-if="index" class="mx-1">{{
+              $t('CONTACTS_LAYOUT.DETAILS.DATES_SEPARATOR')
+            }}</span>
             <span
               v-tooltip.top="{
                 content: item.exactTime,
@@ -179,6 +181,7 @@ const handleUpdateCompany = async () => {
       </div>
     </div>
 
+    <slot name="actions" />
     <div class="flex flex-col items-start w-full gap-6">
       <span class="py-1 text-sm font-medium text-n-slate-12">
         {{ t('COMPANIES.DETAIL.PROFILE.TITLE') }}

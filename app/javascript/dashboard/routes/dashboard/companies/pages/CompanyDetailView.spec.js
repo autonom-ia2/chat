@@ -139,17 +139,17 @@ beforeEach(() => {
 });
 
 describe('CompanyDetailView custom attributes', () => {
-  it('keeps History as default and exposes the existing Attributes sidebar', async () => {
+  it('opens Contacts by default and exposes the existing Attributes sidebar', async () => {
     const wrapper = await mountView();
 
-    expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+    expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
     expect(wrapper.find('[data-tab="attributes"]').exists()).toBe(true);
     expect(wrapper.find('.company-attributes').exists()).toBe(false);
 
     await wrapper.find('[data-tab="attributes"]').trigger('click');
     await nextTick();
 
-    expect(wrapper.find('.history-sidebar').exists()).toBe(false);
+    expect(wrapper.find('.contacts-sidebar').exists()).toBe(false);
     expect(wrapper.find('.company-attributes').exists()).toBe(true);
     expect(
       wrapper.find('.company-attributes').attributes('data-company-id')
@@ -164,7 +164,7 @@ it('restores Media from the detail return query and exits Media when flags turn 
   };
   const wrapper = await mountView();
   expect(wrapper.find('.company-media').exists()).toBe(true);
-  expect(wrapper.find('.history-sidebar').exists()).toBe(false);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(false);
   expect(JSON.parse(testState.query.media)).toEqual({
     q: 'proposal',
     contact_id: '4',
@@ -173,24 +173,24 @@ it('restores Media from the detail return query and exits Media when flags turn 
   testState.flags.value = false;
   await nextTick();
   expect(wrapper.find('.company-media').exists()).toBe(false);
-  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
   wrapper.unmount();
 });
 it('ignores media query when media flags are off', async () => {
   testState.query = { media: '{}' };
   const wrapper = await mountView();
   expect(wrapper.find('.company-media').exists()).toBe(false);
-  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
   wrapper.unmount();
 });
 
 it('restores the media return context when the account flags finish loading', async () => {
   testState.query = { media: JSON.stringify({ q: 'proposal', page: 2 }) };
   const wrapper = await mountView();
-  expect(wrapper.find('.history-sidebar').exists()).toBe(true);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
   testState.flags.value = true;
   await nextTick();
   expect(wrapper.find('.company-media').exists()).toBe(true);
-  expect(wrapper.find('.history-sidebar').exists()).toBe(false);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(false);
   wrapper.unmount();
 });

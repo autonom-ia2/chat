@@ -18,6 +18,10 @@ class Api::V1::Accounts::CompaniesController < Api::V1::Accounts::EnterpriseAcco
     @companies_count = @companies.total_count
   end
 
+  def summary
+    render json: Relationships::Summary.call(resolved_companies, Relationships::Summary::COMPANY_METRICS)
+  end
+
   def search
     if params[:q].blank?
       return render json: { error: I18n.t('errors.companies.search.query_missing') },

@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import RelationshipSummary from 'dashboard/components-next/Relationships/RelationshipSummary.vue';
 import { debounce } from '@chatwoot/utils';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
@@ -19,6 +21,7 @@ const companiesStore = useCompaniesStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { navigationEnabled } = useRelationships();
 
 const { updateUISettings, uiSettings } = useUISettings();
 
@@ -176,6 +179,9 @@ onMounted(() => {
     @search="onSearch"
     @create="openCreateCompanyDialog"
   >
+    <template #summary>
+      <RelationshipSummary v-if="navigationEnabled" entity="companies" />
+    </template>
     <div v-if="isFetchingList" class="flex items-center justify-center p-8">
       <span class="text-n-slate-11 text-base">{{
         t('COMPANIES.LOADING')

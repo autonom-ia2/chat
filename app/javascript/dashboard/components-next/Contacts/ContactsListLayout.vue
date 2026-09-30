@@ -107,6 +107,7 @@ const showPagination = computed(() => {
             @clear-filters="emit('clearFilters')"
             @open-filter="openFilter"
           />
+          <slot name="summary" />
           <slot name="default" />
           <ContactsLoadMore
             v-if="showLoadMore"

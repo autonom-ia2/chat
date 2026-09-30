@@ -181,7 +181,8 @@ const handleAvatarDelete = async () => {
       </div>
       <ContactLabels :contact-id="selectedContact?.id" />
     </div>
-    <div class="flex flex-col items-start gap-6">
+    <slot name="actions" />
+    <div class="flex flex-col items-start w-full gap-6">
       <ContactsForm
         ref="contactsFormRef"
         :contact-data="contactData"
