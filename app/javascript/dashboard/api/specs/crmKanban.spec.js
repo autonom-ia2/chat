@@ -120,6 +120,15 @@ describe('#CrmKanbanAPI', () => {
     );
   });
 
+  it('sends an optional idempotency header without adding it to card attributes', () => {
+    crmKanban.createCard({ title: 'Opportunity' }, 'test-opportunity-key');
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/cards',
+      { card: { title: 'Opportunity' } },
+      { headers: { 'Idempotency-Key': 'test-opportunity-key' } }
+    );
+  });
+
   it('manages follow-ups and calendar using account scoped CRM endpoints', () => {
     crmKanban.getFollowUps({ card_id: 10 });
     expect(axiosMock.get).toHaveBeenCalledWith(

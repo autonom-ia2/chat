@@ -99,6 +99,23 @@ describe('#ContactsAPI', () => {
       });
     });
 
+    it('#search explicitly includes canonical companies only when requested', () => {
+      contactAPI.search('Horizonte', 2, 'name', '', { includeCompany: true });
+      expect(axiosMock.get).toHaveBeenLastCalledWith(
+        '/api/v1/contacts/search',
+        {
+          params: {
+            include_contact_inboxes: false,
+            page: 2,
+            sort: 'name',
+            q: 'Horizonte',
+            include_company: true,
+          },
+          signal: undefined,
+        }
+      );
+    });
+
     it('#search with signal', () => {
       const controller = new AbortController();
       contactAPI.search('leads', 1, 'date', 'customer-support', {

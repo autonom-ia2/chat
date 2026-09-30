@@ -70,28 +70,29 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def create
-    with_idempotency do
-      authorize ::Crm::Card
-      permitted_params = create_params.to_h.with_indifferent_access
-      external_id = permitted_params[:external_id].presence
+    authorize ::Crm::Card
+    permitted_params = create_params.to_h.with_indifferent_access
+    external_id = permitted_params[:external_id].presence
 
-      # Idempotent upsert for external systems (n8n): a retried create with the
-      # same external_id updates the existing card instead of duplicating.
-      existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
-      next upsert_existing_card!(existing, permitted_params) if existing
+    # Claim, opportunity and captured response commit together. Retrying a failed
+    # request cannot strand a processing key or duplicate a partially saved card.
+    ActiveRecord::Base.transaction do
+      with_idempotency do
+        existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
+        next upsert_existing_card!(existing, permitted_params) if existing
 
-      conversation = conversation_from_params(permitted_params)
-      resolved_params = resolved_create_params(permitted_params, conversation: conversation)
-      create_authorizer.authorize!(resolved_params, conversation: conversation)
-      @card = ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
-      authorize @card, :show?
-      broadcast_card(::Events::Types::CRM_CARD_CREATED)
-      render :show, status: :created
-    rescue ActiveRecord::RecordNotUnique
-      # Lost a race on the same external_id — resolve to the now-existing card.
-      raise unless external_id
+        @card = create_authorized_card(permitted_params)
+        authorize @card, :show?
+        broadcast_card(::Events::Types::CRM_CARD_CREATED)
+        render :show, status: :created
+      end
+    end
+  rescue ActiveRecord::RecordNotUnique
+    # The failed transaction is already rolled back before resolving an external upsert race.
+    raise unless external_id
 
-      upsert_existing_card!(Current.account.crm_cards.find_by!(external_id: external_id), permitted_params)
+    ActiveRecord::Base.transaction do
+      with_idempotency { upsert_existing_card!(Current.account.crm_cards.find_by!(external_id: external_id), permitted_params) }
     end
   end
 
@@ -332,8 +333,29 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     Current.account.conversations.find(params[:conversation_id])
   end
 
+  def create_authorized_card(permitted_params)
+    conversation = conversation_from_params(permitted_params)
+    resolved_params = resolved_create_params(permitted_params, conversation: conversation)
+    create_authorizer.authorize!(resolved_params, conversation: conversation)
+    ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
+  end
+
   def broadcast_card(event_name)
-    ::Crm::Cards::Broadcaster.broadcast(@card, event_name)
+    return ::Crm::Cards::Broadcaster.broadcast(@card, event_name) unless action_name == 'create'
+
+    card = @card
+    ActiveRecord.after_all_transactions_commit { ::Crm::Cards::Broadcaster.broadcast(card, event_name) }
+  end
+
+  def replay_stored_response(record)
+    return super unless action_name == 'create'
+
+    # A replay must honor current visibility, not return a historical payload
+    # containing conversations the requesting user can no longer read.
+    @card = policy_scope(::Crm::Card).find(record.response_body.fetch('payload').fetch('id'))
+    authorize @card, :show?
+    response.headers[REPLAYED_HEADER] = 'true'
+    render :show, status: record.response_status
   end
 
   def filtered_cards

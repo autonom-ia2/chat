@@ -788,14 +788,17 @@ export const actions = {
     }
   },
 
-  createCard: async ({ commit, dispatch }, payload) => {
+  createCard: async ({ commit }, { idempotencyKey, ...payload }) => {
+    const account = CrmKanbanAPI.accountIdFromRoute;
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isCreatingCard: true });
     try {
-      const response = await CrmKanbanAPI.createCard(payload);
-      commit(types.UPSERT_CRM_KANBAN_CARD, response.data.payload);
-      await dispatch('fetchBoard', {
-        pipelineId: response.data.payload.pipeline_id,
-      });
+      const response = idempotencyKey
+        ? await CrmKanbanAPI.createCard(payload, idempotencyKey)
+        : await CrmKanbanAPI.createCard(payload);
+      if (account === CrmKanbanAPI.accountIdFromRoute)
+        commit(types.UPSERT_CRM_KANBAN_CARD, response.data.payload);
+      // Refresh belongs to the page: a failed GET must not turn a confirmed
+      // creation into a save error and encourage creating the opportunity again.
       return response.data.payload;
     } finally {
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isCreatingCard: false });

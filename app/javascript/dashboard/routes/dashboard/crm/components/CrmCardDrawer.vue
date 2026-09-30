@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
+import CrmOpportunityForm from './CrmOpportunityForm.vue';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -31,6 +32,7 @@ const props = defineProps({
   // quick-add). Null → default 'summary'.
   initialTab: { type: String, default: null },
   stages: { type: Array, default: () => [] },
+  pipelines: { type: Array, default: () => [] },
   pipelineId: { type: [String, Number], default: '' },
   agents: { type: Array, default: () => [] },
   inboxes: { type: Array, default: () => [] },
@@ -104,6 +106,7 @@ const isEditingContact = ref(false);
 const isSavingContact = ref(false);
 const contactError = ref('');
 const relationshipPanel = ref(null);
+const creationForm = ref(null);
 const companyAction = computed(() => relationshipPanel.value?.companyAction);
 const discardDialog = ref(null);
 const discardOpen = ref(false);
@@ -126,10 +129,6 @@ const isLoadingMessagingWindow = ref(false);
 const whatsappApiTemplates = ref([]);
 const isLoadingWhatsappTemplates = ref(false);
 
-const contactSearch = ref('');
-const contactResults = ref([]);
-const hasSearchedContacts = ref(false);
-const isSearchingContacts = ref(false);
 const activeTab = ref('summary');
 
 const isEditing = computed(() => props.mode === 'edit');
@@ -144,15 +143,6 @@ const panelSubtitle = computed(() =>
     : t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE')
 );
 
-const stageOptions = computed(() =>
-  props.stages.map(stage => ({ value: stage.id, label: stage.name }))
-);
-const agentOptions = computed(() =>
-  props.agents.map(agent => ({ value: agent.id, label: agent.name }))
-);
-const inboxOptions = computed(() =>
-  props.inboxes.map(inbox => ({ value: inbox.id, label: inbox.name }))
-);
 const priorityOptions = computed(() => [
   { value: 'low', label: t('CRM_KANBAN.PRIORITY.LOW') },
   { value: 'medium', label: t('CRM_KANBAN.PRIORITY.MEDIUM') },
@@ -160,21 +150,6 @@ const priorityOptions = computed(() => [
   { value: 'urgent', label: t('CRM_KANBAN.PRIORITY.URGENT') },
 ]);
 const withEmptyChoice = (label, options) => [{ value: '', label }, ...options];
-const inboxChoices = computed(() =>
-  withEmptyChoice(t('CRM_KANBAN.DRAWER.NO_INBOX'), inboxOptions.value)
-);
-const ownerChoices = computed(() =>
-  withEmptyChoice(t('CRM_KANBAN.DRAWER.USE_CURRENT_USER'), agentOptions.value)
-);
-const contactChoices = computed(() =>
-  withEmptyChoice(
-    t('CRM_KANBAN.DRAWER.NO_CONTACT'),
-    contactResults.value.map(contact => ({
-      value: contact.id,
-      label: contact.name || contact.phone_number,
-    }))
-  )
-);
 const detailTabs = computed(() => [
   { id: 'summary', label: t('CRM_KANBAN.DRAWER.TAB_SUMMARY') },
   { id: 'contact', label: relationshipLabel('TAB') },
@@ -182,9 +157,6 @@ const detailTabs = computed(() => [
   { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_FOLLOW_UPS') },
   { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_TIMELINE') },
 ]);
-const selectedContact = computed(() =>
-  contactResults.value.find(contact => contact.id === Number(form.contactId))
-);
 const linkedConversationDisplayId = computed(
   () => props.card?.conversation?.display_id || ''
 );
@@ -395,9 +367,6 @@ const resetForm = () => {
   form.inboxId = card.inbox_id || '';
   form.contactId = card.contact_id || '';
   hydrateContactForm(card);
-  contactSearch.value = card.contact?.name || '';
-  contactResults.value = card.contact ? [card.contact] : [];
-  hasSearchedContacts.value = false;
   activeTab.value = props.initialTab || 'summary';
   followUpForm.title = t('CRM_KANBAN.DRAWER.FOLLOW_UP_DEFAULT_TITLE');
   followUpForm.dueAt = '';
@@ -473,23 +442,6 @@ const onNativeTemplateSelected = () => {
   followUpForm.templateName = selected.name;
   followUpForm.templateLanguage = selected.language || 'pt_BR';
   followUpForm.templateNamespace = selected.namespace || '';
-};
-
-const searchContacts = async () => {
-  if (contactSearch.value.trim().length < 2) return;
-  isSearchingContacts.value = true;
-  hasSearchedContacts.value = true;
-  try {
-    const response = await ContactAPI.search(contactSearch.value.trim(), 1);
-    contactResults.value = response.data.payload || [];
-  } finally {
-    isSearchingContacts.value = false;
-  }
-};
-
-const onContactSelected = () => {
-  if (!selectedContact.value || form.title.trim()) return;
-  form.title = selectedContact.value.name || selectedContact.value.phone_number;
 };
 
 // Reset when the drawer opens or the selected card object changes. We intentionally
@@ -640,10 +592,17 @@ const discardRelationship = () => {
   relationshipPanel.value?.reset();
 };
 const guardRelationship = action => {
-  if (isSavingContact.value || relationshipPanel.value?.saving) return;
+  if (
+    props.isSaving ||
+    creationForm.value?.sending ||
+    isSavingContact.value ||
+    relationshipPanel.value?.saving
+  )
+    return;
   if (
     (isEditingContact.value && contactDirty.value) ||
-    relationshipPanel.value?.dirty
+    relationshipPanel.value?.dirty ||
+    (!isEditing.value && creationForm.value?.dirty)
   ) {
     discardAction = action;
     discardOpen.value = true;
@@ -741,7 +700,7 @@ const resetFollowUpForm = () => {
   followUpForm.templateNamespace = '';
 };
 
-defineExpose({ resetFollowUpForm });
+defineExpose({ resetFollowUpForm, guardNavigation: guardRelationship });
 
 const createFollowUp = () => {
   if (!props.card?.id || !followUpForm.title.trim() || !followUpForm.dueAt) {
@@ -1253,7 +1212,11 @@ useFixedPanelPresence(computed(() => props.show));
     ref="discardDialog"
     type="alert"
     :title="relationshipLabel('DISCARD_TITLE')"
-    :description="relationshipLabel('DISCARD_HELP')"
+    :description="
+      isEditing
+        ? relationshipLabel('DISCARD_HELP')
+        : t('CRM_KANBAN.OPPORTUNITY.DISCARD_HELP')
+    "
     :confirm-button-label="relationshipLabel('DISCARD')"
     :cancel-button-label="relationshipLabel('KEEP_EDITING')"
     @confirm="confirmDiscard"
@@ -1386,7 +1349,19 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </div>
 
-        <div v-if="!isEditing || activeTab === 'summary'" class="grid gap-4">
+        <CrmOpportunityForm
+          v-if="!isEditing"
+          :key="route.params.accountId"
+          ref="creationForm"
+          :pipelines="pipelines"
+          :pipeline-id="pipelineId"
+          :stages="stages"
+          :agents="agents"
+          :inboxes="inboxes"
+          :can-manage="canManageCards"
+          @save="(payload, failed) => emit('save', payload, failed)"
+        />
+        <div v-else-if="activeTab === 'summary'" class="grid gap-4">
           <Input
             v-model="form.title"
             :label="t('CRM_KANBAN.DRAWER.TITLE_LABEL')"
@@ -1494,72 +1469,6 @@ useFixedPanelPresence(computed(() => props.show));
             </div>
           </section>
 
-          <section
-            v-if="!isEditing"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
-          >
-            <div>
-              <p class="mb-1 text-sm font-medium text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.MANUAL_CARD_TITLE') }}
-              </p>
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.MANUAL_CARD_HELP') }}
-              </p>
-            </div>
-
-            <div class="grid gap-2 md:grid-cols-[1fr_auto]">
-              <Input
-                v-model="contactSearch"
-                :label="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH')"
-                :placeholder="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH_PLACEHOLDER')"
-                @enter="searchContacts"
-              />
-              <div class="flex items-end">
-                <Button
-                  :label="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH_BUTTON')"
-                  icon="i-lucide-search"
-                  slate
-                  faded
-                  :is-loading="isSearchingContacts"
-                  :disabled="contactSearch.trim().length < 2"
-                  @click="searchContacts"
-                />
-              </div>
-            </div>
-
-            <label v-if="contactResults.length" class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.CONTACT') }}
-              </span>
-              <ChoiceSelect
-                v-model="form.contactId"
-                :options="contactChoices"
-                :aria-label="t('CRM_KANBAN.DRAWER.CONTACT')"
-                class="w-full"
-                @change="onContactSelected"
-              />
-            </label>
-
-            <p
-              v-else-if="hasSearchedContacts && !isSearchingContacts"
-              class="mb-0 text-xs text-n-slate-10"
-            >
-              {{ t('CRM_KANBAN.DRAWER.CONTACT_EMPTY') }}
-            </p>
-          </section>
-
-          <label v-if="!isEditing" class="grid gap-1">
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.STAGE') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.stageId"
-              :options="stageOptions"
-              :aria-label="t('CRM_KANBAN.DRAWER.STAGE')"
-              class="w-full"
-            />
-          </label>
-
           <div class="grid grid-cols-2 gap-3">
             <Input
               v-model="form.valueAmount"
@@ -1596,33 +1505,6 @@ useFixedPanelPresence(computed(() => props.show));
               :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
             />
           </div>
-
-          <label v-if="!isEditing && inboxOptions.length" class="grid gap-1">
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.INBOX') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.inboxId"
-              :options="inboxChoices"
-              :aria-label="t('CRM_KANBAN.DRAWER.INBOX')"
-              class="w-full"
-            />
-          </label>
-
-          <label
-            v-if="!isEditing && canManageCards && agentOptions.length"
-            class="grid gap-1"
-          >
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.OWNER') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.ownerId"
-              :options="ownerChoices"
-              :aria-label="t('CRM_KANBAN.DRAWER.OWNER')"
-              class="w-full"
-            />
-          </label>
         </div>
 
         <CrmCardRelationshipPanel
@@ -2157,13 +2039,28 @@ useFixedPanelPresence(computed(() => props.show));
             "
           />
         </div>
+        <div
+          v-else-if="!isEditing"
+          class="flex min-w-0 items-center gap-2 text-xs text-n-slate-11"
+        >
+          <span
+            class="i-lucide-link-2 size-4 shrink-0 text-n-blue-11"
+            aria-hidden="true"
+          />
+          <span>{{ creationForm?.summary }}</span>
+        </div>
         <span v-else />
         <div class="flex items-center gap-2">
           <Button
             :label="footerCancelLabel"
             slate
             faded
-            :disabled="isSavingContact || companyAction?.saving"
+            :disabled="
+              isSaving ||
+              creationForm?.sending ||
+              isSavingContact ||
+              companyAction?.saving
+            "
             @click="
               guardRelationship(
                 isEditingContact || companyAction
@@ -2173,7 +2070,16 @@ useFixedPanelPresence(computed(() => props.show));
             "
           />
           <Button
-            v-if="isEditingContact"
+            v-if="!isEditing"
+            type="submit"
+            :form="creationForm?.formId"
+            icon="i-lucide-check"
+            :label="t('CRM_KANBAN.OPPORTUNITY.CREATE')"
+            :disabled="!creationForm?.canSave"
+            :is-loading="creationForm?.sending"
+          />
+          <Button
+            v-else-if="isEditingContact"
             type="submit"
             :form="`crm-contact-form-${card.id}`"
             icon="i-lucide-check"
@@ -2194,7 +2100,7 @@ useFixedPanelPresence(computed(() => props.show));
             :disabled="companyAction.disabled"
           />
           <Button
-            v-else-if="!isEditing || activeTab === 'summary'"
+            v-else-if="activeTab === 'summary'"
             :label="
               isEditing
                 ? t('CRM_KANBAN.DRAWER.SAVE')

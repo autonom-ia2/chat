@@ -1027,7 +1027,8 @@ const refreshSelectedCard = async () => {
   }
 };
 
-const saveCard = async payload => {
+const saveCard = async (payload, failed) => {
+  const originAccount = String(route.params.accountId);
   try {
     if (drawerMode.value === 'edit') {
       await store.dispatch('crmKanban/updateCard', {
@@ -1036,16 +1037,34 @@ const saveCard = async payload => {
       });
       useAlert(t('CRM_KANBAN.ALERTS.CARD_UPDATED'));
     } else {
-      await store.dispatch('crmKanban/createCard', payload);
+      const created = await store.dispatch('crmKanban/createCard', payload);
+      if (originAccount !== String(route.params.accountId)) return;
       useAlert(t('CRM_KANBAN.ALERTS.CARD_CREATED'));
+      const changedPipeline =
+        String(currentPipelineId.value) !== String(created.pipeline_id);
+      if (changedPipeline) currentPipelineId.value = created.pipeline_id;
+      await openCardDrawer(created, {
+        initialTab: created.contact_id ? 'contact' : 'summary',
+      });
+      if (!changedPipeline) await loadActiveView(true);
+      return;
     }
     closeDrawer();
   } catch {
+    if (originAccount !== String(route.params.accountId)) return;
+    failed?.();
     useAlert(t('CRM_KANBAN.ALERTS.CARD_SAVE_ERROR'));
   }
 };
 
 const cardDrawerRef = ref(null);
+const openCardFromBoard = card => {
+  if (showDrawer.value && drawerMode.value === 'create') {
+    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card));
+    return;
+  }
+  openCardDrawer(card);
+};
 
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
 // keep the calendar in sync when it's the active view (it reads a separate
@@ -2299,7 +2318,7 @@ onMounted(async () => {
             <CrmKanbanCard
               :card="element"
               :stage-color="stage.color"
-              @open="openCardDrawer"
+              @open="openCardFromBoard"
               @open-conversation="openCardConversation"
             />
           </template>
@@ -2376,7 +2395,7 @@ onMounted(async () => {
         @group-change="onListGroupChange"
         @column-change="onListColumnChange"
         @select-change="onListSelectChange"
-        @open-card="openCardDrawer"
+        @open-card="openCardFromBoard"
         @edit-save="onListEditSave"
         @retry="loadCurrentList"
         @clear-filters="clearFilters"
@@ -2469,6 +2488,7 @@ onMounted(async () => {
       :card="selectedCard"
       :initial-tab="drawerInitialTab"
       :stages="stages"
+      :pipelines="pipelines"
       :pipeline-id="currentPipelineId"
       :agents="agents"
       :inboxes="inboxes"

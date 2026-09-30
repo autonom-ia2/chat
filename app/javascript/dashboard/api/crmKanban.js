@@ -149,8 +149,16 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
-  createCard(payload) {
-    return axios.post(`${this.url}/cards`, { card: payload });
+  createCard(payload, idempotencyKey) {
+    if (!idempotencyKey)
+      return axios.post(`${this.url}/cards`, { card: payload });
+    return axios.post(
+      `${this.url}/cards`,
+      { card: payload },
+      {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }
+    );
   }
 
   createCardFromConversation(payload) {

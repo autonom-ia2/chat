@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–4 e autorizou editar/vincular empresa no card. Parte 5 implementada e validada localmente, aguardando aceite das telas reais. Parar antes da parte 6 e aguardar novo de acordo. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–5 e autorizou somente a primeira parte de Nova oportunidade: contato existente ou sem vínculo. Parte 6 implementada e testada localmente, aguardando aprovação visual. Parar antes da parte 7 e aguardar novo de acordo. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -14,9 +14,9 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
-| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Aceite visual da parte 5 e revisão transversal pendentes. |
+| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Trechos visuais até a parte 5 aprovados; revisão transversal pendente. |
 | M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
-| M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Nova experiência não iniciada. |
+| M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; aceite visual e revisão transversal pendentes. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
@@ -105,9 +105,21 @@ São reutilizadas as APIs nativas e a store de empresa, enviando só os campos e
 
 Evidências: [auditoria da parte 5](../audit/2026-09-30-792-crm-relationships-part-5.md) e [telas reais](screenshots/792-part5/README.md).
 
+## Parte 6 — Nova oportunidade com contato existente ou sem vínculo
+
+Novo card passa a Nova oportunidade. A primeira seção escolhe um contato existente, com resumo de pessoa/empresa/e-mail/telefone, ou permite continuar sem vínculo. A segunda seção reúne dados comerciais e Mais opções. A lateral mantém a largura de Editar funil; sua gravação não altera os cadastros selecionados.
+
+Buscar por empresa usa a opção `include_company=true` da pesquisa de contatos, implementada no overlay Enterprise quando Empresas está habilitado. São empresa e vínculo canônicos; não se usa texto legado como associação. A busca padrão permanece inalterada e a paginação continua no servidor.
+
+O formulário preserva valores durante busca, troca de contato, troca de modo e seleção de funil. A etapa passa a ser carregada do funil escolhido; uma resposta antiga não substitui as opções atuais. Cancelar, fechar a lateral ou abrir outro card do Kanban/lista durante a criação passam pela confirmação de descarte. Criar abre a oportunidade confirmada; contato existente abre em Relacionamento, sem vínculo abre em Resumo.
+
+A chave de idempotência é enviada separadamente no cabeçalho e permanece igual na repetição da mesma intenção. `cards#create` confirma chave, card e captura da resposta na mesma transação, com broadcast posterior. Um replay revalida o acesso ao mesmo card e devolve sua representação atual autorizada, não necessariamente os bytes de uma resposta histórica. O contrato sem cabeçalho e o upsert externo permanecem disponíveis. Uma leitura de atualização da listagem não altera o resultado de uma criação já confirmada.
+
+Evidências: [auditoria da parte 6](../audit/2026-09-30-792-crm-relationships-part-6.md) e [telas reais](screenshots/792-part6/README.md). Esta parte não conclui cadastro composto nem criação contextual a partir de todas as fichas.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação deste trecho, implementar a primeira parte de Nova oportunidade: usar contato existente ou continuar sem vínculo. A criação composta de contato/empresa/oportunidade permanece em etapa própria. Não iniciar a parte 6 nem fazer merge/deploy por consequência desta entrega.
+Após aprovação da parte 6, implementar novo contato e empresa opcional dentro da Nova oportunidade, com confirmação composta e prevenção de duplicidade. Não iniciar a parte 7 nem fazer merge/deploy por consequência desta entrega.
 
 ## Validação e publicação
 

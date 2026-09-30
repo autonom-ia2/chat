@@ -1,0 +1,297 @@
+{
+  "checks": [
+    "real_native_form_two_sections_no_initial_validation_error",
+    "canonical_company_search_selects_existing_contact_without_overwriting_title",
+    "switching_between_existing_and_unlinked_preserves_commercial_draft",
+    "urgent_priority_currency_forecast_score_and_description_preserved",
+    "pipeline_change_loads_its_own_stage_without_losing_other_fields",
+    "another_board_card_preserves_creation_draft_after_cancel",
+    "cancel_keeps_draft_after_explicit_continue_and_does_not_write",
+    "real_create_existing_opens_same_contact_and_retry_replays_same_opportunity",
+    "real_unlinked_creation_keeps_contact_null_and_allows_later_link",
+    "lost_acknowledgement_after_real_commit_preserves_form_and_UI_retry_reuses_same_card",
+    "two_real_simultaneous_requests_create_one_opportunity",
+    "contact_and_company_records_unchanged_by_creation",
+    "mobile_390_fixed_create_visible_without_horizontal_overflow",
+    "notebook_1366_drawer_640_and_explicit_discard_creates_nothing"
+  ],
+  "captures": [
+    {
+      "name": "01-nova-oportunidade-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "68f6e0d46ea47cb07105f190d71a3e32f42c924f5fb51e466f403ca7d9f12bba"
+    },
+    {
+      "name": "02-contato-existente-selecionado",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "04b8397d54b0a344b07e6877e92a29017ec8a18946004b18633e109a0095666e"
+    },
+    {
+      "name": "03-oportunidade-sem-vinculo",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "018cf6c35106ede54d04f8e8f21fe25a159b32fef0d7d6389e254984158a9fea"
+    },
+    {
+      "name": "04-mais-opcoes-preservadas",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "127a13e2170c052461b75a3239c7a6b13445c0fecc4bc798db8fafa8cf9cb5d6"
+    },
+    {
+      "name": "05-confirmacao-de-descarte",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "bdf898b163d854e9700ec156bb9372d9598ef145010cee76afce465c6747a675"
+    },
+    {
+      "name": "06-oportunidade-criada-com-relacionamento",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "224a05405bcc25ffa103579744da973c594ea079f244ec9f87188ded1cd2eac1"
+    },
+    {
+      "name": "09-retentativa-sem-duplicacao",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "84fc823060743132068cca7318b4b81347ac10809d8823d5ca45679d6799541e"
+    },
+    {
+      "name": "07-nova-oportunidade-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "7efeee3f2b9bb487719c8f282bd8091fdd3475dba6d671ed34570e29d544af24"
+    },
+    {
+      "name": "08-nova-oportunidade-notebook",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "drawer": {
+        "x": 726,
+        "y": 0,
+        "width": 640,
+        "height": 768
+      },
+      "sha256": "b1b841c7cb42192713dc55ce1220ecfc13f47d3597de3d92b4210070d3597943"
+    }
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "consoleMessages": [
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    }
+  ],
+  "expectedFaults": [
+    "creation_response_dropped_after_real_server_commit"
+  ],
+  "createdIds": [
+    12,
+    13,
+    14,
+    15
+  ],
+  "sourceHashes": {
+    "app/javascript/dashboard/store/modules/crmKanban.js": "007d3feb6b0a7683cf31dd842378a14ad5ad261cbe6ff20721d0d30b1b188961",
+    "app/javascript/dashboard/api/crmKanban.js": "5b9fdb874ea0334873eb372bd6f0de16308886108e6c05dcf1ba331d2ebfe9c7",
+    "app/javascript/dashboard/api/contacts.js": "655217f85760386ce1210b651ec1564e54b36598819e37e799bdc88c674ef1ae",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityForm.vue": "9ad1eef4629d96eddf6eff7c4ab9ec4537c0072ee381c942476928eb1903a1b9",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityContactPicker.vue": "74666d1a83a1ec898cef3fd205e42fff83bb3487055cea006c481c61bf067913",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "93ece6010fbf5246266d5416e0cde1392828b9554084efe7783d2d054d2dca3d",
+    "app/javascript/dashboard/routes/dashboard/crm/pages/CrmKanbanPage.vue": "fa6d57e64f0fd4e2717b9af5d44fb8f8e35b431995e280d2e105e276c982f468",
+    "app/controllers/api/v1/accounts/crm/cards_controller.rb": "120e5f510d6e95f609f3755d2d7a83c949b2ef8de590c4645450d4cf607ca6e5"
+  },
+  "browser": "154.0.8037.58",
+  "data": "synthetic",
+  "backend": "real-local-Rails-PostgreSQL"
+}

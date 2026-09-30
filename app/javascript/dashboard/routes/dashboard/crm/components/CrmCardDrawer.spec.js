@@ -65,6 +65,7 @@ const mountDrawer = (props = {}) =>
         CrmCardSummaryPanel: true,
         CrmCardAutoFollowupStatus: true,
         PhoneNumberInput: true,
+        CrmOpportunityContactPicker: true,
       },
     },
   });
@@ -102,6 +103,65 @@ describe('CrmCardDrawer form reset vs realtime churn', () => {
     });
 
     expect(wrapper.vm.form.description).toBe('detalhe');
+  });
+});
+
+describe('CrmCardDrawer new opportunity', () => {
+  it('asks before discarding the new commercial draft and does not create a record', async () => {
+    const wrapper = mountDrawer({
+      mode: 'create',
+      card: null,
+      pipelines: [{ id: 1, name: 'Comercial' }],
+      canManageCards: true,
+    });
+    const form = wrapper.findComponent({ name: 'CrmOpportunityForm' });
+    form.vm.form.title = 'Unsaved opportunity';
+    await wrapper.vm.$nextTick();
+    const cancel = wrapper
+      .findAll('button')
+      .find(button => button.text() === 'CRM_KANBAN.DRAWER.CANCEL');
+    await cancel.trigger('click');
+    expect(wrapper.vm.discardOpen).toBe(true);
+    expect(wrapper.emitted('close')).toBeUndefined();
+    expect(wrapper.emitted('save')).toBeUndefined();
+    wrapper.vm.confirmDiscard();
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
+  });
+  it('keeps the fixed create button bound to the real form and forwards the failure callback', async () => {
+    const wrapper = mountDrawer({
+      mode: 'create',
+      card: null,
+      pipelines: [{ id: 1, name: 'Comercial' }],
+      canManageCards: true,
+    });
+    const form = wrapper.findComponent({ name: 'CrmOpportunityForm' });
+    const failed = vi.fn();
+    form.vm.$emit('save', { title: 'New', idempotencyKey: 'key' }, failed);
+    expect(wrapper.emitted('save')[0]).toEqual([
+      { title: 'New', idempotencyKey: 'key' },
+      failed,
+    ]);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('button[type="submit"]').attributes('form')).toBe(
+      form.vm.formId
+    );
+    wrapper.unmount();
+  });
+  it('cannot close while creation is waiting for the server', async () => {
+    const wrapper = mountDrawer({
+      mode: 'create',
+      card: null,
+      pipelines: [{ id: 1, name: 'Comercial' }],
+      canManageCards: true,
+    });
+    wrapper.findComponent({ name: 'CrmOpportunityForm' }).vm.sending = true;
+    await wrapper.vm.$nextTick();
+    const action = vi.fn();
+    wrapper.vm.guardRelationship(action);
+    expect(action).not.toHaveBeenCalled();
+    expect(wrapper.emitted('close')).toBeUndefined();
+    wrapper.unmount();
   });
 });
 

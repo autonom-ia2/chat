@@ -1,0 +1,35 @@
+{
+  "checks": [
+    "authenticated_real_CRM_no_framework_overlay",
+    "duplicate_domain_rejected_without_partial_save_and_draft_retained",
+    "edit_saved_to_canonical_company_with_hidden_attributes_preserved",
+    "cancel_requires_explicit_discard_without_writing",
+    "same_name_companies_distinguished_and_linked_only_after_save",
+    "company_media_follows_current_contact_link_without_file_copy",
+    "unlink_confirmation_removes_only_association_and_keeps_company",
+    "unlinked_contact_can_link_existing_company_from_same_opportunity",
+    "opportunity_identity_and_all_commercial_fields_preserved",
+    "mobile_390_fixed_save_visible_without_horizontal_overflow",
+    "notebook_1366_drawer_640_preserved"
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/companies/1",
+      "status": 422
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "tested_with": "part6 current source"
+}
