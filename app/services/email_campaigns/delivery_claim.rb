@@ -12,7 +12,7 @@ class EmailCampaigns::DeliveryClaim
 
   # Final authorization after rendering. No rendering, DNS or provider I/O under locks.
   def claim(recipient)
-    result = @admission.with_delivery_locks(recipient, provider: true) do |state|
+    result = @admission.with_delivery_locks(recipient, provider: true) do
       eligible = eligibility(recipient, :pending)
       next eligible unless eligible == :ready
 
@@ -21,7 +21,6 @@ class EmailCampaigns::DeliveryClaim
                                       .update_all(status: EmailCampaignRecipient.statuses[:sent], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       next :skipped unless claimed.positive?
 
-      @admission.consume_override!(state) if state&.override_active?
       recipient.reload
       :claimed
     end

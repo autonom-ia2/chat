@@ -9,6 +9,7 @@ module EmailCampaigns; end
 module CampaignImports; end
 require_relative '../../../app/services/campaign_imports/parser'
 require_relative '../../../app/services/campaign_imports/header_mapper'
+require_relative '../../../app/services/campaign_imports/schema_resolver'
 require_relative '../../../app/services/email_campaigns/email_normalizer'
 require_relative '../../../app/services/email_campaigns/recipient_importer'
 

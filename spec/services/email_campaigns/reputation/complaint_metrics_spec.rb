@@ -13,7 +13,7 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do # rubocop:disable RSpec/Sp
   after { expect(WebMock).not_to have_requested(:any, /./) } # rubocop:disable RSpec/ExpectInHook -- zero HTTP contract for every example
 
   %w[OnAccountSuppressionList OnTenantSuppressionList].each do |subtype|
-    it "excludes Complaint/#{subtype} and replays from complaints/fingerprint without a false 0.1 percent pause" do
+    it "excludes Complaint/#{subtype} and replays from complaints/fingerprint without a false local risk alert" do
       EmailCampaignRecipient.insert_all!(Array.new(999) do |index| # rubocop:disable Rails/SkipsModelValidations
         { email_campaign_id: campaign.id, email: "accepted-#{index}@example.com", status: 1, sent_at: 1.hour.ago,
           created_at: Time.current, updated_at: Time.current }
@@ -32,7 +32,7 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do # rubocop:disable RSpec/Sp
       expect(policy.evaluate(collector.call)).to include(complaint_ratio: 0.001, pause: true, spam_alert: true)
     end
 
-    it "keeps the override fingerprint and incident intact after late Complaint/#{subtype}" do
+    it "preserves historical exceptions and incidents after late Complaint/#{subtype}" do
       recipient.update!(sent_at: 8.days.ago)
       account.update!(internal_attributes: { email_campaigns_paused: { reason: 'synthetic legacy protection' } })
       evaluator.evaluate!
@@ -40,13 +40,14 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do # rubocop:disable RSpec/Sp
       snapshot = state.trigger_snapshot
       state.update!(override: { expires_at: 1.hour.from_now.iso8601, remaining: 2, feedback_fingerprint: collector.harmful_feedback_fingerprint })
       2.times { recipient.email_events.create!(event_type: :complaint, payload: { complaint: { complaintSubType: subtype } }) }
-      expect(evaluator.evaluate!).to include(blocked: true, override_active: true)
+      expect(evaluator.evaluate!).to include(blocked: false, override_active: false)
       expect(state.reload.trigger_snapshot).to eq(snapshot)
       expect(state.override).not_to have_key('revoked_at')
       expect(EmailReputationAudit.where(account: account, action: %w[override_revoked risk_alert])).to be_empty
       recipient.email_events.create!(event_type: :complaint, payload: { complaint: { complaintSubType: 'FutureUnknown' } })
       expect(evaluator.evaluate!).to include(override_active: false)
-      expect(state.reload.override['revocation_reason']).to eq('new_harmful_feedback')
+      expect(state.reload.override).not_to have_key('revocation_reason')
+      expect(EmailReputationAudit.where(account: account, action: 'risk_alert')).to be_empty
     end
   end
 

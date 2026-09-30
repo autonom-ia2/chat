@@ -5,6 +5,7 @@ module CampaignImports
   class XlsxReader
     DEFAULT_MAX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
     ParsedRow = Struct.new(:number, :values, keyword_init: true)
+    ParsedSheet = Struct.new(:name, :rows, keyword_init: true)
 
     class ZipReader
       Entry = Struct.new(
@@ -131,39 +132,46 @@ module CampaignImports
     end
 
     def rows
-      sheet = document_for(first_sheet_path)
+      sheets.first&.rows || []
+    end
+
+    def sheets
+      @sheets ||= workbook_sheets.map do |sheet|
+        ParsedSheet.new(name: sheet.fetch(:name), rows: rows_for(sheet.fetch(:path)))
+      end
+    end
+
+    private
+
+    def workbook_sheets
+      workbook = document_for('xl/workbook.xml')
+      relationships = workbook_relationships
+      sheets_node = find_child(workbook.root, 'sheets')
+      result = []
+      sheets_node&.each_element do |sheet|
+        next unless sheet.name == 'sheet'
+        next if %w[hidden veryHidden].include?(sheet.attributes['state'])
+
+        relationship_id = sheet.attributes['r:id']
+        target = relationships[relationship_id]
+        next if target.to_s.empty?
+
+        result << { name: sheet.attributes['name'].to_s, path: normalize_path('xl', target) }
+      end
+      raise ArgumentError, 'xlsx_sheet_not_found' if result.empty?
+
+      result
+    end
+
+    def rows_for(path)
+      sheet = document_for(path)
       sheet_data = find_child(sheet.root, 'sheetData')
       return [] if sheet_data.nil?
 
       shared_strings = read_shared_strings
       sheet_rows = []
       sheet_data.each_element { |element| sheet_rows << element if element.name == 'row' }
-      sheet_rows.map do |row|
-        parse_row(row, shared_strings)
-      end
-    end
-
-    private
-
-    def default_max_uncompressed_bytes
-      return CampaignImports::Config.max_xlsx_uncompressed_size_bytes if defined?(CampaignImports::Config)
-
-      DEFAULT_MAX_UNCOMPRESSED_BYTES
-    end
-
-    def first_sheet_path
-      workbook = document_for('xl/workbook.xml')
-      relationships = workbook_relationships
-      sheets = find_child(workbook.root, 'sheets')
-      first_sheet = nil
-      sheets&.each_element do |element|
-        first_sheet ||= element if element.name == 'sheet'
-      end
-      relationship_id = first_sheet&.attributes&.[]('r:id')
-      target = relationships[relationship_id]
-      raise ArgumentError, 'xlsx_sheet_not_found' if target.to_s.empty?
-
-      normalize_path('xl', target)
+      sheet_rows.map { |row| parse_row(row, shared_strings) }
     end
 
     def workbook_relationships
@@ -178,15 +186,17 @@ module CampaignImports
     end
 
     def read_shared_strings
+      return @shared_strings if defined?(@shared_strings)
+
       xml = @zip.read('xl/sharedStrings.xml')
-      return [] if xml.to_s.empty?
+      return @shared_strings = [] if xml.to_s.empty?
 
       document = REXML::Document.new(xml)
-      strings = []
+      @shared_strings = []
       document.root.each_element do |element|
-        strings << text_content(element) if element.name == 'si'
+        @shared_strings << text_content(element) if element.name == 'si'
       end
-      strings
+      @shared_strings
     end
 
     def parse_row(row, shared_strings)
@@ -260,6 +270,12 @@ module CampaignImports
     def column_index(reference)
       letters = reference.to_s[/\A[A-Z]+/i].to_s.upcase
       letters.chars.reduce(0) { |sum, char| (sum * 26) + char.ord - 64 } - 1
+    end
+
+    def default_max_uncompressed_bytes
+      return CampaignImports::Config.max_xlsx_uncompressed_size_bytes if defined?(CampaignImports::Config)
+
+      DEFAULT_MAX_UNCOMPRESSED_BYTES
     end
   end
 end

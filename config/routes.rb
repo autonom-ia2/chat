@@ -1082,6 +1082,7 @@ Rails.application.routes.draw do
       root to: 'dashboard#index'
 
       resource :app_config, only: [:show, :create]
+      post 'app_config/test_typesafe', to: 'app_configs#test_typesafe', as: :test_typesafe_app_config
       resource :push_diagnostics, only: [:show, :create] do
         post :destroy_subscriptions, on: :collection
       end

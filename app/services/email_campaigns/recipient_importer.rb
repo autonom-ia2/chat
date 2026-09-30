@@ -20,33 +20,24 @@ module EmailCampaigns
       import_rows(@rows, @mapper)
     end
 
-    # Parse/download before the job takes ownership of the import transaction.
+    # Parse/download and resolve the file schema before the job takes the campaign/import write locks.
     def prepare
       parsed = CampaignImports::Parser.new(@file, filename: @filename).perform
       raise Error, 'unsupported_file_format' unless CampaignImports::Config.supported_formats.include?(parsed.format)
 
-      mapper = header_mapping(parsed.headers)
-      rows = data_rows(parsed)
-      raise Error, 'empty_file' if rows.blank?
-      raise Error, 'row_limit_exceeded' if rows.size > MAX_ROWS
+      resolved = CampaignImports::SchemaResolver.new(parsed).perform
+      raise Error, 'empty_file' if resolved.rows.blank?
+      raise Error, 'row_limit_exceeded' if resolved.rows.size > MAX_ROWS
 
-      @rows = rows
-      @mapper = mapper
+      @schema_resolution = resolved.metadata
+      @rows = resolved.rows
+      @mapper = resolved.mapper
       self
+    rescue CampaignImports::SchemaResolver::Error => e
+      raise Error, e.message
     end
 
     private
-
-    def header_mapping(headers)
-      result = CampaignImports::HeaderMapper.new(headers, mode: :email).perform
-      raise Error, result.errors.join(',') if result.errors.present?
-
-      result
-    end
-
-    def data_rows(parsed)
-      parsed.rows.reject { |row| row.values.all? { |value| value.to_s.valid_encoding? && value.to_s.strip.empty? } }
-    end
 
     BATCH_SIZE = 500
 
@@ -58,6 +49,7 @@ module EmailCampaigns
       # Resolve the parent FK before any inserted recipient/issue/import FK.
       # No account/state locks or campaign writes are allowed until this commits.
       @campaign.with_lock('FOR KEY SHARE') do
+        @import&.update!(schema_resolution: @schema_resolution)
         rows.each_slice(BATCH_SIZE) do |batch|
           @issues = []
           records = batch.filter_map { |row| build_recipient(row, mapper, suppressed, seen, stats) }

@@ -95,6 +95,7 @@
 
 - **Translations**:
   - For product and source-string changes, only update `en.yml` and `en.json`; other languages are handled through Crowdin and the community
+  - Fork-owned frontend catalogs listed in `config/fork_i18n.json` are a repository-owned overlay excluded from Crowdin. Update their source and `pt_BR` together, preserve existing other languages, and run `pnpm i18n:fork:check`. Fork-owned keys in shared catalogs may also update en/pt_BR together without excluding the shared catalog. Follow `docs/i18n/fork-translations.md` when adding a module.
   - Crowdin-generated translation sync PRs may update non-English locale files; do not flag those changes solely for modifying translated locale files
   - Preserve product and brand names, OAuth scopes, API values, and other machine-readable identifiers unless an official localized form exists
   - When reviewing Crowdin syncs, verify protected terms remain unchanged. Add newly introduced product names, brand names, and machine-readable identifiers to the Crowdin glossary as non-translatable, and keep the glossary current

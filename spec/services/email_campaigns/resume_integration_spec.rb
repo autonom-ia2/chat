@@ -35,14 +35,14 @@ RSpec.describe EmailCampaign, '#resume!' do
     expect(EmailCampaigns::DeliveryJob).not_to have_received(:perform_later)
   end
 
-  it 'rolls back account release when hygiene changes during the unlocked reputation collection' do
+  it 'preserves account history when hygiene changes during unlocked diagnostic collection' do
     recipient.update!(preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
     50.times do |i|
       create(:email_campaign_recipient, email_campaign: campaign, email: "accepted#{i}@example.org", status: :sent, sent_at: 1.hour.ago)
     end
     account.update!(internal_attributes: { preserved: 'synthetic', email_campaigns_paused: { reason: 'legacy synthetic' } })
+    state = EmailReputationState.create!(account: account, blocked: true, trigger_snapshot: { code: 'legacy_pause' })
     EmailCampaigns::Reputation::Evaluator.new(account).evaluate!
-    state = EmailReputationState.find_by!(account: account)
     snapshot = state.trigger_snapshot
     allow(EmailCampaigns::Reputation::Observation).to receive(:new).and_wrap_original do |original, *args|
       collector = original.call(*args)

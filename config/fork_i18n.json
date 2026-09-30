@@ -1,0 +1,31 @@
+{
+  "defaultSourceLocale": "en",
+  "requiredLocales": ["en", "pt_BR"],
+  "catalogs": [
+    {
+      "file": "agents.json"
+    },
+    {
+      "file": "campaignImport.json"
+    },
+    {
+      "file": "crm.json"
+    },
+    {
+      "file": "emailCampaignProtection.json"
+    },
+    {
+      "file": "insurance.json"
+    },
+    {
+      "file": "onboardingTrail.json"
+    },
+    {
+      "file": "prospecting.json",
+      "sourceLocale": "pt_BR"
+    },
+    {
+      "file": "relationships.json"
+    }
+  ]
+}

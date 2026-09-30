@@ -1,5 +1,7 @@
 # #436 — entrega integrada de proteção e gestão de campanhas
 
+> Registro histórico da entrega #436. A política de admissão local foi substituída pela #765; consultar [reputation.md](reputation.md) para o comportamento atual.
+
 Data de validação local:17/09/2026. Escopo: código e PRs, **sem autorização de merge, deploy, liberação de campanha ou backfill em produção**.
 
 ## PR final de integração e trilha técnica

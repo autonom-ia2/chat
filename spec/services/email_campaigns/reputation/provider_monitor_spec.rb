@@ -129,4 +129,109 @@ RSpec.describe EmailCampaigns::Reputation::ProviderMonitor do
       expect(monitor.call.telemetry).to include('enforcement_status' => 'PROBATION')
     end
   end
+
+  context 'with automatic recovery' do
+    let!(:state) { EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true) }
+
+    before do
+      allow(cloudwatch).to receive(:get_metric_statistics) do |args|
+        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
+          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+        )
+      end
+    end
+
+    it 'recovers only after two distinct healthy samples spanning a metric period and audits the release' do
+      travel_to now
+      monitor.call
+      expect(state.reload).to be_blocked
+      travel 299.seconds do
+        monitor.call
+        expect(state.reload).to be_blocked
+      end
+      travel 300.seconds do
+        monitor.call
+        expect(state.reload).not_to be_blocked
+        expect(EmailCampaigns::Reputation::ProviderGate.protection(config: config)).to be_nil
+      end
+      expect(EmailReputationAudit.where(provider_key: config.provider_key, action: 'provider_recovered').count).to eq(1)
+    end
+
+    it 'does not treat repeated polls of the same CloudWatch point as recovery' do
+      allow(cloudwatch).to receive(:get_metric_statistics).and_return(
+        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
+          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: now, average: 0)]
+        )
+      )
+      travel_to now
+      monitor.call
+      travel 300.seconds do
+        monitor.call
+        expect(state.reload).to be_blocked
+      end
+    end
+
+    it 'requires recovery ratios below the pause thresholds with a safety margin' do
+      allow(cloudwatch).to receive(:get_metric_statistics) do |args|
+        ratio = args[:metric_name] == 'Reputation.BounceRate' ? 0.041 : 0
+        Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
+          datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: ratio)]
+        )
+      end
+      travel_to now
+      monitor.call
+      travel 300.seconds do
+        monitor.call
+        expect(state.reload).to be_blocked
+        expect(state.telemetry).not_to have_key('recovery_started_at')
+      end
+    end
+
+    it 'resets recovery after missing telemetry instead of counting the unsafe interval' do
+      travel_to now
+      monitor.call
+      travel 300.seconds do
+        allow(ses).to receive(:get_account).and_raise(Net::ReadTimeout)
+        monitor.call
+        expect(state.reload.telemetry).not_to have_key('recovery_started_at')
+      end
+      travel 301.seconds do
+        allow(ses).to receive(:get_account).and_return('SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY')
+        monitor.call
+        expect(state.reload).to be_blocked
+      end
+    end
+
+    it 'restarts recovery after the previous observation becomes stale' do
+      travel_to now
+      monitor.call
+      travel 901.seconds do
+        monitor.call
+        expect(state.reload).to be_blocked
+        expect(state.telemetry['recovery_started_at']).to eq((now + 901.seconds).iso8601)
+      end
+    end
+
+    it 'preserves a manual operator block through healthy samples' do
+      state.update!(manual_block: true)
+      travel_to now
+      monitor.call
+      travel 300.seconds do
+        monitor.call
+        expect(state.reload).to have_attributes(blocked: true, manual_block: true)
+        expect(state.telemetry).not_to have_key('recovery_started_at')
+      end
+    end
+
+    it 'resets recovery when an older overlapping poll returns harmful evidence' do
+      travel_to now
+      monitor.call
+      monitor.send(:persist, status: 'blocked', checked_at: now - 1.second, observed_at: now - 1.second)
+      expect(state.reload.telemetry).not_to have_key('recovery_started_at')
+      travel 300.seconds do
+        monitor.call
+        expect(state.reload).to be_blocked
+      end
+    end
+  end
 end

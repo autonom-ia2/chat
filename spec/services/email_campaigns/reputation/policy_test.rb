@@ -8,7 +8,6 @@ module EmailCampaigns; end
 module EmailCampaigns::Reputation; end
 
 require_relative '../../../../app/services/email_campaigns/reputation/policy'
-require_relative '../../../../app/services/email_campaigns/reputation/legacy_decision'
 
 class EmailReputationPolicyTest < Minitest::Test
   def setup
@@ -48,16 +47,6 @@ class EmailReputationPolicyTest < Minitest::Test
     result = @policy.evaluate(sent: 0, permanent: 0, complaints: 0)
     assert_nil result[:permanent_ratio]
     assert_equal false, result[:resume_allowed]
-  end
-
-  def test_legacy_protection_cannot_be_released_by_the_new_policy
-    metrics = { sent: 100, permanent: 0, transient: 6, bounced: 6, complaints: 0 }
-    proposed = @policy.evaluate(metrics)[:resume_allowed]
-    assert proposed
-    assert EmailCampaigns::Reputation::LegacyDecision.pause?(metrics)
-    refute EmailCampaigns::Reputation::LegacyDecision.resume_allowed?(metrics, proposed: proposed)
-    refute EmailCampaigns::Reputation::LegacyDecision.resume_allowed?(metrics.merge(bounced: 0), proposed: false)
-    assert EmailCampaigns::Reputation::LegacyDecision.resume_allowed?(metrics.merge(bounced: 0), proposed: true)
   end
 
   def test_invalid_configuration_fails_closed

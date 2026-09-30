@@ -1049,7 +1049,8 @@
       "CREATE_ERROR": "Não foi possível criar o card no CRM.",
       "LOAD_ERROR": "Não foi possível carregar funis ou etapas do CRM.",
       "STAGE_BADGE_LABEL": "Etapa atual",
-      "STAGE_BADGE_EMPTY": "Ainda não está em nenhum funil."
+      "STAGE_BADGE_EMPTY": "Ainda não está em nenhum funil.",
+      "CONTACT_LABELS_TITLE": "Etiquetas do contato"
     },
     "PIPELINE_DRAWER": {
       "CREATE_TITLE": "Novo funil",

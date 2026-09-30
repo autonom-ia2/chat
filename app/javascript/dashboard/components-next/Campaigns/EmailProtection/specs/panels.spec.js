@@ -110,6 +110,47 @@ describe.each(['en', 'pt_BR'])('protection panels in %s', locale => {
     });
     expect(wrapper.findAllComponents(Badge)).toHaveLength(1);
   });
+  it('does not turn local high risk into a sending pause when the provider is healthy', () => {
+    const wrapper = mount(Panel, {
+      ...options,
+      props: {
+        campaign: { id: 1, status: 'sending' },
+        protection: {
+          state: 'high_risk',
+          reason_code: 'hard_bounce_rate',
+          current: { evaluated_at: '2026-09-29T12:00:00Z' },
+          provider: { state: 'healthy' },
+        },
+      },
+    });
+    expect(wrapper.find('h3').text()).toBe(
+      t('EMAIL_CAMPAIGN_PROTECTION.HEALTH')
+    );
+    expect(wrapper.text()).not.toContain(
+      t('EMAIL_CAMPAIGN_PROTECTION.STATUS.paused_unknown')
+    );
+  });
+  it('offers resume for a historical local pause once global health permits it', async () => {
+    const wrapper = mount(Panel, {
+      ...options,
+      props: {
+        campaign: { id: 1, status: 'paused', pause_reason: 'reputation' },
+        protection: {
+          state: 'high_risk',
+          reason_code: 'hard_bounce_rate',
+          provider: { state: 'healthy' },
+          release_eligible: true,
+          capabilities: { resume: true },
+        },
+      },
+    });
+    const resume = wrapper
+      .findAll('button')
+      .find(button => button.text() === t('EMAIL_CAMPAIGN_PROTECTION.RESUME'));
+    expect(resume).toBeDefined();
+    await resume.trigger('click');
+    expect(wrapper.emitted('resume')).toHaveLength(1);
+  });
   it('labels distinct account and campaign states using translated context', () => {
     const wrapper = mount(Panel, {
       ...options,

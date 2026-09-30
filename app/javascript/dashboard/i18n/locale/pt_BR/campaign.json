@@ -611,7 +611,7 @@
           "FILE_TOO_LARGE": "O arquivo excede o limite de tamanho. Divida a lista e tente novamente.",
           "EMPTY_FILE": "A lista está vazia. Adicione contatos e envie novamente.",
           "ROW_LIMIT": "A lista excede 50.000 linhas. Divida-a em arquivos menores.",
-          "HEADERS": "Use uma coluna Nome e uma coluna Email na primeira linha da primeira planilha, sem repetir os cabeçalhos.",
+          "HEADERS": "Não foi possível identificar a coluna de e-mail com segurança. Use uma coluna de e-mail; o nome é opcional. Confira se há nomes de colunas repetidos.",
           "IN_PROGRESS": "Já existe uma importação em andamento para esta campanha. Aguarde a conclusão.",
           "EXPIRED": "O arquivo enviado expirou. Envie a lista novamente.",
           "UPLOAD_FAILED": "Não foi possível armazenar o arquivo. Envie a lista novamente."

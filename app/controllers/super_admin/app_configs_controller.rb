@@ -12,9 +12,11 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     SHOPIFY_PARTNER_ACCESS_TOKEN
     SHOPIFY_PARTNER_API_VERSION
   ].freeze
+  TYPESAFE_CONFIGS = %w[TYPESAFE_JEV_ENABLED TYPESAFE_JEV_MODEL TYPESAFE_API_KEY].freeze
 
   before_action :set_config
   before_action :allowed_configs
+
   def show
     # ref: https://github.com/rubocop/rubocop/issues/7767
     # rubocop:disable Style/HashTransformValues
@@ -26,24 +28,36 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     @installation_configs = ConfigLoader.new.general_configs.each_with_object({}) do |config_hash, result|
       result[config_hash['name']] = config_hash.except('name')
     end
+    prepare_typesafe_secret
   end
 
   def create
-    errors = shopify_partner_config_errors
-    params['app_config'].each do |key, value|
-      break if errors.any?
-      next unless @allowed_configs.include?(key)
-
-      i = InstallationConfig.where(name: key).first_or_create(value: value, locked: false)
-      i.value = value
-      errors.concat(i.errors.full_messages) unless i.save
+    if @config == 'typesafe' && !valid_typesafe_submission?(params.fetch('app_config', {}))
+      return render json: { error: I18n.t('super_admin.typesafe.invalid_configuration') }, status: :unprocessable_entity
     end
+
+    errors = shopify_partner_config_errors + typesafe_config_errors
+    persist_typesafe_api_key(errors) if errors.empty?
+    persist_app_configs(errors) if errors.empty?
 
     if errors.any?
       redirect_to super_admin_app_config_path(config: @config), alert: errors.join(', ')
     else
       redirect_to super_admin_settings_path, flash: success_flash
     end
+  end
+
+  def test_typesafe
+    return head :not_found unless @config == 'typesafe'
+
+    credential = AiProviderCredential.for('typesafe')
+    return typesafe_redirect(:alert, :configure_key) if credential.nil?
+    return typesafe_redirect(:alert, :encryption_unavailable) unless Chatwoot.encryption_configured?
+
+    TypesafeAi::Client.new(api_key: credential.api_key).models
+    typesafe_redirect(:notice, :connection_ok)
+  rescue TypesafeAi::Client::Error => e
+    typesafe_redirect(:alert, :connection_failed, code: e.code)
   end
 
   private
@@ -67,10 +81,87 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'whatsapp_embedded' => %w[WHATSAPP_APP_ID WHATSAPP_APP_SECRET WHATSAPP_CONFIGURATION_ID WHATSAPP_API_VERSION],
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
-      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT]
+      'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT],
+      'typesafe' => TYPESAFE_CONFIGS
     }
 
     @allowed_configs = mapping.fetch(@config, general_configs)
+  end
+
+  def persist_app_configs(errors)
+    params.fetch('app_config', {}).each do |key, value|
+      break if errors.any?
+      next if key == 'TYPESAFE_API_KEY'
+      next unless @allowed_configs.include?(key)
+
+      config = InstallationConfig.where(name: key).first_or_create(value: value, locked: false)
+      config.value = value
+      errors.concat(config.errors.full_messages) unless config.save
+    end
+  end
+
+  def prepare_typesafe_secret
+    return unless @config == 'typesafe'
+
+    @app_config.delete('TYPESAFE_API_KEY')
+    @typesafe_secret_configured = AiProviderCredential.for('typesafe').present?
+  end
+
+  def persist_typesafe_api_key(errors)
+    return unless @config == 'typesafe'
+
+    api_key = params.fetch('app_config', {}).fetch('TYPESAFE_API_KEY', '').strip
+    return if api_key.blank?
+
+    credential = AiProviderCredential.for('typesafe') || AiProviderCredential.new(provider: 'typesafe')
+    credential.api_key = api_key
+    errors.concat(credential.errors.full_messages) unless credential.save
+  end
+
+  def typesafe_config_errors
+    return [] unless @config == 'typesafe'
+
+    submitted = params.fetch('app_config', {})
+    existing = AiProviderCredential.for('typesafe')
+    typesafe_credential_errors(submitted, existing) +
+      typesafe_model_errors(submitted) +
+      typesafe_enablement_errors(submitted, existing)
+  end
+
+  def valid_typesafe_submission?(submitted)
+    return false unless submitted.is_a?(ActionController::Parameters) || submitted.is_a?(Hash)
+    return false unless TYPESAFE_CONFIGS.all? { |key| !submitted.key?(key) || submitted[key].is_a?(String) }
+
+    !submitted.key?('TYPESAFE_JEV_ENABLED') || %w[true false].include?(submitted['TYPESAFE_JEV_ENABLED'])
+  end
+
+  def typesafe_credential_errors(submitted, existing)
+    api_key = submitted.fetch('TYPESAFE_API_KEY', '').strip
+    return [] if api_key.blank?
+
+    candidate = existing || AiProviderCredential.new(provider: 'typesafe')
+    candidate.api_key = api_key
+    candidate.valid? ? [] : candidate.errors.full_messages
+  end
+
+  def typesafe_model_errors(submitted)
+    model = submitted['TYPESAFE_JEV_MODEL'].presence
+    return [] if model.blank? || model == TypesafeAi::Config::DEFAULT_MODEL
+
+    [I18n.t('super_admin.typesafe.unsupported_model')]
+  end
+
+  def typesafe_enablement_errors(submitted, existing)
+    return [] unless ActiveModel::Type::Boolean.new.cast(submitted['TYPESAFE_JEV_ENABLED'])
+
+    errors = []
+    errors << I18n.t('super_admin.typesafe.encryption_unavailable') unless Chatwoot.encryption_configured?
+    errors << I18n.t('super_admin.typesafe.configure_key') if existing.nil? && submitted['TYPESAFE_API_KEY'].blank?
+    errors
+  end
+
+  def typesafe_redirect(kind, message, **)
+    redirect_to super_admin_app_config_path(config: @config), kind => I18n.t("super_admin.typesafe.#{message}", **)
   end
 
   def shopify_partner_config_errors

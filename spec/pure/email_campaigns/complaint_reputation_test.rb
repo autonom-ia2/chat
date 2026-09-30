@@ -6,7 +6,6 @@ module EmailCampaigns::Reputation; end
 require_relative '../../../app/services/email_campaigns/complaint_classifier'
 require_relative '../../../app/services/email_campaigns/bounce_classifier'
 require_relative '../../../app/services/email_campaigns/reputation/policy'
-require_relative '../../../app/services/email_campaigns/reputation/legacy_decision'
 
 class ComplaintReputationTest < Minitest::Test
   def test_only_account_and_tenant_suppression_are_prevention
@@ -35,7 +34,6 @@ class ComplaintReputationTest < Minitest::Test
     assert_equal 0.0, result[:complaint_ratio]
     refute result[:pause]
     refute result[:spam_alert]
-    refute EmailCampaigns::Reputation::LegacyDecision.pause?(metrics.merge(sent: 100))
   end
 
   def test_real_complaint_still_pauses_at_point_one_percent

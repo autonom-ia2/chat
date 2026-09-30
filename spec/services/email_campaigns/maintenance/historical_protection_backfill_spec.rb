@@ -217,7 +217,7 @@ RSpec.describe EmailCampaigns::Maintenance::HistoricalProtectionBackfill do
       expect(EmailCampaigns::Config.enabled?).to be(false)
     end
     expect(account.reload.attributes).to eq(before)
-    expect(EmailCampaigns::Guardrail.paused?(account)).to be(true)
+    expect(EmailCampaigns::Guardrail.paused?(account)).to be(false)
     expect(campaign.reload).to be_paused
     expect(EmailSuppression.suppressed?(account, recipient.email)).to be(true)
   end

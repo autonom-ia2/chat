@@ -2,11 +2,11 @@
 class EmailCampaigns::Reputation::Payload
   def self.for_state(state)
     {
-      blocked: state.blocked, level: state.level, evaluated_at: state.evaluated_at,
+      blocked: false, level: state.level == 'paused' ? 'high_risk' : state.level, evaluated_at: state.evaluated_at,
       current_metrics: state.current_metrics, policy: state.policy,
       trigger_snapshot: state.trigger_snapshot.slice('triggered_at', 'code', 'metrics', 'policy'),
-      override_active: state.override_active?,
-      resume_allowed: !state.blocked || state.override_active? || state.current_metrics.fetch('resume_allowed', false)
+      override_active: false,
+      resume_allowed: true
     }
   end
 end

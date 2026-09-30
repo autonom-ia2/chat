@@ -88,6 +88,7 @@
 - **Translations**:
   - Only update `en.yml` and `en.json`
   - Other languages are handled by the community
+  - Exception: repository-owned catalogs in `config/fork_i18n.json` require source and pt_BR updates together and are excluded from Crowdin. Fork-owned keys in shared catalogs may also update en/pt_BR together without excluding the shared catalog. Follow `docs/i18n/fork-translations.md` and run `pnpm i18n:fork:check`.
   - Backend i18n → `en.yml`, Frontend i18n → `en.json`
 - **Frontend**:
   - Use `components-next/` for message bubbles (the rest is being deprecated)

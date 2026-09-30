@@ -1,8 +1,7 @@
-# Tenant DTO only. Manual resume does not require reputational remediation;
-# protected accounts still require fresh release evidence. GET never releases a latch.
+# Tenant DTO: local diagnostics and global sending health. GET never releases a provider block.
 class EmailCampaigns::Presentation::Protection
   LEVELS = { 'unknown' => 'unknown', 'healthy' => 'healthy', 'warning' => 'attention',
-             'attention' => 'attention', 'high_risk' => 'high_risk', 'paused' => 'paused' }.freeze
+             'attention' => 'attention', 'high_risk' => 'high_risk', 'paused' => 'high_risk' }.freeze
   REASONS = {
     'manual' => 'manual', 'manual_pause' => 'manual', 'user' => 'manual',
     'reputation' => 'reputation', 'reputation_guardrail' => 'reputation',
@@ -35,12 +34,12 @@ class EmailCampaigns::Presentation::Protection
     raise ArgumentError, 'campaign account mismatch' if campaign && campaign.account_id != @account.id
 
     provider = @provider.call(direct: campaign&.direct_inbox? == true)
-    eligible = release_eligible? && !provider[:blocked]
+    eligible = provider[:state] == 'healthy'
     {
-      state: display_state, reason_code: reason_code(provider), mode: @policy.mode, scope: 'account',
+      state: provider[:blocked] ? 'paused' : display_state, reason_code: reason_code(provider), mode: @policy.mode, scope: 'account',
       current: EmailCampaigns::Presentation::ProtectionMetrics.new(@state&.current_metrics, evaluated_at: @state&.evaluated_at).call,
       trigger: trigger, provider: provider.slice(:state, :observed_at), release_eligible: eligible,
-      capabilities: capabilities(campaign, preflight, eligible, provider), domains: []
+      capabilities: capabilities(campaign, preflight, provider), domains: []
     }
   end
 
@@ -48,19 +47,13 @@ class EmailCampaigns::Presentation::Protection
 
   def display_state
     level = LEVELS.fetch(@state.level) if @state
-    return 'paused' if blocked?
     return 'unknown' unless @state&.evaluated_at && @state.current_metrics['sent'].is_a?(Integer) && @state.current_metrics['sent'].positive?
 
     level
   end
 
-  def blocked?
-    @state&.blocked || @account.internal_attributes['email_campaigns_paused'].present?
-  end
-
   def reason_code(provider)
     return 'provider_blocked' if provider[:blocked]
-    return 'reputation' if blocked?
 
     reason = @state&.current_metrics&.fetch('reasons', [])&.first
     reason ? REASONS.fetch(reason, 'unknown') : nil
@@ -74,40 +67,7 @@ class EmailCampaigns::Presentation::Protection
       metrics: EmailCampaigns::Presentation::ProtectionMetrics.new(snapshot['metrics']).call }
   end
 
-  def release_eligible?
-    return false unless current_evaluation?
-
-    metrics = @state.current_metrics
-    return false unless metrics['resume_allowed'] == true && @state.policy == @policy.snapshot.deep_stringify_keys
-
-    # Evaluate the real pure policy; no duplicate thresholds or percentages in the decision path.
-    decision = @policy.evaluate(metrics.symbolize_keys)
-    return false unless decision.fetch(:resume_allowed)
-    return true if @policy.mode == 'enforce'
-
-    EmailCampaigns::Reputation::LegacyDecision.resume_allowed?(metrics.symbolize_keys, proposed: true)
-  end
-
-  def current_evaluation?
-    return false unless @state&.evaluated_at&.between?(@now - EmailCampaigns::Reputation::Policy::WINDOW_SECONDS, @now)
-    return false if @state.level == 'unknown'
-
-    published_generation? && @state.evaluated_feedback_version == @state.feedback_version && complete_metrics?
-  end
-
-  def published_generation?
-    generation = @state.current_metrics['evaluation_generation']
-    # The evaluator publishes this marker with current_metrics inside its successful generation CAS.
-    # Older rows cannot prove which observation produced them, and therefore cannot advertise release.
-    generation.is_a?(Integer) && generation.positive? && generation == @state.observation_generation
-  end
-
-  def complete_metrics?
-    metrics = @state.current_metrics
-    %w[sent permanent transient unknown complaints bounced].all? { |key| metrics[key].is_a?(Integer) && metrics[key] >= 0 }
-  end
-
-  def capabilities(campaign, preflight, eligible, provider)
+  def capabilities(campaign, preflight, provider)
     denied = { reevaluate: false, resume: false, override: false }
     return denied unless @actor && campaign
 
@@ -117,19 +77,13 @@ class EmailCampaigns::Presentation::Protection
 
     {
       reevaluate: policy.reevaluate?,
-      resume: policy.resume? && resumable?(campaign, preflight, eligible, provider),
-      override: operator?
+      resume: policy.resume? && resumable?(campaign, preflight, provider),
+      override: false
     }
   end
 
-  def resumable?(campaign, preflight, eligible, provider)
-    campaign.paused? && !provider[:blocked] && (!blocked? || eligible) && hygiene_ready?(campaign, preflight)
-  end
-
-  def operator?
-    return @operator if defined?(@operator)
-
-    @operator = SuperAdmin.exists?(id: @actor.id)
+  def resumable?(campaign, preflight, provider)
+    campaign.paused? && !provider[:blocked] && hygiene_ready?(campaign, preflight)
   end
 
   def hygiene_ready?(campaign, preflight)

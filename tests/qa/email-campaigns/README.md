@@ -48,3 +48,5 @@ node --check tests/qa/email-campaigns/fixtures.mjs
 ```
 
 The DOM helper test uses jsdom and controlled rectangles. It verifies expectation selection, **not rendered geometry or real keyboard behavior**. Actual browser checks and visual acceptance belong to the parent rerun.
+
+For a host where the bundled full Chromium crashes before opening a page, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to another installed Chromium binary (for example the matching Playwright headless shell). The runner records its browser version and keeps the same isolated synthetic routes and assertions. This is a local executable selection, not a product setting.
