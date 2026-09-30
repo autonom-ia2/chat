@@ -1,7 +1,7 @@
 {
   "environment": "local full Rails/Vue application, real APIs, synthetic QA account 362",
   "locale": "pt_BR",
-  "dashboard_asset": "dashboard-xy_fYzxl.js (latest main captures; per-file asset below)",
+  "dashboard_asset": "dashboard-Bx2hXWX9.js (campaign alignment captures; per-file asset below)",
   "sidebar_logo": "/brand-assets/hub2you-icon.png",
   "sidebar_background": "#0b1e3f",
   "production_changes": false,
@@ -9,9 +9,9 @@
   "captures": [
     {
       "file": "01-campanhas.jpg",
-      "bytes": 146175,
-      "sha256": "7c340822de18887a271271fd3cc458eadbe53402fe62da6138fef641b08cecb0",
-      "dashboard_asset": "dashboard-xy_fYzxl.js"
+      "bytes": 146459,
+      "sha256": "fd165765109217ec1bfb14ea6a3bb12b497aa7abe547fc16789de6a440882751",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
     },
     {
       "file": "02-editor.jpg",
@@ -41,7 +41,7 @@
       "file": "06-campanhas-mobile.jpg",
       "bytes": 46799,
       "sha256": "24a85066eacf9c0fef2b07d00c808fc2b4814cd2b4e042273543b289fdc2c9e3",
-      "dashboard_asset": "dashboard-eDBAlyKY.js"
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
     },
     {
       "file": "07-modelos-mobile.jpg",
@@ -66,6 +66,31 @@
       "bytes": 136005,
       "sha256": "3233f80db426ae4f7a29c1efe564cd956e8f1d5c6a615dbb1a8ac118f712ef1c",
       "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "11-campanhas-1280.jpg",
+      "bytes": 143840,
+      "sha256": "32d778dedb4366a46c4daa3ec86e55a23c768649db95542fa0bb4da070497714",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "12-campanhas-1024.jpg",
+      "bytes": 116580,
+      "sha256": "5183578abe079820590be931f6f5f5f906a64409b324095e60efd885232babe7",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "13-campanhas-tablet.jpg",
+      "bytes": 98365,
+      "sha256": "d26ff614760ce1576ceba1c9e8b43f5fdad3bcd53663569ed7ce5979e05873be",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "14-campanhas-mobile-acoes.jpg",
+      "bytes": 52103,
+      "sha256": "cd7a445384b36956c29e45eae6eb1ac10e61957bd4c535722d12b44ffc63233d",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
     }
-  ]
+  ],
+  "alignment_report": "alignment.json"
 }

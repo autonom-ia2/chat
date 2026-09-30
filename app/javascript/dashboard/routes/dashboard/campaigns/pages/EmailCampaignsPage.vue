@@ -343,9 +343,9 @@ const confirmDestructive = async () => {
           />
         </div>
         <div
-          class="flex flex-1 flex-wrap items-center justify-between gap-5 px-6 py-6 md:px-8"
+          class="grid min-w-0 flex-1 gap-5 px-6 py-6 md:px-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,.8fr)]"
         >
-          <div>
+          <div class="min-w-0">
             <p class="mb-0 text-xs text-n-slate-11">
               {{ t(`${UX}.IN_PREPARATION`) }}
             </p>
@@ -361,8 +361,7 @@ const confirmDestructive = async () => {
               {{ t(`${UX}.CURRENT_VIEW`) }}
             </p>
           </div>
-          <div class="hidden h-16 w-px bg-n-weak sm:block" />
-          <div>
+          <div class="min-w-0 lg:border-s lg:border-n-weak lg:ps-5">
             <p class="mb-0 text-xs text-n-slate-11">
               {{ t(`${UX}.NEXT_SCHEDULE`) }}
             </p>
@@ -373,8 +372,9 @@ const confirmDestructive = async () => {
               {{ nextScheduled?.name || t(`${UX}.NO_SCHEDULE`) }}
             </p>
           </div>
-          <div class="hidden h-16 w-px bg-n-weak xl:block" />
-          <div class="hidden xl:block">
+          <div
+            class="hidden min-w-0 xl:block xl:border-s xl:border-n-weak xl:ps-5"
+          >
             <p class="mb-0 text-xs text-n-slate-11">
               {{ t(`${UX}.SENT_CAMPAIGNS`) }}
             </p>
@@ -454,9 +454,9 @@ const confirmDestructive = async () => {
         <article
           v-for="item in isFetching ? [] : visibleCampaigns"
           :key="item.id"
-          class="flex flex-col gap-5 border-b border-n-weak px-5 py-5 last:border-0 xl:flex-row xl:items-center xl:px-6"
+          class="grid gap-5 border-b border-n-weak px-5 py-5 last:border-0 xl:grid-cols-[minmax(0,1fr)_17rem_17rem] xl:items-center xl:px-6"
         >
-          <div class="flex min-w-0 flex-1 gap-4">
+          <div class="flex min-w-0 gap-4">
             <div
               class="relative flex h-20 w-16 shrink-0 justify-center overflow-hidden rounded-xl border border-n-weak bg-n-alpha-1"
             >
@@ -509,7 +509,7 @@ const confirmDestructive = async () => {
               </span>
             </div>
           </div>
-          <div class="flex items-center gap-7 xl:w-[17rem] xl:shrink-0">
+          <div class="flex min-w-0 items-center gap-7">
             <div class="w-16 shrink-0">
               <p
                 class="mb-0 text-sm font-semibold tabular-nums text-n-slate-12"
@@ -530,7 +530,10 @@ const confirmDestructive = async () => {
                 }}
               </p>
             </div>
-            <button class="min-h-11 text-start" @click="showDiagnostics(item)">
+            <button
+              class="min-h-11 min-w-0 flex-1 text-start"
+              @click="showDiagnostics(item)"
+            >
               <p
                 class="mb-0 text-xs font-medium"
                 :class="
@@ -548,7 +551,7 @@ const confirmDestructive = async () => {
           </div>
           <div
             v-on-click-outside="() => (menuId = null)"
-            class="relative flex flex-wrap items-center gap-2 xl:shrink-0"
+            class="relative flex flex-wrap items-center gap-2 xl:justify-end"
           >
             <template v-if="item.status === 'draft'">
               <router-link :to="builderRoute(item)">

@@ -13,7 +13,8 @@ A marca foi conferida em leitura na conta 16: logo `/brand-assets/hub2you-icon.p
 | Confirmação final aberta e cancelada | [Desktop](full-application/09-confirmacao.jpg) |
 | Público, exclusões e envio/agendamento | [Desktop](full-application/10-publico-e-agendamento.jpg) |
 | Revisão com destinatários ausentes | [Desktop](full-application/05-pendencia.jpg) |
-| Lista no celular | [390 px](full-application/06-campanhas-mobile.jpg) |
+| Lista no celular | [390 px](full-application/06-campanhas-mobile.jpg), [ações após rolagem](full-application/14-campanhas-mobile-acoes.jpg) |
+| Lista com colunas alinhadas em telas menores | [1280 px](full-application/11-campanhas-1280.jpg), [1024 px](full-application/12-campanhas-1024.jpg), [768 px](full-application/13-campanhas-tablet.jpg) |
 | Biblioteca no celular | [390 px](full-application/07-modelos-mobile.jpg) |
 | Biblioteca no tablet | [768 px](full-application/08-modelos-tablet.jpg) |
 
@@ -37,3 +38,13 @@ A rodada inicial de 159 exemplos Ruby foi em ambiente previamente populado e nã
 As capturas antigas em `previews/` foram feitas no harness `tests/qa/email-workspace/`, com shell e API sintéticos. Permanecem somente como evidência isolada histórica e foram substituídas pelas capturas acima para a aceitação visual.
 
 Nenhum deploy, seed ou banco de produção foi alterado. Não há prova de entrega real de e-mail nesta rodada. Plano: `docs/campaigns/email-workspace-release-800.md`.
+
+## Correção do alinhamento — 30/09/2026
+
+A lista usava linhas flexíveis independentes: uma campanha agendada, com menos botões, deslocava destinatários e situação em 38,90 px em relação aos rascunhos. As linhas agora compartilham as mesmas larguras de colunas no desktop; em telas menores, os blocos continuam empilhados. O resumo superior também usa colunas com títulos alinhados pelo topo. Handlers, condições de ações e permissões foram preservados.
+
+As capturas da lista foram atualizadas com o build `dashboard-Bx2hXWX9.js`. O relatório [alignment.json](full-application/alignment.json) registra posições reais antes/depois: mesmas posições nas três linhas em 1440 e 1280 px, títulos do resumo no mesmo eixo em desktop e documento sem expansão horizontal em 1440, 1280, 1024, 768 e 390 px. A captura adicional no celular mostra as ações após rolagem.
+
+Validação direcionada desta correção: 3 testes da lista aprovados, zero falhas; lint do arquivo com zero bloqueios, Prettier, build e diff check aprovados. Os checks remotos anteriores passaram no HEAD `4b190153de` (6891 testes frontend, 1063 exemplos Ruby, zero falhas e dois casos Ruby em quarentena preexistente). A correção de alinhamento precisa de checks no seu próprio HEAD antes da publicação. Nenhum envio, banco de produção, merge ou deploy nesta rodada.
+
+Parecer independente final `/root/qa_800`: **alinhamento aprovado** nas cinco larguras. Capturas de desktop e celular e relatório DOM conferidos; nenhum bloqueador visual encontrado. Fluxos e permissões preservados. CI do novo HEAD e revisão de Rodrigo permanecem como etapas anteriores a merge/deploy.

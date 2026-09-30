@@ -146,3 +146,24 @@ Captura real `04-revisao.jpg` registrada. Abertura de Confirmar disparo mostrou 
 Parecer final independente de `/root/qa_800`: aplicação local aprovada; captura 01 confirma quatro destinatários após recarregar, README registra 486 testes e capturas 09/10, revisão/confirmação/agendamento coerentes. O agente repetiu as correções Ruby no banco novo `email800_ci`: **12 exemplos, zero falhas**, log local ignorado `.codex/800/qa-rspec-email800-ci-final.log`, resultado lido. O log amplo inicial de 159 exemplos não identifica banco e não serve como prova de fixtures independentes. Rechecagem local: lint cumulativo com zero bloqueios, Prettier aprovado, dois specs Ruby sem infrações de RuboCop.
 
 Commit `2cb5b9f67b633452065ed33289fdabcc831d5589` publicado na branch do PR #801, com dez capturas da aplicação completa e proveniência por arquivo. Após o push, os três workflows apareceram novamente `disabled_manually`, sem checks para esse HEAD; não se presume motivo ou autoria. Reativados somente e-mail, traduções e Guia para conferir o novo HEAD de documentação. O PR continua draft, aguardando checks atuais e avaliação de Rodrigo das telas completas. Nenhum merge ou deploy nesta rodada.
+
+
+## Alinhamento das colunas após revisão visual — 30/09/2026
+
+Rodrigo apontou o desalinhamento das colunas na captura da aplicação completa. Medição real do DOM, viewport 1440 × 900: a linha agendada tinha a coluna de destinatários em x=866,4375 e ações em x=1158,4375; os rascunhos tinham x=827,5391 e x=1119,5391. Diferença: **38,90 px**, causada pelo tamanho variável dos grupos de botões em linhas flexíveis independentes. Os rótulos do resumo superior tinham y=204/208/190 por centralização vertical de conteúdos com alturas diferentes.
+
+Correção restrita a Tailwind em `EmailCampaignsPage.vue`: grade compartilhada de larguras de colunas no desktop (conteúdo flexível, diagnóstico 17 rem, ações 17 rem), ações alinhadas ao fim, blocos empilhados abaixo de xl e resumo com títulos alinhados pelo topo. Nenhum handler, condição, permissão, string ou contrato foi alterado. Pesquisa OSS/Enterprise não encontrou outro override desse componente.
+
+Validações lidas antes do commit:
+- `node .github/scripts/email-protection-eslint.mjs app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue`: 1 arquivo, **zero bloqueios**, 40 avisos dinâmicos de i18n permitidos.
+- `pnpm exec prettier --check app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue`: aprovado, sem reescrita.
+- `pnpm exec vitest run app/javascript/dashboard/components-next/Campaigns/EmailProtection/specs/campaignList.spec.js --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage --reporter=dot --silent`: **3 testes, 1 arquivo, zero falhas**.
+- `bundle exec vite build --mode test`: aprovado em 30,27 s; asset efetivo da lista `dashboard-Bx2hXWX9.js`. Somente o Puma local desta tarefa foi reiniciado para invalidar o manifest em cache; nenhuma outra instância foi encerrada.
+- Geometria real do navegador registrada em `full-application/alignment.json`: em 1440 px todas as linhas têm destinatários x=819 e ações x=1111; rótulos do resumo y=188. Mesma grade entre linhas em 1280 px. Em 1440/1280/1024/768/390 px, documento sem expansão horizontal; ações dentro do viewport. Capturas 01/11/12/13/06 e captura 14 após rolagem no celular.
+- `git diff --check` e `sh bin/validate_push`: aprovados. Nenhum teste/formatter foi encadeado com commit.
+
+Resultado remoto anterior confirmado no HEAD `4b190153dea74839c79fea86500b41f7fd3f6f77`: e-mail [36778825344](https://github.com/autonom-ia2/chat/actions/runs/36778825344), traduções [36778825167](https://github.com/autonom-ia2/chat/actions/runs/36778825167) e Guia [36778825216](https://github.com/autonom-ia2/chat/actions/runs/36778825216) passaram. **6891 testes frontend em 618 arquivos, 1063 exemplos Ruby, zero falhas**, dois casos Ruby em quarentena preexistente. Esses checks não substituem o CI do novo HEAD com o alinhamento. Workflows seguem ativos; nenhuma mudança neles nesta continuação.
+
+Sem acesso ou alteração em banco de produção, seeds, IA, SES, envios, infraestrutura, merge ou deploy. PR #801 permanece draft para revisão das telas completas e checks do HEAD atual. Viewport temporário restaurado no navegador.
+
+Parecer independente final `/root/qa_800`: **alinhamento aprovado** nas cinco larguras. Capturas de desktop e celular e relatório DOM conferidos; nenhum bloqueador visual encontrado. Fluxos e permissões preservados. CI do novo HEAD e revisão de Rodrigo permanecem como etapas anteriores a merge/deploy.

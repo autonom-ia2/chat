@@ -1,0 +1,693 @@
+{
+  "environment": "local full Rails/Vue application, synthetic QA account 362",
+  "before": {
+    "asset": "http://127.0.0.1:34781/vite-test/assets/dashboard-xy_fYzxl.js",
+    "rows": [
+      {
+        "campaign": "QA · Campanha agendada",
+        "columns": [
+          {
+            "width": 589.4375,
+            "x": 257
+          },
+          {
+            "width": 272,
+            "x": 866.4375
+          },
+          {
+            "width": 224.5625,
+            "x": 1158.4375
+          }
+        ]
+      },
+      {
+        "campaign": "QA · Importação TypeSafe",
+        "columns": [
+          {
+            "width": 550.5390625,
+            "x": 257
+          },
+          {
+            "width": 272,
+            "x": 827.5390625
+          },
+          {
+            "width": 263.4609375,
+            "x": 1119.5390625
+          }
+        ]
+      },
+      {
+        "campaign": "QA · Onboarding",
+        "columns": [
+          {
+            "width": 550.5390625,
+            "x": 257
+          },
+          {
+            "width": 272,
+            "x": 827.5390625
+          },
+          {
+            "width": 263.4609375,
+            "x": 1119.5390625
+          }
+        ]
+      }
+    ],
+    "summary": [
+      {
+        "label": "Em preparação",
+        "y": 204
+      },
+      {
+        "label": "Próximo envio agendado",
+        "y": 208
+      },
+      {
+        "label": "Campanhas enviadas",
+        "y": 190
+      }
+    ],
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    }
+  },
+  "after": [
+    {
+      "asset": "http://127.0.0.1:34781/vite-test/assets/dashboard-Bx2hXWX9.js",
+      "documentWidth": 1440,
+      "rows": [
+        {
+          "campaign": "QA · Campanha agendada",
+          "columns": [
+            {
+              "width": 542,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 819
+            },
+            {
+              "width": 272,
+              "x": 1111
+            }
+          ],
+          "grid": "542px 272px 272px"
+        },
+        {
+          "campaign": "QA · Importação TypeSafe",
+          "columns": [
+            {
+              "width": 542,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 819
+            },
+            {
+              "width": 272,
+              "x": 1111
+            }
+          ],
+          "grid": "542px 272px 272px"
+        },
+        {
+          "campaign": "QA · Onboarding",
+          "columns": [
+            {
+              "width": 542,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 819
+            },
+            {
+              "width": 272,
+              "x": 1111
+            }
+          ],
+          "grid": "542px 272px 272px"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Em preparação",
+          "y": 188
+        },
+        {
+          "label": "Próximo envio agendado",
+          "y": 188
+        },
+        {
+          "label": "Campanhas enviadas",
+          "y": 188
+        }
+      ],
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "documentWidth": 1280,
+      "rows": [
+        {
+          "buttons": [
+            {
+              "label": "Ver agendamento",
+              "left": 998.4375,
+              "right": 1171,
+              "width": 172.5625
+            },
+            {
+              "label": "Mais ações para QA · Campanha agendada",
+              "left": 1179,
+              "right": 1223,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Campanha agendada",
+          "columns": [
+            {
+              "width": 382,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 659
+            },
+            {
+              "width": 272,
+              "x": 951
+            }
+          ],
+          "grid": "382px 272px 272px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 959.5390625,
+              "right": 1052.3671875,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 1060.3671875,
+              "right": 1171,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Importação TypeSafe",
+              "left": 1179,
+              "right": 1223,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Importação TypeSafe",
+          "columns": [
+            {
+              "width": 382,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 659
+            },
+            {
+              "width": 272,
+              "x": 951
+            }
+          ],
+          "grid": "382px 272px 272px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 959.5390625,
+              "right": 1052.3671875,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 1060.3671875,
+              "right": 1171,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Onboarding",
+              "left": 1179,
+              "right": 1223,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Onboarding",
+          "columns": [
+            {
+              "width": 382,
+              "x": 257
+            },
+            {
+              "width": 272,
+              "x": 659
+            },
+            {
+              "width": 272,
+              "x": 951
+            }
+          ],
+          "grid": "382px 272px 272px"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Em preparação",
+          "visible": true,
+          "y": 188
+        },
+        {
+          "label": "Próximo envio agendado",
+          "visible": true,
+          "y": 188
+        },
+        {
+          "label": "Campanhas enviadas",
+          "visible": true,
+          "y": 188
+        }
+      ],
+      "viewport": {
+        "height": 900,
+        "width": 1280
+      }
+    },
+    {
+      "documentWidth": 1024,
+      "rows": [
+        {
+          "buttons": [
+            {
+              "label": "Ver agendamento",
+              "left": 253,
+              "right": 425.5625,
+              "width": 172.5625
+            },
+            {
+              "label": "Mais ações para QA · Campanha agendada",
+              "left": 433.5625,
+              "right": 477.5625,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Campanha agendada",
+          "columns": [
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            }
+          ],
+          "grid": "718px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 253,
+              "right": 345.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 353.828125,
+              "right": 464.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Importação TypeSafe",
+              "left": 472.4609375,
+              "right": 516.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Importação TypeSafe",
+          "columns": [
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            }
+          ],
+          "grid": "718px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 253,
+              "right": 345.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 353.828125,
+              "right": 464.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Onboarding",
+              "left": 472.4609375,
+              "right": 516.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Onboarding",
+          "columns": [
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            },
+            {
+              "width": 718,
+              "x": 253
+            }
+          ],
+          "grid": "718px"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Em preparação",
+          "visible": true,
+          "y": 188
+        },
+        {
+          "label": "Próximo envio agendado",
+          "visible": true,
+          "y": 188
+        },
+        {
+          "label": "Campanhas enviadas",
+          "visible": false,
+          "y": 0
+        }
+      ],
+      "viewport": {
+        "height": 900,
+        "width": 1024
+      }
+    },
+    {
+      "documentWidth": 768,
+      "rows": [
+        {
+          "buttons": [
+            {
+              "label": "Ver agendamento",
+              "left": 241,
+              "right": 413.5625,
+              "width": 172.5625
+            },
+            {
+              "label": "Mais ações para QA · Campanha agendada",
+              "left": 421.5625,
+              "right": 465.5625,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Campanha agendada",
+          "columns": [
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            }
+          ],
+          "grid": "486px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 241,
+              "right": 333.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 341.828125,
+              "right": 452.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Importação TypeSafe",
+              "left": 460.4609375,
+              "right": 504.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Importação TypeSafe",
+          "columns": [
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            }
+          ],
+          "grid": "486px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 241,
+              "right": 333.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 341.828125,
+              "right": 452.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Onboarding",
+              "left": 460.4609375,
+              "right": 504.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Onboarding",
+          "columns": [
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            },
+            {
+              "width": 486,
+              "x": 241
+            }
+          ],
+          "grid": "486px"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Em preparação",
+          "visible": true,
+          "y": 236
+        },
+        {
+          "label": "Próximo envio agendado",
+          "visible": true,
+          "y": 344
+        },
+        {
+          "label": "Campanhas enviadas",
+          "visible": false,
+          "y": 0
+        }
+      ],
+      "viewport": {
+        "height": 900,
+        "width": 768
+      }
+    },
+    {
+      "documentWidth": 390,
+      "rows": [
+        {
+          "buttons": [
+            {
+              "label": "Ver agendamento",
+              "left": 41,
+              "right": 213.5625,
+              "width": 172.5625
+            },
+            {
+              "label": "Mais ações para QA · Campanha agendada",
+              "left": 221.5625,
+              "right": 265.5625,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Campanha agendada",
+          "columns": [
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            }
+          ],
+          "grid": "308px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 41,
+              "right": 133.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 141.828125,
+              "right": 252.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Importação TypeSafe",
+              "left": 260.4609375,
+              "right": 304.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Importação TypeSafe",
+          "columns": [
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            }
+          ],
+          "grid": "308px"
+        },
+        {
+          "buttons": [
+            {
+              "label": "Editar",
+              "left": 41,
+              "right": 133.828125,
+              "width": 92.828125
+            },
+            {
+              "label": "Disparar",
+              "left": 141.828125,
+              "right": 252.4609375,
+              "width": 110.6328125
+            },
+            {
+              "label": "Mais ações para QA · Onboarding",
+              "left": 260.4609375,
+              "right": 304.4609375,
+              "width": 44
+            }
+          ],
+          "campaign": "QA · Onboarding",
+          "columns": [
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            },
+            {
+              "width": 308,
+              "x": 41
+            }
+          ],
+          "grid": "308px"
+        }
+      ],
+      "summary": [
+        {
+          "label": "Em preparação",
+          "visible": true,
+          "y": 452
+        },
+        {
+          "label": "Próximo envio agendado",
+          "visible": true,
+          "y": 556
+        },
+        {
+          "label": "Campanhas enviadas",
+          "visible": false,
+          "y": 0
+        }
+      ],
+      "viewport": {
+        "height": 844,
+        "width": 390
+      }
+    }
+  ]
+}
