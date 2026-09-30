@@ -294,8 +294,8 @@ export function assertVisibleInventory() {
       /['"]((?:CAMPAIGN\.EMAIL_CAMPAIGN|CAMPAIGN_MANAGEMENT|CRM_KANBAN\.TRACKED_LINKS)\.[A-Z_.]+)['"]/g
     );
     [...references].forEach(([, key]) => {
-      // New product copy follows the source-locale/Crowdin workflow. The
-      // previously translated protection contract remains required everywhere.
+      // Chat2You workspace copy is checked in English and Brazilian Portuguese.
+      // The existing protection contract remains required in every locale.
       if (
         key === workspaceNamespace ||
         key.startsWith(`${workspaceNamespace}.`)
@@ -521,7 +521,23 @@ export function checkEmailProtectionLocales() {
   const workspaceKeys = Object.keys(
     flattenMessages(workspaceMessages, 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE')
   );
-  validateRuntime('en', loadLocaleIndex('en'), workspaceKeys);
+  ['en', 'pt_BR'].forEach(locale => {
+    const loaded = loadLocaleIndex(locale);
+    const workspace = loaded.CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE;
+    assert.deepEqual(
+      Object.keys(flattenMessages(workspace)).sort(),
+      Object.keys(flattenMessages(workspaceMessages)).sort(),
+      `${locale}: workspace key parity`
+    );
+    workspaceKeys.forEach(key => {
+      assert.deepEqual(
+        placeholders(messageAt(loaded, key)),
+        placeholders(messageAt(visibleCanonical, key)),
+        `${locale}/${key}: workspace interpolation parity`
+      );
+    });
+    validateRuntime(locale, loaded, workspaceKeys);
+  });
   const keysPerLocale = Object.keys(flattenMessages(canonical)).length;
   metadata.folders.forEach(locale => {
     const messages = readLocale(locale);
