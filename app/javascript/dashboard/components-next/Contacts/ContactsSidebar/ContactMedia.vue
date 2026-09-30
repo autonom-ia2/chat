@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -8,6 +8,8 @@ import {
   NON_FILE_TYPES,
 } from 'dashboard/components-next/message/constants';
 
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import ContactMediaPanel from 'dashboard/components-next/Relationships/ContactMediaPanel.vue';
 import GalleryView from 'dashboard/components/widgets/conversation/components/GalleryView.vue';
 import Media from 'dashboard/components-next/SharedAttachments/Media.vue';
 import Files from 'dashboard/components-next/SharedAttachments/Files.vue';
@@ -20,6 +22,7 @@ const route = useRoute();
 const router = useRouter();
 const store = useStore();
 const { t } = useI18n();
+const { mediaEnabled } = useRelationships();
 
 const attachmentsByContact = useMapGetter('contacts/getContactAttachments');
 const uiFlags = useMapGetter('contacts/getUIFlags');
@@ -67,13 +70,25 @@ const onJumpToMessage = attachment => {
   });
 };
 
-onMounted(() => {
-  store.dispatch('contacts/fetchAttachments', route.params.contactId);
-});
+watch(
+  [() => route.params.accountId, () => route.params.contactId, mediaEnabled],
+  () => {
+    showGallery.value = false;
+    selectedAttachment.value = null;
+    if (!mediaEnabled.value)
+      store.dispatch('contacts/fetchAttachments', route.params.contactId);
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
-  <div class="px-6">
+  <ContactMediaPanel
+    v-if="mediaEnabled"
+    :key="route.params.contactId"
+    :contact-id="Number(route.params.contactId)"
+  />
+  <div v-else class="px-6">
     <div v-if="isFetching" class="flex justify-center p-3">
       <Spinner class="size-5" />
     </div>

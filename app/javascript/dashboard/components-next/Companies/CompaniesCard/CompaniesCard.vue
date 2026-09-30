@@ -42,14 +42,19 @@ const formattedLastActivityAt = computed(() => {
 </script>
 
 <template>
-  <CardLayout layout="row" @click="onClickViewDetails">
+  <CardLayout
+    class="!rounded-2xl shadow-sm"
+    layout="row"
+    @click="onClickViewDetails"
+  >
     <div class="flex items-center justify-start flex-1 gap-4 cursor-pointer">
       <Avatar
         :username="displayName"
         :src="avatarSource"
         class="shrink-0"
         :name="name"
-        :size="42"
+        :size="48"
+        rounded-full
         hide-offline-status
       />
       <div class="flex flex-col gap-0.5 flex-1 min-w-0">

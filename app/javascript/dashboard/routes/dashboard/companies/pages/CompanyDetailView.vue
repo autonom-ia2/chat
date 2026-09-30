@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import CompanyMedia from 'dashboard/components-next/Relationships/CompanyMedia.vue';
+import RelationshipActionMenu from 'dashboard/components-next/Relationships/RelationshipActionMenu.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Policy from 'dashboard/components/policy.vue';
@@ -13,6 +14,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import CompaniesDetailsLayout from 'dashboard/components-next/Companies/CompaniesDetailsLayout.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import TabBar from 'dashboard/components-next/tabbar/TabBar.vue';
+import RelationshipTabs from 'dashboard/components-next/Relationships/RelationshipTabs.vue';
 import CompanyContactsSidebar from 'dashboard/components-next/Companies/CompanyDetail/CompanyContactsSidebar.vue';
 import CompanyCustomAttributes from 'dashboard/components-next/Companies/CompanyDetail/CompanyCustomAttributes.vue';
 import CompanyHistorySidebar from 'dashboard/components-next/Companies/CompanyDetail/CompanyHistorySidebar.vue';
@@ -30,7 +32,7 @@ const { t } = useI18n();
 const confirmDeleteDialogRef = ref(null);
 const selectedCandidate = ref(null);
 const activeSidebarTab = ref(
-  mediaEnabled.value && route.query.media ? 'media' : 'history'
+  mediaEnabled.value && route.query.media ? 'media' : 'contacts'
 );
 
 const companyId = computed(() => Number(route.params.companyId));
@@ -204,7 +206,7 @@ watch(
     companiesStore.resetCompanyDetailState();
     clearSelectedCandidate();
     activeSidebarTab.value =
-      mediaEnabled.value && route.query.media ? 'media' : 'history';
+      mediaEnabled.value && route.query.media ? 'media' : 'contacts';
     if (!id) return;
     await Promise.allSettled([
       companiesStore.show(id),
@@ -219,8 +221,8 @@ watch(mediaEnabled, enabled => {
   if (enabled && route.query.media) {
     activeSidebarTab.value = 'media';
   } else if (!enabled && activeSidebarTab.value === 'media') {
-    activeSidebarTab.value = 'history';
-    loadSidebarTab('history');
+    activeSidebarTab.value = 'contacts';
+    loadSidebarTab('contacts');
   }
 });
 
@@ -267,14 +269,45 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="flex flex-col gap-6">
-      <CompanyProfileCard :company="company" :is-loading="isFetchingCompany" />
+      <CompanyProfileCard :company="company" :is-loading="isFetchingCompany">
+        <template v-if="navigationEnabled" #actions>
+          <div
+            data-profile-actions
+            class="flex w-full flex-wrap items-center gap-2"
+          >
+            <a
+              v-if="company.domain"
+              :href="`https://${company.domain}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex min-h-11 items-center gap-2 rounded-lg border border-n-weak px-4 text-sm font-medium text-n-slate-12 hover:bg-n-alpha-2"
+            >
+              <span class="i-lucide-globe size-4" aria-hidden="true" />
+              {{ t('RELATIONSHIPS.VISIT_SITE') }}
+            </a>
+            <Policy :permissions="['administrator']">
+              <RelationshipActionMenu
+                :actions="[
+                  {
+                    key: 'delete',
+                    label: t('COMPANIES.DETAIL.DELETE.BUTTON'),
+                    icon: 'i-lucide-trash-2',
+                    disabled: isDeletingCompany,
+                  },
+                ]"
+                @select="openDeleteCompanyDialog"
+              />
+            </Policy>
+          </div>
+        </template>
+      </CompanyProfileCard>
 
       <RelationshipFields
         :record="company"
         entity="company"
         surface="company_details"
       />
-      <Policy :permissions="['administrator']">
+      <Policy v-if="!navigationEnabled" :permissions="['administrator']">
         <section
           class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"
         >
@@ -296,8 +329,15 @@ onBeforeUnmount(() => {
       </Policy>
     </div>
 
-    <template #sidebarHeader>
-      <div class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
+    <template #sidebarHeader="{ context = 'desktop' }">
+      <RelationshipTabs
+        v-if="navigationEnabled"
+        :id="`company-sidebar-${context}`"
+        :tabs="sidebarTabs"
+        :initial-active-tab="activeSidebarTabIndex"
+        @tab-changed="handleSidebarTabChange"
+      />
+      <div v-else class="min-w-0 overflow-x-auto px-4 pt-6 pb-3">
         <TabBar
           :tabs="sidebarTabs"
           :initial-active-tab="activeSidebarTabIndex"
@@ -306,42 +346,52 @@ onBeforeUnmount(() => {
         />
       </div>
     </template>
-    <template v-if="hasCompany" #sidebar>
-      <CompanyMedia
-        v-if="mediaEnabled && activeSidebarTab === 'media'"
-        :company-id="companyId"
-      />
-      <CompanyNotesSidebar
-        v-if="activeSidebarTab === 'notes'"
-        :notes="companyNotes"
-        :is-loading="isFetchingNotes"
-      />
-      <CompanyHistorySidebar
-        v-if="activeSidebarTab === 'history'"
-        :conversations="companyConversations"
-        :is-loading="isFetchingConversations"
-      />
-      <CompanyContactsSidebar
-        v-if="activeSidebarTab === 'contacts'"
-        :company="company"
-        :contacts="companyContacts"
-        :meta="companyContactsMeta"
-        :is-loading="isFetchingContacts"
-        :is-busy="isManagingContacts"
-        :search-results="contactSearchResults"
-        :is-searching="isSearchingContacts"
-        :selected-contact="selectedCandidate"
-        @cancel-contact-selection="clearSelectedCandidate"
-        @confirm-contact-selection="handleConfirmContactSelection"
-        @search="handleContactSearch"
-        @select-contact="contact => (selectedCandidate = contact)"
-        @remove-contact="handleRemoveContact"
-        @update:current-page="loadCompanyContactsPage"
-      />
-      <CompanyCustomAttributes
-        v-if="activeSidebarTab === 'attributes'"
-        :company="company"
-      />
+    <template v-if="hasCompany" #sidebar="{ context = 'desktop' }">
+      <div
+        :id="navigationEnabled ? `company-sidebar-${context}-panel` : undefined"
+        :role="navigationEnabled ? 'tabpanel' : undefined"
+        :aria-labelledby="
+          navigationEnabled
+            ? `company-sidebar-${context}-${activeSidebarTab}`
+            : undefined
+        "
+      >
+        <CompanyMedia
+          v-if="mediaEnabled && activeSidebarTab === 'media'"
+          :company-id="companyId"
+        />
+        <CompanyNotesSidebar
+          v-if="activeSidebarTab === 'notes'"
+          :notes="companyNotes"
+          :is-loading="isFetchingNotes"
+        />
+        <CompanyHistorySidebar
+          v-if="activeSidebarTab === 'history'"
+          :conversations="companyConversations"
+          :is-loading="isFetchingConversations"
+        />
+        <CompanyContactsSidebar
+          v-if="activeSidebarTab === 'contacts'"
+          :company="company"
+          :contacts="companyContacts"
+          :meta="companyContactsMeta"
+          :is-loading="isFetchingContacts"
+          :is-busy="isManagingContacts"
+          :search-results="contactSearchResults"
+          :is-searching="isSearchingContacts"
+          :selected-contact="selectedCandidate"
+          @cancel-contact-selection="clearSelectedCandidate"
+          @confirm-contact-selection="handleConfirmContactSelection"
+          @search="handleContactSearch"
+          @select-contact="contact => (selectedCandidate = contact)"
+          @remove-contact="handleRemoveContact"
+          @update:current-page="loadCompanyContactsPage"
+        />
+        <CompanyCustomAttributes
+          v-if="activeSidebarTab === 'attributes'"
+          :company="company"
+        />
+      </div>
     </template>
 
     <ConfirmCompanyDeleteDialog

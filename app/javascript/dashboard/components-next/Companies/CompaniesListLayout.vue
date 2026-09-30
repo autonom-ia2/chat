@@ -40,6 +40,7 @@ const updateCurrentPage = page => {
       />
       <main class="flex-1 px-6 overflow-y-auto">
         <div class="w-full mx-auto max-w-5xl py-4">
+          <slot name="summary" />
           <slot name="default" />
         </div>
       </main>

@@ -518,6 +518,7 @@ Rails.application.routes.draw do
 
           resources :companies, only: [:index, :show, :create, :update, :destroy] do
             collection do
+              get :summary
               get :search
             end
             member do
@@ -540,6 +541,7 @@ Rails.application.routes.draw do
           end
           resources :contacts, only: [:index, :show, :update, :create, :destroy] do
             collection do
+              get :summary
               get :active
               get :search
               post :filter
@@ -557,6 +559,11 @@ Rails.application.routes.draw do
               resources :labels, only: [:create, :index]
               resources :notes
               resource :opt_out, only: [:create, :destroy]
+              if ChatwootApp.enterprise?
+                resources :media, only: [:index, :show] do
+                  member { get :preview }
+                end
+              end
               get :attachments, to: 'attachments#index'
               post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, useSlots } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
+import { useEventListener } from '@vueuse/core';
 
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -29,6 +30,20 @@ const closeMobileSidebar = () => {
 
   isSidebarOpen.value = false;
 };
+useEventListener(
+  window,
+  'keydown',
+  event => {
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    const openChoice = event.target?.closest?.(
+      '[role="combobox"][aria-expanded="true"]'
+    );
+    if (openChoice) return;
+    if (document.querySelector('[data-popover-content], dialog[open]')) return;
+    closeMobileSidebar();
+  },
+  { capture: true }
+);
 </script>
 
 <template>
@@ -60,20 +75,29 @@ const closeMobileSidebar = () => {
 
     <div
       v-if="slots.sidebar"
-      class="hidden lg:flex flex-col min-w-52 w-full max-w-md border-l border-n-weak bg-n-solid-2"
+      class="hidden shrink-0 flex-col border-s border-n-weak bg-n-solid-2"
+      :class="
+        relationshipsLayout
+          ? 'xl:flex w-[37rem]'
+          : 'lg:flex min-w-52 w-full max-w-md'
+      "
     >
       <div class="shrink-0">
-        <slot name="sidebarHeader" />
+        <slot name="sidebarHeader" context="desktop" />
       </div>
-      <div class="flex-1 overflow-y-auto pb-6 pt-3">
-        <slot name="sidebar" />
+      <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
+        <slot name="sidebar" context="desktop" />
       </div>
     </div>
 
     <div
       v-if="slots.sidebar"
-      class="lg:hidden fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end transition-all duration-200 ease-in-out"
-      :class="isSidebarOpen ? 'w-full' : 'w-16'"
+      class="fixed top-0 ltr:right-0 rtl:left-0 h-full z-50 flex justify-end duration-200 ease-in-out"
+      :class="[
+        relationshipsLayout ? 'xl:hidden' : 'lg:hidden',
+        relationshipsLayout ? 'transition-none' : 'transition-all',
+        isSidebarOpen ? 'w-full' : 'w-16',
+      ]"
     >
       <div
         v-on-click-outside="[
@@ -81,7 +105,9 @@ const closeMobileSidebar = () => {
           {
             ignore: [
               '#details-sidebar-content',
-              '[data-relationships-media-popover]',
+              'dialog.ProseMirror-prompt-backdrop',
+              '[data-popover-content]',
+              '[data-popover-backdrop]',
             ],
           },
         ]"
@@ -104,6 +130,14 @@ const closeMobileSidebar = () => {
               : 'i-lucide-panel-right-open'
           "
           data-details-sidebar-toggle
+          :aria-expanded="isSidebarOpen"
+          :aria-label="
+            $t(
+              isSidebarOpen
+                ? 'RELATIONSHIPS.CLOSE_PANEL'
+                : 'RELATIONSHIPS.OPEN_PANEL'
+            )
+          "
           @click="toggleSidebar"
         />
       </div>
@@ -119,13 +153,18 @@ const closeMobileSidebar = () => {
         <div
           v-if="isSidebarOpen"
           id="details-sidebar-content"
-          class="order-2 w-[85%] sm:w-[50%] flex flex-col bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak shadow-lg"
+          class="order-2 flex flex-col bg-n-solid-2 ltr:border-l rtl:border-r border-n-weak shadow-lg"
+          :class="
+            relationshipsLayout
+              ? 'w-[calc(100%-3rem)] sm:w-[37rem] max-w-[calc(100%-3rem)]'
+              : 'w-[85%] sm:w-[50%]'
+          "
         >
           <div class="shrink-0">
-            <slot name="sidebarHeader" />
+            <slot name="sidebarHeader" context="mobile" />
           </div>
-          <div class="flex-1 overflow-y-auto pb-6 pt-3">
-            <slot name="sidebar" />
+          <div class="flex-1 min-h-0 overflow-y-auto pb-6 pt-3">
+            <slot name="sidebar" context="mobile" />
           </div>
         </div>
       </Transition>

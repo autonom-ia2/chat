@@ -21,6 +21,10 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     @contacts_count = @contacts.total_count
   end
 
+  def summary
+    render json: Relationships::Summary.contacts(Current.account)
+  end
+
   def search
     render json: { error: 'Specify search string with parameter q' }, status: :unprocessable_entity if params[:q].blank? && return
 

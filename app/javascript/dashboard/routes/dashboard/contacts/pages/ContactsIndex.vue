@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useRelationships } from 'dashboard/composables/useRelationships';
+import RelationshipSummary from 'dashboard/components-next/Relationships/RelationshipSummary.vue';
 import { debounce } from '@chatwoot/utils';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import filterQueryGenerator from 'dashboard/helper/filterQueryGenerator';
@@ -25,6 +27,7 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { navigationEnabled } = useRelationships();
 
 const { updateUISettings, uiSettings } = useUISettings();
 
@@ -523,6 +526,9 @@ onMounted(async () => {
       @clear-filters="fetchContacts"
       @load-more="loadMoreSearchResults"
     >
+      <template #summary>
+        <RelationshipSummary v-if="navigationEnabled" entity="contacts" />
+      </template>
       <div
         v-if="isFetchingList && !(isSearchView && hasContacts)"
         class="flex items-center justify-center py-10 text-n-slate-11"
