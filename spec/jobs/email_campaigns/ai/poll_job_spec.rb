@@ -22,7 +22,7 @@ RSpec.describe EmailCampaigns::Ai::PollJob do
   end
 
   it 'prices an in-flight old generation using its actual model after the default changes' do
-    expect(Crm::Ai::Config::MODEL_EMAIL).to eq('gpt-6-sol')
+    expect(Crm::Ai::Config::MODEL_EMAIL).to eq('gpt-6.1-sol')
     expect(EmailCampaigns::Ai::Broadcaster).to receive(:ready).with(campaign).ordered
     expect(client).to receive(:delete).with('resp_old').ordered
 
