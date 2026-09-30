@@ -3,6 +3,8 @@ import { flushPromises, mount, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import campaignMessages from 'dashboard/i18n/locale/en/campaign.json';
 import protectionMessages from 'dashboard/i18n/locale/en/emailCampaignProtection.json';
+import ptBrCampaignMessages from 'dashboard/i18n/locale/pt_BR/campaign.json';
+import ptBrProtectionMessages from 'dashboard/i18n/locale/pt_BR/emailCampaignProtection.json';
 import EmailCampaignReview from '../../Pages/CampaignPage/EmailCampaign/EmailCampaignReview.vue';
 
 const dispatch = vi.hoisted(() => vi.fn());
@@ -21,6 +23,8 @@ vi.mock(
   () => ({ default: { template: '<div data-recipient-import-status />' } })
 );
 
+// Test-only child stub keeps this spec independent of the design-system bundle.
+// eslint-disable-next-line vue/one-component-per-file
 const ButtonStub = defineComponent({
   props: {
     label: { type: [String, Number], default: '' },
@@ -42,6 +46,8 @@ const ButtonStub = defineComponent({
   },
 });
 
+// Test-only child stub keeps this spec independent of the design-system bundle.
+// eslint-disable-next-line vue/one-component-per-file
 const DialogStub = defineComponent({
   props: {
     title: { type: String, default: '' },
@@ -129,8 +135,12 @@ const defaultPlugins = config.global.plugins;
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
-  fallbackLocale: false,
-  messages: { en: { ...campaignMessages, ...protectionMessages } },
+  fallbackLocale: 'en',
+  messages: {
+    en: { ...campaignMessages, ...protectionMessages },
+    pt_BR: { ...ptBrCampaignMessages, ...ptBrProtectionMessages },
+    zh_CN: { ...campaignMessages, ...protectionMessages },
+  },
 });
 
 const mountReview = props =>
@@ -157,6 +167,7 @@ afterAll(() => {
 beforeEach(() => {
   dispatch.mockReset();
   alert.mockReset();
+  i18n.global.locale.value = 'en';
   dispatch.mockImplementation(action => {
     if (action === 'emailCampaigns/validateTemplate')
       return Promise.resolve({ missing: [] });
@@ -224,6 +235,35 @@ it('keeps an incomplete campaign blocked and points the user back to correction'
   expect(dispatch).not.toHaveBeenCalledWith('emailCampaigns/sendNow', 42);
 });
 
+it('renders a draft without a sender safely and keeps confirmation blocked', async () => {
+  const wrapper = mountReview({
+    campaign: campaign({
+      from_name: null,
+      from_email: null,
+      send_readiness: {
+        can_send: false,
+        checks: { ...readyChecks, sender: false },
+        eligible_recipients: 3,
+        protected_recipients: 1,
+      },
+    }),
+  });
+  await flushPromises();
+
+  expect(wrapper.text()).not.toContain('null <null>');
+  expect(wrapper.text()).not.toContain('undefined <undefined>');
+
+  const sendButton = wrapper
+    .findAll('button')
+    .find(button => button.text() === 'Send campaign');
+  expect(sendButton.attributes('disabled')).toBeDefined();
+
+  await sendButton.trigger('click');
+  await flushPromises();
+  expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+  expect(dispatch).not.toHaveBeenCalledWith('emailCampaigns/sendNow', 42);
+});
+
 it('sends the chosen future time only after confirming the schedule', async () => {
   const wrapper = mountReview();
   await flushPromises();
@@ -272,3 +312,59 @@ it('fails closed when the readiness refresh fails before confirmation', async ()
     'Could not complete this action. Please try again.'
   );
 });
+
+it.each(['pt_BR', 'zh_CN'])(
+  'renders counts and schedule review for the %s profile locale without Intl errors',
+  async profileLocale => {
+    i18n.global.locale.value = profileLocale;
+    const wrapper = mountReview({
+      campaign: campaign({
+        send_readiness: {
+          can_send: true,
+          checks: readyChecks,
+          eligible_recipients: 1234,
+          protected_recipients: 56,
+        },
+      }),
+    });
+    await flushPromises();
+
+    const formattedEligible = new Intl.NumberFormat(
+      profileLocale.replace('_', '-')
+    ).format(1234);
+    expect(wrapper.text()).toContain(formattedEligible);
+
+    const later = wrapper
+      .findAll('button')
+      .find(button =>
+        button
+          .text()
+          .includes(
+            i18n.global.t('CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.DELIVERY.later')
+          )
+      );
+    await later.trigger('click');
+    await wrapper.get('input[type="date"]').setValue('2099-12-31');
+    await wrapper.get('input[type="time"]').setValue('12:30');
+
+    const reviewSchedule = wrapper
+      .findAll('button')
+      .find(
+        button =>
+          button.text() ===
+          i18n.global.t('CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.REVIEW_SCHEDULE')
+      );
+    await reviewSchedule.trigger('click');
+    await flushPromises();
+
+    const expectedSchedule = new Intl.DateTimeFormat(
+      profileLocale.replace('_', '-'),
+      { dateStyle: 'medium', timeStyle: 'short' }
+    ).format(new Date('2099-12-31T12:30'));
+    expect(wrapper.get('[role="dialog"]').text()).toContain(expectedSchedule);
+    expect(dispatch).not.toHaveBeenCalledWith(
+      'emailCampaigns/schedule',
+      expect.anything()
+    );
+  }
+);

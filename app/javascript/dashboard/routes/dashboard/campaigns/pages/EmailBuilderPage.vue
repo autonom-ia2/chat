@@ -28,6 +28,7 @@ import EmailCampaignDetailsDialog from 'dashboard/components-next/Campaigns/Page
 import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 
 const { t } = useI18n();
+const stepNumbers = [1, 2, 3];
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -447,7 +448,8 @@ const insertPlaceholder = key => {
             class="!min-h-11 !rounded-xl"
             :disabled="!campaignHasBody && !isReady"
             @click="previewEmail"
-          /><Button
+          />
+          <Button
             v-if="canManage"
             :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE')"
             icon="i-lucide-save"
@@ -457,7 +459,8 @@ const insertPlaceholder = key => {
             :disabled="!isReady"
             :is-loading="uiFlags.isUpdating"
             @click="save"
-          /><Button
+          />
+          <Button
             v-if="canManage"
             :label="t(`${UX}.REVIEW_SEND`)"
             icon="i-lucide-arrow-right"
@@ -480,7 +483,8 @@ const insertPlaceholder = key => {
           :readonly="!canManage"
           @blur="persistSubject"
           @enter="persistSubject"
-        /><Input
+        />
+        <Input
           v-model="preheaderInput"
           :label="t(`${UX}.PREHEADER`)"
           :placeholder="t(`${UX}.PREHEADER_HINT`)"
@@ -493,26 +497,35 @@ const insertPlaceholder = key => {
       >
         <span
           class="flex min-h-11 items-center gap-2 rounded-lg bg-n-blue-3 px-3 font-medium text-n-blue-11"
-          ><span
+        >
+          <span
             class="flex size-6 items-center justify-center rounded-full bg-n-brand text-white"
-            >{{ 1 }}</span
-          >{{ t(`${UX}.CONTENT`) }}</span
-        ><button
+          >
+            {{ stepNumbers[0] }}
+          </span>
+          {{ t(`${UX}.CONTENT`) }}
+        </span>
+        <button
           class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
           @click="openRecipients(false)"
         >
           <span
             class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
-            >{{ 2 }}</span
-          >{{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}</button
-        ><button
+          >
+            {{ stepNumbers[1] }}
+          </span>
+          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}
+        </button>
+        <button
           class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
           @click="openReview"
         >
           <span
             class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
-            >{{ 3 }}</span
-          >{{ t(`${UX}.REVIEW_SEND`) }}
+          >
+            {{ stepNumbers[2] }}
+          </span>
+          {{ t(`${UX}.REVIEW_SEND`) }}
         </button>
       </nav>
       <RecipientImportStatus
@@ -539,12 +552,14 @@ const insertPlaceholder = key => {
             @click="
               activePanel = activePanel === 'blocks' ? 'canvas' : 'blocks'
             "
-          /><Button
+          />
+          <Button
             :label="t(`${UX}.CONTENT`)"
             slate
             :variant="activePanel === 'canvas' ? 'faded' : 'ghost'"
             @click="activePanel = 'canvas'"
-          /><Button
+          />
+          <Button
             :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.TITLE')"
             slate
             :variant="activePanel === 'properties' ? 'faded' : 'ghost'"
@@ -564,7 +579,8 @@ const insertPlaceholder = key => {
               icon="i-lucide-sparkles"
               class="!min-h-11 w-full !rounded-xl"
               @click="showWelcome ? chooseAi() : openAiDialog()"
-            /><Button
+            />
+            <Button
               :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TEMPLATES')"
               icon="i-lucide-layout-template"
               slate
@@ -612,7 +628,8 @@ const insertPlaceholder = key => {
                 ghost
                 class="!min-h-11"
                 @click="showPersonalize = !showPersonalize"
-              /><Button
+              />
+              <Button
                 v-if="canManage"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
                 icon="i-lucide-mail-check"
@@ -621,7 +638,8 @@ const insertPlaceholder = key => {
                 class="!min-h-11"
                 :disabled="!isReady"
                 @click="toggleTestPopover"
-              /><Button
+              />
+              <Button
                 v-if="canManage"
                 :label="t(`${UX}.SAVE_MODEL`)"
                 icon="i-lucide-bookmark-plus"
@@ -732,10 +750,8 @@ const insertPlaceholder = key => {
           class="min-h-0 w-full shrink-0 overflow-y-auto border-s border-n-weak bg-n-solid-1 lg:w-[17rem]"
           :class="activePanel === 'properties' ? 'block' : 'hidden lg:block'"
         >
-          <AiBlockActions
-            v-if="isReady && canManage"
-            class="p-3"
-          /><PropertiesPanel v-if="isReady" />
+          <AiBlockActions v-if="isReady && canManage" class="p-3" />
+          <PropertiesPanel v-if="isReady" />
           <p v-else class="m-0 p-6 text-sm leading-6 text-n-slate-11">
             {{ t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.EMPTY') }}
           </p>
@@ -747,7 +763,8 @@ const insertPlaceholder = key => {
         width="3xl"
         :show-confirm-button="false"
         overflow-y-auto
-        ><div
+      >
+        <div
           class="mx-auto w-full"
           :class="device === 'mobile' ? 'max-w-[22rem]' : 'max-w-[37.5rem]'"
         >
@@ -757,8 +774,9 @@ const insertPlaceholder = key => {
             referrerpolicy="no-referrer"
             :title="t(`${UX}.PREVIEW`)"
             class="h-[60vh] w-full rounded-xl border border-n-weak bg-white"
-          /></div
-      ></Dialog>
+          />
+        </div>
+      </Dialog>
     </template>
     <div
       v-if="senderOpen"

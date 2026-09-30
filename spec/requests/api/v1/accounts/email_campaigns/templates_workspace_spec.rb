@@ -6,7 +6,15 @@ RSpec.describe 'Email campaign template workspace', :aggregate_failures, type: :
   let(:headers) { admin.create_new_auth_token }
   let(:path) { "/api/v1/accounts/#{account.id}/email_campaigns/templates" }
   let(:catalog_entry) { EmailCampaigns::TemplateCatalog.entries.first }
-  let!(:global_template) { EmailCampaignTemplate.global.find_by!(name: catalog_entry.fetch('name')) }
+  let!(:global_template) do
+    EmailCampaignTemplate.create!(
+      account: nil,
+      name: catalog_entry.fetch('name'),
+      category: catalog_entry.fetch('category'),
+      body_mjml: EmailCampaigns::TemplateCatalog.body(catalog_entry),
+      body_html: EmailCampaigns::TemplateCatalog::ROOT.join(catalog_entry.fetch('path')).sub_ext('.html').read
+    )
+  end
   let!(:account_template) do
     EmailCampaignTemplate.create!(account: account, name: 'Minha campanha', category: 'meus-modelos',
                                   body_mjml: '<mjml><mj-body><mj-text>Account</mj-text></mj-body></mjml>',

@@ -30,7 +30,11 @@ RSpec.describe 'Email campaign recipient presentation #436', :aggregate_failures
 
     get "#{base}/#{campaign.id}", headers: headers, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch('payload')).to eq(dto)
+    detail_payload = response.parsed_body.fetch('payload')
+    expect(detail_payload.except('send_readiness')).to eq(dto)
+    expect(detail_payload.fetch('send_readiness').keys).to include(
+      'can_send', 'checks', 'eligible_recipients', 'protected_recipients'
+    )
     get base, headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('payload', 'campaigns').sole).to eq(dto)
@@ -54,7 +58,11 @@ RSpec.describe 'Email campaign recipient presentation #436', :aggregate_failures
 
     get "#{base}/#{campaign.id}", headers: headers, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch('payload')).to eq(dto)
+    detail_payload = response.parsed_body.fetch('payload')
+    expect(detail_payload.except('send_readiness')).to eq(dto)
+    expect(detail_payload.fetch('send_readiness').keys).to include(
+      'can_send', 'checks', 'eligible_recipients', 'protected_recipients'
+    )
   end
 
   it 'returns 202 with the shared DTO when retrying the same persisted import' do
@@ -71,7 +79,11 @@ RSpec.describe 'Email campaign recipient presentation #436', :aggregate_failures
 
     get "#{base}/#{campaign.id}", headers: headers, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.fetch('payload')).to eq(dto)
+    detail_payload = response.parsed_body.fetch('payload')
+    expect(detail_payload.except('send_readiness')).to eq(dto)
+    expect(detail_payload.fetch('send_readiness').keys).to include(
+      'can_send', 'checks', 'eligible_recipients', 'protected_recipients'
+    )
   end
 
   it 'refuses the original file when the provider permanently rejected the request' do

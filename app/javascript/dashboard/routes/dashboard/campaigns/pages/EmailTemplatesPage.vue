@@ -282,10 +282,10 @@ const chooseLibrary = value => {
     <div class="mx-auto w-full max-w-[90rem] p-5 lg:p-8">
       <p class="mb-5 flex items-center gap-2 text-xs text-n-slate-11">
         <button class="min-h-9" @click="goBack">
-          {{ t(`${UX}.CAMPAIGNS`) }}</button
-        ><span class="i-lucide-chevron-right size-3.5" />{{
-          t(`${UX}.LIBRARY_BUTTON`)
-        }}
+          {{ t(`${UX}.CAMPAIGNS`) }}
+        </button>
+        <span class="i-lucide-chevron-right size-3.5" />
+        {{ t(`${UX}.LIBRARY_BUTTON`) }}
       </p>
       <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -306,7 +306,8 @@ const chooseLibrary = value => {
             outline
             class="!min-h-11 !rounded-xl"
             @click="goBack"
-          /><EmailCampaignDialog
+          />
+          <EmailCampaignDialog
             v-if="newTemplate"
             :template="newTemplate"
             @saved="newTemplate = null"
@@ -338,19 +339,22 @@ const chooseLibrary = value => {
                   ? 'i-lucide-layout-template'
                   : 'i-lucide-bookmark'
               "
-            />{{ t(`${UX}.${option === 'global' ? 'LIBRARY' : 'MY_MODELS'}`) }}
+            />
+            {{ t(`${UX}.${option === 'global' ? 'LIBRARY' : 'MY_MODELS'}`) }}
           </button>
         </nav>
         <label
           class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-n-weak bg-n-solid-1 px-3 sm:w-64"
-          ><span
-            class="i-lucide-search size-4 shrink-0 text-n-slate-11" /><input
+        >
+          <span class="i-lucide-search size-4 shrink-0 text-n-slate-11" />
+          <input
             v-model="search"
             type="search"
             :aria-label="t(`${UX}.SEARCH_MODEL`)"
             :placeholder="t(`${UX}.SEARCH_MODEL`)"
             class="m-0 min-w-0 w-full !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
-        /></label>
+          />
+        </label>
       </div>
       <nav class="mb-6 flex flex-wrap gap-2" :aria-label="t(`${UX}.PURPOSE`)">
         <button
@@ -412,16 +416,15 @@ const chooseLibrary = value => {
                 class="pointer-events-none h-[56rem] w-[37.5rem] origin-top-left scale-50 border-0"
               />
             </div>
-            <Spinner v-else-if="thumbHtml[template.id] === undefined" /><span
-              v-else
-              class="i-lucide-image size-8 text-n-slate-9"
-            />
+            <Spinner v-else-if="thumbHtml[template.id] === undefined" />
+            <span v-else class="i-lucide-image size-8 text-n-slate-9" />
           </button>
           <div class="flex flex-1 flex-col gap-2 p-5">
             <span
               class="w-fit rounded-full bg-n-blue-3 px-2.5 py-1 text-xs font-medium text-n-blue-11"
-              >{{ categoryLabel(template.category) }}</span
             >
+              {{ categoryLabel(template.category) }}
+            </span>
             <h2
               class="mb-0 mt-1 text-base font-semibold leading-6 text-n-slate-12"
             >
@@ -438,7 +441,8 @@ const chooseLibrary = value => {
                 outline
                 class="!min-h-11 flex-1 !rounded-xl"
                 @click="openPreview(template)"
-              /><Button
+              />
+              <Button
                 v-if="canManage"
                 :label="t(`${UX}.USE_MODEL`)"
                 icon="i-lucide-arrow-right"

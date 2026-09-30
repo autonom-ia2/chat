@@ -892,7 +892,7 @@
         "VIEW_SCHEDULE": "View schedule",
         "MORE_ACTIONS": "More actions for {name}",
         "SENDER_SETTINGS": "Sender settings",
-        "LIST_COUNT": "{count} campaigns",
+        "LIST_COUNT": "Campaigns: {count}",
         "ALL_STATUS_FILTERS": "More status filters",
         "PROTECTION_NOTE": "Addresses with permanent failures, spam reports or unsubscribes stay out of the send.",
         "CLOSE": "Close",
@@ -945,7 +945,7 @@
         "PREVIEW_MODEL": "Preview {name}",
         "MODEL_HINT": "Edit the text, images and links before sending.",
         "USE_MODEL": "Use template",
-        "LIBRARY_COUNT": "{count} templates available",
+        "LIBRARY_COUNT": "Available templates: {count}",
         "TABS": {
           "all": "All",
           "draft": "Drafts",

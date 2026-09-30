@@ -2,5 +2,18 @@
   "printWidth": 80,
   "singleQuote": true,
   "trailingComma": "es5",
-  "arrowParens": "avoid"
+  "arrowParens": "avoid",
+  "overrides": [
+    {
+      "files": [
+        "app/javascript/dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignReview.vue",
+        "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailBuilderPage.vue",
+        "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue",
+        "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailTemplatesPage.vue"
+      ],
+      "options": {
+        "htmlWhitespaceSensitivity": "ignore"
+      }
+    }
+  ]
 }

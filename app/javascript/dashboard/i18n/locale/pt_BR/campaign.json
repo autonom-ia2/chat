@@ -892,7 +892,7 @@
         "VIEW_SCHEDULE": "Ver agendamento",
         "MORE_ACTIONS": "Mais ações para {name}",
         "SENDER_SETTINGS": "Configurar remetente",
-        "LIST_COUNT": "{count} campanhas",
+        "LIST_COUNT": "Campanhas: {count}",
         "ALL_STATUS_FILTERS": "Mais filtros de situação",
         "PROTECTION_NOTE": "Endereços com falha permanente, denúncia de spam ou descadastro ficam fora do envio.",
         "CLOSE": "Fechar",
@@ -945,7 +945,7 @@
         "PREVIEW_MODEL": "Prévia de {name}",
         "MODEL_HINT": "Edite os textos, as imagens e os links antes de enviar.",
         "USE_MODEL": "Usar modelo",
-        "LIBRARY_COUNT": "{count} modelos disponíveis",
+        "LIBRARY_COUNT": "Modelos disponíveis: {count}",
         "TABS": {
           "all": "Todas",
           "draft": "Rascunhos",

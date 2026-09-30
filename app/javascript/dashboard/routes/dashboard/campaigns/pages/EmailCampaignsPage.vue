@@ -19,6 +19,8 @@ import {
   hasActiveEmailWork,
   statusKey,
   formatNumber,
+  formatDate as formatCampaignDate,
+  localeTag,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
@@ -192,10 +194,10 @@ const confirmDialog = ref(null);
 const isConfirming = ref(false);
 const tabs = ['', 'draft', 'scheduled', 'sent'];
 const visibleCampaigns = computed(() => {
-  const query = search.value.trim().toLocaleLowerCase(locale.value);
+  const query = search.value.trim().toLocaleLowerCase(localeTag(locale.value));
   return campaigns.value.filter(item =>
     [item.name, item.subject].some(value =>
-      value?.toLocaleLowerCase(locale.value).includes(query)
+      value?.toLocaleLowerCase(localeTag(locale.value)).includes(query)
     )
   );
 });
@@ -228,13 +230,7 @@ const campaignNote = item => {
     return t(`${UX}.${needsContent(item) ? 'COMPLETE_EMAIL' : 'REVIEW_SEND'}`);
   return t(`${NS}.STATUS.${statusKey(item, true)}`);
 };
-const formatDate = value =>
-  value
-    ? new Intl.DateTimeFormat(locale.value, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(value))
-    : '—';
+const formatDate = value => formatCampaignDate(value, locale.value);
 const showDiagnostics = async item => {
   menuId.value = null;
   diagnosticCampaign.value = item;
@@ -284,14 +280,15 @@ const confirmDestructive = async () => {
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <router-link :to="galleryRoute"
-            ><Button
+          <router-link :to="galleryRoute">
+            <Button
               :label="t(`${UX}.LIBRARY_BUTTON`)"
               icon="i-lucide-layout-template"
               slate
               outline
               class="!min-h-11 !rounded-xl"
-          /></router-link>
+            />
+          </router-link>
           <div v-on-click-outside="() => toggleDialog(false)" class="relative">
             <Button
               v-if="canManage"
@@ -323,7 +320,8 @@ const confirmDestructive = async () => {
           <p
             class="relative mb-0 flex items-center gap-2 text-xs text-n-blue-6"
           >
-            <span class="i-lucide-sparkles size-4" />{{ t(`${UX}.NEXT_SEND`) }}
+            <span class="i-lucide-sparkles size-4" />
+            {{ t(`${UX}.NEXT_SEND`) }}
           </p>
           <p class="relative mb-0 mt-3 text-xl font-semibold tracking-tight">
             {{ drafts[0]?.name || t(`${UX}.START_NEXT`) }}
@@ -332,9 +330,10 @@ const confirmDestructive = async () => {
             v-if="drafts[0]"
             :to="reviewRoute(drafts[0])"
             class="relative mt-4 flex min-h-11 items-center gap-2 text-sm font-medium text-n-blue-6 hover:text-white"
-            >{{ t(`${UX}.REVIEW_SEND`) }}
-            <span class="i-lucide-arrow-right size-4"
-          /></router-link>
+          >
+            {{ t(`${UX}.REVIEW_SEND`) }}
+            <span class="i-lucide-arrow-right size-4" />
+          </router-link>
           <Button
             v-else-if="canManage"
             :label="t(`${UX}.NEW_CAMPAIGN`)"
@@ -354,9 +353,9 @@ const confirmDestructive = async () => {
               class="mb-0 mt-2 text-3xl font-semibold tabular-nums text-n-slate-12"
             >
               {{ number(drafts.length) }}
-              <span class="text-sm font-normal text-n-slate-11">{{
-                t(`${UX}.DRAFTS`)
-              }}</span>
+              <span class="text-sm font-normal text-n-slate-11">
+                {{ t(`${UX}.DRAFTS`) }}
+              </span>
             </p>
             <p class="mb-0 mt-2 text-xs text-n-slate-11">
               {{ t(`${UX}.CURRENT_VIEW`) }}
@@ -419,14 +418,16 @@ const confirmDestructive = async () => {
           </nav>
           <label
             class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-n-weak px-3 focus-within:ring-2 focus-within:ring-n-brand sm:w-60"
-            ><span
-              class="i-lucide-search size-4 shrink-0 text-n-slate-11" /><input
+          >
+            <span class="i-lucide-search size-4 shrink-0 text-n-slate-11" />
+            <input
               v-model="search"
               type="search"
               :aria-label="t(`${UX}.SEARCH_CAMPAIGN`)"
               :placeholder="t(`${UX}.SEARCH_CAMPAIGN`)"
               class="m-0 min-w-0 w-full !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
-          /></label>
+            />
+          </label>
         </header>
         <p
           v-if="errorMessage"
@@ -484,8 +485,9 @@ const confirmDestructive = async () => {
                       : showDiagnostics(item)
                   "
                 >
-                  {{ item.name }}</button
-                ><EmailStatusBadge
+                  {{ item.name }}
+                </button>
+                <EmailStatusBadge
                   :record="item"
                   campaign
                   class="!rounded-full"
@@ -501,10 +503,10 @@ const confirmDestructive = async () => {
                 v-if="aiBadge(item.ai_status)"
                 class="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs"
                 :class="aiBadge(item.ai_status).class"
-                ><span :class="aiBadge(item.ai_status).icon" class="size-3" />{{
-                  aiBadge(item.ai_status).label
-                }}</span
               >
+                <span :class="aiBadge(item.ai_status).icon" class="size-3" />
+                {{ aiBadge(item.ai_status).label }}
+              </span>
             </div>
           </div>
           <div class="flex items-center gap-7 xl:w-[17rem] xl:shrink-0">
@@ -549,23 +551,25 @@ const confirmDestructive = async () => {
             class="relative flex flex-wrap items-center gap-2 xl:shrink-0"
           >
             <template v-if="item.status === 'draft'">
-              <router-link :to="builderRoute(item)"
-                ><Button
+              <router-link :to="builderRoute(item)">
+                <Button
                   :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.EDIT')"
                   icon="i-lucide-pencil"
                   slate
                   outline
                   class="!min-h-11 !rounded-xl"
-              /></router-link>
-              <template v-if="canManage"
-                ><Button
+                />
+              </router-link>
+              <template v-if="canManage">
+                <Button
                   :label="t(`${UX}.SEND`)"
-                  @click="router.push(reviewRoute(item))"
                   icon="i-lucide-send"
                   :variant="needsContent(item) ? 'outline' : 'solid'"
                   :color="needsContent(item) ? 'amber' : 'blue'"
                   class="!min-h-11 !rounded-xl"
-              /></template>
+                  @click="router.push(reviewRoute(item))"
+                />
+              </template>
             </template>
             <Button
               v-else
@@ -672,10 +676,10 @@ const confirmDestructive = async () => {
         <footer
           class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4 text-xs text-n-slate-11"
         >
-          <span>{{
-            t(`${UX}.LIST_COUNT`, { count: visibleCampaigns.length })
-          }}</span
-          ><Button
+          <span>
+            {{ t(`${UX}.LIST_COUNT`, { count: visibleCampaigns.length }) }}
+          </span>
+          <Button
             :label="t(`${NS}.REFRESH`)"
             icon="i-lucide-refresh-cw"
             slate
@@ -695,9 +699,8 @@ const confirmDestructive = async () => {
         </div>
       </details>
       <p class="mt-3 flex items-start gap-2 text-xs leading-5 text-n-slate-11">
-        <span class="i-lucide-shield-check size-4 shrink-0" />{{
-          t(`${UX}.PROTECTION_NOTE`)
-        }}
+        <span class="i-lucide-shield-check size-4 shrink-0" />
+        {{ t(`${UX}.PROTECTION_NOTE`) }}
       </p>
     </div>
     <Dialog
