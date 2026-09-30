@@ -17,6 +17,7 @@ import BuildInfo from './components/BuildInfo.vue';
 import AccountDelete from './components/AccountDelete.vue';
 import AudioTranscription from './components/AudioTranscription.vue';
 import SectionLayout from './components/SectionLayout.vue';
+import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
 
 export default {
   components: {
@@ -123,7 +124,7 @@ export default {
 
         const effectiveLocale = this.uiSettings?.locale || locale;
         if (effectiveLocale) {
-          this.$root.$i18n.locale = effectiveLocale;
+          await setDashboardLocale(this.$root.$i18n, effectiveLocale);
         }
         this.name = name;
         this.locale = locale;
@@ -152,7 +153,7 @@ export default {
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
         if (updatedLocale) {
-          this.$root.$i18n.locale = updatedLocale;
+          await setDashboardLocale(this.$root.$i18n, updatedLocale);
         }
         this.getAccount(this.id).locale = this.locale;
         useAlert(this.$t('GENERAL_SETTINGS.UPDATE.SUCCESS'));

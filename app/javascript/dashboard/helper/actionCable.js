@@ -1,6 +1,5 @@
 import AuthAPI from '../api/auth';
 import BaseActionCableConnector from '../../shared/helpers/BaseActionCableConnector';
-import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotificationHelper';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
@@ -22,6 +21,23 @@ const FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS = 30000;
 const FILTERED_UNREAD_COUNTS_REFRESH_RETRY_JITTER_MS = 15000;
 const MENTION_UNREAD_COUNTS_REFETCH_DELAY_MS =
   UNREAD_COUNTS_REFETCH_THROTTLE_MS;
+let dashboardAudioNotificationHelperPromise;
+
+const loadDashboardAudioNotificationHelper = () => {
+  if (!dashboardAudioNotificationHelperPromise) {
+    dashboardAudioNotificationHelperPromise = import(
+      './AudioAlerts/DashboardAudioNotificationHelper'
+    )
+      .then(({ default: helper }) => helper)
+      .catch(error => {
+        dashboardAudioNotificationHelperPromise = null;
+        throw error;
+      });
+  }
+
+  return dashboardAudioNotificationHelperPromise;
+};
+
 const getFilteredUnreadCountsRefreshRetryDelay = () =>
   FILTERED_UNREAD_COUNTS_REFRESH_RETRY_MS +
   Math.random() * FILTERED_UNREAD_COUNTS_REFRESH_RETRY_JITTER_MS;
@@ -142,7 +158,9 @@ class ActionCableConnector extends BaseActionCableConnector {
       conversation: { last_activity_at: lastActivityAt },
       conversation_id: conversationId,
     } = data;
-    DashboardAudioNotificationHelper.onNewMessage(data);
+    loadDashboardAudioNotificationHelper()
+      .then(helper => helper.onNewMessage(data))
+      .catch(() => {});
     this.app.$store.dispatch('addMessage', data);
     this.app.$store.dispatch('updateConversationLastActivity', {
       lastActivityAt,

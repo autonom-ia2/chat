@@ -1,6 +1,7 @@
 import { frontendURL } from '../../../helper/URLHelper';
-import CentralDeAjudaInicio from './pages/CentralDeAjudaInicio.vue';
-import CentralDeAjudaArtigo from './pages/CentralDeAjudaArtigo.vue';
+
+const CentralDeAjudaInicio = () => import('./pages/CentralDeAjudaInicio.vue');
+const CentralDeAjudaArtigo = () => import('./pages/CentralDeAjudaArtigo.vue');
 
 // Central de Ajuda da plataforma (#501): qualquer pessoa da conta lê. O que cada uma vê (recurso da
 // conta, artigo só de administrador) o servidor decide.

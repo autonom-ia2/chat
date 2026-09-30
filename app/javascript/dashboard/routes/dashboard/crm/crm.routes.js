@@ -5,12 +5,14 @@ import {
   CRM_ADMIN_PERMISSION,
   CAMPAIGN_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
-import CrmKanbanPage from './pages/CrmKanbanPage.vue';
-import CrmDashboardPage from './pages/CrmDashboardPage.vue';
-import CrmAiUsagePage from './pages/CrmAiUsagePage.vue';
-import CrmSlaPage from './pages/CrmSlaPage.vue';
-import CrmIntegrationTokensPage from './pages/CrmIntegrationTokensPage.vue';
-import CrmCampaignManagementPage from './pages/CrmCampaignManagementPage.vue';
+const CrmKanbanPage = () => import('./pages/CrmKanbanPage.vue');
+const CrmDashboardPage = () => import('./pages/CrmDashboardPage.vue');
+const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
+const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
+const CrmIntegrationTokensPage = () =>
+  import('./pages/CrmIntegrationTokensPage.vue');
+const CrmCampaignManagementPage = () =>
+  import('./pages/CrmCampaignManagementPage.vue');
 
 // 'agent' keeps plain (non-custom-role) agents in per the locked decision;
 // custom-role seats are gated by the granular crm_view permission key.

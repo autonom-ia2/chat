@@ -1,11 +1,12 @@
 import { frontendURL } from 'dashboard/helper/URLHelper';
-import InboxListView from './InboxList.vue';
-import InboxDetailView from './InboxView.vue';
-import InboxEmptyStateView from './InboxEmptyState.vue';
 import {
   ROLES,
   CONVERSATION_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
+
+const InboxListView = () => import('./InboxList.vue');
+const InboxDetailView = () => import('./InboxView.vue');
+const InboxEmptyStateView = () => import('./InboxEmptyState.vue');
 
 export const routes = [
   {

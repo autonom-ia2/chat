@@ -21,6 +21,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
 
 export default {
   name: 'App',
@@ -100,9 +101,9 @@ export default {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
       mql.onchange = e => setColorTheme(e.matches);
     },
-    setLocale(locale) {
+    async setLocale(locale) {
       if (locale) {
-        this.$root.$i18n.locale = locale;
+        await setDashboardLocale(this.$root.$i18n, locale);
       }
     },
     async initializeAccount() {
@@ -115,7 +116,7 @@ export default {
         account;
       const { pubsub_token: pubsubToken } = this.currentUser || {};
       // If user locale is set, use it; otherwise use account locale
-      this.setLocale(this.uiSettings?.locale || locale);
+      await this.setLocale(this.uiSettings?.locale || locale);
       this.latestChatwootVersion = latestChatwootVersion;
       vueActionCable.init(this.store, pubsubToken);
       this.reconnectService = new ReconnectService(this.store, this.router);

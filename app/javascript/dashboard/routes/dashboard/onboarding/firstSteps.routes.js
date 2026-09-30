@@ -1,5 +1,7 @@
 import { frontendURL } from '../../../helper/URLHelper';
-import FirstSteps from 'dashboard/components-next/onboarding/FirstSteps.vue';
+
+const FirstSteps = () =>
+  import('dashboard/components-next/onboarding/FirstSteps.vue');
 
 // Trilha de onboarding (épico #485): a tela fica acessível a qualquer momento,
 // não só enquanto a conta é nova. Só administrador: é ele quem configura a conta,

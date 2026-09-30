@@ -6,24 +6,31 @@ import {
 } from 'dashboard/constants/permissions';
 import { frontendURL } from '../../../helper/URLHelper';
 
-import CaptainPageRouteView from './pages/CaptainPageRouteView.vue';
-import AssistantsIndexPage from './pages/AssistantsIndexPage.vue';
-import AssistantEmptyStateIndex from './assistants/Index.vue';
+const CaptainPageRouteView = () => import('./pages/CaptainPageRouteView.vue');
+const AssistantsIndexPage = () => import('./pages/AssistantsIndexPage.vue');
+const AssistantEmptyStateIndex = () => import('./assistants/Index.vue');
 
-import AssistantOverviewIndex from './assistants/overview/Index.vue';
-import AssistantSettingsIndex from './assistants/settings/Index.vue';
-import AssistantSystemSettingsIndex from './assistants/settings/System.vue';
-import AssistantAudienceSettingsIndex from './assistants/settings/Audience.vue';
-import AssistantScheduleSettingsIndex from './assistants/settings/Schedule.vue';
-import AssistantInboxesIndex from './assistants/inboxes/Index.vue';
-import AssistantPlaygroundIndex from './assistants/playground/Index.vue';
-import AssistantGuardrailsIndex from './assistants/guardrails/Index.vue';
-import AssistantGuidelinesIndex from './assistants/guidelines/Index.vue';
-import AssistantScenariosIndex from './assistants/scenarios/Index.vue';
-import DocumentsIndex from './documents/Index.vue';
-import ResponsesIndex from './responses/Index.vue';
-import FaqSuggestionsIndex from './responses/FaqSuggestions.vue';
-import CustomToolsIndex from './tools/Index.vue';
+const AssistantOverviewIndex = () => import('./assistants/overview/Index.vue');
+const AssistantSettingsIndex = () => import('./assistants/settings/Index.vue');
+const AssistantSystemSettingsIndex = () =>
+  import('./assistants/settings/System.vue');
+const AssistantAudienceSettingsIndex = () =>
+  import('./assistants/settings/Audience.vue');
+const AssistantScheduleSettingsIndex = () =>
+  import('./assistants/settings/Schedule.vue');
+const AssistantInboxesIndex = () => import('./assistants/inboxes/Index.vue');
+const AssistantPlaygroundIndex = () =>
+  import('./assistants/playground/Index.vue');
+const AssistantGuardrailsIndex = () =>
+  import('./assistants/guardrails/Index.vue');
+const AssistantGuidelinesIndex = () =>
+  import('./assistants/guidelines/Index.vue');
+const AssistantScenariosIndex = () =>
+  import('./assistants/scenarios/Index.vue');
+const DocumentsIndex = () => import('./documents/Index.vue');
+const ResponsesIndex = () => import('./responses/Index.vue');
+const FaqSuggestionsIndex = () => import('./responses/FaqSuggestions.vue');
+const CustomToolsIndex = () => import('./tools/Index.vue');
 
 const meta = {
   permissions: ['administrator', 'agent'],

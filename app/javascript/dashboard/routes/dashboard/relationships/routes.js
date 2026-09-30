@@ -1,8 +1,9 @@
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
-import RelationshipsHome from './RelationshipsHome.vue';
-import CompanyMediaView from './CompanyMediaView.vue';
+
+const RelationshipsHome = () => import('./RelationshipsHome.vue');
+const CompanyMediaView = () => import('./CompanyMediaView.vue');
 
 export const routes = [
   {

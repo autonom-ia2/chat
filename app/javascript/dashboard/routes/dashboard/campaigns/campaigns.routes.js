@@ -1,17 +1,20 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
-
-import CampaignsPageRouteView from './pages/CampaignsPageRouteView.vue';
-import LiveChatCampaignsPage from './pages/LiveChatCampaignsPage.vue';
-import SMSCampaignsPage from './pages/SMSCampaignsPage.vue';
-import WhatsAppCampaignsPage from './pages/WhatsAppCampaignsPage.vue';
-import WhatsAppCampaignAnalyticsPage from './pages/WhatsAppCampaignAnalyticsPage.vue';
-import WhatsAppApiCampaignsPage from './pages/WhatsAppApiCampaignsPage.vue';
-import EmailSenderPage from './pages/EmailSenderPage.vue';
-import EmailCampaignsPage from './pages/EmailCampaignsPage.vue';
-import SettingsWrapper from '../settings/SettingsWrapper.vue';
-import WhatsAppTemplatesPage from '../settings/templates/Index.vue';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
+
+const CampaignsPageRouteView = () =>
+  import('./pages/CampaignsPageRouteView.vue');
+const LiveChatCampaignsPage = () => import('./pages/LiveChatCampaignsPage.vue');
+const SMSCampaignsPage = () => import('./pages/SMSCampaignsPage.vue');
+const WhatsAppCampaignsPage = () => import('./pages/WhatsAppCampaignsPage.vue');
+const WhatsAppCampaignAnalyticsPage = () =>
+  import('./pages/WhatsAppCampaignAnalyticsPage.vue');
+const WhatsAppApiCampaignsPage = () =>
+  import('./pages/WhatsAppApiCampaignsPage.vue');
+const EmailSenderPage = () => import('./pages/EmailSenderPage.vue');
+const EmailCampaignsPage = () => import('./pages/EmailCampaignsPage.vue');
+const SettingsWrapper = () => import('../settings/SettingsWrapper.vue');
+const WhatsAppTemplatesPage = () => import('../settings/templates/Index.vue');
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
