@@ -23,8 +23,8 @@ RSpec.describe 'CRM shared company operations', type: :request do
   end
 
   it 'edits the shared company without touching the contact, opportunity or messages' do
-    snapshot = card.attributes
-    contact_snapshot = contact.attributes
+    snapshot = card.reload.attributes
+    contact_snapshot = contact.reload.attributes
     messages = Message.count
     patch company_url, headers: headers, params: { company: { name: 'Horizonte Seguros' } }, as: :json
     expect(response).to have_http_status(:ok)
@@ -59,8 +59,8 @@ RSpec.describe 'CRM shared company operations', type: :request do
 
   it 'links an existing company while preserving opportunity, conversations and original files' do
     other
-    snapshot = card.attributes
-    origin = conversation.attributes
+    snapshot = card.reload.attributes
+    origin = conversation.reload.attributes
     counts = [Contact.count, Company.count, Crm::Card.count, Attachment.count, Message.count]
     patch contact_url, headers: headers, params: { company_id: other.id }, as: :json
     expect(response).to have_http_status(:ok)
@@ -74,7 +74,7 @@ RSpec.describe 'CRM shared company operations', type: :request do
   end
 
   it 'removes the association without deleting the company or contact, even when repeated' do
-    snapshot = card.attributes
+    snapshot = card.reload.attributes
     2.times do
       patch contact_url, headers: headers, params: { company_id: nil }, as: :json
       expect(response).to have_http_status(:ok)

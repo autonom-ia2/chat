@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–5 e autorizou somente a primeira parte de Nova oportunidade: contato existente ou sem vínculo. Parte 6 implementada e testada localmente, aguardando aprovação visual. Parar antes da parte 7 e aguardar novo de acordo. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–6. Parte 7 implementada e validada localmente: novo contato, empresa opcional e oportunidade na mesma confirmação. Aguardando aprovação das telas reais; parar antes da criação contextual nas fichas. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -16,9 +16,9 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 |---|---|---|
 | M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Trechos visuais até a parte 5 aprovados; revisão transversal pendente. |
 | M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
-| M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; aceite visual e revisão transversal pendentes. |
-| M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
-| M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
+| M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6 aprovada: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; revisão transversal pendente. |
+| M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 implementada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; aceite visual e revisão transversal pendentes. |
+| M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
@@ -117,9 +117,25 @@ A chave de idempotência é enviada separadamente no cabeçalho e permanece igua
 
 Evidências: [auditoria da parte 6](../audit/2026-09-30-792-crm-relationships-part-6.md) e [telas reais](screenshots/792-part6/README.md). Esta parte não conclui cadastro composto nem criação contextual a partir de todas as fichas.
 
+## Parte 7 — Novo contato e empresa opcional na mesma confirmação
+
+Criar novo adiciona pessoa, detalhes complementares e atributos compartilhados, sem sair da lateral. Empresa oferece Sem empresa, Selecionar existente ou Nova empresa. Rascunhos são mantidos entre modos, mas somente o modo ativo entra no payload. O contato pode ter somente nome, sem identificadores artificiais, e nasce como lead explícito preservado pelas rotinas de limpeza.
+
+`card.relationship` no endpoint de criação existente recebe `mode: new`, `contact` e `company`. A empresa informa `mode: none`, `mode: existing` com ID real, ou `mode: new` com seus atributos. `Idempotency-Key` é obrigatório neste contrato; a mesma intenção confirma empresa, contato, vínculo, oportunidade e resposta numa transação. Não se mistura esse modo com `contact_id`, `conversation_id` ou `external_id`; o contrato legado permanece disponível.
+
+O servidor normaliza e confere e-mail/telefone e domínio; não funde pessoas nem empresas por nome igual. Candidatos de outras contas ou sem acesso não são expostos. Usar existente é uma decisão explícita e não sobrescreve o cadastro. O bloqueio transacional serializa este novo fluxo; não substitui a revisão de unicidade/concorrência com outros escritores antes do release.
+
+Sem empresa prevalece sobre a inferência nativa por e-mail somente nesta instância de criação. Os callbacks de outros caminhos não foram desativados. A cidade da empresa agora é devolvida em `additional_attributes.city` pela API e pode ser vista/editada tanto no CRM quanto na ficha canônica. O serializer não expõe outras chaves de metadados; a atualização parcial mescla os atributos em vez de apagar seus irmãos. Limpar cidade usa nulo.
+
+Atributos conservam tipos, zero, falso e datas; erros recolhidos abrem a seção afetada. Campos com validação antiga por padrão permanecem no editor legado da ficha, sem introduzir novo regex. O novo método público de validação de telefone permite vazio, mas não aceita texto inválido usando silenciosamente um número válido anterior.
+
+A validação encontrou um conflito real no cache IndexedDB ao atualizar a aplicação e a ficha simultaneamente. A substituição do snapshot agora limpa e insere numa única transação, observando todas as requisições e preservando o snapshot anterior em caso de falha. O comportamento de inclusão não passou a sobrescrever dados. Testes direcionados e o ensaio real no Chrome documentam o antes/depois; não houve nova dependência.
+
+Evidências e limites: [auditoria da parte 7](../audit/2026-09-30-792-crm-relationships-part-7.md) e [11 telas reais](screenshots/792-part7/README.md). Bateria local: 429 testes frontend; 302 backend aprovados e três suspensos antigos; 39 checks funcionais de navegador e conferência direta dos registros. Revisão independente e cobertura integral continuam pendentes.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação da parte 6, implementar novo contato e empresa opcional dentro da Nova oportunidade, com confirmação composta e prevenção de duplicidade. Não iniciar a parte 7 nem fazer merge/deploy por consequência desta entrega.
+Após aprovação visual da parte 7, abordar a criação contextual a partir da ficha do contato, reutilizando o cadastro selecionado. A ficha da empresa e a revisão transversal permanecem no plano. Não iniciar o próximo incremento nem fazer merge/deploy por consequência desta entrega.
 
 ## Validação e publicação
 

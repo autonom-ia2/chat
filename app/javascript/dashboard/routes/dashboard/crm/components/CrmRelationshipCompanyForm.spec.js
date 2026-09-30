@@ -300,3 +300,26 @@ it('does not mistake an omitted company_id for a confirmed unlink when Companies
   expect(wrapper.emitted('saved')).toBeUndefined();
   expect(wrapper.find('[role=alert]').text()).toContain('NOT_CONFIRMED');
 });
+
+it('edits only the shared company city and not a stale company object', async () => {
+  wrapper = makeForm({
+    company: { ...company, additionalAttributes: { city: 'Original' } },
+  });
+  wrapper.vm.form.city = 'Contagem';
+  await wrapper.find('form').trigger('submit');
+  expect(context.update).toHaveBeenCalledExactlyOnceWith({
+    id: 7,
+    additionalAttributes: { city: 'Contagem' },
+  });
+});
+it('clears only the city when explicitly removed in the opportunity editor', async () => {
+  wrapper = makeForm({
+    company: { ...company, additionalAttributes: { city: 'Original' } },
+  });
+  wrapper.vm.form.city = '';
+  await wrapper.find('form').trigger('submit');
+  expect(context.update).toHaveBeenCalledExactlyOnceWith({
+    id: 7,
+    additionalAttributes: { city: null },
+  });
+});

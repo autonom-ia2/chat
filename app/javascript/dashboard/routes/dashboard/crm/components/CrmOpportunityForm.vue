@@ -8,6 +8,11 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmOpportunityContactPicker from './CrmOpportunityContactPicker.vue';
+import CrmOpportunityRegistration from './CrmOpportunityRegistration.vue';
+import {
+  newRegistrationDraft,
+  registrationPayload,
+} from './opportunityRegistration';
 
 const props = defineProps({
   pipelines: { type: Array, required: true },
@@ -24,6 +29,10 @@ const formId = `crm-opportunity-${useId()}`;
 const element = ref(null);
 const mode = ref('existing');
 const contact = ref(null);
+const registration = ref(null);
+const registrationDraft = ref(newRegistrationDraft());
+const registrationInitial = JSON.stringify(registrationDraft.value);
+const validating = ref(false);
 const more = ref(false);
 const sending = ref(false);
 const error = ref('');
@@ -45,7 +54,10 @@ const form = ref({
 });
 const initial = JSON.stringify(form.value);
 const dirty = computed(
-  () => Boolean(contact.value) || JSON.stringify(form.value) !== initial
+  () =>
+    Boolean(contact.value) ||
+    JSON.stringify(form.value) !== initial ||
+    JSON.stringify(registrationDraft.value) !== registrationInitial
 );
 const pipelineOptions = computed(() =>
   props.pipelines.map(item => ({ value: item.id, label: item.name }))
@@ -71,6 +83,7 @@ const canSave = computed(
   () =>
     props.canManage &&
     !sending.value &&
+    !validating.value &&
     !stageRequest.isPending.value &&
     !stageError.value &&
     Boolean(form.value.title.trim()) &&
@@ -80,11 +93,22 @@ const canSave = computed(
     stageOptions.value.some(
       item => String(item.value) === String(form.value.stageId)
     ) &&
-    (mode.value === 'none' || Boolean(contact.value?.id))
+    (mode.value === 'none' ||
+      (mode.value === 'new'
+        ? registration.value?.canSave
+        : Boolean(contact.value?.id)))
 );
-const summary = computed(() =>
-  label(mode.value === 'none' ? 'SUMMARY_NONE' : 'SUMMARY_EXISTING')
-);
+const summary = computed(() => {
+  if (mode.value !== 'new')
+    return label(mode.value === 'none' ? 'SUMMARY_NONE' : 'SUMMARY_EXISTING');
+  return label(
+    {
+      none: 'SUMMARY_NEW',
+      existing: 'SUMMARY_NEW_EXISTING_COMPANY',
+      new: 'SUMMARY_NEW_COMPANY',
+    }[registrationDraft.value.companyMode]
+  );
+});
 const loadStages = async () => {
   stageError.value = false;
   loadedStages.value = [];
@@ -111,15 +135,29 @@ watch(
   }
 );
 const changeMode = next => {
-  if (sending.value) return;
+  if (sending.value || validating.value) return;
   mode.value = next;
   contact.value = null;
   error.value = '';
+};
+const useExistingContact = person => {
+  changeMode('existing');
+  contact.value = person;
 };
 let requestKey = crypto.randomUUID();
 let submitted = '';
 const submit = async () => {
   if (!canSave.value) return;
+  if (mode.value === 'new') {
+    validating.value = true;
+    let valid;
+    try {
+      valid = await registration.value.validate();
+    } finally {
+      validating.value = false;
+    }
+    if (!valid || !canSave.value) return;
+  }
   if (element.value.querySelector(':invalid')) {
     more.value = true;
     await nextTick();
@@ -139,6 +177,9 @@ const submit = async () => {
     expected_close_at: data.expectedCloseAt || null,
     ...(data.ownerId ? { owner_id: data.ownerId } : {}),
     ...(data.inboxId ? { inbox_id: data.inboxId } : {}),
+    ...(mode.value === 'new'
+      ? { relationship: registrationPayload(registrationDraft.value) }
+      : {}),
     ...(mode.value === 'existing' && contact.value
       ? { contact_id: contact.value.id }
       : {}),
@@ -148,12 +189,27 @@ const submit = async () => {
   submitted = fingerprint;
   sending.value = true;
   error.value = '';
-  emit('save', { ...payload, idempotencyKey: requestKey }, () => {
+  emit('save', { ...payload, idempotencyKey: requestKey }, failure => {
     sending.value = false;
+    const detail = failure?.response?.data?.error;
+    if (
+      mode.value === 'new' &&
+      ['contact', 'company'].includes(detail?.section)
+    ) {
+      registration.value?.showError(detail);
+      return;
+    }
+    if (detail?.section === 'opportunity') more.value = true;
     error.value = label('SAVE_ERROR');
   });
 };
-defineExpose({ dirty, sending, canSave, formId, summary });
+defineExpose({
+  dirty,
+  sending: computed(() => sending.value || validating.value),
+  canSave,
+  formId,
+  summary,
+});
 </script>
 
 <template>
@@ -225,11 +281,51 @@ defineExpose({ dirty, sending, canSave, formId, summary });
             />
           </div>
         </div>
-        <CrmOpportunityContactPicker
-          v-else
-          v-model="contact"
-          :disabled="sending"
-        />
+        <template v-else>
+          <div
+            class="grid grid-cols-2 gap-1 rounded-xl border border-n-weak bg-n-alpha-black2 p-1"
+            role="group"
+            :aria-label="label('RELATIONSHIP')"
+          >
+            <button
+              v-for="option in [
+                {
+                  value: 'existing',
+                  key: 'USE_EXISTING',
+                  icon: 'i-lucide-link-2',
+                },
+                { value: 'new', key: 'CREATE_NEW', icon: 'i-lucide-user-plus' },
+              ]"
+              :key="option.value"
+              type="button"
+              class="flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-n-brand"
+              :class="
+                mode === option.value
+                  ? 'bg-n-brand/10 text-n-blue-11 ring-1 ring-inset ring-n-brand/30'
+                  : 'text-n-slate-11 hover:bg-n-alpha-2'
+              "
+              :aria-pressed="mode === option.value"
+              :disabled="sending"
+              @click="changeMode(option.value)"
+            >
+              <span :class="option.icon" class="size-4" aria-hidden="true" />{{
+                label(option.key)
+              }}
+            </button>
+          </div>
+          <CrmOpportunityRegistration
+            v-if="mode === 'new'"
+            ref="registration"
+            v-model="registrationDraft"
+            :disabled="sending"
+            @use-contact="useExistingContact"
+          />
+          <CrmOpportunityContactPicker
+            v-else
+            v-model="contact"
+            :disabled="sending"
+          />
+        </template>
       </section>
       <section
         class="grid min-w-0 gap-4 border-t border-n-weak pt-5"

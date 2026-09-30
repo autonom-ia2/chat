@@ -1,0 +1,90 @@
+[
+  {
+    "part": 6,
+    "checks": [
+      "real_native_form_two_sections_no_initial_validation_error",
+      "canonical_company_search_selects_existing_contact_without_overwriting_title",
+      "switching_between_existing_and_unlinked_preserves_commercial_draft",
+      "urgent_priority_currency_forecast_score_and_description_preserved",
+      "pipeline_change_loads_its_own_stage_without_losing_other_fields",
+      "another_board_card_preserves_creation_draft_after_cancel",
+      "cancel_keeps_draft_after_explicit_continue_and_does_not_write",
+      "real_create_existing_opens_same_contact_and_retry_replays_same_opportunity",
+      "real_unlinked_creation_keeps_contact_null_and_allows_later_link",
+      "lost_acknowledgement_after_real_commit_preserves_form_and_UI_retry_reuses_same_card",
+      "two_real_simultaneous_requests_create_one_opportunity",
+      "contact_and_company_records_unchanged_by_creation",
+      "mobile_390_fixed_create_visible_without_horizontal_overflow",
+      "notebook_1366_drawer_640_and_explicit_discard_creates_nothing"
+    ],
+    "errors": [],
+    "responses": [
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      }
+    ],
+    "sourceHashes": {
+      "app/javascript/dashboard/store/modules/crmKanban.js": "007d3feb6b0a7683cf31dd842378a14ad5ad261cbe6ff20721d0d30b1b188961",
+      "app/javascript/dashboard/api/crmKanban.js": "5b9fdb874ea0334873eb372bd6f0de16308886108e6c05dcf1ba331d2ebfe9c7",
+      "app/javascript/dashboard/api/contacts.js": "655217f85760386ce1210b651ec1564e54b36598819e37e799bdc88c674ef1ae",
+      "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityForm.vue": "96995dfe296c9ff10b505f88e2ea10604d3f431268c73894b31d832b9fa1c9a1",
+      "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityContactPicker.vue": "74666d1a83a1ec898cef3fd205e42fff83bb3487055cea006c481c61bf067913",
+      "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "93ece6010fbf5246266d5416e0cde1392828b9554084efe7783d2d054d2dca3d",
+      "app/javascript/dashboard/routes/dashboard/crm/pages/CrmKanbanPage.vue": "de83c1eab4ebdc197e026350e5392f1369a563ee6ee6fe72850312e091297404",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb": "b5fb755354eb3b5f5ce04f308f7dd08631d6252509b3411c45213680aecf25b2"
+    }
+  },
+  {
+    "part": 5,
+    "checks": [
+      "authenticated_real_CRM_no_framework_overlay",
+      "duplicate_domain_rejected_without_partial_save_and_draft_retained",
+      "edit_saved_to_canonical_company_with_hidden_attributes_preserved",
+      "cancel_requires_explicit_discard_without_writing",
+      "same_name_companies_distinguished_and_linked_only_after_save",
+      "company_media_follows_current_contact_link_without_file_copy",
+      "unlink_confirmation_removes_only_association_and_keeps_company",
+      "unlinked_contact_can_link_existing_company_from_same_opportunity",
+      "opportunity_identity_and_all_commercial_fields_preserved",
+      "mobile_390_fixed_save_visible_without_horizontal_overflow",
+      "notebook_1366_drawer_640_preserved"
+    ],
+    "errors": [],
+    "responses": [
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/api/v1/accounts/1/companies/1",
+        "status": 422
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      },
+      {
+        "path": "/enterprise/api/v1/accounts/1/limits",
+        "status": 404
+      }
+    ],
+    "sourceHashes": {}
+  }
+]

@@ -1050,9 +1050,9 @@ const saveCard = async (payload, failed) => {
       return;
     }
     closeDrawer();
-  } catch {
+  } catch (error) {
     if (originAccount !== String(route.params.accountId)) return;
-    failed?.();
+    failed?.(error);
     useAlert(t('CRM_KANBAN.ALERTS.CARD_SAVE_ERROR'));
   }
 };

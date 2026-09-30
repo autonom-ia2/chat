@@ -124,7 +124,8 @@
         },
         "FIELDS": {
           "NAME": "Name",
-          "DOMAIN": "Domain"
+          "DOMAIN": "Domain",
+          "CITY": "City"
         }
       },
       "DELETE": {

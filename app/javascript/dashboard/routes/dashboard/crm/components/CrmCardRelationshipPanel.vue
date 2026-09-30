@@ -439,6 +439,15 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
               {{ company.domain || label('NOT_INFORMED') }}
             </dd>
           </div>
+          <div
+            v-if="company.additionalAttributes?.city"
+            class="flex flex-wrap gap-x-7 gap-y-1"
+          >
+            <dt class="text-n-slate-11">{{ label('CITY') }}</dt>
+            <dd class="m-0 break-words text-n-slate-12">
+              {{ company.additionalAttributes.city }}
+            </dd>
+          </div>
           <div v-if="company.description">
             <dt class="mb-1 text-xs text-n-slate-11">
               {{ label('ABOUT_COMPANY') }}

@@ -1,0 +1,42 @@
+{
+  "before": {
+    "contacts": 29,
+    "companies": 14,
+    "messages": 33,
+    "conversations": 2,
+    "cards": 39
+  },
+  "after": {
+    "contacts": 36,
+    "companies": 17,
+    "cards": 47,
+    "messages": 33,
+    "conversations": 2
+  },
+  "delta": {
+    "contacts": 7,
+    "companies": 3,
+    "cards": 8,
+    "messages": 0,
+    "conversations": 0
+  },
+  "confirmed_ids": [
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47
+  ],
+  "checks": [
+    "exact_counts",
+    "same_ids",
+    "resolved_contacts",
+    "canonical_companies"
+  ],
+  "result": "passed",
+  "database": "isolated local UI",
+  "data": "synthetic"
+}

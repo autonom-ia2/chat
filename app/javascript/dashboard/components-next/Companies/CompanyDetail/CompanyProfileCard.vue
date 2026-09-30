@@ -21,7 +21,7 @@ const exactTimestamp = useExactTimestamp();
 const { t, locale } = useI18n();
 const companiesStore = useCompaniesStore();
 
-const form = reactive({ name: '', domain: '', description: '' });
+const form = reactive({ name: '', domain: '', description: '', city: '' });
 const avatarPreviewUrl = ref('');
 const isUploadingAvatar = ref(false);
 
@@ -43,7 +43,9 @@ const hasChanges = computed(
   () =>
     form.name.trim() !== (props.company?.name || '').trim() ||
     form.domain.trim() !== (props.company?.domain || '').trim() ||
-    form.description.trim() !== (props.company?.description || '').trim()
+    form.description.trim() !== (props.company?.description || '').trim() ||
+    form.city.trim() !==
+      (props.company?.additionalAttributes?.city || '').trim()
 );
 
 const summary = computed(() => {
@@ -70,6 +72,7 @@ const syncForm = company => {
   form.name = company?.name || '';
   form.domain = company?.domain || '';
   form.description = company?.description || '';
+  form.city = company?.additionalAttributes?.city || '';
 };
 
 const isCurrentCompany = companyId => Number(props.company?.id) === companyId;
@@ -80,6 +83,7 @@ watch(
     props.company?.name,
     props.company?.domain,
     props.company?.description,
+    props.company?.additionalAttributes?.city,
     props.company?.avatarUrl,
   ],
   () => {
@@ -122,6 +126,10 @@ const handleUpdateCompany = async () => {
       name: form.name.trim(),
       domain: form.domain.trim() || null,
       description: form.description.trim() || null,
+      ...(form.city.trim() !==
+      (props.company?.additionalAttributes?.city || '').trim()
+        ? { additionalAttributes: { city: form.city.trim() || null } }
+        : {}),
     });
     if (!isCurrentCompany(companyId)) return;
 
@@ -201,6 +209,14 @@ const handleUpdateCompany = async () => {
           custom-input-class="h-8 !pt-1 !pb-1"
         />
       </div>
+
+      <Input
+        v-model="form.city"
+        :label="t('COMPANIES.DETAIL.PROFILE.FIELDS.CITY')"
+        :disabled="isUpdating"
+        class="w-full"
+        custom-input-class="h-8 !pt-1 !pb-1"
+      />
 
       <TextArea
         v-model="form.description"

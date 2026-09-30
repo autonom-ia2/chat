@@ -55,24 +55,22 @@ export class DataManager {
   }
 
   async replace({ modelName, data }) {
-    this.validateModel(modelName);
-
-    await this.db.clear(modelName);
-    return this.push({ modelName, data });
+    return this.push({ modelName, data, replace: true });
   }
 
-  async push({ modelName, data }) {
+  async push({ modelName, data, replace = false }) {
     this.validateModel(modelName);
 
-    if (Array.isArray(data)) {
-      const tx = this.db.transaction(modelName, 'readwrite');
-      data.forEach(item => {
-        tx.store.add(item);
-      });
-      await tx.done;
-    } else {
-      await this.db.add(modelName, data);
-    }
+    // Clear and insert one complete snapshot in the same transaction. Separate
+    // transactions race when the CRM and a relationship tab refresh the cache.
+    const tx = this.db.transaction(modelName, 'readwrite');
+    const requests = [tx.done];
+    if (replace) requests.push(tx.store.clear());
+    const items = Array.isArray(data) ? data : [data];
+    items.forEach(item => requests.push(tx.store.add(item)));
+    // Observe each request as well as the transaction: a failed add must not
+    // leak an unhandled rejection past the API client's existing error handler.
+    await Promise.all(requests);
   }
 
   async get({ modelName }) {

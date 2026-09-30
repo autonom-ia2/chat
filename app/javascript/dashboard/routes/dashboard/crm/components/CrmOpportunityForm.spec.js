@@ -17,7 +17,16 @@ const makeForm = props =>
       canManage: true,
       ...props,
     },
-    global: { stubs: { CrmOpportunityContactPicker: true } },
+    global: {
+      stubs: {
+        CrmOpportunityContactPicker: true,
+        CrmOpportunityRegistration: {
+          template: '<div />',
+          data: () => ({ canSave: true }),
+          methods: { validate: () => true, showError: vi.fn() },
+        },
+      },
+    },
   });
 let wrapper;
 beforeEach(() => vi.clearAllMocks());
@@ -243,4 +252,95 @@ it('accepts a pipeline ID supplied as a route string without sending the wrong s
   wrapper.vm.form.title = 'Rota';
   wrapper.vm.changeMode('none');
   expect(wrapper.vm.canSave).toBe(true);
+});
+
+it('submits one composed payload and keeps commercial fields independent of the new registration', async () => {
+  wrapper = makeForm();
+  wrapper.vm.form.title = 'Commercial intent';
+  wrapper.vm.changeMode('new');
+  Object.assign(wrapper.vm.registrationDraft, {
+    name: 'Person',
+    companyMode: 'new',
+    companyName: 'Company',
+  });
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  const payload = wrapper.emitted('save')[0][0];
+  expect(payload.title).toBe('Commercial intent');
+  expect(payload).not.toHaveProperty('contact_id');
+  expect(payload.relationship.contact.name).toBe('Person');
+  expect(payload.relationship.company.attributes.name).toBe('Company');
+  expect(wrapper.vm.summary).toBe('CRM_KANBAN.OPPORTUNITY.SUMMARY_NEW_COMPANY');
+});
+it('preserves a new-person draft between modes but never submits its stale values for existing contact', async () => {
+  wrapper = makeForm();
+  wrapper.vm.form.title = 'Commercial';
+  wrapper.vm.changeMode('new');
+  wrapper.vm.registrationDraft.name = 'Draft person';
+  wrapper.vm.changeMode('existing');
+  wrapper.vm.contact = { id: 7 };
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')[0][0]).toMatchObject({
+    title: 'Commercial',
+    contact_id: 7,
+  });
+  expect(wrapper.emitted('save')[0][0]).not.toHaveProperty('relationship');
+  expect(wrapper.vm.registrationDraft.name).toBe('Draft person');
+});
+it('retains new contact edits in dirty tracking even before a commercial title is entered', () => {
+  wrapper = makeForm();
+  expect(wrapper.vm.dirty).toBe(false);
+  wrapper.vm.registrationDraft.name = 'Person';
+  expect(wrapper.vm.dirty).toBe(true);
+});
+it('blocks synchronous second submission while validating the new registration', async () => {
+  wrapper = makeForm();
+  wrapper.vm.form.title = 'Commercial';
+  wrapper.vm.changeMode('new');
+  wrapper.vm.registrationDraft.name = 'Person';
+  await wrapper.vm.$nextTick();
+  let finish;
+  wrapper.vm.registration.validate = () =>
+    new Promise(resolve => {
+      finish = resolve;
+    });
+  const first = wrapper.vm.submit();
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')).toBeUndefined();
+  finish(true);
+  await first;
+  expect(wrapper.emitted('save')).toHaveLength(1);
+});
+it('forwards authoritative contact errors without resetting either part of the draft', async () => {
+  wrapper = makeForm();
+  wrapper.vm.form.title = 'Commercial';
+  wrapper.vm.changeMode('new');
+  wrapper.vm.registrationDraft.name = 'Person';
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  const showError = vi.spyOn(wrapper.vm.registration, 'showError');
+  const detail = {
+    code: 'crm.opportunity.contact_exists',
+    section: 'contact',
+    fields: {},
+    matches: [],
+  };
+  wrapper.emitted('save')[0][1]({ response: { data: { error: detail } } });
+  expect(showError).toHaveBeenCalledWith(detail);
+  expect(wrapper.vm.sending).toBe(false);
+  expect(wrapper.vm.form.title).toBe('Commercial');
+  expect(wrapper.vm.registrationDraft.name).toBe('Person');
+});
+it('keeps the same key and entire new registration for a retry after a lost response', async () => {
+  wrapper = makeForm();
+  wrapper.vm.form.title = 'Retry whole set';
+  wrapper.vm.changeMode('new');
+  wrapper.vm.registrationDraft.name = 'Person';
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  const [first, failed] = wrapper.emitted('save')[0];
+  failed(new Error('Connection lost'));
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')[1][0]).toEqual(first);
 });

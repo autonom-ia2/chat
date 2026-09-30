@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
   include Crm::IdempotentRequests
+  include Crm::OpportunityRegistration
   include DeferInteractiveAi
 
   before_action :fetch_card, only: [
@@ -73,24 +74,19 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card
     permitted_params = create_params.to_h.with_indifferent_access
     external_id = permitted_params[:external_id].presence
+    @registration = registration_for_creation
+    persist_card_creation(permitted_params, external_id)
+  rescue ::Crm::Cards::RegistrationInput::Invalid => e
+    render_registration_error(e)
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless @registration
 
-    # Claim, opportunity and captured response commit together. Retrying a failed
-    # request cannot strand a processing key or duplicate a partially saved card.
-    ActiveRecord::Base.transaction do
-      with_idempotency do
-        existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
-        next upsert_existing_card!(existing, permitted_params) if existing
-
-        @card = create_authorized_card(permitted_params)
-        authorize @card, :show?
-        broadcast_card(::Events::Types::CRM_CARD_CREATED)
-        render :show, status: :created
-      end
-    end
+    render_registration_record_error(e)
   rescue ActiveRecord::RecordNotUnique
-    # The failed transaction is already rolled back before resolving an external upsert race.
+    return render_registration_error(@registration.conflict) if @registration
     raise unless external_id
 
+    # The failed transaction is rolled back before resolving an external upsert race.
     ActiveRecord::Base.transaction do
       with_idempotency { upsert_existing_card!(Current.account.crm_cards.find_by!(external_id: external_id), permitted_params) }
     end
@@ -333,10 +329,31 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     Current.account.conversations.find(params[:conversation_id])
   end
 
+  def persist_card_creation(permitted_params, external_id)
+    # Registration, opportunity, idempotency key and captured response commit together.
+    ActiveRecord::Base.transaction do
+      with_idempotency do
+        existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
+        next upsert_existing_card!(existing, permitted_params) if existing
+
+        @card = create_authorized_card(permitted_params)
+        authorize @card, :show?
+        broadcast_card(::Events::Types::CRM_CARD_CREATED)
+        render :show, status: :created
+      end
+    end
+  end
+
   def create_authorized_card(permitted_params)
     conversation = conversation_from_params(permitted_params)
     resolved_params = resolved_create_params(permitted_params, conversation: conversation)
     create_authorizer.authorize!(resolved_params, conversation: conversation)
+    if @registration
+      return @registration.perform do |contact|
+        ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
+      end
+    end
+
     ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
   end
 

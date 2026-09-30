@@ -28,6 +28,7 @@ const initial = {
   name: props.company?.name || '',
   domain: props.company?.domain || '',
   description: props.company?.description || '',
+  city: props.company?.additionalAttributes?.city || '',
 };
 const form = ref({ ...initial });
 const query = ref('');
@@ -109,7 +110,14 @@ const save = async () => {
           .filter(([key, value]) => value.trim() !== initial[key].trim())
           .map(([key, value]) => [key, value.trim() || null])
       );
-      await companies.update({ id: props.company.id, ...patch });
+      const { city, ...fields } = patch;
+      await companies.update({
+        id: props.company.id,
+        ...fields,
+        ...(Object.hasOwn(patch, 'city')
+          ? { additionalAttributes: { city } }
+          : {}),
+      });
     } else {
       const companyId = operation === 'unlink' ? null : selected.value.id;
       const { data } = await ContactAPI.update(props.contact.id, {
@@ -213,6 +221,10 @@ defineExpose({ dirty, saving, canSave });
           {{ label('DOMAIN_HELP') }}
         </p>
       </div>
+      <Input
+        v-model="form.city"
+        :label="t('COMPANIES.DETAIL.PROFILE.FIELDS.CITY')"
+      />
       <TextArea
         :id="`${formId}-description`"
         v-model="form.description"
