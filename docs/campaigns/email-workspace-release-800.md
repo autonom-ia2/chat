@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementação em branch isolada e PR #801. QA e capturas locais disponíveis. Português e inglês concluídos. As capturas do dashboard completo estão em `docs/campaigns/workspace-800/full-application/`, com APIs reais e dados sintéticos locais. QA de integração foi retomado; o CI remoto do HEAD final deve passar antes da publicação. As capturas anteriores com shell sintético foram substituídas para aceitação visual. Nenhuma etapa abaixo foi executada em produção nesta implementação.
+Implementação em branch isolada e PR #801. QA local aprovado e capturas disponíveis. Português e inglês concluídos. As capturas do dashboard completo estão em `docs/campaigns/workspace-800/full-application/`, com APIs reais e dados sintéticos locais. O CI remoto do HEAD final deve passar antes da publicação. As capturas anteriores com shell sintético foram substituídas para aceitação visual. Nenhuma etapa abaixo foi executada em produção nesta implementação.
 
 Não há migração de schema, mudança de credenciais, permissão, DNS ou infraestrutura. A revisão acrescenta `send_readiness` à leitura de uma campanha; endpoints existentes de enviar/agendar continuam responsáveis pela decisão final.
 

@@ -30,7 +30,7 @@ Desktop de QA: 1440 × 900 px; celular: 390 × 844 px; tablet: 768 × 900 px. Os
 
 ## QA e limite da evidência
 
-O agente `/root/qa_800` revisou os ajustes e specs de forma independente. A rodada frontend atual passou com 486 testes de frontend em 16 arquivos, zero falhas, após os últimos ajustes de remetente e contagens. Lint cumulativo do CI passou com zero bloqueios; Prettier e build também passaram. Os 12 exemplos Ruby corrigidos passaram em banco local novo `email800_ci`, sem depender de seed anterior. O CI remoto completo precisa passar no HEAD final antes de publicar.
+O agente `/root/qa_800` aprovou a aplicação local após conferir as dez capturas, a lista com quatro destinatários e os fluxos de revisão, confirmação cancelada e agendamento. A rodada frontend atual passou com 486 testes de frontend em 16 arquivos, zero falhas, após os últimos ajustes de remetente e contagens. Lint cumulativo do CI passou com zero bloqueios; Prettier e build também passaram. Os 12 exemplos Ruby corrigidos passaram em banco local novo `email800_ci`, sem depender de seed anterior, e foram repetidos pelo QA no parecer final. O CI remoto completo precisa passar no HEAD final antes de publicar.
 
 A rodada inicial de 159 exemplos Ruby foi em ambiente previamente populado e não comprovava independência de fixtures. O CI mais amplo encontrou oito falhas de contrato/fixture, corrigidas nos specs; seu resultado final deve ser consultado no PR.
 
