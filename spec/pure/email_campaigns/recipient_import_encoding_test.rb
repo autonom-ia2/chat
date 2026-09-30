@@ -7,6 +7,12 @@ require 'active_support/core_ext'
 require 'uri'
 module EmailCampaigns; end
 module CampaignImports; end
+module TypesafeAi; end
+TypesafeAi::Config = Class.new do
+  def self.enabled?
+    false
+  end
+end
 require_relative '../../../app/services/campaign_imports/parser'
 require_relative '../../../app/services/campaign_imports/header_mapper'
 require_relative '../../../app/services/campaign_imports/schema_resolver'

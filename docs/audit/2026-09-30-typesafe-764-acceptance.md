@@ -54,6 +54,8 @@ Comandos utilizados: `bundle exec rspec` com a lista completa de 101 specs da pr
 
 A regressão inicial identificou configuração de instalação deixada por exemplos de concorrência sem transação. Três grupos passaram a usar o isolamento já existente `relationships_committed_fixtures`, sem enfraquecer suas asserções. Uma repetição em banco já usado também encontrou registros de auditoria/supressão residuais; ela foi interrompida e substituída por uma execução em banco sintético novo. Esses resultados anteriores não foram contados como aprovados.
 
+O primeiro CI do código encontrou uma dependência não declarada no teste puro de codificação: esse teste carrega o importador sem Rails e não definia a configuração TypeSafe, agora consultada antes dos aliases locais. Seu ambiente sintético passou a declarar explicitamente TypeSafe desativado, preservando as asserções de persistência/codificação e a proibição de chamadas pagas nesse grupo. A aplicação não recebeu fallback ou mudança adicional para contornar o teste. Após a correção, os nove grupos puros tiveram 56 testes, zero falhas e zero erros; o lint desse arquivo também passou.
+
 ## Revisão e liberação
 
 Mudanças nos dois catálogos próprios seguem `config/fork_i18n.json` e a exclusão Crowdin já usada pelo fork. O diálogo compartilhado foi mantido sem alterações. Foram conferidos os caminhos OSS/Enterprise relacionados; nenhum override correspondente exige edição nesta correção.
