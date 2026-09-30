@@ -1,0 +1,138 @@
+{
+  "data": "synthetic",
+  "runtime": "local Rails + PostgreSQL + authenticated APIs",
+  "browser": "154.0.8037.58",
+  "checks": [
+    "real_application_identity_and_content",
+    "contact_value_saved_real_api_hidden_keys_zero_preserved",
+    "field_collapse_requires_explicit_discard",
+    "company_value_saved_to_canonical_company",
+    "native_configurator_cancel_preserves_account_configuration",
+    "hiding_and_restoring_fields_keeps_value_and_conversation_sidebar_configuration",
+    "authorized_real_media_with_generated_image_pdf_thumbnails",
+    "server_search_finds_old_media_outside_first_page_without_url_change",
+    "expanded_25_rows_and_second_page_keep_same_opportunity",
+    "company_media_includes_linked_contacts_and_authorized_original_pdf",
+    "commercial_record_unchanged_after_attribute_and_media_actions",
+    "mobile_390_no_drawer_horizontal_overflow"
+  ],
+  "captures": [
+    {
+      "name": "01-atributos-contato-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "95cfa540bfa6c550d361503e876005d1e0f79e85189603f70dbb553f05a6c4ba"
+    },
+    {
+      "name": "02-confirmacao-rascunho-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "4d821f1458ef9a216ee9f65bb08902520b20ba5a25cd898d5b9b8d9d17c4635b"
+    },
+    {
+      "name": "03-atributos-empresa-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "ff7692f13f94be6d59d88ef85c7723003c710eccc407de15585b422f245179f4"
+    },
+    {
+      "name": "04-configurar-campos-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "b53001707058f5e9dda97af53a9da634870d1f9e04f57454c3677323342714a4"
+    },
+    {
+      "name": "05-midias-contato-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "e3d340c2a2648321b3e596affb69f92be33ea970464f218769d86d0b001864f1"
+    },
+    {
+      "name": "06-busca-acervo-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "dbffad4e3292402174314473f388591f5b3e71eab04c54f288d69e76f1145027"
+    },
+    {
+      "name": "07-midias-empresa-desktop",
+      "width": 1620,
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "2a3709a5e8faa2704d3a52d1d25ccbc2687054b683102f2cefc170bc6185a922"
+    },
+    {
+      "name": "08-atributos-mobile",
+      "width": 390,
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "e17d83f427529e9150ae9461166b26b099481c7e2a810e71c8427cad92619279"
+    },
+    {
+      "name": "09-midias-mobile",
+      "width": 390,
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "16d56941916d282d1f28ab3201cd500a259b32a2cc5b7ad4531e0ff510b45139"
+    }
+  ],
+  "errors": [],
+  "failures": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "base_commit": "192d49c836bc79424eff07ad38c65fb25870930a",
+  "source_sha256": {
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmRelationshipResources.vue": "f1a02a243a528324f7652d04c5925c424bef680acf645f9a4df54271ac40d735",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue": "d8dfd5ca05f246655998b8f9221303b0c37b9c1f8523cdf14affe1b7b74558d5",
+    "app/javascript/dashboard/components-next/Relationships/FieldEditor.vue": "6bb67631c332a67bf2194d402c71a5b22b1b92b76ed9810baa08d882f759df5c",
+    "app/javascript/dashboard/components-next/Relationships/RelationshipMedia.vue": "7aed376a8d552a37f392e0475d9a9b5b564042c4b92e54cd4b10e0b0363581a8"
+  }
+}

@@ -5,7 +5,8 @@ import CrmCardDrawer from './CrmCardDrawer.vue';
 // Stub the store/router/composables/APIs the drawer reaches for, so we can mount
 // it in isolation and assert the form-reset reactivity that the realtime-churn
 // fix changed (props.stages dropped from the reset watcher, props.card kept).
-vi.mock('vuex', () => ({
+vi.mock('vuex', async importOriginal => ({
+  ...(await importOriginal()),
   useStore: () => ({ getters: {}, dispatch: vi.fn() }),
 }));
 vi.mock('vue-router', () => ({
@@ -50,7 +51,10 @@ const mountDrawer = (props = {}) =>
     },
     global: {
       stubs: {
-        Dialog: true,
+        Dialog: {
+          template: '<div />',
+          methods: { open: vi.fn(), close: vi.fn() },
+        },
         CrmCardRelationshipPanel: true,
         CrmCardAiPanel: true,
         CrmCardSummaryPanel: true,
@@ -245,5 +249,30 @@ it('never updates a company name as a substitute for a canonical company associa
   wrapper.vm.contactForm.name = 'Updated person';
   wrapper.vm.contactForm.company = 'Not an association';
   expect(wrapper.vm.buildContactPayload()).toEqual({ name: 'Updated person' });
+  wrapper.unmount();
+});
+
+it('guards archiving when a relationship field has an unsaved draft', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.relationshipPanel = { dirty: true, saving: false, reset: vi.fn() };
+  const archive = wrapper
+    .findAll('button')
+    .find(button => button.text() === 'CRM_KANBAN.DRAWER.ARCHIVE');
+  await archive.trigger('click');
+  expect(wrapper.emitted('archive')).toBeUndefined();
+  expect(wrapper.vm.discardOpen).toBe(true);
+  wrapper.vm.confirmDiscard();
+  expect(wrapper.emitted('archive')).toHaveLength(1);
+  wrapper.unmount();
+});
+it('does not archive while a relationship field write is in progress', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.relationshipPanel = { dirty: true, saving: true, reset: vi.fn() };
+  const archive = wrapper
+    .findAll('button')
+    .find(button => button.text() === 'CRM_KANBAN.DRAWER.ARCHIVE');
+  await archive.trigger('click');
+  expect(wrapper.emitted('archive')).toBeUndefined();
+  expect(wrapper.vm.discardOpen).toBe(false);
   wrapper.unmount();
 });

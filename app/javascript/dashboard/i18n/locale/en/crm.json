@@ -1486,7 +1486,14 @@
       "DISCARD_HELP": "There are unsaved changes to this relationship.",
       "DISCARD": "Discard changes",
       "KEEP_EDITING": "Keep editing",
-      "OPPORTUNITY_DETAILS": "Opportunity details"
+      "OPPORTUNITY_DETAILS": "Opportunity details",
+      "ATTRIBUTES": "Custom attributes",
+      "FIELDS_CONTACT": "Contact",
+      "FIELDS_COMPANY": "Company",
+      "FIELDS_SHARED": "The same fields and values as the Relationships profile. Each change is saved separately from the opportunity.",
+      "MEDIA": "Relationship media",
+      "MEDIA_SOURCE": "View files from",
+      "LEGACY_COMPANY_NAME": "Reported name, without a confirmed link: {name}"
     }
   },
   "crm": {

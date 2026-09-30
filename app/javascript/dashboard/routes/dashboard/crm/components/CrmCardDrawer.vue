@@ -1665,12 +1665,14 @@ useFixedPanelPresence(computed(() => props.show));
                   :label="relationshipLabel('EMAIL')"
                   :disabled="isSavingContact"
                 />
-                <label class="grid gap-2 text-sm text-n-slate-12"
-                  ><span>{{ relationshipLabel('PHONE') }}</span
-                  ><PhoneNumberInput
+                <label class="grid gap-2 text-sm text-n-slate-12">
+                  <!-- Native phone input keeps its country selector and validation. -->
+                  <span>{{ relationshipLabel('PHONE') }}</span>
+                  <PhoneNumberInput
                     v-model="contactForm.phoneNumber"
                     :disabled="isSavingContact"
-                /></label>
+                  />
+                </label>
                 <Input
                   v-model="contactForm.jobTitle"
                   :label="relationshipLabel('ROLE')"
@@ -2138,7 +2140,7 @@ useFixedPanelPresence(computed(() => props.show));
             ruby
             ghost
             :is-loading="isArchiving"
-            @click="$emit('archive')"
+            @click="guardRelationship(() => $emit('archive'))"
           />
           <Button
             v-if="meetingsEnabled && card?.id"
@@ -2146,7 +2148,11 @@ useFixedPanelPresence(computed(() => props.show));
             icon="i-lucide-video"
             variant="outline"
             color="slate"
-            @click="$emit('scheduleMeeting', { cardId: card.id })"
+            @click="
+              guardRelationship(() =>
+                $emit('scheduleMeeting', { cardId: card.id })
+              )
+            "
           />
         </div>
         <span v-else />

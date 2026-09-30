@@ -2,6 +2,10 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import camelcaseKeys from 'camelcase-keys';
+import { useStore } from 'dashboard/composables/store';
+import { useCompaniesStore } from 'dashboard/stores/companies';
+import { recordRequest } from 'dashboard/components-next/Relationships/confirmedValues';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import ContactAPI from 'dashboard/api/contacts';
@@ -9,6 +13,7 @@ import CompanyAPI from 'dashboard/api/companies';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmRelationshipLinkForm from './CrmRelationshipLinkForm.vue';
+import CrmRelationshipResources from './CrmRelationshipResources.vue';
 
 const props = defineProps({
   card: { type: Object, required: true },
@@ -24,14 +29,29 @@ const companiesEnabled = computed(() =>
   Boolean(currentAccount.value?.id && isCloudFeatureEnabled('companies'))
 );
 const request = useAbortableRequest();
-const person = ref(null);
-const company = ref(null);
+const store = useStore();
+const companies = useCompaniesStore();
+const loadedContactId = ref(null);
+const loadedCompanyId = ref(null);
+const person = computed(() =>
+  loadedContactId.value
+    ? store.getters['contacts/getContact'](loadedContactId.value)
+    : null
+);
+const company = computed(() =>
+  loadedCompanyId.value ? companies.getRecord(loadedCompanyId.value) : null
+);
+const resources = ref(null);
 const failed = ref(false);
 const companyFailed = ref(false);
 const mode = ref(null);
 const linkForm = ref(null);
-const dirty = computed(() => Boolean(linkForm.value?.dirty));
-const saving = computed(() => Boolean(linkForm.value?.saving));
+const dirty = computed(() =>
+  Boolean(linkForm.value?.dirty || resources.value?.dirty)
+);
+const saving = computed(() =>
+  Boolean(linkForm.value?.saving || resources.value?.saving)
+);
 const contactId = computed(
   () => props.card.contact_id || props.card.contact?.id
 );
@@ -40,14 +60,15 @@ const identity = computed(
 );
 
 const reload = async () => {
-  person.value = null;
-  company.value = null;
+  loadedContactId.value = null;
+  loadedCompanyId.value = null;
   failed.value = false;
   companyFailed.value = false;
   request.abort();
   if (!contactId.value) return;
   const id = contactId.value;
   const withCompany = companiesEnabled.value;
+  const contactRead = recordRequest(store, accountId.value, 'contact', id);
   try {
     const result = await request.run(async () => {
       const { data } = await ContactAPI.show(id);
@@ -55,15 +76,39 @@ const reload = async () => {
       if (!withCompany || !contact.company_id)
         return { contact, company: null };
       try {
+        const companyRead = recordRequest(
+          store,
+          accountId.value,
+          'company',
+          contact.company_id
+        );
         const response = await CompanyAPI.show(contact.company_id);
-        return { contact, company: response.data.payload };
+        return { contact, company: response.data.payload, companyRead };
       } catch {
         return { contact, company: null, companyFailed: true };
       }
     });
-    if (!result) return;
-    person.value = result.contact;
-    company.value = result.company;
+    if (!result || !contactRead.valid()) return;
+    store.commit('contacts/SET_CONTACT_ITEM', {
+      ...result.contact,
+      custom_attributes: contactRead.mergeRead(
+        result.contact.custom_attributes,
+        store.getters['contacts/getContact'](id).custom_attributes
+      ),
+    });
+    loadedContactId.value = result.contact.id;
+    if (result.company && result.companyRead.valid()) {
+      const record = camelcaseKeys(result.company, {
+        deep: true,
+        stopPaths: ['custom_attributes'],
+      });
+      record.customAttributes = result.companyRead.mergeRead(
+        record.customAttributes,
+        companies.getRecord(record.id).customAttributes
+      );
+      companies.upsertCompanyRecord(record);
+      loadedCompanyId.value = record.id;
+    }
     companyFailed.value = Boolean(result.companyFailed);
   } catch {
     failed.value = true;
@@ -84,6 +129,7 @@ const openProfile = entity => {
 };
 const reset = () => {
   mode.value = null;
+  resources.value?.reset();
 };
 const guard = action => emit('guard', action);
 const linked = card => {
@@ -110,7 +156,7 @@ watch(
     reset();
     reload();
   },
-  { immediate: true }
+  { immediate: true, flush: 'sync' }
 );
 defineExpose({ dirty, saving, reset, reload });
 </script>
@@ -201,7 +247,7 @@ defineExpose({ dirty, saving, reset, reload });
               icon="i-lucide-pencil"
               :label="label('EDIT')"
               :disabled="editing"
-              @click="emit('edit', person)"
+              @click="guard(() => emit('edit', person))"
             />
             <Button
               outline
@@ -321,8 +367,11 @@ defineExpose({ dirty, saving, reset, reload });
           v-else-if="person.additional_attributes?.company_name"
           class="mb-0 mt-4 rounded-lg bg-n-amber-3 p-3 text-xs leading-5 text-n-amber-11"
         >
-          {{ label('LEGACY_COMPANY') }}:
-          {{ person.additional_attributes.company_name }}
+          {{
+            t('CRM_KANBAN.RELATIONSHIP.LEGACY_COMPANY_NAME', {
+              name: person.additional_attributes.company_name,
+            })
+          }}
         </p>
         <Button
           v-if="companyFailed"
@@ -375,6 +424,16 @@ defineExpose({ dirty, saving, reset, reload });
           </div>
         </dl>
       </details>
+      <CrmRelationshipResources
+        v-if="person && !mode && !editing"
+        :key="identity"
+        ref="resources"
+        :contact="person"
+        :company="company"
+        :can-manage="canManage"
+        @guard="guard"
+        @changed="emit('linked')"
+      />
     </template>
   </section>
 </template>

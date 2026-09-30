@@ -167,14 +167,15 @@ defineExpose({ dirty, saving });
           @click="selected = contact"
         >
           <Avatar :name="contact.name || ''" :size="36" rounded-full />
-          <span class="min-w-0 flex-1"
-            ><strong
-              class="block truncate text-sm font-medium text-n-slate-12"
-              >{{ contact.name }}</strong
-            ><span class="block truncate text-xs text-n-slate-11">{{
-              contact.email || contact.phone_number || label('NO_CHANNEL')
-            }}</span></span
-          >
+          <span class="min-w-0 flex-1">
+            <!-- Keep the name and channel on separate visual lines. -->
+            <strong class="block truncate text-sm font-medium text-n-slate-12">
+              {{ contact.name }}
+            </strong>
+            <span class="block truncate text-xs text-n-slate-11">
+              {{ contact.email || contact.phone_number || label('NO_CHANNEL') }}
+            </span>
+          </span>
           <span
             v-if="selected?.id === contact.id"
             class="i-lucide-circle-check size-5 text-n-blue-11"

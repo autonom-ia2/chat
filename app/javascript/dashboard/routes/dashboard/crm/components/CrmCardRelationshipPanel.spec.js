@@ -1,8 +1,17 @@
 import { mount, flushPromises } from '@vue/test-utils';
+import { createStore } from 'vuex';
+import { createPinia, setActivePinia } from 'pinia';
+import { mutations } from 'dashboard/store/modules/contacts/mutations';
+import { getters } from 'dashboard/store/modules/contacts/getters';
+import { useCompaniesStore } from 'dashboard/stores/companies';
 import ContactAPI from 'dashboard/api/contacts';
 import CompanyAPI from 'dashboard/api/companies';
 import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
 
+const context = vi.hoisted(() => ({ store: null }));
+vi.mock('dashboard/composables/store', () => ({
+  useStore: () => context.store,
+}));
 const routing = vi.hoisted(() => ({
   resolve: vi.fn(() => ({ href: '/resolved-profile' })),
 }));
@@ -26,12 +35,34 @@ const person = {
 };
 const makePanel = (props = {}) =>
   mount(CrmCardRelationshipPanel, {
-    props: { card: { id: 5, contact_id: 42 }, canManage: true, ...props },
-    global: { stubs: { Avatar: true, CrmRelationshipLinkForm: true } },
+    props: {
+      card: { id: 5, contact_id: 42 },
+      canManage: true,
+      onGuard: action => action(),
+      ...props,
+    },
+    global: {
+      stubs: {
+        Avatar: true,
+        CrmRelationshipLinkForm: true,
+        CrmRelationshipResources: true,
+      },
+    },
   });
 let wrapper;
 beforeEach(() => {
   vi.clearAllMocks();
+  setActivePinia(createPinia());
+  context.store = createStore({
+    modules: {
+      contacts: {
+        namespaced: true,
+        state: () => ({ records: {}, sortOrder: [] }),
+        getters,
+        mutations,
+      },
+    },
+  });
   ContactAPI.show.mockResolvedValue({ data: { payload: person } });
   CompanyAPI.show.mockResolvedValue({
     data: {
@@ -84,7 +115,11 @@ it('does not infer a company association from legacy text', async () => {
   await flushPromises();
   expect(CompanyAPI.show).not.toHaveBeenCalled();
   expect(wrapper.text()).toContain('LEGACY_COMPANY');
-  expect(wrapper.text()).toContain('Legacy text');
+  expect(wrapper.text()).toContain('LEGACY_COMPANY_NAME');
+  expect(
+    context.store.getters['contacts/getContact'](42).additional_attributes
+      .company_name
+  ).toBe('Legacy text');
 });
 it('keeps the contact visible when the company cannot be read', async () => {
   CompanyAPI.show.mockRejectedValue(new Error('not available'));
@@ -145,4 +180,26 @@ it('emits the freshly loaded person when editing, not the old card snapshot', as
     .find(item => item.text() === 'CRM_KANBAN.RELATIONSHIP.EDIT');
   await button.trigger('click');
   expect(wrapper.emitted('edit')[0][0]).toEqual(person);
+});
+
+it('reflects confirmed native store writes without a stale copy of the contact', async () => {
+  wrapper = makePanel();
+  await flushPromises();
+  context.store.commit('contacts/SET_CONTACT_ITEM', {
+    id: 42,
+    custom_attributes: { job_title: 'Updated role' },
+  });
+  await wrapper.vm.$nextTick();
+  expect(wrapper.text()).toContain('Updated role');
+});
+it('binds company custom values to the same Pinia record used in the company profile', async () => {
+  wrapper = makePanel();
+  await flushPromises();
+  const companies = useCompaniesStore();
+  companies.getRecord(7).customAttributes = { size: 'Enterprise' };
+  await wrapper.vm.$nextTick();
+  expect(
+    wrapper.findComponent({ name: 'CrmRelationshipResources' }).props('company')
+      .customAttributes.size
+  ).toBe('Enterprise');
 });

@@ -1487,7 +1487,14 @@
       "DISCARD_HELP": "Existem alterações no relacionamento que ainda não foram salvas.",
       "DISCARD": "Descartar alterações",
       "KEEP_EDITING": "Continuar editando",
-      "OPPORTUNITY_DETAILS": "Detalhes da oportunidade"
+      "OPPORTUNITY_DETAILS": "Detalhes da oportunidade",
+      "ATTRIBUTES": "Atributos personalizados",
+      "FIELDS_CONTACT": "Contato",
+      "FIELDS_COMPANY": "Empresa",
+      "FIELDS_SHARED": "Mesmos campos e valores da ficha em Relacionamentos. Cada alteração é salva separadamente da oportunidade.",
+      "MEDIA": "Mídias do relacionamento",
+      "MEDIA_SOURCE": "Ver arquivos de",
+      "LEGACY_COMPANY_NAME": "Nome informado, sem vínculo confirmado: {name}"
     }
   },
   "crm": {

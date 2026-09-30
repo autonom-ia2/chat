@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1 e 2 e autorizou o primeiro trecho visual, exigindo screenshots reais e largura igual a Editar funil. Parte 3 implementada e testada localmente; aguardar aprovação visual antes da parte 4. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–3, incluindo as telas reais e a largura igual a Editar funil. Parte 4 integra atributos e mídias no painel e está em validação/aceite visual local. Parar antes da próxima parte e aguardar novo de acordo. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -14,14 +14,14 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
-| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Parte 3: contato/empresa canônicos, edição de pessoa e largura de 40rem. Atributos/mídias e editor empresarial inline pendentes. |
-| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card. Aceite visual pendente. |
+| M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–4: contato/empresa canônicos, edição de pessoa, atributos e mídias nativos com largura de 40rem. Editor cadastral da empresa inline ainda pendente. |
+| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Nova experiência não iniciada. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Não iniciada. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 2 respeita as validações nativas e não faz fusão. Experiência de reutilização e concorrência entre escritores diferentes pendentes. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre ficha real em outra aba e preserva contexto; criação contextual completa pendente. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
-| M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Integração não iniciada. |
+| M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 integra editores e configurador nativos, superfícies da ficha e stores compartilhados. Aguardar aceite visual e revisão transversal. |
 
 ## Parte 1 — Contrato do vínculo existente
 
@@ -85,9 +85,19 @@ A abertura das fichas é em nova aba nesta parte. O acesso usa rotas e permissõ
 
 A atenção aos efeitos nativos permanece: `Enterprise::Concerns::Contact` pode associar empresa após commit quando o primeiro e-mail é cadastrado. A seleção empresarial explícita deverá ser conciliada com esse comportamento antes de concluir M04; este incremento não desliga callbacks globais.
 
+## Parte 4 — Atributos e mídias no mesmo cadastro
+
+`CrmRelationshipResources` apresenta seções expansíveis de atributos e mídias. Contato e empresa usam seus respectivos registros canônicos. O catálogo/configuração de campos usa `contact_details` e `company_details`; ocultar não apaga valores e não substitui a configuração de `contact_sidebar`. O editor nativo confirma cada valor separadamente da oportunidade e participa do guard de rascunhos.
+
+O modo `embedded` de `RelationshipMedia` reutiliza busca, filtros, miniaturas e autorização. Mostra 5 arquivos ou 25 por página sem alterar a URL do CRM. Empresa usa os contatos realmente vinculados. Origem e arquivo abrem pelo fluxo nativo em outra aba. Não há cópia de arquivos nem ampliação de acesso.
+
+A empresa em Pinia e o contato em Vuex são os mesmos registros das fichas. Leituras usam a proteção de valores confirmados para não substituir uma gravação por uma resposta antiga. Estados vazios/erro e flags continuam sendo respeitados.
+
+Evidências: [auditoria da parte 4](../audit/2026-09-30-792-crm-relationships-part-4.md) e [screenshots reais](screenshots/792-part4/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação visual, encaixar atributos personalizados e mídias no painel, reutilizando consultas, componentes e autorização existentes. A criação completa de Nova oportunidade permanece em etapa própria. Não iniciar a parte 4 nem fazer merge/deploy por consequência desta entrega.
+Após aprovação deste trecho visual, implementar edição cadastral e vínculo da empresa dentro da lateral. A Nova oportunidade completa permanece em etapa própria. Não iniciar outra parte nem fazer merge/deploy por consequência desta entrega.
 
 ## Validação e publicação
 
