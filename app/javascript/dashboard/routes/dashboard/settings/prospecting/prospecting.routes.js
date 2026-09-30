@@ -1,6 +1,7 @@
 import { frontendURL } from '../../../../helper/URLHelper';
 import store from '../../../../store';
-import SettingsWrapper from '../SettingsWrapper.vue';
+
+const SettingsWrapper = () => import('../SettingsWrapper.vue');
 
 const ProspectingSettingsPage = () =>
   import('../../autonomia/prospecting/pages/ProspectingSettingsPage.vue');

@@ -1,6 +1,7 @@
 import { frontendURL } from '../../../../helper/URLHelper';
-import SettingsWrapper from '../SettingsWrapper.vue';
-import ConversationWorkflowIndex from './index.vue';
+
+const SettingsWrapper = () => import('../SettingsWrapper.vue');
+const ConversationWorkflowIndex = () => import('./index.vue');
 
 export default {
   routes: [

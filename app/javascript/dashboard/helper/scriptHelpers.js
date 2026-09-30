@@ -4,7 +4,6 @@ import {
   CHATWOOT_SET_USER,
 } from '../constants/appEvents';
 import AnalyticsHelper from './AnalyticsHelper';
-import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotificationHelper';
 import { emitter } from 'shared/helpers/mitt';
 
 export const initializeAnalyticsEvents = () => {
@@ -14,7 +13,10 @@ export const initializeAnalyticsEvents = () => {
   });
 };
 
-export const initializeAudioAlerts = user => {
+export const initializeAudioAlerts = async user => {
+  const { default: DashboardAudioNotificationHelper } = await import(
+    './AudioAlerts/DashboardAudioNotificationHelper'
+  );
   const { ui_settings: uiSettings } = user || {};
   const {
     always_play_audio_alert: alwaysPlayAudioAlert,
