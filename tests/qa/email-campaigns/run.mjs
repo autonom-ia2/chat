@@ -961,7 +961,9 @@ try {
   } = await startServer());
   browser = await chromium.launch({
     headless: true,
-    executablePath: chromium.executablePath(),
+    executablePath:
+      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
+      chromium.executablePath(),
   });
   results.browserVersion = browser.version();
   const desktop = await openScreen('pt-desktop');

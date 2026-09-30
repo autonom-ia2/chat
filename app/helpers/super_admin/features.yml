@@ -53,7 +53,12 @@ captain:
   enabled: true
   icon: 'icon-captain'
   config_key: 'captain'
-
+typesafe_ai:
+  name: 'TypeSafe AI'
+  description: 'Configure Jev for intelligent file certification and recipient-column mapping.'
+  enabled: true
+  icon: 'icon-robot-line'
+  config_key: 'typesafe'
 # ------- Communication Channels ------- #
 live_chat:
   name: 'Live Chat'

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only, deterministic file selection for issue 436's bounded CI gate."""
+"""Read-only file selection for email protection and intelligent import gates."""
 
 import os
 from pathlib import Path
@@ -8,17 +8,23 @@ import subprocess
 import sys
 
 
-FEATURE = re.compile(
-    r"email[_-](campaign|sender|suppression|reputation|provider|event|template)"
-    r"|email(Campaign|Sender|Suppression|Reputation|Provider|Event|Template)"
-    r"|Email(Campaign|Sender|Suppression|Reputation|Provider|Event|Template|Protection)"
-    r"|RecipientImport|recipientImport|CrmCampaignManagement|CampaignLayout"
-)
+FEATURE_TOKENS = tuple(
+    f"email{separator}{domain}"
+    for separator in ("_", "-", "")
+    for domain in ("campaign", "sender", "suppression", "reputation", "provider", "event", "template", "protection")
+) + ("recipientimport", "crmcampaignmanagement", "campaignlayout", "typesafe", "campaign_imports", "ai_provider_credential")
+
+
+def feature_path(path):
+    normalized = path.lower()
+    return any(token in normalized for token in FEATURE_TOKENS)
 UI_ROOT = "app/javascript/dashboard/components-next/Campaigns/EmailProtection/"
 BASELINE_SPECS = {
     "spec/models/account_spec.rb",
     "spec/models/working_hour_spec.rb",
     "spec/enterprise/models/account_spec.rb",
+    "spec/enterprise/controllers/enterprise/super_admin/app_configs_controller_spec.rb",
+    "spec/lib/config_loader_spec.rb",
     "spec/models/email_template_spec.rb",
     "spec/services/email_campaigns/ses/sender_spec.rb",
     "spec/services/email_campaigns/ses/event_destination_ensurer_spec.rb",
@@ -54,7 +60,7 @@ def changes(base, head, include_deleted=False):
 
 def relevant(path):
     return bool(
-        FEATURE.search(path) or path in PREREQUISITES or path in BASELINE_SPECS
+        feature_path(path) or path in PREREQUISITES or path in BASELINE_SPECS
         or path.startswith((".github/scripts/email-protection", "spec/support/"))
         or re.search(r"/i18n/locale/[^/]+/(campaign|crm|index)\.(json|js)$", path)
     )
@@ -63,14 +69,14 @@ def relevant(path):
 def select(mode, files):
     if mode == "rspec":
         return [p for p in files if p.startswith("spec/") and p.endswith("_spec.rb")
-                and (FEATURE.search(p) or p in BASELINE_SPECS)]
+                and (feature_path(p) or p in BASELINE_SPECS)]
     if mode == "pure":
         return [p for p in files if p.endswith("_test.rb") and p.startswith((
             "spec/pure/email_campaigns/", "spec/services/email_campaigns/reputation/"))]
     if mode == "frontend":
         return [p for p in files if p.startswith("app/javascript/")
                 and re.search(r"\.(spec|test)\.[cm]?[jt]sx?$", p)
-                and (FEATURE.search(p) or "/specs/campaigns/" in p
+                and (feature_path(p) or "/specs/campaigns/" in p
                      or p.endswith("/api/specs/campaign.spec.js"))]
     if mode == "ruby-lint":
         return [p for p in files if p.endswith((".rb", ".rake"))

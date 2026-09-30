@@ -9,11 +9,11 @@ RSpec.describe EmailCampaigns::Reputation::ProviderGate do
 
   it 'blocks missing, unknown, stale and future telemetry, with an explicit configurable unknown policy' do
     expect(described_class.protection(config: config, now: now)[:code]).to eq('provider_telemetry_unknown')
-    state = EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: now - 901)
+    state = EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', checked_at: now - 901)
     expect(described_class.protection(config: config, now: now)).to be_present
-    state.update!(observed_at: now + 1)
+    state.update!(checked_at: now + 1)
     expect(described_class.protection(config: config, now: now)).to be_present
-    state.update!(observed_at: now, status: 'unknown')
+    state.update!(checked_at: now, status: 'unknown')
     expect(described_class.protection(config: config, now: now)).to be_present
     allow(config).to receive(:unknown_action).and_return('allow')
     expect(described_class.protection(config: config, now: now)).to be_nil
@@ -30,7 +30,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderGate do
 
   it 'scopes provider state by AWS account and region, never tenant' do
     EmailProviderState.create!(provider_key: "#{config.provider_key}-other-region", status: 'blocked')
-    EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: now)
+    EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', checked_at: now)
     expect(described_class.protection(config: config, now: now)).to be_nil
+  end
+
+  it 'allows an old official rate when the successful provider check is current' do
+    EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: now - 10.hours, checked_at: now)
+
+    expect(described_class.protection(config: config, now: now)).to be_nil
+    expect(described_class.protection(config: config, now: now + 901.seconds)[:code]).to eq('provider_telemetry_unknown')
   end
 end

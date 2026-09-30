@@ -56,7 +56,7 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do
     expect(service.harmful_feedback_fingerprint).not_to eq(original)
   end
 
-  it 'counts global Suppressed as permanent harmful feedback, deduplicates it and pauses at five percent' do
+  it 'counts global Suppressed as permanent harmful feedback, deduplicates it and reports high local risk at five percent' do
     recipients = Array.new(100) do |index|
       campaign.email_campaign_recipients.create!(email: "suppressed#{index}@example.com", sent_at: now - 1.hour)
     end
@@ -71,7 +71,7 @@ RSpec.describe EmailCampaigns::Reputation::Metrics do
     expect(service.harmful_feedback_fingerprint).to eq(harmful)
     expect(service.call).to include(permanent: 5, bounced: 5)
     policy = EmailCampaigns::Reputation::Policy.new('EMAIL_REPUTATION_MODE' => 'enforce')
-    expect(EmailCampaigns::Reputation::Evaluator.new(account, policy: policy).evaluate!).to include(blocked: true)
+    expect(EmailCampaigns::Reputation::Evaluator.new(account, policy: policy).evaluate!).to include(blocked: false, level: 'high_risk')
   end
 
   it 'includes late global Suppressed feedback in the harmful fingerprint outside the local cohort' do

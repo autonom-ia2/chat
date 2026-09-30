@@ -22,7 +22,24 @@
           <%= form.label "app_config[#{key}]", @installation_configs[key]&.dig('display_title') || key %>
         </div>
         <div class="-mt-2 field-unit__field ">
-          <% if @installation_configs[key]&.dig('type') == 'boolean' %>
+          <% if @config == 'typesafe' && key == 'TYPESAFE_JEV_ENABLED' %>
+            <div class="mt-2 flex items-center gap-2">
+              <%= form.hidden_field "app_config[#{key}]", value: 'false' %>
+              <%= form.check_box "app_config[#{key}]",
+                  { checked: ActiveModel::Type::Boolean.new.cast(@app_config[key]), class: "h-4 w-4" },
+                  'true', 'false'
+              %>
+              <span class="text-sm text-n-slate-11"><%= t('super_admin.typesafe.enabled') %></span>
+            </div>
+          <% elsif @config == 'typesafe' && key == 'TYPESAFE_JEV_MODEL' %>
+            <%= form.hidden_field "app_config[#{key}]", value: TypesafeAi::Config::DEFAULT_MODEL %>
+            <input
+              type="text"
+              value="<%= TypesafeAi::Config::DEFAULT_MODEL %>"
+              readonly
+              class="mt-2 border border-slate-100 p-1.5 rounded-md w-full bg-slate-50 text-n-slate-11"
+            />
+          <% elsif @installation_configs[key]&.dig('type') == 'boolean' %>
             <%= form.select "app_config[#{key}]",
               [["True", true], ["False", false]],
               { selected: ActiveModel::Type::Boolean.new.cast(@app_config[key]) },
@@ -35,6 +52,17 @@
                 wrap: 'off',
                 class: "mt-2 border font-mono text-xs border-slate-100 p-1 rounded-md overflow-scroll"
             %>
+          <% elsif @installation_configs[key]&.dig('type') == 'secret' && @config == 'typesafe' && key == 'TYPESAFE_API_KEY' %>
+            <%= form.password_field "app_config[#{key}]",
+                id: "app_config_#{key}",
+                value: nil,
+                autocomplete: 'new-password',
+                placeholder: (@typesafe_secret_configured ? t('super_admin.typesafe.keep_key') : t('super_admin.typesafe.paste_key')),
+                class: "mt-2 border border-slate-100 p-1.5 rounded-md w-full"
+            %>
+            <p class="pt-2 text-xs text-slate-400">
+              <%= @typesafe_secret_configured ? t('super_admin.typesafe.key_configured') : t('super_admin.typesafe.key_missing') %>
+            </p>
           <% elsif @installation_configs[key]&.dig('type') == 'secret' %>
             <div class="relative">
               <%= form.password_field "app_config[#{key}]",
@@ -72,6 +100,12 @@
     <% end %>
     <div class="form-actions">
       <%= form.submit "Submit" %>
+    </div>
+  <% end %>
+  <% if @config == 'typesafe' %>
+    <div class="mt-4">
+      <%= button_to t('super_admin.typesafe.test_connection'), super_admin_test_typesafe_app_config_path(config: 'typesafe'), method: :post,
+          class: "border border-slate-100 rounded-md px-3 py-2 text-sm" %>
     </div>
   <% end %>
 </section>

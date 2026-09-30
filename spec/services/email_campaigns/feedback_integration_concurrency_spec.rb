@@ -88,11 +88,11 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
       # SNS would then wait for that same unique key: two SQL sessions form a cycle.
       EmailCampaigns::Sns::EventProcessor.new(payload).process
     end
-    expect(completed(worker)).to include(blocked: true)
+    expect(completed(worker)).to include(blocked: false, level: 'high_risk')
     expect(waiting_sql).to match(/SELECT .*FROM "accounts".*FOR UPDATE/m)
     state = EmailReputationState.where(account: account).sole
     expect(state).to have_attributes(feedback_version: 1, evaluated_feedback_version: 1, observation_generation: 1)
-    expect(state.trigger_snapshot.fetch('metrics')).to include('complaints' => 1, 'evaluation_generation' => 1)
+    expect(state.current_metrics).to include('complaints' => 1, 'evaluation_generation' => 1)
     expect(recipient.email_events.complaint.sole.payload).to eq(payload)
     expect(EmailSuppression.find_by!(account: account, email: recipient.email).reason).to eq('complaint')
   end
@@ -181,7 +181,7 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
     expect(EmailSuppression.suppressed?(account, recipient.email)).to be(true)
   end
 
-  it 'rejects a resume collected before SNS committed and preserves its incident and paused campaign' do
+  it 'discards diagnostics collected before SNS while preserving individual complaint suppression' do
     safe_cohort
     campaign.pause!
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'synthetic incident' } })
@@ -207,10 +207,10 @@ RSpec.describe 'Feedback integration lock protocol', type: :model do
     Timeout.timeout(5) { collected.pop }
     EmailCampaigns::Sns::EventProcessor.new(payload).process
     publish << true
-    expect(completed(worker)).to include(protection: include(code: 'reputation_evaluation_superseded'))
-    expect(campaign.reload).to be_paused
+    expect(completed(worker)).to be(true)
+    expect(campaign.reload).to be_sending
     expect(recipient.reload).to be_complained
-    expect(EmailReputationState.find_by!(account: account)).to have_attributes(blocked: true, trigger_snapshot: snapshot, feedback_version: 1)
+    expect(EmailReputationState.find_by!(account: account)).to have_attributes(blocked: false, trigger_snapshot: snapshot, feedback_version: 1)
     expect(EmailReputationAudit.where(account: account, action: 'released')).to be_empty
   ensure
     publish << true

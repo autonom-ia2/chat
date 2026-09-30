@@ -55,7 +55,7 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
     expect(response).to have_http_status(:ok)
   end
 
-  it 'reevaluates with the actual collector, leaves protection sticky, and resumes only on the explicit POST' do
+  it 'reevaluates with the actual collector, preserves local history, and resumes only on the explicit POST' do
     recipient
     create_list(:email_campaign_recipient, 50, email_campaign: campaign, status: :sent, sent_at: 1.hour.ago)
     state = EmailReputationState.create!(account: account, blocked: true, level: 'paused',
@@ -65,7 +65,7 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
     expect(response).to have_http_status(:ok)
     payload = response.parsed_body.fetch('payload')
     expect(payload).to include('id' => campaign.id, 'status' => 'paused', 'pause_reason' => 'manual')
-    expect(payload.fetch('protection')).to include('state' => 'paused', 'release_eligible' => true)
+    expect(payload.fetch('protection')).to include('state' => 'healthy', 'release_eligible' => false)
     expect(payload.dig('protection', 'capabilities', 'resume')).to be(true)
     state.reload
     generation = state.observation_generation
@@ -85,39 +85,30 @@ RSpec.describe 'Email campaign reports integration #436', :aggregate_failures, t
     expect(payload).to include('id' => campaign.id, 'status' => 'sending', 'pause_reason' => nil)
     expect(payload.fetch('protection')).to include('state' => 'healthy')
     expect(payload.dig('protection', 'capabilities', 'resume')).to be(false)
-    expect(state.reload).not_to be_blocked
+    expect(state.reload).to be_blocked
     expect(state.observation_generation).to be > generation
     expect(state.current_metrics['evaluation_generation']).to eq(state.observation_generation)
-    expect(account.reload.internal_attributes).not_to have_key('email_campaigns_paused')
+    expect(account.reload.internal_attributes).to have_key('email_campaigns_paused')
   end
 
-  it 'uses fresh evidence after feedback instead of trusting eligibility supplied by the browser' do
+  it 'uses global protection instead of trusting eligibility supplied by the browser' do
     recipient
-    rows = create_list(:email_campaign_recipient, 50, email_campaign: campaign, status: :sent, sent_at: 1.hour.ago)
     state = EmailReputationState.create!(account: account, blocked: true, level: 'paused')
-    post "#{base}/campaigns/#{campaign.id}/reevaluate", headers: headers, as: :json
-    expect(response.parsed_body.dig('payload', 'protection', 'release_eligible')).to be(true)
-    generation = state.reload.observation_generation
-    rows.first.email_events.create!(event_type: :complaint, payload: { private: 'provider-diagnostic' })
-    get "#{base}/campaigns/#{campaign.id}", headers: headers, as: :json
-    expect(response.parsed_body.dig('payload', 'protection', 'release_eligible')).to be(false)
+    allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection).and_return(kind: 'provider', code: 'provider_blocked')
     post "#{base}/campaigns/#{campaign.id}/resume", params: { release_eligible: true, protection: { capabilities: { resume: true } } },
                                                     headers: headers, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to include('error' => 'email_campaign.protected')
     expect(response.parsed_body.fetch('protection')).to eq(
-      'kind' => 'reputation', 'code' => 'reputation_paused', 'overridable' => false, 'resume_allowed' => false
+      'kind' => 'provider', 'code' => 'provider_blocked', 'overridable' => false, 'resume_allowed' => false
     )
     expect(response.parsed_body.keys).to contain_exactly('error', 'protection')
-    expect(response.body).not_to include(
-      'provider-diagnostic', 'current_metrics', 'policy', 'trigger_snapshot', 'actor_id', 'override', 'private-note'
-    )
+    expect(response.body).not_to include('current_metrics', 'policy', 'trigger_snapshot', 'actor_id', 'override', 'private-note')
     expect(campaign.reload).to be_paused
     expect(state.reload).to be_blocked
-    expect(state.observation_generation).to be > generation
   end
 
-  it 'invalidates an older published generation on GET without evaluating or writing' do
+  it 'keeps local generation independent from admission on GET without evaluating or writing' do
     recipient
     create_list(:email_campaign_recipient, 50, email_campaign: campaign, status: :sent, sent_at: 1.hour.ago)
     post "#{base}/campaigns/#{campaign.id}/reevaluate", headers: headers, as: :json

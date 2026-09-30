@@ -217,6 +217,36 @@ resource "aws_iam_role_policy" "ec2_app" {
   })
 }
 
+resource "aws_iam_role_policy" "email_campaigns" {
+  name = "ses-email-campaigns"
+  role = aws_iam_role.ec2_app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:CreateEmailIdentity",
+          "ses:GetEmailIdentity",
+          "ses:CreateConfigurationSet",
+          "ses:GetConfigurationSet",
+          "ses:PutConfigurationSetEventDestination",
+          "ses:SendEmail",
+          "ses:GetAccount",
+          "cloudwatch:GetMetricData"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion" = "sa-east-1"
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2_app" {
   name = "${local.name}-ec2-app"
   role = aws_iam_role.ec2_app.name

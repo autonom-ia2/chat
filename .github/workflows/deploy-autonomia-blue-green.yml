@@ -154,6 +154,9 @@ jobs:
 
           path = Path("chatwoot.env")
           required = {
+              "EMAIL_REPUTATION_PROVIDER_MONITOR": "true",
+              "EMAIL_REPUTATION_AWS_ACCOUNT_ID": "140023375763",
+              "EMAIL_REPUTATION_PROVIDER_UNKNOWN_ACTION": "block",
               # Widget "Copiloto Autonom.ia" (agentes internos) — o plano V2
               # previa a flag em prod, mas ela so foi setada na VPS legada.
               "CRM_COPILOT_ENABLED": "true",
@@ -327,6 +330,7 @@ jobs:
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
           docker pull "$IMAGE_URI"
           docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
+          docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
           systemctl restart chatwoot-web.service
           if [ "$START_WORKER_AFTER_DEPLOY" = "true" ]; then
             systemctl restart chatwoot-worker.service

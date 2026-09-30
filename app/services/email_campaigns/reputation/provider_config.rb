@@ -26,7 +26,9 @@ class EmailCampaigns::Reputation::ProviderConfig
   def provider_account(env)
     account = env.fetch('EMAIL_REPUTATION_AWS_ACCOUNT_ID', '')
     return 'unconfigured' if account.empty? && !enabled
-    raise ArgumentError, 'valid provider AWS account id is required' unless account.match?(/\A\d{12}\z/)
+
+    valid = account.length == 12 && account.each_char.all? { |char| ('0'..'9').cover?(char) }
+    raise ArgumentError, 'valid provider AWS account id is required' unless valid
 
     account
   end

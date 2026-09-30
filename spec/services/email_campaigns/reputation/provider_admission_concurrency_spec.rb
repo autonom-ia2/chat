@@ -44,7 +44,10 @@ RSpec.describe EmailCampaigns::DeliveryClaim do # rubocop:disable RSpec/SpecFile
 
   [false, true].each do |existing_provider|
     it "denies the final claim after monitor commits its block (existing provider: #{existing_provider})" do
-      EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: Time.current) if existing_provider
+      if existing_provider
+        EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: Time.current,
+                                   checked_at: Time.current)
+      end
       entering = Queue.new
       owner = main_pid
       allow(monitor).to receive(:update_observation!).and_wrap_original do |original, *args|
@@ -76,7 +79,7 @@ RSpec.describe EmailCampaigns::DeliveryClaim do # rubocop:disable RSpec/SpecFile
   end
 
   it 'makes monitor wait when the final claim already owns provider, then rejects the next claim' do # rubocop:disable RSpec/MultipleExpectations -- both serial orders
-    provider = EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: Time.current)
+    provider = EmailProviderState.create!(provider_key: config.provider_key, status: 'healthy', observed_at: Time.current, checked_at: Time.current)
     collected = Queue.new
     owner = main_pid
     decision = EmailCampaigns::PreflightDecision.new
@@ -118,10 +121,15 @@ RSpec.describe EmailCampaigns::DeliveryClaim do # rubocop:disable RSpec/SpecFile
       { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' }
     end
     cloudwatch = instance_double(Aws::CloudWatch::Client)
-    allow(cloudwatch).to receive(:get_metric_statistics) do |args|
+    allow(cloudwatch).to receive(:get_metric_data) do |args|
       depths << connection.open_transactions
-      Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-        datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: args[:end_time], average: 0)]
+      Aws::CloudWatch::Types::GetMetricDataOutput.new(
+        metric_data_results: [
+          Aws::CloudWatch::Types::MetricDataResult.new(
+            id: 'rate', status_code: 'Complete',
+            timestamps: [args[:end_time]], values: [0]
+          )
+        ]
       )
     end
     EmailCampaigns::Reputation::ProviderMonitor.new(config: config, ses: ses, cloudwatch: cloudwatch).call

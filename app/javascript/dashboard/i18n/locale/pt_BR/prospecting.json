@@ -1,0 +1,932 @@
+{
+  "PROSPECTING": {
+    "STATES": {
+      "LOADING": "Carregando..."
+    },
+    "SEARCH_COUNTRY": {
+      "LABEL": "País da busca",
+      "HINT": "O Google procura cidades, endereços e empresas neste país. O idioma das telas não muda.",
+      "DEFAULT_HINT": "Sem escolha, a busca é no Brasil.",
+      "COUNTRIES": {
+        "BR": "Brasil",
+        "PT": "Portugal",
+        "US": "Estados Unidos",
+        "FR": "França",
+        "ES": "Espanha",
+        "DE": "Alemanha",
+        "IT": "Itália",
+        "GB": "Reino Unido",
+        "MX": "México",
+        "AR": "Argentina",
+        "CL": "Chile",
+        "CO": "Colômbia",
+        "PE": "Peru",
+        "EC": "Equador",
+        "PY": "Paraguai",
+        "UY": "Uruguai",
+        "AT": "Áustria",
+        "IE": "Irlanda",
+        "IN": "Índia"
+      },
+      "GROUPS": {
+        "SOUTH_AMERICA": "América do Sul",
+        "NORTH_AMERICA": "América do Norte e Central",
+        "EUROPE": "Europa",
+        "ASIA": "Ásia",
+        "OTHER": "Outros"
+      }
+    },
+    "DECISION_MAKER": {
+      "LABEL": "Tipo de decisor",
+      "COMING_SOON": "{label} (em breve)",
+      "TYPES": {
+        "OWNER": "Proprietário",
+        "CEO": "CEO",
+        "COMMERCIAL": "Comercial",
+        "FINANCIAL": "Financeiro",
+        "MARKETING": "Marketing",
+        "HR": "RH",
+        "OPERATIONS": "Operações",
+        "TECHNOLOGY": "Tecnologia",
+        "LEGAL": "Jurídico",
+        "COMPLIANCE": "Compliance",
+        "RISK": "Riscos"
+      }
+    },
+    "LOCATION_ERRORS": {
+      "SUGGESTIONS": "Não foi possível buscar sugestões de local agora. Tente de novo em instantes.",
+      "DETAILS": "Não foi possível confirmar este local agora. Escolha a sugestão de novo."
+    },
+    "ERRORS": {
+      "LOAD_SEARCHES": "Não foi possível carregar as buscas.",
+      "LOAD_SEARCH": "Não foi possível abrir esta busca.",
+      "CREATE_SEARCH": "Não foi possível fazer esta busca.",
+      "CREATE_CONTACT": "Não foi possível criar este contato.",
+      "UPDATE_LEAD": "Não foi possível atualizar este lead.",
+      "UPDATE_SEARCH": "Não foi possível atualizar esta busca.",
+      "LOAD_CRM": "Não foi possível carregar os funis do CRM.",
+      "LOAD_LISTS": "Não foi possível carregar as listas.",
+      "LOAD_LIST": "Não foi possível abrir esta lista.",
+      "CREATE_LIST": "Não foi possível criar esta lista.",
+      "ADD_LEAD_TO_LIST": "Não foi possível adicionar este lead à lista.",
+      "REMOVE_LEAD_FROM_LIST": "Não foi possível tirar este lead da lista.",
+      "CREATE_CAMPAIGN_SEGMENT": "Não foi possível criar o público de campanha.",
+      "LOAD_SETTINGS": "Não foi possível carregar as configurações da prospecção.",
+      "SAVE_SETTINGS": "Não foi possível salvar as configurações da prospecção.",
+      "DELETE_SEARCH": "Não foi possível excluir esta busca.",
+      "ENRICH_LEAD": "Não foi possível enriquecer este lead."
+    },
+    "SEARCH": {
+      "TITLE": "Buscar leads",
+      "SUBTITLE": "Consulte buscas recentes, execute novas pesquisas e trabalhe os resultados.",
+      "HISTORY_TITLE": "Histórico de buscas",
+      "RECENT_SEARCHES": "Buscas recentes",
+      "RESULTS_TITLE": "Resultados",
+      "RESULTS_FOR": "Resultados para {query}",
+      "NEW_SEARCH": "Nova busca",
+      "BACK_TO_RESULTS": "Voltar",
+      "QUERY_PLACEHOLDER": "Segmento ou termo",
+      "LOCATION_PLACEHOLDER": "Cidade, bairro ou região",
+      "LOCATION_HINT": "Use uma região clara para melhorar o retorno do Google Places.",
+      "AUTOCOMPLETE_HINT": "Sugestões do Google aparecem quando a chave está configurada.",
+      "AUTOCOMPLETE_READY_HINT": "Digite e selecione uma localização sugerida.",
+      "AUTOCOMPLETE_DISABLED_HINT": "As sugestões do Google ainda não estão disponíveis na plataforma.",
+      "SUGGESTING_LOCATIONS": "Buscando sugestões...",
+      "LOCATION_CONFIRMED": "Localização confirmada.",
+      "SEARCH_SUMMARY_HINT": "Confira os parâmetros antes de executar.",
+      "ACTION": "Buscar",
+      "CANCEL": "Cancelar",
+      "SEARCHING": "Buscando...",
+      "REPEAT_SEARCH": "Repetir",
+      "DELETE_SEARCH": "Excluir busca",
+      "DELETE_CONFIRM_TITLE": "Excluir busca",
+      "DELETE_CONFIRM_DESCRIPTION": "A busca \"{query}\" será removida do histórico. Os leads salvos permanecem disponíveis.",
+      "DELETE_CONFIRM_ACTION": "Excluir",
+      "LOAD_MORE": "Carregar mais",
+      "LOADING_MORE": "Carregando...",
+      "HISTORY_COUNT": "{count} buscas",
+      "RECENT_METRICS": "{leads} leads · {contacts} contatos · {crm} CRM · score {score}",
+      "SELECT_VISIBLE": "Selecionar visíveis",
+      "SELECTED_COUNT": "{count} selecionados",
+      "BULK_CONTACTS": "Criar contatos",
+      "CSV_EXPORT": "Exportar leads",
+      "EXPORT_CSV": "CSV",
+      "EXPORT_XLSX": "Excel (.xlsx)",
+      "EXPORT_ERROR": "Não foi possível exportar os leads. Tente de novo.",
+      "FILTER_BUTTON": "Filtros",
+      "OPEN_DETAILS": "Detalhes",
+      "CLOSE_DETAILS": "Fechar detalhes",
+      "CREATE_CONTACT": "Criar contato",
+      "CREATING_CONTACT": "Criando...",
+      "CONTACT_CREATED": "Contato criado",
+      "OPEN_CONTACT": "Abrir contato",
+      "OPEN_CRM_CARD": "Abrir card",
+      "ENRICH_LEAD": "Enriquecer",
+      "ENRICHED": "Enriquecido",
+      "ENRICHING": "Enriquecendo...",
+      "ENRICHMENT_COMPLETED": "Lead enriquecido.",
+      "ENRICHMENT_QUEUED": "Enriquecimento na fila. O card se atualiza sozinho quando terminar.",
+      "PARTIAL_RESULTS": "O Google parou de responder no meio da busca. Mostramos os lugares que chegaram; busque de novo para tentar completar.",
+      "ENRICHMENT_DISABLED": "A pesquisa de empresa não está liberada para esta conta. Fale com o suporte.",
+      "ENRICHMENT_NO_SITE": "Este lead não possui site para enriquecimento.",
+      "ENRICHMENT_TITLE": "Enriquecimento",
+      "ENRICHMENT_SUMMARY": "Resumo retornado",
+      "ENRICHED_EMAIL": "E-mail encontrado",
+      "ENRICHED_WHATSAPP": "WhatsApp encontrado",
+      "ENRICHED_INSTAGRAM": "Instagram encontrado",
+      "ENRICHED_FACEBOOK": "Facebook encontrado",
+      "ENRICHED_LINKEDIN": "LinkedIn encontrado",
+      "ENRICHED_CNPJ": "CNPJ encontrado",
+      "DECISION_MAKER": "Decisor",
+      "CRM_DISABLED": "Configure um funil CRM ativo para criar cards.",
+      "CRM_DISABLED_SHORT": "Sem funil",
+      "CRM_STAGE_EMPTY": "Selecione uma etapa.",
+      "CRM_TARGET": "Funil CRM",
+      "CRM_CONFIG_HINT": "O funil CRM desta busca usa o padrão da conta, exceto quando alterado no histórico.",
+      "CONFIGURE_SEARCH": "Configurações",
+      "EDIT_SEARCH": "Editar e buscar",
+      "SAVE_CONFIG": "Salvar",
+      "EMPTY": "Nenhuma busca registrada.",
+      "RESULTS_EMPTY": "Execute uma busca ou selecione uma busca do histórico.",
+      "RESULTS_EMPTY_AFTER_SEARCH": "Nenhum lead encontrado para esta busca.",
+      "OPEN_SITE": "Abrir site",
+      "WHATSAPP": "WhatsApp",
+      "NO_WHATSAPP": "Sem WhatsApp",
+      "CHECKING_WHATSAPP": "Verificando...",
+      "WHATSAPP_VERIFIED": "verificado",
+      "PHONE_NOT_WHATSAPP": "Não é WhatsApp",
+      "CALL": "Ligar",
+      "OPEN_MAP": "Mapa",
+      "MAP_TITLE": "Mapa",
+      "MAP_HINT": "Visualização da região e dos leads encontrados.",
+      "MAP_PREVIEW": "Prévia do mapa",
+      "MAP_NO_COORDINATES": "Os leads desta busca ainda não possuem coordenadas para posicionar marcadores.",
+      "MAP_API_KEY_MISSING": "O mapa ainda não está disponível na plataforma.",
+      "MAP_LOAD_ERROR": "Não foi possível carregar o mapa.",
+      "ADVANCED_FILTERS_HINT": "Os filtros abaixo são aplicados antes de salvar cada lead retornado pela busca.",
+      "SCORE_MODE_GBP_HINT": "Prioriza empresas com lacunas no Google Meu Negócio.",
+      "SCORE_MODE_GENERAL_HINT": "Prioriza empresas com dados e reputação mais fortes.",
+      "AREA_RADIUS": "Raio",
+      "AREA_RADIUS_HINT": "Busca empresas próximas ao centro selecionado, dentro do raio informado.",
+      "AREA_VIEWPORT": "Área visível",
+      "AREA_VIEWPORT_SHORT": "Área do mapa",
+      "AREA_VIEWPORT_HINT": "Mova ou aplique zoom no mapa. A busca usará a área visível no momento de executar.",
+      "AREA_DRAW": {
+        "CIRCLE": "Círculo desenhado",
+        "RECTANGLE": "Retângulo desenhado",
+        "POLYGON": "Polígono desenhado",
+        "SHORT_CIRCLE": "Área desenhada · círculo",
+        "SHORT_RECTANGLE": "Área desenhada · retângulo",
+        "SHORT_POLYGON": "Área desenhada · polígono",
+        "HINT": "Desenhe no mapa a área onde a busca deve procurar. Só entram empresas dentro dela.",
+        "HINT_NEEDS_LOCATION": "Escolha o local para abrir o mapa e desenhar a área.",
+        "HINT_CIRCLE": "Clique no mapa para pôr o centro do círculo. Arraste a borda para mudar o raio e o meio para mover.",
+        "HINT_RECTANGLE": "Clique no mapa para criar o retângulo. Arraste os cantos para ajustar e o meio para mover.",
+        "HINT_POLYGON": "Clique no mapa para marcar cada ponto do contorno, pelo menos três. Arraste um ponto para ajustar.",
+        "MAP_LABEL": "Mapa para desenhar a área da busca",
+        "READY": "Área pronta para a busca.",
+        "PENDING": "Desenhe a área para liberar a busca.",
+        "POINTS": "{count} pontos marcados.",
+        "UNDO_POINT": "Desfazer último ponto",
+        "CLEAR": "Limpar desenho"
+      },
+      "AUTO_EXPAND_RADIUS_HINT": "Se vierem poucos resultados, tenta uma vez com o dobro do raio, até 10 km, e só fica com essa tentativa se ela trouxer mais.",
+      "PRIORITY_GOOGLE_RANK": "G #{rank}",
+      "PRIORITY_POSITION": "Posição {position}",
+      "PRIORITY_POSITION_IN_LIST": "Posição {position} da lista",
+      "PRIORITY_FIRST_CALL_SHORT": "Ligar 1º",
+      "PRIORITY_FIRST_CALL": "Ligar primeiro",
+      "CARD_SIGNALS": {
+        "HAS_SITE": "Tem site",
+        "NO_SITE": "Sem site",
+        "HAS_PHONE": "Tem fone",
+        "NO_PHONE": "Sem fone",
+        "NO_PHOTO": "Sem foto",
+        "FEW_PHOTOS": "Pouca foto",
+        "PHOTOS": "{count} fotos",
+        "GOOGLE_RANK": "#{rank} Google",
+        "RATING": "★ {value}",
+        "REVIEWS": "{count} avaliações"
+      },
+      "CARD_SOCIAL": {
+        "INSTAGRAM": "Abrir Instagram",
+        "FACEBOOK": "Abrir Facebook",
+        "LINKEDIN": "Abrir LinkedIn"
+      },
+      "SELECT_LEAD": "Selecionar lead",
+      "DESELECT_LEAD": "Desmarcar lead",
+      "SCORE_BASE": "Score base {score}",
+      "ADDRESS_SEPARATOR": " - ",
+      "RATING_LABEL": "{rating} estrelas",
+      "REVIEWS_LABEL": "{count} avaliações",
+      "RADIUS_KM_VALUE": "{value} km",
+      "RADIUS_EXPANDED_VALUE": "{value} km, ampliado de {requested} km",
+      "CONTACT_DATA": "Contato",
+      "REPUTATION": "Reputação",
+      "LATEST_REVIEWS_TITLE": "Últimas {count} avaliações",
+      "COORDINATES": "Coordenadas",
+      "SCORE_EVALUATION_TITLE": "Avaliação do score",
+      "SCORE_EVALUATION_HINT": "Critérios usados para calcular a prioridade deste lead.",
+      "SCORE_VALUE": "Score {score}",
+      "SCORE_SIGNAL": "Sinal {value}/100",
+      "SCORE_WEIGHT": "Peso",
+      "SCORE_CONTRIBUTION": "Contribuição",
+      "NEGATIVE_FACTORS_TITLE": "Fatores de atenção",
+      "ACTIVE_FILTERS": "{count} filtros",
+      "VISIBLE_COUNT": "{count} leads visíveis",
+      "TIME_NOW": "agora",
+      "TIME_MINUTES_AGO": "há {count}min",
+      "TIME_HOURS_AGO": "há {count}h",
+      "TIME_DAYS_AGO": "há {count}d",
+      "MODE_BADGE": {
+        "GBP": "Modo: GMN (atacar lacunas)",
+        "GENERAL": "Modo: Geral (qualificar leads)",
+        "GBP_TOOLTIP": "Modo GMN: a busca prioriza empresas com lacunas no Google Meu Negócio, que viram oportunidade comercial.",
+        "GENERAL_TOOLTIP": "Modo Geral: a busca prioriza empresas qualificadas, bem estruturadas no Google."
+      },
+      "PRESETS": {
+        "TITLE": "Sua jogada",
+        "HINT": "Escolha a estratégia. Ela define os filtros base e o tipo de lead que a busca vai trazer. Opcional.",
+        "NONE_NAME": "Sem jogada",
+        "NONE_PITCH": "Busca livre",
+        "ITEMS": {
+          "VENDER_SITE": {
+            "NAME": "Vender site",
+            "PITCH": "Empresas sem site no Google"
+          },
+          "GESTAO_REVIEWS": {
+            "NAME": "Gestão de avaliações",
+            "PITCH": "Avaliação fraca, volume relevante"
+          },
+          "OTIMIZACAO_GBP": {
+            "NAME": "Otimização GMN",
+            "PITCH": "Maduras, mas com lacuna no perfil"
+          },
+          "PROVA_SOCIAL": {
+            "NAME": "Prova social",
+            "PITCH": "Empresas bem avaliadas, boa reputação"
+          },
+          "MERCADO_MADURO": {
+            "NAME": "Mercado maduro",
+            "PITCH": "Volume e nota saudáveis"
+          },
+          "PRESENCA_DIGITAL": {
+            "NAME": "Presença digital",
+            "PITCH": "Site, telefone e perfil completo"
+          }
+        }
+      },
+      "SECTIONS": {
+        "WHERE": "Onde buscar",
+        "DECIDER": "Decisor e quantidade",
+        "RUN": "Executar",
+        "ADVANCED": "Avançada"
+      },
+      "FILTERS": {
+        "ANY": "Todos",
+        "YES": "Sim",
+        "NO": "Não"
+      },
+      "FILTER_DRAWER": {
+        "TITLE": "Filtros avançados",
+        "BASE_PRESET": "Jogada base:",
+        "BASE_MODE": "Modo:",
+        "OPEN": "Filtros avançados",
+        "CLOSE": "Fechar filtros",
+        "APPLY": "Aplicar",
+        "CLEAR_ALL": "Limpar tudo",
+        "GROUP_COUNT": "{count} filtros ativos",
+        "HAS": "Tem",
+        "HAS_NOT": "Não tem",
+        "REVIEWS_PLACEHOLDER": "ex: 10",
+        "OPEN_NOW": "Aberto agora",
+        "HAS_OPENING_HOURS": "Tem horário",
+        "YES": "Sim",
+        "GROUPS": {
+          "PAIN": {
+            "TITLE": "Dor do lead",
+            "SUBTITLE": "O que falta no Google que você vende"
+          },
+          "QUALIFICATION": {
+            "TITLE": "Qualificação mínima",
+            "SUBTITLE": "Corta empresa fantasma e sem volume"
+          },
+          "VISIBILITY": {
+            "TITLE": "Visibilidade no Google",
+            "SUBTITLE": "Quando você vende SEO"
+          },
+          "OPERATIONAL": {
+            "TITLE": "Operacional",
+            "SUBTITLE": "O que precisa para contatar"
+          }
+        },
+        "RATING": {
+          "LABEL": "Avaliação",
+          "OPERATOR": "Operador da avaliação",
+          "VALUE": "Estrelas da avaliação",
+          "ANY": "Qualquer",
+          "ABOVE": "Acima de",
+          "BELOW": "Abaixo de",
+          "VALUE_PLACEHOLDER": "Estrelas",
+          "STARS": "{value} estrelas"
+        },
+        "RANK": {
+          "LABEL": "Posição no Google",
+          "ANY": "{min} a {max} (qualquer)",
+          "RANGE": "{min} a {max}",
+          "MIN_ARIA": "Posição mínima no Google",
+          "MAX_ARIA": "Posição máxima no Google"
+        }
+      },
+      "SCORE_MODES": {
+        "GBP": "Google Meu Negócio",
+        "GENERAL": "Geral"
+      },
+      "SCORE_COMPONENTS": {
+        "RATING": "Avaliação Google",
+        "REVIEWS_COUNT": "Volume de avaliações",
+        "VOLUME": "Volume de avaliações",
+        "WEBSITE": "Presença de site",
+        "PHONE": "Presença de telefone",
+        "ACTIVITY": "Atividade recente",
+        "PHOTOS": "Fotos",
+        "GOOGLE_RANK": "Posição no Google",
+        "QUERY_RELEVANCE": "Relevância da busca"
+      },
+      "NEGATIVE_FACTORS": {
+        "MISSING_WEBSITE": "Sem site informado",
+        "MISSING_PHONE": "Sem telefone informado",
+        "LOW_RATING": "Avaliação abaixo do esperado",
+        "LOW_REVIEWS": "Poucas avaliações",
+        "MISSING_PHOTOS": "Sem fotos no perfil",
+        "INACTIVE_GBP": "Perfil com baixa atividade recente",
+        "ALREADY_IN_CRM": "Já está no CRM",
+        "RECENTLY_CONTACTED": "Contatado recentemente",
+        "OLD_REVIEWS": "Avaliação mais recente com mais de 2 anos",
+        "LOW_RATING_LOW_VOLUME": "Nota abaixo de 2 com poucas avaliações"
+      },
+      "SORT": {
+        "FIELDS": {
+          "PRIORITY": "Prioridade",
+          "SCORE": "Score",
+          "RATING": "Avaliação",
+          "REVIEWS": "Número de avaliações",
+          "DISTANCE": "Distância do centro",
+          "GOOGLE_RANK": "Posição no Google",
+          "CREATED": "Data",
+          "NAME": "Nome"
+        },
+        "DIRECTION": {
+          "ASC": "Crescente",
+          "DESC": "Decrescente"
+        },
+        "INVERT": "Inverter a ordem (agora {direction})"
+      },
+      "FIELDS": {
+        "PROVIDER": "Fonte",
+        "QUERY": "Termo",
+        "LOCATION": "Localização",
+        "AREA_TYPE": "Área de busca",
+        "RADIUS": "Raio (m)",
+        "RADIUS_KM": "Raio (km)",
+        "LIMIT": "Limite",
+        "CRM_PIPELINE": "Funil CRM",
+        "CRM_STAGE": "Etapa CRM",
+        "CATEGORY": "Categoria",
+        "PRIORITY": "Prioridade",
+        "SCORE_MODE": "Forma de pesquisa",
+        "SORT": "Ordenar",
+        "HAS_SITE": "Site",
+        "HAS_PHONE": "Telefone",
+        "HAS_PHOTOS": "Fotos",
+        "OPEN_NOW": "Aberto agora",
+        "RATING_MIN": "Avaliação mín.",
+        "RATING_MAX": "Avaliação máx.",
+        "REVIEWS_MIN": "Avaliações mín.",
+        "SEARCH_RANK_MAX": "Posição Google máx.",
+        "AUTO_EXPAND_RADIUS": "Expandir raio automaticamente"
+      },
+      "COLUMNS": {
+        "QUERY": "Busca",
+        "PROVIDER": "Fonte",
+        "STATUS": "Status",
+        "RESULTS": "Leads",
+        "CREATED_AT": "Criada em"
+      },
+      "SEND_TO_CRM": "Enviar ao CRM",
+      "ADD_TO_CAMPAIGN": "Adicionar à campanha",
+      "SAVED_PRESETS": {
+        "SAVE_AS": "Salvar como jogada",
+        "SAVE_AS_EMPTY": "Escolha pelo menos um filtro para salvar a jogada.",
+        "TITLE": "Salvar filtros como jogada",
+        "DESCRIPTION": "Dê um nome para usar estes filtros de novo. A jogada fica na grade da conta, no modo desta busca.",
+        "NAME": "Nome da jogada",
+        "NAME_PLACEHOLDER": "ex.: Sem site e bem avaliadas",
+        "SAVE": "Salvar jogada",
+        "CANCEL": "Cancelar",
+        "ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "TAGS": {
+          "HAS_WEBSITE_YES": "Com site",
+          "HAS_WEBSITE_NO": "Sem site",
+          "HAS_PHOTOS_YES": "Com fotos",
+          "HAS_PHOTOS_NO": "Sem fotos",
+          "REVIEWS_MIN": "{value}+ avaliações",
+          "RATING_MIN": "Nota acima de {value}",
+          "RATING_MAX": "Nota abaixo de {value}",
+          "OUTSIDE_TOP": "Fora do top {value} do Google",
+          "SEARCH_RANK_MAX": "Até a posição {value} do Google",
+          "HAS_PHONE_YES": "Com telefone",
+          "HAS_PHONE_NO": "Sem telefone",
+          "OPEN_NOW": "Aberto agora",
+          "HAS_OPENING_HOURS": "Com horário"
+        }
+      }
+    },
+    "LISTS": {
+      "TITLE": "Listas",
+      "HEADER_SUMMARY": "{lists} listas · {leads} leads disponíveis",
+      "NEW_LIST": "Nova Lista",
+      "EMPTY": "Nenhuma lista salva.",
+      "ALL_LISTS": "Listas",
+      "LISTS_COUNT": "{count} listas",
+      "DETAIL_TITLE": "Detalhes da lista",
+      "ADD_LEADS_TITLE": "Adicionar leads",
+      "CREATE_MODAL_TITLE": "Nova lista",
+      "CREATE": "Criar lista",
+      "CREATING": "Criando...",
+      "CREATED": "Lista criada.",
+      "CLOSE": "Fechar",
+      "CANCEL": "Cancelar",
+      "ADD_LEAD": "Adicionar",
+      "REMOVE_LEAD": "Remover",
+      "LEAD_ADDED": "Lead adicionado à lista.",
+      "LEADS_ADDED": "{count} leads adicionados.",
+      "LEAD_REMOVED": "Lead removido da lista.",
+      "NO_DESCRIPTION": "Sem descrição",
+      "CAMPAIGN_SEGMENT_TITLE": "Campanha",
+      "CAMPAIGN_SEGMENT_HINT": "Crie um público por etiqueta para usar em campanhas existentes. Nada será disparado automaticamente.",
+      "CAMPAIGN_SEGMENT_CREATE": "Criar público",
+      "CAMPAIGN_SEGMENT_CREATING": "Criando...",
+      "CAMPAIGN_SEGMENT_CREATED": "Público criado com a etiqueta {label}.",
+      "CAMPAIGN_SEGMENT_ONLY_LABEL": "Criar apenas etiqueta",
+      "CAMPAIGN_SEGMENT_LABEL": "Etiqueta: {label}",
+      "SEGMENT_READY": "Segmento criado",
+      "CAMPAIGN_READY_COUNT": "{count} prontos para campanha",
+      "CAMPAIGN_BLOCKED_COUNT": "{count} bloqueados por status/consentimento",
+      "SELECT_EMPTY": "Selecione uma lista para ver os leads.",
+      "SELECT_TO_ADD": "Selecione uma lista para adicionar leads.",
+      "LEADS_EMPTY": "Esta lista ainda não tem leads.",
+      "NO_AVAILABLE_LEADS": "Não há leads disponíveis fora desta lista.",
+      "SEARCH_AVAILABLE_LEADS": "Buscar lead por nome, telefone ou endereço",
+      "SELECTED_LEADS_COUNT": "{count} selecionados",
+      "ADDING_LEADS": "Adicionando...",
+      "ADD_SELECTED_LEADS": "Adicionar selecionados",
+      "NAME_PLACEHOLDER": "Campanha, praça ou segmento",
+      "DESCRIPTION_PLACEHOLDER": "Descrição opcional",
+      "LEADS_COUNT": "{count} leads",
+      "METRICS": {
+        "LEADS": "Leads",
+        "READY": "Prontos",
+        "CONTACTS": "Contatos",
+        "CRM": "CRM",
+        "BLOCKED": "Bloqueados",
+        "SEGMENT": "Segmento"
+      },
+      "FIELDS": {
+        "NAME": "Nome",
+        "DESCRIPTION": "Descrição",
+        "SEGMENT_NAME": "Nome do público",
+        "CAMPAIGN": "Campanha existente"
+      },
+      "COLUMNS": {
+        "NAME": "Lista",
+        "STATUS": "Status",
+        "CREATED_AT": "Criada em"
+      },
+      "SEND_LIST_TO_CRM": "Enviar lista ao CRM"
+    },
+    "QUALITY": {
+      "ALL_STATUSES": "Todos",
+      "DISCARD_REASON": "Motivo",
+      "DISCARD_REASON_PROMPT": "Informe o motivo do descarte",
+      "NO_STATUS_RESULTS": "Nenhum lead encontrado para este status.",
+      "SOURCE": "Origem",
+      "STATUS_FILTER": "Status",
+      "STATUSES": {
+        "new_lead": "Novo",
+        "qualified": "Qualificado",
+        "discarded": "Descartado",
+        "no_consent": "Sem consentimento",
+        "ready_for_campaign": "Pronto para campanha"
+      }
+    },
+    "LEAD_STATUS": {
+      "IN_CRM": "Já está no CRM",
+      "NO_OWNER": "sem responsável",
+      "DISCARDED": "Descartado",
+      "RESTORE": "Desfazer descarte",
+      "RESTORED": "Descarte desfeito. O lead voltou a novo.",
+      "RESTORE_ERROR": "Não foi possível desfazer o descarte."
+    },
+    "CONSENT_REFUSAL": {
+      "BADGE": "Não quer ser contatado",
+      "CANCEL": "Voltar",
+      "REFUSE": {
+        "ACTION": "Não quer ser contatado",
+        "CONFIRM_TITLE": "Marcar que não quer ser contatado?",
+        "CONFIRM_DESCRIPTION": "A recusa fica no lead, mesmo que ele seja descartado depois, e vai para o contato dele e para os contatos com o mesmo telefone ou e-mail. Campanhas e follow-ups automáticos deixam de enviar mensagem para eles.",
+        "CONFIRM": "Marcar recusa",
+        "DONE": "Recusa marcada. Ninguém mais envia mensagem ativa para este contato.",
+        "ERROR": "Não foi possível marcar a recusa."
+      },
+      "WITHDRAW": {
+        "ACTION": "Desfazer: pode ser contatado",
+        "CONFIRM_TITLE": "Desfazer a recusa?",
+        "CONFIRM_DESCRIPTION": "A pessoa volta a poder receber campanhas e follow-ups. A recusa sai dos contatos, a menos que outro lead recusado, um descadastro de e-mail ou uma marcação manual ainda a sustente.",
+        "CONFIRM": "Desfazer recusa",
+        "DONE": "Recusa desfeita.",
+        "ERROR": "Não foi possível desfazer a recusa."
+      }
+    },
+    "DISCARD": {
+      "ACTION": "Descartar",
+      "TITLE": "Descartar leads",
+      "DESCRIPTION": "{count} lead(s) saem do envio ao CRM, dos contatos e da campanha. Continuam na busca, marcados como descartados.",
+      "REASON": "Motivo",
+      "OTHER_REASON": "Escreva o motivo",
+      "REASONS": {
+        "NO_INTEREST": "Sem interesse",
+        "OUT_OF_PROFILE": "Fora do perfil",
+        "ALREADY_CUSTOMER": "Já é cliente",
+        "WRONG_DATA": "Dados errados",
+        "CLOSED": "Empresa fechada",
+        "OTHER": "Outro motivo"
+      },
+      "SUBMIT": "Descartar",
+      "SUBMITTING": "Descartando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "DONE": "{count} lead(s) descartado(s).",
+      "ERROR": "Não foi possível descartar os leads."
+    },
+    "BULK": {
+      "CRM_EXCLUDED": "{count} já no CRM ou descartado(s) ficam fora do envio.",
+      "CREATING_CONTACTS": "Criando contatos...",
+      "CONTACTS_RESULT": "Contatos: {created} criado(s), {existing} já existia(m), {failed} falha(s)."
+    },
+    "SETTINGS": {
+      "TITLE": "Prospecção",
+      "DESCRIPTION": "Configure o funil padrão, o cache e os critérios de score usados nas buscas de leads.",
+      "ENABLED": "Habilitado",
+      "DISABLED": "Desabilitado",
+      "SAVE": "Salvar",
+      "SAVING": "Salvando...",
+      "SAVED": "Configurações salvas.",
+      "SCORING_TITLE": "Score e priorização",
+      "SCORING_HINT": "Escolha um perfil global definido pelo superadmin ou personalize os pesos desta conta.",
+      "SEARCH_SCORE_MODE_GBP_HINT": "Score alto indica lacunas no Google Meu Negócio: sem site, poucas avaliações, baixa atividade ou perfil incompleto.",
+      "SEARCH_SCORE_MODE_GENERAL_HINT": "Score alto indica lead mais estruturado: boa reputação, contato, site e sinais positivos.",
+      "SCORING_PROFILE_GLOBAL": "Perfil global",
+      "SCORING_PROFILE_CUSTOM": "Customizado",
+      "SCORING_PROFILE_HINT": "Pesos definidos pelo perfil selecionado. Para alterar, escolha Customizado.",
+      "SCORING_CUSTOM_HINT": "Edite os pesos que serão usados apenas nesta conta.",
+      "SCORING_WEIGHTS_TITLE": "Pesos do perfil",
+      "SCORING_PROFILE_RESTRICTED": "Perfil exclusivo desta conta",
+      "ORTH": {
+        "WEIGHTS_TITLE": "Componentes da nota",
+        "WEIGHTS_HINT": "Pesos efetivos do perfil escolhido, numa busca sem filtros. Filtro que já garante um sinal, como ter site, zera o peso dele e redistribui o resto.",
+        "CUSTOM_HINT": "Pesos próprios desta conta, convertidos para os 6 componentes. Posição no Google e relevância da busca não entram na nota; a posição conta na prioridade.",
+        "READING_GBP": "Google Meu Negócio: nota alta indica lacuna no perfil. De 65 para cima é oportunidade alta, de 40 a 64 é média e abaixo de 40 é baixa.",
+        "READING_GENERAL": "Geral: nota alta indica empresa bem estruturada. De 70 para cima é lead bem qualificado, de 50 a 69 é qualificado e abaixo de 50 a qualificação é fraca.",
+        "COMPONENTS": {
+          "website": "Site",
+          "phone": "Telefone",
+          "rating": "Nota no Google",
+          "volume": "Volume de avaliações",
+          "activity": "Atividade recente",
+          "photos": "Fotos"
+        }
+      },
+      "CRM_EMPTY": "Nenhum funil padrão",
+      "CRM_STAGE_EMPTY": "Nenhuma etapa padrão",
+      "USAGE_DAILY": "Consumo diário",
+      "USAGE_OF": "{used} / {limit}",
+      "USAGE_MONTHLY": "Consumo mensal",
+      "UNLIMITED": "sem limite",
+      "TABS": {
+        "GENERAL": "Geral",
+        "SCORE": "Score",
+        "PRESETS": "Jogadas"
+      },
+      "PROVIDERS": {
+        "MOCK": "Demonstração",
+        "GOOGLE_PLACES": "Google Places"
+      },
+      "SCORING_MODES": {
+        "PROFILE": "Usar perfil existente",
+        "CUSTOM": "Personalizado da conta"
+      },
+      "SEARCH_SCORE_MODES": {
+        "GBP": "Google Meu Negócio",
+        "GENERAL": "Geral"
+      },
+      "SCORING_WEIGHTS": {
+        "website": "Possui site",
+        "phone": "Possui telefone",
+        "rating": "Avaliação",
+        "reviews_count": "Quantidade de avaliações",
+        "activity": "Atividade recente",
+        "photos": "Fotos",
+        "google_rank": "Ranking Google",
+        "query_relevance": "Relevância da busca"
+      },
+      "FIELDS": {
+        "CRM_PIPELINE": "Funil CRM padrão",
+        "CRM_STAGE": "Etapa CRM padrão",
+        "SCORING_MODE": "Modo de score",
+        "SEARCH_SCORE_MODE": "Forma padrão de pesquisa",
+        "SCORING_PROFILE": "Perfil de score",
+        "CACHE_TTL": "Validade do cache (segundos)"
+      },
+      "PLATFORM": {
+        "KEYS_TITLE": "Chaves do Google",
+        "KEYS_READY": "Chaves da plataforma configuradas.",
+        "KEYS_MISSING": "As chaves da plataforma ainda não foram configuradas. A busca no Google fica indisponível até o suporte configurar.",
+        "KEYS_MOCK": "Esta conta ainda está no modo de demonstração: a busca não usa o Google.",
+        "MAP_KEY_MISSING": "O mapa ainda não está disponível na plataforma. A busca funciona normalmente.",
+        "RESEARCH_TITLE": "Pesquisa de empresa e decisor",
+        "RESEARCH_ENABLED": "Pesquisa liberada pelo superadmin para esta conta.",
+        "RESEARCH_DISABLED": "Pesquisa não liberada para esta conta. Fale com o suporte para contratar."
+      },
+      "SAVED_PRESETS": {
+        "TITLE": "Jogadas salvas",
+        "HINT": "Jogadas que a conta salvou na busca, em Filtros avançados. Aparecem na grade de jogadas, no modo em que foram salvas.",
+        "EMPTY": "Nenhuma jogada salva ainda. Na busca, abra Filtros avançados, escolha os filtros e use Salvar como jogada.",
+        "EDIT": "Editar",
+        "DELETE": "Excluir",
+        "CONFIRM_DELETE": "Confirmar exclusão",
+        "CANCEL": "Cancelar",
+        "EDIT_TITLE": "Editar jogada",
+        "NAME": "Nome da jogada",
+        "SAVE": "Salvar jogada",
+        "CLOSE": "Fechar",
+        "SAVE_ERROR": "Não foi possível salvar a jogada. Tente de novo.",
+        "DELETE_ERROR": "Não foi possível excluir a jogada. Tente de novo.",
+        "DELETED": "Jogada excluída.",
+        "SAVED": "Jogada salva."
+      }
+    },
+    "MOCK_PROVIDER": {
+      "TITLE": "Modo de demonstração",
+      "DESCRIPTION": "A busca desta conta devolve empresas fictícias, não resultados do Google. Fale com o suporte para ativar a busca real."
+    },
+    "AI_CREDENTIAL": {
+      "MISSING_TITLE": "Sem chave de IA do Kanban CRM",
+      "MISSING_DESCRIPTION": "A IA da prospecção usa só a chave da integração CRM Kanban AI desta conta. Sem ela, o enriquecimento traz apenas o que está no site do lead, sem resumo nem decisor.",
+      "CONFIGURE": "Configurar em Configurações > Integrações > CRM Kanban AI"
+    },
+    "RESEARCH": {
+      "STATES": {
+        "NOT_RESEARCHED": "Não pesquisado",
+        "QUEUED": "Na fila",
+        "RESEARCHING": "Em pesquisa",
+        "WAITING_CAPACITY": "Aguardando capacidade",
+        "CONFIRMED": "Confirmado",
+        "POSSIBLE": "Possível",
+        "AMBIGUOUS": "Ambíguo",
+        "NO_RESULT": "Nenhum resultado",
+        "FAILED": "Falha técnica",
+        "BLOCKED": "Bloqueado"
+      },
+      "BADGE": {
+        "COMPANY": "Empresa: {state}",
+        "DECISION": "Decisor: {state}"
+      },
+      "DECISION_LABEL": "Decisor:",
+      "DECISION_LINE": {
+        "NOT_RESEARCHED": "Não pesquisado",
+        "IN_PROGRESS": "Pesquisa em andamento",
+        "WAITING_CAPACITY": "Aguardando capacidade · retomada automática",
+        "FAILED": "Pesquisa não concluída",
+        "POSSIBLE": "Possível decisor",
+        "NOT_CONFIRMED": "Não confirmado",
+        "BLOCKED": "Pesquisa bloqueada",
+        "DISABLED": "Pesquisa desligada"
+      },
+      "CONFIDENCE": "{percent}% de confiança",
+      "VERIFIED_ON": "verificado em {date}",
+      "REUSED": "resultado reutilizado",
+      "PROGRESS": {
+        "LABEL": "{done} de {total} concluídos",
+        "RUNNING": "em andamento",
+        "FINISHED": "concluído",
+        "FAILED_COUNT": "{count} com falha"
+      },
+      "PANEL": {
+        "TITLE": "Empresa e decisor",
+        "SEARCH": "Pesquisar",
+        "RETRY": "Verificar novamente",
+        "RUNNING": "Pesquisando…",
+        "CONFIRM_TITLE": "Refazer pesquisa?",
+        "CONFIRM_DESCRIPTION": "Vamos pesquisar este lead de novo, sem usar o resultado guardado. O resultado atual fica na tela até o novo chegar.",
+        "CONFIRM_ACTION": "Refazer pesquisa",
+        "CANCEL": "Cancelar",
+        "OWNERS_TITLE": "Quem atende",
+        "COMPANY_TITLE": "Empresa",
+        "LEGAL_NAME": "Razão social",
+        "TRADE_NAME": "Nome fantasia",
+        "CNPJ": "CNPJ",
+        "COPY_CNPJ": "Copiar CNPJ {cnpj}",
+        "COPY_SUFFIX": "copiar",
+        "CNPJ_COPIED": "CNPJ copiado.",
+        "CNPJ_COPY_FAILED": "Não foi possível copiar o CNPJ.",
+        "REGISTRATION_STATUS": "Situação",
+        "REGISTRATION_STATE": "Registro {state}",
+        "INACTIVE_ALERT": "Empresa com situação {status} na Receita",
+        "UPDATED_ON": "Pesquisa atualizada em {date}",
+        "REUSED_ON": "Resultado reutilizado em {date}",
+        "NEVER_RESEARCHED": "Nenhuma pesquisa de empresa e decisor feita para este lead.",
+        "RUNNING_HINT": "A pesquisa está confirmando a empresa e o quadro de sócios.",
+        "DISABLED": "A pesquisa de empresa e decisor está desligada nesta conta.",
+        "FAILED": "A última pesquisa não pôde ser concluída. Tente verificar novamente.",
+        "BLOCKED": "A pesquisa deste lead foi bloqueada.",
+        "USE_AS_CONTACT": "Usar como contato",
+        "USE_AS_CONTACT_LABEL": "Usar {name} como contato",
+        "ADOPTING": "Salvando…",
+        "CURRENT_CONTACT": "Contato atual",
+        "DECISION_OWNER": "Decisor",
+        "OWNER_ADOPTED": "{name} agora é o decisor e o contato deste lead.",
+        "OWNER_ADOPTED_SHARED_CONTACT": "Decisor trocado para {name}. O contato do CRM é compartilhado com {other} e não foi alterado.",
+        "OWNER_ADOPTED_SHARED_CONTACT_UNNAMED": "Decisor trocado para {name}. O contato do CRM é compartilhado com outro negócio e não foi alterado.",
+        "OWNER_ADOPTED_KEPT_CONTACT": "Decisor trocado para {name}. O contato deste lead já existia com outro nome e não foi alterado.",
+        "ADOPT_ERROR": "Não foi possível usar este sócio como contato."
+      },
+      "NO_DECISION_REASON": {
+        "COMPANY_NOT_FOUND": "Nenhuma empresa do cadastro público bate com este lead (nome, telefone, cidade e UF).",
+        "COMPANY_AMBIGUOUS": "Mais de uma empresa do cadastro público combina com este lead; nenhuma foi escolhida.",
+        "EXPLICIT_ROLE_NOT_SUPPORTED": "A pesquisa pelo cadastro público só indica o proprietário; o tipo de decisor pedido ainda não tem pesquisa.",
+        "NO_QSA": "A Receita não traz quadro de sócios para esta empresa.",
+        "ONLY_COMPANIES": "Os sócios desta empresa são outras empresas, não pessoas.",
+        "ONLY_MINORS": "O quadro de sócios só tem menores de idade, que não são mostrados.",
+        "NO_ELIGIBLE_ROLE": "Nenhum sócio com vínculo de dono ou de comando (sócio, titular, administrador, diretor).",
+        "PUBLIC_ENTITY": "É um órgão público: não há dono a indicar.",
+        "UNKNOWN": "Nenhum decisor foi confirmado no cadastro público."
+      },
+      "QUALIFICATIONS": {
+        "SOCIO_ADMINISTRADOR": "Sócio-administrador",
+        "SOCIO": "Sócio",
+        "TITULAR": "Titular",
+        "EMPRESARIO_INDIVIDUAL": "Empresário individual",
+        "PROPRIETARIO": "Proprietário",
+        "ACIONISTA_CONTROLADOR": "Acionista controlador",
+        "ADMINISTRADOR": "Administrador",
+        "DIRETOR": "Diretor",
+        "PRESIDENTE": "Presidente",
+        "CEO": "CEO"
+      },
+      "QUEUED_ALERT": "Pesquisa na fila. O resultado aparece aqui sozinho.",
+      "REQUEST_ERROR": "Não foi possível pedir a pesquisa."
+    },
+    "CRM_SEND": {
+      "TITLE": "Enviar ao CRM",
+      "PIPELINE": "Funil",
+      "STAGE": "Estágio",
+      "PIPELINE_PLACEHOLDER": "Escolha o funil",
+      "STAGE_PLACEHOLDER": "Escolha o estágio",
+      "CHOOSE_DESTINATION": "Escolha o funil e o estágio para onde os leads vão.",
+      "CONFIRMATION": "Enviando {count} lead(s) para o funil {pipeline}, estágio {stage}.",
+      "LOADING": "Carregando funis...",
+      "EMPTY_TITLE": "Nenhum funil no CRM",
+      "EMPTY_DESCRIPTION": "Os leads entram no CRM como cards de um funil. Crie um funil no CRM e volte aqui para enviar.",
+      "LOAD_ERROR": "Não foi possível carregar os funis do CRM. Confira se o CRM está ligado nesta conta.",
+      "CREATE_PIPELINE": "Criar funil no CRM",
+      "SEND": "Enviar",
+      "SENDING": "Enviando {done} de {total}...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "RESULT": {
+        "SUCCESS_TITLE": "Envio concluído",
+        "PARTIAL_TITLE": "Envio concluído com falhas",
+        "FAILED_TITLE": "Nenhum lead foi enviado",
+        "CREATED": "{count} card(s) criado(s)",
+        "EXISTING": "{count} já estava(m) no CRM",
+        "FAILED": "{count} falha(s)",
+        "FAILED_LIST": "O que não foi enviado",
+        "UNKNOWN_LEAD": "Lead {id}"
+      },
+      "FAILURE_REASONS": {
+        "NOT_FOUND": "Lead não encontrado nesta conta.",
+        "REQUEST_FAILED": "Não foi possível enviar. Tente de novo.",
+        "DEFAULT": "Não foi possível enviar este lead."
+      }
+    },
+    "CAMPAIGN_SELECTION": {
+      "TITLE": "Adicionar à campanha",
+      "SELECTED": "{count} lead(s) selecionado(s).",
+      "RULE": "Entram no segmento os leads prontos para campanha, com WhatsApp verificado e sem bloqueio no contato. Os outros aparecem no resumo, com o motivo.",
+      "CAMPAIGN": "Campanha",
+      "SEGMENT_ONLY": "Só criar o segmento, sem campanha",
+      "CHOICE_WHATSAPP_API": "WhatsApp API · {title}",
+      "CHOICE_ONE_OFF": "Envio único · {title}",
+      "SEGMENT_NAME": "Nome do segmento",
+      "CAMPAIGNS_LOAD_ERROR": "Não foi possível carregar as campanhas. Dá para criar só o segmento e ligar a campanha depois.",
+      "SUBMIT": "Adicionar",
+      "SUBMITTING": "Adicionando...",
+      "CANCEL": "Cancelar",
+      "CLOSE": "Fechar",
+      "ERROR": "Não foi possível adicionar os leads à campanha.",
+      "ERRORS": {
+        "NO_ELIGIBLE": "Nenhum lead da seleção pode entrar na campanha.",
+        "CAMPAIGN_NOT_FOUND": "A campanha escolhida não existe mais. Escolha outra.",
+        "CAMPAIGN_NOT_ACTIVE": "A campanha escolhida não está ativa ou já começou a enviar. Escolha outra ou crie só o segmento.",
+        "UNSUPPORTED_CAMPAIGN": "Só campanhas de envio único ou da API do WhatsApp recebem leads da prospecção.",
+        "LABEL_COLLISION": "Já existe uma etiqueta com esse nome no menu. Escolha outro nome para o segmento.",
+        "TOO_MANY_LEADS": "Selecione até 500 leads por vez.",
+        "EMPTY_SELECTION": "Selecione pelo menos um lead."
+      },
+      "UNKNOWN_LEAD": "Lead {id}",
+      "RESULT": {
+        "ELIGIBLE": "{count} lead(s) entraram no segmento {label}.",
+        "CAMPAIGN": "Campanha: {title}",
+        "CONTACTS_CREATED": "{count} contato(s) criado(s) no caminho.",
+        "BLOCKED": "{count} ficaram de fora"
+      },
+      "BLOCK_REASONS": {
+        "NO_PHONE": "Sem telefone",
+        "NO_WHATSAPP": "Sem WhatsApp verificado",
+        "OPT_OUT": "Pediu para não receber mensagens",
+        "CONTACT_BLOCKED": "Contato bloqueado",
+        "DISCARDED": "Descartado",
+        "NOT_READY": "Ainda não está pronto para campanha",
+        "NOT_FOUND": "Lead não encontrado nesta conta",
+        "DEFAULT": "Não pode entrar na campanha"
+      }
+    },
+    "TOUR": {
+      "RESTART": "Refazer tour",
+      "RESTART_HINT": "Refazer o tour de boas-vindas da busca",
+      "START": "Vamos lá",
+      "NEXT": "Próximo",
+      "PREV": "Voltar",
+      "FINISH": "Concluir",
+      "SKIP": "Pular tour",
+      "CLOSE": "Fechar tour",
+      "PROGRESS": "Passo {current} de {total}",
+      "SUGGEST_LOCATION": "Ver sugestões do local",
+      "WAITING_LOCATION": "Esperando você escolher uma das sugestões do local.",
+      "WAITING_RESULTS": "Esperando você clicar em Buscar e os resultados chegarem.",
+      "EXAMPLE": {
+        "QUERY": "restaurante",
+        "LOCATION": "Moema, São Paulo"
+      },
+      "STEPS": {
+        "WELCOME": {
+          "EYEBROW": "Primeira busca",
+          "TITLE": "Vamos achar seus primeiros leads juntos.",
+          "BODY_GBP": "Em uns 60 segundos. A busca lê o Google Meu Negócio da sua região e volta com empresas reais que valem a sua próxima ligação.",
+          "BODY_GENERAL": "Em uns 60 segundos. A busca lê o Google na sua região e volta com empresas qualificadas que valem a sua próxima ligação."
+        },
+        "MODE": {
+          "EYEBROW": "Modo de busca",
+          "TITLE_GBP": "Toda busca aqui ataca o Google Meu Negócio.",
+          "TITLE_GENERAL": "Toda busca aqui qualifica leads no Google.",
+          "BODY_GBP": "Você procura quem aparece, mas tem lacunas: sem site, avaliação fraca, perfil pouco cuidado. Não é lista comprada, é oportunidade real.",
+          "BODY_GENERAL": "Você procura quem já está bem estruturado: presença sólida, boa reputação, pronto para uma conversa comercial. O foco é qualificar, não achar problema."
+        },
+        "PRESETS": {
+          "EYEBROW": "Sua jogada",
+          "TITLE": "Cada jogada é uma tese de venda.",
+          "BODY_GBP": "Quer atacar quem não tem site? Quem tem avaliação fraca? Cada jogada monta os filtros e o tipo de lead. Agora vamos de busca livre; depois você experimenta as outras.",
+          "BODY_GENERAL": "Quer empresas com prova social forte? Mercado maduro? Presença digital completa? Cada jogada monta os filtros e o tipo de lead. Agora vamos de busca livre; depois você experimenta as outras."
+        },
+        "WHERE": {
+          "EYEBROW": "Onde buscar",
+          "TITLE": "Já preenchi um exemplo para você.",
+          "BODY": "Nicho, local e raio. Clique em Ver sugestões do local e escolha uma das opções do Google para confirmar. Pode trocar o nicho e o local pelos seus."
+        },
+        "DECISION_MAKER": {
+          "EYEBROW": "Decisor",
+          "TITLE": "Decisor é quem assina o contrato.",
+          "BODY": "Hoje a pesquisa encontra o proprietário; os outros perfis chegam em breve. Comece com poucos leads; dá para pedir até 60 por busca."
+        },
+        "FILTERS": {
+          "EYEBROW": "Refino",
+          "TITLE": "Aqui você afina a sua tese.",
+          "BODY_GBP": "Quatro grupos. Dor do lead: sem site é oportunidade. Qualificação mínima: corta empresa fantasma. Visibilidade: quem está fora das primeiras posições. Operacional: telefone e horário. Combine para mirar a sua dor de venda.",
+          "BODY_GENERAL": "Quatro grupos. Dor do lead: incluir ou excluir quem não tem site. Qualificação mínima: corta empresa sem volume. Visibilidade: priorizar quem já aparece bem. Operacional: telefone e horário. Combine para mirar o seu cliente ideal."
+        },
+        "SUBMIT": {
+          "EYEBROW": "A busca",
+          "TITLE": "Clique em Buscar e veja o que aparece.",
+          "BODY": "Está tudo preenchido. A busca só roda quando você clicar, os leads saem de verdade e leva alguns segundos enquanto o Google da região é lido."
+        },
+        "RESULTS": {
+          "EYEBROW": "Busca concluída",
+          "TITLE": "Esses são reais. Agora é com você.",
+          "BODY_GBP": "Cada card traz telefone, decisor quando encontrado e os pontos fracos do perfil no Google, a sua munição de venda. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp.",
+          "BODY_GENERAL": "Cada card traz telefone, decisor quando encontrado e os pontos fortes que qualificam o lead. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp."
+        }
+      }
+    }
+  }
+}

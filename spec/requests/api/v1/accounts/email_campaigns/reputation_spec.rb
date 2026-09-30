@@ -29,10 +29,11 @@ RSpec.describe 'Email reputation API', type: :request do
     expect(campaign.reload.pause_reason).to eq({})
   end
 
-  it 'returns a machine code plus protection and refreshes persisted metrics when resume is denied' do
+  it 'returns provider protection and refreshes local diagnostics when resume is denied' do
     campaign.email_campaign_recipients.create!(email: 'next@example.org')
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' } })
     allow(collector).to receive(:call).and_return(sent: 100, permanent: 10, bounced: 10, complaints: 0)
+    allow(EmailCampaigns::Reputation::ProviderGate).to receive(:protection).and_return(kind: 'provider', code: 'provider_blocked')
     post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body).to include('error' => 'email_campaign.protected')
@@ -42,13 +43,13 @@ RSpec.describe 'Email reputation API', type: :request do
     expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
   end
 
-  it 'releases a safe guarded resume and clears only the tenant pause flag' do
+  it 'resumes without changing rollback flags or unrelated account data' do
     campaign.email_campaign_recipients.create!(email: 'next@example.org')
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' }, unrelated: 'keep' })
     post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(account.reload.internal_attributes).to eq('unrelated' => 'keep')
-    expect(EmailReputationAudit.where(account: account, action: 'released').count).to eq(1)
+    expect(account.reload.internal_attributes).to eq('unrelated' => 'keep', 'email_campaigns_paused' => { 'reason' => 'old' })
+    expect(EmailReputationAudit.where(account: account, action: 'released')).to be_empty
   end
 
   it 'provides authorized account and campaign re-evaluation without silently resuming' do
@@ -83,14 +84,13 @@ RSpec.describe 'Email reputation API', type: :request do
     expect(response).to have_http_status(:unauthorized)
   end
 
-  it 'accepts an actual SuperAdmin and audits the bounded override without clearing the rollback flag' do
+  it 'retires tenant exceptions for an actual SuperAdmin without changing history' do
     super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'old' } })
     post "#{url}/reputation/override", headers: super_admin.create_new_auth_token,
                                        params: { reason: 'Reviewed list source', duration_seconds: 60, message_budget: 2 }, as: :json
-    expect(response).to have_http_status(:ok)
-    expect(response.parsed_body.dig('protection', 'override_active')).to be(true)
-    expect(EmailReputationAudit.find_by!(account: account, action: 'override_granted').actor_id).to eq(super_admin.id)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(EmailReputationAudit.where(account: account, action: 'override_granted')).to be_empty
     expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
   end
 
@@ -103,16 +103,16 @@ RSpec.describe 'Email reputation API', type: :request do
   end
 
   %w[shadow warning].each do |mode|
-    it "does not enqueue delivery on protected legacy resume in #{mode}" do
+    it "enqueues delivery despite local risk on legacy resume in #{mode}" do
       campaign.email_campaign_recipients.create!(email: 'next@example.org')
       allow(collector).to receive(:call).and_return(sent: 100, permanent: 0, transient: 6, bounced: 6, complaints: 0)
       with_modified_env('EMAIL_REPUTATION_MODE' => mode) do
         expect do
           post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
-        end.not_to have_enqueued_job(EmailCampaigns::DeliveryJob)
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.parsed_body.dig('protection', 'resume_allowed')).to be(false)
-        expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
+        end.to have_enqueued_job(EmailCampaigns::DeliveryJob)
+        expect(response).to have_http_status(:ok)
+        expect(campaign.reload).to be_sending
+        expect(account.reload.internal_attributes['email_campaigns_paused']).to be_nil
       end
     end
   end
@@ -122,13 +122,13 @@ RSpec.describe 'Email reputation API', type: :request do
     EmailReputationAudit.create!(account: other, action: 'paused', snapshot: { reason: 'other tenant private' })
     super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
     account.update!(internal_attributes: { email_campaigns_paused: { reason: 'legacy internal note' } })
-    EmailCampaigns::Reputation::Evaluator.new(account).override!(actor: super_admin, reason: 'Private operator investigation',
-                                                                 duration_seconds: 60, message_budget: 2)
+    EmailReputationAudit.create!(account: account, actor_id: super_admin.id, action: 'override_granted',
+                                 snapshot: { reason: 'Private operator investigation' })
     get "#{url}/reputation", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(response.body).not_to match(/Private operator|legacy internal|actor_id|message_budget|feedback_fingerprint|history/)
+    expect(response.body).not_to include('Private operator', 'legacy internal', 'actor_id', 'message_budget', 'feedback_fingerprint', 'history')
     post "#{url}/reputation/reevaluate", headers: admin.create_new_auth_token, as: :json
-    expect(response.body).not_to match(/actor_id|message_budget|feedback_fingerprint|Private operator/)
+    expect(response.body).not_to include('actor_id', 'message_budget', 'feedback_fingerprint', 'Private operator')
     get "#{url}/reputation/history", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unauthorized)
     get "#{url}/reputation/history", headers: super_admin.create_new_auth_token, as: :json
@@ -150,31 +150,15 @@ RSpec.describe 'Email reputation API', type: :request do
     expect(EmailReputationAudit.where(action: 'provider_released')).to be_empty
   end
 
-  it 'allows a bounded SuperAdmin exception to resume an active legacy pause while retaining protection' do
-    campaign.email_campaign_recipients.create!(email: 'next@example.org')
-    super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
-    allow(collector).to receive(:call).and_return(sent: 100, permanent: 0, transient: 6, bounced: 6, complaints: 0)
-    with_modified_env('EMAIL_REPUTATION_MODE' => 'warning') do
-      post "#{url}/reputation/override", headers: super_admin.create_new_auth_token,
-                                         params: { reason: 'Reviewed remediation plan', duration_seconds: 60, message_budget: 2 }, as: :json
-      expect(response).to have_http_status(:ok)
-      expect do
-        post "#{url}/campaigns/#{campaign.id}/resume", headers: admin.create_new_auth_token, as: :json
-      end.to have_enqueued_job(EmailCampaigns::DeliveryJob).with(campaign.id)
-      expect(response).to have_http_status(:ok)
-      expect(EmailReputationState.find_by!(account: account).blocked).to be(true)
-      expect(account.reload.internal_attributes['email_campaigns_paused']).to be_present
-    end
-  end
-
   it 'routes actual SuperAdmin provider release through fresh simulated telemetry and records the global audit' do
     super_admin = create(:user, type: 'SuperAdmin', account: account, role: :administrator)
     ses = instance_double(EmailCampaigns::Ses::Client, get_account: { 'SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY' })
     cloudwatch = instance_double(Aws::CloudWatch::Client)
-    response_point = Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: Time.current, average: 0)]
+    response_point = Aws::CloudWatch::Types::GetMetricDataOutput.new(
+      metric_data_results: [Aws::CloudWatch::Types::MetricDataResult.new(id: 'rate', status_code: 'Complete',
+                                                                         timestamps: [Time.current], values: [0])]
     )
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(response_point)
+    allow(cloudwatch).to receive(:get_metric_data).and_return(response_point)
     with_modified_env('EMAIL_REPUTATION_PROVIDER_MONITOR' => 'true', 'EMAIL_REPUTATION_AWS_ACCOUNT_ID' => '123456789012') do
       config = EmailCampaigns::Reputation::ProviderConfig.new
       state = EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true)

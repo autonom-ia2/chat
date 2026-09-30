@@ -28,7 +28,7 @@ class EmailCampaigns::Presentation::ProtectionProvider
     status = state&.status || 'unknown'
     raise ArgumentError, 'unknown persisted provider status' unless %w[unknown healthy blocked].include?(status)
 
-    fresh = state&.observed_at&.between?(@now - config.max_age, @now)
+    fresh = state&.checked_at&.between?(@now - config.max_age, @now)
     { state: fresh ? status : 'unknown', observed_at: state&.observed_at, blocked: state&.latched? == true }
   end
 end

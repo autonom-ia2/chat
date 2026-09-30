@@ -1,5 +1,9 @@
-# Read-only SES GetAccount + CloudWatch GetMetricStatistics. Never called by admission.
+# Read-only SES GetAccount + CloudWatch GetMetricData. Never called by admission.
 class EmailCampaigns::Reputation::ProviderMonitor
+  RECOVERY_RATIO = 0.8
+  RECOVERY_INTERVAL = 300
+  METRIC_LOOKBACK = 62.days
+
   def initialize(config: EmailCampaigns::Reputation::ProviderConfig.new, ses: nil, cloudwatch: nil)
     @config = config
     @ses = ses
@@ -63,23 +67,28 @@ class EmailCampaigns::Reputation::ProviderMonitor
   end
 
   def metric(name, now)
-    response = cloudwatch.get_metric_statistics(namespace: 'AWS/SES', metric_name: name, dimensions: [],
-                                                start_time: now - @config.max_age, end_time: now, period: 300,
-                                                statistics: ['Average'])
-    point = response.datapoints.select { |item| item.timestamp.between?(now - @config.max_age, now) }.max_by(&:timestamp)
+    response = cloudwatch.get_metric_data(start_time: now - METRIC_LOOKBACK, end_time: now, scan_by: 'TimestampDescending',
+                                          metric_data_queries: [{ id: 'rate', return_data: true, metric_stat: {
+                                            metric: { namespace: 'AWS/SES', metric_name: name, dimensions: [] }, period: 300, stat: 'Average'
+                                          } }])
+    result = response.metric_data_results.fetch(0)
+    raise ArgumentError, 'incomplete provider metric' unless result.status_code == 'Complete'
+
+    point = result.timestamps.zip(result.values).select { |timestamp, _value| timestamp.between?(now - METRIC_LOOKBACK, now) }.max_by(&:first)
     return unless point
 
-    value = Float(point.average)
+    timestamp, average = point
+    value = Float(average)
     raise ArgumentError, 'invalid provider ratio' unless value.finite? && value.between?(0, 1)
 
-    { ratio: value, observed_at: point.timestamp }
+    { ratio: value, observed_at: timestamp }
   end
 
   def persist(attributes)
     state = EmailProviderState.for_provider(@config.provider_key)
     state.with_lock do
       # Older overlapping polls cannot replace newer telemetry. A late harmful
-      # observation may still add the irreversible provider latch/audit, but never
+      # observation may still add the provider latch/audit, but never
       # rewinds checked_at/status/telemetry or releases anything.
       if state.checked_at && state.checked_at >= attributes.fetch(:checked_at)
         latch_superseded_block!(state, attributes)
@@ -95,7 +104,8 @@ class EmailCampaigns::Reputation::ProviderMonitor
     return unless attributes[:status] == 'blocked'
 
     newly_blocked = !state.blocked
-    state.update!(blocked: true, harmful_generation: state.harmful_generation + 1)
+    state.update!(blocked: true, harmful_generation: state.harmful_generation + 1,
+                  telemetry: state.telemetry.except('recovery_started_at'))
     return unless newly_blocked
 
     EmailReputationAudit.create!(provider_key: state.provider_key, action: 'provider_blocked',
@@ -108,11 +118,44 @@ class EmailCampaigns::Reputation::ProviderMonitor
     attributes[:status] = 'blocked' if state.status == 'blocked' && attributes[:status] == 'unknown'
     newly_blocked = !state.blocked && (state.latched? || harmful)
     apply_block_attributes!(state, attributes, harmful, newly_blocked)
+    recovered = apply_recovery!(state, attributes)
     state.update!(attributes)
+    if recovered
+      EmailReputationAudit.create!(provider_key: state.provider_key, action: 'provider_recovered',
+                                   snapshot: { code: 'provider_recovered', checked_at: state.checked_at, observed_at: state.observed_at })
+    end
     return unless newly_blocked
 
     EmailReputationAudit.create!(provider_key: state.provider_key, action: 'provider_blocked',
                                  snapshot: { code: 'provider_blocked', checked_at: state.checked_at })
+  end
+
+  # Two fresh healthy provider checks spanning five minutes, below the recovery
+  # thresholds. Missing/error observations reset recovery; manual blocks stay manual.
+  def apply_recovery!(state, attributes) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity -- atomic recovery decision
+    previous_start = state.telemetry['recovery_started_at'] if state.checked_at&.between?(attributes[:checked_at] - @config.max_age,
+                                                                                          attributes[:checked_at])
+    telemetry = (attributes[:telemetry] || state.telemetry).deep_stringify_keys.except('recovery_started_at')
+    attributes[:telemetry] = telemetry
+    return false unless state.latched? && recovery_safe?(state, attributes, telemetry)
+
+    checked_at = attributes.fetch(:checked_at)
+    if previous_start && checked_at >= Time.iso8601(previous_start) + RECOVERY_INTERVAL
+      attributes[:blocked] = false
+      return true
+    end
+
+    telemetry['recovery_started_at'] = previous_start || checked_at.iso8601
+    false
+  end
+
+  def recovery_safe?(state, attributes, telemetry) # rubocop:disable Metrics/CyclomaticComplexity -- keep recovery conditions together
+    return false if state.manual_block || @config.manual_block || attributes[:status] != 'healthy'
+    return false unless attributes[:checked_at]&.between?(Time.current - @config.max_age, Time.current)
+
+    bounce, complaint = telemetry.values_at('bounce', 'complaint')
+    telemetry.values_at('sending_enabled', 'enforcement_status') == [true, 'HEALTHY'] &&
+      bounce.fetch('ratio') < @config.bounce_ratio * RECOVERY_RATIO && complaint.fetch('ratio') < @config.complaint_ratio * RECOVERY_RATIO
   end
 
   def apply_block_attributes!(state, attributes, harmful, newly_blocked)

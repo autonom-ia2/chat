@@ -52,14 +52,4 @@ class EmailCampaigns::Reputation::Admission
   end
 
   # rubocop:enable Rails/SkipsModelValidations
-
-  # Called once, inside with_delivery_locks, only after a successful final claim.
-  def consume_override!(state)
-    remaining = state.override.fetch('remaining') - 1
-    state.update!(override: state.override.merge('remaining' => remaining))
-    return unless remaining.zero?
-
-    EmailReputationAudit.create!(account_id: @campaign.account_id, action: 'override_budget_exhausted',
-                                 actor_id: state.override.fetch('actor_id'), snapshot: { override: state.override })
-  end
 end

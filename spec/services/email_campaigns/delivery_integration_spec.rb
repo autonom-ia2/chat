@@ -46,19 +46,19 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
     expect(campaign.reload).to be_paused
   end
 
-  it 'stops before the next claim after a tenant flag, preserving the accepted in-flight message' do
+  it 'stops before the next claim after a provider block, preserving the accepted in-flight message' do
     recipient.update!(preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
     next_recipient = create(:email_campaign_recipient, email_campaign: campaign,
                                                        preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
     allow(sender).to receive(:deliver) do
-      Account.find(account.id).update!(internal_attributes: { email_campaigns_paused: { reason: 'synthetic' } })
+      EmailProviderState.create!(provider_key: EmailCampaigns::Reputation::ProviderConfig.new.provider_key, status: 'blocked', blocked: true)
       'accepted-before-block'
     end
     engine.perform
     expect(sender).to have_received(:deliver).once
     expect(recipient.reload.ses_message_id).to eq('accepted-before-block')
     expect(next_recipient.reload).to be_pending
-    expect(campaign.reload.pause_reason).to include('kind' => 'reputation')
+    expect(campaign.reload.pause_reason).to include('kind' => 'provider')
   end
 
   it 'stops before the next claim after a durable provider block even with monitoring disabled' do
@@ -97,7 +97,7 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
     expect(campaign.reload).to be_sending
   end
 
-  it 'retains dispatch history and tenant protection across duplicate import and a new campaign' do
+  it 'retains dispatch history across duplicate import and permits a new campaign despite local history' do
     recipient.update!(status: :delivered, ses_message_id: 'old-acceptance', sent_at: 1.day.ago)
     before_import = recipient.attributes
     state = EmailReputationState.create!(account: account, blocked: true,
@@ -110,10 +110,10 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
     EmailCampaigns::RecipientImporter.new(future, csv, filename: 'synthetic.csv').perform
     pending = future.email_campaign_recipients.sole
     pending.update!(preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
-    expect(EmailCampaigns::Reputation::Admission.new(future).claim!(pending)).to be(false)
+    expect(EmailCampaigns::Reputation::Admission.new(future).claim!(pending)).to be(true)
     expect(state.reload).to be_blocked
     expect(state.trigger_snapshot).to eq('code' => 'synthetic_incident')
-    expect(pending.reload).to be_pending
+    expect(pending.reload).to be_sent
   end
 
   it 'does not turn a competing claim into failed when rendering raises' do
@@ -264,16 +264,16 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
       expect(EmailReputationState.find_by!(account: account)).to be_blocked
     end
 
-    it 'observes a tenant block published while direct inbox rendering is in progress' do
+    it 'ignores tenant block history published during direct inbox rendering' do
       recipient.update!(preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
       allow(direct).to receive(:render) do
         EmailReputationState.create!(account: account, blocked: true)
         { subject: 'Synthetic', body_html: '<p>Synthetic</p>' }
       end
-      expect(direct.deliver(recipient)).to eq(:paused)
-      expect(sender).not_to have_received(:deliver)
-      expect(recipient.reload).to be_pending
-      expect(campaign.reload.pause_reason).to include('kind' => 'reputation')
+      expect(direct.deliver(recipient)).to eq(:sent)
+      expect(sender).to have_received(:deliver).once
+      expect(recipient.reload).to be_delivered
+      expect(campaign.reload).to be_sending
     end
 
     it 'does not fail a competing direct inbox claim when its own rendering raises' do
@@ -289,7 +289,7 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
       expect(sender).not_to have_received(:deliver)
     end
 
-    it 'preserves opt-out on failure and refuses another recipient after a tenant flag' do
+    it 'preserves opt-out on failure and ignores a tenant flag for another direct recipient' do
       recipient.update!(preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
       next_recipient = create(:email_campaign_recipient, email_campaign: campaign,
                                                          preflight_status: 'valid', preflight_valid_until: 1.hour.from_now)
@@ -300,9 +300,9 @@ RSpec.describe 'Integrated hygiene and reputation delivery', type: :model do
       end
       direct.deliver(recipient)
       expect(recipient.reload).to be_unsubscribed
-      expect(direct.deliver(next_recipient)).to eq(:paused)
-      expect(next_recipient.reload).to be_pending
-      expect(sender).to have_received(:deliver).once
+      expect(direct.deliver(next_recipient)).to eq(:failed)
+      expect(next_recipient.reload).to be_failed
+      expect(sender).to have_received(:deliver).twice
     end
   end
 end

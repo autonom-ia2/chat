@@ -14,10 +14,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderRelease do
   let!(:state) { EmailProviderState.create!(provider_key: config.provider_key, status: 'blocked', blocked: true) }
 
   before do
-    allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(
-                                                                      datapoints: [Aws::CloudWatch::Types::Datapoint.new(timestamp: Time.current,
-                                                                                                                         average: 0)]
-                                                                    ))
+    allow(cloudwatch).to receive(:get_metric_data).and_return(Aws::CloudWatch::Types::GetMetricDataOutput.new(
+                                                                metric_data_results: [
+                                                                  Aws::CloudWatch::Types::MetricDataResult.new(
+                                                                    id: 'rate', status_code: 'Complete',
+                                                                    timestamps: [Time.current], values: [0]
+                                                                  )
+                                                                ]
+                                                              ))
   end
 
   it 'requires an actual SuperAdmin and fresh rechecked health, and audits explicit release' do
@@ -51,7 +55,14 @@ RSpec.describe EmailCampaigns::Reputation::ProviderRelease do
     expect { service.call(actor: actor, reason: 'Reviewed provider remediation') }.to raise_error(CustomExceptions::EmailReputationOverride)
     travel 1.second do
       allow(ses).to receive(:get_account).and_return('SendingEnabled' => true, 'EnforcementStatus' => 'HEALTHY')
-      allow(cloudwatch).to receive(:get_metric_statistics).and_return(Aws::CloudWatch::Types::GetMetricStatisticsOutput.new(datapoints: []))
+      allow(cloudwatch).to receive(:get_metric_data).and_return(Aws::CloudWatch::Types::GetMetricDataOutput.new(
+                                                                  metric_data_results: [
+                                                                    Aws::CloudWatch::Types::MetricDataResult.new(
+                                                                      id: 'rate', status_code: 'Complete',
+                                                                      timestamps: [], values: []
+                                                                    )
+                                                                  ]
+                                                                ))
       expect { service.call(actor: actor, reason: 'Reviewed provider remediation') }.to raise_error(CustomExceptions::EmailReputationOverride)
     end
     expect(state.reload.blocked).to be(true)

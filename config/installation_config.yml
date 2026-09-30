@@ -204,6 +204,28 @@
   display_title: 'OpenAI API Endpoint (optional)'
   description: 'The OpenAI endpoint configured for use in Captain AI. Default: https://api.openai.com/'
   locked: false
+
+# MARK: TypeSafe AI / Jev Config
+- name: TYPESAFE_JEV_ENABLED
+  display_title: 'Enable intelligent imports with Jev'
+  description: 'Use TypeSafe Jev only when deterministic parsing cannot safely identify the recipient schema.'
+  value: false
+  locked: false
+  type: boolean
+- name: TYPESAFE_JEV_MODEL
+  display_title: 'Jev model'
+  description: 'Version-pinned TypeSafe model used for semantic recipient-column mapping.'
+  value: 'jev-1.13.0'
+  locked: false
+  type: select
+  options:
+    jev-1.13.0: 'Jev 1.13'
+- name: TYPESAFE_API_KEY
+  display_title: 'TypeSafe API Key'
+  description: 'Write-only credential stored with Active Record Encryption. Leave blank to keep the current key.'
+  locked: false
+  type: secret
+
 - name: CAPTAIN_EMBEDDING_MODEL
   display_title: 'Embedding Model (optional)'
   description: 'The embedding model configured for use in Captain AI. Default: text-embedding-3-small'
