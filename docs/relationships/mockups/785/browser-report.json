@@ -74,18 +74,139 @@
     },
     {
       "view": "contacts",
+      "viewport": 1280,
+      "overflow": false,
+      "actionButtons": []
+    },
+    {
+      "view": "companies",
+      "viewport": 1280,
+      "overflow": false,
+      "actionButtons": []
+    },
+    {
+      "view": "contact",
+      "viewport": 1280,
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Enviar mensagem",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Chamada",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 322,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "view": "company",
+      "viewport": 1280,
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Ver site",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 322,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "view": "contacts",
+      "viewport": 1440,
+      "overflow": false,
+      "actionButtons": []
+    },
+    {
+      "view": "companies",
+      "viewport": 1440,
+      "overflow": false,
+      "actionButtons": []
+    },
+    {
+      "view": "contact",
+      "viewport": 1440,
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Enviar mensagem",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Chamada",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 322,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "view": "company",
+      "viewport": 1440,
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Ver site",
+          "top": 322,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 322,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "view": "contacts",
       "viewport": 1024,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": []
     },
     {
       "view": "companies",
       "viewport": 1024,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": []
     },
     {
       "view": "contact",
       "viewport": 1024,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Enviar mensagem",
+          "top": 310,
+          "clipped": false
+        },
+        {
+          "label": "Chamada",
+          "top": 362,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 362,
+          "clipped": false
+        }
+      ]
     },
     {
       "drawer": "contact",
@@ -117,7 +238,19 @@
     {
       "view": "company",
       "viewport": 1024,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Ver site",
+          "top": 310,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 310,
+          "clipped": false
+        }
+      ]
     },
     {
       "drawer": "company",
@@ -149,17 +282,36 @@
     {
       "view": "contacts",
       "viewport": 390,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": []
     },
     {
       "view": "companies",
       "viewport": 390,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": []
     },
     {
       "view": "contact",
       "viewport": 390,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Enviar mensagem",
+          "top": 430,
+          "clipped": false
+        },
+        {
+          "label": "Chamada",
+          "top": 482,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 482,
+          "clipped": false
+        }
+      ]
     },
     {
       "drawer": "contact",
@@ -191,7 +343,19 @@
     {
       "view": "company",
       "viewport": 390,
-      "overflow": false
+      "overflow": false,
+      "actionButtons": [
+        {
+          "label": "Ver site",
+          "top": 458,
+          "clipped": false
+        },
+        {
+          "label": "Mais ações",
+          "top": 458,
+          "clipped": false
+        }
+      ]
     },
     {
       "drawer": "company",
@@ -217,6 +381,84 @@
         {
           "text": "Mídias",
           "overflow": false
+        }
+      ]
+    },
+    {
+      "media": "contact",
+      "viewport": 1630,
+      "overflow": false,
+      "thumbnails": [
+        {
+          "width": 245.5,
+          "height": 245.5,
+          "loaded": true
+        },
+        {
+          "width": 245.5,
+          "height": 245.5,
+          "loaded": true
+        },
+        {
+          "width": 96,
+          "height": 96,
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "media": "company",
+      "viewport": 1630,
+      "overflow": false,
+      "thumbnails": [
+        {
+          "width": 94,
+          "height": 94,
+          "loaded": true
+        },
+        {
+          "width": 94,
+          "height": 94,
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "media": "contact",
+      "viewport": 390,
+      "overflow": false,
+      "thumbnails": [
+        {
+          "width": 164.5,
+          "height": 164.5,
+          "loaded": true
+        },
+        {
+          "width": 164.5,
+          "height": 164.5,
+          "loaded": true
+        },
+        {
+          "width": 96,
+          "height": 96,
+          "loaded": true
+        }
+      ]
+    },
+    {
+      "media": "company",
+      "viewport": 390,
+      "overflow": false,
+      "thumbnails": [
+        {
+          "width": 94,
+          "height": 94,
+          "loaded": true
+        },
+        {
+          "width": 94,
+          "height": 94,
+          "loaded": true
         }
       ]
     }
