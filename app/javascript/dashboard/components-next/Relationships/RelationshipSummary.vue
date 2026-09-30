@@ -89,7 +89,8 @@ onBeforeUnmount(() => {
     </div>
     <dl
       v-else
-      class="m-0 grid grid-cols-2 overflow-hidden rounded-3xl border border-n-blue-5 bg-n-solid-2 shadow-sm xl:grid-cols-4"
+      class="m-0 grid grid-cols-2 overflow-hidden rounded-3xl border border-n-blue-5 bg-n-solid-2 shadow-sm"
+      :class="metrics.length === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'"
     >
       <div
         v-for="(metric, index) in metrics"
@@ -101,6 +102,7 @@ onBeforeUnmount(() => {
             : 'border-s border-n-weak',
           index > 1 ? 'border-t xl:border-t-0' : '',
           index === 2 ? 'border-s-0 xl:border-s' : '',
+          metrics.length === 3 && index === 2 ? 'col-span-2 xl:col-span-1' : '',
         ]"
       >
         <dt

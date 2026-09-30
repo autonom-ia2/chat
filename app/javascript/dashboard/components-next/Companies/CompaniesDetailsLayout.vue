@@ -30,9 +30,16 @@ const closeMobileSidebar = () => {
 
   isSidebarOpen.value = false;
 };
-useEventListener(window, 'keydown', event => {
-  if (event.key === 'Escape') closeMobileSidebar();
-});
+useEventListener(
+  window,
+  'keydown',
+  event => {
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    if (document.querySelector('[data-popover-content], dialog[open]')) return;
+    closeMobileSidebar();
+  },
+  { capture: true }
+);
 </script>
 
 <template>

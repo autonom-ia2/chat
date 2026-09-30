@@ -3,10 +3,12 @@ module Crm
     # Tabela de preço por modelo p/ ESTIMAR custo (USD por 1M tokens).
     #
     # Valores DEFAULT = preço de tabela "Standard" da OpenAI (developers.openai.com/api/docs/pricing,
-    # Sol/Luna 5.6 e 6 consultados em 2026-09-29). Modelos novos/preços alterados: ajustar aqui OU sem deploy
+    # Sol/Luna 5.6 e 6 consultados em 2026-09-29; gpt-6.1-sol em 2026-09-30). Modelos novos/preços
+    # alterados: ajustar aqui OU sem deploy
     # via ENV (1M tokens, "input,cached,output" com 4o campo OPCIONAL "cache_write"):
     #   CRM_AI_PRICE_GPT_5_4="2.5,0.25,15"
     #   CRM_AI_PRICE_GPT_6_LUNA="0.1,0.01,0.5,0.125"
+    #   CRM_AI_PRICE_GPT_6_1_SOL="2.0,0.1,10.0,2.5"
     # A chave da ENV é o modelo em UPPER, com tudo que não for [A-Z0-9] virando "_".
     # Não cobre Batch (-50%), Flex/Priority, nem áudio/TTS — só os modelos de texto em uso no CRM.
     module Pricing
@@ -20,7 +22,11 @@ module Crm
       # Família 5.6 (Sol/Terra/Luna) incluída para a página de gestão de IA precificar qualquer
       # modelo em uso: modelo AUSENTE daqui cai em ZERO_RATE e o custo é gravado como 0 SEM erro
       # (falha silenciosa). Terra tem a MESMA tarifa do gpt-5.4 — troca de geração sem custo extra.
+      # gpt-6-sol fica na tabela PARA SEMPRE: as linhas históricas de uso gravadas com esse nome
+      # precisam precificar retroativo sem cair em ZERO_RATE. gpt-6.1-sol = MESMAS tarifas, exceto
+      # leitura de cache pela METADE (0.1 vs 0.2) — toda a economia da migração vem do cache hit.
       DEFAULT_RATES = {
+        'gpt-6.1-sol' => { input: 2.0, cached: 0.1, cache_write: 2.5, output: 10.0 },
         'gpt-6-sol' => { input: 2.0, cached: 0.2, cache_write: 2.5, output: 10.0 },
         'gpt-6-luna' => { input: 0.1, cached: 0.01, cache_write: 0.125, output: 0.5 },
         'gpt-5.6-sol' => { input: 4.0, cached: 0.4, cache_write: 5.0, output: 20.0 },

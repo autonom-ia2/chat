@@ -71,9 +71,16 @@ const closeMobileSidebar = () => {
   if (!isContactSidebarOpen.value) return;
   isContactSidebarOpen.value = false;
 };
-useEventListener(window, 'keydown', event => {
-  if (event.key === 'Escape') closeMobileSidebar();
-});
+useEventListener(
+  window,
+  'keydown',
+  event => {
+    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    if (document.querySelector('[data-popover-content], dialog[open]')) return;
+    closeMobileSidebar();
+  },
+  { capture: true }
+);
 </script>
 
 <template>
@@ -168,7 +175,12 @@ useEventListener(window, 'keydown', event => {
       <div
         v-on-click-outside="[
           closeMobileSidebar,
-          { ignore: ['#contact-sidebar-content'] },
+          {
+            ignore: [
+              '#contact-sidebar-content',
+              '[data-relationships-media-popover]',
+            ],
+          },
         ]"
         class="flex items-start p-1 w-fit h-fit relative order-1 xs:top-24 top-28 transition-all bg-n-solid-2 border border-n-weak duration-500 ease-in-out"
         :class="[

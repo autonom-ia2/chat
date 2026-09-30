@@ -64,3 +64,22 @@ Navegador: nova rodada de 24 estados em quatro larguras, sem exceções JavaScri
 Durante as primeiras execuções, edição com HMR e três navegadores em paralelo produziram timeout e uma exceção de inicialização de BackButton. Os processos locais próprios foram reiniciados; as rodadas acima foram executadas em sequência, sem alteração desse componente e sem repetição da exceção. Esses resultados não são evidência de produção.
 
 O workflow Relationships do commit anterior 64704b206fff40fad774ac9049bd1154844ca4fe concluiu regression e production-image-runtime com sucesso; a verificação de Email UI desse SHA falhou nos três avisos já corrigidos. O SHA desta revisão ainda requer sua própria execução de CI. Capturas da revisão final são da aplicação, em ambiente isolado, com dados fictícios, sem edição dos pixels. As animações são estabilizadas pelo navegador ao capturar, para não registrar um hover em transição.
+
+## Aprovação e revisão para liberação
+
+Rodrigo aprovou a aparência final, recebeu a confirmação de 592px (+32,14%) e autorizou continuar com merge/deploy em 30/09/2026. A publicação passa pelo lote exclusivo release/2026-09-30-lote1 e pelos workflows blue-green das duas stacks. A main foi incorporada em 1d7f051a2655ef98cdc6ac70fa8b6f1a89c4cfe7, sem conflitos; essa versão já estava ativa nas duas stacks antes desta entrega.
+
+Revisão independente pelo agente review_776 identificou dois P2: espaço vazio na faixa quando Empresas está desativado e Escape fechando a lateral junto com um overlay interno. Corrigidos por grade de três colunas (último indicador ocupa a linha no celular) e leitura dos overlays na fase de captura do evento. O primeiro guard na fase de propagação não bastava: o navegador mostrou que o Popover já podia ter sido removido antes do listener da janela. Não foi alterado o Popover global. A lateral de contato também ignora cliques no menu de mídias teletransportado, como já fazia a empresa.
+
+Nova revisão independente dos três arquivos finais não encontrou problema demonstrável. Limite dessa revisão: leitura estática; os testes e a aceitação foram executados pela sessão principal.
+
+- Chrome real/local, com Empresas desativado no account sintético: dois estados (1630px e 390px), três métricas sem área vazia; feature restaurada após o teste.
+- Chrome real/local: dez verificações em contato/empresa, a 1024px e 390px; Escape no dialog de edição de link preserva a nota em rascunho, Escape no menu de mídias preserva a lateral (foco no conteúdo e no trigger), novo Escape sem overlay fecha a lateral. Zero exceções JavaScript. Nada salvo/enviado/excluído.
+- ESLint estrito nos três arquivos: zero achados bloqueantes, quatro avisos permitidos de chaves dinâmicas. Prettier passou. Gate AST passou em 267 arquivos contra sua base histórica. A primeira execução do gate sem inicializar rbenv falhou por Ruby/Bundler do sistema; foi repetida com Ruby 3.4.4 e passou.
+
+O CI completo do SHA de1ae2abb0fbb56c39c89b34a5c38e1dae531971 passou antes dessas correções: frontend 6.832 testes, backend Relacionamentos 288 exemplos/zero falhas/um pending conhecido, conversão nativa 18 exemplos, imagem final Linux com 11 verificações de runtime. Email protection passou com 1.032 exemplos/zero falhas/dois pending conhecidos e suas validações de interface. Esses resultados não substituem o CI da revisão final integrada à main.
+
+
+Bateria local sobre a árvore integrada à main: 615 arquivos/6.832 testes frontend passaram; após o ajuste da captura de Escape, os 17 arquivos relevantes foram repetidos (174 testes, zero falhas). RSpec executou 5.499 exemplos: 5.481 de integração/contratos sem falhas (dez pending: sete quarentenas existentes e três avaliações pagas desativadas); 18 de conversão nativa tiveram quatro falhas por libvips ausente no macOS. Essas falhas não foram ocultadas nem tiveram expectativas relaxadas; o gate Linux continua obrigatório antes da liberação. Os testes nativos e seu código não mudaram nesta revisão.
+
+Lint completo da aplicação: 22 arquivos frontend, zero bloqueios e 13 avisos permitidos; 11 arquivos Ruby sem infrações; Prettier passou. Um comando inicialmente incluiu o protótipo ilustrativo docs/relationships/mockups/785/mockup.js no lint de aplicação: apresentou 47 achados no artefato, fora dos caminhos de produto/CI. A seleção foi corrigida para app/enterprise e repetida, sem reescrever o protótipo aprovado. Guia build/check e Central check passaram, sem mudança nos arquivos gerados; avisos existentes de referências da Central preservados.

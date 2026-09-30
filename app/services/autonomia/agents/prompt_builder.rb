@@ -29,7 +29,7 @@ module Autonomia
 
       # KB-quality Bloco A (2026-07-03): 800→1500 para o trecho recuperado chegar mais INTEIRO ao LLM
       # (menos fato cortado no meio). No-op nos chunks atuais de ~600 chars; prepara o Bloco B (chunks
-      # adaptativos maiores). gpt-6-sol (1,05M de contexto) acomoda 12 trechos × 1500 com folga.
+      # adaptativos maiores). A janela de contexto do modelo acomoda 12 trechos × 1500 com folga.
       SNIPPET_MAX_CHARS = 1500
 
       OUTPUT_FORMAT = <<~FORMAT.strip
