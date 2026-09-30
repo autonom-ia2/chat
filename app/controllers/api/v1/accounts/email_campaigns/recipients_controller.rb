@@ -1,5 +1,6 @@
 class Api::V1::Accounts::EmailCampaigns::RecipientsController < Api::V1::Accounts::EmailCampaigns::BaseController
   before_action :fetch_campaign
+  before_action :authorize_management, only: [:create, :retry_import]
   before_action :set_current_page, only: [:index]
 
   RESULTS_PER_PAGE = 50
@@ -82,6 +83,10 @@ class Api::V1::Accounts::EmailCampaigns::RecipientsController < Api::V1::Account
   def fetch_campaign
     @campaign = EmailCampaign.where(account: Current.account).find(params[:campaign_id])
     authorize @campaign, :show?
+  end
+
+  def authorize_management
+    authorize @campaign, :update?
   end
 
   def too_large?

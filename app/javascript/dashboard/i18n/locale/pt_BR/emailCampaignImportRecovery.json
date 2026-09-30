@@ -1,0 +1,75 @@
+{
+  "EMAIL_CAMPAIGN_IMPORT_RECOVERY": {
+    "TITLE": "Vamos ajustar sua lista de contatos",
+    "PRESERVED": "Sua campanha e o rascunho do e-mail estão salvos. Nenhum contato desta tentativa com falha foi adicionado.",
+    "REASON": "O que aconteceu",
+    "CORRECTION": "Como resolver",
+    "OPEN": "Ver motivo e corrigir importação",
+    "SELECT": "Escolher CSV ou XLSX corrigido",
+    "UPLOAD": "Importar arquivo corrigido",
+    "RETRY": "Tentar o arquivo original novamente",
+    "LATER": "Resolver depois",
+    "CAUSES": {
+      "EMAIL": {
+        "REASON": "Não encontramos uma coluna com os e-mails dos destinatários.",
+        "CORRECTION": "Inclua uma coluna com os endereços de e-mail. Você pode chamá-la de Email; o nome da pessoa é opcional."
+      },
+      "AMBIGUOUS": {
+        "REASON": "Não conseguimos identificar com segurança qual coluna contém o destinatário desejado.",
+        "CORRECTION": "Se houver várias colunas de e-mail, identifique a desejada como E-mail principal do destinatário ou mantenha apenas essa coluna de endereços. Confira os títulos e reenvie o arquivo aqui."
+      },
+      "NAME": {
+        "REASON": "Mais de uma coluna pode representar o nome do contato.",
+        "CORRECTION": "Diferencie Nome do contato de Nome da empresa e envie o arquivo corrigido."
+      },
+      "FILE": {
+        "REASON": "Não conseguimos ler o arquivo como uma planilha compatível.",
+        "CORRECTION": "Salve como CSV ou XLSX, confira se ele abre corretamente e envie aqui."
+      },
+      "WIDTH": {
+        "REASON": "A planilha tem mais colunas do que conseguimos analisar.",
+        "CORRECTION": "Mantenha até 254 colunas, incluindo a de e-mail, e envie novamente."
+      },
+      "SIZE": {
+        "REASON": "O arquivo ultrapassa o limite de tamanho para envio.",
+        "CORRECTION": "Divida a lista em arquivos menores e envie um deles aqui."
+      },
+      "EMPTY": {
+        "REASON": "Não encontramos linhas de contatos neste arquivo.",
+        "CORRECTION": "Inclua os títulos das colunas e os contatos nas linhas abaixo, depois envie novamente."
+      },
+      "ROWS": {
+        "REASON": "A lista ultrapassa 50.000 linhas de contatos.",
+        "CORRECTION": "Divida a lista em arquivos de até 50.000 linhas cada."
+      },
+      "EXPIRED": {
+        "REASON": "O arquivo original enviado já expirou.",
+        "CORRECTION": "Escolha o arquivo novamente e envie aqui."
+      },
+      "UPLOAD": {
+        "REASON": "Não foi possível guardar o arquivo enviado.",
+        "CORRECTION": "Escolha seu arquivo novamente e tente enviá-lo aqui."
+      },
+      "CONFIG": {
+        "REASON": "O serviço de análise da lista está sem configuração ou recusou a chave de acesso.",
+        "CORRECTION": "Peça ao administrador para verificar a configuração do TypeSafe. O rascunho está salvo; envie a lista após o acesso ser restabelecido."
+      },
+      "SERVICE": {
+        "REASON": "O serviço de análise da lista não conseguiu concluir esta tentativa.",
+        "CORRECTION": "Tente o arquivo original novamente. Se continuar, peça ao administrador para verificar o serviço; alterar a planilha pode não resolver."
+      },
+      "UNKNOWN": {
+        "REASON": "Não foi possível concluir a importação. Esta tentativa não tem uma causa mais específica disponível.",
+        "CORRECTION": "Tente o arquivo original novamente ou envie um CSV ou XLSX corrigido aqui. Se falhar de novo, fale com o administrador."
+      },
+      "ADDRESSES": {
+        "REASON": "Este arquivo não contém endereços de e-mail válidos para envio.",
+        "CORRECTION": "Confira se essa é a coluna de e-mail desejada e corrija os endereços. Exemplo: pessoa{'@'}example.com. Depois envie o arquivo aqui."
+      },
+      "REQUEST": {
+        "REASON": "O serviço de análise da lista recusou esta solicitação.",
+        "CORRECTION": "Peça ao administrador para verificar o serviço de análise. Repetir a mesma solicitação não resolve esse erro; seu rascunho está salvo."
+      }
+    }
+  }
+}

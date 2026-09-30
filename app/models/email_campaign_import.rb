@@ -11,13 +11,14 @@ class EmailCampaignImport < ApplicationRecord
 
   RETENTION = 1.day
   RECOVERY_AFTER = 10.minutes
+  NON_RETRYABLE_ERRORS = %w[upload_failed typesafe_invalid_request].freeze
 
   def active?
     queued? || processing?
   end
 
   def retryable?
-    failed? && error_code != 'upload_failed' && created_at > RETENTION.ago && source_file.attached?
+    failed? && NON_RETRYABLE_ERRORS.exclude?(error_code) && created_at > RETENTION.ago && source_file.attached?
   end
 
   def public_status

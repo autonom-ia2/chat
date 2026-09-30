@@ -8,6 +8,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/campaignImport.json
       - /app/javascript/dashboard/i18n/locale/en/crm.json
       - /app/javascript/dashboard/i18n/locale/en/emailCampaignProtection.json
+      - /app/javascript/dashboard/i18n/locale/en/emailCampaignImportRecovery.json
       - /app/javascript/dashboard/i18n/locale/en/insurance.json
       - /app/javascript/dashboard/i18n/locale/en/onboardingTrail.json
       - /app/javascript/dashboard/i18n/locale/en/prospecting.json

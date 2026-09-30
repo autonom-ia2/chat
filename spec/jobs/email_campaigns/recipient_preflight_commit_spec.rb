@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe 'Recipient preflight commit boundary', type: :model do
+RSpec.describe 'Recipient preflight commit boundary', :relationships_committed_fixtures, type: :model do
   self.use_transactional_tests = false
 
   let!(:campaign) { create(:email_campaign) }

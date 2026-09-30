@@ -74,6 +74,20 @@ RSpec.describe 'Email campaign recipient presentation #436', :aggregate_failures
     expect(response.parsed_body.fetch('payload')).to eq(dto)
   end
 
+  it 'refuses the original file when the provider permanently rejected the request' do
+    import = campaign.email_campaign_imports.create!(status: :failed, error_code: 'typesafe_invalid_request')
+    import.source_file.attach(io: StringIO.new("Email\nsynthetic@example.org\n"), filename: 'recipients.csv', identify: false)
+
+    get "#{base}/#{campaign.id}/recipients", headers: headers, as: :json
+    expect(response.parsed_body.dig('payload', 'campaign', 'recipient_import', 'retryable')).to be(false)
+    expect do
+      post "#{base}/#{campaign.id}/recipients/retry_import", headers: headers, as: :json
+    end.not_to have_enqueued_job(EmailCampaigns::RecipientImportJob)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(import.reload).to be_failed
+    expect(import.error_code).to eq('typesafe_invalid_request')
+  end
+
   [[:get, ''], [:post, ''], [:post, '/retry_import']].each do |method, suffix|
     it "preserves tenant and role authorization for #{method.upcase} recipients#{suffix}" do
       foreign = create(:email_campaign, name: 'private-foreign-campaign')

@@ -7,7 +7,9 @@ class EmailCampaigns::Presentation::Errors
     'reputation_evaluation_superseded' => 'technical', 'reputation_configuration_invalid' => 'technical'
   }.freeze
   IMPORT_CODES = %w[upload_failed file_expired import_failed unsupported_file_format file_too_large invalid_file empty_file row_limit_exceeded
-                    invalid_csv invalid_xlsx].freeze
+                    invalid_csv invalid_xlsx missing_email_header missing_name_header duplicated_name_header duplicated_email_header
+                    invalid_header_mapping schema_not_resolved schema_too_wide no_valid_emails typesafe_not_configured typesafe_invalid_key
+                    typesafe_rate_limited typesafe_overloaded typesafe_unavailable typesafe_invalid_response typesafe_invalid_request].freeze
 
   def self.protection(value)
     value = value.to_h.with_indifferent_access
