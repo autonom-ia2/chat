@@ -74,6 +74,8 @@ en:
       cannot_revoke_current: You cannot revoke the current session.
 
   errors:
+    crm:
+      contact_conversation_conflict: 'cannot be changed while this opportunity has conversations belonging to another contact. Review the conversation links first.'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
