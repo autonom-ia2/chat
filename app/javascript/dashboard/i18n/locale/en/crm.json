@@ -152,6 +152,31 @@
     }
   },
   "CRM_KANBAN": {
+    "CONTACT_OPPORTUNITIES": {
+      "TAB": "Opportunities",
+      "TITLE": "CRM opportunities",
+      "HELP": "This contact's deals across pipelines. Only opportunities you can access.",
+      "REFRESH": "Refresh opportunities",
+      "SEARCH": "Search opportunity",
+      "SEARCH_HINT": "Deal title",
+      "APPLY_SEARCH": "Search opportunities",
+      "RESULT": "Status",
+      "ACTIVE": "Not archived",
+      "ALL": "All statuses",
+      "LOADING": "Loading opportunities…",
+      "ERROR": "Opportunities could not be loaded. Try again. Your contact record was not changed.",
+      "RETRY": "Try again",
+      "COUNT": "Results in this query: {count}",
+      "OPEN": "Open {title} in CRM in a new tab",
+      "NO_OWNER": "Unassigned",
+      "FORECAST": "Expected close:",
+      "EMPTY": "No opportunities in this query",
+      "EMPTY_HELP": "Check the search and selected status.",
+      "PAGINATION": "Contact opportunity pages",
+      "PREVIOUS": "Previous",
+      "NEXT": "Next",
+      "PAGE": "Page {page}"
+    },
     "TITLE": "CRM Kanban",
     "SUBTITLE": "Operational pipelines with cards that can work independently from conversations, contacts, or inboxes.",
     "ORIGIN": {

@@ -351,6 +351,15 @@
 - passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados comerciais e confirme **Criar oportunidade**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
 - gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
 
+### consultar_oportunidades_na_ficha_do_contato
+- titulo: Consultar oportunidades na ficha do contato
+- rota: contacts_edit
+- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"
+- onde_fica: Relacionamentos > Contatos > abrir contato > Acompanhamento > Oportunidades
+- pre_requisitos: Relacionamentos e CRM habilitados; permissão de visualizar CRM e acesso ao contato. Cada oportunidade respeita também sua visibilidade no CRM.
+- passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
+- gotchas: por padrão, arquivadas ficam fora; escolha **Arquivado** ou **Todas as situações** para consultá-las. O total considera apenas registros que você pode acessar e os filtros da consulta. A lista não cria nem altera dados. A ficha e seu preenchimento permanecem abertos. Os filtros desta lista não mudam os filtros do Kanban; as moedas aparecem por oportunidade e não são somadas ou convertidas.
+
 ### mover_card_ganhar_perder_ou_reabrir_oportunidade
 - titulo: Mover card, ganhar, perder ou reabrir oportunidade
 - rota: crm_kanban_index

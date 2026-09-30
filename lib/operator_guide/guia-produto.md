@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (170 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (171 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -373,6 +373,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - pre_requisitos: navegação de Relacionamentos e CRM habilitados; permissão de visualizar CRM e gerenciar oportunidades; acesso ao contato; funil com etapa disponível.
 - passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados comerciais e confirme **Criar oportunidade**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
 - gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
+- nav_target: `contacts_edit`
+
+### Consultar oportunidades na ficha do contato
+- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"
+- onde_fica: Relacionamentos > Contatos > abrir contato > Acompanhamento > Oportunidades
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: Relacionamentos e CRM habilitados; permissão de visualizar CRM e acesso ao contato. Cada oportunidade respeita também sua visibilidade no CRM.
+- passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
+- gotchas: por padrão, arquivadas ficam fora; escolha **Arquivado** ou **Todas as situações** para consultá-las. O total considera apenas registros que você pode acessar e os filtros da consulta. A lista não cria nem altera dados. A ficha e seu preenchimento permanecem abertos. Os filtros desta lista não mudam os filtros do Kanban; as moedas aparecem por oportunidade e não são somadas ou convertidas.
 - nav_target: `contacts_edit`
 
 ### Mover card, ganhar, perder ou reabrir oportunidade

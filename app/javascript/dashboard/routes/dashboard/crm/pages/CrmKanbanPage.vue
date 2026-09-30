@@ -1009,8 +1009,18 @@ const openRouteCardIfNeeded = async () => {
   const cardId = route.query.card_id;
   if (!cardId || openedRouteCardId.value === String(cardId)) return;
 
+  const originAccount = route.params.accountId;
   openedRouteCardId.value = String(cardId);
   await openCardDrawer({ id: Number(cardId) });
+  const card = selectedCard.value;
+  if (originAccount !== route.params.accountId || card?.id !== Number(cardId))
+    return;
+  // A profile lists opportunities across funnels. Align the board and its stage
+  // options only after the card has been authorized and loaded by the real API.
+  // Never inject an unavailable/archived pipeline into the native selector.
+  if (pipelines.value.some(pipeline => pipeline.id === card.pipeline_id)) {
+    currentPipelineId.value = card.pipeline_id;
+  }
 };
 
 const closeDrawer = () => {

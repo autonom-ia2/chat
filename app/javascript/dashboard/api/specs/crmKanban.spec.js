@@ -56,6 +56,22 @@ describe('#CrmKanbanAPI', () => {
     expect(crmKanban).toHaveProperty('getCalendarEvents');
   });
 
+  it('fetches only the requested contact opportunities with account scope and abort signal', () => {
+    const signal = new AbortController().signal;
+    crmKanban.getContactOpportunities(
+      42,
+      { page: 2, result: 'won' },
+      { signal }
+    );
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/contacts/42/opportunities',
+      {
+        params: { page: 2, result: 'won' },
+        signal,
+      }
+    );
+  });
+
   it('fetches pipelines with account scope', () => {
     crmKanban.getPipelines();
     expect(axiosMock.get).toHaveBeenCalledWith(

@@ -1,9 +1,12 @@
 <script setup>
-import { onMounted, computed, ref, watch } from 'vue';
+import { onMounted, computed, ref, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import ContactDetailActions from 'dashboard/components-next/Relationships/ContactDetailActions.vue';
+import ContactOpportunities from 'dashboard/components-next/Relationships/ContactOpportunities.vue';
+import { useContactOpportunities } from 'dashboard/components-next/Relationships/useContactOpportunities';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import RelationshipTabs from 'dashboard/components-next/Relationships/RelationshipTabs.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -43,6 +46,29 @@ const showSpinner = computed(
 );
 
 const { t } = useI18n();
+const { canViewCrm } = useCrmPermissions();
+const opportunitiesAvailable = computed(
+  () =>
+    navigationEnabled.value &&
+    canViewCrm.value &&
+    window.globalConfig?.CRM_KANBAN_ENABLED === 'true'
+);
+const opportunityList = reactive(
+  useContactOpportunities({
+    accountId,
+    contactId: computed(() => route.params.contactId),
+    enabled: computed(
+      () =>
+        opportunitiesAvailable.value &&
+        activeTab.value === 'opportunities' &&
+        !isFetchingItem.value
+    ),
+  })
+);
+watch(opportunitiesAvailable, available => {
+  if (!available && activeTab.value === 'opportunities')
+    activeTab.value = 'notes';
+});
 
 const CONTACT_TABS_OPTIONS = [
   { key: 'ATTRIBUTES', value: 'attributes' },
@@ -53,14 +79,24 @@ const CONTACT_TABS_OPTIONS = [
 ];
 
 const tabs = computed(() => {
-  return CONTACT_TABS_OPTIONS.map(tab => ({
-    label: t(`CONTACTS_LAYOUT.SIDEBAR.TABS.${tab.key}`),
-    value: tab.value,
-  }));
+  return [
+    ...(opportunitiesAvailable.value
+      ? [
+          {
+            label: t('CRM_KANBAN.CONTACT_OPPORTUNITIES.TAB'),
+            value: 'opportunities',
+          },
+        ]
+      : []),
+    ...CONTACT_TABS_OPTIONS.map(tab => ({
+      label: t(`CONTACTS_LAYOUT.SIDEBAR.TABS.${tab.key}`),
+      value: tab.value,
+    })),
+  ];
 });
 
 const activeTabIndex = computed(() => {
-  return CONTACT_TABS_OPTIONS.findIndex(v => v.value === activeTab.value);
+  return tabs.value.findIndex(v => v.value === activeTab.value);
 });
 
 const goToContactsList = () => {
@@ -228,6 +264,10 @@ onMounted(() => {
             <Spinner />
           </div>
           <template v-else>
+            <ContactOpportunities
+              v-if="opportunitiesAvailable && activeTab === 'opportunities'"
+              :list="opportunityList"
+            />
             <ContactCustomAttributes
               v-if="activeTab === 'attributes'"
               :selected-contact="selectedContact"

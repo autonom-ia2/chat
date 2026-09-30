@@ -141,6 +141,13 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/cards`, { params });
   }
 
+  getContactOpportunities(contactId, params = {}, { signal } = {}) {
+    return axios.get(`${this.url}/contacts/${contactId}/opportunities`, {
+      params,
+      signal,
+    });
+  }
+
   // #722 — planilha (.xlsx) da Lista, com os mesmos parâmetros de getCards, sem página.
   exportCards(params = {}) {
     return axios.get(`${this.url}/cards/export`, {

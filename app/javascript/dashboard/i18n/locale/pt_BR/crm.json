@@ -152,6 +152,31 @@
     }
   },
   "CRM_KANBAN": {
+    "CONTACT_OPPORTUNITIES": {
+      "TAB": "Oportunidades",
+      "TITLE": "Oportunidades no CRM",
+      "HELP": "Negociações deste contato em todos os funis. Apenas oportunidades que você pode acessar.",
+      "REFRESH": "Atualizar oportunidades",
+      "SEARCH": "Buscar oportunidade",
+      "SEARCH_HINT": "Título da negociação",
+      "APPLY_SEARCH": "Buscar oportunidades",
+      "RESULT": "Situação",
+      "ACTIVE": "Não arquivadas",
+      "ALL": "Todas as situações",
+      "LOADING": "Carregando oportunidades…",
+      "ERROR": "Não foi possível consultar as oportunidades. Tente novamente. Seu cadastro não foi alterado.",
+      "RETRY": "Tentar novamente",
+      "COUNT": "Resultados nesta consulta: {count}",
+      "OPEN": "Abrir {title} no CRM em outra aba",
+      "NO_OWNER": "Sem responsável",
+      "FORECAST": "Previsão:",
+      "EMPTY": "Nenhuma oportunidade nesta consulta",
+      "EMPTY_HELP": "Confira a busca e a situação selecionadas.",
+      "PAGINATION": "Páginas de oportunidades do contato",
+      "PREVIOUS": "Anterior",
+      "NEXT": "Próxima",
+      "PAGE": "Página {page}"
+    },
     "TITLE": "CRM Kanban",
     "ORIGIN": {
       "META_CTWA": "Meta clique para WhatsApp",

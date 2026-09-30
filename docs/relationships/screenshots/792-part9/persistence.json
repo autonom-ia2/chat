@@ -1,0 +1,23 @@
+{
+  "result": "passed",
+  "database": "isolated local UI",
+  "data": "synthetic",
+  "before": {
+    "contacts": 45,
+    "companies": 20,
+    "cards": 71,
+    "messages": 33,
+    "conversations": 2
+  },
+  "after": {
+    "contacts": 45,
+    "companies": 20,
+    "cards": 71,
+    "messages": 33,
+    "conversations": 2
+  },
+  "contact_unchanged": true,
+  "all_eight_cards_unchanged": true,
+  "business_writes": 0,
+  "timestamp_precision": "ISO8601 UTC, six decimals on both snapshots"
+}

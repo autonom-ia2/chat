@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–7. Parte 8 implementada: abrir Nova oportunidade pela ficha do contato com o cadastro confirmado selecionado. Validada localmente, aguardando aprovação das telas reais antes do próximo incremento. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–8. Parte 9 implementada: consultar oportunidades vinculadas na ficha do contato, com visibilidade, filtros e paginação no servidor. Validada localmente, aguardando aprovação das telas reais antes do próximo incremento. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -19,7 +19,7 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6 aprovada: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; revisão transversal pendente. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
-| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre a ficha real; parte 8 cria oportunidade pela ficha com pessoa/empresa confirmadas, preservando a aba de origem. A listagem integrada de oportunidades e a revisão transversal ainda estão pendentes. |
+| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre a ficha real; parte 8 aprovada cria oportunidade pela ficha preservando a aba de origem. Parte 9 lista as oportunidades autorizadas com busca/paginação, sem carregar conversas ou alterar cadastros. Aceite visual e revisão transversal pendentes. |
 | M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
@@ -143,9 +143,19 @@ A largura continua igual à de Editar funil. Não foram adicionados endpoints, m
 
 Evidências: [auditoria da parte 8](../audit/2026-09-30-792-crm-relationships-part-8.md) e [telas reais](screenshots/792-part8/README.md).
 
+## Parte 9 — Lista de oportunidades na ficha do contato
+
+Acompanhamento recebeu a aba Oportunidades, sem remover os controles existentes e mantendo Notas como entrada padrão. Lista título, funil, etapa, situação, valor/moeda, responsável e previsão. Por padrão mostra não arquivadas; filtros permitem consultar todas, abertas, ganhas, perdidas e arquivadas. Busca e paginação de cinco itens são realizadas no servidor. O total corresponde somente à consulta e aos registros permitidos.
+
+A projeção read-only `GET /api/v1/accounts/:account_id/crm/contacts/:contact_id/opportunities` exige acesso ao CRM e ao contato, aplica o escopo nativo de cards e retorna só os campos comerciais necessários. Não usa o serializer amplo do CRM e não retorna conversas, mensagens ou metadados de IA. Não são criados vínculos/tabelas novos. A consulta por ID canônico não agrega homônimos nem outros contatos da mesma empresa.
+
+Desktop e celular compartilham o estado da mesma consulta. Trocar conta/contato/aba ou perder permissão invalida respostas antigas. Voltar ao foco da ficha ou clicar em Atualizar busca os dados atuais; não se promete atualização contínua enquanto a ficha estiver sem foco. Abrir uma oportunidade usa outra aba e preserva o formulário da pessoa. Filtros não modificam o Kanban. Valores zero e moedas individuais são preservados, sem soma/conversão.
+
+Evidências: [auditoria da parte 9](../audit/2026-09-30-792-crm-relationships-part-9.md) e [11 telas reais](screenshots/792-part9/README.md). Bateria local: 484 testes frontend selecionados, 507 backend aprovados e quatro suspensos antigos separados, 28 checks de navegador com bundle compilado. Consulta sem gravações confirmada diretamente no banco. O CI remoto e a revisão independente permanecem gates próprios.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação visual da parte 8, abordar primeiro a consulta das oportunidades vinculadas na ficha do contato. A ficha da empresa será tratada depois, reutilizando os vínculos e as permissões existentes. Não iniciar essa etapa nem fazer merge/deploy por consequência desta entrega. A revisão transversal e independente permanece obrigatória antes da liberação final.
+Após aprovação visual da parte 9, abordar a lista de oportunidades na ficha da empresa, usando os contatos realmente vinculados e as permissões existentes. Não iniciar essa etapa nem fazer merge/deploy por consequência desta entrega. A revisão transversal e independente permanece obrigatória antes da liberação final.
 
 ## Validação e publicação
 

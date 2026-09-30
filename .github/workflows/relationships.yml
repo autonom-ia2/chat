@@ -106,6 +106,7 @@ jobs:
           spec/enterprise/services/contacts/company_association_service_spec.rb
           spec/requests/api/v1/accounts/crm/cards_spec.rb
           spec/requests/api/v1/accounts/crm/opportunity_creation_spec.rb
+          spec/requests/api/v1/accounts/crm/contact_opportunities_spec.rb
           spec/requests/api/v1/accounts/crm/opportunity_registration_spec.rb
           spec/requests/api/v1/accounts/crm/card_contact_creation_spec.rb
           spec/requests/api/v1/accounts/crm/card_contact_links_spec.rb
