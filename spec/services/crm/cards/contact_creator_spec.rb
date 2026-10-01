@@ -26,6 +26,13 @@ RSpec.describe Crm::Cards::ContactCreator do
     expect(card.reload.contact_id).to eq(existing.id)
   end
 
+  it 'allows the same phone in different accounts without linking the foreign contact' do
+    foreign = create(:contact, phone_number: '+14155552671')
+    described_class.new(card: card, actor: admin, attributes: { name: 'Local lead', phone_number: foreign.phone_number }).perform
+    expect(card.reload.contact).to have_attributes(account_id: account.id, phone_number: foreign.phone_number)
+    expect(card.contact_id).not_to eq(foreign.id)
+  end
+
   it 'rolls back the person and card when audit recording fails' do
     card
     previous = card.attributes

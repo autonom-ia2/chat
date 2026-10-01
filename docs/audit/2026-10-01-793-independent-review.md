@@ -1,6 +1,13 @@
 # PR #793 — revisão independente e alinhamento visual
 
-## Decisão
+## Atualização posterior
+
+A corrida entre os dois fluxos novos do CRM recebeu correção autorizada pelo
+Rodrigo. Veja `2026-10-01-793-contact-race-fix.md` para a prova antes/depois e os
+gates ainda pendentes. O parecer abaixo registra o estado auditado anteriormente
+e foi preservado como histórico.
+
+## Decisão original
 
 **Não liberar a PR neste estado.** A revisão reproduziu uma corrida que permite
 criar duas pessoas com o mesmo telefone na mesma conta. A aprovação visual não
