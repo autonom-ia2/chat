@@ -96,3 +96,21 @@ registrada como próxima decisão, sem mudar dados nem os títulos dos cards.
 O pre-push também encontrou o mesmo Husky ausente. Hooks foram ignorados apenas
 nos comandos desta proposta documental; configuração compartilhada preservada.
 Não houve merge, deploy, produto, provider pago ou acesso a dados reais.
+
+## Revisão de filtros e investigação do Guia — 01/10
+
+Rodrigo solicitou manter etiquetas e score com simplicidade, remover duplicidade
+da busca de empresa e avaliar reutilização do Guia. Protótipo reorganizado em
+busca por nome + Mais filtros + Encontrar com IA; categorias recolhidas e chips.
+Nenhuma edição de produto, provedor, conta, banco ou deploy.
+
+Validação: node --check aprovado; Tailwind build aprovado (aviso Browserslist
+desatualizado, sem atualização); navegador isolado 1440×900 e 390×844. VIP=6,
+VIP+atenção>=84=2, com Alvorada=1; responsável Camila=4; campanhas OU=6; remover
+campanhas=11; Urgente=1 sem score; IA fictícia Norte+Minha carteira=2. Escape
+restaura foco e aria-expanded. US$0 de chamadas, teto autorizado US$1 preservado.
+
+Pesquisa primária: Carbon Filtering (atualização 11/08/2026) e NN/g User Intent
+Affects Filter Design. A instantaneidade do mockup não prova desempenho no
+backend. A integração do Guia exige conferir ferramentas executáveis, pois a
+instrução escrita pode não representar todas as capacidades já implementadas.

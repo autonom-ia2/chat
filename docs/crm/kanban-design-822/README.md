@@ -12,7 +12,8 @@ em revisão na [PR #793](https://github.com/autonom-ia2/chat/pull/793).
 - [Quadro desktop — cinco status](screenshots/06-kanban-1920.png).
 - [Contato e empresa no detalhe](screenshots/02-card-empresa.png).
 - [Kanban no celular](screenshots/03-kanban-celular.png).
-- [Revisão dos filtros compactos e Criar funil visível](screenshots/13-filtros-compactos.png); [celular revisado](screenshots/14-filtros-compactos-celular.png).
+- [Busca única e ações visíveis](screenshots/15-busca-unificada.png); [Mais filtros completo](screenshots/16-filtros-completos.png); [filtros completos no celular](screenshots/18-filtros-celular.png).
+- Histórico: [Revisão dos filtros compactos e Criar funil visível](screenshots/13-filtros-compactos.png); [celular revisado](screenshots/14-filtros-compactos-celular.png).
 - [Filtros combinados](screenshots/09-filtros-combinados.png) e [filtros no celular](screenshots/10-filtros-celular.png).
 - [Encontrar com IA](screenshots/11-encontrar-com-ia.png) e [IA no celular](screenshots/12-ia-celular.png).
 - [Parecer de arte](reports/art-direction.md), [UX/UI](reports/ux-analysis.md),
@@ -205,3 +206,29 @@ oportunidade. A recomendação para próxima decisão visual é empresa em desta
 e pessoa abaixo; sem empresa, pessoa em destaque. Conservar o negócio como
 informação secundária evita tornar oportunidades da mesma empresa indistintas.
 Essa nova hierarquia ainda não foi aplicada ao protótipo nesta revisão.
+
+## Revisão de filtros após feedback do Rodrigo
+
+Busca por nome, **Mais filtros** e **Encontrar com IA** têm entradas distintas.
+A empresa exata fica dentro de Mais filtros; não há outro campo de empresa na
+faixa do quadro. O drawer reúne atalhos de carteira/atraso e cinco categorias
+recolhidas, com resumo curto do conteúdo. Chips removíveis e badge tornam os
+critérios ativos visíveis após fechar. Criar funil continua exposto.
+
+Etiquetas e campanhas aceitam mais de uma opção (qualquer uma das escolhidas);
+estágios, atendimento, responsável, equipe, caixa, valor e atividade continuam
+representados. Prioridade da equipe e nota de atenção são conceitos distintos.
+Empresa e faixa de score ainda exigem contrato novo no backend. O protótipo
+não demonstra consulta paginada, fechamento dos dados ou permissão real.
+
+Esta composição usa divulgação progressiva: abrir apenas a categoria necessária,
+sem perder acesso aos filtros. A referência [Carbon — Filtering](https://www.carbondesignsystem.com/building-blocks/core/patterns/filtering)
+recomenda sinalizar filtros ocultos e permitir limpar sem reabrir. A referência
+[NN/g — User Intent Affects Filter Design](https://www.nngroup.com/articles/applying-filters/)
+orienta preservar o contexto enquanto a pessoa combina critérios.
+
+Na integração, critérios complexos devem ser preparados antes da aplicação;
+a decisão entre atualização instantânea e em lote depende da latência real da
+consulta. A prévia calcula apenas onze fixtures em memória, imediatamente.
+Para muitas empresas e usuários, os botões de fixtures serão substituídos por
+pickers pesquisáveis do design system, com consulta autorizada e sem select nativo.

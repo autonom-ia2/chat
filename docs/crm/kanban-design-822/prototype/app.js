@@ -59,7 +59,7 @@ const card = (id, stage, title, contactIndex, score, source, who, value = 0, due
   ownerId: who === 'Camila Rocha' ? 1 : who === 'João Lima' ? 2 : null,
   responsible: { type: who === 'Agente Gabriela' ? 'bot' : who ? 'agent' : 'none', name: who },
   value, inbox: who === 'Agente Gabriela' ? 'WhatsApp Comercial' : 'Email Comercial',
-  lastMessageAt: id % 2 ? '2026-10-01T09:00:00-03:00' : '2026-09-30T16:00:00-03:00',
+  enteredStageAt: '2026-10-01T09:00:00-03:00', lastMessageAt: id % 2 ? '2026-10-01T09:00:00-03:00' : '2026-09-30T16:00:00-03:00',
   nextFollowUpAt: due, nextFollowUpSource: due ? 'manual' : null,
 });
 const INITIAL = [
@@ -78,17 +78,18 @@ const INITIAL = [
 INITIAL[2].lastMessageAt = null;
 INITIAL[0].scoreReason = 'O cliente respondeu há pouco e aguarda o primeiro atendimento.';
 INITIAL[8].nextFollowUpSource = 'ai';
+const emptyAdvanced = () => ({ labels: [], stages: [], scoreMin: '', scoreMax: '', priority: '', inbox: '', team: '', owner: '', responsible: '', followUp: '', campaign: [], valueMin: '', valueMax: '', stale: '', linked: '', aiPending: '', result: '' });
 const app = {
   pipelines: [{ id: 1, name: 'Email Comercial', stages: STAGES, cards: structuredClone(INITIAL) }, { id: 2, name: 'Pós-venda', stages: POST_STAGES, cards: [card(21, 'received', 'Ajustar canais da equipe', 0, 64, null, 'João Lima'), card(22, 'support', 'Atualizar plano contratado', 1, 80, 'manual', 'Camila Rocha', 0, '2026-10-02T15:00:00-03:00')] }],
-  pipelineId: 1, view: 'kanban', filter: 'all', companyId: null, overdueOnly: false, query: '', stageIndex: 0, demoState: 'normal', dragged: null,
+  advanced: emptyAdvanced(), pipelineId: 1, view: 'kanban', filter: 'all', companyId: null, overdueOnly: false, query: '', stageIndex: 0, demoState: 'normal', dragged: null,
 };
 const pipeline = () => app.pipelines.find(p => p.id === app.pipelineId);
 const stage = id => pipeline().stages.find(s => s.id === id);
 const findCard = id => pipeline().cards.find(c => c.id === Number(id));
 const show = (el, visible) => el.classList.toggle('hidden', !visible);
-const FILTERS = { all: 'Todos', mine: 'Minha carteira', unassigned: 'Sem responsável' };
+const FILTERS = { all: 'Qualquer responsável', mine: 'Minha carteira', unassigned: 'Sem responsável' };
 const COMPANY_FILTERS = [{ id: 'all', name: 'Qualquer empresa' }, { id: '1', name: 'Norte Logística' }, { id: '2', name: 'Alvorada Tecnologia' }, { id: 'none', name: 'Sem empresa vinculada' }];
-const filterCount = () => Number(app.filter !== 'all') + Number(app.companyId !== null) + Number(app.overdueOnly);
+const filterCount = () => Number(app.filter !== 'all') + Number(app.companyId !== null) + Number(app.overdueOnly) + advancedChips().length;
 const money = value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 const dateLabel = iso => new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).format(new Date(iso));
 const scoreLabel = c => `Atenção${c.scoreSource === 'ai' ? ' IA' : c.scoreSource === 'manual' ? ' manual' : ''} · ${c.score}`;
@@ -112,7 +113,7 @@ function matches(criteria = app) {
     const filterMatch = criteria.filter === 'all' || criteria.filter === 'mine' && c.ownerId === 1 || criteria.filter === 'unassigned' && c.responsible.type === 'none';
     const demoMatch = criteria.demoState !== 'b2c' || c.contact && !c.contact.company;
     const companyMatch = criteria.companyId === null || criteria.companyId === 'none' && !c.contact?.company || String(c.contact?.company?.id) === criteria.companyId;
-    return queryMatch && filterMatch && companyMatch && (!criteria.overdueOnly || overdue(c)) && demoMatch;
+    return advancedMatches(c, criteria.advanced, criteria.overdueOnly) && queryMatch && filterMatch && companyMatch && (!criteria.overdueOnly || overdue(c)) && demoMatch;
   }).sort((a, b) => (b.score || 0) - (a.score || 0) || (b.lastMessageAt || '').localeCompare(a.lastMessageAt || '') || b.id - a.id);
 }
 function renderFiltered() {
@@ -153,24 +154,16 @@ function render() {
   show($('filter-badge'), filterCount() > 0);
   $('filter-badge').textContent = filterCount();
   $('filter-button').setAttribute('aria-pressed', String(filterCount() > 0));
-  $('company-label').textContent = COMPANY_FILTERS.find(item => item.id === (app.companyId || 'all')).name;
-  $('overdue-button').setAttribute('aria-pressed', String(app.overdueOnly));
-  $('overdue-button').classList.toggle('bg-white', !app.overdueOnly);
-  $('overdue-button').classList.toggle('border-slate-200', !app.overdueOnly);
-  $('overdue-button').classList.toggle('bg-blue-50', app.overdueOnly);
-  $('overdue-button').classList.toggle('text-blue-700', app.overdueOnly);
-  $('overdue-button').classList.toggle('border-blue-600', app.overdueOnly);
   renderViews();
-  $('filters-results').textContent = `Ver ${cards.length} ${cards.length === 1 ? 'oportunidade' : 'oportunidades'}`;
   const applied = [];
   if (app.companyId !== null) applied.push(['company', `Empresa: ${COMPANY_FILTERS.find(item => item.id === app.companyId).name}`]);
   if (app.filter !== 'all') applied.push(['owner', FILTERS[app.filter]]);
   if (app.overdueOnly) applied.push(['overdue', 'Retornos atrasados']);
+  applied.push(...advancedChips());
   $('applied-filters').innerHTML = applied.map(([key, label]) => `<button data-remove-filter="${key}" aria-label="Remover filtro ${esc(label)}" class="flex min-h-11 items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 text-xs font-medium text-blue-800 hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${esc(label)}${icon('x')}</button>`).join('');
   show($('applied-filters'), applied.length > 0);
   $('applied-filters').classList.toggle('flex', applied.length > 0);
 
-  $('filter-options').innerHTML = Object.entries(FILTERS).map(([id, label]) => `<button type="button" data-filter="${id}" aria-pressed="${app.filter === id}" class="min-h-11 rounded-lg border px-3 text-sm ${app.filter === id ? 'border-blue-600 bg-blue-50 font-medium text-blue-700' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${label}</button>`).join('');
   const isState = ['loading', 'error', 'empty'].includes(app.demoState) || cards.length === 0;
   show($('state-panel'), isState);
   show($('board'), !isState && app.view === 'kanban');
@@ -220,7 +213,7 @@ function restoreFocus() {
 function openDrawer(title, subtitle, content, footer) {
   if (!$('drawer').open) {
     const active = document.activeElement;
-    returnFocus = active?.closest('#config-menu') ? $('config-button') : active?.closest('#pipeline-menu') ? $('pipeline-button') : active?.closest('#company-menu') ? $('company-button') : active;
+    returnFocus = active?.closest('#config-menu') ? $('config-button') : active?.closest('#pipeline-menu') ? $('pipeline-button') : active;
     returnCardId = returnFocus?.dataset.move || returnFocus?.dataset.open || null;
     returnAction = returnFocus?.dataset.open ? 'open' : 'move';
   }
@@ -232,7 +225,7 @@ function openDrawer(title, subtitle, content, footer) {
   hydrate();
   if (!$('drawer').open) $('drawer').showModal();
 }
-function closeDrawer() { $('drawer').close(); restoreFocus(); }
+function closeDrawer() { $('drawer').close(); $('filter-button').setAttribute('aria-expanded', 'false'); restoreFocus(); }
 function details(id) {
   const c = findCard(id);
   openDrawer(c.title, 'Oportunidade e relacionamento', `<div class="flex items-center gap-2 text-sm"><span class="h-2.5 w-2.5 rounded-sm ${stage(c.stage).dot}"></span>${stage(c.stage).name}</div><section class="mt-6"><h3 class="text-base font-semibold">Quem está nesta oportunidade?</h3><div class="mt-4 rounded-xl border border-slate-200 p-4"><p class="text-xs text-slate-600">Contato</p><p class="mt-1 font-medium">${esc(c.contact?.name || 'Sem contato vinculado')}</p>${c.contact ? `<p class="mt-1 text-sm text-slate-600">${esc(c.contact.phone_number)}</p>` : ''}${c.contact?.company ? `<div class="mt-4 border-t border-slate-100 pt-4"><p class="text-xs text-slate-600">Empresa vinculada</p><p class="mt-1 flex items-center gap-2 font-medium">${icon('building')}${esc(c.contact.company.name)}</p></div>` : ''}</div></section><section class="mt-6"><h3 class="text-base font-semibold">Atendimento</h3><dl class="mt-4 grid grid-cols-1 gap-4 rounded-xl bg-slate-50 p-4 sm:grid-cols-2"><div><dt class="text-xs text-slate-600">Responsável</dt><dd class="mt-1 text-sm font-medium">${esc(responsible(c))}</dd></div><div><dt class="text-xs text-slate-600">Caixa de entrada</dt><dd class="mt-1 text-sm font-medium">${esc(c.inbox)}</dd></div><div><dt class="text-xs text-slate-600">Valor estimado</dt><dd class="mt-1 text-sm font-medium">${c.value ? money(c.value) : 'Não informado'}</dd></div><div><dt class="text-xs text-slate-600">Última mensagem</dt><dd class="mt-1 text-sm font-medium">${c.lastMessageAt ? dateLabel(c.lastMessageAt) : 'Sem conversa vinculada'}</dd></div></dl></section>${c.score !== null ? `<section class="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4"><h3 class="text-sm font-semibold">${esc(scoreLabel(c))}</h3><p class="mt-2 text-sm leading-6 text-slate-700">${esc(c.scoreReason || 'A origem desta avaliação não foi informada.')}</p><p class="mt-2 text-xs text-slate-600">Indica atenção necessária. Não é chance de venda.</p></section>` : ''}${c.nextFollowUpAt ? `<section class="mt-6"><h3 class="text-sm font-semibold">${followUpOrigin(c)}</h3><p class="mt-2 text-sm">${dateLabel(c.nextFollowUpAt)}</p></section>` : ''}`, `<button data-close class="${secondary}">Fechar</button><button data-move="${c.id}" class="${primary}">Mover para ${icon('move')}</button>`);
@@ -245,12 +238,13 @@ function moveCard(id, destination) {
   const c = findCard(id);
   if (c.stage === destination) return;
   const previous = c.stage;
-  c.stage = destination;
+  const previousEnteredStageAt = c.enteredStageAt;
+  c.stage = destination; c.enteredStageAt = NOW.toISOString();
   app.stageIndex = pipeline().stages.findIndex(s => s.id === destination);
   if ($('drawer').open) closeDrawer();
   render();
   restoreFocus();
-  toast(`${c.title} movida para ${stage(destination).name}.`, { id: c.id, previous });
+  toast(`${c.title} movida para ${stage(destination).name}.`, { id: c.id, previous, previousEnteredStageAt });
 }
 let undoMove;
 let toastTimer;
@@ -261,7 +255,7 @@ function toast(message, undo) {
   clearTimeout(toastTimer);
   if (!undo) toastTimer = setTimeout(() => show($('toast'), false), 7000);
 }
-function closeMenus() { show($('config-menu'), false); show($('pipeline-menu'), false); show($('company-menu'), false); $('company-button').setAttribute('aria-expanded', 'false'); $('config-button').setAttribute('aria-expanded', 'false'); $('pipeline-button').setAttribute('aria-expanded', 'false'); }
+function closeMenus() { show($('config-menu'), false); show($('pipeline-menu'), false); $('config-button').setAttribute('aria-expanded', 'false'); $('pipeline-button').setAttribute('aria-expanded', 'false'); }
 function menu(id, trigger) {
   const visible = $(id).classList.contains('hidden');
   closeMenus();
@@ -270,16 +264,8 @@ function menu(id, trigger) {
   if (visible) $(id).querySelector('button')?.focus();
 }
 function menus() {
-  $('company-menu').innerHTML = `<label for="company-search" class="sr-only">Pesquisar empresa</label><input id="company-search" role="combobox" aria-expanded="true" aria-controls="company-options" placeholder="Pesquisar empresa" class="mb-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-base outline-none focus:border-blue-600"/><div id="company-options" role="listbox" aria-label="Empresas"></div>`;
-  $('company-search').addEventListener('input', renderCompanyOptions);
-  renderCompanyOptions();
   $('pipeline-menu').innerHTML = app.pipelines.map(p => `<button role="menuitemradio" aria-checked="${p.id === app.pipelineId}" data-pipeline="${p.id}" class="flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-start text-sm hover:bg-slate-50">${esc(p.name)}${p.id === app.pipelineId ? icon('check') : ''}</button>`).join('');
   $('config-menu').innerHTML = [['edit', 'Editar funil', 'Nome, status, critérios IA e caixas'], ['handoff', 'Responsáveis e repasse', 'Quem recebe e quando passar à equipe'], ['inboxes', 'Caixas de entrada', 'Gestão das caixas da conta'], ['booking', 'Página de agendamento', 'Como os clientes marcam horário']].map(([key, name, desc]) => `<button role="menuitem" data-config="${key}" class="block min-h-16 w-full rounded-lg px-3 py-3 text-start hover:bg-slate-50"><strong class="block text-sm font-medium">${name}</strong><span class="mt-1 block text-xs text-slate-600">${desc}</span></button>`).join('');
-}
-function renderCompanyOptions() {
-  const query = $('company-search').value.toLocaleLowerCase('pt-BR');
-  const items = COMPANY_FILTERS.filter(item => item.name.toLocaleLowerCase('pt-BR').includes(query));
-  $('company-options').innerHTML = items.map(item => `<button role="option" aria-selected="${item.id === (app.companyId || 'all')}" data-company="${item.id}" class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 text-start text-sm hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${item.name}${item.id === (app.companyId || 'all') ? icon('check') : ''}</button>`).join('') || '<p class="px-3 py-4 text-sm text-slate-600">Nenhuma empresa encontrada.</p>';
 }
 const AI_DEMOS = {
   overdue: { text: 'Mostre os retornos atrasados da Alvorada Tecnologia.', companyId: '2', filter: 'all', overdueOnly: true, note: 'Buscar as oportunidades da Alvorada Tecnologia com retorno já vencido.' },
@@ -294,19 +280,105 @@ function aiFilters() {
   $('ai-understand').addEventListener('click', aiFilterSuggestion);
   $('ai-apply').addEventListener('click', () => {
     const demo = AI_DEMOS[aiDemoId];
-    app.companyId = demo.companyId; app.filter = demo.filter; app.overdueOnly = demo.overdueOnly; app.query = ''; $('search').value = ''; app.demoState = 'normal';
-    closeDrawer(); if ($('filters-drawer').open) $('filters-drawer').close(); show($('filter-panel'), false); $('filter-button').setAttribute('aria-expanded', 'false'); renderFiltered(); $('filter-button').focus();
+    app.advanced = emptyAdvanced(); app.companyId = demo.companyId; app.filter = demo.filter; app.overdueOnly = demo.overdueOnly; app.query = ''; $('search').value = ''; app.demoState = 'normal';
+    closeDrawer(); renderFiltered(); $('filter-button').focus();
   });
 }
 function aiFilterSuggestion() {
   if (!aiDemoId) return;
   const demo = AI_DEMOS[aiDemoId];
   show($('ai-examples'), false);
-  const count = matches({ ...app, companyId: demo.companyId, filter: demo.filter, overdueOnly: demo.overdueOnly, query: '', demoState: 'normal' }).length;
+  const count = matches({ ...app, advanced: emptyAdvanced(), companyId: demo.companyId, filter: demo.filter, overdueOnly: demo.overdueOnly, query: '', demoState: 'normal' }).length;
   const chips = [demo.companyId && COMPANY_FILTERS.find(item => item.id === demo.companyId).name, demo.filter !== 'all' && FILTERS[demo.filter], demo.overdueOnly && 'Retornos atrasados'].filter(Boolean);
   $('ai-result').innerHTML = `<section class="rounded-xl border border-blue-200 bg-blue-50 p-4"><h3 class="flex items-center gap-2 text-sm font-semibold text-navy">${icon('sparkles')}A IA entendeu</h3><p class="mt-3 text-sm leading-6 text-slate-700">${demo.note}</p><div class="mt-3 flex flex-wrap gap-2">${chips.map(label => `<span class="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs font-medium text-blue-800">${label}</span>`).join('')}</div><p class="mt-4 text-sm font-semibold text-navy">${count} ${count === 1 ? 'oportunidade corresponde' : 'oportunidades correspondem'}</p><p class="mt-1 text-xs leading-5 text-slate-600">Ao confirmar, estes filtros substituirão os atuais. Você poderá ajustá-los no quadro.</p></section>`;
   $('ai-apply').disabled = false;
 }
+// Extra filter fixtures are synthetic, independent of score/source/owner.
+const EXTRA = {
+  labels: [{ id: 'vip', name: 'VIP', dot: 'bg-violet-500' }, { id: 'renewal', name: 'Renovação', dot: 'bg-blue-500' }, { id: 'new-lead', name: 'Novo cliente', dot: 'bg-teal-500' }],
+  priority: [['', 'Qualquer'], ['low', 'Baixa'], ['medium', 'Média'], ['high', 'Alta'], ['urgent', 'Urgente']],
+  inbox: [['', 'Todas'], ['Email Comercial', 'Email Comercial'], ['WhatsApp Comercial', 'WhatsApp Comercial']],
+  team: [['', 'Todas'], ['sales', 'Comercial'], ['support', 'Suporte']],
+  owner: [['', 'Qualquer pessoa'], ['1', 'Camila Rocha'], ['2', 'João Lima']],
+  responsible: [['', 'Todos'], ['agent', 'Pessoa'], ['bot', 'IA'], ['none', 'Ninguém']],
+  followUp: [['', 'Qualquer'], ['pending', 'Agendado'], ['none', 'Sem retorno']],
+  campaign: [['travel', 'Seguro viagem · Meta'], ['renewal', 'Renovação · Meta']],
+  stale: [['', 'Qualquer período'], ['3', '3 dias'], ['7', '7 dias'], ['14', '14 dias'], ['30', '30 dias']],
+  linked: [['', 'Todos'], ['yes', 'Com conversa'], ['no', 'Sem conversa']],
+  aiPending: [['', 'Todos'], ['yes', 'Com sugestão pendente']],
+  result: [['', 'Em andamento'], ['won', 'Ganhos'], ['lost', 'Perdidos'], ['archived', 'Arquivados']],
+};
+const extraFor = c => ({ labels: c.contact?.id === 1 ? ['vip', 'renewal'] : c.contact?.id === 3 ? ['vip', 'new-lead'] : [], priority: c.id === 7 ? 'high' : c.id === 3 ? 'urgent' : 'medium', team: c.id > 20 ? 'support' : 'sales', campaign: c.contact?.id === 3 ? 'travel' : c.contact?.id === 1 ? 'renewal' : '', linked: c.lastMessageAt ? 'yes' : 'no', aiPending: c.id === 2 ? 'yes' : 'no', result: '' });
+function advancedMatches(c, f = emptyAdvanced(), overdueActive = false) {
+  const x = extraFor(c);
+  return (!f.labels.length || f.labels.some(id => x.labels.includes(id))) && (!f.stages.length || f.stages.includes(c.stage))
+    && (f.scoreMin === '' || c.score !== null && c.score >= Number(f.scoreMin)) && (f.scoreMax === '' || c.score !== null && c.score <= Number(f.scoreMax))
+    && (!f.priority || f.priority === x.priority) && (!f.inbox || f.inbox === c.inbox) && (!f.team || f.team === x.team)
+    && (!f.owner || f.owner === String(c.ownerId)) && (!f.responsible || f.responsible === c.responsible.type) && (!f.campaign.length || f.campaign.includes(x.campaign))
+    && (!f.followUp || overdueActive || (f.followUp === 'none' ? !c.nextFollowUpAt : c.nextFollowUpAt && !overdue(c)))
+    && (f.valueMin === '' || c.value >= Number(f.valueMin)) && (f.valueMax === '' || c.value <= Number(f.valueMax))
+    && (!f.stale || NOW - Math.max(c.lastMessageAt ? new Date(c.lastMessageAt).getTime() : 0, c.enteredStageAt ? new Date(c.enteredStageAt).getTime() : 0) >= Number(f.stale) * 86400000)
+    && (!f.linked || f.linked === x.linked) && (!f.aiPending || f.aiPending === x.aiPending)
+    && (app.view !== 'list' || !f.result || f.result === x.result);
+}
+function advancedChips() {
+  const f = app.advanced;
+  const chips = [];
+  if (f.labels.length) chips.push(['advanced:labels', `Etiquetas: ${f.labels.map(id => EXTRA.labels.find(l => l.id === id).name).join(' ou ')}`]);
+  if (f.stages.length) chips.push(['advanced:stages', `Status: ${f.stages.map(id => stage(id).name).join(' ou ')}`]);
+  if (f.scoreMin !== '' || f.scoreMax !== '') chips.push(['advanced:scoreMin,scoreMax', `Atenção: ${f.scoreMin || 0} a ${f.scoreMax || 100}`]);
+  if (f.valueMin !== '' || f.valueMax !== '') chips.push(['advanced:valueMin,valueMax', `Valor: ${money(Number(f.valueMin || 0))} a ${f.valueMax ? money(Number(f.valueMax)) : 'sem limite'}`]);
+  if (f.campaign.length) chips.push(['advanced:campaign', `Campanha: ${f.campaign.map(id => EXTRA.campaign.find(([value]) => value === id)[1]).join(' ou ')}`]);
+  const names = { owner: 'Responsável', priority: 'Prioridade', inbox: 'Caixa', team: 'Equipe', responsible: 'Atendimento', followUp: 'Retorno', stale: 'Sem atividade', linked: 'Conversa', aiPending: 'IA', result: 'Resultado' };
+  for (const [key, label] of Object.entries(names)) if (f[key] && (key !== 'result' || app.view === 'list')) chips.push([`advanced:${key}`, `${label}: ${EXTRA[key].find(([id]) => id === f[key])[1]}`]);
+  return chips;
+}
+function choiceButtons(key, title, items = EXTRA[key], multi = false) {
+  return `<fieldset class="mt-5"><legend class="text-sm font-medium">${title}</legend><div class="mt-2 flex flex-wrap gap-2">${items.map(([id, name, dot]) => { const active = multi ? app.advanced[key].includes(id) : app.advanced[key] === id; return `<button type="button" data-extra-key="${key}" data-extra-value="${id}" data-multi="${multi}" aria-pressed="${active}" class="flex min-h-11 items-center gap-2 rounded-lg border ${active ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-700'} px-3 text-sm hover:border-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${dot ? `<span class="h-2.5 w-2.5 rounded-full ${dot}"></span>` : ''}${esc(name)}</button>`; }).join('')}</div></fieldset>`;
+}
+function rangeFields(key, title, max, help) {
+  return `<fieldset class="mt-5"><legend class="text-sm font-medium">${title}</legend>${help ? `<p class="mt-1 text-xs leading-5 text-slate-600">${help}</p>` : ''}<div class="mt-2 grid grid-cols-2 gap-3">${[['Min', 'De'], ['Max', 'Até']].map(([suffix, label]) => `<label class="text-xs text-slate-600">${label}<input id="extra-${key}${suffix}" data-extra-range="${key}${suffix}" type="number" min="0" ${max ? `max="${max}"` : ''} step="1" value="${app.advanced[key + suffix]}" placeholder="${suffix === 'Min' ? 'Sem mínimo' : 'Sem máximo'}" class="mt-1 h-11 w-full rounded-lg border border-slate-300 px-3 text-base text-slate-900 outline-none focus:border-blue-600" /></label>`).join('')}</div></fieldset>`;
+}
+function companyChoices() {
+  return `<fieldset class="mt-5"><legend class="text-sm font-medium">Empresa vinculada ao contato</legend><p class="mt-1 text-xs leading-5 text-slate-600">Escolha um vínculo exato para combinar com os outros filtros.</p><div class="mt-2 flex flex-wrap gap-2">${COMPANY_FILTERS.map(item => `<button data-company="${item.id}" aria-pressed="${item.id === (app.companyId || 'all')}" class="min-h-11 rounded-lg border ${item.id === (app.companyId || 'all') ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200'} px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">${item.name}</button>`).join('')}</div></fieldset>`;
+}
+function filterGroup(title, description, content) {
+  return `<details class="border-b border-slate-200 py-2"><summary class="flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-lg px-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span><strong class="block text-sm font-semibold">${title}</strong><span class="mt-1 block text-xs font-normal text-slate-600">${description}</span></span>${icon('chevron')}</summary><div class="pb-5">${content}</div></details>`;
+}
+function quickFilterButtons() {
+  return `<fieldset><legend class="text-xs font-medium text-slate-600">Atalhos</legend><div class="mt-2 flex flex-wrap gap-2">${Object.entries(FILTERS).map(([id, label]) => `<button data-filter="${id}" aria-pressed="${app.filter === id}" class="${secondary} ${app.filter === id ? 'border-blue-600 bg-blue-50 text-blue-700' : ''}">${label}</button>`).join('')}<button id="quick-overdue" aria-pressed="${app.overdueOnly}" class="${secondary} ${app.overdueOnly ? 'border-blue-600 bg-blue-50 text-blue-700' : ''}">${icon('clock')}Retornos atrasados</button></div></fieldset>`;
+}
+function moreFilters() {
+  openDrawer('Mais filtros', `Funil ${pipeline().name}`, `<p class="mb-5 text-sm leading-6 text-slate-600">Escolha só o que precisa. Você pode combinar critérios e remover cada um depois.</p>${quickFilterButtons()}<div class="mt-5 border-t border-slate-200">${filterGroup('Empresa', 'Filtrar pela empresa ligada ao contato', companyChoices())}${filterGroup('Etiquetas e status', 'VIP, renovação e etapas do funil', choiceButtons('labels', 'Etiquetas', EXTRA.labels.map(l => [l.id, l.name, l.dot]), true) + '<p class="mt-2 text-xs text-slate-600">Encontra qualquer uma das etiquetas escolhidas.</p>' + choiceButtons('stages', 'Status do funil', pipeline().stages.map(s => [s.id, s.name, s.dot]), true))}${filterGroup('Atenção e prioridade', 'Nível de atenção, sem indicar chance de venda', rangeFields('score', 'Score de atenção · 0 a 100', 100, 'Quanto maior, mais atenção merece. Não representa chance de venda.') + choiceButtons('priority', 'Prioridade definida pela equipe'))}${filterGroup('Atendimento e origem', 'Pessoa ou IA, equipe, caixa e campanha', choiceButtons('owner', 'Responsável pela carteira') + choiceButtons('responsible', 'Quem está atendendo?') + choiceButtons('team', 'Equipe') + choiceButtons('inbox', 'Caixa de entrada') + choiceButtons('campaign', 'Campanha de origem · qualquer uma das selecionadas', EXTRA.campaign, true))}${filterGroup('Valor, retorno e atividade', 'Valor estimado, retorno e atividade do card', rangeFields('value', 'Valor estimado · R$', null, '') + choiceButtons('followUp', 'Retorno') + choiceButtons('stale', 'Sem mensagem nem mudança de status há') + choiceButtons('linked', 'Conversa vinculada') + choiceButtons('aiPending', 'Sugestão de status da IA') + (app.view === 'list' ? choiceButtons('result', 'Resultado · somente na Lista') : ''))}</div><p class="mt-4 text-xs leading-5 text-slate-500">Prévia com dados fictícios. O filtro por faixa de score é uma proposta nova.</p>`, `<button id="clear-more" class="${secondary}">Limpar filtros</button><button id="more-results" class="${primary}">Ver oportunidades</button>`);
+  $('filter-button').setAttribute('aria-expanded', 'true');
+  updateMoreResult();
+  $('quick-overdue').addEventListener('click', () => { app.overdueOnly = !app.overdueOnly; app.advanced.followUp = ''; $('quick-overdue').setAttribute('aria-pressed', String(app.overdueOnly)); $('quick-overdue').classList.toggle('bg-blue-50', app.overdueOnly); $('quick-overdue').classList.toggle('border-blue-600', app.overdueOnly); $('quick-overdue').classList.toggle('text-blue-700', app.overdueOnly); renderFiltered(); updateMoreResult(); });
+  $('clear-more').addEventListener('click', () => { app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.advanced = emptyAdvanced(); renderFiltered(); moreFilters(); });
+  $('more-results').addEventListener('click', closeDrawer);
+}
+function updateMoreResult() { if ($('more-results')) $('more-results').textContent = `Ver ${matches().length} ${matches().length === 1 ? 'oportunidade' : 'oportunidades'}`; }
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-extra-key]');
+  if (!button) return;
+  const { extraKey: key, extraValue: value, multi } = button.dataset;
+  if (multi === 'true') { const values = app.advanced[key]; app.advanced[key] = values.includes(value) ? values.filter(id => id !== value) : [...values, value]; }
+  else { app.advanced[key] = value; if (key === 'followUp') app.overdueOnly = false; }
+  document.querySelectorAll(`[data-extra-key="${key}"]`).forEach(el => { const active = multi === 'true' ? app.advanced[key].includes(el.dataset.extraValue) : app.advanced[key] === el.dataset.extraValue; el.setAttribute('aria-pressed', String(active)); el.classList.toggle('bg-blue-50', active); el.classList.toggle('text-blue-700', active); el.classList.toggle('border-blue-600', active); el.classList.toggle('bg-white', !active); el.classList.toggle('text-slate-700', !active); el.classList.toggle('border-slate-200', !active); });
+  renderFiltered(); updateMoreResult();
+});
+document.addEventListener('change', event => {
+  const input = event.target.closest('[data-extra-range]');
+  if (!input) return;
+  input.setCustomValidity('');
+  const prefix = input.dataset.extraRange.startsWith('score') ? 'score' : 'value';
+  const min = $('extra-' + prefix + 'Min'); const max = $('extra-' + prefix + 'Max');
+  min.setCustomValidity(''); max.setCustomValidity('');
+  if (min.value !== '' && max.value !== '' && Number(min.value) > Number(max.value)) input.setCustomValidity('O valor inicial deve ser menor ou igual ao final.');
+  if (!min.reportValidity() || !max.reportValidity()) return;
+  app.advanced[prefix + 'Min'] = min.value; app.advanced[prefix + 'Max'] = max.value;
+  renderFiltered(); updateMoreResult();
+});
+$('filter-button').addEventListener('click', moreFilters);
 function createOpportunity() {
   openDrawer('Nova oportunidade', `Funil ${pipeline().name}`, `<form id="new-form"><label for="new-title" class="block text-sm font-medium">Nome da oportunidade</label><input id="new-title" name="title" required maxlength="100" placeholder="Ex.: Renovação do plano" class="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 text-base outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600" /><fieldset class="mt-6"><legend class="text-sm font-medium">Contato</legend><div class="mt-3 space-y-2">${[null, ...PEOPLE.slice(0, 2)].map((person, index) => `<label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-4 py-3"><input type="radio" name="contact" value="${person?.id || ''}" ${index === 0 ? 'checked' : ''} class="h-4 w-4 accent-blue-600"/><span class="text-sm">${esc(person?.name || 'Continuar sem contato vinculado')}${person?.company ? `<span class="mt-1 block text-xs text-slate-600">${esc(person.company.name)}</span>` : ''}</span></label>`).join('')}</div></fieldset><p class="mt-6 text-sm text-slate-600">Status inicial: <strong>${pipeline().stages[0].name}</strong></p></form>`, `<button data-close class="${secondary}">Cancelar</button><button type="submit" form="new-form" class="${primary}">Criar oportunidade</button>`);
   $('new-title').focus();
@@ -330,19 +402,19 @@ document.addEventListener('click', event => {
   else if (d.move) moveMenu(d.move);
   else if (d.destination) moveCard(d.cardId, d.destination);
   else if (d.view) { app.view = d.view; render(); }
-  else if (d.filter) { app.filter = d.filter; renderFiltered(); }
-  else if (d.removeFilter) { if (d.removeFilter === 'owner') app.filter = 'all'; else if (d.removeFilter === 'company') app.companyId = null; else app.overdueOnly = false; renderFiltered(); $('filter-button').focus(); }
-  else if (d.company) { app.companyId = d.company === 'all' ? null : d.company; closeMenus(); renderFiltered(); $('company-button').focus(); }
-  else if (d.pipeline) { app.pipelineId = Number(d.pipeline); app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.demoState = 'normal'; app.stageIndex = 0; closeMenus(); menus(); render(); $('pipeline-button').focus(); }
+  else if (d.filter) { app.filter = d.filter; document.querySelectorAll('[data-filter]').forEach(el => { const active = el.dataset.filter === app.filter; el.setAttribute('aria-pressed', String(active)); el.classList.toggle('bg-blue-50', active); el.classList.toggle('border-blue-600', active); el.classList.toggle('text-blue-700', active); }); renderFiltered(); updateMoreResult(); }
+  else if (d.removeFilter) { if (d.removeFilter === 'owner') app.filter = 'all'; else if (d.removeFilter === 'company') app.companyId = null; else if (d.removeFilter.startsWith('advanced:')) { for (const key of d.removeFilter.slice(9).split(',')) app.advanced[key] = emptyAdvanced()[key]; } else app.overdueOnly = false; renderFiltered(); $('filter-button').focus(); }
+  else if (d.company) { app.companyId = d.company === 'all' ? null : d.company; renderFiltered(); document.querySelectorAll('[data-company]').forEach(el => { const active = el.dataset.company === (app.companyId || 'all'); el.setAttribute('aria-pressed', String(active)); el.classList.toggle('border-blue-600', active); el.classList.toggle('bg-blue-50', active); el.classList.toggle('text-blue-700', active); el.classList.toggle('border-slate-200', !active); }); updateMoreResult(); }
+  else if (d.pipeline) { app.pipelineId = Number(d.pipeline); app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.advanced = emptyAdvanced(); app.demoState = 'normal'; app.stageIndex = 0; closeMenus(); menus(); render(); $('pipeline-button').focus(); }
   else if (d.config) configuration(d.config);
   else if (d.step) { app.stageIndex += Number(d.step); render(); }
   else if (d.criteria) openDrawer(`Quando usar ${stage(d.criteria).name}`, 'Critério do status', `<p class="text-base leading-7">${esc(stage(d.criteria).criteria)}</p><p class="mt-6 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-slate-700">Esta descrição orienta a IA. Você pode ajustá-la no Editar Funil.</p>`, `<button data-close class="${secondary}">Voltar ao quadro</button><button data-config="edit" class="${primary}">${icon('settings')}Editar funil</button>`);
   else if (d.close !== undefined) closeDrawer();
   else if (d.recover !== undefined) { if (app.demoState === 'error') { app.demoState = 'normal'; render(); } else resetFilters(); }
   else if (d.demoNav) toast('Navegação de contexto ilustrada. Este protótipo concentra a área CRM.');
-  else if (d.scenario) { app.demoState = d.scenario; app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; closeDrawer(); render(); }
+  else if (d.scenario) { app.demoState = d.scenario; app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.advanced = emptyAdvanced(); closeDrawer(); render(); }
   else if (button.id === 'dismiss-toast') show($('toast'), false);
-  else if (button.id === 'undo-button' && undoMove) { const c = findCard(undoMove.id); if (c) { c.stage = undoMove.previous; app.stageIndex = pipeline().stages.findIndex(s => s.id === c.stage); render(); } show($('toast'), false); undoMove = null; }
+  else if (button.id === 'undo-button' && undoMove) { const c = findCard(undoMove.id); if (c) { c.stage = undoMove.previous; c.enteredStageAt = undoMove.previousEnteredStageAt; app.stageIndex = pipeline().stages.findIndex(s => s.id === c.stage); render(); } show($('toast'), false); undoMove = null; }
 });
 document.addEventListener('submit', event => {
   event.preventDefault();
@@ -362,7 +434,7 @@ document.addEventListener('submit', event => {
     closeDrawer(); menus(); resetFilters(); toast('Funil criado nos dados fictícios.');
   }
 });
-function resetFilters() { app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.demoState = 'normal'; app.stageIndex = 0; render(); }
+function resetFilters() { app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.advanced = emptyAdvanced(); app.demoState = 'normal'; app.stageIndex = 0; render(); }
 window.addEventListener('resize', updateColumnNavigation);
 $('board-area').addEventListener('scroll', updateColumnNavigation);
 $('previous-columns').addEventListener('click', () => $('board-area').scrollBy({ left: -640, behavior: 'smooth' }));
@@ -370,35 +442,18 @@ $('next-columns').addEventListener('click', () => $('board-area').scrollBy({ lef
 $('search').addEventListener('input', event => { app.query = event.target.value; renderFiltered(); });
 $('new-button').addEventListener('click', createOpportunity);
 $('drawer-close').addEventListener('click', closeDrawer);
-$('drawer').addEventListener('close', restoreFocus);
+$('drawer').addEventListener('close', () => { $('filter-button').setAttribute('aria-expanded', 'false'); restoreFocus(); });
 $('clear-button').addEventListener('click', () => {
-  if (filterCount() > 0) { app.filter = 'all'; app.companyId = null; app.overdueOnly = false; renderFiltered(); }
+  if (filterCount() > 0) { app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.advanced = emptyAdvanced(); renderFiltered(); }
   else resetFilters();
 });
 $('refresh-button').addEventListener('click', () => { if (['error', 'loading'].includes(app.demoState)) app.demoState = 'normal'; render(); toast('Quadro atualizado · demonstração local.'); });
-const filterHome = $('filter-panel').parentElement;
-$('filter-button').addEventListener('click', () => {
-  if (window.matchMedia('(max-width: 767px)').matches) {
-    $('filters-content').appendChild($('filter-panel'));
-    show($('filter-panel'), true);
-    $('filter-button').setAttribute('aria-expanded', 'true');
-    $('filters-drawer').showModal();
-  } else {
-    const open = $('filter-panel').classList.contains('hidden'); show($('filter-panel'), open); $('filter-button').setAttribute('aria-expanded', String(open));
-  }
-});
 $('ai-filter-button').addEventListener('click', aiFilters);
-$('filters-close').addEventListener('click', () => $('filters-drawer').close());
-$('filters-results').addEventListener('click', () => $('filters-drawer').close());
-$('filters-drawer').addEventListener('close', () => { closeMenus(); filterHome.appendChild($('filter-panel')); show($('filter-panel'), false); $('filter-button').setAttribute('aria-expanded', 'false'); $('filter-button').focus(); });
-window.addEventListener('resize', () => { if ($('filters-drawer').open && window.matchMedia('(min-width: 768px)').matches) $('filters-drawer').close(); });
 $('config-button').addEventListener('click', () => menu('config-menu', 'config-button'));
-$('company-button').addEventListener('click', () => { menus(); menu('company-menu', 'company-button'); if (!$('company-menu').classList.contains('hidden')) $('company-search').focus(); });
-$('overdue-button').addEventListener('click', () => { app.overdueOnly = !app.overdueOnly; renderFiltered(); });
 $('pipeline-button').addEventListener('click', () => { menus(); menu('pipeline-menu', 'pipeline-button'); });
 $('demo-button').addEventListener('click', () => openDrawer('Cenários do protótipo', 'Dados fictícios. Nenhuma alteração no produto.', `<p class="text-sm leading-6 text-slate-600">Esta ferramenta de revisão fica fora da interface proposta do produto.</p><div class="mt-5 space-y-2">${[['normal', 'Quadro normal · B2B, B2C, IA e humano'], ['b2c', 'Contatos sem empresa'], ['loading', 'Carregando'], ['empty', 'Nenhum resultado'], ['error', 'Falha de carregamento']].map(([key, label]) => `<button data-scenario="${key}" class="${secondary} w-full justify-start">${label}</button>`).join('')}</div>`));
 document.addEventListener('keydown', event => {
-  const activeDialog = $('drawer').open ? $('drawer') : $('filters-drawer').open ? $('filters-drawer') : null;
+  const activeDialog = $('drawer').open ? $('drawer') : null;
   if (activeDialog && event.key === 'Tab') {
     const controls = [...activeDialog.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, a[href]')].filter(el => el.getClientRects().length > 0);
     const first = controls[0];
@@ -409,11 +464,10 @@ document.addEventListener('keydown', event => {
     }
   }
   if (event.key === 'Escape') {
-    const trigger = !$('config-menu').classList.contains('hidden') ? $('config-button') : !$('pipeline-menu').classList.contains('hidden') ? $('pipeline-button') : !$('company-menu').classList.contains('hidden') ? $('company-button') : null;
+    const trigger = !$('config-menu').classList.contains('hidden') ? $('config-button') : !$('pipeline-menu').classList.contains('hidden') ? $('pipeline-button') : null;
     closeMenus();
     if (trigger) { event.preventDefault(); trigger.focus(); }
   }
-  if (event.target.id === 'company-search' && event.key === 'ArrowDown') { event.preventDefault(); $('company-options').querySelector('button')?.focus(); }
   const parentMenu = event.target.closest('[role="menu"], [role="listbox"]');
   if (parentMenu && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
     event.preventDefault(); const buttons = Array.from(parentMenu.querySelectorAll('button')); const index = buttons.indexOf(event.target);
@@ -421,7 +475,7 @@ document.addEventListener('keydown', event => {
     buttons[next].focus();
   }
 });
-document.addEventListener('click', event => { if (!event.target.closest('#config-button, #config-menu, #pipeline-button, #pipeline-menu, #company-button, #company-menu')) closeMenus(); });
+document.addEventListener('click', event => { if (!event.target.closest('#config-button, #config-menu, #pipeline-button, #pipeline-menu')) closeMenus(); });
 $('board').addEventListener('dragstart', event => { const el = event.target.closest('[data-card]'); if (!el) return; app.dragged = Number(el.dataset.card); event.dataTransfer.setData('text/plain', el.dataset.card); event.dataTransfer.effectAllowed = 'move'; el.classList.add('opacity-50'); });
 $('board').addEventListener('dragover', event => { const drop = event.target.closest('[data-drop]'); if (drop && app.dragged) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; drop.classList.add('ring-2', 'ring-inset', 'ring-blue-400'); } });
 $('board').addEventListener('dragleave', event => { const drop = event.target.closest('[data-drop]'); if (drop && !drop.contains(event.relatedTarget)) drop.classList.remove('ring-2', 'ring-inset', 'ring-blue-400'); });

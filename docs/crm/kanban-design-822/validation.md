@@ -83,3 +83,24 @@ Mockup aprovado não equivale a autorização de merge ou deploy.
   criação de oportunidade tem nome acessível completo no celular.
 - Build Tailwind aprovado, mesmo aviso Browserslist; Node syntax aprovado;
   console final sem erro/warn; viewport restaurada; zero chamadas pagas.
+
+## Filtros completos — revisão adicional de 01/10
+
+As capturas 15, 16 e 18 substituem as revisões históricas 13/14 para esta proposta.
+
+- Etiqueta VIP: seis oportunidades; VIP + atenção mínima 84: duas; combinando
+  Alvorada: uma. Intervalos foram verificados com entrada real de teclado.
+- Responsável Camila: quatro oportunidades. Duas campanhas selecionadas combinam
+  por OU e retornam seis; remover o chip retorna onze.
+- Prioridade Urgente: um card com score não informado; confirma a separação de conceitos.
+- Escape fecha a gaveta, volta ao botão Mais filtros e limpa aria-expanded.
+- IA exemplo Norte + Minha carteira: prévia de duas oportunidades, mesmos chips
+  após aplicar; continua sendo simulação explícita sem chamada ao modelo.
+- Celular 390×844: um modal, sem overflow horizontal, footer termina em 844.
+- Node syntax e Tailwind aprovados; console sem erros nas interações verificadas.
+
+A direção de arte pediu ajuste dos textos técnicos e do atalho Todos: os textos
+foram simplificados e o atalho agora se chama Qualquer responsável. No protótipo,
+conversa vinculada e metadados extras são fixtures ilustrativos; não demonstram
+semântica do payload real. Resultado somente na Lista tem opções, porém não há
+fixtures ganhos/perdidos/arquivados para comprovar esses recortes.
