@@ -242,18 +242,19 @@
   },
   "SIDEBAR_ITEMS": {
     "CHANGE_AVAILABILITY_STATUS": "Trocar",
-    "CHANGE_ACCOUNTS": "Switch account",
-    "SWITCH_ACCOUNT": "Switch account",
-    "CONTACT_SUPPORT": "Contact support",
+    "CHANGE_ACCOUNTS": "Alterar conta",
+    "SWITCH_ACCOUNT": "Alterar conta",
+    "CONTACT_SUPPORT": "Contate o suporte",
     "SELECTOR_SUBTITLE": "Escolha uma conta da lista a seguir",
-    "PROFILE_SETTINGS": "Profile settings",
-    "YEAR_IN_REVIEW": "Year in Review",
-    "KEYBOARD_SHORTCUTS": "Keyboard shortcuts",
-    "APPEARANCE": "Change appearance",
-    "SUPER_ADMIN_CONSOLE": "SuperAdmin console",
-    "DOCS": "Read documentation",
-    "CHANGELOG": "Changelog",
-    "LOGOUT": "Log out"
+    "PROFILE_SETTINGS": "Configurações do perfil",
+    "INVITE_CONNECTION": "Status da conexão",
+    "YEAR_IN_REVIEW": "Retrospectiva do ano",
+    "KEYBOARD_SHORTCUTS": "Atalhos do teclado",
+    "APPEARANCE": "Alterar tema",
+    "SUPER_ADMIN_CONSOLE": "Console de Super Admin",
+    "DOCS": "Central de ajuda",
+    "CHANGELOG": "Notas de versão",
+    "LOGOUT": "Encerrar sessão"
   },
   "APP_GLOBAL": {
     "TRIAL_MESSAGE": "dias de teste restantes.",
@@ -396,7 +397,7 @@
     "SET_AUTO_OFFLINE": {
       "TEXT": "Marcar offline automaticamente",
       "INFO_TEXT": "Deixar o sistema alterar automaticamente o seu estado para offline quando não estiver a usar a app ou o painel.",
-      "INFO_SHORT": "Automatically mark offline when you aren't using the app."
+      "INFO_SHORT": "Marcar offline automaticamente quando você não estiver usando o aplicativo."
     },
     "SORT_TOOLTIP": "Ordenar",
     "SORT_BY": "Ordenar por",
