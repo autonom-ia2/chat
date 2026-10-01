@@ -353,7 +353,7 @@ onClickOutside(
       :aria-label="ariaLabel"
       tabindex="-1"
       popover="manual"
-      class="fixed z-50 px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
+      class="reset-base fixed z-50 list-none px-0 py-1 m-0 overflow-y-auto border-0 rounded-lg shadow-lg inset-auto max-h-80 bg-n-solid-2 text-n-slate-12 outline outline-1 outline-n-container"
       :style="listStyle"
       @pointerdown.prevent
       @click.prevent
@@ -375,7 +375,7 @@ onClickOutside(
           :aria-labelledby="
             section.label ? groupLabelId(sectionIndex) : undefined
           "
-          class="p-0 m-0 list-none"
+          class="reset-base p-0 m-0 list-none"
         >
           <li
             v-for="{ option, index } in section.items"

@@ -49,7 +49,10 @@ class Crm::Pipeline < ApplicationRecord
 
   def initialize_followup_days
     config = (metadata || {}).deep_dup
-    config['ai'] ||= {}
+    config['ai'] = {
+      'enabled' => true, 'auto_move_enabled' => true, 'attribute_extraction_enabled' => true,
+      'score_enabled' => true, 'callback_enabled' => true, 'stale_hours' => Crm::Ai::Config::DEFAULT_STALE_HOURS
+    }.merge(config['ai'] || {})
     config['ai']['auto_followup'] ||= {}
     config['ai']['auto_followup']['allowed_days'] ||= [1, 2, 3, 4, 5]
     self.metadata = config
