@@ -16,7 +16,15 @@ export const defaultFilters = () => ({
   search: '',
   inboxId: '',
   ownerId: '',
+  // Resolved CRM company: a canonical company for a Prospecting card, or the
+  // contact's company when the card has no Prospecting override. `none` means
+  // cards without either association.
+  companyId: '',
   priority: '',
+  // AI attention score bounds (0–100). This measures attention needed, not
+  // probability of winning the deal.
+  scoreMin: '',
+  scoreMax: '',
   standalone: '',
   followUpStatus: '',
   // Default the List to in-funnel deals ('open' card status, NOT conversation
@@ -28,7 +36,7 @@ export const defaultFilters = () => ({
   //    are evaluable from a single card payload and ARE mirrored in
   //    cardMatchesFilters below (campaignSourceIds reads card.campaigns, the
   //    CTWA multi-touch aggregate carried by both payload builders).
-  //  - responsibleKind (bot/none), aiPending and labelIds are server-truth only;
+  //  - companyId, search, responsibleKind (bot/none), aiPending and labelIds are server-truth only;
   //    a realtime upsert cannot be reliably classified client-side (label
   //    add/remove never emits a card upsert), so they force a refetch
   //    (see SERVER_ONLY_FILTER_KEYS / hasServerOnlyFilters).
@@ -55,6 +63,8 @@ export const defaultFilters = () => ({
 // labelIds is here because adding/removing a label on a conversation does NOT
 // broadcast a card upsert, so the payload's labels can be stale mid-session.
 export const SERVER_ONLY_FILTER_KEYS = [
+  'companyId',
+  'search',
   'responsibleKind',
   'aiPending',
   'labelIds',
@@ -255,7 +265,12 @@ const normalizeFilters = filters => {
   if (filters.search) params.search = filters.search;
   if (filters.inboxId) params.inbox_id = filters.inboxId;
   if (filters.ownerId) params.owner_id = filters.ownerId;
+  if (filters.companyId) params.company_id = filters.companyId;
   if (filters.priority) params.priority = filters.priority;
+  if (filters.scoreMin != null && filters.scoreMin !== '')
+    params.score_min = filters.scoreMin;
+  if (filters.scoreMax != null && filters.scoreMax !== '')
+    params.score_max = filters.scoreMax;
   if (filters.standalone) params.standalone = filters.standalone;
   if (filters.followUpStatus) params.follow_up_status = filters.followUpStatus;
   // List-only "Resultado" filter; the board strips it in fetchBoard.
@@ -390,6 +405,21 @@ const cardMatchesFilters = (card, filters) => {
   if (valueMaxCents != null && Number(card.value_cents || 0) > valueMaxCents) {
     return false;
   }
+  const score = Number(card.score);
+  if (
+    filters.scoreMin != null &&
+    filters.scoreMin !== '' &&
+    (!Number.isFinite(score) || score < Number(filters.scoreMin))
+  ) {
+    return false;
+  }
+  if (
+    filters.scoreMax != null &&
+    filters.scoreMax !== '' &&
+    (!Number.isFinite(score) || score > Number(filters.scoreMax))
+  ) {
+    return false;
+  }
   if (
     Number(filters.staleDays) > 0 &&
     !isStale(card, Number(filters.staleDays))
@@ -408,9 +438,10 @@ const cardMatchesFilters = (card, filters) => {
       return false;
     }
   }
-  // responsibleKind, aiPending and labelIds are intentionally NOT evaluated here —
-  // they are server-truth filters (see SERVER_ONLY_FILTER_KEYS). When active, the
-  // page refetches on realtime instead of relying on this predicate.
+  // companyId, search, responsibleKind, aiPending and labelIds are intentionally
+  // NOT evaluated here — they are server-truth filters (see
+  // SERVER_ONLY_FILTER_KEYS). When active, the page refetches on realtime
+  // instead of relying on this predicate.
   return true;
 };
 

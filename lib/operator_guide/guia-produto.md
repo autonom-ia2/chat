@@ -337,14 +337,14 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use busca, prioridade e follow-up na barra; abra **Filtros** (caixa, responsável, time, estágio, valor, card parado, tipo de vínculo); alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips e podem esconder cards.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, score, responsável, time, caixa, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
+- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar inboxes
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
@@ -397,11 +397,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar follow-ups e lembretes no CRM
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Follow-ups; ou CRM > CRM Calendar > clique no dia
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário > clique no dia
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
-- passos: Abra o card; entre em Follow-ups; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; salve; conclua ou cancele pelo card ou calendário.
+- passos: Abra o card; entre em Retornos; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; crie o retorno; conclua ou cancele pelo card ou calendário. Consulte Histórico para acompanhar as atividades e tentativas registradas.
 - gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e a timeline mostra Follow-up cancelado com o motivo.
 - nav_target: `crm_kanban_index`
 

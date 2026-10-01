@@ -7,6 +7,7 @@ import CrmKanbanCard from './CrmKanbanCard.vue';
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key, params) => (params ? `${key}:${JSON.stringify(params)}` : key),
+    locale: { value: 'en' },
   }),
 }));
 vi.mock('dashboard/composables/store', () => ({
@@ -28,7 +29,7 @@ const NO_CONVERSATION_CARD = {
 
 const mountCard = (card = CONVERSATION_CARD, props = {}) =>
   mount(CrmKanbanCard, {
-    props: { card, stageColor: '#2563eb', ...props },
+    props: { card, stageColor: '#2563eb', canMove: true, ...props },
     global: {
       stubs: {
         Avatar: true,
@@ -150,5 +151,88 @@ describe('CrmKanbanCard bubble shortcut', () => {
     await wrapper.find('div.relative.z-10').trigger('click');
     expect(wrapper.emitted('open')).toHaveLength(1);
     expect(wrapper.emitted('openConversation')).toBeUndefined();
+  });
+
+  it('renders company, person and business once in the approved identity order', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      title: 'Implantação do atendimento',
+      company: { id: 7, name: 'Norte Logística' },
+      contact: {
+        id: 10,
+        name: 'Mariana Costa',
+        phone_number: '+55 11 90000-0010',
+        // A shared contact must not override the card-level company.
+        company: { id: 99, name: 'Empresa antiga' },
+      },
+    });
+
+    expect(wrapper.find('[data-crm-card-company]').text()).toBe(
+      'Norte Logística'
+    );
+    expect(wrapper.find('[data-crm-card-person]').text()).toBe('Mariana Costa');
+    expect(wrapper.find('[data-crm-card-business]').text()).toContain(
+      'Implantação do atendimento'
+    );
+    expect(wrapper.text()).not.toContain('Empresa antiga');
+  });
+
+  it('keeps a B2C contact as the main identity without inventing a company', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      title: 'Plano anual',
+      contact: { id: 10, name: 'Ana Clara Souza' },
+    });
+
+    expect(wrapper.find('[data-crm-card-company]').exists()).toBe(false);
+    expect(wrapper.find('[data-crm-card-identity]').text()).toContain(
+      'Ana Clara Souza'
+    );
+    expect(wrapper.find('[data-crm-card-business]').text()).toContain(
+      'Plano anual'
+    );
+    expect(wrapper.find('[data-crm-card-no-contact]').exists()).toBe(false);
+  });
+
+  it('marks a standalone card without showing a fake person or company', () => {
+    const wrapper = mountCard({
+      ...NO_CONVERSATION_CARD,
+      title: 'Indicação recebida na feira',
+      contact: null,
+    });
+
+    expect(wrapper.find('[data-crm-card-identity]').text()).toContain(
+      'Indicação recebida na feira'
+    );
+    expect(wrapper.find('[data-crm-card-person]').exists()).toBe(false);
+    expect(wrapper.find('[data-crm-card-company]').exists()).toBe(false);
+    expect(wrapper.find('[data-crm-card-no-contact]').exists()).toBe(true);
+  });
+
+  it('emits move from the visible accessible action without opening the card', async () => {
+    const wrapper = mountCard();
+
+    await wrapper.find('[data-crm-card-move]').trigger('click');
+
+    expect(wrapper.emitted('move')).toEqual([[CONVERSATION_CARD]]);
+    expect(wrapper.emitted('open')).toBeUndefined();
+  });
+
+  it('hides move when the page denies the card movement permission', () => {
+    const wrapper = mountCard(CONVERSATION_CARD, { canMove: false });
+
+    expect(wrapper.find('[data-crm-card-move]').exists()).toBe(false);
+  });
+
+  it('does not infer AI score provenance from a bot responsible', () => {
+    const wrapper = mountCard({
+      ...CONVERSATION_CARD,
+      score: 82,
+      responsible: { type: 'bot', name: 'Gabriela' },
+    });
+
+    const chip = scoreChip(wrapper);
+    expect(chip.text()).toContain('CRM_KANBAN.CARD.SCORE_UNSPECIFIED');
+    expect(wrapper.text()).toContain('CRM_KANBAN.CARD.RESPONSIBLE_AI');
   });
 });

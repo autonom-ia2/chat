@@ -1,8 +1,11 @@
 class Crm::Kanban::CardPayloadBuilder
-  def initialize(card:, conversation_visibility:, pending_suggestion: nil)
+  UNRESOLVED_COMPANY = Object.new.freeze
+
+  def initialize(card:, conversation_visibility:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
     @card = card
     @conversation_visibility = conversation_visibility
     @pending_suggestion = pending_suggestion
+    @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
   def perform
@@ -31,6 +34,7 @@ class Crm::Kanban::CardPayloadBuilder
       currency: @card.currency,
       priority: @card.priority,
       score: @card.score,
+      score_source: score_source,
       status: @card.status,
       is_standalone: @card.standalone?,
       # Epoch seconds across the board payload so the frontend timeHelper.js
@@ -58,6 +62,10 @@ class Crm::Kanban::CardPayloadBuilder
     'manual'
   end
 
+  def score_source
+    (@card.metadata || {}).dig('ai', 'score', 'source').presence
+  end
+
   def ai_suggestion_payload
     return unless Crm::Ai::Config.enabled?
 
@@ -75,6 +83,7 @@ class Crm::Kanban::CardPayloadBuilder
   def link_payload
     {
       contact: compact_contact,
+      company: Crm::Cards::CompanyResolver.payload(@company),
       owner: compact_user(@card.owner),
       responsible: @card.responsible_descriptor,
       inbox: compact_inbox,

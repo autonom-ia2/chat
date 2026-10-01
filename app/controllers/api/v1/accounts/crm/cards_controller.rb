@@ -1,4 +1,8 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
+  include Crm::FilterParameters
+
+  before_action :validate_crm_filter_parameters, only: %i[index export]
+
   include Crm::IdempotentRequests
   include Crm::OpportunityRegistration
   include DeferInteractiveAi
@@ -18,6 +22,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # Ordering is owned by FilterQuery#apply_sort (whitelisted sort/direction,
     # defaulting to updated_at desc — byte-identical to the historical default).
     @cards = filtered_cards.page(params[:page] || 1).per(per_page)
+    @card_companies = Crm::Cards::CompanyResolver.for_cards(@cards.to_a)
     @cards_count = filtered_cards.count
   end
 
@@ -319,7 +324,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def fetch_card
-    @card = policy_scope(::Crm::Card).includes(:contact, :owner, :inbox, :stage, :pipeline, :primary_conversation).find(params[:id])
+    @card = policy_scope(::Crm::Card).includes(
+      { contact: Crm::Cards::CompanyResolver.contact_preload },
+      :owner, :inbox, :stage, :pipeline, :primary_conversation
+    ).find(params[:id])
     authorize @card, "#{action_name}?".to_sym
   end
 

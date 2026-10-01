@@ -80,6 +80,38 @@ RSpec.describe 'CRM cards export', type: :request do
     expect(titulos).to eq(['Seguro caro', 'Seguro barato'])
   end
 
+  it 'exports the business company instead of the shared contact company' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    contact_company = Company.create!(account: account, name: 'Contact company')
+    business_company = Company.create!(account: account, name: 'Business company')
+    contact = account.contacts.create!(name: 'Shared contact', company: contact_company,
+                                       additional_attributes: { 'company_name' => contact_company.name })
+    card!(account, pipeline, stage, 'Business',
+          contact: contact, score: 80,
+          metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => business_company.id } } })
+
+    exportar(account, admin, pipeline_id: pipeline.id, company_id: business_company.id, score_min: 80, score_max: 80)
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to eq('Business company')
+  end
+
+  it 'does not export the contact company when the prospecting company is unavailable' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    foreign_company = Company.create!(account: create(:account), name: 'Foreign company')
+    contact = account.contacts.create!(name: 'Shared contact', additional_attributes: { 'company_name' => 'Contact company' })
+    card!(account, pipeline, stage, 'Business',
+          contact: contact,
+          metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => foreign_company.id } } })
+
+    exportar(account, admin, pipeline_id: pipeline.id, company_id: 'none')
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to be_nil
+  end
+
   it 'traz todos os cards, sem o limite de página da Lista' do
     account, admin = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: admin)

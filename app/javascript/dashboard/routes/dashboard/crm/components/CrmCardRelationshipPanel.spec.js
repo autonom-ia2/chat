@@ -290,3 +290,58 @@ it('removes the generic read-only notice while choosing a different contact link
   expect(wrapper.vm.linking).toBe(true);
   expect(wrapper.find('[data-record-read-only]').exists()).toBe(false);
 });
+
+it('keeps the prospecting business company distinct from the shared contact company', async () => {
+  wrapper = makePanel({
+    card: {
+      id: 5,
+      contact_id: 42,
+      company: { id: 9, name: 'Business Company' },
+      metadata: { autonomia_prospecting: { company: { id: 9 } } },
+    },
+  });
+  await flushPromises();
+  expect(wrapper.find('[data-relationship-deal-company]').text()).toContain(
+    'Business Company'
+  );
+  expect(wrapper.find('[data-relationship-company]').text()).toContain(
+    'Canonical Company'
+  );
+  const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+  await wrapper
+    .find('[data-relationship-deal-company] button')
+    .trigger('click');
+  expect(routing.resolve).toHaveBeenCalledWith({
+    name: 'companies_dashboard_show',
+    params: { accountId: 1, companyId: 9 },
+  });
+  expect(open).toHaveBeenCalledWith(
+    '/resolved-profile',
+    '_blank',
+    'noopener,noreferrer'
+  );
+  open.mockRestore();
+});
+it('does not duplicate the company when the card and contact identify the same company', async () => {
+  wrapper = makePanel({
+    card: {
+      id: 5,
+      contact_id: 42,
+      company: { id: 7, name: 'Canonical Company' },
+      metadata: { autonomia_prospecting: { company: { id: 7 } } },
+    },
+  });
+  await flushPromises();
+  expect(wrapper.find('[data-relationship-deal-company]').exists()).toBe(false);
+});
+
+it('does not present a stale generic card snapshot as a prospecting business company', async () => {
+  wrapper = makePanel({
+    card: { id: 5, contact_id: 42, company: { id: 9, name: 'Old Company' } },
+  });
+  await flushPromises();
+  expect(wrapper.find('[data-relationship-deal-company]').exists()).toBe(false);
+  expect(wrapper.find('[data-relationship-company]').text()).toContain(
+    'Canonical Company'
+  );
+});

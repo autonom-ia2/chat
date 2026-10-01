@@ -9,6 +9,7 @@ class Crm::Cards::ActivityPayloadBuilder
   STAGE_ID_KEYS = %w[from_stage_id to_stage_id target_stage_id stage_id].freeze
   OWNER_ID_KEYS = %w[owner_id assignee_id].freeze
   CONTACT_ID_KEYS = %w[contact_id].freeze
+  SENSITIVE_PAYLOAD_KEYS = %w[error send_error].freeze
   # Fase D: resolve o destino de time do handoff do agente nativo (assign_team)
   # para nome legível na timeline. Aditivo; nenhum event_type existente usa team_id.
   TEAM_ID_KEYS = %w[team_id].freeze
@@ -165,9 +166,25 @@ class Crm::Cards::ActivityPayloadBuilder
   end
 
   def sanitized_activity_payload(payload)
-    return payload if administrator?
+    sanitized = remove_sensitive_payload_fields(payload)
+    return sanitized if administrator?
 
-    remove_source_conversation(payload)
+    remove_source_conversation(sanitized)
+  end
+
+  def remove_sensitive_payload_fields(payload)
+    case payload
+    when Hash
+      payload.each_with_object({}) do |(key, value), sanitized|
+        next if SENSITIVE_PAYLOAD_KEYS.include?(key.to_s)
+
+        sanitized[key] = remove_sensitive_payload_fields(value)
+      end
+    when Array
+      payload.map { |value| remove_sensitive_payload_fields(value) }
+    else
+      payload
+    end
   end
 
   def remove_source_conversation(payload)

@@ -317,8 +317,8 @@
 - intent: "Onde vejo o CRM?"; "Como filtro oportunidades?"; "Onde vejo as oportunidades ganhas ou perdidas?"; "Onde vejo o que perdi / o que ganhei?"; "Como alterno entre Kanban, lista e calendário?"
 - onde_fica: Sidebar > CRM > CRM Kanban
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use busca, prioridade e follow-up na barra; abra **Filtros** (caixa, responsável, time, estágio, valor, card parado, tipo de vínculo); alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips e podem esconder cards.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, score, responsável, time, caixa, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
+- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - highlight: `crm-filters`
 
 ### criar_funis_estagios_e_conectar_caixas_ao_crm
@@ -326,7 +326,7 @@
 - rota: crm_kanban_index
 - leitura: funis
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar inboxes
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
 - passos: No editor, defina o nome e abra um status para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções do status; o número indica a posição atual. Melhorar com IA compara os demais status e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir status volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa e escolha o status de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar inboxes, ligar o CRM na caixa, escolher o funil e a etapa de entrada e salvar.
 - gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o follow-up automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
@@ -373,9 +373,9 @@
 - titulo: Criar follow-ups e lembretes no CRM
 - rota: crm_kanban_index
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Follow-ups; ou CRM > CRM Calendar > clique no dia
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário > clique no dia
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
-- passos: Abra o card; entre em Follow-ups; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; salve; conclua ou cancele pelo card ou calendário.
+- passos: Abra o card; entre em Retornos; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; crie o retorno; conclua ou cancele pelo card ou calendário. Consulte Histórico para acompanhar as atividades e tentativas registradas.
 - gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e a timeline mostra Follow-up cancelado com o motivo.
 
 ### usar_o_card_crm_a_partir_de_uma_conversa

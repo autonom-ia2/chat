@@ -376,8 +376,11 @@ describe('#crmKanban board filters', () => {
             ...defaultFilters(),
             stageIds: [3, 4],
             teamId: '9',
+            companyId: 'none',
             valueMin: 100,
             valueMax: 500,
+            scoreMin: 0,
+            scoreMax: 100,
             staleDays: '7',
             responsibleKind: 'bot',
             aiPending: true,
@@ -392,8 +395,11 @@ describe('#crmKanban board filters', () => {
     expect(sentParams).toMatchObject({
       stage_ids: '3,4',
       team_id: '9',
+      company_id: 'none',
       value_min: 10000,
       value_max: 50000,
+      score_min: 0,
+      score_max: 100,
       stale_days: '7',
       responsible_kind: 'bot',
       ai_pending: true,
@@ -584,6 +590,29 @@ describe('#crmKanban board filters', () => {
       { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
     );
 
+    expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
+    expect(commit).not.toHaveBeenCalledWith(
+      types.UPSERT_CRM_KANBAN_CARD,
+      expect.anything()
+    );
+  });
+
+  it('refetches when search or company is active because realtime payloads are partial', () => {
+    const commit = vi.fn();
+    [
+      { ...defaultFilters(), search: 'Norte' },
+      { ...defaultFilters(), companyId: 'none' },
+    ].forEach(filters => {
+      actions.handleRealtimeCardEvent(
+        {
+          commit,
+          state: { board: { pipeline: { id: 7 } }, filters },
+        },
+        { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
+      );
+    });
+
+    expect(emitter.emit).toHaveBeenCalledTimes(2);
     expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
     expect(commit).not.toHaveBeenCalledWith(
       types.UPSERT_CRM_KANBAN_CARD,

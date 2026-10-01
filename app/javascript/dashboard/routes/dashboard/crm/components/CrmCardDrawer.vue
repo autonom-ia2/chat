@@ -151,28 +151,64 @@ const followUpForm = reactive({
   templateLanguage: 'pt_BR',
   templateNamespace: '',
 });
+const followUpDraftSnapshot = ref('');
+const newFollowUpOpen = ref(false);
 const followUpMessagingWindow = ref(null);
 const isLoadingMessagingWindow = ref(false);
 const whatsappApiTemplates = ref([]);
 const isLoadingWhatsappTemplates = ref(false);
 
 const activeTab = ref('summary');
+const additionalDetailsOpen = ref(false);
 const tabButtons = ref([]);
 const drawerElement = ref(null);
 const drawerId = `crm-card-drawer-${useId()}`;
 let previousActiveElement = null;
 
 const isEditing = computed(() => props.mode === 'edit');
-const panelTitle = computed(() =>
-  isEditing.value
-    ? relationshipLabel('OPPORTUNITY_DETAILS')
-    : t('CRM_KANBAN.DRAWER.CREATE_TITLE')
+const headerCompanyName = computed(() =>
+  String(props.card?.company?.name || '').trim()
 );
-const panelSubtitle = computed(() =>
-  isEditing.value
-    ? form.title || t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE')
-    : t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE')
+const headerContactName = computed(() =>
+  String(
+    props.card?.contact?.name || props.card?.contact?.phone_number || ''
+  ).trim()
 );
+const headerBusinessName = computed(() =>
+  String(form.title || props.card?.title || '').trim()
+);
+const headerHasDistinctContact = computed(
+  () =>
+    Boolean(headerCompanyName.value) &&
+    Boolean(headerContactName.value) &&
+    headerCompanyName.value !== headerContactName.value
+);
+const headerHasDistinctBusiness = computed(() => {
+  const title = headerBusinessName.value;
+  return Boolean(
+    title && ![headerCompanyName.value, headerContactName.value].includes(title)
+  );
+});
+const panelTitle = computed(() => {
+  if (!isEditing.value) return t('CRM_KANBAN.DRAWER.CREATE_TITLE');
+  return (
+    headerCompanyName.value ||
+    headerContactName.value ||
+    headerBusinessName.value ||
+    relationshipLabel('OPPORTUNITY_DETAILS')
+  );
+});
+const panelSubtitle = computed(() => {
+  if (!isEditing.value) return t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE');
+  const context = [];
+  if (headerHasDistinctContact.value) context.push(headerContactName.value);
+  if (headerHasDistinctBusiness.value) {
+    context.push(
+      `${t('CRM_KANBAN.CARD.BUSINESS_LABEL')} ${headerBusinessName.value}`
+    );
+  }
+  return context.join(' · ') || t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE');
+});
 
 const priorityOptions = computed(() => [
   { value: 'low', label: t('CRM_KANBAN.PRIORITY.LOW') },
@@ -185,8 +221,8 @@ const detailTabs = computed(() => [
   { id: 'summary', label: t('CRM_KANBAN.DRAWER.TAB_SUMMARY') },
   { id: 'contact', label: relationshipLabel('TAB') },
   { id: 'conversations', label: t('CRM_KANBAN.DRAWER.TAB_CONVERSATIONS') },
-  { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_FOLLOW_UPS') },
-  { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_TIMELINE') },
+  { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_RETURNS') },
+  { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_HISTORY') },
 ]);
 const tabId = tab => `${drawerId}-tab-${tab}`;
 const detailPanelId = tab => `${drawerId}-panel-${tab}`;
@@ -354,6 +390,21 @@ const statusPillClass = computed(
       archived: 'bg-n-slate-4 text-n-slate-10',
     })[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
 );
+
+const conversationStatusLabel = status => {
+  switch (String(status || '').toLowerCase()) {
+    case 'open':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_OPEN');
+    case 'pending':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_PENDING');
+    case 'resolved':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_RESOLVED');
+    case 'snoozed':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_SNOOZED');
+    default:
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_UNKNOWN');
+  }
+};
 const aiFilledValue = computed(() => props.card?.ai_value?.source === 'ai');
 
 // CTWA conversion sync-state for the open card (FE-5 badge). Read-only ledger row
@@ -451,11 +502,13 @@ const resetForm = () => {
   form.expectedCloseAt = card.expected_close_at
     ? card.expected_close_at.slice(0, 10)
     : '';
+  additionalDetailsOpen.value = Boolean(form.score || form.expectedCloseAt);
   form.ownerId = card.owner_id || '';
   form.inboxId = card.inbox_id || '';
   form.contactId = card.contact_id || '';
   hydrateContactForm(card);
   activeTab.value = props.initialTab || 'summary';
+  newFollowUpOpen.value = false;
   followUpForm.title = t('CRM_KANBAN.DRAWER.FOLLOW_UP_DEFAULT_TITLE');
   followUpForm.dueAt = '';
   followUpForm.automationMode = 'reminder_only';
@@ -466,6 +519,7 @@ const resetForm = () => {
   followUpForm.templateName = '';
   followUpForm.templateLanguage = 'pt_BR';
   followUpForm.templateNamespace = '';
+  followUpDraftSnapshot.value = JSON.stringify({ ...followUpForm });
   followUpMessagingWindow.value = null;
   whatsappApiTemplates.value = [];
   formSnapshot.value = JSON.stringify({ ...form });
@@ -546,10 +600,13 @@ watch(
     if (!props.show) return;
     const sameCard = previous?.[0] && props.card?.id === previous[1]?.id;
     const tab = activeTab.value;
+    const followUpDraftDirty =
+      JSON.stringify({ ...followUpForm }) !== followUpDraftSnapshot.value;
     if (
       sameCard &&
       (isEditingContact.value ||
-        JSON.stringify({ ...form }) !== formSnapshot.value)
+        JSON.stringify({ ...form }) !== formSnapshot.value ||
+        followUpDraftDirty)
     ) {
       if (!isEditingContact.value) hydrateContactForm(props.card);
       return;
@@ -819,6 +876,8 @@ const resetFollowUpForm = () => {
   followUpForm.templateName = '';
   followUpForm.templateLanguage = 'pt_BR';
   followUpForm.templateNamespace = '';
+  newFollowUpOpen.value = false;
+  followUpDraftSnapshot.value = JSON.stringify({ ...followUpForm });
 };
 
 defineExpose({ resetFollowUpForm, guardNavigation: guardRelationship });
@@ -965,9 +1024,14 @@ const ACTIVITY_META = {
     tone: 'positive',
   },
   follow_up_message_failed: {
-    key: 'ACTIVITY_FOLLOW_UP_MESSAGE_FAILED',
+    key: 'ACTIVITY_FOLLOW_UP_DELIVERY_FAILED',
     icon: 'i-lucide-triangle-alert',
     tone: 'negative',
+  },
+  follow_up_rescheduled: {
+    key: 'ACTIVITY_FOLLOW_UP_RESCHEDULED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
   },
   meeting_scheduled: {
     key: 'ACTIVITY_MEETING_SCHEDULED',
@@ -1046,6 +1110,26 @@ const ACTIVITY_META = {
     icon: 'i-lucide-circle-stop',
     tone: 'muted',
   },
+  ai_followup_failed: {
+    key: 'ACTIVITY_AI_FOLLOWUP_FAILED',
+    icon: 'i-lucide-triangle-alert',
+    tone: 'negative',
+  },
+  ai_followup_sent: {
+    key: 'ACTIVITY_AI_FOLLOWUP_SENT',
+    icon: 'i-lucide-send',
+    tone: 'positive',
+  },
+  ai_followup_capped: {
+    key: 'ACTIVITY_AI_FOLLOWUP_CAPPED',
+    icon: 'i-lucide-circle-stop',
+    tone: 'muted',
+  },
+  ai_followup_completed: {
+    key: 'ACTIVITY_AI_FOLLOWUP_COMPLETED',
+    icon: 'i-lucide-check-circle-2',
+    tone: 'positive',
+  },
   ai_handoff_invite: {
     key: 'ACTIVITY_AI_HANDOFF_INVITE',
     icon: 'i-lucide-user-round-plus',
@@ -1096,6 +1180,47 @@ const activityLabelValue = (activity, key) => {
   if (labels[key]) return labels[key];
   const raw = activity.payload?.[key];
   return raw ? `#${raw}` : '';
+};
+
+// Provider/LLM errors are diagnostic data, not user-facing copy. Never read
+// payload.error or metadata.send_error in the drawer because they can contain
+// arbitrary provider text.
+
+// Attempt copy is shown only when the activity carries an explicit counter.
+// `touch` is a cadence position, not a retry count, so it must not be used here.
+const activityAttemptDetail = activity => {
+  const attempts = Number(activity.payload?.attempts);
+  if (!Number.isInteger(attempts) || attempts < 1) return '';
+
+  const total = Number(activity.payload?.max_attempts);
+  if (Number.isInteger(total) && total > 0) {
+    return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPT_OF', {
+      attempt: attempts,
+      total,
+    });
+  }
+  return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPT', {
+    attempt: attempts,
+  });
+};
+
+const activityRetryAtDetail = activity => {
+  const retryAt = activity.payload?.retry_at;
+  if (!retryAt || Number.isNaN(new Date(retryAt).getTime())) return '';
+  return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_RETRY_AT', {
+    time: relativeTimeFromISO(retryAt, locale.value),
+  });
+};
+
+const activityRetryDetail = activity => {
+  const details = [
+    activityAttemptDetail(activity),
+    activityRetryAtDetail(activity),
+  ];
+  if (activity.payload?.final === true) {
+    details.push(t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPTS_FINISHED'));
+  }
+  return details.filter(Boolean).join(' · ');
 };
 
 // Builds a friendly one-line description for the activity. Returns '' when the
@@ -1170,10 +1295,24 @@ const activityDetail = activity => {
     case 'follow_up_updated':
     case 'follow_up_completed':
     case 'follow_up_overdue':
-    case 'follow_up_message_sent':
-    case 'follow_up_message_failed': {
+    case 'follow_up_message_sent': {
       const title = activity.payload?.title;
-      return title || '';
+      return title || activityAttemptDetail(activity);
+    }
+    case 'follow_up_message_failed':
+      return activityRetryDetail(activity);
+    case 'ai_followup_failed':
+      return activityRetryDetail(activity);
+    case 'ai_followup_sent':
+    case 'ai_followup_capped':
+    case 'ai_followup_completed':
+      return activityAttemptDetail(activity);
+    case 'follow_up_rescheduled': {
+      const dueAt = activity.payload?.due_at;
+      if (!dueAt || Number.isNaN(new Date(dueAt).getTime())) return '';
+      return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED', {
+        time: relativeTimeFromISO(dueAt, locale.value),
+      });
     }
     case 'meeting_scheduled':
     case 'meeting_rescheduled':
@@ -1374,9 +1513,28 @@ useFixedPanelPresence(computed(() => props.show));
           </h2>
           <p
             :id="`${drawerId}-subtitle`"
-            class="mb-0 text-sm leading-6 text-n-slate-4"
+            class="mb-0 grid gap-0.5 text-sm leading-6 text-n-slate-4"
           >
-            {{ panelSubtitle }}
+            <template
+              v-if="
+                isEditing &&
+                (headerHasDistinctContact || headerHasDistinctBusiness)
+              "
+            >
+              <span v-if="headerHasDistinctContact" class="truncate">
+                {{ headerContactName }}
+              </span>
+              <span
+                v-if="headerHasDistinctBusiness"
+                class="truncate text-xs text-n-slate-5"
+              >
+                <span class="font-medium text-n-slate-4">
+                  {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
+                </span>
+                {{ headerBusinessName }}
+              </span>
+            </template>
+            <span v-else>{{ panelSubtitle }}</span>
           </p>
           <Button
             v-if="!isEditing && initialContact"
@@ -1413,7 +1571,7 @@ useFixedPanelPresence(computed(() => props.show));
 
       <div class="flex-1 overflow-y-auto px-6 py-5">
         <div
-          v-if="isEditing && canManageCards"
+          v-if="isEditing"
           class="flex flex-wrap items-center justify-between gap-3 p-3 mb-5 border rounded-lg border-n-weak bg-n-solid-1"
         >
           <span
@@ -1422,7 +1580,7 @@ useFixedPanelPresence(computed(() => props.show));
           >
             {{ statusLabel }}
           </span>
-          <div class="flex items-center gap-2">
+          <div v-if="canManageCards" class="flex items-center gap-2">
             <template v-if="isDealOpen">
               <Button
                 sm
@@ -1566,7 +1724,7 @@ useFixedPanelPresence(computed(() => props.show));
 
           <section
             v-if="hasLinkedContext"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
+            class="grid gap-3 rounded-xl border border-n-weak bg-n-surface-1 p-4"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -1603,10 +1761,10 @@ useFixedPanelPresence(computed(() => props.show));
               </CrmCardPill>
             </div>
 
-            <div class="grid gap-2 text-sm">
+            <div class="grid divide-y divide-n-weak text-sm">
               <div
                 v-if="card?.contact"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.CONTACT') }}
@@ -1617,7 +1775,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
               <div
                 v-if="card?.inbox"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.INBOX') }}
@@ -1628,7 +1786,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
               <div
                 v-if="linkedConversationDisplayId"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.CONVERSATION') }}
@@ -1644,7 +1802,7 @@ useFixedPanelPresence(computed(() => props.show));
             </div>
           </section>
 
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 min-[460px]:grid-cols-2">
             <Input
               v-model="form.valueAmount"
               :readonly="!canManageCards"
@@ -1657,18 +1815,6 @@ useFixedPanelPresence(computed(() => props.show));
               "
               :placeholder="t('CRM_KANBAN.DRAWER.VALUE_PLACEHOLDER')"
             />
-            <Input
-              v-model="form.score"
-              :readonly="!canManageCards"
-              type="number"
-              min="0"
-              max="100"
-              :label="t('CRM_KANBAN.DRAWER.SCORE')"
-              :placeholder="t('CRM_KANBAN.DRAWER.SCORE_PLACEHOLDER')"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
             <label class="grid gap-1">
               <span class="text-heading-3 text-n-slate-12">
                 {{ t('CRM_KANBAN.DRAWER.PRIORITY') }}
@@ -1681,13 +1827,50 @@ useFixedPanelPresence(computed(() => props.show));
                 class="w-full"
               />
             </label>
-            <Input
-              v-model="form.expectedCloseAt"
-              :readonly="!canManageCards"
-              type="date"
-              :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
-            />
           </div>
+
+          <details
+            class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"
+            :open="additionalDetailsOpen"
+            @toggle="additionalDetailsOpen = $event.currentTarget.open"
+          >
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-sliders-horizontal size-4 shrink-0 text-n-slate-10"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.MORE_DETAILS') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <div
+              class="grid grid-cols-1 gap-3 px-2 pb-2 pt-3 min-[460px]:grid-cols-2"
+            >
+              <Input
+                v-model="form.score"
+                :readonly="!canManageCards"
+                type="number"
+                min="0"
+                max="100"
+                :label="t('CRM_KANBAN.DRAWER.SCORE')"
+                :placeholder="t('CRM_KANBAN.DRAWER.SCORE_PLACEHOLDER')"
+              />
+              <Input
+                v-model="form.expectedCloseAt"
+                :readonly="!canManageCards"
+                type="date"
+                :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
+              />
+            </div>
+          </details>
         </div>
 
         <CrmCardRelationshipPanel
@@ -1790,9 +1973,9 @@ useFixedPanelPresence(computed(() => props.show));
           <article
             v-for="conversation in linkedConversations"
             :key="conversation.id || conversation.display_id"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid gap-3 border-b border-n-weak py-4 first:pt-0 last:border-b-0 last:pb-0"
           >
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="mb-1 text-sm font-medium text-n-slate-12">
                   {{
@@ -1815,13 +1998,16 @@ useFixedPanelPresence(computed(() => props.show));
                 slate
                 faded
                 sm
+                class="min-w-max shrink-0"
                 @click="openConversationByDisplayId(conversation.display_id)"
               />
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs text-n-slate-11">
               <div>
                 {{ t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS') }}
-                <span class="text-n-slate-12">{{ conversation.status }}</span>
+                <span class="text-n-slate-12">
+                  {{ conversationStatusLabel(conversation.status) }}
+                </span>
               </div>
               <div>
                 {{ t('CRM_KANBAN.DRAWER.CONVERSATION_LAST_ACTIVITY') }}
@@ -1857,7 +2043,7 @@ useFixedPanelPresence(computed(() => props.show));
           role="tabpanel"
           :aria-labelledby="tabId('followups')"
           tabindex="-1"
-          class="grid gap-4 outline-none"
+          class="grid gap-3 outline-none"
         >
           <!-- 1) Open follow-ups (pending / overdue) on top -->
           <div
@@ -1870,7 +2056,7 @@ useFixedPanelPresence(computed(() => props.show));
           <article
             v-for="followUp in activeFollowUps"
             :key="`active-${followUp.id}`"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid gap-3 rounded-xl border border-n-weak bg-n-surface-1 p-4"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -1902,6 +2088,7 @@ useFixedPanelPresence(computed(() => props.show));
                 slate
                 faded
                 sm
+                class="min-w-max"
                 :is-loading="isSavingFollowUp"
                 @click="completeFollowUp(followUp)"
               />
@@ -1911,6 +2098,7 @@ useFixedPanelPresence(computed(() => props.show));
                 ruby
                 ghost
                 sm
+                class="min-w-max"
                 :is-loading="isSavingFollowUp"
                 @click="cancelFollowUp(followUp)"
               />
@@ -1918,175 +2106,206 @@ useFixedPanelPresence(computed(() => props.show));
           </article>
 
           <!-- 2) New follow-up -->
-          <div
+          <details
             v-if="canManageCards"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            :open="newFollowUpOpen"
+            class="group rounded-xl border border-n-weak bg-n-surface-1"
+            @toggle="newFollowUpOpen = $event.currentTarget.open"
           >
-            <div>
-              <p class="mb-1 text-sm font-medium text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_TITLE') }}
-              </p>
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_HELP') }}
-              </p>
-            </div>
-
-            <Input
-              v-model="followUpForm.title"
-              :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE')"
-              :placeholder="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE_PLACEHOLDER')"
-            />
-
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DUE_AT') }}
-              </span>
-              <input
-                v-model="followUpForm.dueAt"
-                type="datetime-local"
-                class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-              />
-            </label>
-
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE') }}
-              </span>
-              <ChoiceSelect
-                v-model="followUpForm.automationMode"
-                :options="followUpModeChoices"
-                :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE')"
-                class="w-full"
-              />
-              <span
-                v-if="!canSnoozeConversation"
-                class="text-xs text-n-slate-10"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_SNOOZE_DISABLED') }}
-              </span>
-              <span v-if="!canAutoSendMessage" class="text-xs text-n-slate-10">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_DISABLED') }}
-              </span>
-            </label>
-
-            <div
-              v-if="followUpForm.automationMode === 'auto_send_message'"
-              class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
             >
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_HELP') }}
-              </p>
-              <p
-                v-if="isLoadingMessagingWindow"
-                class="mb-0 text-xs text-n-slate-10"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_LOADING') }}
-              </p>
-              <p
-                v-else-if="requiresTemplateNow"
-                class="mb-0 text-xs text-n-ruby-11"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED') }}
-              </p>
-              <p v-else class="mb-0 text-xs text-n-teal-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_SESSION_OK') }}
-              </p>
-
-              <Input
-                v-model="followUpForm.messageBody"
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY')"
-                :placeholder="
-                  t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER')
-                "
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-plus size-4 shrink-0 text-n-blue-11"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
               />
+            </summary>
 
-              <label
-                v-if="isWhatsappApiInbox && requiresTemplateNow"
-                class="grid gap-1"
-              >
-                <span class="text-heading-3 text-n-slate-12">
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="followUpForm.whatsappApiTemplateId"
-                  :options="whatsappApiTemplateChoices"
-                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
-                  class="w-full"
-                />
-                <span
-                  v-if="isLoadingWhatsappTemplates"
-                  class="text-xs text-n-slate-10"
-                >
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATES_LOADING') }}
-                </span>
-              </label>
+            <div class="grid gap-3 border-t border-n-weak p-4">
+              <div>
+                <p class="mb-1 text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_TITLE') }}
+                </p>
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_HELP') }}
+                </p>
+              </div>
 
-              <label
-                v-else-if="isWhatsappNativeInbox && requiresTemplateNow"
-                class="grid gap-1"
-              >
-                <span class="text-heading-3 text-n-slate-12">
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="followUpForm.nativeTemplateKey"
-                  :options="nativeWhatsappTemplateChoices"
-                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
-                  class="w-full"
-                  @change="onNativeTemplateSelected"
-                />
-                <span
-                  v-if="!nativeWhatsappTemplateOptions.length"
-                  class="text-xs text-n-slate-10"
-                >
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_EMPTY') }}
-                </span>
-              </label>
-
-              <template v-else-if="requiresTemplateNow">
+              <div class="grid grid-cols-1 gap-3 min-[460px]:grid-cols-2">
                 <Input
-                  v-model="followUpForm.templateName"
-                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME')"
+                  v-model="followUpForm.title"
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE')"
                   :placeholder="
-                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME_PLACEHOLDER')
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE_PLACEHOLDER')
                   "
                 />
-                <Input
-                  v-model="followUpForm.templateLanguage"
-                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_LANGUAGE')"
-                  placeholder="pt_BR"
+
+                <label class="grid gap-1">
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DUE_AT') }}
+                  </span>
+                  <input
+                    v-model="followUpForm.dueAt"
+                    type="datetime-local"
+                    class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  />
+                </label>
+              </div>
+
+              <label class="grid gap-1">
+                <span class="text-heading-3 text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE') }}
+                </span>
+                <ChoiceSelect
+                  v-model="followUpForm.automationMode"
+                  :options="followUpModeChoices"
+                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE')"
+                  class="w-full"
                 />
-              </template>
-            </div>
+                <span
+                  v-if="!canSnoozeConversation"
+                  class="text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_SNOOZE_DISABLED') }}
+                </span>
+                <span
+                  v-if="!canAutoSendMessage"
+                  class="text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_DISABLED') }}
+                </span>
+              </label>
 
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION') }}
-              </span>
-              <textarea
-                v-model="followUpForm.description"
-                rows="3"
-                class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
-                :placeholder="
-                  t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION_PLACEHOLDER')
-                "
-              />
-            </label>
+              <div
+                v-if="followUpForm.automationMode === 'auto_send_message'"
+                class="grid gap-3 rounded-lg border border-n-blue-7/40 bg-n-blue-2/30 p-3"
+              >
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_HELP') }}
+                </p>
+                <p
+                  v-if="isLoadingMessagingWindow"
+                  class="mb-0 text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_LOADING') }}
+                </p>
+                <p
+                  v-else-if="requiresTemplateNow"
+                  class="mb-0 text-xs text-n-ruby-11"
+                >
+                  {{
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED')
+                  }}
+                </p>
+                <p v-else class="mb-0 text-xs text-n-teal-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_SESSION_OK') }}
+                </p>
 
-            <div class="flex justify-end">
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE')"
-                icon="i-lucide-clock-3"
-                :is-loading="isSavingFollowUp"
-                :disabled="
-                  !followUpForm.title.trim() ||
-                  !followUpForm.dueAt ||
-                  isSavingFollowUp
-                "
-                @click="createFollowUp"
-              />
+                <Input
+                  v-model="followUpForm.messageBody"
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY')"
+                  :placeholder="
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER')
+                  "
+                />
+
+                <label
+                  v-if="isWhatsappApiInbox && requiresTemplateNow"
+                  class="grid gap-1"
+                >
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
+                  </span>
+                  <ChoiceSelect
+                    v-model="followUpForm.whatsappApiTemplateId"
+                    :options="whatsappApiTemplateChoices"
+                    :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                    class="w-full"
+                  />
+                  <span
+                    v-if="isLoadingWhatsappTemplates"
+                    class="text-xs text-n-slate-10"
+                  >
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATES_LOADING') }}
+                  </span>
+                </label>
+
+                <label
+                  v-else-if="isWhatsappNativeInbox && requiresTemplateNow"
+                  class="grid gap-1"
+                >
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
+                  </span>
+                  <ChoiceSelect
+                    v-model="followUpForm.nativeTemplateKey"
+                    :options="nativeWhatsappTemplateChoices"
+                    :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                    class="w-full"
+                    @change="onNativeTemplateSelected"
+                  />
+                  <span
+                    v-if="!nativeWhatsappTemplateOptions.length"
+                    class="text-xs text-n-slate-10"
+                  >
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_EMPTY') }}
+                  </span>
+                </label>
+
+                <template v-else-if="requiresTemplateNow">
+                  <Input
+                    v-model="followUpForm.templateName"
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME')"
+                    :placeholder="
+                      t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME_PLACEHOLDER')
+                    "
+                  />
+                  <Input
+                    v-model="followUpForm.templateLanguage"
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_LANGUAGE')"
+                    placeholder="pt_BR"
+                  />
+                </template>
+              </div>
+
+              <label class="grid gap-1">
+                <span class="text-heading-3 text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION') }}
+                </span>
+                <textarea
+                  v-model="followUpForm.description"
+                  rows="3"
+                  class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
+                  :placeholder="
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION_PLACEHOLDER')
+                  "
+                />
+              </label>
+
+              <div class="flex justify-end">
+                <Button
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE')"
+                  icon="i-lucide-clock-3"
+                  :is-loading="isSavingFollowUp"
+                  :disabled="
+                    !followUpForm.title.trim() ||
+                    !followUpForm.dueAt ||
+                    isSavingFollowUp
+                  "
+                  @click="createFollowUp"
+                />
+              </div>
             </div>
-          </div>
+          </details>
 
           <!-- 3) Automatic follow-up -->
           <CrmCardAutoFollowupStatus
@@ -2097,67 +2316,91 @@ useFixedPanelPresence(computed(() => props.show));
           />
 
           <!-- 4) Completed follow-ups (bottom) -->
-          <p
+          <details
             v-if="completedFollowUps.length"
-            class="mb-0 mt-1 text-[11px] font-semibold uppercase tracking-wide text-n-slate-10"
+            class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"
           >
-            {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION') }}
-          </p>
-          <article
-            v-for="followUp in completedFollowUps"
-            :key="followUp.id"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="mb-1 truncate text-sm font-medium text-n-slate-12">
-                  {{ followUp.title }}
-                </p>
-                <p class="mb-0 flex flex-wrap gap-2 text-xs text-n-slate-11">
-                  <span>{{ formatDate(followUp.due_at) }}</span>
-                  <span>{{ followUpAutomationLabel(followUp) }}</span>
-                </p>
-              </div>
-              <span
-                class="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium"
-                :class="followUpStatusClass(followUp)"
-              >
-                {{ followUpStatusLabel(followUp) }}
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-check-check size-4 shrink-0 text-n-slate-10"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION') }}
+                </span>
               </span>
-            </div>
-            <p
-              v-if="followUp.description"
-              class="mb-0 text-xs leading-5 text-n-slate-11"
-            >
-              {{ followUp.description }}
-            </p>
-            <div
-              v-if="
-                canManageCards &&
-                activeFollowUps.some(item => item.id === followUp.id)
-              "
-              class="flex justify-end gap-2"
-            >
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
-                icon="i-lucide-check"
-                slate
-                faded
-                sm
-                :is-loading="isSavingFollowUp"
-                @click="completeFollowUp(followUp)"
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
               />
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
-                icon="i-lucide-x"
-                ruby
-                ghost
-                sm
-                :is-loading="isSavingFollowUp"
-                @click="cancelFollowUp(followUp)"
-              />
+            </summary>
+            <div class="grid px-2 pb-2">
+              <article
+                v-for="followUp in completedFollowUps"
+                :key="followUp.id"
+                class="grid gap-3 border-b border-n-weak py-3 last:border-b-0"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p
+                      class="mb-1 truncate text-sm font-medium text-n-slate-12"
+                    >
+                      {{ followUp.title }}
+                    </p>
+                    <p
+                      class="mb-0 flex flex-wrap gap-2 text-xs text-n-slate-11"
+                    >
+                      <span>{{ formatDate(followUp.due_at) }}</span>
+                      <span>{{ followUpAutomationLabel(followUp) }}</span>
+                    </p>
+                  </div>
+                  <span
+                    class="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium"
+                    :class="followUpStatusClass(followUp)"
+                  >
+                    {{ followUpStatusLabel(followUp) }}
+                  </span>
+                </div>
+                <p
+                  v-if="followUp.description"
+                  class="mb-0 text-xs leading-5 text-n-slate-11"
+                >
+                  {{ followUp.description }}
+                </p>
+                <div
+                  v-if="
+                    canManageCards &&
+                    activeFollowUps.some(item => item.id === followUp.id)
+                  "
+                  class="flex justify-end gap-2"
+                >
+                  <Button
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
+                    icon="i-lucide-check"
+                    slate
+                    faded
+                    sm
+                    class="min-w-max"
+                    :is-loading="isSavingFollowUp"
+                    @click="completeFollowUp(followUp)"
+                  />
+                  <Button
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
+                    icon="i-lucide-x"
+                    ruby
+                    ghost
+                    sm
+                    class="min-w-max"
+                    :is-loading="isSavingFollowUp"
+                    @click="cancelFollowUp(followUp)"
+                  />
+                </div>
+              </article>
             </div>
-          </article>
+          </details>
 
           <div
             v-if="!isFetchingFollowUps && followUps.length === 0"
@@ -2183,17 +2426,19 @@ useFixedPanelPresence(computed(() => props.show));
           <article
             v-for="entry in timelineEntries"
             :key="entry.id"
-            class="grid grid-cols-[auto_1fr] gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid grid-cols-[auto_1fr] gap-3 border-b border-n-weak py-3 last:border-b-0 first:pt-0"
           >
             <span
-              class="mt-0.5 flex size-8 items-center justify-center rounded-full"
+              class="mt-0.5 flex size-7 items-center justify-center rounded-full"
               :class="entry.toneClass"
             >
-              <span class="size-4" :class="[entry.icon]" />
+              <span class="size-3.5" :class="[entry.icon]" />
             </span>
             <div class="min-w-0">
-              <div class="flex items-start justify-between gap-3">
-                <p class="mb-1 text-sm font-medium text-n-slate-12">
+              <div
+                class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+              >
+                <p class="mb-0 text-sm font-medium text-n-slate-12">
                   {{ entry.title }}
                 </p>
                 <span class="shrink-0 text-xs text-n-slate-10">

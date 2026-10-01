@@ -10,6 +10,7 @@ class Crm::Cards::PayloadBuilder
 
   NESTED_PAYLOADS = {
     contact: :contact_payload,
+    company: :company_payload,
     owner: :owner_payload,
     responsible: :responsible_payload,
     inbox: :inbox_payload,
@@ -51,11 +52,14 @@ class Crm::Cards::PayloadBuilder
     end
   end
 
-  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil)
+  UNRESOLVED_COMPANY = Object.new.freeze
+
+  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY)
     @card = card
     @user = user
     @account_user = account_user
     @conversation_visibility = conversation_visibility
+    @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
   def perform
@@ -198,6 +202,10 @@ class Crm::Cards::PayloadBuilder
       additional_attributes: @card.contact.additional_attributes || {},
       custom_attributes: @card.contact.custom_attributes || {}
     }
+  end
+
+  def company_payload
+    Crm::Cards::CompanyResolver.payload(@company)
   end
 
   def owner_payload

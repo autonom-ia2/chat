@@ -68,8 +68,13 @@ class Crm::Cards::XlsxExport
   end
 
   def add_card_row(sheet, styles, card, zebra)
-    payload = Crm::Cards::PayloadBuilder.new(card, user: @user, account_user: @account_user,
-                                                   conversation_visibility: conversation_visibility).perform
+    payload = Crm::Cards::PayloadBuilder.new(
+      card,
+      user: @user,
+      account_user: @account_user,
+      conversation_visibility: conversation_visibility,
+      company: @company_by_card_id[card.id]
+    ).perform
     cells = COLUMNS.map { |column| cell_value(column, card, payload) }
     row_styles = COLUMNS.map { |column| styles.cell(LAYOUT[column].first, zebra: zebra, raw: raw_enum(column, card)) }
     sheet.add_row(cells, types: COLUMNS.map { |column| CELL_TYPES[LAYOUT[column].first] }, style: row_styles, height: 20)
@@ -112,6 +117,7 @@ class Crm::Cards::XlsxExport
       batch = @cards.limit(BATCH_SIZE).offset(offset).to_a
       break if batch.empty?
 
+      @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(batch)
       batch.each(&block)
       offset += BATCH_SIZE
     end
@@ -143,7 +149,10 @@ class Crm::Cards::XlsxExport
 
   def relation_text(column, card, payload)
     case column
-    when :company then payload.dig(:contact, :additional_attributes, 'company_name')
+    when :company
+      return payload.dig(:company, :name) if card.metadata.to_h.dig('autonomia_prospecting', 'company', 'id').present?
+
+      payload.dig(:company, :name) || payload.dig(:contact, :additional_attributes, 'company_name')
     when :responsible then payload.dig(:responsible, :name)
     when :labels then (Array(payload[:labels]) | Array(payload[:contact_labels])).join(', ').presence
     when :campaign then campaign_text(payload)

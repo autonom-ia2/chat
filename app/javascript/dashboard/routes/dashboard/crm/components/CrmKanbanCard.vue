@@ -8,7 +8,6 @@ import {
   dateFormat,
 } from 'shared/helpers/timeHelper';
 
-import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import CardPriorityIcon from 'dashboard/components-next/Conversation/ConversationCard/CardPriorityIcon.vue';
 import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/CardLabels.vue';
@@ -31,11 +30,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // The page owns the CRM permission check. Keep the default closed so a card
+  // cannot expose a movement action until the board passes its capability.
+  canMove: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['open', 'openConversation']);
+defineEmits(['open', 'openConversation', 'move']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
 
@@ -45,34 +50,57 @@ const railStyle = computed(() => ({
   backgroundColor: props.stageColor || STAGE_FALLBACK_COLOR,
 }));
 
-const contactLabel = computed(
+// The card payload owns the company association. Do not fall back to
+// contact.company: the same contact can be shared by opportunities from
+// different companies, so that snapshot can identify the wrong customer.
+const cardCompany = computed(() => props.card.company || null);
+const companyName = computed(() => cardCompany.value?.name || '');
+const contactName = computed(
+  () => props.card.contact?.name || props.card.contact?.phone_number || ''
+);
+const hasContact = computed(() => Boolean(props.card.contact));
+
+// Keep the identity order stable and readable at a glance:
+//   B2B: company → person → business
+//   B2C: person → business
+//   standalone: business/title → no linked contact
+const identityMain = computed(
   () =>
-    props.card.contact?.name ||
-    props.card.contact?.phone_number ||
-    props.card.inbox?.name ||
+    companyName.value ||
+    contactName.value ||
+    props.card.title ||
     t('CRM_KANBAN.CARD.STANDALONE')
 );
+const identityPerson = computed(() => {
+  if (!companyName.value || !contactName.value) return '';
+  return contactName.value === companyName.value ? '' : contactName.value;
+});
+const identityBusiness = computed(() => {
+  const title = String(props.card.title || '').trim();
+  if (!title || [identityMain.value, identityPerson.value].includes(title)) {
+    return '';
+  }
+  if (title === props.card.contact?.phone_number) return '';
+  return title;
+});
+const identityIcon = computed(() => {
+  if (companyName.value) return 'i-lucide-building-2';
+  if (hasContact.value) return 'i-lucide-user-round';
+  return 'i-lucide-kanban-square';
+});
 
-// The title is backfilled from the contact (name/phone) when no custom title
-// exists, so the contact line would just repeat the title. Only show it when it
-// adds information beyond the title.
-const showContactLine = computed(
-  () => Boolean(contactLabel.value) && contactLabel.value !== props.card.title
-);
-
-// The avatar represents WHO is handling the card (the responsible), in 3 states:
-//   bot   -> IA (square i-lucide-bot glyph)
-//   agent -> a human (initials avatar)
-//   none  -> nobody assigned and no bot (distinct dashed i-lucide-user-round-x)
+// The responsible is a separate operational signal. It must never be used as
+// the customer's avatar or identity, especially when the responsible is a bot.
 const responsibleType = computed(() => props.card.responsible?.type || 'none');
 const responsibleIsBot = computed(() => responsibleType.value === 'bot');
 const responsibleName = computed(
   () => props.card.responsible?.name || t('CRM_KANBAN.CARD.NO_OWNER')
 );
-const avatarIconName = computed(() => {
-  if (responsibleType.value === 'bot') return 'i-lucide-bot';
-  if (responsibleType.value === 'none') return 'i-lucide-user-round-x';
-  return null; // agent -> initials from name
+const responsibleLabel = computed(() => {
+  if (!responsibleIsBot.value) return responsibleName.value;
+  return t('CRM_KANBAN.CARD.RESPONSIBLE_AI', {
+    name: responsibleName.value,
+  });
 });
 const responsibleIcon = computed(() => {
   if (responsibleType.value === 'bot') return 'i-lucide-bot';
@@ -138,7 +166,12 @@ const scoreView = computed(() => {
 
   const meta = props.card.metadata?.ai?.score || {};
   const tier = SCORE_TIERS.find(item => value <= item.max);
-  const isManual = meta.source === 'manual';
+  // The board and list payloads may expose this as a flat field while the
+  // drawer keeps it inside metadata. Only explicit provenance gets a label;
+  // responsible bot/AI is never evidence that the score came from AI.
+  const source =
+    props.card.score_source || props.card.scoreSource || meta.source || '';
+  const isManual = source === 'manual';
   // Chaves literais: o projeto proíbe chave de i18n montada dinamicamente.
   const tierLabel = {
     COLD: t('CRM_KANBAN.CARD.SCORE_TIER.COLD'),
@@ -147,11 +180,19 @@ const scoreView = computed(() => {
     URGENT: t('CRM_KANBAN.CARD.SCORE_TIER.URGENT'),
   }[tier.key];
 
+  let label = t('CRM_KANBAN.CARD.SCORE_UNSPECIFIED', { score: value });
+  if (source === 'ai') {
+    label = t('CRM_KANBAN.CARD.SCORE_AI', { score: value });
+  } else if (source === 'manual') {
+    label = t('CRM_KANBAN.CARD.SCORE_MANUAL', { score: value });
+  }
+
   return {
     value,
     reason: meta.reason || '',
     icon: isManual ? 'i-lucide-hand' : tier.icon,
     toneClasses: isManual ? tier.outlined : tier.filled,
+    label,
     ariaLabel: t('CRM_KANBAN.CARD.SCORE_ARIA', {
       score: value,
       tier: tierLabel,
@@ -166,12 +207,21 @@ const aiSuggestionLabel = computed(() => {
   return t('CRM_KANBAN.AI_CARD.BADGE', { stage: suggestion.to_stage_name });
 });
 
+// shortTimestamp intentionally parses English phrases. Keep its compact chip
+// output for English, but leave localized date-fns text intact for Portuguese
+// and other locales instead of rendering an English "ago" suffix.
+const localizedRelativeLabel = epoch => {
+  const appLocale = locale?.value || 'en';
+  const detail = dynamicTime(epoch, appLocale);
+  return appLocale === 'en' ? shortTimestamp(detail, true) : detail;
+};
+
 // Board sends epoch seconds; render via timeHelper (fromUnixTime). Do not mix
 // with ISO date helpers.
 const relativeFromEpoch = epoch => {
   const value = Number(epoch);
   if (!value || Number.isNaN(value)) return '';
-  return shortTimestamp(dynamicTime(value), true);
+  return localizedRelativeLabel(value);
 };
 
 const titleFromEpoch = epoch => {
@@ -219,7 +269,7 @@ const followUp = computed(() => {
   // type with an icon + tooltip so the two are never confused.
   const isAi = props.card.next_follow_up_source === 'ai';
   return {
-    label: shortTimestamp(dynamicTime(epoch), true),
+    label: localizedRelativeLabel(epoch),
     title: isAi
       ? t('CRM_KANBAN.CARD.FOLLOW_UP_AI')
       : t('CRM_KANBAN.CARD.FOLLOW_UP_MANUAL'),
@@ -260,7 +310,7 @@ const handoffInvite = computed(() => {
   const isOverdue = Date.now() / 1000 > due;
   return {
     tone: isOverdue ? 'ruby' : 'amber',
-    label: shortTimestamp(dynamicTime(due), true),
+    label: localizedRelativeLabel(due),
     title: isOverdue
       ? t('CRM_KANBAN.CARD.HANDOFF_INVITE_OVERDUE')
       : t('CRM_KANBAN.CARD.HANDOFF_INVITE_PENDING'),
@@ -281,7 +331,7 @@ const canOpenConversation = computed(
 
 <template>
   <div
-    class="group/card relative w-full shrink-0 overflow-hidden rounded-lg border border-n-weak bg-n-surface-1 py-3 pl-4 pr-3 text-left shadow-sm transition-colors hover:bg-n-alpha-2"
+    class="group/card relative w-full shrink-0 overflow-hidden rounded-lg border border-n-weak bg-n-surface-1 py-1.5 pl-4 pr-3 text-left shadow-sm transition-colors hover:bg-n-alpha-2"
   >
     <!-- Stage accent rail (inline :style per repo precedent; slate fallback,
          dark ring guards pale colors on dark surfaces) -->
@@ -299,59 +349,81 @@ const canOpenConversation = computed(
     <button
       type="button"
       class="absolute inset-0 z-0 cursor-pointer rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
-      :aria-label="t('CRM_KANBAN.CARD.OPEN_DETAILS', { name: card.title })"
+      tabindex="-1"
+      aria-hidden="true"
       @click="$emit('open', card)"
     />
 
     <div class="relative z-10 cursor-pointer" @click="$emit('open', card)">
-      <div class="flex items-start gap-2.5">
-        <Avatar
-          :name="responsibleName"
-          :size="32"
-          :rounded-full="!responsibleIsBot"
-          :icon-name="avatarIconName"
-          :title="responsibleName"
-          class="mt-0.5 shrink-0"
-        />
-
-        <div class="min-w-0 flex-1">
-          <div class="flex items-start justify-between gap-2">
-            <p class="mb-0 truncate text-sm font-medium text-n-slate-12">
-              {{ card.title }}
-            </p>
-            <div class="flex shrink-0 items-center gap-1.5">
-              <CardPriorityIcon
-                v-if="showPriorityGlyph"
-                :priority="card.priority"
-                class="mt-0.5 shrink-0"
-              />
-              <button
-                v-if="scoreView"
-                v-tooltip.top="
-                  scoreView.reason
-                    ? {
-                        content: scoreView.reason,
-                        delay: { show: 300, hide: 0 },
-                      }
-                    : null
-                "
-                type="button"
-                :aria-label="scoreView.ariaLabel"
-                class="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 tabular-nums"
-                :class="scoreView.toneClasses"
-              >
-                <span :class="scoreView.icon" class="size-3 shrink-0" />
-                {{ scoreView.value }}
-              </button>
-            </div>
-          </div>
-          <p
-            v-if="showContactLine"
-            class="mb-0 mt-0.5 truncate text-xs text-n-slate-11"
+      <div class="relative">
+        <button
+          type="button"
+          class="min-h-11 w-full min-w-0 rounded px-0 py-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
+          :aria-label="
+            t('CRM_KANBAN.CARD.OPEN_DETAILS', {
+              name: identityBusiness || identityMain,
+            })
+          "
+          @click.stop="$emit('open', card)"
+        >
+          <span
+            class="flex min-w-0 items-start gap-1.5"
+            :class="{ 'pe-24': canMove }"
+            data-crm-card-identity
           >
-            {{ contactLabel }}
-          </p>
-        </div>
+            <span
+              :class="identityIcon"
+              class="mt-0.5 size-4 shrink-0 text-n-slate-11"
+              aria-hidden="true"
+            />
+            <span
+              class="min-w-0 break-words text-base font-semibold leading-6 text-n-slate-12"
+              :data-crm-card-company="companyName || undefined"
+            >
+              {{ identityMain }}
+            </span>
+          </span>
+          <span
+            v-if="identityPerson"
+            class="ms-6 mt-0.5 block break-words text-sm font-normal leading-5 text-n-slate-11"
+            data-crm-card-person
+          >
+            {{ identityPerson }}
+          </span>
+          <span
+            v-if="identityBusiness"
+            class="ms-6 mt-1 block break-words text-xs font-normal leading-5 text-n-slate-11"
+            data-crm-card-business
+          >
+            <span class="font-medium text-n-slate-10">
+              {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
+            </span>
+            {{ identityBusiness }}
+          </span>
+          <span
+            v-if="!hasContact"
+            class="ms-6 mt-1 block text-xs font-normal leading-5 text-n-slate-11"
+            data-crm-card-no-contact
+          >
+            {{ t('CRM_KANBAN.DRAWER.NO_CONTACT') }}
+          </span>
+        </button>
+
+        <button
+          v-if="canMove"
+          type="button"
+          data-crm-card-move
+          class="crm-card-move absolute end-0 top-0 flex h-11 items-center gap-1 rounded-lg px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
+          :aria-label="
+            t('CRM_KANBAN.CARD.MOVE', {
+              name: identityBusiness || identityMain,
+            })
+          "
+          @click.stop="$emit('move', card)"
+        >
+          <span>{{ t('CRM_KANBAN.CARD.MOVE_LABEL') }}</span>
+          <span class="i-lucide-chevron-down size-3.5" aria-hidden="true" />
+        </button>
       </div>
 
       <p
@@ -386,7 +458,56 @@ const canOpenConversation = computed(
         </CrmCardPill>
       </div>
 
-      <!-- Signal pills -->
+      <!-- Primary signal row: value and attention stay together so the first
+           glance answers what is being negotiated and what needs attention. -->
+      <div
+        v-if="valueLabel || scoreView || followUp || showPriorityGlyph"
+        class="mt-3 flex min-h-7 flex-wrap items-center justify-between gap-1"
+      >
+        <span
+          v-if="valueLabel"
+          class="text-sm font-medium tabular-nums text-n-slate-12"
+        >
+          {{ valueLabel }}
+        </span>
+        <span v-else />
+
+        <div class="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+          <CardPriorityIcon
+            v-if="showPriorityGlyph"
+            :priority="card.priority"
+            class="shrink-0"
+          />
+          <button
+            v-if="scoreView"
+            v-tooltip.top="
+              scoreView.reason
+                ? {
+                    content: scoreView.reason,
+                    delay: { show: 300, hide: 0 },
+                  }
+                : null
+            "
+            type="button"
+            :aria-label="scoreView.ariaLabel"
+            class="inline-flex max-w-full shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium leading-4 tabular-nums"
+            :class="scoreView.toneClasses"
+          >
+            <span :class="scoreView.icon" class="size-3 shrink-0" />
+            <span class="truncate">{{ scoreView.label }}</span>
+          </button>
+          <CrmCardPill
+            v-if="followUp"
+            :icon="followUp.icon"
+            :tone="followUp.tone"
+            :title="followUp.title"
+          >
+            {{ t('CRM_KANBAN.CARD.FOLLOW_UP_DUE', { time: followUp.label }) }}
+          </CrmCardPill>
+        </div>
+      </div>
+
+      <!-- Secondary signals stay available without competing with identity. -->
       <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
         <SLACardLabel v-if="slaChat" :chat="slaChat" />
 
@@ -409,19 +530,6 @@ const canOpenConversation = computed(
           {{ card.inbox.name }}
         </CrmCardPill>
 
-        <CrmCardPill v-if="valueLabel" icon="i-lucide-banknote" tone="default">
-          {{ valueLabel }}
-        </CrmCardPill>
-
-        <CrmCardPill
-          v-if="followUp"
-          :icon="followUp.icon"
-          :tone="followUp.tone"
-          :title="followUp.title"
-        >
-          {{ t('CRM_KANBAN.CARD.FOLLOW_UP_DUE', { time: followUp.label }) }}
-        </CrmCardPill>
-
         <CrmCardPill
           v-if="aiSuggestionLabel"
           icon="i-lucide-sparkles"
@@ -434,9 +542,9 @@ const canOpenConversation = computed(
       <div
         class="mt-2 flex items-center justify-between gap-2 text-[11px] text-n-slate-10"
       >
-        <span class="flex min-w-0 items-center gap-1" :title="responsibleName">
+        <span class="flex min-w-0 items-center gap-1" :title="responsibleLabel">
           <span :class="responsibleIcon" class="size-3 shrink-0" />
-          <span class="truncate">{{ responsibleName }}</span>
+          <span class="truncate">{{ responsibleLabel }}</span>
         </span>
         <button
           v-if="lastMessageLabel && canOpenConversation"

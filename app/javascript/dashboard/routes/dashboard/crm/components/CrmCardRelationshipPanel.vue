@@ -47,6 +47,16 @@ const company = computed(() =>
     ? companies.getRecord(loadedCompanyId.value)
     : null
 );
+const differentDealCompany = computed(() => {
+  const dealCompany = props.card.company;
+  return companiesEnabled.value &&
+    props.card.metadata?.autonomia_prospecting?.company?.id &&
+    dealCompany?.id &&
+    person.value &&
+    dealCompany.id !== person.value.company_id
+    ? dealCompany
+    : null;
+});
 const resources = ref(null);
 const failed = ref(false);
 const companyFailed = ref(false);
@@ -144,8 +154,9 @@ const reload = async () => {
     failed.value = true;
   }
 };
-const openProfile = entity => {
-  const id = entity === 'contact' ? person.value?.id : company.value?.id;
+const openProfile = (entity, recordId) => {
+  const id =
+    recordId || (entity === 'contact' ? person.value?.id : company.value?.id);
   if (!id) return;
   // New tab preserves the current opportunity and any unsaved commercial draft.
   const target = router.resolve({
@@ -377,6 +388,39 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
         </div>
       </section>
       <section
+        v-if="differentDealCompany && !mode && !companyMode"
+        class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
+        data-relationship-deal-company
+      >
+        <header class="flex flex-wrap items-center gap-3">
+          <div
+            class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-n-brand/10 text-n-blue-11"
+          >
+            <span class="i-lucide-building-2 size-5" aria-hidden="true" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="mb-1 text-xs text-n-slate-11">
+              {{ label('DEAL_COMPANY_LABEL') }}
+            </p>
+            <h3 class="m-0 break-words text-base font-semibold text-n-slate-12">
+              {{ differentDealCompany.name }}
+            </h3>
+          </div>
+          <Button
+            outline
+            slate
+            sm
+            icon="i-lucide-external-link"
+            :label="label('OPEN')"
+            :aria-label="label('OPEN_COMPANY')"
+            @click="openProfile('company', differentDealCompany.id)"
+          />
+        </header>
+        <p class="mb-0 mt-3 text-sm leading-6 text-n-slate-11">
+          {{ label('DEAL_COMPANY_DESCRIPTION') }}
+        </p>
+      </section>
+      <section
         v-if="person && companiesEnabled && !mode && !companyMode"
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
         data-relationship-company
@@ -400,7 +444,13 @@ defineExpose({ dirty, saving, reset, reload, companyAction, linking });
               class="flex flex-wrap items-center gap-2 text-xs leading-5 text-n-slate-11"
             >
               <span>{{
-                label(company ? 'LINKED_COMPANY' : 'COMPANY_OPTIONAL')
+                label(
+                  differentDealCompany
+                    ? 'CONTACT_COMPANY_LABEL'
+                    : company
+                      ? 'LINKED_COMPANY'
+                      : 'COMPANY_OPTIONAL'
+                )
               }}</span>
               <Button
                 v-if="company && canManageRecords"

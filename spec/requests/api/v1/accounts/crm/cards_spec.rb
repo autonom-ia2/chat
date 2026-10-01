@@ -23,6 +23,75 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(response.parsed_body['error']).to eq('crm.disabled')
   end
 
+  it 'rejects malformed company and score filter parameters at the request boundary' do
+    account, user = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: user)
+    headers = auth_headers(user)
+
+    get "/api/v1/accounts/#{account.id}/crm/cards", params: { company_id: ['1'] }, headers: headers
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.invalid_filter_parameters')
+
+    get "/api/v1/accounts/#{account.id}/crm/kanban",
+        params: { pipeline_id: pipeline.id, company_id: '0' }, headers: headers
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.invalid_filter_parameters')
+
+    get "/api/v1/accounts/#{account.id}/crm/cards", params: { score_min: '80', score_max: '20' }, headers: headers
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('crm.invalid_filter_parameters')
+  end
+
+  it 'returns and filters the account-scoped company resolved for each card' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    contact_company = create(:company, account: account, name: 'Empresa do contato')
+    prospecting_company = create(:company, account: account, name: 'Empresa da prospecção')
+    contact = account.contacts.create!(name: 'Pessoa da oportunidade', company: contact_company)
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      title: 'Prospecção da empresa',
+      contact: contact,
+      metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => prospecting_company.id } } }
+    )
+    no_company_card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Sem empresa')
+
+    get "/api/v1/accounts/#{account.id}/crm/cards", params: { search: 'Empresa da prospecção' }, headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    payload = response.parsed_body['payload']
+    expect(payload.pluck('id')).to eq([card.id])
+    expect(payload.first['company']).to eq('id' => prospecting_company.id, 'name' => prospecting_company.name)
+
+    get "/api/v1/accounts/#{account.id}/crm/cards", params: { company_id: 'none' }, headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['payload'].pluck('id')).to eq([no_company_card.id])
+
+    get "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('payload', 'company')).to eq(
+      'id' => prospecting_company.id,
+      'name' => prospecting_company.name
+    )
+  end
+
+  it 'rejects noncanonical numeric filters instead of coercing them' do
+    account, user = create_account_and_user
+    headers = auth_headers(user)
+    ['0x10', '1_0', '+1', ' 1', '01'].each do |value|
+      get "/api/v1/accounts/#{account.id}/crm/cards", params: { company_id: value }, headers: headers
+      expect(response).to have_http_status(:unprocessable_entity)
+      get "/api/v1/accounts/#{account.id}/crm/cards", params: { score_min: value }, headers: headers
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   it 'creates a standalone card without contact, conversation or inbox' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
@@ -253,6 +322,67 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(payload['activities'].first['payload']['title']).to eq('Lead Timeline')
   end
 
+  it 'returns the primary conversation details for a legacy card without a join row' do
+    account, admin = create_account_and_user
+    inbox = create_crm_inbox(account: account, members: [admin])
+    contact = account.contacts.create!(name: 'Lead Legado', phone_number: '+5511987654321')
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+    activity_at = 2.hours.ago
+    conversation.update!(last_activity_at: activity_at)
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      contact: contact,
+      inbox: inbox,
+      primary_conversation: conversation,
+      title: 'Lead Legado'
+    )
+
+    get "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:ok)
+    linked_conversation = response.parsed_body.dig('payload', 'linked_conversations').first
+    expect(linked_conversation).to include(
+      'display_id' => conversation.display_id,
+      'inbox_name' => inbox.name,
+      'last_activity_at' => conversation.reload.last_activity_at.iso8601,
+      'is_primary' => true
+    )
+  end
+
+  it 'removes raw follow-up errors from card activity payloads for admins' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead seguro')
+    retry_at = 1.hour.from_now.iso8601
+    Crm::ActivityLogger.new(
+      card: card,
+      actor: nil,
+      event_type: 'ai_followup_failed',
+      payload: {
+        error: 'provider-secret',
+        attempts: 2,
+        final: false,
+        retry_at: retry_at,
+        nested: { send_error: 'nested-provider-secret', keep: 'safe' }
+      }
+    ).perform
+
+    get "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}", headers: auth_headers(admin)
+
+    expect(response).to have_http_status(:ok)
+    activity_payload = response.parsed_body.dig('payload', 'activities').first.fetch('payload')
+    expect(activity_payload).to include(
+      'attempts' => 2,
+      'final' => false,
+      'retry_at' => retry_at
+    )
+    expect(activity_payload).not_to have_key('error')
+    expect(activity_payload.dig('nested', 'send_error')).to be_nil
+    expect(activity_payload.dig('nested', 'keep')).to eq('safe')
+  end
+
   it 'filters hidden linked conversations from card details for agents' do
     account, admin = create_account_and_user
     agent, = create_crm_agent(account: account)
@@ -327,6 +457,7 @@ RSpec.describe 'CRM cards API', type: :request do
     payload = response.parsed_body['payload']
     expect(payload['conversation_id']).to be_nil
     expect(payload['conversation']).to be_nil
+    expect(payload['linked_conversations']).to be_empty
     expect(payload['metadata']).not_to have_key('source_conversation')
   end
 

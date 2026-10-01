@@ -1,16 +1,20 @@
 class Crm::Cards::DetailPayloadBuilder
   ACTIVITY_LIMIT = 25
   CONVERSATION_LIMIT = 10
+  UNRESOLVED_COMPANY = Object.new.freeze
 
-  def initialize(card:, user:, account_user:)
+  def initialize(card:, user:, account_user:, company: UNRESOLVED_COMPANY)
     @card = card
     @account = card.account
     @user = user
     @account_user = account_user
+    @company = company
   end
 
   def perform
-    Crm::Cards::PayloadBuilder.new(@card, user: @user, account_user: @account_user).perform.merge(
+    payload_options = { user: @user, account_user: @account_user }
+    payload_options[:company] = @company unless @company.equal?(UNRESOLVED_COMPANY)
+    Crm::Cards::PayloadBuilder.new(@card, **payload_options).perform.merge(
       linked_conversations: linked_conversations_payload,
       activities: activities_payload
     )
@@ -47,6 +51,11 @@ class Crm::Cards::DetailPayloadBuilder
                          .order(updated_at: :desc)
                          .limit(CONVERSATION_LIMIT)
                          .to_a
+    # Legacy cards can have conversation_id without the join row introduced
+    # later. Keep the primary conversation in the same flat detail contract so
+    # the drawer never falls back to the compact card.conversation payload.
+    primary = @card.primary_conversation
+    conversations << primary if primary.present? && conversations.none? { |conversation| conversation.id == primary.id }
     return conversations if administrator?
 
     preload_conversation_permissions(conversations)
