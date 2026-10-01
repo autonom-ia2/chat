@@ -1,4 +1,5 @@
 <script>
+import { useI18n } from 'vue-i18n';
 import { useVuelidate } from '@vuelidate/core';
 import { required } from '@vuelidate/validators';
 import { mapGetters } from 'vuex';
@@ -33,12 +34,20 @@ export default {
     ChoiceSelect,
   },
   setup() {
+    const i18n = useI18n({ useScope: 'global' });
     const { updateUISettings, uiSettings } = useUISettings();
     const { enabledLanguages } = useConfig();
     const { accountId } = useAccount();
     const v$ = useVuelidate();
 
-    return { updateUISettings, uiSettings, v$, enabledLanguages, accountId };
+    return {
+      i18n,
+      updateUISettings,
+      uiSettings,
+      v$,
+      enabledLanguages,
+      accountId,
+    };
   },
   data() {
     return {
@@ -124,7 +133,7 @@ export default {
 
         const effectiveLocale = this.uiSettings?.locale || locale;
         if (effectiveLocale) {
-          await setDashboardLocale(this.$root.$i18n, effectiveLocale);
+          await setDashboardLocale(this.i18n, effectiveLocale);
         }
         this.name = name;
         this.locale = locale;
@@ -153,7 +162,7 @@ export default {
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
         if (updatedLocale) {
-          await setDashboardLocale(this.$root.$i18n, updatedLocale);
+          await setDashboardLocale(this.i18n, updatedLocale);
         }
         this.getAccount(this.id).locale = this.locale;
         useAlert(this.$t('GENERAL_SETTINGS.UPDATE.SUCCESS'));
