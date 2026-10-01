@@ -24,6 +24,7 @@ RSpec.describe Crm::Ai::ScoreApplier do
   end
 
   it 'writes nothing while the funnel has the score turned off' do
+    pipeline.update!(metadata: pipeline.metadata.deep_merge('ai' => { 'score_enabled' => false }))
     described_class.new(card: card, signals: signals).perform
 
     expect(card.reload.score).to eq(0)

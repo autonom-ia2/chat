@@ -82,7 +82,14 @@ it.each([
     });
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/', component: Page }],
+      routes: [
+        { path: '/', component: Page },
+        {
+          path: '/templates',
+          name: 'campaigns_email_templates',
+          component: { template: '<div />' },
+        },
+      ],
     });
     await router.push('/?email_status=paused');
     const i18n = createI18n({

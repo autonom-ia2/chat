@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe EmailCampaigns::RecipientPreflightJob do # rubocop:disable RSpec/SpecFilePathFormat -- campaign-local exclusion integration
+RSpec.describe EmailCampaigns::RecipientPreflightJob, :relationships_committed_fixtures do # rubocop:disable RSpec/SpecFilePathFormat -- campaign-local exclusion integration
   self.use_transactional_tests = false
 
   let!(:campaign) { create(:email_campaign) }

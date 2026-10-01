@@ -328,8 +328,8 @@
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
 - onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: São duas paradas. 1. Clique em Novo funil, defina nome e estágios e salve — as descrições dos estágios já vêm prontas. 2. Abra Configurar inboxes, ligue o CRM na caixa, escolha o funil e a etapa de entrada e salve; isso já cria o vínculo entre a caixa e o funil, com a criação automática de cards ligada. Não é mais preciso voltar em Editar funil para vincular a caixa.
-- gotchas: a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Inbox e automação continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
+- passos: No editor, defina o nome e abra um status para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções do status; o número indica a posição atual. Melhorar com IA compara os demais status e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir status volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa e escolha o status de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar inboxes, ligar o CRM na caixa, escolher o funil e a etapa de entrada e salvar.
+- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o follow-up automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - highlight: `crm-new-pipeline`
 
 ### criar_card_ou_oportunidade_no_crm
@@ -459,19 +459,19 @@
 - titulo: Montar e-mail com editor, IA e templates
 - rota: campaigns_email_builder
 - intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Abrir builder
+- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Editor
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
-- passos: Abra o builder; escolha IA, galeria de templates ou começar do zero; ajuste assunto no topo; edite blocos e propriedades; use placeholders disponíveis; envie teste e salve.
+- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
 - gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de disparar.
 
 ### gerenciar_destinatarios_agendar_e_enviar_campanha_de_e_mail
 - titulo: Gerenciar destinatários, agendar e enviar campanha de e-mail
 - rota: campaigns_email_index
-- intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Quando aparece Enviar agora?"
+- intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Onde fica o botão Disparar?"
 - onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Gerenciar destinatários
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
-- passos: Abra Gerenciar destinatários; importe CSV/XLSX adicional se precisar; confira placeholders e validação de template; agende data/hora ou volte ao builder se não houver corpo; na lista, use Enviar agora, Pausar, Retomar ou Cancelar conforme status.
-- gotchas: Enviar agora só aparece em rascunho com destinatários e corpo; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
+- passos: Abra Destinatários; importe CSV/XLSX adicional se precisar; confira campos e validação; na lista, clique em Disparar; a revisão mostra o que falta, remetente, público e exclusões; escolha enviar agora ou data/hora e confirme na etapa final. Pausar, Retomar e Cancelar ficam nas ações da campanha.
+- gotchas: Disparar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
 
 ### ver_gestao_e_relatorio_de_campanhas_de_e_mail
 - titulo: Ver gestão e relatório de campanhas de e-mail
@@ -1702,9 +1702,9 @@
 - titulo: Escolher um modelo pronto de e-mail
 - rota: campaigns_email_templates
 - intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
-- onde_fica: Campanhas > Campanhas de e-mail > abrir a campanha > galeria de modelos
-- pre_requisitos: campanhas de e-mail liberadas na conta, uma campanha já criada e permissão de gerenciar campanhas
-- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra a campanha no editor; 3. Vá para a galeria de modelos; 4. Filtre pela categoria; 5. Pré-visualize e use o modelo.
+- onde_fica: Campanhas > Campanhas de e-mail > Biblioteca de modelos
+- pre_requisitos: campanhas de e-mail liberadas na conta e permissão de gerenciar campanhas para aplicar modelos
+- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
 - gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
 - nav_target: `campaigns_email_templates`
 

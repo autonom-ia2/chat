@@ -4,7 +4,7 @@ import {
   ROLES,
 } from 'dashboard/constants/permissions';
 import { frontendURL } from '../../../helper/URLHelper';
-import CallsIndex from './pages/CallsIndex.vue';
+const CallsIndex = () => import('./pages/CallsIndex.vue');
 
 export const routes = [
   {

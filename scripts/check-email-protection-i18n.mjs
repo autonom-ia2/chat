@@ -279,6 +279,10 @@ export function loadLocaleIndex(locale) {
 
 export function assertVisibleInventory() {
   const required = new Set(REQUIRED_LEGACY_KEYS);
+  const sourceMessages = readVisibleLocale('en');
+  const workspaceNamespace = ['CAMPAIGN', 'EMAIL_CAMPAIGN', 'WORKSPACE'].join(
+    '.'
+  );
   assert.equal(
     required.size,
     REQUIRED_LEGACY_KEYS.length,
@@ -290,6 +294,18 @@ export function assertVisibleInventory() {
       /['"]((?:CAMPAIGN\.EMAIL_CAMPAIGN|CAMPAIGN_MANAGEMENT|CRM_KANBAN\.TRACKED_LINKS)\.[A-Z_.]+)['"]/g
     );
     [...references].forEach(([, key]) => {
+      // Chat2You workspace copy is checked in English and Brazilian Portuguese.
+      // The existing protection contract remains required in every locale.
+      if (
+        key === workspaceNamespace ||
+        key.startsWith(`${workspaceNamespace}.`)
+      ) {
+        assert(
+          messageAt(sourceMessages, key),
+          `${file}: missing source key ${key}`
+        );
+        return;
+      }
       assert(required.has(key), `${file}: unregistered visible key ${key}`);
     });
     if (file === 'helper/emailCampaignImport.js') {
@@ -501,6 +517,27 @@ export function checkEmailProtectionLocales() {
   assertVisibleInventory();
   const canonical = readLocale('en');
   const visibleCanonical = readVisibleLocale('en');
+  const workspaceMessages = visibleCanonical.CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE;
+  const workspaceKeys = Object.keys(
+    flattenMessages(workspaceMessages, 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE')
+  );
+  ['en', 'pt_BR'].forEach(locale => {
+    const loaded = loadLocaleIndex(locale);
+    const workspace = loaded.CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE;
+    assert.deepEqual(
+      Object.keys(flattenMessages(workspace)).sort(),
+      Object.keys(flattenMessages(workspaceMessages)).sort(),
+      `${locale}: workspace key parity`
+    );
+    workspaceKeys.forEach(key => {
+      assert.deepEqual(
+        placeholders(messageAt(loaded, key)),
+        placeholders(messageAt(visibleCanonical, key)),
+        `${locale}/${key}: workspace interpolation parity`
+      );
+    });
+    validateRuntime(locale, loaded, workspaceKeys);
+  });
   const keysPerLocale = Object.keys(flattenMessages(canonical)).length;
   metadata.folders.forEach(locale => {
     const messages = readLocale(locale);

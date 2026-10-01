@@ -1102,12 +1102,12 @@
       "MONTHLY_TARGET_PLACEHOLDER": "E.g. 50000",
       "MONTHLY_TARGET_HELP": "Drives the Goal box on the dashboard. Leave empty for no target.",
       "REQUIRED": "Required",
-      "STAGES": "Stages",
+      "STAGES": "Pipeline statuses",
       "STAGES_HELP": "Stages are the Kanban columns. Stages with cards cannot be deleted.",
-      "ADD_STAGE": "Add stage",
+      "ADD_STAGE": "Add status",
       "NEW_STAGE_NAME": "New stage {count}",
       "COLOR": "Color",
-      "STAGE_NAME": "Name",
+      "STAGE_NAME": "Status name",
       "STAGE_NAME_PLACEHOLDER": "E.g. Qualification",
       "PROBABILITY": "%",
       "WIP": "Limit",
@@ -1117,7 +1117,7 @@
       "META_STAGE_TYPE_QUALIFIED": "Qualified lead",
       "META_STAGE_TYPE_OPPORTUNITY": "Opportunity",
       "META_STAGE_TYPE_NEGOTIATION": "In negotiation",
-      "META_SYNC_TITLE": "Send conversions to Meta (Ads)",
+      "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "When a card is won, lost or moved, send the conversion back to Meta so it optimizes your Click-to-WhatsApp ads by real closers.",
       "META_SYNC_EVENTS": "Which events to send",
       "META_SYNC_EVENT_WON": "Won (Purchase, with value)",
@@ -1129,8 +1129,8 @@
       "MOVE_STAGE_UP": "Move stage up",
       "MOVE_STAGE_DOWN": "Move stage down",
       "DELETE_STAGE": "Delete stage",
-      "INBOX_AUTOMATION": "Inbox and automation",
-      "INBOX_AUTOMATION_HELP": "Link inboxes that should feed this pipeline. When auto-create is on, new messages create or update cards in the selected entry stage.",
+      "INBOX_AUTOMATION": "Inbox connections",
+      "INBOX_AUTOMATION_HELP": "Bring conversations from multiple inboxes into this pipeline. Add each inbox and choose its entry status.",
       "LINKED_INBOXES": "Linked inboxes",
       "NO_LINKED_INBOXES": "No inbox linked to this pipeline.",
       "ADD_INBOX": "Add inbox",
@@ -1151,7 +1151,7 @@
       "CREATE": "Create pipeline"
     },
     "GOOGLE_SYNC": {
-      "TITLE": "Google Ads (offline conversions)",
+      "TITLE": "Google Ads",
       "HELP": "Send CRM outcomes to Google Ads through a scheduled conversion feed.",
       "TOGGLE": "Enable Google Ads offline conversions",
       "EVENTS": "Which events to include",
@@ -1242,11 +1242,11 @@
       "SCORE_ENABLED": "AI score on cards",
       "SCORE_ENABLED_HELP": "The AI reads each conversation and writes a 0-100 attention score on the card: broken promises and ready-to-close clients rise to the top, silence cools the card down on its own.",
       "CALLBACK": "Create a reminder when the customer asks for a callback",
-      "CALLBACK_HELP": "When a customer asks to be contacted on a date (\"call me next Tuesday\"), a reminder is created automatically on the calendar.",
+      "CALLBACK_HELP": "When a customer asks for contact on a date, AI creates a reminder, generates a notification and adds it to the calendar.",
       "CALLBACK_MODE": "When the date arrives",
       "CALLBACK_MODE_REMINDER": "Only remind me (calendar/popup)",
       "CALLBACK_MODE_MESSAGE": "Send a message to the customer (AI; falls back to a reminder)",
-      "CALLBACK_MODE_BOTH": "Both: remind me and message the customer",
+      "CALLBACK_MODE_BOTH": "AI also sends the message to the customer",
       "STALE_HOURS": "Re-evaluate stale cards after (hours)",
       "CRITERIA_PLACEHOLDER": "Describe when a card should be in this stage",
       "HANDOFF": {
@@ -1667,6 +1667,77 @@
       "SUMMARY_NEW": "New contact + opportunity",
       "SUMMARY_NEW_EXISTING_COMPANY": "New contact + existing company + opportunity",
       "SUMMARY_NEW_COMPANY": "New contact + new company + opportunity"
+    },
+    "PIPELINE_EDITOR": {
+      "INCLUDED": "AI included · Inactive cards are reviewed after 7 days.",
+      "BACK": "Back to pipeline",
+      "STAGES_HELP": "Open a status and describe when to use it. AI uses this text to organize conversations.",
+      "DESCRIBE": "Describe when to use this status",
+      "CRITERIA_QUESTION": "What happened in the conversation to use this status?",
+      "CRITERIA_HELP": "The AI reads this description to decide where the card belongs.",
+      "CRITERIA_TIP": "Use concrete signs, such as “proposal sent”.",
+      "IMPROVE": "Improve with AI",
+      "CREATE": "Create with AI",
+      "CREATE_HELP": "AI uses this status name and the other stages to draft a description.",
+      "NAMES_REQUIRED": "Name every status so AI can understand the pipeline.",
+      "IMPROVE_ERROR": "The suggestion could not be completed, or the descriptions changed. Your text is safe. Try again.",
+      "SUGGESTION": "Suggested description · Compare before applying",
+      "APPLY": "Use this description",
+      "KEEP": "Keep my description",
+      "DISMISS": "Not now",
+      "SAVE_FIRST": "Save the pipeline to create or improve descriptions with AI.",
+      "STAGE_OPTIONS": "Color, order and status options",
+      "RETURNS": "Reminders and follow-ups",
+      "AD_RESULTS": "Ad results",
+      "AD_RESULTS_HELP": "Show which ads became sales. A sale is counted when a card is marked as won, regardless of its column.",
+      "GOOGLE_HELP": "Make sales available for Google Ads to import. Configure a scheduled import in Google Ads using the link below.",
+      "META_HELP": "Send sales from WhatsApp ads to Meta. Requires the Meta integration to be configured and a conversation attributed to the ad.",
+      "OTHER_EVENTS": "Other events (advanced)",
+      "MORE": "More settings",
+      "DONE": "Done with status",
+      "RETRY": "Try again",
+      "INBOX_SAVE_FIRST": "Save this pipeline first. Then open More settings → Inbox connections to add one or more inboxes.",
+      "COLORS": {
+        "BLUE": "Blue",
+        "TEAL": "Teal",
+        "AMBER": "Yellow",
+        "GREEN": "Green",
+        "RED": "Red",
+        "PURPLE": "Purple"
+      },
+      "CUSTOM_COLOR": "Choose a custom color",
+      "META_PROGRESS": {
+        "TITLE": "How Meta understands this status",
+        "HELP": "Choose the progress this status represents. Meta receives this signal to link the customer’s progress to the ad that brought the conversation.",
+        "CURRENT": "When the customer reaches this stage",
+        "CHANGE": "Change",
+        "REQUIREMENTS": "Sending requires the Meta integration, the ad source, and “Stage moved” enabled in More settings.",
+        "NONE": {
+          "TITLE": "Do not report this stage",
+          "HELP": "Do not send entry into this status. Won sales still follow the pipeline settings."
+        },
+        "INTEREST": {
+          "TITLE": "Initial interest",
+          "HELP": "The customer started contact or asked for information."
+        },
+        "QUALIFIED": {
+          "TITLE": "Need confirmed",
+          "HELP": "Their need is understood and the customer fits the offer."
+        },
+        "PROPOSAL": {
+          "TITLE": "Offer under review",
+          "HELP": "The customer received a proposal and is considering buying."
+        },
+        "NEGOTIATION": {
+          "TITLE": "Negotiation",
+          "HELP": "The customer is discussing prices, terms or next steps."
+        },
+        "SETUP": "How do I enable sending?"
+      },
+      "STAGE_POSITION": "Status {current} of {total}",
+      "REORDER_HELP": "Drag the dots or use the arrows in the status options.",
+      "REORDER_STAGE": "Reorder {name}. Drag or use the up and down arrow keys.",
+      "ORDER_CHANGED": "{name} is now status {position} of {total}."
     }
   },
   "crm": {

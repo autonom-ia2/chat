@@ -10,10 +10,11 @@ import {
 } from 'dashboard/helper/emailCampaignImport';
 
 import Input from 'dashboard/components-next/input/Input.vue';
-import Select from 'dashboard/components-next/select/Select.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
+  template: { type: Object, default: null },
   campaign: {
     type: Object,
     default: null,
@@ -101,7 +102,7 @@ const initialSender = () => {
 };
 
 const state = reactive({
-  name: props.campaign?.name || '',
+  name: props.campaign?.name || props.template?.name || '',
   sender: initialSender(),
   fromName: props.campaign?.from_name || '',
   fromEmail: props.campaign?.from_email || '',
@@ -224,6 +225,12 @@ const importBase = async campaignId => {
 
 const buildPayload = () => {
   const base = {
+    ...(props.template
+      ? {
+          body_mjml: props.template.body_mjml,
+          body_html: props.template.body_html,
+        }
+      : {}),
     name: state.name.trim(),
     from_name: state.fromName.trim(),
     preheader: state.preheader.trim() || null,
@@ -320,18 +327,14 @@ const submit = async ({ openEditor = false } = {}) => {
         <label class="text-sm font-medium text-n-slate-12">
           {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_LABEL') }}
         </label>
-        <Select
+        <ChoiceSelect
           v-model="state.sender"
-          class="w-full"
+          class="w-full sm:flex-1"
           :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_LABEL')"
           :options="senderOptions"
           :disabled="!hasSenderOption"
           :placeholder="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_PLACEHOLDER')"
-          :error="
-            errors.sender
-              ? t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SENDER_ERROR')
-              : ''
-          "
+          :invalid="errors.sender"
           @update:model-value="onSenderChange"
         />
         <p v-if="errors.sender" class="mb-0 text-xs text-n-ruby-9">
@@ -429,14 +432,14 @@ const submit = async ({ openEditor = false } = {}) => {
     </div>
 
     <div
-      class="flex items-center justify-between w-full gap-3 p-6 pt-4 border-t border-n-weak bg-n-alpha-2"
+      class="flex flex-wrap items-center justify-between w-full gap-3 p-6 pt-4 border-t border-n-weak bg-n-alpha-2"
     >
       <Button
         variant="faded"
         color="slate"
         type="button"
         :label="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.CANCEL')"
-        class="w-full"
+        class="w-full sm:flex-1"
         :disabled="isSaving"
         @click="close"
       />
@@ -445,7 +448,7 @@ const submit = async ({ openEditor = false } = {}) => {
         color="slate"
         variant="outline"
         :label="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.SAVE_DRAFT')"
-        class="w-full"
+        class="w-full sm:flex-1"
         :is-loading="isSaving"
         :disabled="isSaving"
         @click="submit({ openEditor: false })"
@@ -455,7 +458,7 @@ const submit = async ({ openEditor = false } = {}) => {
         color="blue"
         icon="i-lucide-layout-template"
         :label="t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.CREATE_AND_OPEN')"
-        class="w-full"
+        class="w-full sm:flex-1"
         :is-loading="isSaving"
         :disabled="isSaving"
       />

@@ -2,43 +2,20 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import Button from 'dashboard/components-next/button/Button.vue';
-import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
-// The parent pipeline drawer still passes :inboxes, but the AI now picks the
-// re-engagement template server-side, so this panel no longer declares/reads it
-// (an extra attr on the parent is a harmless no-op in Vue 3).
 const props = defineProps({
   pipelineId: { type: [String, Number], required: true },
-  stages: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
-
-const callbackModeOptions = computed(() => [
-  {
-    value: 'reminder',
-    label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_REMINDER'),
-  },
-  {
-    value: 'message',
-    label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_MESSAGE'),
-  },
-  { value: 'both', label: t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_BOTH') },
-]);
+const STALE_HOURS = 168;
 
 const isLoading = ref(false);
 const isSaving = ref(false);
 const loadFailed = ref(false);
 const form = reactive({
-  enabled: true,
-  autoMoveEnabled: false,
-  attributeExtractionEnabled: false,
-  scoreEnabled: false,
-  callbackEnabled: true,
   callbackMode: 'reminder',
-  staleHours: 48,
   stageCriteria: {},
   autoFollowup: {
     enabled: false,
@@ -107,6 +84,8 @@ const scheduleValid = computed(() => {
 });
 const canSave = computed(
   () =>
+    !isLoading.value &&
+    !loadFailed.value &&
     Boolean(props.pipelineId) &&
     (!form.autoFollowup.enabled || scheduleValid.value)
 );
@@ -118,18 +97,9 @@ const loadSettings = async () => {
   try {
     const response = await CrmKanbanAPI.getAiSettings(props.pipelineId);
     const payload = response.data.payload || {};
-    form.enabled = payload.enabled !== false;
-    form.autoMoveEnabled = payload.auto_move_enabled === true;
-    form.attributeExtractionEnabled =
-      payload.attribute_extraction_enabled === true;
-    form.scoreEnabled = payload.score_enabled === true;
-    form.callbackEnabled = payload.callback_enabled !== false;
-    form.callbackMode = ['reminder', 'message', 'both'].includes(
-      payload.callback_mode
-    )
-      ? payload.callback_mode
+    form.callbackMode = ['message', 'both'].includes(payload.callback_mode)
+      ? 'both'
       : 'reminder';
-    form.staleHours = Number(payload.stale_hours || 48);
     form.stageCriteria = Object.fromEntries(
       (payload.stages || []).map(stage => [stage.id, stage.ai_criteria || ''])
     );
@@ -163,6 +133,7 @@ const loadSettings = async () => {
 // triggers this — it shows its own success alert and rethrows so the parent can
 // react, avoiding a duplicate toast.
 const saveSettings = async ({ silent = false } = {}) => {
+  if (isLoading.value || isSaving.value || loadFailed.value) return false;
   if (!canSave.value) {
     useAlert(t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.INVALID_SCHEDULE'));
     return false;
@@ -171,13 +142,13 @@ const saveSettings = async ({ silent = false } = {}) => {
   try {
     const response = await CrmKanbanAPI.updateAiSettings(props.pipelineId, {
       ai_settings: {
-        enabled: form.enabled,
-        auto_move_enabled: form.autoMoveEnabled,
-        attribute_extraction_enabled: form.attributeExtractionEnabled,
-        score_enabled: form.scoreEnabled,
-        callback_enabled: form.callbackEnabled,
+        enabled: true,
+        auto_move_enabled: true,
+        attribute_extraction_enabled: true,
+        score_enabled: true,
+        callback_enabled: true,
         callback_mode: form.callbackMode,
-        stale_hours: form.staleHours,
+        stale_hours: STALE_HOURS,
         auto_followup: form.autoFollowup.enabled
           ? {
               enabled: form.autoFollowup.enabled,
@@ -197,18 +168,9 @@ const saveSettings = async ({ silent = false } = {}) => {
       stage_criteria: form.stageCriteria,
     });
     const payload = response.data.payload || {};
-    form.enabled = payload.enabled !== false;
-    form.autoMoveEnabled = payload.auto_move_enabled === true;
-    form.attributeExtractionEnabled =
-      payload.attribute_extraction_enabled === true;
-    form.scoreEnabled = payload.score_enabled === true;
-    form.callbackEnabled = payload.callback_enabled !== false;
-    form.callbackMode = ['reminder', 'message', 'both'].includes(
-      payload.callback_mode
-    )
-      ? payload.callback_mode
+    form.callbackMode = ['message', 'both'].includes(payload.callback_mode)
+      ? 'both'
       : 'reminder';
-    form.staleHours = Number(payload.stale_hours || 48);
     if (!silent) useAlert(t('CRM_KANBAN.AI_SETTINGS.SAVE_SUCCESS'));
     return true;
   } catch {
@@ -221,7 +183,14 @@ const saveSettings = async ({ silent = false } = {}) => {
 };
 
 // Let the parent pipeline drawer save this panel as part of "Salvar funil".
-defineExpose({ saveSettings });
+defineExpose({
+  saveSettings,
+  loadSettings,
+  form,
+  isLoading,
+  isSaving,
+  loadFailed,
+});
 
 watch(
   () => props.pipelineId,
@@ -233,15 +202,13 @@ watch(
 </script>
 
 <template>
-  <section
-    class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
-  >
+  <section class="grid gap-5">
     <div>
-      <h3 class="mb-1 text-sm font-medium text-n-slate-12">
-        {{ t('CRM_KANBAN.AI_SETTINGS.TITLE') }}
+      <h3 class="mb-1 text-lg font-semibold text-n-slate-12">
+        {{ t('CRM_KANBAN.PIPELINE_EDITOR.RETURNS') }}
       </h3>
       <p class="mb-0 text-xs leading-5 text-n-slate-11">
-        {{ t('CRM_KANBAN.AI_SETTINGS.HELP') }}
+        {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_HELP') }}
       </p>
     </div>
 
@@ -254,109 +221,23 @@ watch(
     </p>
 
     <template v-else>
-      <label class="flex items-center gap-2 text-sm text-n-slate-12">
+      <label
+        class="flex min-h-11 items-center gap-3 rounded-xl border border-n-weak bg-n-surface-2 p-4 text-sm text-n-slate-12"
+      >
         <input
-          v-model="form.enabled"
+          :checked="form.callbackMode !== 'reminder'"
           type="checkbox"
-          class="rounded border-n-weak"
+          class="h-5 w-5 rounded border-n-weak"
+          @change="
+            form.callbackMode = $event.target.checked ? 'both' : 'reminder'
+          "
         />
-        {{ t('CRM_KANBAN.AI_SETTINGS.ENABLED') }}
+        {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE_BOTH') }}
       </label>
 
-      <label class="flex items-center gap-2 text-sm text-n-slate-12">
-        <input
-          v-model="form.autoMoveEnabled"
-          type="checkbox"
-          class="rounded border-n-weak"
-        />
-        {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_MOVE') }}
-      </label>
-
-      <label class="flex items-start gap-2 text-sm text-n-slate-12">
-        <input
-          v-model="form.attributeExtractionEnabled"
-          type="checkbox"
-          class="mt-0.5 rounded border-n-weak"
-        />
-        <span class="grid gap-0.5">
-          <span>{{ t('CRM_KANBAN.AI_SETTINGS.ATTRIBUTE_EXTRACTION') }}</span>
-          <span class="text-xs text-n-slate-11">
-            {{ t('CRM_KANBAN.AI_SETTINGS.ATTRIBUTE_EXTRACTION_HELP') }}
-          </span>
-        </span>
-      </label>
-
-      <label class="flex items-start gap-2 text-sm text-n-slate-12">
-        <input
-          v-model="form.scoreEnabled"
-          type="checkbox"
-          class="mt-0.5 rounded border-n-weak"
-        />
-        <span class="grid gap-0.5">
-          <span>{{ t('CRM_KANBAN.AI_SETTINGS.SCORE_ENABLED') }}</span>
-          <span class="text-xs text-n-slate-11">
-            {{ t('CRM_KANBAN.AI_SETTINGS.SCORE_ENABLED_HELP') }}
-          </span>
-        </span>
-      </label>
-
-      <label class="flex items-start gap-2 text-sm text-n-slate-12">
-        <input
-          v-model="form.callbackEnabled"
-          type="checkbox"
-          class="mt-0.5 rounded border-n-weak"
-        />
-        <span class="grid gap-0.5">
-          <span>{{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK') }}</span>
-          <span class="text-xs text-n-slate-11">
-            {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_HELP') }}
-          </span>
-        </span>
-      </label>
-
-      <label v-if="form.callbackEnabled" class="grid gap-1 pl-6">
-        <span class="text-xs text-n-slate-11">
-          {{ t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE') }}
-        </span>
-        <ChoiceSelect
-          v-model="form.callbackMode"
-          :options="callbackModeOptions"
-          :aria-label="t('CRM_KANBAN.AI_SETTINGS.CALLBACK_MODE')"
-          class="w-full"
-        />
-      </label>
-
-      <label class="grid gap-1">
-        <span class="text-xs text-n-slate-11">
-          {{ t('CRM_KANBAN.AI_SETTINGS.STALE_HOURS') }}
-        </span>
-        <input
-          v-model.number="form.staleHours"
-          type="number"
-          min="1"
-          class="reset-base w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-        />
-      </label>
-
-      <div class="grid gap-3">
-        <div
-          v-for="stage in stages.filter(item => item.id)"
-          :key="stage.id"
-          class="grid gap-1"
-        >
-          <span class="text-xs font-medium text-n-slate-12">
-            {{ stage.name }}
-          </span>
-          <textarea
-            v-model="form.stageCriteria[stage.id]"
-            rows="3"
-            class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-            :placeholder="t('CRM_KANBAN.AI_SETTINGS.CRITERIA_PLACEHOLDER')"
-          />
-        </div>
-      </div>
-
-      <section class="grid gap-3 rounded-lg bg-n-alpha-2 p-3">
+      <section
+        class="grid gap-4 rounded-2xl border border-n-slate-4 bg-n-surface-1 p-5"
+      >
         <div>
           <h4
             class="mb-1 flex items-center gap-1.5 text-sm font-medium text-n-slate-12"
@@ -369,11 +250,11 @@ watch(
           </p>
         </div>
 
-        <label class="flex items-center gap-2 text-sm text-n-slate-12">
+        <label class="flex min-h-11 items-center gap-3 text-sm text-n-slate-12">
           <input
             v-model="form.autoFollowup.enabled"
             type="checkbox"
-            class="rounded border-n-weak"
+            class="h-5 w-5 rounded border-n-weak"
           />
           {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.ENABLED') }}
         </label>
@@ -411,164 +292,193 @@ watch(
               </span>
             </label>
           </div>
-          <label class="grid gap-1">
-            <span class="text-xs text-n-slate-11">
-              {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.MAX_TOUCHES') }}
-            </span>
-            <input
-              v-model.number="form.autoFollowup.maxTouches"
-              type="number"
-              min="1"
-              max="3"
-              class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-              @change="syncIntervals"
-            />
-          </label>
-
-          <div class="grid gap-1.5">
-            <span class="text-xs text-n-slate-11">
-              {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.EVALUATION_OFFSETS') }}
-            </span>
-            <div
-              v-for="(interval, index) in form.autoFollowup.intervalsHours"
-              :key="index"
-              class="flex flex-wrap items-center gap-3"
+          <details class="rounded-xl border border-n-weak bg-n-surface-2 p-4">
+            <summary
+              class="min-h-11 cursor-pointer text-sm font-medium text-n-slate-12"
             >
-              <span class="w-20 shrink-0 text-xs text-n-slate-11">
-                {{
-                  t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
-                    n: index + 1,
-                  })
-                }}
-              </span>
-              <input
-                v-model.number="form.autoFollowup.intervalsHours[index]"
-                :aria-label="
-                  t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
-                    n: index + 1,
-                  })
-                "
-                type="number"
-                min="1"
-                class="reset-base box-border h-9 w-24 shrink-0 rounded-lg border-0 bg-n-surface-2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-              />
-              <span
-                v-if="isReminder"
-                class="rounded bg-n-teal-3 px-2 py-1 text-[10px] font-medium text-n-teal-11"
-              >
-                {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_BADGE') }}
-              </span>
-              <span
-                v-else-if="Number(interval) < 24"
-                class="rounded px-2 py-1 text-[10px] font-medium text-n-teal-11 bg-n-teal-3"
-              >
-                {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SESSION_BADGE') }}
-              </span>
-              <span
-                v-else
-                class="rounded px-2 py-1 text-[10px] font-medium text-n-amber-11 bg-n-amber-3"
-              >
-                {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TEMPLATE_BADGE') }}
-              </span>
-            </div>
-          </div>
-
-          <div class="grid gap-3">
-            <span class="text-xs text-n-slate-11">
               {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_LABEL') }}
-            </span>
-            <div class="flex flex-wrap items-end gap-3">
+            </summary>
+            <div class="mt-3 grid gap-4">
               <label class="grid gap-1">
                 <span class="text-xs text-n-slate-11">
-                  {{
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_START')
-                  }}
+                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.MAX_TOUCHES') }}
                 </span>
                 <input
-                  v-model.number="form.autoFollowup.quietHours.start"
+                  v-model.number="form.autoFollowup.maxTouches"
                   type="number"
-                  min="0"
-                  max="23"
-                  class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                  min="1"
+                  max="3"
+                  class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                  @change="syncIntervals"
                 />
               </label>
-              <label class="grid gap-1">
+
+              <div class="grid gap-1.5">
                 <span class="text-xs text-n-slate-11">
                   {{
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_END')
+                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.EVALUATION_OFFSETS')
                   }}
                 </span>
-                <input
-                  v-model.number="form.autoFollowup.quietHours.end"
-                  type="number"
-                  min="0"
-                  max="23"
-                  class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-                />
-              </label>
-              <div class="grid min-w-0 gap-1">
-                <span class="text-xs text-n-slate-11">{{
-                  t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
-                }}</span>
                 <div
-                  class="grid grid-cols-7 gap-1"
-                  role="group"
-                  :aria-label="
-                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
-                  "
+                  v-for="(interval, index) in form.autoFollowup.intervalsHours"
+                  :key="index"
+                  class="flex flex-wrap items-center gap-3"
                 >
-                  <button
-                    v-for="day in weekdays"
-                    :key="day"
-                    type="button"
-                    :aria-pressed="form.autoFollowup.allowedDays.includes(day)"
+                  <span class="w-20 shrink-0 text-xs text-n-slate-11">
+                    {{
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
+                        n: index + 1,
+                      })
+                    }}
+                  </span>
+                  <input
+                    v-model.number="form.autoFollowup.intervalsHours[index]"
                     :aria-label="
-                      t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_FULL.${day}`)
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TOUCH_LABEL', {
+                        n: index + 1,
+                      })
                     "
-                    class="h-9 rounded-md border px-1.5 text-xs font-medium"
-                    :class="
-                      form.autoFollowup.allowedDays.includes(day)
-                        ? 'border-n-brand bg-n-brand/10 text-n-brand'
-                        : 'border-n-weak bg-n-surface-2 text-n-slate-11'
-                    "
-                    @click="toggleDay(day)"
+                    type="number"
+                    min="1"
+                    class="reset-base box-border h-9 w-24 shrink-0 rounded-lg border-0 bg-n-surface-2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                  />
+                  <span
+                    v-if="isReminder"
+                    class="rounded bg-n-teal-3 px-2 py-1 text-[10px] font-medium text-n-teal-11"
                   >
-                    {{ t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS.${day}`) }}
-                  </button>
+                    {{
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_BADGE')
+                    }}
+                  </span>
+                  <span
+                    v-else-if="Number(interval) < 24"
+                    class="rounded px-2 py-1 text-[10px] font-medium text-n-teal-11 bg-n-teal-3"
+                  >
+                    {{
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SESSION_BADGE')
+                    }}
+                  </span>
+                  <span
+                    v-else
+                    class="rounded px-2 py-1 text-[10px] font-medium text-n-amber-11 bg-n-amber-3"
+                  >
+                    {{
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TEMPLATE_BADGE')
+                    }}
+                  </span>
                 </div>
               </div>
+
+              <div class="grid gap-3">
+                <span class="text-xs text-n-slate-11">
+                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_LABEL') }}
+                </span>
+                <div class="flex flex-wrap items-end gap-3">
+                  <label class="grid gap-1">
+                    <span class="text-xs text-n-slate-11">
+                      {{
+                        t(
+                          'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_START'
+                        )
+                      }}
+                    </span>
+                    <input
+                      v-model.number="form.autoFollowup.quietHours.start"
+                      type="number"
+                      min="0"
+                      max="23"
+                      class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                    />
+                  </label>
+                  <label class="grid gap-1">
+                    <span class="text-xs text-n-slate-11">
+                      {{
+                        t(
+                          'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.QUIET_HOURS_END'
+                        )
+                      }}
+                    </span>
+                    <input
+                      v-model.number="form.autoFollowup.quietHours.end"
+                      type="number"
+                      min="0"
+                      max="23"
+                      class="reset-base w-20 rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                    />
+                  </label>
+                  <div class="grid min-w-0 gap-1">
+                    <span class="text-xs text-n-slate-11">{{
+                      t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
+                    }}</span>
+                    <div
+                      class="grid grid-cols-7 gap-1"
+                      role="group"
+                      :aria-label="
+                        t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_LABEL')
+                      "
+                    >
+                      <button
+                        v-for="day in weekdays"
+                        :key="day"
+                        type="button"
+                        :aria-pressed="
+                          form.autoFollowup.allowedDays.includes(day)
+                        "
+                        :aria-label="
+                          t(
+                            `CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS_FULL.${day}`
+                          )
+                        "
+                        class="h-9 rounded-md border px-1.5 text-xs font-medium"
+                        :class="
+                          form.autoFollowup.allowedDays.includes(day)
+                            ? 'border-n-brand bg-n-brand/10 text-n-brand'
+                            : 'border-n-weak bg-n-surface-2 text-n-slate-11'
+                        "
+                        @click="toggleDay(day)"
+                      >
+                        {{
+                          t(`CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.DAYS.${day}`)
+                        }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_HELP') }}
+                </p>
+              </div>
+
+              <p
+                class="mb-0 flex items-start gap-1.5 rounded-lg bg-n-alpha-black2 p-3 text-xs leading-5 text-n-slate-11"
+              >
+                <span class="i-lucide-sparkles mt-0.5 shrink-0 text-sm" />
+                {{
+                  t(
+                    isReminder
+                      ? 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_INFO'
+                      : 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.OFFICIAL_INFO'
+                  )
+                }}
+              </p>
+
+              <label class="grid gap-1">
+                <span class="text-xs text-n-slate-11">
+                  {{
+                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.AI_INSTRUCTIONS')
+                  }}
+                </span>
+                <textarea
+                  v-model="form.autoFollowup.toneInstructions"
+                  rows="3"
+                  class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+                  :placeholder="
+                    t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TONE_PLACEHOLDER')
+                  "
+                />
+              </label>
             </div>
-            <p class="mb-0 text-xs leading-5 text-n-slate-11">
-              {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.SCHEDULE_HELP') }}
-            </p>
-          </div>
-
-          <p
-            class="mb-0 flex items-start gap-1.5 rounded-lg bg-n-alpha-black2 p-3 text-xs leading-5 text-n-slate-11"
-          >
-            <span class="i-lucide-sparkles mt-0.5 shrink-0 text-sm" />
-            {{
-              t(
-                isReminder
-                  ? 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.REMINDER_INFO'
-                  : 'CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.OFFICIAL_INFO'
-              )
-            }}
-          </p>
-
-          <label class="grid gap-1">
-            <span class="text-xs text-n-slate-11">
-              {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.AI_INSTRUCTIONS') }}
-            </span>
-            <textarea
-              v-model="form.autoFollowup.toneInstructions"
-              rows="3"
-              class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak"
-              :placeholder="
-                t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.TONE_PLACEHOLDER')
-              "
-            />
-          </label>
+          </details>
         </template>
       </section>
 
@@ -579,13 +489,6 @@ watch(
       >
         {{ t('CRM_KANBAN.AI_SETTINGS.AUTO_FOLLOWUP.INVALID_SCHEDULE') }}
       </p>
-      <Button
-        :label="t('CRM_KANBAN.AI_SETTINGS.SAVE')"
-        :is-loading="isSaving"
-        :disabled="!canSave"
-        sm
-        @click="saveSettings"
-      />
     </template>
   </section>
 </template>

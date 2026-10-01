@@ -1,12 +1,12 @@
 class Api::V1::Accounts::EmailCampaigns::TemplatesController < Api::V1::Accounts::EmailCampaigns::BaseController
   # Lightweight list payload for the gallery (NO body — fetched lazily via #show).
-  INDEX_FIELDS = [:id, :name, :category, :thumbnail_url, :created_at, :updated_at].freeze
+  INDEX_FIELDS = [:id, :account_id, :name, :category, :thumbnail_url, :created_at, :updated_at].freeze
   SHOW_FIELDS = (INDEX_FIELDS + [:body_mjml, :body_html]).freeze
 
   def index
     authorize EmailCampaignTemplate
     scope = template_scope.by_category(params[:category]).order(:category, :name)
-    render json: scope.as_json(only: INDEX_FIELDS)
+    render json: scope.map { |template| template.as_json(only: INDEX_FIELDS).merge(catalog_key: EmailCampaigns::TemplateCatalog.key_for(template)) }
   end
 
   def show

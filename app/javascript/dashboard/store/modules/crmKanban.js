@@ -438,6 +438,9 @@ const defaultPipelinePayload = pipeline => ({
 });
 
 const normalizeStagePayload = (stage, index) => ({
+  ...(stage.aiCriteria !== undefined
+    ? { metadata: { ai_criteria: stage.aiCriteria } }
+    : {}),
   name: stage.name,
   description: stage.description || '',
   color: stage.color || '#64748b',
@@ -601,18 +604,16 @@ export const actions = {
       const savedPipeline = response.data.payload;
       commit(types.UPSERT_CRM_KANBAN_PIPELINE, savedPipeline);
 
-      await Promise.all(
-        stages.map((stage, index) => {
+      const savedStageIds = await Promise.all(
+        stages.map(async (stage, index) => {
           const stagePayload = normalizeStagePayload(stage, index);
-          return stage.id
-            ? CrmKanbanAPI.updateStage(stage.id, stagePayload)
-            : CrmKanbanAPI.createStage(savedPipeline.id, stagePayload);
+          const stageResponse = stage.id
+            ? await CrmKanbanAPI.updateStage(stage.id, stagePayload)
+            : await CrmKanbanAPI.createStage(savedPipeline.id, stagePayload);
+          return stageResponse.data.payload.id;
         })
       );
 
-      const savedStageIds = stages
-        .filter(stage => stage.id)
-        .map(stage => stage.id);
       if (savedStageIds.length > 1) {
         await CrmKanbanAPI.reorderStages(savedStageIds);
       }

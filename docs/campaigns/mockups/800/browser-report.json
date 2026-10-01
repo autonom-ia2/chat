@@ -1,0 +1,135 @@
+{
+  "date": "2026-09-30",
+  "scope": "Protótipo local; dados fictícios; sem acesso a APIs, banco, IA ou envio.",
+  "checks": [
+    {
+      "check": "Biblioteca com 14 modelos",
+      "pass": true
+    },
+    {
+      "check": "Filtro por objetivo",
+      "pass": true
+    },
+    {
+      "check": "Busca na biblioteca",
+      "pass": true
+    },
+    {
+      "check": "Prévia completa do modelo",
+      "pass": true
+    },
+    {
+      "check": "Separação Biblioteca/Meus modelos",
+      "pass": true
+    },
+    {
+      "check": "Prévia de modelo da equipe",
+      "pass": true
+    },
+    {
+      "check": "Usar modelo abre editor com o HTML escolhido",
+      "pass": true
+    },
+    {
+      "check": "Disparar incompleto explica o que falta",
+      "pass": true
+    },
+    {
+      "check": "Correção abre editor com opções de criação",
+      "pass": true
+    },
+    {
+      "check": "Assunto sozinho não libera conteúdo incompleto",
+      "pass": true
+    },
+    {
+      "check": "Disparar pronto abre revisão, sem enviar",
+      "pass": true
+    },
+    {
+      "check": "Confirmação final explícita",
+      "pass": true
+    },
+    {
+      "check": "Resultado informa que não houve envio real",
+      "pass": true
+    },
+    {
+      "check": "Agendamento exibe data e horário",
+      "pass": true
+    },
+    {
+      "check": "Correção guiada mantém assunto vazio e conteúdo pendente",
+      "pass": true
+    }
+  ],
+  "layouts": [
+    {
+      "view": "review",
+      "width": 390,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "templates",
+      "width": 390,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "editor",
+      "width": 390,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "campaigns",
+      "width": 390,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "campaigns",
+      "width": 1440,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "editor",
+      "width": 1440,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "templates",
+      "width": 1440,
+      "clippedActions": [],
+      "overflow": false
+    },
+    {
+      "view": "review",
+      "width": 1440,
+      "clippedActions": [],
+      "overflow": false
+    }
+  ],
+  "supersededAssertions": [
+    {
+      "check": "Ação de correção na versão final mantém assunto e conteúdo pendentes",
+      "pass": false,
+      "reason": "A comparação do atributo value foi afetada pela ocultação automática do campo; substituída por verificação booleana de campo vazio no DOM."
+    },
+    {
+      "check": "Agendamento exibe data e horário",
+      "pass": false,
+      "reason": "A asserção exigia que input date não fosse apresentado como textbox; removida essa condição sem relação com o objetivo."
+    }
+  ],
+  "screenshots": {
+    "format": "JPEG",
+    "width": 1440,
+    "height": 900,
+    "method": "CUA CDP Page.captureScreenshot"
+  },
+  "templateFiles": 14
+}

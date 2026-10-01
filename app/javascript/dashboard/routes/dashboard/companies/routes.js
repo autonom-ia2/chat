@@ -1,12 +1,13 @@
 import { frontendURL } from '../../../helper/URLHelper';
-import CompaniesIndex from './pages/CompaniesIndex.vue';
-import CompanyDetailView from './pages/CompanyDetailView.vue';
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
 import {
   CONTACT_VIEW_PERMISSION,
   CONTACT_PERMISSIONS,
 } from 'dashboard/constants/permissions';
+
+const CompaniesIndex = () => import('./pages/CompaniesIndex.vue');
+const CompanyDetailView = () => import('./pages/CompanyDetailView.vue');
 
 const commonMeta = {
   featureFlag: FEATURE_FLAGS.COMPANIES,

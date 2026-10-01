@@ -1,7 +1,7 @@
 require 'rails_helper'
 require 'timeout'
 
-RSpec.describe 'Email cross-caller lock closure', type: :model do
+RSpec.describe 'Email cross-caller lock closure', :relationships_committed_fixtures, type: :model do
   self.use_transactional_tests = false
 
   let!(:account) { create(:account) }

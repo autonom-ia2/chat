@@ -6,6 +6,8 @@ O Crowdin continua responsável pelos catálogos do Chatwoot. `crowdin.yml` excl
 
 Textos exclusivos do fork que já estão em catálogo compartilhado continuam no catálogo atual; alterar somente suas chaves em `en` e `pt_BR`, sem excluir o arquivo inteiro do Crowdin. A orientação de cabeçalhos da importação de e-mail em `campaign.json` segue esse caso.
 
+O workspace de campanhas (#800) também segue esse caso: `CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE` fica em `campaign.json`. O check `scripts/check-email-protection-i18n.mjs` confere as mesmas chaves, parâmetros e a renderização real desse namespace em inglês e português brasileiro. A regra de origem inglesa do upstream não proíbe traduzir os recursos próprios do Chat2You; traduções dentro de uma entrega autorizada não precisam de aprovação separada.
+
 Os módulos próprios exigem inglês e português brasileiro, com as mesmas chaves e parâmetros. As traduções já existentes dos demais idiomas são preservadas. Quando um idioma não tem tradução própria, o painel mantém seu fallback atual; isso não constitui promessa de tradução completa para todos os idiomas do Chatwoot.
 
 Exceção histórica explícita: Prospecção já tinha os textos em português no arquivo `en/prospecting.json`, usados pelo fallback. Nesta entrega, `pt_BR/prospecting.json` assume a fonte de verdade em português e entra no índice pt_BR, mantendo a apresentação existente. O arquivo `en` permanece compatível enquanto sua tradução completa para inglês fica acompanhada na #780. Essa exceção está registrada por catálogo e não autoriza novas strings portuguesas nos outros catálogos ingleses.

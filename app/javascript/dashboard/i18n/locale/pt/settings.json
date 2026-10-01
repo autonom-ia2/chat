@@ -313,7 +313,7 @@
     "SWITCH": "Alternar",
     "INBOX_VIEW": "Visualização da Caixa de entrada",
     "CONVERSATIONS": "Conversas",
-    "INBOX": "My Inbox",
+    "INBOX": "Caixa de Entrada",
     "ALL_CONVERSATIONS": "Todas as conversas",
     "MENTIONED_CONVERSATIONS": "Menções",
     "PARTICIPATING_CONVERSATIONS": "Participando",
@@ -325,7 +325,7 @@
     "COMPANIES": "Companies",
     "ALL_COMPANIES": "All Companies",
     "CAPTAIN": "Captain",
-    "CALLS": "Calls",
+    "CALLS": "Chamadas",
     "CAPTAIN_ASSISTANTS": "Assistants",
     "CAPTAIN_OVERVIEW": "Visão geral",
     "CAPTAIN_DOCUMENTS": "Documents",
@@ -392,7 +392,7 @@
       "LOCALES": "Locais",
       "SETTINGS": "Configurações"
     },
-    "CHANNELS": "Channels",
+    "CHANNELS": "Canais",
     "SET_AUTO_OFFLINE": {
       "TEXT": "Marcar offline automaticamente",
       "INFO_TEXT": "Deixar o sistema alterar automaticamente o seu estado para offline quando não estiver a usar a app ou o painel.",

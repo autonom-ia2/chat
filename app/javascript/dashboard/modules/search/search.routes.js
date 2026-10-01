@@ -6,7 +6,7 @@ import {
   PORTAL_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 
-import SearchView from './components/SearchView.vue';
+const SearchView = () => import('./components/SearchView.vue');
 
 export const routes = [
   {

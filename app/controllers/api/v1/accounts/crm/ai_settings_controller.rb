@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::BaseController
+  include DeferInteractiveAi
+
   before_action :ensure_crm_ai_enabled
   before_action :fetch_pipeline
 
@@ -17,6 +19,18 @@ class Api::V1::Accounts::Crm::AiSettingsController < Api::V1::Accounts::Crm::Bas
     ).perform
     @ai_settings = Crm::Ai::SettingsPresenter.new(pipeline: @pipeline.reload).perform
     render :show
+  end
+
+  def improve_criteria
+    authorize @pipeline, :manage_ai?
+    input = params.permit(:stage_index, stages: [:name, :description]).to_h
+    raw_input = params.slice(:stages, :stage_index).to_unsafe_h
+    return render_unprocessable('invalid_stage_criteria') unless Crm::Ai::StageCriteriaImprover.valid_input?(raw_input)
+
+    defer_interactive_ai('stage_criteria', {
+                           pipeline_id: @pipeline.id, stages: input.fetch('stages'),
+                           stage_index: input.fetch('stage_index'), language: I18n.locale.to_s
+                         })
   end
 
   private

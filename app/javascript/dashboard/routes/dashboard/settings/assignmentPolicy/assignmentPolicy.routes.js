@@ -1,16 +1,19 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
 import { CRM_MANAGE_AI_PERMISSION } from 'dashboard/constants/permissions';
-import SettingsWrapper from '../SettingsWrapper.vue';
-import AssignmentPolicyIndex from './Index.vue';
-import AgentAssignmentIndex from './pages/AgentAssignmentIndexPage.vue';
-import AgentAssignmentCreate from './pages/AgentAssignmentCreatePage.vue';
-import AgentAssignmentEdit from './pages/AgentAssignmentEditPage.vue';
-import AgentCapacityIndex from './pages/AgentCapacityIndexPage.vue';
-import AgentCapacityCreate from './pages/AgentCapacityCreatePage.vue';
-import AgentCapacityEdit from './pages/AgentCapacityEditPage.vue';
-import CrmHandoffIndex from './pages/CrmHandoffIndexPage.vue';
-import CrmHandoffEdit from './pages/CrmHandoffEditPage.vue';
+
+const SettingsWrapper = () => import('../SettingsWrapper.vue');
+const AssignmentPolicyIndex = () => import('./Index.vue');
+const AgentAssignmentIndex = () =>
+  import('./pages/AgentAssignmentIndexPage.vue');
+const AgentAssignmentCreate = () =>
+  import('./pages/AgentAssignmentCreatePage.vue');
+const AgentAssignmentEdit = () => import('./pages/AgentAssignmentEditPage.vue');
+const AgentCapacityIndex = () => import('./pages/AgentCapacityIndexPage.vue');
+const AgentCapacityCreate = () => import('./pages/AgentCapacityCreatePage.vue');
+const AgentCapacityEdit = () => import('./pages/AgentCapacityEditPage.vue');
+const CrmHandoffIndex = () => import('./pages/CrmHandoffIndexPage.vue');
+const CrmHandoffEdit = () => import('./pages/CrmHandoffEditPage.vue');
 
 // Mirrors ensureCrmAiEnabled from crm.routes.js: the handoff pages only make
 // sense when the CRM kanban + CRM AI are enabled on this installation.

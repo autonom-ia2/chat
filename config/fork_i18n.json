@@ -12,6 +12,9 @@
       "file": "crm.json"
     },
     {
+      "file": "emailCampaignImportRecovery.json"
+    },
+    {
       "file": "emailCampaignProtection.json"
     },
     {

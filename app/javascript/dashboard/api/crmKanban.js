@@ -278,6 +278,15 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
+  improveStageCriteria(pipelineId, payload) {
+    return pollAiRequest(
+      axios.post(
+        `${this.url}/pipelines/${pipelineId}/ai_settings/improve_criteria`,
+        payload
+      )
+    );
+  }
+
   getAiSettings(pipelineId) {
     return axios.get(`${this.url}/pipelines/${pipelineId}/ai_settings`);
   }

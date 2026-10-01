@@ -18,6 +18,7 @@
     "start:test": "RAILS_ENV=test foreman start -f ./Procfile.test",
     "dev": "overmind start -f ./Procfile.dev",
     "ruby:prettier": "bundle exec rubocop -a",
+    "assets:compress": "node scripts/compress-vite-assets.mjs",
     "build:sdk": "vite build --config vite.lib.config.ts",
     "analyze:bundles": "pnpm analyze:bundle:sdk && pnpm analyze:bundle:widget",
     "analyze:bundle:sdk": "vite build --config vite.sdk.analyze.config.mts",

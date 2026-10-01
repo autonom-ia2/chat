@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useToggle } from '@vueuse/core';
@@ -17,14 +17,18 @@ import {
   NS,
   safeError,
   hasActiveEmailWork,
+  statusKey,
   formatNumber,
+  formatDate as formatCampaignDate,
+  localeTag,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useEmailReportRefresh } from 'dashboard/components-next/Campaigns/EmailProtection/useEmailReportRefresh';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
-import CampaignLayout from 'dashboard/components-next/Campaigns/CampaignLayout.vue';
+import { vOnClickOutside } from '@vueuse/components';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 import EmailCampaignDetailsDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDetailsDialog.vue';
 
@@ -80,12 +84,6 @@ const builderRoute = campaign => ({
   },
 });
 
-const hasCampaignBody = campaign => Boolean(campaign.body_html);
-const canSendNow = campaign =>
-  campaign.status === 'draft' &&
-  !isRecipientImportActive(campaign) &&
-  campaign.recipients_count > 0 &&
-  hasCampaignBody(campaign);
 const canPause = campaign => campaign.status === 'sending';
 const canCancel = campaign =>
   !isRecipientImportActive(campaign) &&
@@ -146,20 +144,6 @@ const onSaved = () => {
   fetchCampaigns();
 };
 
-const sendNow = async campaign => {
-  try {
-    const result = await store.dispatch('emailCampaigns/sendNow', campaign.id);
-    useAlert(
-      result.status === 'paused'
-        ? t(`${NS}.STILL_BLOCKED`)
-        : t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SEND_SUCCESS')
-    );
-    fetchCampaigns(true);
-  } catch (error) {
-    useAlert(safeError(t, error));
-  }
-};
-
 const pause = async campaign => {
   try {
     await store.dispatch('emailCampaigns/pause', campaign.id);
@@ -170,12 +154,8 @@ const pause = async campaign => {
 };
 
 const cancel = async campaign => {
-  try {
-    await store.dispatch('emailCampaigns/cancel', campaign.id);
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL_SUCCESS'));
-  } catch (error) {
-    useAlert(safeError(t, error));
-  }
+  await store.dispatch('emailCampaigns/cancel', campaign.id);
+  useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL_SUCCESS'));
 };
 
 const duplicate = async campaign => {
@@ -192,12 +172,8 @@ const duplicate = async campaign => {
 };
 
 const removeCampaign = async campaign => {
-  try {
-    await store.dispatch('emailCampaigns/delete', campaign.id);
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DELETE_SUCCESS'));
-  } catch (error) {
-    useAlert(safeError(t, error));
-  }
+  await store.dispatch('emailCampaigns/delete', campaign.id);
+  useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DELETE_SUCCESS'));
 };
 
 onMounted(() => {
@@ -207,258 +183,576 @@ onMounted(() => {
   // Caixas conectadas alimentam as opções de "envio direto" no diálogo de campanha.
   store.dispatch('inboxes/get');
 });
+
+const UX = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
+const search = ref('');
+const menuId = ref(null);
+const diagnosticCampaign = ref(null);
+const diagnosticDialog = ref(null);
+const destructive = ref(null);
+const confirmDialog = ref(null);
+const isConfirming = ref(false);
+const tabs = ['', 'draft', 'scheduled', 'sent'];
+const visibleCampaigns = computed(() => {
+  const query = search.value.trim().toLocaleLowerCase(localeTag(locale.value));
+  return campaigns.value.filter(item =>
+    [item.name, item.subject].some(value =>
+      value?.toLocaleLowerCase(localeTag(locale.value)).includes(query)
+    )
+  );
+});
+const drafts = computed(() =>
+  campaigns.value.filter(item => item.status === 'draft')
+);
+const nextScheduled = computed(
+  () =>
+    campaigns.value
+      .filter(item => item.status === 'scheduled')
+      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0]
+);
+const sentCampaigns = computed(
+  () => campaigns.value.filter(item => item.status === 'sent').length
+);
+const needsContent = item => !item.subject?.trim() || !item.body_html;
+const reviewRoute = item => ({
+  ...builderRoute(item),
+  query: { step: 'review' },
+});
+const galleryRoute = computed(() => ({
+  name: 'campaigns_email_templates',
+  params: { accountId: route.params.accountId },
+}));
+const campaignNote = item => {
+  if (isRecipientImportActive(item)) return t(`${UX}.IMPORT_ACTIVE`);
+  if (item.recipient_import?.status === 'failed')
+    return t(`${UX}.IMPORT_FAILED`);
+  if (item.status === 'draft')
+    return t(`${UX}.${needsContent(item) ? 'COMPLETE_EMAIL' : 'REVIEW_SEND'}`);
+  return t(`${NS}.STATUS.${statusKey(item, true)}`);
+};
+const formatDate = value => formatCampaignDate(value, locale.value);
+const showDiagnostics = async item => {
+  menuId.value = null;
+  diagnosticCampaign.value = item;
+  await nextTick();
+  diagnosticDialog.value.open();
+};
+const askDestructive = async (item, action) => {
+  menuId.value = null;
+  destructive.value = { item, action };
+  await nextTick();
+  confirmDialog.value.open();
+};
+const confirmDestructive = async () => {
+  isConfirming.value = true;
+  const { item, action } = destructive.value;
+  try {
+    if (action === 'delete') await removeCampaign(item);
+    else await cancel(item);
+    confirmDialog.value.close();
+  } catch (error) {
+    useAlert(safeError(t, error));
+  } finally {
+    isConfirming.value = false;
+  }
+};
 </script>
 
 <template>
-  <CampaignLayout
-    :header-title="t('CAMPAIGN.EMAIL_CAMPAIGN.HEADER_TITLE')"
-    :button-label="t('CAMPAIGN.EMAIL_CAMPAIGN.NEW')"
-    @click="openCompose()"
-    @close="toggleDialog(false)"
+  <section
+    class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2"
   >
-    <template #action>
-      <EmailCampaignDialog
-        v-if="showDialog"
-        :campaign="editing"
-        @saved="onSaved()"
-        @close="toggleDialog(false)"
-      />
-    </template>
-
-    <div class="flex flex-col gap-4">
-      <p class="max-w-3xl mb-0 text-sm leading-5 text-n-slate-11">
-        {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DESCRIPTION') }}
+    <div class="mx-auto w-full max-w-[90rem] p-5 lg:p-8">
+      <p class="mb-5 flex items-center gap-2 text-xs text-n-slate-11">
+        {{ t(`${UX}.CAMPAIGNS`) }}
+        <span class="i-lucide-chevron-right size-3.5" />
+        <span class="font-medium text-n-blue-11">{{ t(`${UX}.EMAIL`) }}</span>
       </p>
-
-      <div class="flex flex-wrap items-end gap-3">
-        <EmailStatusFilter v-model="campaignStatus" campaign />
-        <Button
-          :label="t(`${NS}.REFRESH`)"
-          icon="i-lucide-refresh-cw"
-          slate
-          outline
-          :disabled="isFetching"
-          @click="fetchCampaigns()"
-        />
-      </div>
-      <p v-if="errorMessage" role="alert" class="m-0 text-sm text-n-ruby-11">
-        {{ errorMessage }}
-      </p>
-      <div
-        v-else-if="isFetching"
-        class="flex items-center justify-center py-10 text-n-slate-11"
+      <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1
+            class="mb-0 text-[1.75rem] font-semibold leading-tight tracking-tight text-n-slate-12"
+          >
+            {{ t('CAMPAIGN.EMAIL_CAMPAIGN.HEADER_TITLE') }}
+          </h1>
+          <p class="mb-0 mt-2 text-sm leading-6 text-n-slate-11">
+            {{ t(`${UX}.LIST_SUBTITLE`) }}
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <router-link :to="galleryRoute">
+            <Button
+              :label="t(`${UX}.LIBRARY_BUTTON`)"
+              icon="i-lucide-layout-template"
+              slate
+              outline
+              class="!min-h-11 !rounded-xl"
+            />
+          </router-link>
+          <div v-on-click-outside="() => toggleDialog(false)" class="relative">
+            <Button
+              v-if="canManage"
+              :label="t(`${UX}.NEW_CAMPAIGN`)"
+              icon="i-lucide-plus"
+              class="!min-h-11 !rounded-xl"
+              @click="openCompose"
+            />
+            <EmailCampaignDialog
+              v-if="showDialog"
+              :campaign="editing"
+              @saved="onSaved"
+              @close="toggleDialog(false)"
+            />
+          </div>
+        </div>
+      </header>
+      <section
+        class="mb-7 flex flex-col overflow-hidden rounded-3xl border border-n-weak bg-n-solid-1 shadow-sm md:flex-row"
+        :aria-label="t(`${UX}.OVERVIEW`)"
       >
-        <Spinner />
-      </div>
-
-      <div
-        v-else-if="campaigns.length === 0"
-        class="flex flex-col items-center justify-center gap-2 py-16 text-center border rounded-lg border-n-weak"
-      >
-        <p class="mb-0 text-base font-medium text-n-slate-12">
-          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.EMPTY_STATE.TITLE') }}
-        </p>
-        <p class="max-w-xl mb-0 text-sm leading-5 text-n-slate-11">
-          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.EMPTY_STATE.SUBTITLE') }}
-        </p>
-      </div>
-
-      <div v-else class="flex flex-col gap-4">
         <div
-          v-for="campaign in campaigns"
-          :key="campaign.id"
-          class="flex flex-col gap-4 p-4 border rounded-lg border-n-weak"
+          class="relative min-w-0 overflow-hidden bg-[#0D2344] px-6 py-6 text-white md:w-[32%]"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="mb-1 font-medium truncate text-n-slate-12">
-                {{ campaign.name }}
-              </p>
-              <p class="mb-1 text-sm truncate text-n-slate-11">
-                {{ campaign.subject }}
-              </p>
-              <EmailStatusBadge :record="campaign" campaign />
+          <span
+            class="absolute -end-8 -top-12 size-40 rounded-full border-[1.5rem] border-n-blue-9 opacity-10"
+            aria-hidden="true"
+          />
+          <p
+            class="relative mb-0 flex items-center gap-2 text-xs text-n-blue-6"
+          >
+            <span class="i-lucide-sparkles size-4" />
+            {{ t(`${UX}.NEXT_SEND`) }}
+          </p>
+          <p class="relative mb-0 mt-3 text-xl font-semibold tracking-tight">
+            {{ drafts[0]?.name || t(`${UX}.START_NEXT`) }}
+          </p>
+          <router-link
+            v-if="drafts[0]"
+            :to="reviewRoute(drafts[0])"
+            class="relative mt-4 flex min-h-11 items-center gap-2 text-sm font-medium text-n-blue-6 hover:text-white"
+          >
+            {{ t(`${UX}.REVIEW_SEND`) }}
+            <span class="i-lucide-arrow-right size-4" />
+          </router-link>
+          <Button
+            v-else-if="canManage"
+            :label="t(`${UX}.NEW_CAMPAIGN`)"
+            variant="ghost"
+            class="relative mt-4 !text-n-blue-6"
+            @click="openCompose"
+          />
+        </div>
+        <div
+          class="grid min-w-0 flex-1 gap-5 px-6 py-6 md:px-8 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,.8fr)]"
+        >
+          <div class="min-w-0">
+            <p class="mb-0 text-xs text-n-slate-11">
+              {{ t(`${UX}.IN_PREPARATION`) }}
+            </p>
+            <p
+              class="mb-0 mt-2 text-3xl font-semibold tabular-nums text-n-slate-12"
+            >
+              {{ number(drafts.length) }}
+              <span class="text-sm font-normal text-n-slate-11">
+                {{ t(`${UX}.DRAFTS`) }}
+              </span>
+            </p>
+            <p class="mb-0 mt-2 text-xs text-n-slate-11">
+              {{ t(`${UX}.CURRENT_VIEW`) }}
+            </p>
+          </div>
+          <div class="min-w-0 lg:border-s lg:border-n-weak lg:ps-5">
+            <p class="mb-0 text-xs text-n-slate-11">
+              {{ t(`${UX}.NEXT_SCHEDULE`) }}
+            </p>
+            <p class="mb-0 mt-2 text-lg font-semibold text-n-slate-12">
+              {{ formatDate(nextScheduled?.scheduled_at) }}
+            </p>
+            <p class="mb-0 mt-2 text-xs text-n-slate-11">
+              {{ nextScheduled?.name || t(`${UX}.NO_SCHEDULE`) }}
+            </p>
+          </div>
+          <div
+            class="hidden min-w-0 xl:block xl:border-s xl:border-n-weak xl:ps-5"
+          >
+            <p class="mb-0 text-xs text-n-slate-11">
+              {{ t(`${UX}.SENT_CAMPAIGNS`) }}
+            </p>
+            <p
+              class="mb-0 mt-2 text-3xl font-semibold tabular-nums text-n-slate-12"
+            >
+              {{ number(sentCampaigns) }}
+            </p>
+            <button
+              class="mt-2 min-h-11 text-xs font-medium text-n-blue-11"
+              @click="campaignStatus = 'sent'"
+            >
+              {{ t(`${UX}.VIEW_RESULTS`) }}
+              <span class="i-lucide-arrow-right ms-1 inline-block size-3" />
+            </button>
+          </div>
+        </div>
+      </section>
+      <section class="rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm">
+        <header
+          class="flex flex-wrap items-center justify-between gap-4 border-b border-n-weak px-5 py-4 xl:px-6"
+        >
+          <nav
+            class="flex max-w-full gap-1 overflow-x-auto"
+            :aria-label="t(`${NS}.CAMPAIGN_STATUS`)"
+          >
+            <button
+              v-for="tab in tabs"
+              :key="tab"
+              class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-medium"
+              :class="
+                campaignStatus === tab
+                  ? 'bg-n-blue-3 text-n-blue-11'
+                  : 'text-n-slate-11 hover:bg-n-alpha-1'
+              "
+              :aria-pressed="campaignStatus === tab"
+              @click="campaignStatus = tab"
+            >
+              {{ t(`${UX}.TABS.${tab || 'all'}`) }}
+            </button>
+          </nav>
+          <label
+            class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-n-weak px-3 focus-within:ring-2 focus-within:ring-n-brand sm:w-60"
+          >
+            <span class="i-lucide-search size-4 shrink-0 text-n-slate-11" />
+            <input
+              v-model="search"
+              type="search"
+              :aria-label="t(`${UX}.SEARCH_CAMPAIGN`)"
+              :placeholder="t(`${UX}.SEARCH_CAMPAIGN`)"
+              class="m-0 min-w-0 w-full !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
+            />
+          </label>
+        </header>
+        <p
+          v-if="errorMessage"
+          role="alert"
+          class="m-0 p-6 text-sm text-n-ruby-11"
+        >
+          {{ errorMessage }}
+        </p>
+        <div v-else-if="isFetching" class="flex justify-center p-12">
+          <Spinner />
+        </div>
+        <div
+          v-else-if="!visibleCampaigns.length"
+          class="flex flex-col items-center gap-2 p-12 text-center"
+        >
+          <span class="i-lucide-mail size-8 text-n-slate-9" />
+          <p class="mb-0 font-medium text-n-slate-12">
+            {{ t('CAMPAIGN.EMAIL_CAMPAIGN.EMPTY_STATE.TITLE') }}
+          </p>
+          <p class="mb-0 text-sm text-n-slate-11">
+            {{ t(`${UX}.EMPTY_SEARCH`) }}
+          </p>
+        </div>
+        <article
+          v-for="item in isFetching ? [] : visibleCampaigns"
+          :key="item.id"
+          class="grid gap-5 border-b border-n-weak px-5 py-5 last:border-0 xl:grid-cols-[minmax(0,1fr)_17rem_17rem] xl:items-center xl:px-6"
+        >
+          <div class="flex min-w-0 gap-4">
+            <div
+              class="relative flex h-20 w-16 shrink-0 justify-center overflow-hidden rounded-xl border border-n-weak bg-n-alpha-1"
+            >
+              <iframe
+                v-if="item.body_html"
+                :srcdoc="item.body_html"
+                :title="t(`${UX}.THUMBNAIL`, { name: item.name })"
+                sandbox=""
+                referrerpolicy="no-referrer"
+                tabindex="-1"
+                aria-hidden="true"
+                class="pointer-events-none h-[60rem] w-[37.5rem] shrink-0 origin-top scale-[.105] border-0"
+              />
               <span
-                v-if="aiBadge(campaign.ai_status)"
-                class="inline-flex items-center gap-1 px-2 py-1 ms-2 text-xs font-medium rounded-md"
-                :class="aiBadge(campaign.ai_status).class"
-              >
-                <span
-                  :class="aiBadge(campaign.ai_status).icon"
-                  class="size-3"
+                v-else
+                class="i-lucide-mail absolute top-6 size-7 text-n-slate-9"
+              />
+            </div>
+            <div class="min-w-0 pt-0.5">
+              <div class="mb-1.5 flex flex-wrap items-center gap-3">
+                <button
+                  class="text-start text-sm font-semibold text-n-slate-12 hover:text-n-blue-11"
+                  @click="
+                    item.status === 'draft'
+                      ? router.push(builderRoute(item))
+                      : showDiagnostics(item)
+                  "
+                >
+                  {{ item.name }}
+                </button>
+                <EmailStatusBadge
+                  :record="item"
+                  campaign
+                  class="!rounded-full"
                 />
-                {{ aiBadge(campaign.ai_status).label }}
+              </div>
+              <p class="mb-0 truncate text-sm text-n-slate-11">
+                {{ item.subject || t(`${UX}.NO_SUBJECT`) }}
+              </p>
+              <p class="mb-0 mt-2 text-xs text-n-slate-11">
+                {{ formatDate(item.updated_at) }}
+              </p>
+              <span
+                v-if="aiBadge(item.ai_status)"
+                class="mt-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs"
+                :class="aiBadge(item.ai_status).class"
+              >
+                <span :class="aiBadge(item.ai_status).icon" class="size-3" />
+                {{ aiBadge(item.ai_status).label }}
               </span>
             </div>
-            <div class="flex flex-wrap items-center justify-end gap-2">
+          </div>
+          <div class="flex min-w-0 items-center gap-7">
+            <div class="w-16 shrink-0">
+              <p
+                class="mb-0 text-sm font-semibold tabular-nums text-n-slate-12"
+              >
+                {{
+                  number(
+                    item.status === 'sent'
+                      ? item.sent_count
+                      : item.recipients_count
+                  )
+                }}
+              </p>
+              <p class="mb-0 mt-1 text-xs text-n-slate-11">
+                {{
+                  t(
+                    `CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.${item.status === 'sent' ? 'SENT' : 'RECIPIENTS'}`
+                  )
+                }}
+              </p>
+            </div>
+            <button
+              class="min-h-11 min-w-0 flex-1 text-start"
+              @click="showDiagnostics(item)"
+            >
+              <p
+                class="mb-0 text-xs font-medium"
+                :class="
+                  needsContent(item) && item.status === 'draft'
+                    ? 'text-n-amber-11'
+                    : 'text-n-blue-11'
+                "
+              >
+                {{ campaignNote(item) }}
+              </p>
+              <p class="mb-0 mt-1 text-xs text-n-slate-11">
+                {{ t(`${UX}.SEE_DETAILS`) }}
+              </p>
+            </button>
+          </div>
+          <div
+            v-on-click-outside="() => (menuId = null)"
+            class="relative flex flex-wrap items-center gap-2 xl:justify-end"
+          >
+            <template v-if="item.status === 'draft'">
+              <router-link :to="builderRoute(item)">
+                <Button
+                  :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.EDIT')"
+                  icon="i-lucide-pencil"
+                  slate
+                  outline
+                  class="!min-h-11 !rounded-xl"
+                />
+              </router-link>
+              <template v-if="canManage">
+                <Button
+                  :label="t(`${UX}.SEND`)"
+                  icon="i-lucide-send"
+                  :variant="needsContent(item) ? 'outline' : 'solid'"
+                  :color="needsContent(item) ? 'amber' : 'blue'"
+                  class="!min-h-11 !rounded-xl"
+                  @click="router.push(reviewRoute(item))"
+                />
+              </template>
+            </template>
+            <Button
+              v-else
+              :label="
+                t(
+                  `${UX}.${item.status === 'scheduled' ? 'VIEW_SCHEDULE' : 'VIEW_RESULTS'}`
+                )
+              "
+              icon="i-lucide-chart-no-axes-combined"
+              slate
+              outline
+              class="!min-h-11 !rounded-xl"
+              @click="showDiagnostics(item)"
+            />
+            <Button
+              :aria-label="t(`${UX}.MORE_ACTIONS`, { name: item.name })"
+              :aria-expanded="menuId === item.id"
+              icon="i-lucide-ellipsis"
+              slate
+              ghost
+              class="!size-11 !rounded-xl"
+              @click="menuId = menuId === item.id ? null : item.id"
+            />
+            <div
+              v-if="menuId === item.id"
+              class="absolute end-0 top-12 z-20 w-60 rounded-xl border border-n-weak bg-n-solid-1 p-1.5 text-sm shadow-lg"
+            >
               <Button
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.MANAGE_RECIPIENTS')"
                 icon="i-lucide-users"
-                color="slate"
-                variant="outline"
-                size="sm"
-                @click="openRecipients(campaign)"
+                slate
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
+                @click="
+                  openRecipients(item);
+                  menuId = null;
+                "
               />
               <Button
                 v-if="canManage"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DUPLICATE')"
                 icon="i-lucide-copy"
-                color="slate"
-                variant="ghost"
-                size="sm"
+                slate
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
                 :is-loading="uiFlags.isCreating"
-                @click="duplicate(campaign)"
+                @click="
+                  duplicate(item);
+                  menuId = null;
+                "
               />
               <Button
-                v-if="canManage && campaign.status === 'draft'"
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.EDIT')"
-                icon="i-lucide-pencil"
-                color="slate"
-                variant="ghost"
-                size="sm"
-                @click="openEdit(campaign)"
-              />
-              <router-link
-                v-if="campaign.status === 'draft'"
-                :to="builderRoute(campaign)"
-              >
-                <Button
-                  :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.OPEN_BUILDER')"
-                  icon="i-lucide-layout-template"
-                  color="blue"
-                  variant="ghost"
-                  size="sm"
-                />
-              </router-link>
-              <Button
-                v-if="canManage && canSendNow(campaign)"
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SEND_NOW')"
-                icon="i-lucide-send"
-                color="blue"
-                variant="outline"
-                size="sm"
-                :is-loading="uiFlags.isUpdating"
-                @click="sendNow(campaign)"
+                v-if="canManage && item.status === 'draft'"
+                :label="t(`${UX}.SENDER_SETTINGS`)"
+                icon="i-lucide-settings-2"
+                slate
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
+                @click="
+                  openEdit(item);
+                  menuId = null;
+                "
               />
               <Button
-                v-if="canManage && canPause(campaign)"
+                v-if="canManage && canPause(item)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.PAUSE')"
                 icon="i-lucide-pause"
-                color="amber"
-                variant="ghost"
-                size="sm"
-                @click="pause(campaign)"
+                amber
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
+                @click="
+                  pause(item);
+                  menuId = null;
+                "
               />
               <Button
-                v-if="canManage && canCancel(campaign)"
+                v-if="canManage && canCancel(item)"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.CANCEL')"
                 icon="i-lucide-x"
-                color="ruby"
-                variant="ghost"
-                size="sm"
-                @click="cancel(campaign)"
+                ruby
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
+                @click="askDestructive(item, 'cancel')"
               />
               <Button
-                v-if="canManage && campaign.status === 'draft'"
+                v-if="canManage && item.status === 'draft'"
                 :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.DELETE')"
                 icon="i-lucide-trash-2"
-                color="ruby"
-                variant="ghost"
-                size="sm"
-                :disabled="isRecipientImportActive(campaign)"
-                @click="removeCampaign(campaign)"
+                ruby
+                ghost
+                justify="start"
+                class="!min-h-11 w-full"
+                :disabled="isRecipientImportActive(item)"
+                @click="askDestructive(item, 'delete')"
               />
             </div>
           </div>
-
-          <RecipientImportStatus :campaign="campaign" />
-          <EmailCampaignHealth
-            v-if="
-              campaign.status === 'paused' ||
-              campaign.protection ||
-              campaign.preflight
-            "
-            :campaign="campaign"
-            @updated="fetchCampaigns(true)"
-            @problems="openRecipients(campaign, true)"
+        </article>
+        <footer
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4 text-xs text-n-slate-11"
+        >
+          <span>
+            {{ t(`${UX}.LIST_COUNT`, { count: visibleCampaigns.length }) }}
+          </span>
+          <Button
+            :label="t(`${NS}.REFRESH`)"
+            icon="i-lucide-refresh-cw"
+            slate
+            ghost
+            class="!min-h-11"
+            :disabled="isFetching"
+            @click="fetchCampaigns()"
           />
-
-          <p v-if="campaign.last_error" class="mb-0 text-xs text-n-ruby-11">
-            {{
-              safeError(t, {
-                response: { data: { error_code: campaign.error_code } },
-              })
-            }}
-          </p>
-
-          <div class="flex flex-wrap gap-6 text-sm">
-            <div class="flex flex-col">
-              <span class="text-xs text-n-slate-11">
-                {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.recipients_count) }}
-              </span>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-xs text-n-slate-11">
-                {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.SENT') }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.sent_count) }}
-              </span>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-xs text-n-slate-11">
-                {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.FAILED') }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.failed_count) }}
-              </span>
-            </div>
-            <div
-              v-if="campaign.preflight?.counts?.invalid"
-              class="flex flex-col"
-            >
-              <span class="text-xs text-n-slate-11">
-                {{ t(`${NS}.STATUS.invalid`) }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.preflight.counts.invalid) }}
-              </span>
-            </div>
-            <div
-              v-if="campaign.preflight?.counts?.review"
-              class="flex flex-col"
-            >
-              <span class="text-xs text-n-slate-11">
-                {{ t(`${NS}.STATUS.review`) }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.preflight.counts.review) }}
-              </span>
-            </div>
-            <div
-              v-if="campaign.preflight?.counts?.protected"
-              class="flex flex-col"
-            >
-              <span class="text-xs text-n-slate-11">
-                {{ t(`${NS}.STATUS.protected`) }}
-              </span>
-              <span class="font-medium text-n-slate-12">
-                {{ number(campaign.preflight.counts.protected) }}
-              </span>
-            </div>
-          </div>
+        </footer>
+      </section>
+      <details class="mt-3 text-xs text-n-slate-11">
+        <summary class="min-h-11 cursor-pointer py-3">
+          {{ t(`${UX}.ALL_STATUS_FILTERS`) }}
+        </summary>
+        <div class="max-w-sm">
+          <EmailStatusFilter v-model="campaignStatus" campaign />
         </div>
-      </div>
+      </details>
+      <p class="mt-3 flex items-start gap-2 text-xs leading-5 text-n-slate-11">
+        <span class="i-lucide-shield-check size-4 shrink-0" />
+        {{ t(`${UX}.PROTECTION_NOTE`) }}
+      </p>
     </div>
-
+    <Dialog
+      v-if="diagnosticCampaign"
+      ref="diagnosticDialog"
+      :title="diagnosticCampaign.name"
+      width="3xl"
+      overflow-y-auto
+      :show-confirm-button="false"
+      :cancel-button-label="t(`${UX}.CLOSE`)"
+      @close="diagnosticCampaign = null"
+    >
+      <RecipientImportStatus
+        :campaign="diagnosticCampaign"
+        :can-recover="canManage"
+      />
+      <EmailCampaignHealth
+        :campaign="diagnosticCampaign"
+        @updated="fetchCampaigns(true)"
+        @problems="openRecipients(diagnosticCampaign, true)"
+      />
+      <Button
+        :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.MANAGE_RECIPIENTS')"
+        icon="i-lucide-users"
+        slate
+        outline
+        @click="openRecipients(diagnosticCampaign)"
+      />
+    </Dialog>
+    <Dialog
+      v-if="destructive"
+      ref="confirmDialog"
+      type="alert"
+      :title="t(`${UX}.CONFIRM_${destructive.action.toUpperCase()}`)"
+      :description="destructive.item.name"
+      :is-loading="isConfirming"
+      @confirm="confirmDestructive"
+      @close="destructive = null"
+    />
     <EmailCampaignDetailsDialog
       v-if="detailsCampaign"
       :campaign="detailsCampaign"
       :initial-problem="detailsProblems"
       @close="detailsCampaign = null"
+      @review="
+        router.push(reviewRoute(detailsCampaign));
+        detailsCampaign = null;
+      "
+      @updated="fetchCampaigns(true)"
     />
-  </CampaignLayout>
+  </section>
 </template>

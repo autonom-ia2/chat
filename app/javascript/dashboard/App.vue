@@ -1,4 +1,5 @@
 <script>
+import { useI18n } from 'vue-i18n';
 import { mapGetters } from 'vuex';
 import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
@@ -21,6 +22,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
 
 export default {
   name: 'App',
@@ -36,6 +38,7 @@ export default {
     LowBackupCodesBanner,
   },
   setup() {
+    const i18n = useI18n({ useScope: 'global' });
     const router = useRouter();
     const store = useStore();
     const { accountId } = useAccount();
@@ -44,6 +47,7 @@ export default {
     const { uiSettings } = useUISettings();
 
     return {
+      i18n,
       router,
       store,
       currentAccountId: accountId,
@@ -100,9 +104,9 @@ export default {
       const mql = window.matchMedia('(prefers-color-scheme: dark)');
       mql.onchange = e => setColorTheme(e.matches);
     },
-    setLocale(locale) {
+    async setLocale(locale) {
       if (locale) {
-        this.$root.$i18n.locale = locale;
+        await setDashboardLocale(this.i18n, locale);
       }
     },
     async initializeAccount() {
@@ -115,7 +119,7 @@ export default {
         account;
       const { pubsub_token: pubsubToken } = this.currentUser || {};
       // If user locale is set, use it; otherwise use account locale
-      this.setLocale(this.uiSettings?.locale || locale);
+      await this.setLocale(this.uiSettings?.locale || locale);
       this.latestChatwootVersion = latestChatwootVersion;
       vueActionCable.init(this.store, pubsubToken);
       this.reconnectService = new ReconnectService(this.store, this.router);

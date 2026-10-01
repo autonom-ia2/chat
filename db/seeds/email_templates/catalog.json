@@ -1,0 +1,86 @@
+[
+  {
+    "key": "cart-recovery-benefits",
+    "name": "Abandoned Cart with Benefits Breakdown",
+    "path": "abandoned-cart/01-cart-recovery-benefits.mjml",
+    "category": "abandoned-cart"
+  },
+  {
+    "key": "welcome-donation-activation",
+    "name": "Welcome & Account Activation for Donors",
+    "path": "account-activation/01-welcome-donation-activation.mjml",
+    "category": "account-activation"
+  },
+  {
+    "key": "email-verification-security",
+    "name": "Welcome & Email Verification (Security-Focused)",
+    "path": "account-activation/02-email-verification-security.mjml",
+    "category": "account-activation"
+  },
+  {
+    "key": "webinar-thank-you-review",
+    "name": "Webinar Thank You & Review Request",
+    "path": "feedback/01-webinar-thank-you-review.mjml",
+    "category": "feedback"
+  },
+  {
+    "key": "weekly-data-analysis",
+    "name": "Weekly Newsletter with Data Analysis",
+    "path": "newsletter/01-weekly-data-analysis.mjml",
+    "category": "newsletter"
+  },
+  {
+    "key": "newsletter-productivity-tips",
+    "name": "Productivity Newsletter - Quarterly Edition",
+    "path": "newsletter/02-newsletter-productivity-tips.mjml",
+    "category": "newsletter"
+  },
+  {
+    "key": "new-flavor-simple",
+    "name": "New Product Launch - Simple Hero",
+    "path": "product-launch/01-new-flavor-simple.mjml",
+    "category": "product-launch"
+  },
+  {
+    "key": "teaser-mystery",
+    "name": "Product Launch Teaser - Mystery Reveal",
+    "path": "product-launch/02-teaser-mystery.mjml",
+    "category": "product-launch"
+  },
+  {
+    "key": "review-request-post-delivery",
+    "name": "Post-Purchase Review Request",
+    "path": "receipt-invoice/01-review-request-post-delivery.mjml",
+    "category": "receipt-invoice"
+  },
+  {
+    "key": "breakup-final",
+    "name": "Re-engagement Breakup (Final Notice)",
+    "path": "reengagement/01-breakup-final.mjml",
+    "category": "reengagement"
+  },
+  {
+    "key": "anniversary-milestone",
+    "name": "Company Anniversary Celebration",
+    "path": "reengagement/02-anniversary-milestone.mjml",
+    "category": "reengagement"
+  },
+  {
+    "key": "win-back-poll-feedback",
+    "name": "Win-Back with Anonymous Poll",
+    "path": "reengagement/03-win-back-poll-feedback.mjml",
+    "category": "reengagement"
+  },
+  {
+    "key": "card-shipped",
+    "name": "Card Shipped Confirmation",
+    "path": "shipping-update/01-card-shipped.mjml",
+    "category": "shipping-update"
+  },
+  {
+    "key": "order-bump-discount",
+    "name": "Order Bump with Future Discount",
+    "path": "upsell/01-order-bump-discount.mjml",
+    "category": "upsell"
+  }
+]

@@ -21,6 +21,11 @@ const footerLocked = ref(false);
 
 const DEVICE_MAP = { desktop: 'Desktop', mobile: 'Mobile portrait' };
 let editorGeneration = 0;
+let savedCanvasView = null;
+let previewBodyObserver;
+let previewGeneration = 0;
+const PREVIEW_WIDTH = { desktop: 600, mobile: 320 };
+const PREVIEW_GUTTER = 64;
 
 const refreshSectors = () => {
   const ed = editor.value;
@@ -162,6 +167,8 @@ async function init(el, opts = {}) {
 
 function destroy() {
   editorGeneration += 1;
+  previewGeneration += 1;
+  previewBodyObserver?.disconnect();
   editor.value?.destroy();
   editor.value = null;
   isReady.value = false;
@@ -172,6 +179,7 @@ function destroy() {
   styleVersion.value = 0;
   device.value = 'desktop';
   footerLocked.value = false;
+  savedCanvasView = null;
 }
 
 // ---- BLOCKS ----
@@ -303,6 +311,105 @@ const setDevice = d => {
   device.value = d === 'mobile' ? 'mobile' : 'desktop';
 };
 
+// GrapesJS owns its iframe geometry and zoom; never scale the editor with CSS.
+const setCanvasPreview = async (fullView, fitToView = true) => {
+  const ed = editor.value;
+  if (!ed) return;
+  previewGeneration += 1;
+  const generation = previewGeneration;
+  previewBodyObserver?.disconnect();
+  const canvas = ed.Canvas;
+  const frame = canvas.getFrame();
+  const frameWindow = canvas.getWindow();
+  if (!fullView) {
+    if (!savedCanvasView) return;
+    ed.stopCommand('preview');
+    frame.set({ width: savedCanvasView.width, height: savedCanvasView.height });
+    canvas.setZoom(savedCanvasView.zoom);
+    canvas.setCoords(savedCanvasView.x, savedCanvasView.y);
+    const { scrollX, scrollY, viewportHeight } = savedCanvasView;
+    savedCanvasView = null;
+    // Restoring scroll while the frame is shrinking clamps it to the old
+    // viewport. Restore after resize until the original viewport is reached.
+    previewBodyObserver = new ResizeObserver(() => {
+      if (generation !== previewGeneration || ed !== editor.value) return;
+      frameWindow.scrollTo(scrollX, scrollY);
+      if (frameWindow.innerHeight <= viewportHeight) {
+        previewBodyObserver.disconnect();
+      }
+    });
+    previewBodyObserver.observe(canvas.getFrameEl());
+    return;
+  }
+  if (!savedCanvasView) {
+    savedCanvasView = {
+      width: frame.get('width'),
+      height: frame.get('height'),
+      zoom: canvas.getZoom(),
+      ...canvas.getCoords(),
+      scrollX: frameWindow.scrollX,
+      scrollY: frameWindow.scrollY,
+      viewportHeight: frameWindow.innerHeight,
+    };
+    ed.runCommand('preview');
+  }
+  const width = PREVIEW_WIDTH[device.value];
+  frame.set({ width, height: '' });
+  canvas.setCoords(0, 0);
+  frameWindow.scrollTo(0, 0);
+  await new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+  if (generation !== previewGeneration || ed !== editor.value) return;
+  // MJML wrappers have min-height: 100vh. Observing/auto-sizing them feeds the
+  // iframe height back into itself; measure the rendered email inside instead.
+  const content = canvas
+    .getBody()
+    .querySelector('[data-gjs-type="mj-body"]').firstElementChild;
+  const updateZoom = () => {
+    if (generation !== previewGeneration || ed !== editor.value) return;
+    if (fitToView) {
+      const height = Math.ceil(
+        content.getBoundingClientRect().bottom +
+          frameWindow.scrollY +
+          PREVIEW_GUTTER / 2
+      );
+      frame.set({ height });
+      canvas.fitViewport({
+        el: content,
+        gap: PREVIEW_GUTTER / 2,
+        zoom: zoom => Math.min(100, zoom),
+      });
+    } else {
+      canvas.setZoom(100);
+    }
+  };
+  updateZoom();
+  if (fitToView) {
+    previewBodyObserver = new ResizeObserver(updateZoom);
+    previewBodyObserver.observe(content);
+  }
+};
+
+const subscribeCanvasScroll = callback => {
+  const ed = editor.value;
+  let frameWindow;
+  const onScroll = () => callback(frameWindow.scrollY);
+  const bind = ({ window: loadedWindow } = {}) => {
+    frameWindow?.removeEventListener('scroll', onScroll);
+    frameWindow = loadedWindow || ed.Canvas.getWindow();
+    frameWindow.addEventListener('scroll', onScroll, { passive: true });
+  };
+  ed.on('canvas:frame:load', bind);
+  if (ed.Canvas.getBody()) bind();
+  return () => {
+    frameWindow?.removeEventListener('scroll', onScroll);
+    ed.off('canvas:frame:load', bind);
+  };
+};
+const adjustCanvasScroll = delta =>
+  editor.value?.Canvas.getWindow().scrollBy(0, delta);
+
 // ---- I/O MJML/HTML ----
 const getMjml = () => editor.value?.runCommand('mjml-code') || '';
 
@@ -372,6 +479,9 @@ export function useEmailEditor() {
     // TOP BAR / COMANDOS
     runCommand,
     setDevice,
+    setCanvasPreview,
+    subscribeCanvasScroll,
+    adjustCanvasScroll,
 
     // I/O MJML/HTML
     getMjml,

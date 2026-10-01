@@ -33,7 +33,7 @@ class Autonomia::Sso::Provisioner
     pending_agent_invitation_account ||
       registration_checkout_account ||
       confirmed_account_link ||
-      invited_linked_account ||
+      existing_linked_account ||
       raise_untrusted_account!
   end
 
@@ -61,9 +61,15 @@ class Autonomia::Sso::Provisioner
 
   def ensure_account_user(user, account, pending_invitation)
     AccountUser.find_or_initialize_by(user: user, account: account).tap do |account_user|
-      account_user.role = pending_invitation&.fetch('role', nil).presence || 'administrator'
-      account_user.custom_role_id = pending_invitation['custom_role_id'] if pending_invitation&.fetch('custom_role_id', nil).present?
-      account_user.inviter_id ||= pending_invitation['invited_by_user_id'] if pending_invitation.present?
+      if pending_invitation.present?
+        account_user.role = pending_invitation.fetch('role', nil).presence || 'administrator'
+        if pending_invitation.fetch('custom_role_id', nil).present?
+          account_user.custom_role_id = pending_invitation['custom_role_id']
+        end
+        account_user.inviter_id ||= pending_invitation['invited_by_user_id']
+      elsif account_user.new_record?
+        account_user.role = 'administrator'
+      end
       account_user.save!
     end
   end
@@ -173,12 +179,16 @@ class Autonomia::Sso::Provisioner
       &.account
   end
 
-  def invited_linked_account
+  def existing_linked_account
     user = linked_user
     return if user.blank?
 
-    memberships = user.account_users.human.where.not(inviter_id: nil).includes(:account).limit(2).to_a
-    memberships.one? ? memberships.first.account : nil
+    user.account_users
+        .human
+        .includes(:account)
+        .order(Arel.sql('active_at DESC NULLS LAST'), created_at: :desc, id: :desc)
+        .first
+        &.account
   end
 
   def raise_untrusted_account!

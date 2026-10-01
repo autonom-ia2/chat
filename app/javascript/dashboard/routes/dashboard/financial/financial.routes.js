@@ -1,6 +1,7 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
-import SubscriptionPage from './pages/SubscriptionPage.vue';
-import InvoicesPage from './pages/InvoicesPage.vue';
+
+const SubscriptionPage = () => import('./pages/SubscriptionPage.vue');
+const InvoicesPage = () => import('./pages/InvoicesPage.vue');
 
 const adminMeta = {
   permissions: ['administrator'],
