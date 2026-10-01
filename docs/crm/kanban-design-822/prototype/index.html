@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chat2You · Proposta Kanban</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="bg-slate-50 font-inter text-slate-900">
+    <a href="#main" class="fixed start-4 top-3 z-50 -translate-y-24 rounded-lg bg-white px-4 py-3 shadow focus:translate-y-0">Pular para o conteúdo</a>
+    <div class="flex h-dvh overflow-hidden">
+      <aside class="hidden w-56 shrink-0 flex-col bg-sidebar text-white md:flex" aria-label="Navegação do Chat2You">
+        <div class="flex flex-col items-center gap-3 px-4 pb-5 pt-5">
+          <img src="./assets/hub2you-icon.png" width="68" height="68" alt="Hub2You" />
+          <button type="button" data-demo-nav="Trocar conta" class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Hub2You · Demonstração <span data-icon="chevron"></span></button>
+        </div>
+        <div class="mx-3 mb-4 flex h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-sm text-white/80"><span data-icon="search"></span><span>Pesquisar no Chat2You</span></div>
+        <nav class="min-h-0 flex-1 overflow-y-auto px-3 text-sm" aria-label="Áreas do produto">
+          <div id="sidebar-links" class="space-y-1"></div>
+          <div class="mt-2 flex h-11 items-center gap-3 px-3 font-medium"><span data-icon="board"></span>CRM</div>
+          <div class="ms-5 border-s border-white/20 ps-2">
+            <a href="#main" aria-current="page" class="flex h-11 items-center rounded-lg bg-white/15 px-3 font-medium">Kanban</a>
+            <button type="button" data-view="calendar" class="flex h-11 w-full items-center rounded-lg px-3 text-white/85 hover:bg-white/10">Calendário</button>
+            <button type="button" data-demo-nav="Dashboard" class="flex h-11 w-full items-center rounded-lg px-3 text-white/85 hover:bg-white/10">Dashboard</button>
+          </div>
+          <button type="button" data-demo-nav="Financeiro" class="mt-2 flex h-11 w-full items-center gap-3 rounded-lg px-3 hover:bg-white/10"><span data-icon="wallet"></span>Financeiro</button>
+          <button type="button" data-demo-nav="Campanhas" class="flex h-11 w-full items-center gap-3 rounded-lg px-3 hover:bg-white/10"><span data-icon="campaign"></span>Campanhas</button>
+          <button type="button" data-demo-nav="Configurações" class="flex h-11 w-full items-center gap-3 rounded-lg px-3 hover:bg-white/10"><span data-icon="settings"></span>Configurações</button>
+        </nav>
+        <div class="space-y-3 border-t border-white/15 p-3">
+          <button type="button" data-demo-nav="Pergunte ao Guia" class="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-semibold text-sidebar"><span data-icon="help"></span>Pergunte ao Guia</button>
+          <div class="flex items-center gap-3"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-sm">CA</span><div class="min-w-0 text-sm"><p>Chat2You Admin</p><p class="text-xs text-white/75">Conta de demonstração</p></div></div>
+        </div>
+      </aside>
+      <main id="main" class="flex min-w-0 flex-1 flex-col">
+        <header class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6">
+          <h1 class="whitespace-nowrap text-xl font-semibold tracking-tight">CRM Kanban</h1>
+          <div class="ms-auto hidden gap-1 rounded-lg bg-slate-100 p-1 lg:flex" role="group" aria-label="Visualização" id="desktop-views"></div>
+          <div class="relative ms-auto lg:ms-0">
+            <button id="config-button" type="button" aria-label="Configurar CRM" aria-haspopup="menu" aria-expanded="false" class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="settings"></span><span class="hidden sm:inline">Configurar</span></button>
+            <div id="config-menu" role="menu" aria-label="Configurar CRM" class="absolute end-0 top-12 z-30 hidden w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"></div>
+          </div>
+          <button id="new-button" type="button" class="flex h-11 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><span data-icon="plus"></span><span class="hidden sm:inline">Nova oportunidade</span><span class="sm:hidden">Nova</span></button>
+        </header>
+        <div class="shrink-0 border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="relative w-full sm:w-auto">
+              <button id="pipeline-button" type="button" aria-haspopup="menu" aria-expanded="false" class="flex h-11 w-full min-w-56 items-center justify-between gap-5 rounded-lg border border-slate-200 px-3 text-sm hover:border-slate-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span><span class="me-2 text-slate-600">Funil</span><strong id="pipeline-label" class="font-semibold">Email Comercial</strong></span><span data-icon="chevron"></span></button>
+              <div id="pipeline-menu" role="menu" aria-label="Funis" class="absolute start-0 top-12 z-30 hidden w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"></div>
+            </div>
+            <label class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600"><span data-icon="search" class="text-slate-500"></span><span class="sr-only">Buscar oportunidade, contato ou empresa</span><input id="search" type="search" placeholder="Buscar oportunidade, contato ou empresa" class="w-full min-w-0 bg-transparent text-base outline-none sm:text-sm" /></label>
+            <button id="filter-button" type="button" aria-pressed="false" aria-expanded="false" aria-controls="filter-panel" class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="filter"></span>Filtros<span id="filter-badge" class="hidden rounded bg-blue-50 px-1.5 text-blue-700">1</span></button>
+            <button id="refresh-button" type="button" aria-label="Atualizar quadro" class="flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="refresh"></span></button>
+          </div>
+          <div id="mobile-views" class="mt-3 flex gap-1 rounded-lg bg-slate-100 p-1 lg:hidden" role="group" aria-label="Visualização"></div>
+          <fieldset id="filter-panel" class="mt-3 hidden rounded-lg border border-slate-200 bg-slate-50 p-3"><legend class="px-1 text-sm font-medium">Filtros do quadro</legend><div class="mb-3 flex justify-end"><button id="ai-filter-button" class="flex min-h-11 items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 text-sm font-medium text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="sparkles"></span>Encontrar com IA</button></div><div class="flex flex-wrap items-start gap-4"><div><p class="mb-2 text-xs font-medium text-slate-600">Responsável</p><div id="filter-options" class="flex flex-wrap gap-2"></div></div><div class="relative min-w-56"><p class="mb-2 text-xs font-medium text-slate-600">Empresa vinculada ao contato</p><button id="company-button" aria-haspopup="dialog" aria-expanded="false" class="flex h-11 w-full items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span id="company-label">Qualquer empresa</span><span data-icon="chevron"></span></button><div id="company-menu" role="dialog" aria-label="Escolher empresa" class="absolute start-0 top-[5rem] z-30 hidden w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-lg"></div></div><div><p class="mb-2 text-xs font-medium text-slate-600">Retorno</p><button id="overdue-button" aria-pressed="false" class="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="clock"></span>Somente atrasados</button></div></div></fieldset>
+        </div>
+        <div class="flex min-h-9 shrink-0 flex-wrap items-center gap-2 px-4 text-xs text-slate-600 lg:px-6"><p id="results" role="status" aria-live="polite" aria-atomic="true"></p><button id="clear-button" type="button" class="ms-1 hidden min-h-8 rounded px-2 font-medium text-blue-700 hover:bg-blue-50">Limpar filtros</button><div id="columns-nav" class="ms-auto hidden items-center gap-1 md:flex"><span class="me-3 hidden xl:inline">Arraste ou use Mover</span><button id="previous-columns" aria-label="Ver status anteriores" class="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600"><span data-icon="arrowLeft"></span></button><button id="next-columns" class="flex h-11 items-center gap-1 rounded-lg px-2 text-xs font-medium hover:bg-slate-100 disabled:opacity-30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">Mais status <span data-icon="arrowRight"></span></button></div></div>
+        <div id="applied-filters" aria-label="Filtros ativos" class="mx-4 mb-2 hidden flex-wrap items-center gap-2 lg:mx-6"></div>
+        <div id="mobile-stages" class="mx-4 mb-3 hidden items-center justify-between rounded-lg border border-slate-200 bg-white p-1 md:hidden"></div>
+        <div id="board-area" class="min-h-0 flex-1 overflow-auto px-4 pb-4 pt-2 lg:px-6"><div id="board" class="flex h-full min-h-0 gap-4"></div><div id="list" class="hidden"></div><div id="calendar" class="hidden"></div><div id="state-panel" class="hidden"></div></div>
+        <footer class="flex h-9 shrink-0 items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 text-xs text-slate-600 lg:px-6"><span>Protótipo · dados fictícios</span><button id="demo-button" type="button" class="flex h-8 items-center gap-1 rounded px-2 hover:bg-slate-100">Ver cenários <span data-icon="chevron"></span></button></footer>
+      </main>
+    </div>
+    <dialog id="drawer" aria-labelledby="drawer-title" class="fixed inset-y-0 start-auto end-0 m-0 h-dvh max-h-none w-full max-w-[40rem] border-0 p-0 backdrop:bg-slate-950/35">
+      <div class="flex h-full flex-col">
+        <header class="flex shrink-0 items-start justify-between gap-4 bg-navy px-6 py-6 text-white"><div><h2 id="drawer-title" class="text-2xl font-semibold"></h2><p id="drawer-subtitle" class="mt-2 text-sm text-white/85"></p></div><button id="drawer-close" type="button" aria-label="Fechar" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"><span data-icon="x"></span></button></header>
+        <div id="drawer-content" class="min-h-0 flex-1 overflow-y-auto p-6"></div>
+        <footer id="drawer-footer" class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4"></footer>
+      </div>
+    </dialog>
+    <dialog id="filters-drawer" aria-labelledby="filters-title" class="fixed inset-y-0 start-auto end-0 m-0 h-dvh max-h-none w-full max-w-[40rem] border-0 p-0 backdrop:bg-slate-950/35">
+      <div class="flex h-full flex-col">
+        <header class="flex shrink-0 items-start justify-between gap-4 bg-navy p-6 text-white"><div><h2 id="filters-title" class="text-2xl font-semibold">Filtrar oportunidades</h2><p class="mt-2 text-sm text-white/85">Escolha o que você precisa acompanhar.</p></div><button id="filters-close" aria-label="Fechar filtros" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-white/10"><span data-icon="x"></span></button></header>
+        <div id="filters-content" class="min-h-0 flex-1 overflow-y-auto px-4 pb-4"></div>
+        <footer class="shrink-0 border-t border-slate-200 p-4"><button id="filters-results" class="flex h-11 w-full items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700">Ver oportunidades</button></footer>
+      </div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-12 start-1/2 z-50 hidden w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-xl bg-sidebar px-4 py-3 text-sm text-white shadow-lg"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
