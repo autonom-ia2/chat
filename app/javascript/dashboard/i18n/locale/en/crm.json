@@ -152,6 +152,11 @@
     }
   },
   "CRM_KANBAN": {
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Deals belonging to contacts currently linked to this company. Only opportunities you can access.",
+      "CONTACT": "Contact: {name}",
+      "PAGINATION": "Company opportunity pages"
+    },
     "CONTACT_OPPORTUNITIES": {
       "TAB": "Opportunities",
       "TITLE": "CRM opportunities",

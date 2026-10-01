@@ -56,6 +56,22 @@ describe('#CrmKanbanAPI', () => {
     expect(crmKanban).toHaveProperty('getCalendarEvents');
   });
 
+  it('fetches only company opportunities with the account scope and cancellation signal', () => {
+    const signal = new AbortController().signal;
+    crmKanban.getCompanyOpportunities(
+      17,
+      { page: 2, result: 'all' },
+      { signal }
+    );
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/companies/17/opportunities',
+      {
+        params: { page: 2, result: 'all' },
+        signal,
+      }
+    );
+  });
+
   it('fetches only the requested contact opportunities with account scope and abort signal', () => {
     const signal = new AbortController().signal;
     crmKanban.getContactOpportunities(

@@ -141,6 +141,13 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/cards`, { params });
   }
 
+  getCompanyOpportunities(companyId, params = {}, { signal } = {}) {
+    return axios.get(`${this.url}/companies/${companyId}/opportunities`, {
+      params,
+      signal,
+    });
+  }
+
   getContactOpportunities(contactId, params = {}, { signal } = {}) {
     return axios.get(`${this.url}/contacts/${contactId}/opportunities`, {
       params,

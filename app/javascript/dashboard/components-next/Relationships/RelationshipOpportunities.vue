@@ -6,12 +6,29 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
-defineProps({ list: { type: Object, required: true } });
+const props = defineProps({
+  list: { type: Object, required: true },
+  entity: {
+    type: String,
+    default: 'contact',
+    validator: value => ['contact', 'company'].includes(value),
+  },
+});
 const { t, locale } = useI18n();
 const { accountId } = useAccount();
 // Account catalogs use pt_BR; browser Intl requires the BCP 47 spelling pt-BR.
 const intlLocale = computed(() => locale.value.replace('_', '-'));
 const label = key => t(`CRM_KANBAN.CONTACT_OPPORTUNITIES.${key}`);
+const help = computed(() =>
+  props.entity === 'company'
+    ? t('CRM_KANBAN.COMPANY_OPPORTUNITIES.HELP')
+    : label('HELP')
+);
+const paginationLabel = computed(() =>
+  props.entity === 'company'
+    ? t('CRM_KANBAN.COMPANY_OPPORTUNITIES.PAGINATION')
+    : label('PAGINATION')
+);
 const results = computed(() => [
   { value: 'active', label: label('ACTIVE') },
   { value: 'all', label: label('ALL') },
@@ -54,7 +71,8 @@ const destination = card => ({
 <template>
   <section
     class="grid min-w-0 gap-4 px-4 py-3 sm:px-6"
-    data-contact-opportunities
+    :data-contact-opportunities="entity === 'contact' ? '' : undefined"
+    :data-company-opportunities="entity === 'company' ? '' : undefined"
     :aria-busy="list.loading"
   >
     <header class="flex items-start justify-between gap-3">
@@ -69,7 +87,7 @@ const destination = card => ({
           {{ label('TITLE') }}
         </h3>
         <p class="mb-0 mt-2 text-xs leading-5 text-n-slate-11">
-          {{ label('HELP') }}
+          {{ help }}
         </p>
       </div>
       <Button
@@ -158,7 +176,8 @@ const destination = card => ({
             t('CRM_KANBAN.CONTACT_OPPORTUNITIES.OPEN', { title: card.title })
           "
           class="grid min-w-0 gap-3 rounded-xl border border-n-weak bg-n-solid-1 p-4 text-n-slate-12 hover:border-n-brand/40 hover:bg-n-brand/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-          data-contact-opportunity
+          :data-contact-opportunity="entity === 'contact' ? '' : undefined"
+          :data-company-opportunity="entity === 'company' ? '' : undefined"
         >
           <div class="flex min-w-0 items-start justify-between gap-3">
             <h4 class="m-0 min-w-0 break-words text-sm font-semibold">
@@ -169,6 +188,21 @@ const destination = card => ({
               aria-hidden="true"
             />
           </div>
+          <p
+            v-if="entity === 'company'"
+            class="m-0 flex min-w-0 items-center gap-2 text-xs text-n-blue-11"
+            data-opportunity-contact-name
+          >
+            <span
+              class="i-lucide-contact-round size-4 shrink-0"
+              aria-hidden="true"
+            />
+            <span class="min-w-0 break-words">{{
+              t('CRM_KANBAN.COMPANY_OPPORTUNITIES.CONTACT', {
+                name: card.contact.name,
+              })
+            }}</span>
+          </p>
           <p class="m-0 break-words text-xs leading-5 text-n-slate-11">
             {{ [card.pipeline.name, card.stage.name].join(' · ') }}
           </p>
@@ -216,7 +250,7 @@ const destination = card => ({
       <nav
         v-if="list.state.page > 1 || list.state.hasMore"
         class="flex items-center justify-between gap-2"
-        :aria-label="label('PAGINATION')"
+        :aria-label="paginationLabel"
       >
         <Button
           type="button"

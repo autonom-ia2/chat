@@ -152,6 +152,11 @@
     }
   },
   "CRM_KANBAN": {
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Negociações dos contatos vinculados a esta empresa. Apenas oportunidades que você pode acessar.",
+      "CONTACT": "Contato: {name}",
+      "PAGINATION": "Páginas de oportunidades da empresa"
+    },
     "CONTACT_OPPORTUNITIES": {
       "TAB": "Oportunidades",
       "TITLE": "Oportunidades no CRM",

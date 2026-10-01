@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import ContactDetailActions from 'dashboard/components-next/Relationships/ContactDetailActions.vue';
-import ContactOpportunities from 'dashboard/components-next/Relationships/ContactOpportunities.vue';
+import RelationshipOpportunities from 'dashboard/components-next/Relationships/RelationshipOpportunities.vue';
 import { useContactOpportunities } from 'dashboard/components-next/Relationships/useContactOpportunities';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import RelationshipTabs from 'dashboard/components-next/Relationships/RelationshipTabs.vue';
@@ -264,7 +264,7 @@ onMounted(() => {
             <Spinner />
           </div>
           <template v-else>
-            <ContactOpportunities
+            <RelationshipOpportunities
               v-if="opportunitiesAvailable && activeTab === 'opportunities'"
               :list="opportunityList"
             />

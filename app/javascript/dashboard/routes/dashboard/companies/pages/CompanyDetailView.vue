@@ -1,11 +1,15 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 
 import { useRelationships } from 'dashboard/composables/useRelationships';
 import CompanyMedia from 'dashboard/components-next/Relationships/CompanyMedia.vue';
+import RelationshipOpportunities from 'dashboard/components-next/Relationships/RelationshipOpportunities.vue';
+import { useRelationshipOpportunities } from 'dashboard/components-next/Relationships/useRelationshipOpportunities';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import RelationshipActionMenu from 'dashboard/components-next/Relationships/RelationshipActionMenu.vue';
 import RelationshipBreadcrumb from 'dashboard/components-next/Relationships/RelationshipBreadcrumb.vue';
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
@@ -23,7 +27,8 @@ import CompanyProfileCard from 'dashboard/components-next/Companies/CompanyDetai
 import ConfirmCompanyDeleteDialog from 'dashboard/components-next/Companies/CompanyDetail/ConfirmCompanyDeleteDialog.vue';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
-const { mediaEnabled, navigationEnabled, accountId } = useRelationships();
+const { mediaEnabled, navigationEnabled, companiesEnabled, accountId } =
+  useRelationships();
 const route = useRoute();
 const router = useRouter();
 const companiesStore = useCompaniesStore();
@@ -65,6 +70,34 @@ const showInitialLoadingState = computed(
     !hasCompany.value && (isFetchingCompany.value || isFetchingContacts.value)
 );
 
+const { canViewCrm } = useCrmPermissions();
+const opportunitiesAvailable = computed(
+  () =>
+    navigationEnabled.value &&
+    companiesEnabled.value &&
+    canViewCrm.value &&
+    window.globalConfig?.CRM_KANBAN_ENABLED === 'true'
+);
+const opportunityList = reactive(
+  useRelationshipOpportunities({
+    accountId,
+    recordId: companyId,
+    enabled: computed(
+      () =>
+        opportunitiesAvailable.value &&
+        hasCompany.value &&
+        !isFetchingCompany.value &&
+        activeSidebarTab.value === 'opportunities'
+    ),
+    fetchOpportunities: (...args) =>
+      CrmKanbanAPI.getCompanyOpportunities(...args),
+  })
+);
+watch(opportunitiesAvailable, available => {
+  if (!available && activeSidebarTab.value === 'opportunities')
+    activeSidebarTab.value = 'contacts';
+});
+
 const breadcrumbItems = computed(() => [
   { label: t('COMPANIES.HEADER') },
   ...(hasCompany.value
@@ -81,10 +114,12 @@ const SIDEBAR_TABS_OPTIONS = [
 
 const sidebarTabs = computed(() =>
   [
+    ...(opportunitiesAvailable.value ? [{ value: 'opportunities' }] : []),
     ...SIDEBAR_TABS_OPTIONS,
     ...(mediaEnabled.value ? [{ key: 'MEDIA', value: 'media' }] : []),
   ].map(tab => ({
     label: {
+      opportunities: t('CRM_KANBAN.CONTACT_OPPORTUNITIES.TAB'),
       media: t('RELATIONSHIPS.MEDIA.TAB'),
       notes: t('COMPANIES.DETAIL.SIDEBAR.TABS.NOTES'),
       history: t('COMPANIES.DETAIL.SIDEBAR.TABS.HISTORY'),
@@ -333,6 +368,10 @@ onBeforeUnmount(() => {
       <RelationshipTabs
         v-if="navigationEnabled"
         :id="`company-sidebar-${context}`"
+        :class="{
+          '[&>[role=tablist]]:grid [&>[role=tablist]]:grid-cols-3':
+            opportunitiesAvailable,
+        }"
         :tabs="sidebarTabs"
         :initial-active-tab="activeSidebarTabIndex"
         @tab-changed="handleSidebarTabChange"
@@ -356,6 +395,11 @@ onBeforeUnmount(() => {
             : undefined
         "
       >
+        <RelationshipOpportunities
+          v-if="opportunitiesAvailable && activeSidebarTab === 'opportunities'"
+          :list="opportunityList"
+          entity="company"
+        />
         <CompanyMedia
           v-if="mediaEnabled && activeSidebarTab === 'media'"
           :company-id="companyId"

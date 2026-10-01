@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–8. Parte 9 implementada: consultar oportunidades vinculadas na ficha do contato, com visibilidade, filtros e paginação no servidor. Validada localmente, aguardando aprovação das telas reais antes do próximo incremento. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–9. Parte 10 implementada: oportunidades dos contatos vinculados na ficha empresarial. Após a reconexão do Mac, foram concluídos os caminhos de administrador/agente, persistência e regressão da ficha do contato. Aguardando aprovação visual antes da revisão integrada. A navegação empresarial com papel personalizado permanece bloqueada, não contada como aprovada. Sem autorização de merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -19,8 +19,8 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6 aprovada: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; revisão transversal pendente. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
-| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Parte 3 abre a ficha real; parte 8 aprovada cria oportunidade pela ficha preservando a aba de origem. Parte 9 lista as oportunidades autorizadas com busca/paginação, sem carregar conversas ou alterar cadastros. Aceite visual e revisão transversal pendentes. |
-| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 3 consulta empresa canônica e abre ficha real; integração completa pendente. |
+| M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Partes 3, 8 e 9 aprovadas: ficha real, criação contextual e lista autorizada. Regressão reexecutada na parte 10 após compartilhar apresentação/consulta. Revisão transversal pendente. |
+| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 lista oportunidades por contatos canônicos atuais, com nomes, filtros, paginação e abertura do mesmo card. Aguardando aceite visual; navegação de papel personalizado e revisão transversal pendentes. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
 ## Parte 1 — Contrato do vínculo existente
@@ -153,9 +153,21 @@ Desktop e celular compartilham o estado da mesma consulta. Trocar conta/contato/
 
 Evidências: [auditoria da parte 9](../audit/2026-09-30-792-crm-relationships-part-9.md) e [11 telas reais](screenshots/792-part9/README.md). Bateria local: 484 testes frontend selecionados, 507 backend aprovados e quatro suspensos antigos separados, 28 checks de navegador com bundle compilado. Consulta sem gravações confirmada diretamente no banco. O CI remoto e a revisão independente permanecem gates próprios.
 
+## Parte 10 — Oportunidades na ficha da empresa
+
+A aba Oportunidades foi adicionada ao Acompanhamento da empresa, mantendo Contatos como entrada. Reúne as negociações dos contatos atualmente vinculados por `company_id`, com identificação da pessoa, situação, funil/etapa, valor/moeda, responsável e previsão. Busca e paginação são feitas no servidor; homônimos e texto legado não geram vínculo. Trocar/desvincular contato muda o conjunto da próxima consulta sem apagar negociações.
+
+`GET /api/v1/accounts/:account_id/crm/companies/:company_id/opportunities` existe somente no overlay Enterprise e exige CRM, Empresas da conta, leitura da empresa e escopo nativo de cards. Retorna apenas a projeção comercial e `contact: {id,name}`; não expõe mensagens, notas, metadados de IA ou dados de contato desnecessários. Linhas e total têm a mesma visibilidade.
+
+Contato e empresa compartilham `RelationshipOpportunities`, `useRelationshipOpportunities` e a projeção de `ProfileOpportunitiesController`, preservando o contrato e os seletores anteriores. Abertura em outra aba mantém a ficha e seu rascunho. O card do CRM continua com 640px; a ficha empresarial mantém o painel nativo, com abas equilibradas em duas linhas. Sem alteração de modelos, dependências ou migrações.
+
+**Limite conhecido:** a rota da ficha aceita administrator/agent e não carrega para o papel personalizado sintético contact_view/crm_view. Esse cenário está bloqueado, não aprovado. Não houve ampliação de acesso. A API desse papel foi testada separadamente; a UI com agente padrão mostrou somente os dois cards autorizados. O alinhamento de papéis deverá ser tratado antes de liberar o conjunto.
+
+Evidências: [auditoria da parte 10](../audit/2026-09-30-792-crm-relationships-part-10.md) e [12 telas reais](screenshots/792-part10/README.md). Reexecutados 502 testes frontend, 527 backend aprovados e quatro suspensos antigos, 28 checks de navegador concluídos (empresa + regressão do contato). A comparação direta no banco confirmou consulta sem alterações. O cenário bloqueado não está incluído nos aprovados.
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após aprovação visual da parte 9, abordar a lista de oportunidades na ficha da empresa, usando os contatos realmente vinculados e as permissões existentes. Não iniciar essa etapa nem fazer merge/deploy por consequência desta entrega. A revisão transversal e independente permanece obrigatória antes da liberação final.
+Após o aceite visual da parte 10, iniciar a revisão integrada M01–M08: consistência entre telas, permissões — incluindo o bloqueio de papéis personalizados —, concorrência entre escritores, efeitos externos e regressão do conjunto. Não fazer merge/deploy por consequência desta entrega. CI remoto e revisão independente continuam obrigatórios antes do pedido final de merge.
 
 ## Validação e publicação
 

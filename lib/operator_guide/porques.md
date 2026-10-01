@@ -1580,6 +1580,15 @@
 - gotchas: Empresas é liberado por conta, então pode simplesmente não aparecer no menu; criar a empresa não vincula contato nenhum, o vínculo é feito dentro da ficha ou pelo campo empresa do contato; busca e ordenação ficam no endereço da página, então dá para compartilhar o link já filtrado.
 - nav_target: `companies_dashboard_index`
 
+### consultar_oportunidades_na_ficha_da_empresa
+- titulo: Consultar oportunidades dos contatos de uma empresa
+- rota: companies_dashboard_show
+- intent: Quais negociações esta empresa tem?; Como vejo as oportunidades de todos os contatos da empresa?
+- onde_fica: Relacionamentos > Empresas > abrir empresa > Acompanhamento > Oportunidades
+- pre_requisitos: Empresas, Relacionamentos e CRM habilitados; acesso à empresa e permissão de visualizar CRM. As oportunidades respeitam a visibilidade individual do usuário.
+- passos: Abra **Oportunidades** no painel da empresa. Cada item mostra a negociação, o contato vinculado, funil, etapa, situação e valor. Busque pelo título, ajuste **Situação** e use **Próxima** para mais resultados. Clique para abrir a mesma oportunidade no CRM em outra aba; a ficha original permanece aberta.
+- gotchas: os contatos considerados são os vinculados atualmente à empresa, inclusive os que não aparecem na primeira página de Contatos. Nome de empresa igual ou nome legado não cria associação. Ao trocar/desvincular um contato, suas oportunidades deixam de aparecer na empresa anterior na próxima consulta, sem apagar as negociações. Contatos continua sendo a aba inicial. Por padrão, arquivadas ficam fora. O total inclui somente os resultados permitidos. Moedas não são somadas nem convertidas; a consulta não altera cadastros.
+
 ### ficha_da_empresa
 - titulo: Ver a empresa por dentro e vincular os contatos dela
 - rota: companies_dashboard_show

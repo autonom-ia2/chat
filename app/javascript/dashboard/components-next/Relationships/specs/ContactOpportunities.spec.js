@@ -1,10 +1,13 @@
 import { mount } from '@vue/test-utils';
 import { reactive, ref } from 'vue';
-import ContactOpportunities from '../ContactOpportunities.vue';
+import RelationshipOpportunities from '../RelationshipOpportunities.vue';
 
 const accountLocale = ref('pt_BR');
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: key => key, locale: accountLocale }),
+  useI18n: () => ({
+    t: (key, values) => (values?.name ? `${key} ${values.name}` : key),
+    locale: accountLocale,
+  }),
 }));
 
 vi.mock('dashboard/composables/useAccount', () => ({
@@ -47,12 +50,39 @@ beforeEach(() => {
   });
 });
 afterEach(() => wrapper?.unmount());
-const render = () => {
-  wrapper = mount(ContactOpportunities, {
-    props: { list },
+const render = (props = {}) => {
+  wrapper = mount(RelationshipOpportunities, {
+    props: { list, ...props },
     global: { stubs: { RouterLink } },
   });
 };
+
+it('identifies the contact behind every company opportunity without nesting a contact link', () => {
+  list.state.items = [
+    { ...row, contact: { id: 12, name: 'Mariana Costa' } },
+    { ...row, id: 8, contact: { id: 13, name: 'João Ribeiro' } },
+  ];
+  render({ entity: 'company' });
+  expect(wrapper.find('[data-company-opportunities]').exists()).toBe(true);
+  expect(wrapper.findAll('[data-company-opportunity]')).toHaveLength(2);
+  expect(
+    wrapper.findAll('[data-opportunity-contact-name]').map(item => item.text())
+  ).toEqual([
+    'CRM_KANBAN.COMPANY_OPPORTUNITIES.CONTACT Mariana Costa',
+    'CRM_KANBAN.COMPANY_OPPORTUNITIES.CONTACT João Ribeiro',
+  ]);
+  expect(wrapper.findAll('a a')).toHaveLength(0);
+  expect(wrapper.text()).toContain('COMPANY_OPPORTUNITIES.HELP');
+  expect(wrapper.find('nav').attributes('aria-label')).toContain(
+    'COMPANY_OPPORTUNITIES.PAGINATION'
+  );
+});
+it('keeps the contact projection unchanged when no company context is supplied', () => {
+  render();
+  expect(wrapper.findAll('[data-opportunity-contact-name]')).toHaveLength(0);
+  expect(wrapper.find('[data-company-opportunities]').exists()).toBe(false);
+  expect(wrapper.text()).toContain('CONTACT_OPPORTUNITIES.HELP');
+});
 
 it('shows the canonical title, pipeline, stage, status, owner and currency without a summed total', () => {
   render();
