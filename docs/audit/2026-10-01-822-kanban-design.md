@@ -138,3 +138,10 @@ busca/filtro consistente com empresa do card. Node --check e Tailwind CLI passar
 aviso Browserslist apenas. QA UI: 11 cards, Lista/Calendário, filtro Norte=2 e busca
 Alvorada=1 no cenário de 4, Escape/foco e mobile sem overflow. Capturas 19/20/21.
 Mudanças restritas a docs/protótipo. Orçamento US$1, gasto US$0. Sem merge/deploy.
+
+## Retirada da faixa a pedido de Rodrigo
+
+A faixa de contagem/instrução acima do Kanban foi removida. Navegação de status
+transferida ao rodapé existente da prévia; contagem permanece acessível sem ocupar
+altura. Desktop ganhou 44px. Conferidos pager e celular sem overflow; Tailwind
+compilado, diff check e console sem erros. Apenas docs/protótipo; sem produção.

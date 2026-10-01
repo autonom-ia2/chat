@@ -9,7 +9,7 @@ em revisão na [PR #793](https://github.com/autonom-ia2/chat/pull/793).
 ## Abrir e revisar
 
 - [Protótipo navegável](prototype/index.html): abrir por um servidor local.
-- **Atual:** [cliente em destaque](screenshots/19-identidade-cliente.png), [celular](screenshots/20-identidade-cliente-celular.png) e [Prospecção sintética](screenshots/21-identidade-prospeccao.png).
+- **Atual:** [quadro sem faixa intermediária](screenshots/22-kanban-sem-faixa.png); [hierarquia do cliente](screenshots/19-identidade-cliente.png), [celular](screenshots/20-identidade-cliente-celular.png) e [Prospecção sintética](screenshots/21-identidade-prospeccao.png).
 - Histórico: [quadro desktop — cinco status](screenshots/06-kanban-1920.png).
 - [Contato e empresa no detalhe](screenshots/02-card-empresa.png).
 - [Kanban no celular](screenshots/03-kanban-celular.png).

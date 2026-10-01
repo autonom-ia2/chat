@@ -124,3 +124,12 @@ fixtures ganhos/perdidos/arquivados para comprovar esses recortes.
 As capturas 19/20/21 mostram protótipo com dados fictícios, não produto integrado.
 O bloqueador P1 de empresa por card foi identificado por leitura de main; a nova
 consulta/backend ainda não foi implementada ou validada em produção.
+
+## Retirada da faixa intermediária
+
+Pedido de Rodrigo: retirar contagem/instrução/navegação da faixa acima do quadro.
+Faixa removida; board desktop começa em y=133, ganhando 44px. Contagem preservada
+para leitores de tela; navegação horizontal fica no rodapé existente da prévia.
+Mais status avança scrollLeft para 326; celular 390×844 sem overflow, rodapé em 844.
+Limpar filtros foi transferido para a barra existente, aparecendo somente quando
+necessário. Build Tailwind e diff check passaram; console sem erro/warn. Captura 22.
