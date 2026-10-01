@@ -84,7 +84,7 @@
       "SECURITY_SECTION": {
         "TITLE": "Segurança",
         "NOTE": "Gerencie recursos adicionais de segurança para sua conta.",
-        "MFA_BUTTON": "Gerenciar autenticação de dois fatores "
+        "MFA_BUTTON": "Gerenciar autenticação de dois fatores"
       },
       "SESSIONS_SECTION": {
         "TITLE": "Sessões Ativas",
@@ -248,19 +248,19 @@
     "SWITCH_ACCOUNT": "Alterar conta",
     "CONTACT_SUPPORT": "Contate o suporte",
     "SELECTOR_SUBTITLE": "Selecione uma conta da lista a seguir",
-    "PROFILE_SETTINGS": "Configurações do Perfil",
-    "INVITE_CONNECTION": "Status Conexão",
-    "YEAR_IN_REVIEW": "Retrospectiva do Ano",
+    "PROFILE_SETTINGS": "Configurações do perfil",
+    "INVITE_CONNECTION": "Status da conexão",
+    "YEAR_IN_REVIEW": "Retrospectiva do ano",
     "KEYBOARD_SHORTCUTS": "Atalhos do teclado",
-    "APPEARANCE": "Alterar Tema",
+    "APPEARANCE": "Alterar tema",
     "SUPER_ADMIN_CONSOLE": "Console de Super Admin",
-    "DOCS": "Central de Ajuda",
+    "DOCS": "Central de ajuda",
     "CHANGELOG": "Notas de versão",
     "LOGOUT": "Encerrar sessão"
   },
   "AUTONOMIA": {
     "INVITE_CONNECTION": {
-      "TITLE": "Status Conexão",
+      "TITLE": "Status da conexão",
       "DESCRIPTION": "Conecte a caixa de entrada criada para você escaneando o QR Code pelo WhatsApp.",
       "EMPTY": "Nenhuma caixa de entrada criada por convite está vinculada ao seu usuário."
     }
