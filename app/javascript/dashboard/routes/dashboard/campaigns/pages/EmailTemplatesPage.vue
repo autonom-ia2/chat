@@ -1,14 +1,23 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import {
+  computed,
+  onActivated,
+  onMounted,
+  onBeforeUnmount,
+  ref,
+  nextTick,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 import { buildTemplateCampaignPayload } from './emailTemplateBody';
 
 const { t } = useI18n();
@@ -16,8 +25,6 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 const canManage = useCanManage('campaign_manage');
-
-const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 
 const campaignId = computed(() => {
   const id = Number(route.params.campaignId);
@@ -38,28 +45,60 @@ const cardEls = new Map();
 const inFlightThumbs = new Set();
 let thumbObserver = null;
 let isUnmounted = false;
+let mounted = false;
 // Monotonic token so a slow preview fetch can't overwrite a newer one.
 let previewSeq = 0;
 
+const UX = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
+const library = ref('global');
+const search = ref('');
+const previewDevice = ref('desktop');
+const previewDialog = ref(null);
+const newTemplate = ref(null);
+const displayName = template =>
+  template.catalog_key
+    ? t(`${UX}.MODELS.${template.catalog_key}`)
+    : template.name;
+const libraryTemplates = computed(() =>
+  templates.value.filter(item =>
+    library.value === 'global'
+      ? item.account_id === null
+      : item.account_id !== null
+  )
+);
+const categoryLabel = category => {
+  if (category === 'all') {
+    return t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.ALL_CATEGORIES');
+  }
+  if (category === 'meus-modelos') return t(`${UX}.MY_MODELS`);
+  return t(`CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.CATEGORIES.${category}`, category);
+};
+
 const categories = computed(() => {
   const unique = new Set(
-    templates.value.map(item => item.category).filter(Boolean)
+    templates.value
+      .filter(item =>
+        library.value === 'global'
+          ? item.account_id === null
+          : item.account_id !== null
+      )
+      .map(item => item.category)
+      .filter(Boolean)
   );
   return ['all', ...Array.from(unique).sort()];
 });
 
 const filteredTemplates = computed(() => {
-  if (activeCategory.value === 'all') return templates.value;
-  return templates.value.filter(item => item.category === activeCategory.value);
+  const query = search.value.trim().toLocaleLowerCase();
+  return libraryTemplates.value.filter(
+    item =>
+      (activeCategory.value === 'all' ||
+        item.category === activeCategory.value) &&
+      [displayName(item), categoryLabel(item.category)].some(value =>
+        value?.toLocaleLowerCase().includes(query)
+      )
+  );
 });
-
-const categoryLabel = category => {
-  if (category === 'all') {
-    return t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.ALL_CATEGORIES');
-  }
-  return t(`CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.CATEGORIES.${category}`, category);
-};
-
 const fetchTemplates = async () => {
   isLoading.value = true;
   try {
@@ -127,6 +166,9 @@ const goBack = () => {
 
 const openPreview = async template => {
   previewTemplate.value = template;
+  previewDevice.value = 'desktop';
+  await nextTick();
+  previewDialog.value.open();
   previewHtml.value = '';
   // The gallery index payload is lightweight (no body); fetch the full template so we can
   // render its compiled HTML. body_html is compiled at seed time; fall back gracefully if absent.
@@ -173,16 +215,13 @@ const useTemplate = async template => {
       useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.APPLIED'));
       goToBuilder();
     } else {
-      router.push({
-        name: 'campaigns_email_index',
-        params: { accountId: route.params.accountId },
-      });
+      newTemplate.value = { ...campaignPayload, name: displayName(template) };
     }
   } catch (error) {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.APPLY_ERROR'));
   } finally {
     isApplying.value = false;
-    closePreview();
+    if (previewTemplate.value) previewDialog.value.close();
   }
 };
 
@@ -201,10 +240,23 @@ onMounted(async () => {
   // Observe any cards already registered before the observer existed.
   cardEls.forEach(el => thumbObserver.observe(el));
 
-  if (campaignId.value && !campaigns.value.length) {
-    await store.dispatch('emailCampaigns/get');
+  try {
+    if (campaignId.value) {
+      await store.dispatch('emailCampaigns/getOne', campaignId.value);
+    } else {
+      await Promise.all([
+        store.dispatch('emailSenderIdentities/get'),
+        store.dispatch('inboxes/get'),
+      ]);
+    }
+  } catch (error) {
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.LOAD_ERROR'));
   }
   await fetchTemplates();
+  mounted = true;
+});
+onActivated(() => {
+  if (mounted) fetchTemplates();
 });
 
 onBeforeUnmount(() => {
@@ -215,213 +267,253 @@ onBeforeUnmount(() => {
   }
   cardEls.clear();
 });
+
+const chooseLibrary = value => {
+  library.value = value;
+  activeCategory.value = 'all';
+  search.value = '';
+};
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 h-full min-h-0 bg-n-surface-1">
-    <div
-      class="flex items-center justify-between gap-3 px-4 py-3 border-b border-n-weak"
-    >
-      <div class="flex items-center min-w-0 gap-2">
-        <Button
-          icon="i-lucide-arrow-left"
-          color="slate"
-          variant="ghost"
-          size="sm"
-          @click="goBack()"
-        />
-        <p class="mb-0 font-medium truncate text-n-slate-12">
-          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.TITLE') }}
-        </p>
+  <section
+    class="flex h-full min-w-0 flex-1 flex-col overflow-y-auto bg-n-slate-2"
+  >
+    <div class="mx-auto w-full max-w-[90rem] p-5 lg:p-8">
+      <p class="mb-5 flex items-center gap-2 text-xs text-n-slate-11">
+        <button class="min-h-9" @click="goBack">
+          {{ t(`${UX}.CAMPAIGNS`) }}
+        </button>
+        <span class="i-lucide-chevron-right size-3.5" />
+        {{ t(`${UX}.LIBRARY_BUTTON`) }}
+      </p>
+      <header class="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1
+            class="mb-0 text-[1.75rem] font-semibold tracking-tight text-n-slate-12"
+          >
+            {{ t(`${UX}.LIBRARY_TITLE`) }}
+          </h1>
+          <p class="mb-0 mt-2 text-sm leading-6 text-n-slate-11">
+            {{ t(`${UX}.LIBRARY_SUBTITLE`) }}
+          </p>
+        </div>
+        <div class="relative">
+          <Button
+            :label="t(`${UX}.${campaignId ? 'BACK_EDITOR' : 'BACK_CAMPAIGNS'}`)"
+            icon="i-lucide-arrow-left"
+            slate
+            outline
+            class="!min-h-11 !rounded-xl"
+            @click="goBack"
+          />
+          <EmailCampaignDialog
+            v-if="newTemplate"
+            :template="newTemplate"
+            @saved="newTemplate = null"
+            @close="newTemplate = null"
+          />
+        </div>
+      </header>
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <nav
+          class="flex gap-1 rounded-xl border border-n-weak bg-n-solid-1 p-1"
+          :aria-label="t(`${UX}.LIBRARY_TITLE`)"
+        >
+          <button
+            v-for="option in ['global', 'own']"
+            :key="option"
+            class="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium"
+            :class="
+              library === option
+                ? 'bg-n-blue-3 text-n-blue-11'
+                : 'text-n-slate-11'
+            "
+            :aria-pressed="library === option"
+            @click="chooseLibrary(option)"
+          >
+            <span
+              class="size-4"
+              :class="
+                option === 'global'
+                  ? 'i-lucide-layout-template'
+                  : 'i-lucide-bookmark'
+              "
+            />
+            {{ t(`${UX}.${option === 'global' ? 'LIBRARY' : 'MY_MODELS'}`) }}
+          </button>
+        </nav>
+        <label
+          class="flex min-h-11 w-full items-center gap-2 rounded-xl border border-n-weak bg-n-solid-1 px-3 sm:w-64"
+        >
+          <span class="i-lucide-search size-4 shrink-0 text-n-slate-11" />
+          <input
+            v-model="search"
+            type="search"
+            :aria-label="t(`${UX}.SEARCH_MODEL`)"
+            :placeholder="t(`${UX}.SEARCH_MODEL`)"
+            class="m-0 min-w-0 w-full !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
+          />
+        </label>
       </div>
-    </div>
-
-    <div
-      v-if="!isLoading && categories.length > 1"
-      class="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-n-weak"
-    >
-      <Button
-        v-for="category in categories"
-        :key="category"
-        :label="categoryLabel(category)"
-        size="sm"
-        :color="activeCategory === category ? 'blue' : 'slate'"
-        :variant="activeCategory === category ? 'solid' : 'outline'"
-        @click="activeCategory = category"
-      />
-    </div>
-
-    <div class="flex-1 min-h-0 overflow-y-auto">
-      <div
-        v-if="isLoading"
-        class="flex items-center justify-center h-full text-n-slate-11"
-      >
-        <Spinner />
-      </div>
-
-      <div
+      <nav class="mb-6 flex flex-wrap gap-2" :aria-label="t(`${UX}.PURPOSE`)">
+        <button
+          v-for="category in categories"
+          :key="category"
+          class="min-h-11 rounded-full border px-4 text-xs font-medium"
+          :class="
+            activeCategory === category
+              ? 'border-n-brand bg-n-brand text-white'
+              : 'border-n-weak bg-n-solid-1 text-n-slate-11 hover:bg-n-alpha-1'
+          "
+          :aria-pressed="activeCategory === category"
+          @click="activeCategory = category"
+        >
+          {{ categoryLabel(category) }}
+        </button>
+      </nav>
+      <div v-if="isLoading" class="flex justify-center py-16"><Spinner /></div>
+      <p
         v-else-if="!filteredTemplates.length"
-        class="flex flex-col items-center justify-center h-full gap-2 text-n-slate-11"
+        class="rounded-2xl border border-n-weak bg-n-solid-1 p-12 text-center text-sm text-n-slate-11"
       >
-        <span class="i-lucide-layout-template text-2xl" />
-        <p class="mb-0 text-sm">
-          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.EMPTY') }}
-        </p>
-      </div>
-
-      <div
-        v-else
-        class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        <div
+        {{ t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.EMPTY') }}
+      </p>
+      <div v-else class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <article
           v-for="template in filteredTemplates"
           :key="template.id"
           :ref="el => registerCard(template.id, el)"
           :data-template-id="template.id"
-          class="flex flex-col overflow-hidden border rounded-xl border-n-weak bg-n-solid-1"
+          class="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm"
         >
           <button
-            type="button"
-            class="relative flex items-center justify-center h-40 overflow-hidden border-b bg-n-alpha-1 border-n-weak"
+            class="relative flex h-56 items-center justify-center overflow-hidden border-b border-n-weak bg-n-alpha-1 p-4"
+            :aria-label="
+              t(`${UX}.PREVIEW_MODEL`, { name: displayName(template) })
+            "
             @click="openPreview(template)"
           >
             <img
               v-if="template.thumbnail_url"
               :src="template.thumbnail_url"
-              :alt="template.name"
-              class="object-cover w-full h-full"
+              :alt="displayName(template)"
+              class="h-full w-full rounded-xl object-cover"
             />
             <div
               v-else-if="thumbHtml[template.id]"
-              class="absolute inset-0 overflow-hidden bg-white pointer-events-none"
+              class="relative h-full w-full overflow-hidden rounded-xl border border-n-weak bg-white"
             >
               <iframe
                 :srcdoc="thumbHtml[template.id]"
-                :title="template.name"
+                :title="displayName(template)"
                 sandbox=""
+                referrerpolicy="no-referrer"
                 scrolling="no"
-                loading="lazy"
+                tabindex="-1"
                 aria-hidden="true"
-                class="w-[600px] h-[320px] origin-top-left scale-50 border-0 pointer-events-none"
+                loading="lazy"
+                class="pointer-events-none h-[56rem] w-[37.5rem] origin-top-left scale-50 border-0"
               />
             </div>
             <Spinner v-else-if="thumbHtml[template.id] === undefined" />
-            <span v-else class="i-lucide-image text-3xl text-n-slate-9" />
+            <span v-else class="i-lucide-image size-8 text-n-slate-9" />
           </button>
-          <div class="flex flex-col flex-1 gap-1 p-3">
-            <p class="mb-0 text-sm font-medium truncate text-n-slate-12">
-              {{ template.name }}
-            </p>
-            <p v-if="template.category" class="mb-0 text-xs text-n-slate-11">
+          <div class="flex flex-1 flex-col gap-2 p-5">
+            <span
+              class="w-fit rounded-full bg-n-blue-3 px-2.5 py-1 text-xs font-medium text-n-blue-11"
+            >
               {{ categoryLabel(template.category) }}
+            </span>
+            <h2
+              class="mb-0 mt-1 text-base font-semibold leading-6 text-n-slate-12"
+            >
+              {{ displayName(template) }}
+            </h2>
+            <p class="mb-0 text-xs leading-5 text-n-slate-11">
+              {{ t(`${UX}.MODEL_HINT`) }}
             </p>
-            <div class="flex items-center gap-2 mt-2">
+            <div class="mt-auto flex flex-wrap gap-2 pt-3">
               <Button
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.PREVIEW')"
-                color="slate"
-                variant="outline"
-                size="sm"
-                class="flex-1"
+                :label="t(`${UX}.PREVIEW`)"
+                icon="i-lucide-eye"
+                slate
+                outline
+                class="!min-h-11 flex-1 !rounded-xl"
                 @click="openPreview(template)"
               />
               <Button
                 v-if="canManage"
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.USE')"
-                color="blue"
-                size="sm"
-                class="flex-1"
+                :label="t(`${UX}.USE_MODEL`)"
+                icon="i-lucide-arrow-right"
+                trailing-icon
+                class="!min-h-11 flex-1 !rounded-xl"
                 :is-loading="isApplying"
                 @click="useTemplate(template)"
               />
             </div>
           </div>
-        </div>
+        </article>
       </div>
+      <p class="mb-0 mt-6 text-xs text-n-slate-11">
+        {{ t(`${UX}.LIBRARY_COUNT`, { count: filteredTemplates.length }) }}
+      </p>
     </div>
-
-    <div
+    <Dialog
       v-if="previewTemplate"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-n-alpha-black2"
-      @click.self="closePreview"
+      ref="previewDialog"
+      :title="displayName(previewTemplate)"
+      type="edit"
+      width="3xl"
+      :confirm-button-label="t(`${UX}.USE_MODEL`)"
+      :show-confirm-button="canManage"
+      :is-loading="isApplying"
+      overflow-y-auto
+      @confirm="useTemplate(previewTemplate)"
+      @close="closePreview"
     >
-      <div
-        class="flex max-h-[85vh] w-[min(48rem,calc(100vw-3rem))] min-w-0 flex-col overflow-hidden rounded-xl border border-n-weak bg-n-solid-2 shadow-xl"
-      >
-        <div
-          class="flex items-start justify-between gap-3 p-6 pb-4 border-b border-n-weak"
-        >
-          <div class="min-w-0">
-            <h3 class="mb-1 text-base font-medium leading-6 text-n-slate-12">
-              {{ previewTemplate.name }}
-            </h3>
-            <p
-              v-if="previewTemplate.category"
-              class="mb-0 text-sm leading-5 text-n-slate-11"
-            >
-              {{ categoryLabel(previewTemplate.category) }}
-            </p>
-          </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="mb-0 text-xs text-n-slate-11">
+          {{ categoryLabel(previewTemplate.category) }}
+        </p>
+        <div class="flex gap-1 rounded-lg bg-n-alpha-1 p-1">
           <Button
-            icon="i-lucide-x"
-            color="slate"
-            variant="ghost"
-            size="sm"
-            @click="closePreview"
-          />
-        </div>
-
-        <div class="flex flex-1 min-h-0 p-6 overflow-y-auto">
-          <div
-            v-if="isPreviewLoading"
-            class="flex items-center justify-center flex-1 text-n-slate-11"
-          >
-            <Spinner />
-          </div>
-          <iframe
-            v-else-if="previewHtml"
-            :srcdoc="previewHtml"
-            :title="previewTemplate.name"
-            sandbox=""
-            class="w-full min-h-[60vh] flex-1 rounded-lg border border-n-weak bg-white"
-          />
-          <img
-            v-else-if="previewTemplate.thumbnail_url"
-            :src="previewTemplate.thumbnail_url"
-            :alt="previewTemplate.name"
-            class="self-center max-w-full mx-auto rounded-lg"
-          />
-          <div
-            v-else
-            class="flex flex-col items-center justify-center flex-1 gap-2 text-n-slate-11"
-          >
-            <span class="i-lucide-image text-3xl text-n-slate-9" />
-            <p class="mb-0 text-sm">
-              {{ t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.NO_PREVIEW') }}
-            </p>
-          </div>
-        </div>
-
-        <div
-          class="flex items-center justify-end w-full gap-3 p-6 pt-4 border-t border-n-weak bg-n-alpha-2"
-        >
-          <Button
-            variant="faded"
-            color="slate"
+            v-for="option in ['desktop', 'mobile']"
+            :key="option"
             type="button"
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.CANCEL')"
-            @click="closePreview"
-          />
-          <Button
-            v-if="canManage"
-            type="button"
-            color="blue"
-            icon="i-lucide-check"
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.USE')"
-            :is-loading="isApplying"
-            @click="useTemplate(previewTemplate)"
+            :label="t(`${UX}.DEVICES.${option}`)"
+            slate
+            :variant="previewDevice === option ? 'solid' : 'ghost'"
+            class="!min-h-11"
+            :aria-pressed="previewDevice === option"
+            @click="previewDevice = option"
           />
         </div>
       </div>
-    </div>
-  </div>
+      <div
+        class="max-h-[62vh] overflow-y-auto rounded-xl border border-n-weak bg-n-alpha-1 p-3"
+      >
+        <Spinner v-if="isPreviewLoading" />
+        <div
+          v-else
+          class="mx-auto w-full"
+          :class="
+            previewDevice === 'mobile' ? 'max-w-[22rem]' : 'max-w-[37.5rem]'
+          "
+        >
+          <iframe
+            v-if="previewHtml"
+            :srcdoc="previewHtml"
+            :title="displayName(previewTemplate)"
+            sandbox=""
+            referrerpolicy="no-referrer"
+            class="h-[70rem] w-full border-0 bg-white"
+          />
+          <p v-else class="p-6 text-sm text-n-slate-11">
+            {{ t('CAMPAIGN.EMAIL_CAMPAIGN.GALLERY.NO_PREVIEW') }}
+          </p>
+        </div>
+      </div>
+    </Dialog>
+  </section>
 </template>

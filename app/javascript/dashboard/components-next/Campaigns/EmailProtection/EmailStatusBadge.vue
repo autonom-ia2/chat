@@ -43,16 +43,14 @@ const visual = computed(
 );
 const label = computed(() => displayStatusLabel(t, key.value));
 
-const hint = computed(() =>
-  t(
-    `${NS}.REASON.${reasonKey(
-      props.record.suppression_reason ||
-        props.record.reason_code ||
-        props.record.pause_reason ||
-        props.record.preflight_reason
-    )}`
-  )
-);
+const hint = computed(() => {
+  const reason =
+    props.record.suppression_reason ||
+    props.record.reason_code ||
+    props.record.pause_reason ||
+    props.record.preflight_reason;
+  return reason ? t(`${NS}.REASON.${reasonKey(reason)}`) : label.value;
+});
 </script>
 
 <template>
