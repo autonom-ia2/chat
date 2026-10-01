@@ -79,11 +79,17 @@ class Crm::Ai::StageCriteriaImprover
       If descriptions conflict, preserve the target's meaning and flag the ambiguity
       in note instead of redefining the target or deciding new rules for other stages.
       Do not invent business rules, deadlines, required documents, prices or thresholds.
+      Do not add delivery-channel or document-format requirements unless explicitly defined for the target.
       Do not infer a lost sale solely from silence or a won sale solely from intent.
       If the target is ambiguous, preserve what is known and use note to ask one short clarification.
       Return description and note in the requested UI language. Leave note empty when no clarification is needed.
-      A blank description can be drafted from the target's name with the other
-      stages as context; flag uncertainty in note. Otherwise, do not expand its scope.
+      If the target description is blank, CREATE its classification criteria from
+      the target's name and the available names and descriptions of the other stages.
+      Infer the target's business milestone, not an undocumented procedure.
+      Restrictions mentioned in other stages are not automatically requirements for the target.
+      Keep an unclear delivery channel, format or completion rule unspecified and ask about it in note.
+      If that context cannot establish a needed rule, flag the missing definition in note.
+      If the target description is present, IMPROVE those criteria without expanding their scope.
       Do not rename stages, change other stages, classify real cards or claim to have read customer conversations.
     TEXT
   end
