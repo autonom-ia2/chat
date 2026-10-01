@@ -1,0 +1,62 @@
+{
+  "result": "passed",
+  "scenarios": [
+    {
+      "first_writer": "contact",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    },
+    {
+      "first_writer": "contact",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    },
+    {
+      "first_writer": "contact",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    },
+    {
+      "first_writer": "conversation",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    },
+    {
+      "first_writer": "conversation",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    },
+    {
+      "first_writer": "conversation",
+      "outcomes": [
+        "committed",
+        "rejected_conflict"
+      ],
+      "contact_consistent": true,
+      "commercial_data_preserved": true
+    }
+  ],
+  "database": "isolated local UI",
+  "data": "synthetic",
+  "mechanism": "two real PostgreSQL connections; both first-writer orderings, shared card lock"
+}

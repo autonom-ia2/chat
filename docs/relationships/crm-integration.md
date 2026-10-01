@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–9. Parte 10 implementada: oportunidades dos contatos vinculados na ficha empresarial. Após a reconexão do Mac, foram concluídos os caminhos de administrador/agente, persistência e regressão da ficha do contato. Aguardando aprovação visual antes da revisão integrada. A navegação empresarial com papel personalizado permanece bloqueada, não contada como aprovada. Sem autorização de merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–10. Parte 11 iniciou a revisão integrada e corrigiu o ciclo de navegação de contact_view e o vínculo reverso de conversa incompatível, incluindo estados antigos e concorrência no mesmo card. Foram reproduzidos bloqueios de autorização de escrita em contatos/empresas que exigem próximo incremento. A revisão independente está em BLOCKED_MODEL_TIER e o workflow de Relacionamentos está desabilitado remotamente. Sem aprovação global, merge ou deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -15,12 +15,12 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | Cenário | Entrega esperada | Estado neste checkpoint |
 |---|---|---|
 | M01 — Card com relacionamento | Aba Relacionamento, editores independentes, atributos e mídias. | Partes 3–5: contato/empresa canônicos, editores separados, atributos/mídias e vínculo empresarial dentro da lateral de 40rem. Trechos visuais até a parte 5 aprovados; revisão transversal pendente. |
-| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3: proteção, API e UI para buscar/vincular/criar pessoa no mesmo card; trecho visual aprovado. |
+| M02 — Card sem vínculo | Vincular/criar depois; troca consistente sem transferir conversas. | Partes 1–3 aprovadas. Parte 11 protege também conversa → card e os dois escritores no mesmo lock. Outros escritores continuam em revisão. |
 | M03 — Existente | Criar oportunidade usando um contato existente, sem duplicá-lo. | Parte 6 aprovada: duas seções nativas, busca por contato/empresa, seleção, criação e repetição segura; revisão transversal pendente. |
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Partes 3, 8 e 9 aprovadas: ficha real, criação contextual e lista autorizada. Regressão reexecutada na parte 10 após compartilhar apresentação/consulta. Revisão transversal pendente. |
-| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 lista oportunidades por contatos canônicos atuais, com nomes, filtros, paginação e abertura do mesmo card. Aguardando aceite visual; navegação de papel personalizado e revisão transversal pendentes. |
+| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 aprovada visualmente para administrador/agente. Parte 11 resolve o ciclo de fallback sem conceder acesso empresarial ao papel personalizado; direitos de consulta/escrita são bloqueadores ainda abertos. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
 ## Parte 1 — Contrato do vínculo existente
@@ -165,9 +165,19 @@ Contato e empresa compartilham `RelationshipOpportunities`, `useRelationshipOppo
 
 Evidências: [auditoria da parte 10](../audit/2026-09-30-792-crm-relationships-part-10.md) e [12 telas reais](screenshots/792-part10/README.md). Reexecutados 502 testes frontend, 527 backend aprovados e quatro suspensos antigos, 28 checks de navegador concluídos (empresa + regressão do contato). A comparação direta no banco confirmou consulta sem alterações. O cenário bloqueado não está incluído nos aprovados.
 
+## Parte 11 — Primeira rodada de revisão integrada
+
+O caminho reverso de vínculo também valida a pessoa: anexar conversa de outro contato é recusado antes de gravar link/histórico. O lock é compartilhado com a troca de contato; decisões sobre a primária usam o estado atual. Seis disputas entre duas conexões PostgreSQL confirmaram uma operação válida e a outra recusada, sem mistura de contatos ou alterações comerciais.
+
+A navegação de contact_view não entra mais em ciclo ao acessar a rota empresarial não autorizada: volta para Contatos, destino já permitido. Isso **não concede acesso à empresa** nem corrige sozinho seus direitos de edição. A diferença entre abrir uma página e ter permissão para alterar cadastros continua explícita.
+
+A auditoria reproduziu em banco de teste que contact_view consegue alterar contato/empresa pela API e que crm_manage_cards, sem contact_manage, consegue criar os cadastros compartilhados. As políticas permissivas preexistem à branch e são reutilizadas pelos novos caminhos. Esses achados são bloqueadores pendentes, não testes de segurança aprovados. Não foram alteradas políticas de cadastro neste incremento.
+
+Reexecutados 7.081 testes frontend completos, 540 backend aprovados e quatro suspensos anteriores, 19 checks de navegador e seis ensaios de concorrência separados. Revisão independente tentada, mas o modelo configurado foi recusado pelo Codex autenticado; sem downgrade e sem aprovação independente. O workflow específico de Relacionamentos está disabled_manually, não simplesmente aguardando execução. Evidências: [auditoria da parte 11](../audit/2026-10-01-792-crm-relationships-part-11.md) e [telas reais](screenshots/792-part11/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após o aceite visual da parte 10, iniciar a revisão integrada M01–M08: consistência entre telas, permissões — incluindo o bloqueio de papéis personalizados —, concorrência entre escritores, efeitos externos e regressão do conjunto. Não fazer merge/deploy por consequência desta entrega. CI remoto e revisão independente continuam obrigatórios antes do pedido final de merge.
+Após o aceite das correções da parte 11, tratar a separação de leitura e escrita de cadastros e os caminhos CRM que as reutilizam. Alinhar controles da UI e autorização no servidor, preservando os contratos de administrador/agente padrão e sem liberar edição por conceder apenas visualização. Continuar a revisão dos demais escritores, efeitos externos e projeções de dados. CI de Relacionamentos e revisão independente devem ser resolvidos antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
 
 ## Validação e publicação
 

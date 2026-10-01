@@ -114,6 +114,8 @@ jobs:
           spec/services/crm/cards/creator_spec.rb
           spec/services/crm/cards/contact_creator_spec.rb
           spec/services/crm/cards/contact_linker_spec.rb
+          spec/services/crm/cards/conversation_linker_spec.rb
+          spec/services/crm/cards/conversation_linker_integrity_spec.rb
           --format progress --format json --out tmp/relationships-rspec.json
       - name: Real native converter tests
         run: bundle exec rspec spec/relationships_unit

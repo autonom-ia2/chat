@@ -46,6 +46,19 @@ RSpec.describe 'CRM card contact links (M02)', type: :request do
     expect(conversation.reload.contact_id).to eq(contact.id)
   end
 
+  it 'also refuses attaching a different persons conversation through the reverse endpoint' do
+    conflicting = create_crm_conversation(account: account, inbox: inbox, contact: replacement)
+    before = card.reload.attributes
+    expect do
+      post "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}/link_conversation",
+           params: { conversation_id: conflicting.id }, headers: auth_headers(admin)
+    end.to not_change(Crm::CardConversation, :count).and not_change(Crm::Activity, :count)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['attributes']).to eq(['contact'])
+    expect(response.body).not_to include(replacement.name, replacement.email, conflicting.uuid)
+    expect(card.reload.attributes).to eq(before)
+  end
+
   it 'checks secondary conversations without exposing their content in the error' do
     card.card_conversations.create!(account: account, conversation: conversation, linked_by: admin)
     post path, params: { contact_id: replacement.id }, headers: auth_headers(admin)
