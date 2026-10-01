@@ -157,6 +157,12 @@ const selectedCriteria = computed({
     } else selectedStage.value.aiCriteria = value;
   },
 });
+const hasSelectedCriteria = computed(
+  () => selectedCriteria.value.trim() !== ''
+);
+const hasUnnamedStages = computed(() =>
+  form.stages.some(stage => !stage.name.trim())
+);
 const isEditing = computed(() => props.mode === 'edit');
 const criteriaReady = computed(
   () =>
@@ -886,22 +892,35 @@ useFixedPanelPresence(computed(() => props.show));
                     class="reset-base !mb-0 !h-auto min-h-[12rem] w-full rounded-2xl border border-n-weak bg-n-surface-1 px-4 py-4 text-base leading-7 text-n-slate-12 focus:outline focus:outline-2 focus:outline-n-brand"
                   />
                   <div
+                    v-if="isEditing"
                     class="flex flex-wrap items-center justify-between gap-3"
                   >
                     <span class="text-xs text-n-slate-11">
-                      {{ t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_TIP') }}
+                      {{
+                        t(
+                          hasUnnamedStages
+                            ? 'CRM_KANBAN.PIPELINE_EDITOR.NAMES_REQUIRED'
+                            : hasSelectedCriteria
+                              ? 'CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_TIP'
+                              : 'CRM_KANBAN.PIPELINE_EDITOR.CREATE_HELP'
+                        )
+                      }}
                     </span>
                     <Button
                       v-if="isEditing"
-                      :label="t('CRM_KANBAN.PIPELINE_EDITOR.IMPROVE')"
+                      :label="
+                        t(
+                          hasSelectedCriteria
+                            ? 'CRM_KANBAN.PIPELINE_EDITOR.IMPROVE'
+                            : 'CRM_KANBAN.PIPELINE_EDITOR.CREATE'
+                        )
+                      "
                       icon="i-lucide-sparkles"
                       slate
                       faded
                       :is-loading="improving"
                       :disabled="
-                        !criteriaReady ||
-                        improving ||
-                        form.stages.some(item => !item.name.trim())
+                        !criteriaReady || improving || hasUnnamedStages
                       "
                       @click="improveCriteria"
                     />
@@ -939,7 +958,13 @@ useFixedPanelPresence(computed(() => props.show));
                         @click="applySuggestion"
                       />
                       <Button
-                        :label="t('CRM_KANBAN.PIPELINE_EDITOR.KEEP')"
+                        :label="
+                          t(
+                            hasSelectedCriteria
+                              ? 'CRM_KANBAN.PIPELINE_EDITOR.KEEP'
+                              : 'CRM_KANBAN.PIPELINE_EDITOR.DISMISS'
+                          )
+                        "
                         slate
                         ghost
                         @click="suggestion = null"
