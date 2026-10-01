@@ -56,6 +56,13 @@ const ensureCrmAiEnabled = (to, _from, next) => {
 
 export const routes = [
   {
+    path: frontendURL('accounts/:accountId/campaigns/links'),
+    name: 'campaigns_tracked_links_index',
+    meta: campaignsMeta,
+    beforeEnter: ensureCrmEnabled,
+    component: () => import('../campaigns/pages/TrackedLinksPage.vue'),
+  },
+  {
     path: frontendURL('accounts/:accountId/crm'),
     name: 'crm_kanban_index',
     meta,

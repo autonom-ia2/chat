@@ -9,7 +9,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
 
   def create
     inbox = Current.account.inboxes.find(tracked_link_params[:inbox_id])
-    authorize inbox, :campaigns?
+    authorize ::Campaign, :create?
 
     tracked_link = Ctwa::TrackedLink.create!(
       account: Current.account,
@@ -22,7 +22,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
   end
 
   def destroy
-    authorize @tracked_link.inbox, :campaigns?
+    authorize ::Campaign, :destroy?
 
     @tracked_link.destroy!
     head :no_content

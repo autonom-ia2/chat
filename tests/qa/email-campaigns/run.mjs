@@ -1019,7 +1019,7 @@ try {
     }
   );
   await check(
-    'PT: tracked-link inbox selector matches the adjacent input height',
+    'PT: tracked links are absent from email campaign management',
     async () => {
       const form = page.locator('form').filter({
         has: page.getByRole('textbox', {
@@ -1027,28 +1027,14 @@ try {
           exact: true,
         }),
       });
-      const input = form.getByRole('textbox', {
-        name: await t('CRM_KANBAN.TRACKED_LINKS.NAME'),
-        exact: true,
-      });
-      const trigger = form.getByRole('button', {
-        name: await t('CRM_KANBAN.TRACKED_LINKS.INBOX'),
-        exact: true,
-      });
-      const [left, right] = await Promise.all([
-        input.boundingBox(),
-        trigger.boundingBox(),
-      ]);
-      assert(left && right, 'Tracked-link controls are not rendered');
+      assert((await form.count()) === 0, 'Old tracked-link form remains');
       assert(
-        Math.abs(left.height - right.height) <= 1,
-        JSON.stringify({ left, right })
+        !results.requests.some(request =>
+          request.path.includes('/ctwa_tracked_links')
+        ),
+        'Email campaign management still loads tracked links'
       );
-      assert(
-        Math.abs(left.y + left.height - right.y - right.height) <= 3,
-        JSON.stringify({ left, right })
-      );
-      return { inputHeight: left.height, triggerHeight: right.height };
+      return { trackedLinkForms: 0, trackedLinkRequests: 0 };
     }
   );
   await check(

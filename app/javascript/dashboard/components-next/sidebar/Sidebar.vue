@@ -1039,10 +1039,8 @@ const menuItems = computed(() => {
       name: 'Campaigns',
       label: t('SIDEBAR.CAMPAIGNS'),
       icon: 'i-lucide-megaphone',
-      // Ordem do produto: 1) Campanhas de e-mail, 2) Modelos WhatsApp, 3) WhatsApp Oficial,
-      // 4) WhatsApp API, 5) Chat ao vivo, 6) SMS, 7) Gestão de campanhas. Itens condicionais
-      // (e-mail / WhatsApp API / Gestão) somem da posição sem afetar a ordem relativa dos demais.
-      // Modelos e Gestão têm endereço próprio em /campaigns (#725): só este grupo fica aceso.
+      // Links and QR codes follow email campaigns, before WhatsApp templates.
+      // They require CRM, independently of the email add-on.
       children: [
         ...(emailCampaignEnabled.value
           ? [
@@ -1050,6 +1048,16 @@ const menuItems = computed(() => {
                 name: 'Email Campaigns',
                 label: t('SIDEBAR.EMAIL_CAMPAIGNS'),
                 to: accountScopedRoute('campaigns_email_index'),
+              },
+            ]
+          : []),
+        ...(crmKanbanEnabled.value && canViewCampaigns.value
+          ? [
+              {
+                name: 'Campaign Links and QR codes',
+                label: t('CRM_KANBAN.TRACKED_LINKS.PAGE.TITLE'),
+                to: accountScopedRoute('campaigns_tracked_links_index'),
+                activeOn: ['campaigns_tracked_links_index'],
               },
             ]
           : []),
