@@ -235,7 +235,7 @@
         "EMPTY_HINT": "Create your first link and QR code to identify where your conversations come from.",
         "FIRST_CAMPAIGN": "Create first campaign",
         "NO_RESULTS": "No campaigns found. Try another name.",
-        "LIST_COUNT": "{count} campaigns · cumulative results",
+        "LIST_COUNT": "{count} campaigns · cumulative results | {count} campaign · cumulative results | {count} campaigns · cumulative results",
         "ATTRIBUTION_TITLE": "The source follows the conversation",
         "ATTRIBUTION_HINT": "Use a link for each store, salesperson or promotion. When a conversation starts, its source is recorded in the CRM.",
         "DETAILS": "Selected campaign details",

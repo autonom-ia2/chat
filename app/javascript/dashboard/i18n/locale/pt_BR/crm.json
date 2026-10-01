@@ -235,7 +235,7 @@
         "EMPTY_HINT": "Crie seu primeiro link e QR code para identificar de onde chegam suas conversas.",
         "FIRST_CAMPAIGN": "Criar primeira campanha",
         "NO_RESULTS": "Nenhuma campanha encontrada. Tente outro nome.",
-        "LIST_COUNT": "{count} campanhas · resultados acumulados",
+        "LIST_COUNT": "{count} campanhas · resultados acumulados | {count} campanha · resultados acumulados | {count} campanhas · resultados acumulados",
         "ATTRIBUTION_TITLE": "A origem acompanha a conversa",
         "ATTRIBUTION_HINT": "Use um link para cada loja, vendedor ou divulgação. Quando a conversa começa, a origem fica registrada no CRM.",
         "DETAILS": "Detalhes da campanha selecionada",

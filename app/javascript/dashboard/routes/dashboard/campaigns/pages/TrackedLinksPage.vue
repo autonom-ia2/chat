@@ -303,7 +303,11 @@ onMounted(fetchLinks);
             </div>
             <p class="m-0 mt-4 text-xs text-n-slate-11">
               {{
-                t(`${NS}.LIST_COUNT`, { count: format(filteredLinks.length) })
+                t(
+                  `${NS}.LIST_COUNT`,
+                  { count: format(filteredLinks.length) },
+                  filteredLinks.length
+                )
               }}
             </p>
             <div
