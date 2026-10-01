@@ -257,6 +257,8 @@ const canAddPipelineInbox = computed(
   () =>
     isEditing.value &&
     props.pipeline?.id &&
+    !props.isSavingPipelineInbox &&
+    !props.isRemovingPipelineInbox &&
     availableInboxes.value.some(inbox => inbox.id === newPipelineInbox.inboxId)
 );
 // The feed URL is account-level and minted on demand by the backend (token in
@@ -522,17 +524,24 @@ watch(
 );
 
 // Deleting a stage keeps the drawer open and removes it server-side, so we still
-// need to drop it from the form. Reconcile deletions only (a persisted stage that
-// vanished server-side) instead of a full resetForm, to preserve in-progress edits
-// to the remaining stages. New stages and renames are NOT pulled in from realtime.
+// need to drop it from the form and refresh the destination's card count for the
+// next deletion. Preserve local edits rather than resetting the entire form.
 watch(
   () => props.stages,
   serverStages => {
     if (!props.show || !isEditing.value) return;
-    const serverStageIds = new Set(serverStages.map(stage => stage.id));
-    const next = form.stages.filter(
-      stage => !stage.id || serverStageIds.has(stage.id)
+    const serverStagesById = new Map(
+      serverStages.map(stage => [stage.id, stage])
     );
+    const next = form.stages.filter(
+      stage => !stage.id || serverStagesById.has(stage.id)
+    );
+    next.forEach(stage => {
+      if (stage.id)
+        stage.total_cards_count = serverStagesById.get(
+          stage.id
+        ).total_cards_count;
+    });
     if (next.length !== form.stages.length) form.stages = next;
     if (selectedStage.value && !next.includes(selectedStage.value))
       view.value = 'home';
@@ -1491,6 +1500,9 @@ useFixedPanelPresence(computed(() => props.show));
                       ghost
                       sm
                       :is-loading="isRemovingPipelineInbox"
+                      :disabled="
+                        isRemovingPipelineInbox || isSavingPipelineInbox
+                      "
                       :title="t('CRM_KANBAN.PIPELINE_DRAWER.REMOVE_INBOX')"
                       @click="removePipelineInbox(pipelineInbox)"
                     />
