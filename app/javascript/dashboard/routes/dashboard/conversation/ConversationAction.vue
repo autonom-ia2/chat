@@ -38,10 +38,11 @@ export default {
     const { agentsList } = useAgentsList(true, {
       includeAIAssignees: true,
     });
-    const { canViewCrm } = useCrmPermissions();
+    const { canViewCrm, canManageCards } = useCrmPermissions();
     return {
       agentsList,
       canViewCrm,
+      canManageCards,
     };
   },
   data() {
@@ -108,6 +109,9 @@ export default {
         window.globalConfig?.CRM_KANBAN_ENABLED === 'true'
       );
     },
+    crmCreationEnabled() {
+      return this.crmKanbanEnabled && this.canViewCrm && this.canManageCards;
+    },
     crmPipelineOptions() {
       return this.crmPipelines.map(pipeline => ({
         value: pipeline.id,
@@ -122,7 +126,7 @@ export default {
     },
     canCreateCrmCard() {
       return (
-        this.crmKanbanEnabled &&
+        this.crmCreationEnabled &&
         this.currentChat?.id &&
         this.crmPipelineId &&
         this.crmStageId &&
@@ -235,7 +239,7 @@ export default {
     },
   },
   watch: {
-    crmKanbanEnabled: {
+    crmCreationEnabled: {
       immediate: true,
       handler(enabled) {
         if (enabled) this.loadCrmPipelines();
@@ -255,7 +259,7 @@ export default {
   },
   methods: {
     async loadCrmPipelines() {
-      if (!this.crmKanbanEnabled || this.crmIsLoadingPipelines) return;
+      if (!this.crmCreationEnabled || this.crmIsLoadingPipelines) return;
       this.crmIsLoadingPipelines = true;
       try {
         const pipelines = await this.$store.dispatch(
@@ -271,6 +275,7 @@ export default {
       }
     },
     async loadCrmStages(pipelineId) {
+      if (!this.crmCreationEnabled) return;
       this.crmIsLoadingStages = true;
       try {
         const response = await CrmKanbanAPI.getStages(pipelineId);
@@ -306,6 +311,7 @@ export default {
       }
     },
     openCrmKanban() {
+      if (!this.canViewCrm) return;
       this.$router.push({
         name: 'crm_kanban_index',
         params: { accountId: this.currentChat.account_id },
@@ -443,7 +449,7 @@ export default {
       :conversation-id="currentChat.id"
     />
     <section
-      v-if="crmKanbanEnabled"
+      v-if="crmKanbanEnabled && canViewCrm"
       class="my-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
     >
       <div class="mb-3 flex items-start justify-between gap-3">
@@ -472,7 +478,10 @@ export default {
         <CrmConversationStageBadge :conversation-id="conversationId" />
       </div>
 
-      <div v-if="crmPipelineOptions.length" class="grid gap-2">
+      <div
+        v-if="crmCreationEnabled && crmPipelineOptions.length"
+        class="grid gap-2"
+      >
         <label class="grid gap-1">
           <span class="text-xs font-medium text-n-slate-11">
             {{ $t('CRM_KANBAN.CONVERSATION.PIPELINE') }}
@@ -510,7 +519,10 @@ export default {
           @click="createCrmCardFromConversation"
         />
       </div>
-      <p v-else class="mb-0 text-xs leading-5 text-n-slate-11">
+      <p
+        v-else-if="crmCreationEnabled"
+        class="mb-0 text-xs leading-5 text-n-slate-11"
+      >
         {{ $t('CRM_KANBAN.CONVERSATION.NO_PIPELINES') }}
       </p>
     </section>

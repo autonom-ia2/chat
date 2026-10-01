@@ -10,6 +10,8 @@ import ContactAPI from 'dashboard/api/contacts';
 
 const props = defineProps({
   card: { type: Object, default: null },
+  canManageAi: { type: Boolean, default: false },
+  canManageRecords: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['reset']);
@@ -133,7 +135,7 @@ const resetButtonLabel = computed(() =>
 );
 
 const resetCycle = async () => {
-  if (!cardId.value || isResetting.value) return;
+  if (!props.canManageAi || !cardId.value || isResetting.value) return;
   isResetting.value = true;
   try {
     await CrmKanbanAPI.resetAutoFollowup(cardId.value);
@@ -148,7 +150,8 @@ const resetCycle = async () => {
 };
 
 const onContactToggle = async disabled => {
-  if (!contact.value?.id || isSavingContact.value) return;
+  if (!props.canManageRecords || !contact.value?.id || isSavingContact.value)
+    return;
   isSavingContact.value = true;
   try {
     await ContactAPI.update(contact.value.id, {
@@ -163,6 +166,7 @@ const onContactToggle = async disabled => {
 };
 
 const onResetClick = () => {
+  if (!props.canManageAi) return;
   if (isOptedOut.value) {
     reactivateDialogRef.value?.open();
     return;
@@ -218,12 +222,12 @@ const onResetClick = () => {
       <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE') }}</span>
       <Switch
         :model-value="isContactDisabled"
-        :disabled="isSavingContact"
+        :disabled="isSavingContact || !canManageRecords"
         @update:model-value="onContactToggle"
       />
     </label>
 
-    <div v-if="isSpent || isOptedOut" class="flex justify-end">
+    <div v-if="canManageAi && (isSpent || isOptedOut)" class="flex justify-end">
       <Button
         :label="resetButtonLabel"
         icon="i-lucide-rotate-ccw"
@@ -246,7 +250,7 @@ const onResetClick = () => {
         t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_OK')
       "
       :is-loading="isResetting"
-      :disable-confirm-button="isResetting"
+      :disable-confirm-button="isResetting || !canManageAi"
       @confirm="resetCycle"
     />
   </div>

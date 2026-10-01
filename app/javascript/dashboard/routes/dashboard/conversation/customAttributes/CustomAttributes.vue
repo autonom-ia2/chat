@@ -10,6 +10,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CustomAttribute from 'dashboard/components/CustomAttribute.vue';
 import { useRelationships } from 'dashboard/composables/useRelationships';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import FieldConfigurator from 'dashboard/components-next/Relationships/FieldConfigurator.vue';
 import FieldEditor from 'dashboard/components-next/Relationships/FieldEditor.vue';
 import { selectDefinitions } from 'dashboard/components-next/Relationships/presentation';
@@ -41,6 +42,12 @@ const store = useStore();
 const getters = useStoreGetters();
 const route = useRoute();
 const { t } = useI18n();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
+const readOnlyContact = computed(
+  () =>
+    props.attributeType === 'contact_attribute' &&
+    !canManageRelationshipRecords.value
+);
 const { uiSettings, updateUISettings } = useUISettings();
 
 const {
@@ -221,6 +228,7 @@ const onClickToggle = () => {
 };
 
 const onUpdate = async (key, value) => {
+  if (readOnlyContact.value) return;
   const updatedAttributes = { ...customAttributes.value, [key]: value };
   try {
     if (props.attributeType === 'conversation_attribute') {
@@ -243,6 +251,7 @@ const onUpdate = async (key, value) => {
 };
 
 const onDelete = async key => {
+  if (readOnlyContact.value) return;
   try {
     const { [key]: remove, ...updatedAttributes } = customAttributes.value;
     if (props.attributeType === 'conversation_attribute') {
@@ -252,7 +261,7 @@ const onDelete = async key => {
       });
     } else {
       await store.dispatch('contacts/deleteCustomAttributes', {
-        id: props.contactId,
+        id: contactIdentifier.value,
         customAttributes: [key],
       });
     }
@@ -315,15 +324,17 @@ const evenClass = [
           <template v-else>
             <FieldEditor
               v-if="
-                relationshipSidebar &&
-                !element.regex_pattern &&
-                relationshipState.configuration?.surfaces?.contact_sidebar
-                  ?.mode === 'custom'
+                readOnlyContact ||
+                (relationshipSidebar &&
+                  !element.regex_pattern &&
+                  relationshipState.configuration?.surfaces?.contact_sidebar
+                    ?.mode === 'custom')
               "
               :key="`${accountId}-${contact.id}-${element.id}`"
               compact
               :definition="element"
               :record="contact"
+              :read-only="readOnlyContact"
               entity="contact"
             />
             <CustomAttribute

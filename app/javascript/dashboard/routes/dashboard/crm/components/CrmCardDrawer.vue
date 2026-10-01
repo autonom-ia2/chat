@@ -61,6 +61,19 @@ const emit = defineEmits([
   'scheduleMeeting',
 ]);
 
+const archiveCard = () => {
+  if (props.canManageCards) emit('archive');
+};
+const completeFollowUp = followUp => {
+  if (props.canManageCards) emit('completeFollowUp', followUp);
+};
+const cancelFollowUp = followUp => {
+  if (props.canManageCards) emit('cancelFollowUp', followUp);
+};
+const scheduleMeeting = () => {
+  if (props.canManageCards) emit('scheduleMeeting', { cardId: props.card.id });
+};
+
 const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
@@ -307,6 +320,7 @@ const winCurrency = ref('BRL');
 const loseReason = ref('');
 
 const openWinDialog = () => {
+  if (!props.canManageCards) return;
   winAmount.value = props.card?.value_cents
     ? Number(props.card.value_cents) / 100
     : '';
@@ -314,10 +328,12 @@ const openWinDialog = () => {
   showWinDialog.value = true;
 };
 const openLoseDialog = () => {
+  if (!props.canManageCards) return;
   loseReason.value = props.card?.lost_reason || '';
   showLoseDialog.value = true;
 };
 const confirmWin = () => {
+  if (!props.canManageCards) return;
   const amount = Number(winAmount.value);
   emit('closeDeal', {
     result: 'won',
@@ -330,13 +346,16 @@ const confirmWin = () => {
   showWinDialog.value = false;
 };
 const confirmLose = () => {
+  if (!props.canManageCards) return;
   emit('closeDeal', {
     result: 'lost',
     lost_reason: loseReason.value || undefined,
   });
   showLoseDialog.value = false;
 };
-const reopenDeal = () => emit('closeDeal', { result: 'reopen' });
+const reopenDeal = () => {
+  if (props.canManageCards) emit('closeDeal', { result: 'reopen' });
+};
 
 const hydrateContactForm = card => {
   const contact = card?.contact || {};
@@ -656,6 +675,7 @@ const saveContact = async () => {
   }
 };
 const onSubmit = () => {
+  if (!props.canManageCards) return;
   if (!form.title.trim() || (!isEditing.value && !form.stageId)) return;
   emit('save', buildPayload());
 };
@@ -708,6 +728,7 @@ const resetFollowUpForm = () => {
 defineExpose({ resetFollowUpForm, guardNavigation: guardRelationship });
 
 const createFollowUp = () => {
+  if (!props.canManageCards) return;
   if (!props.card?.id || !followUpForm.title.trim() || !followUpForm.dueAt) {
     return;
   }
@@ -1392,6 +1413,7 @@ useFixedPanelPresence(computed(() => props.show));
         <div v-else-if="activeTab === 'summary'" class="grid gap-4">
           <Input
             v-model="form.title"
+            :readonly="!canManageCards"
             :label="t('CRM_KANBAN.DRAWER.TITLE_LABEL')"
             :placeholder="t('CRM_KANBAN.DRAWER.TITLE_PLACEHOLDER')"
             :message="!form.title.trim() ? t('CRM_KANBAN.DRAWER.REQUIRED') : ''"
@@ -1404,6 +1426,7 @@ useFixedPanelPresence(computed(() => props.show));
             </span>
             <textarea
               v-model="form.description"
+              :readonly="!canManageCards"
               rows="4"
               class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
               :placeholder="t('CRM_KANBAN.DRAWER.DESCRIPTION_PLACEHOLDER')"
@@ -1500,6 +1523,7 @@ useFixedPanelPresence(computed(() => props.show));
           <div class="grid grid-cols-2 gap-3">
             <Input
               v-model="form.valueAmount"
+              :readonly="!canManageCards"
               type="number"
               min="0"
               :label="t('CRM_KANBAN.DRAWER.VALUE')"
@@ -1507,6 +1531,7 @@ useFixedPanelPresence(computed(() => props.show));
             />
             <Input
               v-model="form.score"
+              :readonly="!canManageCards"
               type="number"
               min="0"
               max="100"
@@ -1522,6 +1547,7 @@ useFixedPanelPresence(computed(() => props.show));
               </span>
               <ChoiceSelect
                 v-model="form.priority"
+                :disabled="!canManageCards"
                 :options="priorityOptions"
                 :aria-label="t('CRM_KANBAN.DRAWER.PRIORITY')"
                 class="w-full"
@@ -1529,6 +1555,7 @@ useFixedPanelPresence(computed(() => props.show));
             </label>
             <Input
               v-model="form.expectedCloseAt"
+              :readonly="!canManageCards"
               type="date"
               :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
             />
@@ -1722,7 +1749,7 @@ useFixedPanelPresence(computed(() => props.show));
             >
               {{ followUp.description }}
             </p>
-            <div class="flex justify-end gap-2">
+            <div v-if="canManageCards" class="flex justify-end gap-2">
               <Button
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
                 icon="i-lucide-check"
@@ -1730,7 +1757,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 sm
                 :is-loading="isSavingFollowUp"
-                @click="$emit('completeFollowUp', followUp)"
+                @click="completeFollowUp(followUp)"
               />
               <Button
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
@@ -1739,13 +1766,14 @@ useFixedPanelPresence(computed(() => props.show));
                 ghost
                 sm
                 :is-loading="isSavingFollowUp"
-                @click="$emit('cancelFollowUp', followUp)"
+                @click="cancelFollowUp(followUp)"
               />
             </div>
           </article>
 
           <!-- 2) New follow-up -->
           <div
+            v-if="canManageCards"
             class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
           >
             <div>
@@ -1917,6 +1945,8 @@ useFixedPanelPresence(computed(() => props.show));
           <!-- 3) Automatic follow-up -->
           <CrmCardAutoFollowupStatus
             :card="props.card"
+            :can-manage-ai="canManageAi"
+            :can-manage-records="canManageRelationshipRecords"
             @reset="$emit('refreshCard')"
           />
 
@@ -1956,7 +1986,10 @@ useFixedPanelPresence(computed(() => props.show));
               {{ followUp.description }}
             </p>
             <div
-              v-if="activeFollowUps.some(item => item.id === followUp.id)"
+              v-if="
+                canManageCards &&
+                activeFollowUps.some(item => item.id === followUp.id)
+              "
               class="flex justify-end gap-2"
             >
               <Button
@@ -1966,7 +1999,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 sm
                 :is-loading="isSavingFollowUp"
-                @click="$emit('completeFollowUp', followUp)"
+                @click="completeFollowUp(followUp)"
               />
               <Button
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
@@ -1975,7 +2008,7 @@ useFixedPanelPresence(computed(() => props.show));
                 ghost
                 sm
                 :is-loading="isSavingFollowUp"
-                @click="$emit('cancelFollowUp', followUp)"
+                @click="cancelFollowUp(followUp)"
               />
             </div>
           </article>
@@ -2048,24 +2081,21 @@ useFixedPanelPresence(computed(() => props.show));
           class="flex items-center gap-2"
         >
           <Button
+            v-if="canManageCards"
             :label="t('CRM_KANBAN.DRAWER.ARCHIVE')"
             icon="i-lucide-archive"
             ruby
             ghost
             :is-loading="isArchiving"
-            @click="guardRelationship(() => $emit('archive'))"
+            @click="guardRelationship(archiveCard)"
           />
           <Button
-            v-if="meetingsEnabled && card?.id"
+            v-if="canManageCards && meetingsEnabled && card?.id"
             :label="t('CRM_KANBAN.DRAWER.SCHEDULE_MEETING')"
             icon="i-lucide-video"
             variant="outline"
             color="slate"
-            @click="
-              guardRelationship(() =>
-                $emit('scheduleMeeting', { cardId: card.id })
-              )
-            "
+            @click="guardRelationship(scheduleMeeting)"
           />
         </div>
         <div
@@ -2129,7 +2159,7 @@ useFixedPanelPresence(computed(() => props.show));
             :disabled="companyAction.disabled"
           />
           <Button
-            v-else-if="activeTab === 'summary'"
+            v-else-if="activeTab === 'summary' && canManageCards"
             :label="
               isEditing
                 ? t('CRM_KANBAN.DRAWER.SAVE')
@@ -2145,7 +2175,7 @@ useFixedPanelPresence(computed(() => props.show));
 
       <!-- Win deal dialog: value pre-filled (auto-filled by AI), confirm to win -->
       <div
-        v-if="showWinDialog"
+        v-if="showWinDialog && canManageCards"
         class="absolute inset-0 z-[60] flex items-center justify-center bg-n-alpha-black2 p-6"
         @click.self="showWinDialog = false"
       >
@@ -2194,7 +2224,7 @@ useFixedPanelPresence(computed(() => props.show));
 
       <!-- Lose deal dialog: optional reason -->
       <div
-        v-if="showLoseDialog"
+        v-if="showLoseDialog && canManageCards"
         class="absolute inset-0 z-[60] flex items-center justify-center bg-n-alpha-black2 p-6"
         @click.self="showLoseDialog = false"
       >

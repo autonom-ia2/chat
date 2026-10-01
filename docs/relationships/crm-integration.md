@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–12. Parte 13 revisa visibilidade das conversas e dados derivados: campanhas de origens restritas não entram nos payloads/filtros e os totais de etapa seguem o escopo autorizado. Três testes antigos de visibilidade foram reativados sem alterar asserções. O desenho, a largura de 640px e a ausência de cotas de oportunidades permanecem. Aguardar aceite deste incremento. Revisão independente e runtime Linux específico continuam gates antes do merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–13. Parte 14 alinha os controles legados do atendimento e do card: consulta do contato sem editores, notas/atributos protegidos, criação comercial condicionada à gestão de oportunidades e ações de follow-up separadas entre CRM/IA/cadastro. O desenho e a largura de 640px são preservados, sem cotas novas. Aguardar aceite deste incremento. Revisão independente e runtime Linux específico continuam gates antes do merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -191,9 +191,17 @@ Filtros de origem e etiqueta de conversa aplicam a autorização antes de pagina
 
 Os três testes suspensos de visibilidade em cards_spec.rb passaram no código inicial e foram reativados sem mudar suas asserções. A bateria ampliada identifica sete outros suspensos antigos, incluindo a associação de conta e seis testes de outras áreas do CRM; não foram criados novos skips. Resultado de testes, medições iniciais que falharam por tempo, reexecução sequencial e telas reais estão na [auditoria da parte 13](../audit/2026-10-01-792-crm-relationships-part-13.md) e na [galeria](screenshots/792-part13/README.md).
 
+## Parte 14 — Controles legados do atendimento
+
+O painel de contato do atendimento usa a mesma capability cadastral das fichas. Leitores consultam dados e notas sem editores, mesclagem ou callbacks de gravação; gestores conservam a edição real do mesmo registro. Atributos do contato em modo legado também recebem leitura, preservando zero/falso, sem bloquear indevidamente atributos da conversa. O formulário antigo não comunica sucesso para callback sem permissão após revogação.
+
+Atender conversas não concede criar cards. O painel CRM no atendimento mantém a etapa e o link para quem pode consultar, mas só carrega escolhas e oferece criação aos gestores comerciais. O drawer mantém Resumo/follow-ups legíveis e protege Salvar, Arquivar, ganhar/perder, criar/concluir/cancelar follow-up e agendar. Reset da cadência exige gestão de IA; excluir o contato do follow-up exige gestão cadastral. Eventos antigos e confirmações diferidas revalidam a capability.
+
+A política do servidor não foi alterada: foram adicionados testes de regressão do contrato existente. Há teste real de edição pelo atendimento, leituras pelos perfis separados e recusas diretas pela API. Auditoria, limites, hashes e imagens: [parte 14](../audit/2026-10-01-792-crm-relationships-part-14.md) e [telas reais](screenshots/792-part14/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após o aceite da parte 13, continuar pelos controles legados do atendimento e pelas entradas de escrita/concorrência ainda não revisadas. Os sete testes antigos suspensos da seleção ampliada e os efeitos de integrações externas são verificações específicas, não cobertas pela aprovação visual. Resolver o CI específico e a revisão independente antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
+Após o aceite da parte 14, tratar os testes históricos suspensos e as entradas de escrita/concorrência ainda pendentes. Os efeitos externos e jobs previamente autorizados são verificações específicas, não cobertas pela aprovação visual. Resolver o CI específico e a revisão independente antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
 
 ## Validação e publicação
 

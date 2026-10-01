@@ -63,7 +63,7 @@ export default {
       });
     },
     saveEdit() {
-      if (!this.isEditing) return;
+      if (!this.isEditing || !this.editable) return;
       this.isEditing = false;
       const trimmed = this.editValue.trim();
       if (trimmed !== (this.value || '')) {
@@ -80,7 +80,10 @@ export default {
 <template>
   <div class="group/row w-full h-5 ltr:-ml-1 rtl:-mr-1">
     <!-- Inline edit mode -->
-    <div v-if="isEditing" class="flex items-center w-full min-w-0 gap-2">
+    <div
+      v-if="isEditing && editable"
+      class="flex items-center w-full min-w-0 gap-2"
+    >
       <EmojiOrIcon
         :icon="icon"
         :emoji="emoji"

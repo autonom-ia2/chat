@@ -1661,12 +1661,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Consultar cadastros sem alterar os dados compartilhados
 - intent: Por que não aparece Editar contato?; Posso criar oportunidade sem editar a pessoa?; Por que Criar novo está indisponível no CRM?
-- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > card > Relacionamento
+- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > card > Relacionamento; Conversas > painel do contato
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: acesso ao cadastro; permissões de Relacionamentos e do CRM são independentes
 - passos: 1. Abra o contato ou a empresa para consultar dados, atributos e histórico; 2. Se a ficha indicar somente consulta, use as informações sem alterar o cadastro; 3. Com permissão de gerenciar oportunidades, use um contato existente ou continue sem vínculo; 4. Para criar ou editar pessoa e empresa, solicite ao administrador a permissão de gerenciar contatos.
-- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de criação, envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
+- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa, inclusive na lateral do atendimento. Atender conversas não concede criar oportunidades; consultar o CRM não permite arquivar ou criar/concluir/cancelar follow-ups. Reiniciar a cadência exige gerenciar a IA, enquanto o bloqueio de follow-up no contato exige gerenciar cadastros. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
 - nav_target: `contacts_edit`
 
 ### Consultar oportunidades dos contatos de uma empresa

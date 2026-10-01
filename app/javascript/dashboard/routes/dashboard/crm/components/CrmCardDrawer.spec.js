@@ -327,6 +327,7 @@ it('retains an unsaved opportunity title during a contact refresh', async () => 
 it('does not implicitly save a dirty contact from the opportunity save action', () => {
   ContactAPI.update.mockClear();
   const wrapper = mountDrawer({
+    canManageCards: true,
     card: {
       id: 5,
       title: 'Card A',
@@ -379,7 +380,7 @@ it('never updates a company name as a substitute for a canonical company associa
 });
 
 it('guards archiving when a relationship field has an unsaved draft', async () => {
-  const wrapper = mountDrawer();
+  const wrapper = mountDrawer({ canManageCards: true });
   wrapper.vm.relationshipPanel = { dirty: true, saving: false, reset: vi.fn() };
   const archive = wrapper
     .findAll('button')
@@ -392,7 +393,7 @@ it('guards archiving when a relationship field has an unsaved draft', async () =
   wrapper.unmount();
 });
 it('does not archive while a relationship field write is in progress', async () => {
-  const wrapper = mountDrawer();
+  const wrapper = mountDrawer({ canManageCards: true });
   wrapper.vm.relationshipPanel = { dirty: true, saving: true, reset: vi.fn() };
   const archive = wrapper
     .findAll('button')
@@ -469,6 +470,80 @@ it.each([
     wrapper.unmount();
   }
 );
+
+describe('legacy commercial action permissions', () => {
+  it('keeps the summary values readable without save or scheduling controls', async () => {
+    const wrapper = mountDrawer({
+      canManageCards: false,
+      meetingsEnabled: true,
+    });
+    expect(wrapper.find('input').attributes('readonly')).toBeDefined();
+    expect(wrapper.find('textarea').attributes('readonly')).toBeDefined();
+    const labels = wrapper.findAll('button').map(button => button.text());
+    expect(labels).not.toContain('CRM_KANBAN.DRAWER.SAVE');
+    expect(labels).not.toContain('CRM_KANBAN.DRAWER.SCHEDULE_MEETING');
+    wrapper.vm.confirmWin();
+    wrapper.vm.confirmLose();
+    expect(wrapper.emitted('closeDeal')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('keeps follow-up details readable without archive, create, complete or cancel controls', async () => {
+    const wrapper = mountDrawer({
+      canManageCards: false,
+      followUps: [
+        {
+          id: 8,
+          title: 'Existing reminder',
+          status: 'pending',
+          due_at: '2026-11-15T12:00:00Z',
+        },
+      ],
+    });
+    wrapper.vm.activeTab = 'followups';
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain('Existing reminder');
+    const buttons = wrapper.findAll('button').map(button => button.text());
+    [
+      'ARCHIVE',
+      'FOLLOW_UP_CREATE',
+      'FOLLOW_UP_COMPLETE',
+      'FOLLOW_UP_CANCEL',
+    ].forEach(key => expect(buttons).not.toContain(`CRM_KANBAN.DRAWER.${key}`));
+    wrapper.vm.form.title = 'Forbidden commercial edit';
+    wrapper.vm.onSubmit();
+    wrapper.vm.followUpForm.title = 'Forbidden reminder';
+    wrapper.vm.followUpForm.dueAt = '2026-11-15T12:00';
+    wrapper.vm.createFollowUp();
+    expect(wrapper.emitted('save')).toBeUndefined();
+    expect(wrapper.emitted('createFollowUp')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('does not execute a deferred archive after commercial permission is revoked', async () => {
+    const wrapper = mountDrawer({ canManageCards: true });
+    wrapper.vm.relationshipPanel = {
+      dirty: true,
+      saving: false,
+      reset: vi.fn(),
+    };
+    await wrapper
+      .findAll('button')
+      .find(button => button.text() === 'CRM_KANBAN.DRAWER.ARCHIVE')
+      .trigger('click');
+    expect(wrapper.vm.discardOpen).toBe(true);
+    await wrapper.setProps({ canManageCards: false });
+    wrapper.vm.confirmDiscard();
+    expect(wrapper.emitted('archive')).toBeUndefined();
+    wrapper.unmount();
+  });
+  it('keeps authorized follow-up creation available', async () => {
+    const wrapper = mountDrawer({ canManageCards: true });
+    wrapper.vm.followUpForm.title = 'Authorized reminder';
+    wrapper.vm.followUpForm.dueAt = '2026-11-15T12:00';
+    wrapper.vm.createFollowUp();
+    expect(wrapper.emitted('createFollowUp')).toHaveLength(1);
+    wrapper.unmount();
+  });
+});
 
 it('never turns CRM card management into permission to edit the shared contact', async () => {
   recordPermission.value = false;

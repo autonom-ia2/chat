@@ -3,6 +3,7 @@ import { watch, computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 
 import Editor from 'dashboard/components-next/Editor/Editor.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -15,6 +16,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const store = useStore();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 const currentUser = useMapGetter('getCurrentUser');
 const uiFlags = useMapGetter('contactNotes/getUIFlags');
 const notesByContact = useMapGetter('contactNotes/getAllNotesByContactId');
@@ -38,7 +40,7 @@ const getWrittenBy = ({ user } = {}) => {
 };
 
 const openCreateModal = () => {
-  if (!contactId.value) {
+  if (!contactId.value || !canManageRelationshipRecords.value) {
     return;
   }
 
@@ -52,7 +54,13 @@ const closeCreateModal = () => {
 };
 
 const onAdd = async () => {
-  if (!contactId.value || !noteContent.value || isCreatingNote.value) {
+  if (
+    !canManageRelationshipRecords.value ||
+    !shouldShowCreateModal.value ||
+    !contactId.value ||
+    !noteContent.value ||
+    isCreatingNote.value
+  ) {
     return;
   }
 
@@ -65,7 +73,7 @@ const onAdd = async () => {
 };
 
 const onDelete = noteId => {
-  if (!contactId.value || !noteId) {
+  if (!canManageRelationshipRecords.value || !contactId.value || !noteId) {
     return;
   }
 
@@ -98,7 +106,7 @@ watch(
 
 <template>
   <div>
-    <div class="px-4 pt-3 pb-2">
+    <div v-if="canManageRelationshipRecords" class="px-4 pt-3 pb-2">
       <NextButton
         ghost
         xs
@@ -125,7 +133,7 @@ watch(
         class="py-4 last-of-type:border-b-0 px-4"
         :note="note"
         :written-by="getWrittenBy(note)"
-        allow-delete
+        :allow-delete="canManageRelationshipRecords"
         collapsible
         @delete="onDelete"
       />
@@ -135,6 +143,7 @@ watch(
     </p>
 
     <woot-modal
+      v-if="canManageRelationshipRecords"
       v-model:show="shouldShowCreateModal"
       :on-close="closeCreateModal"
       :close-on-backdrop-click="false"
