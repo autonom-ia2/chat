@@ -37,27 +37,27 @@
       },
       "INTERFACE_SECTION": {
         "TITLE": "Interface",
-        "NOTE": "Customize the look and feel of your Chatwoot dashboard.",
+        "NOTE": "Personalize a aparência do seu painel do Chatwoot.",
         "FONT_SIZE": {
-          "TITLE": "Font size",
-          "NOTE": "Adjust the text size across the dashboard based on your preference.",
-          "UPDATE_SUCCESS": "Your font settings have been updated successfully",
-          "UPDATE_ERROR": "There is an error while updating the font settings, please try again",
+          "TITLE": "Tamanho da fonte",
+          "NOTE": "Ajuste o tamanho do texto do painel com base na sua preferência.",
+          "UPDATE_SUCCESS": "As configurações de fonte foram atualizadas com sucesso",
+          "UPDATE_ERROR": "Ocorreu um erro ao atualizar as configurações de fonte. Tente novamente",
           "OPTIONS": {
-            "SMALLER": "Smaller",
-            "SMALL": "Small",
+            "SMALLER": "Menor",
+            "SMALL": "Pequeno",
             "DEFAULT": "Padrão",
-            "LARGE": "Large",
-            "LARGER": "Larger",
-            "EXTRA_LARGE": "Extra Large"
+            "LARGE": "Grande",
+            "LARGER": "Maior",
+            "EXTRA_LARGE": "Muito grande"
           }
         },
         "LANGUAGE": {
-          "TITLE": "Preferred Language",
-          "NOTE": "Choose the language you want to use.",
-          "UPDATE_SUCCESS": "Your Language settings have been updated successfully",
-          "UPDATE_ERROR": "There is an error while updating the language settings, please try again",
-          "USE_ACCOUNT_DEFAULT": "Use account default"
+          "TITLE": "Idioma preferido",
+          "NOTE": "Escolha o idioma que deseja usar.",
+          "UPDATE_SUCCESS": "Suas configurações de idioma foram atualizadas com sucesso",
+          "UPDATE_ERROR": "Ocorreu um erro ao atualizar as configurações de idioma. Tente novamente",
+          "USE_ACCOUNT_DEFAULT": "Usar padrão da conta"
         }
       },
       "MESSAGE_SIGNATURE_SECTION": {
@@ -69,7 +69,7 @@
         "IMAGE_UPLOAD_ERROR": "Não foi possível carregar a imagem! Tente novamente",
         "IMAGE_UPLOAD_SUCCESS": "Imagem adicionada. Clique em salvar para salvar a assinatura",
         "IMAGE_UPLOAD_SIZE_ERROR": "O tamanho da imagem deve ser inferior a {size}MB",
-        "INLINE_IMAGE_WARNING": "Pasted inline images were removed. Please use the image upload button to add images to your signature."
+        "INLINE_IMAGE_WARNING": "As imagens incorporadas coladas foram removidas. Use o botão de upload de imagem para adicioná-las à sua assinatura."
       },
       "MESSAGE_SIGNATURE": {
         "LABEL": "Assinatura da mensagem",
@@ -77,58 +77,58 @@
         "PLACEHOLDER": "Escreva aqui a sua assinatura de mensagem pessoal."
       },
       "PASSWORD_SECTION": {
-        "TITLE": "Palavra-passe",
+        "TITLE": "Senha",
         "NOTE": "Atualizar sua senha irá redefinir seus logins em vários dispositivos.",
-        "BTN_TEXT": "Alterar password"
+        "BTN_TEXT": "Alterar senha"
       },
       "SECURITY_SECTION": {
-        "TITLE": "Security",
-        "NOTE": "Manage additional security features for your account.",
-        "MFA_BUTTON": "Manage Two-Factor Authentication"
+        "TITLE": "Segurança",
+        "NOTE": "Gerencie recursos adicionais de segurança para sua conta.",
+        "MFA_BUTTON": "Gerenciar autenticação de dois fatores"
       },
       "SESSIONS_SECTION": {
-        "TITLE": "Active Sessions",
-        "NOTE": "These are the devices currently logged in to your account.",
-        "CURRENT": "Current session",
-        "REVOKE": "Revoke",
-        "REVOKE_SUCCESS": "Session revoked successfully",
-        "REVOKE_ERROR": "Unable to revoke session. Please try again.",
-        "FETCH_ERROR": "Unable to fetch sessions. Please try again.",
-        "LAST_ACTIVE": "Last active",
-        "UNKNOWN_DEVICE": "Unknown device"
+        "TITLE": "Sessões ativas",
+        "NOTE": "Estes são os dispositivos atualmente conectados à sua conta.",
+        "CURRENT": "Sessão atual",
+        "REVOKE": "Revogar",
+        "REVOKE_SUCCESS": "Sessão revogada com sucesso",
+        "REVOKE_ERROR": "Não foi possível revogar a sessão. Tente novamente.",
+        "FETCH_ERROR": "Não foi possível carregar as sessões. Tente novamente.",
+        "LAST_ACTIVE": "Última atividade",
+        "UNKNOWN_DEVICE": "Dispositivo desconhecido"
       },
       "ACCESS_TOKEN": {
         "TITLE": "Token de acesso",
         "NOTE": "Este token pode ser usado se você estiver construindo uma integração baseada em API",
-        "PAID_PLAN_NOTE": "API access tokens are available on paid plans.",
+        "PAID_PLAN_NOTE": "Os tokens de acesso à API estão disponíveis apenas nos planos pagos.",
         "COPY": "Copiar",
-        "RESET": "Reset",
+        "RESET": "Gerar novo token",
         "CONFIRM_RESET": "Tem a certeza?",
         "CONFIRM_HINT": "Clique novamente para confirmar",
         "RESET_SUCCESS": "O token de acesso voltou a ser gerado",
         "RESET_ERROR": "Não foi possível voltar a gerar o token de acesso, por favor tente novamente"
       },
       "AUDIO_NOTIFICATIONS_SECTION": {
-        "TITLE": "Audio Alerts",
-        "NOTE": "Enable audio alerts in dashboard for new messages and conversations.",
-        "PLAY": "Play sound",
+        "TITLE": "Alertas de áudio",
+        "NOTE": "Habilite alertas de áudio no painel para novas mensagens e conversas.",
+        "PLAY": "Reproduzir áudio",
         "ALERT_TYPES": {
           "NONE": "Nenhuma",
           "MINE": "Atribuída",
           "ALL": "Todas",
-          "ASSIGNED": "My assigned conversations",
-          "UNASSIGNED": "Unassigned conversations",
-          "NOTME": "Open conversations assigned to others"
+          "ASSIGNED": "Conversas atribuídas a mim",
+          "UNASSIGNED": "Conversas não atribuídas",
+          "NOTME": "Conversas abertas atribuídas a outras pessoas"
         },
         "ALERT_COMBINATIONS": {
-          "NONE": "You haven't selected any options, you won't receive any audio alerts.",
-          "ASSIGNED": "You'll receive alerts for conversations assigned to you.",
-          "UNASSIGNED": "You'll receive alerts for any unassigned conversations.",
-          "NOTME": "You'll receive alerts for conversations assigned to others.",
-          "ASSIGNED+UNASSIGNED": "You'll receive alerts for your assigned conversations and any unattended ones.",
-          "ASSIGNED+NOTME": "You'll receive alerts for conversations assigned to you and to others, but not for unassigned ones.",
-          "NOTME+UNASSIGNED": "You'll receive alerts for unattended conversations and those assigned to others.",
-          "ASSIGNED+NOTME+UNASSIGNED": "You'll receive alerts for all conversations."
+          "NONE": "Você não selecionou nenhuma opção. Você não receberá alertas de áudio.",
+          "ASSIGNED": "Você receberá alertas para conversas atribuídas a você.",
+          "UNASSIGNED": "Você receberá alertas para todas as conversas não atribuídas.",
+          "NOTME": "Você receberá alertas para conversas atribuídas a outras pessoas.",
+          "ASSIGNED+UNASSIGNED": "Você receberá alertas para conversas atribuídas a você e para as conversas não atribuídas.",
+          "ASSIGNED+NOTME": "Você receberá alertas para conversas atribuídas a você e a outras pessoas, mas não para as não atribuídas.",
+          "NOTME+UNASSIGNED": "Você receberá alertas para conversas não atribuídas e para as atribuídas a outras pessoas.",
+          "ASSIGNED+NOTME+UNASSIGNED": "Você receberá alertas para todas as conversas."
         },
         "ALERT_TYPE": {
           "TITLE": "Eventos de alerta para conversas",
@@ -144,7 +144,7 @@
           "CONDITION_ONE": "Enviar alertas de áudio apenas quando a janela do navegador não estiver ativa",
           "CONDITION_TWO": "Enviar alertas a cada 30 segundos até que todas as conversas atribuídas sejam lidas"
         },
-        "SOUND_PERMISSION_ERROR": "Autoplay is disabled in your browser. To hear alerts automatically, enable sound permission in your browser settings or interact with the page.",
+        "SOUND_PERMISSION_ERROR": "A reprodução automática está desativada no seu navegador. Para ouvir alertas automaticamente, habilite a permissão de som nas configurações do navegador ou interaja com a página.",
         "READ_MORE": "Ler mais"
       },
       "EMAIL_NOTIFICATIONS_SECTION": {
@@ -224,9 +224,9 @@
         "PLACEHOLDER": "Por favor, insira seu endereço de e-mail, que será exibido em conversas"
       },
       "CURRENT_PASSWORD": {
-        "LABEL": "Password atual",
-        "ERROR": "Por favor, digite a password atual",
-        "PLACEHOLDER": "Por favor, digite a password atual"
+        "LABEL": "Senha atual",
+        "ERROR": "Por favor, digite a senha atual",
+        "PLACEHOLDER": "Por favor, digite a senha atual"
       },
       "PASSWORD": {
         "LABEL": "Nova senha",
@@ -323,8 +323,8 @@
     "SETTINGS": "Configurações",
     "CONTACTS": "Contactos",
     "ACTIVE": "Ativa",
-    "COMPANIES": "Companies",
-    "ALL_COMPANIES": "All Companies",
+    "COMPANIES": "Empresas",
+    "ALL_COMPANIES": "Todas as empresas",
     "CAPTAIN": "Captain",
     "CALLS": "Chamadas",
     "CAPTAIN_ASSISTANTS": "Assistants",
@@ -342,10 +342,10 @@
     "AUDIT_LOGS": "Logs de auditoria",
     "INBOXES": "Caixas de Entrada",
     "WHATSAPP_TEMPLATES": "Templates",
-    "NOTIFICATIONS": "Notificaçoes",
+    "NOTIFICATIONS": "Notificações",
     "CANNED_RESPONSES": "Respostas Prontas",
     "INTEGRATIONS": "Integrações",
-    "DATA": "Data",
+    "DATA": "Dados",
     "PROFILE_SETTINGS": "Configurações do perfil",
     "ACCOUNT_SETTINGS": "Configurações da conta",
     "APPLICATIONS": "Aplicações",
@@ -364,7 +364,7 @@
     "NEW_INBOX": "Nova caixa de entrada",
     "REPORTS_CONVERSATION": "Conversas",
     "CSAT": "CSAT",
-    "LIVE_CHAT": "Live Chat",
+    "LIVE_CHAT": "Chat ao vivo",
     "SMS": "SMS",
     "WHATSAPP": "WhatsApp",
     "WHATSAPP_OFFICIAL": "WhatsApp Oficial",
@@ -378,17 +378,17 @@
     "REPORTS_LABEL": "Etiquetas",
     "REPORTS_INBOX": "Caixa de Entrada",
     "REPORTS_TEAM": "Equipa",
-    "AGENT_ASSIGNMENT": "Agent Assignment",
+    "AGENT_ASSIGNMENT": "Atribuição de agentes",
     "SET_AVAILABILITY_TITLE": "Defina-se como",
     "SET_YOUR_AVAILABILITY": "Definir disponibilidade",
     "SLA": "SLA",
     "CUSTOM_ROLES": "Funções personalizadas",
     "BETA": "Beta",
     "REPORTS_OVERVIEW": "Visão geral",
-    "REAUTHORIZE": "Your inbox connection has expired, please reconnect\n to continue receiving and sending messages",
+    "REAUTHORIZE": "A conexão com a sua caixa de entrada expirou. Por favor, reconecte para continuar recebendo e enviando mensagens",
     "HELP_CENTER": {
       "TITLE": "Centro de Suporte",
-      "ARTICLES": "Articles",
+      "ARTICLES": "Artigos",
       "CATEGORIES": "Categorias",
       "LOCALES": "Locais",
       "SETTINGS": "Configurações"
@@ -402,22 +402,22 @@
     "SORT_TOOLTIP": "Ordenar",
     "SORT_BY": "Ordenar por",
     "SORT_GROUPS": {
-      "CREATED": "Sort by date of creation",
-      "ALPHABETICAL": "Sort in alphabetical order",
-      "UNREAD_COUNT": "Sort by unread count"
+      "CREATED": "Ordenar por data de criação",
+      "ALPHABETICAL": "Ordenar em ordem alfabética",
+      "UNREAD_COUNT": "Ordenar por quantidade de não lidas"
     },
     "SORT_OPTIONS": {
-      "CREATED_DESC": "Newest first",
-      "CREATED_ASC": "Oldest first",
-      "ALPHABETICAL_ASC": "Ascending (A - Z)",
-      "ALPHABETICAL_DESC": "Descending (Z - A)",
-      "UNREAD_COUNT_DESC": "Highest first",
-      "UNREAD_COUNT_ASC": "Lowest first"
+      "CREATED_DESC": "Mais recentes primeiro",
+      "CREATED_ASC": "Mais antigos primeiro",
+      "ALPHABETICAL_ASC": "Crescente (A–Z)",
+      "ALPHABETICAL_DESC": "Decrescente (Z - A)",
+      "UNREAD_COUNT_DESC": "Maior primeiro",
+      "UNREAD_COUNT_ASC": "Menor primeiro"
     },
     "DOCS": "Ler documentos",
-    "SECURITY": "Security",
+    "SECURITY": "Segurança",
     "CAPTAIN_AI": "Captain",
-    "CONVERSATION_WORKFLOW": "Conversation Workflow"
+    "CONVERSATION_WORKFLOW": "Fluxo de conversa"
   },
   "DATA_IMPORTS": {
     "HEADER": "Data",
