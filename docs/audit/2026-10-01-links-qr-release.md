@@ -30,3 +30,15 @@ Um merge commit na main dispara os dois workflows oficiais blue-green, sem dispa
 Rollback autorizado no escopo desta publicação: workflow oficial de cada instalação com `action=rollback` e `confirm_production=true`, retornando à instância anterior. Evitar outro lote até a verificação desta publicação.
 
 Após o deploy, conferir sucesso dos workflows, revisão/imagem de web e worker, saúde HTTP e hashes dos arquivos entregues via SSM somente leitura, sem consultas ao banco. Evidência final será registrada no PR de release e nas issues. A checagem operacional não substitui uma sessão autenticada completa de UX em produção.
+
+## Evidência em produção
+
+Merge do PR #828: `902f0059d76da8b1c74c47f57c8e66edc6d55bca`, em 01/10/2026 às 18:34 UTC, após todos os checks do GitHub passarem. CI adicional completo: 620 arquivos/6.901 testes Vitest, 1.063 exemplos RSpec sem falhas (duas pendências preexistentes), 215 verificações de interface sem falhas.
+
+Deploys automáticos: Hub2You run 36907822833; Autonom.ia run 36907822881. Troca de tráfego e saúde aprovadas em ambos.
+
+Verificação SSM somente leitura passou nas duas instalações: imagem de web/worker e `.git_sha` iguais ao merge acima, serviços ativos, HTTP local saudável e SHA-256 de 25 arquivos de produto/manuais igual ao lote. Zero consultas ao banco. Comandos SSM: Hub2You `78349dc9-48a2-4107-a158-8114137f259b`; Autonom.ia `99876fa9-3ad1-4c33-b5c3-b034b499f736`.
+
+HTTP público: login 200 em chat.hub2you.ai e agents.autonomia.site; nova rota `/app/accounts/16/campaigns/links` responde 302 para autenticação no Hub2You. Não foi realizada sessão autenticada completa de UX em produção.
+
+Resultado final: ambos os workflows terminaram com `success`. Publicação concluída e verificada nas duas instalações.
