@@ -23,9 +23,10 @@ class Crm::Cards::FilterQuery
     'updated_at' => :updated_at
   }.freeze
 
-  def initialize(scope:, params:)
+  def initialize(scope:, params:, conversation_visibility:)
     @scope = scope
     @params = params
+    @conversation_visibility = conversation_visibility
   end
 
   def perform
@@ -55,8 +56,8 @@ class Crm::Cards::FilterQuery
   end
 
   def base_scope
-    @scope.includes(:owner, :inbox, :stage, :pipeline, :linked_conversations,
-                    contact: { label_taggings: :tag },
+    @scope.includes(:owner, :inbox, :stage, :pipeline,
+                    linked_conversations: :conversation_participants, contact: { label_taggings: :tag },
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
   end
 

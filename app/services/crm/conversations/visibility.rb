@@ -12,6 +12,19 @@ class Crm::Conversations::Visibility
     assigned_or_participating?(conversation)
   end
 
+  # SQL equivalent of visible? for filters/counts. Filtering after pagination
+  # would still expose matches or drop authorized rows from the current page.
+  def scope(conversations)
+    base = conversations.where(account_id: @account.id)
+    return base if administrator?
+    return base.none if @user.blank?
+
+    unrestricted = base.where(inbox_id: user_inbox_ids).where.not(inbox_id: assigned_only_inbox_ids)
+    restricted = base.where(inbox_id: assigned_only_inbox_ids)
+    participants = ConversationParticipant.where(account_id: @account.id, user_id: @user.id).select(:conversation_id)
+    unrestricted.or(restricted.where(assignee_id: @user.id)).or(restricted.where(id: participants))
+  end
+
   private
 
   def base_visible?(conversation)

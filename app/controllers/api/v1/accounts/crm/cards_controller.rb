@@ -376,7 +376,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def filtered_cards
-    ::Crm::Cards::FilterQuery.new(scope: policy_scope(::Crm::Card), params: params).perform
+    ::Crm::Cards::FilterQuery.new(scope: policy_scope(::Crm::Card), params: params, conversation_visibility: crm_visibility).perform
   end
 
   def per_page

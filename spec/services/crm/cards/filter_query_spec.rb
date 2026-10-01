@@ -16,6 +16,9 @@ RSpec.describe Crm::Cards::FilterQuery do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
+  let(:visibility) do
+    Crm::Conversations::Visibility.new(account: account, user: user, account_user: user.account_users.find_by!(account: account))
+  end
 
   # status `open` here is the in-funnel deal status, NOT the conversation status.
   def seed_cards
@@ -29,7 +32,7 @@ RSpec.describe Crm::Cards::FilterQuery do
   end
 
   def perform(result)
-    described_class.new(scope: account.crm_cards, params: { result: result }).perform
+    described_class.new(scope: account.crm_cards, params: { result: result }, conversation_visibility: visibility).perform
   end
 
   it 'returns only in-funnel (open) cards when result=open' do
@@ -64,7 +67,7 @@ RSpec.describe Crm::Cards::FilterQuery do
 
   describe 'campaign and label filters' do
     def perform_with(params)
-      described_class.new(scope: account.crm_cards, params: params).perform
+      described_class.new(scope: account.crm_cards, params: params, conversation_visibility: visibility).perform
     end
 
     def create_conversation(inbox:, campaign_source_ids: nil, labels: nil, contact_labels: nil)

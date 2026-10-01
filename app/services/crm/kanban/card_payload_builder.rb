@@ -110,13 +110,11 @@ class Crm::Kanban::CardPayloadBuilder
   end
 
   # CTWA multi-touch: aggregated campaign touches of the card, first touch -> last;
-  # the pill uses campaigns[0].headline and the badge uses length-1. [] when the
-  # primary conversation is hidden. Delegates to Crm::Cards::PayloadBuilder
-  # (single source of truth) so board/list/websocket shapes never drift.
+  # the pill uses campaigns[0].headline and the badge uses length-1. Each source
+  # conversation is authorized by Crm::Cards::PayloadBuilder, matching the
+  # list/websocket and server-side campaign filters.
   def campaigns_payload
-    return [] if visible_primary_conversation.blank?
-
-    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card)
+    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card, conversation_visibility: @conversation_visibility)
   end
 
   def compact_contact

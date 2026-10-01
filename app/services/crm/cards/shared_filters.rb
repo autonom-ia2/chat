@@ -86,6 +86,7 @@ module Crm::Cards::SharedFilters
       EXISTS (
         SELECT 1 FROM conversations
         WHERE conversations.account_id = crm_cards.account_id
+          AND conversations.id IN (#{visible_conversation_ids_sql})
           AND (conversations.id = crm_cards.conversation_id
                OR conversations.id IN (SELECT ccc.conversation_id FROM crm_card_conversations ccc WHERE ccc.card_id = crm_cards.id))
           AND (#{mirror_predicates.join(' OR ')})
@@ -101,7 +102,8 @@ module Crm::Cards::SharedFilters
     label_ids = parse_label_ids
     return cards if label_ids.blank?
 
-    predicate = "#{label_exists_sql('Conversation', 'crm_cards.conversation_id')} OR " \
+    predicate = "(crm_cards.conversation_id IN (#{visible_conversation_ids_sql}) AND " \
+                "#{label_exists_sql('Conversation', 'crm_cards.conversation_id')}) OR " \
                 "#{label_exists_sql('Contact', 'crm_cards.contact_id')}"
     cards.where(predicate, label_ids, label_ids)
   end
@@ -116,6 +118,12 @@ module Crm::Cards::SharedFilters
   end
 
   private
+
+  # Authorization is applied before rows, pagination, sums and counts are built.
+  # Required caller context prevents a filter from revealing hidden-chat metadata.
+  def visible_conversation_ids_sql
+    @visible_conversation_ids_sql ||= @conversation_visibility.scope(Conversation.all).select(:id).to_sql
+  end
 
   # A human is responsible when the linked conversation has an assignee, or (for cards
   # without a linked conversation) when an owner is set. Mirrors Crm::Card#responsible_descriptor.

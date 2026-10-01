@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–11. Parte 12 implementa a separação de escrita dos cadastros compartilhados, fecha as três falhas de autorização reproduzidas na etapa anterior e alinha as telas de CRM/Relacionamentos. O perfil de consulta pode abrir a ficha empresarial sem receber edição. Não existe limite de duas oportunidades; quantidade e visibilidade permanecem as do CRM. Aguardar aceite deste incremento. Revisão independente em BLOCKED_MODEL_TIER e workflow de Relacionamentos desabilitado continuam gates de liberação; sem merge/deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–12. Parte 13 revisa visibilidade das conversas e dados derivados: campanhas de origens restritas não entram nos payloads/filtros e os totais de etapa seguem o escopo autorizado. Três testes antigos de visibilidade foram reativados sem alterar asserções. O desenho, a largura de 640px e a ausência de cotas de oportunidades permanecem. Aguardar aceite deste incremento. Revisão independente e runtime Linux específico continuam gates antes do merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -20,7 +20,7 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Partes 3, 8 e 9 aprovadas: ficha real, criação contextual e lista autorizada. Regressão reexecutada na parte 10 após compartilhar apresentação/consulta. Revisão transversal pendente. |
-| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 aprovada visualmente. Parte 12 permite consulta da ficha para contact_view/contact_manage e protege a escrita; administrador/agente mantêm seus contratos. Aguardando aceite visual do modo consulta e revisão transversal. |
+| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Partes 10 e 12 aprovadas visualmente: contact_view/contact_manage consultam a ficha com escrita protegida; administrador/agente mantêm os contratos. Abertura do card recebe a revisão das projeções da parte 13; demais controles permanecem em revisão. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
 ## Parte 1 — Contrato do vínculo existente
@@ -183,9 +183,17 @@ O gestor comercial sem escrita cadastral ainda cria oportunidades com contato ex
 
 As três reproduções da parte 11 agora têm recusas testadas. O teste próprio de navegador criou somente uma oportunidade real, manteve pessoa/empresa intactas e demonstrou oito oportunidades com paginação para o administrador. Nenhuma cota nova foi criada. A comparação de registros e a regressão da lista do contato estão na galeria. Evidências e limites: [auditoria da parte 12](../audit/2026-10-01-792-crm-relationships-part-12.md) e [telas reais](screenshots/792-part12/README.md).
 
+## Parte 13 — Projeções e filtros de conversas autorizadas
+
+Cada origem de campanha passa pela visibilidade de sua própria conversa, tanto no detalhe/lista/Kanban quanto na exportação e no payload por destinatário. Conversa permitida não libera metadados da conversa restrita; uma origem secundária permitida também não é ocultada somente porque a primária é restrita. A ordem e deduplicação do histórico permitido foram preservadas.
+
+Filtros de origem e etiqueta de conversa aplicam a autorização antes de paginação, contagens e agrupamentos. Etiquetas próprias do contato continuam independentes. O total da etapa deixa de incluir cards fora do escopo do usuário. Não houve mudança nos cadastros, vínculos ou direitos de administrador, nem criação de cotas.
+
+Os três testes suspensos de visibilidade em cards_spec.rb passaram no código inicial e foram reativados sem mudar suas asserções. A bateria ampliada identifica sete outros suspensos antigos, incluindo a associação de conta e seis testes de outras áreas do CRM; não foram criados novos skips. Resultado de testes, medições iniciais que falharam por tempo, reexecução sequencial e telas reais estão na [auditoria da parte 13](../audit/2026-10-01-792-crm-relationships-part-13.md) e na [galeria](screenshots/792-part13/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após o aceite da parte 12, continuar a revisão integrada das demais entradas de escrita/concorrência, projeções e mídia de conversas, controles legados do atendimento e os quatro testes suspensos. Os contratos de integrações externas são verificações separadas. Resolver o CI específico e a revisão independente antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
+Após o aceite da parte 13, continuar pelos controles legados do atendimento e pelas entradas de escrita/concorrência ainda não revisadas. Os sete testes antigos suspensos da seleção ampliada e os efeitos de integrações externas são verificações específicas, não cobertas pela aprovação visual. Resolver o CI específico e a revisão independente antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
 
 ## Validação e publicação
 

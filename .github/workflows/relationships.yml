@@ -10,6 +10,8 @@ on:
       - 'spec/requests/api/v1/accounts/crm/**'
       - 'spec/enterprise/requests/api/v1/accounts/crm/**'
       - 'spec/services/crm/cards/**'
+      - 'spec/services/crm/conversations/**'
+      - 'spec/services/crm/kanban/**'
       - 'tests/playwright/**'
       - 'scripts/relationships/**'
       - 'docker/Dockerfile'
@@ -120,6 +122,13 @@ jobs:
           spec/services/crm/cards/contact_linker_spec.rb
           spec/services/crm/cards/conversation_linker_spec.rb
           spec/services/crm/cards/conversation_linker_integrity_spec.rb
+          spec/requests/api/v1/accounts/crm/campaign_visibility_spec.rb
+          spec/requests/api/v1/accounts/crm/cards_export_spec.rb
+          spec/services/crm/cards/filter_query_spec.rb
+          spec/services/crm/cards/payload_builder_spec.rb
+          spec/services/crm/cards/broadcaster_spec.rb
+          spec/services/crm/kanban/board_payload_builder_spec.rb
+          spec/services/crm/conversations/visibility_spec.rb
           --format progress --format json --out tmp/relationships-rspec.json
       - name: Real native converter tests
         run: bundle exec rspec spec/relationships_unit

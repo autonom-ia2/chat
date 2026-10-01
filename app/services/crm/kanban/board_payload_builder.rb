@@ -47,7 +47,7 @@ class Crm::Kanban::BoardPayloadBuilder
       # Unlike cards_count (open cards only, what the column shows), this counts every
       # status — it's how the delete-stage UI knows a stage isn't really empty even when
       # the board displays 0 (won/lost/archived cards never render on the Kanban).
-      total_cards_count: include_counts? ? stage.cards.count : nil,
+      total_cards_count: include_counts? ? @cards_scope.where(pipeline_id: @pipeline.id, stage_id: stage.id).count : nil,
       cards: cards.map { |card| card_payload(card, pending_suggestions) },
       has_more: has_more,
       next_cursor: next_cursor_for(cards, has_more)
@@ -144,7 +144,7 @@ class Crm::Kanban::BoardPayloadBuilder
     cards_scope = base_scope.order(id: :desc)
     cards_scope = cards_scope.where('crm_cards.id < ?', cursor_for(stage)) if cursor_for(stage).present?
     cards = cards_scope.preload(
-      :owner, :linked_conversations,
+      :owner, { linked_conversations: :conversation_participants },
       { contact: { label_taggings: :tag } },
       { inbox: { agent_bot_inbox: :agent_bot } },
       { primary_conversation: [:conversation_participants, :assignee, { applied_sla: :sla_policy }, { inbox: { agent_bot_inbox: :agent_bot } }] }
