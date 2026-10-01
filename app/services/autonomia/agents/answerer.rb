@@ -35,6 +35,13 @@ module Autonomia
         /\b[A-Z]{2,}-\d{2,}\b/                   # SKU/código tipo ST-045
       ].freeze
 
+      GENERIC_HANDOFF_REASONS = %w[
+        low_confidence other outro not_specified nao_especificado other_not_specified outro_nao_especificado
+      ].freeze
+      EXPLICIT_HANDOFF_REASONS = %w[
+        human_requested action_required needs_human customer_requested_human
+      ].freeze
+
       # Cinto determinístico do desbloqueio de conhecimento geral (fix Schengen C, 2026-07-04 — Codex
       # HIGH #118): o ramo !claims_knowledge do portão confia no auto-rótulo do modelo. Se ele rotular
       # ERRADO um fato do NEGÓCIO como "geral" (answered_from_knowledge=false, confiança alta, sem
@@ -389,7 +396,7 @@ module Autonomia
         # P2.2(b): sem fonte real e sem âncora, remover a frase de grounding ("nosso material") da reply.
         reply = sanitize_grounding_phrase(parsed['reply'], used, grounded_by_instruction)
 
-        if handoff?(parsed, confidence, answered, snippets, reply_present, grounded_by_instruction)
+        if handoff?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction)
           handoff_result(parsed, confidence, used)
         else
           AnswerResult.new(
@@ -486,12 +493,45 @@ module Autonomia
       # nem fato-âncora na instrução e a reply traz ESPECIFICIDADE fabricável (passo numerado, preço, horário,
       # SKU), força handoff em vez de deixar o LLM improvisar (S06). NÃO regride injeção: a recusa de injeção
       # é curta e SEM especificidade -> asks_for_specifics? falso -> não escala.
-      def handoff?(parsed, confidence, answered, snippets, reply_present, grounded_by_instruction = false)
-        parsed['should_handoff'] == true ||
+      def handoff?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction = false)
+        model_handoff_applies?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction) ||
           confidence < threshold ||
           @unanchored_business_claim == true || # cinto: fato do negócio sem base NUNCA passa (Codex #118)
           (!reply_present && !answered && snippets.empty?) ||
           improvised_specifics_without_kb?(snippets, reply_present, grounded_by_instruction, parsed)
+      end
+
+      def model_handoff_applies?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction)
+        return false unless parsed['should_handoff'] == true
+        return true if explicit_handoff_reason?(parsed)
+
+        !generic_handoff_noise?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction)
+      end
+
+      def generic_handoff_noise?(parsed, confidence, answered, used, snippets, reply_present, _grounded_by_instruction)
+        generic_handoff_reason?(parsed) &&
+          reply_present &&
+          confidence >= threshold &&
+          answered &&
+          (used.any? || retrieval_strong?(snippets, used))
+      end
+
+      def explicit_handoff_reason?(parsed)
+        EXPLICIT_HANDOFF_REASONS.include?(normalized_handoff_reason(parsed))
+      end
+
+      def generic_handoff_reason?(parsed)
+        reason = normalized_handoff_reason(parsed)
+        reason.blank? || GENERIC_HANDOFF_REASONS.include?(reason)
+      end
+
+      def normalized_handoff_reason(parsed)
+        parsed['handoff_reason'].to_s
+              .unicode_normalize(:nfkd)
+              .encode('ASCII', invalid: :replace, undef: :replace, replace: '')
+              .downcase
+              .gsub(/[^a-z0-9]+/, '_')
+              .gsub(/\A_+|_+\z/, '')
       end
 
       def improvised_specifics_without_kb?(snippets, reply_present, grounded_by_instruction, parsed)

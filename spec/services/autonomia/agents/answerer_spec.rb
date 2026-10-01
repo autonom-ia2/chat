@@ -90,6 +90,98 @@ RSpec.describe Autonomia::Agents::Answerer do
     end
   end
 
+  describe 'model handoff signal with grounded answer' do
+    let(:agent) do
+      agent = create_agent('with_knowledge' => true)
+      allow(agent).to receive(:accepted_sources).and_return(instance_double(ActiveRecord::Relation, exists?: true))
+      agent
+    end
+    let(:source) { instance_double(Autonomia::Agents::Source, reference: 'manual.pdf', external_link: nil) }
+    let(:snippet) do
+      knowledge_snippet(123, 'O kit pode ser impresso em papel A4.', 0.2)
+    end
+    let(:weak_snippet) do
+      knowledge_snippet(124, 'Texto sem relação forte.', 0.8)
+    end
+
+    def knowledge_snippet(id, content, distance)
+      Struct.new(:id, :content, :source, :neighbor_distance).new(id, content, source, distance)
+    end
+
+    def stub_retrieval(snippets)
+      allow(Autonomia::Agents::Retriever).to receive(:new)
+        .and_return(instance_double(Autonomia::Agents::Retriever, retrieve: snippets))
+    end
+
+    def stub_model(reply_hash)
+      client = instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: { text: reply_hash.to_json })
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+    end
+
+    it 'ignores a generic model handoff when the answer is grounded and confident' do
+      stub_retrieval([snippet])
+      stub_model(reply: 'O kit pode ser impresso em papel A4.', confidence: 0.97,
+                 should_handoff: true, handoff_reason: 'Outro / não especificado',
+                 used_snippet_ids: [snippet.id], answered_from_knowledge: true)
+
+      result = described_class.new(agent: agent, query: 'Posso imprimir o kit em A4?').answer
+
+      expect(result.reply).to eq('O kit pode ser impresso em papel A4.')
+      expect(result.handoff).to eq({ should: false, reason: nil })
+      expect(result.answered_from_knowledge).to be(true)
+    end
+
+    it 'keeps the handoff when the grounded answer is below the confidence threshold' do
+      stub_retrieval([snippet])
+      stub_model(reply: 'Talvez o kit possa ser impresso em A4.', confidence: 0.4,
+                 should_handoff: true, handoff_reason: 'Outro / não especificado',
+                 used_snippet_ids: [snippet.id], answered_from_knowledge: true)
+
+      result = described_class.new(agent: agent, query: 'Posso imprimir o kit em A4?').answer
+
+      expect(result.reply).to be_nil
+      expect(result.handoff[:should]).to be(true)
+    end
+
+    it 'keeps the handoff when the model did not ground the answer in retrieved knowledge' do
+      stub_retrieval([snippet])
+      stub_model(reply: 'Vamos verificar com a equipe.', confidence: 0.97,
+                 should_handoff: true, handoff_reason: 'Outro / não especificado',
+                 used_snippet_ids: [], answered_from_knowledge: false)
+
+      result = described_class.new(agent: agent, query: 'Como solicito um kit?').answer
+
+      expect(result.reply).to be_nil
+      expect(result.handoff[:should]).to be(true)
+    end
+
+    it 'keeps the handoff when claimed knowledge has no used snippet and no strong retrieval anchor' do
+      stub_retrieval([weak_snippet])
+      stub_model(reply: 'Vamos verificar com a equipe.', confidence: 0.97,
+                 should_handoff: true, handoff_reason: 'Outro / não especificado',
+                 used_snippet_ids: [], answered_from_knowledge: true)
+
+      result = described_class.new(agent: agent, query: 'Como solicito um kit?').answer
+
+      expect(result.reply).to be_nil
+      expect(result.handoff[:should]).to be(true)
+    end
+
+    it 'keeps explicit human/action handoff reasons even when a snippet was used' do
+      %w[human_requested action_required].each do |reason|
+        stub_retrieval([snippet])
+        stub_model(reply: 'Vou te passar para um atendente.', confidence: 0.97,
+                   should_handoff: true, handoff_reason: reason,
+                   used_snippet_ids: [snippet.id], answered_from_knowledge: true)
+
+        result = described_class.new(agent: agent, query: 'Quero falar com um atendente').answer
+
+        expect(result.reply).to be_nil
+        expect(result.handoff).to eq({ should: true, reason: reason })
+      end
+    end
+  end
+
   describe 'retrieval_query override' do
     it 'retrieves with the bare question when the composed query embeds context first' do
       # Arrange — copiloto chat: query composta = transcrição antes do pedido real
