@@ -43,3 +43,7 @@ Após revisão e autorização explícita: publicar backend/frontend pelo proced
 ## Ajuste solicitado após revisão visual
 
 Lixeira em cada linha da lista de status, usando Button ruby/ghost e ícone Lucide do design system. Área de clique mínima de 44px, título/aria-label traduzidos, proteção do último status e bloqueio durante exclusão/salvamento. Reutiliza removeStage e a confirmação existente na página (incluindo destino dos cards), sem abrir edição nem alterar backend. ESLint sem erros; 5 testes existentes do Drawer passando. Clique direto conferido no componente real com dados fictícios/API simulada: removeu Proposta e manteve a lista aberta; confirmação integrada apenas inspecionada no código.
+
+## Aprovação e preparação da publicação
+
+Após a tela real com lixeiras, Rodrigo respondeu “ok. Pode seguir.”. O CI do HEAD 25a4c3de62 bloqueou 12 avisos de fechamento de tags gerados pelo conflito entre Prettier e ESLint; os demais gates executados passaram. Aplicada ao Drawer a mesma opção htmlWhitespaceSensitivity=ignore já usada nos editores de campanha, sem desativar regra ou gate. Diff de formatação relido; lint idêntico ao CI em cinco arquivos: zero bloqueios e oito avisos permitidos de chaves dinâmicas; Prettier aprovado; Vitest repetido: 68 testes passando. Aparência reconferida no componente real.

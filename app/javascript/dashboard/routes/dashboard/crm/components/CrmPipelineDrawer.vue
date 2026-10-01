@@ -759,20 +759,23 @@ useFixedPanelPresence(computed(() => props.show));
                         'bg-n-brand/10 text-n-brand'
                       "
                       aria-hidden="true"
-                      >{{ index + 1 }}</span
                     >
+                      {{ index + 1 }}
+                    </span>
                     <span class="min-w-0 flex-1">
                       <span
                         class="block break-words text-base font-semibold leading-5 text-n-slate-12"
-                        >{{ stage.name }}</span
                       >
+                        {{ stage.name }}
+                      </span>
                       <span
                         class="mt-1 line-clamp-2 text-sm leading-5 text-n-slate-11"
-                        >{{
+                      >
+                        {{
                           criteriaFor(stage) ||
                           t('CRM_KANBAN.PIPELINE_EDITOR.DESCRIBE')
-                        }}</span
-                      >
+                        }}
+                      </span>
                     </span>
                     <span
                       class="i-lucide-chevron-right shrink-0 text-n-slate-10"
@@ -800,11 +803,11 @@ useFixedPanelPresence(computed(() => props.show));
               class="mt-2 flex min-h-14 items-center justify-between rounded-xl bg-n-alpha-black2 px-4 text-start text-sm font-medium text-n-slate-12"
               @click="view = 'returns'"
             >
-              <span class="flex items-center gap-3"
-                ><span class="i-lucide-calendar-clock text-lg" />{{
-                  t('CRM_KANBAN.PIPELINE_EDITOR.RETURNS')
-                }}</span
-              ><span class="i-lucide-chevron-right" />
+              <span class="flex items-center gap-3">
+                <span class="i-lucide-calendar-clock text-lg" />
+                {{ t('CRM_KANBAN.PIPELINE_EDITOR.RETURNS') }}
+              </span>
+              <span class="i-lucide-chevron-right" />
             </button>
           </section>
 
@@ -822,8 +825,9 @@ useFixedPanelPresence(computed(() => props.show));
                       'bg-n-brand/10 text-n-brand'
                     "
                     aria-hidden="true"
-                    >{{ index + 1 }}</span
                   >
+                    {{ index + 1 }}
+                  </span>
                   <div class="min-w-0">
                     <p class="mb-1 text-xs font-medium text-n-slate-11">
                       {{
@@ -857,13 +861,12 @@ useFixedPanelPresence(computed(() => props.show));
                   <label for="stage-ai-criteria" class="grid gap-2">
                     <span
                       class="text-xl font-semibold leading-7 text-n-slate-12"
-                      >{{
-                        t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_QUESTION')
-                      }}</span
                     >
-                    <span class="text-sm leading-6 text-n-slate-11">{{
-                      t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_HELP')
-                    }}</span>
+                      {{ t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_QUESTION') }}
+                    </span>
+                    <span class="text-sm leading-6 text-n-slate-11">
+                      {{ t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_HELP') }}
+                    </span>
                   </label>
                   <textarea
                     id="stage-ai-criteria"
@@ -876,9 +879,9 @@ useFixedPanelPresence(computed(() => props.show));
                   <div
                     class="flex flex-wrap items-center justify-between gap-3"
                   >
-                    <span class="text-xs text-n-slate-11">{{
-                      t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_TIP')
-                    }}</span>
+                    <span class="text-xs text-n-slate-11">
+                      {{ t('CRM_KANBAN.PIPELINE_EDITOR.CRITERIA_TIP') }}
+                    </span>
                     <Button
                       v-if="isEditing"
                       :label="t('CRM_KANBAN.PIPELINE_EDITOR.IMPROVE')"
@@ -985,14 +988,14 @@ useFixedPanelPresence(computed(() => props.show));
                           type="color"
                           class="h-11 w-11 shrink-0 cursor-pointer rounded-lg border border-n-weak bg-transparent p-1"
                         />
-                        <span class="grid gap-0.5"
-                          ><span>{{
-                            t('CRM_KANBAN.PIPELINE_EDITOR.CUSTOM_COLOR')
-                          }}</span
-                          ><span class="text-xs text-n-slate-11">{{
-                            stage.color
-                          }}</span></span
-                        >
+                        <span class="grid gap-0.5">
+                          <span>
+                            {{ t('CRM_KANBAN.PIPELINE_EDITOR.CUSTOM_COLOR') }}
+                          </span>
+                          <span class="text-xs text-n-slate-11">
+                            {{ stage.color }}
+                          </span>
+                        </span>
                       </label>
                     </fieldset>
 
@@ -1071,9 +1074,9 @@ useFixedPanelPresence(computed(() => props.show));
                       <span class="i-lucide-megaphone text-xl" />
                     </span>
                     <div class="grid gap-1">
-                      <span class="text-xs font-medium text-n-blue-11">{{
-                        t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_TITLE')
-                      }}</span>
+                      <span class="text-xs font-medium text-n-blue-11">
+                        {{ t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_TITLE') }}
+                      </span>
                       <h4
                         class="mb-0 text-base font-semibold leading-6 text-n-slate-12"
                       >
@@ -1091,14 +1094,20 @@ useFixedPanelPresence(computed(() => props.show));
                       class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 rounded-xl bg-n-blue-2 px-4 py-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
                     >
                       <span class="grid gap-1">
-                        <span class="text-xs text-n-slate-11">{{
-                          t('CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS.CURRENT')
-                        }}</span>
-                        <span class="font-medium text-n-slate-12">{{
-                          metaProgressChoices.find(
-                            choice => choice.value === stage.funnel_stage_type
-                          )?.label
-                        }}</span>
+                        <span class="text-xs text-n-slate-11">
+                          {{
+                            t(
+                              'CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS.CURRENT'
+                            )
+                          }}
+                        </span>
+                        <span class="font-medium text-n-slate-12">
+                          {{
+                            metaProgressChoices.find(
+                              choice => choice.value === stage.funnel_stage_type
+                            )?.label
+                          }}
+                        </span>
                       </span>
                       <span
                         class="flex shrink-0 items-center gap-2 text-n-brand"
@@ -1144,12 +1153,14 @@ useFixedPanelPresence(computed(() => props.show));
                         <span class="min-w-0 flex-1">
                           <span
                             class="block text-sm font-semibold leading-5 text-n-slate-12"
-                            >{{ choice.label }}</span
                           >
+                            {{ choice.label }}
+                          </span>
                           <span
                             class="mt-1 block text-sm leading-5 text-n-slate-11"
-                            >{{ choice.description }}</span
                           >
+                            {{ choice.description }}
+                          </span>
                         </span>
                         <span
                           class="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
