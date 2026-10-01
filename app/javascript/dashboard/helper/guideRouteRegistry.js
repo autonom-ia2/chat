@@ -45,6 +45,7 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'campaigns_ongoing_index',
   'campaigns_sms_index',
   'campaigns_templates_index',
+  'campaigns_tracked_links_index',
   'campaigns_whatsapp_analytics',
   'campaigns_whatsapp_api_index',
   'campaigns_whatsapp_index',

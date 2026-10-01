@@ -439,7 +439,7 @@
 - titulo: Criar e verificar identidade de remetente de e-mail
 - rota: campaigns_email_sender_index
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Identidades de remetente
+- onde_fica: Sidebar > Campanhas > E-mails > Identidades de remetente
 - pre_requisitos: acesso ao DNS do domínio ou caixa webmail conectada para envio direto em baixo volume.
 - passos: Abra Identidades de remetente; clique em novo domínio; informe domínio e e-mail opcional; copie os registros DNS; clique em Verificar agora ou aguarde polling; use apenas identidades verificadas na campanha.
 - gotchas: domínios pendentes não aparecem como remetente SES; webmail gratuito aparece como opção de envio direto, mas com aviso e limitações; remover identidade em uso retorna erro.
@@ -449,7 +449,7 @@
 - titulo: Criar campanha de e-mail e importar base
 - rota: campaigns_email_index
 - intent: "Como crio uma campanha de e-mail?"; "Como importo destinatários?"; "Por que o botão de criar está desabilitado?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail
+- onde_fica: Sidebar > Campanhas > E-mails
 - pre_requisitos: identidade verificada ou caixa webmail elegível; arquivo CSV/XLSX de destinatários quando houver base externa.
 - passos: Clique em Nova campanha; informe nome e remetente; defina nome do remetente, e-mail, reply-to e preheader; anexe CSV/XLSX de base se necessário; salve e abra o editor.
 - gotchas: `from_email` precisa pertencer ao domínio SES verificado; envio direto trava o campo "De" com o e-mail da caixa; a importação pode gerar placeholders a partir das colunas da base.
@@ -459,7 +459,7 @@
 - titulo: Montar e-mail com editor, IA e templates
 - rota: campaigns_email_builder
 - intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Editor
+- onde_fica: Sidebar > Campanhas > E-mails > Editor
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
 - passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
 - gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de disparar.
@@ -468,7 +468,7 @@
 - titulo: Gerenciar destinatários, agendar e enviar campanha de e-mail
 - rota: campaigns_email_index
 - intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Onde fica o botão Disparar?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Gerenciar destinatários
+- onde_fica: Sidebar > Campanhas > E-mails > Gerenciar destinatários
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
 - passos: Abra Destinatários; importe CSV/XLSX adicional se precisar; confira campos e validação; na lista, clique em Disparar; a revisão mostra o que falta, remetente, público e exclusões; escolha enviar agora ou data/hora e confirme na etapa final. Pausar, Retomar e Cancelar ficam nas ações da campanha.
 - gotchas: Disparar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
@@ -481,6 +481,16 @@
 - pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega.
 - passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
 - gotchas: abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
+
+### criar_e_compartilhar_links_e_qr_codes
+- titulo: Criar e compartilhar Links e QR codes
+- rota: campaigns_tracked_links_index
+- leitura: campanhas
+- intent: Como crio um QR code para o WhatsApp da loja?; Onde crio um link rastreável de vendedor?; Como identifico as conversas que vêm da bio?; Onde baixo o QR code de uma campanha?
+- onde_fica: Menu lateral > Campanhas > Links e QR codes, depois de E-mails e antes de Modelos WhatsApp
+- pre_requisitos: CRM habilitado; acesso às campanhas; caixa de WhatsApp conectada; permissão de gerenciar campanhas para criar ou excluir.
+- passos: Abra Links e QR codes; clique em Nova campanha; informe nome da origem, WhatsApp de destino e mensagem opcional; confira a prévia e crie; selecione a campanha na lista para copiar o link, baixar o QR ou visualizar o material; acompanhe cliques e conversas nos resultados acumulados.
+- gotchas: link e QR usam a mesma URL rastreável; o cliente pode editar a mensagem antes de enviar; o QR só é gerado depois de criar a campanha; excluir inutiliza o link e QR já divulgados; não é necessário habilitar campanhas de e-mail; Gestão de campanhas mantém apenas os relatórios de e-mail.
 
 ### criar_campanha_whatsapp_api
 - titulo: Criar campanha WhatsApp API
@@ -1702,9 +1712,9 @@
 - titulo: Escolher um modelo pronto de e-mail
 - rota: campaigns_email_templates
 - intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
-- onde_fica: Campanhas > Campanhas de e-mail > Biblioteca de modelos
+- onde_fica: Campanhas > E-mails > Biblioteca de modelos
 - pre_requisitos: campanhas de e-mail liberadas na conta e permissão de gerenciar campanhas para aplicar modelos
-- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
+- passos: 1. Abra Campanhas > E-mails; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
 - gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
 - nav_target: `campaigns_email_templates`
 

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (173 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (174 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -466,7 +466,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar e verificar identidade de remetente de e-mail
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Identidades de remetente
+- onde_fica: Sidebar > Campanhas > E-mails > Identidades de remetente
 - rota: `campaigns_email_sender_index` - `/app/accounts/:accountId/campaigns/email_sender`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: acesso ao DNS do domínio ou caixa webmail conectada para envio direto em baixo volume.
@@ -477,7 +477,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar campanha de e-mail e importar base
 - intent: "Como crio uma campanha de e-mail?"; "Como importo destinatários?"; "Por que o botão de criar está desabilitado?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail
+- onde_fica: Sidebar > Campanhas > E-mails
 - rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: identidade verificada ou caixa webmail elegível; arquivo CSV/XLSX de destinatários quando houver base externa.
@@ -488,7 +488,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Montar e-mail com editor, IA e templates
 - intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Editor
+- onde_fica: Sidebar > Campanhas > E-mails > Editor
 - rota: `campaigns_email_builder` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId/builder`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
@@ -498,7 +498,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Gerenciar destinatários, agendar e enviar campanha de e-mail
 - intent: "Como adiciono mais destinatários?"; "Como agendo envio?"; "Onde fica o botão Disparar?"
-- onde_fica: Sidebar > Campanhas > Campanhas de e-mail > Gerenciar destinatários
+- onde_fica: Sidebar > Campanhas > E-mails > Gerenciar destinatários
 - rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
@@ -515,6 +515,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
 - gotchas: abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
 - nav_target: `crm_campaign_management_index`
+
+### Criar e compartilhar Links e QR codes
+- intent: Como crio um QR code para o WhatsApp da loja?; Onde crio um link rastreável de vendedor?; Como identifico as conversas que vêm da bio?; Onde baixo o QR code de uma campanha?
+- onde_fica: Menu lateral > Campanhas > Links e QR codes, depois de E-mails e antes de Modelos WhatsApp
+- rota: `campaigns_tracked_links_index` - `/app/accounts/:accountId/campaigns/links`
+- gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: CRM habilitado; acesso às campanhas; caixa de WhatsApp conectada; permissão de gerenciar campanhas para criar ou excluir.
+- passos: Abra Links e QR codes; clique em Nova campanha; informe nome da origem, WhatsApp de destino e mensagem opcional; confira a prévia e crie; selecione a campanha na lista para copiar o link, baixar o QR ou visualizar o material; acompanhe cliques e conversas nos resultados acumulados.
+- gotchas: link e QR usam a mesma URL rastreável; o cliente pode editar a mensagem antes de enviar; o QR só é gerado depois de criar a campanha; excluir inutiliza o link e QR já divulgados; não é necessário habilitar campanhas de e-mail; Gestão de campanhas mantém apenas os relatórios de e-mail.
+- leitura: campanhas
+- nav_target: `campaigns_tracked_links_index`
 
 ### Criar campanha WhatsApp API
 - intent: "Como disparo campanha pelo WhatsApp API?"; "Onde escolho rótulos de audiência?"; "Como pauso ou cancelo?"
@@ -1781,11 +1792,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher um modelo pronto de e-mail
 - intent: Onde estão os modelos prontos de e-mail?; Como aplico um modelo na minha campanha?; Dá para ver o modelo antes de usar?; Usar um modelo apaga o que eu já escrevi?
-- onde_fica: Campanhas > Campanhas de e-mail > Biblioteca de modelos
+- onde_fica: Campanhas > E-mails > Biblioteca de modelos
 - rota: `campaigns_email_templates` - `/app/accounts/:accountId/campaigns/email_campaigns/:campaignId?/templates`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanhas de e-mail liberadas na conta e permissão de gerenciar campanhas para aplicar modelos
-- passos: 1. Abra Campanhas > Campanhas de e-mail; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
+- passos: 1. Abra Campanhas > E-mails; 2. Abra Biblioteca de modelos; 3. Escolha Modelos prontos ou Meus modelos, busque e filtre por objetivo; 4. Abra Prévia no computador ou celular; 5. Use o modelo na campanha atual ou preencha o remetente para criar uma nova; 6. Ajuste textos, imagens e links antes de enviar.
 - gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
 - nav_target: `campaigns_email_templates`
 

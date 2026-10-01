@@ -75,25 +75,25 @@
   },
   "CRM_KANBAN": {
     "TRACKED_LINKS": {
-      "TITLE": "Ligações rastreáveis e códigos QR",
-      "SUBTITLE": "Crie uma ligação ou um QR por campanha, vendedor ou loja. As conversas iniciadas através deles ficam com a origem identificada no CRM.",
-      "ADD": "Nova ligação",
+      "TITLE": "Links rastreáveis e códigos QR",
+      "SUBTITLE": "Crie um link ou QR por campanha, vendedor ou loja. Conversas iniciadas por ele chegam atribuídas no CRM.",
+      "ADD": "Novo link",
       "NAME": "Nome",
       "NAME_PLACEHOLDER": "Ex.: QR da loja — Centro",
       "INBOX": "Caixa de entrada do WhatsApp",
       "PREFILLED": "Mensagem pré-preenchida",
-      "PREFILLED_PLACEHOLDER": "Ex.: Olá! Gostaria de saber mais",
+      "PREFILLED_PLACEHOLDER": "Ex.: Olá! Quero saber mais",
       "CODE": "Código",
       "CLICKS": "Cliques",
       "CONVERSATIONS": "Conversas",
-      "COPY_LINK": "Copiar ligação",
+      "COPY_LINK": "Copiar link",
       "COPIED": "Copiado!",
-      "DOWNLOAD_QR": "Descarregar QR",
-      "DELETE": "Eliminar",
-      "DELETE_CONFIRM": "Eliminar esta ligação? As conversas já atribuídas mantêm a sua origem.",
-      "EMPTY": "Ainda não existem ligações rastreáveis. Crie a primeira para identificar conversas da loja, do vendedor ou da biografia.",
-      "CREATE_SUCCESS": "Ligação criada",
-      "CREATE_ERROR": "Não foi possível criar a ligação"
+      "DOWNLOAD_QR": "Baixar QR",
+      "DELETE": "Excluir",
+      "DELETE_CONFIRM": "Excluir este link? Conversas já atribuídas mantêm a origem.",
+      "EMPTY": "Nenhum link rastreável ainda. Crie o primeiro para atribuir conversas de loja, vendedor ou bio.",
+      "CREATE_SUCCESS": "Link criado",
+      "CREATE_ERROR": "Não foi possível criar o link"
     }
   }
 }
