@@ -1,4 +1,5 @@
 <script>
+import { useI18n } from 'vue-i18n';
 import { mapGetters } from 'vuex';
 import LoadingState from './components/widgets/LoadingState.vue';
 import NetworkNotification from './components/NetworkNotification.vue';
@@ -37,6 +38,7 @@ export default {
     LowBackupCodesBanner,
   },
   setup() {
+    const i18n = useI18n({ useScope: 'global' });
     const router = useRouter();
     const store = useStore();
     const { accountId } = useAccount();
@@ -45,6 +47,7 @@ export default {
     const { uiSettings } = useUISettings();
 
     return {
+      i18n,
       router,
       store,
       currentAccountId: accountId,
@@ -103,7 +106,7 @@ export default {
     },
     async setLocale(locale) {
       if (locale) {
-        await setDashboardLocale(this.$root.$i18n, locale);
+        await setDashboardLocale(this.i18n, locale);
       }
     },
     async initializeAccount() {

@@ -154,6 +154,7 @@ jobs:
 
           path = Path("chatwoot.env")
           required = {
+              "DEFAULT_LOCALE": "pt_BR",
               "EMAIL_REPUTATION_PROVIDER_MONITOR": "true",
               "EMAIL_REPUTATION_AWS_ACCOUNT_ID": "140023375763",
               "EMAIL_REPUTATION_PROVIDER_UNKNOWN_ACTION": "block",

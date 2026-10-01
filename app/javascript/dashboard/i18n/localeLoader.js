@@ -1,5 +1,7 @@
 const DEFAULT_LOCALE = 'en';
+const PORTUGUESE_FALLBACK_LOCALE = 'pt_BR';
 const localeLoaders = import.meta.glob('./locale/*/index.js');
+const localeChanges = new WeakMap();
 
 const normalizeLocale = locale =>
   String(locale || DEFAULT_LOCALE).replace('-', '_');
@@ -11,17 +13,6 @@ const resolveLocale = locale => {
   return localeLoaders[localePath(normalizedLocale)]
     ? normalizedLocale
     : DEFAULT_LOCALE;
-};
-
-const i18nTarget = i18n => i18n?.global || i18n;
-
-const assignLocale = (target, locale) => {
-  if (target?.locale && typeof target.locale === 'object') {
-    target.locale.value = locale;
-    return;
-  }
-
-  target.locale = locale;
 };
 
 export const loadDashboardLocale = async locale => {
@@ -40,32 +31,53 @@ export const buildDashboardI18nMessages = async locale => {
     resolveLocale(locale) === DEFAULT_LOCALE
       ? fallbackLocale
       : await loadDashboardLocale(locale);
+  const portugueseFallback =
+    currentLocale.locale === 'pt'
+      ? await loadDashboardLocale(PORTUGUESE_FALLBACK_LOCALE)
+      : null;
 
   return {
     locale: currentLocale.locale,
-    fallbackLocale: fallbackLocale.locale,
+    fallbackLocale: {
+      pt: [PORTUGUESE_FALLBACK_LOCALE, DEFAULT_LOCALE],
+      default: [DEFAULT_LOCALE],
+    },
     messages: {
       [fallbackLocale.locale]: fallbackLocale.messages,
       [currentLocale.locale]: currentLocale.messages,
+      ...(portugueseFallback && {
+        [portugueseFallback.locale]: portugueseFallback.messages,
+      }),
     },
   };
 };
 
-export const setDashboardLocale = async (i18n, locale) => {
-  if (!locale) return;
-
-  const target = i18nTarget(i18n);
-  if (!target) return;
+export const setDashboardLocale = async (composer, locale) => {
+  const request = Symbol();
+  localeChanges.set(composer, request);
 
   const { locale: resolvedLocale, messages } =
     await loadDashboardLocale(locale);
+  const portugueseFallback =
+    resolvedLocale === 'pt'
+      ? await loadDashboardLocale(PORTUGUESE_FALLBACK_LOCALE)
+      : null;
+
+  if (localeChanges.get(composer) !== request) return;
 
   if (
-    target.setLocaleMessage &&
-    !target.availableLocales?.includes?.(resolvedLocale)
+    portugueseFallback &&
+    !composer.availableLocales.includes(portugueseFallback.locale)
   ) {
-    target.setLocaleMessage(resolvedLocale, messages);
+    composer.setLocaleMessage(
+      portugueseFallback.locale,
+      portugueseFallback.messages
+    );
   }
 
-  assignLocale(target, resolvedLocale);
+  if (!composer.availableLocales.includes(resolvedLocale)) {
+    composer.setLocaleMessage(resolvedLocale, messages);
+  }
+
+  composer.locale.value = resolvedLocale;
 };
