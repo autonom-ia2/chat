@@ -118,6 +118,14 @@ RSpec.describe Autonomia::Agents::Answerer do
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
     end
 
+    def stub_model_with_rewrite(initial_hash, rewritten_hash)
+      client = instance_double(Crm::Ai::ResponsesClient)
+      allow(client).to receive(:create_with_tool_executor).and_return({ text: initial_hash.to_json })
+      allow(client).to receive(:create).and_return({ text: rewritten_hash.to_json })
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+      client
+    end
+
     it 'ignores a generic model handoff when the answer is grounded and confident' do
       stub_retrieval([snippet])
       stub_model(reply: 'O kit pode ser impresso em papel A4.', confidence: 0.97,
@@ -127,6 +135,68 @@ RSpec.describe Autonomia::Agents::Answerer do
       result = described_class.new(agent: agent, query: 'Posso imprimir o kit em A4?').answer
 
       expect(result.reply).to eq('O kit pode ser impresso em papel A4.')
+      expect(result.handoff).to eq({ should: false, reason: nil })
+      expect(result.answered_from_knowledge).to be(true)
+    end
+
+    it 'rewrites a generic wait reply when retrieved knowledge clearly answers the question' do
+      stub_retrieval([snippet])
+      client = stub_model_with_rewrite(
+        {
+          reply: 'Só um momento, por favor. Estou verificando e já retorno com as informações.',
+          confidence: 0.98,
+          should_handoff: true,
+          handoff_reason: 'Outro / não especificado',
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        },
+        {
+          reply: 'Sim. O kit pode ser impresso em papel A4.',
+          confidence: 0.98,
+          should_handoff: false,
+          handoff_reason: nil,
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        }
+      )
+
+      result = described_class.new(agent: agent, query: 'Posso receber o PDF do kit para imprimir em folha A4?').answer
+
+      expect(client).to have_received(:create)
+      expect(result.reply).to eq('Sim. O kit pode ser impresso em papel A4.')
+      expect(result.handoff).to eq({ should: false, reason: nil })
+      expect(result.answered_from_knowledge).to be(true)
+    end
+
+    it 'also rewrites generic wait replies in trust_instruction mode used by real attendance' do
+      stub_retrieval([snippet])
+      client = stub_model_with_rewrite(
+        {
+          reply: 'Só um momento, por favor. Estou verificando e já retorno com as informações.',
+          confidence: 0.99,
+          should_handoff: true,
+          handoff_reason: 'Outro / não especificado',
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        },
+        {
+          reply: 'Sim. O kit pode ser impresso em papel A4.',
+          confidence: 0.99,
+          should_handoff: false,
+          handoff_reason: nil,
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        }
+      )
+
+      result = described_class.new(
+        agent: agent,
+        query: 'Posso receber o PDF do kit para imprimir em folha A4?',
+        trust_instruction: true
+      ).answer
+
+      expect(client).to have_received(:create)
+      expect(result.reply).to eq('Sim. O kit pode ser impresso em papel A4.')
       expect(result.handoff).to eq({ should: false, reason: nil })
       expect(result.answered_from_knowledge).to be(true)
     end

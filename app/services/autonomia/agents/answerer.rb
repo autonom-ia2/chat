@@ -42,6 +42,22 @@ module Autonomia
         human_requested action_required needs_human customer_requested_human
       ].freeze
 
+      # Reply que não responde de fato: é só uma promessa de verificar/retornar. Quando o modelo
+      # faz isso apesar de haver contexto recuperado forte, uma reescrita específica força a resposta
+      # factual a partir dos trechos, em vez de deixar o cliente receber uma frase de espera.
+      DEFERRED_REPLY_PATTERNS = [
+        /\bs[óo]\s+um\s+momento\b/i,
+        /\bum\s+momento[, ]+por\s+favor\b/i,
+        /\bestou\s+verificando\b/i,
+        /\bestamos\s+verificando\b/i,
+        /\bvou\s+verificar\b/i,
+        /\bvou\s+consultar\b/i,
+        /\bem\s+breve\s+retorn/i,
+        /\bj[áa]\s+retorno\b/i,
+        /\bretornaremos\s+com\s+as\s+informa[çc][õo]es\b/i,
+        /\bjunto\s+ao\s+setor\s+respons[áa]vel\b/i
+      ].freeze
+
       # Cinto determinístico do desbloqueio de conhecimento geral (fix Schengen C, 2026-07-04 — Codex
       # HIGH #118): o ramo !claims_knowledge do portão confia no auto-rótulo do modelo. Se ele rotular
       # ERRADO um fato do NEGÓCIO como "geral" (answered_from_knowledge=false, confiança alta, sem
@@ -134,6 +150,8 @@ module Autonomia
         return AnswerResult.new(reply: nil, confidence: 0.0, handoff: { should: false, reason: nil },
                                 used_knowledge: [], answered_from_knowledge: false, raw_reply: nil,
                                 error: 'ai_unavailable') if parsed.nil?
+
+        parsed = rewrite_deferred_grounded_reply(parsed, snippets)
 
         AnswerResult.new(
           reply: conferir_precos(parsed['reply']), confidence: clamp(parsed['confidence'].to_f),
@@ -374,6 +392,7 @@ module Autonomia
       end
 
       def build_result(parsed, snippets)
+        parsed = rewrite_deferred_grounded_reply(parsed, snippets)
         self_conf = clamp(parsed['confidence'].to_f)
         used = used_knowledge(parsed['used_snippet_ids'], snippets, parsed)
         answered = parsed['answered_from_knowledge'] == true
@@ -514,6 +533,75 @@ module Autonomia
           confidence >= threshold &&
           answered &&
           (used.any? || retrieval_strong?(snippets, used))
+      end
+
+      def rewrite_deferred_grounded_reply(parsed, snippets)
+        used = used_knowledge(parsed['used_snippet_ids'], snippets, parsed)
+        confidence = clamp(parsed['confidence'].to_f)
+        answered = parsed['answered_from_knowledge'] == true
+        return parsed unless deferred_grounded_reply?(parsed, confidence, answered, used, snippets)
+
+        rewritten = rewrite_deferred_reply(parsed, snippets, used)
+        return parsed unless rewritten.is_a?(Hash)
+        return parsed if rewritten['reply'].to_s.strip.blank? || deferred_reply?(rewritten)
+
+        # A reescrita existe só porque já havia contexto forte. Mantém o contrato seguro mesmo quando
+        # o modelo esquece de ecoar ids/flags no segundo passe.
+        rewritten['should_handoff'] = false if generic_handoff_reason?(rewritten)
+        rewritten['handoff_reason'] = nil unless rewritten['should_handoff'] == true
+        rewritten['answered_from_knowledge'] = true
+        rewritten['used_snippet_ids'] = used.map { |entry| entry[:id] }.compact if Array(rewritten['used_snippet_ids']).empty?
+        rewritten
+      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
+        parsed
+      end
+
+      def deferred_grounded_reply?(parsed, confidence, answered, used, snippets)
+        return false if explicit_handoff_reason?(parsed)
+        return false unless deferred_reply?(parsed)
+        return false unless confidence >= threshold
+        return false unless answered
+
+        generic_handoff_reason?(parsed) && (used.any? || retrieval_strong?(snippets, used))
+      end
+
+      def deferred_reply?(parsed)
+        text = parsed['reply'].to_s
+        DEFERRED_REPLY_PATTERNS.any? { |re| text.match?(re) }
+      end
+
+      def rewrite_deferred_reply(parsed, snippets, used)
+        grounded = used.presence || used_knowledge(Array(snippets).map(&:id), snippets, parsed)
+        context = grounded.map.with_index(1) do |entry, index|
+          id = entry[:id] || "sem-id-#{index}"
+          "[#{id}] #{entry[:content]}"
+        end.join("\n")
+        return parsed if context.blank?
+
+        pedido = <<~PROMPT.strip
+          A resposta anterior foi apenas uma frase de espera, mas ha contexto recuperado suficiente.
+          Reescreva a resposta final ao cliente usando SOMENTE os fatos dos trechos abaixo.
+          Nao prometa verificar, nao diga que vai retornar e nao encaminhe para humano se os trechos responderem.
+          Se faltar algum detalhe especifico, responda o que os trechos afirmam e diga a lacuna de forma curta.
+
+          Pergunta do cliente:
+          #{@query}
+
+          Trechos disponiveis:
+          #{context}
+        PROMPT
+
+        raw = @cliente.create(
+          model: Config::ANSWERER_MODEL,
+          instructions: @prompt.instructions,
+          input: @prompt.input + [
+            PromptParts::Mensagem.montar('assistant', parsed['reply'].to_s),
+            PromptParts::Mensagem.montar('user', pedido)
+          ],
+          schema: schema_da_resposta,
+          reasoning_effort: Config::ANSWERER_REASONING_EFFORT
+        )
+        JSON.parse(raw[:text])
       end
 
       def explicit_handoff_reason?(parsed)
