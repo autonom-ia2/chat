@@ -510,7 +510,7 @@
       }
     },
     "EMAIL_CAMPAIGN": {
-      "HEADER_TITLE": "Campanhas de e-mail",
+      "HEADER_TITLE": "E-mails",
       "NEW": "Nova campanha de e-mail",
       "DESCRIPTION": "Componha um e-mail, escolha um domínio de envio verificado, suba sua lista de destinatários e envie agora ou agende.",
       "EMPTY_STATE": {
