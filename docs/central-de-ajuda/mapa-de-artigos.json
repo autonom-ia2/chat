@@ -3321,13 +3321,12 @@
     },
     {
      "id": "13.11",
-     "titulo": "Analisar uma campanha e usar links rastreáveis",
-     "para_que_serve": "Ver a linha do tempo e os cliques por link de uma campanha, e criar link/QR rastreável por vendedor ou loja.",
+     "titulo": "Analisar uma campanha de e-mail",
+     "para_que_serve": "Ver a linha do tempo, os cliques por link e os destinatários de uma campanha de e-mail.",
      "publico": "admin",
      "prioridade": "P2",
      "assuntos": [
-      "10.22-gestao-campanhas-detalhe",
-      "10.23-links-rastreaveis-qr"
+      "10.22-gestao-campanhas-detalhe"
      ],
      "rotas": [
       "crm_campaign_management_index"
@@ -3363,6 +3362,30 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo, mas o Guia da Plataforma já tinha o conteúdo pronto — só precisou ser portado."
+    },
+    {
+     "id": "13.13",
+     "titulo": "Criar e compartilhar links e QR codes para WhatsApp",
+     "para_que_serve": "Identificar a origem das conversas por loja, vendedor ou divulgação e compartilhar o link ou QR code.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [
+      "10.23-links-rastreaveis-qr"
+     ],
+     "rotas": [
+      "campaigns_tracked_links_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_tracked_links_index",
+      "destaque": null
+     },
+     "requer": null,
+     "prints": [],
+     "fontes": [
+      "porques: Criar e compartilhar Links e QR codes"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

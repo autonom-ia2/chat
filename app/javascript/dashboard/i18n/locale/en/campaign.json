@@ -510,7 +510,7 @@
       }
     },
     "EMAIL_CAMPAIGN": {
-      "HEADER_TITLE": "Email campaigns",
+      "HEADER_TITLE": "Emails",
       "NEW": "New email campaign",
       "DESCRIPTION": "Compose an email, pick a verified sending domain, upload your recipient list and send now or schedule it.",
       "EMPTY_STATE": {

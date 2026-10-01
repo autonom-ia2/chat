@@ -488,7 +488,7 @@
         "SUBTITLE": "Crie a primeira campanha para escrever e enviar uma mensagem a uma lista importada.",
         "TITLE": "Ainda não existem campanhas de correio eletrónico"
       },
-      "HEADER_TITLE": "Campanhas de correio eletrónico",
+      "HEADER_TITLE": "E-mails",
       "IMPORT": {
         "ERRORS": {
           "EMPTY_FILE": "A lista está vazia. Adicione contactos e carregue-a novamente.",
