@@ -114,3 +114,11 @@ Pesquisa primária: Carbon Filtering (atualização 11/08/2026) e NN/g User Inte
 Affects Filter Design. A instantaneidade do mockup não prova desempenho no
 backend. A integração do Guia exige conferir ferramentas executáveis, pois a
 instrução escrita pode não representar todas as capacidades já implementadas.
+
+Auditoria independente do Guia concluída em main remoto
+902f0059d76da8b1c74c47f57c8e66edc6d55bca. Corrigida a conclusão inicial obtida
+do checkout antigo: o Guia possui leitura runtime de conversas/funis/cards.
+Empresa → contatos → cards ainda não é filtro CRM canônico. Recomendado
+reaproveitar o leitor/autorização do Guia com resolvedor tipado compartilhado,
+sem agente adicional persistente. Relatório copiado para reports/guide-crm-audit.md.
+Só código/versionamento foi consultado; nenhuma afirmação de deploy/produção.

@@ -14,7 +14,7 @@ e obtém a contagem pela consulta real autorizada, antes da confirmação.
 
 ## Tela proposta
 
-1. Em Filtros, abrir **Encontrar com IA**.
+1. Ao lado da busca e de Mais filtros, abrir **Encontrar com IA**.
 2. Campo vazio **O que você quer encontrar?** e exemplos opcionais.
 3. **Entender pedido** gera uma proposta, ainda sem modificar o quadro.
 4. **A IA entendeu** apresenta explicação curta, etiquetas e quantidade real.
@@ -86,3 +86,43 @@ O estado inicial é vazio; avisos de prévia ficam antes do CTA.
 
 O mockup demonstra UI e interação. Acurácia, custo real, disponibilidade, contrato
 e autorização da nova operação ainda precisam de implementação e teste.
+
+## Reaproveitar o Guia — conferência da implementação atual
+
+Após Rodrigo apontar que o Guia lê conversas e funis, conferimos o main remoto
+em `902f0059d76da8b1c74c47f57c8e66edc6d55bca`. A primeira leitura do checkout
+principal antigo (`12b6433b639`) não representava a implementação atual.
+O [parecer com fontes do código](reports/guide-crm-audit.md) registra a correção.
+
+O Guia já possui `ler_da_conta`, `propor_acao`, `mostrar_tela` e `ler_da_central`.
+A leitura consulta a API como o usuário do turno; o catálogo deriva das rotas
+GET. Conversas, funis e cards são leituras reais; empresas dependem do recurso
+Enterprise habilitado. O loop permite consultar mais de um recurso/página.
+
+**Decisão recomendada:** compartilhar a capacidade de consulta e autorização
+do Guia, com um contrato CRM tipado. O botão do Kanban invoca essa capacidade
+com o contexto do funil e GPT-6 Luna; o Guia poderá usar a mesma capacidade
+quando o pedido chegar pelo chat. Não criar outro agente persistente com KB,
+permissões ou rotina de leitura próprias, nem obrigar a pessoa a abrir o chat
+global para filtrar um quadro. O modelo do Guia não deve ser alterado como
+consequência desta feature.
+
+O gap concreto é empresa → contatos → cards visíveis. Atualmente `search`
+consulta apenas `crm_cards.title`; encontrar Norte Logística no cadastro de
+empresas não aplica esse vínculo à consulta CRM. Completar essa relação no
+backend atende a busca manual e a IA pelo mesmo caminho. Não enumerar uma
+página de cards no modelo para fingir uma consulta de todas as oportunidades.
+
+O interpretador propõe critérios suportados. O servidor resolve referências
+canônicas, valida a conta/permissões e calcula resultados/contagens. Nome
+parcial ambíguo pede escolha; condição não suportada pede esclarecimento.
+Prévia revisável antes da aplicação, mesmos chips e estado dos filtros manuais.
+Para busca estruturada por empresa não é necessário ler corpos de conversas.
+Pedidos semânticos sobre o conteúdo das mensagens são outro contrato e não
+devem ser prometidos por este filtro inicial.
+
+Leituras genéricas do Guia ainda têm regras de parâmetros simples e resumos.
+O contrato de filtros precisa suportar listas/intervalos de forma explícita,
+sem flexibilizar o catálogo inteiro. A proposta acima ainda precisa de
+implementação e teste; auditoria estática não comprova acurácia do GPT-6 Luna
+nem confirma quais commits já foram implantados em produção. US$0 gasto.

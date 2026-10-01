@@ -232,3 +232,11 @@ a decisão entre atualização instantânea e em lote depende da latência real 
 consulta. A prévia calcula apenas onze fixtures em memória, imediatamente.
 Para muitas empresas e usuários, os botões de fixtures serão substituídos por
 pickers pesquisáveis do design system, com consulta autorizada e sem select nativo.
+
+## Guia da Plataforma e busca CRM
+
+[Auditoria atual do Guia](reports/guide-crm-audit.md): já consulta conversas,
+funis e cards como o operador. A proposta é reutilizar essa capacidade com
+resultado CRM tipado, mantendo a busca contextual no quadro. Falta fechar a
+consulta por empresa canônica; não é preciso outro agente independente.
+A avaliação e os limites estão em [Encontrar com IA](ai-filter-design.md).
