@@ -83,7 +83,7 @@ RSpec.describe Autonomia::Sso::Provisioner do
       end
     end
 
-    context 'with an existing Auth-linked invited user' do
+    context 'with an existing Auth-linked user' do
       let!(:invited_account) { nil }
       let(:identity_email) { 'vaneska.costa@hubsegs.com.br' }
       let(:identity_user_id) { 'auth-vaneska-user-id' }
@@ -115,21 +115,21 @@ RSpec.describe Autonomia::Sso::Provisioner do
         }
       end
 
-      it 'reuses a single invited account' do
-        invited_membership = create(
+      it 'reuses a single existing account even when it was not created by invitation' do
+        membership = create(
           :account_user,
           user: linked_user,
           account: create(:account),
-          inviter: inviter,
+          inviter: nil,
           role: 'agent'
         )
 
         expect(described_class.new(context: context).perform).to eq(linked_user)
 
-        expect(invited_membership.reload).to be_agent
+        expect(membership.reload).to be_agent
       end
 
-      it 'chooses the invited account with the latest active_at' do
+      it 'chooses the existing account with the latest active_at' do
         older_membership = create(
           :account_user,
           user: linked_user,
@@ -142,20 +142,20 @@ RSpec.describe Autonomia::Sso::Provisioner do
           :account_user,
           user: linked_user,
           account: create(:account),
-          inviter: inviter,
+          inviter: nil,
           role: 'agent',
           active_at: 1.hour.ago
         )
 
         provisioner = described_class.new(context: context)
 
-        expect(provisioner.send(:invited_linked_account)).to eq(latest_membership.account)
+        expect(provisioner.send(:existing_linked_account)).to eq(latest_membership.account)
         expect(provisioner.perform).to eq(linked_user)
         expect(latest_membership.reload).to be_agent
         expect(older_membership.reload).to be_agent
       end
 
-      it 'does not override the existing invited account role on SSO re-login' do
+      it 'does not override the existing account role on SSO re-login' do
         membership = create(
           :account_user,
           user: linked_user,
@@ -169,7 +169,7 @@ RSpec.describe Autonomia::Sso::Provisioner do
         expect(membership.reload).to be_agent
       end
 
-      it 'chooses the most recent invited account when none has active_at' do
+      it 'chooses the most recent existing account when none has active_at' do
         older_membership = create(
           :account_user,
           user: linked_user,
@@ -191,14 +191,22 @@ RSpec.describe Autonomia::Sso::Provisioner do
 
         provisioner = described_class.new(context: context)
 
-        expect(provisioner.send(:invited_linked_account)).to eq(latest_membership.account)
+        expect(provisioner.send(:existing_linked_account)).to eq(latest_membership.account)
         expect(provisioner.perform).to eq(linked_user)
         expect(latest_membership.reload).to be_agent
         expect(older_membership.reload).to be_agent
       end
 
-      it 'ignores memberships without an inviter' do
-        create(:account_user, user: linked_user, account: create(:account), inviter: nil)
+      it 'can use memberships created by a super admin without an inviter' do
+        membership = create(:account_user, user: linked_user, account: create(:account), inviter: nil, role: 'administrator')
+
+        expect(described_class.new(context: context).perform).to eq(linked_user)
+
+        expect(membership.reload).to be_administrator
+      end
+
+      it 'ignores integration memberships' do
+        create(:account_user, user: linked_user, account: create(:account), integration: true)
 
         expect do
           described_class.new(context: context).perform
