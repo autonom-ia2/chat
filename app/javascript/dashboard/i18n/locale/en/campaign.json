@@ -867,6 +867,13 @@
         }
       },
       "WORKSPACE": {
+        "RECIPIENTS_STEP": "{step} · Recipients",
+        "EMAIL_DETAILS": "Email details",
+        "RECIPIENTS_ATTENTION": "Recipients: needs attention. Open to review your list.",
+        "RECIPIENTS_READY": "Recipients: ready for the final review.",
+        "FULL_VIEW": "Full view",
+        "ENLARGE": "Enlarge",
+        "FIT_EMAIL": "Fit to screen",
         "CAMPAIGNS": "Campaigns",
         "EMAIL": "Email",
         "LIST_SUBTITLE": "Create great messages. Keep track of every send.",
