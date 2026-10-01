@@ -1,4 +1,5 @@
 <script setup>
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import { computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -16,6 +17,7 @@ import ContactOptOutSection from 'dashboard/components-next/Contacts/ContactOptO
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   selectedContact: {
     type: Object,
     required: true,
@@ -42,6 +44,50 @@ const isUpdating = computed(() => uiFlags.value.isUpdating);
 const isFormInvalid = computed(() => contactsFormRef.value?.isFormInvalid);
 
 const contactData = ref({});
+const readOnlyRows = computed(() => [
+  {
+    key: 'company',
+    label: 'CRM_KANBAN.RELATIONSHIP.LINKED_COMPANY',
+    value:
+      props.selectedContact.company?.name ||
+      props.selectedContact.additionalAttributes?.companyName,
+  },
+  {
+    key: 'description',
+    label: 'CRM_KANBAN.DRAWER.DESCRIPTION_LABEL',
+    value: props.selectedContact.additionalAttributes?.description,
+  },
+  {
+    key: 'email',
+    label: 'CRM_KANBAN.RELATIONSHIP.EMAIL',
+    value: props.selectedContact.email,
+  },
+  {
+    key: 'phone',
+    label: 'CRM_KANBAN.RELATIONSHIP.PHONE',
+    value: props.selectedContact.phoneNumber,
+  },
+  {
+    key: 'city',
+    label: 'CRM_KANBAN.RELATIONSHIP.CITY',
+    value: props.selectedContact.additionalAttributes?.city,
+  },
+  {
+    key: 'country',
+    label: 'CRM_KANBAN.RELATIONSHIP.COUNTRY',
+    value: props.selectedContact.additionalAttributes?.country,
+  },
+  {
+    key: 'role',
+    label: 'CRM_KANBAN.RELATIONSHIP.ROLE',
+    value: props.selectedContact.customAttributes?.job_title,
+  },
+  {
+    key: 'address',
+    label: 'CRM_KANBAN.RELATIONSHIP.ADDRESS',
+    value: props.selectedContact.customAttributes?.address,
+  },
+]);
 
 const getInitialContactData = () => {
   if (!props.selectedContact) return {};
@@ -73,6 +119,7 @@ const handleFormUpdate = updatedData => {
 };
 
 const updateContact = async () => {
+  if (props.readOnly) return;
   try {
     const { customAttributes, ...basicContactData } = contactData.value;
     await store.dispatch('contacts/update', basicContactData);
@@ -91,6 +138,7 @@ const openConfirmDeleteContactDialog = () => {
 };
 
 const handleAvatarUpload = async ({ file, url }) => {
+  if (props.readOnly) return;
   avatarFile.value = file;
   avatarUrl.value = url;
 
@@ -107,6 +155,7 @@ const handleAvatarUpload = async ({ file, url }) => {
 };
 
 const handleAvatarDelete = async () => {
+  if (props.readOnly) return;
   try {
     if (props.selectedContact && props.selectedContact.id) {
       await store.dispatch('contacts/deleteAvatar', props.selectedContact.id);
@@ -132,7 +181,7 @@ const handleAvatarDelete = async () => {
         :src="avatarSrc || ''"
         :name="selectedContact?.name || ''"
         :size="72"
-        allow-upload
+        :allow-upload="!readOnly"
         @upload="handleAvatarUpload"
         @delete="handleAvatarDelete"
       />
@@ -179,10 +228,11 @@ const handleAvatarDelete = async () => {
           </span>
         </div>
       </div>
-      <ContactLabels :contact-id="selectedContact?.id" />
+      <ContactLabels :contact-id="selectedContact?.id" :read-only="readOnly" />
     </div>
     <slot name="actions" />
-    <div class="flex flex-col items-start w-full gap-6">
+    <RecordReadOnly v-if="readOnly" :rows="readOnlyRows" />
+    <div v-else class="flex flex-col items-start w-full gap-6">
       <ContactsForm
         ref="contactsFormRef"
         :contact-data="contactData"
@@ -201,8 +251,9 @@ const handleAvatarDelete = async () => {
       :record="selectedContact"
       entity="contact"
       surface="contact_details"
+      :read-only="readOnly"
     />
-    <ContactOptOutSection :contact="selectedContact" />
+    <ContactOptOutSection :contact="selectedContact" :read-only="readOnly" />
     <Policy :permissions="['administrator']">
       <div
         class="flex flex-col items-start w-full gap-4 pt-6 border-t border-n-strong"

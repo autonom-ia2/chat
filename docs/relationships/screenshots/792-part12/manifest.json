@@ -1,0 +1,166 @@
+{
+  "checks": [
+    "contact_view_renders_confirmed_record_without_edit_form_merge_or_note_composer",
+    "read_only_contact_values_have_no_active_editors",
+    "custom_view_role_opens_company_profile_without_gaining_avatar_record_or_membership_writes",
+    "custom_company_profile_keeps_existing_authorized_card_scope_and_count",
+    "forged_direct_contact_and_company_updates_are_rejected_by_the_real_server",
+    "custom_role_mobile_company_list_is_accessible_without_clipping",
+    "crm_manager_can_prepare_existing_contact_opportunity_without_contact_manage",
+    "commercial_creation_keeps_same_contact_and_640px_drawer_without_record_editors",
+    "crm_manage_cards_does_not_authorize_composite_shared_record_creation",
+    "new_record_mode_is_disabled_but_existing_contact_mode_remains_enabled",
+    "explicit_contact_manage_restores_record_edit_and_composite_create_controls",
+    "admin_sees_all_eight_available_opportunities_over_two_pages_no_two_item_limit",
+    "ui_performs_only_one_explicit_opportunity_write_and_has_no_javascript_exceptions"
+  ],
+  "captures": [
+    {
+      "name": "01-contato-somente-consulta",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "2d8bd48d9646802bccea183ccbb00a1001afce1869b2e6f16898c1bfb9cf32ca"
+    },
+    {
+      "name": "02-empresa-somente-consulta",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "410b15a683945e99899a025fb287f79831fe223e9c5848648b7f092485795c86"
+    },
+    {
+      "name": "03-consulta-empresa-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "fabf5a40c79e834e3dcc6499d4ff14154a4df6c3a1799c84e727bba445a11b89"
+    },
+    {
+      "name": "04-oportunidade-existente-sem-editar-cadastro",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "17acff53f8249a652abe8ebc4f77a5651f348e380c9fbbcb0bc4ba700a4310b2"
+    },
+    {
+      "name": "05-card-com-cadastro-protegido",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "033ef448ab171efe4b94e89da0434b3fb45b84004b86d3a25515b64f64fb57b7"
+    },
+    {
+      "name": "06-novo-cadastro-sem-permissao",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "cb11582a872acb26288a6930a508c345a1bf785b52c184605249c00b1745ba5a"
+    },
+    {
+      "name": "07-gestor-de-cadastro-com-edicao",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "71343dd91292b08796da4c7138b9b24bc5ff920ea8c2021e8bff3949009cc5f5"
+    },
+    {
+      "name": "08-todas-oportunidades-sem-cota-de-duas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "e8038a3cca5e95f1afec4dc9af24b041209195591a42dd04780febffab8e760d"
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": [
+    {
+      "path": "/api/v1/accounts/1/crm/cards",
+      "method": "POST"
+    }
+  ],
+  "denials": [
+    {
+      "kind": "contact",
+      "status": 401
+    },
+    {
+      "kind": "company",
+      "status": 401
+    },
+    {
+      "kind": "composite_crm_only",
+      "status": 401
+    }
+  ],
+  "createdId": 88,
+  "sourceHashes": {
+    "enterprise/app/policies/relationships/record_permissions.rb": "bab9aab797829fa4f677d378f7a5d2c2987575441b029cfacd0a4099f1a59992",
+    "enterprise/app/policies/company_policy.rb": "1f10c068d66fba98d6df40cd008fb37dd89540553072ff7ffe23e0b567af8f4e",
+    "enterprise/app/policies/enterprise/contact_policy.rb": "647dff25c2e87a43e198d0ee9add7cbe11dfd21f422c267e37bb58bf6154703f",
+    "app/javascript/dashboard/composables/useRelationshipPermissions.js": "760eac126b3858d5b173e47d6c743e5a321b8296ba5cfff8718040b13f129648",
+    "app/javascript/dashboard/routes/dashboard/companies/routes.js": "ef7087b3a790c12e5c9c226ca7b55a1f38bf30e30824f83b826cc6560e144cf9",
+    "app/javascript/dashboard/routes/dashboard/companies/pages/CompanyDetailView.vue": "0a986e99222c75328cb41e2514047bc5fdce0176391c3843e0052686fc64620d",
+    "app/javascript/dashboard/routes/dashboard/contacts/pages/ContactManageView.vue": "e1ee5025fc1de51b78609cce9fcf94ae88c617ec1132df35026c08d360e376de",
+    "app/javascript/dashboard/components-next/Contacts/Pages/ContactDetails.vue": "6509849a41e40aed3e81387dcb65b42bfc8d1832338abf5019e94901c91dd18e",
+    "app/javascript/dashboard/components-next/Companies/CompanyDetail/CompanyProfileCard.vue": "6c08f4f40d859b225d9084ba432de1c0ec45b9fcae751e1bf642259f6e1a2d46",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "6ae04ad2764e8d1af1b8b9bc43cb24f10098354899c02fe505c7e21a1bedbcbd",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue": "dccbc05434bbc3a52ba5a89e446479713fdf30c703789a58e91fd9f3879b1f8c",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityForm.vue": "693fa7416c597516a1d37ed664b59159c17dff9b3d8c4ec4f2e0b7bee6f53f5f",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "be40460446db6edc862131c1ef9f592a9ed1ecec9fa60d1108d75d5074e09310"
+  },
+  "entryAssets": [
+    "/vite-test/assets/dashboard-bInfEwxq.js"
+  ],
+  "browser": "154.0.8037.58",
+  "assetMode": "compiled test bundle, real Rails and PostgreSQL",
+  "data": "synthetic",
+  "mockedBusinessResponses": 0
+}

@@ -1464,6 +1464,9 @@
     "RELATIONSHIP": {
       "TAB": "Relationship",
       "SHARED": "Shared record from Relationships",
+      "READ_ONLY": "You can view this shared record. Editing requires relationship management permission.",
+      "VALUE_YES": "Yes",
+      "VALUE_NO": "No",
       "LOADING": "Loading relationship…",
       "LOAD_ERROR": "The record could not be loaded. Please try again.",
       "RETRY": "Try again",

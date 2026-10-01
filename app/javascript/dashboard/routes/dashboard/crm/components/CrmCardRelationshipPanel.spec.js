@@ -38,6 +38,7 @@ const makePanel = (props = {}) =>
     props: {
       card: { id: 5, contact_id: 42 },
       canManage: true,
+      canManageRecords: props.canManage ?? true,
       onGuard: action => action(),
       ...props,
     },
@@ -256,4 +257,25 @@ it('requires an explicit in-card company choice for legacy company text', async 
   expect(wrapper.find('[data-crm-company-form]').exists()).toBe(true);
   expect(wrapper.vm.companyAction.disabled).toBe(true);
   expect(CompanyAPI.show).not.toHaveBeenCalled();
+});
+
+it('keeps card linking but hides shared-record editors without record management', async () => {
+  wrapper = makePanel({ canManage: true, canManageRecords: false });
+  await flushPromises();
+  expect(wrapper.find('[data-record-read-only]').exists()).toBe(true);
+  expect(
+    wrapper
+      .findAll('button')
+      .some(button => button.text() === 'CRM_KANBAN.RELATIONSHIP.EDIT')
+  ).toBe(false);
+  expect(
+    wrapper
+      .findAll('button')
+      .some(button => button.text() === 'CRM_KANBAN.RELATIONSHIP.CHANGE')
+  ).toBe(true);
+  expect(
+    wrapper
+      .findComponent({ name: 'CrmRelationshipResources' })
+      .props('canManage')
+  ).toBe(false);
 });

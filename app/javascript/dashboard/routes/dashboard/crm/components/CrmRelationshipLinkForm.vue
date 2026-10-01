@@ -11,6 +11,7 @@ import PhoneNumberInput from 'dashboard/components-next/phonenumberinput/PhoneNu
 
 const props = defineProps({
   cardId: { type: Number, required: true },
+  readOnly: { type: Boolean, default: false },
   mode: { type: String, required: true },
 });
 const emit = defineEmits(['saved', 'cancel']);
@@ -29,8 +30,12 @@ let submittedPayload = '';
 const dirty = computed(() =>
   Boolean(selected.value || Object.values(form).some(Boolean))
 );
-const canSave = computed(() =>
-  props.mode === 'new' ? form.name.trim().length > 0 : Boolean(selected.value)
+const canSave = computed(
+  () =>
+    !props.readOnly &&
+    (props.mode === 'new'
+      ? form.name.trim().length > 0
+      : Boolean(selected.value))
 );
 
 const search = async () => {

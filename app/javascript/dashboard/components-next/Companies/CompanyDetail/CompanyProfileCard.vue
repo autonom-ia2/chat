@@ -1,4 +1,5 @@
 <script setup>
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -12,6 +13,7 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   company: { type: Object, default: () => ({}) },
   isLoading: { type: Boolean, default: false },
 });
@@ -23,6 +25,23 @@ const companiesStore = useCompaniesStore();
 
 const form = reactive({ name: '', domain: '', description: '', city: '' });
 const avatarPreviewUrl = ref('');
+const readOnlyRows = computed(() => [
+  {
+    key: 'domain',
+    label: 'CRM_KANBAN.RELATIONSHIP.DOMAIN',
+    value: props.company.domain,
+  },
+  {
+    key: 'city',
+    label: 'CRM_KANBAN.RELATIONSHIP.CITY',
+    value: props.company.additionalAttributes?.city,
+  },
+  {
+    key: 'description',
+    label: 'CRM_KANBAN.RELATIONSHIP.ABOUT_COMPANY',
+    value: props.company.description,
+  },
+]);
 const isUploadingAvatar = ref(false);
 
 const uiFlags = computed(() => companiesStore.getUIFlags);
@@ -94,6 +113,7 @@ watch(
 );
 
 const handleAvatarUpload = async ({ file, url }) => {
+  if (props.readOnly) return;
   avatarPreviewUrl.value = url;
   isUploadingAvatar.value = true;
   try {
@@ -108,6 +128,7 @@ const handleAvatarUpload = async ({ file, url }) => {
 };
 
 const handleAvatarDelete = async () => {
+  if (props.readOnly) return;
   try {
     await companiesStore.deleteCompanyAvatar(props.company.id);
     avatarPreviewUrl.value = '';
@@ -118,6 +139,7 @@ const handleAvatarDelete = async () => {
 };
 
 const handleUpdateCompany = async () => {
+  if (props.readOnly) return;
   const companyId = Number(props.company.id);
 
   try {
@@ -155,7 +177,7 @@ const handleUpdateCompany = async () => {
         :name="displayName"
         :src="avatarSource"
         :size="72"
-        :allow-upload="!isAvatarBusy"
+        :allow-upload="!readOnly && !isAvatarBusy"
         hide-offline-status
         @upload="handleAvatarUpload"
         @delete="handleAvatarDelete"
@@ -190,7 +212,8 @@ const handleUpdateCompany = async () => {
     </div>
 
     <slot name="actions" />
-    <div class="flex flex-col items-start w-full gap-6">
+    <RecordReadOnly v-if="readOnly" :rows="readOnlyRows" />
+    <div v-else class="flex flex-col items-start w-full gap-6">
       <span class="py-1 text-sm font-medium text-n-slate-12">
         {{ t('COMPANIES.DETAIL.PROFILE.TITLE') }}
       </span>

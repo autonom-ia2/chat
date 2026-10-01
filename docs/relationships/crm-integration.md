@@ -6,7 +6,7 @@ Rodrigo autorizou iniciar em 30/09/2026, com uma entrega pequena por vez. Ao con
 
 A referência visual/funcional é o HTML aprovado `chat2you-crm-relacionamentos.html`, SHA-256 `d2d172f0336de23aa211d346c27ee5ec7c3eabf45ac5202169a3416ab8cf4f9b`, entregue na conversa com Rodrigo. As imagens conceituais anteriores não são referência. O plano completo entregue é `Plano_Implementacao_CRM_Relacionamentos_Chat2You.md`.
 
-**Checkpoint atual:** Rodrigo aprovou as partes 1–10. Parte 11 iniciou a revisão integrada e corrigiu o ciclo de navegação de contact_view e o vínculo reverso de conversa incompatível, incluindo estados antigos e concorrência no mesmo card. Foram reproduzidos bloqueios de autorização de escrita em contatos/empresas que exigem próximo incremento. A revisão independente está em BLOCKED_MODEL_TIER e o workflow de Relacionamentos está desabilitado remotamente. Sem aprovação global, merge ou deploy.
+**Checkpoint atual:** Rodrigo aprovou as partes 1–11. Parte 12 implementa a separação de escrita dos cadastros compartilhados, fecha as três falhas de autorização reproduzidas na etapa anterior e alinha as telas de CRM/Relacionamentos. O perfil de consulta pode abrir a ficha empresarial sem receber edição. Não existe limite de duas oportunidades; quantidade e visibilidade permanecem as do CRM. Aguardar aceite deste incremento. Revisão independente em BLOCKED_MODEL_TIER e workflow de Relacionamentos desabilitado continuam gates de liberação; sem merge/deploy.
 
 Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usam as mesmas entidades. Não criar cadastros paralelos, vínculos empresariais independentes no card, tabelas de relacionamento novas ou um segundo aplicativo para reproduzir o HTML.
 
@@ -20,7 +20,7 @@ Modelo: **oportunidade → contato → empresa opcional**. As fichas e o CRM usa
 | M04 — Do zero | Contato + empresa opcional + oportunidade, atômicos e idempotentes. | Parte 7 aprovada: nome obrigatório, empresa ausente/existente/nova, dados e atributos compartilhados; revisão transversal pendente. |
 | M05 — Duplicidade | Reaproveitamento explícito; nome igual não implica mesma pessoa/empresa. | Parte 7: reutilização explícita por identidade/domínio, sem fusão por nome; concorrência deste fluxo protegida. A revisão entre todos os escritores continua pendente. |
 | M06 — Ficha do contato | Ficha real, retorno ao card e criação contextual. | Partes 3, 8 e 9 aprovadas: ficha real, criação contextual e lista autorizada. Regressão reexecutada na parte 10 após compartilhar apresentação/consulta. Revisão transversal pendente. |
-| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 aprovada visualmente para administrador/agente. Parte 11 resolve o ciclo de fallback sem conceder acesso empresarial ao papel personalizado; direitos de consulta/escrita são bloqueadores ainda abertos. |
+| M07 — Ficha da empresa | Contatos, mídias e oportunidades autorizadas da mesma empresa. | Parte 10 aprovada visualmente. Parte 12 permite consulta da ficha para contact_view/contact_manage e protege a escrita; administrador/agente mantêm seus contratos. Aguardando aceite visual do modo consulta e revisão transversal. |
 | M08 — Atributos | Reutilizar catálogo e exibição por conta sem apagar valores. | Parte 4 aprovada: editores/configurador nativos, superfícies da ficha e stores compartilhados. Fluxos revalidados na parte 5; revisão transversal permanece. |
 
 ## Parte 1 — Contrato do vínculo existente
@@ -175,9 +175,17 @@ A auditoria reproduziu em banco de teste que contact_view consegue alterar conta
 
 Reexecutados 7.081 testes frontend completos, 540 backend aprovados e quatro suspensos anteriores, 19 checks de navegador e seis ensaios de concorrência separados. Revisão independente tentada, mas o modelo configurado foi recusado pelo Codex autenticado; sem downgrade e sem aprovação independente. O workflow específico de Relacionamentos está disabled_manually, não simplesmente aguardando execução. Evidências: [auditoria da parte 11](../audit/2026-10-01-792-crm-relationships-part-11.md) e [telas reais](screenshots/792-part11/README.md).
 
+## Parte 12 — Escrita cadastral independente da gestão comercial
+
+Para papéis personalizados, criar/editar pessoa e empresa exige contact_manage. Contact_view, crm_manage_cards e crm_admin não concedem escrita cadastral implicitamente. Administradores/agentes padrão preservam o contrato anterior; exclusão integral continua administrativa. O helper Enterprise comum protege as policies de contato/empresa, e notas, etiquetas, mesclagem e lote passaram a consultar a policy de escrita que faltava. Empresa vinculada, avatar e valores de atributos usam a mesma permissão; definições/configuração mantêm attribute_manage.
+
+O gestor comercial sem escrita cadastral ainda cria oportunidades com contato existente ou sem vínculo. Criar novo dentro do CRM fica indisponível com explicação; o servidor também recusa a requisição, independentemente da interface. As fichas mostram dados confirmados e atributos em modo consulta, sem editores de notas/etiquetas/avatar/empresa. O acesso à página empresarial para contact_view foi alinhado sem liberar edição. O vínculo card → contato existente permanece comercial; contato → empresa é escrita cadastral.
+
+As três reproduções da parte 11 agora têm recusas testadas. O teste próprio de navegador criou somente uma oportunidade real, manteve pessoa/empresa intactas e demonstrou oito oportunidades com paginação para o administrador. Nenhuma cota nova foi criada. A comparação de registros e a regressão da lista do contato estão na galeria. Evidências e limites: [auditoria da parte 12](../audit/2026-10-01-792-crm-relationships-part-12.md) e [telas reais](screenshots/792-part12/README.md).
+
 ## Próximo checkpoint proposto, ainda não autorizado
 
-Após o aceite das correções da parte 11, tratar a separação de leitura e escrita de cadastros e os caminhos CRM que as reutilizam. Alinhar controles da UI e autorização no servidor, preservando os contratos de administrador/agente padrão e sem liberar edição por conceder apenas visualização. Continuar a revisão dos demais escritores, efeitos externos e projeções de dados. CI de Relacionamentos e revisão independente devem ser resolvidos antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
+Após o aceite da parte 12, continuar a revisão integrada das demais entradas de escrita/concorrência, projeções e mídia de conversas, controles legados do atendimento e os quatro testes suspensos. Os contratos de integrações externas são verificações separadas. Resolver o CI específico e a revisão independente antes do pedido final de merge. Nenhum merge/deploy é autorizado por consequência desta entrega.
 
 ## Validação e publicação
 

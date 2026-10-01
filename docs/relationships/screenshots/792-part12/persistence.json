@@ -1,0 +1,37 @@
+{
+  "result": "passed",
+  "before": {
+    "contacts": 49,
+    "companies": 23,
+    "cards": 87,
+    "messages": 33,
+    "conversations": 8
+  },
+  "after": {
+    "contacts": 49,
+    "companies": 23,
+    "cards": 88,
+    "messages": 33,
+    "conversations": 8
+  },
+  "same_contact": true,
+  "same_company": true,
+  "shared_records_unchanged": true,
+  "three_forbidden_writes_rejected": [
+    {
+      "kind": "contact",
+      "status": 401
+    },
+    {
+      "kind": "company",
+      "status": 401
+    },
+    {
+      "kind": "composite_crm_only",
+      "status": 401
+    }
+  ],
+  "created_opportunity": 88,
+  "data": "synthetic",
+  "database": "isolated local UI"
+}

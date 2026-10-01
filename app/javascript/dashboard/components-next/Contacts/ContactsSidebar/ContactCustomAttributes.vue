@@ -7,6 +7,7 @@ import { useUISettings } from 'dashboard/composables/useUISettings';
 import ContactCustomAttributeItem from 'dashboard/components-next/Contacts/ContactsSidebar/ContactCustomAttributeItem.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   selectedContact: {
     type: Object,
     default: null,
@@ -115,6 +116,7 @@ const hasNoUsedAttributes = computed(() => usedAttributes.value.length === 0);
         :key="attribute.id"
         is-editing-view
         :attribute="attribute"
+        :read-only="readOnly"
       />
     </div>
     <div v-if="!hasNoUnusedAttributes" class="flex items-center gap-3">
@@ -151,6 +153,7 @@ const hasNoUsedAttributes = computed(() => usedAttributes.value.length === 0);
           v-for="attribute in filteredUnusedAttributes"
           :key="attribute.id"
           :attribute="attribute"
+          :read-only="readOnly"
         />
       </div>
     </div>

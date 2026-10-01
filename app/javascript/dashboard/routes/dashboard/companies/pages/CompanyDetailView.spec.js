@@ -10,6 +10,7 @@ const testState = vi.hoisted(() => ({
   flags: null,
   navigation: null,
   canViewCrm: null,
+  recordWrite: null,
   query: {},
   company: {
     id: 42,
@@ -21,6 +22,12 @@ const testState = vi.hoisted(() => ({
 
 vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
   useCrmPermissions: () => ({ canViewCrm: testState.canViewCrm }),
+}));
+
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canManageRelationshipRecords: testState.recordWrite,
+  }),
 }));
 
 vi.mock('dashboard/composables/useAccount', () => ({
@@ -154,6 +161,7 @@ beforeEach(() => {
   testState.flags = ref(false);
   testState.navigation = ref(false);
   testState.canViewCrm = ref(true);
+  testState.recordWrite = ref(true);
   window.globalConfig = { ...window.globalConfig, CRM_KANBAN_ENABLED: 'true' };
   CrmKanbanAPI.getCompanyOpportunities.mockReset();
   CrmKanbanAPI.getCompanyOpportunities.mockResolvedValue({

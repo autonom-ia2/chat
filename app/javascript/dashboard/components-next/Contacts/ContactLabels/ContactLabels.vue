@@ -7,6 +7,7 @@ import LabelItem from 'dashboard/components-next/label/LabelItem.vue';
 import AddLabel from 'dashboard/components-next/label/AddLabel.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   contactId: {
     type: [String, Number],
     default: null,
@@ -55,6 +56,7 @@ const fetchLabels = async contactId => {
 };
 
 const handleLabelAction = async ({ value }) => {
+  if (props.readOnly) return;
   try {
     // Get current label titles
     const currentLabels = savedLabels.value.map(label => label.title);
@@ -124,11 +126,13 @@ const handleLabelHover = labelId => {
       v-for="label in savedLabels"
       :key="label.id"
       :label="label"
-      :is-hovered="hoveredLabel === label.id"
+      :read-only="readOnly"
+      :is-hovered="!readOnly && hoveredLabel === label.id"
       @remove="handleRemoveLabel"
       @hover="handleLabelHover(label.id)"
     />
     <AddLabel
+      v-if="!readOnly"
       :label-menu-items="labelMenuItems"
       @update-label="handleLabelAction"
     />

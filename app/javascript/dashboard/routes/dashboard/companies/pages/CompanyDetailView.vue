@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 
 import { useRelationships } from 'dashboard/composables/useRelationships';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import CompanyMedia from 'dashboard/components-next/Relationships/CompanyMedia.vue';
 import RelationshipOpportunities from 'dashboard/components-next/Relationships/RelationshipOpportunities.vue';
 import { useRelationshipOpportunities } from 'dashboard/components-next/Relationships/useRelationshipOpportunities';
@@ -33,6 +34,7 @@ const route = useRoute();
 const router = useRouter();
 const companiesStore = useCompaniesStore();
 const { t } = useI18n();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 
 const confirmDeleteDialogRef = ref(null);
 const selectedCandidate = ref(null);
@@ -184,6 +186,7 @@ const handleContactSearch = async query => {
 };
 
 const handleConfirmContactSelection = async () => {
+  if (!canManageRelationshipRecords.value) return;
   const candidate = selectedCandidate.value;
   if (!candidate) return;
 
@@ -206,6 +209,7 @@ const handleConfirmContactSelection = async () => {
 };
 
 const handleRemoveContact = async contactId => {
+  if (!canManageRelationshipRecords.value) return;
   const currentPage = Number(companyContactsMeta.value.page || 1);
   const nextPage =
     currentPage > 1 && companyContacts.value.length === 1
@@ -304,7 +308,11 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="flex flex-col gap-6">
-      <CompanyProfileCard :company="company" :is-loading="isFetchingCompany">
+      <CompanyProfileCard
+        :company="company"
+        :is-loading="isFetchingCompany"
+        :read-only="!canManageRelationshipRecords"
+      >
         <template v-if="navigationEnabled" #actions>
           <div
             data-profile-actions
@@ -341,6 +349,7 @@ onBeforeUnmount(() => {
         :record="company"
         entity="company"
         surface="company_details"
+        :read-only="!canManageRelationshipRecords"
       />
       <Policy v-if="!navigationEnabled" :permissions="['administrator']">
         <section
@@ -416,6 +425,7 @@ onBeforeUnmount(() => {
         />
         <CompanyContactsSidebar
           v-if="activeSidebarTab === 'contacts'"
+          :read-only="!canManageRelationshipRecords"
           :company="company"
           :contacts="companyContacts"
           :meta="companyContactsMeta"
@@ -433,6 +443,7 @@ onBeforeUnmount(() => {
         />
         <CompanyCustomAttributes
           v-if="activeSidebarTab === 'attributes'"
+          :read-only="!canManageRelationshipRecords"
           :company="company"
         />
       </div>

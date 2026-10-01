@@ -1,6 +1,16 @@
+import { ref } from 'vue';
 import ContactAPI from 'dashboard/api/contacts';
 import { mount } from '@vue/test-utils';
 import CrmCardDrawer from './CrmCardDrawer.vue';
+const recordPermission = ref(true);
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canManageRelationshipRecords: recordPermission,
+  }),
+}));
+beforeEach(() => {
+  recordPermission.value = true;
+});
 
 // Stub the store/router/composables/APIs the drawer reaches for, so we can mount
 // it in isolation and assert the form-reset reactivity that the realtime-churn
@@ -459,3 +469,26 @@ it.each([
     wrapper.unmount();
   }
 );
+
+it('never turns CRM card management into permission to edit the shared contact', async () => {
+  recordPermission.value = false;
+  ContactAPI.update.mockClear();
+  const wrapper = mountDrawer({
+    canManageCards: true,
+    card: {
+      id: 5,
+      title: 'Allowed deal',
+      stage_id: 10,
+      contact: { id: 42, name: 'Keep person' },
+    },
+  });
+  wrapper.vm.startContactEdit({ id: 42, name: 'Keep person' });
+  expect(wrapper.vm.isEditingContact).toBe(false);
+  wrapper.vm.contactForm.name = 'Forbidden';
+  await wrapper.vm.saveContact();
+  expect(ContactAPI.update).not.toHaveBeenCalled();
+  wrapper.vm.form.title = 'Commercial edit';
+  wrapper.vm.onSubmit();
+  expect(wrapper.emitted('save')).toHaveLength(1);
+  wrapper.unmount();
+});

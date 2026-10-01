@@ -177,7 +177,7 @@ RSpec.describe 'CRM composed company registration', type: :request do
 
   it 'checks current CRM permissions before replaying a completed composite registration' do
     agent, membership = create_crm_agent(account: account)
-    role = create(:custom_role, account: account, permissions: %w[crm_view crm_manage_cards])
+    role = create(:custom_role, account: account, permissions: %w[crm_view crm_manage_cards contact_manage])
     membership.update!(custom_role: role)
     agent_headers = auth_headers(agent).merge('Idempotency-Key' => SecureRandom.uuid)
     post url, params: payload, headers: agent_headers, as: :json

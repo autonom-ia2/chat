@@ -15,6 +15,7 @@ const makeForm = props =>
       agents: [{ id: 8, name: 'Responsável' }],
       inboxes: [{ id: 9, name: 'Comercial' }],
       canManage: true,
+      canCreateContact: true,
       ...props,
     },
     global: {
@@ -383,4 +384,36 @@ it('keeps the same key and entire new registration for a retry after a lost resp
   failed(new Error('Connection lost'));
   await wrapper.vm.submit();
   expect(wrapper.emitted('save')[1][0]).toEqual(first);
+});
+
+it('separates new shared records from existing and standalone opportunities', async () => {
+  wrapper = makeForm({ canCreateContact: false });
+  wrapper.vm.changeMode('new');
+  expect(wrapper.vm.mode).toBe('existing');
+  wrapper.vm.form.title = 'Permitted negotiation';
+  wrapper.vm.contact = { id: 42, name: 'Existing' };
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')[0][0]).toMatchObject({
+    contact_id: 42,
+    title: 'Permitted negotiation',
+  });
+  expect(wrapper.emitted('save')[0][0]).not.toHaveProperty('relationship');
+  wrapper.emitted('save')[0][1](new Error('No write in component test'));
+  wrapper.vm.changeMode('none');
+  await wrapper.vm.$nextTick();
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')[1][0]).not.toHaveProperty('relationship');
+  expect(wrapper.emitted('save')[1][0]).not.toHaveProperty('contact_id');
+});
+it('stops a new-record draft after record permission revocation without deleting it', async () => {
+  wrapper = makeForm({});
+  wrapper.vm.changeMode('new');
+  wrapper.vm.form.title = 'Keep draft';
+  await wrapper.vm.$nextTick();
+  await wrapper.setProps({ canCreateContact: false });
+  expect(wrapper.vm.canSave).toBe(false);
+  await wrapper.vm.submit();
+  expect(wrapper.emitted('save')).toBeUndefined();
+  expect(wrapper.vm.form.title).toBe('Keep draft');
 });

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (172 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (173 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1653,17 +1653,27 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde cadastro uma empresa?; Como agrupo os contatos de uma mesma empresa?; Onde busco uma empresa pelo nome ou domínio?; Por que não vejo Empresas no menu?
 - onde_fica: Empresas
 - rota: `companies_dashboard_index` - `/app/accounts/:accountId/companies`
-- gate: feature flag `companies`; papel `administrator` ou `agent`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: recurso de Empresas liberado na conta
 - passos: 1. Abra Empresas; 2. Busque pelo nome ou domínio; 3. Ajuste a ordenação; 4. Clique em adicionar empresa e preencha os dados; 5. Ao salvar, a plataforma abre a ficha da empresa criada.
 - gotchas: Empresas é liberado por conta, então pode simplesmente não aparecer no menu; criar a empresa não vincula contato nenhum, o vínculo é feito dentro da ficha ou pelo campo empresa do contato; busca e ordenação ficam no endereço da página, então dá para compartilhar o link já filtrado.
 - nav_target: `companies_dashboard_index`
 
+### Consultar cadastros sem alterar os dados compartilhados
+- intent: Por que não aparece Editar contato?; Posso criar oportunidade sem editar a pessoa?; Por que Criar novo está indisponível no CRM?
+- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > card > Relacionamento
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: acesso ao cadastro; permissões de Relacionamentos e do CRM são independentes
+- passos: 1. Abra o contato ou a empresa para consultar dados, atributos e histórico; 2. Se a ficha indicar somente consulta, use as informações sem alterar o cadastro; 3. Com permissão de gerenciar oportunidades, use um contato existente ou continue sem vínculo; 4. Para criar ou editar pessoa e empresa, solicite ao administrador a permissão de gerenciar contatos.
+- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de criação, envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
+- nav_target: `contacts_edit`
+
 ### Consultar oportunidades dos contatos de uma empresa
 - intent: Quais negociações esta empresa tem?; Como vejo as oportunidades de todos os contatos da empresa?
 - onde_fica: Relacionamentos > Empresas > abrir empresa > Acompanhamento > Oportunidades
 - rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
-- gate: feature flag `companies`; papel `administrator` ou `agent`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: Empresas, Relacionamentos e CRM habilitados; acesso à empresa e permissão de visualizar CRM. As oportunidades respeitam a visibilidade individual do usuário.
 - passos: Abra **Oportunidades** no painel da empresa. Cada item mostra a negociação, o contato vinculado, funil, etapa, situação e valor. Busque pelo título, ajuste **Situação** e use **Próxima** para mais resultados. Clique para abrir a mesma oportunidade no CRM em outra aba; a ficha original permanece aberta.
 - gotchas: os contatos considerados são os vinculados atualmente à empresa, inclusive os que não aparecem na primeira página de Contatos. Nome de empresa igual ou nome legado não cria associação. Ao trocar/desvincular um contato, suas oportunidades deixam de aparecer na empresa anterior na próxima consulta, sem apagar as negociações. Contatos continua sendo a aba inicial. Por padrão, arquivadas ficam fora. O total inclui somente os resultados permitidos. Moedas não são somadas nem convertidas; a consulta não altera cadastros.
@@ -1673,7 +1683,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Como vinculo um contato a uma empresa?; Onde vejo as conversas dos contatos de uma empresa?; Como tiro um contato de uma empresa?; O que acontece com os contatos se eu excluir a empresa?
 - onde_fica: Empresas > clicar na empresa
 - rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
-- gate: feature flag `companies`; papel `administrator` ou `agent`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: empresa cadastrada e contatos existentes para vincular
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
 - gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.

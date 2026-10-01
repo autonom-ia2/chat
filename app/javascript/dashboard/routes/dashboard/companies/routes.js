@@ -3,10 +3,19 @@ import CompaniesIndex from './pages/CompaniesIndex.vue';
 import CompanyDetailView from './pages/CompanyDetailView.vue';
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { INSTALLATION_TYPES } from 'dashboard/constants/installationTypes';
+import {
+  CONTACT_VIEW_PERMISSION,
+  CONTACT_PERMISSIONS,
+} from 'dashboard/constants/permissions';
 
 const commonMeta = {
   featureFlag: FEATURE_FLAGS.COMPANIES,
-  permissions: ['administrator', 'agent'],
+  permissions: [
+    'administrator',
+    'agent',
+    CONTACT_VIEW_PERMISSION,
+    CONTACT_PERMISSIONS,
+  ],
   installationTypes: [INSTALLATION_TYPES.CLOUD, INSTALLATION_TYPES.ENTERPRISE],
 };
 

@@ -9,6 +9,7 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmOpportunityContactPicker from './CrmOpportunityContactPicker.vue';
 import CrmOpportunityRegistration from './CrmOpportunityRegistration.vue';
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import {
   newRegistrationDraft,
   registrationPayload,
@@ -21,6 +22,7 @@ const props = defineProps({
   agents: { type: Array, default: () => [] },
   inboxes: { type: Array, default: () => [] },
   canManage: { type: Boolean, default: false },
+  canCreateContact: { type: Boolean, default: false },
   initialContact: { type: Object, default: null },
 });
 const emit = defineEmits(['save']);
@@ -99,7 +101,7 @@ const canSave = computed(
     ) &&
     (mode.value === 'none' ||
       (mode.value === 'new'
-        ? registration.value?.canSave
+        ? props.canCreateContact && registration.value?.canSave
         : Boolean(contact.value?.id)))
 );
 const summary = computed(() => {
@@ -139,7 +141,12 @@ watch(
   }
 );
 const changeMode = next => {
-  if (sending.value || validating.value) return;
+  if (
+    sending.value ||
+    validating.value ||
+    (next === 'new' && !props.canCreateContact)
+  )
+    return;
   mode.value = next;
   contact.value = null;
   error.value = '';
@@ -286,6 +293,7 @@ defineExpose({
           </div>
         </div>
         <template v-else>
+          <RecordReadOnly v-if="!canCreateContact" />
           <div
             class="grid grid-cols-2 gap-1 rounded-xl border border-n-weak bg-n-alpha-black2 p-1"
             role="group"
@@ -309,7 +317,9 @@ defineExpose({
                   : 'text-n-slate-11 hover:bg-n-alpha-2'
               "
               :aria-pressed="mode === option.value"
-              :disabled="sending"
+              :disabled="
+                sending || (option.value === 'new' && !canCreateContact)
+              "
               @click="changeMode(option.value)"
             >
               <span :class="option.icon" class="size-4" aria-hidden="true" />{{
@@ -321,7 +331,7 @@ defineExpose({
             v-if="mode === 'new'"
             ref="registration"
             v-model="registrationDraft"
-            :disabled="sending"
+            :disabled="sending || !canCreateContact"
             @use-contact="useExistingContact"
           />
           <CrmOpportunityContactPicker

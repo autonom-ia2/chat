@@ -8,6 +8,7 @@ import RelationshipActionMenu from './RelationshipActionMenu.vue';
 import ContactOpportunityLink from './ContactOpportunityLink.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   contact: { type: Object, required: true },
   isUpdating: { type: Boolean, default: false },
 });
@@ -59,6 +60,7 @@ const actions = computed(() => [
       class="min-h-11"
     />
     <RelationshipActionMenu
+      v-if="!readOnly"
       :actions="actions"
       @select="emit('toggleBlock', contact.blocked)"
     />

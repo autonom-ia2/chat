@@ -1,4 +1,5 @@
 class Api::V1::Accounts::Contacts::NotesController < Api::V1::Accounts::Contacts::BaseController
+  before_action :authorize_note_write!, only: [:create, :update, :destroy]
   before_action :note, except: [:index, :create]
 
   def index
@@ -21,6 +22,10 @@ class Api::V1::Accounts::Contacts::NotesController < Api::V1::Accounts::Contacts
   end
 
   private
+
+  def authorize_note_write!
+    authorize @contact, :update?
+  end
 
   def note
     @note ||= @contact.notes.find(params[:id])

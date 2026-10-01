@@ -27,7 +27,7 @@ RSpec.describe 'CRM contact creation permissions (M02)', type: :request do
   end
 
   it 'checks current permissions before replaying a previously authorized response' do
-    role.update!(permissions: %w[crm_view crm_manage_cards])
+    role.update!(permissions: %w[crm_view crm_manage_cards contact_manage])
     membership.update!(custom_role: role)
     post path, params: payload, headers: headers, as: :json
     expect(response).to have_http_status(:created)

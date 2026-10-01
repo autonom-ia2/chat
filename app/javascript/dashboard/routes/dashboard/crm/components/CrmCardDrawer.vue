@@ -7,6 +7,7 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
 import CrmOpportunityForm from './CrmOpportunityForm.vue';
 import { useAlert } from 'dashboard/composables';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -65,6 +66,7 @@ const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
 
 const store = useStore();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 const isCrmAiEnabled = computed(
   () =>
     store.getters['globalConfig/get']?.crmAiEnabled === true ||
@@ -628,11 +630,13 @@ const confirmDiscard = () => {
   action?.();
 };
 const startContactEdit = contact => {
+  if (!canManageRelationshipRecords.value) return;
   hydrateContactForm({ contact });
   isEditingContact.value = true;
   contactError.value = '';
 };
 const saveContact = async () => {
+  if (!canManageRelationshipRecords.value) return;
   if (isSavingContact.value || !contactForm.name.trim()) return;
   const cardIdAtSave = props.card?.id;
   isSavingContact.value = true;
@@ -1382,6 +1386,7 @@ useFixedPanelPresence(computed(() => props.show));
           :agents="agents"
           :inboxes="inboxes"
           :can-manage="canManageCards"
+          :can-create-contact="canManageRelationshipRecords"
           @save="(payload, failed) => emit('save', payload, failed)"
         />
         <div v-else-if="activeTab === 'summary'" class="grid gap-4">
@@ -1536,7 +1541,8 @@ useFixedPanelPresence(computed(() => props.show));
           :key="`${route.params.accountId}:${card.id}`"
           :card="card"
           :can-manage="canManageCards"
-          :editing="isEditingContact"
+          :can-manage-records="canManageRelationshipRecords"
+          :editing="isEditingContact && canManageRelationshipRecords"
           @edit="startContactEdit"
           @guard="guardRelationship"
           @linked="$emit('refreshCard')"

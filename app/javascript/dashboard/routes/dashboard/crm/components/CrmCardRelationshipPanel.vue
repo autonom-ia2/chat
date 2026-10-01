@@ -16,10 +16,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import CrmRelationshipLinkForm from './CrmRelationshipLinkForm.vue';
 import CrmRelationshipResources from './CrmRelationshipResources.vue';
 import CrmRelationshipCompanyForm from './CrmRelationshipCompanyForm.vue';
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 
 const props = defineProps({
   card: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
+  canManageRecords: { type: Boolean, default: false },
   editing: { type: Boolean, default: false },
 });
 const emit = defineEmits(['edit', 'linked', 'guard']);
@@ -237,6 +239,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
       />
     </div>
     <template v-else>
+      <RecordReadOnly v-if="!canManageRecords" />
       <div
         v-if="companyMode && person"
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"
@@ -248,7 +251,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
           :company="company"
           :mode="companyMode"
           :form-id="companyFormId"
-          :read-only="!canManage"
+          :read-only="!canManageRecords"
           @saved="companySaved"
         />
       </div>
@@ -261,6 +264,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
           :key="`${identity}:${mode}`"
           :card-id="card.id"
           :mode="mode"
+          :read-only="!canManage || (mode === 'new' && !canManageRecords)"
           @saved="linked"
           @cancel="guard(reset)"
         />
@@ -299,7 +303,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
             class="flex items-center gap-2 max-[470px]:ms-[3.5rem] max-[470px]:w-full"
           >
             <Button
-              v-if="canManage"
+              v-if="canManageRecords"
               ghost
               sm
               icon="i-lucide-pencil"
@@ -364,6 +368,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
             @click="mode = 'existing'"
           />
           <Button
+            v-if="canManageRecords"
             icon="i-lucide-plus"
             :label="label('CREATE_CONTACT')"
             @click="mode = 'new'"
@@ -397,7 +402,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
                 label(company ? 'LINKED_COMPANY' : 'COMPANY_OPTIONAL')
               }}</span>
               <Button
-                v-if="company && canManage"
+                v-if="company && canManageRecords"
                 sm
                 link
                 :label="label('CHANGE')"
@@ -412,7 +417,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
             class="flex items-center gap-2 max-[470px]:ms-[3.5rem] max-[470px]:w-full"
           >
             <Button
-              v-if="canManage"
+              v-if="canManageRecords"
               ghost
               sm
               icon="i-lucide-pencil"
@@ -476,7 +481,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
           @click="reload"
         />
         <Button
-          v-else-if="!company && canManage"
+          v-else-if="!company && canManageRecords"
           class="mt-4"
           outline
           sm
@@ -486,7 +491,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
           @click="guard(() => (companyMode = 'link'))"
         />
         <Button
-          v-if="company && canManage"
+          v-if="company && canManageRecords"
           class="mt-4"
           ghost
           slate
@@ -536,7 +541,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
         ref="resources"
         :contact="person"
         :company="company"
-        :can-manage="canManage"
+        :can-manage="canManageRecords"
         @guard="guard"
         @changed="emit('linked')"
       />

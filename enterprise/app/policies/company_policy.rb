@@ -1,4 +1,6 @@
 class CompanyPolicy < ApplicationPolicy
+  include Relationships::RecordPermissions
+
   def index?
     true
   end
@@ -16,11 +18,11 @@ class CompanyPolicy < ApplicationPolicy
   end
 
   def create?
-    true
+    relationship_record_write?
   end
 
   def update?
-    true
+    relationship_record_write?
   end
 
   def avatar?

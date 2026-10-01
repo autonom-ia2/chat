@@ -1465,6 +1465,9 @@
     "RELATIONSHIP": {
       "TAB": "Relacionamento",
       "SHARED": "Mesmo cadastro da área Relacionamentos",
+      "READ_ONLY": "Você pode consultar este cadastro compartilhado. Para editar, é necessária a permissão de gerenciar relacionamentos.",
+      "VALUE_YES": "Sim",
+      "VALUE_NO": "Não",
       "LOADING": "Carregando relacionamento…",
       "LOAD_ERROR": "Não foi possível carregar o cadastro. Tente novamente.",
       "RETRY": "Tentar novamente",

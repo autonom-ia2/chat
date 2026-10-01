@@ -3,6 +3,7 @@ import { onMounted, computed, ref, reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useRelationships } from 'dashboard/composables/useRelationships';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import ContactDetailActions from 'dashboard/components-next/Relationships/ContactDetailActions.vue';
 import RelationshipOpportunities from 'dashboard/components-next/Relationships/RelationshipOpportunities.vue';
 import { useContactOpportunities } from 'dashboard/components-next/Relationships/useContactOpportunities';
@@ -24,6 +25,7 @@ import ContactCustomAttributes from 'dashboard/components-next/Contacts/Contacts
 
 const { navigationEnabled, mediaEnabled, accountId } = useRelationships();
 const store = useStore();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 const route = useRoute();
 const router = useRouter();
 
@@ -88,7 +90,9 @@ const tabs = computed(() => {
           },
         ]
       : []),
-    ...CONTACT_TABS_OPTIONS.map(tab => ({
+    ...CONTACT_TABS_OPTIONS.filter(
+      tab => tab.value !== 'merge' || canManageRelationshipRecords.value
+    ).map(tab => ({
       label: t(`CONTACTS_LAYOUT.SIDEBAR.TABS.${tab.key}`),
       value: tab.value,
     })),
@@ -138,6 +142,7 @@ const fetchAttributes = () => {
 };
 
 const toggleContactBlock = async isBlocked => {
+  if (!canManageRelationshipRecords.value) return;
   const ALERT_MESSAGES = {
     success: {
       block: t('CONTACTS_LAYOUT.HEADER.ACTIONS.BLOCK_SUCCESS_MESSAGE'),
@@ -218,11 +223,13 @@ onMounted(() => {
         v-else-if="selectedContact"
         :key="selectedContact.id"
         :selected-contact="selectedContact"
+        :read-only="!canManageRelationshipRecords"
         @go-to-contacts-list="goToContactsList"
       >
         <template v-if="navigationEnabled" #actions>
           <ContactDetailActions
             :contact="selectedContact"
+            :read-only="!canManageRelationshipRecords"
             :is-updating="isUpdatingContact"
             @toggle-block="toggleContactBlock"
           />
@@ -271,15 +278,17 @@ onMounted(() => {
             <ContactCustomAttributes
               v-if="activeTab === 'attributes'"
               :selected-contact="selectedContact"
+              :read-only="!canManageRelationshipRecords"
             />
             <ContactNotes
               v-if="activeTab === 'notes'"
               :key="`${accountId}:${route.params.contactId}`"
+              :read-only="!canManageRelationshipRecords"
             />
             <ContactHistory v-if="activeTab === 'history'" />
             <ContactMedia v-if="activeTab === 'media'" />
             <ContactMerge
-              v-if="activeTab === 'merge'"
+              v-if="activeTab === 'merge' && canManageRelationshipRecords"
               ref="contactMergeRef"
               :selected-contact="selectedContact"
               @go-to-contacts-list="goToContactsList"
