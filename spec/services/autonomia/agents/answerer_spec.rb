@@ -17,10 +17,10 @@ RSpec.describe Autonomia::Agents::Answerer do
     allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
   end
 
-  def create_agent(config)
+  def create_agent(config, fallback_message: nil)
     Autonomia::Agents::Agent.create!(
       account: account, name: 'Bot', agent_type: 'custom', status: :active, enabled: true,
-      instruction: 'Atenda o cliente.', config: config
+      instruction: 'Atenda o cliente.', fallback_message: fallback_message, config: config
     )
   end
 
@@ -173,6 +173,42 @@ RSpec.describe Autonomia::Agents::Answerer do
       client = stub_model_with_rewrite(
         {
           reply: 'Só um momento, por favor. Estou verificando e já retorno com as informações.',
+          confidence: 0.99,
+          should_handoff: true,
+          handoff_reason: 'Outro / não especificado',
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        },
+        {
+          reply: 'Sim. O kit pode ser impresso em papel A4.',
+          confidence: 0.99,
+          should_handoff: false,
+          handoff_reason: nil,
+          used_snippet_ids: [snippet.id],
+          answered_from_knowledge: true
+        }
+      )
+
+      result = described_class.new(
+        agent: agent,
+        query: 'Posso receber o PDF do kit para imprimir em folha A4?',
+        trust_instruction: true
+      ).answer
+
+      expect(client).to have_received(:create)
+      expect(result.reply).to eq('Sim. O kit pode ser impresso em papel A4.')
+      expect(result.handoff).to eq({ should: false, reason: nil })
+      expect(result.answered_from_knowledge).to be(true)
+    end
+
+    it 'rewrites the configured fallback message even when it does not match wait phrase patterns' do
+      custom_fallback = 'Mensagem padrao configurada para encaminhamento.'
+      agent = create_agent({ 'with_knowledge' => true }, fallback_message: custom_fallback)
+      allow(agent).to receive(:accepted_sources).and_return(instance_double(ActiveRecord::Relation, exists?: true))
+      stub_retrieval([snippet])
+      client = stub_model_with_rewrite(
+        {
+          reply: custom_fallback,
           confidence: 0.99,
           should_handoff: true,
           handoff_reason: 'Outro / não especificado',

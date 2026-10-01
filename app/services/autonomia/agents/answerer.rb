@@ -567,7 +567,23 @@ module Autonomia
 
       def deferred_reply?(parsed)
         text = parsed['reply'].to_s
-        DEFERRED_REPLY_PATTERNS.any? { |re| text.match?(re) }
+        configured_fallback_reply?(text) || DEFERRED_REPLY_PATTERNS.any? { |re| text.match?(re) }
+      end
+
+      def configured_fallback_reply?(reply)
+        fallback = @agent.fallback_message.to_s
+        return false if fallback.strip.blank? || reply.to_s.strip.blank?
+
+        normalized_reply_text(reply) == normalized_reply_text(fallback)
+      end
+
+      def normalized_reply_text(text)
+        text.to_s
+            .unicode_normalize(:nfkd)
+            .encode('ASCII', invalid: :replace, undef: :replace, replace: '')
+            .downcase
+            .gsub(/\s+/, ' ')
+            .strip
       end
 
       def rewrite_deferred_reply(parsed, snippets, used)
