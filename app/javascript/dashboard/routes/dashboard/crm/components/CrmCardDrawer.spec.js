@@ -306,6 +306,34 @@ it('uses the same 40rem width as the pipeline drawer', () => {
   );
   wrapper.unmount();
 });
+it('exposes an accessible drawer shell and keyboard-navigable detail tabs', async () => {
+  const wrapper = mountDrawer();
+  const drawer = wrapper.find('[data-crm-card-drawer]');
+  expect(drawer.attributes('role')).toBe('dialog');
+  expect(drawer.attributes('aria-modal')).toBe('true');
+  expect(drawer.attributes('aria-labelledby')).toBeTruthy();
+  expect(drawer.find('button[aria-label="GENERAL.CLOSE"]').exists()).toBe(true);
+
+  const tabs = drawer.findAll('button[role="tab"]');
+  expect(tabs).toHaveLength(5);
+  expect(tabs.every(tab => tab.attributes('aria-controls'))).toBe(true);
+  await tabs[0].trigger('keydown', { key: 'End' });
+  await wrapper.vm.$nextTick();
+  expect(wrapper.vm.activeTab).toBe('timeline');
+  expect(
+    drawer
+      .find('section[role="tabpanel"][aria-labelledby$="timeline"]')
+      .exists()
+  ).toBe(true);
+  wrapper.unmount();
+});
+it('keeps the fixed footer out of the relationship-link subflow', async () => {
+  const wrapper = mountDrawer();
+  wrapper.vm.relationshipPanel = { linking: true, dirty: false, saving: false };
+  await wrapper.vm.$nextTick();
+  expect(wrapper.find('[data-crm-drawer-footer]').exists()).toBe(false);
+  wrapper.unmount();
+});
 it('retains the active relationship tab when refreshing the same card', async () => {
   const wrapper = mountDrawer();
   wrapper.vm.activeTab = 'contact';

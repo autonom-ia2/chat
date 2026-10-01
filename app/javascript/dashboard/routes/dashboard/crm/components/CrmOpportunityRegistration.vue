@@ -280,6 +280,7 @@ defineExpose({ canSave, validate, showError });
     </div>
     <Input
       v-model="draft.name"
+      custom-input-class="!text-base"
       :label="label('NAME')"
       :placeholder="label('NAME_HINT')"
       required
@@ -291,6 +292,7 @@ defineExpose({ canSave, validate, showError });
       <Input
         v-model="draft.email"
         type="email"
+        custom-input-class="!text-base"
         :label="label('EMAIL')"
         :placeholder="label('EMAIL_HINT')"
         :disabled="disabled"
@@ -410,6 +412,7 @@ defineExpose({ canSave, validate, showError });
         <div class="grid min-w-0 gap-4 min-[440px]:grid-cols-2">
           <Input
             v-model="draft.companyName"
+            custom-input-class="!text-base"
             :label="label('COMPANY_NAME')"
             required
             :maxlength="100"

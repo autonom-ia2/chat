@@ -279,3 +279,14 @@ it('keeps card linking but hides shared-record editors without record management
       .props('canManage')
   ).toBe(false);
 });
+
+it('removes the generic read-only notice while choosing a different contact link', async () => {
+  wrapper = makePanel({ canManage: true, canManageRecords: false });
+  await flushPromises();
+  await wrapper
+    .findAll('button')
+    .find(button => button.text() === 'CRM_KANBAN.RELATIONSHIP.CHANGE')
+    .trigger('click');
+  expect(wrapper.vm.linking).toBe(true);
+  expect(wrapper.find('[data-record-read-only]').exists()).toBe(false);
+});

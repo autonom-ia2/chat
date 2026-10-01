@@ -113,6 +113,7 @@ defineExpose({ dirty, saving });
     <div v-if="mode === 'new'" class="grid gap-4">
       <Input
         v-model="form.name"
+        custom-input-class="!text-base"
         :label="label('NAME')"
         :placeholder="label('NAME_PLACEHOLDER')"
         required
@@ -121,6 +122,7 @@ defineExpose({ dirty, saving });
       <Input
         v-model="form.email"
         type="email"
+        custom-input-class="!text-base"
         :label="label('EMAIL')"
         :disabled="saving"
       />
@@ -197,6 +199,7 @@ defineExpose({ dirty, saving });
         type="button"
         slate
         faded
+        class="min-h-11"
         :label="label('CANCEL')"
         :disabled="saving"
         @click="emit('cancel')"
@@ -204,6 +207,7 @@ defineExpose({ dirty, saving });
       <Button
         type="submit"
         icon="i-lucide-check"
+        class="min-h-11"
         :label="label(mode === 'new' ? 'SAVE_AND_LINK' : 'CONFIRM_LINK')"
         :is-loading="saving"
         :disabled="saving || !canSave"

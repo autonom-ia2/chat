@@ -959,6 +959,7 @@
       "DESCRIPTION_PLACEHOLDER": "Contexto, próximos passos ou observações",
       "STAGE": "Etapa",
       "VALUE": "Valor estimado",
+      "VALUE_WITH_CURRENCY": "Valor estimado ({currency})",
       "VALUE_PLACEHOLDER": "0,00",
       "SCORE": "Score",
       "SCORE_PLACEHOLDER": "0",
@@ -1618,6 +1619,8 @@
       "STAGE_ERROR": "Não foi possível carregar as etapas deste funil.",
       "MORE_OPTIONS": "Mais opções da oportunidade",
       "CURRENCY": "Moeda",
+      "CURRENCY_HELP": "Use o código de 3 letras, como BRL ou USD.",
+      "CREATE_NEW_PERMISSION_HELP": "Você pode usar um contato existente. Criar um novo contato exige permissão para gerenciar cadastros compartilhados.",
       "SAVE_ERROR": "Não foi possível confirmar a criação. O preenchimento foi mantido. Ao tentar novamente sem alterar os dados, a mesma solicitação será consultada para evitar duplicação.",
       "DISCARD_HELP": "Existem dados da nova oportunidade que ainda não foram salvos. Descartar não cria contato nem oportunidade.",
       "REGISTRATION": {

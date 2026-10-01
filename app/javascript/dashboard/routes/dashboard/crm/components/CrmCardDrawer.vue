@@ -1,5 +1,13 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  reactive,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -124,6 +132,9 @@ const contactError = ref('');
 const relationshipPanel = ref(null);
 const creationForm = ref(null);
 const companyAction = computed(() => relationshipPanel.value?.companyAction);
+const relationshipLinking = computed(
+  () => relationshipPanel.value?.linking === true
+);
 const discardDialog = ref(null);
 const discardOpen = ref(false);
 let discardAction = null;
@@ -146,6 +157,10 @@ const whatsappApiTemplates = ref([]);
 const isLoadingWhatsappTemplates = ref(false);
 
 const activeTab = ref('summary');
+const tabButtons = ref([]);
+const drawerElement = ref(null);
+const drawerId = `crm-card-drawer-${useId()}`;
+let previousActiveElement = null;
 
 const isEditing = computed(() => props.mode === 'edit');
 const panelTitle = computed(() =>
@@ -173,6 +188,57 @@ const detailTabs = computed(() => [
   { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_FOLLOW_UPS') },
   { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_TIMELINE') },
 ]);
+const tabId = tab => `${drawerId}-tab-${tab}`;
+const detailPanelId = tab => `${drawerId}-panel-${tab}`;
+const drawerFocusableSelector = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+const rememberAndFocusDrawer = async show => {
+  if (show) {
+    previousActiveElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    await nextTick();
+    if (!props.show) return;
+    drawerElement.value?.focus();
+    return;
+  }
+
+  if (previousActiveElement?.isConnected) previousActiveElement.focus();
+  previousActiveElement = null;
+};
+const trapDrawerFocus = event => {
+  if (event.key !== 'Tab' || document.querySelector('dialog[open]')) return;
+
+  const focusable = Array.from(
+    drawerElement.value?.querySelectorAll(drawerFocusableSelector) || []
+  ).filter(element => element.getClientRects().length > 0);
+  if (!focusable.length) {
+    event.preventDefault();
+    drawerElement.value?.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (
+    event.shiftKey &&
+    (document.activeElement === first ||
+      document.activeElement === drawerElement.value)
+  ) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
 const linkedConversationDisplayId = computed(
   () => props.card?.conversation?.display_id || ''
 );
@@ -494,6 +560,12 @@ watch(
   },
   { immediate: true }
 );
+watch(() => props.show, rememberAndFocusDrawer, { immediate: true });
+
+onBeforeUnmount(() => {
+  if (props.show && previousActiveElement?.isConnected)
+    previousActiveElement.focus();
+});
 
 // Fetch the card's Meta conversion row whenever the drawer opens or switches card.
 // Reset first so a stale badge never lingers; failures simply hide the badge. The
@@ -633,6 +705,30 @@ const guardRelationship = action => {
   }
   discardRelationship();
   action();
+};
+const moveTabFocus = event => {
+  const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+  if (!keys.includes(event.key)) return;
+
+  event.preventDefault();
+  const currentIndex = detailTabs.value.findIndex(
+    tab => tab.id === activeTab.value
+  );
+  if (currentIndex < 0) return;
+
+  const isRtl = event.currentTarget.closest('[dir="rtl"]');
+  const step = event.key === 'ArrowRight' ? 1 : -1;
+  let nextIndex =
+    (currentIndex + (isRtl ? -step : step) + detailTabs.value.length) %
+    detailTabs.value.length;
+  if (event.key === 'Home') nextIndex = 0;
+  if (event.key === 'End') nextIndex = detailTabs.value.length - 1;
+
+  const nextTab = detailTabs.value[nextIndex];
+  guardRelationship(() => {
+    activeTab.value = nextTab.id;
+    nextTick(() => tabButtons.value[nextIndex]?.focus());
+  });
 };
 const footerCancelLabel = computed(() => {
   if (isEditingContact.value || companyAction.value)
@@ -1256,19 +1352,30 @@ useFixedPanelPresence(computed(() => props.show));
   >
     <div
       v-if="show"
+      ref="drawerElement"
       data-crm-card-drawer
       role="dialog"
-      :aria-label="panelTitle"
+      aria-modal="true"
+      :aria-labelledby="`${drawerId}-title`"
+      :aria-describedby="`${drawerId}-subtitle`"
+      tabindex="-1"
       class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
+      @keydown="trapDrawerFocus"
     >
       <div
-        class="flex items-start justify-between gap-4 border-b border-n-weak px-6 py-5"
+        class="flex items-start justify-between gap-4 bg-n-blue-12 px-8 py-6"
       >
         <div class="min-w-0">
-          <h2 class="mb-1 text-lg font-medium text-n-slate-12">
+          <h2
+            :id="`${drawerId}-title`"
+            class="mb-2 text-2xl font-semibold text-n-slate-1"
+          >
             {{ panelTitle }}
           </h2>
-          <p class="mb-0 text-sm leading-5 text-n-slate-11">
+          <p
+            :id="`${drawerId}-subtitle`"
+            class="mb-0 text-sm leading-6 text-n-slate-4"
+          >
             {{ panelSubtitle }}
           </p>
           <Button
@@ -1298,6 +1405,8 @@ useFixedPanelPresence(computed(() => props.show));
           slate
           ghost
           sm
+          :aria-label="t('GENERAL.CLOSE')"
+          class="!text-n-slate-1 min-h-11 min-w-11"
           @click="guardRelationship(() => $emit('close'))"
         />
       </div>
@@ -1369,20 +1478,28 @@ useFixedPanelPresence(computed(() => props.show));
         </div>
         <div v-if="isEditing" class="mb-5 grid gap-3">
           <div
-            class="flex gap-1 overflow-x-auto rounded-lg bg-n-alpha-black2 p-1"
+            role="tablist"
+            :aria-label="panelTitle"
+            class="grid grid-cols-2 gap-1 rounded-lg bg-n-alpha-black2 p-1 sm:flex"
           >
             <button
-              v-for="tab in detailTabs"
+              v-for="(tab, index) in detailTabs"
+              :id="tabId(tab.id)"
               :key="tab.id"
+              :ref="element => (tabButtons[index] = element)"
               type="button"
-              class="h-10 min-w-max flex-none shrink-0 whitespace-nowrap min-[480px]:flex-1 rounded-md px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12"
+              role="tab"
+              :aria-selected="activeTab === tab.id"
+              :aria-controls="detailPanelId(tab.id)"
+              :tabindex="activeTab === tab.id ? 0 : -1"
+              class="min-h-11 min-w-0 whitespace-nowrap rounded-md px-3 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand sm:flex-1"
               :class="
                 activeTab === tab.id
                   ? 'bg-n-brand/10 text-n-blue-11 shadow-sm ring-1 ring-inset ring-n-brand/30'
                   : ''
               "
-              :aria-pressed="activeTab === tab.id"
               @click="guardRelationship(() => (activeTab = tab.id))"
+              @keydown="moveTabFocus"
             >
               {{ tab.label }}
             </button>
@@ -1410,7 +1527,14 @@ useFixedPanelPresence(computed(() => props.show));
           :can-create-contact="canManageRelationshipRecords"
           @save="(payload, failed) => emit('save', payload, failed)"
         />
-        <div v-else-if="activeTab === 'summary'" class="grid gap-4">
+        <div
+          v-else-if="activeTab === 'summary'"
+          :id="detailPanelId('summary')"
+          role="tabpanel"
+          :aria-labelledby="tabId('summary')"
+          tabindex="-1"
+          class="grid gap-4 outline-none"
+        >
           <Input
             v-model="form.title"
             :readonly="!canManageCards"
@@ -1526,7 +1650,11 @@ useFixedPanelPresence(computed(() => props.show));
               :readonly="!canManageCards"
               type="number"
               min="0"
-              :label="t('CRM_KANBAN.DRAWER.VALUE')"
+              :label="
+                t('CRM_KANBAN.DRAWER.VALUE_WITH_CURRENCY', {
+                  currency: form.currency || 'BRL',
+                })
+              "
               :placeholder="t('CRM_KANBAN.DRAWER.VALUE_PLACEHOLDER')"
             />
             <Input
@@ -1564,8 +1692,12 @@ useFixedPanelPresence(computed(() => props.show));
 
         <CrmCardRelationshipPanel
           v-else-if="activeTab === 'contact' && card"
+          :id="detailPanelId('contact')"
           ref="relationshipPanel"
           :key="`${route.params.accountId}:${card.id}`"
+          role="tabpanel"
+          :aria-labelledby="tabId('contact')"
+          tabindex="-1"
           :card="card"
           :can-manage="canManageCards"
           :can-manage-records="canManageRelationshipRecords"
@@ -1639,7 +1771,14 @@ useFixedPanelPresence(computed(() => props.show));
           </template>
         </CrmCardRelationshipPanel>
 
-        <section v-else-if="activeTab === 'conversations'" class="grid gap-3">
+        <section
+          v-else-if="activeTab === 'conversations'"
+          :id="detailPanelId('conversations')"
+          role="tabpanel"
+          :aria-labelledby="tabId('conversations')"
+          tabindex="-1"
+          class="grid gap-3 outline-none"
+        >
           <CrmCardSummaryPanel
             v-if="isEditing && card?.id && isCrmAiEnabled"
             :card="card"
@@ -1712,7 +1851,14 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </section>
 
-        <section v-else-if="activeTab === 'followups'" class="grid gap-4">
+        <section
+          v-else-if="activeTab === 'followups'"
+          :id="detailPanelId('followups')"
+          role="tabpanel"
+          :aria-labelledby="tabId('followups')"
+          tabindex="-1"
+          class="grid gap-4 outline-none"
+        >
           <!-- 1) Open follow-ups (pending / overdue) on top -->
           <div
             v-if="isFetchingFollowUps"
@@ -2026,7 +2172,14 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </section>
 
-        <section v-else class="grid gap-3">
+        <section
+          v-else
+          :id="detailPanelId('timeline')"
+          role="tabpanel"
+          :aria-labelledby="tabId('timeline')"
+          tabindex="-1"
+          class="grid gap-3 outline-none"
+        >
           <article
             v-for="entry in timelineEntries"
             :key="entry.id"
@@ -2074,6 +2227,8 @@ useFixedPanelPresence(computed(() => props.show));
       </div>
 
       <div
+        v-if="!relationshipLinking"
+        data-crm-drawer-footer
         class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
       >
         <div

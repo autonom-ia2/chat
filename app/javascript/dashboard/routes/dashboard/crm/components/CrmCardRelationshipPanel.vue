@@ -55,6 +55,7 @@ const linkForm = ref(null);
 const companyMode = ref(null);
 const companyForm = ref(null);
 const companyFormId = `crm-company-${useId()}`;
+const linking = computed(() => Boolean(mode.value));
 const dirty = computed(() =>
   Boolean(
     linkForm.value?.dirty || resources.value?.dirty || companyForm.value?.dirty
@@ -200,7 +201,7 @@ watch(
   },
   { immediate: true, flush: 'sync' }
 );
-defineExpose({ dirty, saving, reset, reload, companyAction });
+defineExpose({ dirty, saving, reset, reload, companyAction, linking });
 </script>
 
 <template>
@@ -239,7 +240,7 @@ defineExpose({ dirty, saving, reset, reload, companyAction });
       />
     </div>
     <template v-else>
-      <RecordReadOnly v-if="!canManageRecords" />
+      <RecordReadOnly v-if="!canManageRecords && !linking" />
       <div
         v-if="companyMode && person"
         class="rounded-xl border border-n-weak bg-n-solid-1 p-5"

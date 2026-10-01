@@ -9,7 +9,6 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmOpportunityContactPicker from './CrmOpportunityContactPicker.vue';
 import CrmOpportunityRegistration from './CrmOpportunityRegistration.vue';
-import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import {
   newRegistrationDraft,
   registrationPayload,
@@ -293,7 +292,6 @@ defineExpose({
           </div>
         </div>
         <template v-else>
-          <RecordReadOnly v-if="!canCreateContact" />
           <div
             class="grid grid-cols-2 gap-1 rounded-xl border border-n-weak bg-n-alpha-black2 p-1"
             role="group"
@@ -327,6 +325,16 @@ defineExpose({
               }}
             </button>
           </div>
+          <p
+            v-if="!canCreateContact"
+            class="m-0 flex items-start gap-2 text-sm leading-6 text-n-slate-11"
+          >
+            <span
+              class="i-lucide-info mt-1 size-4 shrink-0 text-n-blue-11"
+              aria-hidden="true"
+            />
+            {{ label('CREATE_NEW_PERMISSION_HELP') }}
+          </p>
           <CrmOpportunityRegistration
             v-if="mode === 'new'"
             ref="registration"
@@ -359,6 +367,7 @@ defineExpose({
         <Input
           v-model="form.title"
           required
+          custom-input-class="!text-base"
           :label="t('CRM_KANBAN.DRAWER.TITLE_LABEL')"
           :placeholder="t('CRM_KANBAN.DRAWER.TITLE_PLACEHOLDER')"
           :disabled="sending"
@@ -394,7 +403,12 @@ defineExpose({
             type="number"
             min="0"
             step="0.01"
-            :label="t('CRM_KANBAN.DRAWER.VALUE')"
+            custom-input-class="!text-base"
+            :label="
+              t('CRM_KANBAN.DRAWER.VALUE_WITH_CURRENCY', {
+                currency: form.currency || 'BRL',
+              })
+            "
             :placeholder="t('CRM_KANBAN.DRAWER.VALUE_PLACEHOLDER')"
             :disabled="sending"
           />
@@ -485,6 +499,7 @@ defineExpose({
               <Input
                 v-model="form.currency"
                 :label="label('CURRENCY')"
+                :message="label('CURRENCY_HELP')"
                 :disabled="sending"
               />
             </div>

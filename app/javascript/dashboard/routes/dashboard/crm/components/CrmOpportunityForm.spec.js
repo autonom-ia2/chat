@@ -81,6 +81,25 @@ it('starts with two sections, no validation errors and no fake create-contact co
   expect(wrapper.vm.canSave).toBe(false);
   expect(wrapper.findAll('select')).toHaveLength(0);
 });
+it('explains the new-contact permission without blocking an existing contact', () => {
+  wrapper = makeForm({ canCreateContact: false });
+  expect(wrapper.find('[data-record-read-only]').exists()).toBe(false);
+  expect(wrapper.text()).toContain(
+    'CRM_KANBAN.OPPORTUNITY.CREATE_NEW_PERMISSION_HELP'
+  );
+  expect(
+    wrapper
+      .findAll('button')
+      .some(button =>
+        button.text().includes('CRM_KANBAN.OPPORTUNITY.USE_EXISTING')
+      )
+  ).toBe(true);
+});
+it('keeps the currency input self-explanatory inside more options', () => {
+  wrapper = makeForm();
+  wrapper.vm.more = true;
+  expect(wrapper.text()).toContain('CRM_KANBAN.OPPORTUNITY.CURRENCY_HELP');
+});
 it('requires an explicit contact or an explicit choice to continue without one', async () => {
   wrapper = makeForm();
   wrapper.vm.form.title = 'Negociação';

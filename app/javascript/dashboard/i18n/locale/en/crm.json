@@ -959,6 +959,7 @@
       "DESCRIPTION_PLACEHOLDER": "Context, next steps, or notes",
       "STAGE": "Stage",
       "VALUE": "Estimated value",
+      "VALUE_WITH_CURRENCY": "Estimated value ({currency})",
       "VALUE_PLACEHOLDER": "0.00",
       "SCORE": "Score",
       "SCORE_PLACEHOLDER": "0",
@@ -1617,6 +1618,8 @@
       "STAGE_ERROR": "Could not load the stages for this pipeline.",
       "MORE_OPTIONS": "More opportunity options",
       "CURRENCY": "Currency",
+      "CURRENCY_HELP": "Use the 3-letter code, such as BRL or USD.",
+      "CREATE_NEW_PERMISSION_HELP": "You can use an existing contact. Creating a new contact requires permission to manage shared records.",
       "SAVE_ERROR": "Could not confirm creation. Your input has been kept. Retrying without changing the data checks the same request to avoid duplication.",
       "DISCARD_HELP": "There are unsaved details for this new opportunity. Discarding does not create a contact or opportunity.",
       "REGISTRATION": {
