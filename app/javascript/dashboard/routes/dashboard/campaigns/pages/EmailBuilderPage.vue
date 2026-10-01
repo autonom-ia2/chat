@@ -1,11 +1,20 @@
 <script setup>
-import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onActivated,
+  onDeactivated,
+  onMounted,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useRecipientImportPolling } from 'dashboard/composables/useRecipientImportPolling';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
+import EmailRecipientStep from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailRecipientStep.vue';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
@@ -55,6 +64,7 @@ const {
   selectedComponent,
   selectedType,
   setSelectedText,
+  adjustCanvasScroll,
 } = useEmailEditor();
 
 const placeholders = ref([]);
@@ -339,8 +349,13 @@ watch(
 );
 
 onMounted(async () => {
-  if (!campaign.value) {
-    await store.dispatch('emailCampaigns/get');
+  try {
+    if (!campaign.value) {
+      await store.dispatch('emailCampaigns/get');
+    }
+    await store.dispatch('emailCampaigns/getOne', campaignId.value);
+  } catch (error) {
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.ERROR'));
   }
   // Durabilidade: se a campanha já está sendo gerada (usuário saiu e voltou), retoma o popup.
   if (campaign.value?.ai_status === 'processing') {
@@ -361,6 +376,83 @@ const problemsOnly = ref(false);
 const senderOpen = ref(false);
 const previewDialog = ref(null);
 const previewHtml = ref('');
+const importStatus = ref(null);
+const emailDetailsOpen = ref(false);
+const compactHeader = ref(false);
+const fullView = ref(false);
+const fitToView = ref(true);
+const canvasHost = ref(null);
+const COLLAPSE_SCROLL = 120;
+const RESTORE_SCROLL = 60;
+let lastScrollTop = 0;
+let upwardScroll = 0;
+let adjustingScroll = false;
+let scrollGeneration = 0;
+const onCanvasScroll = async top => {
+  if (fullView.value || emailDetailsOpen.value || adjustingScroll) return;
+  const delta = top - lastScrollTop;
+  lastScrollTop = top;
+  upwardScroll = delta < 0 ? upwardScroll - delta : 0;
+  const collapse = top > COLLAPSE_SCROLL && delta > 0;
+  const restore = top < 8 || upwardScroll > RESTORE_SCROLL;
+  if ((!compactHeader.value && !collapse) || (compactHeader.value && !restore))
+    return;
+  const oldTop = canvasHost.value.getBoundingClientRect().top;
+  const generation = scrollGeneration;
+  adjustingScroll = true;
+  compactHeader.value = !compactHeader.value;
+  upwardScroll = 0;
+  await nextTick();
+  if (generation !== scrollGeneration || !canvasHost.value?.isConnected) return;
+  const offset = canvasHost.value.getBoundingClientRect().top - oldTop;
+  adjustCanvasScroll(offset);
+  lastScrollTop = Math.max(0, top + offset);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (generation === scrollGeneration) adjustingScroll = false;
+    });
+  });
+};
+const previewEmail = () => {
+  previewHtml.value =
+    isReady.value && !showWelcome.value
+      ? (getEditorBodyPayload().body_html ?? campaign.value?.body_html)
+      : campaign.value?.body_html;
+  previewDialog.value.open();
+};
+const toggleFullView = () => {
+  if (
+    !fullView.value &&
+    campaign.value?.body_html &&
+    !campaign.value?.body_mjml &&
+    isBlankEditorMjml(getMjml())
+  ) {
+    previewEmail();
+    return;
+  }
+  adjustingScroll = true;
+  fullView.value = !fullView.value;
+  fitToView.value = true;
+  showPersonalize.value = false;
+  showTestPopover.value = false;
+  showSaveTemplatePopover.value = false;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      adjustingScroll = false;
+    });
+  });
+};
+watch(reviewStep, () => {
+  fullView.value = false;
+});
+onDeactivated(() => {
+  scrollGeneration += 1;
+  fullView.value = false;
+  compactHeader.value = false;
+  lastScrollTop = 0;
+  upwardScroll = 0;
+  adjustingScroll = false;
+});
 watch(
   () => campaign.value?.preheader,
   value => {
@@ -388,12 +480,16 @@ const openRecipients = (problems = false) => {
   problemsOnly.value = problems;
   detailsOpen.value = true;
 };
-const previewEmail = () => {
-  previewHtml.value =
-    isReady.value && !showWelcome.value
-      ? (getEditorBodyPayload().body_html ?? campaign.value?.body_html)
-      : campaign.value?.body_html;
-  previewDialog.value.open();
+const openRecipientStep = () => {
+  if (
+    campaign.value?.recipient_import?.status === 'failed' &&
+    canManage.value &&
+    campaign.value.status === 'draft'
+  ) {
+    importStatus.value.openRecovery();
+    return;
+  }
+  openRecipients(false);
 };
 const onSenderSaved = () => {
   senderOpen.value = false;
@@ -408,7 +504,11 @@ const insertPlaceholder = key => {
 </script>
 
 <template>
-  <section class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-n-surface-1">
+  <section
+    class="flex min-h-0 min-w-0 flex-1 flex-col bg-n-surface-1"
+    :class="fullView ? 'fixed inset-0 z-50' : 'h-full'"
+    @keydown.esc="fullView && toggleFullView()"
+  >
     <EmailCampaignReview
       v-if="reviewStep && campaign"
       :campaign="campaign"
@@ -419,9 +519,11 @@ const insertPlaceholder = key => {
     />
     <template v-else>
       <header
-        class="flex flex-wrap items-center justify-between gap-4 border-b border-n-weak bg-n-solid-1 px-5 py-4 lg:px-6"
+        class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak bg-n-solid-1 px-4 py-3 lg:px-6"
       >
-        <div class="flex min-w-0 items-center gap-3">
+        <div
+          class="flex min-w-0 flex-1 basis-full items-center gap-3 sm:basis-0"
+        >
           <Button
             :aria-label="t(`${UX}.BACK_CAMPAIGNS`)"
             icon="i-lucide-arrow-left"
@@ -439,9 +541,15 @@ const insertPlaceholder = key => {
             </p>
           </div>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex max-w-full shrink-0 flex-wrap items-center gap-2">
+          <EmailRecipientStep
+            v-if="compactHeader || fullView"
+            :campaign="campaign"
+            @click="openRecipientStep"
+          />
           <Button
-            :label="t(`${UX}.PREVIEW`)"
+            :aria-label="t(`${UX}.PREVIEW`)"
+            :title="t(`${UX}.PREVIEW`)"
             icon="i-lucide-eye"
             slate
             outline
@@ -472,7 +580,59 @@ const insertPlaceholder = key => {
         </div>
       </header>
       <div
-        class="grid shrink-0 gap-4 border-b border-n-weak bg-n-solid-1 px-5 py-4 sm:grid-cols-2 lg:px-6"
+        v-show="!compactHeader && !fullView"
+        class="flex shrink-0 items-center gap-3 border-b border-n-weak bg-n-solid-1 px-4 py-2 lg:px-6"
+      >
+        <nav
+          class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-xs"
+          :aria-label="t(`${UX}.STEPS`)"
+        >
+          <span
+            class="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-n-blue-3 px-3 font-medium text-n-blue-11"
+            aria-current="step"
+          >
+            <span
+              class="flex size-6 items-center justify-center rounded-full bg-n-brand text-white"
+            >
+              {{ stepNumbers[0] }}
+            </span>
+            {{ t(`${UX}.CONTENT`) }}
+          </span>
+          <EmailRecipientStep :campaign="campaign" @click="openRecipientStep" />
+          <button
+            type="button"
+            class="flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-n-slate-11 hover:bg-n-alpha-1"
+            @click="openReview"
+          >
+            <span
+              class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
+            >
+              {{ stepNumbers[2] }}
+            </span>
+            {{ t(`${UX}.REVIEW_SEND`) }}
+          </button>
+        </nav>
+        <Button
+          :aria-label="t(`${UX}.EMAIL_DETAILS`)"
+          :title="t(`${UX}.EMAIL_DETAILS`)"
+          :icon="
+            emailDetailsOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'
+          "
+          trailing-icon
+          slate
+          outline
+          class="!min-h-11 shrink-0 !rounded-xl"
+          :aria-expanded="emailDetailsOpen"
+          aria-controls="email-campaign-details"
+          @click="emailDetailsOpen = !emailDetailsOpen"
+        >
+          <span class="hidden sm:inline">{{ t(`${UX}.EMAIL_DETAILS`) }}</span>
+        </Button>
+      </div>
+      <div
+        v-show="emailDetailsOpen && !fullView"
+        id="email-campaign-details"
+        class="grid max-h-[40dvh] shrink-0 gap-4 overflow-y-auto border-b border-n-weak bg-n-solid-1 px-5 py-3 sm:grid-cols-2 lg:px-6"
       >
         <Input
           v-model="subjectInput"
@@ -491,59 +651,24 @@ const insertPlaceholder = key => {
           :readonly="!canManage"
         />
       </div>
-      <nav
-        class="flex shrink-0 flex-wrap gap-2 border-b border-n-weak bg-n-solid-1 px-5 py-2 text-xs lg:px-6"
-        :aria-label="t(`${UX}.STEPS`)"
-      >
-        <span
-          class="flex min-h-11 items-center gap-2 rounded-lg bg-n-blue-3 px-3 font-medium text-n-blue-11"
-        >
-          <span
-            class="flex size-6 items-center justify-center rounded-full bg-n-brand text-white"
-          >
-            {{ stepNumbers[0] }}
-          </span>
-          {{ t(`${UX}.CONTENT`) }}
-        </span>
-        <button
-          class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
-          @click="openRecipients(false)"
-        >
-          <span
-            class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
-          >
-            {{ stepNumbers[1] }}
-          </span>
-          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}
-        </button>
-        <button
-          class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
-          @click="openReview"
-        >
-          <span
-            class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
-          >
-            {{ stepNumbers[2] }}
-          </span>
-          {{ t(`${UX}.REVIEW_SEND`) }}
-        </button>
-      </nav>
       <RecipientImportStatus
         v-if="campaign"
+        ref="importStatus"
+        compact
         :campaign="campaign"
         :can-recover="canManage"
         auto-recover
-        class="px-5 py-2"
       />
       <div v-if="!campaign" class="flex flex-1 items-center justify-center">
         <Spinner />
       </div>
       <div
         v-else
-        class="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
+        class="flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row"
       >
         <div
-          class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-n-weak px-4 py-2 lg:hidden"
+          v-show="!fullView"
+          class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-n-weak px-4 py-2 xl:hidden"
         >
           <Button
             :label="t(`${UX}.BLOCKS`)"
@@ -570,8 +695,9 @@ const insertPlaceholder = key => {
           />
         </div>
         <aside
-          class="min-h-0 w-full shrink-0 overflow-y-auto border-e border-n-weak bg-n-solid-1 lg:w-60"
-          :class="activePanel === 'blocks' ? 'block' : 'hidden lg:block'"
+          v-show="!fullView"
+          class="min-h-0 w-full flex-1 shrink-0 overflow-y-auto border-e border-n-weak bg-n-solid-1 xl:w-60 xl:flex-none"
+          :class="activePanel === 'blocks' ? 'block' : 'hidden xl:block'"
         >
           <div v-if="canManage" class="space-y-2 border-b border-n-weak p-4">
             <Button
@@ -596,16 +722,22 @@ const insertPlaceholder = key => {
         </aside>
         <div
           class="flex min-h-0 min-w-0 flex-1 flex-col"
-          :class="activePanel === 'canvas' ? 'flex' : 'hidden lg:flex'"
+          :class="
+            activePanel === 'canvas' || fullView ? 'flex' : 'hidden xl:flex'
+          "
         >
           <div
             class="relative flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-n-weak bg-n-solid-1 px-4 py-2"
           >
-            <div class="flex gap-1 rounded-lg bg-n-alpha-1 p-1">
+            <div
+              v-show="!fullView"
+              class="flex gap-1 rounded-lg bg-n-alpha-1 p-1"
+            >
               <Button
                 v-for="option in ['desktop', 'mobile']"
                 :key="option"
-                :label="t(`${UX}.DEVICES.${option}`)"
+                :aria-label="t(`${UX}.DEVICES.${option}`)"
+                :title="t(`${UX}.DEVICES.${option}`)"
                 :icon="
                   option === 'desktop'
                     ? 'i-lucide-monitor'
@@ -617,38 +749,57 @@ const insertPlaceholder = key => {
                 class="!min-h-11"
                 :disabled="!isReady"
                 @click="setDevice(option)"
-              />
+              >
+                <span class="hidden 2xl:inline">
+                  {{ t(`${UX}.DEVICES.${option}`) }}
+                </span>
+              </Button>
             </div>
-            <div class="relative flex flex-wrap gap-2">
+            <div v-show="!fullView" class="relative flex flex-wrap gap-2">
               <Button
                 v-if="placeholders.length && canManage"
-                :label="t(`${UX}.PERSONALIZE`)"
+                :aria-label="t(`${UX}.PERSONALIZE`)"
+                :title="t(`${UX}.PERSONALIZE`)"
                 icon="i-lucide-braces"
                 slate
                 ghost
                 class="!min-h-11"
                 @click="showPersonalize = !showPersonalize"
-              />
+              >
+                <span class="hidden 2xl:inline">
+                  {{ t(`${UX}.PERSONALIZE`) }}
+                </span>
+              </Button>
               <Button
                 v-if="canManage"
-                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
+                :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
+                :title="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
                 icon="i-lucide-mail-check"
                 slate
                 ghost
                 class="!min-h-11"
                 :disabled="!isReady"
                 @click="toggleTestPopover"
-              />
+              >
+                <span class="hidden 2xl:inline">
+                  {{ t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST') }}
+                </span>
+              </Button>
               <Button
                 v-if="canManage"
-                :label="t(`${UX}.SAVE_MODEL`)"
+                :aria-label="t(`${UX}.SAVE_MODEL`)"
+                :title="t(`${UX}.SAVE_MODEL`)"
                 icon="i-lucide-bookmark-plus"
                 slate
                 ghost
                 class="!min-h-11"
                 :disabled="!isReady"
                 @click="toggleSaveTemplatePopover"
-              />
+              >
+                <span class="hidden 2xl:inline">
+                  {{ t(`${UX}.SAVE_MODEL`) }}
+                </span>
+              </Button>
               <div
                 v-if="showTestPopover"
                 class="absolute end-0 z-50 flex flex-col w-[min(20rem,calc(100vw-3rem))] gap-3 p-4 border rounded-lg shadow-lg top-12 border-n-weak bg-n-solid-1"
@@ -723,9 +874,37 @@ const insertPlaceholder = key => {
                 </div>
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <Button
+                v-if="fullView"
+                :label="t(`${UX}.${fitToView ? 'ENLARGE' : 'FIT_EMAIL'}`)"
+                :icon="fitToView ? 'i-lucide-zoom-in' : 'i-lucide-minimize'"
+                slate
+                outline
+                class="!min-h-11 !rounded-xl"
+                @click="fitToView = !fitToView"
+              />
+              <Button
+                :aria-label="
+                  t(`${UX}.${fullView ? 'BACK_EDITOR' : 'FULL_VIEW'}`)
+                "
+                :title="t(`${UX}.${fullView ? 'BACK_EDITOR' : 'FULL_VIEW'}`)"
+                :icon="fullView ? 'i-lucide-arrow-left' : 'i-lucide-maximize'"
+                slate
+                :variant="fullView ? 'solid' : 'ghost'"
+                class="!min-h-11 !rounded-xl"
+                :disabled="!isReady || showWelcome"
+                :aria-pressed="fullView"
+                @click="toggleFullView"
+              >
+                <span :class="fullView ? 'inline' : 'hidden xl:inline'">
+                  {{ t(`${UX}.${fullView ? 'BACK_EDITOR' : 'FULL_VIEW'}`) }}
+                </span>
+              </Button>
+            </div>
           </div>
           <div
-            v-if="showPersonalize"
+            v-if="showPersonalize && !fullView"
             class="shrink-0 border-b border-n-weak bg-n-solid-1 p-4"
           >
             <PlaceholderChips
@@ -740,15 +919,20 @@ const insertPlaceholder = key => {
             @choose-template="openGallery"
             @start-blank="startBlank"
           />
-          <GrapesEditor
-            v-else
-            :mjml="campaign.body_mjml || ''"
-            class="min-h-0 flex-1 [&_.gjs-pn-devices-c]:hidden"
-          />
+          <div v-else ref="canvasHost" class="min-h-0 flex-1">
+            <GrapesEditor
+              :mjml="campaign.body_mjml || ''"
+              :full-view="fullView"
+              :fit-to-view="fitToView"
+              class="min-h-0 [&_.gjs-pn-devices-c]:hidden"
+              @scroll="onCanvasScroll"
+            />
+          </div>
         </div>
         <aside
-          class="min-h-0 w-full shrink-0 overflow-y-auto border-s border-n-weak bg-n-solid-1 lg:w-[17rem]"
-          :class="activePanel === 'properties' ? 'block' : 'hidden lg:block'"
+          v-show="!fullView"
+          class="min-h-0 w-full flex-1 shrink-0 overflow-y-auto border-s border-n-weak bg-n-solid-1 xl:w-[17rem] xl:flex-none"
+          :class="activePanel === 'properties' ? 'block' : 'hidden xl:block'"
         >
           <AiBlockActions v-if="isReady && canManage" class="p-3" />
           <PropertiesPanel v-if="isReady" />
