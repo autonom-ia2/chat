@@ -273,7 +273,7 @@ function menus() {
   $('company-menu').innerHTML = `<label for="company-search" class="sr-only">Pesquisar empresa</label><input id="company-search" role="combobox" aria-expanded="true" aria-controls="company-options" placeholder="Pesquisar empresa" class="mb-2 h-11 w-full rounded-lg border border-slate-200 px-3 text-base outline-none focus:border-blue-600"/><div id="company-options" role="listbox" aria-label="Empresas"></div>`;
   $('company-search').addEventListener('input', renderCompanyOptions);
   renderCompanyOptions();
-  $('pipeline-menu').innerHTML = app.pipelines.map(p => `<button role="menuitemradio" aria-checked="${p.id === app.pipelineId}" data-pipeline="${p.id}" class="flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-start text-sm hover:bg-slate-50">${esc(p.name)}${p.id === app.pipelineId ? icon('check') : ''}</button>`).join('') + `<div class="my-1 border-t border-slate-100"></div><button role="menuitem" data-config="new-pipeline" class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-sm text-blue-700 hover:bg-blue-50">${icon('plus')}Novo funil</button>`;
+  $('pipeline-menu').innerHTML = app.pipelines.map(p => `<button role="menuitemradio" aria-checked="${p.id === app.pipelineId}" data-pipeline="${p.id}" class="flex min-h-11 w-full items-center justify-between rounded-lg px-3 text-start text-sm hover:bg-slate-50">${esc(p.name)}${p.id === app.pipelineId ? icon('check') : ''}</button>`).join('');
   $('config-menu').innerHTML = [['edit', 'Editar funil', 'Nome, status, critérios IA e caixas'], ['handoff', 'Responsáveis e repasse', 'Quem recebe e quando passar à equipe'], ['inboxes', 'Caixas de entrada', 'Gestão das caixas da conta'], ['booking', 'Página de agendamento', 'Como os clientes marcam horário']].map(([key, name, desc]) => `<button role="menuitem" data-config="${key}" class="block min-h-16 w-full rounded-lg px-3 py-3 text-start hover:bg-slate-50"><strong class="block text-sm font-medium">${name}</strong><span class="mt-1 block text-xs text-slate-600">${desc}</span></button>`).join('');
 }
 function renderCompanyOptions() {
@@ -313,7 +313,8 @@ function createOpportunity() {
 }
 function configuration(key) {
   if (key === 'new-pipeline') {
-    openDrawer('Novo funil', 'Organize um novo processo de atendimento.', '<form id="pipeline-form"><label for="new-pipeline-name" class="block text-sm font-medium">Nome do funil</label><input id="new-pipeline-name" required maxlength="60" class="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 text-base outline-none focus:border-blue-600" placeholder="Ex.: Pós-venda"/></form>', `<button data-close class="${secondary}">Cancelar</button><button type="submit" form="pipeline-form" class="${primary}">Criar funil</button>`);
+    openDrawer('Criar funil', 'Organize um novo processo de atendimento.', '<form id="pipeline-form"><label for="new-pipeline-name" class="block text-sm font-medium">Nome do funil</label><input id="new-pipeline-name" required maxlength="60" class="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 text-base outline-none focus:border-blue-600" placeholder="Ex.: Pós-venda"/></form>', `<button data-close class="${secondary}">Cancelar</button><button type="submit" form="pipeline-form" class="${primary}">Criar funil</button>`);
+    $('new-pipeline-name').focus();
     return;
   }
   const titles = { edit: 'Editar funil', handoff: 'Responsáveis e repasse', inboxes: 'Caixas de entrada', booking: 'Página de agendamento' };
@@ -335,7 +336,7 @@ document.addEventListener('click', event => {
   else if (d.pipeline) { app.pipelineId = Number(d.pipeline); app.query = ''; $('search').value = ''; app.filter = 'all'; app.companyId = null; app.overdueOnly = false; app.demoState = 'normal'; app.stageIndex = 0; closeMenus(); menus(); render(); $('pipeline-button').focus(); }
   else if (d.config) configuration(d.config);
   else if (d.step) { app.stageIndex += Number(d.step); render(); }
-  else if (d.criteria) openDrawer(`Quando usar ${stage(d.criteria).name}`, 'Critério do status', `<p class="text-base leading-7">${esc(stage(d.criteria).criteria)}</p><p class="mt-6 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-slate-700">Esta descrição orienta a IA. Você pode ajustá-la no Editar Funil.</p>`);
+  else if (d.criteria) openDrawer(`Quando usar ${stage(d.criteria).name}`, 'Critério do status', `<p class="text-base leading-7">${esc(stage(d.criteria).criteria)}</p><p class="mt-6 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-slate-700">Esta descrição orienta a IA. Você pode ajustá-la no Editar Funil.</p>`, `<button data-close class="${secondary}">Voltar ao quadro</button><button data-config="edit" class="${primary}">${icon('settings')}Editar funil</button>`);
   else if (d.close !== undefined) closeDrawer();
   else if (d.recover !== undefined) { if (app.demoState === 'error') { app.demoState = 'normal'; render(); } else resetFilters(); }
   else if (d.demoNav) toast('Navegação de contexto ilustrada. Este protótipo concentra a área CRM.');
@@ -399,7 +400,7 @@ $('demo-button').addEventListener('click', () => openDrawer('Cenários do protó
 document.addEventListener('keydown', event => {
   const activeDialog = $('drawer').open ? $('drawer') : $('filters-drawer').open ? $('filters-drawer') : null;
   if (activeDialog && event.key === 'Tab') {
-    const controls = [...activeDialog.querySelectorAll('button:not(:disabled), input:not(:disabled), a[href]')].filter(el => el.getClientRects().length > 0);
+    const controls = [...activeDialog.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), summary, a[href]')].filter(el => el.getClientRects().length > 0);
     const first = controls[0];
     const last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first || !event.shiftKey && document.activeElement === last) {

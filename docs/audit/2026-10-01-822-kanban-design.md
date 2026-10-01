@@ -83,3 +83,16 @@ instalamos pacotes. Para esta branch somente de documentos/protótipo, o commit
 usa `core.hooksPath=/dev/null` apenas naquele comando, após leitura de fontes,
 checks de sintaxe, diff e validação renderizada. A checagem Node foi repetida
 com o executável absoluto do runtime existente após PATH sem Node.
+
+## Revisão de feedback sobre descoberta e filtro
+
+Rodrigo relatou dificuldade para achar criação de funil e pediu IA ao lado
+dos filtros. A criação foi exposta junto ao seletor, e o painel passou a faixa
+compacta. Ver validação/capturas 13/14. Ajustes incluem foco inicial da criação,
+textarea/summary no ciclo do modal, rótulo acessível da ação Nova e caminho da
+ajuda de status para Editar funil. Discussão da hierarquia empresa/pessoa/negócio
+registrada como próxima decisão, sem mudar dados nem os títulos dos cards.
+
+O pre-push também encontrou o mesmo Husky ausente. Hooks foram ignorados apenas
+nos comandos desta proposta documental; configuração compartilhada preservada.
+Não houve merge, deploy, produto, provider pago ou acesso a dados reais.

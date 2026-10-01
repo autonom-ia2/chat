@@ -67,3 +67,19 @@ contagens coerentes; filtro IA tipado com esclarecimento para ambiguidades;
 eval do modelo dentro do orçamento; integração dos fluxos completos do CRM;
 testes de permissão/OSS/Enterprise/realtime e revisão visual do produto construído.
 Mockup aprovado não equivale a autorização de merge ou deploy.
+
+## Revisão após feedback de descoberta
+
+- Em 1280 e 1440 pixels, empresa, atraso e IA têm top=169 e altura=44;
+  faixa de filtros tem 81px, sem caixa envolvente e sem overflow da página.
+- Criar funil permanece visível em 390px, altura 44; input recebe foco ao
+  abrir; criação fictícia seleciona Renovações, total zero, foco volta ao CTA.
+- Empresa Alvorada + Minha carteira + Atrasados continua retornando um card
+  de onze e badge de três filtros.
+- Celular 390×844: retorno e IA alinham em top=317 após ajuste de espaçamento,
+  sem overflow. A gaveta conserva fechamento e retorno ao quadro.
+- Ajuda de Novo → Editar funil abre a prévia de contexto existente.
+- Navegação por Tab passou a incluir textarea e summary no controle do modal;
+  criação de oportunidade tem nome acessível completo no celular.
+- Build Tailwind aprovado, mesmo aviso Browserslist; Node syntax aprovado;
+  console final sem erro/warn; viewport restaurada; zero chamadas pagas.

@@ -12,6 +12,7 @@ em revisão na [PR #793](https://github.com/autonom-ia2/chat/pull/793).
 - [Quadro desktop — cinco status](screenshots/06-kanban-1920.png).
 - [Contato e empresa no detalhe](screenshots/02-card-empresa.png).
 - [Kanban no celular](screenshots/03-kanban-celular.png).
+- [Revisão dos filtros compactos e Criar funil visível](screenshots/13-filtros-compactos.png); [celular revisado](screenshots/14-filtros-compactos-celular.png).
 - [Filtros combinados](screenshots/09-filtros-combinados.png) e [filtros no celular](screenshots/10-filtros-celular.png).
 - [Encontrar com IA](screenshots/11-encontrar-com-ia.png) e [IA no celular](screenshots/12-ia-celular.png).
 - [Parecer de arte](reports/art-direction.md), [UX/UI](reports/ux-analysis.md),
@@ -189,3 +190,18 @@ podem garantir seus resultados.
 contrato empresa/proveniência; depois busca, ordenação e contagens coerentes;
 então hierarquia visual, controles e movimento direto no Kanban. Densidade
 compacta e melhorias secundárias ficam condicionadas ao uso observado.
+
+## Revisão de descoberta e filtros — 01/10, após feedback do Rodrigo
+
+Criar funil passou a ser ação visível junto ao seletor; o menu serve só para
+trocar de funil. Rodrigo encontrou a criação após procurar: existência não
+comprovava descoberta. Filtros deixaram a caixa alta e viraram uma faixa com
+IA alinhada ao lado dos controles. Capturas 13/14 substituem a direção da
+composição anterior dos filtros; as capturas 01–12 são histórico da primeira
+revisão. A ajuda do status agora oferece caminho direto para Editar funil.
+
+Rodrigo também questionou a identidade em negrito do card. Hoje é o título da
+oportunidade. A recomendação para próxima decisão visual é empresa em destaque
+e pessoa abaixo; sem empresa, pessoa em destaque. Conservar o negócio como
+informação secundária evita tornar oportunidades da mesma empresa indistintas.
+Essa nova hierarquia ainda não foi aplicada ao protótipo nesta revisão.

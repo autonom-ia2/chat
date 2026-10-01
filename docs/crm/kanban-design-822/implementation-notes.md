@@ -11,7 +11,7 @@ Nenhum item desta lista foi implementado no produto pela Issue #822.
 | Kanban / Lista / Calendário | Alternância de visualização visível | Estado selecionado acessível; não esconder o caminho manual de edição/lote da Lista. |
 | Criar oportunidade | Único botão primário do quadro | Abrir criação de oportunidade com os modos de vínculo existentes da PR #793. |
 | Editar funil / status | Configurar → Editar Funil | Drawer aprovado, ordem única, exclusão com regras existentes e campos de critérios IA. |
-| Criar funil | Menu de funil ou Configurar | Fluxo próprio; não confundir com Nova oportunidade. |
+| Criar funil | Ação visível junto ao seletor de funil | Fluxo próprio; não confundir com Nova oportunidade. |
 | Atribuição e handoff | Configurar → Responsáveis e repasse | Preservar elegibilidade/permissões e distinção entre owner, responsável e bot. |
 | Gestão de caixas da conta | Configurar → Caixas de entrada | Preservar gestão/autorização atual por conta; não criar permissões novas. |
 | Vínculos das caixas com o funil | Última etapa do Editar Funil | Mais de uma caixa por funil; vínculo não equivale a cadastrar novo canal na conta. |
