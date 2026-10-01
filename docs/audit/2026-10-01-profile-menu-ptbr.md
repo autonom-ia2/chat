@@ -7,12 +7,14 @@ O `SidebarProfileMenu.vue` já usa as chaves i18n corretas. O idioma `pt` tinha 
 ## Mudança
 
 - Tradução dos rótulos de conta, suporte, perfil, atalhos, aparência, central de ajuda, console de Super Admin, changelog e encerramento de sessão.
-- Tradução dos itens de sidebar encontrados no escopo: empresas, Chat ao vivo, atribuição de agentes, reconexão, artigos, ordenação, segurança, fluxo de conversa, notificações e dados. O nome do produto Captain e seus itens próprios foram preservados.
+- Tradução dos itens de sidebar encontrados no escopo: empresas, Chat ao vivo, atribuição de agentes, reconexão, artigos, ordenação, segurança, fluxo de conversa, notificações e dados.
 - Inclusão de `SIDEBAR_ITEMS.INVITE_CONNECTION` no catálogo `pt` para evitar depender do fallback ao exibir o item de conexão.
 - Tradução de `SIDEBAR.SET_AUTO_OFFLINE.INFO_SHORT`.
 - Tradução das seções de interface, tamanho de fonte, idioma, segurança, sessões, token de acesso, assinatura e alertas de áudio nas configurações de perfil em `pt`.
 - Tradução do catálogo `pt/mfa.json`, preservando chaves, placeholders, códigos e nomes de produtos.
 - Naturalização de capitalização e de `Status da conexão` em `pt_BR/settings.json`.
+- Ajustes finais de sentença, clareza e pontuação nos textos de MFA em `pt` e `pt_BR`, incluindo a escolha entre código autenticador e código de recuperação conforme o catálogo `en`.
+- Ajuste de confirmação e disponibilidade de token em `pt/settings.json` e remoção de espaço final em `pt_BR/settings.json`.
 
 O escopo não inclui a revisão global de todos os catálogos da aplicação nem `pt/crm.json`/campanhas, que pertencem ao trabalho de campanha. Ainda há lacunas fora desta revisão, especialmente em inbox, integrações e conversas.
 

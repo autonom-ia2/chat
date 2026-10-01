@@ -100,10 +100,10 @@
       "ACCESS_TOKEN": {
         "TITLE": "Token de acesso",
         "NOTE": "Este token pode ser usado se você estiver construindo uma integração baseada em API",
-        "PAID_PLAN_NOTE": "Os tokens de acesso à API estão disponíveis apenas nos planos pagos.",
+        "PAID_PLAN_NOTE": "Os tokens de acesso à API estão disponíveis nos planos pagos.",
         "COPY": "Copiar",
         "RESET": "Gerar novo token",
-        "CONFIRM_RESET": "Tem a certeza?",
+        "CONFIRM_RESET": "Tem certeza?",
         "CONFIRM_HINT": "Clique novamente para confirmar",
         "RESET_SUCCESS": "O token de acesso voltou a ser gerado",
         "RESET_ERROR": "Não foi possível voltar a gerar o token de acesso, por favor tente novamente"

@@ -84,7 +84,7 @@
       "SECURITY_SECTION": {
         "TITLE": "Segurança",
         "NOTE": "Gerencie recursos adicionais de segurança para sua conta.",
-        "MFA_BUTTON": "Gerenciar autenticação de dois fatores "
+        "MFA_BUTTON": "Gerenciar autenticação de dois fatores"
       },
       "SESSIONS_SECTION": {
         "TITLE": "Sessões Ativas",
