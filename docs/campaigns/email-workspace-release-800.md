@@ -2,7 +2,9 @@
 
 ## Estado
 
-Implementação em branch isolada e PR #801. QA local aprovado e capturas disponíveis. Português e inglês concluídos. As capturas do dashboard completo estão em `docs/campaigns/workspace-800/full-application/`, com APIs reais e dados sintéticos locais. O CI remoto do HEAD final deve passar antes da publicação. As capturas anteriores com shell sintético foram substituídas para aceitação visual. Nenhuma etapa abaixo foi executada em produção nesta implementação.
+Publicado em Hub2You e Autonom.ia em 01/10/2026 pelo lote [#805](https://github.com/autonom-ia2/chat/pull/805), revisão `a5bf00d1c179c775d99ebba749d46665dffeaa3f`, após QA independente e checks de integração verdes. O PR de implementação é [#801](https://github.com/autonom-ia2/chat/pull/801). Os 14 modelos globais foram restaurados nas duas plataformas, com snapshot prévio e preservação dos modelos próprios. A conta 16 foi conferida no navegador de produção, incluindo lista, biblioteca, prévias Desktop/Mobile, editor e revisão, sem enviar ou alterar campanhas. Evidências, limites da conferência e rollback estão no [registro de publicação](../audit/2026-10-01-release-campaigns-800.md).
+
+Português e inglês concluídos; os 57 módulos de idioma foram compilados/renderizados no CI. As capturas do dashboard completo em `docs/campaigns/workspace-800/full-application/` continuam sendo de teste local com APIs reais e dados sintéticos; as capturas produtivas estão identificadas no registro de publicação. As capturas anteriores com shell sintético foram substituídas para aceitação visual.
 
 Não há migração de schema, mudança de credenciais, permissão, DNS ou infraestrutura. A revisão acrescenta `send_readiness` à leitura de uma campanha; endpoints existentes de enviar/agendar continuam responsáveis pela decisão final.
 
