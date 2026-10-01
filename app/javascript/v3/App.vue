@@ -1,9 +1,13 @@
 <script>
+import { useI18n } from 'vue-i18n';
 import SnackbarContainer from './components/SnackBar/Container.vue';
 import { setDashboardLocale } from 'dashboard/i18n/localeLoader';
 
 export default {
   components: { SnackbarContainer },
+  setup() {
+    return { i18n: useI18n({ useScope: 'global' }) };
+  },
   data() {
     return { theme: 'light' };
   },
@@ -37,7 +41,7 @@ export default {
     },
     async setLocale(locale) {
       if (locale) {
-        await setDashboardLocale(this.$root.$i18n, locale);
+        await setDashboardLocale(this.i18n, locale);
       }
     },
   },

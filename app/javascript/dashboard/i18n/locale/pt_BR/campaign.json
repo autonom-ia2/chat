@@ -867,6 +867,13 @@
         "video_blob_not_found": "Vídeo enviado não encontrado para esta campanha."
       },
       "WORKSPACE": {
+        "RECIPIENTS_STEP": "{step} · Destinatários",
+        "EMAIL_DETAILS": "Detalhes do e-mail",
+        "RECIPIENTS_ATTENTION": "Destinatários: precisa de atenção. Abra para revisar sua lista.",
+        "RECIPIENTS_READY": "Destinatários: prontos para a revisão final.",
+        "FULL_VIEW": "Visão completa",
+        "ENLARGE": "Ampliar",
+        "FIT_EMAIL": "Ajustar à tela",
         "CAMPAIGNS": "Campanhas",
         "EMAIL": "E-mail",
         "LIST_SUBTITLE": "Crie boas mensagens. Acompanhe cada envio.",

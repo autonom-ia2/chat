@@ -9,7 +9,8 @@
         "app/javascript/dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignReview.vue",
         "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailBuilderPage.vue",
         "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailCampaignsPage.vue",
-        "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailTemplatesPage.vue"
+        "app/javascript/dashboard/routes/dashboard/campaigns/pages/EmailTemplatesPage.vue",
+        "app/javascript/dashboard/routes/dashboard/crm/components/CrmPipelineDrawer.vue"
       ],
       "options": {
         "htmlWhitespaceSensitivity": "ignore"

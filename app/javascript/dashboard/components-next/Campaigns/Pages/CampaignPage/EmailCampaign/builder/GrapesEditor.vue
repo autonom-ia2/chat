@@ -9,7 +9,9 @@ import {
   onDeactivated,
   nextTick,
   ref,
+  watch,
 } from 'vue';
+import { useResizeObserver } from '@vueuse/core';
 import { useEmailEditor } from './composables/useEmailEditor';
 // Builder-scoped GrapesJS canvas theming (third-party chrome re-skin only).
 import './grapes-theme.css';
@@ -19,12 +21,17 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  fullView: Boolean,
+  fitToView: { type: Boolean, default: true },
 });
+const emit = defineEmits(['scroll']);
 
 const containerRef = ref(null);
-const { init, destroy } = useEmailEditor();
+const { init, destroy, setCanvasPreview, subscribeCanvasScroll } =
+  useEmailEditor();
 
 let initialized = false;
+let stopScroll;
 
 // init() guards on el.isConnected; under a <keep-alive> reactivation the container
 // can re-attach a tick late, so wait for it to be connected before initializing.
@@ -39,15 +46,29 @@ const mountEditor = async () => {
     frames += 1;
   }
   if (containerRef.value?.isConnected) {
-    init(containerRef.value, { mjml: props.mjml });
+    const instance = await init(containerRef.value, { mjml: props.mjml });
+    if (!instance || !containerRef.value?.isConnected) return;
     initialized = true;
+    stopScroll = subscribeCanvasScroll(top => emit('scroll', top));
   }
 };
 
 const teardown = () => {
+  stopScroll?.();
   destroy();
   initialized = false;
 };
+
+watch(
+  () => [props.fullView, props.fitToView],
+  () => setCanvasPreview(props.fullView, props.fitToView),
+  { flush: 'post' }
+);
+useResizeObserver(containerRef, () => {
+  if (initialized && props.fullView) {
+    setCanvasPreview(true, props.fitToView);
+  }
+});
 
 onMounted(mountEditor);
 onBeforeUnmount(teardown);

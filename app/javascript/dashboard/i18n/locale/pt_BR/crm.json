@@ -1072,12 +1072,12 @@
       "MONTHLY_TARGET_PLACEHOLDER": "Ex.: 50000",
       "MONTHLY_TARGET_HELP": "Alimenta o box de Meta no dashboard. Deixe vazio para sem meta.",
       "REQUIRED": "Obrigatório",
-      "STAGES": "Etapas",
+      "STAGES": "Status do funil",
       "STAGES_HELP": "As etapas são as colunas do Kanban. Etapas com cards não podem ser excluídas.",
-      "ADD_STAGE": "Adicionar etapa",
+      "ADD_STAGE": "Adicionar status",
       "NEW_STAGE_NAME": "Nova etapa {count}",
       "COLOR": "Cor",
-      "STAGE_NAME": "Nome",
+      "STAGE_NAME": "Nome do status",
       "STAGE_NAME_PLACEHOLDER": "Ex.: Qualificação",
       "PROBABILITY": "%",
       "WIP": "Limite",
@@ -1087,7 +1087,7 @@
       "META_STAGE_TYPE_QUALIFIED": "Lead qualificado",
       "META_STAGE_TYPE_OPPORTUNITY": "Oportunidade",
       "META_STAGE_TYPE_NEGOTIATION": "Em negociação",
-      "META_SYNC_TITLE": "Enviar conversões para a Meta (Ads)",
+      "META_SYNC_TITLE": "Meta Ads",
       "META_SYNC_HELP": "Quando um card for ganho, perdido ou mudar de etapa, a conversão volta para a Meta para otimizar seus anúncios de clique para WhatsApp por quem realmente fecha.",
       "META_SYNC_EVENTS": "Quais eventos enviar",
       "META_SYNC_EVENT_WON": "Ganho (Purchase, com valor)",
@@ -1099,21 +1099,21 @@
       "MOVE_STAGE_UP": "Subir etapa",
       "MOVE_STAGE_DOWN": "Descer etapa",
       "DELETE_STAGE": "Excluir etapa",
-      "INBOX_AUTOMATION": "Inbox e automação",
-      "INBOX_AUTOMATION_HELP": "Vincule inboxes que devem alimentar este funil. Com auto-criação ativa, novas mensagens criam ou atualizam cards na etapa escolhida.",
-      "LINKED_INBOXES": "Inboxes vinculadas",
-      "NO_LINKED_INBOXES": "Nenhuma inbox vinculada a este funil.",
-      "ADD_INBOX": "Adicionar inbox",
-      "INBOX": "Inbox",
+      "INBOX_AUTOMATION": "Caixas de entrada",
+      "INBOX_AUTOMATION_HELP": "Reúna neste funil as conversas de várias caixas de entrada. Adicione cada caixa e escolha o status de entrada.",
+      "LINKED_INBOXES": "Caixas vinculadas",
+      "NO_LINKED_INBOXES": "Nenhuma caixa de entrada vinculada a este funil.",
+      "ADD_INBOX": "Adicionar caixa de entrada",
+      "INBOX": "Caixa de entrada",
       "UNKNOWN_INBOX": "Inbox removida",
-      "SELECT_INBOX": "Selecione uma inbox",
-      "ENTRY_STAGE": "Etapa de entrada",
+      "SELECT_INBOX": "Selecione uma caixa de entrada",
+      "ENTRY_STAGE": "Status de entrada",
       "ENTRY_STAGE_VALUE": "Entrada: {stage}",
       "FIRST_STAGE": "Primeira etapa do funil",
       "AUTO_CREATE_CARD": "Criar cards automaticamente",
       "AUTO_CREATE_ON": "Auto-criação ativa",
       "AUTO_CREATE_OFF": "Auto-criação desligada",
-      "REMOVE_INBOX": "Remover inbox",
+      "REMOVE_INBOX": "Remover caixa de entrada",
       "LOADING_INBOXES": "Carregando inboxes...",
       "ARCHIVE": "Arquivar funil",
       "CANCEL": "Cancelar",
@@ -1121,7 +1121,7 @@
       "CREATE": "Criar funil"
     },
     "GOOGLE_SYNC": {
-      "TITLE": "Google Ads (conversões offline)",
+      "TITLE": "Google Ads",
       "HELP": "Envie resultados do CRM ao Google Ads por um feed programado de conversões.",
       "TOGGLE": "Ativar conversões offline do Google Ads",
       "EVENTS": "Quais eventos incluir",
@@ -1212,11 +1212,11 @@
       "SCORE_ENABLED": "Score de IA nos cards",
       "SCORE_ENABLED_HELP": "A IA lê cada conversa e grava no card uma nota de 0 a 100 de prioridade de atenção: promessa nossa em aberto e cliente pronto para fechar sobem ao topo; silêncio esfria o card sozinho.",
       "CALLBACK": "Criar lembrete quando o cliente pedir um retorno",
-      "CALLBACK_HELP": "Quando o cliente pede para ser contatado numa data (\"me liga terça que vem\"), um lembrete é criado automaticamente no calendário.",
+      "CALLBACK_HELP": "Quando o cliente pede contato em uma data, a IA cria um lembrete, gera uma notificação e adiciona o retorno ao calendário.",
       "CALLBACK_MODE": "Quando chegar a data",
       "CALLBACK_MODE_REMINDER": "Só me lembrar (calendário/popup)",
       "CALLBACK_MODE_MESSAGE": "Enviar mensagem ao cliente (IA; se não der, vira lembrete)",
-      "CALLBACK_MODE_BOTH": "Ambos: me lembrar e enviar mensagem ao cliente",
+      "CALLBACK_MODE_BOTH": "A IA também envia a mensagem ao cliente",
       "STALE_HOURS": "Reavaliar cards parados após (horas)",
       "CRITERIA_PLACEHOLDER": "Descreva quando um card deve estar neste estágio",
       "HANDOFF": {
@@ -1228,9 +1228,9 @@
         "PREFER_ONLINE": "Preferir quem está online"
       },
       "AUTO_FOLLOWUP": {
-        "TITLE": "Follow-up automático",
+        "TITLE": "Retornos automáticos",
         "HELP": "Quando uma conversa fica parada, a IA monta um follow-up de onde parou. Desligado por padrão; ligar envia automaticamente.",
-        "ENABLED": "Ativar follow-up automático neste funil",
+        "ENABLED": "Permitir que a IA retome conversas",
         "TRIGGER_IDLE_HOURS": "Disparar após a conversa ficar parada por (horas)",
         "MAX_TOUCHES": "Número de follow-ups",
         "TOUCH_OFFSET_LABEL": "Enviar cada follow-up estas horas após a última mensagem do cliente",
@@ -1266,7 +1266,7 @@
         "REMINDER_BADGE": "A IA avalia se deve criar um lembrete",
         "SESSION_BADGE": "A IA escreve se a janela de atendimento estiver aberta",
         "TEMPLATE_BADGE": "Template aprovado se estiver fora de 24h",
-        "SCHEDULE_LABEL": "Horários e dias permitidos",
+        "SCHEDULE_LABEL": "Frequência, dias e horários",
         "DAYS_LABEL": "Dias da semana",
         "DAYS": {
           "0": "Dom",
@@ -1431,6 +1431,73 @@
         "SAVE_ERROR": "Não foi possível salvar a página de agendamento.",
         "LOAD_ERROR": "Não foi possível carregar as páginas de agendamento."
       }
+    },
+    "PIPELINE_EDITOR": {
+      "INCLUDED": "IA incluída · Cards parados são reavaliados após 7 dias.",
+      "BACK": "Voltar ao funil",
+      "STAGES_HELP": "Abra um status e descreva quando usá-lo. A IA usa esse texto para organizar as conversas.",
+      "DESCRIBE": "Descreva quando usar este status",
+      "CRITERIA_QUESTION": "O que aconteceu na conversa para usar este status?",
+      "CRITERIA_HELP": "Essa descrição é o que a IA lê para decidir onde o card deve ficar.",
+      "CRITERIA_TIP": "Use sinais concretos, como “proposta enviada”.",
+      "IMPROVE": "Melhorar com IA",
+      "IMPROVE_ERROR": "Não foi possível concluir a sugestão, ou as descrições mudaram. Seu texto foi preservado. Tente novamente.",
+      "SUGGESTION": "Descrição sugerida · Compare antes de aplicar",
+      "APPLY": "Usar esta descrição",
+      "KEEP": "Manter minha descrição",
+      "SAVE_FIRST": "Salve o funil para usar Melhorar com IA.",
+      "STAGE_OPTIONS": "Cor, ordem e opções do status",
+      "RETURNS": "Lembretes e retornos",
+      "AD_RESULTS": "Resultados dos anúncios",
+      "AD_RESULTS_HELP": "Mostre quais anúncios viraram vendas. A venda é contabilizada quando o card é marcado como ganho, independentemente da coluna.",
+      "GOOGLE_HELP": "Disponibilize as vendas para o Google Ads importar. Configure uma importação agendada no Google Ads com o link abaixo.",
+      "META_HELP": "Envie para a Meta as vendas vindas de anúncios do WhatsApp. Requer a integração Meta configurada e uma conversa atribuída ao anúncio.",
+      "OTHER_EVENTS": "Outros eventos (avançado)",
+      "MORE": "Mais ajustes",
+      "DONE": "Concluir status",
+      "RETRY": "Tentar novamente",
+      "INBOX_SAVE_FIRST": "Salve este funil primeiro. Depois, abra Mais ajustes → Caixas de entrada para adicionar uma ou mais caixas.",
+      "COLORS": {
+        "BLUE": "Azul",
+        "TEAL": "Turquesa",
+        "AMBER": "Amarelo",
+        "GREEN": "Verde",
+        "RED": "Vermelho",
+        "PURPLE": "Roxo"
+      },
+      "CUSTOM_COLOR": "Escolher uma cor personalizada",
+      "META_PROGRESS": {
+        "TITLE": "Como a Meta entende este status",
+        "HELP": "Escolha o avanço que este status representa. A Meta recebe esse sinal para relacionar o progresso do cliente ao anúncio que trouxe a conversa.",
+        "CURRENT": "Quando o cliente chega aqui",
+        "CHANGE": "Alterar",
+        "REQUIREMENTS": "O envio depende da integração Meta, da origem do anúncio e da opção “Mudança de etapa” ativa em Mais ajustes.",
+        "NONE": {
+          "TITLE": "Não informar esta etapa",
+          "HELP": "Não enviar a entrada neste status. As vendas ganhas continuam seguindo os ajustes do funil."
+        },
+        "INTEREST": {
+          "TITLE": "Interesse inicial",
+          "HELP": "O cliente iniciou contato ou pediu informações."
+        },
+        "QUALIFIED": {
+          "TITLE": "Necessidade confirmada",
+          "HELP": "A necessidade foi entendida e o cliente combina com a oferta."
+        },
+        "PROPOSAL": {
+          "TITLE": "Oferta em avaliação",
+          "HELP": "O cliente recebeu uma proposta e está considerando comprar."
+        },
+        "NEGOTIATION": {
+          "TITLE": "Negociação",
+          "HELP": "O cliente está acertando valores, condições ou próximos passos."
+        },
+        "SETUP": "Como ativar o envio?"
+      },
+      "STAGE_POSITION": "Status {current} de {total}",
+      "REORDER_HELP": "Arraste pelos pontinhos ou use as setas nas opções do status.",
+      "REORDER_STAGE": "Mudar ordem de {name}. Arraste ou use as setas para cima e para baixo.",
+      "ORDER_CHANGED": "{name} agora é o status {position} de {total}."
     }
   },
   "crm": {

@@ -13,6 +13,7 @@ const props = defineProps({
   campaign: { type: Object, required: true },
   canRecover: Boolean,
   autoRecover: Boolean,
+  compact: Boolean,
 });
 const { t, locale } = useI18n();
 const currentImport = computed(() => props.campaign.recipient_import);
@@ -67,11 +68,17 @@ const result = computed(() => {
     ])
   );
 });
+defineExpose({ openRecovery: () => recoveryDialog.value?.open() });
 </script>
 
 <template>
   <div class="contents">
-    <div v-if="currentImport" class="text-sm" role="status" aria-live="polite">
+    <div
+      v-if="currentImport && !compact"
+      class="text-sm"
+      role="status"
+      aria-live="polite"
+    >
       <h3 class="m-0 text-sm font-medium text-n-slate-12">
         {{ t(`${NS}.IMPORT_ORIGINAL`) }}
       </h3>

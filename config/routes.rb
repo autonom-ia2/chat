@@ -206,7 +206,9 @@ Rails.application.routes.draw do
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
               resources :stages, only: [:index, :create]
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
-              resource :ai_settings, only: [:show, :update], controller: 'ai_settings'
+              resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
+                post :improve_criteria
+              end
             end
             resources :stages, only: [:update, :destroy] do
               post :reorder, on: :collection
