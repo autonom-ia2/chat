@@ -1,0 +1,96 @@
+{
+  "environment": "local full Rails/Vue application, real APIs, synthetic QA account 362",
+  "locale": "pt_BR",
+  "dashboard_asset": "dashboard-Bx2hXWX9.js (campaign alignment captures; per-file asset below)",
+  "sidebar_logo": "/brand-assets/hub2you-icon.png",
+  "sidebar_background": "#0b1e3f",
+  "production_changes": false,
+  "email_sends": 0,
+  "captures": [
+    {
+      "file": "01-campanhas.jpg",
+      "bytes": 146459,
+      "sha256": "fd165765109217ec1bfb14ea6a3bb12b497aa7abe547fc16789de6a440882751",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "02-editor.jpg",
+      "bytes": 167405,
+      "sha256": "262cdd594f8d06b4c8d384b116622891e3bfba461d39a700c510e0821d27e462",
+      "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "03-modelos.jpg",
+      "bytes": 183670,
+      "sha256": "56abe5a2c5b0841f216cff481c5019694ed6606a96aee168c9c94c586437a7b9",
+      "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "04-revisao.jpg",
+      "bytes": 136802,
+      "sha256": "528388f6a32ddafde36db9a2968693a89b9f2ebbe36fe2a3df3b5d74d820defd",
+      "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "05-pendencia.jpg",
+      "bytes": 136617,
+      "sha256": "cdec85edc3f0fae2ad2233a6e6a1c004edc0d7bd0187cbc2345981b27487f4ac",
+      "dashboard_asset": "dashboard-eDBAlyKY.js"
+    },
+    {
+      "file": "06-campanhas-mobile.jpg",
+      "bytes": 46799,
+      "sha256": "24a85066eacf9c0fef2b07d00c808fc2b4814cd2b4e042273543b289fdc2c9e3",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "07-modelos-mobile.jpg",
+      "bytes": 44324,
+      "sha256": "1069ce58832e8dfafbe3dc73256d97a99536d9d66d0be928c2c6770e760a639f",
+      "dashboard_asset": "dashboard-eDBAlyKY.js"
+    },
+    {
+      "file": "08-modelos-tablet.jpg",
+      "bytes": 117904,
+      "sha256": "2976e88616241695a0ff847e2a5059a60a5caeb19c4d2632412046d065184f9d",
+      "dashboard_asset": "dashboard-eDBAlyKY.js"
+    },
+    {
+      "file": "09-confirmacao.jpg",
+      "bytes": 68597,
+      "sha256": "426c2053f972a187c22b13b3479533ae9fa3b388279382cb24b9cb84af095257",
+      "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "10-publico-e-agendamento.jpg",
+      "bytes": 136005,
+      "sha256": "3233f80db426ae4f7a29c1efe564cd956e8f1d5c6a615dbb1a8ac118f712ef1c",
+      "dashboard_asset": "dashboard-xy_fYzxl.js"
+    },
+    {
+      "file": "11-campanhas-1280.jpg",
+      "bytes": 143840,
+      "sha256": "32d778dedb4366a46c4daa3ec86e55a23c768649db95542fa0bb4da070497714",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "12-campanhas-1024.jpg",
+      "bytes": 116580,
+      "sha256": "5183578abe079820590be931f6f5f5f906a64409b324095e60efd885232babe7",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "13-campanhas-tablet.jpg",
+      "bytes": 98365,
+      "sha256": "d26ff614760ce1576ceba1c9e8b43f5fdad3bcd53663569ed7ce5979e05873be",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    },
+    {
+      "file": "14-campanhas-mobile-acoes.jpg",
+      "bytes": 52103,
+      "sha256": "cd7a445384b36956c29e45eae6eb1ac10e61957bd4c535722d12b44ffc63233d",
+      "dashboard_asset": "dashboard-Bx2hXWX9.js"
+    }
+  ],
+  "alignment_report": "alignment.json"
+}

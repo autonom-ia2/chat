@@ -22,8 +22,13 @@ import WelcomeChooser from 'dashboard/components-next/Campaigns/Pages/CampaignPa
 import { useEmailEditor } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/composables/useEmailEditor';
 import { STARTER_MJML } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/starterMjml';
 import EmailCampaignTemplatesAPI from 'dashboard/api/emailCampaignTemplates';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import EmailCampaignReview from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignReview.vue';
+import EmailCampaignDetailsDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDetailsDialog.vue';
+import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
 
 const { t } = useI18n();
+const stepNumbers = [1, 2, 3];
 const store = useStore();
 const route = useRoute();
 const router = useRouter();
@@ -40,11 +45,23 @@ const campaign = computed(() =>
 useRecipientImportPolling(campaign);
 
 // UNICA fonte da verdade do editor: o composable singleton.
-const { isReady, device, getMjml, getHtml, setMjml, setDevice } =
-  useEmailEditor();
+const {
+  isReady,
+  device,
+  getMjml,
+  getHtml,
+  setMjml,
+  setDevice,
+  selectedComponent,
+  selectedType,
+  setSelectedText,
+} = useEmailEditor();
 
 const placeholders = ref([]);
+const activePanel = ref('canvas');
 const subjectInput = ref(campaign.value?.subject || '');
+const preheaderInput = ref(campaign.value?.preheader || '');
+
 const showAiDialog = ref(false);
 const showGeneratingDialog = ref(false);
 // Current design captured when opening the AI dialog, so the AI can ADAPT a
@@ -83,12 +100,6 @@ const showWelcome = computed(
   () => !forceEditor.value && !campaignHasBody.value
 );
 
-const previewLabel = computed(() =>
-  device.value === 'desktop'
-    ? t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PREVIEW_MOBILE')
-    : t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PREVIEW_DESKTOP')
-);
-
 const goBack = () => {
   router.push({
     name: 'campaigns_email_index',
@@ -107,7 +118,11 @@ const openGallery = () => {
 };
 
 const isBlankEditorMjml = mjml => {
-  const normalized = (mjml || '').replace(/\s+/g, '').toLowerCase();
+  const normalized = (mjml || '')
+    .split('')
+    .filter(character => character.trim())
+    .join('')
+    .toLowerCase();
   return (
     !normalized ||
     normalized === '<mjml><mj-body></mj-body></mjml>' ||
@@ -174,7 +189,10 @@ const persistSubject = async () => {
 
 const save = async () => {
   try {
-    await persist();
+    await persist({
+      subject: subjectInput.value.trim(),
+      preheader: preheaderInput.value.trim() || null,
+    });
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_SUCCESS'));
   } catch (error) {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
@@ -185,7 +203,10 @@ const sendTest = async () => {
   if (!testEmail.value) return;
   isSendingTest.value = true;
   try {
-    await persist();
+    await persist({
+      subject: subjectInput.value.trim(),
+      preheader: preheaderInput.value.trim() || null,
+    });
     await store.dispatch('emailCampaigns/sendTest', {
       id: campaignId.value,
       toEmail: testEmail.value,
@@ -203,10 +224,11 @@ const saveTemplate = async () => {
   if (!templateName.value) return;
   isSavingTemplate.value = true;
   try {
+    const body = getEditorBodyPayload();
     await EmailCampaignTemplatesAPI.create({
       name: templateName.value,
-      body_mjml: getMjml(),
-      body_html: getHtml(),
+      ...body,
+      body_html: body.body_html ?? campaign.value?.body_html,
       category: 'meus-modelos',
     });
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_SUCCESS'));
@@ -217,10 +239,6 @@ const saveTemplate = async () => {
   } finally {
     isSavingTemplate.value = false;
   }
-};
-
-const togglePreview = () => {
-  setDevice(device.value === 'desktop' ? 'mobile' : 'desktop');
 };
 
 const openAiDialog = () => {
@@ -250,6 +268,7 @@ const onGenerationReady = async () => {
 
 // Welcome handlers
 const chooseAi = () => {
+  activePanel.value = 'canvas';
   forceEditor.value = true;
   openAiDialog();
 };
@@ -333,222 +352,456 @@ onMounted(async () => {
 onActivated(() => {
   applyCampaignMjml();
 });
+
+const UX = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
+const reviewStep = computed(() => route.query.step === 'review');
+const showPersonalize = ref(false);
+const detailsOpen = ref(false);
+const problemsOnly = ref(false);
+const senderOpen = ref(false);
+const previewDialog = ref(null);
+const previewHtml = ref('');
+watch(
+  () => campaign.value?.preheader,
+  value => {
+    preheaderInput.value = value || '';
+  }
+);
+const setStep = step =>
+  router.replace({
+    query: { ...route.query, step: step === 'review' ? 'review' : undefined },
+  });
+const openReview = async () => {
+  try {
+    if (canManage.value && !showWelcome.value && isReady.value) {
+      await persist({
+        subject: subjectInput.value.trim(),
+        preheader: preheaderInput.value.trim() || null,
+      });
+    }
+    await setStep('review');
+  } catch (error) {
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+  }
+};
+const openRecipients = (problems = false) => {
+  problemsOnly.value = problems;
+  detailsOpen.value = true;
+};
+const previewEmail = () => {
+  previewHtml.value =
+    isReady.value && !showWelcome.value
+      ? (getEditorBodyPayload().body_html ?? campaign.value?.body_html)
+      : campaign.value?.body_html;
+  previewDialog.value.open();
+};
+const onSenderSaved = () => {
+  senderOpen.value = false;
+  store.dispatch('emailCampaigns/getOne', campaignId.value);
+};
+const insertPlaceholder = key => {
+  if (['mj-text', 'mj-button'].includes(selectedType.value)) {
+    setSelectedText(`${selectedComponent.value.getInnerHTML()} {{ ${key} }}`);
+  }
+  showPersonalize.value = false;
+};
 </script>
 
 <template>
-  <div class="flex flex-col flex-1 h-full min-h-0 bg-n-surface-1">
-    <RecipientImportStatus
-      v-if="campaign"
+  <section class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-n-surface-1">
+    <EmailCampaignReview
+      v-if="reviewStep && campaign"
       :campaign="campaign"
-      :can-recover="canManage"
-      auto-recover
-      class="px-4 py-2"
+      @edit="setStep('content')"
+      @recipients="openRecipients"
+      @sender="senderOpen = true"
+      @done="goBack"
     />
-    <!-- Top bar nova: hierarquia clara, "Criar com IA" = HERÓI -->
-    <div
-      class="flex items-center justify-between gap-3 px-4 py-3 border-b border-n-weak"
-    >
-      <div class="flex items-center min-w-0 gap-2">
-        <Button
-          icon="i-lucide-arrow-left"
-          color="slate"
-          variant="ghost"
-          size="sm"
-          @click="goBack()"
-        />
-        <div class="flex flex-col min-w-0">
-          <p class="mb-0 font-medium truncate text-n-slate-12">
-            {{ campaign?.name || t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TITLE') }}
-          </p>
-          <input
-            v-model="subjectInput"
-            type="text"
-            class="w-64 max-w-full p-0 text-xs bg-transparent border-0 truncate text-n-slate-11 focus:outline-none focus:ring-0"
-            :readonly="!canManage"
-            :aria-label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_LABEL')"
-            :placeholder="
-              t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_PLACEHOLDER')
-            "
-            @blur="persistSubject()"
-            @keyup.enter="persistSubject()"
+    <template v-else>
+      <header
+        class="flex flex-wrap items-center justify-between gap-4 border-b border-n-weak bg-n-solid-1 px-5 py-4 lg:px-6"
+      >
+        <div class="flex min-w-0 items-center gap-3">
+          <Button
+            :aria-label="t(`${UX}.BACK_CAMPAIGNS`)"
+            icon="i-lucide-arrow-left"
+            slate
+            ghost
+            class="!size-11"
+            @click="goBack"
           />
+          <div class="min-w-0">
+            <h1 class="mb-1 truncate text-base font-semibold text-n-slate-12">
+              {{ campaign?.name || t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TITLE') }}
+            </h1>
+            <p class="mb-0 text-xs text-n-slate-11">
+              {{ t(`${UX}.EDIT_DRAFT`) }}
+            </p>
+          </div>
         </div>
-      </div>
-      <div class="relative flex items-center gap-2">
-        <!-- HERÓI: ação primária destacada (azul, solid) -->
-        <template v-if="canManage">
+        <div class="flex flex-wrap gap-2">
           <Button
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')"
-            icon="i-lucide-sparkles"
-            color="blue"
-            size="sm"
-            :disabled="!isReady"
-            @click="openAiDialog"
-          />
-
-          <div class="w-px h-6 mx-1 bg-n-weak" />
-
-          <AiBlockActions v-if="isReady" />
-          <Button
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TEMPLATES')"
-            icon="i-lucide-layout-template"
-            color="slate"
-            variant="link"
-            size="sm"
-            @click="openGallery()"
-          />
-        </template>
-        <Button
-          :label="previewLabel"
-          icon="i-lucide-smartphone"
-          color="slate"
-          variant="outline"
-          size="sm"
-          :disabled="!isReady"
-          @click="togglePreview()"
-        />
-        <template v-if="canManage">
-          <Button
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
-            icon="i-lucide-mail-check"
-            color="slate"
-            variant="outline"
-            size="sm"
-            :disabled="!isReady"
-            @click="toggleTestPopover"
+            :label="t(`${UX}.PREVIEW`)"
+            icon="i-lucide-eye"
+            slate
+            outline
+            class="!min-h-11 !rounded-xl"
+            :disabled="!campaignHasBody && !isReady"
+            @click="previewEmail"
           />
           <Button
+            v-if="canManage"
             :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE')"
             icon="i-lucide-save"
-            color="slate"
-            variant="outline"
-            size="sm"
-            :is-loading="uiFlags.isUpdating"
+            slate
+            outline
+            class="!min-h-11 !rounded-xl"
             :disabled="!isReady"
-            @click="save()"
+            :is-loading="uiFlags.isUpdating"
+            @click="save"
           />
           <Button
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE')"
-            icon="i-lucide-bookmark-plus"
-            color="slate"
-            variant="outline"
-            size="sm"
-            :disabled="!isReady"
-            @click="toggleSaveTemplatePopover"
+            v-if="canManage"
+            :label="t(`${UX}.REVIEW_SEND`)"
+            icon="i-lucide-arrow-right"
+            trailing-icon
+            class="!min-h-11 !rounded-xl"
+            :is-loading="uiFlags.isUpdating"
+            @click="openReview"
           />
-        </template>
-        <div
-          v-if="showTestPopover"
-          class="absolute right-0 z-50 flex flex-col w-72 gap-3 p-4 border rounded-lg shadow-lg top-10 border-n-weak bg-n-solid-1"
-        >
-          <Input
-            v-model="testEmail"
-            type="email"
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_LABEL')"
-            :placeholder="
-              t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_PLACEHOLDER')
-            "
-            @enter="sendTest()"
-          />
-          <div class="flex justify-end gap-2">
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.CANCEL')"
-              color="slate"
-              variant="ghost"
-              size="sm"
-              @click="showTestPopover = false"
-            />
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUBMIT')"
-              color="blue"
-              size="sm"
-              :is-loading="isSendingTest"
-              @click="sendTest()"
-            />
-          </div>
         </div>
-        <div
-          v-if="showSaveTemplatePopover"
-          class="absolute right-0 z-50 flex flex-col w-72 gap-3 p-4 border rounded-lg shadow-lg top-10 border-n-weak bg-n-solid-1"
-        >
-          <Input
-            v-model="templateName"
-            :label="
-              t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_NAME_LABEL')
-            "
-            :placeholder="
-              t(
-                'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_NAME_PLACEHOLDER'
-              )
-            "
-            @enter="saveTemplate()"
-          />
-          <div class="flex justify-end gap-2">
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.CANCEL')"
-              color="slate"
-              variant="ghost"
-              size="sm"
-              @click="showSaveTemplatePopover = false"
-            />
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_SUBMIT')"
-              color="blue"
-              size="sm"
-              :is-loading="isSavingTemplate"
-              @click="saveTemplate()"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Barra de placeholders reais da base -->
-    <div
-      v-if="placeholders.length && !showWelcome"
-      class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-n-weak"
-    >
-      <span class="text-xs text-n-slate-11">
-        {{ t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PLACEHOLDERS_TITLE') }}
-      </span>
-      <PlaceholderChips :placeholders="placeholders" />
-    </div>
-
-    <!-- Conteúdo -->
-    <div class="flex-1 min-h-0">
+      </header>
       <div
-        v-if="!campaign"
-        class="flex items-center justify-center h-full text-n-slate-11"
+        class="grid shrink-0 gap-4 border-b border-n-weak bg-n-solid-1 px-5 py-4 sm:grid-cols-2 lg:px-6"
       >
+        <Input
+          v-model="subjectInput"
+          :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_LABEL')"
+          :placeholder="
+            t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SUBJECT_PLACEHOLDER')
+          "
+          :readonly="!canManage"
+          @blur="persistSubject"
+          @enter="persistSubject"
+        />
+        <Input
+          v-model="preheaderInput"
+          :label="t(`${UX}.PREHEADER`)"
+          :placeholder="t(`${UX}.PREHEADER_HINT`)"
+          :readonly="!canManage"
+        />
+      </div>
+      <nav
+        class="flex shrink-0 flex-wrap gap-2 border-b border-n-weak bg-n-solid-1 px-5 py-2 text-xs lg:px-6"
+        :aria-label="t(`${UX}.STEPS`)"
+      >
+        <span
+          class="flex min-h-11 items-center gap-2 rounded-lg bg-n-blue-3 px-3 font-medium text-n-blue-11"
+        >
+          <span
+            class="flex size-6 items-center justify-center rounded-full bg-n-brand text-white"
+          >
+            {{ stepNumbers[0] }}
+          </span>
+          {{ t(`${UX}.CONTENT`) }}
+        </span>
+        <button
+          class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
+          @click="openRecipients(false)"
+        >
+          <span
+            class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
+          >
+            {{ stepNumbers[1] }}
+          </span>
+          {{ t('CAMPAIGN.EMAIL_CAMPAIGN.COUNTS.RECIPIENTS') }}
+        </button>
+        <button
+          class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-n-slate-11"
+          @click="openReview"
+        >
+          <span
+            class="flex size-6 items-center justify-center rounded-full bg-n-alpha-2"
+          >
+            {{ stepNumbers[2] }}
+          </span>
+          {{ t(`${UX}.REVIEW_SEND`) }}
+        </button>
+      </nav>
+      <RecipientImportStatus
+        v-if="campaign"
+        :campaign="campaign"
+        :can-recover="canManage"
+        auto-recover
+        class="px-5 py-2"
+      />
+      <div v-if="!campaign" class="flex flex-1 items-center justify-center">
         <Spinner />
       </div>
-
-      <!-- Etapa2 "como criar" (estado, não rota) -->
-      <WelcomeChooser
-        v-else-if="showWelcome"
-        @choose-ai="chooseAi"
-        @choose-template="openGallery"
-        @start-blank="startBlank"
-      />
-
-      <!-- Editor: blocos (esq) · canvas (centro) · props (dir) -->
-      <div v-else class="flex h-full min-h-0">
-        <aside
-          class="w-64 shrink-0 h-full min-h-0 overflow-y-auto border-r border-n-weak bg-n-solid-1"
+      <div
+        v-else
+        class="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row"
+      >
+        <div
+          class="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-n-weak px-4 py-2 lg:hidden"
         >
-          <BlocksPanel v-if="isReady" />
-        </aside>
-        <div class="flex-1 min-w-0 min-h-0">
-          <GrapesEditor :mjml="campaign.body_mjml || ''" />
+          <Button
+            :label="t(`${UX}.BLOCKS`)"
+            slate
+            :variant="activePanel === 'blocks' ? 'faded' : 'ghost'"
+            @click="
+              activePanel = activePanel === 'blocks' ? 'canvas' : 'blocks'
+            "
+          />
+          <Button
+            :label="t(`${UX}.CONTENT`)"
+            slate
+            :variant="activePanel === 'canvas' ? 'faded' : 'ghost'"
+            @click="activePanel = 'canvas'"
+          />
+          <Button
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.TITLE')"
+            slate
+            :variant="activePanel === 'properties' ? 'faded' : 'ghost'"
+            @click="
+              activePanel =
+                activePanel === 'properties' ? 'canvas' : 'properties'
+            "
+          />
         </div>
         <aside
-          class="w-72 shrink-0 h-full min-h-0 overflow-y-auto border-l border-n-weak bg-n-solid-1"
+          class="min-h-0 w-full shrink-0 overflow-y-auto border-e border-n-weak bg-n-solid-1 lg:w-60"
+          :class="activePanel === 'blocks' ? 'block' : 'hidden lg:block'"
         >
+          <div v-if="canManage" class="space-y-2 border-b border-n-weak p-4">
+            <Button
+              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')"
+              icon="i-lucide-sparkles"
+              class="!min-h-11 w-full !rounded-xl"
+              @click="showWelcome ? chooseAi() : openAiDialog()"
+            />
+            <Button
+              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.TEMPLATES')"
+              icon="i-lucide-layout-template"
+              slate
+              outline
+              class="!min-h-11 w-full !rounded-xl"
+              @click="openGallery"
+            />
+          </div>
+          <BlocksPanel v-if="isReady && canManage" />
+          <p v-else class="m-0 p-4 text-xs leading-5 text-n-slate-11">
+            {{ t(`${UX}.CHOOSE_START`) }}
+          </p>
+        </aside>
+        <div
+          class="flex min-h-0 min-w-0 flex-1 flex-col"
+          :class="activePanel === 'canvas' ? 'flex' : 'hidden lg:flex'"
+        >
+          <div
+            class="relative flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-n-weak bg-n-solid-1 px-4 py-2"
+          >
+            <div class="flex gap-1 rounded-lg bg-n-alpha-1 p-1">
+              <Button
+                v-for="option in ['desktop', 'mobile']"
+                :key="option"
+                :label="t(`${UX}.DEVICES.${option}`)"
+                :icon="
+                  option === 'desktop'
+                    ? 'i-lucide-monitor'
+                    : 'i-lucide-smartphone'
+                "
+                :aria-pressed="device === option"
+                :variant="device === option ? 'solid' : 'ghost'"
+                :color="device === option ? 'slate' : 'slate'"
+                class="!min-h-11"
+                :disabled="!isReady"
+                @click="setDevice(option)"
+              />
+            </div>
+            <div class="relative flex flex-wrap gap-2">
+              <Button
+                v-if="placeholders.length && canManage"
+                :label="t(`${UX}.PERSONALIZE`)"
+                icon="i-lucide-braces"
+                slate
+                ghost
+                class="!min-h-11"
+                @click="showPersonalize = !showPersonalize"
+              />
+              <Button
+                v-if="canManage"
+                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST')"
+                icon="i-lucide-mail-check"
+                slate
+                ghost
+                class="!min-h-11"
+                :disabled="!isReady"
+                @click="toggleTestPopover"
+              />
+              <Button
+                v-if="canManage"
+                :label="t(`${UX}.SAVE_MODEL`)"
+                icon="i-lucide-bookmark-plus"
+                slate
+                ghost
+                class="!min-h-11"
+                :disabled="!isReady"
+                @click="toggleSaveTemplatePopover"
+              />
+              <div
+                v-if="showTestPopover"
+                class="absolute end-0 z-50 flex flex-col w-[min(20rem,calc(100vw-3rem))] gap-3 p-4 border rounded-lg shadow-lg top-12 border-n-weak bg-n-solid-1"
+              >
+                <Input
+                  v-model="testEmail"
+                  type="email"
+                  :label="
+                    t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_LABEL')
+                  "
+                  :placeholder="
+                    t(
+                      'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_PLACEHOLDER'
+                    )
+                  "
+                  @enter="sendTest()"
+                />
+                <div class="flex justify-end gap-2">
+                  <Button
+                    :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.CANCEL')"
+                    color="slate"
+                    variant="ghost"
+                    size="sm"
+                    @click="showTestPopover = false"
+                  />
+                  <Button
+                    :label="
+                      t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUBMIT')
+                    "
+                    color="blue"
+                    size="sm"
+                    :is-loading="isSendingTest"
+                    @click="sendTest()"
+                  />
+                </div>
+              </div>
+              <div
+                v-if="showSaveTemplatePopover"
+                class="absolute end-0 z-50 flex flex-col w-[min(20rem,calc(100vw-3rem))] gap-3 p-4 border rounded-lg shadow-lg top-12 border-n-weak bg-n-solid-1"
+              >
+                <Input
+                  v-model="templateName"
+                  :label="
+                    t(
+                      'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_NAME_LABEL'
+                    )
+                  "
+                  :placeholder="
+                    t(
+                      'CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_NAME_PLACEHOLDER'
+                    )
+                  "
+                  @enter="saveTemplate()"
+                />
+                <div class="flex justify-end gap-2">
+                  <Button
+                    :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.CANCEL')"
+                    color="slate"
+                    variant="ghost"
+                    size="sm"
+                    @click="showSaveTemplatePopover = false"
+                  />
+                  <Button
+                    :label="
+                      t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_TEMPLATE_SUBMIT')
+                    "
+                    color="blue"
+                    size="sm"
+                    :is-loading="isSavingTemplate"
+                    @click="saveTemplate()"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="showPersonalize"
+            class="shrink-0 border-b border-n-weak bg-n-solid-1 p-4"
+          >
+            <PlaceholderChips
+              :placeholders="placeholders"
+              @insert="insertPlaceholder"
+            />
+          </div>
+          <WelcomeChooser
+            v-if="showWelcome"
+            class="min-h-0 flex-1 overflow-y-auto"
+            @choose-ai="chooseAi"
+            @choose-template="openGallery"
+            @start-blank="startBlank"
+          />
+          <GrapesEditor
+            v-else
+            :mjml="campaign.body_mjml || ''"
+            class="min-h-0 flex-1 [&_.gjs-pn-devices-c]:hidden"
+          />
+        </div>
+        <aside
+          class="min-h-0 w-full shrink-0 overflow-y-auto border-s border-n-weak bg-n-solid-1 lg:w-[17rem]"
+          :class="activePanel === 'properties' ? 'block' : 'hidden lg:block'"
+        >
+          <AiBlockActions v-if="isReady && canManage" class="p-3" />
           <PropertiesPanel v-if="isReady" />
+          <p v-else class="m-0 p-6 text-sm leading-6 text-n-slate-11">
+            {{ t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.PROPS.EMPTY') }}
+          </p>
         </aside>
       </div>
+      <Dialog
+        ref="previewDialog"
+        :title="t(`${UX}.PREVIEW`)"
+        width="3xl"
+        :show-confirm-button="false"
+        overflow-y-auto
+      >
+        <div
+          class="mx-auto w-full"
+          :class="device === 'mobile' ? 'max-w-[22rem]' : 'max-w-[37.5rem]'"
+        >
+          <iframe
+            :srcdoc="previewHtml"
+            sandbox=""
+            referrerpolicy="no-referrer"
+            :title="t(`${UX}.PREVIEW`)"
+            class="h-[60vh] w-full rounded-xl border border-n-weak bg-white"
+          />
+        </div>
+      </Dialog>
+    </template>
+    <div
+      v-if="senderOpen"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-n-alpha-black2 p-5"
+      @click.self="senderOpen = false"
+    >
+      <div class="relative h-[80vh] w-full max-w-xl">
+        <EmailCampaignDialog
+          :campaign="campaign"
+          @saved="onSenderSaved"
+          @close="senderOpen = false"
+        />
+      </div>
     </div>
-
+    <EmailCampaignDetailsDialog
+      v-if="detailsOpen && campaign"
+      :campaign="campaign"
+      :initial-problem="problemsOnly"
+      @close="detailsOpen = false"
+      @review="
+        detailsOpen = false;
+        openReview();
+      "
+      @updated="store.dispatch('emailCampaigns/getOne', campaignId)"
+    />
     <AiComposerDialog
       v-if="showAiDialog"
       :campaign-id="campaignId"
@@ -557,12 +810,11 @@ onActivated(() => {
       @generation-started="onGenerationStarted"
       @close="showAiDialog = false"
     />
-
     <AiGeneratingDialog
       v-if="showGeneratingDialog"
       :campaign-id="campaignId"
       @ready="onGenerationReady"
       @close="showGeneratingDialog = false"
     />
-  </div>
+  </section>
 </template>

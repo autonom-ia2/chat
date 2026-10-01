@@ -9,6 +9,10 @@ import Icon from 'dashboard/components-next/icon/Icon.vue';
 // Os nomes i-lucide-* abaixo são LITERAIS estáticos para o extractor de ícones
 // (@egoist/tailwindcss-icons) gerá-los — não montar nomes dinamicamente.
 const BLOCK_ICONS = {
+  'autonomia-text': 'i-lucide-align-left',
+  'autonomia-heading': 'i-lucide-heading',
+  'autonomia-image': 'i-lucide-image',
+  'autonomia-button': 'i-lucide-mouse-pointer-click',
   'autonomia-hero': 'i-lucide-layout-template',
   'autonomia-offer': 'i-lucide-badge-percent',
   'autonomia-benefits': 'i-lucide-layout-grid',
@@ -62,7 +66,7 @@ const groups = computed(() => {
           v-for="block in group.items"
           :key="block.getId()"
           draggable="true"
-          class="flex flex-col items-center justify-center gap-2 px-2 py-3 text-center transition-colors border rounded-lg cursor-grab select-none border-n-weak bg-n-solid-1 text-n-slate-11 hover:border-n-brand hover:text-n-slate-12 hover:bg-n-alpha-1 active:cursor-grabbing"
+          class="flex flex-col items-center justify-center gap-2 min-h-20 px-2 py-3 text-center transition-colors border rounded-lg cursor-grab select-none border-n-weak bg-n-solid-1 text-n-slate-11 hover:border-n-brand hover:text-n-slate-12 hover:bg-n-alpha-1 active:cursor-grabbing"
           @dragstart="dragStart(block, $event)"
           @dragend="dragStop()"
         >

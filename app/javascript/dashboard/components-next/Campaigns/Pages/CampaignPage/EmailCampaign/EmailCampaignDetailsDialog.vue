@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -16,9 +16,7 @@ import EmailCampaignHealth from 'dashboard/components-next/Campaigns/EmailProtec
 import {
   NS,
   formatNumber,
-  safeError,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
-import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import PlaceholderChips from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PlaceholderChips.vue';
@@ -31,7 +29,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'review']);
 const canManage = useCanManage('campaign_manage');
 
 const { t, locale } = useI18n();
@@ -51,8 +49,6 @@ const uiFlags = useMapGetter('emailCampaigns/getUIFlags');
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 
 const fileInput = ref(null);
-const showSchedule = ref(false);
-const schedule = reactive({ at: '', error: false });
 const placeholders = ref([]);
 const validation = ref(null);
 
@@ -139,29 +135,6 @@ const onFileChange = async event => {
   }
 };
 
-const submitSchedule = async () => {
-  if (isImporting.value) return;
-  if (!hasCampaignBody.value) {
-    openBuilder();
-    return;
-  }
-
-  if (!schedule.at) {
-    schedule.error = true;
-    return;
-  }
-  try {
-    await store.dispatch('emailCampaigns/schedule', {
-      id: props.campaign.id,
-      scheduledAt: schedule.at,
-    });
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SCHEDULE_SUCCESS'));
-    showSchedule.value = false;
-  } catch (error) {
-    useAlert(safeError(t, error));
-  }
-};
-
 onMounted(() => {
   fetchTemplateTools();
 });
@@ -229,13 +202,13 @@ onMounted(() => {
           </span>
           <Button
             v-if="isDraft && hasCampaignBody && !isImporting"
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.ACTIONS.SCHEDULE')"
-            icon="i-lucide-calendar-clock"
-            color="slate"
+            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.REVIEW_SEND')"
+            icon="i-lucide-send"
+            color="blue"
             variant="ghost"
             size="sm"
             class="ms-auto"
-            @click="showSchedule = !showSchedule"
+            @click="emit('review')"
           />
           <Button
             v-else-if="isDraft"
@@ -247,40 +220,6 @@ onMounted(() => {
             class="ms-auto"
             @click="openBuilder"
           />
-        </div>
-
-        <div
-          v-if="showSchedule"
-          class="flex flex-col gap-2 p-4 border rounded-lg border-n-weak"
-        >
-          <Input
-            v-model="schedule.at"
-            type="datetime-local"
-            :label="t('CAMPAIGN.EMAIL_CAMPAIGN.SCHEDULE_DIALOG.DATETIME_LABEL')"
-            :message="
-              schedule.error
-                ? t('CAMPAIGN.EMAIL_CAMPAIGN.SCHEDULE_DIALOG.DATETIME_ERROR')
-                : ''
-            "
-            :message-type="schedule.error ? 'error' : 'info'"
-            @update:model-value="schedule.error = false"
-          />
-          <div class="flex justify-end gap-2 mt-1">
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.SCHEDULE_DIALOG.CANCEL')"
-              color="slate"
-              variant="faded"
-              size="sm"
-              @click="showSchedule = false"
-            />
-            <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.SCHEDULE_DIALOG.SUBMIT')"
-              color="blue"
-              size="sm"
-              :is-loading="uiFlags.isUpdating"
-              @click="submitSchedule"
-            />
-          </div>
         </div>
 
         <div class="flex flex-col gap-2 p-4 border rounded-lg border-n-weak">

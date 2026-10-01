@@ -12,7 +12,11 @@ defineProps({
 
 const emit = defineEmits(['insert']);
 
-const { t } = useI18n();
+const { t, te } = useI18n();
+const label = key => {
+  const translation = `CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.PERSONALIZATION.${key}`;
+  return te(translation) ? t(translation) : key.split('_').join(' ');
+};
 
 const chipLabel = key => `{{ ${key} }}`;
 
@@ -29,11 +33,11 @@ const onChipClick = async key => {
       v-for="key in placeholders"
       :key="key"
       type="button"
-      class="inline-flex items-center gap-1 px-2 py-1 font-mono text-xs rounded-md text-n-slate-12 bg-n-alpha-2 hover:bg-n-alpha-3"
+      class="inline-flex items-center gap-1 min-h-11 px-3 py-2 text-sm rounded-xl text-n-slate-12 bg-n-alpha-2 hover:bg-n-alpha-3"
       @click="onChipClick(key)"
     >
       <span class="i-lucide-copy size-3 text-n-slate-11" />
-      {{ chipLabel(key) }}
+      {{ label(key) }}
     </button>
   </div>
 </template>

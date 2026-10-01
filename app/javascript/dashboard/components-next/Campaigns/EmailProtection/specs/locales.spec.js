@@ -21,6 +21,54 @@ const metadata = localeMetadata();
 const localeModules = import.meta.glob('../../../../i18n/locale/*/index.js');
 const visibleCanonical = readVisibleLocale('en');
 
+describe('email workspace translations', () => {
+  const namespace = 'CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE';
+  const canonical = flattenMessages(
+    visibleCanonical.CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE,
+    namespace
+  );
+
+  it.each(['en', 'pt_BR'])(
+    'renders every workspace message in %s without another language masking it',
+    locale => {
+      validateRuntime(
+        locale,
+        dashboardMessages[locale],
+        Object.keys(canonical)
+      );
+    }
+  );
+
+  it.each(
+    metadata.runtimeLocales.filter(locale => !['en', 'pt_BR'].includes(locale))
+  )(
+    'preserves %s and the dashboard default English fallback for new workspace keys',
+    locale => {
+      const i18n = createI18n({
+        legacy: false,
+        locale: 'en',
+        messages: dashboardMessages,
+        missingWarn: false,
+        fallbackWarn: false,
+      });
+      i18n.global.locale.value = locale;
+      try {
+        Object.entries(canonical).forEach(([key, message]) => {
+          const values = Object.fromEntries(
+            placeholders(message).map(name => [name, `__${name}__`])
+          );
+          expect(i18n.global.t(key, values)).not.toBe(key);
+        });
+        expect(i18n.global.getLocaleMessage(locale)).toEqual(
+          dashboardMessages[locale]
+        );
+      } finally {
+        i18n.dispose();
+      }
+    }
+  );
+});
+
 describe('inactive simplified Chinese locale compatibility', () => {
   it('preserves every originally imported zh resource without activating the locale', async () => {
     const { default: messages } =
