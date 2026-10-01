@@ -779,6 +779,18 @@ useFixedPanelPresence(computed(() => props.show));
                       aria-hidden="true"
                     />
                   </button>
+                  <Button
+                    icon="i-lucide-trash-2"
+                    ruby
+                    ghost
+                    class="min-h-11 min-w-11 shrink-0"
+                    :aria-label="t('CRM_KANBAN.PIPELINE_DRAWER.DELETE_STAGE')"
+                    :title="t('CRM_KANBAN.PIPELINE_DRAWER.DELETE_STAGE')"
+                    :disabled="
+                      form.stages.length === 1 || isDeletingStage || isSaving
+                    "
+                    @click="removeStage(index)"
+                  />
                 </div>
               </template>
             </Draggable>

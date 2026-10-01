@@ -39,3 +39,7 @@ QA independente encontrou ordem incorreta ao criar um status no meio: o reorder 
 Não foi validada qualidade de uma resposta real paga do GPT-6 Luna, nem entrega/recebimento Google Ads ou Meta. A prévia local demonstra o componente real, mas não a integração completa autenticada com o backend. Não houve mutação de produção ou dados de clientes. Não há garantia absoluta de ausência de regressões.
 
 Após revisão e autorização explícita: publicar backend/frontend pelo procedimento existente, confirmar gates e credencial do modelo, testar em conta autorizada criação/edição, descrição, caixas e um pedido de sugestão com orçamento. Separar validação de eventos externos de aparência/CI. Rollback: restaurar release anterior; sem migração de schema. Configurações salvas por operadores continuam persistidas, portanto rollback não desfaz essas escolhas automaticamente.
+
+## Ajuste solicitado após revisão visual
+
+Lixeira em cada linha da lista de status, usando Button ruby/ghost e ícone Lucide do design system. Área de clique mínima de 44px, título/aria-label traduzidos, proteção do último status e bloqueio durante exclusão/salvamento. Reutiliza removeStage e a confirmação existente na página (incluindo destino dos cards), sem abrir edição nem alterar backend. ESLint sem erros; 5 testes existentes do Drawer passando. Clique direto conferido no componente real com dados fictícios/API simulada: removeu Proposta e manteve a lista aberta; confirmação integrada apenas inspecionada no código.
