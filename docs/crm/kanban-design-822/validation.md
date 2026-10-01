@@ -104,3 +104,23 @@ foram simplificados e o atalho agora se chama Qualquer responsável. No protóti
 conversa vinculada e metadados extras são fixtures ilustrativos; não demonstram
 semântica do payload real. Resultado somente na Lista tem opções, porém não há
 fixtures ganhos/perdidos/arquivados para comprovar esses recortes.
+
+## Identidade do cliente — revisão posterior e conferência ao vivo
+
+- Leitura autorizada no Chrome: Chat2You conta 16 e Autonom.ia conta 20; Prospecção
+  conta 16, busca existente e modal de envio apenas. Sem gravação nem nova busca.
+- Quadro sintético: empresa em destaque, contato abaixo, negócio menor; B2C com
+  pessoa principal; card avulso com indicação de contato ausente. Onze cards mantidos.
+- Lista e Calendário apresentam a mesma identidade; três retornos preservados.
+- Prospecção · exemplo: quatro cards; título/empresa/contato iguais aparecem uma
+  vez. Mariana compartilhada entre dois cards mostra Norte em um e Alvorada no outro.
+- Buscar Alvorada retorna somente um desses quatro; filtro Norte retorna dois,
+  excluindo Alvorada mesmo quando o contato dela pertence à Norte.
+- Escape fecha detalhe e devolve foco a Abrir Atendimento de filiais de Norte Logística.
+- Celular 390×844: largura da página 390, rodapé em 844; criar funil e Mover visíveis.
+- Sintaxe Node e build Tailwind aprovados; console sem erro/warn na prévia. Aviso
+  do build limitado ao Browserslist antigo. Viewport restaurada. Provider: US$0.
+
+As capturas 19/20/21 mostram protótipo com dados fictícios, não produto integrado.
+O bloqueador P1 de empresa por card foi identificado por leitura de main; a nova
+consulta/backend ainda não foi implementada ou validada em produção.

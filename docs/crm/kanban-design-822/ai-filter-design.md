@@ -126,3 +126,11 @@ O contrato de filtros precisa suportar listas/intervalos de forma explícita,
 sem flexibilizar o catálogo inteiro. A proposta acima ainda precisa de
 implementação e teste; auditoria estática não comprova acurácia do GPT-6 Luna
 nem confirma quais commits já foram implantados em produção. US$0 gasto.
+
+## Correção do vínculo após auditoria de Prospecção
+
+A relação empresa → contatos → cards, isoladamente, é insuficiente. Leads de
+empresas diferentes podem compartilhar contato. A consulta tipada do Guia e do
+Kanban precisa usar a empresa resolvida por card, incluindo o metadata persistido
+da Prospecção, sob o mesmo escopo/permissão. Busca e exibição devem coincidir.
+[Auditoria específica](reports/identity-prospecting-audit.md).

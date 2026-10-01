@@ -122,3 +122,19 @@ Empresa → contatos → cards ainda não é filtro CRM canônico. Recomendado
 reaproveitar o leitor/autorização do Guia com resolvedor tipado compartilhado,
 sem agente adicional persistente. Relatório copiado para reports/guide-crm-audit.md.
 Só código/versionamento foi consultado; nenhuma afirmação de deploy/produção.
+
+## Revisão de identidade e Prospecção
+
+Rodrigo autorizou leitura das abas Chrome existentes, conta 20 em Autonom.ia.
+Conferidos CRM contas 16/20 e Prospecção conta 16, sem gravações, conversões, buscas
+novas ou chamadas pagas. UI observada usa títulos mistos e empresa primária na Prospecção.
+O QA auditou main 902f0059d7 e identificou risco P1: contatos compartilhados podem
+ter empresa diferente da oportunidade. Contrato recomendado revisado para empresa
+resolvida por card em lote/account scope, com fonte persistida da Prospecção.
+
+Protótipo ajustado para empresa/pessoa principal e negócio menor; sem duplicatas
+exatas de nomes, sem mudar títulos. Fixture Prospecção separado com quatro cards,
+busca/filtro consistente com empresa do card. Node --check e Tailwind CLI passaram,
+aviso Browserslist apenas. QA UI: 11 cards, Lista/Calendário, filtro Norte=2 e busca
+Alvorada=1 no cenário de 4, Escape/foco e mobile sem overflow. Capturas 19/20/21.
+Mudanças restritas a docs/protótipo. Orçamento US$1, gasto US$0. Sem merge/deploy.

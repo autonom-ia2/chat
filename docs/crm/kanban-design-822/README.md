@@ -9,7 +9,8 @@ em revisão na [PR #793](https://github.com/autonom-ia2/chat/pull/793).
 ## Abrir e revisar
 
 - [Protótipo navegável](prototype/index.html): abrir por um servidor local.
-- [Quadro desktop — cinco status](screenshots/06-kanban-1920.png).
+- **Atual:** [cliente em destaque](screenshots/19-identidade-cliente.png), [celular](screenshots/20-identidade-cliente-celular.png) e [Prospecção sintética](screenshots/21-identidade-prospeccao.png).
+- Histórico: [quadro desktop — cinco status](screenshots/06-kanban-1920.png).
 - [Contato e empresa no detalhe](screenshots/02-card-empresa.png).
 - [Kanban no celular](screenshots/03-kanban-celular.png).
 - [Busca única e ações visíveis](screenshots/15-busca-unificada.png); [Mais filtros completo](screenshots/16-filtros-completos.png); [filtros completos no celular](screenshots/18-filtros-celular.png).
@@ -41,13 +42,14 @@ O mockup não replica nem substitui os editores completos já existentes.
 A tela atual distribui operação e configuração por duas faixas de botões com
 peso semelhante. Nos cards, a identidade da oportunidade, a pessoa, o responsável,
 a caixa de entrada e sinais de atenção disputam espaço. A proposta organiza a
-primeira leitura em três perguntas: **qual oportunidade, de quem e o que merece
-atenção agora?**
+primeira leitura em três perguntas: **quem é o cliente, qual negócio estamos
+tratando e o que merece atenção agora?**
 
 A captura fornecida por Rodrigo é uma referência visual da conta 18; não é uma
 medição de produção feita por esta equipe. A conferência usa código da PR #793
-em `56b56f3a79` e uma tela local real com dados sintéticos. Não consultamos a conta
-18 nem copiamos seus contatos para o protótipo.
+em `56b56f3a79`, main em `902f0059d7` e uma tela local real com dados sintéticos.
+Após autorização, lemos as contas 16 (Chat2You) e 20 (Autonom.ia) no Chrome,
+sem alteração de dados. Não consultamos a conta 18 nem copiamos dados de clientes.
 
 ## Direção recomendada
 
@@ -57,8 +59,9 @@ em `56b56f3a79` e uma tela local real com dados sintéticos. Não consultamos a 
   ação principal. Kanban, Lista e Calendário continuam fáceis de encontrar.
 - Configurações administrativas reunidas em uma entrada rotulada, preservando
   todas as funções existentes e suas permissões.
-- Título do negócio mantido. Pessoa e empresa ficam em informação secundária,
-  distinta da atribuição. Um bot responsável não se apresenta como cliente.
+- Empresa em destaque, pessoa abaixo e nome do negócio em hierarquia menor.
+  Sem empresa, pessoa em destaque. O título salvo é preservado; repetições exatas
+  ficam ocultas na exibição. Um bot responsável não se apresenta como cliente.
 - Sinais com significado escrito, sem exigir que o usuário decore ícones ou
   interprete uma nota como probabilidade de venda.
 - Movimento por arrastar e por clique/teclado. Escolhas usam componentes do
@@ -71,6 +74,8 @@ As frequências de uso do menu ainda são hipóteses a validar.
 
 | Fonte primária | Aplicação na proposta |
 |---|---|
+| [HubSpot — Board cards](https://knowledge.hubspot.com/object-settings/select-properties-to-show-on-records-in-board-view) | Ordenar propriedades/associações para o trabalho da equipe e ocultar campos vazios. |
+| [Pipedrive — Deal cards](https://support.pipedrive.com/en/article/deal-card-customization-sorting) | Manter pessoa, organização e negócio distinguíveis. A ordem adotada aqui atende nossa operação de conversas e prospecção; não é uma regra universal. |
 | [NN/g — Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/) | Manter trabalho frequente visível e revelar opções avançadas por uma entrada com rótulo claro. |
 | [NN/g — Complex Applications](https://www.nngroup.com/articles/complex-application-design/) | Reduzir ruído preservando funções e acesso ao detalhe sem perder o contexto do quadro. |
 | [Atlassian — Typography](https://atlassian.design/foundations/typography) | Hierarquia e espaçamento coerentes; fontes e marca do próprio Chat2You preservadas. |
@@ -97,34 +102,32 @@ Isso fecha a gaveta, sem uma segunda etapa de aplicação. A etapa visível pass
 a uma que tem resultados quando um novo filtro esvazia a etapa atual.
 “Sem empresa vinculada” inclui contatos sem empresa e cards sem contato; não
 classifica essas pessoas como B2C. Na integração, preservar todos os filtros
-existentes de status/caixa/campanha etc. Esta prévia demonstra três grupos.
+existentes de status/caixa/campanha etc. Esta prévia demonstra cinco grupos progressivos em Mais filtros.
 
 A ajuda opcional **Encontrar com IA** está descrita em
 [avaliação e contrato sugerido](ai-filter-design.md). Ela transforma um pedido
 em uma proposta para conferir antes de confirmar. A chamada GPT-6 Luna ainda
 não está conectada; a demonstração de UI está explicitamente marcada.
 
-## Empresa: vale colocar?
+## Identidade do cliente e Prospecção
 
-**Sim, quando o contato tiver uma empresa vinculada.** A relação ajuda a distinguir
-vários negócios da mesma empresa e pessoas com nomes semelhantes sem abrir cada
-card. Deve ser contexto secundário do negócio, nunca substituir o título da
-oportunidade. Para pessoa física, nenhuma linha de empresa precisa aparecer.
+**Empresa principal; pessoa abaixo; negócio menor.** Sem empresa, pessoa principal.
+Sem contato, o título continua válido e a ausência do vínculo fica clara.
+Não renomeamos cards e não fundimos oportunidades da mesma empresa.
 
-Hoje o payload do Kanban não entrega essa relação: `compact_contact` contém apenas
-`id`, `name` e `phone_number`. O drawer obtém o cadastro por outra requisição.
-Assim, exibir empresa no mockup representa uma proposta que ainda requer backend;
-a PR #793 não a implementou no board.
+A Prospecção já destaca empresas na tela e grava o nome do lead como título do
+card. A conversão cria/reutiliza empresa e contato; leads diferentes podem
+compartilhar um contato, mas pertencer a empresas diferentes. Por isso a proposta
+anterior de usar apenas `contact.company` foi substituída.
 
-Contrato recomendado: `contact.company: { id, name } | null`, usando a empresa
-canônica do relacionamento, carregada no escopo autorizado da conta. Não usar
-texto legado livre como prova de vínculo e não fazer uma requisição por card.
-Preservar a edição OSS sem associação Enterprise e os casos sem empresa.
+Contrato recomendado: `card.company: { id, name } | null`, resolvida pelo backend
+por card. Para Prospecção, usar a empresa do metadata persistido; para cards comuns,
+a empresa do contato. Respeitar conta, permissões, Enterprise/OSS e carregar em lote.
+Busca, filtro, quadro, Lista e detalhe devem usar a mesma relação. Nunca inferir
+empresa por texto do título, inbox ou responsável.
 
-Se o título automático já for o nome/telefone do contato, não repetir essa mesma
-informação abaixo. Com empresa, a linha secundária pode mostrar somente a empresa.
-Sem contato vinculado, o título manual permanece válido e o vínculo ausente fica
-claro; não inventar pessoa, empresa ou foto a partir do responsável.
+O payload atual não entrega esse contrato; o protótipo ilustra a proposta.
+[Auditoria do fluxo e bloqueador de dados](reports/identity-prospecting-audit.md).
 
 ## Funis e status
 

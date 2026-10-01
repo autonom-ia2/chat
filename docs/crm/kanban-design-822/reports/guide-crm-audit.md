@@ -76,3 +76,10 @@ Não mexer no RAG e não colocar interpretação de linguagem em regex ou no con
 
 **Limitação desta auditoria:** não executei requests autenticados, banco, navegador ou modelo pago. As conclusões são do código em `origin/main` e não equivalem a smoke test de produção.
 
+
+## Correção posterior: vínculo da empresa por oportunidade
+
+A recomendação empresa → contatos → cards acima foi refinada após a auditoria
+da Prospecção. Contatos compartilhados podem estar ligados a uma empresa diferente
+da oportunidade. A consulta deve usar empresa resolvida por card, coerente com a
+exibição. [Auditoria e decisão atual](identity-prospecting-audit.md).

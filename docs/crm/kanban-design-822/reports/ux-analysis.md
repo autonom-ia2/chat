@@ -103,3 +103,11 @@ A organização proposta é simples o suficiente para implementação incrementa
 Capturas atualizadas em `../screenshots/`; testes e resultados em `../validation.md`.
 A prévia IA é explicitamente simulada. Filtros combinados e empresa específica
 foram exercitados em desktop/celular; o contrato autorizado ainda é um gate real.
+
+## Revisão da identidade — decisão posterior às capturas iniciais
+
+Rodrigo pediu empresa em destaque, pessoa abaixo e negócio secundário. Essa ordem
+está aplicada nas capturas 19/20/21, incluindo Lista e Calendário. Os pareceres
+acima sobre título primário e `contact.company` são históricos e foram substituídos
+pelo contrato `card.company` descrito na auditoria Prospecção. Sem empresa, pessoa
+principal; repetições exatas omitidas na exibição, sem editar nomes persistidos.

@@ -38,13 +38,20 @@ Fontes verificadas em `56b56f3a79`:
 - `app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue`:
   fetch de contato/empresa no detalhe.
 
-Contrato mínimo proposto: acrescentar `contact.company` com `id/name` ou `null`.
-Usar extensão compatível com Enterprise; não presumir associação em OSS. A consulta
-deve carregar a associação em lote e manter autorização/escopo de conta.
+Revisão em main `902f0059d7`: [auditoria Prospecção](reports/identity-prospecting-audit.md).
+Contrato mínimo revisado: `card.company: { id, name } | null`, resolvida no backend
+pelo metadata da empresa do card prospectado, ou pela empresa do contato em cards
+comuns. Contatos compartilhados podem ter empresa diferente da oportunidade.
+Somente `contact.company` é insuficiente nesse caminho real.
 
-Não inferir empresa pelo nome da oportunidade ou por `additional_attributes`.
-Não consultar CompanyAPI por card. Atualização do vínculo deve refletir em quadro,
-lista e detalhe sem cache antigo de empresa.
+Usar extensão compatível com Enterprise; não presumir associação em OSS. Carregar
+em lote, respeitando conta e permissões. Busca/filtro/board/Lista/detalhe devem usar
+a mesma empresa. Não inferir empresa pelo título/atributos livres, nem consultar
+CompanyAPI por card. Definir o comportamento para metadata antigo, empresa removida
+e vínculo de contato alterado antes da implementação; não ocultar divergências.
+
+A UI mantém empresa principal, contato abaixo e negócio menor, omitindo somente
+repetições exatas. Títulos são preservados e cards da mesma empresa não são fundidos.
 
 ## Atenção e proveniência
 
