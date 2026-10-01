@@ -33,7 +33,7 @@ class Autonomia::Sso::Provisioner
     pending_agent_invitation_account ||
       registration_checkout_account ||
       confirmed_account_link ||
-      invited_linked_account ||
+      existing_linked_account ||
       raise_untrusted_account!
   end
 
@@ -179,13 +179,12 @@ class Autonomia::Sso::Provisioner
       &.account
   end
 
-  def invited_linked_account
+  def existing_linked_account
     user = linked_user
     return if user.blank?
 
     user.account_users
         .human
-        .where.not(inviter_id: nil)
         .includes(:account)
         .order(Arel.sql('active_at DESC NULLS LAST'), created_at: :desc, id: :desc)
         .first
