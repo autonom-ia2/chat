@@ -19,11 +19,12 @@ class Crm::Ai::InteractiveOperation
     when 'copilot_run', 'copilot_chat' then authorize_copilot!
     when 'agent_test', 'agent_suggest' then authorize_agent!
     when 'email_rewrite' then authorize_email!
+    when 'stage_criteria' then authorize_pipeline!
     else raise ArgumentError, 'unknown_interactive_operation'
     end
   end
 
-  def perform
+  def perform # rubocop:disable Metrics/CyclomaticComplexity
     case @data.fetch('operation')
     when 'meeting_times', 'meeting_invite', 'meeting_summary' then meeting_result
     when 'card_summary' then card_summary
@@ -33,6 +34,7 @@ class Crm::Ai::InteractiveOperation
     when 'copilot_run', 'copilot_chat' then copilot_result
     when 'agent_test', 'agent_suggest' then playground_result
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
+    when 'stage_criteria' then Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id)).perform
     end
   end
 
@@ -65,6 +67,16 @@ class Crm::Ai::InteractiveOperation
     raise Pundit::NotAuthorizedError unless enabled
 
     authorize_conversation!(conversation)
+  end
+
+  def pipeline
+    @pipeline ||= @account.crm_pipelines.find(@inputs.fetch(:pipeline_id))
+  end
+
+  def authorize_pipeline!
+    raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
+
+    Pundit.authorize(@context, pipeline, :manage_ai?)
   end
 
   def authorize_email!
