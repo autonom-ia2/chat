@@ -327,14 +327,18 @@ const setCanvasPreview = async (fullView, fitToView = true) => {
     frame.set({ width: savedCanvasView.width, height: savedCanvasView.height });
     canvas.setZoom(savedCanvasView.zoom);
     canvas.setCoords(savedCanvasView.x, savedCanvasView.y);
-    const { scrollX, scrollY } = savedCanvasView;
+    const { scrollX, scrollY, viewportHeight } = savedCanvasView;
     savedCanvasView = null;
-    await new Promise(resolve => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-    if (generation === previewGeneration && ed === editor.value) {
+    // Restoring scroll while the frame is shrinking clamps it to the old
+    // viewport. Restore after resize until the original viewport is reached.
+    previewBodyObserver = new ResizeObserver(() => {
+      if (generation !== previewGeneration || ed !== editor.value) return;
       frameWindow.scrollTo(scrollX, scrollY);
-    }
+      if (frameWindow.innerHeight <= viewportHeight) {
+        previewBodyObserver.disconnect();
+      }
+    });
+    previewBodyObserver.observe(canvas.getFrameEl());
     return;
   }
   if (!savedCanvasView) {
@@ -345,23 +349,34 @@ const setCanvasPreview = async (fullView, fitToView = true) => {
       ...canvas.getCoords(),
       scrollX: frameWindow.scrollX,
       scrollY: frameWindow.scrollY,
+      viewportHeight: frameWindow.innerHeight,
     };
     ed.runCommand('preview');
   }
   const width = PREVIEW_WIDTH[device.value];
-  frame.set({ width, height: fitToView ? 'auto' : '' });
+  frame.set({ width, height: '' });
   canvas.setCoords(0, 0);
   frameWindow.scrollTo(0, 0);
   await new Promise(resolve => {
     requestAnimationFrame(() => requestAnimationFrame(resolve));
   });
   if (generation !== previewGeneration || ed !== editor.value) return;
-  const body = canvas.getBody();
+  // MJML wrappers have min-height: 100vh. Observing/auto-sizing them feeds the
+  // iframe height back into itself; measure the rendered email inside instead.
+  const content = canvas
+    .getBody()
+    .querySelector('[data-gjs-type="mj-body"]').firstElementChild;
   const updateZoom = () => {
     if (generation !== previewGeneration || ed !== editor.value) return;
     if (fitToView) {
+      const height = Math.ceil(
+        content.getBoundingClientRect().bottom +
+          frameWindow.scrollY +
+          PREVIEW_GUTTER / 2
+      );
+      frame.set({ height });
       canvas.fitViewport({
-        el: body,
+        el: content,
         gap: PREVIEW_GUTTER / 2,
         zoom: zoom => Math.min(100, zoom),
       });
@@ -372,7 +387,7 @@ const setCanvasPreview = async (fullView, fitToView = true) => {
   updateZoom();
   if (fitToView) {
     previewBodyObserver = new ResizeObserver(updateZoom);
-    previewBodyObserver.observe(body);
+    previewBodyObserver.observe(content);
   }
 };
 

@@ -65,6 +65,7 @@ const {
   selectedType,
   setSelectedText,
   adjustCanvasScroll,
+  setCanvasPreview,
 } = useEmailEditor();
 
 const placeholders = ref([]);
@@ -431,6 +432,9 @@ const toggleFullView = () => {
     return;
   }
   adjustingScroll = true;
+  // Save the canvas position before the full-view layout resizes its iframe.
+  // The post-layout watcher then completes the preview with the new viewport.
+  if (!fullView.value) setCanvasPreview(true);
   fullView.value = !fullView.value;
   fitToView.value = true;
   showPersonalize.value = false;
