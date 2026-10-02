@@ -67,9 +67,14 @@ Revalidar imagem, instâncias/targets, ausência de outro deploy e main imediata
 
 ## Definição e preparação do piloto
 
-Instalação, ACCOUNT_ID e INBOX_ID ainda aguardam a escolha de Rodrigo. Não adivinhar IDs nem ampliar o
-filtro para compensar `total=0`. O rake roda no container da aplicação que possui o banco daquela instalação.
-Nenhum dry-run produtivo foi executado nesta preparação.
+Rodrigo selecionou a caixa piloto Hub2You pela URL da captura enviada em 2026-10-02. IDs específicos
+ficam no registro operacional privado `.codex/waha-final-validation/pilot-selection.json`, fora do Git.
+GETs WAHA em 2026-10-02 15:47:39 BRT confirmaram um único Chatwoot para o alvo, habilitado, instalação
+e identidade de sessão correspondentes, lista/GET individual iguais e sessão WORKING. Não há resolver
+brazilian-phone-numbers nessa sessão. Nenhuma mensagem/configuração completa/credencial foi publicada.
+Essa conferência não prova o vínculo/trava local: a validação R2 deve ser feita no dry-run após deploy.
+O rake roda na instalação selecionada, com ACCOUNT_ID e INBOX_ID juntos; não ampliar filtro se total=0.
+Nenhum dry-run produtivo ou APPLY foi executado. A escolha da caixa não autoriza merge/deploy/backfill.
 
 Antes da aplicação autorizada:
 

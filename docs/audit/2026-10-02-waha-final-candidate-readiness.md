@@ -57,7 +57,7 @@ pnpm central:check
 - Guia build/check: saída 0, 174 fluxos, 171 telas, zero telas sem explicação; quatro explicações sem rota
   já informadas pelo build. Regeneração não produziu delta adicional.
 - Central check: saída 0, 175 artigos e 171 telas cobertas. Avisos de evidências/linhas permanecem explícitos;
-  não se reescreveram artigos fora do escopo. A trava do PR ainda precisa concluir no SHA publicado.
+  não se reescreveram artigos fora do escopo. As travas remotas foram confirmadas no SHA publicado conforme o registro abaixo.
 - Primeiro comando do Guia pegou pnpm 11 do runtime genérico e não executou o build por incompatibilidade;
   repetição com PATH do projeto (Node 24/pnpm 10.2) passou. Não se atualizou tooling global nem manifest.
 
@@ -101,8 +101,13 @@ Rollback de aplicação é um degrau, com imagem ativa atual como retorno do pr�
 dados/configuração do backfill. Restaurar backfill exige snapshot privado e comparação com o estado atual,
 sem PUT cego nem sobrescrita de intervenções posteriores. Procedimentos e parada estão no plano.
 
-**Fechamento técnico local aprovado; operação ainda não autorizada.** Restam checks remotos no SHA do PR,
-escolha de instalação/ACCOUNT_ID/INBOX_ID, janela sem escritores, snapshot privado e responsável pelo piloto.
+**Fechamento técnico aprovado; operação ainda não autorizada.** Candidato b13dcfaed875 foi enviado, hooks
+normais aprovados, patch commitado idêntico ao revisado (SHA-256
+`fa58a2e4187346088da212b5f45a3eae01436d91cac4ab70cc7057e413fbb0ba`); worktree limpo.
+PR #853 mergeable/draft; Guia/traduções/escopo concluídos sem falha. Jobs de email dispensados por escopo;
+bateria Ruby/frontend completa executada localmente, sem atribuir sua execução ao CI remoto.
+Rodrigo definiu o piloto Hub2You; IDs guardados privadamente e vínculo remoto/WORKING confirmados por GET.
+Ainda faltam janela sem escritores, snapshot privado imediatamente antes de APPLY e responsável pelo piloto.
 Depois: aprovação explícita de merge/deploy, lote exclusivo e conferência de runtime; dry-run total=1;
 aprovação separada de APPLY e oito aceites reais antes de expansão. Nenhum dry-run produtivo foi realizado.
 Não afirmar que snapshot privado, janela ou piloto estão prontos enquanto não forem definidos.
