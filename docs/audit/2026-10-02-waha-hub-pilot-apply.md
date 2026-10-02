@@ -2,7 +2,7 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/865.
 Continuação de [publicação do lote4](2026-10-02-waha-lote4-publication.md).
-Estado: **APPLY unitário confirmado; aceites E2E e expansão pendentes**.
+Estado: **APPLY, mensagens e reabertura confirmados; fechamento do novo ciclo e expansão pendentes**.
 
 ## Autorização e escopo
 
@@ -86,3 +86,20 @@ integral de duplicação/reenvio. Não fechar esse aceite só por essa consulta.
 com variações 8/9 dígitos. Faltam envio pela plataforma, ciclo novo de resolver/reabrir/resolver e
 convergência de número em contato controlado; esses passos aproveitam o piloto existente sem repetir chegada.
 Nenhuma mensagem, resolução de conversa, configuração WAHA ou banco produtivo foi alterado nesta conferência.
+
+## Conferência após os testes informados por Rodrigo
+
+Rodrigo confirmou explicitamente que os três testes manuais passaram: chegada uma única vez,
+reabertura da mesma conversa e convergência do contato com/sem nono dígito. Esses resultados manuais
+não são apresentados como uma deduplicação por source_id observada no banco.
+
+SSM somente leitura f4ccf98b-a209-47f1-9d66-7fa402125df7, Success/0, 20:03:43–20:03:55 UTC:
+sessão WORKING e plano sem alterações. Dois envios públicos originados pela plataforma com status delivered,
+nenhuma saída privada. Eventos mostram resolução seguida de abertura quatro segundos depois,
+na mesma conversa e com somente uma conversa para aquele contato na Inbox.
+
+A primeira resolução ainda corresponde ao ciclo legado sem marcador. A abertura posterior inicia
+um novo atendimento, mas a conversa de teste permanece open e não há segunda resolução registrada.
+Solicitado somente esse encerramento final para confirmar a duração do novo ciclo; não repetir mensagens
+ou variantes já aceitas. Aceite de N2 em produção permanece pendente dessa evidência específica.
+Sem nova escrita na produção, configuração WAHA, envio, QR, pareamento, merge/deploy ou expansão.
