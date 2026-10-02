@@ -22,6 +22,18 @@ RSpec.describe Waha::InboxProvisioner do
       allow(client).to receive(:delete_session)
     end
 
+    it 'creates the WAHA inbox locked to a single conversation' do
+      result = described_class.new(
+        account: account,
+        phone: '5511999999999',
+        api_access_token: 'account-token',
+        client: client,
+        config: config
+      ).perform
+
+      expect(result.inbox.lock_to_single_conversation).to be(true)
+    end
+
     it 'creates the WAHA Chatwoot app with groups disabled' do
       described_class.new(
         account: account,

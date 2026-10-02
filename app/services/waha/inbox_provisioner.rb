@@ -67,7 +67,11 @@ module Waha
           'whatsapp_api_provider' => Channel::Api::WHATSAPP_API_CAMPAIGN_PROVIDER
         }
       )
-      @account.inboxes.create!(name: inbox_display_name, channel: channel)
+      @account.inboxes.create!(
+        name: inbox_display_name,
+        channel: channel,
+        lock_to_single_conversation: true
+      )
     end
 
     # IA: nome = telefone (automação depende). Humano: nome livre, telefone na sessão.

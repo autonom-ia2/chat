@@ -62,6 +62,39 @@ describe ReportingEventListener do
       expect(reporting_event.event_end_time).to be_within(1.second).of(resolved_at)
     end
 
+    it 'measures a reopened conversation from the current service cycle' do
+      first_resolved_at = 2.days.ago
+      reopened_at = 30.minutes.ago
+      resolved_again_at = Time.current
+
+      create(:reporting_event,
+             name: 'conversation_resolved',
+             account_id: account.id,
+             inbox_id: inbox.id,
+             conversation_id: conversation.id,
+             user_id: user.id,
+             value: 1200,
+             event_start_time: conversation.created_at,
+             event_end_time: first_resolved_at)
+      create(:reporting_event,
+             name: 'conversation_opened',
+             account_id: account.id,
+             inbox_id: inbox.id,
+             conversation_id: conversation.id,
+             user_id: user.id,
+             value: 3600,
+             event_start_time: first_resolved_at,
+             event_end_time: reopened_at)
+
+      listener.conversation_resolved(
+        Events::Base.new('conversation.resolved', resolved_again_at, conversation: conversation)
+      )
+
+      reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+      expect(reporting_event.value).to be_within(1).of(30.minutes.to_i)
+      expect(reporting_event.event_start_time).to be_within(1.second).of(reopened_at)
+    end
+
     describe 'conversation_bot_resolved' do
       # create an agent bot
       let!(:agent_bot_inbox) { create(:inbox, account: account) }
