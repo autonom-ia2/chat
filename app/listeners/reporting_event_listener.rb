@@ -4,18 +4,18 @@ class ReportingEventListener < BaseListener
   def conversation_resolved(event)
     conversation = extract_conversation_and_account(event)[0]
     event_end_time = event.timestamp
-    time_to_resolve = event_end_time.to_i - conversation.created_at.to_i
+    event_start_time = resolution_cycle_start_time(conversation, event)
+    time_to_resolve = event_end_time.to_i - event_start_time.to_i
 
     reporting_event = ReportingEvent.new(
       name: 'conversation_resolved',
       value: time_to_resolve,
-      value_in_business_hours: business_hours(conversation.inbox, conversation.created_at,
-                                              event_end_time),
+      value_in_business_hours: business_hours(conversation.inbox, event_start_time, event_end_time),
       account_id: conversation.account_id,
       inbox_id: conversation.inbox_id,
       user_id: conversation.assignee_id,
       conversation_id: conversation.id,
-      event_start_time: conversation.created_at,
+      event_start_time: event_start_time,
       event_end_time: event_end_time
     )
 
@@ -124,6 +124,13 @@ class ReportingEventListener < BaseListener
   end
 
   private
+
+  def resolution_cycle_start_time(conversation, event)
+    return conversation.created_at unless conversation.waha_single_conversation?
+
+    # Events queued before this version have no cycle snapshot and retain their legacy calculation.
+    event.data.fetch(:resolution_cycle_started_at, conversation.created_at)
+  end
 
   def create_conversation_opened_event(conversation, time_since_resolved, business_hours_value, start_time, event_end_time)
     reporting_event = ReportingEvent.new(
