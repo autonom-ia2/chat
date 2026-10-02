@@ -1,12 +1,12 @@
-# CRM — telas reais para aprovação
+# CRM — telas reais aprovadas
 
 25 capturas do produto real, executado localmente em `http://127.0.0.1:3835/app/accounts/1/crm`. Dados fictícios. A tela de Conversas usa um resumo fictício pré-carregado; nenhum modelo foi chamado. Handoff e automações são apresentados também em estados de edição não salvos.
 
-Rodrigo autorizou merge e deploy após a conferência do botão Criar funil sem contorno nos temas claro e escuro. O status de release consta na PR e no registro de auditoria.
+Rodrigo autorizou merge e deploy após a conferência do botão Criar funil sem contorno nos temas claro e escuro. Release eda6f1f22f publicada com sucesso em Hub2You e Autonomia pela PR #837; as evidências constam no registro de auditoria.
 
 ## 1. Kanban — desktop
 
-![Kanban — desktop](kanban-desktop.png)
+![Kanban — desktop, ajuste final sem borda](kanban-create-borderless-light.png)
 
 ## 2. Lista
 
