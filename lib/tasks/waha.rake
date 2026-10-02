@@ -1,5 +1,5 @@
 namespace :waha do
-  desc 'Backfill existing WAHA inboxes for Chatwoot sync options. DRY_RUN by default; APPLY=true to write.'
+  desc 'Backfill existing WAHA inboxes for Chatwoot sync and Brazilian number resolution. DRY_RUN by default.'
   task backfill_existing_inboxes: :environment do
     apply = ActiveModel::Type::Boolean.new.cast(ENV.fetch('APPLY', nil)) || false
     account_id = ENV['ACCOUNT_ID'].presence&.to_i

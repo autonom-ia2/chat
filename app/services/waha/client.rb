@@ -14,12 +14,18 @@ module Waha
     end
 
     # ---- SESSÕES ----
-    def create_session(name, start: true, config: {})
-      post('/api/sessions', { name: name, start: start, config: config })
+    def create_session(name, start: true, config: {}, apps: nil)
+      payload = { name: name, start: start, config: config }
+      payload[:apps] = apps if apps.present?
+      post('/api/sessions', payload)
     end
 
     def get_session(name)
       get("/api/sessions/#{name}")
+    end
+
+    def update_session(name, config:, apps:)
+      put("/api/sessions/#{name}", { config: config, apps: apps })
     end
 
     def list_sessions(all: true)
