@@ -52,7 +52,7 @@ A API foi primeiro exercitada sem a nova rota para registrar a ausência do comp
 
 ### Prova de concorrência e atomicidade
 
-Script versionado: `script/crm_contact_creation_probe.rb`. Não participa automaticamente da suíte: exige banco scratch vazio com o nome exato e Redis exclusivos; recusa outra configuração antes de carregar Rails.
+Script versionado: `spec/probes/crm_contact_creation_probe.rb`. Não participa automaticamente da suíte: exige banco scratch vazio com o nome exato e Redis exclusivos; recusa outra configuração antes de carregar Rails.
 
 1. Duas requisições HTTP simultâneas, mesma chave e mesmo card: respostas 201/201, uma com `Idempotency-Replayed`; delta de 1 contato, 0 cards, 1 atividade, 1 chave.
 2. Duas requisições simultâneas, chaves diferentes e mesmo card: respostas 201/422; mesmo delta, sem pessoa extra nem claim abandonado.
@@ -78,7 +78,7 @@ bash .codex/792/test.sh rspec \
   --seed 793 --format progress --format json --out .codex/792/part2-final.json
 ```
 
-A prova exige `RAILS_ENV=test`, `DATABASE_URL=postgresql://postgres@127.0.0.1:5432/chat2you_792_probe_test` e `REDIS_URL=redis://127.0.0.1:6792/1`, além das dependências de teste do lockfile. O wrapper `.codex/792/probe.sh` usa essas variáveis e `bundle exec`. Carregar o schema somente num banco scratch novo/vazio e executar `bash .codex/792/probe.sh ruby script/crm_contact_creation_probe.rb`. Para repetir, reconstruir SOMENTE esse banco de prova; nunca usar uma base compartilhada/produção. O script não faz limpeza automática de bancos arbitrários.
+A prova exige `RAILS_ENV=test`, `DATABASE_URL=postgresql://postgres@127.0.0.1:5432/chat2you_792_probe_test` e `REDIS_URL=redis://127.0.0.1:6792/1`, além das dependências de teste do lockfile. O wrapper `.codex/792/probe.sh` usa essas variáveis e `bundle exec`. Carregar o schema somente num banco scratch novo/vazio e executar `bash .codex/792/probe.sh ruby spec/probes/crm_contact_creation_probe.rb`. Para repetir, reconstruir SOMENTE esse banco de prova; nunca usar uma base compartilhada/produção. O script não faz limpeza automática de bancos arbitrários.
 
 Logs/JSON locais: `part2-baseline.*`, `part2-red.log`, `part2-api.*`, `part2-regression.*`, `part2-final.*`, `part2-probe-final.log` e logs de lint. Os dois bancos de teste são separados; reconstruir o banco de prova não afetou o da bateria.
 

@@ -14,7 +14,7 @@ class Api::V1::Accounts::Crm::ProfileOpportunitiesController < Api::V1::Accounts
     rows = cards.reorder(updated_at: :desc, id: :desc).offset((@page - 1) * RESULTS_PER_PAGE).limit(RESULTS_PER_PAGE).preload(*associations)
     payload = rows.map do |card|
       row = card_payload(card)
-      row[:contact] = card.contact.slice(:id, :name) if include_contact
+      row[:contact] = card.contact&.slice(:id, :name) if include_contact
       row
     end
     render json: { payload: payload, meta: { total_count: total, page: @page, per_page: RESULTS_PER_PAGE,

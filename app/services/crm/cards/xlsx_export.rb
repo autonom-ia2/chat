@@ -149,10 +149,7 @@ class Crm::Cards::XlsxExport
 
   def relation_text(column, card, payload)
     case column
-    when :company
-      return payload.dig(:company, :name) if card.metadata.to_h.dig('autonomia_prospecting', 'company', 'id').present?
-
-      payload.dig(:company, :name) || payload.dig(:contact, :additional_attributes, 'company_name')
+    when :company then payload.dig(:company, :name)
     when :responsible then payload.dig(:responsible, :name)
     when :labels then (Array(payload[:labels]) | Array(payload[:contact_labels])).join(', ').presence
     when :campaign then campaign_text(payload)

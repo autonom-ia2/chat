@@ -66,6 +66,43 @@ RSpec.describe 'Company opportunities from linked contacts', type: :request do
     expect(card.reload.attributes).to eq(snapshot)
   end
 
+  # Same rule as board, list, filter and export (Crm::Cards::CompanyFilters).
+  it 'lists a prospected business under its prospecting company, not under the contact company' do
+    business = account.companies.create!(name: 'Business company')
+    prospected = account.crm_cards.create!(
+      attributes.merge(title: 'Prospected', metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => business.id } } })
+    )
+    without_contact = account.crm_cards.create!(
+      attributes.merge(title: 'No contact', contact: nil,
+                       metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => business.id.to_s } } })
+    )
+    regular = account.crm_cards.create!(attributes)
+
+    get url, headers: headers
+    expect(response.parsed_body.fetch('payload').pluck('id')).to eq([regular.id])
+
+    get "/api/v1/accounts/#{account.id}/crm/companies/#{business.id}/opportunities", headers: headers
+    expect(response).to have_http_status(:ok)
+    payload = response.parsed_body.fetch('payload')
+    expect(payload.pluck('id')).to contain_exactly(prospected.id, without_contact.id)
+    expect(payload.find { |row| row['id'] == without_contact.id }['contact']).to be_nil
+  end
+
+  it 'never resolves a prospecting company from another account nor falls back to the contact company' do
+    foreign = create(:company, name: 'Foreign company')
+    card = account.crm_cards.create!(
+      attributes.merge(metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => foreign.id } } })
+    )
+    expect(foreign.account_id).not_to eq(account.id)
+
+    get url, headers: headers
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.fetch('payload')).to eq([])
+    get "/api/v1/accounts/#{account.id}/crm/companies/#{foreign.id}/opportunities", headers: headers
+    expect(response).to have_http_status(:not_found)
+    expect(response.body).not_to include(card.title, foreign.name)
+  end
+
   it 'excludes archived by default and applies each requested status' do
     %w[open won lost archived].each { |status| account.crm_cards.create!(attributes.merge(status: status, contact: second_person)) }
     get url, headers: headers

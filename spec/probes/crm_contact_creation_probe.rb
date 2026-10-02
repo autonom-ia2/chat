@@ -9,7 +9,7 @@ abort 'Explicit scratch test environment required' unless ENV['RAILS_ENV'] == 't
                                                           %w[localhost 127.0.0.1].include?(url.host) &&
                                                           url.path == '/chat2you_792_probe_test'
 abort 'Dedicated loopback Redis required' unless ENV['REDIS_URL'] == 'redis://127.0.0.1:6792/1'
-$LOAD_PATH.unshift(File.expand_path('../spec', __dir__))
+$LOAD_PATH.unshift(File.expand_path('..', __dir__))
 require 'rails_helper'
 
 config = ActiveRecord::Base.connection_db_config

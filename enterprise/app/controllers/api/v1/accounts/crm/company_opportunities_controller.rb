@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Crm::CompanyOpportunitiesController < Api::V1::Accounts::Crm::ProfileOpportunitiesController
+  include ::Crm::Cards::CompanyFilters
+
   before_action :ensure_companies_enabled!
 
   def index
@@ -7,10 +9,11 @@ class Api::V1::Accounts::Crm::CompanyOpportunitiesController < Api::V1::Accounts
 
     company = Current.account.companies.find(@record_id)
     authorize company, :show?
-    # The current canonical association is authoritative, never company_name,
-    # matching email domains or a historical snapshot in the opportunity.
-    contacts = Current.account.contacts.where(company_id: company.id).select(:id)
-    cards = policy_scope(::Crm::Card).where(account_id: Current.account.id, contact_id: contacts)
+    # Same company rule as the board, list, filter and export: the opportunity's
+    # prospecting company (same account) wins, otherwise the contact's canonical
+    # company. Never company_name text or matching email domains.
+    cards = policy_scope(::Crm::Card).where(account_id: Current.account.id)
+                                     .where(resolved_company_match_sql, company.id, company.id)
     render_opportunities(cards, include_contact: true)
   end
 

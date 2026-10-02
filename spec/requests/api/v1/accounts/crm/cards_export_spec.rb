@@ -38,7 +38,7 @@ RSpec.describe 'CRM cards export', type: :request do
 
     before do
       contact = account.contacts.create!(name: 'Maria Lead', phone_number: '+5511987654321', email: 'maria@lead.test',
-                                         additional_attributes: { 'company_name' => 'Acme' })
+                                         company: Company.create!(account: account, name: 'Acme'))
       atributos = { contact: contact, value_cents: 150_050, priority: :high, owner: admin }
       card!(account, pipeline, pipeline.stages.first, 'Seguro auto', **atributos)
     end
@@ -107,6 +107,19 @@ RSpec.describe 'CRM cards export', type: :request do
           metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => foreign_company.id } } })
 
     exportar(account, admin, pipeline_id: pipeline.id, company_id: 'none')
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to be_nil
+  end
+
+  # Exportação = Lista: sem empresa resolvida a célula fica vazia, nunca o texto legado do contato.
+  it 'does not export the legacy company_name text when no company is resolved' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    contact = account.contacts.create!(name: 'Legacy contact', additional_attributes: { 'company_name' => 'Legacy text' })
+    card!(account, pipeline, stage, 'Legacy', contact: contact)
+
+    exportar(account, admin, pipeline_id: pipeline.id)
 
     expect(response).to have_http_status(:ok)
     expect(planilha.cell(primeira, 11)).to be_nil
