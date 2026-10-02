@@ -1,0 +1,142 @@
+{
+  "engine": "chromium",
+  "checks": [
+    {
+      "name": "Reference borders visible on the trigger, step controls and all presets",
+      "status": "passed"
+    },
+    {
+      "name": "Authenticated real application and synthetic CRM fixtures",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 80%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 80%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 90%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 90%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 110%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 110%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 120%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 120%",
+      "status": "passed"
+    },
+    {
+      "name": "Layout, exact zoom, presets, no CRM requests and both scroll axes at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to adjacent stage and persisted server destination at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "Inclusive 70/130 limits and disabled controls",
+      "status": "passed"
+    },
+    {
+      "name": "Real touch preview geometry, finger tracking, drop and persistence at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Real touch preview geometry, finger tracking, drop and persistence at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Real touch preview geometry, finger tracking, drop and persistence at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Real touch preview geometry, finger tracking, drop and persistence at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Real touch preview geometry, finger tracking, drop and persistence at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "87% restored on reload and through Lista/Calendário without scaling either view",
+      "status": "passed"
+    },
+    {
+      "name": "Same exact preference across funnels",
+      "status": "passed"
+    },
+    {
+      "name": "Account preference isolation and restored original account",
+      "status": "passed"
+    },
+    {
+      "name": "Keyboard increment, Escape, restored focus and outside click",
+      "status": "passed"
+    },
+    {
+      "name": "Responsive toolbar and usable popover at 1366×768",
+      "status": "passed"
+    },
+    {
+      "name": "Responsive toolbar and usable popover at 1024×768",
+      "status": "passed"
+    },
+    {
+      "name": "Responsive toolbar and usable popover at 390×844",
+      "status": "passed"
+    },
+    {
+      "name": "No browser runtime errors",
+      "status": "passed"
+    }
+  ],
+  "errors": []
+}
