@@ -28,16 +28,19 @@ Achados e decisão: [revisão independente](2026-10-02-waha-independent-release-
   detectados por `git diff --check`. Nenhuma alteração funcional adicional; a origem permanece intacta.
 - Nenhuma migration, alteração de UI, dependência versionada ou workflow faz parte deste candidato.
 
-Há outro lote aberto, `release/2026-10-02-lote3`, com o zoom do Kanban (PR de lote #847;
-PR #840 já integrado nesse lote). Ele foi preservado. Este candidato não abre um segundo lote operacional
+No início desta preparação havia outro lote aberto, `release/2026-10-02-lote3`, com o zoom do Kanban
+(PR de lote #847; PR #840 já integrado nesse lote). Ele foi preservado. Durante a preparação, outra operação
+integrou #847 na `main`: `ab84a219bdd30f287ed0011ed61d62ec43f1fab4`, em 2026-10-02 16:41:32 UTC.
+Na consulta de 16:42 UTC, seus deploys estavam `in_progress` (Hub2You `37035643106`, Autonom.ia `37035642988`).
+Nenhuma dessas ações foi executada por esta preparação WAHA. O candidato não abre um segundo lote operacional
 e não será integrado ao lote do Kanban. A política permite um lote aberto por vez e exige validação do
-anterior antes do próximo. Após o fechamento e a aceitação do lote anterior, conferir a nova `main`, montar
+anterior antes do próximo. Após o deploy e a aceitação do lote anterior, conferir a nova `main`, montar
 o lote exclusivo do WAHA e repetir a união dos testes sobre sua árvore final. Os resultados deste candidato
 não certificam uma base que tenha mudado posteriormente.
 
 ## Conferência operacional somente leitura
 
-Em 2026-10-02, os últimos deploys bem-sucedidos consultados no GitHub apontaram
+Na primeira consulta de 2026-10-02, os últimos deploys bem-sucedidos no GitHub apontaram
 `eda6f1f22fd5e90573f3cd6b10b06b10c9d0fe6b`:
 
 - Hub2You: run `36992660196`.

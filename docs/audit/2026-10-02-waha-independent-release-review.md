@@ -179,8 +179,17 @@ informadas pelo build. A geração não produziu delta adicional. Central: saíd
 RuboCop de todos os `.rb`/`.rake` do delta: **19 files inspected, no offenses detected**, saída 0.
 O delta não inclui JS/Vue, portanto o lint frontend restrito a arquivos tocados não tem entrada.
 `git diff --check` e `git diff --cached --check` passaram; o único whitespace corrigido é a linha Data do handoff copiado.
-Hooks normais e integridade do patch serão conferidos no commit do candidato. O commit não altera código
-funcional em relação à origem e não fecha os achados. SHA e push são verificações Git posteriores ao relatório.
+Commit do candidato: `0605e7671a4c1605f871ef5f10ec43cb37db1a5f`, com hooks normais aprovados.
+O patch commitado coincidiu byte a byte com o revisado; o hook não reescreveu arquivos.
+SHA-256 do patch: `2d6126ec7e6113f22df59c399b6a169cd41ec32f45e8fb25a8257ca4fdfb0b42`.
+Push confirmado por `git ls-remote`; PR draft https://github.com/autonom-ia2/chat/pull/848.
+Não houve alteração funcional em relação à origem e nenhum achado foi fechado.
+
+Durante a preparação, a `main` avançou pelo merge do lote Kanban #847 para
+`ab84a219bdd30f287ed0011ed61d62ec43f1fab4`. Na consulta de 2026-10-02 16:42 UTC, ambos os deploys
+estavam em andamento. O candidato validado continua baseado em `43901a40c2`; não foi feito rebase,
+merge ou deploy nesta tarefa. Os resultados acima não certificam a nova base. A montagem do lote WAHA
+precisa aguardar a aceitação do anterior e repetir a bateria na árvore final.
 
 ## Decisão
 
