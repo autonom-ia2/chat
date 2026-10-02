@@ -2074,7 +2074,7 @@ onUnmounted(() => {
             icon="i-lucide-plus"
             blue
             outline
-            class="!rounded-lg min-h-11 !border !border-solid !border-n-weak !font-bold !outline-transparent bg-n-surface-1 focus-visible:ring-2 focus-visible:ring-n-brand"
+            class="!rounded-lg min-h-11 !border-0 !px-[1.0625rem] !font-bold !outline-none !bg-transparent focus-visible:ring-2 focus-visible:ring-n-brand"
             :disabled="isLoading"
             @click="openCreatePipelineDrawer"
           />

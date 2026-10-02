@@ -1,8 +1,8 @@
 # CRM — telas reais para aprovação
 
-23 capturas do produto real, executado localmente em `http://127.0.0.1:3835/app/accounts/1/crm`. Dados fictícios. A tela de Conversas usa um resumo fictício pré-carregado; nenhum modelo foi chamado. Handoff e automações são apresentados também em estados de edição não salvos.
+25 capturas do produto real, executado localmente em `http://127.0.0.1:3835/app/accounts/1/crm`. Dados fictícios. A tela de Conversas usa um resumo fictício pré-carregado; nenhum modelo foi chamado. Handoff e automações são apresentados também em estados de edição não salvos.
 
-Merge e deploy aguardam aprovação.
+Rodrigo autorizou merge e deploy após a conferência do botão Criar funil sem contorno nos temas claro e escuro. O status de release consta na PR e no registro de auditoria.
 
 ## 1. Kanban — desktop
 
@@ -95,3 +95,11 @@ Merge e deploy aguardam aprovação.
 ## 23. Acabamento final do card
 
 ![Cantos arredondados e elevação suave](card-rounded-detail.png)
+
+## 24. Criar funil sem contorno — tema claro
+
+![Tema claro](kanban-create-borderless-light.png)
+
+## 25. Criar funil sem contorno — tema escuro
+
+![Tema escuro](kanban-create-borderless-dark.png)
