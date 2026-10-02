@@ -137,6 +137,7 @@ const relationshipLinking = computed(
 );
 const discardDialog = ref(null);
 const discardOpen = ref(false);
+const discardDescription = ref('');
 let discardAction = null;
 const relationshipLabel = key => t(`CRM_KANBAN.RELATIONSHIP.${key}`);
 const followUpForm = reactive({
@@ -152,6 +153,9 @@ const followUpForm = reactive({
   templateNamespace: '',
 });
 const followUpDraftSnapshot = ref('');
+const followUpDraftDirty = computed(
+  () => JSON.stringify({ ...followUpForm }) !== followUpDraftSnapshot.value
+);
 const newFollowUpOpen = ref(false);
 const followUpMessagingWindow = ref(null);
 const isLoadingMessagingWindow = ref(false);
@@ -600,13 +604,11 @@ watch(
     if (!props.show) return;
     const sameCard = previous?.[0] && props.card?.id === previous[1]?.id;
     const tab = activeTab.value;
-    const followUpDraftDirty =
-      JSON.stringify({ ...followUpForm }) !== followUpDraftSnapshot.value;
     if (
       sameCard &&
       (isEditingContact.value ||
         JSON.stringify({ ...form }) !== formSnapshot.value ||
-        followUpDraftDirty)
+        followUpDraftDirty.value)
     ) {
       if (!isEditingContact.value) hydrateContactForm(props.card);
       return;
@@ -735,6 +737,10 @@ const persistContactIfChanged = async () => {
   await ContactAPI.update(contactEditId.value, buildContactPayload());
 };
 
+const relationshipDiscardHelp = () =>
+  isEditing.value
+    ? relationshipLabel('DISCARD_HELP')
+    : t('CRM_KANBAN.OPPORTUNITY.DISCARD_HELP');
 const discardRelationship = () => {
   isEditingContact.value = false;
   contactError.value = '';
@@ -742,7 +748,10 @@ const discardRelationship = () => {
     Object.assign(contactForm, JSON.parse(contactSnapshot.value));
   relationshipPanel.value?.reset();
 };
-const guardRelationship = action => {
+// `leaving`: the action takes the user out of the drawer (close, open the
+// conversation). Only then do the commercial and follow-up drafts — which
+// survive tab switches — need the discard prompt.
+const guardRelationship = (action, { leaving = false } = {}) => {
   if (
     props.isSaving ||
     creationForm.value?.sending ||
@@ -750,12 +759,19 @@ const guardRelationship = action => {
     relationshipPanel.value?.saving
   )
     return;
-  if (
+  const relationshipDirty =
     (isEditingContact.value && contactDirty.value) ||
     relationshipPanel.value?.dirty ||
-    (!isEditing.value && creationForm.value?.dirty)
-  ) {
+    (!isEditing.value && creationForm.value?.dirty);
+  const draftDirty =
+    leaving &&
+    ((isEditing.value && JSON.stringify({ ...form }) !== formSnapshot.value) ||
+      followUpDraftDirty.value);
+  if (relationshipDirty || draftDirty) {
     discardAction = action;
+    discardDescription.value = relationshipDirty
+      ? relationshipDiscardHelp()
+      : '';
     discardOpen.value = true;
     discardDialog.value?.open();
     return;
@@ -763,6 +779,8 @@ const guardRelationship = action => {
   discardRelationship();
   action();
 };
+const closeDrawer = () =>
+  guardRelationship(() => emit('close'), { leaving: true });
 const moveTabFocus = event => {
   const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
   if (!keys.includes(event.key)) return;
@@ -925,13 +943,17 @@ const createFollowUp = () => {
 
 const openConversationByDisplayId = displayId => {
   if (!displayId) return;
-  router.push({
-    name: 'inbox_conversation',
-    params: {
-      accountId: route.params.accountId,
-      conversation_id: displayId,
-    },
-  });
+  guardRelationship(
+    () =>
+      router.push({
+        name: 'inbox_conversation',
+        params: {
+          accountId: route.params.accountId,
+          conversation_id: displayId,
+        },
+      }),
+    { leaving: true }
+  );
 };
 
 const openConversation = () => {
@@ -1191,14 +1213,6 @@ const activityLabelValue = (activity, key) => {
 const activityAttemptDetail = activity => {
   const attempts = Number(activity.payload?.attempts);
   if (!Number.isInteger(attempts) || attempts < 1) return '';
-
-  const total = Number(activity.payload?.max_attempts);
-  if (Number.isInteger(total) && total > 0) {
-    return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPT_OF', {
-      attempt: attempts,
-      total,
-    });
-  }
   return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPT', {
     attempt: attempts,
   });
@@ -1300,7 +1314,9 @@ const activityDetail = activity => {
       return title || activityAttemptDetail(activity);
     }
     case 'follow_up_message_failed':
-      return activityRetryDetail(activity);
+      return [activity.payload?.title, activityRetryDetail(activity)]
+        .filter(Boolean)
+        .join(' · ');
     case 'ai_followup_failed':
       return activityRetryDetail(activity);
     case 'ai_followup_sent':
@@ -1452,12 +1468,17 @@ const followUpAutomationLabel = followUp => {
 useKeyboardEvents({
   Escape: {
     action: () => {
+      if (showWinDialog.value || showLoseDialog.value) {
+        showWinDialog.value = false;
+        showLoseDialog.value = false;
+        return;
+      }
       if (
         props.show &&
         !discardOpen.value &&
         !document.querySelector('dialog[open]')
       )
-        guardRelationship(() => emit('close'));
+        closeDrawer();
     },
     allowOnFocusedInput: true,
   },
@@ -1473,11 +1494,7 @@ useFixedPanelPresence(computed(() => props.show));
     ref="discardDialog"
     type="alert"
     :title="relationshipLabel('DISCARD_TITLE')"
-    :description="
-      isEditing
-        ? relationshipLabel('DISCARD_HELP')
-        : t('CRM_KANBAN.OPPORTUNITY.DISCARD_HELP')
-    "
+    :description="discardDescription"
     :confirm-button-label="relationshipLabel('DISCARD')"
     :cancel-button-label="relationshipLabel('KEEP_EDITING')"
     @confirm="confirmDiscard"
@@ -1565,7 +1582,7 @@ useFixedPanelPresence(computed(() => props.show));
           sm
           :aria-label="t('GENERAL.CLOSE')"
           class="!text-n-slate-1 min-h-11 min-w-11"
-          @click="guardRelationship(() => $emit('close'))"
+          @click="closeDrawer"
         />
       </div>
 
@@ -2025,7 +2042,7 @@ useFixedPanelPresence(computed(() => props.show));
           </article>
 
           <div
-            v-if="linkedConversations.length === 0"
+            v-if="linkedConversations.length === 0 && !isLoadingDetails"
             class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
           >
             <p class="mb-1 text-sm font-medium text-n-slate-12">
@@ -2370,34 +2387,6 @@ useFixedPanelPresence(computed(() => props.show));
                 >
                   {{ followUp.description }}
                 </p>
-                <div
-                  v-if="
-                    canManageCards &&
-                    activeFollowUps.some(item => item.id === followUp.id)
-                  "
-                  class="flex justify-end gap-2"
-                >
-                  <Button
-                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
-                    icon="i-lucide-check"
-                    slate
-                    faded
-                    sm
-                    class="min-w-max"
-                    :is-loading="isSavingFollowUp"
-                    @click="completeFollowUp(followUp)"
-                  />
-                  <Button
-                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
-                    icon="i-lucide-x"
-                    ruby
-                    ghost
-                    sm
-                    class="min-w-max"
-                    :is-loading="isSavingFollowUp"
-                    @click="cancelFollowUp(followUp)"
-                  />
-                </div>
               </article>
             </div>
           </details>
@@ -2458,7 +2447,7 @@ useFixedPanelPresence(computed(() => props.show));
           </article>
 
           <div
-            v-if="activities.length === 0"
+            v-if="activities.length === 0 && !isLoadingDetails"
             class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
           >
             <p class="mb-1 text-sm font-medium text-n-slate-12">
@@ -2524,7 +2513,8 @@ useFixedPanelPresence(computed(() => props.show));
               guardRelationship(
                 isEditingContact || companyAction
                   ? discardRelationship
-                  : () => $emit('close')
+                  : () => $emit('close'),
+                { leaving: !isEditingContact && !companyAction }
               )
             "
           />

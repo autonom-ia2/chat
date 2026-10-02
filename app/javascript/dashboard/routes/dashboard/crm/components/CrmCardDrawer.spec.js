@@ -1,7 +1,14 @@
 import { ref } from 'vue';
 import ContactAPI from 'dashboard/api/contacts';
-import { mount } from '@vue/test-utils';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
+import { flushPromises, mount } from '@vue/test-utils';
 import CrmCardDrawer from './CrmCardDrawer.vue';
+
+const { keyboard, alertSpy, storeGetters } = vi.hoisted(() => ({
+  keyboard: { handlers: null },
+  alertSpy: vi.fn(),
+  storeGetters: {},
+}));
 const recordPermission = ref(true);
 vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
   useRelationshipPermissions: () => ({
@@ -17,7 +24,7 @@ beforeEach(() => {
 // fix changed (props.stages dropped from the reset watcher, props.card kept).
 vi.mock('vuex', async importOriginal => ({
   ...(await importOriginal()),
-  useStore: () => ({ getters: {}, dispatch: vi.fn() }),
+  useStore: () => ({ getters: storeGetters, dispatch: vi.fn() }),
 }));
 const navigate = vi.fn();
 vi.mock('vue-router', () => ({
@@ -25,10 +32,12 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: navigate }),
 }));
 vi.mock('dashboard/composables', () => ({
-  useAlert: () => () => {},
+  useAlert: alertSpy,
 }));
 vi.mock('dashboard/composables/useKeyboardEvents', () => ({
-  useKeyboardEvents: () => {},
+  useKeyboardEvents: handlers => {
+    keyboard.handlers = handlers;
+  },
 }));
 vi.mock('dashboard/api/contacts', () => ({
   default: {
@@ -594,4 +603,367 @@ it('never turns CRM card management into permission to edit the shared contact',
   wrapper.vm.onSubmit();
   expect(wrapper.emitted('save')).toHaveLength(1);
   wrapper.unmount();
+});
+
+describe('CrmCardDrawer follow-ups', () => {
+  const pending = {
+    id: 8,
+    title: 'Ligar amanhã',
+    status: 'pending',
+    due_at: '2026-11-15T12:00:00Z',
+  };
+  const overdue = {
+    id: 9,
+    title: 'Enviar proposta',
+    status: 'overdue',
+    due_at: '2026-11-10T12:00:00Z',
+  };
+  const done = {
+    id: 10,
+    title: 'Retorno feito',
+    status: 'done',
+    due_at: '2026-11-01T12:00:00Z',
+  };
+  const canceled = {
+    id: 11,
+    title: 'Retorno cancelado',
+    status: 'canceled',
+    due_at: '2026-11-02T12:00:00Z',
+  };
+  const linkedCard = {
+    id: 5,
+    title: 'Card A',
+    stage_id: 10,
+    conversation_id: 31,
+    inbox_id: 3,
+  };
+
+  const mountFollowUps = async (props = {}) => {
+    const wrapper = mountDrawer({
+      canManageCards: true,
+      initialTab: 'followups',
+      ...props,
+    });
+    await flushPromises();
+    return wrapper;
+  };
+
+  const fillAutoSend = async (wrapper, messageBody = 'Olá, tudo bem?') => {
+    wrapper.vm.followUpForm.title = 'Retomar contato';
+    wrapper.vm.followUpForm.dueAt = '2026-11-15T12:00';
+    wrapper.vm.followUpForm.messageBody = messageBody;
+    wrapper.vm.followUpForm.automationMode = 'auto_send_message';
+    await flushPromises();
+  };
+
+  beforeEach(() => {
+    alertSpy.mockClear();
+    CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({ data: {} });
+    storeGetters['inboxes/getFilteredWhatsAppTemplates'] = () => [];
+  });
+
+  it('emits complete and cancel with the pending follow-up object', async () => {
+    const wrapper = await mountFollowUps({ followUps: [pending] });
+    const button = label =>
+      wrapper.findAll('button').find(item => item.text() === label);
+
+    await button('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE').trigger('click');
+    await button('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL').trigger('click');
+
+    expect(wrapper.emitted('completeFollowUp')).toEqual([[pending]]);
+    expect(wrapper.emitted('cancelFollowUp')).toEqual([[pending]]);
+    wrapper.unmount();
+  });
+
+  it('separates active follow-ups from done/canceled ones without actions on the closed ones', async () => {
+    const wrapper = await mountFollowUps({
+      followUps: [pending, done, overdue, canceled],
+    });
+
+    expect(wrapper.vm.activeFollowUps.map(item => item.id)).toEqual([8, 9]);
+    expect(wrapper.vm.completedFollowUps.map(item => item.id)).toEqual([
+      10, 11,
+    ]);
+    const completedSection = wrapper
+      .findAll('details')
+      .find(item =>
+        item.text().includes('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION')
+      );
+    expect(completedSection.text()).toContain('Retorno feito');
+    expect(completedSection.text()).toContain('Retorno cancelado');
+    expect(completedSection.findAll('button')).toHaveLength(0);
+    // One complete/cancel pair per active follow-up only.
+    const completeButtons = wrapper
+      .findAll('button')
+      .filter(item => item.text() === 'CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE');
+    expect(completeButtons).toHaveLength(2);
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.DRAWER.NO_FOLLOW_UPS_TITLE'
+    );
+    wrapper.unmount();
+  });
+
+  it('shows the empty state only when there are no follow-ups and nothing is loading', async () => {
+    const wrapper = await mountFollowUps({ isFetchingFollowUps: true });
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.DRAWER.NO_FOLLOW_UPS_TITLE'
+    );
+
+    await wrapper.setProps({ isFetchingFollowUps: false });
+    expect(wrapper.text()).toContain('CRM_KANBAN.DRAWER.NO_FOLLOW_UPS_TITLE');
+    expect(wrapper.text()).not.toContain(
+      'CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION'
+    );
+    wrapper.unmount();
+  });
+
+  it('requires a message body for auto-send and emits nothing without it', async () => {
+    const wrapper = await mountFollowUps({ card: linkedCard });
+    await fillAutoSend(wrapper, '   ');
+
+    wrapper.vm.createFollowUp();
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'CRM_KANBAN.ALERTS.FOLLOW_UP_MESSAGE_BODY_REQUIRED'
+    );
+    expect(wrapper.emitted('createFollowUp')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('requires a template outside the 24h window and emits nothing without it', async () => {
+    CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+      data: { requires_template: true, whatsapp_native_inbox: true },
+    });
+    const wrapper = await mountFollowUps({ card: linkedCard });
+    await fillAutoSend(wrapper);
+
+    wrapper.vm.createFollowUp();
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'CRM_KANBAN.ALERTS.FOLLOW_UP_TEMPLATE_REQUIRED'
+    );
+    expect(wrapper.emitted('createFollowUp')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('sends the native template name and language outside the 24h window', async () => {
+    storeGetters['inboxes/getFilteredWhatsAppTemplates'] = () => [
+      { name: 'retomada_contato', language: 'pt_BR' },
+    ];
+    CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+      data: { requires_template: true, whatsapp_native_inbox: true },
+    });
+    const wrapper = await mountFollowUps({ card: linkedCard });
+    await fillAutoSend(wrapper);
+    wrapper.vm.followUpForm.nativeTemplateKey = 'retomada_contato::pt_BR';
+    wrapper.vm.onNativeTemplateSelected();
+
+    wrapper.vm.createFollowUp();
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    const [[payload]] = wrapper.emitted('createFollowUp');
+    expect(payload).toMatchObject({
+      card_id: 5,
+      conversation_id: 31,
+      automation_mode: 'auto_send_message',
+      metadata: {
+        message_body: 'Olá, tudo bem?',
+        template_name: 'retomada_contato',
+        template_language: 'pt_BR',
+      },
+    });
+    expect(payload.metadata).not.toHaveProperty(
+      'whatsapp_api_message_template_id'
+    );
+    wrapper.unmount();
+  });
+
+  it('sends the WhatsApp API template id outside the 24h window', async () => {
+    CrmKanbanAPI.getFollowUpMessagingWindow.mockResolvedValue({
+      data: { requires_template: true, whatsapp_api_inbox: true },
+    });
+    const wrapper = await mountFollowUps({ card: linkedCard });
+    await fillAutoSend(wrapper);
+    wrapper.vm.followUpForm.whatsappApiTemplateId = '77';
+
+    wrapper.vm.createFollowUp();
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    const [[payload]] = wrapper.emitted('createFollowUp');
+    expect(payload.metadata).toEqual({
+      message_body: 'Olá, tudo bem?',
+      whatsapp_api_message_template_id: 77,
+    });
+    wrapper.unmount();
+  });
+});
+
+describe('CrmCardDrawer deal close', () => {
+  const openCard = {
+    id: 5,
+    title: 'Card A',
+    stage_id: 10,
+    status: 'open',
+    value_cents: 12345,
+    currency: 'BRL',
+  };
+  const button = (wrapper, label) =>
+    wrapper.findAll('button').find(item => item.text() === label);
+
+  it('pre-fills the win value from the card and emits the amount in cents', async () => {
+    const wrapper = mountDrawer({ canManageCards: true, card: openCard });
+    await button(wrapper, 'CRM_KANBAN.DRAWER.WIN_DEAL').trigger('click');
+
+    expect(wrapper.vm.showWinDialog).toBe(true);
+    expect(wrapper.vm.winAmount).toBe(123.45);
+
+    wrapper.vm.winAmount = '1500.5';
+    await button(wrapper, 'CRM_KANBAN.DRAWER.WIN_CONFIRM').trigger('click');
+
+    expect(wrapper.emitted('closeDeal')).toEqual([
+      [{ result: 'won', value_cents: 150050, currency: 'BRL' }],
+    ]);
+    expect(wrapper.vm.showWinDialog).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('emits the lost reason when losing the deal', async () => {
+    const wrapper = mountDrawer({ canManageCards: true, card: openCard });
+    await button(wrapper, 'CRM_KANBAN.DRAWER.LOSE_DEAL').trigger('click');
+    wrapper.vm.loseReason = 'Preço acima do orçamento';
+    await button(wrapper, 'CRM_KANBAN.DRAWER.LOSE_CONFIRM').trigger('click');
+
+    expect(wrapper.emitted('closeDeal')).toEqual([
+      [{ result: 'lost', lost_reason: 'Preço acima do orçamento' }],
+    ]);
+    wrapper.unmount();
+  });
+
+  it('shows Reopen instead of win/lose on a won card', async () => {
+    const wrapper = mountDrawer({
+      canManageCards: true,
+      card: { ...openCard, status: 'won' },
+    });
+    expect(button(wrapper, 'CRM_KANBAN.DRAWER.WIN_DEAL')).toBeUndefined();
+    expect(button(wrapper, 'CRM_KANBAN.DRAWER.LOSE_DEAL')).toBeUndefined();
+
+    await button(wrapper, 'CRM_KANBAN.DRAWER.REOPEN_DEAL').trigger('click');
+
+    expect(wrapper.emitted('closeDeal')).toEqual([[{ result: 'reopen' }]]);
+    wrapper.unmount();
+  });
+
+  it.each([
+    ['CRM_KANBAN.DRAWER.WIN_DEAL', 'showWinDialog'],
+    ['CRM_KANBAN.DRAWER.LOSE_DEAL', 'showLoseDialog'],
+  ])(
+    'Esc with the %s dialog open closes only the dialog',
+    async (label, dialog) => {
+      const wrapper = mountDrawer({ canManageCards: true, card: openCard });
+      await button(wrapper, label).trigger('click');
+      expect(wrapper.vm[dialog]).toBe(true);
+
+      keyboard.handlers.Escape.action();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.vm[dialog]).toBe(false);
+      expect(wrapper.emitted('close')).toBeUndefined();
+
+      keyboard.handlers.Escape.action();
+      expect(wrapper.emitted('close')).toHaveLength(1);
+      wrapper.unmount();
+    }
+  );
+});
+
+describe('CrmCardDrawer unsaved drafts when leaving', () => {
+  const card = {
+    id: 5,
+    title: 'Card A',
+    stage_id: 10,
+    conversation: { id: 31, display_id: 77 },
+  };
+  const conversationRoute = {
+    name: 'inbox_conversation',
+    params: { accountId: '1', conversation_id: 77 },
+  };
+  const exits = {
+    X: wrapper =>
+      wrapper.find('button[aria-label="GENERAL.CLOSE"]').trigger('click'),
+    Esc: async () => keyboard.handlers.Escape.action(),
+    'Open conversation': wrapper =>
+      wrapper
+        .findAll('button')
+        .find(button => button.text() === 'CRM_KANBAN.DRAWER.OPEN_CONVERSATION')
+        .trigger('click'),
+  };
+  const drafts = {
+    'changed title': wrapper => {
+      wrapper.vm.form.title = 'Título não salvo';
+    },
+    'changed value': wrapper => {
+      wrapper.vm.form.valueAmount = '999';
+    },
+    'follow-up draft': wrapper => {
+      wrapper.vm.followUpForm.title = 'Retorno em rascunho';
+    },
+  };
+  const left = wrapper =>
+    Boolean(wrapper.emitted('close')) || navigate.mock.calls.length > 0;
+
+  beforeEach(() => navigate.mockClear());
+
+  Object.entries(exits).forEach(([exitName, exit]) => {
+    Object.entries(drafts).forEach(([draftName, makeDirty]) => {
+      it(`${exitName} with a ${draftName} asks to discard and stays open`, async () => {
+        const wrapper = mountDrawer({ canManageCards: true, card });
+        makeDirty(wrapper);
+        await wrapper.vm.$nextTick();
+
+        await exit(wrapper);
+
+        expect(wrapper.vm.discardOpen).toBe(true);
+        expect(left(wrapper)).toBe(false);
+
+        wrapper.vm.confirmDiscard();
+        expect(left(wrapper)).toBe(true);
+        wrapper.unmount();
+      });
+    });
+
+    it(`${exitName} without changes leaves directly`, async () => {
+      const wrapper = mountDrawer({ canManageCards: true, card });
+
+      await exit(wrapper);
+
+      expect(wrapper.vm.discardOpen).toBe(false);
+      expect(left(wrapper)).toBe(true);
+      wrapper.unmount();
+    });
+  });
+
+  it('confirming the discard on Open conversation navigates to it', async () => {
+    const wrapper = mountDrawer({ canManageCards: true, card });
+    wrapper.vm.form.title = 'Título não salvo';
+    await exits['Open conversation'](wrapper);
+    expect(navigate).not.toHaveBeenCalled();
+
+    wrapper.vm.confirmDiscard();
+
+    expect(navigate).toHaveBeenCalledWith(conversationRoute);
+    wrapper.unmount();
+  });
+
+  it('keeps switching tabs free while a commercial draft is pending', async () => {
+    const wrapper = mountDrawer({ canManageCards: true, card });
+    wrapper.vm.form.title = 'Título não salvo';
+    await wrapper.vm.$nextTick();
+
+    await wrapper.findAll('button[role="tab"]').at(1).trigger('click');
+
+    expect(wrapper.vm.discardOpen).toBe(false);
+    expect(wrapper.vm.activeTab).not.toBe('summary');
+    expect(wrapper.vm.form.title).toBe('Título não salvo');
+    wrapper.unmount();
+  });
 });
