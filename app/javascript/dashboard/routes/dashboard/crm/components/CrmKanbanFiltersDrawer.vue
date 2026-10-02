@@ -194,8 +194,8 @@ useFixedPanelPresence(computed(() => props.show));
   >
     <aside
       v-if="show"
-      data-crm-kanban-filters-drawer
       ref="drawerElement"
+      data-crm-kanban-filters-drawer
       role="dialog"
       aria-modal="true"
       aria-labelledby="crm-kanban-filters-title"

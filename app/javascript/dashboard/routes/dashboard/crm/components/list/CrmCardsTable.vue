@@ -875,7 +875,9 @@ const onRowKeydown = (event, card) => {
                         v-if="slaChatFor(row.original)"
                         :chat="slaChatFor(row.original)"
                       />
-                      <span v-else class="text-n-slate-10">—</span>
+                      <span v-else class="text-n-slate-10">{{
+                        t('CRM_KANBAN.DRAWER.EMPTY_VALUE')
+                      }}</span>
                     </template>
 
                     <button
