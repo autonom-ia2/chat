@@ -2,7 +2,7 @@ class Waha::ExistingInboxMigrationExecutor
   Outcome = Struct.new(:status, :error_class, :reason, keyword_init: true)
   VerificationError = Class.new(StandardError)
 
-  REMOTE_CHANGES = %w[remote_chatwoot_app brazilian_phone_numbers_app].freeze
+  REMOTE_CHANGES = %w[remote_chatwoot_app brazilian_phone_numbers_app session_status_filter].freeze
   WORKING_STATUS = 'WORKING'.freeze
 
   def initialize(client:, sleeper:, health_attempts:, health_interval:)
@@ -50,7 +50,7 @@ class Waha::ExistingInboxMigrationExecutor
   def update_remote(plan)
     @client.update_session(
       plan.context.session,
-      config: plan.snapshot.session_info['config'],
+      config: plan.desired_config,
       apps: plan.desired_apps
     )
     wait_for_working!(plan.context.session)
@@ -61,7 +61,7 @@ class Waha::ExistingInboxMigrationExecutor
     current_session = @client.get_session(plan.context.session)
     current_apps = @client.list_apps(plan.context.session)
     return if current_session['status'] == WORKING_STATUS &&
-              current_session['config'] == plan.snapshot.session_info['config'] &&
+              current_session['config'] == plan.desired_config &&
               stable_apps(current_apps) == stable_apps(plan.desired_apps)
 
     raise VerificationError, 'desired_remote_state_not_confirmed'
