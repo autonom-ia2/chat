@@ -88,6 +88,14 @@ A atualização da sessão causa um restart técnico, mas não faz logout nem re
 
 Se houver caixa sem `session`/`app_id`, divergência de App/sessão, preflight inválido ou erro remoto, o processo registra `SKIP`, `FAILED`, `RECOVERED` ou `CRITICAL`. Em modo APPLY, qualquer `SKIP` ou falha interrompe o lote.
 
+## Duração dos ciclos de atendimento
+
+Em WAHA com `lock_to_single_conversation=true`, o início de uma reabertura é persistido junto à transição de status, usando `status_changed_at`, no atributo interno `waha_resolution_cycle_started_at`. Snooze/pending e novas aberturas do mesmo ciclo não substituem o primeiro início. A resolução encerra esse marcador e captura o início concluído no payload do evento antes de enfileirar o job.
+
+O cálculo de `conversation_resolved` usa o timestamp capturado, sem depender de `conversation_opened` ou da resolução anterior já estarem em `reporting_events`. Jobs atrasados continuam usando o início do seu próprio ciclo, mesmo após novas mudanças na conversa. Horário comercial, resolução de bot e rollups usam esse mesmo início.
+
+O primeiro ciclo continua partindo de `created_at`. Eventos antigos já enfileirados sem o timestamp capturado mantêm o cálculo legado; esta alteração não recalcula histórico. Ciclos já em andamento antes da instalação deste código, sem marcador de início, também conservam a origem legada até uma nova reabertura registrada. Canais não-WAHA e WAHA sem trava permanecem no cálculo legado. A métrica do próprio evento `conversation_opened` não foi alterada.
+
 ## Verificação pós-aplicação
 
 1. Confirmar `failed=0` e `skipped=0`.

@@ -4,7 +4,7 @@ class ReportingEventListener < BaseListener
   def conversation_resolved(event)
     conversation = extract_conversation_and_account(event)[0]
     event_end_time = event.timestamp
-    event_start_time = resolution_cycle_start_time(conversation, event_end_time)
+    event_start_time = resolution_cycle_start_time(conversation, event)
     time_to_resolve = event_end_time.to_i - event_start_time.to_i
 
     reporting_event = ReportingEvent.new(
@@ -125,31 +125,11 @@ class ReportingEventListener < BaseListener
 
   private
 
-  def resolution_cycle_start_time(conversation, event_end_time)
-    return conversation.created_at unless waha_single_conversation?(conversation)
+  def resolution_cycle_start_time(conversation, event)
+    return conversation.created_at unless conversation.waha_single_conversation?
 
-    last_resolved_event = ReportingEvent.where(
-      conversation_id: conversation.id,
-      name: 'conversation_resolved'
-    ).where('event_end_time < ?', event_end_time).order(event_end_time: :desc).first
-    return conversation.created_at unless last_resolved_event
-
-    first_reopened_event = ReportingEvent.where(
-      conversation_id: conversation.id,
-      name: 'conversation_opened'
-    ).where('event_end_time > ? AND event_end_time <= ?', last_resolved_event.event_end_time, event_end_time)
-                                         .order(event_end_time: :asc)
-                                         .first
-
-    first_reopened_event&.event_end_time || conversation.created_at
-  end
-
-  def waha_single_conversation?(conversation)
-    inbox = conversation.inbox
-    return false unless inbox.lock_to_single_conversation?
-
-    channel = inbox.channel
-    channel.is_a?(Channel::Api) && channel.waha_provider?
+    # Events queued before this version have no cycle snapshot and retain their legacy calculation.
+    event.data.fetch(:resolution_cycle_started_at, conversation.created_at)
   end
 
   def create_conversation_opened_event(conversation, time_since_resolved, business_hours_value, start_time, event_end_time)
