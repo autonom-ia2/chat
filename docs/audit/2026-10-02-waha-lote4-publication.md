@@ -58,7 +58,7 @@ Nenhuma configuração WAHA, sessão, mensagem ou dado de cliente foi alterado n
 Após checks finais do PR #862, um único merge commit na main dispara os dois blue-green automaticamente.
 Não executar workflow_dispatch adicional de deploy. Acompanhar cada run por SHA até success e depois conferir
 diretamente web/worker, imagem, SHA, targets, saúde pública e preservação dos endpoints distintos.
-No momento deste registro, merge na main e publicação ainda aguardam essa etapa; não são declarados concluídos.
+Etapa concluída após este registro inicial; evidência direta de publicação e dry-run abaixo.
 
 Rollback de aplicação: workflow oficial de cada ambiente, action=rollback/confirm_production=true,
 com decisão operacional explícita e verificação da instância/imagem anterior. Um degrau apenas; retorno esperado
@@ -68,3 +68,28 @@ Após ambos os runtimes novos, preparar dry-run restrito à seleção privada do
 os filtros. Nunca transportar essa seleção para Autonom.ia. APPLY só após revisar o resultado, snapshot privado,
 janela sem escritores de Apps e responsável pela restauração. GET/PUT de WAHA não é atômico.
 E2E e expansão ficam pendentes do piloto autorizado; nenhuma prova de mock é apresentada como teste produtivo.
+
+## Confirmação posterior — publicação e dry-run
+
+Merge commit da main: d28a87ad9b7264042a92823c5b6f4d04831d1713 (PR #862), 19:10:30 UTC.
+Checks finais do lote passaram nesse head de origem; a execução cancelada de Guia/Central foi substituída
+pela execução 37052152149, success, sem mudança de produto nem bypass.
+Deploys completed/success: [Hub2You 37052375070](https://github.com/autonom-ia2/chat/actions/runs/37052375070)
+e [Autonom.ia 37052372564](https://github.com/autonom-ia2/chat/actions/runs/37052372564).
+
+Conferência AWS/SSM depois dos dois workflows: targets healthy e HTTPS encaminha ao alvo novo;
+web e worker ativos/running, imagens e .git_sha iguais a d28a87ad9b nas duas contas.
+Hub2You atual i-0f5f268683059c096; retorno i-07e5bc744c4ccda52 stopped.
+Autonom.ia atual i-0e9bb7cb5e2a8a2c2; retorno i-018b5c54bf4f35421 stopped.
+O retorno é a imagem ab84a219bd verificada antes do deploy. Endpoints da tabela anterior preservados
+em web/worker; GET autenticado /api/version HTTP 200/2026.9.2 em ambos, sem cruzar instalações.
+SSM Success/0: Hub2You f5a0a12a-30cf-4de9-97f9-5be87aa4cadc; Autonom.ia 0dd261f8-a074-40d8-83a7-ef05c6c63059.
+Saúde pública posterior: chat.hub2you.ai/api e agents.autonomia.site/api HTTP 200, fila/banco ok.
+
+Dry-run restrito à seleção privada Hub2You, SSM 0cac313e-2e8e-481a-ab3e-f20ad34dff95, Success/0 em 19:27:52 UTC:
+total=1, would_update=1, updated=0, unchanged=0, skipped=0, failed=0, recovered=0, recovery_failed=0, halted=false.
+Task original invocada com APPLY=false e os dois filtros, sob transação PostgreSQL read-only e bloqueio HTTP de escrita.
+Hash dos atributos locais antes/depois igual. Plano: App Chatwoot, resolver brasileiro, referência local e single_conversation.
+Nenhum APPLY, envio de teste, logout, QR, pareamento ou mudança operacional nos Apps/sessões WAHA foi executado.
+Aceites E2E/expansão seguem pendentes. Antes de APPLY: autorização separada, janela sem escritores, snapshot privado fresco
+e responsável pela restauração. Não aplicar os IDs desse piloto na Autonom.ia. Evidências operacionais privadas fora do Git.
