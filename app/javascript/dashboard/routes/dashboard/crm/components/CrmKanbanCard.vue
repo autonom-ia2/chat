@@ -14,6 +14,10 @@ import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/
 import SLACardLabel from 'dashboard/components-next/Conversation/Sla/SLACardLabel.vue';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
+import {
+  buildCrmCardIdentity,
+  crmCardIdentityLabel,
+} from './list/cardIdentity.js';
 
 const props = defineProps({
   card: {
@@ -53,36 +57,21 @@ const railStyle = computed(() => ({
 // The card payload owns the company association. Do not fall back to
 // contact.company: the same contact can be shared by opportunities from
 // different companies, so that snapshot can identify the wrong customer.
-const cardCompany = computed(() => props.card.company || null);
-const companyName = computed(() => cardCompany.value?.name || '');
-const contactName = computed(
-  () => props.card.contact?.name || props.card.contact?.phone_number || ''
-);
-const hasContact = computed(() => Boolean(props.card.contact));
-
-// Keep the identity order stable and readable at a glance:
+// Same identity rules as the List (cardIdentity.js):
 //   B2B: company → person → business
 //   B2C: person → business
 //   standalone: business/title → no linked contact
-const identityMain = computed(
-  () =>
-    companyName.value ||
-    contactName.value ||
-    props.card.title ||
-    t('CRM_KANBAN.CARD.STANDALONE')
+const identity = computed(() =>
+  buildCrmCardIdentity(props.card, t('CRM_KANBAN.CARD.STANDALONE'))
 );
-const identityPerson = computed(() => {
-  if (!companyName.value || !contactName.value) return '';
-  return contactName.value === companyName.value ? '' : contactName.value;
-});
-const identityBusiness = computed(() => {
-  const title = String(props.card.title || '').trim();
-  if (!title || [identityMain.value, identityPerson.value].includes(title)) {
-    return '';
-  }
-  if (title === props.card.contact?.phone_number) return '';
-  return title;
-});
+const identityAriaName = computed(() =>
+  crmCardIdentityLabel(props.card, t('CRM_KANBAN.CARD.STANDALONE'))
+);
+const companyName = computed(() => identity.value.company);
+const identityMain = computed(() => identity.value.main);
+const identityPerson = computed(() => identity.value.person);
+const identityBusiness = computed(() => identity.value.business);
+const hasContact = computed(() => Boolean(props.card.contact));
 const identityIcon = computed(() => {
   if (companyName.value) return 'i-lucide-building-2';
   if (hasContact.value) return 'i-lucide-user-round';
@@ -360,9 +349,7 @@ const canOpenConversation = computed(
           type="button"
           class="min-h-11 w-full min-w-0 rounded px-0 py-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
           :aria-label="
-            t('CRM_KANBAN.CARD.OPEN_DETAILS', {
-              name: identityBusiness || identityMain,
-            })
+            t('CRM_KANBAN.CARD.OPEN_DETAILS', { name: identityAriaName })
           "
           @click.stop="$emit('open', card)"
         >
@@ -414,12 +401,8 @@ const canOpenConversation = computed(
           type="button"
           data-crm-card-move
           class="crm-card-move absolute end-0 top-0 flex h-11 items-center gap-1 rounded-lg px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
-          :aria-label="
-            t('CRM_KANBAN.CARD.MOVE', {
-              name: identityBusiness || identityMain,
-            })
-          "
-          @click.stop="$emit('move', card)"
+          :aria-label="t('CRM_KANBAN.CARD.MOVE', { name: identityAriaName })"
+          @click.stop="$emit('move', card, $event.currentTarget)"
         >
           <span>{{ t('CRM_KANBAN.CARD.MOVE_LABEL') }}</span>
           <span class="i-lucide-chevron-down size-3.5" aria-hidden="true" />

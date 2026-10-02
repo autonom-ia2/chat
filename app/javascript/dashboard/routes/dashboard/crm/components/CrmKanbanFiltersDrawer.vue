@@ -254,7 +254,6 @@ useFixedPanelPresence(computed(() => props.show));
                 :placeholder="
                   t('CRM_KANBAN.FILTERS.COMPANY_SEARCH_PLACEHOLDER')
                 "
-                :disabled="companyLoading"
                 @input="emit('search-company', $event.target.value)"
               />
               <ChoiceSelect
@@ -394,10 +393,15 @@ useFixedPanelPresence(computed(() => props.show));
               </label>
 
               <div class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
+                <span
+                  id="crm-kanban-filters-stage-label"
+                  class="text-sm font-medium text-n-slate-12"
+                >
                   {{ t('CRM_KANBAN.FILTERS.STAGE') }}
                 </span>
                 <div
+                  role="group"
+                  aria-labelledby="crm-kanban-filters-stage-label"
                   class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
                 >
                   <button
@@ -425,10 +429,15 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
 
               <div class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
+                <span
+                  id="crm-kanban-filters-labels-label"
+                  class="text-sm font-medium text-n-slate-12"
+                >
                   {{ t('CRM_KANBAN.FILTERS.LABELS') }}
                 </span>
                 <div
+                  role="group"
+                  aria-labelledby="crm-kanban-filters-labels-label"
                   class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
                 >
                   <button
@@ -566,11 +575,16 @@ useFixedPanelPresence(computed(() => props.show));
                 />
               </label>
 
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
+              <div class="grid gap-1">
+                <span
+                  id="crm-kanban-filters-campaign-label"
+                  class="text-sm font-medium text-n-slate-12"
+                >
                   {{ t('CRM_KANBAN.FILTERS.CAMPAIGN') }}
                 </span>
                 <div
+                  role="group"
+                  aria-labelledby="crm-kanban-filters-campaign-label"
                   class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
                 >
                   <button
@@ -595,7 +609,7 @@ useFixedPanelPresence(computed(() => props.show));
                     {{ t('CRM_KANBAN.FILTERS.CAMPAIGN_PLACEHOLDER') }}
                   </span>
                 </div>
-              </label>
+              </div>
 
               <label
                 v-if="canManageAi"

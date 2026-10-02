@@ -212,9 +212,13 @@ describe('CrmKanbanCard bubble shortcut', () => {
   it('emits move from the visible accessible action without opening the card', async () => {
     const wrapper = mountCard();
 
-    await wrapper.find('[data-crm-card-move]').trigger('click');
+    const move = wrapper.find('[data-crm-card-move]');
+    await move.trigger('click');
 
-    expect(wrapper.emitted('move')).toEqual([[CONVERSATION_CARD]]);
+    // The button travels with the intent so the page can return focus to it.
+    expect(wrapper.emitted('move')).toEqual([
+      [CONVERSATION_CARD, move.element],
+    ]);
     expect(wrapper.emitted('open')).toBeUndefined();
   });
 

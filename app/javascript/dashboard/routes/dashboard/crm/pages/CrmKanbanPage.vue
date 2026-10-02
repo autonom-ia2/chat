@@ -432,20 +432,43 @@ const registerMovePopover = (cardId, instance) => {
   else movePopoverRefs.delete(String(cardId));
 };
 
+// Keyboard path: the picker takes focus when it opens and hands it back to the
+// card's "Move" button when it closes, unless the user already moved focus
+// elsewhere (e.g. clicked another control).
+let movePickerEl = null;
+let moveReturnFocusEl = null;
+const setMovePickerEl = el => {
+  movePickerEl = el;
+};
+
+const restoreMoveFocus = () => {
+  const target = moveReturnFocusEl;
+  moveReturnFocusEl = null;
+  if (!target?.isConnected) return;
+  const focused = document.activeElement;
+  const focusWasInPicker =
+    !focused || focused === document.body || movePickerEl?.contains(focused);
+  if (focusWasInPicker) target.focus();
+};
+
 const resetMoveSelection = () => {
+  restoreMoveFocus();
   selectedMoveCard.value = null;
   selectedMoveSourceStage.value = null;
   moveStageId.value = '';
 };
 
-const openMoveFromBoard = async (card, sourceStage) => {
+const openMoveFromBoard = async (card, sourceStage, trigger = null) => {
   if (!canMoveCards.value || !card?.id) return;
 
   selectedMoveCard.value = card;
   selectedMoveSourceStage.value = sourceStage;
   moveStageId.value = '';
+  moveReturnFocusEl = trigger;
   await nextTick();
-  movePopoverRefs.get(String(card.id))?.show();
+  await movePopoverRefs.get(String(card.id))?.show();
+  await nextTick();
+  movePickerEl?.querySelector('[role="combobox"]')?.focus();
 };
 
 const onMoveStageSelected = async (stageId, hide) => {
@@ -1942,6 +1965,7 @@ onUnmounted(() => {
         <div
           v-if="!isCalendarOnly"
           class="flex items-center rounded-lg bg-n-alpha-black2 p-1"
+          role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
           <button
@@ -1982,7 +2006,7 @@ onUnmounted(() => {
           @click="openCreateDrawer"
         />
         <Popover
-          v-if="!isCalendarOnly && (canManagePipelines || canManageAi)"
+          v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2003,7 +2027,11 @@ onUnmounted(() => {
                 {{ t('CRM_KANBAN.ACTIONS.CONFIGURE') }}
               </p>
               <Button
-                v-if="selectedPipeline && (canManagePipelines || canManageAi)"
+                v-if="
+                  !isCalendarOnly &&
+                  selectedPipeline &&
+                  (canManagePipelines || canManageAi)
+                "
                 :label="t('CRM_KANBAN.ACTIONS.EDIT_PIPELINE')"
                 icon="i-lucide-pencil"
                 slate
@@ -2013,7 +2041,12 @@ onUnmounted(() => {
                 @click="runConfigurationAction(openEditPipelineDrawer)"
               />
               <Button
-                v-if="selectedPipeline && canManageAi && isCrmAiEnabled"
+                v-if="
+                  !isCalendarOnly &&
+                  selectedPipeline &&
+                  canManageAi &&
+                  isCrmAiEnabled
+                "
                 :label="t('CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS')"
                 icon="i-lucide-arrow-right-left"
                 slate
@@ -2296,7 +2329,7 @@ onUnmounted(() => {
                     <span class="block h-11 w-16" aria-hidden="true" />
                   </template>
                   <template #content="{ hide }">
-                    <div class="w-64 p-3">
+                    <div :ref="setMovePickerEl" class="w-64 p-3">
                       <p class="mb-2 text-xs font-medium text-n-slate-11">
                         {{ t('CRM_KANBAN.CARD.MOVE_TO') }}
                       </p>
@@ -2320,7 +2353,9 @@ onUnmounted(() => {
                 :can-move="canMoveCards"
                 @open="openCardFromBoard"
                 @open-conversation="openCardConversation"
-                @move="openMoveFromBoard(element, stage)"
+                @move="
+                  (_card, trigger) => openMoveFromBoard(element, stage, trigger)
+                "
               />
             </div>
           </template>
