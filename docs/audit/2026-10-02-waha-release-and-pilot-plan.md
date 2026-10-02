@@ -4,6 +4,11 @@ Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/846.
 Origem: PR #842, `62af5b0493dda09aba9c764e9e62f58197895f34`.
 Estado final/evidências: [fechamento do candidato](2026-10-02-waha-final-candidate-readiness.md).
 
+
+> Atualização posterior: Rodrigo autorizou merge/deploy nas duas instalações. O registro anterior abaixo
+> descreve a preparação antes dessa autorização. Estado e execução atuais:
+> [publicação do lote4](2026-10-02-waha-lote4-publication.md). APPLY/backfill permanece separado.
+
 ## Autorização e candidato
 
 Rodrigo autorizou continuar a preparação até estar pronto para avaliar merge, deploy e backfill.
