@@ -30,7 +30,7 @@ Inventário atual: 33 canais locais. As oito exclusões são:
   valor de autenticação lido. Não atribuir momento ou causa histórica do desaparecimento.
 
 A escolha do Rodrigo preserva as oito caixas e seus históricos sem nova aplicação. As seis sessões
-compartilhadas continuam entregando nas caixas novas já concluídas. As duas outras continuam desconectadas.
+compartilhadas continuam com Apps ativos apontando para as caixas novas já concluídas. As duas outras continuam desconectadas.
 Os GETs e transações READ ONLY confirmaram ausência de escrita local/remota no diagnóstico.
 O roteamento wa-hub.autonomia.site foi confirmado no serviço da VPS hubsegs; wa-hub2you é outro serviço.
 Logs recentes sanitizados não continham evento da sessão FAILED; não foram usados para inventar causa.
@@ -67,8 +67,8 @@ Dois backups before/after foram transferidos cifrados para armazenamento privado
 selagem SSM ec232fb4-a53f-4d05-8789-7c1a6df348a1, Success/0. AES-256-GCM/RSA-OAEP,
 autenticação e hashes internos conferidos; os dois hashes também confrontados com os resultados
 originais de backup/APPLY e sha256sum do host. Diretórios 0700/arquivos 0600.
-Uma referência residual do transporte privado impediu uma preparação local antes de qualquer dispatch
-SSM; corrigida, não houve aplicação repetida nem resultado desconhecido reexecutado.
+Uma referência residual do transporte privado impediu uma preparação local antes do dispatch SSM
+de selagem; corrigida, não houve aplicação repetida nem resultado desconhecido reexecutado.
 
 A consulta agregada de tráfego posterior encontrou PG::GroupingError pela ordenação padrão de Message.
 Foi corrigida apenas no probe privado, usando reorder(nil) antes de group/count. Comando inicial
