@@ -72,3 +72,13 @@ Evidências das quatro aplicações (SSM):
 - `fb7902c2-1bf1-41ec-bf01-00f415a0f114` — Success/0, filtro confirmado e estado preservado.
 
 Leitura final separada: SSM `e1a67727-2945-4fae-9e68-9315fffabef9`, Success/0, concluída às 19:12:40 de Brasília. As quatro sessões continuavam `WORKING`, compatíveis e com filtro ligado. Foi observada uma mensagem comum de entrada após o ajuste, sem novas mensagens de Status de entrada nesse intervalo; o histórico de Status permanecia presente. Foram selecionadas somente contagens, sem conteúdo das mensagens. A janela é breve e três caixas não tiveram novas mensagens de entrada; não se declara validação de tráfego das quatro nem teste de ponta a ponta de todas elas.
+
+## Autorização de conclusão e publicação
+
+Após a revalidação somente de leitura das 21 caixas restantes, Rodrigo autorizou: “pode seguir! FAça completo e com segurança!”. A autorização cobre concluir o backfill restrito à conta piloto do Hub2You e publicar a correção permanente do migrador nas duas instalações. Autonom.ia receberá somente código; nenhum backfill dessa instalação ou de outras contas faz parte deste trabalho. A janela sem escritores concorrentes do lote restante já havia sido confirmada explicitamente.
+
+Revisão independente somente de leitura, pelo procedimento `caveman:cavecrew`, do HEAD `e50b96b50ae89d8fd4933d6b500d64db6b0c4597` sobre a base `0fec5c828af18f8cecde64eb15e1f5a86367c81c`: **No issues**. Conferidas preservação da comparação N1 com snapshot original, recuperação R1 completa, política da instalação, chamadores e ausência de override Enterprise. A revisão não alterou arquivos nem operou produção. Os testes de concorrência N1 existentes continuam preservados; os cinco novos exemplos são os de filtro listados acima.
+
+A PR #872 foi direcionada ao lote aberto `release/2026-10-02-lote5`, ainda idêntico à main na leitura de preparação. Somente esta correção e sua auditoria estão autorizadas para a publicação deste trabalho. Outro componente ainda aberto nesse lote não será incluído por esta autorização. Antes de publicar, conferir o delta do lote novamente e abortar se surgir código fora do escopo.
+
+Sequência: concluir as 21 aplicações e respectivas confirmações; validar a união de suítes do lote; um merge commit do lote para main; acompanhar os dois workflows automáticos; confirmar SHA, imagem, saúde web/worker, endpoint WAHA separado por instalação e filtro das caixas Hub2You. Não há migration de banco. Rollback de aplicação é um degrau nos workflows blue-green das duas stacks, para as instâncias correntes antes desta publicação, após conferir alvo/saúde; o plano não reverte configurações WAHA ou histórico. Backups operacionais completos ficam protegidos fora do Git.
