@@ -122,6 +122,45 @@ RSpec.describe Waha::ExistingInboxUpdater do
     )
   end
 
+  describe 'single-conversation compatibility' do
+    it 'migrates restrictive remote filters to created_newest and any status before locking the inbox' do
+      remote_app['config']['conversations'].merge!(
+        'sort' => 'activity_newest',
+        'status' => %w[open pending snoozed],
+        'customConversationOption' => 'keep-me'
+      )
+      remote_apps.replace([remote_app.deep_dup])
+
+      result = service.perform(apply: true)
+
+      migrated = remote_apps.find { |app| app['id'] == 'app_123' }
+      expect(result.to_h.slice(:updated, :failed, :halted)).to eq(updated: 1, failed: 0, halted: false)
+      expect(migrated.dig('config', 'conversations')).to include(
+        'sort' => 'created_newest',
+        'status' => nil,
+        'customConversationOption' => 'keep-me'
+      )
+      expect(inbox.reload.lock_to_single_conversation).to be(true)
+    end
+
+    it 'reports the remote Chatwoot app as needing migration in dry-run when filters are restrictive' do
+      inbox.update!(lock_to_single_conversation: true)
+      remote_app['config']['conversations'].merge!(
+        'outgoing' => 'message',
+        'syncMessageStatus' => true,
+        'sort' => 'activity_newest',
+        'status' => %w[open pending snoozed]
+      )
+      remote_apps.replace([remote_app.deep_dup])
+
+      result = service.perform
+
+      expect(result.would_update).to eq(1)
+      expect(output.string).to include('remote_chatwoot_app')
+      expect(client).not_to have_received(:update_session)
+    end
+  end
+
   describe 'remote target identity validation' do
     {
       'url' => ['url', 'https://other-installation.example'],

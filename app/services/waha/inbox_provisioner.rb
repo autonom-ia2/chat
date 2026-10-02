@@ -124,7 +124,7 @@ module Waha
         conversations: {
           markAsRead: true,
           syncMessageStatus: true,
-          sort: @config.conversation_sort,
+          sort: Waha::Config.conversation_sort,
           status: nil,
           outgoing: 'message'
         }

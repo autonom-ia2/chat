@@ -128,7 +128,9 @@ class Waha::ExistingInboxMigrationPlanner
     config = app['config'].to_h
     conversations = config['conversations'].to_h.merge(
       'outgoing' => 'message',
-      'syncMessageStatus' => true
+      'syncMessageStatus' => true,
+      'sort' => Waha::Config.conversation_sort,
+      'status' => nil
     )
     app['config'] = config.merge('conversations' => conversations)
     app

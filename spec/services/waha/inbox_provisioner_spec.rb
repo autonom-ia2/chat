@@ -10,8 +10,7 @@ RSpec.describe Waha::InboxProvisioner do
         enabled?: true,
         callback_url: 'https://waha.example/webhooks/chatwoot/5511999999999/app_id',
         session_ignore: { status: true, broadcast: true, channels: true, groups: true },
-        chatwoot_base_url: 'https://chatwoot.example',
-        conversation_sort: 'created_newest'
+        chatwoot_base_url: 'https://chatwoot.example'
       )
     end
 
@@ -66,7 +65,9 @@ RSpec.describe Waha::InboxProvisioner do
               groups: 'OFF',
               conversations: hash_including(
                 outgoing: 'message',
-                syncMessageStatus: true
+                syncMessageStatus: true,
+                sort: 'created_newest',
+                status: nil
               )
             )
           )
