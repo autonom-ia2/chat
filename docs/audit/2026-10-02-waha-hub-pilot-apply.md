@@ -67,3 +67,22 @@ convergência brasileira de 8/9 dígitos e observação de reconexão sem força
 Não expandir o backfill nem transportar IDs do Hub2You para Autonom.ia antes de concluir esses aceites.
 Desfazer o piloto continua procedimento separado: comparar estado atual com o pós-piloto e aprovar ação
 concreta antes de restaurar. Não aplicar PUT cego do backup antigo nem alterar dados locais primeiro.
+
+## Aceites observados depois do APPLY
+
+Rodrigo apresentou captura às 16:57 BRT com saídas do celular em balão normal e marca de leitura.
+Consulta PostgreSQL somente leitura confirmou na conversa selecionada duas saídas externas públicas,
+ambas status read, além de quatro recebimentos posteriores ao APPLY. Estes casos já cobrem saída normal,
+recepção e leitura; não solicitar repetição desses casos. Sem conteúdo ou identidade de clientes neste registro.
+SSM cb881382-166b-4618-8311-a4fd521737f3, Success/0, 19:58:52–19:59:03 UTC.
+
+Consulta agregada na mesma Inbox, SSM 70913367-b744-4310-bd50-8a801fb56583, Success/0,
+19:59:51–20:00:05 UTC: três saídas externas públicas (duas read, uma sent), seis recebimentos públicos,
+nenhuma saída privada, nenhum envio público originado pela plataforma e nenhum evento de abrir/resolver
+posterior ao APPLY. A conversa selecionada permanece aberta, sem marcador de novo ciclo.
+
+Source IDs estão ausentes nessas mensagens; a contagem zero de IDs duplicados não comprova ausência
+integral de duplicação/reenvio. Não fechar esse aceite só por essa consulta. A captura não prova teste
+com variações 8/9 dígitos. Faltam envio pela plataforma, ciclo novo de resolver/reabrir/resolver e
+convergência de número em contato controlado; esses passos aproveitam o piloto existente sem repetir chegada.
+Nenhuma mensagem, resolução de conversa, configuração WAHA ou banco produtivo foi alterado nesta conferência.
