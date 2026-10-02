@@ -1,4 +1,4 @@
-# O Guia que faz a plataforma inteira, com confirmação (issues #536 e #547).
+# O Guia que faz a plataforma inteira (issues #536, #547 e #855).
 #
 # A primeira versão tinha três ações escritas à mão. Três ações nunca viram a
 # plataforma, do mesmo jeito que cinco assuntos nunca viraram cobertura de
@@ -13,8 +13,10 @@
 #
 # Três coisas que este arquivo não negocia:
 #
-# 1. **Nada executa sem confirmação.** `descrever` e `executar` são separados, e
-#    a descrição mostra o pedido literal antes de qualquer clique.
+# 1. **O que não tem volta pede confirmação; o resto tem desfazer.** Desde a
+#    #855 o Guia executa direto e anota tudo para desfazer por 5 dias
+#    (`Diario`, `Desfazer`). As ações de `SEM_DESFAZER` continuam passando por
+#    `descrever` e pelo clique em Confirmar.
 # 2. **A proposta nasce só do que a pessoa escreveu.** Nome de contato, de funil
 #    ou texto de conversa que o Guia leu na conta entram como dado e nunca viram
 #    ordem — a montagem do pedido é feita em EscolhaDaAcao, a partir da mensagem.
@@ -28,17 +30,60 @@ class Autonomia::Guide::Acoes
 
   # NÃO existe lista de áreas bloqueadas, por decisão do Rodrigo em 20/09/2026:
   # o administrador pode pedir tudo que ele mesmo pode fazer na conta dele.
+  # Dinheiro da conta na plataforma (plano, cobrança, créditos) nem entra no
+  # catálogo: mora em /enterprise/api/v1/accounts, fora de `Rotas.recurso`.
   #
-  # O que protege não é uma lista minha:
-  # - a pessoa lê o pedido literal e confirma antes de qualquer execução;
-  # - a execução vai com o token dela, então a plataforma aplica a permissão real;
-  # - o caminho é montado com o id da conta dela, sempre.
+  # O que protege:
+  # - a execução vai com o token da pessoa, então a plataforma aplica a permissão real;
+  # - o caminho é montado com o id da conta dela, sempre;
+  # - tudo o que muda no banco fica anotado para desfazer por 5 dias (#855).
   #
-  # Isto inclui disparar campanha (mensagem para cliente de verdade) e rotacionar
-  # credencial (pode derrubar integração em produção). Não há desfazer para
-  # nenhum dos dois: a tela de confirmação é a proteção.
+  # A lista abaixo é o que o desfazer NÃO alcança, decidido com o Rodrigo em
+  # 02/10/2026: o que sai da plataforma (mensagem, ligação, campanha — inclusive
+  # o WhatsApp oficial, que a Meta cobra do cliente), o que troca credencial em
+  # uso e o que grava em lote fora da requisição (importação, ação em massa,
+  # macro), onde o caderno não chega. Apagar caixa, empresa, contato, conversa,
+  # time, portal, SLA ou etiqueta também entra: a plataforma termina essas
+  # exclusões num job (`DeleteObjectJob`, `dependent: :destroy_async`,
+  # `Labels::RemoveAssociationsJob`), e o desfazer só traria de volta metade.
+  # Para estas, a pessoa confirma antes.
+  SEM_DESFAZER = [
+    'POST conversations',
+    'POST conversations/:conversation_id/messages',
+    'POST conversations/:conversation_id/messages/:id/retry',
+    'POST conversations/:conversation_id/contact_info_request',
+    'POST contacts/:id/call',
+    'POST whatsapp_calls/initiate',
+    'POST campaigns',
+    'POST whatsapp_api_campaigns',
+    'POST whatsapp_api_campaigns/:id/resume',
+    'POST email_campaigns/campaigns/:id/send_now',
+    'POST email_campaigns/campaigns/:id/schedule',
+    'POST email_campaigns/campaigns/:id/resume',
+    'POST portals/:id/send_instructions',
+    'POST crm/integration_tokens/:id/rotate',
+    'POST agent_bots/:id/reset_access_token',
+    'POST agent_bots/:id/reset_secret',
+    'POST inboxes/:id/reset_secret',
+    'POST inboxes/:id/rotate_hmac_token',
+    'PUT inboxes/:id/whatsapp_business_management_token',
+    'POST contacts/import',
+    'POST data_imports/:id/start',
+    'POST campaign_imports/:id/confirm',
+    'POST bulk_actions',
+    'POST captain/bulk_actions',
+    'POST macros/:id/execute',
+    'DELETE inboxes/:id',
+    'DELETE companies/:id',
+    'DELETE contacts/:id',
+    'DELETE conversations/:id',
+    'DELETE teams/:id',
+    'DELETE portals/:id',
+    'DELETE sla_policies/:id',
+    'DELETE labels/:id'
+  ].freeze
 
-  Resultado = Struct.new(:ok, :mensagem, :registro, keyword_init: true)
+  Resultado = Struct.new(:ok, :mensagem, :registro, :corpo, keyword_init: true)
 
   def initialize(account:, user:, account_user: nil)
     @account = account
@@ -57,6 +102,19 @@ class Autonomia::Guide::Acoes
       recurso = ::Autonomia::Guide::Rotas.recurso(rota.path.spec.to_s.sub('(.:format)', ''))
       "#{verbo} #{recurso}" if recurso
     end.uniq.sort
+  end
+
+  # O que `executar` recusaria — ação fora do catálogo, quem não administra,
+  # identificador faltando — recusado ANTES de abrir a execução, para a lista
+  # "Feito pelo Guia" não ganhar um turno vazio.
+  def conferir!(acao, dados)
+    garantir_permitida!(acao)
+    montar_caminho(acao, dados)
+  end
+
+  # Tem desfazer? Então o Guia executa direto; se não, a pessoa confirma.
+  def desfazivel?(acao)
+    SEM_DESFAZER.exclude?(acao.to_s)
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação
@@ -85,17 +143,13 @@ class Autonomia::Guide::Acoes
       aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : nil) }
   end
 
-  # Só roda depois da confirmação. Vai pela API da conta, como o usuário: se a
+  # Executa pela API da conta, como o usuário: se a
   # plataforma não deixa ele fazer, não deixa o Guia fazer.
   def executar(acao, dados)
     garantir_permitida!(acao)
     resposta = requisitar(verbo_de(acao), montar_caminho(acao, dados), corpo_de(dados))
 
-    if sucesso?(resposta)
-      registro = identificador(resposta)
-      auditar(acao, dados, registro)
-      return Resultado.new(ok: true, mensagem: traduzir('done'), registro: registro)
-    end
+    return concluida(acao, dados, resposta) if sucesso?(resposta)
 
     Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta) || traduzir('failed'))
   rescue Recusada
@@ -112,6 +166,12 @@ class Autonomia::Guide::Acoes
   end
 
   private
+
+  def concluida(acao, dados, resposta)
+    registro = identificador(resposta)
+    auditar(acao, dados, registro)
+    Resultado.new(ok: true, mensagem: traduzir('done'), registro: registro, corpo: resposta.corpo)
+  end
 
   def garantir_permitida!(acao)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)

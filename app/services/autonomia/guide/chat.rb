@@ -11,7 +11,7 @@ module Autonomia
       # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
       # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
       Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
-                          :acao, :retido, :artigo, :artigos, keyword_init: true)
+                          :acao, :retido, :artigo, :artigos, :execucao, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -91,10 +91,13 @@ module Autonomia
         # a OpenAI fora, para o banco de vetores fora, e para "li o seu dado certinho e fui
         # censurado por não estar ancorado num fluxo do manual". Separar os dois é o mínimo para
         # alguém conseguir diagnosticar, e para a pessoa não achar que o produto caiu.
-        return retido if text.blank?
+        # O que o Guia FEZ neste turno (#855) vai para a tela mesmo quando o texto
+        # foi retido: a mudança já aconteceu, e a pessoa precisa ver e poder desfazer.
+        execucao = contexto.execucao&.resumo
+        return retido(execucao) if text.blank?
 
         navs = navegacoes(result)
-        Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao,
+        Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
                    artigo: contexto.artigos.first, artigos: contexto.artigos,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
@@ -263,9 +266,9 @@ module Autonomia
       # O Guia está no ar e entendeu; só não está seguro o bastante para afirmar.
       # A tela traduz isso numa frase própria, com a oferta de suporte — em vez
       # de dizer que o produto caiu.
-      def retido
+      def retido(execucao = nil)
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: true, escalate: true, retido: true)
+                   available: true, escalate: true, retido: true, execucao: execucao)
       end
 
       def preparing

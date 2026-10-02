@@ -34,6 +34,19 @@ RSpec.describe Autonomia::Guide::Acoes do
     # Decisão do Rodrigo em 20/09/2026: o administrador pede tudo que ele mesmo
     # pode fazer na conta dele. Não há área bloqueada — o que protege é ele ler o
     # pedido literal e confirmar, e a plataforma aplicar a permissão real.
+    # A lista do que não tem desfazer (#855) é escrita à mão: uma rota renomeada
+    # deixaria a ação sem confirmação, calada. Toda entrada tem que existir.
+    it 'só lista como sem desfazer ações que existem no catálogo' do
+      expect(described_class::SEM_DESFAZER - para(admin).catalogo).to be_empty
+    end
+
+    # Dinheiro da conta na plataforma nunca entra no catálogo do Guia.
+    it 'deixa de fora plano, cobrança e créditos', :aggregate_failures do
+      catalogo = para(admin).catalogo.join(' ')
+
+      %w[checkout subscription topup billing].each { |palavra| expect(catalogo).not_to include(palavra) }
+    end
+
     it 'não esconde área nenhuma do administrador' do
       expect(para(admin).catalogo).to include('POST campaigns', 'POST webhooks', 'DELETE inboxes/:id')
     end

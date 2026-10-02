@@ -1,5 +1,9 @@
 # O Guia PROPONDO uma mudança na conta (issue #568).
 #
+# Desde a #855, só para o que NÃO tem desfazer (`Acoes::SEM_DESFAZER`):
+# mensagem para cliente, campanha, credencial, importação. O resto o Guia
+# executa direto, com `executar_acao`.
+#
 # Esta ferramenta não executa nada, e isso não é detalhe de implementação: é a
 # proteção. Ela monta o pedido, confere que a pessoa pode fazer aquilo, e devolve
 # a frase que ela vai ler. A tela mostra o resumo com os botões, e só o clique
@@ -15,10 +19,10 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
     end
 
     def description
-      'Prepara uma mudança na conta para a pessoa confirmar na tela. NÃO executa: depois de chamar, ' \
-        'a tela mostra o resumo com os botões Confirmar e Cancelar logo abaixo da sua resposta. ' \
-        'Use quando ela pedir para você FAZER algo (criar, alterar, apagar). Só funciona para quem ' \
-        'administra a conta.'
+      'Prepara, para a pessoa confirmar na tela, uma ação que NÃO tem desfazer: enviar mensagem a cliente, ' \
+        'disparar campanha, trocar credencial, importar em lote. NÃO executa: a tela mostra o resumo com ' \
+        'Confirmar e Cancelar logo abaixo da sua resposta. Todo o resto você faz direto com executar_acao. ' \
+        'Só funciona para quem administra a conta.'
     end
 
     def params
@@ -41,6 +45,7 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
 
   def call
     return recusa_sem_contexto if @operador.nil?
+    return tem_volta if conhecida_com_volta?(@params['acao'].to_s)
 
     dados = { caminho: objeto('caminho_json'), corpo: objeto('corpo_json'),
               descricao: @params['descricao'].to_s }
@@ -100,6 +105,16 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
     "Não preparei a ação: #{nao_lidos.map { |nome, valor| "#{nome} #{valor}" }.join(', ')} não veio de nenhuma " \
       'leitura da conta nesta conversa. Leia a conta, ache o registro pelo nome que a pessoa disse e use o id ' \
       'que veio; se houver mais de um, pergunte qual; se não houver, diga que não existe.'
+  end
+
+  # Ação fora do catálogo segue para `descrever`, que recusa e lista as vizinhas.
+  def conhecida_com_volta?(acao)
+    @operador.acoes.catalogo.include?(acao) && @operador.acoes.desfazivel?(acao)
+  end
+
+  def tem_volta
+    "Não preparei: \"#{@params['acao']}\" tem desfazer. Faça direto com executar_acao; a pessoa pode desfazer " \
+      'por 5 dias.'
   end
 
   def recusa_sem_contexto

@@ -2,8 +2,8 @@
 import ApiClient from './ApiClient';
 
 // Guia da Plataforma — onboarding/suporte global (gated server-side by the account's Autonomia
-// eligibility = ENV master + the Kanban AI key). `chat` apenas explica; `executarAcao` muda dados,
-// e só é chamado depois da confirmação explícita na tela.
+// eligibility = ENV master + the Kanban AI key). O que tem desfazer o Guia faz no próprio turno
+// (#855); `executarAcao` é só para o que não tem volta, depois da confirmação explícita na tela.
 class AutonomiaGuideAPI extends ApiClient {
   constructor() {
     super('autonomia/guide', { accountScoped: true });
@@ -33,6 +33,16 @@ class AutonomiaGuideAPI extends ApiClient {
   // estiver fora do catálogo de ações e o que a pessoa não puder fazer.
   executarAcao({ acao, dados } = {}) {
     return axios.post(`${this.url}/acoes/executar`, { acao, dados });
+  }
+
+  // #855 — o que o Guia fez para esta pessoa nos últimos 5 dias.
+  execucoes() {
+    return axios.get(`${this.url}/execucoes`);
+  }
+
+  // #855 — volta a conta ao estado de antes daquele turno do Guia.
+  desfazer(id) {
+    return axios.post(`${this.url}/execucoes/${id}/desfazer`);
   }
 }
 
