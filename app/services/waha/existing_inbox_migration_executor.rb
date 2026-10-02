@@ -1,5 +1,5 @@
 class Waha::ExistingInboxMigrationExecutor
-  Outcome = Struct.new(:status, :error_class, keyword_init: true)
+  Outcome = Struct.new(:status, :error_class, :reason, keyword_init: true)
   VerificationError = Class.new(StandardError)
 
   REMOTE_CHANGES = %w[remote_chatwoot_app brazilian_phone_numbers_app].freeze
@@ -16,6 +16,13 @@ class Waha::ExistingInboxMigrationExecutor
     remote_write_attempted = false
 
     begin
+      unless remote_snapshot_current?(plan)
+        return Outcome.new(
+          status: :skipped,
+          reason: 'A configuração remota mudou após o planejamento. Nenhuma alteração foi aplicada; lote interrompido.'
+        )
+      end
+
       if plan.changes.intersect?(REMOTE_CHANGES)
         remote_write_attempted = true
         update_remote(plan)
@@ -30,6 +37,15 @@ class Waha::ExistingInboxMigrationExecutor
   end
 
   private
+
+  def remote_snapshot_current?(plan)
+    current_session = @client.get_session(plan.context.session)
+    current_apps = @client.list_apps(plan.context.session)
+
+    current_session['status'] == plan.snapshot.session_info['status'] &&
+      current_session['config'] == plan.snapshot.session_info['config'] &&
+      current_apps.sort_by { |app| app['id'].to_s } == plan.snapshot.apps.sort_by { |app| app['id'].to_s }
+  end
 
   def update_remote(plan)
     @client.update_session(

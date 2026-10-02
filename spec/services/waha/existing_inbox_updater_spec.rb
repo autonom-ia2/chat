@@ -122,6 +122,122 @@ RSpec.describe Waha::ExistingInboxUpdater do
     )
   end
 
+  describe 'remote changes after planning' do
+    let(:concurrent_calls_app) do
+      {
+        'id' => 'calls_concurrent',
+        'session' => '5511999999999',
+        'app' => 'calls',
+        'enabled' => true,
+        'config' => { 'reject' => false }
+      }
+    end
+
+    shared_examples 'a concurrent change that stops the batch without writing' do
+      it 'preserves the concurrent state, skips local writes and does not process the next inbox', :aggregate_failures do
+        second_channel = create(
+          :channel_api,
+          account: account,
+          additional_attributes: { 'provider' => 'waha', 'session' => 'second', 'app_id' => 'app_second' }
+        )
+        second_channel.inbox.update!(lock_to_single_conversation: false)
+        allow(client).to receive(:get_app).with('app_second').and_return({})
+        original_local_attributes = channel.additional_attributes.deep_dup
+        expected_apps = nil
+        expected_session = nil
+        planner = Waha::ExistingInboxMigrationPlanner.new(client: client)
+        allow(Waha::ExistingInboxMigrationPlanner).to receive(:new).with(client: client).and_return(planner)
+        allow(planner).to receive(:build).and_wrap_original do |method, *args|
+          plan = method.call(*args)
+          concurrent_change.call
+          expected_apps = remote_apps.deep_dup
+          expected_session = remote_session.deep_dup
+          plan
+        end
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h.slice(:total, :updated, :skipped, :failed, :recovered, :recovery_failed, :halted)).to eq(
+          total: 1, updated: 0, skipped: 1, failed: 0, recovered: 0, recovery_failed: 0, halted: true
+        )
+        expect(client).not_to have_received(:update_session)
+        expect(client).not_to have_received(:start_session)
+        expect(client).not_to have_received(:get_app).with('app_second')
+        expect(remote_apps).to eq(expected_apps)
+        expect(remote_session).to eq(expected_session)
+        expect(inbox.reload.lock_to_single_conversation).to be(false)
+        expect(channel.reload.additional_attributes).to eq(original_local_attributes)
+        expect(second_channel.inbox.reload.lock_to_single_conversation).to be(false)
+        expect(output.string).to include('SKIP', 'mudou após o planejamento', 'Nenhuma alteração foi aplicada')
+        expect(output.string).not_to include('UPDATED')
+      end
+    end
+
+    context 'when a calls app is added after the initial Chatwoot-only snapshot' do
+      let(:concurrent_change) { -> { remote_apps << concurrent_calls_app.deep_dup } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when Chatwoot configuration changes' do
+      let(:concurrent_change) { -> { remote_apps.first['config']['customFutureOption']['keep'] = false } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when Brazilian Phone Numbers configuration changes' do
+      let(:remote_phone_app) do
+        Waha::BrazilianPhoneNumbers.app_payload(session: '5511999999999', app_id: 'br_existing').deep_stringify_keys
+      end
+      let(:concurrent_change) { -> { remote_apps.last['config']['lookup'] = false } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when an unrelated app changes' do
+      let(:remote_other_app) { concurrent_calls_app }
+      let(:concurrent_change) { -> { remote_apps.last['enabled'] = false } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when an app is removed' do
+      let(:remote_other_app) { concurrent_calls_app }
+      let(:concurrent_change) { -> { remote_apps.pop } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when session configuration changes' do
+      let(:concurrent_change) { -> { remote_session['config']['ignore']['groups'] = false } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    context 'when the session stops working' do
+      let(:concurrent_change) { -> { remote_session['status'] = 'STOPPED' } }
+
+      it_behaves_like 'a concurrent change that stops the batch without writing'
+    end
+
+    it 'fails closed and stops without recovery when the final remote read fails' do
+      reads = 0
+      allow(client).to receive(:list_apps) do
+        reads += 1
+        raise Waha::Client::Error, 'read failed' if reads > 1
+
+        remote_apps.deep_dup
+      end
+
+      result = service.perform(apply: true)
+
+      expect(result.to_h.slice(:updated, :failed, :recovered, :halted)).to eq(updated: 0, failed: 1, recovered: 0, halted: true)
+      expect(client).not_to have_received(:update_session)
+      expect(inbox.reload.lock_to_single_conversation).to be(false)
+      expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+    end
+  end
+
   describe 'single-conversation compatibility' do
     it 'migrates restrictive remote filters to created_newest and any status before locking the inbox' do
       remote_app['config']['conversations'].merge!(
@@ -237,6 +353,22 @@ RSpec.describe Waha::ExistingInboxUpdater do
         'enabled' => true,
         'config' => { 'reject' => false }
       }
+    end
+
+    it 'migrates normally when only the order of the remote app list changes' do
+      reads = 0
+      allow(client).to receive(:list_apps) do
+        reads += 1
+        reads == 1 ? remote_apps.deep_dup : remote_apps.reverse.deep_dup
+      end
+
+      result = service.perform(apply: true)
+
+      expect(result.to_h.slice(:updated, :skipped, :failed, :halted)).to eq(updated: 1, skipped: 0, failed: 0, halted: false)
+      expect(client).to have_received(:update_session).once
+      expect(remote_apps).to include(remote_other_app)
+      expect(inbox.reload.lock_to_single_conversation).to be(true)
+      expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_present
     end
 
     it 'preserves the unrelated app while syncing the managed apps' do

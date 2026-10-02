@@ -72,6 +72,8 @@ class Waha::ExistingInboxUpdater
       result.updated += 1
       log(plan.context.channel, 'UPDATED', plan.changes.join(','))
       :updated
+    when :skipped
+      skip(plan.context.channel, result, outcome.reason)
     when :recovered
       record_recovered_failure(plan, result, outcome)
     when :recovery_failed
