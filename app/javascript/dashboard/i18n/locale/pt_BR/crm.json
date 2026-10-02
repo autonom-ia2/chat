@@ -152,6 +152,17 @@
     }
   },
   "CRM_KANBAN": {
+    "ZOOM": {
+      "PERCENT": "{value}%",
+      "TITLE": "Zoom do Kanban",
+      "TRIGGER": "Zoom do Kanban: {value}%",
+      "DESCRIPTION": "Altera somente as colunas e os cards.",
+      "DECREASE": "Diminuir zoom em 1%",
+      "INCREASE": "Aumentar zoom em 1%",
+      "PRESETS": "Níveis rápidos de zoom",
+      "SAVED": "Sua escolha fica salva e será mantida quando você voltar ao Kanban.",
+      "SAVE_FAILED": "Este navegador não conseguiu salvar sua escolha. O zoom foi aplicado apenas nesta tela."
+    },
     "COMPANY_OPPORTUNITIES": {
       "HELP": "Negociações dos contatos vinculados a esta empresa. Apenas oportunidades que você pode acessar.",
       "CONTACT": "Contato: {name}",

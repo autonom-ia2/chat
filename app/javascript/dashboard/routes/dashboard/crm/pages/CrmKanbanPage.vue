@@ -21,6 +21,10 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
+import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
+import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
+import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
+import { KANBAN_ZOOM_DRAG_CLASSES } from '../helpers/kanbanZoom';
 import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CrmCardDrawer from '../components/CrmCardDrawer.vue';
 import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
@@ -46,6 +50,25 @@ import {
 
 const store = useStore();
 const { t } = useI18n();
+const { zoom, zoomClass, setZoom, persistenceFailed } = useCrmKanbanZoom();
+const kanbanBoard = ref(null);
+const isRTL = useMapGetter('accounts/isRTL');
+let suppressClickAfterDrag = false;
+const resetKanbanClick = () => {
+  suppressClickAfterDrag = false;
+};
+const ignoreDragClick = event => {
+  // Sortable can clear its own click guard when crossing sibling cards.
+  // Block only the pointer-generated trailing click, not keyboard activation.
+  if (!suppressClickAfterDrag || event.detail === 0) return;
+  suppressClickAfterDrag = false;
+  event.preventDefault();
+  event.stopPropagation();
+};
+const { start: startAutoScroll, stop: stopAutoScroll } = useCrmKanbanAutoScroll(
+  kanbanBoard,
+  zoom
+);
 
 const pipelines = useMapGetter('crmKanban/getPipelines');
 const stages = useMapGetter('crmKanban/getStages');
@@ -1321,8 +1344,10 @@ const closeCardDeal = async payload => {
   }
 };
 
-const onDragStart = () => {
+const onDragStart = event => {
+  suppressClickAfterDrag = true;
   dragSnapshot.value = JSON.parse(JSON.stringify(stages.value));
+  startAutoScroll(event);
 };
 
 const onDragChange = async (stage, event) => {
@@ -1914,7 +1939,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="flex h-full min-w-0 flex-col overflow-hidden bg-n-background">
+  <main
+    class="flex h-full w-full min-w-0 flex-col overflow-hidden bg-n-background"
+  >
     <CrmOpportunityFromContact
       v-if="route.query.new_contact_id !== undefined"
       :ready="Boolean(currentPipelineId && stages.length && !isLoading)"
@@ -2057,7 +2084,7 @@ onUnmounted(() => {
 
     <section
       v-if="viewMode !== 'calendar'"
-      class="flex flex-col gap-3 border-b border-n-weak bg-n-surface-1 px-6 py-3 sm:px-8"
+      class="flex shrink-0 flex-col gap-3 border-b border-n-weak bg-n-surface-1 px-6 py-3 sm:px-8"
     >
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex items-center gap-2">
@@ -2081,7 +2108,7 @@ onUnmounted(() => {
         </div>
 
         <div
-          class="min-w-0 basis-full sm:min-w-[16rem] sm:flex-1 sm:basis-auto"
+          class="min-w-0 basis-full sm:min-w-[12rem] sm:flex-1 sm:basis-auto"
         >
           <Input
             id="crm-kanban-search"
@@ -2111,6 +2138,13 @@ onUnmounted(() => {
           disabled
           :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
           :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
+        />
+        <CrmKanbanZoom
+          v-if="viewMode === 'kanban'"
+          :model-value="zoom"
+          :persistence-failed="persistenceFailed"
+          class="ms-auto"
+          @update:model-value="setZoom"
         />
         <CrmListExportButton
           v-if="canExportCrm && viewMode === 'list'"
@@ -2244,11 +2278,17 @@ onUnmounted(() => {
 
     <section
       v-else-if="viewMode === 'kanban'"
-      class="flex flex-1 gap-4 overflow-x-auto overflow-y-hidden bg-n-slate-3 px-8 py-5"
+      ref="kanbanBoard"
+      data-kanban-board
+      :class="zoomClass"
+      class="flex min-h-0 min-w-0 flex-1 gap-4 overflow-x-auto overflow-y-hidden bg-n-slate-3 px-8 py-5"
+      @pointerdown.capture="resetKanbanClick"
+      @click.capture="ignoreDragClick"
     >
       <article
         v-for="stage in stages"
         :key="stage.id"
+        :data-stage-id="stage.id"
         class="flex h-full w-[19rem] shrink-0 flex-col overflow-hidden rounded-xl bg-n-alpha-1"
       >
         <header
@@ -2287,6 +2327,14 @@ onUnmounted(() => {
           group="crm-kanban-cards"
           ghost-class="opacity-40"
           drag-class="cursor-grabbing"
+          fallback-class="crm-kanban-drag-preview"
+          v-bind="{
+            'fallback-on-body': true,
+            'force-fallback': true,
+            'fallback-tolerance': 4,
+            scroll: false,
+          }"
+          data-kanban-list
           class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pb-3 pt-2"
           :animation="150"
           :disabled="!canMoveCards || uiFlags.isMovingCard"
@@ -2294,15 +2342,24 @@ onUnmounted(() => {
           filter=".crm-card-open-conversation"
           :prevent-on-filter="false"
           @start="onDragStart"
+          @end="stopAutoScroll"
           @change="event => onDragChange(stage, event)"
         >
           <template #item="{ element }">
-            <CrmKanbanCard
-              :card="element"
-              :stage-color="stage.color"
-              @open="openCardFromBoard"
-              @open-conversation="openCardConversation"
-            />
+            <div
+              :data-card-id="element.id"
+              :dir="isRTL ? 'rtl' : 'ltr'"
+              class="w-full shrink-0 [&.crm-kanban-drag-preview>*]:w-auto"
+              :class="KANBAN_ZOOM_DRAG_CLASSES[zoom]"
+            >
+              <!-- Body-mounted preview: scale the child, not pointer coordinates. -->
+              <CrmKanbanCard
+                :card="element"
+                :stage-color="stage.color"
+                @open="openCardFromBoard"
+                @open-conversation="openCardConversation"
+              />
+            </div>
           </template>
 
           <template #footer>

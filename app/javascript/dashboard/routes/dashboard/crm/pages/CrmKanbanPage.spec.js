@@ -1,6 +1,11 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
+import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
+import {
+  KANBAN_ZOOM_CLASSES,
+  KANBAN_ZOOM_DRAG_CLASSES,
+} from '../helpers/kanbanZoom';
 
 // The page is a large orchestrator. These specs pin three review findings:
 // the Agenda keeps its admin actions, drag is gated by permission, and the
@@ -122,6 +127,7 @@ const setGetters = () => {
     'inboxes/getInboxes': ref([]),
     'agents/getAgents': ref([]),
     'teams/getTeams': ref([]),
+    'accounts/isRTL': ref(false),
     'labels/getLabels': ref([]),
   });
 };
@@ -357,4 +363,148 @@ it('does not start another move while a card is moving', async () => {
     expect.anything()
   );
   wrapper.unmount();
+});
+
+describe('Kanban zoom integration', () => {
+  let wrapper;
+  beforeEach(() => {
+    localStorage.clear();
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+    dispatch.mockImplementation(async type =>
+      type === 'crmKanban/fetchPipelines' ? [PIPELINE] : []
+    );
+  });
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = null;
+    document.body.innerHTML = '';
+    localStorage.clear();
+    delete window.globalConfig;
+  });
+
+  it.each([70, 80, 87, 90, 100, 110, 117, 120, 130])(
+    'scales only the board at %i without rebuilding cards or refetching data',
+    async value => {
+      wrapper = await mountPage();
+      const board = wrapper.get('[data-kanban-board]').element;
+      const column = wrapper.get('[data-stage-id="10"]').element;
+      const header = wrapper.get('main > header').element;
+      dispatch.mockClear();
+      wrapper.findComponent(CrmKanbanZoom).vm.$emit('update:modelValue', value);
+      await flushPromises();
+      expect(wrapper.get('[data-kanban-board]').classes()).toContain(
+        KANBAN_ZOOM_CLASSES[value]
+      );
+      expect(wrapper.get('[data-kanban-board]').element).toBe(board);
+      expect(wrapper.get('[data-stage-id="10"]').element).toBe(column);
+      expect(wrapper.get('main > header').element).toBe(header);
+      expect(header.className).not.toContain('[zoom:');
+      expect(wrapper.get('main').classes()).toContain('w-full');
+      expect(wrapper.get('[data-card-id]').classes()).toContain(
+        KANBAN_ZOOM_DRAG_CLASSES[value]
+      );
+      expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(
+        value
+      );
+      expect(dispatch).not.toHaveBeenCalled();
+      wrapper.findAll('[data-test-draggable]').forEach(list => {
+        expect(list.attributes('sort')).toBe('false');
+        expect(list.attributes('fallback-on-body')).toBe('true');
+        expect(list.attributes('force-fallback')).toBe('true');
+        expect(list.attributes('fallback-tolerance')).toBe('4');
+        expect(list.attributes('scroll')).toBe('false');
+        expect(list.attributes('fallback-class')).toBe(
+          'crm-kanban-drag-preview'
+        );
+      });
+      wrapper.vm.onDragStart();
+      await wrapper.vm.onDragChange(STAGES[1], {
+        added: { element: STAGES[0].cards[0] },
+      });
+      expect(dispatch).toHaveBeenCalledWith('crmKanban/moveCard', {
+        cardId: 100,
+        stageId: 11,
+      });
+    }
+  );
+
+  it.each(['list', 'calendar'])(
+    'keeps the exact preference through %s without scaling it',
+    async mode => {
+      wrapper = await mountPage();
+      wrapper.vm.setZoom(87);
+      wrapper.vm.setViewMode(mode);
+      await flushPromises();
+      expect(wrapper.findComponent(CrmKanbanZoom).exists()).toBe(false);
+      expect(wrapper.find('[data-kanban-board]').exists()).toBe(false);
+      expect(
+        wrapper
+          .findAll('[class]')
+          .some(node => node.attributes('class').includes('[zoom:'))
+      ).toBe(false);
+      wrapper.vm.setViewMode('kanban');
+      await flushPromises();
+      expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(87);
+    }
+  );
+
+  it('restores the exact percentage after leaving and mounting the CRM again', async () => {
+    wrapper = await mountPage();
+    wrapper.vm.setZoom(87);
+    wrapper.unmount();
+    wrapper = await mountPage();
+    expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(87);
+  });
+
+  it('preserves the account direction on cards cloned outside the app', async () => {
+    wrapper = await mountPage();
+    expect(wrapper.get('[data-card-id]').attributes('dir')).toBe('ltr');
+    storeGetters['accounts/isRTL'].value = true;
+    await flushPromises();
+    expect(wrapper.get('[data-card-id]').attributes('dir')).toBe('rtl');
+  });
+
+  it('suppresses the trailing click after dragging, not a fresh pointer click', async () => {
+    wrapper = await mountPage();
+    const target = wrapper.get('[data-card-id]').element;
+    const clicked = vi.fn();
+    target.addEventListener('click', clicked);
+    wrapper.vm.onDragStart();
+    const trailing = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      detail: 1,
+    });
+    target.dispatchEvent(trailing);
+    expect(trailing.defaultPrevented).toBe(true);
+    expect(clicked).not.toHaveBeenCalled();
+    target.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+    expect(clicked).toHaveBeenCalledOnce();
+  });
+
+  it('preserves keyboard activation after an abandoned drag', async () => {
+    wrapper = await mountPage();
+    const target = wrapper.get('[data-card-id]').element;
+    const clicked = vi.fn();
+    target.addEventListener('click', clicked);
+    wrapper.vm.onDragStart();
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 }));
+    expect(clicked).toHaveBeenCalledOnce();
+  });
+
+  it('keeps zoom across funnels and never exposes the control on the Agenda-only route', async () => {
+    wrapper = await mountPage();
+    wrapper.vm.setZoom(83);
+    storeGetters['crmKanban/getPipelines'].value = [
+      PIPELINE,
+      { id: 2, name: 'Outro funil' },
+    ];
+    wrapper.vm.currentPipelineId = 2;
+    await flushPromises();
+    expect(wrapper.findComponent(CrmKanbanZoom).props('modelValue')).toBe(83);
+    wrapper.unmount();
+    wrapper = await mountPage({ calendarOnly: true });
+    expect(wrapper.findComponent(CrmKanbanZoom).exists()).toBe(false);
+  });
 });
