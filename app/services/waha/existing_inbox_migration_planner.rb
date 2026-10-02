@@ -53,7 +53,7 @@ class Waha::ExistingInboxMigrationPlanner
     raise SkipError, 'session config unavailable' unless session_info['config'].is_a?(Hash)
 
     apps = @client.list_apps(context.session)
-    raise SkipError, 'chatwoot app absent from session app list' unless app_list_matches?(apps, context)
+    validate_chatwoot_snapshot!(apps, context, chatwoot)
 
     Snapshot.new(
       chatwoot: chatwoot,
@@ -115,8 +115,12 @@ class Waha::ExistingInboxMigrationPlanner
     remote['app'] == 'chatwoot' && remote['session'].to_s == context.session
   end
 
-  def app_list_matches?(remote_apps, context)
-    remote_apps.any? { |app| app['id'] == context.app_id && app['app'] == 'chatwoot' }
+  def validate_chatwoot_snapshot!(remote_apps, context, chatwoot)
+    listed_chatwoot = remote_apps.find { |app| app['id'] == context.app_id && app['app'] == 'chatwoot' }
+    raise SkipError, 'chatwoot app absent from session app list' unless listed_chatwoot
+    return if listed_chatwoot == chatwoot
+
+    raise SkipError, 'O App Chatwoot mudou entre as leituras do planejamento. Nenhuma alteração foi aplicada.'
   end
 
   def find_phone_numbers_app(remote_apps)

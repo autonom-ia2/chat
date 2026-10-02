@@ -193,6 +193,82 @@ RSpec.describe Waha::ExistingInboxUpdater do
     end
   end
 
+  describe 'inconsistent Chatwoot reads during planning' do
+    {
+      'known configuration' => ->(app) { app['config']['conversations']['markAsRead'] = false },
+      'unknown configuration' => ->(app) { app['config']['customFutureOption']['keep'] = false },
+      'enabled state' => ->(app) { app['enabled'] = false },
+      'unknown App fields' => ->(app) { app['customRemoteField'] = 'concurrent' }
+    }.each do |field, concurrent_change|
+      it "preserves concurrent #{field} and stops the batch without writing", :aggregate_failures do
+        second_channel = create(
+          :channel_api,
+          account: account,
+          additional_attributes: { 'provider' => 'waha', 'session' => 'second', 'app_id' => 'app_second' }
+        )
+        second_channel.inbox.update!(lock_to_single_conversation: false)
+        allow(client).to receive(:get_app).with('app_second').and_return({})
+        original_attributes = channel.additional_attributes.deep_dup
+        expected_apps = nil
+        allow(client).to receive(:get_app).with('app_123') do
+          initial_app = remote_apps.first.deep_dup
+          concurrent_change.call(remote_apps.first)
+          expected_apps = remote_apps.deep_dup
+          initial_app
+        end
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h).to eq(
+          total: 1, would_update: 0, updated: 0, unchanged: 0, skipped: 1, failed: 0,
+          recovered: 0, recovery_failed: 0, halted: true
+        )
+        expect(client).to have_received(:list_apps).with('5511999999999').once
+        expect(client).not_to have_received(:update_session)
+        expect(client).not_to have_received(:start_session)
+        expect(client).not_to have_received(:get_app).with('app_second')
+        expect(remote_apps).to eq(expected_apps)
+        expect(channel.reload.additional_attributes).to eq(original_attributes)
+        expect(inbox.reload.lock_to_single_conversation).to be(false)
+        expect(second_channel.inbox.reload.lock_to_single_conversation).to be(false)
+        expect(output.string).to include('SKIP', 'Chatwoot mudou entre as leituras', 'Nenhuma alteração foi aplicada')
+        expect(output.string).not_to include('UPDATED', 'RECOVERED')
+      end
+    end
+
+    it 'reports the inconsistent snapshot in dry-run without a migration plan or local write', :aggregate_failures do
+      allow(client).to receive(:get_app).with('app_123') do
+        initial_app = remote_apps.first.deep_dup
+        remote_apps.first['config']['customFutureOption']['keep'] = false
+        initial_app
+      end
+
+      result = service.perform
+
+      expect(result.to_h.slice(:total, :would_update, :updated, :skipped, :halted)).to eq(
+        total: 1, would_update: 0, updated: 0, skipped: 1, halted: false
+      )
+      expect(client).not_to have_received(:update_session)
+      expect(client).not_to have_received(:start_session)
+      expect(remote_apps.first.dig('config', 'customFutureOption', 'keep')).to be(false)
+      expect(inbox.reload.lock_to_single_conversation).to be(false)
+      expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+      expect(output.string).to include('SKIP', 'Chatwoot mudou entre as leituras')
+    end
+
+    it 'still blocks a Chatwoot App missing from the complete list', :aggregate_failures do
+      allow(client).to receive(:list_apps).with('5511999999999').and_return([])
+
+      result = service.perform(apply: true)
+
+      expect(result.to_h.slice(:updated, :skipped, :halted)).to eq(updated: 0, skipped: 1, halted: true)
+      expect(client).not_to have_received(:update_session)
+      expect(inbox.reload.lock_to_single_conversation).to be(false)
+      expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+      expect(output.string).to include('chatwoot app absent from session app list')
+    end
+  end
+
   describe 'remote changes after planning' do
     let(:concurrent_calls_app) do
       {
