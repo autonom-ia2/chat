@@ -1,7 +1,7 @@
 class Waha::ExistingInboxMigrationPlanner
   Context = Struct.new(:channel, :inbox, :session, :app_id, keyword_init: true)
   Snapshot = Struct.new(:chatwoot, :session_info, :apps, :phone_app, keyword_init: true)
-  Plan = Struct.new(:context, :snapshot, :desired_apps, :phone_app_id, :changes, keyword_init: true)
+  Plan = Struct.new(:context, :snapshot, :desired_apps, :desired_config, :phone_app_id, :changes, keyword_init: true)
   SkipError = Class.new(StandardError)
 
   WORKING_STATUS = 'WORKING'.freeze
@@ -23,11 +23,13 @@ class Waha::ExistingInboxMigrationPlanner
     phone_app_id = snapshot.phone_app&.dig('id') || "br_#{SecureRandom.hex(16)}"
     desired_chatwoot = desired_chatwoot_app(snapshot.chatwoot)
     desired_phone = desired_phone_numbers_app(snapshot.phone_app, context.session, phone_app_id)
+    desired_config = snapshot.session_info['config'].deep_merge('ignore' => { 'status' => @config.session_ignore.fetch(:status) })
 
     Plan.new(
       context: context,
       snapshot: snapshot,
       desired_apps: desired_session_apps(snapshot, context, desired_chatwoot, desired_phone),
+      desired_config: desired_config,
       phone_app_id: phone_app_id,
       changes: required_changes(context, snapshot, desired_chatwoot, desired_phone, phone_app_id)
     )
@@ -152,6 +154,7 @@ class Waha::ExistingInboxMigrationPlanner
   def required_changes(context, snapshot, desired_chatwoot, desired_phone, phone_app_id)
     changes = []
     changes << 'remote_chatwoot_app' if desired_chatwoot != snapshot.chatwoot
+    changes << 'session_status_filter' if snapshot.session_info.dig('config', 'ignore', 'status') != @config.session_ignore.fetch(:status)
     changes << 'brazilian_phone_numbers_app' if snapshot.phone_app.blank? || desired_phone != snapshot.phone_app
     changes << 'phone_numbers_app_reference' if stored_phone_app_id(context) != phone_app_id
     changes << 'single_conversation' unless context.inbox.lock_to_single_conversation?

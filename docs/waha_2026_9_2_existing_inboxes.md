@@ -6,6 +6,10 @@ Atualizar caixas WhatsApp API já provisionadas sem recriar Inbox, sessão WAHA 
 
 O backfill deixa cada sessão com:
 
+- Filtro de Status do WhatsApp (Stories) na sessão:
+  - `config.ignore.status = true` por padrão
+  - `WAHA_IGNORE_STATUS=false` mantém o opt-in explícito da instalação para importar Status
+  - demais filtros e campos da configuração da sessão preservados
 - App Chatwoot no WAHA:
   - `conversations.outgoing = message`
   - `conversations.syncMessageStatus = true`
@@ -97,13 +101,15 @@ Mais de um App `brazilian-phone-numbers` na lista completa bloqueia o planejamen
 
 Como `lock_to_single_conversation=true`, o App Chatwoot é normalizado no mesmo plano para `sort=created_newest` e `status=null`. Essa combinação permite localizar também a conversa resolvida e reabri-la, em vez de criar outra. Um `WAHA_CONVERSATION_SORT` legado não pode sobrescrever esse comportamento em novas caixas.
 
-Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são capturadas como snapshot antes da atualização. O backfill preserva os Apps existentes, sincroniza Chatwoot + resolver brasileiro e só grava `lock_to_single_conversation`/`phone_numbers_app_id` depois que a sessão retorna a `WORKING` e o estado remoto desejado é confirmado por leitura.
+Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são capturadas como snapshot antes da atualização. O backfill aplica o filtro de Status definido pela instalação, preserva os demais campos da sessão e todos os Apps existentes, sincroniza Chatwoot + resolver brasileiro e só grava `lock_to_single_conversation`/`phone_numbers_app_id` depois que a sessão retorna a `WORKING` e o estado remoto desejado é confirmado por leitura.
 
 Imediatamente antes da aplicação, o executor relê o estado/configuração da sessão e a lista completa de Apps e compara com o snapshot do planejamento. A ordem da lista não importa; os campos de cada App são comparados integralmente. Uma alteração concorrente gera `SKIP` com motivo explícito, sem PUT, recuperação ou gravação local, e interrompe o lote. Falha nessa leitura gera `FAILED` e também interrompe o lote sem escrita. Não há merge automático nem retry.
 
 Essa comparação não é uma escrita condicional atômica na WAHA: continua existindo uma janela entre a última leitura e o PUT. No piloto autorizado, impedir alterações paralelas de Apps/configuração da sessão durante a operação, inclusive durante uma eventual recuperação. A recuperação do R1 após uma tentativa real de escrita continua usando o snapshot anterior.
 
 Se a atualização remota falhar, ficar em `STARTING`/`STOPPED` ou não puder ser confirmada, o backfill tenta restaurar o snapshot anterior. Uma sessão que estava `WORKING` só é considerada recuperada depois de voltar a `WORKING` e ter configuração e Apps anteriores confirmados. Mesmo com recuperação bem-sucedida, o lote para e exige revisão antes de continuar. Falha de recuperação é registrada como `CRITICAL`/`recovery_failed`.
+
+`session_status_filter` aparece no dry-run quando a configuração antiga ainda importa Status, inclusive em uma caixa já compatível com Chatwoot/resolver. Esse filtro é diferente de `conversations.syncMessageStatus`: entrega/leitura continuam sincronizadas. A aplicação não apaga mensagens ou conversas de Status já importadas.
 
 A atualização da sessão causa um restart técnico, mas não faz logout nem remove o pareamento. A operação deve ser feita uma sessão por vez.
 

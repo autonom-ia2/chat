@@ -563,6 +563,84 @@ RSpec.describe Waha::ExistingInboxUpdater do
       expect(output.string).to include('already compliant')
     end
 
+    context 'when an otherwise compliant session still imports WhatsApp Status' do
+      before do
+        inbox.update!(lock_to_single_conversation: true)
+        channel.update!(additional_attributes: channel.additional_attributes.merge('phone_numbers_app_id' => 'br_existing'))
+        remote_app['config']['conversations'].merge!('outgoing' => 'message', 'syncMessageStatus' => true)
+        remote_apps.replace([remote_app.deep_dup, remote_phone_app.deep_dup])
+        remote_session['config'] = {
+          'ignore' => { 'status' => false, 'groups' => false, 'channels' => true, 'customFutureOption' => 'keep' },
+          'proxy' => { 'server' => 'proxy.example:3128' },
+          'customFutureOption' => { 'keep' => true }
+        }
+      end
+
+      it 'reports the missing Status filter in dry-run without writing' do
+        result = service.perform
+
+        expect(result.to_h.slice(:would_update, :updated, :unchanged)).to eq(would_update: 1, updated: 0, unchanged: 0)
+        expect(output.string).to include('session_status_filter')
+        expect(remote_session.dig('config', 'ignore', 'status')).to be(false)
+        expect(client).not_to have_received(:update_session)
+      end
+
+      it 'blocks Status while preserving Apps, delivery/read sync and every other session setting' do
+        initial_config = remote_session['config'].deep_dup
+        initial_apps = remote_apps.deep_dup
+        initial_local = [inbox.attributes, channel.attributes]
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h.slice(:updated, :failed, :halted)).to eq(updated: 1, failed: 0, halted: false)
+        expect(remote_session['config']).to eq(initial_config.deep_merge('ignore' => { 'status' => true }))
+        expect(remote_apps).to eq(initial_apps)
+        expect(remote_apps.first.dig('config', 'conversations', 'syncMessageStatus')).to be(true)
+        expect([inbox.reload.attributes, channel.reload.attributes]).to eq(initial_local)
+        expect(service.perform.unchanged).to eq(1)
+        expect(client).to have_received(:update_session).once
+      end
+
+      it 'adds the filter when the legacy ignore configuration is absent' do
+        remote_session['config'].delete('ignore')
+        initial_config = remote_session['config'].deep_dup
+
+        result = service.perform(apply: true)
+
+        expect(result.updated).to eq(1)
+        expect(remote_session['config']).to eq(initial_config.merge('ignore' => { 'status' => true }))
+      end
+
+      it 'respects the existing explicit installation opt-in for importing Status' do
+        with_modified_env WAHA_IGNORE_STATUS: 'false' do
+          result = service.perform(apply: true)
+
+          expect(result.unchanged).to eq(1)
+          expect(client).not_to have_received(:update_session)
+          expect(remote_session.dig('config', 'ignore', 'status')).to be(false)
+        end
+      end
+
+      it 'restores the original filter and stops if the desired remote filter is not confirmed' do
+        initial_config = remote_session['config'].deep_dup
+        initial_apps = remote_apps.deep_dup
+        writes = 0
+        allow(client).to receive(:update_session) do |_session, config:, apps:|
+          writes += 1
+          remote_session['config'] = config.deep_dup
+          remote_session['config']['ignore']['status'] = false if writes == 1
+          remote_apps.replace(apps.deep_dup)
+        end
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h.slice(:updated, :failed, :recovered, :halted)).to eq(updated: 0, failed: 1, recovered: 1, halted: true)
+        expect(remote_session['config']).to eq(initial_config)
+        expect(remote_apps).to eq(initial_apps)
+        expect(client).to have_received(:update_session).twice
+      end
+    end
+
     it 'repairs resolver settings while preserving unknown config' do
       remote_phone_app['enabled'] = false
       remote_phone_app['config']['lookup'] = false
