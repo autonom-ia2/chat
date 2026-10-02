@@ -85,3 +85,11 @@ por outros alvos. A parada foi decisão operacional diante do relato, sem afirma
 Não houve rollback, alteração adicional de produção, mensagens extras ou operações na Autonom.ia.
 Investigar config.ignore.status e distinguir Stories de confirmação de entrega/leitura; bloquear expansão
 até corrigir o comportamento. O plano anterior não habilita retry ou retomada automática após a parada.
+
+## Filtro corrigido e restante revalidado
+
+A operação autorizada de #871/#872 ativou e confirmou o filtro de Status nas quatro sessões já aplicadas, todas WORKING, preservando Apps, configuração não relacionada, estado local e histórico. Não houve merge/deploy nessa intervenção; o código permanente da PR #872 ainda não foi publicado. Evidência: [auditoria do filtro](https://github.com/autonom-ia2/chat/blob/e50b96b50ae89d8fd4933d6b500d64db6b0c4597/docs/audit/2026-10-02-waha-status-filter.md), commit e50b96b.
+
+Em resposta à consulta sobre tombamento/backfill, o restante foi revalidado em modo somente leitura: SSM `5ee3d640-6efb-4718-9001-a1dc409c1da0`, Success/0, 2026-10-02 19:18:07–19:18:49 de Brasília. As 21 caixas restantes estão WORKING, em sessões distintas, com `ignore.status=true` e exatamente as quatro mudanças esperadas do plano original. Total=21, would_update=21, updated=0; zero skips/falhas/recuperações. Hash local antes/depois igual; banco em READ ONLY e cliente HTTP somente GET.
+
+Esse backfill configura caixas existentes; não importa, apaga ou recalcula mensagens/histórico. O código base d28a87ad9b já está publicado no Hub2You. O resultado permite preparar a retomada das 21 caixas, com novos backups antes de cada aplicação, comparação N1 e parada R1, mantendo o filtro ligado. Nenhum APPLY novo foi feito após a revalidação; não reutilizar o orquestrador interrompido nem o backup antigo do primeiro alvo. Autonom.ia e as oito caixas excluídas permanecem fora deste lote. A consulta sobre prontidão não foi tratada como autorização de novo merge/deploy nas duas instalações.
