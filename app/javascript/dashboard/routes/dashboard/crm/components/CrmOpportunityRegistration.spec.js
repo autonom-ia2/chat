@@ -267,12 +267,13 @@ it('cannot switch company or reuse a contact while saving', async () => {
   expect(wrapper.vm.draft.companyChosen).toBe(false);
   expect(ContactAPI.show).not.toHaveBeenCalled();
 });
-it('shows no company preselected but only marks it explicit after a click', async () => {
+it('marks no company only after an explicit click', async () => {
   wrapper = make({ name: 'Person' });
   const noCompany = wrapper.find('[data-registration-company] button');
-  expect(noCompany.attributes('aria-pressed')).toBe('true');
+  expect(noCompany.attributes('aria-pressed')).toBe('false');
   expect(registrationPayload(wrapper.vm.draft)).not.toHaveProperty('company');
   await noCompany.trigger('click');
+  await wrapper.vm.$nextTick();
   expect(noCompany.attributes('aria-pressed')).toBe('true');
   expect(registrationPayload(wrapper.vm.draft).company).toEqual({
     mode: 'none',

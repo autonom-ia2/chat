@@ -122,6 +122,12 @@ const setCompanyMode = next => {
   companyMatches.value = [];
   serverError.value = null;
 };
+
+// "No company" is only marked once chosen: until then the contact follows the
+// email-domain association, so no option is shown as selected.
+const isCompanyOptionSelected = value =>
+  draft.value.companyChosen && draft.value.companyMode === value;
+
 watch(
   () => [draft.value.email, draft.value.phoneNumber],
   () => {
@@ -381,16 +387,16 @@ defineExpose({ canSave, validate, showError });
           type="button"
           class="min-h-11 rounded-lg border px-3 py-2 text-xs font-medium focus-visible:outline focus-visible:outline-n-brand"
           :class="
-            draft.companyMode === option.value
+            isCompanyOptionSelected(option.value)
               ? 'border-n-brand/30 bg-n-brand/10 text-n-blue-11'
               : 'border-n-weak text-n-slate-11 hover:bg-n-alpha-2'
           "
-          :aria-pressed="draft.companyMode === option.value"
+          :aria-pressed="isCompanyOptionSelected(option.value)"
           :disabled="disabled || (!companiesEnabled && option.value !== 'none')"
           @click="setCompanyMode(option.value)"
         >
           <span
-            v-if="draft.companyMode === option.value"
+            v-if="isCompanyOptionSelected(option.value)"
             class="i-lucide-check me-1 inline-block size-3 align-middle"
             aria-hidden="true"
           />

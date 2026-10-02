@@ -77,6 +77,13 @@ RSpec.describe 'CRM composed company registration', type: :request do
     end
   end
 
+  it 'follows the native rule for an email domain without a company when no choice is made' do
+    payload[:card][:relationship].delete(:company)
+    expect { post url, params: payload, headers: headers, as: :json }.to change(Company, :count).by(1)
+    expect(response).to have_http_status(:created)
+    expect(account.contacts.last.company.domain).to eq('business.example')
+  end
+
   it 'still permits a registration without a company choice when Companies is disabled' do
     account.disable_features!('companies')
     payload[:card][:relationship].delete(:company)
