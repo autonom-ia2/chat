@@ -153,6 +153,7 @@
   },
   "CRM_KANBAN": {
     "ZOOM": {
+      "PERCENT": "{value}%",
       "TITLE": "Zoom do Kanban",
       "TRIGGER": "Zoom do Kanban: {value}%",
       "DESCRIPTION": "Altera somente as colunas e os cards.",

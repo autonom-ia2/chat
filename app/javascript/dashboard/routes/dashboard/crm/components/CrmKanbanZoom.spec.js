@@ -7,7 +7,10 @@ vi.mock('dashboard/composables/store', () => ({
 }));
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
-    t: (key, params) => (params ? `${key}:${params.value}` : key),
+    t: (key, params) => {
+      if (key === 'CRM_KANBAN.ZOOM.PERCENT') return `${params.value}%`;
+      return params ? `${key}:${params.value}` : key;
+    },
   }),
 }));
 

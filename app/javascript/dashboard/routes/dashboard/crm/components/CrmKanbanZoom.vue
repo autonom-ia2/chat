@@ -74,7 +74,7 @@ const step = direction => {
           :title="t('CRM_KANBAN.ZOOM.TITLE')"
         >
           <span class="i-lucide-zoom-in size-[1.125rem]" aria-hidden="true" />
-          <span>{{ modelValue }}%</span>
+          <span>{{ t('CRM_KANBAN.ZOOM.PERCENT', { value: modelValue }) }}</span>
           <span
             class="i-lucide-chevron-down size-3 text-n-slate-9"
             aria-hidden="true"
@@ -120,7 +120,7 @@ const step = direction => {
               aria-live="polite"
               aria-atomic="true"
             >
-              {{ modelValue }}%
+              {{ t('CRM_KANBAN.ZOOM.PERCENT', { value: modelValue }) }}
             </output>
             <button
               type="button"
@@ -149,7 +149,7 @@ const step = direction => {
               :aria-pressed="modelValue === preset"
               @click="emit('update:modelValue', preset)"
             >
-              {{ preset }}%
+              {{ t('CRM_KANBAN.ZOOM.PERCENT', { value: preset }) }}
             </button>
           </div>
           <p
@@ -164,11 +164,9 @@ const step = direction => {
               aria-hidden="true"
             />
             {{
-              t(
-                persistenceFailed
-                  ? 'CRM_KANBAN.ZOOM.SAVE_FAILED'
-                  : 'CRM_KANBAN.ZOOM.SAVED'
-              )
+              persistenceFailed
+                ? t('CRM_KANBAN.ZOOM.SAVE_FAILED')
+                : t('CRM_KANBAN.ZOOM.SAVED')
             }}
           </p>
         </section>
