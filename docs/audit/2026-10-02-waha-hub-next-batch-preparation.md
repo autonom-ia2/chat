@@ -2,7 +2,8 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/867.
 Piloto aceito e limites de QA: https://github.com/autonom-ia2/chat/pull/866.
-Estado final: **duas caixas aplicadas e confirmadas, sem falhas; nenhuma expansão adicional**.
+Estado deste checkpoint histórico: **duas caixas aplicadas e confirmadas, sem falhas; nenhuma expansão adicional nessa etapa**.
+A ampliação autorizada e concluída posteriormente é registrada em [lote elegível Hub2You](https://github.com/autonom-ia2/chat/pull/870).
 
 ## Escopo inicial da preparação
 
