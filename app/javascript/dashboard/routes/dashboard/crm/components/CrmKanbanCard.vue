@@ -2,11 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
-import {
-  dynamicTime,
-  shortTimestamp,
-  dateFormat,
-} from 'shared/helpers/timeHelper';
+import { dateFormat } from 'shared/helpers/timeHelper';
 
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import CardPriorityIcon from 'dashboard/components-next/Conversation/ConversationCard/CardPriorityIcon.vue';
@@ -34,15 +30,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // The page owns the CRM permission check. Keep the default closed so a card
-  // cannot expose a movement action until the board passes its capability.
-  canMove: {
-    type: Boolean,
-    default: false,
-  },
 });
 
-defineEmits(['open', 'openConversation', 'move']);
+defineEmits(['open', 'openConversation']);
 
 const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
@@ -196,17 +186,28 @@ const aiSuggestionLabel = computed(() => {
   return t('CRM_KANBAN.AI_CARD.BADGE', { stage: suggestion.to_stage_name });
 });
 
-// shortTimestamp intentionally parses English phrases. Keep its compact chip
-// output for English, but leave localized date-fns text intact for Portuguese
-// and other locales instead of rendering an English "ago" suffix.
+// Format the timestamp itself, never parse translated natural-language text.
+// Short localized units keep the responsible readable in the compact footer.
+const RELATIVE_TIME_UNITS = [
+  { unit: 'year', seconds: 365 * 24 * 60 * 60 },
+  { unit: 'month', seconds: 30 * 24 * 60 * 60 },
+  { unit: 'day', seconds: 24 * 60 * 60 },
+  { unit: 'hour', seconds: 60 * 60 },
+  { unit: 'minute', seconds: 60 },
+  { unit: 'second', seconds: 1 },
+];
 const localizedRelativeLabel = epoch => {
-  const appLocale = locale?.value || 'en';
-  const detail = dynamicTime(epoch, appLocale);
-  return appLocale === 'en' ? shortTimestamp(detail, true) : detail;
+  const seconds = epoch - Date.now() / 1000;
+  const { unit, seconds: duration } =
+    RELATIVE_TIME_UNITS.find(item => Math.abs(seconds) >= item.seconds) ||
+    RELATIVE_TIME_UNITS.at(-1);
+  return new Intl.RelativeTimeFormat(
+    (locale?.value || 'en').split('_').join('-'),
+    { style: 'short', numeric: 'auto' }
+  ).format(Math.round(seconds / duration), unit);
 };
 
-// Board sends epoch seconds; render via timeHelper (fromUnixTime). Do not mix
-// with ISO date helpers.
+// Board timestamps are epoch seconds; keep conversion explicit.
 const relativeFromEpoch = epoch => {
   const value = Number(epoch);
   if (!value || Number.isNaN(value)) return '';
@@ -320,12 +321,12 @@ const canOpenConversation = computed(
 
 <template>
   <div
-    class="group/card relative w-full shrink-0 overflow-hidden rounded-lg border border-n-weak bg-n-surface-1 py-1.5 pl-4 pr-3 text-left shadow-sm transition-colors hover:bg-n-alpha-2"
+    class="group/card relative w-full shrink-0 overflow-hidden rounded-[1.25rem] border border-n-weak bg-n-surface-1 py-3 ps-4 pe-3 text-start shadow-md transition-shadow hover:shadow-lg"
   >
     <!-- Stage accent rail (inline :style per repo precedent; slate fallback,
          dark ring guards pale colors on dark surfaces) -->
     <span
-      class="absolute inset-y-0 left-0 w-1 rounded-l-lg ring-1 ring-inset ring-n-alpha-1 dark:ring-n-alpha-2"
+      class="absolute inset-y-0 start-0 w-[0.188rem] rounded-s-[1.25rem] ring-1 ring-inset ring-n-alpha-1 dark:ring-n-alpha-2"
       :style="railStyle"
     />
 
@@ -337,7 +338,7 @@ const canOpenConversation = computed(
          action. The last-message bubble stops propagation to branch off. -->
     <button
       type="button"
-      class="absolute inset-0 z-0 cursor-pointer rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
+      class="absolute inset-0 z-0 cursor-pointer rounded-[1.25rem] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
       tabindex="-1"
       aria-hidden="true"
       @click="$emit('open', card)"
@@ -353,33 +354,32 @@ const canOpenConversation = computed(
           "
           @click.stop="$emit('open', card)"
         >
-          <span
-            class="flex min-w-0 items-start gap-1.5"
-            :class="{ 'pe-24': canMove }"
-            data-crm-card-identity
-          >
+          <span class="flex min-w-0 items-start gap-1.5" data-crm-card-identity>
             <span
               :class="identityIcon"
               class="mt-0.5 size-4 shrink-0 text-n-slate-11"
               aria-hidden="true"
             />
             <span
-              class="min-w-0 break-words text-base font-semibold leading-6 text-n-slate-12"
+              class="min-w-0 line-clamp-2 break-words text-base font-semibold leading-6 text-n-slate-12"
               :data-crm-card-company="companyName || undefined"
+              :title="identityMain"
             >
               {{ identityMain }}
             </span>
           </span>
           <span
             v-if="identityPerson"
-            class="ms-6 mt-0.5 block break-words text-sm font-normal leading-5 text-n-slate-11"
+            class="ms-6 mt-0.5 block truncate text-sm font-normal leading-5 text-n-slate-11"
+            :title="identityPerson"
             data-crm-card-person
           >
             {{ identityPerson }}
           </span>
           <span
             v-if="identityBusiness"
-            class="ms-6 mt-1 block break-words text-xs font-normal leading-5 text-n-slate-11"
+            class="ms-6 mt-1 block truncate text-xs font-normal leading-5 text-n-slate-11"
+            :title="identityBusiness"
             data-crm-card-business
           >
             <span class="font-medium text-n-slate-10">
@@ -394,18 +394,6 @@ const canOpenConversation = computed(
           >
             {{ t('CRM_KANBAN.DRAWER.NO_CONTACT') }}
           </span>
-        </button>
-
-        <button
-          v-if="canMove"
-          type="button"
-          data-crm-card-move
-          class="crm-card-move absolute end-0 top-0 flex h-11 items-center gap-1 rounded-lg px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
-          :aria-label="t('CRM_KANBAN.CARD.MOVE', { name: identityAriaName })"
-          @click.stop="$emit('move', card, $event.currentTarget)"
-        >
-          <span>{{ t('CRM_KANBAN.CARD.MOVE_LABEL') }}</span>
-          <span class="i-lucide-chevron-down size-3.5" aria-hidden="true" />
         </button>
       </div>
 
@@ -445,17 +433,16 @@ const canOpenConversation = computed(
            glance answers what is being negotiated and what needs attention. -->
       <div
         v-if="valueLabel || scoreView || followUp || showPriorityGlyph"
-        class="mt-3 flex min-h-7 flex-wrap items-center justify-between gap-1"
+        class="mt-3 flex flex-wrap items-center justify-between gap-2"
       >
         <span
           v-if="valueLabel"
-          class="text-sm font-medium tabular-nums text-n-slate-12"
+          class="text-base font-semibold tabular-nums text-n-slate-12"
         >
           {{ valueLabel }}
         </span>
-        <span v-else />
 
-        <div class="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+        <div class="flex min-w-0 flex-wrap items-center gap-1.5">
           <CardPriorityIcon
             v-if="showPriorityGlyph"
             :priority="card.priority"
@@ -473,7 +460,7 @@ const canOpenConversation = computed(
             "
             type="button"
             :aria-label="scoreView.ariaLabel"
-            class="inline-flex max-w-full shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium leading-4 tabular-nums"
+            class="inline-flex max-w-full shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium leading-4 tabular-nums"
             :class="scoreView.toneClasses"
           >
             <span :class="scoreView.icon" class="size-3 shrink-0" />
@@ -491,7 +478,15 @@ const canOpenConversation = computed(
       </div>
 
       <!-- Secondary signals stay available without competing with identity. -->
-      <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+      <div
+        v-if="
+          slaChat ||
+          handoffInvite ||
+          card.inbox?.channel_type ||
+          aiSuggestionLabel
+        "
+        class="mt-2.5 flex flex-wrap items-center gap-1.5"
+      >
         <SLACardLabel v-if="slaChat" :chat="slaChat" />
 
         <CrmCardPill
@@ -523,7 +518,7 @@ const canOpenConversation = computed(
       </div>
 
       <div
-        class="mt-2 flex items-center justify-between gap-2 text-[11px] text-n-slate-10"
+        class="mt-3 flex items-center justify-between gap-3 border-t border-n-weak pt-2.5 text-xs text-n-slate-11"
       >
         <span class="flex min-w-0 items-center gap-1" :title="responsibleLabel">
           <span :class="responsibleIcon" class="size-3 shrink-0" />
@@ -532,21 +527,21 @@ const canOpenConversation = computed(
         <button
           v-if="lastMessageLabel && canOpenConversation"
           type="button"
-          class="crm-card-open-conversation -my-1 -mr-1 flex shrink-0 cursor-pointer items-center gap-1 rounded px-1 py-1 text-n-slate-10 transition-colors hover:bg-n-alpha-2 hover:text-n-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
+          class="crm-card-open-conversation -my-1 -me-1 flex min-w-0 max-w-[45%] cursor-pointer items-center gap-1 rounded px-1 py-1 text-n-slate-10 transition-colors hover:bg-n-alpha-2 hover:text-n-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-n-brand"
           :title="t('CRM_KANBAN.CARD.OPEN_CONVERSATION')"
           :aria-label="t('CRM_KANBAN.CARD.OPEN_CONVERSATION')"
           @click.stop="$emit('openConversation', card)"
         >
           <span class="i-lucide-message-circle size-3 shrink-0" />
-          {{ lastMessageLabel }}
+          <span class="truncate">{{ lastMessageLabel }}</span>
         </button>
         <span
           v-else-if="lastMessageLabel && !standalone"
-          class="flex shrink-0 items-center gap-1"
+          class="flex min-w-0 max-w-[45%] items-center gap-1"
           :title="lastMessageTitle"
         >
           <span class="i-lucide-message-circle size-3 shrink-0" />
-          {{ lastMessageLabel }}
+          <span class="truncate">{{ lastMessageLabel }}</span>
         </span>
       </div>
     </div>

@@ -43,8 +43,18 @@ const mountOpen = async (overrides = {}) => {
 const buttonByText = (wrapper, text) =>
   wrapper.findAll('button').find(button => button.text() === text);
 
+const buttonByAriaLabel = (wrapper, label) =>
+  wrapper.find(`button[aria-label="${label}"]`);
+
+const openSection = async (wrapper, titleKey) => {
+  const section = wrapper
+    .findAll('details')
+    .find(details => details.find('summary').text().includes(titleKey));
+  await section.find('summary').trigger('click');
+};
+
 const apply = async wrapper => {
-  await buttonByText(wrapper, 'CRM_KANBAN.ACTIONS.APPLY_FILTERS').trigger(
+  await buttonByText(wrapper, 'CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES').trigger(
     'click'
   );
   return wrapper.emitted('apply')?.at(-1)?.[0];
@@ -77,6 +87,7 @@ describe('CrmKanbanFiltersDrawer', () => {
   it('emits the draft on apply', async () => {
     wrapper = await mountOpen();
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.GROUP_OPPORTUNITY');
     await buttonByText(wrapper, 'Proposta').trigger('click');
     const applied = await apply(wrapper);
 
@@ -87,8 +98,11 @@ describe('CrmKanbanFiltersDrawer', () => {
     const filters = { ...defaultFilters(), stageIds: [], labelIds: [] };
     wrapper = await mountOpen({ filters });
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.GROUP_OPPORTUNITY');
     await buttonByText(wrapper, 'Novo').trigger('click');
-    await buttonByText(wrapper, 'CRM_KANBAN.ACTIONS.CANCEL').trigger('click');
+    await buttonByAriaLabel(wrapper, 'CRM_KANBAN.ACTIONS.CLOSE').trigger(
+      'click'
+    );
 
     expect(wrapper.emitted('close')).toHaveLength(1);
     expect(wrapper.emitted('apply')).toBeUndefined();
@@ -116,7 +130,7 @@ describe('CrmKanbanFiltersDrawer', () => {
       expect(wrapper.find('[role="alert"]').text()).toBe(error);
       const applyButton = buttonByText(
         wrapper,
-        'CRM_KANBAN.ACTIONS.APPLY_FILTERS'
+        'CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES'
       );
       expect(applyButton.attributes('disabled')).toBeDefined();
       await applyButton.trigger('click');
@@ -137,6 +151,7 @@ describe('CrmKanbanFiltersDrawer', () => {
   it('applies "without company"', async () => {
     wrapper = await mountOpen();
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.COMPANY');
     await chooseCompany(wrapper, 'none');
     const applied = await apply(wrapper);
 
@@ -146,6 +161,7 @@ describe('CrmKanbanFiltersDrawer', () => {
   it('keeps the chosen company after a new search drops it from the results', async () => {
     wrapper = await mountOpen();
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.COMPANY');
     await chooseCompany(wrapper, '7');
     await wrapper.setProps({ companyChoices: [], companySearch: 'zzz' });
     const applied = await apply(wrapper);
@@ -159,6 +175,7 @@ describe('CrmKanbanFiltersDrawer', () => {
   it('emits company searches and keeps the input enabled while searching', async () => {
     wrapper = await mountOpen();
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.COMPANY');
     const input = wrapper.find('input[type="text"], input:not([type])');
     await input.setValue('acm');
     expect(wrapper.emitted('search-company').at(-1)).toEqual(['acm']);
@@ -172,6 +189,7 @@ describe('CrmKanbanFiltersDrawer', () => {
   it('does not toggle a campaign when the Campaign title is clicked', async () => {
     wrapper = await mountOpen();
 
+    await openSection(wrapper, 'CRM_KANBAN.FILTERS.GROUP_ATTENDANCE');
     const title = wrapper.find('#crm-kanban-filters-campaign-label');
     await title.trigger('click');
 
@@ -185,5 +203,30 @@ describe('CrmKanbanFiltersDrawer', () => {
     });
     const applied = await apply(wrapper);
     expect(applied.campaignSourceIds).toEqual([]);
+  });
+
+  it('starts with the five filter sections collapsed', async () => {
+    wrapper = await mountOpen();
+
+    expect(wrapper.findAll('details')).toHaveLength(5);
+    expect(wrapper.findAll('details[open]')).toHaveLength(0);
+    expect(wrapper.text()).toContain('CRM_KANBAN.FILTERS.SHORTCUTS');
+  });
+
+  it('applies the owner and overdue shortcuts to the draft', async () => {
+    wrapper = await mountOpen({ currentUserId: 42 });
+
+    await buttonByText(wrapper, 'CRM_KANBAN.FILTERS.SHORTCUT_MINE').trigger(
+      'click'
+    );
+    let applied = await apply(wrapper);
+    expect(applied.ownerId).toBe(42);
+    expect(applied.responsibleKind).toBe('');
+
+    await buttonByText(wrapper, 'CRM_KANBAN.FILTERS.SHORTCUT_OVERDUE').trigger(
+      'click'
+    );
+    applied = await apply(wrapper);
+    expect(applied.followUpStatus).toBe('overdue');
   });
 });

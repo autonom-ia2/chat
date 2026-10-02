@@ -4,7 +4,7 @@ import CrmKanbanPage from './CrmKanbanPage.vue';
 
 // The page is a large orchestrator. These specs pin three review findings:
 // the Agenda keeps its admin actions, drag is gated by permission, and the
-// keyboard "Move" path lands focus inside the picker.
+// stage changes stay available inside the card details.
 
 const route = { meta: {}, query: {}, params: {} };
 const permissions = {};
@@ -197,12 +197,12 @@ describe('CrmKanbanPage', () => {
     delete window.globalConfig;
   });
 
-  it('keeps booking page and inbox settings in the Agenda, without funnel actions', async () => {
+  it('keeps inbox settings in the Agenda, without funnel actions', async () => {
     wrapper = await mountPage({ calendarOnly: true });
 
     const text = await openConfiguration(wrapper);
 
-    expect(text).toContain('CRM_KANBAN.BOOKING.ADMIN.ACTION');
+    expect(text).toContain('CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT');
     expect(text).toContain('CRM_KANBAN.ACTIONS.INBOX_SETTINGS');
     expect(text).not.toContain('CRM_KANBAN.ACTIONS.EDIT_PIPELINE');
     expect(text).not.toContain('CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS');
@@ -213,7 +213,8 @@ describe('CrmKanbanPage', () => {
     await openConfiguration(wrapper);
 
     const booking = Array.from(document.body.querySelectorAll('button')).find(
-      button => button.textContent.trim() === 'CRM_KANBAN.BOOKING.ADMIN.ACTION'
+      button =>
+        button.textContent.trim() === 'CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT'
     );
     booking.click();
     await flushPromises();
@@ -228,6 +229,7 @@ describe('CrmKanbanPage', () => {
 
     const text = await openConfiguration(wrapper);
 
+    expect(text).not.toContain('CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT');
     expect(text).toContain('CRM_KANBAN.ACTIONS.EDIT_PIPELINE');
     expect(text).toContain('CRM_KANBAN.ACTIONS.INBOX_SETTINGS');
   });
@@ -251,28 +253,6 @@ describe('CrmKanbanPage', () => {
     });
   });
 
-  it('moves focus into the stage picker when Move opens and back when it closes', async () => {
-    wrapper = await mountPage();
-    const move = wrapper.find('[data-crm-card-move]');
-    move.element.focus();
-
-    await move.trigger('click');
-    await flushPromises();
-
-    const combobox = document.body.querySelector(
-      '[data-popover-content] [role="combobox"]'
-    );
-    expect(combobox).not.toBeNull();
-    expect(document.activeElement).toBe(combobox);
-
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    await flushPromises();
-
-    expect(
-      document.body.querySelector('[data-popover-content] [role="combobox"]')
-    ).toBeNull();
-    expect(document.activeElement).toBe(move.element);
-  });
   it('confirms the open card drafts before switching to another card', async () => {
     const guardNavigation = vi.fn(action => action());
     dispatch.mockImplementation(async (type, payload) => {
@@ -309,4 +289,72 @@ describe('CrmKanbanPage', () => {
       leaving: true,
     });
   });
+});
+
+// The drawer uses the existing move endpoint, separate from commercial edits.
+it('moves the selected card from details without overwriting its title', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 100, stage_id: 10, title: 'Current title' };
+  await wrapper.vm.moveCardFromDetails(11);
+  expect(dispatch).toHaveBeenCalledWith('crmKanban/moveCard', {
+    cardId: 100,
+    stageId: 11,
+  });
+  expect(wrapper.vm.selectedCard).toMatchObject({
+    stage_id: 11,
+    title: 'Current title',
+  });
+  wrapper.unmount();
+});
+
+it('does not move from details without movement permission', async () => {
+  const wrapper = await mountPage({ perms: { canMoveCards: false } });
+  wrapper.vm.selectedCard = { id: 100, stage_id: 10 };
+  dispatch.mockClear();
+  await wrapper.vm.moveCardFromDetails(11);
+  expect(dispatch).not.toHaveBeenCalledWith(
+    'crmKanban/moveCard',
+    expect.anything()
+  );
+  wrapper.unmount();
+});
+
+it('keeps the current stage when the move request fails', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 100, stage_id: 10 };
+  dispatch.mockRejectedValueOnce(new Error('Move failed'));
+  await wrapper.vm.moveCardFromDetails(11);
+  expect(wrapper.vm.selectedCard.stage_id).toBe(10);
+  wrapper.unmount();
+});
+
+it('loads all authorized stages for card details independently of board filters', async () => {
+  const wrapper = await mountPage({ calendarOnly: true });
+  dispatch.mockImplementation(async (type, payload) => {
+    if (type === 'crmKanban/fetchCard')
+      return { id: payload, pipeline_id: 1, stage_id: 10 };
+    if (type === 'crmKanban/fetchPipelineStages') return STAGES;
+    return [];
+  });
+  storeGetters['crmKanban/getStages'].value = [];
+  await wrapper.vm.openCardDrawer({ id: 100 });
+  expect(dispatch).toHaveBeenCalledWith('crmKanban/fetchPipelineStages', 1);
+  expect(
+    wrapper.findComponent({ name: 'CrmCardDrawer' }).attributes('stages')
+  ).toBeTruthy();
+  expect(wrapper.vm.cardDrawerStages).toEqual(STAGES);
+  wrapper.unmount();
+});
+
+it('does not start another move while a card is moving', async () => {
+  const wrapper = await mountPage();
+  wrapper.vm.selectedCard = { id: 100, stage_id: 10 };
+  storeGetters['crmKanban/getUIFlags'].value = { isMovingCard: true };
+  dispatch.mockClear();
+  await wrapper.vm.moveCardFromDetails(11);
+  expect(dispatch).not.toHaveBeenCalledWith(
+    'crmKanban/moveCard',
+    expect.anything()
+  );
+  wrapper.unmount();
 });

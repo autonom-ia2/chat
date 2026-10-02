@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -114,6 +114,7 @@ const pipelineInboxes = ref([]);
 // that produced it happened to pass include_counts (e.g. right after creating a card it
 // doesn't), which let a stale/absent count silently bypass the "has cards" picker.
 const pipelineDrawerStages = ref([]);
+const cardDrawerStages = ref([]);
 const showInboxSettingsDrawer = ref(false);
 const showBookingProfilesDrawer = ref(false);
 const inboxSettings = ref([]);
@@ -415,77 +416,6 @@ watch(cardsList, loadMetaConversions);
 
 const showFiltersDrawer = ref(false);
 const configurationPopover = ref(null);
-const movePopoverRefs = new Map();
-const selectedMoveCard = ref(null);
-const selectedMoveSourceStage = ref(null);
-const moveStageId = ref('');
-
-const moveStageOptions = computed(() => {
-  const sourceStageId = selectedMoveSourceStage.value?.id;
-  return stages.value
-    .filter(stage => String(stage.id) !== String(sourceStageId))
-    .map(stage => ({ value: stage.id, label: stage.name }));
-});
-
-const registerMovePopover = (cardId, instance) => {
-  if (instance) movePopoverRefs.set(String(cardId), instance);
-  else movePopoverRefs.delete(String(cardId));
-};
-
-// Keyboard path: the picker takes focus when it opens and hands it back to the
-// card's "Move" button when it closes, unless the user already moved focus
-// elsewhere (e.g. clicked another control).
-let movePickerEl = null;
-let moveReturnFocusEl = null;
-const setMovePickerEl = el => {
-  movePickerEl = el;
-};
-
-const restoreMoveFocus = () => {
-  const target = moveReturnFocusEl;
-  moveReturnFocusEl = null;
-  if (!target?.isConnected) return;
-  const focused = document.activeElement;
-  const focusWasInPicker =
-    !focused || focused === document.body || movePickerEl?.contains(focused);
-  if (focusWasInPicker) target.focus();
-};
-
-const resetMoveSelection = () => {
-  restoreMoveFocus();
-  selectedMoveCard.value = null;
-  selectedMoveSourceStage.value = null;
-  moveStageId.value = '';
-};
-
-const openMoveFromBoard = async (card, sourceStage, trigger = null) => {
-  if (!canMoveCards.value || !card?.id) return;
-
-  selectedMoveCard.value = card;
-  selectedMoveSourceStage.value = sourceStage;
-  moveStageId.value = '';
-  moveReturnFocusEl = trigger;
-  await nextTick();
-  await movePopoverRefs.get(String(card.id))?.show();
-  await nextTick();
-  movePickerEl?.querySelector('[role="combobox"]')?.focus();
-};
-
-const onMoveStageSelected = async (stageId, hide) => {
-  const card = selectedMoveCard.value;
-  if (!card?.id || !stageId) return;
-
-  hide();
-  try {
-    await store.dispatch('crmKanban/moveCard', {
-      cardId: card.id,
-      stageId,
-    });
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVE_ERROR'));
-  }
-};
 
 const labelForOption = (options, value) =>
   options.value.find(option => String(option.value) === String(value))?.label ||
@@ -741,6 +671,32 @@ const loadActiveView = async (includeCounts = false) => {
   if (viewMode.value === 'list') return loadCurrentList();
   if (viewMode.value === 'calendar') return loadCurrentCalendar();
   return loadCurrentBoard(includeCounts);
+};
+
+const moveCardFromDetails = async stageId => {
+  if (
+    !canMoveCards.value ||
+    uiFlags.value.isMovingCard ||
+    !selectedCard.value?.id ||
+    !stageId
+  )
+    return;
+  const cardId = selectedCard.value.id;
+  const accountId = String(route.params.accountId);
+  try {
+    await store.dispatch('crmKanban/moveCard', { cardId, stageId });
+    if (accountId !== String(route.params.accountId)) return;
+    if (selectedCard.value?.id === cardId) {
+      selectedCard.value = { ...selectedCard.value, stage_id: stageId };
+    }
+    if (viewMode.value !== 'kanban' || filters.value.stageIds.length) {
+      await loadActiveView(true);
+    }
+    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVED'));
+  } catch {
+    if (accountId === String(route.params.accountId))
+      useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVE_ERROR'));
+  }
 };
 
 const handleRealtimeConnected = async () => {
@@ -1148,6 +1104,7 @@ const openCreateDrawer = () => {
 };
 
 const openCardDrawer = async (card, { initialTab = null } = {}) => {
+  cardDrawerStages.value = [];
   drawerInitialTab.value = initialTab;
   selectedCard.value = card;
   drawerMode.value = 'edit';
@@ -1159,6 +1116,13 @@ const openCardDrawer = async (card, { initialTab = null } = {}) => {
     ]);
     if (showDrawer.value && selectedCard.value?.id === card.id) {
       selectedCard.value = detailedCard;
+      const completeStages = await store.dispatch(
+        'crmKanban/fetchPipelineStages',
+        detailedCard.pipeline_id
+      );
+      if (showDrawer.value && selectedCard.value?.id === card.id) {
+        cardDrawerStages.value = completeStages;
+      }
     }
   } catch {
     useAlert(t('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR'));
@@ -1946,7 +1910,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (companySearchTimer) clearTimeout(companySearchTimer);
-  movePopoverRefs.clear();
 });
 </script>
 
@@ -1963,14 +1926,14 @@ onUnmounted(() => {
       class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak px-6 py-3 sm:px-8"
     >
       <div class="flex min-w-0 flex-wrap items-center gap-4">
-        <h1 class="mb-0 text-2xl font-medium text-n-slate-12">
+        <h1 class="mb-0 text-2xl font-semibold text-n-slate-12">
           {{
             isCalendarOnly ? t('SIDEBAR.CRM_CALENDAR') : t('CRM_KANBAN.TITLE')
           }}
         </h1>
         <div
           v-if="!isCalendarOnly"
-          class="flex items-center rounded-lg bg-n-alpha-black2 p-1"
+          class="flex items-center rounded-xl bg-n-alpha-2 p-1"
           role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
@@ -1978,10 +1941,10 @@ onUnmounted(() => {
             v-for="mode in viewModeOptions"
             :key="mode.id"
             type="button"
-            class="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               viewMode === mode.id
-                ? 'bg-n-surface-2 text-n-slate-12 shadow-sm'
+                ? '!font-bold bg-n-surface-2 text-n-slate-12 shadow-sm'
                 : ''
             "
             :aria-pressed="viewMode === mode.id"
@@ -1993,11 +1956,12 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="flex shrink-0 flex-wrap items-center gap-2">
+      <div class="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
         <Button
           icon="i-lucide-refresh-cw"
           slate
-          faded
+          outline
+          class="!rounded-lg min-h-11 min-w-11 !outline-n-weak bg-n-surface-1"
           :title="t('CRM_KANBAN.ACTIONS.REFRESH')"
           :aria-label="t('CRM_KANBAN.ACTIONS.REFRESH')"
           :disabled="isLoading"
@@ -2008,8 +1972,21 @@ onUnmounted(() => {
           :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
           icon="i-lucide-plus"
           :disabled="!hasPipelines || isLoading"
-          class="order-2"
+          class="order-2 !rounded-lg min-h-11 !font-bold"
           @click="openCreateDrawer"
+        />
+        <Button
+          v-if="
+            canManagePipelines &&
+            isMeetingFeatureEnabled &&
+            viewMode === 'calendar'
+          "
+          :label="t('CRM_KANBAN.BOOKING.ADMIN.ACTION_SHORT')"
+          icon="i-lucide-calendar-clock"
+          slate
+          outline
+          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
+          @click="openBookingProfilesDrawer"
         />
         <Popover
           v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"
@@ -2022,7 +1999,8 @@ onUnmounted(() => {
               :label="t('CRM_KANBAN.ACTIONS.CONFIGURE')"
               icon="i-lucide-settings-2"
               slate
-              faded
+              outline
+              class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
             />
           </template>
           <template #content>
@@ -2071,16 +2049,6 @@ onUnmounted(() => {
                 class="w-full"
                 @click="runConfigurationAction(openInboxSettingsDrawer)"
               />
-              <Button
-                v-if="canManagePipelines && isMeetingFeatureEnabled"
-                :label="t('CRM_KANBAN.BOOKING.ADMIN.ACTION')"
-                icon="i-lucide-calendar-clock"
-                slate
-                ghost
-                start
-                class="w-full"
-                @click="runConfigurationAction(openBookingProfilesDrawer)"
-              />
             </div>
           </template>
         </Popover>
@@ -2089,7 +2057,7 @@ onUnmounted(() => {
 
     <section
       v-if="viewMode !== 'calendar'"
-      class="flex flex-col gap-3 border-b border-n-weak px-8 py-4"
+      class="flex flex-col gap-3 border-b border-n-weak bg-n-surface-1 px-6 py-3 sm:px-8"
     >
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex items-center gap-2">
@@ -2098,25 +2066,27 @@ onUnmounted(() => {
             :options="pipelineOptions"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
-            class="w-44 sm:w-52"
+            class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1 [&>button]:!font-bold"
           />
           <Button
             v-if="canManagePipelines"
             :label="t('CRM_KANBAN.ACTIONS.CREATE_PIPELINE')"
             icon="i-lucide-plus"
             blue
-            faded
+            outline
+            class="!rounded-lg min-h-11 !border-0 !px-[1.0625rem] !font-bold !outline-none !bg-transparent focus-visible:ring-2 focus-visible:ring-n-brand"
             :disabled="isLoading"
             @click="openCreatePipelineDrawer"
           />
         </div>
 
         <div
-          class="min-w-0 basis-full sm:min-w-[16rem] sm:max-w-md sm:flex-1 sm:basis-auto"
+          class="min-w-0 basis-full sm:min-w-[16rem] sm:flex-1 sm:basis-auto"
         >
           <Input
             id="crm-kanban-search"
             v-model="filters.search"
+            custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
             :placeholder="t('CRM_KANBAN.FILTERS.SEARCH_PLACEHOLDER')"
             :aria-label="t('CRM_KANBAN.FILTERS.SEARCH')"
             @enter="applyFilters"
@@ -2125,9 +2095,10 @@ onUnmounted(() => {
 
         <Button
           :label="t('CRM_KANBAN.ACTIONS.MORE_FILTERS')"
-          icon="i-lucide-sliders-horizontal"
+          icon="i-lucide-list-filter"
           slate
-          faded
+          outline
+          class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
           :aria-expanded="showFiltersDrawer"
           @click="showFiltersDrawer = true"
         />
@@ -2135,7 +2106,8 @@ onUnmounted(() => {
           :label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI')"
           icon="i-lucide-sparkles"
           slate
-          faded
+          outline
+          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
           disabled
           :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
           :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
@@ -2178,6 +2150,8 @@ onUnmounted(() => {
 
     <CrmKanbanFiltersDrawer
       :show="showFiltersDrawer"
+      :pipeline-name="selectedPipeline?.name"
+      :current-user-id="currentUser?.id"
       :filters="filters"
       :view-mode="viewMode"
       :inbox-choices="inboxChoices"
@@ -2275,29 +2249,33 @@ onUnmounted(() => {
       <article
         v-for="stage in stages"
         :key="stage.id"
-        class="flex h-full w-[19rem] shrink-0 flex-col overflow-hidden rounded-lg border border-n-weak bg-n-surface-2 shadow-sm"
+        class="flex h-full w-[19rem] shrink-0 flex-col overflow-hidden rounded-xl bg-n-alpha-1"
       >
-        <header class="border-b border-n-weak px-4 py-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <div class="flex items-center gap-2">
-                <span
-                  class="h-2.5 w-2.5 shrink-0 rounded-sm"
-                  :style="{ backgroundColor: stage.color || '#64748b' }"
-                />
-                <h2 class="mb-0 truncate text-sm font-medium text-n-slate-12">
-                  {{ stage.name }}
-                </h2>
-              </div>
-              <p class="mt-1 mb-0 text-xs text-n-slate-11">
-                {{
-                  t('CRM_KANBAN.STATUS.STAGE_CARDS', {
-                    count: stage.cards_count ?? stage.cards.length,
-                  })
-                }}
-              </p>
-            </div>
+        <header
+          class="flex min-h-14 items-center justify-between gap-3 px-4 py-3"
+        >
+          <div class="flex min-w-0 items-center gap-2">
+            <span
+              class="size-2.5 shrink-0 rounded-sm"
+              :style="{ backgroundColor: stage.color || '#64748b' }"
+            />
+            <h2
+              class="mb-0 truncate text-base font-semibold text-n-slate-12"
+              :title="stage.name"
+            >
+              {{ stage.name }}
+            </h2>
           </div>
+          <span
+            class="shrink-0 rounded-lg bg-n-surface-1 px-2 py-1 text-xs font-medium tabular-nums text-n-slate-11"
+            :aria-label="
+              t('CRM_KANBAN.STATUS.STAGE_CARDS', {
+                count: stage.cards_count ?? stage.cards.length,
+              })
+            "
+          >
+            {{ stage.cards_count ?? stage.cards.length }}
+          </span>
         </header>
 
         <!-- :sort=false — a ordem da coluna é sempre por conversa mais recente
@@ -2309,61 +2287,22 @@ onUnmounted(() => {
           group="crm-kanban-cards"
           ghost-class="opacity-40"
           drag-class="cursor-grabbing"
-          class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3"
+          class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-2 pb-3 pt-2"
           :animation="150"
-          :disabled="!canMoveCards"
+          :disabled="!canMoveCards || uiFlags.isMovingCard"
           :sort="false"
-          filter=".crm-card-open-conversation, .crm-card-move"
+          filter=".crm-card-open-conversation"
           :prevent-on-filter="false"
           @start="onDragStart"
           @change="event => onDragChange(stage, event)"
         >
           <template #item="{ element }">
-            <div class="relative">
-              <!-- The trigger is an inert anchor aligned with the card action. The
-                   card emits the intent; keeping the picker here gives the page
-                   ownership of the move request and its permission boundary. -->
-              <div
-                class="pointer-events-none absolute end-0 top-0 z-20 h-11 w-16"
-              >
-                <Popover
-                  :ref="instance => registerMovePopover(element.id, instance)"
-                  align="end"
-                  @hide="resetMoveSelection"
-                >
-                  <template #default>
-                    <span class="block h-11 w-16" aria-hidden="true" />
-                  </template>
-                  <template #content="{ hide }">
-                    <div :ref="setMovePickerEl" class="w-64 p-3">
-                      <p class="mb-2 text-xs font-medium text-n-slate-11">
-                        {{ t('CRM_KANBAN.CARD.MOVE_TO') }}
-                      </p>
-                      <ChoiceSelect
-                        v-model="moveStageId"
-                        :options="moveStageOptions"
-                        :aria-label="t('CRM_KANBAN.CARD.MOVE_TO')"
-                        :placeholder="
-                          t('CRM_KANBAN.CARD.MOVE_STAGE_PLACEHOLDER')
-                        "
-                        compact
-                        @change="value => onMoveStageSelected(value, hide)"
-                      />
-                    </div>
-                  </template>
-                </Popover>
-              </div>
-              <CrmKanbanCard
-                :card="element"
-                :stage-color="stage.color"
-                :can-move="canMoveCards"
-                @open="openCardFromBoard"
-                @open-conversation="openCardConversation"
-                @move="
-                  (_card, trigger) => openMoveFromBoard(element, stage, trigger)
-                "
-              />
-            </div>
+            <CrmKanbanCard
+              :card="element"
+              :stage-color="stage.color"
+              @open="openCardFromBoard"
+              @open-conversation="openCardConversation"
+            />
           </template>
 
           <template #footer>
@@ -2531,13 +2470,15 @@ onUnmounted(() => {
       :card="selectedCard"
       :initial-tab="drawerInitialTab"
       :initial-contact="creationContact"
-      :stages="stages"
+      :stages="drawerMode === 'edit' ? cardDrawerStages : stages"
       :pipelines="pipelines"
       :pipeline-id="currentPipelineId"
       :agents="agents"
       :inboxes="inboxes"
       :follow-ups="followUps"
       :can-manage-cards="canManageCards"
+      :can-move-cards="canMoveCards"
+      :is-moving-card="uiFlags.isMovingCard"
       :can-manage-ai="canManageAi"
       :is-saving="uiFlags.isCreatingCard || uiFlags.isUpdatingCard"
       :is-loading-details="uiFlags.isFetchingCard"
@@ -2546,6 +2487,7 @@ onUnmounted(() => {
       :is-saving-follow-up="uiFlags.isSavingFollowUp"
       :meetings-enabled="isMeetingFeatureEnabled"
       @save="saveCard"
+      @move="moveCardFromDetails"
       @schedule-meeting="onDrawerScheduleMeeting"
       @archive="archiveCard"
       @close-deal="closeCardDeal"
