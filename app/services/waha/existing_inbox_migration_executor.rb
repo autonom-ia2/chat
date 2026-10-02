@@ -60,7 +60,8 @@ class Waha::ExistingInboxMigrationExecutor
   def verify_remote_state!(plan)
     current_session = @client.get_session(plan.context.session)
     current_apps = @client.list_apps(plan.context.session)
-    return if current_session['config'] == plan.snapshot.session_info['config'] &&
+    return if current_session['status'] == WORKING_STATUS &&
+              current_session['config'] == plan.snapshot.session_info['config'] &&
               stable_apps(current_apps) == stable_apps(plan.desired_apps)
 
     raise VerificationError, 'desired_remote_state_not_confirmed'

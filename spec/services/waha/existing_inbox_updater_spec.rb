@@ -583,6 +583,62 @@ RSpec.describe Waha::ExistingInboxUpdater do
     end
   end
 
+  describe 'health at final confirmation' do
+    let(:remote_other_app) do
+      { 'id' => 'calls_existing', 'session' => '5511999999999', 'app' => 'calls', 'enabled' => true, 'config' => {} }
+    end
+    let!(:second_channel) do
+      create(:channel_api, account: account,
+                           additional_attributes: { 'provider' => 'waha', 'session' => 'second', 'app_id' => 'app_second' })
+    end
+
+    [true, false].each do |recovery_healthy|
+      it "halts without local writes when final health is STOPPED and recovery health is #{recovery_healthy}", :aggregate_failures do
+        original_config = remote_session['config'].deep_dup
+        original_apps = remote_apps.deep_dup
+        original_attributes = channel.additional_attributes.deep_dup
+        second_attributes = second_channel.additional_attributes.deep_dup
+        second_channel.inbox.update!(lock_to_single_conversation: false)
+        update_calls = 0
+        reads_after_update = 0
+        allow(client).to receive(:get_app).with('app_second').and_return(nil)
+
+        allow(client).to receive(:update_session) do |_session, config:, apps:|
+          update_calls += 1
+          reads_after_update = 0
+          remote_session['config'] = config.deep_dup
+          remote_session['status'] = 'WORKING'
+          remote_apps.replace(apps.deep_dup)
+          remote_session.deep_dup
+        end
+        allow(client).to receive(:get_session).with('5511999999999') do
+          reads_after_update += 1 if update_calls.positive?
+          desired_confirmation = update_calls == 1 && reads_after_update == 2
+          recovery_confirmation = update_calls == 2 && reads_after_update == 3
+          remote_session['status'] = 'STOPPED' if desired_confirmation || (recovery_confirmation && !recovery_healthy)
+          remote_session.deep_dup
+        end
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h.slice(:total, :updated, :failed, :recovered, :recovery_failed, :halted)).to eq(
+          total: 1, updated: 0, failed: 1, recovered: recovery_healthy ? 1 : 0,
+          recovery_failed: recovery_healthy ? 0 : 1, halted: true
+        )
+        expect(update_calls).to eq(2)
+        expect(remote_session['config']).to eq(original_config)
+        expect(remote_session['status']).to eq(recovery_healthy ? 'WORKING' : 'STOPPED')
+        expect(remote_apps).to eq(original_apps)
+        expect(channel.reload.additional_attributes).to eq(original_attributes)
+        expect(second_channel.reload.additional_attributes).to eq(second_attributes)
+        expect([inbox.reload.lock_to_single_conversation, second_channel.inbox.reload.lock_to_single_conversation]).to eq([false, false])
+        expect(client).not_to have_received(:get_app).with('app_second')
+        expect(output.string).to include(recovery_healthy ? 'RECOVERED' : 'CRITICAL')
+        expect(output.string).not_to include('UPDATED')
+      end
+    end
+  end
+
   it 'restores the original remote snapshot, returns to WORKING and halts after a partial remote failure' do
     original_config = remote_session['config'].deep_dup
     original_apps = remote_apps.deep_dup
