@@ -1,6 +1,6 @@
 # CRM — telas reais para aprovação
 
-22 capturas do produto real, executado localmente em `http://127.0.0.1:3835/app/accounts/1/crm`. Dados fictícios. A tela de Conversas usa um resumo fictício pré-carregado; nenhum modelo foi chamado. Handoff e automações são apresentados também em estados de edição não salvos.
+23 capturas do produto real, executado localmente em `http://127.0.0.1:3835/app/accounts/1/crm`. Dados fictícios. A tela de Conversas usa um resumo fictício pré-carregado; nenhum modelo foi chamado. Handoff e automações são apresentados também em estados de edição não salvos.
 
 Merge e deploy aguardam aprovação.
 
@@ -91,3 +91,7 @@ Merge e deploy aguardam aprovação.
 ## 22. Mais filtros — mobile
 
 ![Mais filtros — mobile](filters-mobile.png)
+
+## 23. Acabamento final do card
+
+![Cantos arredondados e elevação suave](card-rounded-detail.png)

@@ -321,12 +321,12 @@ const canOpenConversation = computed(
 
 <template>
   <div
-    class="group/card relative w-full shrink-0 overflow-hidden rounded-xl border border-n-weak bg-n-surface-1 py-3 ps-4 pe-3 text-start shadow-sm transition-colors hover:border-n-slate-7"
+    class="group/card relative w-full shrink-0 overflow-hidden rounded-[1.25rem] border border-n-weak bg-n-surface-1 py-3 ps-4 pe-3 text-start shadow-md transition-shadow hover:shadow-lg"
   >
     <!-- Stage accent rail (inline :style per repo precedent; slate fallback,
          dark ring guards pale colors on dark surfaces) -->
     <span
-      class="absolute inset-y-0 start-0 w-[0.188rem] rounded-s-xl ring-1 ring-inset ring-n-alpha-1 dark:ring-n-alpha-2"
+      class="absolute inset-y-0 start-0 w-[0.188rem] rounded-s-[1.25rem] ring-1 ring-inset ring-n-alpha-1 dark:ring-n-alpha-2"
       :style="railStyle"
     />
 
@@ -338,7 +338,7 @@ const canOpenConversation = computed(
          action. The last-message bubble stops propagation to branch off. -->
     <button
       type="button"
-      class="absolute inset-0 z-0 cursor-pointer rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
+      class="absolute inset-0 z-0 cursor-pointer rounded-[1.25rem] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-n-brand"
       tabindex="-1"
       aria-hidden="true"
       @click="$emit('open', card)"

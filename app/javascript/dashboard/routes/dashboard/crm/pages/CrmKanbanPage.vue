@@ -1944,7 +1944,7 @@ onUnmounted(() => {
             class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               viewMode === mode.id
-                ? 'bg-n-surface-2 text-n-slate-12 shadow-sm'
+                ? '!font-bold bg-n-surface-2 text-n-slate-12 shadow-sm'
                 : ''
             "
             :aria-pressed="viewMode === mode.id"
@@ -1972,7 +1972,7 @@ onUnmounted(() => {
           :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
           icon="i-lucide-plus"
           :disabled="!hasPipelines || isLoading"
-          class="order-2 !rounded-lg min-h-11"
+          class="order-2 !rounded-lg min-h-11 !font-bold"
           @click="openCreateDrawer"
         />
         <Button
@@ -2000,7 +2000,7 @@ onUnmounted(() => {
               icon="i-lucide-settings-2"
               slate
               outline
-              class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
+              class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
             />
           </template>
           <template #content>
@@ -2066,7 +2066,7 @@ onUnmounted(() => {
             :options="pipelineOptions"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
-            class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1"
+            class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1 [&>button]:!font-bold"
           />
           <Button
             v-if="canManagePipelines"
@@ -2074,7 +2074,7 @@ onUnmounted(() => {
             icon="i-lucide-plus"
             blue
             outline
-            class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
+            class="!rounded-lg min-h-11 !border !border-solid !border-n-weak !font-bold !outline-transparent bg-n-surface-1 focus-visible:ring-2 focus-visible:ring-n-brand"
             :disabled="isLoading"
             @click="openCreatePipelineDrawer"
           />
@@ -2098,7 +2098,7 @@ onUnmounted(() => {
           icon="i-lucide-list-filter"
           slate
           outline
-          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
+          class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
           :aria-expanded="showFiltersDrawer"
           @click="showFiltersDrawer = true"
         />
