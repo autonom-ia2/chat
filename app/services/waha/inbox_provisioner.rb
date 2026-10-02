@@ -90,6 +90,7 @@ module Waha
         commands: { server: true, queue: true },
         conversations: {
           markAsRead: true,
+          syncMessageStatus: true,
           sort: @config.conversation_sort,
           status: nil,
           outgoing: 'message'

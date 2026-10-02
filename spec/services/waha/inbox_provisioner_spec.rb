@@ -41,7 +41,10 @@ RSpec.describe Waha::InboxProvisioner do
         app_id: a_string_matching(/\Aapp_/),
         config: hash_including(
           groups: 'OFF',
-          conversations: hash_including(outgoing: 'message')
+          conversations: hash_including(
+            outgoing: 'message',
+            syncMessageStatus: true
+          )
         )
       )
     end
