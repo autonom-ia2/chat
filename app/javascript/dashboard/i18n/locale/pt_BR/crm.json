@@ -1072,7 +1072,7 @@
       "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Reagendado para {time}",
       "ACTIVITY_DETAIL_RETRY_AT": "Próxima tentativa {time}",
       "ACTIVITY_DETAIL_ATTEMPT": "Tentativa {attempt}",
-      "ACTIVITY_DETAIL_ATTEMPT_OF": "Tentativa {attempt} de {total}",
+      "DISCARD_DRAFT_HELP": "Há alterações nesta oportunidade ou num novo retorno que ainda não foram salvas.",
       "ACTIVITY_DETAIL_ATTEMPTS_FINISHED": "Tentativas encerradas",
       "ACTIVITY_DETAIL_FAILURE_UNVERIFIED_QUOTE": "Não foi possível enviar: orçamento não verificado",
       "ACTIVITY_DETAIL_FAILURE_MISSING_AI_CREDENTIAL": "Não foi possível enviar: credencial da IA ausente",

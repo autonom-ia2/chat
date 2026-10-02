@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import CrmKanbanPage from './CrmKanbanPage.vue';
 
 // The page is a large orchestrator. These specs pin three review findings:
@@ -78,7 +78,12 @@ const STAGES = [
     color: '#2563eb',
     cards: [{ id: 100, title: 'Acme deal', company: { name: 'Acme' } }],
   },
-  { id: 11, name: 'Proposta', color: '#22c55e', cards: [] },
+  {
+    id: 11,
+    name: 'Proposta',
+    color: '#22c55e',
+    cards: [{ id: 101, title: 'Beta deal', company: { name: 'Beta' } }],
+  },
 ];
 
 const setPermissions = overrides => {
@@ -121,7 +126,11 @@ const setGetters = () => {
   });
 };
 
-const mountPage = async ({ calendarOnly = false, perms = {} } = {}) => {
+const mountPage = async ({
+  calendarOnly = false,
+  perms = {},
+  stubs = {},
+} = {}) => {
   route.meta = calendarOnly ? { calendarOnly: true } : {};
   setPermissions(perms);
   setGetters();
@@ -153,6 +162,7 @@ const mountPage = async ({ calendarOnly = false, perms = {} } = {}) => {
         CardLabels: true,
         SLACardLabel: true,
         CrmCardPill: true,
+        ...stubs,
       },
     },
   });
@@ -262,5 +272,41 @@ describe('CrmKanbanPage', () => {
       document.body.querySelector('[data-popover-content] [role="combobox"]')
     ).toBeNull();
     expect(document.activeElement).toBe(move.element);
+  });
+  it('confirms the open card drafts before switching to another card', async () => {
+    const guardNavigation = vi.fn(action => action());
+    dispatch.mockImplementation(async (type, payload) => {
+      if (type === 'crmKanban/fetchPipelines') return [PIPELINE];
+      if (type === 'crmKanban/fetchCard') return { id: payload };
+      return [];
+    });
+    const DrawerStub = defineComponent({
+      setup(_, { expose }) {
+        expose({ guardNavigation });
+        return () => h('div');
+      },
+    });
+    wrapper = await mountPage({ stubs: { CrmCardDrawer: DrawerStub } });
+    const openButtons = () =>
+      wrapper
+        .findAll('button')
+        .filter(button =>
+          (button.attributes('aria-label') || '').startsWith(
+            'CRM_KANBAN.CARD.OPEN_DETAILS'
+          )
+        );
+    expect(openButtons()).toHaveLength(2);
+
+    await openButtons()[0].trigger('click');
+    await flushPromises();
+    await openButtons()[0].trigger('click');
+    await flushPromises();
+    expect(guardNavigation).not.toHaveBeenCalled();
+
+    await openButtons()[1].trigger('click');
+    await flushPromises();
+    expect(guardNavigation).toHaveBeenCalledWith(expect.any(Function), {
+      leaving: true,
+    });
   });
 });

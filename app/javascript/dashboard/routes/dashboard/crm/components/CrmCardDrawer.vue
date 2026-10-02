@@ -771,7 +771,7 @@ const guardRelationship = (action, { leaving = false } = {}) => {
     discardAction = action;
     discardDescription.value = relationshipDirty
       ? relationshipDiscardHelp()
-      : '';
+      : t('CRM_KANBAN.DRAWER.DISCARD_DRAFT_HELP');
     discardOpen.value = true;
     discardDialog.value?.open();
     return;

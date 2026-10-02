@@ -1072,7 +1072,7 @@
       "ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED": "Rescheduled to {time}",
       "ACTIVITY_DETAIL_RETRY_AT": "Next attempt {time}",
       "ACTIVITY_DETAIL_ATTEMPT": "Attempt {attempt}",
-      "ACTIVITY_DETAIL_ATTEMPT_OF": "Attempt {attempt} of {total}",
+      "DISCARD_DRAFT_HELP": "Changes to this opportunity or to a new follow-up have not been saved.",
       "ACTIVITY_DETAIL_ATTEMPTS_FINISHED": "Attempts finished",
       "ACTIVITY_DETAIL_FAILURE_UNVERIFIED_QUOTE": "Could not send: quote not verified",
       "ACTIVITY_DETAIL_FAILURE_MISSING_AI_CREDENTIAL": "Could not send: AI credentials are missing",

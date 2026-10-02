@@ -1264,13 +1264,19 @@ const openOpportunityForContact = contact => {
     openCreateDrawer();
     creationContact.value = contact;
   };
-  if (showDrawer.value) cardDrawerRef.value?.guardNavigation(open);
+  if (showDrawer.value)
+    cardDrawerRef.value?.guardNavigation(open, { leaving: true });
   else open();
 };
 
 const openCardFromBoard = card => {
-  if (showDrawer.value && drawerMode.value === 'create') {
-    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card));
+  const sameCard =
+    drawerMode.value === 'edit' && selectedCard.value?.id === card?.id;
+  if (showDrawer.value && !sameCard) {
+    // Switching cards leaves the open one: its unsaved drafts must be confirmed.
+    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card), {
+      leaving: true,
+    });
     return;
   }
   openCardDrawer(card);
