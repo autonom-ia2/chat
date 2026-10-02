@@ -14,12 +14,18 @@ module Waha
     end
 
     # ---- SESSÕES ----
-    def create_session(name, start: true, config: {})
-      post('/api/sessions', { name: name, start: start, config: config })
+    def create_session(name, start: true, config: {}, apps: nil)
+      payload = { name: name, start: start, config: config }
+      payload[:apps] = apps if apps.present?
+      post('/api/sessions', payload)
     end
 
     def get_session(name)
       get("/api/sessions/#{name}")
+    end
+
+    def update_session(name, config:, apps:)
+      put("/api/sessions/#{name}", { config: config, apps: apps })
     end
 
     def list_sessions(all: true)
@@ -61,6 +67,14 @@ module Waha
       get("/api/apps?session=#{session}")
     end
 
+    def get_app(app_id)
+      get("/api/apps/#{app_id}")
+    end
+
+    def update_app(app_id, app)
+      put("/api/apps/#{app_id}", app)
+    end
+
     def delete_app(app_id)
       delete("/api/apps/#{app_id}")
     end
@@ -70,7 +84,27 @@ module Waha
       get("/api/contacts/check-exists?#{query}")
     end
 
+    # Read-only capability probe. When the module is enabled but no App is configured
+    # for the session, WAHA returns a structured 404 saying the App is not enabled.
+    # When the module itself is disabled, Nest returns "Cannot GET ..." instead.
+    def brazilian_phone_numbers_available?(session)
+      path = "/api/apps/brazilian-phone-numbers/#{URI.encode_www_form_component(session)}/cache/stats"
+      response = HTTParty.get("#{@base}#{path}", headers: headers, timeout: DEFAULT_TIMEOUT)
+      return true if response.success? || response.code == 422
+      return brazilian_phone_numbers_route_present?(response) if response.code == 404
+
+      raise Error, "WAHA GET #{path} -> #{response.code}"
+    rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED => e
+      raise Error, "WAHA GET #{path} falhou: #{e.class}"
+    end
+
     private
+
+    def brazilian_phone_numbers_route_present?(response)
+      body = response.parsed_response
+      message = body.is_a?(Hash) ? body['message'].to_s : response.body.to_s
+      message.include?("App 'brazilian-phone-numbers' is not enabled for session")
+    end
 
     def headers
       { 'X-Api-Key' => @key, 'Content-Type' => 'application/json', 'Accept' => 'application/json' }
@@ -82,6 +116,10 @@ module Waha
 
     def get(path)
       request(:get, path)
+    end
+
+    def put(path, body)
+      request(:put, path, body)
     end
 
     def delete(path)
