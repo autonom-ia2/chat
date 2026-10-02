@@ -47,4 +47,28 @@ Ruby 3.4.4; PostgreSQL de teste `chat2you_waha_status_20261002` e Redis de teste
 
 O PUT da WAHA provoca restart técnico da sessão. Não há logout, remoção do pareamento, QR ou limpeza de histórico. A releitura N1 não torna GET/PUT atômico; permanece necessária a exclusividade já confirmada.
 
-O merge do produto aciona publicação nas duas instalações pelo fluxo atual. Não executar merge/deploy nem substituir código em produção como atalho. A aplicação operacional restrita do filtro no Hub2You deve ser decidida separadamente dessa publicação. O produto preparado aqui ainda não está publicado e o filtro das quatro sessões ainda não foi corrigido em produção.
+O merge do produto aciona publicação nas duas instalações pelo fluxo atual. Não executar merge/deploy nem substituir código em produção como atalho. A aplicação operacional restrita do filtro no Hub2You deve ser decidida separadamente dessa publicação. O produto preparado aqui ainda não está publicado. A aplicação operacional do filtro nas quatro sessões foi autorizada e concluída separadamente, conforme o registro abaixo.
+
+## Execução operacional autorizada — concluída
+
+Rodrigo autorizou explicitamente a ativação do filtro nas quatro sessões já aplicadas do Hub2You. A operação foi feita pela API WAHA usando o cliente publicado, sem merge, deploy ou substituição de arquivos da aplicação. O operador administrativo transitório reutilizou as rotinas publicadas de releitura N1, espera por `WORKING` e recuperação R1. Uma restrição de escrita permitiu apenas o PUT da configuração desejada, eventual PUT de restauração do snapshot original e start somente nessa recuperação; nenhuma operação de logout, QR ou exclusão foi permitida.
+
+Antes da operação real, dez cenários locais passaram: caminho normal, novo App concorrente, alterações concorrentes de Chatwoot/resolver/configuração, erro de leitura, falha de escrita, filtro não confirmado, falha de saúde e falha de recuperação. A restrição de escrita também foi validada. Ruby 3.4.4 e sintaxe dos transportes foram conferidos antes de cada despacho.
+
+- Intervalo operacional (Brasília): 2026-10-02 19:06:03 -0300 até 2026-10-02 19:11:53 -0300.
+- Quatro backups novos e completos antes da escrita; arquivos antes/depois persistidos no host, diretórios `0700` e arquivos `0600`, root, com hashes verificados. Conteúdo e caminhos completos permanecem privados.
+- Cada sessão passou por backup, aplicação e confirmação separada antes da próxima. Todos os 12 comandos SSM terminaram `Success`, código 0.
+- Resultado: `updated=4`, `failed=0`, `recovered=0`, `recovery_failed=0`; todas as sessões `WORKING` e `ignore.status=true`.
+- A comparação completa confirmou que só `ignore.status` mudou; Apps/configurações não relacionadas e estado local ficaram preservados.
+- Toda consulta ao banco ocorreu em transação `READ ONLY`; zero escritas locais. Histórico não foi apagado.
+- Não houve alteração de Autonom.ia, outras contas, pareamento, QR ou publicação de aplicação. O runtime continuou `d28a87ad9b7264042a92823c5b6f4d04831d1713`.
+- As 21 caixas restantes da ampliação não receberam escrita nesta intervenção; o lote continua pausado. PR #872 permanece aberta para a correção permanente do migrador.
+
+Evidências das quatro aplicações (SSM):
+
+- `cd162eae-c5ec-42a1-a280-226cdc798e16` — Success/0, filtro confirmado e estado preservado.
+- `4b51dcf8-eb49-411a-9905-3797f2ed4ca5` — Success/0, filtro confirmado e estado preservado.
+- `617421f8-ecb5-4aa2-8d5b-33fee0c1e6a9` — Success/0, filtro confirmado e estado preservado.
+- `fb7902c2-1bf1-41ec-bf01-00f415a0f114` — Success/0, filtro confirmado e estado preservado.
+
+Leitura final separada: SSM `e1a67727-2945-4fae-9e68-9315fffabef9`, Success/0, concluída às 19:12:40 de Brasília. As quatro sessões continuavam `WORKING`, compatíveis e com filtro ligado. Foi observada uma mensagem comum de entrada após o ajuste, sem novas mensagens de Status de entrada nesse intervalo; o histórico de Status permanecia presente. Foram selecionadas somente contagens, sem conteúdo das mensagens. A janela é breve e três caixas não tiveram novas mensagens de entrada; não se declara validação de tráfego das quatro nem teste de ponta a ponta de todas elas.
