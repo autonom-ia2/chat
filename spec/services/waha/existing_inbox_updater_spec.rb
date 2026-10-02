@@ -581,6 +581,52 @@ RSpec.describe Waha::ExistingInboxUpdater do
       expect(resolved.dig('config', 'cache', 'persistent')).to be(true)
       expect(channel.reload.additional_attributes['phone_numbers_app_id']).to eq('br_existing')
     end
+
+    context 'with duplicate resolvers' do
+      let!(:second_channel) do
+        create(:channel_api, account: account,
+                             additional_attributes: { 'provider' => 'waha', 'session' => 'second', 'app_id' => 'app_second' })
+      end
+
+      [false, true].each do |apply|
+        [false, true].each do |compliant|
+          [false, true].each do |duplicate_enabled|
+            it "skips duplicates with apply=#{apply}, compliant=#{compliant}, duplicate_enabled=#{duplicate_enabled}", :aggregate_failures do
+              if compliant
+                inbox.update!(lock_to_single_conversation: true)
+                channel.update!(additional_attributes: channel.additional_attributes.merge('phone_numbers_app_id' => 'br_existing'))
+                remote_app['config']['conversations'].merge!('outgoing' => 'message', 'syncMessageStatus' => true)
+              end
+              duplicate = remote_phone_app.deep_dup.merge('id' => 'br_duplicate', 'enabled' => duplicate_enabled)
+              calls = { 'id' => 'calls_existing', 'session' => '5511999999999', 'app' => 'calls', 'enabled' => true, 'config' => {} }
+              remote_apps.replace([remote_app.deep_dup, remote_phone_app.deep_dup, duplicate, calls])
+              original_apps = remote_apps.deep_dup
+              original_attributes = channel.additional_attributes.deep_dup
+              original_config = remote_session['config'].deep_dup
+              original_lock = inbox.lock_to_single_conversation
+              second_attributes = second_channel.additional_attributes.deep_dup
+              allow(client).to receive(:get_app).with('app_second').and_return(nil)
+
+              result = service.perform(apply: apply, inbox_id: apply ? nil : inbox.id)
+
+              expect(result.to_h.slice(:total, :would_update, :updated, :unchanged, :skipped, :failed, :halted)).to eq(
+                total: 1, would_update: 0, updated: 0, unchanged: 0, skipped: 1, failed: 0, halted: apply
+              )
+              expect(remote_apps).to eq(original_apps)
+              expect(remote_session['config']).to eq(original_config)
+              expect(channel.reload.additional_attributes).to eq(original_attributes)
+              expect(inbox.reload.lock_to_single_conversation).to eq(original_lock)
+              expect(second_channel.reload.additional_attributes).to eq(second_attributes)
+              expect(client).not_to have_received(:update_session)
+              expect(client).not_to have_received(:start_session)
+              expect(client).not_to have_received(:get_app).with('app_second')
+              expect(output.string).to include('SKIP', 'Mais de um App brazilian-phone-numbers')
+              expect(output.string).not_to include('UPDATED', 'already compliant')
+            end
+          end
+        end
+      end
+    end
   end
 
   describe 'health at final confirmation' do

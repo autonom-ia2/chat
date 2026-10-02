@@ -124,7 +124,10 @@ class Waha::ExistingInboxMigrationPlanner
   end
 
   def find_phone_numbers_app(remote_apps)
-    remote_apps.find { |app| app['app'] == Waha::BrazilianPhoneNumbers::APP_NAME }
+    phone_apps = remote_apps.select { |app| app['app'] == Waha::BrazilianPhoneNumbers::APP_NAME }
+    raise SkipError, 'Mais de um App brazilian-phone-numbers na sessão. Nenhuma alteração foi aplicada; revise a duplicidade.' if phone_apps.size > 1
+
+    phone_apps.first
   end
 
   def desired_chatwoot_app(remote)

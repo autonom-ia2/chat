@@ -93,6 +93,8 @@ Antes de qualquer escrita, o backfill valida a identidade do vínculo remoto. O 
 
 Depois da identidade validada, o backfill exige que a sessão esteja `WORKING` e faz uma consulta somente leitura para confirmar que o módulo `brazilian-phone-numbers` está realmente carregado no WAHA. Se o vínculo divergir, o módulo estiver indisponível ou a sessão não estiver operacional, a sessão é ignorada sem escrita e, em `APPLY=true`, o lote para imediatamente.
 
+Mais de um App `brazilian-phone-numbers` na lista completa bloqueia o planejamento com `SKIP` humanizado, inclusive se um estiver desabilitado ou a caixa parecer já compatível. Nenhum App é escolhido, removido ou mesclado automaticamente. Dry-run informa a ambiguidade; em APPLY, o lote para sem escrita ou recuperação. Revisar a duplicidade antes de propor uma nova aplicação.
+
 Como `lock_to_single_conversation=true`, o App Chatwoot é normalizado no mesmo plano para `sort=created_newest` e `status=null`. Essa combinação permite localizar também a conversa resolvida e reabri-la, em vez de criar outra. Um `WAHA_CONVERSATION_SORT` legado não pode sobrescrever esse comportamento em novas caixas.
 
 Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são capturadas como snapshot antes da atualização. O backfill preserva os Apps existentes, sincroniza Chatwoot + resolver brasileiro e só grava `lock_to_single_conversation`/`phone_numbers_app_id` depois que a sessão retorna a `WORKING` e o estado remoto desejado é confirmado por leitura.
