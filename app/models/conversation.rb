@@ -69,6 +69,7 @@ class Conversation < ApplicationRecord
   include ConversationMuteHelpers
 
   CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language].freeze
+  WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY = 'waha_resolution_cycle_started_at'.freeze
   FILTERED_UNREAD_COUNT_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
   FILTERED_UNREAD_COUNT_UPDATE_KEYS = %w[
     cached_label_list campaign_id custom_attributes first_reply_created_at label_list last_activity_at priority snoozed_until waiting_since
@@ -140,6 +141,7 @@ class Conversation < ApplicationRecord
 
   before_save :ensure_snooze_until_reset
   before_save :set_status_changed_at
+  before_save :track_waha_resolution_cycle, if: %i[persisted? status_changed? waha_single_conversation?]
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
 
@@ -277,6 +279,10 @@ class Conversation < ApplicationRecord
     dispatcher_dispatch(CONVERSATION_UPDATED, previous_changes)
   end
 
+  def waha_single_conversation?
+    inbox.lock_to_single_conversation? && inbox.channel.is_a?(Channel::Api) && inbox.channel.waha_provider?
+  end
+
   private
 
   def execute_after_update_commit_callbacks
@@ -302,6 +308,20 @@ class Conversation < ApplicationRecord
 
   def set_status_changed_at
     self.status_changed_at = Time.current if new_record? || status_changed?
+  end
+
+  # A nil marker means a completed cycle; the next opening starts a new one.
+  def track_waha_resolution_cycle
+    if resolved? || status_was == 'resolved'
+      started_at = open? ? status_changed_at.iso8601(6) : nil
+    elsif open? && additional_attributes.key?(WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY) &&
+          additional_attributes[WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY].nil?
+      started_at = status_changed_at.iso8601(6)
+    else
+      return
+    end
+
+    self.additional_attributes = additional_attributes.merge(WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY => started_at)
   end
 
   def ensure_waiting_since
@@ -414,9 +434,20 @@ class Conversation < ApplicationRecord
   end
 
   def dispatcher_dispatch(event_name, changed_attributes = nil)
-    Rails.configuration.dispatcher.dispatch(event_name, Time.zone.now, conversation: self, notifiable_assignee_change: notifiable_assignee_change?,
-                                                                       changed_attributes: changed_attributes,
-                                                                       performed_by: Current.executed_by)
+    data = {
+      conversation: self,
+      notifiable_assignee_change: notifiable_assignee_change?,
+      changed_attributes: changed_attributes,
+      performed_by: Current.executed_by
+    }
+    if event_name == CONVERSATION_RESOLVED && waha_single_conversation?
+      # Capture the completed cycle before the async job reloads a potentially newer conversation.
+      previous_attributes = saved_change_to_additional_attributes&.first || additional_attributes
+      started_at = previous_attributes[WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY]
+      data[:resolution_cycle_started_at] = started_at ? Time.iso8601(started_at) : created_at
+    end
+
+    Rails.configuration.dispatcher.dispatch(event_name, Time.zone.now, data)
   end
 
   def set_unread_count_deletion_data

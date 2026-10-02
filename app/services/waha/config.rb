@@ -29,8 +29,10 @@ module Waha
         ENV.fetch('WAHA_CHATWOOT_WEBHOOK_PATH', '/webhooks/chatwoot').to_s
       end
 
+      # Single Conversation exige Created: Newest no WAHA. Não é configurável por ENV,
+      # porque outro valor ficaria incompatível com lock_to_single_conversation=true.
       def conversation_sort
-        ENV.fetch('WAHA_CONVERSATION_SORT', 'created_newest').to_s
+        'created_newest'
       end
 
       # Filtros de evento por sessão. Por padrão ignoramos Status (os "stories" do WhatsApp),

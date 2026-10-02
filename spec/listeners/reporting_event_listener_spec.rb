@@ -62,6 +62,254 @@ describe ReportingEventListener do
       expect(reporting_event.event_end_time).to be_within(1.second).of(resolved_at)
     end
 
+    context 'when the inbox is WAHA with single conversation enabled' do
+      let(:waha_channel) do
+        create(
+          :channel_api,
+          account: account,
+          additional_attributes: {
+            'provider' => 'waha',
+            'session' => '5511999999999',
+            'app_id' => 'app_reporting_test'
+          }
+        )
+      end
+      let(:waha_inbox) do
+        waha_channel.inbox.tap { |record| record.update!(lock_to_single_conversation: true) }
+      end
+      let(:waha_conversation) do
+        create(:conversation, created_at: 3.days.ago, account: account, inbox: waha_inbox, assignee: user,
+                              additional_attributes: { 'custom_option' => 'preserve' })
+      end
+
+      let(:timeline) do
+        [[2.hours.ago, 'resolved'], [80.minutes.ago, 'open'], [Time.current, 'resolved']]
+      end
+      let(:queued_events) do
+        enqueued_jobs.select { |job| job[:job] == EventDispatcherJob }.map do |job|
+          Events::Base.new(*ActiveJob::Arguments.deserialize(job[:args]))
+        end
+      end
+      let(:resolved_events) { queued_events.select { |event| event.name == 'conversation.resolved' } }
+      let(:opened_events) { queued_events.select { |event| event.name == 'conversation.opened' } }
+
+      before do
+        waha_conversation
+        clear_enqueued_jobs
+        timeline.each do |at, status|
+          travel_to(at) { waha_conversation.reload.update!(status: status) }
+        end
+      end
+
+      it 'records 80 minutes when resolution runs before both the opening and the previous resolution', :aggregate_failures do
+        listener.conversation_resolved(resolved_events.last)
+        resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+
+        expect(resolved.value).to eq(80.minutes.to_i)
+        expect(resolved.event_start_time).to eq(timeline[1][0].change(usec: 0))
+        expect(resolved_events.last.data[:resolution_cycle_started_at]).to eq(timeline[1][0].change(usec: 0))
+        listener.conversation_opened(opened_events.first)
+        listener.conversation_resolved(resolved_events.first)
+        expect(resolved.reload.value).to eq(80.minutes.to_i)
+      end
+
+      it 'keeps the same duration when events execute in chronological order' do
+        listener.conversation_resolved(resolved_events.first)
+        listener.conversation_opened(opened_events.first)
+        listener.conversation_resolved(resolved_events.last)
+
+        resolved = waha_conversation.reporting_events.where(name: 'conversation_resolved').order(:id).last
+        expect(resolved.value).to eq(80.minutes.to_i)
+      end
+
+      it 'keeps unrelated conversation attributes and clears the finished cycle marker' do
+        expect(waha_conversation.reload.additional_attributes).to include(
+          'custom_option' => 'preserve', 'waha_resolution_cycle_started_at' => nil
+        )
+      end
+
+      context 'with snooze and multiple openings in the same cycle' do
+        let(:timeline) do
+          [[2.hours.ago, 'resolved'], [80.minutes.ago, 'open'], [50.minutes.ago, 'snoozed'],
+           [30.minutes.ago, 'open'], [Time.current, 'resolved']]
+        end
+
+        it 'uses the first opening even when all opening jobs run later in reverse order' do
+          listener.conversation_resolved(resolved_events.last)
+          opened_events.reverse_each { |event| listener.conversation_opened(event) }
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          expect(resolved.value).to eq(80.minutes.to_i)
+          expect(resolved.event_start_time).to eq(timeline[1][0].change(usec: 0))
+        end
+      end
+
+      context 'with another cycle before the earlier resolution job runs' do
+        let(:timeline) do
+          [[3.hours.ago, 'resolved'], [2.hours.ago, 'open'], [90.minutes.ago, 'resolved'],
+           [40.minutes.ago, 'open'], [Time.current, 'resolved']]
+        end
+
+        it 'uses the timestamp captured for each resolution instead of the current model state', :aggregate_failures do
+          listener.conversation_resolved(resolved_events.last)
+          listener.conversation_resolved(resolved_events[1])
+
+          resolved = waha_conversation.reporting_events.where(name: 'conversation_resolved').order(:event_end_time)
+          expect(resolved.map(&:value)).to eq([30.minutes.to_i, 40.minutes.to_i])
+          expect(resolved.map(&:event_start_time)).to eq([timeline[1][0], timeline[3][0]].map { |at| at.change(usec: 0) })
+          expect(resolved_events[1].data[:conversation].status).to eq('resolved')
+        end
+      end
+
+      context 'when pending occurs between resolution and opening' do
+        let(:timeline) do
+          [[2.hours.ago, 'resolved'], [100.minutes.ago, 'pending'], [80.minutes.ago, 'open'], [Time.current, 'resolved']]
+        end
+
+        it 'starts at the first opening after resolution rather than the pending transition' do
+          listener.conversation_resolved(resolved_events.last)
+
+          expect(waha_conversation.reporting_events.find_by!(name: 'conversation_resolved').value).to eq(80.minutes.to_i)
+        end
+      end
+
+      context 'when the first cycle has no previous resolution' do
+        let(:timeline) { [[2.hours.ago, 'pending'], [80.minutes.ago, 'open'], [Time.current, 'resolved']] }
+
+        it 'continues measuring from creation' do
+          listener.conversation_resolved(resolved_events.first)
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          expect(resolved.event_start_time).to eq(waha_conversation.created_at)
+        end
+      end
+
+      context 'with business hours and rollups enabled' do
+        let(:waha_inbox) do
+          waha_channel.inbox.tap do |record|
+            record.update!(lock_to_single_conversation: true, working_hours_enabled: true, timezone: 'UTC')
+          end
+        end
+        let(:timeline) do
+          [[Time.zone.parse('2026-10-02 09:00'), 'resolved'], [Time.zone.parse('2026-10-02 10:40'), 'open'],
+           [Time.zone.parse('2026-10-02 12:00'), 'resolved']]
+        end
+
+        it 'records the captured cycle in raw durations, business hours and rollups', :aggregate_failures do
+          account.update!(reporting_timezone: 'UTC')
+          listener.conversation_resolved(resolved_events.last)
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          rollup = ReportingEventsRollup.find_by!(account_id: account.id, dimension_type: 'account', metric: 'resolution_time')
+          expect(resolved.value).to eq(4800)
+          expect(resolved.value_in_business_hours).to eq(4800)
+          expect(rollup).to have_attributes(count: 1, sum_value: 4800, sum_value_business_hours: 4800)
+        end
+      end
+
+      context 'with a bot resolution' do
+        it 'uses the same captured cycle for the bot and ordinary resolution events' do
+          create(:agent_bot_inbox, inbox: waha_inbox, agent_bot: create(:agent_bot, account: account))
+          listener.conversation_resolved(resolved_events.last)
+
+          resolved = waha_conversation.reporting_events.where(name: %w[conversation_resolved conversation_bot_resolved])
+          expect(resolved.count).to eq(2)
+          expect(resolved.map(&:value)).to eq([4800, 4800])
+          expect(resolved.map(&:event_start_time).uniq).to eq([timeline[1][0].change(usec: 0)])
+        end
+      end
+
+      context 'with a job queued before cycle snapshots were introduced' do
+        it 'keeps the legacy calculation without rewriting historical events' do
+          event = Events::Base.new('conversation.resolved', timeline.last[0], conversation: waha_conversation)
+          listener.conversation_resolved(event)
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          expect(resolved.event_start_time).to eq(waha_conversation.created_at)
+        end
+      end
+
+      context 'with a non-WAHA channel and conversation locking enabled' do
+        let(:waha_inbox) { inbox.tap { |record| record.update!(lock_to_single_conversation: true) } }
+
+        it 'keeps the legacy duration and does not add a WAHA marker or event payload', :aggregate_failures do
+          listener.conversation_resolved(resolved_events.last)
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          expect(resolved.event_start_time).to eq(waha_conversation.created_at)
+          expect(resolved_events.last.data).not_to have_key(:resolution_cycle_started_at)
+          expect(waha_conversation.reload.additional_attributes).not_to have_key('waha_resolution_cycle_started_at')
+        end
+      end
+
+      context 'with WAHA without conversation locking' do
+        let(:waha_inbox) { waha_channel.inbox.tap { |record| record.update!(lock_to_single_conversation: false) } }
+
+        it 'keeps the legacy duration and does not add a WAHA marker or event payload', :aggregate_failures do
+          listener.conversation_resolved(resolved_events.last)
+
+          resolved = waha_conversation.reporting_events.find_by!(name: 'conversation_resolved')
+          expect(resolved.event_start_time).to eq(waha_conversation.created_at)
+          expect(resolved_events.last.data).not_to have_key(:resolution_cycle_started_at)
+          expect(waha_conversation.reload.additional_attributes).not_to have_key('waha_resolution_cycle_started_at')
+        end
+      end
+    end
+
+    it 'preserves the historical created_at calculation for non-WAHA channels' do
+      legacy_conversation = create(
+        :conversation,
+        created_at: 3.hours.ago,
+        account: account,
+        inbox: inbox,
+        assignee: user
+      )
+      first_resolved_at = 2.hours.ago
+      reopened_at = 30.minutes.ago
+      resolved_again_at = Time.current
+
+      create_resolution_event(legacy_conversation, first_resolved_at)
+      create_opened_event(legacy_conversation, first_resolved_at, reopened_at)
+
+      listener.conversation_resolved(
+        Events::Base.new('conversation.resolved', resolved_again_at, conversation: legacy_conversation)
+      )
+
+      reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+      expect(reporting_event.value).to be_within(2).of(3.hours.to_i)
+      expect(reporting_event.event_start_time).to be_within(1.second).of(legacy_conversation.created_at)
+    end
+
+    it 'preserves the historical calculation for WAHA inboxes without single conversation enabled' do
+      waha_channel = create(
+        :channel_api,
+        account: account,
+        additional_attributes: {
+          'provider' => 'waha',
+          'session' => '5511888888888',
+          'app_id' => 'app_reporting_unlocked'
+        }
+      )
+      unlocked_inbox = waha_channel.inbox.tap { |record| record.update!(lock_to_single_conversation: false) }
+      unlocked_conversation = create(
+        :conversation,
+        created_at: 3.hours.ago,
+        account: account,
+        inbox: unlocked_inbox,
+        assignee: user
+      )
+
+      create_resolution_event(unlocked_conversation, 2.hours.ago)
+      create_opened_event(unlocked_conversation, 2.hours.ago, 30.minutes.ago)
+
+      listener.conversation_resolved(
+        Events::Base.new('conversation.resolved', Time.current, conversation: unlocked_conversation)
+      )
+
+      reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+      expect(reporting_event.event_start_time).to be_within(1.second).of(unlocked_conversation.created_at)
+    end
+
     describe 'conversation_bot_resolved' do
       # create an agent bot
       let!(:agent_bot_inbox) { create(:inbox, account: account) }
@@ -92,6 +340,34 @@ describe ReportingEventListener do
         expect(account.reporting_events.where(name: 'conversation_bot_resolved').count).to be 0
       end
     end
+  end
+
+  def create_resolution_event(target_conversation, resolved_at)
+    create(
+      :reporting_event,
+      name: 'conversation_resolved',
+      account_id: account.id,
+      inbox_id: target_conversation.inbox_id,
+      conversation_id: target_conversation.id,
+      user_id: user.id,
+      value: 1200,
+      event_start_time: target_conversation.created_at,
+      event_end_time: resolved_at
+    )
+  end
+
+  def create_opened_event(target_conversation, start_time, opened_at)
+    create(
+      :reporting_event,
+      name: 'conversation_opened',
+      account_id: account.id,
+      inbox_id: target_conversation.inbox_id,
+      conversation_id: target_conversation.id,
+      user_id: user.id,
+      value: opened_at.to_i - start_time.to_i,
+      event_start_time: start_time,
+      event_end_time: opened_at
+    )
   end
 
   describe '#reply_created' do
