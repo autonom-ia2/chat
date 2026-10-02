@@ -2,7 +2,7 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/869.
 Piloto aceito: #865/#866. Duas caixas anteriores concluídas: #867/#868.
-Estado deste checkpoint: **22 alvos preparados; nenhuma escrita nesta ampliação ainda**.
+Estado final deste checkpoint: **ampliação interrompida por relato de Status do WhatsApp; uma caixa aplicada e confirmada, 21 restantes sem escrita**.
 
 ## Autorização e limites
 
@@ -66,3 +66,22 @@ Sem mudança Ruby de produto, UI, schema, dependências, rotas ou Guia; nenhuma 
 local repetida ou apresentada como nova execução. Instalação local congelada somente para hooks.
 E2E real aceito no piloto anterior não é presumido para as novas caixas. Esta ampliação verifica
 configuração, preservação e idempotência; o uso normal deve ser acompanhado sem mensagens extras.
+
+## Interrupção por regressão reportada
+
+Rodrigo reportou publicações de Status do WhatsApp aparecendo como conversas e pediu bloqueio ou
+controle opcional. O orquestrador foi interrompido antes de qualquer alvo seguinte. A primeira caixa
+já tinha APPLY SSM em andamento; esse comando foi consultado, sem repeti-lo nem desfazer a caixa.
+
+SSM backup 92da71f9-a3b4-4cf9-9a54-64e8a2abfdfe, Success/0, 21:44:07.693–21:44:18.693 UTC.
+SSM APPLY e80fc1b8-20c7-4c2a-a7a2-f1938d9c1438, Success/0, 21:44:28.041–21:44:50.041 UTC:
+updated=1; zero skips/falhas/recuperações; WORKING; configuração da sessão preservada;
+resolver/vínculo/trava locais conferidos. Cópias before/after persistidas com hashes iguais e 0700/0600 root.
+SSM confirmação read-only 42923f9c-88c6-4f96-bbe7-51cebf5b8b53, Success/0,
+21:45:09.804–21:45:22.804 UTC: unchanged=1, would_update=0, zero falhas, hash local igual.
+
+Somente um dos 22 alvos foi alterado. Os 21 restantes não receberam backup/APPLY nem foram substituídos
+por outros alvos. A parada foi decisão operacional diante do relato, sem afirmar causa ainda não provada.
+Não houve rollback, alteração adicional de produção, mensagens extras ou operações na Autonom.ia.
+Investigar config.ignore.status e distinguir Stories de confirmação de entrega/leitura; bloquear expansão
+até corrigir o comportamento. O plano anterior não habilita retry ou retomada automática após a parada.
