@@ -35,6 +35,9 @@ RSpec.describe Waha::ExistingInboxUpdater do
       'enabled' => true,
       'config' => {
         'url' => 'https://chat.example',
+        'accountId' => account.id,
+        'inboxId' => inbox.id,
+        'inboxIdentifier' => channel.identifier,
         'groups' => 'OFF',
         'conversations' => {
           'markAsRead' => true,
@@ -59,6 +62,7 @@ RSpec.describe Waha::ExistingInboxUpdater do
   end
 
   before do
+    allow(Waha::Config).to receive(:chatwoot_base_url).and_return('https://chat.example')
     allow(client).to receive(:get_app).with('app_123') do
       remote_apps.find { |app| app['id'] == 'app_123' }&.deep_dup
     end
@@ -116,6 +120,49 @@ RSpec.describe Waha::ExistingInboxUpdater do
         )
       )
     )
+  end
+
+  describe 'remote target identity validation' do
+    {
+      'url' => ['url', 'https://other-installation.example'],
+      'accountId' => ['accountId', 999_999],
+      'inboxId' => ['inboxId', 888_888],
+      'inboxIdentifier' => %w[inboxIdentifier wrong-inbox-identifier]
+    }.each do |label, (field, wrong_value)|
+      it "blocks apply when remote #{label} does not match the local target" do
+        remote_app['config'][field] = wrong_value
+
+        result = service.perform(apply: true)
+
+        expect(result.to_h.slice(:skipped, :updated, :halted)).to eq(skipped: 1, updated: 0, halted: true)
+        expect(client).not_to have_received(:update_session)
+        expect([inbox.reload.lock_to_single_conversation, channel.reload.additional_attributes['phone_numbers_app_id']])
+          .to eq([false, nil])
+        expect(output.string).to include("remote_target_mismatch:#{label}")
+      end
+    end
+
+    it 'accepts only a trailing-slash difference in the installation URL' do
+      remote_app['config']['url'] = 'https://chat.example/'
+
+      result = service.perform
+
+      expect(result.would_update).to eq(1)
+      expect(result.skipped).to eq(0)
+    end
+
+    it 'blocks before remote reads that could migrate when local account ownership is inconsistent' do
+      other_account = create(:account)
+      inbox.update_column(:account_id, other_account.id) # rubocop:disable Rails/SkipsModelValidations
+
+      result = service.perform(apply: true)
+
+      expect(result.to_h.slice(:skipped, :updated, :halted)).to eq(skipped: 1, updated: 0, halted: true)
+      expect(client).not_to have_received(:update_session)
+      expect(output.string).to include('local_account_mismatch')
+    ensure
+      inbox.update_column(:account_id, account.id) if inbox.persisted? # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 
   it 'blocks apply before any write when the Brazilian resolver module is unavailable' do

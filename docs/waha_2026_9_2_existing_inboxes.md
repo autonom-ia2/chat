@@ -68,7 +68,9 @@ APPLY=true bundle exec rails waha:backfill_existing_inboxes
 
 O dry-run lê o App remoto e informa somente IDs internos e o tipo de mudança; não imprime telefone, token nem configuração sensível.
 
-Antes de qualquer escrita, o backfill exige que a sessão esteja `WORKING` e faz uma consulta somente leitura para confirmar que o módulo `brazilian-phone-numbers` está realmente carregado no WAHA. Se o módulo estiver indisponível ou a sessão não estiver operacional, a sessão é ignorada sem escrita e, em `APPLY=true`, o lote para imediatamente.
+Antes de qualquer escrita, o backfill valida a identidade do vínculo remoto. O App Chatwoot precisa apontar para a mesma instalação (`config.url`, tolerando apenas `/` final), a mesma conta (`accountId`), a mesma Inbox (`inboxId`) e o mesmo identificador do canal (`inboxIdentifier`). Também é exigida coerência local entre `Channel::Api` e `Inbox`. Qualquer divergência é bloqueante e não é corrigida automaticamente.
+
+Depois da identidade validada, o backfill exige que a sessão esteja `WORKING` e faz uma consulta somente leitura para confirmar que o módulo `brazilian-phone-numbers` está realmente carregado no WAHA. Se o vínculo divergir, o módulo estiver indisponível ou a sessão não estiver operacional, a sessão é ignorada sem escrita e, em `APPLY=true`, o lote para imediatamente.
 
 Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são capturadas como snapshot antes da atualização. O backfill preserva os Apps existentes, sincroniza Chatwoot + resolver brasileiro e só grava `lock_to_single_conversation`/`phone_numbers_app_id` depois que a sessão retorna a `WORKING` e o estado remoto desejado é confirmado por leitura.
 

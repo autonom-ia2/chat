@@ -6,15 +6,18 @@ class Waha::ExistingInboxMigrationPlanner
 
   WORKING_STATUS = 'WORKING'.freeze
 
-  def initialize(client:)
+  def initialize(client:, config: Waha::Config)
     @client = client
+    @config = config
   end
 
   def build(channel)
     context = migration_context(channel)
     raise SkipError, 'missing inbox/session/app_id' unless context
 
+    validate_local_context!(context)
     snapshot = remote_snapshot(context)
+    validate_remote_target!(context, snapshot.chatwoot)
     validate_preconditions!(context, snapshot)
 
     phone_app_id = snapshot.phone_app&.dig('id') || "br_#{SecureRandom.hex(16)}"
@@ -58,6 +61,46 @@ class Waha::ExistingInboxMigrationPlanner
       apps: apps.deep_dup,
       phone_app: find_phone_numbers_app(apps)&.deep_dup
     )
+  end
+
+  def validate_local_context!(context)
+    raise SkipError, 'local_account_mismatch' unless context.channel.account_id == context.inbox.account_id
+    raise SkipError, 'local_channel_mismatch' unless context.inbox.channel_type == 'Channel::Api' && context.inbox.channel_id == context.channel.id
+  end
+
+  def validate_remote_target!(context, chatwoot)
+    expected = expected_remote_target(context)
+    raise SkipError, 'chatwoot_base_url_missing' if expected['url'].blank?
+
+    mismatches = remote_target_mismatches(chatwoot['config'].to_h, expected)
+    return if mismatches.empty?
+
+    raise SkipError, "remote_target_mismatch:#{mismatches.join(',')}"
+  end
+
+  def expected_remote_target(context)
+    {
+      'url' => normalized_url(@config.chatwoot_base_url),
+      'accountId' => context.channel.account_id.to_s,
+      'inboxId' => context.inbox.id.to_s,
+      'inboxIdentifier' => context.channel.identifier.to_s
+    }
+  end
+
+  def remote_target_mismatches(actual, expected)
+    expected.filter_map do |key, expected_value|
+      key unless remote_target_value_matches?(key, actual[key], expected_value)
+    end
+  end
+
+  def remote_target_value_matches?(key, actual_value, expected_value)
+    return normalized_url(actual_value) == expected_value if key == 'url'
+
+    actual_value.to_s == expected_value
+  end
+
+  def normalized_url(value)
+    value.to_s.strip.chomp('/')
   end
 
   def validate_preconditions!(context, snapshot)
