@@ -5,6 +5,7 @@ import FieldConfigurator from './FieldConfigurator.vue';
 import FieldEditor from './FieldEditor.vue';
 import { selectDefinitions } from './presentation';
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   record: { type: Object, required: true },
   entity: { type: String, required: true },
   surface: { type: String, required: true },
@@ -48,6 +49,7 @@ const fields = computed(() =>
         :definition="definition"
         :record="record"
         :entity="entity"
+        :read-only="readOnly"
       />
     </div>
     <div

@@ -23,7 +23,9 @@ const props = defineProps({
   record: { type: Object, required: true },
   entity: { type: String, required: true },
   compact: { type: Boolean, default: false },
+  readOnly: { type: Boolean, default: false },
 });
+const emit = defineEmits(['saved']);
 const fieldIcon = computed(
   () =>
     ({
@@ -102,7 +104,7 @@ const copy = async () => {
   }
 };
 const start = () => {
-  if (busy.value) return;
+  if (busy.value || props.readOnly) return;
   previous.value = value.value ?? null;
   draft.value =
     value.value ??
@@ -115,7 +117,7 @@ const start = () => {
   focusInput();
 };
 const save = async () => {
-  if (busy.value) return;
+  if (busy.value || props.readOnly) return;
   generation += 1;
   const current = generation;
   const id = props.record.id;
@@ -183,6 +185,7 @@ const save = async () => {
     else record.customAttributes = attributes;
     finishEditing();
     saved.value = true;
+    emit('saved', { entity, id, key, value: confirmed });
   } catch (e) {
     if (current !== generation) return;
     error.value =
@@ -216,6 +219,20 @@ const saveLegacy = (_key, nextValue) => {
   return save();
 };
 
+const dirty = computed(
+  () =>
+    editing.value &&
+    JSON.stringify(
+      fieldValue(props.definition.attribute_display_type, draft.value)
+    ) !== JSON.stringify(previous.value)
+);
+const reset = () => {
+  if (busy.value) return;
+  editing.value = false;
+  error.value = '';
+};
+defineExpose({ dirty, busy, reset });
+
 onBeforeUnmount(() => {
   generation += 1;
 });
@@ -235,7 +252,7 @@ onBeforeUnmount(() => {
   >
     <fieldset
       v-if="definition.regex_pattern"
-      :disabled="busy"
+      :disabled="busy || readOnly"
       class="border-0 p-0 m-0 min-w-0"
     >
       <CustomAttribute
@@ -247,7 +264,7 @@ onBeforeUnmount(() => {
         :attribute-regex="definition.regex_pattern"
         :regex-cue="definition.regex_cue"
         :value="value ?? ''"
-        :show-actions="!busy"
+        :show-actions="!busy && !readOnly"
         @update="saveLegacy"
         @delete="saveLegacy(definition.attribute_key, null)"
         @copy="copy"
@@ -261,11 +278,12 @@ onBeforeUnmount(() => {
         >
           <Icon :icon="fieldIcon" class="size-4" />
         </div>
-        <span
+        <div
           :id="`${inputId}-label`"
           class="min-w-0 break-words font-medium text-n-slate-12"
-          >{{ definition.attribute_display_name }}</span
         >
+          {{ definition.attribute_display_name }}
+        </div>
         <details v-if="definition.attribute_description" class="relative">
           <summary
             class="list-none cursor-pointer rounded focus-visible:ring-2"
@@ -349,7 +367,7 @@ onBeforeUnmount(() => {
         >
           {{ value }}
         </a>
-        <span
+        <div
           v-else
           class="min-w-0 break-words"
           :class="
@@ -361,7 +379,8 @@ onBeforeUnmount(() => {
                 ? 'text-n-slate-12'
                 : 'text-n-slate-10'
           "
-          >{{
+        >
+          {{
             value === undefined || value === null || value === ''
               ? t('RELATIONSHIPS.EMPTY')
               : typeof value === 'boolean'
@@ -369,8 +388,8 @@ onBeforeUnmount(() => {
                 : definition.attribute_display_type === 'date'
                   ? formatAttributeDate(value)
                   : value
-          }}</span
-        >
+          }}
+        </div>
         <div class="flex gap-1 shrink-0">
           <Button
             v-if="hasValue"
@@ -381,6 +400,7 @@ onBeforeUnmount(() => {
             @click="copy"
           />
           <Button
+            v-if="!readOnly"
             ref="editButton"
             xs
             ghost
@@ -390,7 +410,7 @@ onBeforeUnmount(() => {
             @click="start"
           />
           <Button
-            v-if="hasValue"
+            v-if="hasValue && !readOnly"
             xs
             ghost
             icon="i-lucide-trash-2"

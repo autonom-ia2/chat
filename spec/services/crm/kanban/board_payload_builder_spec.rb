@@ -130,6 +130,75 @@ RSpec.describe Crm::Kanban::BoardPayloadBuilder do
     expect(cards.pluck(:id)).to eq([matched.id])
   end
 
+  it 'includes the resolved company in the compact card payload' do
+    contact_company = create(:company, account: account, name: 'Empresa do contato')
+    prospecting_company = create(:company, account: account, name: 'Empresa da prospecção')
+    contact = account.contacts.create!(name: 'Pessoa', company: contact_company)
+    card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      contact: contact,
+      title: 'Prospecção',
+      metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => prospecting_company.id } } }
+    )
+
+    card_payload = board_cards.find { |payload| payload[:id] == card.id }
+
+    expect(card_payload[:company]).to eq(id: prospecting_company.id, name: prospecting_company.name)
+  end
+
+  it 'exposes explicit score provenance without inferring it from a bot owner' do
+    ai_card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      title: 'Score IA',
+      score: 82,
+      metadata: { 'ai' => { 'score' => { 'value' => 82, 'source' => 'ai' } } }
+    )
+    manual_card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      title: 'Score manual',
+      score: 30,
+      metadata: { 'ai' => { 'score' => { 'value' => 30, 'source' => 'manual' } } }
+    )
+    bot = create(:agent_bot, account: account)
+    create(:agent_bot_inbox, inbox: inbox, agent_bot: bot)
+    bot_card = create_card(conversation: create_conversation)
+
+    payloads = board_cards.index_by { |payload| payload[:id] }
+
+    expect(payloads[ai_card.id][:score_source]).to eq('ai')
+    expect(payloads[manual_card.id][:score_source]).to eq('manual')
+    expect(payloads[bot_card.id][:responsible][:type]).to eq('bot')
+    expect(payloads[bot_card.id]).not_to have_key(:score_source)
+  end
+
+  it 'filters board cards by score range' do
+    low = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Score baixo', score: 20)
+    middle = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Score médio', score: 60)
+    high = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Score alto', score: 90)
+
+    cards = board_cards(params: { score_min: 50, score_max: 90 })
+
+    expect(cards.pluck(:id)).to contain_exactly(middle.id, high.id)
+    expect(cards.pluck(:id)).not_to include(low.id)
+  end
+
+  it 'filters board cards by resolved company and no company' do
+    company = create(:company, account: account, name: 'Empresa do card')
+    company_card = account.crm_cards.create!(
+      pipeline: pipeline,
+      stage: stage,
+      title: 'Com empresa',
+      metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => company.id } } }
+    )
+    no_company_card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Sem empresa')
+
+    expect(board_cards(params: { company_id: company.id.to_s }).pluck(:id)).to eq([company_card.id])
+    expect(board_cards(params: { company_id: 'none' }).pluck(:id)).to eq([no_company_card.id])
+  end
+
   # Reason: owner_id is not part of the staleness formula (GREATEST(last_message_at,
   # entered_stage_at)) — a recent reassignment must not mask a card that has had no
   # real message and no stage movement in `stale_days`.

@@ -1,0 +1,46 @@
+{
+  "summary": {
+    "duration": 140.518294,
+    "example_count": 751,
+    "failure_count": 0,
+    "pending_count": 7,
+    "errors_outside_of_examples_count": 0
+  },
+  "pending": [
+    {
+      "name": "Account has_many autonomia_account_links",
+      "file": "./spec/models/account_spec.rb",
+      "line": 52
+    },
+    {
+      "name": "CRM follow-ups API creates a reminder follow-up and updates the card next due timestamp",
+      "file": "./spec/requests/api/v1/accounts/crm/follow_ups_spec.rb",
+      "line": 27
+    },
+    {
+      "name": "CRM follow-ups API rejects auto-send follow-ups without template outside the messaging window",
+      "file": "./spec/requests/api/v1/accounts/crm/follow_ups_spec.rb",
+      "line": 203
+    },
+    {
+      "name": "CRM inbox settings API prevents agents from listing or updating CRM inbox settings",
+      "file": "./spec/requests/api/v1/accounts/crm/inbox_settings_spec.rb",
+      "line": 52
+    },
+    {
+      "name": "CRM pipeline inboxes API prevents agents from managing pipeline inbox bindings",
+      "file": "./spec/requests/api/v1/accounts/crm/pipeline_inboxes_spec.rb",
+      "line": 64
+    },
+    {
+      "name": "CRM pipelines and stages API prevents agents from creating pipelines and stages",
+      "file": "./spec/requests/api/v1/accounts/crm/pipelines_and_stages_spec.rb",
+      "line": 70
+    },
+    {
+      "name": "CRM stage automations API prevents agents from managing stage automations",
+      "file": "./spec/requests/api/v1/accounts/crm/stage_automations_spec.rb",
+      "line": 88
+    }
+  ]
+}

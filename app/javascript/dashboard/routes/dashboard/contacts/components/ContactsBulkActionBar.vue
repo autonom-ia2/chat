@@ -102,19 +102,24 @@ const handleRemoveLabels = labels => {
       </template>
       <template #actions>
         <div class="flex items-center gap-2 ml-auto">
-          <BulkLabelActions
-            type="contact"
-            :is-loading="isLoading"
-            :disabled="!selectedCount"
-            @assign="handleAssignLabels"
-          />
-          <BulkLabelActions
-            type="contact"
-            action="remove"
-            :is-loading="isLoading"
-            :disabled="!selectedCount"
-            @remove="handleRemoveLabels"
-          />
+          <Policy
+            :permissions="['administrator', 'agent', 'contact_manage']"
+            class="flex items-center gap-2"
+          >
+            <BulkLabelActions
+              type="contact"
+              :is-loading="isLoading"
+              :disabled="!selectedCount"
+              @assign="handleAssignLabels"
+            />
+            <BulkLabelActions
+              type="contact"
+              action="remove"
+              :is-loading="isLoading"
+              :disabled="!selectedCount"
+              @remove="handleRemoveLabels"
+            />
+          </Policy>
           <div class="w-px h-3 bg-n-weak rounded-lg" />
           <Policy :permissions="['administrator']">
             <Button

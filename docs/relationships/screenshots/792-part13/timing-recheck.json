@@ -1,0 +1,39 @@
+{
+  "initial_backend_summary": {
+    "duration": 262.960264,
+    "example_count": 740,
+    "failure_count": 1,
+    "pending_count": 7,
+    "errors_outside_of_examples_count": 0
+  },
+  "initial_backend_failures": [
+    {
+      "name": "Company media bounded query performance searches 1,000 occurrences without per-row queries and meets the predeclared local p95 target",
+      "message": "expected: < 500\n     got:   620.6"
+    }
+  ],
+  "initial_frontend": {
+    "passed": 7097,
+    "failed": 1,
+    "failure": "email protection locale inventory: existing 5000 ms timeout"
+  },
+  "serial_final_status": {
+    "backend": 0,
+    "frontend": 0,
+    "build": 0
+  },
+  "serial_media_metrics": {
+    "25": {
+      "p95_ms": 105.06,
+      "max_queries": 14,
+      "samples": 20
+    },
+    "50": {
+      "p95_ms": 104.71,
+      "max_queries": 14,
+      "samples": 20
+    }
+  },
+  "thresholds_changed": false,
+  "automatic_retry_loop": false
+}

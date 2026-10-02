@@ -108,7 +108,11 @@ class Api::V1::Accounts::CompaniesController < Api::V1::Accounts::EnterpriseAcco
   end
 
   def company_update_params
-    company_params.except(:custom_attributes).merge(custom_attributes: company_custom_attributes)
+    attributes = company_params.except(:custom_attributes).merge(custom_attributes: company_custom_attributes)
+    if attributes.key?(:additional_attributes)
+      attributes[:additional_attributes] = @company.additional_attributes.to_h.merge(attributes[:additional_attributes].to_h)
+    end
+    attributes
   end
 
   def custom_attributes_to_destroy

@@ -32,6 +32,47 @@ describe('#defaultRedirectPage', () => {
     expect(defaultRedirectPage(to, permissions)).toBe('accounts/2/contacts');
   });
 
+  it('sends a contact-view custom role to its authorized list, not the forbidden dashboard', () => {
+    expect(
+      defaultRedirectPage(to, ['contact_view', 'crm_view', 'custom_role'])
+    ).toBe('accounts/2/contacts');
+  });
+
+  it('keeps the company gate denied while choosing an accessible fallback for a read-only role', () => {
+    const permissions = ['contact_view', 'crm_view', 'custom_role'];
+    const user = {
+      accounts: [{ id: 2, status: 'active', role: 'agent', permissions }],
+    };
+    const company = {
+      params: to.params,
+      meta: { permissions: ['administrator', 'agent'] },
+    };
+    expect(routeIsAccessibleFor(company, permissions)).toBe(false);
+    expect(validateLoggedInRoutes(company, user)).toBe('accounts/2/contacts');
+    const contacts = {
+      params: to.params,
+      meta: {
+        permissions: [
+          'administrator',
+          'agent',
+          'contact_manage',
+          'contact_view',
+        ],
+      },
+    };
+    expect(validateLoggedInRoutes(contacts, user)).toBeNull();
+    expect(permissions).toEqual(['contact_view', 'crm_view', 'custom_role']);
+  });
+
+  it('does not grant contact access to a role that has only CRM viewing', () => {
+    const contacts = {
+      meta: { permissions: ['contact_view', 'contact_manage'] },
+    };
+    expect(routeIsAccessibleFor(contacts, ['crm_view', 'custom_role'])).toBe(
+      false
+    );
+  });
+
   it('should return reports route for users with report permissions', () => {
     const permissions = ['report_manage'];
     expect(defaultRedirectPage(to, permissions)).toBe(

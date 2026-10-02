@@ -10,6 +10,7 @@ class Crm::Cards::PayloadBuilder
 
   NESTED_PAYLOADS = {
     contact: :contact_payload,
+    company: :company_payload,
     owner: :owner_payload,
     responsible: :responsible_payload,
     inbox: :inbox_payload,
@@ -25,9 +26,10 @@ class Crm::Cards::PayloadBuilder
   # truth for the shape — Crm::Kanban::CardPayloadBuilder delegates here so board,
   # list and websocket payloads never drift. Legacy touches without touched_at sort
   # first via to_s -> '' (they are the origin touch, so oldest-first stays correct).
-  def self.aggregated_campaigns_for(card)
+  def self.aggregated_campaigns_for(card, conversation_visibility:)
     conversations = (card.linked_conversations.to_a + [card.primary_conversation]).compact.uniq(&:id)
-    conversations.flat_map { |conversation| campaign_touches_for(conversation) }
+    conversations.select { |conversation| conversation_visibility.visible?(conversation) }
+                 .flat_map { |conversation| campaign_touches_for(conversation) }
                  .sort_by { |touch| touch[:touched_at].to_s }
   end
 
@@ -50,11 +52,14 @@ class Crm::Cards::PayloadBuilder
     end
   end
 
-  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil)
+  UNRESOLVED_COMPANY = Object.new.freeze
+
+  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY)
     @card = card
     @user = user
     @account_user = account_user
     @conversation_visibility = conversation_visibility
+    @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
   def perform
@@ -111,11 +116,10 @@ class Crm::Cards::PayloadBuilder
     @card.contact.label_taggings.reject(&:tagger_id).filter_map { |tagging| tagging.tag&.name }
   end
 
-  # See .aggregated_campaigns_for — gated on primary visibility like the summary.
+  # Each campaign uses the permission of its own source conversation. A hidden
+  # primary must not hide an authorized secondary that the same filters match.
   def campaigns_payload
-    return [] unless primary_conversation_visible?
-
-    self.class.aggregated_campaigns_for(@card)
+    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility)
   end
 
   # Typed AI summary surfaced to the card drawer. Gated on conversation
@@ -198,6 +202,10 @@ class Crm::Cards::PayloadBuilder
       additional_attributes: @card.contact.additional_attributes || {},
       custom_attributes: @card.contact.custom_attributes || {}
     }
+  end
+
+  def company_payload
+    Crm::Cards::CompanyResolver.payload(@company)
   end
 
   def owner_payload

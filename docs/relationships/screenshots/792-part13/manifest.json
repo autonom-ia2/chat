@@ -1,0 +1,152 @@
+{
+  "checks": [
+    "visible_card_detail_excludes_secondary_campaign_id_name_url_and_conversation",
+    "list_retains_the_authorized_card_and_campaign_only",
+    "board_filters_hidden_cards_and_both_stage_counts_on_the_server",
+    "hidden_campaign_filter_does_not_expose_matches_counts_or_sums_in_list_board_or_summary",
+    "permitted_campaign_filter_still_returns_the_same_opportunity",
+    "compiled_crm_opens_the_same_card_and_pipeline_without_hidden_campaign",
+    "shared_relationship_and_read_only_controls_are_preserved_at_640px",
+    "conversation_tab_only_shows_the_authorized_original_chat",
+    "mobile_drawer_stays_readable_and_shows_the_same_authorized_data",
+    "reload_does_not_restore_hidden_campaign_data",
+    "administrator_keeps_complete_authorized_campaign_history_and_private_filter_matches",
+    "same_real_card_keeps_both_conversations_for_the_authorized_administrator",
+    "read_only_rehearsal_has_no_business_writes_or_javascript_exceptions"
+  ],
+  "captures": [
+    {
+      "name": "01-oportunidade-com-origem-permitida",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "4bbe15194ba744e7ca7b900c895d888e69fbb22f8e1f40b66a43075efd15fbe1"
+    },
+    {
+      "name": "02-relacionamento-preservado",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "d50cea8b43c385a1d9815913cd7e6b0e52ec129f869e50f9bb4b0ca874719a5f"
+    },
+    {
+      "name": "03-somente-conversa-autorizada",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "45844fe0039c1e941675e23b24677d0f5a4db7fef1e6cb804462fcbb2185beb2"
+    },
+    {
+      "name": "04-conversa-autorizada-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "845ebcfd818795ff20802c734c012710640e417d56c0ea6611a541d1f8d8af21"
+    },
+    {
+      "name": "05-administrador-conversas-permitidas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "b2d1cc3440230d41477eb07db1ab08cfb50f6a241ffb7b7028714ced87d431fb"
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "httpErrors": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": [],
+  "apiEvidence": [
+    {
+      "role": "viewer",
+      "campaigns": [
+        "public-792-13"
+      ],
+      "conversation_count": 1,
+      "visible_cards": 1,
+      "total_stage_cards": 1,
+      "hidden_filter_count": 0,
+      "hidden_summary_groups": 0
+    },
+    {
+      "role": "administrator",
+      "campaigns": [
+        "private-792-13",
+        "public-792-13"
+      ],
+      "conversation_count": 2,
+      "campaign_filtered_cards": 2
+    }
+  ],
+  "sourceHashes": {
+    "app/services/crm/cards/payload_builder.rb": "9bb055ce9165d6ec47e82e1bc9a27440d298035eb16c5562d8398221aaf45d1c",
+    "app/services/crm/kanban/card_payload_builder.rb": "75b4457fb84d0355e9b5afb934ad69834cd4c03628a2cd5d3b7069cac984c9b6",
+    "app/services/crm/kanban/board_payload_builder.rb": "6590cb95e705d35db6d875c654b2a59f625ed307133194f5dcdf3607ee1d08ae",
+    "app/services/crm/conversations/visibility.rb": "1555f0d8f61cb5d8850b784c54bd3c37bd9b4d61167cfd24a2402ef283d08df7",
+    "app/services/crm/cards/shared_filters.rb": "dce114c4f74539dd78d89abfd878a4c88308daec2385f5280edec105d05e7f83",
+    "app/services/crm/cards/filter_query.rb": "a5698f94a6b65ed648022e6c81c1da49d9f728057fdf177d0f3d37d3646ebff9",
+    "app/services/crm/cards/group_summary.rb": "4e3bdd651b38f1d09fbd9d516a8cf66708a2f8f862cc483061a90e58668bdf9c",
+    "app/controllers/api/v1/accounts/crm/cards_controller.rb": "5565e03b833f1c8a0ead45521e09ba519d4b67657c4758afc9440ebf5c441158",
+    "app/controllers/api/v1/accounts/crm/cards/summaries_controller.rb": "6cf654cfde25ee6ba8e92e1bfc105d79405fc3a715f2bf4195fdc7b1f33d5364",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "6ae04ad2764e8d1af1b8b9bc43cb24f10098354899c02fe505c7e21a1bedbcbd",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue": "dccbc05434bbc3a52ba5a89e446479713fdf30c703789a58e91fd9f3879b1f8c"
+  },
+  "entryAssets": [
+    "/vite-test/assets/dashboard-bInfEwxq.js"
+  ],
+  "data": "synthetic",
+  "browser": "154.0.8037.58",
+  "assetMode": "compiled test bundle",
+  "mockedBusinessResponses": 0
+}

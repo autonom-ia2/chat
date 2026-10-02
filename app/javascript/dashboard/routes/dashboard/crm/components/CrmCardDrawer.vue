@@ -1,9 +1,21 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  reactive,
+  ref,
+  useId,
+  watch,
+} from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import CrmCardRelationshipPanel from './CrmCardRelationshipPanel.vue';
+import CrmOpportunityForm from './CrmOpportunityForm.vue';
 import { useAlert } from 'dashboard/composables';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -28,7 +40,9 @@ const props = defineProps({
   // Tab to land on when the drawer opens (e.g. 'followups' from the calendar
   // quick-add). Null → default 'summary'.
   initialTab: { type: String, default: null },
+  initialContact: { type: Object, default: null },
   stages: { type: Array, default: () => [] },
+  pipelines: { type: Array, default: () => [] },
   pipelineId: { type: [String, Number], default: '' },
   agents: { type: Array, default: () => [] },
   inboxes: { type: Array, default: () => [] },
@@ -55,11 +69,25 @@ const emit = defineEmits([
   'scheduleMeeting',
 ]);
 
+const archiveCard = () => {
+  if (props.canManageCards) emit('archive');
+};
+const completeFollowUp = followUp => {
+  if (props.canManageCards) emit('completeFollowUp', followUp);
+};
+const cancelFollowUp = followUp => {
+  if (props.canManageCards) emit('cancelFollowUp', followUp);
+};
+const scheduleMeeting = () => {
+  if (props.canManageCards) emit('scheduleMeeting', { cardId: props.card.id });
+};
+
 const { t, locale } = useI18n();
 const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
   useCrmOrigin();
 
 const store = useStore();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 const isCrmAiEnabled = computed(
   () =>
     store.getters['globalConfig/get']?.crmAiEnabled === true ||
@@ -95,7 +123,23 @@ const contactForm = reactive({
   city: '',
   country: '',
 });
+const formSnapshot = ref('');
 const contactSnapshot = ref('');
+const contactEditId = ref(null);
+const isEditingContact = ref(false);
+const isSavingContact = ref(false);
+const contactError = ref('');
+const relationshipPanel = ref(null);
+const creationForm = ref(null);
+const companyAction = computed(() => relationshipPanel.value?.companyAction);
+const relationshipLinking = computed(
+  () => relationshipPanel.value?.linking === true
+);
+const discardDialog = ref(null);
+const discardOpen = ref(false);
+const discardDescription = ref('');
+let discardAction = null;
+const relationshipLabel = key => t(`CRM_KANBAN.RELATIONSHIP.${key}`);
 const followUpForm = reactive({
   title: '',
   dueAt: '',
@@ -108,42 +152,68 @@ const followUpForm = reactive({
   templateLanguage: 'pt_BR',
   templateNamespace: '',
 });
+const followUpDraftSnapshot = ref('');
+const followUpDraftDirty = computed(
+  () => JSON.stringify({ ...followUpForm }) !== followUpDraftSnapshot.value
+);
+const newFollowUpOpen = ref(false);
 const followUpMessagingWindow = ref(null);
 const isLoadingMessagingWindow = ref(false);
 const whatsappApiTemplates = ref([]);
 const isLoadingWhatsappTemplates = ref(false);
 
-const contactSearch = ref('');
-const contactResults = ref([]);
-const hasSearchedContacts = ref(false);
-const isSearchingContacts = ref(false);
 const activeTab = ref('summary');
+const additionalDetailsOpen = ref(false);
+const tabButtons = ref([]);
+const drawerElement = ref(null);
+const drawerId = `crm-card-drawer-${useId()}`;
+let previousActiveElement = null;
 
 const isEditing = computed(() => props.mode === 'edit');
+const headerCompanyName = computed(() =>
+  String(props.card?.company?.name || '').trim()
+);
+const headerContactName = computed(() =>
+  String(
+    props.card?.contact?.name || props.card?.contact?.phone_number || ''
+  ).trim()
+);
+const headerBusinessName = computed(() =>
+  String(form.title || props.card?.title || '').trim()
+);
+const headerHasDistinctContact = computed(
+  () =>
+    Boolean(headerCompanyName.value) &&
+    Boolean(headerContactName.value) &&
+    headerCompanyName.value !== headerContactName.value
+);
+const headerHasDistinctBusiness = computed(() => {
+  const title = headerBusinessName.value;
+  return Boolean(
+    title && ![headerCompanyName.value, headerContactName.value].includes(title)
+  );
+});
 const panelTitle = computed(() => {
   if (!isEditing.value) return t('CRM_KANBAN.DRAWER.CREATE_TITLE');
-  // Pull the card's own title into the header once it has one ("Detalhes do {nome}");
-  // a brand-new/untitled card keeps the generic "Detalhes do card".
-  const name = form.title?.trim();
-  return name
-    ? t('CRM_KANBAN.DRAWER.EDIT_TITLE_NAMED', { name })
-    : t('CRM_KANBAN.DRAWER.EDIT_TITLE');
+  return (
+    headerCompanyName.value ||
+    headerContactName.value ||
+    headerBusinessName.value ||
+    relationshipLabel('OPPORTUNITY_DETAILS')
+  );
 });
-const panelSubtitle = computed(() =>
-  isEditing.value
-    ? t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE')
-    : t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE')
-);
+const panelSubtitle = computed(() => {
+  if (!isEditing.value) return t('CRM_KANBAN.DRAWER.CREATE_SUBTITLE');
+  const context = [];
+  if (headerHasDistinctContact.value) context.push(headerContactName.value);
+  if (headerHasDistinctBusiness.value) {
+    context.push(
+      `${t('CRM_KANBAN.CARD.BUSINESS_LABEL')} ${headerBusinessName.value}`
+    );
+  }
+  return context.join(' · ') || t('CRM_KANBAN.DRAWER.EDIT_SUBTITLE');
+});
 
-const stageOptions = computed(() =>
-  props.stages.map(stage => ({ value: stage.id, label: stage.name }))
-);
-const agentOptions = computed(() =>
-  props.agents.map(agent => ({ value: agent.id, label: agent.name }))
-);
-const inboxOptions = computed(() =>
-  props.inboxes.map(inbox => ({ value: inbox.id, label: inbox.name }))
-);
 const priorityOptions = computed(() => [
   { value: 'low', label: t('CRM_KANBAN.PRIORITY.LOW') },
   { value: 'medium', label: t('CRM_KANBAN.PRIORITY.MEDIUM') },
@@ -151,31 +221,64 @@ const priorityOptions = computed(() => [
   { value: 'urgent', label: t('CRM_KANBAN.PRIORITY.URGENT') },
 ]);
 const withEmptyChoice = (label, options) => [{ value: '', label }, ...options];
-const inboxChoices = computed(() =>
-  withEmptyChoice(t('CRM_KANBAN.DRAWER.NO_INBOX'), inboxOptions.value)
-);
-const ownerChoices = computed(() =>
-  withEmptyChoice(t('CRM_KANBAN.DRAWER.USE_CURRENT_USER'), agentOptions.value)
-);
-const contactChoices = computed(() =>
-  withEmptyChoice(
-    t('CRM_KANBAN.DRAWER.NO_CONTACT'),
-    contactResults.value.map(contact => ({
-      value: contact.id,
-      label: contact.name || contact.phone_number,
-    }))
-  )
-);
 const detailTabs = computed(() => [
   { id: 'summary', label: t('CRM_KANBAN.DRAWER.TAB_SUMMARY') },
-  { id: 'contact', label: t('CRM_KANBAN.DRAWER.TAB_CONTACT') },
+  { id: 'contact', label: relationshipLabel('TAB') },
   { id: 'conversations', label: t('CRM_KANBAN.DRAWER.TAB_CONVERSATIONS') },
-  { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_FOLLOW_UPS') },
-  { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_TIMELINE') },
+  { id: 'followups', label: t('CRM_KANBAN.DRAWER.TAB_RETURNS') },
+  { id: 'timeline', label: t('CRM_KANBAN.DRAWER.TAB_HISTORY') },
 ]);
-const selectedContact = computed(() =>
-  contactResults.value.find(contact => contact.id === Number(form.contactId))
-);
+const tabId = tab => `${drawerId}-tab-${tab}`;
+const detailPanelId = tab => `${drawerId}-panel-${tab}`;
+const drawerFocusableSelector = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+const rememberAndFocusDrawer = async show => {
+  if (show) {
+    previousActiveElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    await nextTick();
+    if (!props.show) return;
+    drawerElement.value?.focus();
+    return;
+  }
+
+  if (previousActiveElement?.isConnected) previousActiveElement.focus();
+  previousActiveElement = null;
+};
+const trapDrawerFocus = event => {
+  if (event.key !== 'Tab' || document.querySelector('dialog[open]')) return;
+
+  const focusable = Array.from(
+    drawerElement.value?.querySelectorAll(drawerFocusableSelector) || []
+  ).filter(element => element.getClientRects().length > 0);
+  if (!focusable.length) {
+    event.preventDefault();
+    drawerElement.value?.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (
+    event.shiftKey &&
+    (document.activeElement === first ||
+      document.activeElement === drawerElement.value)
+  ) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+};
 const linkedConversationDisplayId = computed(
   () => props.card?.conversation?.display_id || ''
 );
@@ -291,6 +394,21 @@ const statusPillClass = computed(
       archived: 'bg-n-slate-4 text-n-slate-10',
     })[cardStatus.value] || 'bg-n-blue-3 text-n-blue-11'
 );
+
+const conversationStatusLabel = status => {
+  switch (String(status || '').toLowerCase()) {
+    case 'open':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_OPEN');
+    case 'pending':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_PENDING');
+    case 'resolved':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_RESOLVED');
+    case 'snoozed':
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_SNOOZED');
+    default:
+      return t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS_UNKNOWN');
+  }
+};
 const aiFilledValue = computed(() => props.card?.ai_value?.source === 'ai');
 
 // CTWA conversion sync-state for the open card (FE-5 badge). Read-only ledger row
@@ -323,6 +441,7 @@ const winCurrency = ref('BRL');
 const loseReason = ref('');
 
 const openWinDialog = () => {
+  if (!props.canManageCards) return;
   winAmount.value = props.card?.value_cents
     ? Number(props.card.value_cents) / 100
     : '';
@@ -330,10 +449,12 @@ const openWinDialog = () => {
   showWinDialog.value = true;
 };
 const openLoseDialog = () => {
+  if (!props.canManageCards) return;
   loseReason.value = props.card?.lost_reason || '';
   showLoseDialog.value = true;
 };
 const confirmWin = () => {
+  if (!props.canManageCards) return;
   const amount = Number(winAmount.value);
   emit('closeDeal', {
     result: 'won',
@@ -346,16 +467,20 @@ const confirmWin = () => {
   showWinDialog.value = false;
 };
 const confirmLose = () => {
+  if (!props.canManageCards) return;
   emit('closeDeal', {
     result: 'lost',
     lost_reason: loseReason.value || undefined,
   });
   showLoseDialog.value = false;
 };
-const reopenDeal = () => emit('closeDeal', { result: 'reopen' });
+const reopenDeal = () => {
+  if (props.canManageCards) emit('closeDeal', { result: 'reopen' });
+};
 
 const hydrateContactForm = card => {
   const contact = card?.contact || {};
+  contactEditId.value = contact.id || null;
   const add = contact.additional_attributes || {};
   const custom = contact.custom_attributes || {};
   contactForm.name = contact.name || '';
@@ -381,14 +506,13 @@ const resetForm = () => {
   form.expectedCloseAt = card.expected_close_at
     ? card.expected_close_at.slice(0, 10)
     : '';
+  additionalDetailsOpen.value = Boolean(form.score || form.expectedCloseAt);
   form.ownerId = card.owner_id || '';
   form.inboxId = card.inbox_id || '';
   form.contactId = card.contact_id || '';
   hydrateContactForm(card);
-  contactSearch.value = card.contact?.name || '';
-  contactResults.value = card.contact ? [card.contact] : [];
-  hasSearchedContacts.value = false;
   activeTab.value = props.initialTab || 'summary';
+  newFollowUpOpen.value = false;
   followUpForm.title = t('CRM_KANBAN.DRAWER.FOLLOW_UP_DEFAULT_TITLE');
   followUpForm.dueAt = '';
   followUpForm.automationMode = 'reminder_only';
@@ -399,8 +523,10 @@ const resetForm = () => {
   followUpForm.templateName = '';
   followUpForm.templateLanguage = 'pt_BR';
   followUpForm.templateNamespace = '';
+  followUpDraftSnapshot.value = JSON.stringify({ ...followUpForm });
   followUpMessagingWindow.value = null;
   whatsappApiTemplates.value = [];
+  formSnapshot.value = JSON.stringify({ ...form });
 };
 
 const loadFollowUpMessagingWindow = async () => {
@@ -464,23 +590,6 @@ const onNativeTemplateSelected = () => {
   followUpForm.templateNamespace = selected.namespace || '';
 };
 
-const searchContacts = async () => {
-  if (contactSearch.value.trim().length < 2) return;
-  isSearchingContacts.value = true;
-  hasSearchedContacts.value = true;
-  try {
-    const response = await ContactAPI.search(contactSearch.value.trim(), 1);
-    contactResults.value = response.data.payload || [];
-  } finally {
-    isSearchingContacts.value = false;
-  }
-};
-
-const onContactSelected = () => {
-  if (!selectedContact.value || form.title.trim()) return;
-  form.title = selectedContact.value.name || selectedContact.value.phone_number;
-};
-
 // Reset when the drawer opens or the selected card object changes. We intentionally
 // drop props.stages from the deps: realtime card events and the board poll rebuild
 // board.stages into a new array reference on every update, and a busy board would
@@ -491,11 +600,31 @@ const onContactSelected = () => {
 // to props.stages directly, so they stay live without a reset.
 watch(
   () => [props.show, props.card],
-  () => {
-    if (props.show) resetForm();
+  (_next, previous) => {
+    if (!props.show) return;
+    const sameCard = previous?.[0] && props.card?.id === previous[1]?.id;
+    const tab = activeTab.value;
+    if (
+      sameCard &&
+      (isEditingContact.value ||
+        JSON.stringify({ ...form }) !== formSnapshot.value ||
+        followUpDraftDirty.value)
+    ) {
+      if (!isEditingContact.value) hydrateContactForm(props.card);
+      return;
+    }
+    resetForm();
+    if (sameCard) activeTab.value = tab;
+    else isEditingContact.value = false;
   },
   { immediate: true }
 );
+watch(() => props.show, rememberAndFocusDrawer, { immediate: true });
+
+onBeforeUnmount(() => {
+  if (props.show && previousActiveElement?.isConnected)
+    previousActiveElement.focus();
+});
 
 // Fetch the card's Meta conversion row whenever the drawer opens or switches card.
 // Reset first so a stale badge never lingers; failures simply hide the badge. The
@@ -574,47 +703,151 @@ const contactDirty = computed(
 // untouched. Avoids re-writing stale values for fields we don't edit here.
 const buildContactPayload = () => {
   const initial = JSON.parse(contactSnapshot.value);
-  const changedAttributes = Object.fromEntries(
-    [
-      ['address', 'address'],
-      ['job_title', 'jobTitle'],
-    ]
-      .filter(
-        ([, field]) => contactForm[field].trim() !== initial[field].trim()
-      )
-      .map(([key, field]) => [key, contactForm[field].trim()])
-  );
+  const changed = entries =>
+    Object.fromEntries(
+      entries
+        .filter(
+          ([, field]) => contactForm[field].trim() !== initial[field].trim()
+        )
+        .map(([key, field]) => [key, contactForm[field].trim()])
+    );
+  const custom = changed([
+    ['address', 'address'],
+    ['job_title', 'jobTitle'],
+  ]);
+  const additional = changed([
+    ['city', 'city'],
+    ['country', 'country'],
+  ]);
   return {
-    name: contactForm.name.trim(),
-    email: contactForm.email.trim(),
-    phone_number: contactForm.phoneNumber.trim(),
-    additional_attributes: {
-      company_name: contactForm.company.trim(),
-      city: contactForm.city.trim(),
-      country: contactForm.country.trim(),
-    },
-    ...(Object.keys(changedAttributes).length && {
-      custom_attributes: changedAttributes,
-    }),
+    ...changed([
+      ['name', 'name'],
+      ['email', 'email'],
+      ['phone_number', 'phoneNumber'],
+    ]),
+    ...(Object.keys(additional).length
+      ? { additional_attributes: additional }
+      : {}),
+    ...(Object.keys(custom).length ? { custom_attributes: custom } : {}),
   };
 };
 
 const persistContactIfChanged = async () => {
-  const contact = props.card?.contact;
-  if (!isEditing.value || !contact?.id || !contactDirty.value) return;
-
-  await ContactAPI.update(contact.id, buildContactPayload());
+  if (!isEditing.value || !contactEditId.value || !contactDirty.value) return;
+  await ContactAPI.update(contactEditId.value, buildContactPayload());
 };
 
-const onSubmit = async () => {
-  if (!form.title.trim() || (!isEditing.value && !form.stageId)) return;
-
-  try {
-    await persistContactIfChanged();
-  } catch {
-    useAlert(t('CRM_KANBAN.DRAWER.CONTACT_SAVE_ERROR'));
+const relationshipDiscardHelp = () =>
+  isEditing.value
+    ? relationshipLabel('DISCARD_HELP')
+    : t('CRM_KANBAN.OPPORTUNITY.DISCARD_HELP');
+const discardRelationship = () => {
+  isEditingContact.value = false;
+  contactError.value = '';
+  if (contactSnapshot.value)
+    Object.assign(contactForm, JSON.parse(contactSnapshot.value));
+  relationshipPanel.value?.reset();
+};
+// `leaving`: the action takes the user out of the drawer (close, open the
+// conversation). Only then do the commercial and follow-up drafts — which
+// survive tab switches — need the discard prompt.
+const guardRelationship = (action, { leaving = false } = {}) => {
+  if (
+    props.isSaving ||
+    creationForm.value?.sending ||
+    isSavingContact.value ||
+    relationshipPanel.value?.saving
+  )
+    return;
+  const relationshipDirty =
+    (isEditingContact.value && contactDirty.value) ||
+    relationshipPanel.value?.dirty ||
+    (!isEditing.value && creationForm.value?.dirty);
+  const draftDirty =
+    leaving &&
+    ((isEditing.value && JSON.stringify({ ...form }) !== formSnapshot.value) ||
+      followUpDraftDirty.value);
+  if (relationshipDirty || draftDirty) {
+    discardAction = action;
+    discardDescription.value = relationshipDirty
+      ? relationshipDiscardHelp()
+      : t('CRM_KANBAN.DRAWER.DISCARD_DRAFT_HELP');
+    discardOpen.value = true;
+    discardDialog.value?.open();
     return;
   }
+  discardRelationship();
+  action();
+};
+const closeDrawer = () =>
+  guardRelationship(() => emit('close'), { leaving: true });
+const moveTabFocus = event => {
+  const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+  if (!keys.includes(event.key)) return;
+
+  event.preventDefault();
+  const currentIndex = detailTabs.value.findIndex(
+    tab => tab.id === activeTab.value
+  );
+  if (currentIndex < 0) return;
+
+  const isRtl = event.currentTarget.closest('[dir="rtl"]');
+  const step = event.key === 'ArrowRight' ? 1 : -1;
+  let nextIndex =
+    (currentIndex + (isRtl ? -step : step) + detailTabs.value.length) %
+    detailTabs.value.length;
+  if (event.key === 'Home') nextIndex = 0;
+  if (event.key === 'End') nextIndex = detailTabs.value.length - 1;
+
+  const nextTab = detailTabs.value[nextIndex];
+  guardRelationship(() => {
+    activeTab.value = nextTab.id;
+    nextTick(() => tabButtons.value[nextIndex]?.focus());
+  });
+};
+const footerCancelLabel = computed(() => {
+  if (isEditingContact.value || companyAction.value)
+    return relationshipLabel('CANCEL');
+  return isEditing.value && activeTab.value !== 'summary'
+    ? relationshipLabel('CLOSE')
+    : t('CRM_KANBAN.DRAWER.CANCEL');
+});
+const confirmDiscard = () => {
+  const action = discardAction;
+  discardAction = null;
+  discardRelationship();
+  discardDialog.value?.close();
+  action?.();
+};
+const startContactEdit = contact => {
+  if (!canManageRelationshipRecords.value) return;
+  hydrateContactForm({ contact });
+  isEditingContact.value = true;
+  contactError.value = '';
+};
+const saveContact = async () => {
+  if (!canManageRelationshipRecords.value) return;
+  if (isSavingContact.value || !contactForm.name.trim()) return;
+  const cardIdAtSave = props.card?.id;
+  isSavingContact.value = true;
+  contactError.value = '';
+  try {
+    await persistContactIfChanged();
+    if (props.card?.id !== cardIdAtSave) return;
+    contactSnapshot.value = JSON.stringify({ ...contactForm });
+    isEditingContact.value = false;
+    await relationshipPanel.value?.reload();
+    emit('refreshCard');
+    useAlert(relationshipLabel('SAVED'));
+  } catch {
+    contactError.value = relationshipLabel('SAVE_ERROR');
+  } finally {
+    isSavingContact.value = false;
+  }
+};
+const onSubmit = () => {
+  if (!props.canManageCards) return;
+  if (!form.title.trim() || (!isEditing.value && !form.stageId)) return;
   emit('save', buildPayload());
 };
 
@@ -661,11 +894,14 @@ const resetFollowUpForm = () => {
   followUpForm.templateName = '';
   followUpForm.templateLanguage = 'pt_BR';
   followUpForm.templateNamespace = '';
+  newFollowUpOpen.value = false;
+  followUpDraftSnapshot.value = JSON.stringify({ ...followUpForm });
 };
 
-defineExpose({ resetFollowUpForm });
+defineExpose({ resetFollowUpForm, guardNavigation: guardRelationship });
 
 const createFollowUp = () => {
+  if (!props.canManageCards) return;
   if (!props.card?.id || !followUpForm.title.trim() || !followUpForm.dueAt) {
     return;
   }
@@ -707,13 +943,17 @@ const createFollowUp = () => {
 
 const openConversationByDisplayId = displayId => {
   if (!displayId) return;
-  router.push({
-    name: 'inbox_conversation',
-    params: {
-      accountId: route.params.accountId,
-      conversation_id: displayId,
-    },
-  });
+  guardRelationship(
+    () =>
+      router.push({
+        name: 'inbox_conversation',
+        params: {
+          accountId: route.params.accountId,
+          conversation_id: displayId,
+        },
+      }),
+    { leaving: true }
+  );
 };
 
 const openConversation = () => {
@@ -806,9 +1046,14 @@ const ACTIVITY_META = {
     tone: 'positive',
   },
   follow_up_message_failed: {
-    key: 'ACTIVITY_FOLLOW_UP_MESSAGE_FAILED',
+    key: 'ACTIVITY_FOLLOW_UP_DELIVERY_FAILED',
     icon: 'i-lucide-triangle-alert',
     tone: 'negative',
+  },
+  follow_up_rescheduled: {
+    key: 'ACTIVITY_FOLLOW_UP_RESCHEDULED',
+    icon: 'i-lucide-calendar-clock',
+    tone: 'info',
   },
   meeting_scheduled: {
     key: 'ACTIVITY_MEETING_SCHEDULED',
@@ -887,6 +1132,26 @@ const ACTIVITY_META = {
     icon: 'i-lucide-circle-stop',
     tone: 'muted',
   },
+  ai_followup_failed: {
+    key: 'ACTIVITY_AI_FOLLOWUP_FAILED',
+    icon: 'i-lucide-triangle-alert',
+    tone: 'negative',
+  },
+  ai_followup_sent: {
+    key: 'ACTIVITY_AI_FOLLOWUP_SENT',
+    icon: 'i-lucide-send',
+    tone: 'positive',
+  },
+  ai_followup_capped: {
+    key: 'ACTIVITY_AI_FOLLOWUP_CAPPED',
+    icon: 'i-lucide-circle-stop',
+    tone: 'muted',
+  },
+  ai_followup_completed: {
+    key: 'ACTIVITY_AI_FOLLOWUP_COMPLETED',
+    icon: 'i-lucide-check-circle-2',
+    tone: 'positive',
+  },
   ai_handoff_invite: {
     key: 'ACTIVITY_AI_HANDOFF_INVITE',
     icon: 'i-lucide-user-round-plus',
@@ -937,6 +1202,39 @@ const activityLabelValue = (activity, key) => {
   if (labels[key]) return labels[key];
   const raw = activity.payload?.[key];
   return raw ? `#${raw}` : '';
+};
+
+// Provider/LLM errors are diagnostic data, not user-facing copy. Never read
+// payload.error or metadata.send_error in the drawer because they can contain
+// arbitrary provider text.
+
+// Attempt copy is shown only when the activity carries an explicit counter.
+// `touch` is a cadence position, not a retry count, so it must not be used here.
+const activityAttemptDetail = activity => {
+  const attempts = Number(activity.payload?.attempts);
+  if (!Number.isInteger(attempts) || attempts < 1) return '';
+  return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPT', {
+    attempt: attempts,
+  });
+};
+
+const activityRetryAtDetail = activity => {
+  const retryAt = activity.payload?.retry_at;
+  if (!retryAt || Number.isNaN(new Date(retryAt).getTime())) return '';
+  return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_RETRY_AT', {
+    time: relativeTimeFromISO(retryAt, locale.value),
+  });
+};
+
+const activityRetryDetail = activity => {
+  const details = [
+    activityAttemptDetail(activity),
+    activityRetryAtDetail(activity),
+  ];
+  if (activity.payload?.final === true) {
+    details.push(t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_ATTEMPTS_FINISHED'));
+  }
+  return details.filter(Boolean).join(' · ');
 };
 
 // Builds a friendly one-line description for the activity. Returns '' when the
@@ -1011,10 +1309,26 @@ const activityDetail = activity => {
     case 'follow_up_updated':
     case 'follow_up_completed':
     case 'follow_up_overdue':
-    case 'follow_up_message_sent':
-    case 'follow_up_message_failed': {
+    case 'follow_up_message_sent': {
       const title = activity.payload?.title;
-      return title || '';
+      return title || activityAttemptDetail(activity);
+    }
+    case 'follow_up_message_failed':
+      return [activity.payload?.title, activityRetryDetail(activity)]
+        .filter(Boolean)
+        .join(' · ');
+    case 'ai_followup_failed':
+      return activityRetryDetail(activity);
+    case 'ai_followup_sent':
+    case 'ai_followup_capped':
+    case 'ai_followup_completed':
+      return activityAttemptDetail(activity);
+    case 'follow_up_rescheduled': {
+      const dueAt = activity.payload?.due_at;
+      if (!dueAt || Number.isNaN(new Date(dueAt).getTime())) return '';
+      return t('CRM_KANBAN.DRAWER.ACTIVITY_DETAIL_FOLLOW_UP_RESCHEDULED', {
+        time: relativeTimeFromISO(dueAt, locale.value),
+      });
     }
     case 'meeting_scheduled':
     case 'meeting_rescheduled':
@@ -1154,7 +1468,17 @@ const followUpAutomationLabel = followUp => {
 useKeyboardEvents({
   Escape: {
     action: () => {
-      if (props.show) emit('close');
+      if (showWinDialog.value || showLoseDialog.value) {
+        showWinDialog.value = false;
+        showLoseDialog.value = false;
+        return;
+      }
+      if (
+        props.show &&
+        !discardOpen.value &&
+        !document.querySelector('dialog[open]')
+      )
+        closeDrawer();
     },
     allowOnFocusedInput: true,
   },
@@ -1166,6 +1490,16 @@ useFixedPanelPresence(computed(() => props.show));
 </script>
 
 <template>
+  <Dialog
+    ref="discardDialog"
+    type="alert"
+    :title="relationshipLabel('DISCARD_TITLE')"
+    :description="discardDescription"
+    :confirm-button-label="relationshipLabel('DISCARD')"
+    :cancel-button-label="relationshipLabel('KEEP_EDITING')"
+    @confirm="confirmDiscard"
+    @close="discardOpen = false"
+  />
   <transition
     enter-active-class="transition duration-200 ease-out"
     enter-from-class="ltr:translate-x-full rtl:-translate-x-full opacity-0"
@@ -1174,25 +1508,87 @@ useFixedPanelPresence(computed(() => props.show));
   >
     <div
       v-if="show"
-      class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[34rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
+      ref="drawerElement"
+      data-crm-card-drawer
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="`${drawerId}-title`"
+      :aria-describedby="`${drawerId}-subtitle`"
+      tabindex="-1"
+      class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
+      @keydown="trapDrawerFocus"
     >
       <div
-        class="flex items-start justify-between gap-4 border-b border-n-weak px-6 py-5"
+        class="flex items-start justify-between gap-4 bg-n-blue-12 px-8 py-6"
       >
         <div class="min-w-0">
-          <h2 class="mb-1 text-lg font-medium text-n-slate-12">
+          <h2
+            :id="`${drawerId}-title`"
+            class="mb-2 text-2xl font-semibold text-n-slate-1"
+          >
             {{ panelTitle }}
           </h2>
-          <p class="mb-0 text-sm leading-5 text-n-slate-11">
-            {{ panelSubtitle }}
+          <p
+            :id="`${drawerId}-subtitle`"
+            class="mb-0 grid gap-0.5 text-sm leading-6 text-n-slate-4"
+          >
+            <template
+              v-if="
+                isEditing &&
+                (headerHasDistinctContact || headerHasDistinctBusiness)
+              "
+            >
+              <span v-if="headerHasDistinctContact" class="truncate">
+                {{ headerContactName }}
+              </span>
+              <span
+                v-if="headerHasDistinctBusiness"
+                class="truncate text-xs text-n-slate-5"
+              >
+                <span class="font-medium text-n-slate-4">
+                  {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
+                </span>
+                {{ headerBusinessName }}
+              </span>
+            </template>
+            <span v-else>{{ panelSubtitle }}</span>
           </p>
+          <Button
+            v-if="!isEditing && initialContact"
+            type="button"
+            sm
+            ghost
+            slate
+            icon="i-lucide-arrow-left"
+            class="mt-2"
+            :label="t('CRM_KANBAN.OPPORTUNITY.CONTEXT.BACK')"
+            @click="
+              guardRelationship(() =>
+                router.push({
+                  name: 'contacts_edit',
+                  params: {
+                    accountId: route.params.accountId,
+                    contactId: initialContact.id,
+                  },
+                })
+              )
+            "
+          />
         </div>
-        <Button icon="i-lucide-x" slate ghost sm @click="$emit('close')" />
+        <Button
+          icon="i-lucide-x"
+          slate
+          ghost
+          sm
+          :aria-label="t('GENERAL.CLOSE')"
+          class="!text-n-slate-1 min-h-11 min-w-11"
+          @click="closeDrawer"
+        />
       </div>
 
       <div class="flex-1 overflow-y-auto px-6 py-5">
         <div
-          v-if="isEditing && canManageCards"
+          v-if="isEditing"
           class="flex flex-wrap items-center justify-between gap-3 p-3 mb-5 border rounded-lg border-n-weak bg-n-solid-1"
         >
           <span
@@ -1201,7 +1597,7 @@ useFixedPanelPresence(computed(() => props.show));
           >
             {{ statusLabel }}
           </span>
-          <div class="flex items-center gap-2">
+          <div v-if="canManageCards" class="flex items-center gap-2">
             <template v-if="isDealOpen">
               <Button
                 sm
@@ -1209,7 +1605,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 icon="i-lucide-trophy"
                 :label="t('CRM_KANBAN.DRAWER.WIN_DEAL')"
-                @click="openWinDialog"
+                @click="guardRelationship(openWinDialog)"
               />
               <Button
                 sm
@@ -1217,7 +1613,7 @@ useFixedPanelPresence(computed(() => props.show));
                 faded
                 icon="i-lucide-circle-x"
                 :label="t('CRM_KANBAN.DRAWER.LOSE_DEAL')"
-                @click="openLoseDialog"
+                @click="guardRelationship(openLoseDialog)"
               />
             </template>
             <Button
@@ -1227,7 +1623,7 @@ useFixedPanelPresence(computed(() => props.show));
               faded
               icon="i-lucide-rotate-ccw"
               :label="t('CRM_KANBAN.DRAWER.REOPEN_DEAL')"
-              @click="reopenDeal"
+              @click="guardRelationship(reopenDeal)"
             />
           </div>
         </div>
@@ -1257,19 +1653,28 @@ useFixedPanelPresence(computed(() => props.show));
         </div>
         <div v-if="isEditing" class="mb-5 grid gap-3">
           <div
-            class="flex gap-1 overflow-x-auto rounded-lg bg-n-alpha-black2 p-1"
+            role="tablist"
+            :aria-label="panelTitle"
+            class="grid grid-cols-2 gap-1 rounded-lg bg-n-alpha-black2 p-1 sm:flex"
           >
             <button
-              v-for="tab in detailTabs"
+              v-for="(tab, index) in detailTabs"
+              :id="tabId(tab.id)"
               :key="tab.id"
+              :ref="element => (tabButtons[index] = element)"
               type="button"
-              class="h-9 min-w-24 shrink-0 truncate rounded-md px-2 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12"
+              role="tab"
+              :aria-selected="activeTab === tab.id"
+              :aria-controls="detailPanelId(tab.id)"
+              :tabindex="activeTab === tab.id ? 0 : -1"
+              class="min-h-11 min-w-0 whitespace-nowrap rounded-md px-3 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand sm:flex-1"
               :class="
                 activeTab === tab.id
-                  ? 'bg-n-surface-2 text-n-slate-12 shadow-sm'
+                  ? 'bg-n-brand/10 text-n-blue-11 shadow-sm ring-1 ring-inset ring-n-brand/30'
                   : ''
               "
-              @click="activeTab = tab.id"
+              @click="guardRelationship(() => (activeTab = tab.id))"
+              @keydown="moveTabFocus"
             >
               {{ tab.label }}
             </button>
@@ -1283,9 +1688,31 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </div>
 
-        <div v-if="!isEditing || activeTab === 'summary'" class="grid gap-4">
+        <CrmOpportunityForm
+          v-if="!isEditing"
+          :key="`${route.params.accountId}:${initialContact?.id || 'new'}`"
+          ref="creationForm"
+          :initial-contact="initialContact"
+          :pipelines="pipelines"
+          :pipeline-id="pipelineId"
+          :stages="stages"
+          :agents="agents"
+          :inboxes="inboxes"
+          :can-manage="canManageCards"
+          :can-create-contact="canManageRelationshipRecords"
+          @save="(payload, failed) => emit('save', payload, failed)"
+        />
+        <div
+          v-else-if="activeTab === 'summary'"
+          :id="detailPanelId('summary')"
+          role="tabpanel"
+          :aria-labelledby="tabId('summary')"
+          tabindex="-1"
+          class="grid gap-4 outline-none"
+        >
           <Input
             v-model="form.title"
+            :readonly="!canManageCards"
             :label="t('CRM_KANBAN.DRAWER.TITLE_LABEL')"
             :placeholder="t('CRM_KANBAN.DRAWER.TITLE_PLACEHOLDER')"
             :message="!form.title.trim() ? t('CRM_KANBAN.DRAWER.REQUIRED') : ''"
@@ -1298,6 +1725,7 @@ useFixedPanelPresence(computed(() => props.show));
             </span>
             <textarea
               v-model="form.description"
+              :readonly="!canManageCards"
               rows="4"
               class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
               :placeholder="t('CRM_KANBAN.DRAWER.DESCRIPTION_PLACEHOLDER')"
@@ -1313,7 +1741,7 @@ useFixedPanelPresence(computed(() => props.show));
 
           <section
             v-if="hasLinkedContext"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
+            class="grid gap-3 rounded-xl border border-n-weak bg-n-surface-1 p-4"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -1350,10 +1778,10 @@ useFixedPanelPresence(computed(() => props.show));
               </CrmCardPill>
             </div>
 
-            <div class="grid gap-2 text-sm">
+            <div class="grid divide-y divide-n-weak text-sm">
               <div
                 v-if="card?.contact"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.CONTACT') }}
@@ -1364,7 +1792,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
               <div
                 v-if="card?.inbox"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.INBOX') }}
@@ -1375,7 +1803,7 @@ useFixedPanelPresence(computed(() => props.show));
               </div>
               <div
                 v-if="linkedConversationDisplayId"
-                class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-n-alpha-black2 px-3 py-2"
+                class="flex min-w-0 items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
               >
                 <span class="text-n-slate-11">
                   {{ t('CRM_KANBAN.DRAWER.CONVERSATION') }}
@@ -1391,198 +1819,166 @@ useFixedPanelPresence(computed(() => props.show));
             </div>
           </section>
 
-          <section
-            v-if="!isEditing"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
-          >
-            <div>
-              <p class="mb-1 text-sm font-medium text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.MANUAL_CARD_TITLE') }}
-              </p>
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.MANUAL_CARD_HELP') }}
-              </p>
-            </div>
-
-            <div class="grid gap-2 md:grid-cols-[1fr_auto]">
-              <Input
-                v-model="contactSearch"
-                :label="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH')"
-                :placeholder="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH_PLACEHOLDER')"
-                @enter="searchContacts"
-              />
-              <div class="flex items-end">
-                <Button
-                  :label="t('CRM_KANBAN.DRAWER.CONTACT_SEARCH_BUTTON')"
-                  icon="i-lucide-search"
-                  slate
-                  faded
-                  :is-loading="isSearchingContacts"
-                  :disabled="contactSearch.trim().length < 2"
-                  @click="searchContacts"
-                />
-              </div>
-            </div>
-
-            <label v-if="contactResults.length" class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.CONTACT') }}
-              </span>
-              <ChoiceSelect
-                v-model="form.contactId"
-                :options="contactChoices"
-                :aria-label="t('CRM_KANBAN.DRAWER.CONTACT')"
-                class="w-full"
-                @change="onContactSelected"
-              />
-            </label>
-
-            <p
-              v-else-if="hasSearchedContacts && !isSearchingContacts"
-              class="mb-0 text-xs text-n-slate-10"
-            >
-              {{ t('CRM_KANBAN.DRAWER.CONTACT_EMPTY') }}
-            </p>
-          </section>
-
-          <label v-if="!isEditing" class="grid gap-1">
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.STAGE') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.stageId"
-              :options="stageOptions"
-              :aria-label="t('CRM_KANBAN.DRAWER.STAGE')"
-              class="w-full"
-            />
-          </label>
-
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 gap-3 min-[460px]:grid-cols-2">
             <Input
               v-model="form.valueAmount"
+              :readonly="!canManageCards"
               type="number"
               min="0"
-              :label="t('CRM_KANBAN.DRAWER.VALUE')"
+              :label="
+                t('CRM_KANBAN.DRAWER.VALUE_WITH_CURRENCY', {
+                  currency: form.currency || 'BRL',
+                })
+              "
               :placeholder="t('CRM_KANBAN.DRAWER.VALUE_PLACEHOLDER')"
             />
-            <Input
-              v-model="form.score"
-              type="number"
-              min="0"
-              max="100"
-              :label="t('CRM_KANBAN.DRAWER.SCORE')"
-              :placeholder="t('CRM_KANBAN.DRAWER.SCORE_PLACEHOLDER')"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3">
             <label class="grid gap-1">
               <span class="text-heading-3 text-n-slate-12">
                 {{ t('CRM_KANBAN.DRAWER.PRIORITY') }}
               </span>
               <ChoiceSelect
                 v-model="form.priority"
+                :disabled="!canManageCards"
                 :options="priorityOptions"
                 :aria-label="t('CRM_KANBAN.DRAWER.PRIORITY')"
                 class="w-full"
               />
             </label>
-            <Input
-              v-model="form.expectedCloseAt"
-              type="date"
-              :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
-            />
           </div>
 
-          <label v-if="!isEditing && inboxOptions.length" class="grid gap-1">
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.INBOX') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.inboxId"
-              :options="inboxChoices"
-              :aria-label="t('CRM_KANBAN.DRAWER.INBOX')"
-              class="w-full"
-            />
-          </label>
-
-          <label
-            v-if="!isEditing && canManageCards && agentOptions.length"
-            class="grid gap-1"
+          <details
+            class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"
+            :open="additionalDetailsOpen"
+            @toggle="additionalDetailsOpen = $event.currentTarget.open"
           >
-            <span class="text-heading-3 text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.OWNER') }}
-            </span>
-            <ChoiceSelect
-              v-model="form.ownerId"
-              :options="ownerChoices"
-              :aria-label="t('CRM_KANBAN.DRAWER.OWNER')"
-              class="w-full"
-            />
-          </label>
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-sliders-horizontal size-4 shrink-0 text-n-slate-10"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.MORE_DETAILS') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <div
+              class="grid grid-cols-1 gap-3 px-2 pb-2 pt-3 min-[460px]:grid-cols-2"
+            >
+              <Input
+                v-model="form.score"
+                :readonly="!canManageCards"
+                type="number"
+                min="0"
+                max="100"
+                :label="t('CRM_KANBAN.DRAWER.SCORE')"
+                :placeholder="t('CRM_KANBAN.DRAWER.SCORE_PLACEHOLDER')"
+              />
+              <Input
+                v-model="form.expectedCloseAt"
+                :readonly="!canManageCards"
+                type="date"
+                :label="t('CRM_KANBAN.DRAWER.EXPECTED_CLOSE_AT')"
+              />
+            </div>
+          </details>
         </div>
 
-        <section v-else-if="activeTab === 'contact'" class="grid gap-4">
-          <div
-            v-if="card?.contact"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4 md:grid-cols-2"
-          >
-            <Input
-              v-model="contactForm.name"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_NAME')"
-              class="md:col-span-2"
-            />
-            <Input
-              v-model="contactForm.email"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_EMAIL')"
-            />
-            <label class="grid gap-1">
-              <span class="text-xs font-medium text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.CONTACT_PHONE') }}
-              </span>
-              <!-- Country selector + libphonenumber => always emits E.164 (+digits),
-                   which the contact model requires for messaging. -->
-              <PhoneNumberInput v-model="contactForm.phoneNumber" />
-            </label>
-            <Input
-              v-model="contactForm.company"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_COMPANY')"
-            />
-            <Input
-              v-model="contactForm.jobTitle"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_JOB_TITLE')"
-            />
-            <Input
-              v-model="contactForm.address"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_ADDRESS')"
-              class="md:col-span-2"
-            />
-            <Input
-              v-model="contactForm.city"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_CITY')"
-            />
-            <Input
-              v-model="contactForm.country"
-              :label="t('CRM_KANBAN.DRAWER.CONTACT_COUNTRY')"
-            />
-            <p class="mb-0 text-xs leading-5 text-n-slate-11 md:col-span-2">
-              {{ t('CRM_KANBAN.DRAWER.CONTACT_EDIT_HINT') }}
-            </p>
-          </div>
-          <div
-            v-else
-            class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
-          >
-            <p class="mb-1 text-sm font-medium text-n-slate-12">
-              {{ t('CRM_KANBAN.DRAWER.NO_CONTACT_TITLE') }}
-            </p>
-            <p class="mb-0 text-xs leading-5 text-n-slate-11">
-              {{ t('CRM_KANBAN.DRAWER.NO_CONTACT_HELP') }}
-            </p>
-          </div>
-        </section>
+        <CrmCardRelationshipPanel
+          v-else-if="activeTab === 'contact' && card"
+          :id="detailPanelId('contact')"
+          ref="relationshipPanel"
+          :key="`${route.params.accountId}:${card.id}`"
+          role="tabpanel"
+          :aria-labelledby="tabId('contact')"
+          tabindex="-1"
+          :card="card"
+          :can-manage="canManageCards"
+          :can-manage-records="canManageRelationshipRecords"
+          :editing="isEditingContact && canManageRelationshipRecords"
+          @edit="startContactEdit"
+          @guard="guardRelationship"
+          @linked="$emit('refreshCard')"
+        >
+          <template #editor>
+            <form
+              :id="`crm-contact-form-${card.id}`"
+              class="grid gap-4"
+              data-contact-editor
+              @submit.prevent="saveContact"
+            >
+              <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                {{ relationshipLabel('EDIT_HELP') }}
+              </p>
+              <p
+                v-if="contactError"
+                role="alert"
+                class="mb-0 rounded-lg bg-n-ruby-3 p-3 text-sm text-n-ruby-11"
+              >
+                {{ contactError }}
+              </p>
+              <div class="grid grid-cols-1 gap-4 min-[440px]:grid-cols-2">
+                <Input
+                  v-model="contactForm.name"
+                  :label="relationshipLabel('NAME')"
+                  required
+                  :disabled="isSavingContact"
+                  class="min-[440px]:col-span-2"
+                />
+                <Input
+                  v-model="contactForm.email"
+                  type="email"
+                  :label="relationshipLabel('EMAIL')"
+                  :disabled="isSavingContact"
+                />
+                <label class="grid gap-2 text-sm text-n-slate-12">
+                  <!-- Native phone input keeps its country selector and validation. -->
+                  <span>{{ relationshipLabel('PHONE') }}</span>
+                  <PhoneNumberInput
+                    v-model="contactForm.phoneNumber"
+                    :disabled="isSavingContact"
+                  />
+                </label>
+                <Input
+                  v-model="contactForm.jobTitle"
+                  :label="relationshipLabel('ROLE')"
+                  :disabled="isSavingContact"
+                />
+                <Input
+                  v-model="contactForm.city"
+                  :label="relationshipLabel('CITY')"
+                  :disabled="isSavingContact"
+                />
+                <Input
+                  v-model="contactForm.address"
+                  :label="relationshipLabel('ADDRESS')"
+                  :disabled="isSavingContact"
+                  class="min-[440px]:col-span-2"
+                />
+                <Input
+                  v-model="contactForm.country"
+                  :label="relationshipLabel('COUNTRY')"
+                  :disabled="isSavingContact"
+                />
+              </div>
+            </form>
+          </template>
+        </CrmCardRelationshipPanel>
 
-        <section v-else-if="activeTab === 'conversations'" class="grid gap-3">
+        <section
+          v-else-if="activeTab === 'conversations'"
+          :id="detailPanelId('conversations')"
+          role="tabpanel"
+          :aria-labelledby="tabId('conversations')"
+          tabindex="-1"
+          class="grid gap-3 outline-none"
+        >
           <CrmCardSummaryPanel
             v-if="isEditing && card?.id && isCrmAiEnabled"
             :card="card"
@@ -1594,9 +1990,9 @@ useFixedPanelPresence(computed(() => props.show));
           <article
             v-for="conversation in linkedConversations"
             :key="conversation.id || conversation.display_id"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid gap-3 border-b border-n-weak py-4 first:pt-0 last:border-b-0 last:pb-0"
           >
-            <div class="flex items-start justify-between gap-3">
+            <div class="flex flex-wrap items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="mb-1 text-sm font-medium text-n-slate-12">
                   {{
@@ -1619,13 +2015,16 @@ useFixedPanelPresence(computed(() => props.show));
                 slate
                 faded
                 sm
+                class="min-w-max shrink-0"
                 @click="openConversationByDisplayId(conversation.display_id)"
               />
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs text-n-slate-11">
               <div>
                 {{ t('CRM_KANBAN.DRAWER.CONVERSATION_STATUS') }}
-                <span class="text-n-slate-12">{{ conversation.status }}</span>
+                <span class="text-n-slate-12">
+                  {{ conversationStatusLabel(conversation.status) }}
+                </span>
               </div>
               <div>
                 {{ t('CRM_KANBAN.DRAWER.CONVERSATION_LAST_ACTIVITY') }}
@@ -1643,7 +2042,7 @@ useFixedPanelPresence(computed(() => props.show));
           </article>
 
           <div
-            v-if="linkedConversations.length === 0"
+            v-if="linkedConversations.length === 0 && !isLoadingDetails"
             class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
           >
             <p class="mb-1 text-sm font-medium text-n-slate-12">
@@ -1655,7 +2054,14 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </section>
 
-        <section v-else-if="activeTab === 'followups'" class="grid gap-4">
+        <section
+          v-else-if="activeTab === 'followups'"
+          :id="detailPanelId('followups')"
+          role="tabpanel"
+          :aria-labelledby="tabId('followups')"
+          tabindex="-1"
+          class="grid gap-3 outline-none"
+        >
           <!-- 1) Open follow-ups (pending / overdue) on top -->
           <div
             v-if="isFetchingFollowUps"
@@ -1667,7 +2073,7 @@ useFixedPanelPresence(computed(() => props.show));
           <article
             v-for="followUp in activeFollowUps"
             :key="`active-${followUp.id}`"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid gap-3 rounded-xl border border-n-weak bg-n-surface-1 p-4"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -1692,15 +2098,16 @@ useFixedPanelPresence(computed(() => props.show));
             >
               {{ followUp.description }}
             </p>
-            <div class="flex justify-end gap-2">
+            <div v-if="canManageCards" class="flex justify-end gap-2">
               <Button
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
                 icon="i-lucide-check"
                 slate
                 faded
                 sm
+                class="min-w-max"
                 :is-loading="isSavingFollowUp"
-                @click="$emit('completeFollowUp', followUp)"
+                @click="completeFollowUp(followUp)"
               />
               <Button
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
@@ -1708,247 +2115,281 @@ useFixedPanelPresence(computed(() => props.show));
                 ruby
                 ghost
                 sm
+                class="min-w-max"
                 :is-loading="isSavingFollowUp"
-                @click="$emit('cancelFollowUp', followUp)"
+                @click="cancelFollowUp(followUp)"
               />
             </div>
           </article>
 
           <!-- 2) New follow-up -->
-          <div
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+          <details
+            v-if="canManageCards"
+            :open="newFollowUpOpen"
+            class="group rounded-xl border border-n-weak bg-n-surface-1"
+            @toggle="newFollowUpOpen = $event.currentTarget.open"
           >
-            <div>
-              <p class="mb-1 text-sm font-medium text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_TITLE') }}
-              </p>
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_HELP') }}
-              </p>
-            </div>
-
-            <Input
-              v-model="followUpForm.title"
-              :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE')"
-              :placeholder="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE_PLACEHOLDER')"
-            />
-
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DUE_AT') }}
-              </span>
-              <input
-                v-model="followUpForm.dueAt"
-                type="datetime-local"
-                class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-              />
-            </label>
-
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE') }}
-              </span>
-              <ChoiceSelect
-                v-model="followUpForm.automationMode"
-                :options="followUpModeChoices"
-                :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE')"
-                class="w-full"
-              />
-              <span
-                v-if="!canSnoozeConversation"
-                class="text-xs text-n-slate-10"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_SNOOZE_DISABLED') }}
-              </span>
-              <span v-if="!canAutoSendMessage" class="text-xs text-n-slate-10">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_DISABLED') }}
-              </span>
-            </label>
-
-            <div
-              v-if="followUpForm.automationMode === 'auto_send_message'"
-              class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-3"
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
             >
-              <p class="mb-0 text-xs leading-5 text-n-slate-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_HELP') }}
-              </p>
-              <p
-                v-if="isLoadingMessagingWindow"
-                class="mb-0 text-xs text-n-slate-10"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_LOADING') }}
-              </p>
-              <p
-                v-else-if="requiresTemplateNow"
-                class="mb-0 text-xs text-n-ruby-11"
-              >
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED') }}
-              </p>
-              <p v-else class="mb-0 text-xs text-n-teal-11">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_SESSION_OK') }}
-              </p>
-
-              <Input
-                v-model="followUpForm.messageBody"
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY')"
-                :placeholder="
-                  t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER')
-                "
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-plus size-4 shrink-0 text-n-blue-11"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
               />
+            </summary>
 
-              <label
-                v-if="isWhatsappApiInbox && requiresTemplateNow"
-                class="grid gap-1"
-              >
-                <span class="text-heading-3 text-n-slate-12">
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="followUpForm.whatsappApiTemplateId"
-                  :options="whatsappApiTemplateChoices"
-                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
-                  class="w-full"
-                />
-                <span
-                  v-if="isLoadingWhatsappTemplates"
-                  class="text-xs text-n-slate-10"
-                >
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATES_LOADING') }}
-                </span>
-              </label>
+            <div class="grid gap-3 border-t border-n-weak p-4">
+              <div>
+                <p class="mb-1 text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_TITLE') }}
+                </p>
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE_HELP') }}
+                </p>
+              </div>
 
-              <label
-                v-else-if="isWhatsappNativeInbox && requiresTemplateNow"
-                class="grid gap-1"
-              >
-                <span class="text-heading-3 text-n-slate-12">
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="followUpForm.nativeTemplateKey"
-                  :options="nativeWhatsappTemplateChoices"
-                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
-                  class="w-full"
-                  @change="onNativeTemplateSelected"
-                />
-                <span
-                  v-if="!nativeWhatsappTemplateOptions.length"
-                  class="text-xs text-n-slate-10"
-                >
-                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_EMPTY') }}
-                </span>
-              </label>
-
-              <template v-else-if="requiresTemplateNow">
+              <div class="grid grid-cols-1 gap-3 min-[460px]:grid-cols-2">
                 <Input
-                  v-model="followUpForm.templateName"
-                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME')"
+                  v-model="followUpForm.title"
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE')"
                   :placeholder="
-                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME_PLACEHOLDER')
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_TITLE_PLACEHOLDER')
                   "
                 />
-                <Input
-                  v-model="followUpForm.templateLanguage"
-                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_LANGUAGE')"
-                  placeholder="pt_BR"
+
+                <label class="grid gap-1">
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DUE_AT') }}
+                  </span>
+                  <input
+                    v-model="followUpForm.dueAt"
+                    type="datetime-local"
+                    class="reset-base !mb-0 h-10 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+                  />
+                </label>
+              </div>
+
+              <label class="grid gap-1">
+                <span class="text-heading-3 text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE') }}
+                </span>
+                <ChoiceSelect
+                  v-model="followUpForm.automationMode"
+                  :options="followUpModeChoices"
+                  :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MODE')"
+                  class="w-full"
                 />
-              </template>
-            </div>
+                <span
+                  v-if="!canSnoozeConversation"
+                  class="text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_SNOOZE_DISABLED') }}
+                </span>
+                <span
+                  v-if="!canAutoSendMessage"
+                  class="text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_DISABLED') }}
+                </span>
+              </label>
 
-            <label class="grid gap-1">
-              <span class="text-heading-3 text-n-slate-12">
-                {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION') }}
-              </span>
-              <textarea
-                v-model="followUpForm.description"
-                rows="3"
-                class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
-                :placeholder="
-                  t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION_PLACEHOLDER')
-                "
-              />
-            </label>
+              <div
+                v-if="followUpForm.automationMode === 'auto_send_message'"
+                class="grid gap-3 rounded-lg border border-n-blue-7/40 bg-n-blue-2/30 p-3"
+              >
+                <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_AUTO_SEND_HELP') }}
+                </p>
+                <p
+                  v-if="isLoadingMessagingWindow"
+                  class="mb-0 text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_LOADING') }}
+                </p>
+                <p
+                  v-else-if="requiresTemplateNow"
+                  class="mb-0 text-xs text-n-ruby-11"
+                >
+                  {{
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_TEMPLATE_REQUIRED')
+                  }}
+                </p>
+                <p v-else class="mb-0 text-xs text-n-teal-11">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_WINDOW_SESSION_OK') }}
+                </p>
 
-            <div class="flex justify-end">
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE')"
-                icon="i-lucide-clock-3"
-                :is-loading="isSavingFollowUp"
-                :disabled="
-                  !followUpForm.title.trim() ||
-                  !followUpForm.dueAt ||
-                  isSavingFollowUp
-                "
-                @click="createFollowUp"
-              />
+                <Input
+                  v-model="followUpForm.messageBody"
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY')"
+                  :placeholder="
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_MESSAGE_BODY_PLACEHOLDER')
+                  "
+                />
+
+                <label
+                  v-if="isWhatsappApiInbox && requiresTemplateNow"
+                  class="grid gap-1"
+                >
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
+                  </span>
+                  <ChoiceSelect
+                    v-model="followUpForm.whatsappApiTemplateId"
+                    :options="whatsappApiTemplateChoices"
+                    :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                    class="w-full"
+                  />
+                  <span
+                    v-if="isLoadingWhatsappTemplates"
+                    class="text-xs text-n-slate-10"
+                  >
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATES_LOADING') }}
+                  </span>
+                </label>
+
+                <label
+                  v-else-if="isWhatsappNativeInbox && requiresTemplateNow"
+                  class="grid gap-1"
+                >
+                  <span class="text-heading-3 text-n-slate-12">
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE') }}
+                  </span>
+                  <ChoiceSelect
+                    v-model="followUpForm.nativeTemplateKey"
+                    :options="nativeWhatsappTemplateChoices"
+                    :aria-label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_API_TEMPLATE')"
+                    class="w-full"
+                    @change="onNativeTemplateSelected"
+                  />
+                  <span
+                    v-if="!nativeWhatsappTemplateOptions.length"
+                    class="text-xs text-n-slate-10"
+                  >
+                    {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_NATIVE_TEMPLATE_EMPTY') }}
+                  </span>
+                </label>
+
+                <template v-else-if="requiresTemplateNow">
+                  <Input
+                    v-model="followUpForm.templateName"
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME')"
+                    :placeholder="
+                      t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_NAME_PLACEHOLDER')
+                    "
+                  />
+                  <Input
+                    v-model="followUpForm.templateLanguage"
+                    :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_TEMPLATE_LANGUAGE')"
+                    placeholder="pt_BR"
+                  />
+                </template>
+              </div>
+
+              <label class="grid gap-1">
+                <span class="text-heading-3 text-n-slate-12">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION') }}
+                </span>
+                <textarea
+                  v-model="followUpForm.description"
+                  rows="3"
+                  class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:text-n-slate-10 focus:outline-n-brand"
+                  :placeholder="
+                    t('CRM_KANBAN.DRAWER.FOLLOW_UP_DESCRIPTION_PLACEHOLDER')
+                  "
+                />
+              </label>
+
+              <div class="flex justify-end">
+                <Button
+                  :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CREATE')"
+                  icon="i-lucide-clock-3"
+                  :is-loading="isSavingFollowUp"
+                  :disabled="
+                    !followUpForm.title.trim() ||
+                    !followUpForm.dueAt ||
+                    isSavingFollowUp
+                  "
+                  @click="createFollowUp"
+                />
+              </div>
             </div>
-          </div>
+          </details>
 
           <!-- 3) Automatic follow-up -->
           <CrmCardAutoFollowupStatus
             :card="props.card"
+            :can-manage-ai="canManageAi"
+            :can-manage-records="canManageRelationshipRecords"
             @reset="$emit('refreshCard')"
           />
 
           <!-- 4) Completed follow-ups (bottom) -->
-          <p
+          <details
             v-if="completedFollowUps.length"
-            class="mb-0 mt-1 text-[11px] font-semibold uppercase tracking-wide text-n-slate-10"
+            class="group rounded-xl border border-n-weak bg-n-surface-1 p-1"
           >
-            {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION') }}
-          </p>
-          <article
-            v-for="followUp in completedFollowUps"
-            :key="followUp.id"
-            class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="mb-1 truncate text-sm font-medium text-n-slate-12">
-                  {{ followUp.title }}
-                </p>
-                <p class="mb-0 flex flex-wrap gap-2 text-xs text-n-slate-11">
-                  <span>{{ formatDate(followUp.due_at) }}</span>
-                  <span>{{ followUpAutomationLabel(followUp) }}</span>
-                </p>
-              </div>
-              <span
-                class="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium"
-                :class="followUpStatusClass(followUp)"
-              >
-                {{ followUpStatusLabel(followUp) }}
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-n-slate-12 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="flex min-w-0 items-center gap-2">
+                <span
+                  class="i-lucide-check-check size-4 shrink-0 text-n-slate-10"
+                  aria-hidden="true"
+                />
+                <span class="truncate">
+                  {{ t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETED_SECTION') }}
+                </span>
               </span>
-            </div>
-            <p
-              v-if="followUp.description"
-              class="mb-0 text-xs leading-5 text-n-slate-11"
-            >
-              {{ followUp.description }}
-            </p>
-            <div
-              v-if="activeFollowUps.some(item => item.id === followUp.id)"
-              class="flex justify-end gap-2"
-            >
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
-                icon="i-lucide-check"
-                slate
-                faded
-                sm
-                :is-loading="isSavingFollowUp"
-                @click="$emit('completeFollowUp', followUp)"
+              <span
+                class="i-lucide-chevron-down size-4 shrink-0 text-n-slate-10 transition-transform group-open:rotate-180"
+                aria-hidden="true"
               />
-              <Button
-                :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_CANCEL')"
-                icon="i-lucide-x"
-                ruby
-                ghost
-                sm
-                :is-loading="isSavingFollowUp"
-                @click="$emit('cancelFollowUp', followUp)"
-              />
+            </summary>
+            <div class="grid px-2 pb-2">
+              <article
+                v-for="followUp in completedFollowUps"
+                :key="followUp.id"
+                class="grid gap-3 border-b border-n-weak py-3 last:border-b-0"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p
+                      class="mb-1 truncate text-sm font-medium text-n-slate-12"
+                    >
+                      {{ followUp.title }}
+                    </p>
+                    <p
+                      class="mb-0 flex flex-wrap gap-2 text-xs text-n-slate-11"
+                    >
+                      <span>{{ formatDate(followUp.due_at) }}</span>
+                      <span>{{ followUpAutomationLabel(followUp) }}</span>
+                    </p>
+                  </div>
+                  <span
+                    class="shrink-0 rounded-md px-2 py-1 text-[11px] font-medium"
+                    :class="followUpStatusClass(followUp)"
+                  >
+                    {{ followUpStatusLabel(followUp) }}
+                  </span>
+                </div>
+                <p
+                  v-if="followUp.description"
+                  class="mb-0 text-xs leading-5 text-n-slate-11"
+                >
+                  {{ followUp.description }}
+                </p>
+              </article>
             </div>
-          </article>
+          </details>
 
           <div
             v-if="!isFetchingFollowUps && followUps.length === 0"
@@ -1963,21 +2404,30 @@ useFixedPanelPresence(computed(() => props.show));
           </div>
         </section>
 
-        <section v-else class="grid gap-3">
+        <section
+          v-else
+          :id="detailPanelId('timeline')"
+          role="tabpanel"
+          :aria-labelledby="tabId('timeline')"
+          tabindex="-1"
+          class="grid gap-3 outline-none"
+        >
           <article
             v-for="entry in timelineEntries"
             :key="entry.id"
-            class="grid grid-cols-[auto_1fr] gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+            class="grid grid-cols-[auto_1fr] gap-3 border-b border-n-weak py-3 last:border-b-0 first:pt-0"
           >
             <span
-              class="mt-0.5 flex size-8 items-center justify-center rounded-full"
+              class="mt-0.5 flex size-7 items-center justify-center rounded-full"
               :class="entry.toneClass"
             >
-              <span class="size-4" :class="[entry.icon]" />
+              <span class="size-3.5" :class="[entry.icon]" />
             </span>
             <div class="min-w-0">
-              <div class="flex items-start justify-between gap-3">
-                <p class="mb-1 text-sm font-medium text-n-slate-12">
+              <div
+                class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+              >
+                <p class="mb-0 text-sm font-medium text-n-slate-12">
                   {{ entry.title }}
                 </p>
                 <span class="shrink-0 text-xs text-n-slate-10">
@@ -1997,7 +2447,7 @@ useFixedPanelPresence(computed(() => props.show));
           </article>
 
           <div
-            v-if="activities.length === 0"
+            v-if="activities.length === 0 && !isLoadingDetails"
             class="rounded-lg border border-dashed border-n-weak px-4 py-8 text-center"
           >
             <p class="mb-1 text-sm font-medium text-n-slate-12">
@@ -2011,35 +2461,95 @@ useFixedPanelPresence(computed(() => props.show));
       </div>
 
       <div
-        class="flex items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
+        v-if="!relationshipLinking"
+        data-crm-drawer-footer
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
       >
-        <div v-if="isEditing" class="flex items-center gap-2">
+        <div
+          v-if="isEditing && !isEditingContact && !companyAction"
+          class="flex items-center gap-2"
+        >
           <Button
+            v-if="canManageCards"
             :label="t('CRM_KANBAN.DRAWER.ARCHIVE')"
             icon="i-lucide-archive"
             ruby
             ghost
             :is-loading="isArchiving"
-            @click="$emit('archive')"
+            @click="guardRelationship(archiveCard)"
           />
           <Button
-            v-if="meetingsEnabled && card?.id"
+            v-if="canManageCards && meetingsEnabled && card?.id"
             :label="t('CRM_KANBAN.DRAWER.SCHEDULE_MEETING')"
             icon="i-lucide-video"
             variant="outline"
             color="slate"
-            @click="$emit('scheduleMeeting', { cardId: card.id })"
+            @click="guardRelationship(scheduleMeeting)"
           />
+        </div>
+        <div
+          v-else-if="!isEditing"
+          class="flex min-w-0 items-center gap-2 text-xs text-n-slate-11"
+        >
+          <span
+            class="i-lucide-link-2 size-4 shrink-0 text-n-blue-11"
+            aria-hidden="true"
+          />
+          <span>{{ creationForm?.summary }}</span>
         </div>
         <span v-else />
         <div class="flex items-center gap-2">
           <Button
-            :label="t('CRM_KANBAN.DRAWER.CANCEL')"
+            :label="footerCancelLabel"
             slate
             faded
-            @click="$emit('close')"
+            :disabled="
+              isSaving ||
+              creationForm?.sending ||
+              isSavingContact ||
+              companyAction?.saving
+            "
+            @click="
+              guardRelationship(
+                isEditingContact || companyAction
+                  ? discardRelationship
+                  : () => $emit('close'),
+                { leaving: !isEditingContact && !companyAction }
+              )
+            "
           />
           <Button
+            v-if="!isEditing"
+            type="submit"
+            :form="creationForm?.formId"
+            icon="i-lucide-check"
+            :label="t('CRM_KANBAN.OPPORTUNITY.CREATE')"
+            :disabled="!creationForm?.canSave"
+            :is-loading="creationForm?.sending"
+          />
+          <Button
+            v-else-if="isEditingContact"
+            type="submit"
+            :form="`crm-contact-form-${card.id}`"
+            icon="i-lucide-check"
+            :label="relationshipLabel('SAVE_CONTACT')"
+            :is-loading="isSavingContact"
+            :disabled="isSavingContact || !contactForm.name.trim()"
+          />
+          <Button
+            v-else-if="companyAction"
+            type="submit"
+            :form="companyAction.formId"
+            :icon="
+              companyAction.destructive ? 'i-lucide-unlink' : 'i-lucide-check'
+            "
+            :label="companyAction.label"
+            :ruby="companyAction.destructive"
+            :is-loading="companyAction.saving"
+            :disabled="companyAction.disabled"
+          />
+          <Button
+            v-else-if="activeTab === 'summary' && canManageCards"
             :label="
               isEditing
                 ? t('CRM_KANBAN.DRAWER.SAVE')
@@ -2055,7 +2565,7 @@ useFixedPanelPresence(computed(() => props.show));
 
       <!-- Win deal dialog: value pre-filled (auto-filled by AI), confirm to win -->
       <div
-        v-if="showWinDialog"
+        v-if="showWinDialog && canManageCards"
         class="absolute inset-0 z-[60] flex items-center justify-center bg-n-alpha-black2 p-6"
         @click.self="showWinDialog = false"
       >
@@ -2104,7 +2614,7 @@ useFixedPanelPresence(computed(() => props.show));
 
       <!-- Lose deal dialog: optional reason -->
       <div
-        v-if="showLoseDialog"
+        v-if="showLoseDialog && canManageCards"
         class="absolute inset-0 z-[60] flex items-center justify-center bg-n-alpha-black2 p-6"
         @click.self="showLoseDialog = false"
       >

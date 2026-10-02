@@ -1,0 +1,498 @@
+{
+  "checks": [
+    "invalid_hidden_attribute_is_revealed_without_a_write",
+    "company_city_is_readable_in_the_canonical_profile_and_opportunity",
+    "real_full_registration_persists_contact_company_opportunity_and_typed_shared_attributes",
+    "real_name_only_registration_without_company_email_phone_or_fake_identifiers",
+    "real_new_contact_uses_existing_company_by_id",
+    "duplicate_contact_is_reused_only_by_explicit_selection_without_overwriting_it",
+    "same_normalized_domain_requires_explicit_company_reuse_and_preserves_original_company",
+    "email_and_phone_from_different_contacts_are_not_merged",
+    "real_invalid_contact_rejects_the_entire_company_contact_opportunity_transaction",
+    "two_simultaneous_identical_keys_confirm_one_complete_set",
+    "different_keys_with_same_phone_in_this_flow_create_one_contact_and_one_opportunity",
+    "lost_confirmation_retried_in_real_UI_recovers_same_contact_company_opportunity",
+    "mobile_footer_visible_and_cancel_requires_confirmation_without_persisting_drafts",
+    "notebook_640px_drawer_without_horizontal_overflow"
+  ],
+  "captures": [
+    {
+      "name": "01-novo-contato-e-empresa",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "fb5b315d75b97b6169534e64146d2c8478ea33bac54476dfcecf639dfbbedfcb"
+    },
+    {
+      "name": "02-atributos-compartilhados",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "7db39152418ec165e7ad0cb3ab8cc8e2ccba92ec2db02f01788540ee628767c4"
+    },
+    {
+      "name": "03-dados-da-oportunidade",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "59693f2c2360374b7755c65fa958a7cb90f20dfa37c485807f0446dff9b454f8"
+    },
+    {
+      "name": "04-cadastros-confirmados",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "bf4869fdd1848036e1bcc93a282eab5951e50998c46241de39ef5e6ba6d4e505"
+    },
+    {
+      "name": "05-novo-contato-empresa-existente",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "8a2eaebe13c55f8cc2203200c05c2a68e7a8eb7e2e98ad3e79a68a86f2cb32a3"
+    },
+    {
+      "name": "06-reutilizacao-de-contato",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "4ce8caa88b298ca38fb12c24fbf7c507ab6a1a1c86e85f4c2244d23bd28bb48a"
+    },
+    {
+      "name": "07-reutilizacao-de-empresa",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "5e292018d317d6ff14aad4569fc30f7c89a4537ca425e5443b0e70440a5ea2a8"
+    },
+    {
+      "name": "08-retentativa-segura",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "ab72cd20ba3983fb1e7852d4863bccd171680d0c4e53d02d9bb89b30baaf8f27"
+    },
+    {
+      "name": "09-cadastro-no-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "2bdd13907c698edb7f06b646cfdabe621d4b5e2099d93d53a2955287c21b9268"
+    },
+    {
+      "name": "10-cadastro-no-notebook",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "drawer": {
+        "x": 726,
+        "y": 0,
+        "width": 640,
+        "height": 768
+      },
+      "sha256": "43a242b122e768b1258886a6e0cd5d763ffe2441a280c1e9e8a7eaeb2b0ca3c8"
+    },
+    {
+      "name": "11-novo-cadastro-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 1000
+      },
+      "sha256": "e78768e9985d03c45db5b8182aad374b087423c994ea4f348e660baf758a2753"
+    }
+  ],
+  "errors": [],
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 422 (Unprocessable Content)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "warning",
+      "text": "[DEPRECATED] The 'onClose' prop is deprecated. Please use the 'close' event instead."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "warning",
+      "text": "Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information."
+    }
+  ],
+  "responses": [
+    {
+      "path": "/auth/sign_in",
+      "status": 409
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/crm/cards",
+      "status": 409
+    },
+    {
+      "path": "/api/v1/accounts/1/crm/cards",
+      "status": 422
+    },
+    {
+      "path": "/api/v1/accounts/1/crm/cards",
+      "status": 409
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "expectedFaults": [
+    "real_server_commit_then_dropped_browser_response"
+  ],
+  "confirmed": [
+    {
+      "id": 40,
+      "contact_id": 30,
+      "newContact": true,
+      "newCompany": true
+    },
+    {
+      "id": 41,
+      "contact_id": 31,
+      "newContact": true,
+      "newCompany": false
+    },
+    {
+      "id": 42,
+      "contact_id": 32,
+      "newContact": true,
+      "newCompany": false
+    },
+    {
+      "id": 43,
+      "contact_id": 1,
+      "newContact": false,
+      "newCompany": false
+    },
+    {
+      "id": 44,
+      "contact_id": 33,
+      "newContact": true,
+      "newCompany": false
+    },
+    {
+      "id": 45,
+      "contact_id": 34,
+      "newContact": true,
+      "newCompany": true
+    },
+    {
+      "id": 46,
+      "contact_id": 35,
+      "newContact": true,
+      "newCompany": false
+    },
+    {
+      "id": 47,
+      "contact_id": 36,
+      "newContact": true,
+      "newCompany": true
+    }
+  ],
+  "expectedDelta": {
+    "contacts": 7,
+    "companies": 3,
+    "cards": 8,
+    "messages": 0,
+    "conversations": 0
+  },
+  "sourceHashes": {
+    "app/javascript/dashboard/helper/CacheHelper/DataManager.js": "2c09ec8f7650ea9ff19e1ac945041f0f705bd3291a21226b4321cb9d880389f0",
+    "enterprise/app/views/api/v1/models/_company.json.jbuilder": "b173f8240cbff1a31435fdf04a8cbc12329e8c43c2010ab06b2b156be61106ae",
+    "enterprise/app/controllers/api/v1/accounts/companies_controller.rb": "a5286bb221f7ddf3d44dad99b532fb009138ebdc484b5196fd7a71cfab80f99c",
+    "app/javascript/dashboard/components-next/Companies/CompanyDetail/CompanyProfileCard.vue": "45d6bef866cfe0e4b40a50b337207c4c6b0533d737ddc45be2ec3389dad52389",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmRelationshipCompanyForm.vue": "a33ae6ebafbb7b4f56b8bcb7c585ebea20eb4821d067f25df716d596885e4868",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue": "fa0e82e4e9fe1a175048e31095f473b9796a111db4b91078efd434a0c799dedc",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityRegistration.vue": "72d409b0f63900a23af39af38cefd0bede5c8e30b53a5d2baf2c424679bf1f1b",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityForm.vue": "96995dfe296c9ff10b505f88e2ea10604d3f431268c73894b31d832b9fa1c9a1",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityCompanyPicker.vue": "e3786bc6c2af23ae79d76b376cf4555becd8e9f2084675ac438cd7b68624a7ee",
+    "app/javascript/dashboard/routes/dashboard/crm/components/opportunityRegistration.js": "41cbf3eee2769153501f20eb0538c268fefb21d975f60541d3c8dbf8177d7838",
+    "app/javascript/dashboard/components-next/Relationships/AttributeDraftFields.vue": "90e3d99e8e41dc3336b557ee1a7bb1481ba47c14bd40f774b039cd5e82fdc8d2",
+    "app/javascript/dashboard/components-next/phonenumberinput/PhoneNumberInput.vue": "99b3ce764c7d428b0cc9fcf926653ad125e18ee532cfed5a3a821c2aab6d396c",
+    "app/controllers/api/v1/accounts/crm/cards_controller.rb": "b5fb755354eb3b5f5ce04f308f7dd08631d6252509b3411c45213680aecf25b2",
+    "app/controllers/concerns/crm/opportunity_registration.rb": "37828fc95bfff1897eeb540e81df13c4931fd71fcf80017a644ad81053ae4ff7",
+    "app/services/crm/cards/relationship_registration.rb": "884088f71e5e12bee9c41349233ba635e108b0a14ee502485e51548d2bcf7071",
+    "app/services/crm/cards/registration_input.rb": "b553ed163034b9fc242a090d9b40bf55304429ed2b1bd4d7fce0a6255185a727",
+    "enterprise/app/services/enterprise/crm/cards/relationship_registration.rb": "23f9162761cdd0080acdb3e4718e5e8f173490cb5a628d9a01b17b8ab09e818e",
+    "enterprise/app/models/enterprise/concerns/contact.rb": "4e70bf4b29ca15bd546c23104f9562c7cb5ba168ebf570f0b61ddd5ba9921bac"
+  },
+  "browser": "154.0.8037.58",
+  "backend": "real local Rails/PostgreSQL",
+  "login": "normal UI",
+  "data": "synthetic",
+  "run": "5955542",
+  "visualDraftCheck": {
+    "result": "passed",
+    "writes": 0,
+    "errors": [],
+    "state": "new contact and new company draft without a name match"
+  }
+}

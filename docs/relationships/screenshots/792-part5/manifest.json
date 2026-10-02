@@ -1,0 +1,158 @@
+{
+  "checks": [
+    "authenticated_real_CRM_no_framework_overlay",
+    "duplicate_domain_rejected_without_partial_save_and_draft_retained",
+    "edit_saved_to_canonical_company_with_hidden_attributes_preserved",
+    "cancel_requires_explicit_discard_without_writing",
+    "same_name_companies_distinguished_and_linked_only_after_save",
+    "company_media_follows_current_contact_link_without_file_copy",
+    "unlink_confirmation_removes_only_association_and_keeps_company",
+    "unlinked_contact_can_link_existing_company_from_same_opportunity",
+    "opportunity_identity_and_all_commercial_fields_preserved",
+    "mobile_390_fixed_save_visible_without_horizontal_overflow",
+    "notebook_1366_drawer_640_preserved"
+  ],
+  "captures": [
+    {
+      "name": "01-empresa-acoes-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "7e7275837afa8da3004771609db481cce66503605ea7331f76cedff58feb6f85"
+    },
+    {
+      "name": "02-editar-empresa-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "e4ff72f23c3fc1da2366038d2c14479c7ef5a0472408b31ccbf11b5adcff09ad"
+    },
+    {
+      "name": "03-dominio-repetido-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "cf1d5efe16ec43082c16949a78281d5e544cb0f5ca170a9d63bb20c321d9b341"
+    },
+    {
+      "name": "04-trocar-vinculo-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "42e35e1f0938b57bc5adf8a57d70a6529aab059bb50d10d935a3f57ba6f0ca44"
+    },
+    {
+      "name": "05-desvincular-confirmacao-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "7cb400e8a951699e4257579cb3740fe72d4cd49c8151ae2c48133b513f160f03"
+    },
+    {
+      "name": "06-sem-empresa-desktop",
+      "viewport": {
+        "width": 1620,
+        "height": 928
+      },
+      "drawer": {
+        "x": 980,
+        "y": 0,
+        "width": 640,
+        "height": 928
+      },
+      "sha256": "c27e32c6562389e45cc6c033b98698b144c36d604167a0ba2416a783188b4558"
+    },
+    {
+      "name": "07-editar-empresa-mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "drawer": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "a04085f547cf2bc5cce512bdbed1643671930feaf8c92a95981d419fbc176052"
+    },
+    {
+      "name": "08-editar-empresa-notebook",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "drawer": {
+        "x": 726,
+        "y": 0,
+        "width": 640,
+        "height": 768
+      },
+      "sha256": "53dfba36b38a6d7f148ac669e08afc1b11a66de8a398f12ed083a42fa7e4e7b3"
+    }
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/companies/1",
+      "status": 422
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "browser": "154.0.8037.58",
+  "backend": "real-local-Rails-PostgreSQL",
+  "data": "synthetic",
+  "sources": {
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmRelationshipCompanyForm.vue": "d1f9292821ae174903ee5579630a24f769bb2584150ddb2308defaf06f79db19",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardRelationshipPanel.vue": "5826521917173d10d4a477d7440627338b3efb1d3447fbe9a0804f062b972b0a",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "2cd150baa5d6c3fcdac2647f201d43d51a31e63b10c2f1ac41ca93e50404a0e8",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "8f7f1a5ed6939182ab0501ab6c3c873f04528a37cd389f7ff16f599f3aefbb44",
+    "app/javascript/dashboard/i18n/locale/en/crm.json": "7b2e45d958f84e8e3452ab5fb2af148fea216805da4bda562247da147ebb72e7"
+  }
+}

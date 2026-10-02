@@ -1,6 +1,8 @@
 module Enterprise::Concerns::Contact
   extend ActiveSupport::Concern
   included do
+    attr_accessor :skip_company_auto_association
+
     belongs_to :company, optional: true, counter_cache: true
     has_many :campaign_recipients, dependent: :destroy_async
 
@@ -22,7 +24,8 @@ module Enterprise::Concerns::Contact
     # 5. The account has the Companies feature enabled
     # Feature check is last so unrelated contact updates short-circuit on the
     # cheap in-memory guards before touching the account (hot message-ingest path).
-    email.present? &&
+    !skip_company_auto_association &&
+      email.present? &&
       company_id.nil? &&
       saved_change_to_email? &&
       saved_change_to_email.first.nil? &&

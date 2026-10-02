@@ -225,6 +225,13 @@ RSpec.describe 'Companies API', type: :request do
         expect(response_body['payload']['id']).to eq(company.id)
       end
 
+      it 'returns the supported city without exposing unrelated additional metadata' do
+        company.update!(additional_attributes: { 'city' => 'Belo Horizonte', 'internal_note' => 'Not part of the public profile' })
+        get "/api/v1/accounts/#{account.id}/companies/#{company.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body.dig('payload', 'additional_attributes')).to eq('city' => 'Belo Horizonte')
+      end
+
       it 'returns company custom attributes' do
         company.update!(custom_attributes: { 'plan' => 'enterprise' })
 
@@ -314,6 +321,31 @@ RSpec.describe 'Companies API', type: :request do
         response_body = response.parsed_body
         expect(response_body['payload']['name']).to eq('Updated Company Name')
         expect(response_body['payload']['domain']).to eq('updated.com')
+      end
+
+      it 'reads and updates a company whose optional additional metadata is null' do
+        # The database column is nullable; reproduce a stored legacy row without normalizing it first.
+        company.additional_attributes = nil
+        company.save!(validate: false)
+        get "/api/v1/accounts/#{account.id}/companies/#{company.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(response.parsed_body.dig('payload', 'additional_attributes')).to eq({})
+        patch "/api/v1/accounts/#{account.id}/companies/#{company.id}",
+              params: { company: { additional_attributes: { city: 'Belo Horizonte' } } }, headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(company.reload.additional_attributes).to eq('city' => 'Belo Horizonte')
+      end
+
+      it 'updates or clears the city without replacing unrelated additional metadata' do
+        company.update!(additional_attributes: { 'city' => 'Original', 'internal_note' => 'Preserve' })
+        patch "/api/v1/accounts/#{account.id}/companies/#{company.id}",
+              params: { company: { additional_attributes: { city: 'Updated' } } }, headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(company.reload.additional_attributes).to eq('city' => 'Updated', 'internal_note' => 'Preserve')
+        patch "/api/v1/accounts/#{account.id}/companies/#{company.id}",
+              params: { company: { additional_attributes: { city: nil } } }, headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:success)
+        expect(company.reload.additional_attributes).to eq('city' => nil, 'internal_note' => 'Preserve')
       end
 
       it 'merges custom attributes without removing existing attributes' do

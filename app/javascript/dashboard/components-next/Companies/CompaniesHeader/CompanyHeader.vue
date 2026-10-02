@@ -4,6 +4,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import CompanySortMenu from './components/CompanySortMenu.vue';
 import CompanyMoreActions from './components/CompanyMoreActions.vue';
+import Policy from 'dashboard/components/policy.vue';
 
 defineProps({
   showSearch: { type: Boolean, default: true },
@@ -51,7 +52,9 @@ const emit = defineEmits(['search', 'update:sort', 'create']);
             :active-ordering="activeOrdering"
             @update:sort="emit('update:sort', $event)"
           />
-          <CompanyMoreActions @create="emit('create')" />
+          <Policy :permissions="['administrator', 'agent', 'contact_manage']">
+            <CompanyMoreActions @create="emit('create')" />
+          </Policy>
         </div>
       </div>
     </div>

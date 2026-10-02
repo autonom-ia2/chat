@@ -1,0 +1,164 @@
+{
+  "checks": [
+    "real_conversation_loads_compiled_sidebar_contact_data_without_inline_name_edit_or_record_drawer",
+    "legacy_attribute_surface_keeps_zero_and_false_without_active_record_inputs",
+    "saved_contact_notes_remain_readable_without_add_or_delete_controls",
+    "conversation_management_does_not_offer_unauthorized_CRM_creation_or_pipeline_choices",
+    "commercial_summary_remains_visible_readonly_with_no_save_archive_or_new_width",
+    "manual_reminders_and_AI_cadence_are_readable_without_unauthorized_create_complete_cancel_reset_or_contact_toggle",
+    "six_direct_forbidden_requests_are_rejected_by_real_server_not_only_hidden_buttons",
+    "mobile_reader_preserves_content_and_footer_without_horizontal_overflow",
+    "explicit_record_manager_saves_same_contact_through_real_inline_edit",
+    "explicit_manager_keeps_commercial_actions_and_independent_contact_toggle",
+    "reader_reload_observes_confirmed_shared_contact_without_receiving_edit_rights",
+    "only_one_explicit_record_write_no_opportunity_note_message_or_reminder_writes"
+  ],
+  "captures": [
+    {
+      "name": "01-atendimento-cadastro-em-consulta",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "c21ef6e024c149d9525b7766a692eab4f400e884a0f8773bef3646d29a9f1c40"
+    },
+    {
+      "name": "02-notas-e-atributos-preservados",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "db61bfe1cd79172c37f69f1b5122d306ab1571822d711b8678323942dae0754f"
+    },
+    {
+      "name": "03-acoes-atendimento-sem-criacao-comercial",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "db61bfe1cd79172c37f69f1b5122d306ab1571822d711b8678323942dae0754f"
+    },
+    {
+      "name": "04-follow-ups-somente-consulta",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "8adcbb4de8245a91308b7618fd2210765aee9e81fe72cc9a8d0129f65dc541ec"
+    },
+    {
+      "name": "05-consulta-follow-ups-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "sha256": "68e4e8da5970f34aa008d2367b1299b7122dd0bb3531aa476ee5b294e8aaa471"
+    },
+    {
+      "name": "06-edicao-autorizada-no-atendimento",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "c28d27ab0475a562b9d177433b1b2081ec20a9481766f23444e56ab35012df4c"
+    },
+    {
+      "name": "07-gestor-com-acoes-preservadas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "sha256": "e3e629ca89087512e5a1bdfc6a61b7cd98c804fcdd7d95754993c101d96da3b7"
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": [
+    {
+      "path": "/api/v1/accounts/1/contacts/51",
+      "method": "PATCH"
+    }
+  ],
+  "denials": [
+    {
+      "kind": "contact",
+      "status": 401
+    },
+    {
+      "kind": "note",
+      "status": 401
+    },
+    {
+      "kind": "archive",
+      "status": 401
+    },
+    {
+      "kind": "complete",
+      "status": 401
+    },
+    {
+      "kind": "reset",
+      "status": 401
+    },
+    {
+      "kind": "from_conversation",
+      "status": 401
+    }
+  ],
+  "sourceHashes": {
+    "app/javascript/dashboard/routes/dashboard/conversation/ConversationAction.vue": "005461295fa9b816e03a44987c34790f669d18177867dd3e9b656ec521c5241d",
+    "app/javascript/dashboard/routes/dashboard/conversation/contact/ContactInfo.vue": "90f146889905f132dedb04704d9d34de6bdc0428408e9c5bba0f2babc541af22",
+    "app/javascript/dashboard/routes/dashboard/conversation/contact/ContactInfoRow.vue": "30b8d64db10604be3a88b693c6704b609c8ddd682d01c6514a5922771e4d143d",
+    "app/javascript/dashboard/routes/dashboard/conversation/contact/EditContact.vue": "7193540097ae02c552f338be86bf7e79649345aa2ed5cad3d16928228a5ae1eb",
+    "app/javascript/dashboard/routes/dashboard/conversation/contact/ContactNotes.vue": "c06bdcccc797d0629217ccebbb35f6c46db291f41e61783fd117f2e4b1903728",
+    "app/javascript/dashboard/routes/dashboard/conversation/customAttributes/CustomAttributes.vue": "dc2f0fed59484dd814dc75f6bf807e8c0478ee21e4dd5a114cf98c70d157688d",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "4332f066462dcc19b057a365b86a24bf2f1f397e8d66d2e565ad92411785d2b7",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardAutoFollowupStatus.vue": "d31e87c2ec901c6759bc52eb4cb88b51b8a3d2d18ea72c096418bc90e50f15de"
+  },
+  "entryAssets": [
+    "/vite-test/assets/dashboard-DuS2Z0nf.js"
+  ],
+  "operationalWrites": [
+    {
+      "path": "/api/v1/accounts/1/conversations/11/update_last_seen",
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/accounts/1/conversations/11/update_last_seen",
+      "method": "POST"
+    }
+  ],
+  "browser": "154.0.8037.58",
+  "data": "synthetic",
+  "assetMode": "compiled real application",
+  "mockedBusinessResponses": 0,
+  "attributeSurface": "legacy feature-disabled surface"
+}

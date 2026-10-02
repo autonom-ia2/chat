@@ -1,9 +1,16 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
 import CompanyDetailView from './CompanyDetailView.vue';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: { getCompanyOpportunities: vi.fn() },
+}));
 const testState = vi.hoisted(() => ({
   flags: null,
+  navigation: null,
+  canViewCrm: null,
+  recordWrite: null,
   query: {},
   company: {
     id: 42,
@@ -13,13 +20,25 @@ const testState = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canViewCrm: testState.canViewCrm }),
+}));
+
+vi.mock('dashboard/composables/useRelationshipPermissions', () => ({
+  useRelationshipPermissions: () => ({
+    canManageRelationshipRecords: testState.recordWrite,
+  }),
+}));
+
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     accountId: ref(16),
     currentAccount: ref({ id: 16 }),
     isCloudFeatureEnabled: name =>
-      ['companies', 'relationships_company_media'].includes(name) &&
-      testState.flags.value,
+      name === 'relationships_navigation'
+        ? testState.navigation.value
+        : ['companies', 'relationships_company_media'].includes(name) &&
+          testState.flags.value,
   }),
 }));
 vi.mock('dashboard/composables/store', () => ({
@@ -92,6 +111,11 @@ const mountView = async () => {
         },
         Button: true,
         CompanyProfileCard: true,
+        RelationshipOpportunities: {
+          props: ['list', 'entity'],
+          template:
+            '<div data-company-opportunity-view :data-entity="entity" />',
+        },
         CompanyMedia: { template: '<div class="company-media" />' },
         ConfirmCompanyDeleteDialog: true,
         CompanyNotesSidebar: {
@@ -135,7 +159,63 @@ const mountView = async () => {
 
 beforeEach(() => {
   testState.flags = ref(false);
+  testState.navigation = ref(false);
+  testState.canViewCrm = ref(true);
+  testState.recordWrite = ref(true);
+  window.globalConfig = { ...window.globalConfig, CRM_KANBAN_ENABLED: 'true' };
+  CrmKanbanAPI.getCompanyOpportunities.mockReset();
+  CrmKanbanAPI.getCompanyOpportunities.mockResolvedValue({
+    data: { payload: [], meta: { total_count: 0, page: 1, has_more: false } },
+  });
   testState.query = {};
+});
+
+it('keeps Contacts as the entry and only reads opportunities after opening the authorized tab', async () => {
+  testState.flags.value = true;
+  testState.navigation.value = true;
+  const wrapper = await mountView();
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
+  expect(CrmKanbanAPI.getCompanyOpportunities).not.toHaveBeenCalled();
+  wrapper.vm.handleSidebarTabChange({ value: 'opportunities' });
+  await flushPromises();
+  expect(CrmKanbanAPI.getCompanyOpportunities).toHaveBeenCalledOnce();
+  expect(CrmKanbanAPI.getCompanyOpportunities.mock.lastCall[0]).toBe(42);
+  expect(
+    wrapper.find('[data-company-opportunity-view]').attributes('data-entity')
+  ).toBe('company');
+  wrapper.unmount();
+});
+
+it.each(['permission', 'companies', 'navigation'])(
+  'hides opportunities when %s is unavailable without removing other tabs',
+  async gate => {
+    testState.flags.value = gate !== 'companies';
+    testState.navigation.value = gate !== 'navigation';
+    testState.canViewCrm.value = gate !== 'permission';
+    const wrapper = await mountView();
+    expect(wrapper.vm.sidebarTabs.map(tab => tab.value)).not.toContain(
+      'opportunities'
+    );
+    expect(wrapper.vm.sidebarTabs.map(tab => tab.value)).toEqual(
+      expect.arrayContaining(['contacts', 'notes', 'history', 'attributes'])
+    );
+    expect(CrmKanbanAPI.getCompanyOpportunities).not.toHaveBeenCalled();
+    wrapper.unmount();
+  }
+);
+
+it('removes active opportunities and their totals when viewing permission is revoked', async () => {
+  testState.flags.value = true;
+  testState.navigation.value = true;
+  const wrapper = await mountView();
+  wrapper.vm.handleSidebarTabChange({ value: 'opportunities' });
+  await flushPromises();
+  testState.canViewCrm.value = false;
+  await nextTick();
+  expect(wrapper.find('[data-company-opportunity-view]').exists()).toBe(false);
+  expect(wrapper.find('.contacts-sidebar').exists()).toBe(true);
+  expect(wrapper.vm.opportunityList.state.total).toBe(0);
+  wrapper.unmount();
 });
 
 describe('CompanyDetailView custom attributes', () => {

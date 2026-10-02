@@ -1,0 +1,26 @@
+{
+  "result": "confirmed_defects_not_fixed",
+  "environment": "isolated synthetic RSpec transaction, rolled back",
+  "observations": [
+    {
+      "case": "read_only_contact_write",
+      "http_status": 200,
+      "persisted": true
+    },
+    {
+      "case": "read_only_company_write",
+      "http_status": 200,
+      "persisted": true
+    },
+    {
+      "case": "crm_write_without_contact_manage",
+      "http_status": 201,
+      "created": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "not_a_security_acceptance_result": true
+}

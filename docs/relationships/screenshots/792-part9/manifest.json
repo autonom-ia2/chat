@@ -1,0 +1,376 @@
+{
+  "checks": [
+    "compiled_profile_keeps_notes_as_default_and_does_not_query_until_opportunities_are_open",
+    "one_shared_request_for_native_panel_all_pipelines_default_nonarchived_and_real_total",
+    "server_pagination_has_no_repeated_cards_and_preserves_zero_and_individual_currencies",
+    "won_lost_and_archived_filters_are_authoritative_and_do_not_mix_contact_results",
+    "search_runs_on_server_across_pipelines_instead_of_filtering_only_the_loaded_page",
+    "valid_empty_search_is_explicit_and_distinct_from_failure",
+    "opening_exact_existing_card_preserves_original_profile_draft_and_640px_drawer_without_writes",
+    "returning_focus_refreshes_authorized_data_without_resetting_contact_draft",
+    "transport_failure_has_no_fake_empty_success_or_stale_total_and_retry_reads_real_server",
+    "mobile_reuses_shared_results_with_touch_sized_controls_and_no_horizontal_overflow",
+    "keyboard_tab_navigation_preserves_existing_notes_attributes_history_media_and_merge_tabs",
+    "real_readonly_role_gets_only_its_cards_and_count_and_cannot_open_a_hidden_card",
+    "readonly_empty_filter_does_not_expose_hidden_wins_or_offer_unavailable_creation",
+    "switching_contacts_clears_previous_rows_counts_and_filters_instead_of_reusing_same_name_or_company"
+  ],
+  "captures": [
+    {
+      "name": "01-oportunidades-na-ficha",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 1254.46875
+      },
+      "sha256": "3554a112c6c274606110c0adabdd1e321212b9f57b85561890e9f88200a73d71"
+    },
+    {
+      "name": "02-paginacao-e-moedas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 708.1875
+      },
+      "sha256": "9fa4554c90a5ced0c4f75a09188ae894881864c523afec256d17a46bd633f5bc"
+    },
+    {
+      "name": "03-oportunidades-ganhas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 478.09375
+      },
+      "sha256": "c391e556e6344841e1df639c8efa1ea7fedc38b9580f86a949bc10f31275cd16"
+    },
+    {
+      "name": "04-busca-em-todos-os-funis",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 478.09375
+      },
+      "sha256": "8b8cb12a2f0ab3452caf41e1e140f359f409c694ae49ac874f961ad22bc821f7"
+    },
+    {
+      "name": "05-resultado-vazio",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 458
+      },
+      "sha256": "30e5eb374bf0d2b8a4853a8edc4904a4df9daaf7391adc822ac3538e855aafd0"
+    },
+    {
+      "name": "06-mesma-oportunidade-aberta-no-crm",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": null,
+      "sha256": "981d9260d496ffaada5044786dee308999d1aa13155483991bc0b508c72ab708"
+    },
+    {
+      "name": "07-erro-de-consulta-com-retentativa",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 400.1875
+      },
+      "sha256": "d0f20ab14a96436e626c43bf871b612533d3d76b272e6c704852bf201a5efee9"
+    },
+    {
+      "name": "08-oportunidades-no-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "x": 49,
+        "y": 195,
+        "width": 341,
+        "height": 1254.46875
+      },
+      "sha256": "b598f02bfda9bfaf7a2e6f6579498ab1f3f400859ce581c00fdba2ef8828551c"
+    },
+    {
+      "name": "09-filtro-no-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "x": 49,
+        "y": 195,
+        "width": 341,
+        "height": 478.09375
+      },
+      "sha256": "6ef5689d9363d410f08b1d0824ab3431d5118acd60f00b720e2c9a7841b0fa54"
+    },
+    {
+      "name": "10-oportunidades-no-notebook",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "panel": {
+        "x": 775,
+        "y": 155,
+        "width": 591,
+        "height": 478.09375
+      },
+      "sha256": "c8d49e6d41d7231e2aa1a23c07290df5e241312e4521b2fbce9c33ef958ec283"
+    },
+    {
+      "name": "11-visao-somente-leitura-com-permissoes",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 155,
+        "width": 591,
+        "height": 660.1875
+      },
+      "sha256": "a630fef9c79afa4e07cc011f09f0ce85fb13fcbd0d96ad9efd8d97f5a70c16e0"
+    }
+  ],
+  "errors": [],
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "reads": [
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "2",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "won",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "lost",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "archived",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "all",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "all",
+        "search": "revisão anual"
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "all",
+        "search": "Nenhuma negociação com este título"
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "all",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "won",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "won",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "active",
+        "search": ""
+      }
+    },
+    {
+      "method": "GET",
+      "params": {
+        "page": "1",
+        "result": "won",
+        "search": ""
+      }
+    }
+  ],
+  "writes": [],
+  "expectedFaults": [
+    "deliberately_aborted_read_request_no_success_mock"
+  ],
+  "sourceHashes": {
+    "app/javascript/dashboard/routes/dashboard/crm/pages/CrmKanbanPage.vue": "3345e4f214e17f70532175502bf282c116187237e4d31d781a139da89bb51f9d",
+    "app/controllers/api/v1/accounts/crm/contact_opportunities_controller.rb": "558a123f16cd14e36807b7bfd03d24bb5d6edf75f337632a89e5bde81597015a",
+    "config/routes.rb": "6191f72a32bdff3872e07da75c6acc679f10704e7079a305d1df71d990406dbb",
+    "app/javascript/dashboard/api/crmKanban.js": "aad94087c769c267433cdf121da2f84c29464abda3ee375e8f6c89825b81d4f8",
+    "app/javascript/dashboard/routes/dashboard/contacts/pages/ContactManageView.vue": "fb814981aaa0f2d6ec31316a730fdbc327c2aa0a870053c4bbebdcd649c147a0",
+    "app/javascript/dashboard/components-next/Relationships/ContactOpportunities.vue": "2b4074ad1d6cc5d21998925b7444c276e96d716a44ad1e64ccb37d461da15c27",
+    "app/javascript/dashboard/components-next/Relationships/useContactOpportunities.js": "6f079c3447509511984fc0dcb64e194db6fe0c2cecef8db8da3498ba1302f1ae",
+    "app/javascript/dashboard/i18n/locale/en/crm.json": "012feb8fc86ca2b869ed31639ffb6bea8739e8cca2a77a774d5fa3bbd12b7852",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "728fd380ac83029600230606f412fd885a9a5648544ff04b951f2b494b2f019a"
+  },
+  "browser": "154.0.8037.58",
+  "assetMode": "compiled test bundle, no Vite dev server",
+  "backend": "real isolated Rails/PostgreSQL",
+  "data": "synthetic",
+  "transportMocks": "one deliberate abort to verify failure UI; no mocked success"
+}

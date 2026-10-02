@@ -14,6 +14,7 @@ import {
   formatMoneyCents,
   toDate,
 } from './cardColumns.js';
+import { buildCrmCardIdentity, crmCardIdentityLabel } from './cardIdentity.js';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 
 const props = defineProps({
@@ -366,10 +367,12 @@ const relativeDate = value => {
   return relativeTimeFromISO(d.toISOString(), locale.value);
 };
 
-const contactSubtitle = card =>
-  card.contact?.name ||
-  card.contact?.phone_number ||
-  t('CRM_KANBAN.CARD.STANDALONE');
+// Keep the table identity aligned with the Kanban card: company → person →
+// business title, with an honest title fallback for cards without a contact.
+const identityForCard = card =>
+  buildCrmCardIdentity(card, t('CRM_KANBAN.CARD.STANDALONE'));
+const cardAriaName = card =>
+  crmCardIdentityLabel(card, t('CRM_KANBAN.CARD.STANDALONE'));
 
 const stageForCard = card =>
   card.stage ||
@@ -757,7 +760,7 @@ const onRowKeydown = (event, card) => {
                         :model-value="isRowSelected(row.original.id)"
                         :aria-label="
                           t('CRM_KANBAN.LIST.SELECT_ROW', {
-                            name: row.original.title || row.original.id,
+                            name: cardAriaName(row.original),
                           })
                         "
                         @change="toggleRow(row.original.id)"
@@ -771,13 +774,37 @@ const onRowKeydown = (event, card) => {
                       class="flex min-w-0 flex-col text-left"
                       @click="emit('openCard', row.original)"
                     >
+                      <template v-if="identityForCard(row.original).company">
+                        <span
+                          class="truncate font-semibold text-n-slate-12 hover:underline"
+                          data-crm-list-company
+                        >
+                          {{ identityForCard(row.original).company }}
+                        </span>
+                        <span
+                          v-if="identityForCard(row.original).person"
+                          class="truncate text-sm text-n-slate-11"
+                          data-crm-list-person
+                        >
+                          {{ identityForCard(row.original).person }}
+                        </span>
+                      </template>
                       <span
-                        class="truncate font-medium text-n-slate-12 hover:underline"
+                        v-else
+                        class="truncate font-semibold text-n-slate-12 hover:underline"
+                        data-crm-list-identity
                       >
-                        {{ row.original.title }}
+                        {{ identityForCard(row.original).main }}
                       </span>
-                      <span class="truncate text-xs text-n-slate-11">
-                        {{ contactSubtitle(row.original) }}
+                      <span
+                        v-if="identityForCard(row.original).business"
+                        class="truncate text-xs text-n-slate-11"
+                        data-crm-list-business
+                      >
+                        <span class="font-medium text-n-slate-10">
+                          {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
+                        </span>
+                        {{ identityForCard(row.original).business }}
                       </span>
                     </button>
 
@@ -848,7 +875,9 @@ const onRowKeydown = (event, card) => {
                         v-if="slaChatFor(row.original)"
                         :chat="slaChatFor(row.original)"
                       />
-                      <span v-else class="text-n-slate-10">—</span>
+                      <span v-else class="text-n-slate-10">{{
+                        t('CRM_KANBAN.DRAWER.EMPTY_VALUE')
+                      }}</span>
                     </template>
 
                     <button
@@ -924,7 +953,7 @@ const onRowKeydown = (event, card) => {
           <Checkbox
             :model-value="isRowSelected(card.id)"
             :aria-label="
-              t('CRM_KANBAN.LIST.SELECT_ROW', { name: card.title || card.id })
+              t('CRM_KANBAN.LIST.SELECT_ROW', { name: cardAriaName(card) })
             "
             class="mt-1"
             @change="toggleRow(card.id)"
@@ -934,11 +963,28 @@ const onRowKeydown = (event, card) => {
             class="flex min-w-0 flex-1 flex-col text-left"
             @click="emit('openCard', card)"
           >
-            <span class="truncate font-medium text-n-slate-12">
-              {{ card.title }}
+            <template v-if="identityForCard(card).company">
+              <span class="truncate font-semibold text-n-slate-12">
+                {{ identityForCard(card).company }}
+              </span>
+              <span
+                v-if="identityForCard(card).person"
+                class="truncate text-sm text-n-slate-11"
+              >
+                {{ identityForCard(card).person }}
+              </span>
+            </template>
+            <span v-else class="truncate font-semibold text-n-slate-12">
+              {{ identityForCard(card).main }}
             </span>
-            <span class="truncate text-xs text-n-slate-11">
-              {{ contactSubtitle(card) }}
+            <span
+              v-if="identityForCard(card).business"
+              class="truncate text-xs text-n-slate-11"
+            >
+              <span class="font-medium text-n-slate-10">
+                {{ t('CRM_KANBAN.CARD.BUSINESS_LABEL') }}
+              </span>
+              {{ identityForCard(card).business }}
             </span>
             <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
               <span

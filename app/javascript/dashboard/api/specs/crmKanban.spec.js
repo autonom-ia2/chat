@@ -56,6 +56,38 @@ describe('#CrmKanbanAPI', () => {
     expect(crmKanban).toHaveProperty('getCalendarEvents');
   });
 
+  it('fetches only company opportunities with the account scope and cancellation signal', () => {
+    const signal = new AbortController().signal;
+    crmKanban.getCompanyOpportunities(
+      17,
+      { page: 2, result: 'all' },
+      { signal }
+    );
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/companies/17/opportunities',
+      {
+        params: { page: 2, result: 'all' },
+        signal,
+      }
+    );
+  });
+
+  it('fetches only the requested contact opportunities with account scope and abort signal', () => {
+    const signal = new AbortController().signal;
+    crmKanban.getContactOpportunities(
+      42,
+      { page: 2, result: 'won' },
+      { signal }
+    );
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/contacts/42/opportunities',
+      {
+        params: { page: 2, result: 'won' },
+        signal,
+      }
+    );
+  });
+
   it('fetches pipelines with account scope', () => {
     crmKanban.getPipelines();
     expect(axiosMock.get).toHaveBeenCalledWith(
@@ -117,6 +149,15 @@ describe('#CrmKanbanAPI', () => {
     expect(axiosMock.post).toHaveBeenCalledWith(
       '/api/v1/accounts/85/crm/cards/10/move',
       { stage_id: 3 }
+    );
+  });
+
+  it('sends an optional idempotency header without adding it to card attributes', () => {
+    crmKanban.createCard({ title: 'Opportunity' }, 'test-opportunity-key');
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/cards',
+      { card: { title: 'Opportunity' } },
+      { headers: { 'Idempotency-Key': 'test-opportunity-key' } }
     );
   });
 

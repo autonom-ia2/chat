@@ -38,7 +38,7 @@ RSpec.describe 'CRM cards export', type: :request do
 
     before do
       contact = account.contacts.create!(name: 'Maria Lead', phone_number: '+5511987654321', email: 'maria@lead.test',
-                                         additional_attributes: { 'company_name' => 'Acme' })
+                                         company: Company.create!(account: account, name: 'Acme'))
       atributos = { contact: contact, value_cents: 150_050, priority: :high, owner: admin }
       card!(account, pipeline, pipeline.stages.first, 'Seguro auto', **atributos)
     end
@@ -78,6 +78,51 @@ RSpec.describe 'CRM cards export', type: :request do
                              sort: 'value_cents', direction: 'desc')
 
     expect(titulos).to eq(['Seguro caro', 'Seguro barato'])
+  end
+
+  it 'exports the business company instead of the shared contact company' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    contact_company = Company.create!(account: account, name: 'Contact company')
+    business_company = Company.create!(account: account, name: 'Business company')
+    contact = account.contacts.create!(name: 'Shared contact', company: contact_company,
+                                       additional_attributes: { 'company_name' => contact_company.name })
+    card!(account, pipeline, stage, 'Business',
+          contact: contact, score: 80,
+          metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => business_company.id } } })
+
+    exportar(account, admin, pipeline_id: pipeline.id, company_id: business_company.id, score_min: 80, score_max: 80)
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to eq('Business company')
+  end
+
+  it 'does not export the contact company when the prospecting company is unavailable' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    foreign_company = Company.create!(account: create(:account), name: 'Foreign company')
+    contact = account.contacts.create!(name: 'Shared contact', additional_attributes: { 'company_name' => 'Contact company' })
+    card!(account, pipeline, stage, 'Business',
+          contact: contact,
+          metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => foreign_company.id } } })
+
+    exportar(account, admin, pipeline_id: pipeline.id, company_id: 'none')
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to be_nil
+  end
+
+  # Exportação = Lista: sem empresa resolvida a célula fica vazia, nunca o texto legado do contato.
+  it 'does not export the legacy company_name text when no company is resolved' do
+    account, admin = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: admin)
+    contact = account.contacts.create!(name: 'Legacy contact', additional_attributes: { 'company_name' => 'Legacy text' })
+    card!(account, pipeline, stage, 'Legacy', contact: contact)
+
+    exportar(account, admin, pipeline_id: pipeline.id)
+
+    expect(response).to have_http_status(:ok)
+    expect(planilha.cell(primeira, 11)).to be_nil
   end
 
   it 'traz todos os cards, sem o limite de página da Lista' do

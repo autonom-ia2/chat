@@ -10,6 +10,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactNoteItem from './components/ContactNoteItem.vue';
 
+const props = defineProps({ readOnly: { type: Boolean, default: false } });
 const { t } = useI18n();
 const store = useStore();
 const route = useRoute();
@@ -33,14 +34,14 @@ const getWrittenBy = note => {
 };
 
 const onAdd = content => {
-  if (!content) return;
+  if (props.readOnly || !content) return;
   const { contactId } = route.params;
   store.dispatch('contactNotes/create', { content, contactId });
   state.message = '';
 };
 
 const onDelete = noteId => {
-  if (!noteId) return;
+  if (props.readOnly || !noteId) return;
   const { contactId } = route.params;
   store.dispatch('contactNotes/delete', { noteId, contactId });
 };
@@ -57,6 +58,7 @@ useKeyboardEvents(keyboardEvents);
 <template>
   <div class="flex flex-col gap-6">
     <Editor
+      v-if="!readOnly"
       v-model="state.message"
       :placeholder="t('CONTACTS_LAYOUT.SIDEBAR.NOTES.PLACEHOLDER')"
       focus-on-mount
@@ -90,7 +92,7 @@ useKeyboardEvents(keyboardEvents);
         class="mx-6 py-4"
         :note="note"
         :written-by="getWrittenBy(note)"
-        allow-delete
+        :allow-delete="!readOnly"
         @delete="onDelete"
       />
     </div>

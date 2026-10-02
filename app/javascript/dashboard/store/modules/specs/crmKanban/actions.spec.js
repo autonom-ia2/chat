@@ -6,6 +6,8 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 
 vi.mock('../../../../api/crmKanban', () => ({
   default: {
+    createCard: vi.fn(),
+    accountIdFromRoute: '1',
     getPipelineInboxes: vi.fn(),
     createPipelineInbox: vi.fn(),
     deletePipelineInbox: vi.fn(),
@@ -27,6 +29,60 @@ vi.mock('../../../../api/crmKanban', () => ({
 vi.mock('shared/helpers/mitt', () => ({
   emitter: { emit: vi.fn() },
 }));
+
+describe('#crmKanban confirmed opportunity creation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CrmKanbanAPI.accountIdFromRoute = '1';
+  });
+  it('passes the key separately and returns success without requiring a board refresh', async () => {
+    const commit = vi.fn();
+    const dispatch = vi.fn().mockRejectedValue(new Error('Read unavailable'));
+    const card = { id: 7, pipeline_id: 1, contact_id: 42 };
+    CrmKanbanAPI.createCard.mockResolvedValue({ data: { payload: card } });
+    expect(
+      await actions.createCard(
+        { commit, dispatch },
+        { title: 'New', idempotencyKey: 'same-request' }
+      )
+    ).toEqual(card);
+    expect(CrmKanbanAPI.createCard).toHaveBeenCalledWith(
+      { title: 'New' },
+      'same-request'
+    );
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledWith(types.UPSERT_CRM_KANBAN_CARD, card);
+  });
+  it('propagates write errors and releases the loading state', async () => {
+    const commit = vi.fn();
+    CrmKanbanAPI.createCard.mockRejectedValue(new Error('Write unavailable'));
+    await expect(
+      actions.createCard({ commit }, { title: 'New', idempotencyKey: 'key' })
+    ).rejects.toThrow('Write unavailable');
+    expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isCreatingCard: false,
+    });
+    expect(
+      commit.mock.calls.some(([type]) => type === types.UPSERT_CRM_KANBAN_CARD)
+    ).toBe(false);
+  });
+  it('does not publish an old account result into the new account store', async () => {
+    let finish;
+    const commit = vi.fn();
+    CrmKanbanAPI.createCard.mockReturnValue(
+      new Promise(done => {
+        finish = done;
+      })
+    );
+    const pending = actions.createCard({ commit }, { title: 'New' });
+    CrmKanbanAPI.accountIdFromRoute = '2';
+    finish({ data: { payload: { id: 7 } } });
+    await pending;
+    expect(
+      commit.mock.calls.some(([type]) => type === types.UPSERT_CRM_KANBAN_CARD)
+    ).toBe(false);
+  });
+});
 
 describe('#crmKanban pipeline inbox actions', () => {
   beforeEach(() => {
@@ -320,8 +376,11 @@ describe('#crmKanban board filters', () => {
             ...defaultFilters(),
             stageIds: [3, 4],
             teamId: '9',
+            companyId: 'none',
             valueMin: 100,
             valueMax: 500,
+            scoreMin: 0,
+            scoreMax: 100,
             staleDays: '7',
             responsibleKind: 'bot',
             aiPending: true,
@@ -336,8 +395,11 @@ describe('#crmKanban board filters', () => {
     expect(sentParams).toMatchObject({
       stage_ids: '3,4',
       team_id: '9',
+      company_id: 'none',
       value_min: 10000,
       value_max: 50000,
+      score_min: 0,
+      score_max: 100,
       stale_days: '7',
       responsible_kind: 'bot',
       ai_pending: true,
@@ -528,6 +590,29 @@ describe('#crmKanban board filters', () => {
       { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
     );
 
+    expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
+    expect(commit).not.toHaveBeenCalledWith(
+      types.UPSERT_CRM_KANBAN_CARD,
+      expect.anything()
+    );
+  });
+
+  it('refetches when search or company is active because realtime payloads are partial', () => {
+    const commit = vi.fn();
+    [
+      { ...defaultFilters(), search: 'Norte' },
+      { ...defaultFilters(), companyId: 'none' },
+    ].forEach(filters => {
+      actions.handleRealtimeCardEvent(
+        {
+          commit,
+          state: { board: { pipeline: { id: 7 } }, filters },
+        },
+        { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
+      );
+    });
+
+    expect(emitter.emit).toHaveBeenCalledTimes(2);
     expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
     expect(commit).not.toHaveBeenCalledWith(
       types.UPSERT_CRM_KANBAN_CARD,

@@ -22,12 +22,18 @@ const { t } = useI18n();
 const { checkPermissions } = usePolicy();
 
 const contactMenuItems = computed(() => [
-  {
-    label: t('CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ADD_CONTACT'),
-    action: 'add',
-    value: 'add',
-    icon: 'i-lucide-plus',
-  },
+  ...(checkPermissions(['administrator', 'agent', 'contact_manage'])
+    ? [
+        {
+          label: t(
+            'CONTACTS_LAYOUT.HEADER.ACTIONS.CONTACT_CREATION.ADD_CONTACT'
+          ),
+          action: 'add',
+          value: 'add',
+          icon: 'i-lucide-plus',
+        },
+      ]
+    : []),
   ...(checkPermissions(['administrator', 'contact_manage'])
     ? [
         {
@@ -87,7 +93,11 @@ const handleContactAction = ({ action }) => {
 </script>
 
 <template>
-  <div v-on-clickaway="() => (showActionsDropdown = false)" class="relative">
+  <div
+    v-if="contactMenuItems.length"
+    v-on-clickaway="() => (showActionsDropdown = false)"
+    class="relative"
+  >
     <Button
       icon="i-lucide-ellipsis-vertical"
       color="slate"
@@ -103,4 +113,5 @@ const handleContactAction = ({ action }) => {
       @action="handleContactAction($event)"
     />
   </div>
+  <template v-else />
 </template>

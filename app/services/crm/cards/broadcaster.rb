@@ -48,7 +48,7 @@ class Crm::Cards::Broadcaster
   def card_with_associations
     @card_with_associations ||= Crm::Card
                                 .includes(
-                                  { contact: { label_taggings: :tag } },
+                                  { contact: Crm::Cards::CompanyResolver.contact_preload },
                                   :owner,
                                   :pipeline,
                                   :stage,

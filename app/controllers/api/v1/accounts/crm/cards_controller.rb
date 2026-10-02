@@ -1,5 +1,10 @@
 class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseController
+  include Crm::FilterParameters
+
+  before_action :validate_crm_filter_parameters, only: %i[index export]
+
   include Crm::IdempotentRequests
+  include Crm::OpportunityRegistration
   include DeferInteractiveAi
 
   before_action :fetch_card, only: [
@@ -17,6 +22,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     # Ordering is owned by FilterQuery#apply_sort (whitelisted sort/direction,
     # defaulting to updated_at desc — byte-identical to the historical default).
     @cards = filtered_cards.page(params[:page] || 1).per(per_page)
+    @card_companies = Crm::Cards::CompanyResolver.for_cards(@cards.to_a)
     @cards_count = filtered_cards.count
   end
 
@@ -70,28 +76,24 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def create
-    with_idempotency do
-      authorize ::Crm::Card
-      permitted_params = create_params.to_h.with_indifferent_access
-      external_id = permitted_params[:external_id].presence
+    authorize ::Crm::Card
+    permitted_params = create_params.to_h.with_indifferent_access
+    external_id = permitted_params[:external_id].presence
+    @registration = registration_for_creation
+    persist_card_creation(permitted_params, external_id)
+  rescue ::Crm::Cards::RegistrationInput::Invalid => e
+    render_registration_error(e)
+  rescue ActiveRecord::RecordInvalid => e
+    raise unless @registration
 
-      # Idempotent upsert for external systems (n8n): a retried create with the
-      # same external_id updates the existing card instead of duplicating.
-      existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
-      next upsert_existing_card!(existing, permitted_params) if existing
+    render_registration_record_error(e)
+  rescue ActiveRecord::RecordNotUnique
+    return render_registration_error(@registration.conflict) if @registration
+    raise unless external_id
 
-      conversation = conversation_from_params(permitted_params)
-      resolved_params = resolved_create_params(permitted_params, conversation: conversation)
-      create_authorizer.authorize!(resolved_params, conversation: conversation)
-      @card = ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
-      authorize @card, :show?
-      broadcast_card(::Events::Types::CRM_CARD_CREATED)
-      render :show, status: :created
-    rescue ActiveRecord::RecordNotUnique
-      # Lost a race on the same external_id — resolve to the now-existing card.
-      raise unless external_id
-
-      upsert_existing_card!(Current.account.crm_cards.find_by!(external_id: external_id), permitted_params)
+    # The failed transaction is rolled back before resolving an external upsert race.
+    ActiveRecord::Base.transaction do
+      with_idempotency { upsert_existing_card!(Current.account.crm_cards.find_by!(external_id: external_id), permitted_params) }
     end
   end
 
@@ -322,7 +324,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def fetch_card
-    @card = policy_scope(::Crm::Card).includes(:contact, :owner, :inbox, :stage, :pipeline, :primary_conversation).find(params[:id])
+    @card = policy_scope(::Crm::Card).includes(
+      { contact: Crm::Cards::CompanyResolver.contact_preload },
+      :owner, :inbox, :stage, :pipeline, :primary_conversation
+    ).find(params[:id])
     authorize @card, "#{action_name}?".to_sym
   end
 
@@ -332,12 +337,54 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     Current.account.conversations.find(params[:conversation_id])
   end
 
+  def persist_card_creation(permitted_params, external_id)
+    # Registration, opportunity, idempotency key and captured response commit together.
+    ActiveRecord::Base.transaction do
+      with_idempotency do
+        existing = external_id && Current.account.crm_cards.find_by(external_id: external_id)
+        next upsert_existing_card!(existing, permitted_params) if existing
+
+        @card = create_authorized_card(permitted_params)
+        authorize @card, :show?
+        broadcast_card(::Events::Types::CRM_CARD_CREATED)
+        render :show, status: :created
+      end
+    end
+  end
+
+  def create_authorized_card(permitted_params)
+    conversation = conversation_from_params(permitted_params)
+    resolved_params = resolved_create_params(permitted_params, conversation: conversation)
+    create_authorizer.authorize!(resolved_params, conversation: conversation)
+    if @registration
+      return @registration.perform do |contact|
+        ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params.merge(contact_id: contact.id)).perform
+      end
+    end
+
+    ::Crm::Cards::Creator.new(account: Current.account, user: Current.user, params: resolved_params, conversation: conversation).perform
+  end
+
   def broadcast_card(event_name)
-    ::Crm::Cards::Broadcaster.broadcast(@card, event_name)
+    return ::Crm::Cards::Broadcaster.broadcast(@card, event_name) unless action_name == 'create'
+
+    card = @card
+    ActiveRecord.after_all_transactions_commit { ::Crm::Cards::Broadcaster.broadcast(card, event_name) }
+  end
+
+  def replay_stored_response(record)
+    return super unless action_name == 'create'
+
+    # A replay must honor current visibility, not return a historical payload
+    # containing conversations the requesting user can no longer read.
+    @card = policy_scope(::Crm::Card).find(record.response_body.fetch('payload').fetch('id'))
+    authorize @card, :show?
+    response.headers[REPLAYED_HEADER] = 'true'
+    render :show, status: record.response_status
   end
 
   def filtered_cards
-    ::Crm::Cards::FilterQuery.new(scope: policy_scope(::Crm::Card), params: params).perform
+    ::Crm::Cards::FilterQuery.new(scope: policy_scope(::Crm::Card), params: params, conversation_visibility: crm_visibility).perform
   end
 
   def per_page

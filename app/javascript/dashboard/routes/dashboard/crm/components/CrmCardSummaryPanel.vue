@@ -104,9 +104,9 @@ onBeforeUnmount(() => {
 <template>
   <section
     v-if="aiEnabled && hasConversation"
-    class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4"
+    class="grid gap-3 rounded-xl border border-n-weak bg-n-surface-1 p-4"
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="min-w-0">
         <h3 class="mb-1 text-sm font-medium text-n-slate-12">
           {{ t('CRM_KANBAN.AI_SUMMARY.TITLE') }}
@@ -122,6 +122,7 @@ onBeforeUnmount(() => {
         slate
         faded
         sm
+        class="min-w-max shrink-0"
         :is-loading="isLoading"
         @click="generateSummary"
       />

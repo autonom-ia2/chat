@@ -1,0 +1,24 @@
+{
+  "before": {
+    "contacts": 7,
+    "companies": 5,
+    "messages": 33,
+    "conversations": 2,
+    "cards": 11
+  },
+  "after": {
+    "contacts": 7,
+    "companies": 5,
+    "messages": 33,
+    "conversations": 2,
+    "cards": 15
+  },
+  "confirmed_opportunity_ids": [
+    12,
+    13,
+    14,
+    15
+  ],
+  "result": "passed",
+  "database": "isolated_local_UI"
+}

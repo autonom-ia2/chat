@@ -1,0 +1,73 @@
+{
+  "checks": [
+    "compiled_profile_keeps_notes_as_default_and_does_not_query_until_opportunities_are_open",
+    "one_shared_request_for_native_panel_all_pipelines_default_nonarchived_and_real_total",
+    "server_pagination_has_no_repeated_cards_and_preserves_zero_and_individual_currencies",
+    "won_lost_and_archived_filters_are_authoritative_and_do_not_mix_contact_results",
+    "search_runs_on_server_across_pipelines_instead_of_filtering_only_the_loaded_page",
+    "valid_empty_search_is_explicit_and_distinct_from_failure",
+    "opening_exact_existing_card_preserves_original_profile_draft_and_640px_drawer_without_writes",
+    "returning_focus_refreshes_authorized_data_without_resetting_contact_draft",
+    "transport_failure_has_no_fake_empty_success_or_stale_total_and_retry_reads_real_server",
+    "mobile_reuses_shared_results_with_touch_sized_controls_and_no_horizontal_overflow",
+    "keyboard_tab_navigation_preserves_existing_notes_attributes_history_media_and_merge_tabs",
+    "real_readonly_role_gets_only_its_cards_and_count_and_cannot_open_a_hidden_card",
+    "readonly_empty_filter_does_not_expose_hidden_wins_or_offer_unavailable_creation",
+    "switching_contacts_clears_previous_rows_counts_and_filters_instead_of_reusing_same_name_or_company"
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": [],
+  "sourceHashes": {
+    "app/javascript/dashboard/routes/dashboard/crm/pages/CrmKanbanPage.vue": "3345e4f214e17f70532175502bf282c116187237e4d31d781a139da89bb51f9d",
+    "app/controllers/api/v1/accounts/crm/contact_opportunities_controller.rb": "5c7e64fa8d3b77035e592aed3a74951d389e28457353fbf6e8f1918e8b2f59df",
+    "config/routes.rb": "ce2d7429771766b1222cb2759d2ba5745b866e5161b8a87c7322ac2899959109",
+    "app/javascript/dashboard/api/crmKanban.js": "164321274a1ccc66fc4265112ee26746385ceb4afa7c0bf4b886b5f401230fc1",
+    "app/javascript/dashboard/routes/dashboard/contacts/pages/ContactManageView.vue": "e1ee5025fc1de51b78609cce9fcf94ae88c617ec1132df35026c08d360e376de",
+    "app/javascript/dashboard/components-next/Relationships/RelationshipOpportunities.vue": "1ebf1387c987a1f7c51789a434bd0c24342147588653d212d9939708e9b33eb4",
+    "app/javascript/dashboard/components-next/Relationships/useRelationshipOpportunities.js": "63c4dd53aa1ed56e7e3496f55f3b2e004d6a550d3f2b974ecab092b0e104ef28",
+    "app/javascript/dashboard/components-next/Relationships/useContactOpportunities.js": "7a47f2bbe15b3659160f44228da4d1a6a7f6e1d21209f16663307bcfd5235e9a",
+    "app/javascript/dashboard/i18n/locale/en/crm.json": "dd30ab5fc00a0263dff101ce5bc0bc36f85b346704c286e5598cdc816071d72b",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "be40460446db6edc862131c1ef9f592a9ed1ecec9fa60d1108d75d5074e09310"
+  },
+  "persistence": {
+    "result": "passed",
+    "database": "isolated local UI",
+    "data": "synthetic",
+    "before": {
+      "contacts": 49,
+      "companies": 23,
+      "cards": 88,
+      "messages": 33,
+      "conversations": 8
+    },
+    "after": {
+      "contacts": 49,
+      "companies": 23,
+      "cards": 88,
+      "messages": 33,
+      "conversations": 8
+    },
+    "contact_unchanged": true,
+    "all_eight_cards_unchanged": true,
+    "business_writes": 0,
+    "timestamp_precision": "ISO8601 UTC, six decimals on both snapshots"
+  }
+}

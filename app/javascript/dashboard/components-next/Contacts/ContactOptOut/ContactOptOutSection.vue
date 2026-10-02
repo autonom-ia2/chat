@@ -13,6 +13,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   contact: {
     type: Object,
     required: true,
@@ -48,7 +49,9 @@ const canUndo = computed(
   () => isOptedOut.value && props.contact?.optOutSource === 'manual'
 );
 
-const showAction = computed(() => !isOptedOut.value || canUndo.value);
+const showAction = computed(
+  () => !props.readOnly && (!isOptedOut.value || canUndo.value)
+);
 
 const originHint = computed(() => {
   const source = props.contact?.optOutSource;
@@ -69,6 +72,7 @@ const resultKey = (optedOut, payload) => {
 };
 
 const confirmChange = async () => {
+  if (props.readOnly) return;
   const optedOut = !isOptedOut.value;
   isSaving.value = true;
   try {

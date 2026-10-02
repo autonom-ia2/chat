@@ -1,0 +1,73 @@
+{
+  "result": "passed",
+  "before": {
+    "contacts": 51,
+    "companies": 23,
+    "cards": 91,
+    "conversations": 11,
+    "messages": 33,
+    "follow_ups": 1,
+    "notes": 1
+  },
+  "after": {
+    "contacts": 51,
+    "companies": 23,
+    "cards": 91,
+    "conversations": 11,
+    "messages": 33,
+    "follow_ups": 1,
+    "notes": 1
+  },
+  "same_contact_id": 51,
+  "authorized_changed_contact_fields": [
+    "name",
+    "updated_at"
+  ],
+  "card_unchanged": true,
+  "reminder_unchanged": true,
+  "conversation_read_state_fields": [],
+  "forbidden_writes_rejected": [
+    {
+      "kind": "contact",
+      "status": 401
+    },
+    {
+      "kind": "note",
+      "status": 401
+    },
+    {
+      "kind": "archive",
+      "status": 401
+    },
+    {
+      "kind": "complete",
+      "status": 401
+    },
+    {
+      "kind": "reset",
+      "status": 401
+    },
+    {
+      "kind": "from_conversation",
+      "status": 401
+    }
+  ],
+  "business_writes": [
+    {
+      "path": "/api/v1/accounts/1/contacts/51",
+      "method": "PATCH"
+    }
+  ],
+  "operational_read_state_requests": [
+    {
+      "path": "/api/v1/accounts/1/conversations/11/update_last_seen",
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/accounts/1/conversations/11/update_last_seen",
+      "method": "POST"
+    }
+  ],
+  "database": "isolated local UI",
+  "data": "synthetic"
+}

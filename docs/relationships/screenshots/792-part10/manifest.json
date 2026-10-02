@@ -1,0 +1,331 @@
+{
+  "checks": [
+    "compiled_company_profile_keeps_contacts_initial_and_does_not_query_opportunities_early",
+    "canonical_contacts_across_pipelines_share_one_query_with_contact_names_and_authorized_count",
+    "server_pages_do_not_repeat_cards_and_preserve_individual_currencies_and_zero",
+    "won_lost_archived_filters_return_exact_current_company_deals",
+    "title_search_runs_on_server_across_contacts_and_pipelines",
+    "valid_empty_query_is_not_presented_as_an_error",
+    "existing_opportunity_opens_with_original_id_correct_funnel_and_640px_drawer_preserving_company_draft",
+    "focus_refreshes_only_list_and_keeps_company_edits",
+    "transport_failure_clears_stale_totals_and_retry_uses_real_api",
+    "mobile_and_notebook_share_native_tabs_controls_and_current_results_without_clipping",
+    "real_readonly_api_returns_only_allowed_cards_and_count_without_hidden_wins",
+    "supported_agent_profile_visually_shows_only_two_authorized_cards_no_hidden_totals_or_wins",
+    "company_navigation_resets_old_filters_rows_counts_and_identifying_names",
+    "read_and_navigation_issue_no_business_writes_or_framework_errors"
+  ],
+  "captures": [
+    {
+      "name": "01-ficha-empresa-contatos-preservados",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": null,
+      "sha256": "99d3b8977f13a62b0a8202d19d6287527395e6d1e17485ecd0a40af872239f3d"
+    },
+    {
+      "name": "02-oportunidades-da-empresa",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 1394.46875
+      },
+      "sha256": "bc0184c511c2eb94dae10035de2dd36bfe2b9fe273cbca6d27e9709d2c69c053"
+    },
+    {
+      "name": "03-paginacao-contatos-e-moedas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 764.1875
+      },
+      "sha256": "54f745fc5bd87b947a1d07113461f51eca690a31d375121f849b9f74c62e24df"
+    },
+    {
+      "name": "04-oportunidades-ganhas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 506.09375
+      },
+      "sha256": "044a1fc0d715bded1f527d07179ef8f937466f9a3a97737037561628b5731065"
+    },
+    {
+      "name": "05-busca-em-todos-os-contatos",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 506.09375
+      },
+      "sha256": "108a23e9f6df5633b2e0b6bcd2930501997e598404606da239aca9f34d783a12"
+    },
+    {
+      "name": "06-oportunidade-aberta-no-crm",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": null,
+      "sha256": "898d87269a0a5abf4fd551c84b832b081740d5eee96cffd9cf2a7fc70e5b5123"
+    },
+    {
+      "name": "07-erro-de-consulta-e-retentativa",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 400.1875
+      },
+      "sha256": "733ae37aa18a2d082d235a4411122b74d65a7f90547f8771f63946817a1fecaa"
+    },
+    {
+      "name": "08-oportunidades-da-empresa-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "x": 49,
+        "y": 195,
+        "width": 341,
+        "height": 1414.46875
+      },
+      "sha256": "794085f3100d8e1076665c4e57022cbc56a747fc20a52cd135ca498f7f7756bb"
+    },
+    {
+      "name": "09-filtro-da-empresa-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "x": 49,
+        "y": 195,
+        "width": 341,
+        "height": 526.09375
+      },
+      "sha256": "2aa15f0553ec54d7eeebf4abeb68c48fcc93602c412ebd932726adf6cec119c4"
+    },
+    {
+      "name": "10-oportunidades-da-empresa-notebook",
+      "viewport": {
+        "width": 1366,
+        "height": 768
+      },
+      "panel": {
+        "x": 775,
+        "y": 203,
+        "width": 591,
+        "height": 1394.46875
+      },
+      "sha256": "f0d0ea2b94a6f8868838656d89099d9996e4578f23057ad532986c8a5d718e41"
+    },
+    {
+      "name": "12-agente-apenas-oportunidades-permitidas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 716.1875
+      },
+      "sha256": "048e1ab2e5e17ea7f82923451ca641abdb90db0e9d89ddf4a25454a2e66d2a2d"
+    },
+    {
+      "name": "11-empresa-sem-oportunidades",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "panel": {
+        "x": 1029,
+        "y": 203,
+        "width": 591,
+        "height": 458
+      },
+      "sha256": "3b9dec00e32d9adf54ce1a557e01df02c2d4def80c35bcae238473bf12b30abf"
+    }
+  ],
+  "errors": [],
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "reads": [
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "2",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "won",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "lost",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "archived",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": "benefícios"
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": "termo inexistente p10"
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "won",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "active",
+      "search": ""
+    },
+    {
+      "page": "1",
+      "result": "won",
+      "search": ""
+    }
+  ],
+  "writes": [],
+  "sourceHashes": {
+    "config/routes.rb": "ce2d7429771766b1222cb2759d2ba5745b866e5161b8a87c7322ac2899959109",
+    "app/controllers/api/v1/accounts/crm/profile_opportunities_controller.rb": "e5ead3e97ec6ad29f5f99e247bd634c5534aaea2e8ef950a87e900f14d74ff16",
+    "app/controllers/api/v1/accounts/crm/contact_opportunities_controller.rb": "5c7e64fa8d3b77035e592aed3a74951d389e28457353fbf6e8f1918e8b2f59df",
+    "enterprise/app/controllers/api/v1/accounts/crm/company_opportunities_controller.rb": "c2b2c35dc4654c07dc1bb076930a7f9d78177303e7c72bd09277e9f703e559f7",
+    "app/javascript/dashboard/api/crmKanban.js": "164321274a1ccc66fc4265112ee26746385ceb4afa7c0bf4b886b5f401230fc1",
+    "app/javascript/dashboard/components-next/Relationships/RelationshipOpportunities.vue": "1ebf1387c987a1f7c51789a434bd0c24342147588653d212d9939708e9b33eb4",
+    "app/javascript/dashboard/components-next/Relationships/useRelationshipOpportunities.js": "63c4dd53aa1ed56e7e3496f55f3b2e004d6a550d3f2b974ecab092b0e104ef28",
+    "app/javascript/dashboard/routes/dashboard/companies/pages/CompanyDetailView.vue": "535d7412de8ebd08884d79c77a8ded3e58bded4be7ad573474d9d032b74f6301",
+    "app/javascript/dashboard/routes/dashboard/contacts/pages/ContactManageView.vue": "b6daa7a041dfc8aca661a89665608bcd74582cab0ca059b97b8d3fe2e243cae1",
+    "app/javascript/dashboard/i18n/locale/en/crm.json": "3d4d474ee8e83dd30f68f3b56f1f38e82bec1e56d3c4aa6cc8cfdcedd217c5d2",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "c27a006290ed257ea7a4654151d851eef9cc2c11c287c6297f2c899427487832"
+  },
+  "entryAssets": [
+    "/vite-test/assets/dashboard-BcUDgJnD.js"
+  ],
+  "knownLimitations": [
+    {
+      "flow": "company profile with custom contact_view/crm_view role",
+      "status": "blocked_not_passed",
+      "evidence": "part10-browser-acceptance.log and part10-role-probe.log",
+      "detail": "Company URL remained unchanged and profile did not load; native route accepts administrator/agent. Auth and roles unchanged; the custom role API is tested separately."
+    }
+  ],
+  "browser": "154.0.8037.58",
+  "assetMode": "compiled test bundle without Vite dev server",
+  "backend": "real isolated Rails/PostgreSQL",
+  "data": "synthetic",
+  "transportMocks": "one GET abort for failure UI; no simulated success"
+}
