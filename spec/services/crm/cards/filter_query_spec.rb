@@ -16,6 +16,9 @@ RSpec.describe Crm::Cards::FilterQuery do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
+  let(:visibility) do
+    Crm::Conversations::Visibility.new(account: account, user: user, account_user: user.account_users.find_by!(account: account))
+  end
 
   # status `open` here is the in-funnel deal status, NOT the conversation status.
   def seed_cards
@@ -29,7 +32,7 @@ RSpec.describe Crm::Cards::FilterQuery do
   end
 
   def perform(result)
-    described_class.new(scope: account.crm_cards, params: { result: result }).perform
+    described_class.new(scope: account.crm_cards, params: { result: result }, conversation_visibility: visibility).perform
   end
 
   it 'returns only in-funnel (open) cards when result=open' do
@@ -64,7 +67,7 @@ RSpec.describe Crm::Cards::FilterQuery do
 
   describe 'campaign and label filters' do
     def perform_with(params)
-      described_class.new(scope: account.crm_cards, params: params).perform
+      described_class.new(scope: account.crm_cards, params: params, conversation_visibility: visibility).perform
     end
 
     def create_conversation(inbox:, campaign_source_ids: nil, labels: nil, contact_labels: nil)
@@ -145,6 +148,92 @@ RSpec.describe Crm::Cards::FilterQuery do
       create_card(conversation: create_conversation(inbox: inbox), title: 'Sem etiqueta de campanha')
 
       expect(perform_with(label_ids: lote.id.to_s)).to contain_exactly(matched)
+    end
+  end
+
+  describe 'company filters and search' do
+    def perform_with(params)
+      described_class.new(scope: account.crm_cards, params: params, conversation_visibility: visibility).perform
+    end
+
+    def create_company_card(metadata: {}, title: 'Oportunidade', contact: nil)
+      pipeline, stage = create_crm_pipeline(account: account, user: user, name: "Funil #{SecureRandom.hex(3)}")
+      account.crm_cards.create!(
+        pipeline: pipeline,
+        stage: stage,
+        title: title,
+        contact: contact,
+        metadata: metadata
+      )
+    end
+
+    it 'filters by the resolved prospecting company before the contact fallback' do
+      contact_company = create(:company, account: account, name: 'Empresa do contato')
+      prospecting_company = create(:company, account: account, name: 'Empresa da prospecção')
+      contact = account.contacts.create!(name: 'Pessoa', company: contact_company)
+      card = create_company_card(
+        contact: contact,
+        metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => prospecting_company.id } } }
+      )
+
+      expect(perform_with(company_id: prospecting_company.id.to_s)).to contain_exactly(card)
+      expect(perform_with(company_id: contact_company.id.to_s)).to be_empty
+    end
+
+    it 'supports the explicit no-company filter' do
+      company = create(:company, account: account, name: 'Com empresa')
+      contact = account.contacts.create!(name: 'Pessoa', company: company)
+      create_company_card(contact: contact)
+      no_company_card = create_company_card(title: 'Sem empresa')
+
+      expect(perform_with(company_id: 'none')).to contain_exactly(no_company_card)
+    end
+
+    it 'searches title, contact and the resolved company' do
+      company = create(:company, account: account, name: 'Acme Energia')
+      contact = account.contacts.create!(name: 'Mariana Pessoa', phone_number: '+5511987654321', company: company)
+      title_card = create_company_card(title: 'Renovação anual')
+      contact_card = create_company_card(contact: contact, title: 'Oportunidade')
+      company_card = create_company_card(
+        title: 'Prospecção',
+        metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => company.id } } }
+      )
+
+      expect(perform_with(search: 'Renovação')).to include(title_card)
+      expect(perform_with(search: 'Mariana')).to include(contact_card)
+      expect(perform_with(search: 'Acme Energia')).to contain_exactly(contact_card, company_card)
+    end
+
+    it 'does not match a foreign account company by id or search' do
+      foreign_company = create(:company, account: create(:account), name: 'Empresa privada')
+      contact_company = create(:company, account: account, name: 'Empresa do contato')
+      contact = account.contacts.create!(name: 'Pessoa', company: contact_company)
+      card = create_company_card(
+        contact: contact,
+        metadata: { 'autonomia_prospecting' => { 'company' => { 'id' => foreign_company.id } } }
+      )
+
+      expect(perform_with(company_id: foreign_company.id.to_s)).not_to include(card)
+      expect(perform_with(company_id: contact_company.id.to_s)).not_to include(card)
+      expect(perform_with(search: 'Empresa privada')).not_to include(card)
+      expect(perform_with(search: 'Empresa do contato')).not_to include(card)
+      expect(perform_with(company_id: 'none')).to include(card)
+    end
+  end
+
+  describe 'score range' do
+    def perform_with(params)
+      described_class.new(scope: account.crm_cards, params: params, conversation_visibility: visibility).perform
+    end
+
+    it 'filters the list by inclusive score range' do
+      pipeline, stage = create_crm_pipeline(account: account, user: user)
+      low = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Baixo', score: 20)
+      middle = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Médio', score: 60)
+      high = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Alto', score: 90)
+
+      expect(perform_with(score_min: '60', score_max: '90')).to contain_exactly(middle, high)
+      expect(perform_with(score_min: '0')).to include(low, middle, high)
     end
   end
 end

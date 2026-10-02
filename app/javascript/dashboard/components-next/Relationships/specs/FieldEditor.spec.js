@@ -270,3 +270,49 @@ beforeEach(() => {
 afterEach(() => {
   window.axios = originalDashboardClient;
 });
+
+it('exposes only changed drafts and clears them explicitly without a write', async () => {
+  const wrapper = mountField('text', 'before');
+  await click(wrapper, 'RELATIONSHIPS.EDIT');
+  expect(wrapper.vm.dirty).toBe(false);
+  await wrapper.find('input').setValue('unsaved');
+  expect(wrapper.vm.dirty).toBe(true);
+  wrapper.vm.reset();
+  await wrapper.vm.$nextTick();
+  expect(wrapper.vm.dirty).toBe(false);
+  expect(wrapper.find('input').exists()).toBe(false);
+  expect(axios.patch).not.toHaveBeenCalled();
+  wrapper.unmount();
+});
+it('reports confirmed field writes to the CRM only after persistence', async () => {
+  axios.patch.mockResolvedValue({
+    data: { custom_attributes: { job_title: 5 } },
+  });
+  const wrapper = mountField('number', 0);
+  await click(wrapper, 'RELATIONSHIPS.EDIT');
+  await wrapper.find('input').setValue('5');
+  await click(wrapper, 'RELATIONSHIPS.SAVE');
+  await flushPromises();
+  expect(wrapper.emitted('saved')[0][0]).toEqual({
+    entity: 'contact',
+    id: 42,
+    key: 'job_title',
+    value: 5,
+  });
+  expect(wrapper.vm.dirty).toBe(false);
+  expect(wrapper.vm.busy).toBe(false);
+  wrapper.unmount();
+});
+it('hides value mutation controls for a read-only embedded viewer', async () => {
+  const wrapper = mountField('text', 'visible');
+  await wrapper.setProps({ readOnly: true });
+  expect(wrapper.find('button[aria-label="RELATIONSHIPS.EDIT"]').exists()).toBe(
+    false
+  );
+  expect(
+    wrapper.find('button[aria-label="RELATIONSHIPS.CLEAR"]').exists()
+  ).toBe(false);
+  expect(wrapper.text()).toContain('visible');
+  expect(axios.patch).not.toHaveBeenCalled();
+  wrapper.unmount();
+});

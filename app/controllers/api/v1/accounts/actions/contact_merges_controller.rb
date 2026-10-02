@@ -3,6 +3,8 @@ class Api::V1::Accounts::Actions::ContactMergesController < Api::V1::Accounts::B
   before_action :set_mergee_contact, only: [:create]
 
   def create
+    authorize @base_contact, :update?
+    authorize @mergee_contact, :update?
     contact_merge_action = ContactMergeAction.new(
       account: Current.account,
       base_contact: @base_contact,

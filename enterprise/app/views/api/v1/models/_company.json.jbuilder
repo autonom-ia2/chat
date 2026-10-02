@@ -3,6 +3,8 @@ json.name resource.name
 json.contacts_count resource.contacts_count
 json.domain resource.domain
 json.description resource.description
+# Only the supported public company detail; unrelated stored metadata stays private.
+json.additional_attributes resource.additional_attributes.to_h.slice('city')
 json.custom_attributes resource.custom_attributes
 json.avatar_url resource.avatar_url
 json.last_activity_at resource.last_activity_at.to_i if resource[:last_activity_at].present?

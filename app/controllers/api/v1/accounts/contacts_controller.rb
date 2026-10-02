@@ -28,11 +28,7 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   def search
     render json: { error: 'Specify search string with parameter q' }, status: :unprocessable_entity if params[:q].blank? && return
 
-    contacts = Current.account.contacts.where(
-      'name ILIKE :search OR email ILIKE :search OR phone_number ILIKE :search OR contacts.identifier LIKE :search',
-      search: "%#{params[:q].strip}%"
-    )
-    @contacts = fetch_contacts_with_has_more(contacts)
+    @contacts = fetch_contacts_with_has_more(contact_search_scope)
   end
 
   def import
@@ -123,6 +119,12 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  # Enterprise extends only the explicit include_company search used by the CRM picker.
+  def contact_search_scope
+    Current.account.contacts.where('name ILIKE :search OR email ILIKE :search OR phone_number ILIKE :search OR contacts.identifier LIKE :search',
+                                   search: "%#{params[:q].strip}%")
+  end
 
   # TODO: Move this to a finder class
   def resolved_contacts

@@ -23,6 +23,7 @@ const props = defineProps({
   companyId: { type: Number, default: null },
   contactId: { type: Number, default: null },
   expanded: { type: Boolean, default: false },
+  embedded: { type: Boolean, default: false },
 });
 const emit = defineEmits(['expand', 'collapse']);
 const { accountId } = useAccount();
@@ -145,20 +146,23 @@ const load = async () => {
     if (current === generation) loading.value = false;
   }
 };
+// Embedded CRM filters must not replace the opportunity route or query.
+const persistFilters = () => {
+  if (!props.embedded)
+    router.replace({
+      query: { ...route.query, media: JSON.stringify(appliedFilters.value) },
+    });
+};
 const apply = () => {
   filters.value.page = 1;
   appliedFilters.value = { ...filters.value };
-  router.replace({
-    query: { ...route.query, media: JSON.stringify(appliedFilters.value) },
-  });
+  persistFilters();
   load();
 };
 const changePage = amount => {
   appliedFilters.value.page += amount;
   filters.value.page = appliedFilters.value.page;
-  router.replace({
-    query: { ...route.query, media: JSON.stringify(appliedFilters.value) },
-  });
+  persistFilters();
   load();
 };
 const closeContacts = () => {
@@ -178,7 +182,7 @@ const clear = () => {
   apply();
 };
 const openAll = () => {
-  if (props.contactId) {
+  if (props.embedded || props.contactId) {
     emit('expand');
     return;
   }
@@ -188,15 +192,19 @@ const openAll = () => {
     query: { media: JSON.stringify(appliedFilters.value) },
   });
 };
-const openOrigin = row =>
-  router.push({
+const openOrigin = row => {
+  const target = {
     name: 'inbox_conversation',
     params: {
       accountId: accountId.value,
       conversation_id: row.conversation_id,
     },
     query: { messageId: row.message_id },
-  });
+  };
+  if (props.embedded)
+    window.open(router.resolve(target).href, '_blank', 'noopener,noreferrer');
+  else router.push(target);
+};
 const download = async (row, inline = false) => {
   actionError.value = null;
   const current = actionGeneration;
@@ -227,7 +235,7 @@ watch(
     contactQuery.value = '';
     if (!props.contactId) findContacts();
     filters.value = cleanFilters();
-    if (typeof route.query.media === 'string') {
+    if (!props.embedded && typeof route.query.media === 'string') {
       try {
         const parsed = JSON.parse(route.query.media);
         Object.keys(filters.value).forEach(key => {
@@ -268,7 +276,7 @@ onBeforeUnmount(() => {
 <template>
   <section
     class="flex min-w-0 flex-col gap-4"
-    :class="expanded && !contactId ? 'py-4' : 'p-4'"
+    :class="expanded && !contactId && !embedded ? 'py-4' : 'p-4'"
   >
     <header class="flex min-w-0 flex-wrap items-start justify-between gap-2">
       <div class="min-w-0">
@@ -286,7 +294,7 @@ onBeforeUnmount(() => {
         </p>
       </div>
       <Button
-        v-if="contactId && expanded"
+        v-if="(contactId || embedded) && expanded"
         type="button"
         sm
         ghost
@@ -355,7 +363,9 @@ onBeforeUnmount(() => {
         v-if="showFilters"
         :id="`${inputId}-filters`"
         class="grid min-w-0 grid-cols-1 gap-3 rounded-xl border border-n-weak bg-n-alpha-black2 p-3"
-        :class="{ 'md:grid-cols-2 xl:grid-cols-4': expanded && !contactId }"
+        :class="{
+          'md:grid-cols-2 xl:grid-cols-4': expanded && !contactId && !embedded,
+        }"
       >
         <label
           class="flex min-w-0 flex-col gap-2 text-xs font-medium text-n-slate-11"
@@ -475,7 +485,7 @@ onBeforeUnmount(() => {
     </div>
     <template v-else>
       <div
-        v-if="expanded && !contactId"
+        v-if="expanded && !contactId && !embedded"
         class="min-w-0 overflow-x-auto rounded-xl border border-n-weak px-3"
       >
         <BaseTable :headers="headers" :items="rows" class="text-sm">
@@ -524,6 +534,8 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="py-3 pe-4">
                   <RouterLink
+                    :target="embedded ? '_blank' : undefined"
+                    :rel="embedded ? 'noopener noreferrer' : undefined"
                     :to="{
                       name: 'contacts_edit',
                       params: { accountId, contactId: row.contact.id },
@@ -573,56 +585,68 @@ onBeforeUnmount(() => {
         v-else
         class="m-0 flex min-w-0 list-none flex-col divide-y divide-n-weak p-0"
       >
-        <li
-          v-for="row in rows"
-          :key="row.id"
-          class="flex min-w-0 gap-3 py-4 first:pt-0"
-        >
-          <MediaThumbnail
-            :url="`${base}/${row.id}/preview`"
-            :name="row.filename"
-            :type="row.file_type"
-            class="rounded-lg bg-n-alpha-black2"
-          />
-          <div class="min-w-0 flex-1">
-            <p
-              class="m-0 truncate text-sm font-medium text-n-slate-12"
-              :title="row.filename"
-            >
-              {{ row.filename }}
-            </p>
-            <p class="mb-1 mt-1 text-xs text-n-slate-11">
-              {{
-                t('RELATIONSHIPS.MEDIA.METADATA', {
-                  type: t(`RELATIONSHIPS.MEDIA.${mediaTypeKey(row)}`),
-                  size: formatMediaSize(row.byte_size, locale),
-                })
-              }}
-            </p>
-            <RouterLink
-              class="block truncate text-xs text-n-blue-11 hover:underline"
-              :title="row.contact.name"
-              :to="{
-                name: 'contacts_edit',
-                params: { accountId, contactId: row.contact.id },
-              }"
-            >
-              {{ row.contact.name }}
-            </RouterLink>
-            <time
-              :datetime="row.created_at"
-              class="mt-1 block text-xs text-n-slate-11"
-            >
-              {{ formatMediaDate(row.created_at, locale) }}
-            </time>
-            <CompanyMediaActions
-              class="mt-2"
-              @preview="download(row, true)"
-              @download="download(row)"
-              @origin="openOrigin(row)"
+        <template v-for="group in groups" :key="group.key">
+          <li
+            v-if="embedded && appliedFilters.group === 'contact'"
+            data-media-group
+            class="bg-n-alpha-black2 px-3 py-3 text-sm font-semibold text-n-slate-12"
+          >
+            {{ group.contact.name }}
+          </li>
+          <li
+            v-for="row in group.rows"
+            :key="row.id"
+            data-media-row
+            class="flex min-w-0 gap-3 py-4 first:pt-0"
+          >
+            <MediaThumbnail
+              :url="`${base}/${row.id}/preview`"
+              :name="row.filename"
+              :type="row.file_type"
+              class="rounded-lg bg-n-alpha-black2"
             />
-          </div>
-        </li>
+            <div class="min-w-0 flex-1">
+              <p
+                class="m-0 truncate text-sm font-medium text-n-slate-12"
+                :title="row.filename"
+              >
+                {{ row.filename }}
+              </p>
+              <p class="mb-1 mt-1 text-xs text-n-slate-11">
+                {{
+                  t('RELATIONSHIPS.MEDIA.METADATA', {
+                    type: t(`RELATIONSHIPS.MEDIA.${mediaTypeKey(row)}`),
+                    size: formatMediaSize(row.byte_size, locale),
+                  })
+                }}
+              </p>
+              <RouterLink
+                :target="embedded ? '_blank' : undefined"
+                :rel="embedded ? 'noopener noreferrer' : undefined"
+                class="block truncate text-xs text-n-blue-11 hover:underline"
+                :title="row.contact.name"
+                :to="{
+                  name: 'contacts_edit',
+                  params: { accountId, contactId: row.contact.id },
+                }"
+              >
+                {{ row.contact.name }}
+              </RouterLink>
+              <time
+                :datetime="row.created_at"
+                class="mt-1 block text-xs text-n-slate-11"
+              >
+                {{ formatMediaDate(row.created_at, locale) }}
+              </time>
+              <CompanyMediaActions
+                class="mt-2"
+                @preview="download(row, true)"
+                @download="download(row)"
+                @origin="openOrigin(row)"
+              />
+            </div>
+          </li>
+        </template>
       </ul>
     </template>
     <div

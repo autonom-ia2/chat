@@ -40,7 +40,7 @@ class Api::V1::Accounts::BulkActionsController < Api::V1::Accounts::BaseControll
   end
 
   def check_authorization_for_contact_action
-    authorize(Contact, :destroy?) if delete_contact_action?
+    authorize(Contact, delete_contact_action? ? :destroy? : :update?)
   end
 
   def conversation_params

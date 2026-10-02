@@ -203,6 +203,8 @@ Rails.application.routes.draw do
           resources :ctwa_campaigns, only: [:index]
           resources :ctwa_tracked_links, only: [:index, :create, :destroy]
           namespace :crm do
+            get 'contacts/:contact_id/opportunities', to: 'contact_opportunities#index'
+            get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
               resources :stages, only: [:index, :create]
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
@@ -220,6 +222,7 @@ Rails.application.routes.draw do
             post 'cards/bulk', to: 'cards/bulk#create'
             get 'cards/summaries', to: 'cards/summaries#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
+              resource :contact, only: [:create], controller: 'cards/contacts'
               post :from_conversation, on: :collection
               get :export, on: :collection
               member do

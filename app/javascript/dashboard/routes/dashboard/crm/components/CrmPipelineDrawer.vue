@@ -588,6 +588,7 @@ useFixedPanelPresence(computed(() => props.show));
   >
     <div
       v-if="show"
+      data-crm-pipeline-drawer
       class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:border-l rtl:border-r"
     >
       <div

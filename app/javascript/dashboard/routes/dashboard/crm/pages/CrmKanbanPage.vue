@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -9,6 +9,7 @@ import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
+import CompanyAPI from 'dashboard/api/companies';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import Draggable from 'vuedraggable';
@@ -20,7 +21,9 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
+import CrmKanbanFiltersDrawer from '../components/CrmKanbanFiltersDrawer.vue';
 import CrmCardDrawer from '../components/CrmCardDrawer.vue';
+import CrmOpportunityFromContact from '../components/CrmOpportunityFromContact.vue';
 import CrmPipelineDrawer from '../components/CrmPipelineDrawer.vue';
 import CrmInboxSettingsDrawer from '../components/CrmInboxSettingsDrawer.vue';
 import CrmBookingProfilesDrawer from '../components/CrmBookingProfilesDrawer.vue';
@@ -65,6 +68,7 @@ const teams = useMapGetter('teams/getTeams');
 const accountLabels = useMapGetter('labels/getLabels');
 const {
   canManageCards,
+  canViewCrm,
   canMoveCards,
   canManagePipelines,
   canManageAi,
@@ -94,6 +98,7 @@ watch(isCalendarOnly, only => {
 const filters = ref({ ...storedFilters.value });
 const drawerMode = ref('create');
 const selectedCard = ref(null);
+const creationContact = ref(null);
 const showDrawer = ref(false);
 // Which tab the card drawer lands on when opened ('followups' from the calendar
 // quick-add "Continuar"; null → default summary).
@@ -231,6 +236,14 @@ const labelOptions = computed(() =>
 // do endpoint único /ctwa_campaigns. `value` fica String — source_id de anúncio
 // Meta estoura Number.MAX_SAFE_INTEGER, então nada de coerção numérica.
 const campaignOptions = ref([]);
+const companyOptions = ref([]);
+const companySearch = ref('');
+const companyLoading = ref(false);
+const companyFilterAvailable = ref(true);
+const selectedCompanyOption = ref(null);
+let companySearchTimer = null;
+let companySearchRequestSeq = 0;
+let selectedCompanyRequestSeq = 0;
 const campaignFilterOptions = computed(() =>
   campaignOptions.value.map(option => ({
     value: String(option.source_id),
@@ -238,6 +251,21 @@ const campaignFilterOptions = computed(() =>
     count: option.count,
   }))
 );
+const companyFilterOptions = computed(() => {
+  const options = [
+    { value: '', label: t('CRM_KANBAN.FILTERS.ALL_COMPANIES') },
+    { value: 'none', label: t('CRM_KANBAN.FILTERS.NO_COMPANY') },
+    ...companyOptions.value,
+  ];
+  const selected = selectedCompanyOption.value;
+  if (
+    selected &&
+    !options.some(item => String(item.value) === String(selected.value))
+  ) {
+    options.push(selected);
+  }
+  return options;
+});
 
 const loadCampaignOptions = async () => {
   try {
@@ -248,6 +276,96 @@ const loadCampaignOptions = async () => {
     campaignOptions.value = [];
   }
 };
+
+const loadCompanyOptions = async query => {
+  const term = String(query || '').trim();
+  companySearchRequestSeq += 1;
+  const requestSeq = companySearchRequestSeq;
+  if (!term) {
+    companyOptions.value = [];
+    companyFilterAvailable.value = true;
+    companyLoading.value = false;
+    return;
+  }
+
+  companyLoading.value = true;
+  try {
+    const response = await CompanyAPI.search(term, 1, 'name');
+    if (requestSeq !== companySearchRequestSeq) return;
+    companyOptions.value = (response.data.payload || []).map(company => ({
+      value: company.id,
+      label: company.name,
+    }));
+    companyFilterAvailable.value = true;
+  } catch (error) {
+    if (requestSeq !== companySearchRequestSeq) return;
+    // Company search is permission/feature scoped. Keep the filter explicit
+    // when the account cannot use it instead of presenting an empty fake list.
+    companyOptions.value = [];
+    companyFilterAvailable.value = filters.value.companyId
+      ? true
+      : ![403, 404].includes(error?.response?.status);
+  } finally {
+    if (requestSeq === companySearchRequestSeq) companyLoading.value = false;
+  }
+};
+
+const loadSelectedCompanyOption = async companyId => {
+  const id = String(companyId || '').trim();
+  selectedCompanyRequestSeq += 1;
+  const requestSeq = selectedCompanyRequestSeq;
+  if (!id || id === 'none') {
+    selectedCompanyOption.value = null;
+    return;
+  }
+
+  const fromSearch = companyOptions.value.find(
+    option => String(option.value) === id
+  );
+  if (fromSearch) {
+    selectedCompanyOption.value = fromSearch;
+    return;
+  }
+
+  try {
+    const response = await CompanyAPI.show(id);
+    if (requestSeq !== selectedCompanyRequestSeq) return;
+    const company = response.data.payload;
+    if (company?.id == null || String(company.id) !== id) {
+      selectedCompanyOption.value = {
+        value: id,
+        label: t('CRM_KANBAN.FILTERS.SELECTED_COMPANY_FALLBACK', { id }),
+      };
+      return;
+    }
+    selectedCompanyOption.value = {
+      value: company.id,
+      label:
+        company.name ||
+        t('CRM_KANBAN.FILTERS.SELECTED_COMPANY_FALLBACK', { id }),
+    };
+  } catch {
+    if (requestSeq !== selectedCompanyRequestSeq) return;
+    // Keep the previous canonical option when a refresh fails. The active
+    // company filter must never silently fall back to "all companies".
+    selectedCompanyOption.value = {
+      value: id,
+      label: t('CRM_KANBAN.FILTERS.SELECTED_COMPANY_FALLBACK', { id }),
+    };
+  }
+};
+
+const onCompanySearch = query => {
+  companySearch.value = query;
+  if (companySearchTimer) clearTimeout(companySearchTimer);
+  companySearchTimer = setTimeout(() => loadCompanyOptions(query), 250);
+};
+
+watch(
+  () => filters.value.companyId,
+  companyId => loadSelectedCompanyOption(companyId),
+  { immediate: true }
+);
 
 // The Meta conversion column is only relevant for accounts running Click-to-WhatsApp
 // ads, so campaignOptions doubles as the gate. Fetch the ledger status for the cards
@@ -295,46 +413,79 @@ const cardsListWithMeta = computed(() =>
 
 watch(cardsList, loadMetaConversions);
 
-const filtersPopover = ref(null);
+const showFiltersDrawer = ref(false);
+const configurationPopover = ref(null);
+const movePopoverRefs = new Map();
+const selectedMoveCard = ref(null);
+const selectedMoveSourceStage = ref(null);
+const moveStageId = ref('');
 
-// Toggle a stage id in the multi-select stage filter.
-const toggleStageFilter = stageId => {
-  const current = filters.value.stageIds || [];
-  filters.value.stageIds = current.some(id => Number(id) === Number(stageId))
-    ? current.filter(id => Number(id) !== Number(stageId))
-    : [...current, stageId];
+const moveStageOptions = computed(() => {
+  const sourceStageId = selectedMoveSourceStage.value?.id;
+  return stages.value
+    .filter(stage => String(stage.id) !== String(sourceStageId))
+    .map(stage => ({ value: stage.id, label: stage.name }));
+});
+
+const registerMovePopover = (cardId, instance) => {
+  if (instance) movePopoverRefs.set(String(cardId), instance);
+  else movePopoverRefs.delete(String(cardId));
 };
 
-const isStageSelected = stageId =>
-  (filters.value.stageIds || []).some(id => Number(id) === Number(stageId));
-
-// Toggle a label id in the multi-select label filter (same Number-compare
-// contract as stages: label ids are plain integers).
-const toggleLabelFilter = labelId => {
-  const current = filters.value.labelIds || [];
-  filters.value.labelIds = current.some(id => Number(id) === Number(labelId))
-    ? current.filter(id => Number(id) !== Number(labelId))
-    : [...current, labelId];
+// Keyboard path: the picker takes focus when it opens and hands it back to the
+// card's "Move" button when it closes, unless the user already moved focus
+// elsewhere (e.g. clicked another control).
+let movePickerEl = null;
+let moveReturnFocusEl = null;
+const setMovePickerEl = el => {
+  movePickerEl = el;
 };
 
-const isLabelSelected = labelId =>
-  (filters.value.labelIds || []).some(id => Number(id) === Number(labelId));
-
-// Toggle de campanha por source_id — comparação SEMPRE por String (ids Meta
-// não cabem em Number com segurança).
-const toggleCampaignFilter = sourceId => {
-  const current = filters.value.campaignSourceIds || [];
-  filters.value.campaignSourceIds = current.some(
-    id => String(id) === String(sourceId)
-  )
-    ? current.filter(id => String(id) !== String(sourceId))
-    : [...current, String(sourceId)];
+const restoreMoveFocus = () => {
+  const target = moveReturnFocusEl;
+  moveReturnFocusEl = null;
+  if (!target?.isConnected) return;
+  const focused = document.activeElement;
+  const focusWasInPicker =
+    !focused || focused === document.body || movePickerEl?.contains(focused);
+  if (focusWasInPicker) target.focus();
 };
 
-const isCampaignSelected = sourceId =>
-  (filters.value.campaignSourceIds || []).some(
-    id => String(id) === String(sourceId)
-  );
+const resetMoveSelection = () => {
+  restoreMoveFocus();
+  selectedMoveCard.value = null;
+  selectedMoveSourceStage.value = null;
+  moveStageId.value = '';
+};
+
+const openMoveFromBoard = async (card, sourceStage, trigger = null) => {
+  if (!canMoveCards.value || !card?.id) return;
+
+  selectedMoveCard.value = card;
+  selectedMoveSourceStage.value = sourceStage;
+  moveStageId.value = '';
+  moveReturnFocusEl = trigger;
+  await nextTick();
+  await movePopoverRefs.get(String(card.id))?.show();
+  await nextTick();
+  movePickerEl?.querySelector('[role="combobox"]')?.focus();
+};
+
+const onMoveStageSelected = async (stageId, hide) => {
+  const card = selectedMoveCard.value;
+  if (!card?.id || !stageId) return;
+
+  hide();
+  try {
+    await store.dispatch('crmKanban/moveCard', {
+      cardId: card.id,
+      stageId,
+    });
+    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVED'));
+  } catch {
+    useAlert(t('CRM_KANBAN.ALERTS.CARD_MOVE_ERROR'));
+  }
+};
 
 const labelForOption = (options, value) =>
   options.value.find(option => String(option.value) === String(value))?.label ||
@@ -360,6 +511,12 @@ const activeFilterChips = computed(() => {
     chips.push({
       key: 'ownerId',
       label: `${t('CRM_KANBAN.FILTERS.OWNER')}: ${labelForOption(agentOptions, f.ownerId)}`,
+    });
+  }
+  if (f.companyId) {
+    chips.push({
+      key: 'companyId',
+      label: `${t('CRM_KANBAN.FILTERS.COMPANY')}: ${labelForOption(companyFilterOptions, f.companyId)}`,
     });
   }
   if (f.priority) {
@@ -436,6 +593,14 @@ const activeFilterChips = computed(() => {
     chips.push({
       key: 'value',
       label: `${t('CRM_KANBAN.FILTERS.VALUE_RANGE')}: ${min} – ${max}`,
+    });
+  }
+  if (f.scoreMin !== '' || f.scoreMax !== '') {
+    const min = f.scoreMin === '' ? '…' : f.scoreMin;
+    const max = f.scoreMax === '' ? '…' : f.scoreMax;
+    chips.push({
+      key: 'score',
+      label: `${t('CRM_KANBAN.FILTERS.SCORE_RANGE')}: ${min} – ${max}`,
     });
   }
   if (f.staleDays) {
@@ -646,9 +811,24 @@ const selectResult = async value => {
   await applyFilters();
 };
 
-const applyFiltersFromPopover = async () => {
-  filtersPopover.value?.hide();
+const applyFiltersFromDrawer = async nextFilters => {
+  filters.value = nextFilters;
+  showFiltersDrawer.value = false;
   await applyFilters();
+};
+
+const clearFiltersFromDrawer = async () => {
+  showFiltersDrawer.value = false;
+  await clearFilters();
+};
+
+const closeConfiguration = () => {
+  configurationPopover.value?.hide();
+};
+
+const runConfigurationAction = action => {
+  closeConfiguration();
+  action();
 };
 
 const removeFilterChip = async key => {
@@ -656,6 +836,9 @@ const removeFilterChip = async key => {
   if (key === 'value') {
     filters.value.valueMin = defaults.valueMin;
     filters.value.valueMax = defaults.valueMax;
+  } else if (key === 'score') {
+    filters.value.scoreMin = defaults.scoreMin;
+    filters.value.scoreMax = defaults.scoreMax;
   } else {
     filters.value[key] = defaults[key];
   }
@@ -902,10 +1085,6 @@ const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
 };
 
-// Rótulo do filtro de campanha com a contagem, fora do template para não deixar
-// texto solto sem i18n na marcação.
-const campaignFilterLabel = campaign => `${campaign.label} (${campaign.count})`;
-
 const deleteStageErrorMessage = error => {
   const code = error?.response?.data?.error;
   return t(
@@ -954,7 +1133,14 @@ const deleteStage = async stage => {
   }
 };
 
+const clearContactCreationIntent = () => {
+  if (route.query.new_contact_id === undefined) return;
+  const { new_contact_id: _intent, ...query } = route.query;
+  router.replace({ query });
+};
 const openCreateDrawer = () => {
+  creationContact.value = null;
+  clearContactCreationIntent();
   selectedCard.value = null;
   drawerInitialTab.value = null;
   drawerMode.value = 'create';
@@ -999,8 +1185,18 @@ const openRouteCardIfNeeded = async () => {
   const cardId = route.query.card_id;
   if (!cardId || openedRouteCardId.value === String(cardId)) return;
 
+  const originAccount = route.params.accountId;
   openedRouteCardId.value = String(cardId);
   await openCardDrawer({ id: Number(cardId) });
+  const card = selectedCard.value;
+  if (originAccount !== route.params.accountId || card?.id !== Number(cardId))
+    return;
+  // A profile lists opportunities across funnels. Align the board and its stage
+  // options only after the card has been authorized and loaded by the real API.
+  // Never inject an unavailable/archived pipeline into the native selector.
+  if (pipelines.value.some(pipeline => pipeline.id === card.pipeline_id)) {
+    currentPipelineId.value = card.pipeline_id;
+  }
 };
 
 const closeDrawer = () => {
@@ -1010,7 +1206,8 @@ const closeDrawer = () => {
 
 // Re-fetch the open card after a child action mutated it server-side (e.g. the
 // AI auto-follow-up RESET re-arms the cadence). Mirrors the closeCardDeal
-// refresh pattern and also reloads the follow-ups list shown in the drawer.
+// refresh pattern, reloads the follow-ups list shown in the drawer, and keeps
+// the active board/list/calendar in sync with contact and company edits.
 const refreshSelectedCard = async () => {
   const cardId = selectedCard.value?.id;
   if (!cardId) return;
@@ -1021,13 +1218,18 @@ const refreshSelectedCard = async () => {
     ]);
     if (detailedCard && selectedCard.value?.id === cardId) {
       selectedCard.value = detailedCard;
+      // Contact/company edits can affect every opportunity linked to the same
+      // contact and the active company filter. Refresh the current view so the
+      // board, list, and calendar do not keep stale identity data.
+      await loadActiveView(true);
     }
   } catch {
     useAlert(t('CRM_KANBAN.ALERTS.CARD_LOAD_ERROR'));
   }
 };
 
-const saveCard = async payload => {
+const saveCard = async (payload, failed) => {
+  const originAccount = String(route.params.accountId);
   try {
     if (drawerMode.value === 'edit') {
       await store.dispatch('crmKanban/updateCard', {
@@ -1036,16 +1238,49 @@ const saveCard = async payload => {
       });
       useAlert(t('CRM_KANBAN.ALERTS.CARD_UPDATED'));
     } else {
-      await store.dispatch('crmKanban/createCard', payload);
+      const created = await store.dispatch('crmKanban/createCard', payload);
+      if (originAccount !== String(route.params.accountId)) return;
       useAlert(t('CRM_KANBAN.ALERTS.CARD_CREATED'));
+      const changedPipeline =
+        String(currentPipelineId.value) !== String(created.pipeline_id);
+      if (changedPipeline) currentPipelineId.value = created.pipeline_id;
+      await openCardDrawer(created, {
+        initialTab: created.contact_id ? 'contact' : 'summary',
+      });
+      if (!changedPipeline) await loadActiveView(true);
+      return;
     }
     closeDrawer();
-  } catch {
+  } catch (error) {
+    if (originAccount !== String(route.params.accountId)) return;
+    failed?.(error);
     useAlert(t('CRM_KANBAN.ALERTS.CARD_SAVE_ERROR'));
   }
 };
 
 const cardDrawerRef = ref(null);
+const openOpportunityForContact = contact => {
+  const open = () => {
+    openCreateDrawer();
+    creationContact.value = contact;
+  };
+  if (showDrawer.value)
+    cardDrawerRef.value?.guardNavigation(open, { leaving: true });
+  else open();
+};
+
+const openCardFromBoard = card => {
+  const sameCard =
+    drawerMode.value === 'edit' && selectedCard.value?.id === card?.id;
+  if (showDrawer.value && !sameCard) {
+    // Switching cards leaves the open one: its unsaved drafts must be confirmed.
+    cardDrawerRef.value?.guardNavigation(() => openCardDrawer(card), {
+      leaving: true,
+    });
+    return;
+  }
+  openCardDrawer(card);
+};
 
 // Follow-up CRUD from the card drawer mutates the calendar's data source, so
 // keep the calendar in sync when it's the active view (it reads a separate
@@ -1708,76 +1943,147 @@ onMounted(async () => {
   }
   await openRouteCardIfNeeded();
 });
+
+onUnmounted(() => {
+  if (companySearchTimer) clearTimeout(companySearchTimer);
+  movePopoverRefs.clear();
+});
 </script>
 
 <template>
   <main class="flex h-full min-w-0 flex-col overflow-hidden bg-n-background">
+    <CrmOpportunityFromContact
+      v-if="route.query.new_contact_id !== undefined"
+      :ready="Boolean(currentPipelineId && stages.length && !isLoading)"
+      :can-manage="canManageCards && canViewCrm"
+      @open="openOpportunityForContact"
+      @cancel="clearContactCreationIntent"
+    />
     <header
-      class="flex flex-col gap-3 border-b border-n-weak px-8 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between"
+      class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak px-6 py-3 sm:px-8"
     >
-      <div class="min-w-0">
+      <div class="flex min-w-0 flex-wrap items-center gap-4">
         <h1 class="mb-0 text-2xl font-medium text-n-slate-12">
           {{
             isCalendarOnly ? t('SIDEBAR.CRM_CALENDAR') : t('CRM_KANBAN.TITLE')
           }}
         </h1>
-      </div>
-      <div class="flex shrink-0 flex-wrap items-center gap-2">
         <div
           v-if="!isCalendarOnly"
           class="flex items-center rounded-lg bg-n-alpha-black2 p-1"
+          role="group"
+          :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
           <button
             v-for="mode in viewModeOptions"
             :key="mode.id"
             type="button"
-            class="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12"
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               viewMode === mode.id
                 ? 'bg-n-surface-2 text-n-slate-12 shadow-sm'
                 : ''
             "
+            :aria-pressed="viewMode === mode.id"
             @click="setViewMode(mode.id)"
           >
-            <span :class="mode.icon" class="size-3.5" />
+            <span :class="mode.icon" class="size-3.5" aria-hidden="true" />
             {{ mode.label }}
           </button>
         </div>
+      </div>
+
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
         <Button
           icon="i-lucide-refresh-cw"
           slate
           faded
           :title="t('CRM_KANBAN.ACTIONS.REFRESH')"
+          :aria-label="t('CRM_KANBAN.ACTIONS.REFRESH')"
           :disabled="isLoading"
           @click="refreshData"
         />
         <Button
-          v-if="canManagePipelines"
-          :label="t('CRM_KANBAN.ACTIONS.INBOX_SETTINGS')"
-          icon="i-lucide-shield-check"
-          slate
-          faded
-          :disabled="isLoading"
-          @click="openInboxSettingsDrawer"
+          v-if="canManageCards && viewMode !== 'calendar'"
+          :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
+          icon="i-lucide-plus"
+          :disabled="!hasPipelines || isLoading"
+          class="order-2"
+          @click="openCreateDrawer"
         />
-        <Button
-          v-if="canManagePipelines && isMeetingFeatureEnabled"
-          :label="t('CRM_KANBAN.BOOKING.ADMIN.ACTION')"
-          icon="i-lucide-calendar-clock"
-          slate
-          faded
-          :disabled="isLoading"
-          @click="openBookingProfilesDrawer"
-        />
-        <Button
-          v-if="canManagePipelines && !isCalendarOnly"
-          :label="t('CRM_KANBAN.ACTIONS.NEW_PIPELINE')"
-          icon="i-lucide-kanban"
-          slate
-          faded
-          :disabled="isLoading"
-          @click="openCreatePipelineDrawer"
-        />
+        <Popover
+          v-if="canManagePipelines || (!isCalendarOnly && canManageAi)"
+          ref="configurationPopover"
+          align="end"
+          class="order-1"
+        >
+          <template #default>
+            <Button
+              :label="t('CRM_KANBAN.ACTIONS.CONFIGURE')"
+              icon="i-lucide-settings-2"
+              slate
+              faded
+            />
+          </template>
+          <template #content>
+            <div class="grid w-72 gap-1 p-2">
+              <p
+                class="mb-1 px-2 py-1 text-xs font-medium uppercase tracking-wide text-n-slate-10"
+              >
+                {{ t('CRM_KANBAN.ACTIONS.CONFIGURE') }}
+              </p>
+              <Button
+                v-if="
+                  !isCalendarOnly &&
+                  selectedPipeline &&
+                  (canManagePipelines || canManageAi)
+                "
+                :label="t('CRM_KANBAN.ACTIONS.EDIT_PIPELINE')"
+                icon="i-lucide-pencil"
+                slate
+                ghost
+                start
+                class="w-full"
+                @click="runConfigurationAction(openEditPipelineDrawer)"
+              />
+              <Button
+                v-if="
+                  !isCalendarOnly &&
+                  selectedPipeline &&
+                  canManageAi &&
+                  isCrmAiEnabled
+                "
+                :label="t('CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS')"
+                icon="i-lucide-arrow-right-left"
+                slate
+                ghost
+                start
+                class="w-full"
+                @click="runConfigurationAction(openHandoffSettings)"
+              />
+              <Button
+                v-if="canManagePipelines"
+                :label="t('CRM_KANBAN.ACTIONS.INBOX_SETTINGS')"
+                icon="i-lucide-inbox"
+                slate
+                ghost
+                start
+                class="w-full"
+                @click="runConfigurationAction(openInboxSettingsDrawer)"
+              />
+              <Button
+                v-if="canManagePipelines && isMeetingFeatureEnabled"
+                :label="t('CRM_KANBAN.BOOKING.ADMIN.ACTION')"
+                icon="i-lucide-calendar-clock"
+                slate
+                ghost
+                start
+                class="w-full"
+                @click="runConfigurationAction(openBookingProfilesDrawer)"
+              />
+            </div>
+          </template>
+        </Popover>
       </div>
     </header>
 
@@ -1785,400 +2091,117 @@ onMounted(async () => {
       v-if="viewMode !== 'calendar'"
       class="flex flex-col gap-3 border-b border-n-weak px-8 py-4"
     >
-      <!-- Single control row: pipeline picker + Edit pipeline + search + 2
-           high-frequency selects + Filters popover + clear, with New card pushed
-           to the right. Keeps the header band to just the title + global actions. -->
       <div class="flex flex-wrap items-end gap-3">
-        <label v-if="viewMode !== 'calendar'" class="grid gap-1">
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ t('CRM_KANBAN.FILTERS.PIPELINE') }}
-          </span>
+        <div class="flex items-center gap-2">
           <ChoiceSelect
             v-model="currentPipelineId"
             :options="pipelineOptions"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
-            class="w-44"
+            class="w-44 sm:w-52"
           />
-        </label>
+          <Button
+            v-if="canManagePipelines"
+            :label="t('CRM_KANBAN.ACTIONS.CREATE_PIPELINE')"
+            icon="i-lucide-plus"
+            blue
+            faded
+            :disabled="isLoading"
+            @click="openCreatePipelineDrawer"
+          />
+        </div>
 
-        <Button
-          v-if="
-            viewMode !== 'calendar' &&
-            selectedPipeline &&
-            (canManagePipelines || canManageAi)
-          "
-          :label="t('CRM_KANBAN.ACTIONS.EDIT_PIPELINE')"
-          icon="i-lucide-settings"
-          blue
-          faded
-          @click="openEditPipelineDrawer"
-        />
-
-        <Button
-          v-if="
-            viewMode !== 'calendar' &&
-            selectedPipeline &&
-            canManageAi &&
-            isCrmAiEnabled
-          "
-          :label="t('CRM_KANBAN.ACTIONS.HANDOFF_SETTINGS')"
-          icon="i-lucide-arrow-right-left"
-          teal
-          solid
-          @click="openHandoffSettings"
-        />
-
-        <div v-if="viewMode !== 'calendar'" class="w-60">
+        <div
+          class="min-w-0 basis-full sm:min-w-[16rem] sm:max-w-md sm:flex-1 sm:basis-auto"
+        >
           <Input
+            id="crm-kanban-search"
             v-model="filters.search"
             :placeholder="t('CRM_KANBAN.FILTERS.SEARCH_PLACEHOLDER')"
-            :label="t('CRM_KANBAN.FILTERS.SEARCH')"
+            :aria-label="t('CRM_KANBAN.FILTERS.SEARCH')"
             @enter="applyFilters"
           />
         </div>
 
-        <Popover
-          v-if="viewMode !== 'calendar'"
-          ref="filtersPopover"
-          align="start"
-        >
-          <template #default>
-            <span class="relative inline-flex">
-              <Button
-                icon="i-lucide-sliders-horizontal"
-                :label="t('CRM_KANBAN.ACTIONS.FILTERS')"
-                slate
-                faded
-              />
-              <span
-                v-if="activeFilterCount"
-                class="absolute -right-1.5 -top-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-n-brand px-1 text-[10px] font-semibold text-white"
-              >
-                {{ activeFilterCount }}
-              </span>
-            </span>
-          </template>
-          <template #content>
-            <div class="flex w-80 flex-col gap-3 p-4">
-              <p class="mb-0 text-sm font-medium text-n-slate-12">
-                {{ t('CRM_KANBAN.FILTERS.PANEL_TITLE') }}
-              </p>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.INBOX') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.inboxId"
-                  :options="inboxChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.OWNER') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.ownerId"
-                  :options="ownerChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.priority"
-                  :options="priorityChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
-                  compact
-                  class="w-full"
-                  @change="applyFilters"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.followUpStatus"
-                  :options="followUpStatusChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
-                  compact
-                  class="w-full"
-                  @change="applyFilters"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.RESPONSIBLE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.responsibleKind"
-                  :options="responsibleChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.TEAM') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.teamId"
-                  :options="teamChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <div class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.STAGE') }}
-                </span>
-                <div
-                  class="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-n-alpha-black2 p-2 outline outline-1 outline-n-weak"
-                >
-                  <button
-                    v-for="stage in stageOptions"
-                    :key="stage.value"
-                    type="button"
-                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors"
-                    :class="
-                      isStageSelected(stage.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
-                    "
-                    @click="toggleStageFilter(stage.value)"
-                  >
-                    {{ stage.label }}
-                  </button>
-                  <span
-                    v-if="!stageOptions.length"
-                    class="text-xs text-n-slate-10"
-                  >
-                    {{ t('CRM_KANBAN.FILTERS.STAGE_PLACEHOLDER') }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.LABELS') }}
-                </span>
-                <div
-                  class="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-n-alpha-black2 p-2 outline outline-1 outline-n-weak"
-                >
-                  <button
-                    v-for="label in labelOptions"
-                    :key="label.value"
-                    type="button"
-                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors"
-                    :class="
-                      isLabelSelected(label.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
-                    "
-                    @click="toggleLabelFilter(label.value)"
-                  >
-                    <span
-                      class="size-1.5 shrink-0 rounded-full"
-                      :style="{ backgroundColor: label.color }"
-                    />
-                    {{ label.label }}
-                  </button>
-                  <span
-                    v-if="!labelOptions.length"
-                    class="text-xs text-n-slate-10"
-                  >
-                    {{ t('CRM_KANBAN.FILTERS.LABELS_PLACEHOLDER') }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.CAMPAIGN') }}
-                </span>
-                <div
-                  class="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-lg bg-n-alpha-black2 p-2 outline outline-1 outline-n-weak"
-                >
-                  <button
-                    v-for="campaign in campaignFilterOptions"
-                    :key="campaign.value"
-                    type="button"
-                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors"
-                    :class="
-                      isCampaignSelected(campaign.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
-                    "
-                    @click="toggleCampaignFilter(campaign.value)"
-                  >
-                    {{ campaignFilterLabel(campaign) }}
-                  </button>
-                  <span
-                    v-if="!campaignFilterOptions.length"
-                    class="text-xs text-n-slate-10"
-                  >
-                    {{ t('CRM_KANBAN.FILTERS.CAMPAIGN_PLACEHOLDER') }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.VALUE_RANGE') }}
-                </span>
-                <div class="flex items-center gap-2">
-                  <input
-                    v-model="filters.valueMin"
-                    type="number"
-                    min="0"
-                    :placeholder="t('CRM_KANBAN.FILTERS.VALUE_MIN')"
-                    class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                  />
-                  <span
-                    class="i-lucide-minus size-3 shrink-0 text-n-slate-10"
-                  />
-                  <input
-                    v-model="filters.valueMax"
-                    type="number"
-                    min="0"
-                    :placeholder="t('CRM_KANBAN.FILTERS.VALUE_MAX')"
-                    class="reset-base !mb-0 h-9 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
-                  />
-                </div>
-              </div>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.STALE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.staleDays"
-                  :options="staleChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.LINKED') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.standalone"
-                  :options="linkedChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <label
-                v-if="canManageAi"
-                class="flex items-center gap-2 text-sm text-n-slate-12"
-              >
-                <input
-                  v-model="filters.aiPending"
-                  type="checkbox"
-                  class="size-4 rounded border-n-weak text-n-brand focus:ring-n-brand"
-                />
-                {{ t('CRM_KANBAN.FILTERS.AI_PENDING') }}
-              </label>
-
-              <label v-if="viewMode === 'list'" class="grid gap-1">
-                <span class="text-xs font-medium text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.RESULT') }}
-                </span>
-                <ChoiceSelect
-                  v-model="filters.result"
-                  :options="resultChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
-                  compact
-                  class="w-full"
-                />
-              </label>
-
-              <div class="flex items-center justify-between gap-2 pt-1">
-                <Button
-                  :label="t('CRM_KANBAN.ACTIONS.CLEAR_FILTERS')"
-                  slate
-                  ghost
-                  sm
-                  @click="clearFilters"
-                />
-                <Button
-                  :label="t('CRM_KANBAN.ACTIONS.APPLY_FILTERS')"
-                  sm
-                  @click="applyFiltersFromPopover"
-                />
-              </div>
-            </div>
-          </template>
-        </Popover>
-
         <Button
-          v-if="activeFilterCount && viewMode !== 'calendar'"
-          icon="i-lucide-x"
+          :label="t('CRM_KANBAN.ACTIONS.MORE_FILTERS')"
+          icon="i-lucide-sliders-horizontal"
           slate
           faded
-          :title="t('CRM_KANBAN.ACTIONS.CLEAR_FILTERS')"
-          @click="clearFilters"
+          :aria-expanded="showFiltersDrawer"
+          @click="showFiltersDrawer = true"
         />
-
-        <!-- Export (list only, #722) and New card sit together at the right of the
-             control row. With active filters the row wraps and the group drops to
-             the next line as a whole (never splitting), thanks to flex-wrap + ml-auto. -->
-        <div class="ml-auto flex items-center gap-2">
-          <CrmListExportButton
-            v-if="canExportCrm && viewMode === 'list'"
-            :pipeline-id="currentPipelineId"
-            :sort-params="listSortParams"
-            :disabled="!hasPipelines || isLoading"
-          />
-          <Button
-            v-if="canManageCards && viewMode !== 'calendar'"
-            :label="t('CRM_KANBAN.ACTIONS.NEW_CARD')"
-            icon="i-lucide-plus"
-            :disabled="!hasPipelines || isLoading"
-            @click="openCreateDrawer"
-          />
-        </div>
+        <Button
+          :label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI')"
+          icon="i-lucide-sparkles"
+          slate
+          faded
+          disabled
+          :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
+          :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
+        />
+        <CrmListExportButton
+          v-if="canExportCrm && viewMode === 'list'"
+          :pipeline-id="currentPipelineId"
+          :sort-params="listSortParams"
+          :disabled="!hasPipelines || isLoading"
+        />
       </div>
 
-      <!-- Active-filter chips -->
+      <!-- Applied filters stay visible so every selection can be understood and removed. -->
       <div
-        v-if="activeFilterChips.length && viewMode !== 'calendar'"
-        class="flex flex-wrap gap-2"
+        v-if="activeFilterChips.length"
+        class="flex flex-wrap items-center gap-2"
       >
         <button
           v-for="chip in activeFilterChips"
           :key="chip.key"
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-full bg-n-alpha-2 px-2.5 py-1 text-xs font-medium text-n-slate-12 hover:bg-n-alpha-3"
+          class="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-n-alpha-2 px-3 text-xs font-medium text-n-slate-12 hover:bg-n-alpha-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          :aria-label="
+            t('CRM_KANBAN.ACTIONS.REMOVE_FILTER', { filter: chip.label })
+          "
           @click="removeFilterChip(chip.key)"
         >
           {{ chip.label }}
-          <span class="i-lucide-x size-3 text-n-slate-10" />
+          <span class="i-lucide-x size-3 text-n-slate-10" aria-hidden="true" />
         </button>
+        <Button
+          :label="t('CRM_KANBAN.ACTIONS.CLEAR_FILTERS')"
+          slate
+          ghost
+          sm
+          @click="clearFilters"
+        />
       </div>
     </section>
+
+    <CrmKanbanFiltersDrawer
+      :show="showFiltersDrawer"
+      :filters="filters"
+      :view-mode="viewMode"
+      :inbox-choices="inboxChoices"
+      :owner-choices="ownerChoices"
+      :priority-choices="priorityChoices"
+      :follow-up-status-choices="followUpStatusChoices"
+      :company-choices="companyFilterOptions"
+      :company-search="companySearch"
+      :company-loading="companyLoading"
+      :company-filter-available="companyFilterAvailable"
+      :responsible-choices="responsibleChoices"
+      :team-choices="teamChoices"
+      :stage-options="stageOptions"
+      :label-options="labelOptions"
+      :campaign-filter-options="campaignFilterOptions"
+      :stale-choices="staleChoices"
+      :linked-choices="linkedChoices"
+      :result-choices="resultChoices"
+      :can-manage-ai="canManageAi"
+      @close="showFiltersDrawer = false"
+      @apply="applyFiltersFromDrawer"
+      @clear="clearFiltersFromDrawer"
+      @search-company="onCompanySearch"
+    />
 
     <section
       v-if="loadError && hasBoardContent"
@@ -2290,18 +2313,57 @@ onMounted(async () => {
           :animation="150"
           :disabled="!canMoveCards"
           :sort="false"
-          filter=".crm-card-open-conversation"
+          filter=".crm-card-open-conversation, .crm-card-move"
           :prevent-on-filter="false"
           @start="onDragStart"
           @change="event => onDragChange(stage, event)"
         >
           <template #item="{ element }">
-            <CrmKanbanCard
-              :card="element"
-              :stage-color="stage.color"
-              @open="openCardDrawer"
-              @open-conversation="openCardConversation"
-            />
+            <div class="relative">
+              <!-- The trigger is an inert anchor aligned with the card action. The
+                   card emits the intent; keeping the picker here gives the page
+                   ownership of the move request and its permission boundary. -->
+              <div
+                class="pointer-events-none absolute end-0 top-0 z-20 h-11 w-16"
+              >
+                <Popover
+                  :ref="instance => registerMovePopover(element.id, instance)"
+                  align="end"
+                  @hide="resetMoveSelection"
+                >
+                  <template #default>
+                    <span class="block h-11 w-16" aria-hidden="true" />
+                  </template>
+                  <template #content="{ hide }">
+                    <div :ref="setMovePickerEl" class="w-64 p-3">
+                      <p class="mb-2 text-xs font-medium text-n-slate-11">
+                        {{ t('CRM_KANBAN.CARD.MOVE_TO') }}
+                      </p>
+                      <ChoiceSelect
+                        v-model="moveStageId"
+                        :options="moveStageOptions"
+                        :aria-label="t('CRM_KANBAN.CARD.MOVE_TO')"
+                        :placeholder="
+                          t('CRM_KANBAN.CARD.MOVE_STAGE_PLACEHOLDER')
+                        "
+                        compact
+                        @change="value => onMoveStageSelected(value, hide)"
+                      />
+                    </div>
+                  </template>
+                </Popover>
+              </div>
+              <CrmKanbanCard
+                :card="element"
+                :stage-color="stage.color"
+                :can-move="canMoveCards"
+                @open="openCardFromBoard"
+                @open-conversation="openCardConversation"
+                @move="
+                  (_card, trigger) => openMoveFromBoard(element, stage, trigger)
+                "
+              />
+            </div>
           </template>
 
           <template #footer>
@@ -2376,7 +2438,7 @@ onMounted(async () => {
         @group-change="onListGroupChange"
         @column-change="onListColumnChange"
         @select-change="onListSelectChange"
-        @open-card="openCardDrawer"
+        @open-card="openCardFromBoard"
         @edit-save="onListEditSave"
         @retry="loadCurrentList"
         @clear-filters="clearFilters"
@@ -2468,7 +2530,9 @@ onMounted(async () => {
       :mode="drawerMode"
       :card="selectedCard"
       :initial-tab="drawerInitialTab"
+      :initial-contact="creationContact"
       :stages="stages"
+      :pipelines="pipelines"
       :pipeline-id="currentPipelineId"
       :agents="agents"
       :inboxes="inboxes"

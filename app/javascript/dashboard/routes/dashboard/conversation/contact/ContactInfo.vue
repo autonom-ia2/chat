@@ -7,6 +7,8 @@ import {
 } from 'shared/helpers/CustomErrors';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import ContactInfoRow from './ContactInfoRow.vue';
 import ViewAllConversations from './ViewAllConversations.vue';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -32,6 +34,7 @@ export default {
     ContactDeleteModal,
     VoiceCallButton,
     InlineInput,
+    RecordReadOnly,
   },
   props: {
     contact: {
@@ -48,6 +51,7 @@ export default {
     const { isAdmin } = useAdmin();
     return {
       isAdmin,
+      ...useRelationshipPermissions(),
       exactTimestamp: useExactTimestamp(),
     };
   },
@@ -111,6 +115,11 @@ export default {
     },
   },
   watch: {
+    canManageRelationshipRecords(allowed) {
+      if (allowed) return;
+      this.showEditModal = false;
+      this.isEditingName = false;
+    },
     'contact.id': {
       handler(id) {
         this.$store.dispatch('contacts/fetchContactableInbox', id);
@@ -120,6 +129,7 @@ export default {
   },
   methods: {
     toggleEditModal() {
+      if (!this.canManageRelationshipRecords) return;
       this.showEditModal = !this.showEditModal;
     },
     findCountryFlag(countryCode, cityAndCountry) {
@@ -135,6 +145,7 @@ export default {
       }
     },
     startEditingName() {
+      if (!this.canManageRelationshipRecords) return;
       this.editName = this.contact.name || '';
       this.isEditingName = true;
       this.$nextTick(() => {
@@ -156,6 +167,7 @@ export default {
       this.updateContactField({ [field]: value });
     },
     async updateContactField(attrs) {
+      if (!this.canManageRelationshipRecords) return;
       const contactId = this.contact.id;
       try {
         await this.$store.dispatch('contacts/update', {
@@ -191,7 +203,7 @@ export default {
 </script>
 
 <template>
-  <div class="relative items-center w-full p-4">
+  <div class="relative items-center w-full p-4" data-legacy-contact-profile>
     <div class="flex flex-col w-full gap-2 text-left rtl:text-right">
       <div class="flex flex-row justify-between">
         <Avatar
@@ -208,7 +220,7 @@ export default {
         <div v-if="showAvatar" class="flex items-center w-full min-w-0 gap-2">
           <div class="group/name flex items-center min-w-0 gap-2">
             <InlineInput
-              v-if="isEditingName"
+              v-if="isEditingName && canManageRelationshipRecords"
               ref="nameInput"
               v-model="editName"
               custom-input-class="!text-base !font-medium !w-auto max-w-full [field-sizing:content]"
@@ -219,13 +231,22 @@ export default {
             />
             <h3
               v-else
-              class="flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-n-slate-12 cursor-pointer hover:text-n-slate-12/80"
-              :title="$t('CONTACT_PANEL.CLICK_TO_EDIT')"
+              class="flex-shrink max-w-full min-w-0 my-0 text-base capitalize break-words text-n-slate-12"
+              :class="{
+                'cursor-pointer hover:text-n-slate-12/80':
+                  canManageRelationshipRecords,
+              }"
+              :title="
+                canManageRelationshipRecords
+                  ? $t('CONTACT_PANEL.CLICK_TO_EDIT')
+                  : undefined
+              "
               @click="startEditingName"
             >
               {{ contact.name }}
             </h3>
             <NextButton
+              v-if="canManageRelationshipRecords"
               ghost
               xs
               slate
@@ -272,7 +293,7 @@ export default {
             emoji="✉️"
             :title="$t('CONTACT_PANEL.EMAIL_ADDRESS')"
             show-copy
-            editable
+            :editable="canManageRelationshipRecords"
             @update="value => onFieldUpdate('email', value)"
           />
           <ContactInfoRow
@@ -282,7 +303,7 @@ export default {
             emoji="📞"
             :title="$t('CONTACT_PANEL.PHONE_NUMBER')"
             show-copy
-            editable
+            :editable="canManageRelationshipRecords"
             @update="value => onFieldUpdate('phone_number', value)"
           />
           <ContactInfoRow
@@ -305,7 +326,7 @@ export default {
             icon="building-bank"
             emoji="🏢"
             :title="$t('CONTACT_PANEL.COMPANY')"
-            editable
+            :editable="canManageRelationshipRecords"
             @update="
               value =>
                 updateContactField({
@@ -326,6 +347,7 @@ export default {
           <SocialIcons :social-profiles="socialProfiles" />
         </div>
       </div>
+      <RecordReadOnly v-if="!canManageRelationshipRecords" />
       <div class="flex items-center w-full mt-0.5 gap-2">
         <ComposeConversation :contact-id="String(contact.id)">
           <template #trigger>
@@ -350,6 +372,7 @@ export default {
           :tooltip-label="$t('CONTACT_PANEL.CALL')"
         />
         <NextButton
+          v-if="canManageRelationshipRecords"
           v-tooltip.top-end="$t('EDIT_CONTACT.BUTTON_LABEL')"
           icon="i-ph-pencil-simple"
           slate
@@ -357,7 +380,10 @@ export default {
           sm
           @click="toggleEditModal"
         />
-        <ContactMergeModal :primary-contact="contact">
+        <ContactMergeModal
+          v-if="canManageRelationshipRecords"
+          :primary-contact="contact"
+        >
           <template #trigger>
             <NextButton
               v-tooltip.top-end="$t('CONTACT_PANEL.MERGE_CONTACT')"
@@ -388,6 +414,7 @@ export default {
         </ContactDeleteModal>
       </div>
       <EditContact
+        v-if="canManageRelationshipRecords"
         :show="showEditModal"
         :contact="contact"
         @cancel="toggleEditModal"

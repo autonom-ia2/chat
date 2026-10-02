@@ -1,0 +1,41 @@
+{
+  "source": "Real local application; synthetic records; unedited screenshots after native transitions settle",
+  "files": [
+    {
+      "file": "01-relacionamento-desktop.png",
+      "sha256": "ebc2a09cd39540e5cd6c1165253a0cbce23f255762facf32115a780fefdb0a41"
+    },
+    {
+      "file": "02-editar-contato-desktop.png",
+      "sha256": "ff8bb933e03432ee19750338b7c56ff3148b68a569827c0976b617bee621c464"
+    },
+    {
+      "file": "03-editar-funil-desktop.png",
+      "sha256": "5cb2ada6381fd40e5b142bbd4647b2842afce90a213c16e972e51eb8c86c4334"
+    },
+    {
+      "file": "04-sem-relacionamento-desktop.png",
+      "sha256": "5becb3e6cfd6449793e14c51cabc017953d95de552245dcc8910039d0a090dbe"
+    },
+    {
+      "file": "05-criar-contato-desktop.png",
+      "sha256": "c7cbbde9d4ec1986c701239b3f61a1897ffe4f993638c28dfecd584ca0f71e59"
+    },
+    {
+      "file": "06-vinculo-legado-desktop.png",
+      "sha256": "86f2e82381ccc656c54d3d19b9fa826bb52f0a1d035dfbceb36a5fc822f5ffc3"
+    },
+    {
+      "file": "07-relacionamento-mobile.png",
+      "sha256": "f54f4673aade63d608be005386cef37b498601418a1a84fbe6f944bfde76ed87"
+    },
+    {
+      "file": "08-relacionamento-notebook.png",
+      "sha256": "24a92e55b4d22132f930cbffba61e1dcc1fb5bdfa3a671bf6ca3e5f48f89a197"
+    },
+    {
+      "file": "09-editar-contato-mobile.png",
+      "sha256": "f6fceffcaaeb381f6300612ab58527853ef9a868058165d6ab18e18cbc3e5401"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (170 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (174 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -337,14 +337,14 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use busca, prioridade e follow-up na barra; abra **Filtros** (caixa, responsável, time, estágio, valor, card parado, tipo de vínculo); alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips e podem esconder cards.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, score, responsável, time, caixa, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
+- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Novo funil ou Editar funil; também CRM Kanban > Configurações da caixa
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar inboxes
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
@@ -356,14 +356,34 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar card ou oportunidade no CRM
 - intent: "Como crio uma oportunidade?"; "Como adiciono um card no funil?"; "Como associo contato, caixa e responsável?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Novo card
+- onde_fica: Sidebar > CRM > CRM Kanban > Nova oportunidade
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: funil e estágio existentes; contato opcional, mas recomendado para histórico e follow-ups.
-- passos: Clique em Novo card; preencha título, estágio, valor, prioridade e previsão; busque ou vincule contato; selecione dono, time e caixa quando necessário; salve.
-- gotchas: cards sem conversa são "standalone" e podem sumir se o filtro "vinculado" estiver ativo; valores são tratados em centavos no backend e exibidos formatados; a caixa influencia visibilidade para agentes.
+- pre_requisitos: CRM habilitado e permissão de criar oportunidades; funil e etapa disponíveis. Contato e empresa são opcionais.
+- passos: Clique em **Nova oportunidade**; em Relacionamento, use um contato existente, **Criar novo** ou **Continuar sem vínculo**. Para contato novo, a empresa pode ficar ausente, ser escolhida ou criada. Preencha título, funil, etapa, valor e responsável; abra **Mais opções da oportunidade** para os dados adicionais; confira o resumo do rodapé e clique em **Criar oportunidade**.
+- gotchas: os cadastros são compartilhados com Relacionamentos, não cópias; reutilizar existente não altera a pessoa ou empresa; identidade/domínio repetidos pedem escolha explícita, nomes iguais não causam fusão; erro de gravação conserva o preenchimento; repetir a mesma solicitação recupera a oportunidade confirmada. Cards sem conversa podem ser ocultados pelo filtro vinculado; a caixa influencia a visibilidade para agentes.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-card`
+
+### Criar uma oportunidade pela ficha do contato
+- intent: "Como crio uma oportunidade para este contato?"; "Como levo o contato de Relacionamentos para o CRM?"
+- onde_fica: Sidebar > Relacionamentos > Contatos > abrir contato > Nova oportunidade
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: navegação de Relacionamentos e CRM habilitados; permissão de visualizar CRM e gerenciar oportunidades; acesso ao contato; funil com etapa disponível.
+- passos: Na ficha do contato, clique em **Nova oportunidade**. O CRM abre em outra aba com a pessoa e sua empresa cadastrada selecionadas. Preencha os dados comerciais e confirme **Criar oportunidade**. O card criado abre com o mesmo contato vinculado. **Voltar ao contato** retorna à ficha; se houver dados comerciais não salvos, confirme o descarte ou continue editando.
+- gotchas: a aba original e seu preenchimento não salvo permanecem abertos. A oportunidade usa o cadastro salvo, não alterações ainda não confirmadas na ficha. Abrir o formulário não cria nenhum registro. Contato indisponível mostra erro e permite tentar novamente ou cancelar, sem virar card avulso silenciosamente. Usuário somente leitura não vê a ação. Sem funil/etapa, selecione ou crie um disponível conforme suas permissões.
+- nav_target: `contacts_edit`
+
+### Consultar oportunidades na ficha do contato
+- intent: "Quais oportunidades este contato tem?"; "Como vejo os negócios ganhos ou perdidos deste contato?"
+- onde_fica: Relacionamentos > Contatos > abrir contato > Acompanhamento > Oportunidades
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: Relacionamentos e CRM habilitados; permissão de visualizar CRM e acesso ao contato. Cada oportunidade respeita também sua visibilidade no CRM.
+- passos: Abra **Oportunidades** no painel Acompanhamento. A lista reúne as negociações do mesmo contato em todos os funis. Use a busca pelo título e **Situação**; avance por **Próxima** quando houver mais resultados. Clique numa oportunidade para abrir seu card no CRM em outra aba. Use **Atualizar oportunidades** ou retorne à ficha para buscar o estado atual.
+- gotchas: por padrão, arquivadas ficam fora; escolha **Arquivado** ou **Todas as situações** para consultá-las. O total considera apenas registros que você pode acessar e os filtros da consulta. A lista não cria nem altera dados. A ficha e seu preenchimento permanecem abertos. Os filtros desta lista não mudam os filtros do Kanban; as moedas aparecem por oportunidade e não são somadas ou convertidas.
+- nav_target: `contacts_edit`
 
 ### Mover card, ganhar, perder ou reabrir oportunidade
 - intent: "Como movo uma oportunidade de estágio?"; "Como marco como ganha?"; "Como reabro um negócio perdido?"
@@ -377,11 +397,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar follow-ups e lembretes no CRM
 - intent: "Como crio um lembrete?"; "Como programo follow-up de WhatsApp?"; "Como vejo follow-ups atrasados?"
-- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Follow-ups; ou CRM > CRM Calendar > clique no dia
+- onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário > clique no dia
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
-- passos: Abra o card; entre em Follow-ups; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; salve; conclua ou cancele pelo card ou calendário.
+- passos: Abra o card; entre em Retornos; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; crie o retorno; conclua ou cancele pelo card ou calendário. Consulte Histórico para acompanhar as atividades e tentativas registradas.
 - gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e a timeline mostra Follow-up cancelado com o motivo.
 - nav_target: `crm_kanban_index`
 
@@ -1644,17 +1664,37 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - intent: Onde cadastro uma empresa?; Como agrupo os contatos de uma mesma empresa?; Onde busco uma empresa pelo nome ou domínio?; Por que não vejo Empresas no menu?
 - onde_fica: Empresas
 - rota: `companies_dashboard_index` - `/app/accounts/:accountId/companies`
-- gate: feature flag `companies`; papel `administrator` ou `agent`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: recurso de Empresas liberado na conta
 - passos: 1. Abra Empresas; 2. Busque pelo nome ou domínio; 3. Ajuste a ordenação; 4. Clique em adicionar empresa e preencha os dados; 5. Ao salvar, a plataforma abre a ficha da empresa criada.
 - gotchas: Empresas é liberado por conta, então pode simplesmente não aparecer no menu; criar a empresa não vincula contato nenhum, o vínculo é feito dentro da ficha ou pelo campo empresa do contato; busca e ordenação ficam no endereço da página, então dá para compartilhar o link já filtrado.
 - nav_target: `companies_dashboard_index`
 
+### Consultar cadastros sem alterar os dados compartilhados
+- intent: Por que não aparece Editar contato?; Posso criar oportunidade sem editar a pessoa?; Por que Criar novo está indisponível no CRM?
+- onde_fica: Relacionamentos > ficha do contato ou empresa; CRM > card > Relacionamento; Conversas > painel do contato
+- rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
+- gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- pre_requisitos: acesso ao cadastro; permissões de Relacionamentos e do CRM são independentes
+- passos: 1. Abra o contato ou a empresa para consultar dados, atributos e histórico; 2. Se a ficha indicar somente consulta, use as informações sem alterar o cadastro; 3. Com permissão de gerenciar oportunidades, use um contato existente ou continue sem vínculo; 4. Para criar ou editar pessoa e empresa, solicite ao administrador a permissão de gerenciar contatos.
+- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa, inclusive na lateral do atendimento. Atender conversas não concede criar oportunidades; consultar o CRM não permite arquivar ou criar/concluir/cancelar follow-ups. Reiniciar a cadência exige gerenciar a IA, enquanto o bloqueio de follow-up no contato exige gerenciar cadastros. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
+- nav_target: `contacts_edit`
+
+### Consultar oportunidades dos contatos de uma empresa
+- intent: Quais negociações esta empresa tem?; Como vejo as oportunidades de todos os contatos da empresa?
+- onde_fica: Relacionamentos > Empresas > abrir empresa > Acompanhamento > Oportunidades
+- rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
+- pre_requisitos: Empresas, Relacionamentos e CRM habilitados; acesso à empresa e permissão de visualizar CRM. As oportunidades respeitam a visibilidade individual do usuário.
+- passos: Abra **Oportunidades** no painel da empresa. Cada item mostra a negociação, o contato vinculado, funil, etapa, situação e valor. Busque pelo título, ajuste **Situação** e use **Próxima** para mais resultados. Clique para abrir a mesma oportunidade no CRM em outra aba; a ficha original permanece aberta.
+- gotchas: os contatos considerados são os vinculados atualmente à empresa, inclusive os que não aparecem na primeira página de Contatos. Nome de empresa igual ou nome legado não cria associação. Ao trocar/desvincular um contato, suas oportunidades deixam de aparecer na empresa anterior na próxima consulta, sem apagar as negociações. Contatos continua sendo a aba inicial. Por padrão, arquivadas ficam fora. O total inclui somente os resultados permitidos. Moedas não são somadas nem convertidas; a consulta não altera cadastros.
+- nav_target: `companies_dashboard_show`
+
 ### Ver a empresa por dentro e vincular os contatos dela
 - intent: Como vinculo um contato a uma empresa?; Onde vejo as conversas dos contatos de uma empresa?; Como tiro um contato de uma empresa?; O que acontece com os contatos se eu excluir a empresa?
 - onde_fica: Empresas > clicar na empresa
 - rota: `companies_dashboard_show` - `/app/accounts/:accountId/companies/:companyId`
-- gate: feature flag `companies`; papel `administrator` ou `agent`
+- gate: feature flag `companies`; papel `administrator` ou `agent` ou `contact_view` ou `contact_manage`
 - pre_requisitos: empresa cadastrada e contatos existentes para vincular
 - passos: 1. Abra Empresas e clique na empresa; 2. Ajuste nome, domínio, descrição e avatar e atualize; 3. Use as abas de histórico, notas e contatos; 4. Em contatos, adicione pesquisando e confirmando o vínculo; 5. Use remover para desvincular.
 - gotchas: vincular um contato que já pertence a outra empresa é reatribuição, não cópia, e a tela avisa a qual empresa ele está ligado hoje; histórico e notas vêm dos contatos vinculados, então empresa sem contato aparece vazia; excluir a empresa é irreversível e desvincula todos os contatos, mas os contatos continuam na conta.

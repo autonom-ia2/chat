@@ -2,6 +2,7 @@
 import Button from 'dashboard/components-next/button/Button.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   label: {
     type: Object,
     default: null,
@@ -39,6 +40,7 @@ const handleMouseEnter = () => {
       {{ label.title }}
     </span>
     <div
+      v-if="!readOnly"
       class="w-0 flex relative ltr:left-1 rtl:right-1 flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-out"
       :class="{ 'w-6': isHovered }"
     >

@@ -1,0 +1,19 @@
+{
+  "independent_review": {
+    "status": "BLOCKED_MODEL_TIER",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "sandbox": "read-only",
+    "error": "The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.",
+    "fallback_attempted": false,
+    "completed": false
+  },
+  "relationships_ci": {
+    "id": 370172507,
+    "name": "Relationships - isolated regression and Linux runtime",
+    "path": ".github/workflows/relationships.yml",
+    "state": "disabled_manually"
+  },
+  "merge_authorized": false,
+  "deploy_authorized": false
+}

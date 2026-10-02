@@ -1,0 +1,28 @@
+{
+  "checks": [
+    "real_application_identity_and_content",
+    "contact_value_saved_real_api_hidden_keys_zero_preserved",
+    "field_collapse_requires_explicit_discard",
+    "company_value_saved_to_canonical_company",
+    "native_configurator_cancel_preserves_account_configuration",
+    "hiding_and_restoring_fields_keeps_value_and_conversation_sidebar_configuration",
+    "authorized_real_media_with_generated_image_pdf_thumbnails",
+    "server_search_finds_old_media_outside_first_page_without_url_change",
+    "expanded_25_rows_and_second_page_keep_same_opportunity",
+    "company_media_includes_linked_contacts_and_authorized_original_pdf",
+    "commercial_record_unchanged_after_attribute_and_media_actions",
+    "mobile_390_no_drawer_horizontal_overflow"
+  ],
+  "errors": [],
+  "failures": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "browser": "154.0.8037.58"
+}

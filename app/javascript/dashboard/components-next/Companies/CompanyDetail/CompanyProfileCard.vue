@@ -1,4 +1,5 @@
 <script setup>
+import RecordReadOnly from 'dashboard/components-next/Relationships/RecordReadOnly.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -12,6 +13,7 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import { useCompaniesStore } from 'dashboard/stores/companies';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   company: { type: Object, default: () => ({}) },
   isLoading: { type: Boolean, default: false },
 });
@@ -21,8 +23,25 @@ const exactTimestamp = useExactTimestamp();
 const { t, locale } = useI18n();
 const companiesStore = useCompaniesStore();
 
-const form = reactive({ name: '', domain: '', description: '' });
+const form = reactive({ name: '', domain: '', description: '', city: '' });
 const avatarPreviewUrl = ref('');
+const readOnlyRows = computed(() => [
+  {
+    key: 'domain',
+    label: 'CRM_KANBAN.RELATIONSHIP.DOMAIN',
+    value: props.company.domain,
+  },
+  {
+    key: 'city',
+    label: 'CRM_KANBAN.RELATIONSHIP.CITY',
+    value: props.company.additionalAttributes?.city,
+  },
+  {
+    key: 'description',
+    label: 'CRM_KANBAN.RELATIONSHIP.ABOUT_COMPANY',
+    value: props.company.description,
+  },
+]);
 const isUploadingAvatar = ref(false);
 
 const uiFlags = computed(() => companiesStore.getUIFlags);
@@ -43,7 +62,9 @@ const hasChanges = computed(
   () =>
     form.name.trim() !== (props.company?.name || '').trim() ||
     form.domain.trim() !== (props.company?.domain || '').trim() ||
-    form.description.trim() !== (props.company?.description || '').trim()
+    form.description.trim() !== (props.company?.description || '').trim() ||
+    form.city.trim() !==
+      (props.company?.additionalAttributes?.city || '').trim()
 );
 
 const summary = computed(() => {
@@ -70,6 +91,7 @@ const syncForm = company => {
   form.name = company?.name || '';
   form.domain = company?.domain || '';
   form.description = company?.description || '';
+  form.city = company?.additionalAttributes?.city || '';
 };
 
 const isCurrentCompany = companyId => Number(props.company?.id) === companyId;
@@ -80,6 +102,7 @@ watch(
     props.company?.name,
     props.company?.domain,
     props.company?.description,
+    props.company?.additionalAttributes?.city,
     props.company?.avatarUrl,
   ],
   () => {
@@ -90,6 +113,7 @@ watch(
 );
 
 const handleAvatarUpload = async ({ file, url }) => {
+  if (props.readOnly) return;
   avatarPreviewUrl.value = url;
   isUploadingAvatar.value = true;
   try {
@@ -104,6 +128,7 @@ const handleAvatarUpload = async ({ file, url }) => {
 };
 
 const handleAvatarDelete = async () => {
+  if (props.readOnly) return;
   try {
     await companiesStore.deleteCompanyAvatar(props.company.id);
     avatarPreviewUrl.value = '';
@@ -114,6 +139,7 @@ const handleAvatarDelete = async () => {
 };
 
 const handleUpdateCompany = async () => {
+  if (props.readOnly) return;
   const companyId = Number(props.company.id);
 
   try {
@@ -122,6 +148,10 @@ const handleUpdateCompany = async () => {
       name: form.name.trim(),
       domain: form.domain.trim() || null,
       description: form.description.trim() || null,
+      ...(form.city.trim() !==
+      (props.company?.additionalAttributes?.city || '').trim()
+        ? { additionalAttributes: { city: form.city.trim() || null } }
+        : {}),
     });
     if (!isCurrentCompany(companyId)) return;
 
@@ -147,7 +177,7 @@ const handleUpdateCompany = async () => {
         :name="displayName"
         :src="avatarSource"
         :size="72"
-        :allow-upload="!isAvatarBusy"
+        :allow-upload="!readOnly && !isAvatarBusy"
         hide-offline-status
         @upload="handleAvatarUpload"
         @delete="handleAvatarDelete"
@@ -182,7 +212,8 @@ const handleUpdateCompany = async () => {
     </div>
 
     <slot name="actions" />
-    <div class="flex flex-col items-start w-full gap-6">
+    <RecordReadOnly v-if="readOnly" :rows="readOnlyRows" />
+    <div v-else class="flex flex-col items-start w-full gap-6">
       <span class="py-1 text-sm font-medium text-n-slate-12">
         {{ t('COMPANIES.DETAIL.PROFILE.TITLE') }}
       </span>
@@ -201,6 +232,14 @@ const handleUpdateCompany = async () => {
           custom-input-class="h-8 !pt-1 !pb-1"
         />
       </div>
+
+      <Input
+        v-model="form.city"
+        :label="t('COMPANIES.DETAIL.PROFILE.FIELDS.CITY')"
+        :disabled="isUpdating"
+        class="w-full"
+        custom-input-class="h-8 !pt-1 !pb-1"
+      />
 
       <TextArea
         v-model="form.description"

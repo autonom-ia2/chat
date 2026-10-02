@@ -1,8 +1,11 @@
 class Crm::Kanban::CardPayloadBuilder
-  def initialize(card:, conversation_visibility:, pending_suggestion: nil)
+  UNRESOLVED_COMPANY = Object.new.freeze
+
+  def initialize(card:, conversation_visibility:, pending_suggestion: nil, company: UNRESOLVED_COMPANY)
     @card = card
     @conversation_visibility = conversation_visibility
     @pending_suggestion = pending_suggestion
+    @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
   end
 
   def perform
@@ -31,6 +34,7 @@ class Crm::Kanban::CardPayloadBuilder
       currency: @card.currency,
       priority: @card.priority,
       score: @card.score,
+      score_source: score_source,
       status: @card.status,
       is_standalone: @card.standalone?,
       # Epoch seconds across the board payload so the frontend timeHelper.js
@@ -58,6 +62,10 @@ class Crm::Kanban::CardPayloadBuilder
     'manual'
   end
 
+  def score_source
+    (@card.metadata || {}).dig('ai', 'score', 'source').presence
+  end
+
   def ai_suggestion_payload
     return unless Crm::Ai::Config.enabled?
 
@@ -75,6 +83,7 @@ class Crm::Kanban::CardPayloadBuilder
   def link_payload
     {
       contact: compact_contact,
+      company: Crm::Cards::CompanyResolver.payload(@company),
       owner: compact_user(@card.owner),
       responsible: @card.responsible_descriptor,
       inbox: compact_inbox,
@@ -110,13 +119,11 @@ class Crm::Kanban::CardPayloadBuilder
   end
 
   # CTWA multi-touch: aggregated campaign touches of the card, first touch -> last;
-  # the pill uses campaigns[0].headline and the badge uses length-1. [] when the
-  # primary conversation is hidden. Delegates to Crm::Cards::PayloadBuilder
-  # (single source of truth) so board/list/websocket shapes never drift.
+  # the pill uses campaigns[0].headline and the badge uses length-1. Each source
+  # conversation is authorized by Crm::Cards::PayloadBuilder, matching the
+  # list/websocket and server-side campaign filters.
   def campaigns_payload
-    return [] if visible_primary_conversation.blank?
-
-    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card)
+    Crm::Cards::PayloadBuilder.aggregated_campaigns_for(@card, conversation_visibility: @conversation_visibility)
   end
 
   def compact_contact

@@ -1,0 +1,116 @@
+{
+  "checks": [
+    "compiled_bundle_renders_real_profile_without_vite_hot_reload",
+    "canonical_profile_has_permission_gated_native_action_with_explicit_new_tab",
+    "opening_preserves_unsaved_profile_in_original_tab_and_uses_saved_canonical_contact",
+    "opening_fetches_company_and_never_writes_a_person_or_an_opportunity",
+    "consumed_contact_intent_leaves_no_automatic_creation_on_refresh",
+    "back_to_contact_requires_discard_and_keep_editing_preserves_commercial_draft",
+    "real_creation_inserts_only_opportunity_with_original_contact_id_and_commercial_values",
+    "original_contact_company_attributes_and_original_profile_draft_remain_unchanged",
+    "second_intent_has_blank_commercial_form_and_untouched_return_needs_no_false_discard",
+    "unavailable_contact_has_retry_and_cancel_never_implicit_unlinked_creation",
+    "mobile_profile_action_and_contextual_form_fit_without_horizontal_overflow_with_fixed_footer",
+    "cancel_and_reload_do_not_reopen_or_persist_a_consumed_creation_intent",
+    "notebook_drawer_is_640px_same_as_approved_funnel_editor",
+    "real_read_only_role_has_no_profile_action_and_cannot_bypass_creation_permission"
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/contacts/99999999",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/contacts/99999999",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/accounts/1/contacts/99999999",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": 1,
+  "sourceHashes": {
+    "app/javascript/dashboard/components/widgets/BackButton.vue": "3b0ece349715e6563e37da67bc4eb3e2452b83137c6614b35d5d9e90560ff055",
+    "app/javascript/dashboard/components-next/Relationships/ContactOpportunityLink.vue": "69284c554e7055554dffad0757cc807ddba218a0a8aa0e83250e9a19519ffe4c",
+    "app/javascript/dashboard/components-next/Relationships/ContactDetailActions.vue": "0da992b3f05b2e28bfc7572c11f4db7c97d6c90f08cb5dfe633c617737b9751b",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityFromContact.vue": "816bd50504c58bc70dc0bd75fdc8671a094117a0aa87f61c365e5068c80fe62f",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmOpportunityForm.vue": "429390e34fdadcf5b033c862cda02d54844bf6f5154f7d0c3d10e815ee0c24ea",
+    "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue": "0762d4d0df55687a8a279d0142a05ee07ff1902f031bb4b55f4d83cb5a41ed1d",
+    "app/javascript/dashboard/routes/dashboard/crm/pages/CrmKanbanPage.vue": "3345e4f214e17f70532175502bf282c116187237e4d31d781a139da89bb51f9d",
+    "app/javascript/dashboard/i18n/locale/en/crm.json": "012feb8fc86ca2b869ed31639ffb6bea8739e8cca2a77a774d5fa3bbd12b7852",
+    "app/javascript/dashboard/i18n/locale/pt_BR/crm.json": "728fd380ac83029600230606f412fd885a9a5648544ff04b951f2b494b2f019a"
+  },
+  "entryAssets": [
+    "/vite-test/assets/dashboard-BGhjISrp.js"
+  ],
+  "persistence": {
+    "result": "passed",
+    "database": "isolated local UI",
+    "data": "synthetic",
+    "before": {
+      "contacts": 45,
+      "companies": 20,
+      "cards": 71,
+      "messages": 33,
+      "conversations": 2
+    },
+    "after": {
+      "contacts": 45,
+      "companies": 20,
+      "cards": 72,
+      "messages": 33,
+      "conversations": 2
+    },
+    "delta": {
+      "contacts": 0,
+      "companies": 0,
+      "cards": 1,
+      "messages": 0,
+      "conversations": 0
+    },
+    "confirmed": [
+      72
+    ],
+    "original_contact_unchanged": true,
+    "original_company_unchanged": true,
+    "timestamp_precision": "ISO8601 UTC, 6 decimal digits on both snapshots"
+  }
+}

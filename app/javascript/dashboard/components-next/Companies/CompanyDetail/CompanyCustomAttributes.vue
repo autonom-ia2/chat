@@ -6,6 +6,7 @@ import { useMapGetter, useStore } from 'dashboard/composables/store';
 import CompanyCustomAttributeItem from 'dashboard/components-next/Companies/CompanyDetail/CompanyCustomAttributeItem.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   company: {
     type: Object,
     default: () => ({}),
@@ -88,6 +89,7 @@ onMounted(() => {
         is-editing-view
         :company-id="company.id"
         :attribute="attribute"
+        :read-only="readOnly"
       />
     </div>
 
@@ -131,6 +133,7 @@ onMounted(() => {
           :key="`${company.id}-${attribute.id}`"
           :company-id="company.id"
           :attribute="attribute"
+          :read-only="readOnly"
         />
       </div>
     </div>

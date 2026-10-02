@@ -1,0 +1,100 @@
+{
+  "checks": [
+    {
+      "name": "01-relacionamento-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "02-editar-contato-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "03-editar-funil-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "04-sem-relacionamento-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "05-criar-contato-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "06-vinculo-legado-desktop",
+      "width": 640,
+      "x": 980,
+      "right": 1620,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "08-relacionamento-notebook",
+      "width": 640,
+      "x": 726,
+      "right": 1366,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "07-relacionamento-mobile",
+      "width": 390,
+      "x": 0,
+      "right": 390,
+      "opacity": "1",
+      "transitionSettled": true
+    },
+    {
+      "name": "09-editar-contato-mobile",
+      "width": 390,
+      "x": 0,
+      "right": 390,
+      "opacity": "1",
+      "transitionSettled": true
+    }
+  ],
+  "errors": [],
+  "failures": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "browser": "154.0.8037.58"
+}

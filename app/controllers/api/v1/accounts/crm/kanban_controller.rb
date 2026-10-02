@@ -1,4 +1,8 @@
 class Api::V1::Accounts::Crm::KanbanController < Api::V1::Accounts::Crm::BaseController
+  include Crm::FilterParameters
+
+  before_action :validate_crm_filter_parameters, only: :index
+
   def index
     authorize ::Crm::Card
     pipeline = selected_pipeline

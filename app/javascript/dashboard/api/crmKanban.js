@@ -141,6 +141,20 @@ class CrmKanbanAPI extends ApiClient {
     return axios.get(`${this.url}/cards`, { params });
   }
 
+  getCompanyOpportunities(companyId, params = {}, { signal } = {}) {
+    return axios.get(`${this.url}/companies/${companyId}/opportunities`, {
+      params,
+      signal,
+    });
+  }
+
+  getContactOpportunities(contactId, params = {}, { signal } = {}) {
+    return axios.get(`${this.url}/contacts/${contactId}/opportunities`, {
+      params,
+      signal,
+    });
+  }
+
   // #722 — planilha (.xlsx) da Lista, com os mesmos parâmetros de getCards, sem página.
   exportCards(params = {}) {
     return axios.get(`${this.url}/cards/export`, {
@@ -149,8 +163,16 @@ class CrmKanbanAPI extends ApiClient {
     });
   }
 
-  createCard(payload) {
-    return axios.post(`${this.url}/cards`, { card: payload });
+  createCard(payload, idempotencyKey) {
+    if (!idempotencyKey)
+      return axios.post(`${this.url}/cards`, { card: payload });
+    return axios.post(
+      `${this.url}/cards`,
+      { card: payload },
+      {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }
+    );
   }
 
   createCardFromConversation(payload) {
@@ -163,6 +185,22 @@ class CrmKanbanAPI extends ApiClient {
 
   showCard(id) {
     return axios.get(`${this.url}/cards/${id}`);
+  }
+
+  linkCardContact(cardId, contactId) {
+    return axios.post(`${this.url}/cards/${cardId}/link_contact`, {
+      contact_id: contactId,
+    });
+  }
+
+  createCardContact(cardId, contact, idempotencyKey) {
+    return axios.post(
+      `${this.url}/cards/${cardId}/contact`,
+      { contact },
+      {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }
+    );
   }
 
   updateCard(id, payload) {

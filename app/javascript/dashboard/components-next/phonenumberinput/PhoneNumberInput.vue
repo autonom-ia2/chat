@@ -15,6 +15,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import DropdownMenu from 'dashboard/components-next/dropdown-menu/DropdownMenu.vue';
 
 const props = defineProps({
+  ariaLabel: { type: String, default: '' },
+  compact: { type: Boolean, default: true },
   placeholder: {
     type: String,
     default: '',
@@ -58,6 +60,11 @@ const rules = {
 const v$ = useVuelidate(rules, {
   phoneNumber,
   activeDialCode,
+});
+
+// Draft registration must validate the raw input, not a previously emitted number.
+defineExpose({
+  validate: () => phoneNumber.value === '' || v$.value.$validate(),
 });
 
 const hasError = computed(() => v$.value.$invalid);
@@ -163,15 +170,20 @@ watch(
   <div>
     <div
       v-on-clickaway="() => closeCountryDropdown()"
-      class="relative flex items-center h-8 transition-all duration-500 ease-in-out outline outline-1 outline-offset-[-1px] rounded-lg bg-n-alpha-black2"
-      :class="[inputBorderClass, { 'cursor-not-allowed opacity-50': disabled }]"
+      class="relative flex items-center transition-all duration-500 ease-in-out outline outline-1 outline-offset-[-1px] rounded-lg bg-n-alpha-black2"
+      :class="[
+        inputBorderClass,
+        compact ? 'h-8' : 'h-10',
+        { 'cursor-not-allowed opacity-50': disabled },
+      ]"
     >
       <Input
         v-model="phoneNumber"
         type="tel"
+        :aria-label="ariaLabel || undefined"
         :placeholder="placeholder"
         :disabled="disabled"
-        custom-input-class="!border-0 !outline-none h-8 !py-0.5 !bg-transparent ltr:!pl-1 rtl:!pr-1"
+        :custom-input-class="`!border-0 !outline-none ${compact ? 'h-8' : 'h-10'} !py-0.5 !bg-transparent ltr:!pl-1 rtl:!pr-1`"
         class="w-full !flex-row"
       >
         <template #prefix>

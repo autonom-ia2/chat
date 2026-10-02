@@ -16,10 +16,11 @@ class Crm::Cards::GroupSummary
 
   DEFAULT_CURRENCY = 'BRL'.freeze
 
-  def initialize(scope:, params:, group_by:)
+  def initialize(scope:, params:, group_by:, conversation_visibility:)
     @scope = scope
     @params = params
     @group_by = group_by.to_s
+    @conversation_visibility = conversation_visibility
   end
 
   def perform
@@ -42,7 +43,7 @@ class Crm::Cards::GroupSummary
   # the identical row set (filters/search/result/follow-up all honored). The
   # scope passed in is already the Pundit policy_scope from the controller.
   def filtered_scope
-    ::Crm::Cards::FilterQuery.new(scope: @scope, params: @params).perform
+    ::Crm::Cards::FilterQuery.new(scope: @scope, params: @params, conversation_visibility: @conversation_visibility).perform
   end
 
   def build_groups

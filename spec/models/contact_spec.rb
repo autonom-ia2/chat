@@ -198,8 +198,10 @@ RSpec.describe Contact do
 
         # Test with use_crm_v2: false
         resolved_old = account.contacts.resolved_contacts(use_crm_v2: false)
-        expect(resolved_old).to include(lead_with_email, customer_contact)
-        expect(resolved_old).not_to include(visitor_contact, lead_without_email)
+        # Deliberately registered name-only leads are now listed by the CRM flow (#792).
+        # Anonymous widget visitors remain excluded; identified customers keep legacy behavior.
+        expect(resolved_old).to include(lead_with_email, lead_without_email, customer_contact)
+        expect(resolved_old).not_to include(visitor_contact)
 
         # Test with use_crm_v2: true
         resolved_new = account.contacts.resolved_contacts(use_crm_v2: true)

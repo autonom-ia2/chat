@@ -1,0 +1,24 @@
+{
+  "result": {
+    "moduleURL": "http://127.0.0.1:35792/vite-test/dashboard/helper/CacheHelper/DataManager.js",
+    "outcomes": [
+      {
+        "status": "fulfilled"
+      },
+      {
+        "status": "fulfilled"
+      }
+    ],
+    "data": [
+      {
+        "id": 1,
+        "name": "Snapshot B"
+      },
+      {
+        "id": 2,
+        "name": "Only B"
+      }
+    ]
+  },
+  "errors": []
+}

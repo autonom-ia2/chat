@@ -10,6 +10,7 @@ import DateAttribute from 'dashboard/components-next/CustomAttributes/DateAttrib
 import OtherAttribute from 'dashboard/components-next/CustomAttributes/OtherAttribute.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   companyId: {
     type: Number,
     required: true,
@@ -26,8 +27,17 @@ const props = defineProps({
 
 const companiesStore = useCompaniesStore();
 const { t } = useI18n();
+const readOnlyValue = computed(() => {
+  const value = props.attribute.value;
+  if (typeof value === 'boolean')
+    return t(`CRM_KANBAN.RELATIONSHIP.${value ? 'VALUE_YES' : 'VALUE_NO'}`);
+  return value === '' || value == null
+    ? t('CRM_KANBAN.RELATIONSHIP.NOT_INFORMED')
+    : value;
+});
 
 const handleDelete = async () => {
+  if (props.readOnly) return;
   try {
     await companiesStore.deleteCustomAttributes({
       id: props.companyId,
@@ -43,6 +53,7 @@ const handleDelete = async () => {
 };
 
 const handleUpdate = async value => {
+  if (props.readOnly) return;
   try {
     await companiesStore.update({
       id: props.companyId,
@@ -83,8 +94,12 @@ const CurrentAttributeComponent = computed(
       </span>
     </div>
 
+    <span v-if="readOnly" class="break-words text-sm text-n-slate-12">{{
+      readOnlyValue
+    }}</span>
     <component
       :is="CurrentAttributeComponent"
+      v-else
       :attribute="attribute"
       :is-editing-view="isEditingView"
       @update="handleUpdate"

@@ -1,0 +1,21 @@
+{
+  "result": "passed",
+  "command": "pnpm test --maxWorkers=2 --minWorkers=1",
+  "tests": 7098,
+  "files": 636,
+  "build": "Vite mode test passed",
+  "log_tail": [
+    " \u001b[32m✓\u001b[39m scripts/central-de-ajuda/specs/conferir.spec.js \u001b[2m(\u001b[22m\u001b[2m35 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 30\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 47 MB heap used\u001b[39m",
+    " \u001b[32m✓\u001b[39m app/javascript/dashboard/services/TemplateNormalizer.spec.js \u001b[2m(\u001b[22m\u001b[2m6 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 7\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 22 MB heap used\u001b[39m",
+    " \u001b[32m✓\u001b[39m scripts/guide-map/specs/trava.spec.js \u001b[2m(\u001b[22m\u001b[2m13 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 5\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 70 MB heap used\u001b[39m",
+    " \u001b[32m✓\u001b[39m scripts/central-de-ajuda/specs/trava.spec.js \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 5\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 48 MB heap used\u001b[39m",
+    " \u001b[32m✓\u001b[39m scripts/guide-map/specs/build.spec.js \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 70\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 47 MB heap used\u001b[39m",
+    " \u001b[32m✓\u001b[39m app/javascript/dashboard/services/TemplateTypeDetector.spec.js \u001b[2m(\u001b[22m\u001b[2m6 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 3\u001b[2mms\u001b[22m\u001b[39m\u001b[35m 22 MB heap used\u001b[39m",
+    "",
+    "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m636 passed\u001b[39m\u001b[22m\u001b[90m (636)\u001b[39m",
+    "\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m7098 passed\u001b[39m\u001b[22m\u001b[90m (7098)\u001b[39m",
+    "\u001b[2m   Start at \u001b[22m 11:01:54",
+    "\u001b[2m   Duration \u001b[22m 677.98s\u001b[2m (transform 46.57s, setup 188.83s, collect 213.64s, tests 104.14s, environment 597.54s, prepare 94.17s)\u001b[22m",
+    ""
+  ]
+}

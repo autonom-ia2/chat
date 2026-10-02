@@ -1,0 +1,23 @@
+{
+  "result": "passed",
+  "before": {
+    "contacts": 50,
+    "companies": 23,
+    "cards": 90,
+    "conversations": 10,
+    "messages": 33
+  },
+  "after": {
+    "contacts": 50,
+    "companies": 23,
+    "cards": 90,
+    "conversations": 10,
+    "messages": 33
+  },
+  "contact_unchanged": true,
+  "cards_unchanged": true,
+  "conversations_unchanged": true,
+  "business_writes": 0,
+  "database": "isolated local UI",
+  "data": "synthetic"
+}

@@ -16,9 +16,18 @@ class Crm::Kanban::BoardPayloadBuilder
   end
 
   def perform
+    stage_list = stages
+    pending_suggestions = board_pending_suggestions
+    cards_by_stage = stage_list.index_with do |stage|
+      cards_for_stage(filtered_cards.where(stage_id: stage.id), stage)
+    end
+    @company_by_card_id = Crm::Cards::CompanyResolver.for_cards(
+      cards_by_stage.values.flat_map { |cards, _has_more| cards }
+    )
+
     {
       pipeline: pipeline_payload,
-      stages: stages.map { |stage| stage_payload(stage, board_pending_suggestions) }
+      stages: stage_list.map { |stage| stage_payload(stage, pending_suggestions, cards_by_stage.fetch(stage)) }
     }
   end
 
@@ -29,9 +38,9 @@ class Crm::Kanban::BoardPayloadBuilder
     requested_stage_ids.present? ? scope.where(id: requested_stage_ids) : scope
   end
 
-  def stage_payload(stage, pending_suggestions)
+  def stage_payload(stage, pending_suggestions, stage_result)
     base_scope = filtered_cards.where(stage_id: stage.id)
-    cards, has_more = cards_for_stage(base_scope, stage)
+    cards, has_more = stage_result
 
     {
       id: stage.id,
@@ -47,7 +56,7 @@ class Crm::Kanban::BoardPayloadBuilder
       # Unlike cards_count (open cards only, what the column shows), this counts every
       # status — it's how the delete-stage UI knows a stage isn't really empty even when
       # the board displays 0 (won/lost/archived cards never render on the Kanban).
-      total_cards_count: include_counts? ? stage.cards.count : nil,
+      total_cards_count: include_counts? ? @cards_scope.where(pipeline_id: @pipeline.id, stage_id: stage.id).count : nil,
       cards: cards.map { |card| card_payload(card, pending_suggestions) },
       has_more: has_more,
       next_cursor: next_cursor_for(cards, has_more)
@@ -75,18 +84,19 @@ class Crm::Kanban::BoardPayloadBuilder
   def apply_shared_filters(cards)
     cards = apply_team_filter(cards)
     cards = apply_value_range_filter(cards)
+    cards = apply_score_range_filter(cards)
     cards = apply_stale_filter(cards)
     cards = apply_responsible_filter(cards)
     cards = apply_label_filter(cards)
     cards = apply_campaign_filter(cards)
-    apply_ai_pending_filter(cards)
+    cards = apply_ai_pending_filter(cards)
+    apply_company_filter(cards)
   end
 
   def apply_search_filter(cards)
     return cards if @params[:search].blank?
 
-    search_term = ActiveRecord::Base.sanitize_sql_like(@params[:search].strip.downcase)
-    cards.where('LOWER(crm_cards.title) LIKE ?', "%#{search_term}%")
+    apply_card_search_filter(cards, @params[:search])
   end
 
   def apply_standalone_filter(cards)
@@ -122,7 +132,8 @@ class Crm::Kanban::BoardPayloadBuilder
     Crm::Kanban::CardPayloadBuilder.new(
       card: card,
       conversation_visibility: @conversation_visibility,
-      pending_suggestion: pending_suggestions[card.id]
+      pending_suggestion: pending_suggestions[card.id],
+      company: @company_by_card_id.fetch(card.id)
     ).perform
   end
 
@@ -144,8 +155,8 @@ class Crm::Kanban::BoardPayloadBuilder
     cards_scope = base_scope.order(id: :desc)
     cards_scope = cards_scope.where('crm_cards.id < ?', cursor_for(stage)) if cursor_for(stage).present?
     cards = cards_scope.preload(
-      :owner, :linked_conversations,
-      { contact: { label_taggings: :tag } },
+      :owner, { linked_conversations: :conversation_participants },
+      { contact: Crm::Cards::CompanyResolver.contact_preload },
       { inbox: { agent_bot_inbox: :agent_bot } },
       { primary_conversation: [:conversation_participants, :assignee, { applied_sla: :sla_policy }, { inbox: { agent_bot_inbox: :agent_bot } }] }
     ).limit(limit_per_stage + 1).to_a

@@ -7,6 +7,11 @@ on:
       - 'app/**'
       - 'enterprise/**'
       - 'spec/**relationships**/**'
+      - 'spec/requests/api/v1/accounts/crm/**'
+      - 'spec/enterprise/requests/api/v1/accounts/crm/**'
+      - 'spec/services/crm/cards/**'
+      - 'spec/services/crm/conversations/**'
+      - 'spec/services/crm/kanban/**'
       - 'tests/playwright/**'
       - 'scripts/relationships/**'
       - 'docker/Dockerfile'
@@ -97,8 +102,33 @@ jobs:
           spec/enterprise/jobs/relationships spec/models/custom_attribute_definition_spec.rb
           spec/models/account_spec.rb
           spec/controllers/api/v1/accounts/contacts_controller_spec.rb
+          spec/controllers/api/v1/accounts/contacts/notes_controller_spec.rb
+          spec/controllers/api/v1/accounts/contacts/labels_controller_spec.rb
+          spec/controllers/api/v1/accounts/bulk_actions_controller_spec.rb
+          spec/controllers/api/v1/accounts/actions/contact_merges_controller_spec.rb
           spec/controllers/api/v1/accounts_controller_spec.rb
           spec/enterprise/controllers/api/v1/accounts/companies_controller_spec.rb
+          spec/enterprise/controllers/api/v1/accounts/contacts_controller_spec.rb
+          spec/enterprise/services/contacts/company_association_service_spec.rb
+          spec/requests/api/v1/accounts/crm/cards_spec.rb
+          spec/requests/api/v1/accounts/crm/opportunity_creation_spec.rb
+          spec/requests/api/v1/accounts/crm/contact_opportunities_spec.rb
+          spec/requests/api/v1/accounts/crm/opportunity_registration_spec.rb
+          spec/requests/api/v1/accounts/crm/card_contact_creation_spec.rb
+          spec/requests/api/v1/accounts/crm/card_contact_links_spec.rb
+          spec/enterprise/requests/api/v1/accounts/crm/card_contact_creation_spec.rb
+          spec/services/crm/cards/creator_spec.rb
+          spec/services/crm/cards/contact_creator_spec.rb
+          spec/services/crm/cards/contact_linker_spec.rb
+          spec/services/crm/cards/conversation_linker_spec.rb
+          spec/services/crm/cards/conversation_linker_integrity_spec.rb
+          spec/requests/api/v1/accounts/crm/campaign_visibility_spec.rb
+          spec/requests/api/v1/accounts/crm/cards_export_spec.rb
+          spec/services/crm/cards/filter_query_spec.rb
+          spec/services/crm/cards/payload_builder_spec.rb
+          spec/services/crm/cards/broadcaster_spec.rb
+          spec/services/crm/kanban/board_payload_builder_spec.rb
+          spec/services/crm/conversations/visibility_spec.rb
           --format progress --format json --out tmp/relationships-rspec.json
       - name: Real native converter tests
         run: bundle exec rspec spec/relationships_unit

@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import { useStore } from 'dashboard/composables/store';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -15,11 +17,17 @@ const props = defineProps({
 const emit = defineEmits(['cancel']);
 
 const store = useStore();
+const { t } = useI18n();
+const { canManageRelationshipRecords } = useRelationshipPermissions();
 const uiFlags = useMapGetter('contacts/getUIFlags');
 
 const onCancel = () => emit('cancel');
 
 const onSubmit = async contactItem => {
+  // The form reports success when this resolves. Reject stale callbacks after
+  // revocation rather than returning a false success without a server write.
+  if (!canManageRelationshipRecords.value)
+    throw new Error(t('CRM_KANBAN.RELATIONSHIP.READ_ONLY'));
   await store.dispatch('contacts/update', contactItem);
   await store.dispatch('contacts/fetchContactableInbox', props.contact.id);
 };
@@ -36,7 +44,9 @@ useKeyboardEvents({
 });
 
 // #646 — a gaveta ocupa o canto do lançador do Guia/Copilot; sinaliza que está aberta.
-useFixedPanelPresence(computed(() => props.show));
+useFixedPanelPresence(
+  computed(() => props.show && canManageRelationshipRecords.value)
+);
 </script>
 
 <template>
@@ -47,7 +57,7 @@ useFixedPanelPresence(computed(() => props.show));
     leave-to-class="ltr:translate-x-[30%] rtl:-translate-x-[30%] opacity-0"
   >
     <div
-      v-if="show"
+      v-if="show && canManageRelationshipRecords"
       class="fixed inset-y-0 ltr:right-0 rtl:left-0 z-50 flex flex-col w-[30rem] max-w-full h-full bg-n-surface-2 ltr:border-l rtl:border-r border-n-weak shadow-lg overflow-auto"
     >
       <div class="flex items-center justify-between px-8 pt-8 pb-2">

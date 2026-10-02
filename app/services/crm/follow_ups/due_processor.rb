@@ -283,6 +283,7 @@ class Crm::FollowUps::DueProcessor
       conversation: follow_up.conversation,
       payload: {
         follow_up_id: follow_up.id,
+        title: follow_up.title,
         error: error.to_s,
         due_at: follow_up.due_at&.iso8601
       }

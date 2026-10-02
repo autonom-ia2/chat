@@ -138,6 +138,36 @@ RSpec.describe 'CRM follow-ups API', type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
+  it 'does not expose raw send errors in the follow-up payload' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead seguro')
+    follow_up = account.crm_follow_ups.create!(
+      card: card,
+      title: 'Retornar',
+      due_at: 1.hour.from_now,
+      timezone: 'UTC',
+      created_by: user,
+      metadata: {
+        source: 'ai_followup',
+        send_error: 'provider-secret',
+        retries: 2,
+        retry_at: 1.hour.from_now.iso8601
+      }
+    )
+
+    get "/api/v1/accounts/#{account.id}/crm/follow_ups/#{follow_up.id}",
+        headers: auth_headers(user)
+
+    expect(response).to have_http_status(:ok)
+    metadata = response.parsed_body.dig('payload', 'metadata')
+    expect(metadata).to include(
+      'source' => 'ai_followup',
+      'retries' => 2
+    )
+    expect(metadata).not_to have_key('send_error')
+  end
+
   it 'completes follow-ups and clears card next due when there are no active follow-ups' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)

@@ -11,7 +11,8 @@ safe_assignee = follow_up.assignee if [follow_up.card&.owner_id, follow_up.conve
 safe_assignee ||= follow_up.assignee if Current.account_user&.administrator?
 
 json.extract! follow_up, :id, :account_id, :card_id, :title, :description, :follow_up_type, :status, :automation_mode,
-              :timezone, :metadata
+              :timezone
+json.metadata follow_up.metadata.to_h.stringify_keys.except('send_error')
 json.contact_id safe_contact&.id
 json.inbox_id safe_inbox&.id
 json.assignee_id safe_assignee&.id

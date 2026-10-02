@@ -191,4 +191,32 @@ RSpec.describe Crm::FollowUps::DueProcessor do
 
     expect(follow_up.reload.status).to eq('done')
   end
+
+  it 'records the follow-up title on a failed manual auto-send and keeps the provider error only in the payload' do
+    account, user = create_account_and_user
+    inbox = create_crm_whatsapp_api_inbox(account: account, members: [user])
+    contact = account.contacts.create!(name: 'Lead Falha', phone_number: '+5511987654321')
+    conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: user)
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    card = account.crm_cards.create!(
+      pipeline: pipeline, stage: stage, inbox: inbox, contact: contact,
+      primary_conversation: conversation, title: 'Lead Falha'
+    )
+    follow_up = account.crm_follow_ups.create!(
+      card: card, conversation: conversation, title: 'Enviar proposta', due_at: 10.minutes.ago,
+      timezone: 'UTC', automation_mode: :auto_send_message, created_by: user,
+      metadata: { message_body: 'Olá' }
+    )
+    sender = instance_double(Crm::FollowUps::MessageSender,
+                             perform: Crm::FollowUps::MessageSender::Result.failed('Meta API 131047 raw'))
+    allow(Crm::FollowUps::MessageSender).to receive(:new).and_return(sender)
+
+    described_class.new(now: Time.current).perform
+
+    activity = card.activities.find_by!(event_type: 'follow_up_message_failed')
+    expect(activity.payload).to include('follow_up_id' => follow_up.id, 'title' => 'Enviar proposta',
+                                        'error' => 'Meta API 131047 raw')
+    expect(activity.payload.except('error').values.map(&:to_s)).not_to include('Meta API 131047 raw')
+    expect(follow_up.reload.status).to eq('overdue')
+  end
 end

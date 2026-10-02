@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -10,6 +10,8 @@ import ContactAPI from 'dashboard/api/contacts';
 
 const props = defineProps({
   card: { type: Object, default: null },
+  canManageAi: { type: Boolean, default: false },
+  canManageRecords: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['reset']);
@@ -22,8 +24,12 @@ const { t } = useI18n();
 const isResetting = ref(false);
 const isSavingContact = ref(false);
 const reactivateDialogRef = ref(null);
+const detailsOpen = ref(false);
 
 const cardId = computed(() => props.card?.id || null);
+watch(cardId, () => {
+  detailsOpen.value = false;
+});
 const state = computed(
   () =>
     props.card?.auto_followup ||
@@ -133,7 +139,7 @@ const resetButtonLabel = computed(() =>
 );
 
 const resetCycle = async () => {
-  if (!cardId.value || isResetting.value) return;
+  if (!props.canManageAi || !cardId.value || isResetting.value) return;
   isResetting.value = true;
   try {
     await CrmKanbanAPI.resetAutoFollowup(cardId.value);
@@ -148,7 +154,8 @@ const resetCycle = async () => {
 };
 
 const onContactToggle = async disabled => {
-  if (!contact.value?.id || isSavingContact.value) return;
+  if (!props.canManageRecords || !contact.value?.id || isSavingContact.value)
+    return;
   isSavingContact.value = true;
   try {
     await ContactAPI.update(contact.value.id, {
@@ -163,6 +170,7 @@ const onContactToggle = async disabled => {
 };
 
 const onResetClick = () => {
+  if (!props.canManageAi) return;
   if (isOptedOut.value) {
     reactivateDialogRef.value?.open();
     return;
@@ -172,67 +180,79 @@ const onResetClick = () => {
 </script>
 
 <template>
-  <div class="grid gap-3 rounded-lg border border-n-weak bg-n-alpha-black2 p-4">
-    <div class="flex items-start justify-between gap-3">
-      <div class="flex items-center gap-2">
-        <span class="i-lucide-bot size-4 text-n-slate-11" />
-        <p class="mb-0 text-sm font-medium text-n-slate-12">
+  <details
+    :open="detailsOpen"
+    class="group rounded-xl border border-n-weak bg-n-surface-1"
+    @toggle="detailsOpen = $event.currentTarget.open"
+  >
+    <summary
+      class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 outline-none hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+    >
+      <span class="flex min-w-0 items-center gap-2">
+        <span class="i-lucide-bot size-4 shrink-0 text-n-slate-11" />
+        <span class="truncate text-sm font-medium text-n-slate-12">
           {{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.TITLE') }}
-        </p>
-      </div>
-      <span
-        class="shrink-0 text-xs font-medium"
-        :class="
-          isOptedOut
-            ? 'rounded-full bg-n-amber-3 px-2 py-0.5 text-n-amber-11'
-            : 'text-n-slate-11'
-        "
-      >
-        {{ statusText }}
+        </span>
       </span>
-    </div>
-
-    <ul v-if="timelineEntries.length" class="grid gap-1.5">
-      <li
-        v-for="entry in timelineEntries"
-        :key="entry.key"
-        class="flex items-center gap-2 text-xs text-n-slate-11"
+      <span
+        class="flex shrink-0 items-center gap-2 text-xs font-medium"
+        :class="isOptedOut ? 'text-n-amber-11' : 'text-n-slate-11'"
       >
-        <span class="size-3.5 shrink-0" :class="[entry.icon, entry.tone]" />
-        <span class="min-w-0 truncate">{{ entry.label }}</span>
-      </li>
-    </ul>
+        <span>{{ statusText }}</span>
+        <span
+          class="i-lucide-chevron-down size-4 text-n-slate-10 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
+      </span>
+    </summary>
 
-    <p
-      v-if="isOptedOut"
-      class="mb-0 flex items-center gap-1.5 text-xs text-n-slate-11"
-    >
-      <span class="i-lucide-hand size-3.5 shrink-0" />
-      <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.OPT_OUT_HINT') }}</span>
-    </p>
+    <div class="grid gap-3 border-t border-n-weak p-4">
+      <ul v-if="timelineEntries.length" class="grid gap-1.5">
+        <li
+          v-for="entry in timelineEntries"
+          :key="entry.key"
+          class="flex items-center gap-2 text-xs text-n-slate-11"
+        >
+          <span class="size-3.5 shrink-0" :class="[entry.icon, entry.tone]" />
+          <span class="min-w-0 truncate">{{ entry.label }}</span>
+        </li>
+      </ul>
 
-    <label
-      v-if="contact?.id"
-      class="mb-0 flex items-center justify-between gap-3 text-xs text-n-slate-11"
-    >
-      <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE') }}</span>
-      <Switch
-        :model-value="isContactDisabled"
-        :disabled="isSavingContact"
-        @update:model-value="onContactToggle"
-      />
-    </label>
+      <p
+        v-if="isOptedOut"
+        class="mb-0 flex items-center gap-1.5 text-xs text-n-slate-11"
+      >
+        <span class="i-lucide-hand size-3.5 shrink-0" />
+        <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.OPT_OUT_HINT') }}</span>
+      </p>
 
-    <div v-if="isSpent || isOptedOut" class="flex justify-end">
-      <Button
-        :label="resetButtonLabel"
-        icon="i-lucide-rotate-ccw"
-        slate
-        faded
-        sm
-        :is-loading="isResetting"
-        @click="onResetClick"
-      />
+      <label
+        v-if="contact?.id"
+        class="mb-0 flex items-center justify-between gap-3 text-xs text-n-slate-11"
+      >
+        <span>{{ t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.CONTACT_TOGGLE') }}</span>
+        <Switch
+          :model-value="isContactDisabled"
+          :disabled="isSavingContact || !canManageRecords"
+          @update:model-value="onContactToggle"
+        />
+      </label>
+
+      <div
+        v-if="canManageAi && (isSpent || isOptedOut)"
+        class="flex justify-end"
+      >
+        <Button
+          :label="resetButtonLabel"
+          icon="i-lucide-rotate-ccw"
+          slate
+          faded
+          sm
+          class="min-w-max shrink-0"
+          :is-loading="isResetting"
+          @click="onResetClick"
+        />
+      </div>
     </div>
 
     <Dialog
@@ -246,8 +266,8 @@ const onResetClick = () => {
         t('CRM_KANBAN.DRAWER.AUTO_FOLLOWUP.REACTIVATE_CONFIRM_OK')
       "
       :is-loading="isResetting"
-      :disable-confirm-button="isResetting"
+      :disable-confirm-button="isResetting || !canManageAi"
       @confirm="resetCycle"
     />
-  </div>
+  </details>
 </template>

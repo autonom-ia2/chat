@@ -1,0 +1,7 @@
+{
+  "files_passed": 636,
+  "tests_passed": 7098,
+  "tests_failed": 0,
+  "command": "pnpm test --maxWorkers=2 --minWorkers=1",
+  "run_log": ".codex/792/part12-full-frontend-final.log"
+}

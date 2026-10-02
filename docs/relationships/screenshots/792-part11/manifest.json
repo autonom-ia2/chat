@@ -1,0 +1,72 @@
+{
+  "result": "passed",
+  "checks": [
+    "denied_company_route_resolves_to_authorized_contact_list_without_infinite_redirect_or_grant",
+    "reload_keeps_a_resolved_authorized_destination",
+    "same_custom_role_keeps_two_authorized_contact_opportunities_and_no_hidden_total",
+    "mobile_preserves_the_same_authorized_list_without_clipping",
+    "compiled_bundle_without_framework_errors_or_business_writes"
+  ],
+  "captures": [
+    {
+      "name": "01-perfil-personalizado-sem-travamento",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "path": "/app/accounts/1/contacts",
+      "sha256": "e36a93f76ba1396f0213f2da6217d0dacba5a9a7be2382cc57b1762fc4664c89"
+    },
+    {
+      "name": "02-oportunidades-autorizadas-preservadas",
+      "viewport": {
+        "width": 1620,
+        "height": 1000
+      },
+      "path": "/app/accounts/1/contacts/44",
+      "sha256": "7f2e0b4a37ec7207ccf9d406be4430d5ab024e93d3a2e549f2f1cc90f0b61b1d"
+    },
+    {
+      "name": "03-perfil-personalizado-celular",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "path": "/app/accounts/1/contacts/44",
+      "sha256": "3d1277372e9fad351950be32059996cea4240d6fdbe4dfefe895433562055e53"
+    }
+  ],
+  "errors": [],
+  "logs": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    }
+  ],
+  "responses": [
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    },
+    {
+      "path": "/enterprise/api/v1/accounts/1/limits",
+      "status": 404
+    }
+  ],
+  "writes": [],
+  "assets": [
+    "/vite-test/assets/dashboard-Cj2EiXfB.js"
+  ],
+  "sourceHashes": {
+    "app/javascript/dashboard/helper/routeHelpers.js": "fdb8ce60236b51a5e5924614ddc3fd2ece8741962705541c8ec332d46fa210e2",
+    "app/services/crm/cards/conversation_linker.rb": "498a53c1d5225d2617742c8170588f6c93f4914095c6f548b45ff41ea27a2515"
+  },
+  "knownLimitations": [
+    "Company custom-role authorization remains denied; this checkpoint fixes navigation, not new permission grants.",
+    "Read-only APIs still need the separate permission corrections identified in the audit."
+  ]
+}

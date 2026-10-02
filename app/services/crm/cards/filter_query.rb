@@ -23,9 +23,10 @@ class Crm::Cards::FilterQuery
     'updated_at' => :updated_at
   }.freeze
 
-  def initialize(scope:, params:)
+  def initialize(scope:, params:, conversation_visibility:)
     @scope = scope
     @params = params
+    @conversation_visibility = conversation_visibility
   end
 
   def perform
@@ -55,8 +56,9 @@ class Crm::Cards::FilterQuery
   end
 
   def base_scope
-    @scope.includes(:owner, :inbox, :stage, :pipeline, :linked_conversations,
-                    contact: { label_taggings: :tag },
+    @scope.includes(:owner, :inbox, :stage, :pipeline,
+                    linked_conversations: :conversation_participants,
+                    contact: Crm::Cards::CompanyResolver.contact_preload,
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
   end
 
@@ -69,11 +71,13 @@ class Crm::Cards::FilterQuery
     cards = apply_stage_ids_filter(cards)
     cards = apply_team_filter(cards)
     cards = apply_value_range_filter(cards)
+    cards = apply_score_range_filter(cards)
     cards = apply_stale_filter(cards)
     cards = apply_responsible_filter(cards)
     cards = apply_label_filter(cards)
     cards = apply_campaign_filter(cards)
-    apply_ai_pending_filter(cards)
+    cards = apply_ai_pending_filter(cards)
+    apply_company_filter(cards)
   end
 
   def apply_standalone_filter(cards)
@@ -98,8 +102,7 @@ class Crm::Cards::FilterQuery
   def apply_search(cards)
     return cards if @params[:search].blank?
 
-    search_term = ActiveRecord::Base.sanitize_sql_like(@params[:search].strip.downcase)
-    cards.where('LOWER(crm_cards.title) LIKE ?', "%#{search_term}%")
+    apply_card_search_filter(cards, @params[:search])
   end
 
   def apply_follow_up_filter(cards)

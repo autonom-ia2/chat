@@ -10,6 +10,7 @@ import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import PaginationFooter from 'dashboard/components-next/pagination/PaginationFooter.vue';
 
 const props = defineProps({
+  readOnly: { type: Boolean, default: false },
   company: {
     type: Object,
     default: () => ({}),
@@ -170,7 +171,7 @@ const handleContactSelect = contactId => {
 
 <template>
   <div class="flex flex-col gap-6 px-6 pb-8">
-    <div v-if="!selectedContact" class="flex flex-col gap-4">
+    <div v-if="!readOnly && !selectedContact" class="flex flex-col gap-4">
       <div class="flex flex-col gap-2">
         <label class="text-base text-n-slate-12">
           {{ t('COMPANIES.DETAIL.CONTACTS.ACTIONS.ADD') }}
@@ -195,7 +196,7 @@ const handleContactSelect = contactId => {
       />
     </div>
 
-    <div v-else class="flex flex-col gap-4">
+    <div v-else-if="!readOnly" class="flex flex-col gap-4">
       <div class="flex flex-col gap-2">
         <label class="text-base text-n-slate-12">
           {{ t('COMPANIES.DETAIL.CONTACTS.DIALOGS.ADD.CONFIRM_TITLE') }}
@@ -327,6 +328,7 @@ const handleContactSelect = contactId => {
           </button>
 
           <Button
+            v-if="!readOnly"
             icon="i-lucide-unlink"
             color="slate"
             variant="ghost"
