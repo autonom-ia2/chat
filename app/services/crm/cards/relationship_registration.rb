@@ -55,7 +55,7 @@ class Crm::Cards::RelationshipRegistration
   end
 
   def register_company
-    return if @input[:company]['mode'] == 'none'
+    return if %w[none auto].include?(@input[:company]['mode'])
 
     raise Pundit::NotAuthorizedError
   end

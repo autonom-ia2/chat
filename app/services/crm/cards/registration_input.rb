@@ -73,8 +73,12 @@ class Crm::Cards::RegistrationInput
     end
   end
 
+  # Omitting company keeps the native email-domain association ('auto', internal only);
+  # only an explicit { mode: 'none' } turns that association off.
   def company_input
-    input = @input.fetch('company', { 'mode' => 'none' })
+    return { 'mode' => 'auto' } unless @input.key?('company')
+
+    input = @input['company']
     object!(input, %w[mode id attributes], 'company')
     case input['mode']
     when 'none'

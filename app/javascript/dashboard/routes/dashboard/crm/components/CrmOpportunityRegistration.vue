@@ -117,6 +117,7 @@ const errorLabel = computed(() => {
 const setCompanyMode = next => {
   if (props.disabled) return;
   draft.value.companyMode = next;
+  draft.value.companyChosen = true;
   draft.value.company = null;
   companyMatches.value = [];
   serverError.value = null;

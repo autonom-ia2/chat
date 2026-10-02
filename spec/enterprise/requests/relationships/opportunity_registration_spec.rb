@@ -59,6 +59,38 @@ RSpec.describe 'CRM composed company registration', type: :request do
     expect(account.contacts.last.company_id).to be_nil
   end
 
+  context 'with a company already registered for the contact email domain' do
+    let!(:domain_company) { create(:company, account: account, name: 'Business', domain: 'business.example') }
+
+    it 'keeps the native email-domain association when the request makes no company choice' do
+      payload[:card][:relationship].delete(:company)
+      expect { post url, params: payload, headers: headers, as: :json }.not_to change(Company, :count)
+      expect(response).to have_http_status(:created)
+      expect(account.contacts.last.company_id).to eq(domain_company.id)
+    end
+
+    it 'does not associate the contact when the user explicitly chose no company' do
+      payload[:card][:relationship][:company] = { mode: 'none' }
+      post url, params: payload, headers: headers, as: :json
+      expect(response).to have_http_status(:created)
+      expect(account.contacts.last.company_id).to be_nil
+    end
+  end
+
+  it 'still permits a registration without a company choice when Companies is disabled' do
+    account.disable_features!('companies')
+    payload[:card][:relationship].delete(:company)
+    post url, params: payload, headers: headers, as: :json
+    expect(response).to have_http_status(:created)
+    expect(account.contacts.last.company_id).to be_nil
+  end
+
+  it 'rejects auto as an explicit company mode' do
+    payload[:card][:relationship][:company] = { mode: 'auto' }
+    post url, params: payload, headers: headers, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+  end
+
   it 'preserves native inference for unrelated contact registrations' do
     expect { account.contacts.create!(name: 'Native contact', email: 'native@unrelatedbusiness.example') }.to change(Company, :count).by(1)
     expect(account.contacts.last.company.domain).to eq('unrelatedbusiness.example')

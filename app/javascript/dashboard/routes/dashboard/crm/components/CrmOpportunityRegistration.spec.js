@@ -264,7 +264,19 @@ it('cannot switch company or reuse a contact while saving', async () => {
   wrapper.vm.setCompanyMode('new');
   await wrapper.vm.useContact({ id: 7 });
   expect(wrapper.vm.draft.companyMode).toBe('none');
+  expect(wrapper.vm.draft.companyChosen).toBe(false);
   expect(ContactAPI.show).not.toHaveBeenCalled();
+});
+it('shows no company preselected but only marks it explicit after a click', async () => {
+  wrapper = make({ name: 'Person' });
+  const noCompany = wrapper.find('[data-registration-company] button');
+  expect(noCompany.attributes('aria-pressed')).toBe('true');
+  expect(registrationPayload(wrapper.vm.draft)).not.toHaveProperty('company');
+  await noCompany.trigger('click');
+  expect(noCompany.attributes('aria-pressed')).toBe('true');
+  expect(registrationPayload(wrapper.vm.draft).company).toEqual({
+    mode: 'none',
+  });
 });
 
 it('keeps company address attributes and respects a typed contact key instead of duplicating a text input', () => {
@@ -326,10 +338,21 @@ describe('composed payload', () => {
     });
     expect(payload.company.attributes).not.toHaveProperty('domain');
   });
-  it('does not send stale company values when no company is selected', () => {
+  it('omits company when no company option was chosen, keeping native email-domain association', () => {
     const payload = registrationPayload({
       ...newRegistrationDraft(),
       name: 'Person',
+      company: { id: 8 },
+      companyName: 'Stale',
+      companyAttributes: { old: true },
+    });
+    expect(payload).not.toHaveProperty('company');
+  });
+  it('sends an explicit no-company choice without stale company values', () => {
+    const payload = registrationPayload({
+      ...newRegistrationDraft(),
+      name: 'Person',
+      companyChosen: true,
       company: { id: 8 },
       companyName: 'Stale',
       companyAttributes: { old: true },

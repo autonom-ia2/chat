@@ -7,6 +7,8 @@ export const newRegistrationDraft = () => ({
   country: '',
   address: '',
   companyMode: 'none',
+  // "No company" is shown preselected, but only a click makes it an explicit choice.
+  companyChosen: false,
   company: null,
   companyName: '',
   companyDomain: '',
@@ -57,7 +59,9 @@ export function registrationPayload(draft) {
       ...nonempty(draft.contactAttributes),
     },
   };
-  let company = { mode: 'none' };
+  // Without an explicit choice, company is omitted so the contact keeps the
+  // native email-domain association; an explicit "no company" turns it off.
+  let company = draft.companyChosen ? { mode: 'none' } : undefined;
   if (draft.companyMode === 'existing')
     company = { mode: 'existing', id: draft.company.id };
   if (draft.companyMode === 'new')
@@ -70,5 +74,5 @@ export function registrationPayload(draft) {
         custom_attributes: nonempty(draft.companyAttributes),
       },
     };
-  return { mode: 'new', contact, company };
+  return { mode: 'new', contact, ...(company && { company }) };
 }

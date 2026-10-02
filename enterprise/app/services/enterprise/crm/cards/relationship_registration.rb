@@ -3,7 +3,7 @@ module Enterprise::Crm::Cards::RelationshipRegistration
 
   def register_company
     input = @input[:company]
-    return if input['mode'] == 'none'
+    return if %w[none auto].include?(input['mode'])
 
     raise Pundit::NotAuthorizedError unless @account.feature_enabled?('companies')
 
@@ -22,7 +22,10 @@ module Enterprise::Crm::Cards::RelationshipRegistration
   end
 
   def attach_company(contact, company)
-    # The explicit choice in this form wins over inference from the email domain.
+    # No choice made: the contact follows the native email-domain association.
+    return if @input[:company]['mode'] == 'auto'
+
+    # An explicit choice in this form (including "no company") wins over inference from the email domain.
     # Instance-local and transient: native registration/import behavior is unchanged.
     contact.skip_company_auto_association = true
     contact.company = company
