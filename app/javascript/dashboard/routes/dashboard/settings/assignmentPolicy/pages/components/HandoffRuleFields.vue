@@ -76,7 +76,7 @@ const setAction = option => {
   <div class="grid gap-4">
     <button
       type="button"
-      class="flex w-full items-center justify-between gap-3 text-left"
+      class="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-solid border-n-weak bg-n-surface-1 px-3 py-2.5 text-left transition-colors hover:border-n-slate-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       role="switch"
       :aria-checked="form.enabled"
       @click="form.enabled = !form.enabled"
@@ -107,7 +107,7 @@ const setAction = option => {
         <textarea
           v-model="form.trigger"
           rows="2"
-          class="reset-base w-full rounded-lg border-0 bg-n-surface-2 px-3 py-2 text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
+          class="reset-base w-full rounded-lg border-0 bg-n-surface-1 px-3 py-2.5 text-sm leading-6 text-n-slate-12 outline outline-1 outline-n-weak placeholder:text-n-slate-10 focus:outline-n-brand"
           :placeholder="t('CRM_KANBAN.AI_SETTINGS.HANDOFF.TRIGGER_PLACEHOLDER')"
         />
       </div>
@@ -121,12 +121,13 @@ const setAction = option => {
             v-for="option in FLOW_OPTIONS"
             :key="option"
             type="button"
-            class="rounded-xl p-3 text-left outline transition-colors"
+            class="min-h-20 rounded-lg border border-solid bg-n-surface-1 p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               form.handoff_mode === option
-                ? 'bg-n-surface-2 outline-2 outline-n-brand'
-                : 'bg-n-surface-2 outline-1 outline-n-weak hover:outline-n-strong'
+                ? 'border-n-brand bg-n-blue-2'
+                : 'border-n-weak hover:border-n-slate-6'
             "
+            :aria-pressed="form.handoff_mode === option"
             @click="setFlow(option)"
           >
             <span class="flex items-center justify-between gap-2">
@@ -158,12 +159,13 @@ const setAction = option => {
             v-for="option in POOL_OPTIONS"
             :key="option"
             type="button"
-            class="rounded-xl p-3 text-left outline transition-colors"
+            class="min-h-20 rounded-lg border border-solid bg-n-surface-1 p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               form.pool_type === option
-                ? 'bg-n-surface-2 outline-2 outline-n-brand'
-                : 'bg-n-surface-2 outline-1 outline-n-weak hover:outline-n-strong'
+                ? 'border-n-brand bg-n-blue-2'
+                : 'border-n-weak hover:border-n-slate-6'
             "
+            :aria-pressed="form.pool_type === option"
             @click="setPool(option)"
           >
             <span class="flex items-center justify-between gap-2">
@@ -194,7 +196,7 @@ const setAction = option => {
             v-model="form.pool_id"
             :options="personChoices"
             :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.POOL_USER_SELECT')"
-            class="w-full max-w-56"
+            class="w-full max-w-56 [&>button]:!bg-n-surface-1 [&>button]:!h-11"
           />
         </label>
         <label
@@ -206,31 +208,36 @@ const setAction = option => {
             v-model="form.mode"
             :options="modeChoices"
             :aria-label="t('CRM_KANBAN.AI_SETTINGS.HANDOFF.MODE')"
-            class="w-full"
+            class="w-full [&>button]:!bg-n-surface-1 [&>button]:!h-11"
           />
         </label>
       </div>
 
       <div
-        class="flex items-start gap-3 rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
+        class="flex items-start gap-3 rounded-lg border border-solid border-n-weak bg-n-surface-1 p-3"
       >
         <button
           type="button"
           role="switch"
           :aria-checked="form.prefer_online"
-          class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors"
-          :class="form.prefer_online ? 'bg-n-brand' : 'bg-n-slate-6'"
+          class="relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :aria-label="t('CRM_KANBAN.AI_SETTINGS.HANDOFF.PREFER_ONLINE')"
+          :class="form.prefer_online ? 'bg-n-blue-2' : 'bg-n-slate-2'"
           @click="form.prefer_online = !form.prefer_online"
         >
           <span
-            class="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
-            :class="
-              form.prefer_online
-                ? 'ltr:left-[18px] rtl:right-[18px]'
-                : 'ltr:left-0.5 rtl:right-0.5'
-            "
-          />
+            class="relative h-5 w-9 rounded-full transition-colors"
+            :class="form.prefer_online ? 'bg-n-brand' : 'bg-n-slate-6'"
+          >
+            <span
+              class="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
+              :class="
+                form.prefer_online
+                  ? 'ltr:left-[18px] rtl:right-[18px]'
+                  : 'ltr:left-0.5 rtl:right-0.5'
+              "
+            />
+          </span>
         </button>
         <div>
           <p class="mb-0 text-sm font-medium text-n-slate-12">
@@ -258,7 +265,7 @@ const setAction = option => {
             v-model="pickupThresholdMinutes"
             type="number"
             min="1"
-            class="reset-base w-16 rounded-lg border-0 bg-n-surface-2 px-2 py-1 text-center text-sm text-n-slate-12 outline outline-1 outline-n-weak"
+            class="reset-base h-11 w-20 rounded-lg border-0 bg-n-surface-1 px-2 py-1 text-center text-sm text-n-slate-12 outline outline-1 outline-n-weak focus:outline-n-brand"
           />
           {{ t('CRM_KANBAN.HANDOFF_SETTINGS.PICKUP_SUFFIX') }}
         </p>
@@ -267,12 +274,13 @@ const setAction = option => {
             v-for="option in ACTION_OPTIONS"
             :key="option"
             type="button"
-            class="rounded-xl p-3 text-left outline transition-colors"
+            class="min-h-20 rounded-lg border border-solid bg-n-surface-1 p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
             :class="
               form.escalation_action === option
-                ? 'bg-n-surface-2 outline-2 outline-n-brand'
-                : 'bg-n-surface-2 outline-1 outline-n-weak hover:outline-n-strong'
+                ? 'border-n-brand bg-n-blue-2'
+                : 'border-n-weak hover:border-n-slate-6'
             "
+            :aria-pressed="form.escalation_action === option"
             @click="setAction(option)"
           >
             <span class="flex items-center justify-between gap-2">
@@ -303,7 +311,7 @@ const setAction = option => {
             v-model="form.escalation_user_id"
             :options="personChoices"
             :aria-label="t('CRM_KANBAN.HANDOFF_SETTINGS.ESCALATION_USER')"
-            class="w-full max-w-56"
+            class="w-full max-w-56 [&>button]:!bg-n-surface-1 [&>button]:!h-11"
           />
         </label>
       </div>

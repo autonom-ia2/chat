@@ -11,6 +11,7 @@ const props = defineProps({
   pipelineStages: { type: Array, default: () => [] },
   agents: { type: Array, default: () => [] },
   expanded: { type: Boolean, default: false },
+  showHeader: { type: Boolean, default: true },
 });
 
 const { t } = useI18n();
@@ -203,22 +204,26 @@ watch(
 </script>
 
 <template>
-  <div class="grid gap-3 border-t border-n-weak pt-3">
-    <div class="flex items-center justify-between gap-2">
-      <div>
-        <p class="mb-0 text-xs font-medium text-n-slate-12">
+  <div class="grid gap-4 p-4 sm:p-5">
+    <div class="flex items-center justify-between gap-3">
+      <div v-if="showHeader" class="min-w-0">
+        <h3 class="mb-1 text-base font-semibold leading-6 text-n-slate-12">
           {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TITLE') }}
-        </p>
-        <p class="mb-0 text-xs leading-5 text-n-slate-10">
+        </h3>
+        <p class="mb-0 text-sm leading-5 text-n-slate-11">
           {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.HELP') }}
         </p>
       </div>
+      <span v-else class="text-sm font-medium text-n-slate-12">
+        {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.RULES') }}
+      </span>
       <Button
         :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ADD_RULE')"
         icon="i-lucide-plus"
         slate
-        faded
-        xs
+        outline
+        md
+        class="min-h-11 shrink-0 bg-n-surface-1 !outline-n-weak"
         :disabled="!stage.id"
         @click="startCreate"
       />
@@ -226,14 +231,14 @@ watch(
 
     <div
       v-if="isLoading || uiFlags.isFetchingStageAutomations"
-      class="rounded-lg border border-n-weak bg-n-alpha-black2 px-3 py-2 text-xs text-n-slate-11"
+      class="rounded-xl border border-n-slate-4 bg-n-surface-1 px-4 py-3 text-sm text-n-slate-11"
     >
       {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.LOADING') }}
     </div>
 
     <div
       v-else-if="automations.length === 0 && editingId !== 'new'"
-      class="rounded-lg border border-dashed border-n-weak px-3 py-2 text-xs text-n-slate-10"
+      class="rounded-xl border border-dashed border-n-slate-5 px-4 py-4 text-sm leading-5 text-n-slate-11"
     >
       {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.EMPTY') }}
     </div>
@@ -242,13 +247,13 @@ watch(
       <div
         v-for="automation in automations"
         :key="automation.id"
-        class="flex items-center justify-between gap-2 rounded-lg border border-n-weak bg-n-alpha-black2 px-3 py-2"
+        class="flex items-center justify-between gap-3 rounded-xl border border-n-slate-4 bg-n-surface-1 px-4 py-3"
       >
         <div class="min-w-0">
-          <p class="mb-0 truncate text-xs font-medium text-n-slate-12">
+          <p class="mb-0 truncate text-sm font-medium text-n-slate-12">
             {{ automation.name }}
           </p>
-          <p class="mb-0 truncate text-[11px] text-n-slate-10">
+          <p class="mb-0 truncate text-xs leading-5 text-n-slate-11">
             {{
               t('CRM_KANBAN.STAGE_AUTOMATIONS.SUMMARY', {
                 trigger: triggerLabel(automation.trigger_event),
@@ -261,7 +266,7 @@ watch(
         </div>
         <div class="flex shrink-0 items-center gap-1">
           <span
-            class="rounded px-1.5 py-0.5 text-[10px]"
+            class="rounded-full px-2 py-1 text-xs font-medium"
             :class="
               automation.enabled
                 ? 'bg-n-teal-3 text-n-teal-11'
@@ -277,15 +282,21 @@ watch(
           <Button
             icon="i-lucide-pencil"
             slate
-            ghost
-            xs
+            outline
+            md
+            class="min-h-11 min-w-11 bg-n-surface-1 !outline-n-weak"
+            :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.EDIT_RULE')"
+            :title="t('CRM_KANBAN.STAGE_AUTOMATIONS.EDIT_RULE')"
             @click="startEdit(automation)"
           />
           <Button
             icon="i-lucide-trash-2"
             ruby
-            ghost
-            xs
+            outline
+            md
+            class="min-h-11 min-w-11 bg-n-surface-1"
+            :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.DELETE_RULE')"
+            :title="t('CRM_KANBAN.STAGE_AUTOMATIONS.DELETE_RULE')"
             :is-loading="uiFlags.isDeletingStageAutomation"
             @click="deleteAutomation(automation)"
           />
@@ -295,12 +306,13 @@ watch(
 
     <div
       v-if="editingId"
-      class="grid gap-3 rounded-lg border border-n-brand/30 bg-n-alpha-black2 p-3"
+      class="grid gap-4 rounded-xl border border-n-brand/30 bg-n-surface-1 p-4"
     >
       <Input
         v-model="draft.name"
         :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.RULE_NAME')"
         :placeholder="t('CRM_KANBAN.STAGE_AUTOMATIONS.RULE_NAME_PLACEHOLDER')"
+        custom-input-class="!bg-n-surface-1 !outline-n-weak"
       />
 
       <div class="grid gap-3 md:grid-cols-2">
@@ -312,10 +324,10 @@ watch(
             v-model="draft.trigger_event"
             :options="triggerChoices"
             :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.TRIGGER')"
-            class="w-full"
+            class="w-full [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
           />
         </label>
-        <label class="flex items-end gap-2 pb-1 text-sm text-n-slate-12">
+        <label class="flex min-h-11 items-center gap-2 text-sm text-n-slate-12">
           <input
             v-model="draft.enabled"
             type="checkbox"
@@ -327,15 +339,16 @@ watch(
 
       <div class="grid gap-2">
         <div class="flex items-center justify-between gap-2">
-          <p class="mb-0 text-xs font-medium text-n-slate-12">
+          <p class="mb-0 text-sm font-medium text-n-slate-12">
             {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.SEQUENCE') }}
           </p>
           <Button
             :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ADD_STEP')"
             icon="i-lucide-plus"
             slate
-            faded
-            xs
+            outline
+            md
+            class="min-h-11 bg-n-surface-1 !outline-n-weak"
             @click="addStep"
           />
         </div>
@@ -343,10 +356,10 @@ watch(
         <div
           v-for="(step, index) in draft.steps"
           :key="index"
-          class="grid gap-2 rounded-lg border border-n-weak p-2"
+          class="grid gap-3 rounded-xl border border-n-slate-4 bg-n-surface-1 p-4"
         >
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-medium text-n-slate-11">
+            <span class="text-sm font-medium text-n-slate-12">
               {{
                 t('CRM_KANBAN.STAGE_AUTOMATIONS.STEP_LABEL', {
                   count: index + 1,
@@ -357,33 +370,47 @@ watch(
               v-if="draft.steps.length > 1"
               icon="i-lucide-trash-2"
               ruby
-              ghost
-              xs
+              outline
+              md
+              class="min-h-11 min-w-11"
+              :aria-label="
+                t('CRM_KANBAN.STAGE_AUTOMATIONS.REMOVE_STEP', {
+                  count: index + 1,
+                })
+              "
+              :title="
+                t('CRM_KANBAN.STAGE_AUTOMATIONS.REMOVE_STEP', {
+                  count: index + 1,
+                })
+              "
               @click="removeStep(index)"
             />
           </div>
 
           <div class="grid gap-2">
             <label class="grid min-w-0 gap-1">
-              <span class="text-[11px] text-n-slate-10">
+              <span class="text-xs font-medium text-n-slate-11">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.DELAY') }}
               </span>
               <input
                 v-model.number="step.delay_seconds"
                 type="number"
                 min="0"
-                class="reset-base !mb-0 h-9 w-full min-w-0 rounded-lg border-0 bg-n-alpha-black2 px-3 text-sm outline outline-1 outline-n-weak"
+                class="reset-base !mb-0 min-h-11 w-full min-w-0 rounded-lg border-0 bg-n-surface-1 px-3 text-sm outline outline-1 outline-n-weak"
               />
+              <span class="text-xs leading-5 text-n-slate-11">
+                {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.DELAY_HELP') }}
+              </span>
             </label>
             <label class="grid min-w-0 gap-1">
-              <span class="text-[11px] text-n-slate-10">
+              <span class="text-xs font-medium text-n-slate-11">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.ACTION') }}
               </span>
               <ChoiceSelect
                 v-model="step.action_type"
                 :options="actionChoices"
                 :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ACTION')"
-                class="w-full min-w-0"
+                class="w-full min-w-0 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
                 @change="onActionTypeChange(step)"
               />
             </label>
@@ -393,15 +420,16 @@ watch(
             <Input
               v-model="step.action_config.title"
               :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.FOLLOW_UP_TITLE')"
+              custom-input-class="!bg-n-surface-1 !outline-n-weak"
             />
             <label class="grid gap-1">
-              <span class="text-[11px] text-n-slate-10">
+              <span class="text-xs font-medium text-n-slate-11">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.FOLLOW_UP_DESCRIPTION') }}
               </span>
               <textarea
                 v-model="step.action_config.description"
                 rows="2"
-                class="reset-base rounded-lg border-0 bg-n-alpha-black2 px-3 py-2 text-sm outline outline-1 outline-n-weak"
+                class="reset-base rounded-lg border-0 bg-n-surface-1 px-3 py-2 text-sm outline outline-1 outline-n-weak"
               />
             </label>
           </template>
@@ -418,26 +446,28 @@ watch(
               }}</span>
             </label>
             <label v-if="!step.action_config.use_card_owner" class="grid gap-1">
-              <span class="text-[11px] text-n-slate-10">
+              <span class="text-xs font-medium text-n-slate-11">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.OWNER') }}
               </span>
               <ChoiceSelect
                 v-model="step.action_config.owner_id"
                 :options="ownerChoices"
                 :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.OWNER')"
+                class="[&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
               />
             </label>
           </template>
 
           <template v-else-if="step.action_type === 'move_stage'">
             <label class="grid gap-1">
-              <span class="text-[11px] text-n-slate-10">
+              <span class="text-xs font-medium text-n-slate-11">
                 {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TARGET_STAGE') }}
               </span>
               <ChoiceSelect
                 v-model="step.action_config.target_stage_id"
                 :options="targetStageChoices"
                 :aria-label="t('CRM_KANBAN.STAGE_AUTOMATIONS.TARGET_STAGE')"
+                class="[&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
               />
             </label>
           </template>
@@ -448,14 +478,16 @@ watch(
         <Button
           :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.CANCEL')"
           slate
-          faded
-          sm
+          outline
+          md
+          class="min-h-11 bg-n-surface-1 !outline-n-weak"
           @click="resetDraft"
         />
         <Button
           :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.SAVE')"
           icon="i-lucide-check"
-          sm
+          md
+          class="min-h-11"
           :is-loading="uiFlags.isSavingStageAutomation"
           :disabled="!draft.name.trim()"
           @click="saveAutomation"

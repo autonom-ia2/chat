@@ -973,12 +973,28 @@ export const actions = {
     }
   },
 
-  moveCard: async ({ commit }, { cardId, stageId }) => {
+  moveCard: async ({ commit, state: $state }, { cardId, stageId }) => {
+    if ($state.uiFlags?.isMovingCard)
+      throw new Error('crm_card_move_in_progress');
+
     commit(types.SET_CRM_KANBAN_UI_FLAG, { isMovingCard: true });
     try {
       const response = await CrmKanbanAPI.moveCard(cardId, stageId);
-      commit(types.UPSERT_CRM_KANBAN_CARD, response.data.payload);
-      return response.data.payload;
+      const card = response.data.payload;
+      commit(types.UPSERT_CRM_KANBAN_CARD, card);
+
+      // A board move must update a row already loaded in List as well. Do not
+      // insert a board-only card into a paginated List page: that would change
+      // the page contents and count without a server fetch.
+      const isLoadedInList = ($state.cardsList || []).some(
+        item => String(item.id) === String(card.id)
+      );
+      if (isLoadedInList) commit(types.UPSERT_CRM_CARD_IN_LIST, card);
+
+      // Calendar events are follow-ups/meetings and intentionally carry only
+      // their own event fields plus card_id; stage_id is not part of that
+      // response contract, so a stage-only move has no event row to rewrite.
+      return card;
     } finally {
       commit(types.SET_CRM_KANBAN_UI_FLAG, { isMovingCard: false });
     }

@@ -318,7 +318,7 @@
 - onde_fica: Sidebar > CRM > CRM Kanban
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
 - passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, score, responsável, time, caixa, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
+- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - highlight: `crm-filters`
 
 ### criar_funis_estagios_e_conectar_caixas_ao_crm
@@ -420,9 +420,9 @@
 - titulo: Configurar link público de agendamento
 - rota: public_booking_page
 - intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como cada vendedor tem seu próprio link?"
-- onde_fica: Sidebar > CRM > CRM Calendar > Perfis de agendamento
+- onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
 - pre_requisitos: caixa Google/Microsoft com calendário ativo; funil/estágio padrão recomendado; agentes membros da caixa para links por agente.
-- passos: Abra CRM Calendar; clique em Perfis de agendamento; habilite o perfil da caixa; defina duração, janela, fuso, dias e horário; escolha modo fixo ou por agente; salve e copie a URL.
+- passos: Abra CRM Calendar; clique em Agendamento; habilite o perfil da caixa; defina duração, janela, fuso, dias e horário; escolha modo fixo ou por agente; salve e copie a URL.
 - gotchas: no modo por agente, o slug base pode não funcionar e cada agente deve usar seu link individual; a página pública envia e-mail de confirmação antes de criar a reunião; links dependem de `FRONTEND_URL` correto para o e-mail de confirmação.
 - nav_target: `crm_calendar_index`
 
@@ -787,10 +787,10 @@
 - titulo: Configurar pagina de agendamento em caixa compartilhada e links por agente
 - rota: crm_calendar_index
 - intent: "Como varios vendedores usam o mesmo e-mail para agenda?"; "Como gero um link de agendamento para cada agente?"; "O que significa caixa compartilhada no booking?"
-- onde_fica: Sidebar > CRM > CRM Calendar > Pagina de agendamento
+- onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
 - perfil: `administrator`; se o perfil nao puder, diga que a API de perfis de agendamento e administrativa. Custom role com `crm_manage_pipelines` pode ver controles de CRM, mas deve pedir a um administrador para salvar/gerar links de booking.
 - pre_requisitos: caixa de e-mail Google/Microsoft conectada com calendario; agentes adicionados como membros da caixa; funil/etapa padrao recomendados para criar o lead corretamente.
-- passos: 1. Abra CRM Calendar; 2. Clique em Pagina de agendamento; 3. Habilite a pagina da caixa; 4. Em Atribuicao, escolha Por agente (links individuais); 5. Marque Caixa compartilhada quando varios agentes usam o mesmo e-mail; 6. Salve e copie o link de cada agente.
+- passos: 1. Abra CRM Calendar; 2. Clique em Agendamento; 3. Habilite a pagina da caixa; 4. Em Atribuicao, escolha Por agente (links individuais); 5. Marque Caixa compartilhada quando varios agentes usam o mesmo e-mail; 6. Salve e copie o link de cada agente.
 - gotchas: em modo por agente, compartilhe os links individuais, nao o slug base; agente sem acesso a caixa nao e elegivel; com `calendar_shared`, disponibilidade e calculada pelos compromissos CRM do agente, nao pelo free/busy agregado da caixa compartilhada.
 - highlight: `crm-booking-page`
 
@@ -831,10 +831,10 @@
 - titulo: Criar automacoes por etapa do funil
 - rota: crm_kanban_index
 - intent: "Como automatizo uma etapa do CRM?"; "Como criar follow-up ao mover card?"; "Como atribuir responsavel automaticamente quando entrar numa etapa?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Editar funil > etapa > icone de automacoes
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar > Editar funil > status > Automacoes deste status
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis.
 - pre_requisitos: funil salvo; etapa existente; agentes disponiveis quando a acao for atribuir responsavel.
-- passos: 1. Abra Editar funil; 2. Na etapa desejada, clique no icone de automacoes; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar follow-up, Atribuir responsavel ou Mover estagio; 5. Defina atraso e parametros; 6. Salve a regra.
+- passos: 1. Abra Editar funil; 2. No status desejado, abra Automacoes deste status; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar follow-up, Atribuir responsavel ou Mover estagio; 5. Defina atraso e parametros; 6. Salve a regra.
 - gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; follow-ups criados pela automacao aparecem no card e no calendario.
 
 ### salvar_e_compartilhar_visoes_da_lista_do_crm

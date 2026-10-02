@@ -90,6 +90,41 @@ describe('CrmPipelineDrawer form reset vs realtime churn', () => {
     expect(wrapper.vm.form.stages[0].id).toBe(10);
     expect(wrapper.vm.form.stages[0].name).toBe('Novo Editado');
   });
+
+  it('keeps order and delete actions labeled and automation separate from options', async () => {
+    const wrapper = mountDrawer();
+    wrapper.vm.openStage(wrapper.vm.form.stages[1]);
+    await wrapper.vm.$nextTick();
+
+    const options = wrapper.get('details');
+    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.ORDER_LABEL');
+    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.MOVE_BEFORE');
+    expect(options.text()).toContain('CRM_KANBAN.PIPELINE_EDITOR.MOVE_AFTER');
+    expect(options.text()).toContain(
+      'CRM_KANBAN.PIPELINE_EDITOR.DELETE_STATUS'
+    );
+    expect(options.text()).not.toContain('CRM_KANBAN.STAGE_AUTOMATIONS');
+    expect(wrapper.text()).toContain('CRM_KANBAN.STAGE_AUTOMATIONS.OPEN');
+  });
+
+  it('moves the selected status with the visible order action', async () => {
+    const wrapper = mountDrawer();
+    wrapper.vm.openStage(wrapper.vm.form.stages[1]);
+    await wrapper.vm.$nextTick();
+
+    const moveBefore = wrapper
+      .findAll('button')
+      .find(button =>
+        button.text().includes('CRM_KANBAN.PIPELINE_EDITOR.MOVE_BEFORE')
+      );
+    await moveBefore.trigger('click');
+
+    expect(wrapper.vm.form.stages.map(stage => stage.name)).toEqual([
+      'Em atendimento',
+      'Novo',
+    ]);
+  });
+
   it('keeps the drawer open when AI settings fail to save', async () => {
     const wrapper = mountDrawer();
     wrapper.vm.aiPanel = { saveSettings: vi.fn().mockResolvedValue(false) };
