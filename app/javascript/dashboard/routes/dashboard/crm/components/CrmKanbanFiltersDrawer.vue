@@ -556,8 +556,8 @@ useFixedPanelPresence(computed(() => props.show));
                 </p>
                 <div class="grid grid-cols-2 gap-3">
                   <Input
-                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     v-model="draft.scoreMin"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     max="100"
@@ -565,8 +565,8 @@ useFixedPanelPresence(computed(() => props.show));
                     :label="t('CRM_KANBAN.FILTERS.SCORE_MIN')"
                   />
                   <Input
-                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     v-model="draft.scoreMax"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     max="100"
@@ -725,15 +725,15 @@ useFixedPanelPresence(computed(() => props.show));
                 </span>
                 <div class="grid grid-cols-2 gap-3">
                   <Input
-                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     v-model="draft.valueMin"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     :label="t('CRM_KANBAN.FILTERS.VALUE_MIN')"
                   />
                   <Input
-                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     v-model="draft.valueMax"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     :label="t('CRM_KANBAN.FILTERS.VALUE_MAX')"
