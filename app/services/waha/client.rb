@@ -61,6 +61,14 @@ module Waha
       get("/api/apps?session=#{session}")
     end
 
+    def get_app(app_id)
+      get("/api/apps/#{app_id}")
+    end
+
+    def update_app(app_id, app)
+      put("/api/apps/#{app_id}", app)
+    end
+
     def delete_app(app_id)
       delete("/api/apps/#{app_id}")
     end
@@ -82,6 +90,10 @@ module Waha
 
     def get(path)
       request(:get, path)
+    end
+
+    def put(path, body)
+      request(:put, path, body)
     end
 
     def delete(path)
