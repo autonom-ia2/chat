@@ -2,14 +2,16 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/869.
 Piloto aceito: #865/#866. Duas caixas anteriores concluídas: #867/#868.
-Estado final deste checkpoint: **ampliação interrompida por relato de Status do WhatsApp; uma caixa aplicada e confirmada, 21 restantes sem escrita**.
+Estado atualizado: **retomada autorizada concluída; 21 caixas restantes aplicadas e confirmadas, total de 25 elegíveis conformes no Hub2You. As oito excluídas permanecem sem APPLY**.
+Os blocos anteriores registram a interrupção e a revalidação; a conclusão está no bloco de retomada abaixo.
 
 ## Autorização e limites
 
 Rodrigo pediu ampliar para todo o lote e confirmou explicitamente que a janela sem outros escritores
 cobre todas as sessões restantes desta conta durante aplicação e eventual recuperação.
 Escopo concreto: somente mesma conta do piloto no Hub2You. Autonom.ia e outras contas excluídas.
-Sem novo merge/deploy, logout, QR, pareamento, envio de mensagens extras ou edição de produto.
+Na ampliação original não houve novo merge/deploy, logout, QR, pareamento, envio de mensagens extras ou edição de produto.
+A autorização posterior para publicar a correção permanente de Status está registrada no bloco de retomada.
 R1–R5/N1–N3 preservados. M4 identificado para toda operação com estado local.
 Identidades exatas e configuração ficam privadas, fora de Git/GitHub.
 
@@ -93,3 +95,44 @@ A operação autorizada de #871/#872 ativou e confirmou o filtro de Status nas q
 Em resposta à consulta sobre tombamento/backfill, o restante foi revalidado em modo somente leitura: SSM `5ee3d640-6efb-4718-9001-a1dc409c1da0`, Success/0, 2026-10-02 19:18:07–19:18:49 de Brasília. As 21 caixas restantes estão WORKING, em sessões distintas, com `ignore.status=true` e exatamente as quatro mudanças esperadas do plano original. Total=21, would_update=21, updated=0; zero skips/falhas/recuperações. Hash local antes/depois igual; banco em READ ONLY e cliente HTTP somente GET.
 
 Esse backfill configura caixas existentes; não importa, apaga ou recalcula mensagens/histórico. O código base d28a87ad9b já está publicado no Hub2You. O resultado permite preparar a retomada das 21 caixas, com novos backups antes de cada aplicação, comparação N1 e parada R1, mantendo o filtro ligado. Nenhum APPLY novo foi feito após a revalidação; não reutilizar o orquestrador interrompido nem o backup antigo do primeiro alvo. Autonom.ia e as oito caixas excluídas permanecem fora deste lote. A consulta sobre prontidão não foi tratada como autorização de novo merge/deploy nas duas instalações.
+
+## Retomada autorizada — lote concluído
+
+Rodrigo autorizou seguir completo e com segurança após a revalidação. A execução manteve a janela
+confirmada sem outros escritores e a seleção fixa do Hub2You. A publicação autorizada da correção
+permanente de Status nas duas instalações segue #872/#873; isso não autoriza backfill na Autonom.ia.
+
+Novo registro privado: `/Users/rodrigosilva/.codex/operations/waha-2026-10-02-lote4/full-batch-resume/`.
+Não foi reutilizado o orquestrador interrompido. Os 42 runners Ruby da retomada passaram na verificação
+de sintaxe com Ruby 3.4.4. Antes de cada APPLY, houve backup completo fresco e confronto com o estado
+original; a escrita usou a task publicada com ACCOUNT_ID e INBOX_ID, preservando N1/R1.
+Cada próximo alvo só começou depois da confirmação separada da caixa anterior.
+
+Execução: 2026-10-02 19:27:44–19:54:17 de Brasília (22:27:44–22:54:17 UTC).
+Resultado: **21 UPDATED, 63 comandos SSM Success/0**, zero skips/falhas/recuperações.
+Cada uma das 21 sessões ficou WORKING, filtro de Status ligado, configuração não relacionada preservada,
+resolver único habilitado e vínculo/trava locais corretos. Todos os dry-runs posteriores retornaram
+unchanged=1, would_update=0, sem escrita, com hash local antes/depois igual.
+Os IDs e resultados integrais dos 63 comandos ficam privados no resumo de conclusão.
+
+Conferência agregada anterior à publicação: SSM `27feb719-5876-4a7c-bdfd-7302333c1fb0`, Success/0,
+2026-10-02 19:54:48–19:55:36 de Brasília. As **25 caixas elegíveis** estão conformes, WORKING, em sessões
+distintas, com ignore.status=true, plano vazio e unchanged=1 por caixa. Cliente HTTP GET-only e banco
+em transação READ ONLY; nenhuma alteração de estado local. Nas janelas posteriores à aplicação/filtro
+de cada caixa, observaram-se **5 mensagens comuns e 0 mensagens de Status**. Esse tráfego não estabelece
+E2E completo nas 25 caixas; nas demais não houve tráfego novo naquela janela.
+
+Os **50 arquivos before/after** das quatro correções de filtro e das 21 aplicações foram transferidos
+cifrados para armazenamento privado fora da instância antes do deploy. SSM de selagem
+`93b95666-6035-4e2d-84a0-105e98724ff0`, Success/0. AES-256-GCM autenticado, chave encapsulada com
+RSA-OAEP; hash do arquivo cifrado conferido, cada hash interno conferido e comparação final contra os
+hashes originais emitidos nas operações. Diretórios 0700/arquivos 0600. Teste local com 50 arquivos
+sintéticos passou; arquivo adulterado foi rejeitado antes de gravar qualquer arquivo.
+Um erro inicial do conferidor local selecionava somente a última linha JSON da operação, que não
+continha hash; foi corrigido para verificar todas as linhas e o sha256sum. Nenhuma divergência de dados
+foi encontrada e nenhuma aplicação foi repetida.
+
+Não houve importação, exclusão ou recálculo de mensagens/histórico, novos envios, logout, alteração de
+QR ou pareamento. As oito caixas excluídas continuam sem APPLY e exigem diagnóstico separado.
+A Autonom.ia não recebeu backfill. O runtime usado nas operações foi d28a87ad9b; a publicação posterior
+é comprovada separadamente pela auditoria do release.
