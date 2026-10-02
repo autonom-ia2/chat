@@ -62,37 +62,114 @@ describe ReportingEventListener do
       expect(reporting_event.event_end_time).to be_within(1.second).of(resolved_at)
     end
 
-    it 'measures a reopened conversation from the current service cycle' do
-      first_resolved_at = 2.days.ago
+    context 'when the inbox is WAHA with single conversation enabled' do
+      let(:waha_channel) do
+        create(
+          :channel_api,
+          account: account,
+          additional_attributes: {
+            'provider' => 'waha',
+            'session' => '5511999999999',
+            'app_id' => 'app_reporting_test'
+          }
+        )
+      end
+      let(:waha_inbox) do
+        waha_channel.inbox.tap { |record| record.update!(lock_to_single_conversation: true) }
+      end
+      let(:waha_conversation) do
+        create(:conversation, created_at: 3.days.ago, account: account, inbox: waha_inbox, assignee: user)
+      end
+
+      it 'measures a reopened conversation from the first opening of the current service cycle' do
+        first_resolved_at = 2.days.ago
+        reopened_at = 30.minutes.ago
+        resolved_again_at = Time.current
+
+        create_resolution_event(waha_conversation, first_resolved_at)
+        create_opened_event(waha_conversation, first_resolved_at, reopened_at)
+
+        listener.conversation_resolved(
+          Events::Base.new('conversation.resolved', resolved_again_at, conversation: waha_conversation)
+        )
+
+        reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+        expect(reporting_event.value).to be_within(1).of(30.minutes.to_i)
+        expect(reporting_event.event_start_time).to be_within(1.second).of(reopened_at)
+      end
+
+      it 'does not discard the first part of the cycle after snooze and another opening' do
+        first_resolved_at = 2.hours.ago
+        first_reopened_at = 80.minutes.ago
+        reopened_after_snooze_at = 30.minutes.ago
+        resolved_again_at = Time.current
+
+        create_resolution_event(waha_conversation, first_resolved_at)
+        create_opened_event(waha_conversation, first_resolved_at, first_reopened_at)
+        create_opened_event(waha_conversation, first_reopened_at, reopened_after_snooze_at)
+
+        listener.conversation_resolved(
+          Events::Base.new('conversation.resolved', resolved_again_at, conversation: waha_conversation)
+        )
+
+        reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+        expect(reporting_event.value).to be_within(1).of(80.minutes.to_i)
+        expect(reporting_event.event_start_time).to be_within(1.second).of(first_reopened_at)
+      end
+    end
+
+    it 'preserves the historical created_at calculation for non-WAHA channels' do
+      legacy_conversation = create(
+        :conversation,
+        created_at: 3.hours.ago,
+        account: account,
+        inbox: inbox,
+        assignee: user
+      )
+      first_resolved_at = 2.hours.ago
       reopened_at = 30.minutes.ago
       resolved_again_at = Time.current
 
-      create(:reporting_event,
-             name: 'conversation_resolved',
-             account_id: account.id,
-             inbox_id: inbox.id,
-             conversation_id: conversation.id,
-             user_id: user.id,
-             value: 1200,
-             event_start_time: conversation.created_at,
-             event_end_time: first_resolved_at)
-      create(:reporting_event,
-             name: 'conversation_opened',
-             account_id: account.id,
-             inbox_id: inbox.id,
-             conversation_id: conversation.id,
-             user_id: user.id,
-             value: 3600,
-             event_start_time: first_resolved_at,
-             event_end_time: reopened_at)
+      create_resolution_event(legacy_conversation, first_resolved_at)
+      create_opened_event(legacy_conversation, first_resolved_at, reopened_at)
 
       listener.conversation_resolved(
-        Events::Base.new('conversation.resolved', resolved_again_at, conversation: conversation)
+        Events::Base.new('conversation.resolved', resolved_again_at, conversation: legacy_conversation)
       )
 
       reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
-      expect(reporting_event.value).to be_within(1).of(30.minutes.to_i)
-      expect(reporting_event.event_start_time).to be_within(1.second).of(reopened_at)
+      expect(reporting_event.value).to be_within(2).of(3.hours.to_i)
+      expect(reporting_event.event_start_time).to be_within(1.second).of(legacy_conversation.created_at)
+    end
+
+    it 'preserves the historical calculation for WAHA inboxes without single conversation enabled' do
+      waha_channel = create(
+        :channel_api,
+        account: account,
+        additional_attributes: {
+          'provider' => 'waha',
+          'session' => '5511888888888',
+          'app_id' => 'app_reporting_unlocked'
+        }
+      )
+      unlocked_inbox = waha_channel.inbox.tap { |record| record.update!(lock_to_single_conversation: false) }
+      unlocked_conversation = create(
+        :conversation,
+        created_at: 3.hours.ago,
+        account: account,
+        inbox: unlocked_inbox,
+        assignee: user
+      )
+
+      create_resolution_event(unlocked_conversation, 2.hours.ago)
+      create_opened_event(unlocked_conversation, 2.hours.ago, 30.minutes.ago)
+
+      listener.conversation_resolved(
+        Events::Base.new('conversation.resolved', Time.current, conversation: unlocked_conversation)
+      )
+
+      reporting_event = account.reporting_events.where(name: 'conversation_resolved').order(:id).last
+      expect(reporting_event.event_start_time).to be_within(1.second).of(unlocked_conversation.created_at)
     end
 
     describe 'conversation_bot_resolved' do
@@ -125,6 +202,34 @@ describe ReportingEventListener do
         expect(account.reporting_events.where(name: 'conversation_bot_resolved').count).to be 0
       end
     end
+  end
+
+  def create_resolution_event(target_conversation, resolved_at)
+    create(
+      :reporting_event,
+      name: 'conversation_resolved',
+      account_id: account.id,
+      inbox_id: target_conversation.inbox_id,
+      conversation_id: target_conversation.id,
+      user_id: user.id,
+      value: 1200,
+      event_start_time: target_conversation.created_at,
+      event_end_time: resolved_at
+    )
+  end
+
+  def create_opened_event(target_conversation, start_time, opened_at)
+    create(
+      :reporting_event,
+      name: 'conversation_opened',
+      account_id: account.id,
+      inbox_id: target_conversation.inbox_id,
+      conversation_id: target_conversation.id,
+      user_id: user.id,
+      value: opened_at.to_i - start_time.to_i,
+      event_start_time: start_time,
+      event_end_time: opened_at
+    )
   end
 
   describe '#reply_created' do

@@ -126,20 +126,30 @@ class ReportingEventListener < BaseListener
   private
 
   def resolution_cycle_start_time(conversation, event_end_time)
+    return conversation.created_at unless waha_single_conversation?(conversation)
+
     last_resolved_event = ReportingEvent.where(
       conversation_id: conversation.id,
       name: 'conversation_resolved'
     ).where('event_end_time < ?', event_end_time).order(event_end_time: :desc).first
     return conversation.created_at unless last_resolved_event
 
-    reopened_event = ReportingEvent.where(
+    first_reopened_event = ReportingEvent.where(
       conversation_id: conversation.id,
       name: 'conversation_opened'
     ).where('event_end_time > ? AND event_end_time <= ?', last_resolved_event.event_end_time, event_end_time)
-                                   .order(event_end_time: :desc)
-                                   .first
+                                         .order(event_end_time: :asc)
+                                         .first
 
-    reopened_event&.event_end_time || conversation.created_at
+    first_reopened_event&.event_end_time || conversation.created_at
+  end
+
+  def waha_single_conversation?(conversation)
+    inbox = conversation.inbox
+    return false unless inbox.lock_to_single_conversation?
+
+    channel = inbox.channel
+    channel.is_a?(Channel::Api) && channel.waha_provider?
   end
 
   def create_conversation_opened_event(conversation, time_since_resolved, business_hours_value, start_time, event_end_time)
