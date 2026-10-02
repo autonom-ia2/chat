@@ -3213,8 +3213,8 @@
      "fontes": [
       "porques: Criar campanha de e-mail e importar base"
      ],
-     "revisar": false,
-     "nota": null
+     "revisar": true,
+     "nota": "evidência sumiu: app/javascript/dashboard/i18n/locale/pt_BR/campaign.json:610"
     },
     {
      "id": "13.07",
