@@ -84,7 +84,27 @@ module Waha
       get("/api/contacts/check-exists?#{query}")
     end
 
+    # Read-only capability probe. When the module is enabled but no App is configured
+    # for the session, WAHA returns a structured 404 saying the App is not enabled.
+    # When the module itself is disabled, Nest returns "Cannot GET ..." instead.
+    def brazilian_phone_numbers_available?(session)
+      path = "/api/apps/brazilian-phone-numbers/#{URI.encode_www_form_component(session)}/cache/stats"
+      response = HTTParty.get("#{@base}#{path}", headers: headers, timeout: DEFAULT_TIMEOUT)
+      return true if response.success? || response.code == 422
+      return brazilian_phone_numbers_route_present?(response) if response.code == 404
+
+      raise Error, "WAHA GET #{path} -> #{response.code}"
+    rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED => e
+      raise Error, "WAHA GET #{path} falhou: #{e.class}"
+    end
+
     private
+
+    def brazilian_phone_numbers_route_present?(response)
+      body = response.parsed_response
+      message = body.is_a?(Hash) ? body['message'].to_s : response.body.to_s
+      message.include?("App 'brazilian-phone-numbers' is not enabled for session")
+    end
 
     def headers
       { 'X-Api-Key' => @key, 'Content-Type' => 'application/json', 'Accept' => 'application/json' }

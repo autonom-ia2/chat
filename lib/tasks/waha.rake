@@ -10,14 +10,15 @@ namespace :waha do
 
     puts(
       "[waha][backfill_existing_inboxes][done] total=#{result.total} would_update=#{result.would_update} " \
-      "updated=#{result.updated} unchanged=#{result.unchanged} skipped=#{result.skipped} failed=#{result.failed}"
+      "updated=#{result.updated} unchanged=#{result.unchanged} skipped=#{result.skipped} failed=#{result.failed} " \
+      "recovered=#{result.recovered} recovery_failed=#{result.recovery_failed} halted=#{result.halted}"
     )
 
     if !apply && result.would_update.positive?
       puts '[waha][backfill_existing_inboxes] DRY_RUN only. Re-run with APPLY=true after reviewing the report.'
     end
 
-    incomplete = result.failed.positive? || (apply && result.skipped.positive?)
+    incomplete = result.failed.positive? || result.recovery_failed.positive? || (apply && result.skipped.positive?)
     abort('[waha][backfill_existing_inboxes] incomplete migration detected') if incomplete
   end
 end

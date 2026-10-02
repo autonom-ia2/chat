@@ -4,7 +4,15 @@ RSpec.describe Waha::ExistingInboxUpdater do
   let(:account) { create(:account) }
   let(:client) { instance_double(Waha::Client) }
   let(:output) { StringIO.new }
-  let(:service) { described_class.new(client: client, output: output) }
+  let(:service) do
+    described_class.new(
+      client: client,
+      output: output,
+      sleeper: ->(_) {},
+      health_attempts: 3,
+      health_interval: 0
+    )
+  end
   let(:channel) do
     create(
       :channel_api,
@@ -39,27 +47,40 @@ RSpec.describe Waha::ExistingInboxUpdater do
   end
   let(:remote_phone_app) { nil }
   let(:remote_other_app) { nil }
-  let(:session_info) do
+  let(:remote_session) do
     {
       'name' => '5511999999999',
+      'status' => 'WORKING',
       'config' => { 'ignore' => { 'status' => true, 'groups' => true } }
     }
   end
+  let(:remote_apps) do
+    [remote_app.deep_dup, remote_phone_app&.deep_dup, remote_other_app&.deep_dup].compact
+  end
 
   before do
-    allow(client).to receive(:get_app).with('app_123') { remote_app.deep_dup }
-    allow(client).to receive(:get_session).with('5511999999999') { session_info.deep_dup }
-    allow(client).to receive(:list_apps).with('5511999999999') do
-      [remote_app.deep_dup, remote_phone_app&.deep_dup, remote_other_app&.deep_dup].compact
+    allow(client).to receive(:get_app).with('app_123') do
+      remote_apps.find { |app| app['id'] == 'app_123' }&.deep_dup
     end
-    allow(client).to receive(:update_session)
+    allow(client).to receive(:get_session).with('5511999999999') { remote_session.deep_dup }
+    allow(client).to receive(:list_apps).with('5511999999999') { remote_apps.deep_dup }
+    allow(client).to receive(:brazilian_phone_numbers_available?).with('5511999999999').and_return(true)
+    allow(client).to receive(:start_session).with('5511999999999') do
+      remote_session['status'] = 'WORKING'
+      remote_session.deep_dup
+    end
+    allow(client).to receive(:update_session) do |_session, config:, apps:|
+      remote_session['config'] = config.deep_dup
+      remote_session['status'] = 'WORKING'
+      remote_apps.replace(apps.deep_dup)
+      remote_session.merge('apps' => remote_apps.deep_dup)
+    end
   end
 
   it 'is dry-run by default and reports all required changes without writing' do
     result = service.perform
 
-    expect(result.would_update).to eq(1)
-    expect(result.updated).to eq(0)
+    expect(result.to_h.slice(:would_update, :updated, :failed)).to eq(would_update: 1, updated: 0, failed: 0)
     expect(inbox.reload.lock_to_single_conversation).to be(false)
     expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
     expect(client).not_to have_received(:update_session)
@@ -67,48 +88,58 @@ RSpec.describe Waha::ExistingInboxUpdater do
     expect(output.string).to include('DRY_RUN')
   end
 
-  it 'updates Chatwoot, creates the Brazilian resolver and records its app id' do
+  it 'updates remote state, confirms WORKING and only then records local state' do
     result = service.perform(apply: true)
 
     expect(result.updated).to eq(1)
+    expect(result.failed).to eq(0)
+    expect(result.halted).to be(false)
+    expect(remote_session['status']).to eq('WORKING')
     expect(inbox.reload.lock_to_single_conversation).to be(true)
 
     phone_app_id = channel.reload.additional_attributes['phone_numbers_app_id']
     expect(phone_app_id).to start_with('br_')
-    expect(client).to have_received(:update_session).with(
-      '5511999999999',
-      config: session_info['config'],
-      apps: contain_exactly(
-        hash_including(
-          'id' => phone_app_id,
-          'app' => 'brazilian-phone-numbers',
-          'enabled' => true,
-          'config' => hash_including(
-            'strict' => false,
-            'lookup' => true,
-            'cache' => hash_including(
-              'memoryTtl' => '24h',
-              'persistent' => true,
-              'persistentTtl' => '31d'
-            )
-          )
-        ),
-        hash_including(
-          'id' => 'app_123',
-          'config' => hash_including(
-            'groups' => 'OFF',
-            'customFutureOption' => { 'keep' => true },
-            'conversations' => hash_including(
-              'markAsRead' => true,
-              'sort' => 'created_newest',
-              'status' => nil,
-              'outgoing' => 'message',
-              'syncMessageStatus' => true
-            )
+    expect(remote_apps).to contain_exactly(
+      hash_including(
+        'id' => phone_app_id,
+        'app' => 'brazilian-phone-numbers',
+        'enabled' => true
+      ),
+      hash_including(
+        'id' => 'app_123',
+        'app' => 'chatwoot',
+        'config' => hash_including(
+          'conversations' => hash_including(
+            'outgoing' => 'message',
+            'syncMessageStatus' => true
           )
         )
       )
-    ).once
+    )
+  end
+
+  it 'blocks apply before any write when the Brazilian resolver module is unavailable' do
+    allow(client).to receive(:brazilian_phone_numbers_available?).and_return(false)
+
+    result = service.perform(apply: true)
+
+    expect(result.skipped).to eq(1)
+    expect(result.updated).to eq(0)
+    expect(result.halted).to be(true)
+    expect(client).not_to have_received(:update_session)
+    expect(inbox.reload.lock_to_single_conversation).to be(false)
+    expect(output.string).to include('brazilian_phone_numbers_unavailable')
+  end
+
+  it 'blocks apply before any write when the session is not WORKING' do
+    remote_session['status'] = 'FAILED'
+
+    result = service.perform(apply: true)
+
+    expect(result.skipped).to eq(1)
+    expect(result.halted).to be(true)
+    expect(client).not_to have_received(:update_session)
+    expect(output.string).to include('session_not_working:FAILED')
   end
 
   context 'when another WAHA app already exists on the session' do
@@ -122,14 +153,10 @@ RSpec.describe Waha::ExistingInboxUpdater do
       }
     end
 
-    it 'preserves the unrelated app while syncing Chatwoot and the Brazilian resolver' do
+    it 'preserves the unrelated app while syncing the managed apps' do
       service.perform(apply: true)
 
-      expect(client).to have_received(:update_session).with(
-        '5511999999999',
-        config: session_info['config'],
-        apps: array_including(remote_other_app)
-      ).once
+      expect(remote_apps).to include(remote_other_app)
     end
   end
 
@@ -152,7 +179,7 @@ RSpec.describe Waha::ExistingInboxUpdater do
       }
     end
 
-    it 'is idempotent when both remote apps and the local inbox are already compliant' do
+    it 'is idempotent when remote and local state are already compliant' do
       inbox.update!(lock_to_single_conversation: true)
       channel.update!(
         additional_attributes: channel.additional_attributes.merge('phone_numbers_app_id' => 'br_existing')
@@ -161,6 +188,7 @@ RSpec.describe Waha::ExistingInboxUpdater do
         'outgoing' => 'message',
         'syncMessageStatus' => true
       )
+      remote_apps.replace([remote_app.deep_dup, remote_phone_app.deep_dup])
 
       result = service.perform(apply: true)
 
@@ -174,45 +202,136 @@ RSpec.describe Waha::ExistingInboxUpdater do
       remote_phone_app['enabled'] = false
       remote_phone_app['config']['lookup'] = false
       remote_phone_app['config']['customFutureOption'] = { 'keep' => true }
+      remote_apps.replace([remote_app.deep_dup, remote_phone_app.deep_dup])
 
       service.perform(apply: true)
 
-      expect(client).to have_received(:update_session).with(
-        '5511999999999',
-        config: session_info['config'],
-        apps: array_including(
-          hash_including(
-            'id' => 'br_existing',
-            'enabled' => true,
-            'config' => hash_including(
-              'lookup' => true,
-              'strict' => false,
-              'customFutureOption' => { 'keep' => true },
-              'cache' => hash_including('persistent' => true)
-            )
-          )
-        )
-      ).once
+      resolved = remote_apps.find { |app| app['id'] == 'br_existing' }
+      expect(resolved).to include('enabled' => true)
+      expect(resolved['config']).to include(
+        'lookup' => true,
+        'strict' => false,
+        'customFutureOption' => { 'keep' => true }
+      )
+      expect(resolved.dig('config', 'cache', 'persistent')).to be(true)
       expect(channel.reload.additional_attributes['phone_numbers_app_id']).to eq('br_existing')
     end
   end
 
-  it 'does not change local state when the remote session update fails' do
-    allow(client).to receive(:update_session).and_raise(Waha::Client::Error, 'provider failed')
+  it 'restores the original remote snapshot, returns to WORKING and halts after a partial remote failure' do
+    original_config = remote_session['config'].deep_dup
+    original_apps = remote_apps.deep_dup
+    update_calls = 0
+
+    allow(client).to receive(:update_session) do |_session, config:, apps:|
+      update_calls += 1
+      if update_calls == 1
+        remote_session['status'] = 'STOPPED'
+        remote_session['config'] = config.deep_dup
+        # Simulates WAHA having already updated the first App before a later App fails.
+        remote_apps[0] = apps.find { |app| app['id'] == 'app_123' }.deep_dup
+        raise Waha::Client::Error, 'provider failed after partial write'
+      end
+
+      remote_session['config'] = config.deep_dup
+      remote_session['status'] = 'STOPPED'
+      remote_apps.replace(apps.deep_dup)
+      remote_session.merge('apps' => remote_apps.deep_dup)
+    end
+
+    result = service.perform(apply: true)
+
+    expect(result.to_h.slice(:failed, :recovered, :recovery_failed, :halted)).to eq(
+      failed: 1, recovered: 1, recovery_failed: 0, halted: true
+    )
+    expect(update_calls).to eq(2)
+    expect(client).to have_received(:start_session).with('5511999999999').once
+    expect(remote_session.slice('status', 'config')).to eq('status' => 'WORKING', 'config' => original_config)
+    expect(remote_apps).to eq(original_apps)
+    expect([inbox.reload.lock_to_single_conversation, channel.reload.additional_attributes['phone_numbers_app_id']])
+      .to eq([false, nil])
+    expect(output.string).to include('RECOVERED')
+  end
+
+  it 'rolls back when WAHA never returns to WORKING after the desired update' do
+    original_apps = remote_apps.deep_dup
+    update_calls = 0
+
+    allow(client).to receive(:update_session) do |_session, config:, apps:|
+      update_calls += 1
+      remote_session['config'] = config.deep_dup
+      remote_apps.replace(apps.deep_dup)
+      remote_session['status'] = 'STARTING'
+      remote_session.merge('apps' => remote_apps.deep_dup)
+    end
+    allow(client).to receive(:start_session) do
+      remote_session['status'] = 'WORKING'
+      remote_session.deep_dup
+    end
 
     result = service.perform(apply: true)
 
     expect(result.failed).to eq(1)
+    expect(result.recovered).to eq(1)
+    expect(result.halted).to be(true)
+    expect(update_calls).to eq(2)
+    expect(remote_apps).to eq(original_apps)
+    expect(remote_session['status']).to eq('WORKING')
+    expect(inbox.reload.lock_to_single_conversation).to be(false)
+  end
+
+  it 'marks recovery failure as critical and halts without local writes' do
+    update_calls = 0
+
+    allow(client).to receive(:update_session) do |_session, config:, apps:|
+      update_calls += 1
+      remote_session['status'] = 'STOPPED'
+      remote_session['config'] = config.deep_dup
+      remote_apps.replace(apps.deep_dup)
+      raise Waha::Client::Error, update_calls == 1 ? 'desired update failed' : 'rollback failed'
+    end
+
+    result = service.perform(apply: true)
+
+    expect(result.failed).to eq(1)
+    expect(result.recovered).to eq(0)
+    expect(result.recovery_failed).to eq(1)
+    expect(result.halted).to be(true)
     expect(inbox.reload.lock_to_single_conversation).to be(false)
     expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+    expect(output.string).to include('CRITICAL')
+  end
+
+  it 'does not process a second inbox after the first apply failure' do
+    second_channel = create(
+      :channel_api,
+      account: account,
+      additional_attributes: {
+        'provider' => 'waha',
+        'session' => '5511888888888',
+        'app_id' => 'app_second'
+      }
+    )
+    second_channel.inbox.update!(lock_to_single_conversation: false)
+
+    allow(client).to receive(:update_session).and_raise(Waha::Client::Error, 'first failed')
+
+    result = service.perform(apply: true)
+
+    expect(result.total).to eq(1)
+    expect(result.failed).to eq(1)
+    expect(result.halted).to be(true)
+    expect(client).not_to have_received(:get_app).with('app_second')
   end
 
   it 'skips a remote Chatwoot app that does not match the stored session' do
     remote_app['session'] = 'another-session'
+    remote_apps.replace([remote_app.deep_dup])
 
     result = service.perform(apply: true)
 
     expect(result.skipped).to eq(1)
+    expect(result.halted).to be(true)
     expect(client).not_to have_received(:update_session)
     expect(inbox.reload.lock_to_single_conversation).to be(false)
   end

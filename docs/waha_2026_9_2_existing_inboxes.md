@@ -68,11 +68,15 @@ APPLY=true bundle exec rails waha:backfill_existing_inboxes
 
 O dry-run lê o App remoto e informa somente IDs internos e o tipo de mudança; não imprime telefone, token nem configuração sensível.
 
-Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são lidas primeiro. O backfill preserva os Apps existentes, sincroniza Chatwoot + resolver brasileiro em uma única atualização da sessão e só depois grava as referências locais. Se o WAHA falhar, `lock_to_single_conversation` e `phone_numbers_app_id` não são alterados.
+Antes de qualquer escrita, o backfill exige que a sessão esteja `WORKING` e faz uma consulta somente leitura para confirmar que o módulo `brazilian-phone-numbers` está realmente carregado no WAHA. Se o módulo estiver indisponível ou a sessão não estiver operacional, a sessão é ignorada sem escrita e, em `APPLY=true`, o lote para imediatamente.
 
-A atualização da sessão causa um restart técnico único, mas não faz logout nem remove o pareamento. A operação deve ser feita um ambiente por vez.
+Em `APPLY=true`, a configuração completa da sessão e a lista completa de Apps são capturadas como snapshot antes da atualização. O backfill preserva os Apps existentes, sincroniza Chatwoot + resolver brasileiro e só grava `lock_to_single_conversation`/`phone_numbers_app_id` depois que a sessão retorna a `WORKING` e o estado remoto desejado é confirmado por leitura.
 
-Se houver caixa sem `session`/`app_id`, divergência de App/sessão ou erro remoto, o processo registra `SKIP`/`FAILED`. Em modo APPLY, qualquer `SKIP` ou `FAILED` torna a migração incompleta e encerra com erro.
+Se a atualização remota falhar, ficar em `STARTING`/`STOPPED` ou não puder ser confirmada, o backfill tenta restaurar o snapshot anterior. Uma sessão que estava `WORKING` só é considerada recuperada depois de voltar a `WORKING` e ter configuração e Apps anteriores confirmados. Mesmo com recuperação bem-sucedida, o lote para e exige revisão antes de continuar. Falha de recuperação é registrada como `CRITICAL`/`recovery_failed`.
+
+A atualização da sessão causa um restart técnico, mas não faz logout nem remove o pareamento. A operação deve ser feita uma sessão por vez.
+
+Se houver caixa sem `session`/`app_id`, divergência de App/sessão, preflight inválido ou erro remoto, o processo registra `SKIP`, `FAILED`, `RECOVERED` ou `CRITICAL`. Em modo APPLY, qualquer `SKIP` ou falha interrompe o lote.
 
 ## Verificação pós-aplicação
 

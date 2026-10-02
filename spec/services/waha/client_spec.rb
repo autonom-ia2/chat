@@ -31,6 +31,46 @@ RSpec.describe Waha::Client do
     expect(request).to have_been_requested.once
   end
 
+  it 'detects the Brazilian resolver module when the route exists but the session app is not configured' do
+    request = stub_request(:get, 'https://waha.example/api/apps/brazilian-phone-numbers/5511999999999/cache/stats')
+              .to_return(
+                status: 404,
+                headers: { 'Content-Type' => 'application/json' },
+                body: {
+                  message: "App 'brazilian-phone-numbers' is not enabled for session '5511999999999'",
+                  error: 'Not Found',
+                  statusCode: 404
+                }.to_json
+              )
+
+    expect(client.brazilian_phone_numbers_available?('5511999999999')).to be(true)
+    expect(request).to have_been_requested.once
+  end
+
+  it 'reports the Brazilian resolver module unavailable when its route is not registered' do
+    request = stub_request(:get, 'https://waha.example/api/apps/brazilian-phone-numbers/5511999999999/cache/stats')
+              .to_return(
+                status: 404,
+                headers: { 'Content-Type' => 'application/json' },
+                body: {
+                  message: 'Cannot GET /api/apps/brazilian-phone-numbers/5511999999999/cache/stats',
+                  error: 'Not Found',
+                  statusCode: 404
+                }.to_json
+              )
+
+    expect(client.brazilian_phone_numbers_available?('5511999999999')).to be(false)
+    expect(request).to have_been_requested.once
+  end
+
+  it 'raises on an unexpected resolver capability response' do
+    stub_request(:get, 'https://waha.example/api/apps/brazilian-phone-numbers/5511999999999/cache/stats')
+      .to_return(status: 500, body: '{}')
+
+    expect { client.brazilian_phone_numbers_available?('5511999999999') }
+      .to raise_error(Waha::Client::Error, /WAHA GET/)
+  end
+
   it 'reads an existing app by id' do
     request = stub_request(:get, 'https://waha.example/api/apps/app_123')
               .with(headers: { 'X-Api-Key' => 'test-key' })
