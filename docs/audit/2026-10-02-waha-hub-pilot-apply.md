@@ -2,7 +2,7 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/865.
 Continuação de [publicação do lote4](2026-10-02-waha-lote4-publication.md).
-Estado: **APPLY, mensagens e reabertura confirmados; fechamento do novo ciclo e expansão pendentes**.
+Estado: **piloto unitário validado nos casos exercitados; expansão não autorizada**.
 
 ## Autorização e escopo
 
@@ -103,3 +103,22 @@ um novo atendimento, mas a conversa de teste permanece open e não há segunda r
 Solicitado somente esse encerramento final para confirmar a duração do novo ciclo; não repetir mensagens
 ou variantes já aceitas. Aceite de N2 em produção permanece pendente dessa evidência específica.
 Sem nova escrita na produção, configuração WAHA, envio, QR, pareamento, merge/deploy ou expansão.
+
+## Fechamento do novo ciclo e aceite do piloto
+
+Rodrigo encerrou novamente a conversa de teste. SSM cdc2acbe-b827-4f76-96f3-0b5a8793f04d,
+Success/0, 20:05:27–20:05:38 UTC, somente leitura: conversa resolved e uma única conversa para o contato.
+Novo evento conversation_resolved: início 20:02:33 UTC, igual à abertura observada, fim 20:04:48 UTC,
+value=135 segundos (2min15s). A mensagem recebida está dentro desse ciclo. O tempo não incorporou os dias
+anteriores da conversa; N2 está observado em produção para esse novo ciclo completo.
+Sessão WAHA WORKING, plano sem alterações e dois envios da plataforma continuam delivered.
+
+Aceite dos casos solicitados: saída pelo celular pública/normal e leitura observadas; plataforma entregue
+observada; ausência de entrega duplicada e convergência com/sem nono dígito confirmadas manualmente por Rodrigo;
+mesma conversa reaberta e novo tempo de resolução confirmados nos registros. Não requer repetir esses testes.
+Não foi forçada inversão de jobs, reconexão, QR ou concorrência na produção. A preservação de Apps extras
+não foi exercitada neste alvo, que não os tinha. Esses limites permanecem explícitos, sem inferência de QA global.
+
+Piloto unitário aceito para os casos exercitados. Expansão exige selecionar um próximo conjunto pequeno,
+novo dry-run/backup e autorização própria. Autonom.ia precisa de seleção e piloto separados na sua WAHA.
+A auditoria #866 permanece separada da aplicação; não há novo merge/deploy autorizado nesta etapa.
