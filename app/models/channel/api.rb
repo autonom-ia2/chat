@@ -73,11 +73,13 @@ class Channel::Api < ApplicationRecord
   def cleanup_waha_remote
     session = channel_additional_attributes['session']
     app_id = channel_additional_attributes['app_id']
+    phone_numbers_app_id = channel_additional_attributes['phone_numbers_app_id']
     return true if session.blank?
 
     client = Waha::Client.new
-    # Cada chamada isolada: falha ao remover o app NÃO impede remover a sessão.
+    # Cada chamada isolada: falha ao remover um App NÃO impede remover os demais ou a sessão.
     safe_waha_call { client.delete_app(app_id) } if app_id.present?
+    safe_waha_call { client.delete_app(phone_numbers_app_id) } if phone_numbers_app_id.present?
     safe_waha_call { client.delete_session(session) }
     true
   end
@@ -85,7 +87,7 @@ class Channel::Api < ApplicationRecord
   def safe_waha_call
     yield
   rescue StandardError => e
-    Rails.logger.warn("[Waha] cleanup on destroy failed for channel #{id}: #{e.message}")
+    Rails.logger.warn("[Waha] cleanup on destroy failed for channel #{id}: #{e.class}")
     nil
   end
 
