@@ -976,6 +976,63 @@ useFixedPanelPresence(computed(() => props.show));
                     {{ t('CRM_KANBAN.PIPELINE_EDITOR.SAVE_FIRST') }}
                   </p>
                 </div>
+                <section
+                  v-if="isEditing && stage.id"
+                  class="grid gap-4 overflow-hidden rounded-2xl border border-n-slate-5 bg-n-surface-1"
+                >
+                  <div
+                    class="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5"
+                  >
+                    <div class="flex min-w-0 items-start gap-3">
+                      <span
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-n-blue-3 text-n-blue-11"
+                        aria-hidden="true"
+                      >
+                        <span class="i-lucide-workflow text-xl" />
+                      </span>
+                      <div class="min-w-0">
+                        <h3
+                          class="mb-1 text-base font-semibold leading-6 text-n-slate-12"
+                        >
+                          {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.TITLE') }}
+                        </h3>
+                        <p class="mb-0 text-sm leading-5 text-n-slate-11">
+                          {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.HELP') }}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      :label="
+                        t(
+                          isStageAutomationsExpanded(stage)
+                            ? 'CRM_KANBAN.STAGE_AUTOMATIONS.HIDE'
+                            : 'CRM_KANBAN.STAGE_AUTOMATIONS.OPEN'
+                        )
+                      "
+                      :icon="
+                        isStageAutomationsExpanded(stage)
+                          ? 'i-lucide-chevron-up'
+                          : 'i-lucide-chevron-down'
+                      "
+                      trailing-icon
+                      slate
+                      outline
+                      md
+                      class="min-h-11 shrink-0 bg-n-surface-1 !outline-n-weak"
+                      :aria-expanded="isStageAutomationsExpanded(stage)"
+                      @click="toggleStageAutomations(stage)"
+                    />
+                  </div>
+                  <CrmStageAutomationsPanel
+                    v-if="isStageAutomationsExpanded(stage)"
+                    :stage="stage"
+                    :pipeline-stages="form.stages"
+                    :agents="agents"
+                    :expanded="isStageAutomationsExpanded(stage)"
+                    :show-header="false"
+                  />
+                </section>
+
                 <details class="border-t border-n-weak pt-4">
                   <summary
                     class="min-h-11 cursor-pointer text-sm font-medium text-n-slate-11"
@@ -1034,68 +1091,72 @@ useFixedPanelPresence(computed(() => props.show));
                       </label>
                     </fieldset>
 
-                    <div class="flex items-end justify-end gap-1">
-                      <Button
-                        icon="i-lucide-arrow-up"
-                        class="min-h-11 min-w-11"
-                        slate
-                        ghost
-                        sm
-                        :title="t('CRM_KANBAN.PIPELINE_DRAWER.MOVE_STAGE_UP')"
-                        :aria-label="
-                          t('CRM_KANBAN.PIPELINE_DRAWER.MOVE_STAGE_UP')
-                        "
-                        :disabled="index === 0"
-                        @click="moveStage(index, -1)"
-                      />
-                      <Button
-                        icon="i-lucide-arrow-down"
-                        class="min-h-11 min-w-11"
-                        slate
-                        ghost
-                        sm
-                        :title="t('CRM_KANBAN.PIPELINE_DRAWER.MOVE_STAGE_DOWN')"
-                        :aria-label="
-                          t('CRM_KANBAN.PIPELINE_DRAWER.MOVE_STAGE_DOWN')
-                        "
-                        :disabled="index === form.stages.length - 1"
-                        @click="moveStage(index, 1)"
-                      />
-                      <Button
-                        v-if="isEditing && stage.id"
-                        icon="i-lucide-workflow"
-                        slate
-                        ghost
-                        sm
-                        :title="t('CRM_KANBAN.STAGE_AUTOMATIONS.TITLE')"
-                        :class="
-                          isStageAutomationsExpanded(stage)
-                            ? 'text-n-brand'
-                            : 'text-n-slate-11'
-                        "
-                        @click="toggleStageAutomations(stage)"
-                      />
-                      <Button
-                        icon="i-lucide-trash-2"
-                        ruby
-                        ghost
-                        sm
-                        :title="t('CRM_KANBAN.PIPELINE_DRAWER.DELETE_STAGE')"
-                        :disabled="form.stages.length === 1 || isDeletingStage"
-                        @click="removeStage(index)"
-                      />
+                    <div class="grid gap-3 border-t border-n-weak pt-4">
+                      <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                      >
+                        <div>
+                          <p class="mb-1 text-sm font-medium text-n-slate-12">
+                            {{ t('CRM_KANBAN.PIPELINE_EDITOR.ORDER_LABEL') }}
+                          </p>
+                          <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                            {{ t('CRM_KANBAN.PIPELINE_EDITOR.ORDER_HELP') }}
+                          </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                          <Button
+                            :label="t('CRM_KANBAN.PIPELINE_EDITOR.MOVE_BEFORE')"
+                            icon="i-lucide-arrow-up"
+                            slate
+                            outline
+                            md
+                            class="min-h-11 bg-n-surface-1 !outline-n-weak"
+                            :disabled="index === 0"
+                            @click="moveStage(index, -1)"
+                          />
+                          <Button
+                            :label="t('CRM_KANBAN.PIPELINE_EDITOR.MOVE_AFTER')"
+                            icon="i-lucide-arrow-down"
+                            slate
+                            outline
+                            md
+                            class="min-h-11 bg-n-surface-1 !outline-n-weak"
+                            :disabled="index === form.stages.length - 1"
+                            @click="moveStage(index, 1)"
+                          />
+                        </div>
+                      </div>
+                      <div
+                        class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak pt-3"
+                      >
+                        <div>
+                          <p class="mb-1 text-sm font-medium text-n-slate-12">
+                            {{
+                              t(
+                                'CRM_KANBAN.PIPELINE_EDITOR.DELETE_STATUS_TITLE'
+                              )
+                            }}
+                          </p>
+                          <p class="mb-0 text-xs leading-5 text-n-slate-11">
+                            {{
+                              t('CRM_KANBAN.PIPELINE_EDITOR.DELETE_STATUS_HELP')
+                            }}
+                          </p>
+                        </div>
+                        <Button
+                          :label="t('CRM_KANBAN.PIPELINE_EDITOR.DELETE_STATUS')"
+                          icon="i-lucide-trash-2"
+                          ruby
+                          outline
+                          md
+                          class="min-h-11 shrink-0 bg-n-surface-1"
+                          :disabled="
+                            form.stages.length === 1 || isDeletingStage
+                          "
+                          @click="removeStage(index)"
+                        />
+                      </div>
                     </div>
-                    <CrmStageAutomationsPanel
-                      v-if="
-                        isEditing &&
-                        stage.id &&
-                        isStageAutomationsExpanded(stage)
-                      "
-                      :stage="stage"
-                      :pipeline-stages="form.stages"
-                      :agents="agents"
-                      :expanded="isStageAutomationsExpanded(stage)"
-                    />
                   </div>
                 </details>
                 <section

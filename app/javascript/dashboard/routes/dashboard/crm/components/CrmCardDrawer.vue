@@ -48,6 +48,8 @@ const props = defineProps({
   inboxes: { type: Array, default: () => [] },
   followUps: { type: Array, default: () => [] },
   canManageCards: { type: Boolean, default: false },
+  canMoveCards: { type: Boolean, default: false },
+  isMovingCard: { type: Boolean, default: false },
   canManageAi: { type: Boolean, default: false },
   isSaving: { type: Boolean, default: false },
   isLoadingDetails: { type: Boolean, default: false },
@@ -60,6 +62,7 @@ const props = defineProps({
 const emit = defineEmits([
   'close',
   'save',
+  'move',
   'archive',
   'closeDeal',
   'createFollowUp',
@@ -1602,7 +1605,8 @@ useFixedPanelPresence(computed(() => props.show));
               <Button
                 sm
                 teal
-                faded
+                outline
+                class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-trophy"
                 :label="t('CRM_KANBAN.DRAWER.WIN_DEAL')"
                 @click="guardRelationship(openWinDialog)"
@@ -1610,7 +1614,8 @@ useFixedPanelPresence(computed(() => props.show));
               <Button
                 sm
                 ruby
-                faded
+                outline
+                class="!outline-n-weak !rounded-lg"
                 icon="i-lucide-circle-x"
                 :label="t('CRM_KANBAN.DRAWER.LOSE_DEAL')"
                 @click="guardRelationship(openLoseDialog)"
@@ -1620,7 +1625,8 @@ useFixedPanelPresence(computed(() => props.show));
               v-else
               sm
               slate
-              faded
+              outline
+              class="!outline-n-weak !rounded-lg"
               icon="i-lucide-rotate-ccw"
               :label="t('CRM_KANBAN.DRAWER.REOPEN_DEAL')"
               @click="guardRelationship(reopenDeal)"
@@ -1710,6 +1716,22 @@ useFixedPanelPresence(computed(() => props.show));
           tabindex="-1"
           class="grid gap-4 outline-none"
         >
+          <label class="grid gap-2 text-sm text-n-slate-12">
+            <span>{{ t('CRM_KANBAN.DRAWER.STAGE') }}</span>
+            <ChoiceSelect
+              :model-value="card.stage_id"
+              :options="
+                stages.map(stage => ({ value: stage.id, label: stage.name }))
+              "
+              class="[&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+              :disabled="!canMoveCards || isMovingCard || !stages.length"
+              :aria-label="t('CRM_KANBAN.DRAWER.STAGE')"
+              @change="
+                stageId =>
+                  canMoveCards && !isMovingCard && emit('move', stageId)
+              "
+            />
+          </label>
           <Input
             v-model="form.title"
             :readonly="!canManageCards"
@@ -1757,7 +1779,8 @@ useFixedPanelPresence(computed(() => props.show));
                 :label="t('CRM_KANBAN.DRAWER.OPEN_CONVERSATION')"
                 icon="i-lucide-message-circle"
                 slate
-                faded
+                outline
+                class="!outline-n-weak !rounded-lg"
                 sm
                 @click="openConversation"
               />
@@ -2013,9 +2036,9 @@ useFixedPanelPresence(computed(() => props.show));
                 :label="t('CRM_KANBAN.DRAWER.OPEN_CONVERSATION')"
                 icon="i-lucide-message-circle"
                 slate
-                faded
+                outline
+                class="!outline-n-weak !rounded-lg"
                 sm
-                class="min-w-max shrink-0"
                 @click="openConversationByDisplayId(conversation.display_id)"
               />
             </div>
@@ -2103,9 +2126,9 @@ useFixedPanelPresence(computed(() => props.show));
                 :label="t('CRM_KANBAN.DRAWER.FOLLOW_UP_COMPLETE')"
                 icon="i-lucide-check"
                 slate
-                faded
+                outline
+                class="min-w-max !outline-n-weak !rounded-lg"
                 sm
-                class="min-w-max"
                 :is-loading="isSavingFollowUp"
                 @click="completeFollowUp(followUp)"
               />
@@ -2502,7 +2525,8 @@ useFixedPanelPresence(computed(() => props.show));
           <Button
             :label="footerCancelLabel"
             slate
-            faded
+            outline
+            class="!outline-n-weak !rounded-lg"
             :disabled="
               isSaving ||
               creationForm?.sending ||
@@ -2597,7 +2621,8 @@ useFixedPanelPresence(computed(() => props.show));
             <Button
               :label="t('CRM_KANBAN.DRAWER.CANCEL')"
               slate
-              faded
+              outline
+              class="!outline-n-weak !rounded-lg"
               sm
               @click="showWinDialog = false"
             />
@@ -2631,7 +2656,8 @@ useFixedPanelPresence(computed(() => props.show));
             <Button
               :label="t('CRM_KANBAN.DRAWER.CANCEL')"
               slate
-              faded
+              outline
+              class="!outline-n-weak !rounded-lg"
               sm
               @click="showLoseDialog = false"
             />

@@ -29,7 +29,7 @@ const NO_CONVERSATION_CARD = {
 
 const mountCard = (card = CONVERSATION_CARD, props = {}) =>
   mount(CrmKanbanCard, {
-    props: { card, stageColor: '#2563eb', canMove: true, ...props },
+    props: { card, stageColor: '#2563eb', ...props },
     global: {
       stubs: {
         Avatar: true,
@@ -209,23 +209,12 @@ describe('CrmKanbanCard bubble shortcut', () => {
     expect(wrapper.find('[data-crm-card-no-contact]').exists()).toBe(true);
   });
 
-  it('emits move from the visible accessible action without opening the card', async () => {
+  it('keeps the full identity area free of a movement action', () => {
     const wrapper = mountCard();
-
-    const move = wrapper.find('[data-crm-card-move]');
-    await move.trigger('click');
-
-    // The button travels with the intent so the page can return focus to it.
-    expect(wrapper.emitted('move')).toEqual([
-      [CONVERSATION_CARD, move.element],
-    ]);
-    expect(wrapper.emitted('open')).toBeUndefined();
-  });
-
-  it('hides move when the page denies the card movement permission', () => {
-    const wrapper = mountCard(CONVERSATION_CARD, { canMove: false });
-
     expect(wrapper.find('[data-crm-card-move]').exists()).toBe(false);
+    expect(wrapper.find('[data-crm-card-identity]').classes()).not.toContain(
+      'pe-24'
+    );
   });
 
   it('does not infer AI score provenance from a bot responsible', () => {

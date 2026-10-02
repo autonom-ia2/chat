@@ -12,6 +12,8 @@ const props = defineProps({
   show: { type: Boolean, default: false },
   filters: { type: Object, required: true },
   viewMode: { type: String, default: 'kanban' },
+  pipelineName: { type: String, default: '' },
+  currentUserId: { type: [String, Number], default: '' },
   inboxChoices: { type: Array, default: () => [] },
   ownerChoices: { type: Array, default: () => [] },
   priorityChoices: { type: Array, default: () => [] },
@@ -74,6 +76,50 @@ const isStageSelected = stageId => isSelected(draft.stageIds, stageId);
 const isLabelSelected = labelId => isSelected(draft.labelIds, labelId);
 const isCampaignSelected = sourceId =>
   isSelected(draft.campaignSourceIds, sourceId);
+
+const shortcutIsActive = shortcut => {
+  switch (shortcut) {
+    case 'any-owner':
+      return !draft.ownerId && !draft.responsibleKind;
+    case 'mine':
+      return (
+        Boolean(props.currentUserId) &&
+        String(draft.ownerId) === String(props.currentUserId) &&
+        !draft.responsibleKind
+      );
+    case 'none':
+      return draft.responsibleKind === 'none' && !draft.ownerId;
+    case 'overdue':
+      return draft.followUpStatus === 'overdue';
+    default:
+      return false;
+  }
+};
+
+const applyShortcut = shortcut => {
+  switch (shortcut) {
+    case 'any-owner':
+      draft.ownerId = '';
+      draft.responsibleKind = '';
+      break;
+    case 'mine':
+      if (props.currentUserId) {
+        draft.ownerId = props.currentUserId;
+        draft.responsibleKind = '';
+      }
+      break;
+    case 'none':
+      draft.ownerId = '';
+      draft.responsibleKind = 'none';
+      break;
+    case 'overdue':
+      draft.followUpStatus =
+        draft.followUpStatus === 'overdue' ? '' : 'overdue';
+      break;
+    default:
+      break;
+  }
+};
 
 const scoreRangeError = computed(() => {
   const invalidValue = value => {
@@ -200,7 +246,7 @@ useFixedPanelPresence(computed(() => props.show));
       aria-modal="true"
       aria-labelledby="crm-kanban-filters-title"
       tabindex="-1"
-      class="fixed inset-y-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-2 shadow-lg ltr:right-0 ltr:border-l rtl:left-0 rtl:border-r"
+      class="fixed inset-y-0 z-50 flex h-full w-[40rem] max-w-full flex-col overflow-hidden border-n-weak bg-n-surface-1 shadow-lg ltr:right-0 ltr:border-l rtl:left-0 rtl:border-r"
       @keydown="trapDrawerFocus"
     >
       <header
@@ -214,8 +260,11 @@ useFixedPanelPresence(computed(() => props.show));
           >
             {{ t('CRM_KANBAN.FILTERS.DRAWER_TITLE') }}
           </h2>
-          <p class="mb-0 text-sm leading-6 text-n-slate-4">
-            {{ t('CRM_KANBAN.FILTERS.DRAWER_DESCRIPTION') }}
+          <p
+            v-if="pipelineName"
+            class="mb-0 truncate text-sm leading-6 text-n-slate-4"
+          >
+            {{ pipelineName }}
           </p>
         </div>
         <Button
@@ -229,170 +278,147 @@ useFixedPanelPresence(computed(() => props.show));
       </header>
 
       <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-8">
-        <div class="grid gap-2">
-          <section
-            class="rounded-xl border border-n-weak bg-n-alpha-black2 p-4"
-          >
-            <div class="flex items-start gap-3">
-              <span
-                class="i-lucide-building-2 mt-0.5 size-5 shrink-0 text-n-slate-10"
-                aria-hidden="true"
-              />
-              <div class="min-w-0">
-                <h3 class="mb-1 text-base font-semibold text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.COMPANY') }}
-                </h3>
-                <p class="mb-0 text-sm leading-5 text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.COMPANY_HELP') }}
-                </p>
-              </div>
-            </div>
-            <div v-if="companyFilterAvailable" class="mt-4 grid gap-3">
-              <Input
-                :model-value="companySearch"
-                :label="t('CRM_KANBAN.FILTERS.COMPANY_SEARCH')"
-                :placeholder="
-                  t('CRM_KANBAN.FILTERS.COMPANY_SEARCH_PLACEHOLDER')
-                "
-                @input="emit('search-company', $event.target.value)"
-              />
-              <ChoiceSelect
-                v-model="draft.companyId"
-                :options="companyChoicesWithSelection"
-                :aria-label="t('CRM_KANBAN.FILTERS.COMPANY')"
-                :placeholder="t('CRM_KANBAN.FILTERS.ALL_COMPANIES')"
-                class="w-full"
-                @change="rememberCompanySelection"
-              />
-              <p v-if="companyLoading" class="mb-0 text-xs text-n-slate-10">
-                {{ t('CRM_KANBAN.FILTERS.COMPANY_SEARCHING') }}
-              </p>
-              <p
-                v-else-if="companySearch && !companyChoices.length"
-                class="mb-0 text-xs text-n-slate-10"
-              >
-                {{ t('CRM_KANBAN.FILTERS.COMPANY_EMPTY') }}
-              </p>
-            </div>
-            <span
-              v-else
-              class="mt-3 inline-flex rounded-full bg-n-alpha-2 px-2.5 py-1 text-xs font-medium text-n-slate-10"
-            >
-              {{ t('CRM_KANBAN.FILTERS.UNAVAILABLE') }}
-            </span>
-          </section>
+        <p class="mb-5 text-sm leading-6 text-n-slate-11">
+          {{ t('CRM_KANBAN.FILTERS.DRAWER_DESCRIPTION') }}
+        </p>
 
-          <details open class="border-b border-n-weak pb-4">
+        <div class="mb-5">
+          <p
+            class="mb-2 text-xs font-semibold uppercase tracking-wide text-n-slate-10"
+          >
+            {{ t('CRM_KANBAN.FILTERS.SHORTCUTS') }}
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <Button
+              :label="t('CRM_KANBAN.FILTERS.SHORTCUT_ANY_OWNER')"
+              outline
+              slate
+              :aria-pressed="shortcutIsActive('any-owner')"
+              class="!min-h-11 !rounded-lg"
+              :class="
+                shortcutIsActive('any-owner')
+                  ? '!outline-n-blue-7 !bg-n-blue-2 !text-n-blue-11'
+                  : '!outline-n-weak !bg-n-surface-1'
+              "
+              @click="applyShortcut('any-owner')"
+            />
+            <Button
+              :label="t('CRM_KANBAN.FILTERS.SHORTCUT_MINE')"
+              outline
+              slate
+              :aria-pressed="shortcutIsActive('mine')"
+              class="!min-h-11 !rounded-lg"
+              :class="
+                shortcutIsActive('mine')
+                  ? '!outline-n-blue-7 !bg-n-blue-2 !text-n-blue-11'
+                  : '!outline-n-weak !bg-n-surface-1'
+              "
+              @click="applyShortcut('mine')"
+            />
+            <Button
+              :label="t('CRM_KANBAN.FILTERS.SHORTCUT_NONE')"
+              outline
+              slate
+              :aria-pressed="shortcutIsActive('none')"
+              class="!min-h-11 !rounded-lg"
+              :class="
+                shortcutIsActive('none')
+                  ? '!outline-n-blue-7 !bg-n-blue-2 !text-n-blue-11'
+                  : '!outline-n-weak !bg-n-surface-1'
+              "
+              @click="applyShortcut('none')"
+            />
+            <Button
+              :label="t('CRM_KANBAN.FILTERS.SHORTCUT_OVERDUE')"
+              outline
+              slate
+              :aria-pressed="shortcutIsActive('overdue')"
+              class="!min-h-11 !rounded-lg"
+              :class="
+                shortcutIsActive('overdue')
+                  ? '!outline-n-blue-7 !bg-n-blue-2 !text-n-blue-11'
+                  : '!outline-n-weak !bg-n-surface-1'
+              "
+              @click="applyShortcut('overdue')"
+            />
+          </div>
+        </div>
+
+        <div class="grid">
+          <details class="group border-t border-n-weak">
             <summary
-              class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+              class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 py-4 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
             >
-              <span>
+              <span class="min-w-0">
                 <strong class="block text-base font-semibold text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENDANCE') }}
+                  {{ t('CRM_KANBAN.FILTERS.COMPANY') }}
                 </strong>
-                <span class="mt-1 block text-sm text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENDANCE_HELP') }}
+                <span class="mt-1 block text-sm leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.COMPANY_HELP') }}
                 </span>
               </span>
               <span
-                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10"
+                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10 group-open:rotate-180"
                 aria-hidden="true"
               />
             </summary>
-            <div class="grid gap-5 pt-4">
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.INBOX') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.inboxId"
-                  :options="inboxChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
-                  class="w-full"
+            <div class="grid gap-4 pb-5">
+              <div v-if="companyFilterAvailable" class="grid gap-3">
+                <Input
+                  custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
+                  :model-value="companySearch"
+                  :label="t('CRM_KANBAN.FILTERS.COMPANY_SEARCH')"
+                  :placeholder="
+                    t('CRM_KANBAN.FILTERS.COMPANY_SEARCH_PLACEHOLDER')
+                  "
+                  @input="emit('search-company', $event.target.value)"
                 />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.OWNER') }}
-                </span>
                 <ChoiceSelect
-                  v-model="draft.ownerId"
-                  :options="ownerChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
-                  class="w-full"
+                  v-model="draft.companyId"
+                  :options="companyChoicesWithSelection"
+                  :aria-label="t('CRM_KANBAN.FILTERS.COMPANY')"
+                  :placeholder="t('CRM_KANBAN.FILTERS.ALL_COMPANIES')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                  @change="rememberCompanySelection"
                 />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.RESPONSIBLE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.responsibleKind"
-                  :options="responsibleChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.TEAM') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.teamId"
-                  :options="teamChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
-                  class="w-full"
-                />
-              </label>
-
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.followUpStatus"
-                  :options="followUpStatusChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
-                  class="w-full"
-                />
-              </label>
+                <p v-if="companyLoading" class="mb-0 text-xs text-n-slate-10">
+                  {{ t('CRM_KANBAN.FILTERS.COMPANY_SEARCHING') }}
+                </p>
+                <p
+                  v-else-if="companySearch && !companyChoices.length"
+                  class="mb-0 text-xs text-n-slate-10"
+                >
+                  {{ t('CRM_KANBAN.FILTERS.COMPANY_EMPTY') }}
+                </p>
+              </div>
+              <span
+                v-else
+                class="inline-flex rounded-lg border border-n-weak px-3 py-2 text-xs font-medium text-n-slate-10"
+              >
+                {{ t('CRM_KANBAN.FILTERS.UNAVAILABLE') }}
+              </span>
             </div>
           </details>
 
-          <details class="border-b border-n-weak py-4">
+          <details class="group border-t border-n-weak">
             <summary
-              class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+              class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 py-4 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
             >
-              <span>
+              <span class="min-w-0">
                 <strong class="block text-base font-semibold text-n-slate-12">
                   {{ t('CRM_KANBAN.FILTERS.GROUP_OPPORTUNITY') }}
                 </strong>
-                <span class="mt-1 block text-sm text-n-slate-11">
+                <span class="mt-1 block text-sm leading-5 text-n-slate-11">
                   {{ t('CRM_KANBAN.FILTERS.GROUP_OPPORTUNITY_HELP') }}
                 </span>
               </span>
               <span
-                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10"
+                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10 group-open:rotate-180"
                 aria-hidden="true"
               />
             </summary>
-            <div class="grid gap-5 pt-4">
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.priority"
-                  :options="priorityChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
-                  class="w-full"
-                />
-              </label>
-
-              <div class="grid gap-1">
+            <div class="grid gap-5 pb-5">
+              <div class="grid gap-2">
                 <span
                   id="crm-kanban-filters-stage-label"
                   class="text-sm font-medium text-n-slate-12"
@@ -402,18 +428,18 @@ useFixedPanelPresence(computed(() => props.show));
                 <div
                   role="group"
                   aria-labelledby="crm-kanban-filters-stage-label"
-                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
+                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-n-weak p-3"
                 >
                   <button
                     v-for="stage in stageOptions"
                     :key="stage.value"
                     type="button"
                     :aria-pressed="isStageSelected(stage.value)"
-                    class="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+                    class="inline-flex min-h-11 items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                     :class="
                       isStageSelected(stage.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
+                        ? 'border-n-brand bg-n-blue-2 text-n-blue-11'
+                        : 'border-n-weak bg-n-surface-1 text-n-slate-11 hover:border-n-slate-6 hover:text-n-slate-12'
                     "
                     @click="toggleValue('stageIds', stage.value)"
                   >
@@ -428,7 +454,7 @@ useFixedPanelPresence(computed(() => props.show));
                 </div>
               </div>
 
-              <div class="grid gap-1">
+              <div class="grid gap-2">
                 <span
                   id="crm-kanban-filters-labels-label"
                   class="text-sm font-medium text-n-slate-12"
@@ -438,18 +464,18 @@ useFixedPanelPresence(computed(() => props.show));
                 <div
                   role="group"
                   aria-labelledby="crm-kanban-filters-labels-label"
-                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
+                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-n-weak p-3"
                 >
                   <button
                     v-for="label in labelOptions"
                     :key="label.value"
                     type="button"
                     :aria-pressed="isLabelSelected(label.value)"
-                    class="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+                    class="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                     :class="
                       isLabelSelected(label.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
+                        ? 'border-n-brand bg-n-blue-2 text-n-blue-11'
+                        : 'border-n-weak bg-n-surface-1 text-n-slate-11 hover:border-n-slate-6 hover:text-n-slate-12'
                     "
                     @click="toggleValue('labelIds', label.value)"
                   >
@@ -465,25 +491,61 @@ useFixedPanelPresence(computed(() => props.show));
                 </div>
               </div>
 
-              <div class="grid gap-1">
+              <label class="grid gap-1">
                 <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.VALUE_RANGE') }}
+                  {{ t('CRM_KANBAN.FILTERS.LINKED') }}
                 </span>
-                <div class="grid grid-cols-2 gap-3">
-                  <Input
-                    v-model="draft.valueMin"
-                    type="number"
-                    min="0"
-                    :label="t('CRM_KANBAN.FILTERS.VALUE_MIN')"
-                  />
-                  <Input
-                    v-model="draft.valueMax"
-                    type="number"
-                    min="0"
-                    :label="t('CRM_KANBAN.FILTERS.VALUE_MAX')"
-                  />
-                </div>
-              </div>
+                <ChoiceSelect
+                  v-model="draft.standalone"
+                  :options="linkedChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <label v-if="viewMode === 'list'" class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.RESULT') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.result"
+                  :options="resultChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+            </div>
+          </details>
+
+          <details class="group border-t border-n-weak">
+            <summary
+              class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 py-4 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="min-w-0">
+                <strong class="block text-base font-semibold text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENTION') }}
+                </strong>
+                <span class="mt-1 block text-sm leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENTION_HELP') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10 group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <div class="grid gap-5 pb-5">
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.PRIORITY') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.priority"
+                  :options="priorityChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.PRIORITY')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
 
               <div class="grid gap-1">
                 <span class="text-sm font-medium text-n-slate-12">
@@ -495,6 +557,7 @@ useFixedPanelPresence(computed(() => props.show));
                 <div class="grid grid-cols-2 gap-3">
                   <Input
                     v-model="draft.scoreMin"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     max="100"
@@ -503,6 +566,7 @@ useFixedPanelPresence(computed(() => props.show));
                   />
                   <Input
                     v-model="draft.scoreMax"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
                     type="number"
                     min="0"
                     max="100"
@@ -519,98 +583,6 @@ useFixedPanelPresence(computed(() => props.show));
                 </p>
               </div>
 
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.LINKED') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.standalone"
-                  :options="linkedChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.LINKED')"
-                  class="w-full"
-                />
-              </label>
-
-              <label v-if="viewMode === 'list'" class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.RESULT') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.result"
-                  :options="resultChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.RESULT')"
-                  class="w-full"
-                />
-              </label>
-            </div>
-          </details>
-
-          <details class="border-b border-n-weak py-4">
-            <summary
-              class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
-            >
-              <span>
-                <strong class="block text-base font-semibold text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.GROUP_ACTIVITY') }}
-                </strong>
-                <span class="mt-1 block text-sm text-n-slate-11">
-                  {{ t('CRM_KANBAN.FILTERS.GROUP_ACTIVITY_HELP') }}
-                </span>
-              </span>
-              <span
-                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10"
-                aria-hidden="true"
-              />
-            </summary>
-            <div class="grid gap-5 pt-4">
-              <label class="grid gap-1">
-                <span class="text-sm font-medium text-n-slate-12">
-                  {{ t('CRM_KANBAN.FILTERS.STALE') }}
-                </span>
-                <ChoiceSelect
-                  v-model="draft.staleDays"
-                  :options="staleChoices"
-                  :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
-                  class="w-full"
-                />
-              </label>
-
-              <div class="grid gap-1">
-                <span
-                  id="crm-kanban-filters-campaign-label"
-                  class="text-sm font-medium text-n-slate-12"
-                >
-                  {{ t('CRM_KANBAN.FILTERS.CAMPAIGN') }}
-                </span>
-                <div
-                  role="group"
-                  aria-labelledby="crm-kanban-filters-campaign-label"
-                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-xl bg-n-alpha-black2 p-3 outline outline-1 outline-n-weak"
-                >
-                  <button
-                    v-for="campaign in campaignFilterOptions"
-                    :key="campaign.value"
-                    type="button"
-                    :aria-pressed="isCampaignSelected(campaign.value)"
-                    class="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-                    :class="
-                      isCampaignSelected(campaign.value)
-                        ? 'bg-n-brand text-white'
-                        : 'bg-n-alpha-2 text-n-slate-11 hover:text-n-slate-12'
-                    "
-                    @click="toggleValue('campaignSourceIds', campaign.value)"
-                  >
-                    {{ campaign.label }}
-                  </button>
-                  <span
-                    v-if="!campaignFilterOptions.length"
-                    class="p-2 text-sm text-n-slate-10"
-                  >
-                    {{ t('CRM_KANBAN.FILTERS.CAMPAIGN_PLACEHOLDER') }}
-                  </span>
-                </div>
-              </div>
-
               <label
                 v-if="canManageAi"
                 class="flex min-h-11 items-center gap-3 text-sm text-n-slate-12"
@@ -624,31 +596,195 @@ useFixedPanelPresence(computed(() => props.show));
               </label>
             </div>
           </details>
+
+          <details class="group border-t border-n-weak">
+            <summary
+              class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 py-4 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="min-w-0">
+                <strong class="block text-base font-semibold text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENDANCE') }}
+                </strong>
+                <span class="mt-1 block text-sm leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ATTENDANCE_HELP') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10 group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <div class="grid gap-5 pb-5">
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.OWNER') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.ownerId"
+                  :options="ownerChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.OWNER')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.RESPONSIBLE') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.responsibleKind"
+                  :options="responsibleChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.RESPONSIBLE')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.TEAM') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.teamId"
+                  :options="teamChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.TEAM')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.INBOX') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.inboxId"
+                  :options="inboxChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.INBOX')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <div class="grid gap-2">
+                <span
+                  id="crm-kanban-filters-campaign-label"
+                  class="text-sm font-medium text-n-slate-12"
+                >
+                  {{ t('CRM_KANBAN.FILTERS.CAMPAIGN') }}
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby="crm-kanban-filters-campaign-label"
+                  class="flex max-h-40 flex-wrap gap-2 overflow-y-auto rounded-lg border border-n-weak p-3"
+                >
+                  <button
+                    v-for="campaign in campaignFilterOptions"
+                    :key="campaign.value"
+                    type="button"
+                    :aria-pressed="isCampaignSelected(campaign.value)"
+                    class="inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+                    :class="
+                      isCampaignSelected(campaign.value)
+                        ? 'border-n-brand bg-n-blue-2 text-n-blue-11'
+                        : 'border-n-weak bg-n-surface-1 text-n-slate-11 hover:border-n-slate-6 hover:text-n-slate-12'
+                    "
+                    @click="toggleValue('campaignSourceIds', campaign.value)"
+                  >
+                    {{ campaign.label }}
+                  </button>
+                  <span
+                    v-if="!campaignFilterOptions.length"
+                    class="p-2 text-sm text-n-slate-10"
+                  >
+                    {{ t('CRM_KANBAN.FILTERS.CAMPAIGN_PLACEHOLDER') }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="group border-t border-n-weak">
+            <summary
+              class="flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 py-4 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+            >
+              <span class="min-w-0">
+                <strong class="block text-base font-semibold text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ACTIVITY') }}
+                </strong>
+                <span class="mt-1 block text-sm leading-5 text-n-slate-11">
+                  {{ t('CRM_KANBAN.FILTERS.GROUP_ACTIVITY_HELP') }}
+                </span>
+              </span>
+              <span
+                class="i-lucide-chevron-down size-5 shrink-0 text-n-slate-10 group-open:rotate-180"
+                aria-hidden="true"
+              />
+            </summary>
+            <div class="grid gap-5 pb-5">
+              <div class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.VALUE_RANGE') }}
+                </span>
+                <div class="grid grid-cols-2 gap-3">
+                  <Input
+                    v-model="draft.valueMin"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
+                    type="number"
+                    min="0"
+                    :label="t('CRM_KANBAN.FILTERS.VALUE_MIN')"
+                  />
+                  <Input
+                    v-model="draft.valueMax"
+                    custom-input-class="!min-h-11 !rounded-lg !bg-n-surface-1"
+                    type="number"
+                    min="0"
+                    :label="t('CRM_KANBAN.FILTERS.VALUE_MAX')"
+                  />
+                </div>
+              </div>
+
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.FOLLOW_UP') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.followUpStatus"
+                  :options="followUpStatusChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.FOLLOW_UP')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-sm font-medium text-n-slate-12">
+                  {{ t('CRM_KANBAN.FILTERS.STALE') }}
+                </span>
+                <ChoiceSelect
+                  v-model="draft.staleDays"
+                  :options="staleChoices"
+                  :aria-label="t('CRM_KANBAN.FILTERS.STALE')"
+                  class="w-full [&>button]:!min-h-11 [&>button]:!bg-n-surface-1 [&>button]:!outline-n-weak"
+                />
+              </label>
+            </div>
+          </details>
         </div>
       </div>
 
       <footer
-        class="flex shrink-0 items-center justify-between gap-3 border-t border-n-weak bg-n-surface-2 px-5 py-4 sm:px-8"
+        class="flex shrink-0 items-center justify-between gap-3 border-t border-n-weak bg-n-surface-1 px-5 py-4 sm:px-8"
       >
         <Button
           :label="t('CRM_KANBAN.ACTIONS.CLEAR_FILTERS')"
+          outline
           slate
-          ghost
+          class="!min-h-11 !rounded-lg !outline-n-weak"
           @click="clear"
         />
-        <div class="flex items-center gap-2">
-          <Button
-            :label="t('CRM_KANBAN.ACTIONS.CANCEL')"
-            slate
-            faded
-            @click="emit('close')"
-          />
-          <Button
-            :label="t('CRM_KANBAN.ACTIONS.APPLY_FILTERS')"
-            :disabled="Boolean(scoreRangeError)"
-            @click="apply"
-          />
-        </div>
+        <Button
+          :label="t('CRM_KANBAN.ACTIONS.VIEW_OPPORTUNITIES')"
+          :disabled="Boolean(scoreRangeError)"
+          class="!min-h-11 !rounded-lg"
+          @click="apply"
+        />
       </footer>
     </aside>
   </transition>

@@ -23,6 +23,7 @@ vi.mock('../../../../api/crmKanban', () => ({
     completeFollowUp: vi.fn(),
     cancelFollowUp: vi.fn(),
     getCalendarEvents: vi.fn(),
+    moveCard: vi.fn(),
   },
 }));
 
@@ -257,6 +258,85 @@ describe('#crmKanban pipeline inbox actions', () => {
     );
     expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
       isFetchingCard: false,
+    });
+  });
+
+  it('updates an already loaded List row after moving a card', async () => {
+    const commit = vi.fn();
+    const card = { id: 10, pipeline_id: 7, stage_id: 3, title: 'Lead' };
+    CrmKanbanAPI.moveCard.mockResolvedValue({ data: { payload: card } });
+
+    const result = await actions.moveCard(
+      {
+        commit,
+        state: { cardsList: [{ id: 10, stage_id: 1 }] },
+      },
+      { cardId: 10, stageId: 3 }
+    );
+
+    expect(result).toEqual(card);
+    expect(CrmKanbanAPI.moveCard).toHaveBeenCalledWith(10, 3);
+    expect(commit).toHaveBeenCalledWith(types.UPSERT_CRM_KANBAN_CARD, card);
+    expect(commit).toHaveBeenCalledWith(types.UPSERT_CRM_CARD_IN_LIST, card);
+    expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isMovingCard: false,
+    });
+  });
+
+  it('does not insert a board-only card into the paginated List', async () => {
+    const commit = vi.fn();
+    const card = { id: 10, pipeline_id: 7, stage_id: 3 };
+    CrmKanbanAPI.moveCard.mockResolvedValue({ data: { payload: card } });
+
+    await actions.moveCard(
+      { commit, state: { cardsList: [] } },
+      {
+        cardId: 10,
+        stageId: 3,
+      }
+    );
+
+    expect(commit).not.toHaveBeenCalledWith(
+      types.UPSERT_CRM_CARD_IN_LIST,
+      card
+    );
+  });
+
+  it('rejects a concurrent move before it reaches the API', async () => {
+    const commit = vi.fn();
+    const state = { cardsList: [], uiFlags: { isMovingCard: true } };
+
+    await expect(
+      actions.moveCard(
+        { commit, state },
+        {
+          cardId: 10,
+          stageId: 3,
+        }
+      )
+    ).rejects.toThrow('crm_card_move_in_progress');
+
+    expect(CrmKanbanAPI.moveCard).not.toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('releases the move lock after a failed request', async () => {
+    const commit = vi.fn();
+    const error = new Error('Move unavailable');
+    CrmKanbanAPI.moveCard.mockRejectedValue(error);
+
+    await expect(
+      actions.moveCard(
+        { commit, state: { cardsList: [] } },
+        {
+          cardId: 10,
+          stageId: 3,
+        }
+      )
+    ).rejects.toThrow('Move unavailable');
+
+    expect(commit).toHaveBeenLastCalledWith(types.SET_CRM_KANBAN_UI_FLAG, {
+      isMovingCard: false,
     });
   });
 
