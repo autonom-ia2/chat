@@ -88,7 +88,12 @@ module Waha
         groups: 'OFF',
         templates: {},
         commands: { server: true, queue: true },
-        conversations: { markAsRead: true, sort: @config.conversation_sort, status: nil }
+        conversations: {
+          markAsRead: true,
+          sort: @config.conversation_sort,
+          status: nil,
+          outgoing: 'message'
+        }
       }
     end
 
@@ -113,6 +118,5 @@ module Waha
         nil
       end
     end
-
   end
 end

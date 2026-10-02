@@ -39,7 +39,10 @@ RSpec.describe Waha::InboxProvisioner do
       expect(client).to have_received(:create_app).with(
         session: '5511999999999',
         app_id: a_string_matching(/\Aapp_/),
-        config: hash_including(groups: 'OFF')
+        config: hash_including(
+          groups: 'OFF',
+          conversations: hash_including(outgoing: 'message')
+        )
       )
     end
   end
