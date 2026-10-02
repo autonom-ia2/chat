@@ -20,10 +20,10 @@ class Waha::ExistingInboxUpdater
     )
   end
 
-  def perform(apply: false, account_id: nil)
+  def perform(apply: false, account_id: nil, inbox_id: nil)
     result = empty_result
 
-    scope(account_id).find_each do |channel|
+    scope(account_id, inbox_id).find_each do |channel|
       result.total += 1
       outcome = process_channel(channel, apply, result)
       next unless apply && %i[failed skipped].include?(outcome)
@@ -44,10 +44,12 @@ class Waha::ExistingInboxUpdater
     )
   end
 
-  def scope(account_id)
+  def scope(account_id, inbox_id)
     relation = Channel::Api.includes(:inbox)
                            .where("channel_api.additional_attributes ->> 'provider' = ?", 'waha')
-    account_id.present? ? relation.where(account_id: account_id) : relation
+    relation = relation.where(account_id: account_id) if account_id.present?
+    relation = relation.joins(:inbox).where(inboxes: { id: inbox_id }) if inbox_id.present?
+    relation
   end
 
   def process_channel(channel, apply, result)

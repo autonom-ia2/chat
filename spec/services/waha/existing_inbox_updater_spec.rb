@@ -122,6 +122,77 @@ RSpec.describe Waha::ExistingInboxUpdater do
     )
   end
 
+  describe 'inbox scope' do
+    let!(:other_channel) do
+      create(:channel_api, account: account,
+                           additional_attributes: { 'provider' => 'waha', 'session' => 'other', 'app_id' => 'app_other' })
+    end
+    let!(:other_account_channel) do
+      create(:channel_api, additional_attributes: { 'provider' => 'waha', 'session' => 'outside', 'app_id' => 'app_outside' })
+    end
+
+    before do
+      other_channel.inbox.update!(lock_to_single_conversation: false)
+      other_account_channel.inbox.update!(lock_to_single_conversation: false)
+    end
+
+    [false, true].each do |apply|
+      [false, true].each do |filter_account|
+        it "processes only the selected inbox with apply=#{apply} and account filter=#{filter_account}", :aggregate_failures do
+          result = service.perform(apply: apply, inbox_id: inbox.id, account_id: filter_account ? account.id : nil)
+
+          expect(result.to_h.slice(:total, :would_update, :updated, :failed, :skipped, :halted)).to eq(
+            total: 1, would_update: 1, updated: apply ? 1 : 0, failed: 0, skipped: 0, halted: false
+          )
+          expect(client).to have_received(:get_app).with('app_123').once
+          expect(client).not_to have_received(:get_app).with('app_other')
+          expect(client).not_to have_received(:get_app).with('app_outside')
+          expect(inbox.reload.lock_to_single_conversation).to be(apply)
+          expect(other_channel.inbox.reload.lock_to_single_conversation).to be(false)
+          expect(other_account_channel.inbox.reload.lock_to_single_conversation).to be(false)
+          expect(other_channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+          expect(other_account_channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+          if apply
+            expect(client).to have_received(:update_session).with('5511999999999', config: anything, apps: anything).once
+          else
+            expect(client).not_to have_received(:update_session)
+            expect(channel.reload.additional_attributes['phone_numbers_app_id']).to be_nil
+          end
+        end
+      end
+    end
+
+    it 'does not fall back to another inbox when account and inbox do not match' do
+      result = service.perform(apply: true, account_id: other_account_channel.account_id, inbox_id: inbox.id)
+
+      expect(result.total).to eq(0)
+      expect(client).not_to have_received(:get_app)
+      expect(client).not_to have_received(:update_session)
+      expect(inbox.reload.lock_to_single_conversation).to be(false)
+    end
+
+    it 'does not process any inbox when the selected inbox does not exist' do
+      missing_id = Inbox.maximum(:id) + 1
+
+      result = service.perform(apply: true, inbox_id: missing_id)
+
+      expect(result.total).to eq(0)
+      expect(client).not_to have_received(:get_app)
+      expect(client).not_to have_received(:update_session)
+    end
+
+    it 'does not process the selected inbox when its channel is not WAHA' do
+      channel.update!(additional_attributes: channel.additional_attributes.merge('provider' => 'other'))
+
+      result = service.perform(apply: true, inbox_id: inbox.id)
+
+      expect(result.total).to eq(0)
+      expect(client).not_to have_received(:get_app)
+      expect(client).not_to have_received(:update_session)
+      expect(inbox.reload.lock_to_single_conversation).to be(false)
+    end
+  end
+
   describe 'remote changes after planning' do
     let(:concurrent_calls_app) do
       {

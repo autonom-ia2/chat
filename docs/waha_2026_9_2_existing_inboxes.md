@@ -33,8 +33,10 @@ O rake deve ser executado no ambiente da aplicação que possui o banco da respe
 
 - Hub/Chat2You: 33 Apps Chatwoot encontrados; 0 já compatíveis; 0 Apps `brazilian-phone-numbers`.
 - Autonom.ia: 6 Apps Chatwoot encontrados; 0 já compatíveis; 0 Apps `brazilian-phone-numbers`.
-- Nos dois WAHA, `WAHA_APPS_ON` está atualmente em `calls,chatwoot,mcp`.
+- Naquele inventário, os dois WAHA tinham `WAHA_APPS_ON=calls,chatwoot,mcp`.
 - Nenhuma configuração foi alterada durante o inventário.
+
+Esse é o registro histórico do inventário. O [handoff posterior](audit/2026-10-02-waha-2026-9-2-post-review-handoff.md) registra a habilitação e persistência de `brazilian-phone-numbers` no Portainer. O código da branch continua sem deploy; este documento não substitui a validação do estado real antes do piloto autorizado.
 
 ## Pré-requisito de deploy
 
@@ -59,6 +61,23 @@ Escopo opcional por conta:
 ```bash
 ACCOUNT_ID=123 bundle exec rails waha:backfill_existing_inboxes
 ```
+
+Piloto em uma única caixa (IDs ilustrativos; substituir pelos IDs revisados):
+
+```bash
+INBOX_ID=456 bundle exec rails waha:backfill_existing_inboxes
+ACCOUNT_ID=123 INBOX_ID=456 bundle exec rails waha:backfill_existing_inboxes
+```
+
+`INBOX_ID` é opcional e deve ser um inteiro positivo. Valor vazio, inválido, zero ou negativo interrompe o comando antes de criar o cliente WAHA. Quando os dois filtros são informados, a caixa precisa pertencer à conta indicada. Caixa inexistente, de outra conta ou sem provider WAHA resulta em `total=0`, sem leitura remota ou escrita; isso não comprova uma migração. O relatório inicial mostra conta e caixa selecionadas, ou `ALL` para filtro ausente.
+
+Aplicação do piloto, somente após autorização explícita para produção e revisão do dry-run com `total=1`:
+
+```bash
+APPLY=true ACCOUNT_ID=123 INBOX_ID=456 bundle exec rails waha:backfill_existing_inboxes
+```
+
+Usar os mesmos filtros na revalidação em dry-run. O filtro limita o processamento à caixa selecionada; o PUT mantém o snapshot completo dos Apps dessa sessão, com as proteções de concorrência e recuperação descritas abaixo.
 
 Aplicação explícita:
 
