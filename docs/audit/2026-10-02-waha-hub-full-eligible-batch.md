@@ -128,11 +128,14 @@ cifrados para armazenamento privado fora da instância antes do deploy. SSM de s
 RSA-OAEP; hash do arquivo cifrado conferido, cada hash interno conferido e comparação final contra os
 hashes originais emitidos nas operações. Diretórios 0700/arquivos 0600. Teste local com 50 arquivos
 sintéticos passou; arquivo adulterado foi rejeitado antes de gravar qualquer arquivo.
+Também foram preservados e conferidos os oito arquivos before/after originais do piloto e das três
+primeiras caixas ampliadas: **58 arquivos protegidos no total**, fora da instância, todos iguais aos
+hashes das operações originais. Selagem adicional SSM `123fd3e1-b442-4655-8d68-37a8a3c04934`, Success/0.
 Um erro inicial do conferidor local selecionava somente a última linha JSON da operação, que não
 continha hash; foi corrigido para verificar todas as linhas e o sha256sum. Nenhuma divergência de dados
 foi encontrada e nenhuma aplicação foi repetida.
 
-Não houve importação, exclusão ou recálculo de mensagens/histórico, novos envios, logout, alteração de
+Não houve importação, exclusão ou recálculo de mensagens/histórico, envios pelo operador, logout, alteração de
 QR ou pareamento. As oito caixas excluídas continuam sem APPLY e exigem diagnóstico separado.
 A Autonom.ia não recebeu backfill. O runtime usado nas operações foi d28a87ad9b; a publicação posterior
-é comprovada separadamente pela auditoria do release.
+será registrada separadamente na auditoria do release; este documento de aplicação não comprova deploy.
