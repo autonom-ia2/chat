@@ -1,0 +1,125 @@
+{
+  "checks": [
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage and server persistence at 70%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 80%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 80%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage and server persistence at 80%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 87%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 90%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 90%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 90%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 100%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 110%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 110%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 110%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 117%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 120%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 120%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 120%",
+      "status": "passed"
+    },
+    {
+      "name": "Automatic in-column ordering and no accidental click after return drag at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "Filters, new opportunity and existing card drawers stay unscaled at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "Mouse drag to last stage with edge auto-scroll and server persistence at 130%",
+      "status": "passed"
+    },
+    {
+      "name": "Search updates and restores cards without resetting zoom",
+      "status": "passed"
+    },
+    {
+      "name": "Exact 87% preference survives closing and restarting the actual browser process",
+      "status": "passed"
+    },
+    {
+      "name": "No browser runtime errors during the additional interactions",
+      "status": "passed"
+    }
+  ],
+  "errors": []
+}
