@@ -2,7 +2,8 @@
 
 Data: 2026-10-02. Issue: https://github.com/autonom-ia2/chat/issues/865.
 Continuação de [publicação do lote4](2026-10-02-waha-lote4-publication.md).
-Estado: **piloto unitário validado nos casos exercitados; expansão não autorizada**.
+Estado deste checkpoint histórico: **piloto unitário validado nos casos exercitados; expansão ainda não autorizada nessa etapa**.
+A ampliação autorizada e concluída posteriormente é registrada em [lote elegível Hub2You](https://github.com/autonom-ia2/chat/pull/870).
 
 ## Autorização e escopo
 

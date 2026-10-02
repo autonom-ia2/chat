@@ -97,4 +97,5 @@ e responsável pela restauração. Não aplicar os IDs desse piloto na Autonom.i
 ## APPLY posterior do piloto
 
 Rodrigo autorizou o piloto restrito ao Hub2You e confirmou a janela exclusiva. APPLY e dry-run idempotente
-concluídos; evidências e limites em [piloto Hub2You](2026-10-02-waha-hub-pilot-apply.md). E2E/expansão continuam pendentes.
+concluídos; evidências e limites em [piloto Hub2You](2026-10-02-waha-hub-pilot-apply.md). Os casos E2E solicitados
+foram aceitos no fechamento do piloto. A ampliação posterior e suas autorizações estão na [auditoria do lote](https://github.com/autonom-ia2/chat/pull/870).
