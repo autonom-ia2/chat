@@ -199,6 +199,7 @@ export async function run(env = process.env) {
       pathToFileURL(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
     );
     context = await runtime.chromium.launchPersistentContext(profile, {
+      channel: 'chrome',
       headless: true,
       env: browserEnvironment(env),
       proxy: {

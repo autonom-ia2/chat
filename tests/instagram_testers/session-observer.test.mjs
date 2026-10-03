@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   configuration,
+  proxyConfiguration,
   observedSession,
   rolesQueryFields,
   validateRolesResponse,
@@ -28,6 +29,26 @@ const env = {
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
 };
 const config = configuration(env);
+
+test('manual browser initialization validates the proxy without inventing Meta bindings', () => {
+  const proxyEnv = {
+    INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
+    INSTAGRAM_TESTER_PROXY_PORT: '9100',
+    INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+  };
+  assert.deepEqual(proxyConfiguration(proxyEnv), {
+    host: '127.0.0.1',
+    port: '9100',
+    authMode: 'ip',
+  });
+  assert.throws(() => configuration(proxyEnv));
+  assert.throws(() =>
+    proxyConfiguration({
+      ...proxyEnv,
+      INSTAGRAM_TESTER_PROXY_PASSWORD: 'synthetic',
+    })
+  );
+});
 
 test('browser child environment excludes backend secrets and protocol tracing', () => {
   assert.deepEqual(

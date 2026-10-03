@@ -25,7 +25,7 @@ const requireSafe = condition => {
   if (!condition) throw new Error('session_update_rejected');
 };
 
-export function configuration(env) {
+export function proxyConfiguration(env) {
   const authMode = env.INSTAGRAM_TESTER_PROXY_AUTH_MODE;
   const hasUsername =
     env.INSTAGRAM_TESTER_PROXY_USERNAME !== undefined &&
@@ -34,25 +34,32 @@ export function configuration(env) {
     env.INSTAGRAM_TESTER_PROXY_PASSWORD !== undefined &&
     env.INSTAGRAM_TESTER_PROXY_PASSWORD !== '';
   const config = {
-    appId: env.INSTAGRAM_META_DEVELOPER_APP_ID,
-    businessId: env.INSTAGRAM_META_BUSINESS_ID,
-    docId: env.INSTAGRAM_TESTER_ROLES_DOC_ID,
-    adminId: env.INSTAGRAM_TESTER_ADMIN_USER_ID,
     host: env.INSTAGRAM_TESTER_PROXY_HOST,
     port: env.INSTAGRAM_TESTER_PROXY_PORT,
     authMode,
   };
-  requireSafe(
-    [config.appId, config.businessId, config.docId, config.adminId].every(
-      numeric
-    )
-  );
   requireSafe(typeof config.host === 'string' && isIP(config.host) === 4);
   requireSafe(config.authMode === 'ip' && !hasUsername && !hasPassword);
   requireSafe(
     numeric(config.port) &&
       Number(config.port) >= 1 &&
       Number(config.port) <= 65535
+  );
+  return Object.freeze(config);
+}
+
+export function configuration(env) {
+  const config = {
+    ...proxyConfiguration(env),
+    appId: env.INSTAGRAM_META_DEVELOPER_APP_ID,
+    businessId: env.INSTAGRAM_META_BUSINESS_ID,
+    docId: env.INSTAGRAM_TESTER_ROLES_DOC_ID,
+    adminId: env.INSTAGRAM_TESTER_ADMIN_USER_ID,
+  };
+  requireSafe(
+    [config.appId, config.businessId, config.docId, config.adminId].every(
+      numeric
+    )
   );
   config.rolesUrl = `https://developers.facebook.com/apps/${config.appId}/roles/roles/?business_id=${config.businessId}`;
   config.proxyFingerprint = createHash('sha256')

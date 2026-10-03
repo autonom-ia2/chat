@@ -31,7 +31,17 @@ a conexão comum contém somente locks/resultados de convite, sem cookies ou OAu
 
 ## Configuração do backend
 
-Entregar pelo mecanismo existente do SSM, sem reconstruir `/chatwoot/prod/env`.
+Entregar no SecureString separado `/chatwoot/prod/instagram-tester-env`, sem
+reconstruir `/chatwoot/prod/env`. O workflow aplica esse overlay como segundo
+env-file, aceita somente as 13 variáveis backend da tabela abaixo e rejeita
+duplicatas; não executa seu conteúdo como shell. Sessão JSON, usuário/senha de
+proxy e variáveis do gestor não são permitidos. Ausência do parâmetro mantém a configuração
+legada; falha de permissão ou configuração inválida interrompe o deploy.
+Antes de publicar o workflow, conceder ao role EC2 somente os dois ARNs de leitura
+novos declarados em IaC, sem apply amplo. O parâmetro base continua intacto.
+Essa integração operacional é suportada pelo workflow blue-green. Os templates
+Terraform de bootstrap direto não instalam o overlay/publisher; não usar recriação
+fora desse workflow para uma instalação com a funcionalidade ativa.
 Preservar todas as chaves, especialmente `SECRET_KEY_BASE` e as três chaves
 `ACTIVE_RECORD_ENCRYPTION_*`. Nunca trocar essas chaves para preparar este fluxo.
 
@@ -62,7 +72,7 @@ Refresh do token OAuth **não renova cookies administrativos**.
 
 ## Gestor separado e navegador dedicado
 
-O repositório não instala um navegador operacional nem um serviço no host.
+O repositório não instala um navegador operacional nem ativa o gestor no host.
 O gestor é um processo separado com Node/Playwright fixados pelo lock existente,
 perfil privado fora de Git, volume protegido e supervisão/monitoramento existentes.
 Preparar esse runtime e entregar segredos é etapa operacional sujeita a aprovação.
@@ -81,11 +91,28 @@ consulta/proxy acima e:
   Num host separado, usar o transporte de execução operacional já autorizado,
   com stdin preservado; não criar endpoint público para publicação.
 
+O transporte fornecido em `scripts/instagram_testers/runtime/publisher-tunnel.mjs`
+usa SSH com comando forçado por túnel SSM, valida conta AWS e consulta o ponteiro
+blue-green atual a cada publicação. Não abre porta SSH pública. A chave privada
+dedicada fica fora de Git no gestor; somente sua chave pública é entregue pelo
+parâmetro String `/chatwoot/prod/instagram-tester-publisher-public-key`.
+Os workflows instalam o publisher a partir da imagem antes do cutover, inclusive
+com a funcionalidade OFF quando há chave pública configurada. Não colocar o usuário
+publisher no grupo Docker. Os arquivos LaunchAgent/wrapper são templates: adaptar
+caminhos absolutos, PATH e bindings reais antes de instalar; template não é serviço
+em execução.
+
 **Inicialização/recuperação somente pelo operador autorizado:**
 
 ```sh
 node scripts/instagram_testers/session-browser.mjs
 ```
+
+Quando os bindings ainda estão sendo conferidos, `--initialize` abre somente a
+página inicial do Meta Developers com proxy validado. Não inventa App, Business,
+administrador ou doc_id. A seleção explícita `channel: 'chrome'` usa Google Chrome
+instalado com o perfil dedicado, sem reutilizar o perfil pessoal. O runtime local
+operacional fixa Playwright 1.59.1, conforme o lock de `tests/playwright`.
 
 Abre uma janela dedicada pelo mesmo proxy. O humano conclui login e 2FA e fecha a
 janela. Não há coleta de senha, tentativa automática de login ou bypass de desafio.
@@ -161,6 +188,12 @@ cookies, senhas, headers completos, bodies, tokens, HARs ou dados de clientes.
 Antes de merge: revisar commit final e CI, screenshots, matriz acima, allowlist e
 rollback das duas stacks; obter aprovação explícita. Manter flag OFF no preparo.
 A flag não impede o deploy automático da `main`.
+
+Na ativação inicial somente Hub2You/conta 18, manter Autonom.ia OFF e usar coordenação
+local apenas enquanto há uma única stack ativa. Para ativar ambas com App
+compartilhado, verificar um Redis comum e o isolamento OAuth legado antes. Cada
+novo host green recebe IP de origem novo: autorizá-lo no Webshare antes de habilitar
+o onboarding; a autorização do host blue não comprova acesso do green.
 
 Para interromper ativação, desligar flag/allowlist no runtime aprovado e parar o
 gestor. Preservar caixas, tokens, conversas e papéis existentes. Não limpar marcadores

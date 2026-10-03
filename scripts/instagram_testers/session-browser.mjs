@@ -1,13 +1,18 @@
 import { open, unlink } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { configuration } from './session-observer.mjs';
+import { configuration, proxyConfiguration } from './session-observer.mjs';
 import { privateProfile, browserEnvironment } from './session-manager.mjs';
 
 // Future operator-only initialization/recovery. It opens a dedicated window;
 // the human completes login and 2FA. No credential/cookie/form is inspected.
 async function run() {
-  const config = configuration(process.env);
+  const args = process.argv.slice(2);
+  const initialize = args.length === 1 && args[0] === '--initialize';
+  if (args.length && !initialize) throw new Error('operator_required');
+  const config = initialize
+    ? proxyConfiguration(process.env)
+    : configuration(process.env);
   if (
     !process.env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE ||
     !isAbsolute(process.env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
@@ -26,6 +31,7 @@ async function run() {
       pathToFileURL(process.env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
     );
     context = await runtime.chromium.launchPersistentContext(profile, {
+      channel: 'chrome',
       headless: false,
       env: browserEnvironment(process.env),
       proxy: {
@@ -38,10 +44,13 @@ async function run() {
       context.once('close', done);
     });
     const page = context.pages()[0] || (await context.newPage());
-    await page.goto(config.rolesUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
-    });
+    await page.goto(
+      initialize ? 'https://developers.facebook.com/' : config.rolesUrl,
+      {
+        waitUntil: 'domcontentloaded',
+        timeout: 30000,
+      }
+    );
     process.stdout.write(
       'Complete authorization manually in the dedicated window, then close it.\n'
     );
