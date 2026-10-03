@@ -156,7 +156,8 @@
         "tipo": "string",
         "um_de": [
           "agger"
-        ]
+        ],
+        "unico": true
       }
     },
     "completo": true,
@@ -1127,7 +1128,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -1248,7 +1250,9 @@
       "slug": {
         "max_caracteres": 64,
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -1558,7 +1562,8 @@
       },
       "short_code": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -1836,7 +1841,9 @@
         "tipo": "string"
       },
       "domain": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "max_caracteres": 100,
@@ -1943,17 +1950,22 @@
         "tipo": "objeto_livre"
       },
       "email": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "identifier": {
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "include_contact_inboxes": {},
       "name": {
         "tipo": "string"
       },
       "phone_number": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": false,
@@ -2163,7 +2175,8 @@
       },
       "external_id": {
         "max_caracteres": 255,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "lost_reason": {
         "tipo": "string"
@@ -2517,7 +2530,8 @@
       },
       "owner_id": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "inteiro"
+        "tipo": "inteiro",
+        "unico": true
       },
       "owner_type": {
         "tipo": "string",
@@ -2925,7 +2939,9 @@
       "redirect_uri": {
         "tipo": "string"
       },
-      "tenant_id": {}
+      "tenant_id": {
+        "padrao_do_texto": "\\A(?:common|organizations|consumers|\\h{8}-\\h{4}-\\h{4}-\\h{4}-\\h{12}|[a-z0-9][a-z0-9.-]*\\.[a-z]{2,})\\z"
+      }
     },
     "completo": true,
     "controller": "api/v1/accounts/email_oauth_apps#update",
@@ -2999,7 +3015,8 @@
           },
           "Channel::Email": {
             "email": {
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "imap_address": {
               "tipo": "string"
@@ -3074,7 +3091,8 @@
           "Channel::Line": {
             "line_channel_id": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "line_channel_secret": {
               "nao_pode_ficar_vazio": true,
@@ -3089,7 +3107,8 @@
           "Channel::Sms": {
             "phone_number": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider_config": {
               "tipo": "objeto_livre"
@@ -3099,7 +3118,8 @@
           "Channel::Telegram": {
             "bot_token": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "type": {}
           },
@@ -3194,7 +3214,8 @@
           "Channel::Whatsapp": {
             "phone_number": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider": {
               "padrao": "default",
@@ -3432,7 +3453,9 @@
       },
       "title": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "padrao_do_texto": "\\A[\\p{L}\\p{N}]+[\\p{L}\\p{N}_-]+\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -3750,7 +3773,8 @@
       },
       "locale": {
         "padrao": "en",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "nao_pode_ficar_vazio": true,
@@ -3928,7 +3952,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -3978,7 +4003,9 @@
         "tipo": "lista"
       },
       "url": {
-        "tipo": "string"
+        "padrao_do_texto": "(?=(?i:http|https):)\n        ([a-zA-Z][\\-+.a-zA-Z\\d]*):                           (?# 1: scheme)\n        (?:\n           ((?:[\\-_.!~*'()a-zA-Z\\d;?:@&=+$,]|%[a-fA-F\\d]{2})(?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*)                    (?# 2: opaque)\n        |\n           (?:(?:\n             //(?:\n                 (?:(?:((?:[\\-_.!~*'()a-zA-Z\\d;:&=+$,]|%[a-fA-F\\d]{2})*)@)?        (?# 3: userinfo)\n                   (?:((?:(?:[a-zA-Z0-9\\-.]|%\\h\\h)+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\[(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})|(?:(?:[a-fA-F\\d]{1,4}:)*[a-fA-F\\d]{1,4})?::(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}))?)\\]))(?::(\\d*))?))? (?# 4: host, 5: port)\n               |\n                 ((?:[\\-_.!~*'()a-zA-Z\\d$,;:@&=+]|%[a-fA-F\\d]{2})+)                 (?# 6: registry)\n               )\n             |\n             (?!//))                           (?# XXX: '//' is the mark for hostport)\n             (/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*(?:/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*)*)?                    (?# 7: path)\n           )(?:\\?((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                 (?# 8: query)\n        )\n        (?:\\#((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                  (?# 9: fragment)\n      ",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -4216,7 +4243,8 @@
       },
       "name": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -4927,7 +4955,8 @@
         "tipo": "string",
         "um_de": [
           "agger"
-        ]
+        ],
+        "unico": true
       }
     },
     "modelo": "Autonomia::Insurance::Connection",
@@ -4945,7 +4974,8 @@
         "tipo": "string",
         "um_de": [
           "agger"
-        ]
+        ],
+        "unico": true
       }
     },
     "completo": true,
@@ -4964,7 +4994,8 @@
         "tipo": "string",
         "um_de": [
           "agger"
-        ]
+        ],
+        "unico": true
       }
     },
     "completo": true,
@@ -5535,7 +5566,8 @@
       },
       "short_code": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -5942,7 +5974,8 @@
       },
       "external_link": {
         "obrigatorio": "condicional",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "markdown_content": {},
       "name": {
@@ -6155,7 +6188,9 @@
         "tipo": "string"
       },
       "domain": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "max_caracteres": 100,
@@ -6259,17 +6294,22 @@
         "tipo": "objeto_livre"
       },
       "email": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "identifier": {
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "inbox_id": {},
       "name": {
         "tipo": "string"
       },
       "phone_number": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
+        "tipo": "string",
+        "unico": true
       },
       "source_id": {}
     },
@@ -6958,7 +6998,8 @@
       },
       "external_id": {
         "max_caracteres": 255,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "inbox_id": {
         "tipo": "inteiro"
@@ -7245,7 +7286,8 @@
       },
       "external_id": {
         "max_caracteres": 255,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "inbox_id": {
         "tipo": "inteiro"
@@ -7681,7 +7723,8 @@
       },
       "inbox_id": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "inteiro"
+        "tipo": "inteiro",
+        "unico": true
       }
     },
     "completo": true,
@@ -7811,7 +7854,8 @@
       },
       "owner_id": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "inteiro"
+        "tipo": "inteiro",
+        "unico": true
       },
       "owner_type": {
         "tipo": "string",
@@ -8000,7 +8044,9 @@
       },
       "attribute_key": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "padrao_do_texto": "\\A[\\p{L}\\p{N}_.\\-]+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "attribute_model": {
         "obrigatorio": "pelo_modelo",
@@ -8582,7 +8628,9 @@
     "campos": {
       "domain": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "padrao_do_texto": "\\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,}\\z",
+        "tipo": "string",
+        "unico": true
       },
       "from_email": {
         "tipo": "string"
@@ -8635,7 +8683,8 @@
       },
       "name": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "thumbnail_url": {
         "tipo": "string"
@@ -8738,7 +8787,8 @@
           },
           "Channel::Email": {
             "email": {
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "imap_address": {
               "tipo": "string"
@@ -8813,7 +8863,8 @@
           "Channel::Line": {
             "line_channel_id": {
               "obrigatorio": "pelo_modelo",
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "line_channel_secret": {
               "obrigatorio": "pelo_modelo",
@@ -8828,7 +8879,8 @@
           "Channel::Sms": {
             "phone_number": {
               "obrigatorio": "pelo_modelo",
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider_config": {
               "tipo": "objeto_livre"
@@ -8838,7 +8890,8 @@
           "Channel::Telegram": {
             "bot_token": {
               "obrigatorio": "pelo_modelo",
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "type": {}
           },
@@ -8933,7 +8986,8 @@
           "Channel::Whatsapp": {
             "phone_number": {
               "obrigatorio": "pelo_modelo",
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider": {
               "padrao": "default",
@@ -9308,7 +9362,8 @@
     "campos": {
       "app_id": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "inbox_id": {
         "obrigatorio": "condicional",
@@ -9471,7 +9526,9 @@
       },
       "title": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "padrao_do_texto": "\\A[\\p{L}\\p{N}]+[\\p{L}\\p{N}_-]+\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -9859,7 +9916,8 @@
       },
       "locale": {
         "padrao": "en",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "obrigatorio": "pelo_modelo",
@@ -10016,7 +10074,8 @@
       },
       "name": {
         "obrigatorio": "pelo_modelo",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -10133,7 +10192,9 @@
         "tipo": "lista"
       },
       "url": {
-        "tipo": "string"
+        "padrao_do_texto": "(?=(?i:http|https):)\n        ([a-zA-Z][\\-+.a-zA-Z\\d]*):                           (?# 1: scheme)\n        (?:\n           ((?:[\\-_.!~*'()a-zA-Z\\d;?:@&=+$,]|%[a-fA-F\\d]{2})(?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*)                    (?# 2: opaque)\n        |\n           (?:(?:\n             //(?:\n                 (?:(?:((?:[\\-_.!~*'()a-zA-Z\\d;:&=+$,]|%[a-fA-F\\d]{2})*)@)?        (?# 3: userinfo)\n                   (?:((?:(?:[a-zA-Z0-9\\-.]|%\\h\\h)+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\[(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})|(?:(?:[a-fA-F\\d]{1,4}:)*[a-fA-F\\d]{1,4})?::(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}))?)\\]))(?::(\\d*))?))? (?# 4: host, 5: port)\n               |\n                 ((?:[\\-_.!~*'()a-zA-Z\\d$,;:@&=+]|%[a-fA-F\\d]{2})+)                 (?# 6: registry)\n               )\n             |\n             (?!//))                           (?# XXX: '//' is the mark for hostport)\n             (/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*(?:/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*)*)?                    (?# 7: path)\n           )(?:\\?((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                 (?# 8: query)\n        )\n        (?:\\#((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                  (?# 9: fragment)\n      ",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -10544,7 +10605,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -10665,7 +10727,9 @@
       "slug": {
         "max_caracteres": 64,
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -10958,7 +11022,8 @@
       },
       "short_code": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -11236,7 +11301,9 @@
         "tipo": "string"
       },
       "domain": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "max_caracteres": 100,
@@ -11343,17 +11410,22 @@
         "tipo": "objeto_livre"
       },
       "email": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A[^@\\s]+@[^@\\s]+\\z",
+        "tipo": "string",
+        "unico": true
       },
       "identifier": {
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "include_contact_inboxes": {},
       "name": {
         "tipo": "string"
       },
       "phone_number": {
-        "tipo": "string"
+        "padrao_do_texto": "\\A\\+[1-9]\\d{1,14}\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": false,
@@ -11563,7 +11635,8 @@
       },
       "external_id": {
         "max_caracteres": 255,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "lost_reason": {
         "tipo": "string"
@@ -11880,7 +11953,8 @@
       },
       "owner_id": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "inteiro"
+        "tipo": "inteiro",
+        "unico": true
       },
       "owner_type": {
         "tipo": "string",
@@ -12272,7 +12346,9 @@
       "redirect_uri": {
         "tipo": "string"
       },
-      "tenant_id": {}
+      "tenant_id": {
+        "padrao_do_texto": "\\A(?:common|organizations|consumers|\\h{8}-\\h{4}-\\h{4}-\\h{4}-\\h{12}|[a-z0-9][a-z0-9.-]*\\.[a-z]{2,})\\z"
+      }
     },
     "completo": true,
     "controller": "api/v1/accounts/email_oauth_apps#update",
@@ -12324,7 +12400,8 @@
           },
           "Channel::Email": {
             "email": {
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "imap_address": {
               "tipo": "string"
@@ -12399,7 +12476,8 @@
           "Channel::Line": {
             "line_channel_id": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "line_channel_secret": {
               "nao_pode_ficar_vazio": true,
@@ -12414,7 +12492,8 @@
           "Channel::Sms": {
             "phone_number": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider_config": {
               "tipo": "objeto_livre"
@@ -12424,7 +12503,8 @@
           "Channel::Telegram": {
             "bot_token": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "type": {}
           },
@@ -12519,7 +12599,8 @@
           "Channel::Whatsapp": {
             "phone_number": {
               "nao_pode_ficar_vazio": true,
-              "tipo": "string"
+              "tipo": "string",
+              "unico": true
             },
             "provider": {
               "padrao": "default",
@@ -12774,7 +12855,9 @@
       },
       "title": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "padrao_do_texto": "\\A[\\p{L}\\p{N}]+[\\p{L}\\p{N}_-]+\\z",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -13033,7 +13116,8 @@
       },
       "locale": {
         "padrao": "en",
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       },
       "name": {
         "nao_pode_ficar_vazio": true,
@@ -13192,7 +13276,8 @@
       },
       "name": {
         "nao_pode_ficar_vazio": true,
-        "tipo": "string"
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,
@@ -13223,7 +13308,9 @@
         "tipo": "lista"
       },
       "url": {
-        "tipo": "string"
+        "padrao_do_texto": "(?=(?i:http|https):)\n        ([a-zA-Z][\\-+.a-zA-Z\\d]*):                           (?# 1: scheme)\n        (?:\n           ((?:[\\-_.!~*'()a-zA-Z\\d;?:@&=+$,]|%[a-fA-F\\d]{2})(?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*)                    (?# 2: opaque)\n        |\n           (?:(?:\n             //(?:\n                 (?:(?:((?:[\\-_.!~*'()a-zA-Z\\d;:&=+$,]|%[a-fA-F\\d]{2})*)@)?        (?# 3: userinfo)\n                   (?:((?:(?:[a-zA-Z0-9\\-.]|%\\h\\h)+|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\[(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})|(?:(?:[a-fA-F\\d]{1,4}:)*[a-fA-F\\d]{1,4})?::(?:(?:[a-fA-F\\d]{1,4}:)*(?:[a-fA-F\\d]{1,4}|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}))?)\\]))(?::(\\d*))?))? (?# 4: host, 5: port)\n               |\n                 ((?:[\\-_.!~*'()a-zA-Z\\d$,;:@&=+]|%[a-fA-F\\d]{2})+)                 (?# 6: registry)\n               )\n             |\n             (?!//))                           (?# XXX: '//' is the mark for hostport)\n             (/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*(?:/(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*(?:;(?:[\\-_.!~*'()a-zA-Z\\d:@&=+$,]|%[a-fA-F\\d]{2})*)*)*)?                    (?# 7: path)\n           )(?:\\?((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                 (?# 8: query)\n        )\n        (?:\\#((?:[\\-_.!~*'()a-zA-Z\\d;/?:@&=+$,\\[\\]]|%[a-fA-F\\d]{2})*))?                  (?# 9: fragment)\n      ",
+        "tipo": "string",
+        "unico": true
       }
     },
     "completo": true,

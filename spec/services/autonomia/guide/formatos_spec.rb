@@ -38,6 +38,16 @@ RSpec.describe Autonomia::Guide::Formatos do
     expect(etiqueta['campos']['show_on_sidebar']).to include('tipo' => 'booleano')
   end
 
+  # Bateria, C03: "Title is invalid" não diz a regra. O formato leva a expressão do FormatValidator e a
+  # unicidade, e o resumo para o modelo as mostra — é daí que ele tira "cliente-vip".
+  it 'POST labels: leva a regra de texto e a unicidade do título', :aggregate_failures do
+    titulo = formato('POST labels')['campos']['title']
+
+    expect(titulo['padrao_do_texto']).to eq(Label.validators_on(:title).grep(ActiveModel::Validations::FormatValidator).first.options[:with].source)
+    expect(titulo).to include('unico' => true)
+    expect(described_class.resumo_para_o_modelo('POST labels')).to include('expressão', 'único na conta')
+  end
+
   it 'POST teams', :aggregate_failures do
     time = formato('POST teams')
 

@@ -128,6 +128,8 @@ module Autonomia::Guide::Formatos::Modelo
     when ActiveModel::Validations::InclusionValidator then inclusao(validador)
     when ActiveModel::Validations::NumericalityValidator then faixa(validador)
     when ActiveModel::Validations::LengthValidator then tamanho(validador)
+    when ActiveModel::Validations::FormatValidator then padrao_do_texto(validador)
+    when ActiveRecord::Validations::UniquenessValidator then { 'unico' => true }
     else {}
     end
   end
@@ -141,6 +143,14 @@ module Autonomia::Guide::Formatos::Modelo
     return { 'obrigatorio' => 'condicional' } if condicional
 
     criando ? { 'obrigatorio' => 'pelo_modelo' } : { 'nao_pode_ficar_vazio' => true }
+  end
+
+  # Regra de texto do modelo (ex.: título de etiqueta só com letras, números, - e _). A plataforma
+  # recusa com "is invalid" e não diz a regra; sem ela o Guia não sabe corrigir (bateria, C03).
+  # A expressão vai como DADO para o modelo ler — ninguém aqui interpreta texto com ela.
+  def padrao_do_texto(validador)
+    expressao = validador.options[:with]
+    expressao.is_a?(Regexp) ? { 'padrao_do_texto' => expressao.source } : {}
   end
 
   def inclusao(validador)

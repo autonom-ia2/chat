@@ -106,8 +106,16 @@ class Autonomia::Guide::Formatos::Resumo
     partes << valores(campo, limite)
     partes << faixa(campo)
     partes << "padrão #{campo['padrao'].to_json}" if campo.key?('padrao')
+    partes.concat(regras_do_texto(campo))
     partes << campo['so_se'] if campo['so_se']
     partes.compact_blank.join('; ')
+  end
+
+  def regras_do_texto(campo)
+    regras = []
+    regras << "o texto tem de casar com a expressão #{campo['padrao_do_texto']}" if campo['padrao_do_texto']
+    regras << 'único na conta' if campo['unico']
+    regras
   end
 
   def valores(campo, limite)

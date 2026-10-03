@@ -324,10 +324,8 @@ class Autonomia::Guide::Acoes
   # conseguido o que tinha feito (bateria do #900, C19). Lista não tem um id só: o registro fica nil.
   def identificador(resposta)
     dados = JSON.parse(resposta.corpo.to_s)
-    return unless dados.is_a?(Hash)
-
-    dados = dados['payload'] if dados['payload'].is_a?(Hash)
-    dados['id']
+    dados = dados['payload'] if dados.is_a?(Hash) && dados['payload'].is_a?(Hash)
+    dados.is_a?(Hash) ? dados['id'] : nil
   rescue JSON::ParserError
     nil
   end
