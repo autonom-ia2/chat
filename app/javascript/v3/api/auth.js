@@ -58,6 +58,7 @@ export const login = async ({
     }
     const loginError = new Error(parseAPIErrorResponse(error));
     loginError.errorCode = error.response?.data?.error_code;
+    loginError.status = error.response?.status;
     throw loginError;
   }
 };

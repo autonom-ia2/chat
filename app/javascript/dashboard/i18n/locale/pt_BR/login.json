@@ -21,7 +21,11 @@
       "NO_ACCOUNT_FOUND": "Não encontramos uma conta para seu endereço de correio eletrônico."
     },
     "AUTONOMIA": {
-      "LABEL": "Entrar com Autonomia"
+      "LABEL": "Entrar com Autonomia",
+      "AUTH_ERROR": "Não foi possível validar seu acesso pela Autonomia. Estamos levando você de volta para entrar novamente.",
+      "TRANSIENT_ERROR": "Não foi possível concluir seu acesso. Verifique sua conexão e tente novamente.",
+      "RETRY": "Tentar novamente",
+      "RESTART": "Entrar novamente pela Autonomia"
     },
     "FORGOT_PASSWORD": "Esqueceu-se da sua senha?",
     "CREATE_NEW_ACCOUNT": "Criar nova conta",
