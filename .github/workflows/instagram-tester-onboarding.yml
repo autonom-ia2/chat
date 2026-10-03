@@ -101,7 +101,7 @@ jobs:
       NODE_ENV: production
       RAILS_ENV: test
       VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/instagram-910-browsers
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/instagram-910-browsers
     steps:
       - uses: actions/checkout@v4
         with:
