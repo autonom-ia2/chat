@@ -10,6 +10,7 @@ class Instagram::RefreshTokensJob < ApplicationJob
 
   REFRESH_WINDOW = 10.days
   REAUTHORIZATION_WINDOW = 2.days
+  MINIMUM_TOKEN_AGE = 24.hours
 
   def perform
     Channel::Instagram.where(expires_at: Time.current..REFRESH_WINDOW.from_now).find_each do |channel|
@@ -22,14 +23,21 @@ class Instagram::RefreshTokensJob < ApplicationJob
   def refresh(channel)
     previous_expiry = channel.expires_at
     channel.access_token
-    return if channel.reload.expires_at > previous_expiry
+    return clear_reauthorization(channel) if channel.reload.expires_at > previous_expiry
 
     flag_for_reauthorization(channel)
   rescue StandardError => e
     Rails.logger.error("[#{self.class.name}] channel #{channel.id}: #{e.class.name}")
   end
 
+  def clear_reauthorization(channel)
+    channel.reauthorized! if channel.reauthorization_required?
+  end
+
+  # Meta only refreshes tokens at least 24h old (RefreshOauthTokenService uses updated_at for that),
+  # so an unchanged expiry on a younger record is not a refresh failure.
   def flag_for_reauthorization(channel)
+    return if channel.updated_at > MINIMUM_TOKEN_AGE.ago
     return if channel.expires_at > REAUTHORIZATION_WINDOW.from_now || channel.reauthorization_required?
 
     Rails.logger.warn("[#{self.class.name}] channel #{channel.id}: token refresh failed, expires at #{channel.expires_at}")

@@ -55,6 +55,26 @@ RSpec.describe Instagram::RefreshTokensJob do
     expect(channel.reload.reauthorization_required?).to be true
   end
 
+  it 'does not flag a record updated in the last 24 hours, which Meta would not refresh yet' do
+    channel = channel_expiring_in(1.day, token_age: 2.hours)
+    stub = stub_refresh(status: 200, body: { access_token: 'renewed-token', expires_in: 60.days.to_i })
+
+    described_class.perform_now
+
+    expect(stub).not_to have_been_requested
+    expect(channel.reload.reauthorization_required?).to be false
+  end
+
+  it 'clears a previous reconnection flag after a successful refresh' do
+    channel = channel_expiring_in(1.day, token_age: 59.days)
+    channel.prompt_reauthorization!
+    stub_refresh(status: 200, body: { access_token: 'renewed-token', expires_in: 60.days.to_i })
+
+    described_class.perform_now
+
+    expect(channel.reload.reauthorization_required?).to be false
+  end
+
   it 'keeps the inbox connected when the refresh fails with time left to retry' do
     channel = channel_expiring_in(6.days, token_age: 54.days)
     stub_refresh(status: 400, body: { error: { message: 'temporary' } })
