@@ -4,8 +4,8 @@
 # (modelo, tipo, certeza entre 0 e 1 e escolha entre as chaves do Decisor) antes de valer.
 #
 # O custo do Jev é NOSSO (decisão do Rodrigo, 03/10/2026) e fica em `Crm::AiUsageEvent` com a
-# feature `decisor`. O Jev devolve `usage` com `input_tokens`/`output_tokens`; o preço por token
-# está em `Crm::Ai::Pricing`.
+# feature `decisor` (`jev_guia` quando é o Guia classificando, `Decisores::Classificacao`). O Jev
+# devolve `usage` com `input_tokens`/`output_tokens`; o preço por token está em `Crm::Ai::Pricing`.
 class TypesafeAi::Decisor
   class Error < StandardError
     attr_reader :code
@@ -20,9 +20,10 @@ class TypesafeAi::Decisor
   PERGUNTA = 'decisao'.freeze
   Resultado = Struct.new(:resposta, :certeza, :modelo, keyword_init: true)
 
-  def initialize(client: TypesafeAi::Client.new, model: TypesafeAi::Config.model)
+  def initialize(client: TypesafeAi::Client.new, model: TypesafeAi::Config.model, feature: FEATURE)
     @client = client
     @model = model
+    @feature = feature
   end
 
   def decidir(decisor:, estado:)
@@ -56,7 +57,7 @@ class TypesafeAi::Decisor
 
   def registrar_custo(account, response, comeco)
     Crm::Ai::UsageRecorder.record(
-      account: account, feature: FEATURE, model: response['model'].presence || @model, usage: response['usage'],
+      account: account, feature: @feature, model: response['model'].presence || @model, usage: response['usage'],
       latency_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - comeco) * 1000).round
     )
   end

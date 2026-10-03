@@ -43,6 +43,8 @@ SSL_CERT_FILE=/etc/ssl/cert.pem AUTONOMIA_EVAL_PAGO=1 OPENAI_API_KEY=<chave> \
 - `OPENAI_API_KEY`: a chave da OpenAI. Nunca cole o valor em chat, commit ou log.
 - `SSL_CERT_FILE`: sem ele, no Mac, a base do Guia fica vazia e as respostas saem retidas.
 - `GUIA_ORCAMENTO_USD` (opcional, padrão 6): teto em dólar da bateria inteira.
+- `TYPESAFE_API_KEY` (só para o C30, #858): a chave do Jev, que o `classificar_com_jev` usa. Sem ela o
+  C30 fica pendente. O custo do Jev é nosso e aparece no placar junto com o resto.
 
 Para rodar só alguns cenários: `-e C07` (um) ou `-e C07 -e C19` (vários).
 
