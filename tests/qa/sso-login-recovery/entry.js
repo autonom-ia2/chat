@@ -7,7 +7,7 @@ import axios from 'axios';
 import FloatingVue from 'floating-vue';
 import '@chatwoot/viz/style.css';
 
-const params = new URLSearchParams(location.search);
+const params = new URLSearchParams(window.location.search);
 const locale = params.get('locale') || 'pt_BR';
 const loaders = {
   en: () => import('dashboard/i18n/locale/en/index.js'),
@@ -18,10 +18,10 @@ const messages = (await loaders[locale]()).default;
 window.axios = axios;
 window.globalConfig = {
   installationName: 'Chatwoot Synthetic QA',
-  frontendUrl: location.origin,
+  frontendUrl: window.location.origin,
 };
 window.chatwootConfig = {
-  apiHost: `${location.origin}/`,
+  apiHost: `${window.location.origin}/`,
   allowedLoginMethods: ['email'],
   autonomiaSsoEnabled: 'true',
   autonomiaSsoAutoRedirect: 'false',
@@ -29,10 +29,10 @@ window.chatwootConfig = {
     params.get('configured_auth_url') || '/auth/autonomia?source=visual-gate',
   signupEnabled: 'false',
 };
-window.__qa = { locale, missing: [], vueErrors: [], vueWarnings: [] };
+window.qa = { locale, missing: [], vueErrors: [], vueWarnings: [] };
 document.documentElement.lang = locale.replace('_', '-');
 document.documentElement.dir = 'ltr';
-history.replaceState(null, '', `/app/login?${params.toString()}`);
+window.history.replaceState(null, '', `/app/login?${params.toString()}`);
 
 const Login = (await import('v3/views/login/Index.vue')).default;
 const router = createRouter({
@@ -59,17 +59,16 @@ const i18n = createI18n({
   locale,
   fallbackLocale: false,
   messages: { [locale]: messages },
-  missing: (language, key) => window.__qa.missing.push({ language, key }),
+  missing: (language, key) => window.qa.missing.push({ language, key }),
 });
 const app = createApp(Login, {
   ssoAuthToken: 'synthetic-one-time-token',
   redirectTo: params.get('redirect_to') || '',
 });
 app.config.errorHandler = (error, instance, info) => {
-  window.__qa.vueErrors.push({ message: error.message, info });
-  console.error(error);
+  window.qa.vueErrors.push({ message: error.message, info });
 };
-app.config.warnHandler = message => window.__qa.vueWarnings.push(message);
+app.config.warnHandler = message => window.qa.vueWarnings.push(message);
 app.use(FloatingVue, {
   instantMove: true,
   arrowOverflow: false,
@@ -77,4 +76,4 @@ app.use(FloatingVue, {
   themes: { tooltip: { strategy: 'fixed' } },
 });
 app.use(store).use(createPinia()).use(router).use(i18n).mount('#app');
-window.__qa.ready = true;
+window.qa.ready = true;
