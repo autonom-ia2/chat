@@ -25,6 +25,11 @@ class Autonomia::Agents::Tools::Native::GuiaLeitura < Autonomia::Agents::Tools::
       'ler_da_conta'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[recurso parametros_json status pagina campos]
+    end
+
     def description
       'Lê dados reais da conta de quem está falando com você, com a permissão dela. Use sempre que a ' \
         'pergunta for sobre o que a conta TEM (quantas caixas, quais funis, quais conversas, quem são os ' \

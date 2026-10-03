@@ -18,6 +18,11 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
       'propor_acao'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[acao descricao]
+    end
+
     def description
       'Prepara, para a pessoa confirmar na tela, uma ação que NÃO tem desfazer: enviar mensagem a cliente, ' \
         'disparar campanha, trocar credencial, importar em lote. NÃO executa: a tela mostra o resumo com ' \

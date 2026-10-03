@@ -27,7 +27,7 @@ RSpec.describe Autonomia::Agents::Tools::Native::Base do
   # `ToolRun#resultado_obtido?`) entrou na fatia 2 do #420: quem pergunta tem a linha, não a ferramenta montada.
   let(:textos_de_classe) do
     %i[slug tool_name description params available_for? async? openai_schema
-       accepted_message fatos_do_evento resultado_guardado?]
+       accepted_message fatos_do_evento resultado_guardado? args_registraveis args_para_registro]
   end
   # O que o `Bound` e o job chamam NA INSTÂNCIA (`resultado_entregue?` e `resta_entregar?` são as
   # duas perguntas que o `Tools::Encerramento` faz à ferramenta antes de escolher o fecho).

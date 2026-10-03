@@ -237,3 +237,10 @@ autonomia_guide_limpar_arquivos_job:
   cron: '40 4 * * *'
   class: 'Autonomia::Guide::LimparArquivosJob'
   queue: scheduled_jobs
+
+# executed every day at 04:50; apaga as conversas com o Guia paradas há mais de 30 dias, com o
+# registro de diagnóstico de cada pedido (#861). O texto pode ter dado pessoal de cliente.
+autonomia_guide_limpar_conversas_job:
+  cron: '50 4 * * *'
+  class: 'Autonomia::Guide::LimparConversasJob'
+  queue: scheduled_jobs

@@ -15,17 +15,20 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # Antes a resposta saía desta requisição, e o `rack-timeout` de produção mata
   # qualquer requisição aos 15 segundos: em 21/09/2026 uma pergunta que exigiu
   # duas leituras morreu aos 15,2s com erro 500.
+  #
+  # #861 — a pergunta entra numa conversa guardada. Sem `conversa_id`, abre uma
+  # nova; com o id de uma conversa de outra pessoa, responde 404.
   def chat
-    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
-    ::Autonomia::Guide::ChatJob.perform_later(
-      pedido,
-      { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
-        'mensagem' => params[:message].to_s, 'historico' => history_param,
-        'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s,
-        'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
-    )
+    conversa = conversa_do_pedido
+    return head :not_found if conversa.nil?
 
-    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE }, status: :accepted
+    historico = historico_de(conversa)
+    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
+    ::Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: params[:message],
+                                    tela: params[:route_context], anexos: params[:anexos])
+    ::Autonomia::Guide::ChatJob.perform_later(pedido, pergunta(historico))
+
+    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id }, status: :accepted
   end
 
   # O estado do pedido e, quando pronto, a resposta — com os mesmos campos que a
@@ -52,13 +55,18 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   end
 
   # Só chega aqui depois da confirmação explícita na tela.
+  #
+  # #861 — com `pedido_id`, o desfecho fica no turno: reabrir a conversa mostra
+  # a ação feita (ou o motivo da falha), e não os botões de novo.
   def executar_acao
     resultado = acoes.executar(params[:acao], dados_do_pedido)
     registrar(resultado)
+    anotar_acao(resultado.ok, resultado.mensagem)
     return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
 
     render json: { mensagem: resultado.mensagem }
   rescue ::Autonomia::Guide::Acoes::Recusada => e
+    anotar_acao(false, e.message)
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
@@ -166,6 +174,39 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       "[autonomia][guide][acao] account=#{Current.account.id} user=#{Current.user.id} " \
       "acao=#{params[:acao]} ok=#{resultado.ok} registro=#{resultado.registro}"
     )
+  end
+
+  # Quem perguntou, o quê, o histórico, a tela e o idioma: tudo o que o job precisa, serializável.
+  def pergunta(historico)
+    { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
+      'mensagem' => params[:message].to_s, 'historico' => historico,
+      'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s,
+      'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
+  end
+
+  def anotar_acao(feita, mensagem)
+    return if params[:pedido_id].blank?
+
+    turno = ::Autonomia::Guide::Turno.de(Current.account, Current.user).find_by(pedido_id: params[:pedido_id].to_s)
+    turno&.update!(acao_estado: feita ? ::Autonomia::Guide::Turno::ACAO_FEITA : ::Autonomia::Guide::Turno::ACAO_FALHOU,
+                   acao_resultado: mensagem.to_s)
+  end
+
+  # A conversa só existe para quem a começou. Id de outra pessoa (ou que não
+  # existe) vira nil, e a ação responde 404.
+  def conversa_do_pedido
+    conversas = ::Autonomia::Guide::Conversa.de(Current.account, Current.user)
+    return conversas.find_by(id: params[:conversa_id]) if params[:conversa_id].present?
+
+    conversas.create!(titulo: ::Autonomia::Guide::Conversa.titulo_para(params[:message]))
+  end
+
+  # O histórico sai dos turnos guardados. O `history` do cliente vale só quando a
+  # conversa ainda não tem turno: é o caso da tela antiga, que não manda
+  # `conversa_id`, durante o deploy blue/green. Depois dele, o parâmetro sai.
+  def historico_de(conversa)
+    turnos = conversa.historico
+    turnos.any? ? turnos : history_param
   end
 
   def ensure_guide_enabled

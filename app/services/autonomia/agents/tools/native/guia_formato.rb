@@ -11,6 +11,11 @@ class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::
       'formato_da_acao'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[acao]
+    end
+
     def description
       'Diz o que uma ação de escrita aceita: onde vão os campos, quais existem, de que tipo, quais são ' \
         'obrigatórios e quais valores cada lista aceita. Consulte ANTES de executar_acao ou propor_acao e ' \

@@ -17,6 +17,11 @@ class Autonomia::Agents::Tools::Native::GuiaAnexo < Autonomia::Agents::Tools::Na
       'ler_anexo'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[conversation_id anexo_id parte]
+    end
+
     def description
       'Lê o CONTEÚDO de um anexo de conversa — documento, áudio (transcrito) ou imagem (texto visível) — que ' \
         'você achou lendo as mensagens com ler_da_conta. Texto longo vem por partes: peça a parte seguinte se ' \
