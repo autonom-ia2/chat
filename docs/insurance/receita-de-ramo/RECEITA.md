@@ -160,9 +160,54 @@ descoberta não responde.
    mais pede, depois o resto, até o orçamento. Cada limite medido vira tabela no adapter com a data: limite de
    seguradora muda.
 
-**O mínimo do ramo é medido, não escolhido.** É o menor conjunto de dados que traz preço na maioria das
-seguradoras prontas. Tudo o mais é buscado (CPF, CNPJ, CEP) ou tem padrão com motivo. A tabela do mínimo, com
-as execuções, fica no piloto antes da primeira linha do manual.
+### O mínimo para cotar e a completude dos parâmetros
+
+São duas promessas diferentes, e o ramo precisa cumprir as duas:
+- **Pedir pouco.** O cliente responde o mínimo e recebe preço.
+- **Aceitar tudo.** Qualquer coisa que o portal cote e o cliente diga ("quero franquia reduzida", "carro reserva de
+  30 dias", "cobre doença grave?") chega ao pedido, mesmo que ninguém tenha perguntado.
+
+Em auto as duas foram provadas: 84 parâmetros conferidos contra o formulário do portal (`auto-completo.test.ts`,
+`knowledge/formularios-auto.json`) e 4 perguntas. Residencial e empresarial nasceram sem essa conferência, e o
+empresarial perdeu campos da tela (modo F10) que só apareceram quando o cliente pediu.
+
+**Toda variável do ramo cai em uma de cinco classes**, escrita no schema do adapter e mostrada no piloto:
+
+| Classe | O que é | O especialista | Exemplo |
+|---|---|---|---|
+| **mínimo** | sem ele, a maioria das seguradoras não cota | pergunta, na ordem do mínimo | CPF, CEP e número, valor a segurar |
+| **condicional** | só existe quando outro dado o abre | pergunta só quando abrir | complemento se apartamento; renovação se o cliente renova |
+| **buscado** | sai de consulta, sem pergunta | não pergunta; confirma só se a busca falhar | nome pelo CPF, endereço pelo CEP, veículo pela placa |
+| **sob pedido** | tem padrão com motivo; o cliente muda se quiser | **não pergunta**; usa quando o cliente disser | franquia, carro reserva, danos elétricos, funeral |
+| **fora** | o portal tem, mas não entra na cotação | nunca usa; o motivo fica escrito | dado de emissão, campo de sistema, pacote que zera valores |
+
+**Como se define o mínimo**, medindo:
+1. Parte do formulário inteiro no padrão, sem nada do cliente além do que identifica a pessoa e o bem.
+2. Tira ou põe **um campo por cotação**, sempre pelo caminho do produto, e anota quem cotou.
+3. O campo entra no mínimo só se, sem ele, **menos de 70% das seguradoras prontas** trazem preço, **ou** se uma
+   recusa nomeada o exige, **ou** se o validador do portal o obriga. A prova de cada campo é a execução, com o id.
+4. Repete em **três faixas de valor** e em **dois perfis** do ramo (apartamento e casa; loja e escritório; homem e
+   mulher, fumante e não fumante), para o mínimo não valer só para um caso.
+5. O resultado é a tabela **campo, classe, prova** no piloto, antes da primeira linha do manual. O manual pergunta
+   exatamente os campos de classe mínimo e condicional, nesta ordem, e nenhum outro.
+
+**Como se garante a completude**, sem memória:
+1. **O formulário do portal vira arquivo.** A leitura do bundle (`fb.group({...})` e os domínios) de cada ramo fica
+   em `knowledge/formularios-<ramo>.json` no adapter, como o de auto. A descoberta de 04/09 já tem a matéria-prima
+   em `agger-descoberta/ramos/<ramo>/`.
+2. **Guarda de completude.** Um teste por ramo pronto confere, nos dois sentidos, o formulário contra o schema:
+   todo campo do portal está no schema com classe e descrição, ou está em `fora` com o motivo. Todo valor de
+   domínio do portal está nos `valores` do campo. Campo que o schema tem e o portal não tem reprova, porque é campo
+   inventado. É o `auto-completo.test.ts` estendido a todo ramo em `RAMOS_PRONTOS`.
+3. **A descrição do campo sob pedido diz a regra**, e não só o significado: "use quando o cliente mencionar; não
+   pergunte". A guarda de descrição do adapter confere que todo campo sob pedido traz essa direção.
+4. **O que o cliente pede e o portal não tem** não some em silêncio. O especialista devolve em "não coube", com o
+   motivo, e a Lia conta (#748).
+5. **Prova real:** o roteiro da Fase 6 tem uma rodada em que o cliente pede, sem ser perguntado, pelo menos três
+   parâmetros sob pedido de uma vez. A leitura de volta no portal mostra os três no pedido.
+
+**Limites não são completude.** Saber que o campo existe é grátis; saber até quanto cada seguradora aceita é
+medição paga (camada 2), com prioridade e orçamento.
 
 Antes de mexer no chat2you, prove a ponta que custa dinheiro.
 
@@ -450,8 +495,8 @@ o ramo na conta.
 |---|---|---|---|
 | R1 | Decisão do Rodrigo, orçamento de cotações do ramo aprovado e descoberta de 04/09 lida | 0 | a data da decisão, o teto, o arquivo da descoberta |
 | R2 | Jornada de auto preenchida, todas as linhas, sem "depois" | antes do código | a tabela no piloto, mostrada ao Rodrigo |
-| R3 | Mínimo medido: preço na maioria das seguradoras prontas, o resto buscado ou com padrão | 1 | a tabela do mínimo e as execuções |
-| R4 | Catálogo grátis completo: 100% dos parâmetros no schema, com descrição e origem | 1 e 2 | o schema e o teste de ramo pronto |
+| R3 | Mínimo medido um campo por vez, em três faixas e dois perfis: sem o campo, menos de 70% das prontas cotam, ou recusa nomeada, ou validador; tabela campo, classe e prova | 1 | a tabela no piloto com o id de cada execução |
+| R4 | Completude: formulário do portal em `formularios-<ramo>.json`, toda variável com classe (mínimo, condicional, buscado, sob pedido, fora) e guarda formulário contra schema nos dois sentidos | 1 e 2 | o arquivo do formulário e o teste de completude |
 | R5 | Limites pagos por seguradora, por bisseção, priorizados, com data | 1 e 3 | as tabelas no adapter e as execuções |
 | R6 | Cota pelo caminho do produto, lida de volta, em três faixas de valor, com dado real | 1 | ids das execuções |
 | R7 | Formulário gerado; todo campo atravessa; descrições sem crase nem travessão | 2 | specs de travessia e de descrição |
@@ -470,7 +515,7 @@ o ramo na conta.
 | R20 | Toda falha do ramo vira nota privada à equipe | 7 | `falha_vira_nota_privada_spec.rb` |
 | R21 | Peças em paridade no adapter e no chat, exceções com motivo | antes do ar | `paridade-dos-ramos.test.ts` e `paridade_das_pecas_spec.rb` |
 | R22 | Especialista nos agentes existentes, só onde a corretora cota | 5 | a migration e `disponivel?` |
-| R23 | Roteiro real: sozinho; depois de outro ramo; dois bens; com auto e residencial; dado mudado entre rodadas | 6 | números das conversas |
+| R23 | Roteiro real: sozinho; depois de outro ramo; dois bens; com auto e residencial; dado mudado entre rodadas; o cliente pedindo três parâmetros sob pedido sem ser perguntado, conferidos na leitura de volta | 6 | números das conversas e a leitura de volta |
 | R24 | Bateria de roteamento, também contra os ramos no ar, com veredito do banco | 6 | números das conversas e o especialista chamado |
 | R25 | Recusas conhecidas registradas, com o dono de cada uma | 6 | a lista no piloto |
 | R26 | Revisão adversarial sem `test/contract`, suíte local lida, mutação; ordem do deploy e vez combinada | antes do merge | o relatório do revisor e o PR |
