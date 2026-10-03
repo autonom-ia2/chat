@@ -34,7 +34,7 @@ class Autonomia::Guide::ChatJob < ApplicationJob
     resultado = I18n.with_locale(pergunta['locale']) do
       ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
                                    history: pergunta['historico'], route_context: pergunta['tela'],
-                                   arquivos: pergunta['arquivos']).perform
+                                   route_params: pergunta['parametros'], arquivos: pergunta['arquivos']).perform
     end
     ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h)
   end
