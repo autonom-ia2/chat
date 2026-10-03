@@ -31,6 +31,10 @@ RSpec.describe 'Ferramentas do Guia' do
     Autonomia::Agents::Tools::Native::GuiaAcao.new(agent: agente, params: params, operador: quem).call
   end
 
+  def executar(params, quem: operador)
+    Autonomia::Agents::Tools::Native::GuiaExecucao.new(agent: agente, params: params, operador: quem).call
+  end
+
   def ler_central(params, quem: operador)
     Autonomia::Agents::Tools::Native::GuiaCentral.new(agent: agente, params: params, operador: quem).call
   end
@@ -120,25 +124,96 @@ RSpec.describe 'Ferramentas do Guia' do
     end
   end
 
-  describe 'propor_acao' do
+  describe 'executar_acao' do
     let(:pedido) do
-      { 'acao' => 'POST labels', 'descricao' => 'Criar a etiqueta Urgente.',
+      { 'acao' => 'POST labels', 'descricao' => 'Criei a etiqueta Urgente.',
         'corpo_json' => { title: 'urgente' }.to_json }
     end
 
-    # O item mais importante do arquivo. A ferramenta PREPARA; quem grava é o
-    # endpoint de confirmação, noutro request, depois do clique.
+    # #855: o Guia faz, sem esperar clique — e tudo fica anotado para desfazer.
+    it 'faz na hora e anota para desfazer', :aggregate_failures do
+      expect { executar(pedido) }.to change(conta.labels, :count).by(1)
+
+      expect(operador.execucao.passos.first).to include('frase' => 'Criei a etiqueta Urgente.', 'ok' => true)
+      expect(operador.execucao.mudancas.map(&:record_type)).to include('Label')
+    end
+
+    # O pedido real da conta 18 (02/10/2026) tinha várias etapas, e a segunda
+    # usava o id da primeira. O retorno do passo conta como leitura.
+    it 'encadeia passos: o id criado num passo serve para o seguinte', :aggregate_failures do
+      resposta = executar(pedido)
+      id = conta.labels.find_by(title: 'urgente').id
+
+      expect(resposta).to include(id.to_s)
+      executar({ 'acao' => 'PATCH labels/:id', 'descricao' => 'Renomeei para Prioridade.',
+                 'caminho_json' => { id: id.to_s }.to_json, 'corpo_json' => { title: 'prioridade' }.to_json })
+
+      expect(conta.labels.find(id).title).to eq('prioridade')
+      expect(operador.execucao.passos.size).to eq(2)
+    end
+
+    it 'deixa a pessoa desfazer o turno inteiro' do
+      executar(pedido)
+
+      expect do
+        Autonomia::Guide::Desfazer.new(execucao: operador.execucao, user: admin).perform
+      end.to change(conta.labels, :count).by(-1)
+    end
+
+    # Mensagem para cliente, campanha, credencial: não tem volta, então não
+    # passa por aqui.
+    it 'recusa o que não tem desfazer e manda para a confirmação', :aggregate_failures do
+      resposta = executar({ 'acao' => 'POST campaigns', 'descricao' => 'Disparei a campanha.' })
+
+      expect(resposta).to include('propor_acao')
+      expect(operador.execucao).to be_nil
+    end
+
+    it 'não muda nada para quem não administra a conta' do
+      agente_comum, = create_crm_agent(account: conta)
+      comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
+
+      expect { executar(pedido, quem: comum) }.not_to change(conta.labels, :count)
+      # Recusado antes de abrir: nada de turno vazio na lista "Feito pelo Guia".
+      expect(Autonomia::Guide::Execucao.where(user: agente_comum)).to be_empty
+    end
+
+    it 'não aponta para registro que não leu', :aggregate_failures do
+      resposta = executar({ 'acao' => 'PATCH labels/:id', 'descricao' => 'Renomeei.',
+                            'caminho_json' => { id: '999' }.to_json })
+
+      expect(resposta).to include('Não executei')
+      expect(operador.execucao).to be_nil
+    end
+  end
+
+  describe 'propor_acao' do
+    let(:pedido) do
+      { 'acao' => 'POST campaigns', 'descricao' => 'Disparar a campanha Boas-vindas.',
+        'corpo_json' => { title: 'Boas-vindas' }.to_json }
+    end
+
+    # Para o que não tem volta, a ferramenta PREPARA; quem grava é o endpoint de
+    # confirmação, noutro request, depois do clique.
     it 'não toca no banco: prepara e espera a confirmação', :aggregate_failures do
-      expect { propor(pedido) }.not_to change(conta.labels, :count)
+      expect { propor(pedido) }.not_to change(conta.campaigns, :count)
       expect(propor(pedido)).to include('confirmar')
     end
 
     it 'deixa a proposta pronta para a tela mostrar o Confirmar', :aggregate_failures do
       propor(pedido)
 
-      expect(operador.proposta[:nome]).to eq('POST labels')
-      expect(operador.proposta[:descricao][:frase]).to eq('Criar a etiqueta Urgente.')
-      expect(operador.proposta[:descricao][:detalhe]).to include('urgente')
+      expect(operador.proposta[:nome]).to eq('POST campaigns')
+      expect(operador.proposta[:descricao][:frase]).to eq('Disparar a campanha Boas-vindas.')
+      expect(operador.proposta[:descricao][:detalhe]).to include('Boas-vindas')
+    end
+
+    # O que tem desfazer o Guia faz direto (#855); propor só atrasaria.
+    it 'manda fazer direto o que tem desfazer', :aggregate_failures do
+      resposta = propor({ 'acao' => 'POST labels', 'descricao' => 'Criar a etiqueta.', 'corpo_json' => '{"title":"x"}' })
+
+      expect(resposta).to include('executar_acao')
+      expect(operador.proposta).to be_nil
     end
 
     # Sem frase não há confirmação informada, e cair no verbo com a rota traria
@@ -159,15 +234,15 @@ RSpec.describe 'Ferramentas do Guia' do
       propor(pedido, quem: comum)
 
       expect(comum.proposta).to be_nil
-      expect(conta.labels.count).to eq(0)
+      expect(conta.campaigns.count).to eq(0)
     end
 
     # O catálogo de escrita tem 16.245 caracteres e não cabe no prompt de toda
     # pergunta. Ele chega aqui, no momento em que faz falta.
     it 'diz quais ações existem para o recurso quando o modelo erra o nome' do
-      resposta = propor(pedido.merge('acao' => 'PUT labels/:id/arquivar'))
+      resposta = propor(pedido.merge('acao' => 'PUT campaigns/:id/arquivar'))
 
-      expect(resposta).to include('POST labels')
+      expect(resposta).to include('POST campaigns')
     end
 
     it 'recusa sem derrubar o turno quando não há operador' do
@@ -414,6 +489,7 @@ RSpec.describe 'Ferramentas do Guia' do
   describe 'o esquema que vai para a OpenAI' do
     [Autonomia::Agents::Tools::Native::GuiaLeitura,
      Autonomia::Agents::Tools::Native::GuiaAcao,
+     Autonomia::Agents::Tools::Native::GuiaExecucao,
      Autonomia::Agents::Tools::Native::GuiaTela,
      Autonomia::Agents::Tools::Native::GuiaCentral].each do |ferramenta|
       it "de #{ferramenta.slug} é válido em strict mode", :aggregate_failures do

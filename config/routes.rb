@@ -362,6 +362,9 @@ Rails.application.routes.draw do
             get 'guide/chat/:id', to: 'guide#resposta'
             post 'guide/acoes/preparar', to: 'guide#preparar_acao'
             post 'guide/acoes/executar', to: 'guide#executar_acao'
+            # #855 — o que o Guia fez nos últimos 5 dias, e o desfazer.
+            get 'guide/execucoes', to: 'guide#execucoes'
+            post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect

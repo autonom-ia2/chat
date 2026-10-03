@@ -2160,7 +2160,7 @@
     "THINKING": "Thinking…",
     "HIGHLIGHT_HERE": "it's here",
     "RESET": "New chat",
-    "KICK_OFF": "I explain where things are, look up your account data and, for admins, make changes once you confirm.",
+    "KICK_OFF": "I explain where things are, look up your account data and, for admins, do what you ask — anything I change can be undone for 5 days.",
     "GO_TO_SCREEN": "Go to screen",
     "GO_TO_SCREEN_NAMED": "Go to: {rotulo}",
     "GO_TO_SCREEN_NUMBERED": "Go to screen {numero}",
@@ -2184,6 +2184,24 @@
       "FAILED": "I couldn't do that. You can do it from the screen.",
       "FAILED_GENERIC": "I couldn't do that, and I can't tell why. You can do it from the screen.",
       "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again."
+    },
+    "DONE": {
+      "TITLE": "What I did",
+      "TITLE_AT": "What I did on {quando}",
+      "STEP_OK": "Done:",
+      "STEP_FAILED": "Not done:",
+      "UNDO": "Undo",
+      "UNDOING": "Undoing…",
+      "UNDONE": "Undone. Everything went back to how it was.",
+      "UNTIL": "You can undo until {quando}",
+      "CONFLICTS": "{total} change(s) were kept because someone edited them afterwards.",
+      "PARTIAL": "Part of this was deleted without a copy and cannot come back.",
+      "UNDO_FAILED": "I could not undo this right now. Try again in a moment.",
+      "LIST_TITLE": "Done by the Guide",
+      "BACK": "Back to the chat",
+      "LOADING": "Loading what I did…",
+      "LOAD_FAILED": "I could not load what I did. Try again in a moment.",
+      "EMPTY": "Nothing done by the Guide in the last 5 days."
     },
     "A11Y": {
       "PANEL": "Platform Guide",

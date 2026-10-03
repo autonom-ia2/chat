@@ -73,6 +73,7 @@ const addAssistantMessage = ({
   acao = null,
   artigo = null,
   artigos = null,
+  execucao = null,
 } = {}) => {
   const record = {
     id: nextId,
@@ -87,6 +88,8 @@ const addAssistantMessage = ({
     // Os artigos da Central que o Guia leu, na ordem de leitura (#617, #636):
     // o link "Ler" de cada um abre o artigo completo dele.
     artigos: paraLista(artigos, artigo),
+    // O que o Guia FEZ neste turno (#855), com o desfazer.
+    execucao,
   };
   nextId += 1;
   state.messages.push(record);

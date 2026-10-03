@@ -9,11 +9,11 @@
 # motivo: `Tools::Bound.for_agent` memoiza catálogo, então pendurar contexto na
 # construção da ferramenta vazaria a pessoa de um turno para o turno seguinte.
 #
-# Também é aqui que a PROPOSTA de ação fica guardada. A ferramenta não executa
-# nada: ela descreve, deixa a proposta neste objeto, e quem monta a resposta lê
-# daqui para a tela mostrar o Confirmar. Nada toca o banco antes do clique.
+# Também é aqui que fica o que o Guia FEZ neste turno (#855): a execução, com
+# cada passo anotado para desfazer, e — só para o que não tem volta — a
+# PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
@@ -40,7 +40,19 @@ class Autonomia::Guide::Contexto
     @acoes ||= ::Autonomia::Guide::Acoes.new(account: @account, user: @user, account_user: @account_user)
   end
 
-  # UMA proposta por turno. O modelo pode chamar a ferramenta mais de uma vez
+  # Executa agora, anotando cada linha que mudar para desfazer (#855). Uma
+  # execução por turno, com quantos passos o pedido precisar: criar a função,
+  # aplicá-la a três agentes e ajustar a caixa cabem no mesmo turno.
+  def executar(acao, dados)
+    acoes.conferir!(acao, dados)
+    @execucao ||= ::Autonomia::Guide::Execucao.abrir(account: @account, user: @user)
+    passo = @execucao.passos.size
+    resultado = ::Autonomia::Guide::Diario.gravando(@execucao, passo) { acoes.executar(acao, dados) }
+    @execucao.registrar_passo(acao: acao, frase: dados[:descricao], feito: resultado.ok, registro: resultado.registro)
+    resultado
+  end
+
+  # UMA proposta por turno, e só para o que não tem desfazer. O modelo pode chamar a ferramenta mais de uma vez
   # enquanto pensa; a tela tem um par de botões só, e dois pedidos empilhados
   # fariam a pessoa confirmar um e achar que confirmou o outro. Fica a última,
   # que é a que a resposta dele descreve.

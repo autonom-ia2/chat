@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_29_153000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_02_190000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -578,6 +578,40 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_29_153000) do
     t.index ["account_id", "status"], name: "index_autonomia_agents_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
+  end
+
+  create_table "autonomia_guide_changes", force: :cascade do |t|
+    t.bigint "execution_id", null: false
+    t.integer "passo", null: false
+    t.integer "ordem", null: false
+    t.string "tabela", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.string "operacao", null: false
+    t.jsonb "antes", default: {}, null: false
+    t.jsonb "depois", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["execution_id", "ordem"], name: "index_autonomia_guide_changes_on_execution_id_and_ordem"
+    t.index ["execution_id"], name: "index_autonomia_guide_changes_on_execution_id"
+  end
+
+  create_table "autonomia_guide_executions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.jsonb "passos", default: [], null: false
+    t.jsonb "pendencias", default: [], null: false
+    t.datetime "expira_em", null: false
+    t.datetime "desfeita_em"
+    t.bigint "desfeita_por_id"
+    t.jsonb "relatorio_desfazer", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "created_at"], name: "idx_autonomia_guide_executions_dono"
+    t.index ["account_id"], name: "index_autonomia_guide_executions_on_account_id"
+    t.index ["desfeita_por_id"], name: "index_autonomia_guide_executions_on_desfeita_por_id"
+    t.index ["expira_em"], name: "index_autonomia_guide_executions_on_expira_em"
+    t.index ["user_id"], name: "index_autonomia_guide_executions_on_user_id"
   end
 
   create_table "autonomia_insurance_connections", force: :cascade do |t|
@@ -3147,6 +3181,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_29_153000) do
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
+  add_foreign_key "autonomia_guide_changes", "autonomia_guide_executions", column: "execution_id", on_delete: :cascade
+  add_foreign_key "autonomia_guide_executions", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_executions", "users", column: "desfeita_por_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_executions", "users", on_delete: :cascade
   add_foreign_key "autonomia_insurance_connections", "accounts"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify

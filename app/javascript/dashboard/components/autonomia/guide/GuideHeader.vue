@@ -18,9 +18,14 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  // #855 — a lista "Feito pelo Guia" está aberta no lugar da conversa.
+  vendoFeitos: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['reset', 'close']);
+defineEmits(['reset', 'feitos', 'close']);
 </script>
 
 <template>
@@ -31,6 +36,24 @@ defineEmits(['reset', 'close']);
       {{ title }}
     </h2>
     <div class="flex items-center gap-2 shrink-0">
+      <Button
+        v-tooltip="
+          vendoFeitos
+            ? $t('AUTONOMIA_GUIDE.DONE.BACK')
+            : $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+        "
+        :aria-label="
+          vendoFeitos
+            ? $t('AUTONOMIA_GUIDE.DONE.BACK')
+            : $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+        "
+        :aria-pressed="vendoFeitos ? 'true' : 'false'"
+        :icon="vendoFeitos ? 'i-lucide-message-circle' : 'i-lucide-history'"
+        ghost
+        slate
+        lg
+        @click="$emit('feitos')"
+      />
       <Button
         v-if="canReset"
         v-tooltip="$t('AUTONOMIA_GUIDE.RESET')"

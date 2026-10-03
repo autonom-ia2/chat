@@ -223,3 +223,10 @@ autonomia_prospecting_reaper_job:
   cron: '*/5 * * * *'
   class: 'Autonomia::Prospecting::ReaperJob'
   queue: scheduled_jobs
+
+# executed every day at 04:30; apaga o que o Guia fez há mais de 5 dias, quando o
+# desfazer já venceu (#855). As mudanças saem junto, pela chave estrangeira.
+autonomia_guide_limpar_execucoes_job:
+  cron: '30 4 * * *'
+  class: 'Autonomia::Guide::LimparExecucoesJob'
+  queue: scheduled_jobs

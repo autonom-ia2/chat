@@ -18,6 +18,8 @@ import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
+import GuideExecucao from './GuideExecucao.vue';
+import GuideFeitos from './GuideFeitos.vue';
 import CopilotAgentMessage from 'dashboard/components-next/copilot/CopilotAgentMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
@@ -47,6 +49,8 @@ const { messages } = store;
 const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
+// #855 — a lista "Feito pelo Guia" ocupa o lugar da conversa enquanto aberta.
+const vendoFeitos = ref(false);
 const chatContainer = ref(null);
 const panelRef = ref(null);
 
@@ -353,12 +357,17 @@ const requestReply = async (requestAccount, message, requestId) => {
         acao: data.acao || null,
         artigo: data.artigo || null,
         artigos: data.artigos || null,
+        execucao: data.execucao || null,
       });
     } else if (data.retido) {
       // O Guia está no ar e entendeu — só não está seguro o bastante para
       // afirmar. Dizer "indisponível" aqui faz a pessoa achar que o produto
       // caiu, e some com a oferta de suporte que é o próximo passo útil.
-      store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.WITHHELD') });
+      // O que ele já fez neste turno aparece mesmo assim (#855): mudou a conta.
+      store.addAssistantMessage({
+        content: t('AUTONOMIA_GUIDE.WITHHELD'),
+        execucao: data.execucao || null,
+      });
     } else {
       useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
     }
@@ -396,6 +405,7 @@ const sendMessage = message => {
   requestSequence += 1;
   const requestId = requestSequence;
   store.addUserMessage(message);
+  vendoFeitos.value = false;
   isSending.value = true;
   requestReply(requestAccount, message, requestId);
   return true;
@@ -435,6 +445,7 @@ watch(showPanel, async aberto => {
 watch(accountId, () => {
   requestSequence += 1;
   isSending.value = false;
+  vendoFeitos.value = false;
   store.reset();
 });
 </script>
@@ -451,13 +462,24 @@ watch(accountId, () => {
   >
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
-        :title="$t('AUTONOMIA_GUIDE.TITLE')"
-        :can-reset="hasMessages"
+        :title="
+          vendoFeitos
+            ? $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+            : $t('AUTONOMIA_GUIDE.TITLE')
+        "
+        :can-reset="hasMessages && !vendoFeitos"
+        :vendo-feitos="vendoFeitos"
         @reset="resetConversation"
+        @feitos="vendoFeitos = !vendoFeitos"
         @close="closePanel"
       />
 
+      <div v-if="vendoFeitos" class="flex-1 flex px-4 py-4 overflow-y-auto">
+        <GuideFeitos />
+      </div>
+
       <div
+        v-show="!vendoFeitos"
         ref="chatContainer"
         role="log"
         aria-live="polite"
@@ -477,8 +499,10 @@ watch(accountId, () => {
                 :is-last-message="index === messages.length - 1"
                 :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
               />
-              <!-- Ação proposta: a pessoa lê o que vai acontecer, com os valores,
-                   e só então confirma. Nada executa antes disso. -->
+              <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
+              <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
+              <!-- Ação que não tem volta: a pessoa lê o que vai acontecer, com
+                   os valores, e só então confirma. Nada executa antes disso. -->
               <div
                 v-if="item.acao"
                 class="rounded-lg border border-n-weak bg-n-alpha-1 p-3 flex flex-col gap-2"

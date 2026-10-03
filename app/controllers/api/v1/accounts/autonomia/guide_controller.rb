@@ -2,8 +2,9 @@
 # usa). Gated pela elegibilidade Autonomia (ENV master + chave de IA do Kanban por conta) — o mesmo
 # gate que faz o Guia nascer sozinho.
 #
-# Ele responde, orienta, lê a conta e PROPÕE mudanças. Escrever, só em `executar_acao`, e só depois do
-# clique em confirmar na tela — nunca no caminho da pergunta.
+# Ele responde, orienta, lê a conta e muda a conta (#855): o que tem desfazer ele faz no próprio
+# turno, anotado em `Autonomia::Guide::Execucao`; o que não tem volta ele propõe, e só `executar_acao`
+# grava, depois do clique em confirmar na tela.
 class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseController
   before_action :ensure_guide_enabled
 
@@ -60,7 +61,29 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # #855 — o que o Guia fez para esta pessoa nesta conta, ainda dentro do prazo
+  # de desfazer. É daqui que a pessoa desfaz depois de recarregar a tela.
+  def execucoes
+    lista = ::Autonomia::Guide::Execucao.de(Current.account, Current.user).vigentes
+                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES)
+    render json: { execucoes: lista.map(&:resumo) }
+  end
+
+  # Só quem pediu desfaz: a execução saiu com a permissão dela. De outra pessoa
+  # responde 404, igual a uma que não existe.
+  def desfazer
+    execucao = ::Autonomia::Guide::Execucao.de(Current.account, Current.user).find_by(id: params[:id])
+    return head :not_found if execucao.nil?
+
+    ::Autonomia::Guide::Desfazer.new(execucao: execucao, user: Current.user).perform
+    render json: { execucao: execucao.reload.resumo }
+  rescue ::Autonomia::Guide::Desfazer::Recusado => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
   private
+
+  LIMITE_DE_EXECUCOES = 50
 
   # O corpo da ação é conteúdo livre (os campos do recurso), então não cabe strong
   # params por campo: quem autoriza é o endpoint real, chamado com o token de quem
