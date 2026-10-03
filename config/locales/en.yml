@@ -468,6 +468,9 @@ en:
       short_description: 'Sync your contacts and conversations with LeadSquared CRM.'
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
   autonomia:
+    automacoes:
+      ensaio:
+        condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'
     guide:
       done: 'Done.'
       failed: 'I could not do this right now.'

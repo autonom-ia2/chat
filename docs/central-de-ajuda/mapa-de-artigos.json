@@ -2950,7 +2950,10 @@
       "03.16-time-em-automacao"
      ],
      "rotas": [
-      "automation_list"
+      "automation_list",
+      "automacoes_lista",
+      "automacoes_nova",
+      "automacoes_editar"
      ],
      "me_leve_ate_la": {
       "rota": "automation_list",
@@ -2961,8 +2964,8 @@
      "fontes": [
       "porques: Criar automacoes"
      ],
-     "revisar": false,
-     "nota": "Cobertura fraca no estudo: 03.16 só ensinava a condição 'Nome do Time'; ninguém ensinava a criar a regra do zero."
+     "revisar": true,
+     "nota": "Cobertura fraca no estudo: 03.16 só ensinava a condição 'Nome do Time'; ninguém ensinava a criar a regra do zero. #859 — Automações saiu das Configurações e virou item do menu principal (automacoes_lista, automacoes_nova, automacoes_editar), com a automação montada conversando com o Guia e o formulário antigo como modo manual. Estas rotas ficam aqui até o artigo próprio da tela nova ser escrito; o texto deste artigo ainda descreve o caminho por Configurações e precisa de revisão humana."
     },
     {
      "id": "12.02",

@@ -39,13 +39,14 @@ module Autonomia
 
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
       # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
-      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [], registro: nil)
+      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, arquivos: [], registro: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
         @message = message.to_s
         @history = Array(history)
         @route_context = route_context.to_s
+        @route_params = route_params.to_h
         @arquivos = Array(arquivos)
         @registro = registro
       end
@@ -129,10 +130,18 @@ module Autonomia
       def role_scoped_query(diagnostics = nil)
         role = @account_user&.role.presence || 'agent'
         ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
-              "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
+              "Tela atual: #{@route_context.presence || 'não informada'}.#{registro_aberto} Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
         "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+      end
+
+      # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).
+      # Só números, filtrados no controller; é contexto, não autorização.
+      def registro_aberto
+        return '' if @route_params.blank?
+
+        " Registro aberto na tela: #{@route_params.map { |chave, valor| "#{chave}=#{valor}" }.join(', ')}."
       end
 
       # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.

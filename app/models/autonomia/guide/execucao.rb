@@ -84,7 +84,7 @@ class Autonomia::Guide::Execucao < ApplicationRecord
 
   # O que a tela mostra embaixo da resposta e na lista "Feito pelo Guia".
   def resumo
-    { 'id' => id, 'passos' => passos.map { |passo| passo.slice('frase', 'ok') },
+    { 'id' => id, 'passos' => passos.map { |passo| passo.slice('acao', 'frase', 'ok', 'registro') },
       'pendencias' => pendencias, 'desfazivel' => desfazivel?,
       'desfeita_em' => desfeita_em&.iso8601, 'expira_em' => expira_em.iso8601,
       'criada_em' => created_at.iso8601, 'relatorio' => relatorio_desfazer.presence }

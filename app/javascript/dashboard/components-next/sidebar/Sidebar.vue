@@ -774,6 +774,20 @@ const menuItems = computed(() => {
           },
         ]
       : []),
+    // #859 — Automações saiu das Configurações e virou item do menu principal. O
+    // formulário antigo continua existindo como modo manual (automation_list).
+    {
+      name: 'Automacoes',
+      label: t('AUTOMACOES.MENU'),
+      icon: 'i-lucide-repeat',
+      to: accountScopedRoute('automacoes_lista'),
+      activeOn: [
+        'automacoes_lista',
+        'automacoes_nova',
+        'automacoes_editar',
+        'automation_list',
+      ],
+    },
     ...(autonomiaAgentsEnabled.value
       ? [
           {
@@ -1229,12 +1243,6 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ATTRIBUTES'),
           icon: 'i-lucide-code',
           to: accountScopedRoute('attributes_list'),
-        },
-        {
-          name: 'Settings Automation',
-          label: t('SIDEBAR.AUTOMATION'),
-          icon: 'i-lucide-repeat',
-          to: accountScopedRoute('automation_list'),
         },
         {
           name: 'Settings Agent Bots',

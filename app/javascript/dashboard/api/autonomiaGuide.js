@@ -22,6 +22,8 @@ class AutonomiaGuideAPI extends ApiClient {
 
   // history: [{ role: 'user' | 'assistant', content }]
   // routeContext: the current route name (so the guide knows where the user is).
+  // routeParams: os parâmetros da rota (#859) — o servidor guarda só os números, como
+  // "Registro aberto na tela: id=42". É contexto, não autorização.
   //
   // #572 — não devolve a resposta: abre o pedido e devolve { id, status }. O
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
@@ -35,6 +37,7 @@ class AutonomiaGuideAPI extends ApiClient {
     message,
     history,
     routeContext,
+    routeParams,
     arquivos = [],
     conversaId = null,
     anexos = [],
@@ -43,6 +46,7 @@ class AutonomiaGuideAPI extends ApiClient {
       message,
       history,
       route_context: routeContext,
+      route_params: routeParams,
       arquivos,
       conversa_id: conversaId,
       anexos,
