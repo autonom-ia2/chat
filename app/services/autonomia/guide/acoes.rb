@@ -24,6 +24,10 @@
 #    thread, pela pilha do Rails: ver `ChamadaInterna`, e o porquê lá.
 class Autonomia::Guide::Acoes
   class Recusada < StandardError; end
+  # O corpo não bate com o formato da ação (#900). É uma Recusada, então todo
+  # caminho que já trata recusa trata esta; as ferramentas só não juntam as
+  # ações vizinhas, porque a ação está certa e o que falta corrigir é o corpo.
+  CorpoForaDoFormato = Class.new(Recusada)
 
   VERBOS = %w[POST PATCH PUT DELETE].freeze
   DESTRUTIVO = 'DELETE'.freeze
@@ -83,7 +87,10 @@ class Autonomia::Guide::Acoes
     'DELETE labels/:id'
   ].freeze
 
-  Resultado = Struct.new(:ok, :mensagem, :registro, :corpo, keyword_init: true)
+  # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são
+  # para o modelo: o formato do que a plataforma recusou e o que ela pode ter
+  # descartado (#900).
+  Resultado = Struct.new(:ok, :mensagem, :registro, :corpo, :dica, :aviso, keyword_init: true)
 
   def initialize(account:, user:, account_user: nil)
     @account = account
@@ -115,6 +122,7 @@ class Autonomia::Guide::Acoes
     raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao)
 
     montar_caminho(acao, dados)
+    conferir_corpo!(acao, dados)
   end
 
   # Tem desfazer? Então o Guia executa direto; se não, a pessoa confirma.
@@ -137,6 +145,7 @@ class Autonomia::Guide::Acoes
   def descrever(acao, dados)
     garantir_permitida!(acao)
     montar_caminho(acao, dados)
+    conferencia = conferir_corpo!(acao, dados)
 
     # Sem frase não há confirmação informada. O esquema deixa a descrição
     # anulável, e cair no verbo com a rota traria "POST crm/pipelines" de volta
@@ -144,7 +153,7 @@ class Autonomia::Guide::Acoes
     raise Recusada, traduzir('no_description') if dados[:descricao].blank?
 
     { frase: dados[:descricao],
-      detalhe: valores_legiveis(dados),
+      detalhe: valores_legiveis(dados, conferencia),
       aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : nil) }
   end
 
@@ -152,11 +161,14 @@ class Autonomia::Guide::Acoes
   # plataforma não deixa ele fazer, não deixa o Guia fazer.
   def executar(acao, dados)
     garantir_permitida!(acao)
-    resposta = requisitar(verbo_de(acao), montar_caminho(acao, dados), corpo_de(dados))
+    caminho = montar_caminho(acao, dados)
+    conferencia = conferir_corpo!(acao, dados)
+    resposta = requisitar(verbo_de(acao), caminho, conferencia.corpo)
 
-    return concluida(acao, dados, resposta) if sucesso?(resposta)
+    return concluida(acao, dados, resposta, conferencia) if sucesso?(resposta)
 
-    Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta) || traduzir('failed'))
+    Resultado.new(ok: false, mensagem: recusa_da_plataforma(resposta) || traduzir('failed'),
+                  dica: ::Autonomia::Guide::Formatos::Retorno.new(acao, resposta).dica)
   rescue Recusada
     raise
   rescue StandardError => e
@@ -172,11 +184,16 @@ class Autonomia::Guide::Acoes
 
   private
 
-  def concluida(acao, dados, resposta)
+  def concluida(acao, dados, resposta, conferencia)
     registro = identificador(resposta)
     auditar(acao, dados, registro)
-    Resultado.new(ok: true, mensagem: traduzir('done'), registro: registro, corpo: resposta.corpo)
+    Resultado.new(ok: true, mensagem: traduzir('done'), registro: registro, corpo: resposta.corpo,
+                  aviso: ::Autonomia::Guide::Formatos::Retorno.new(acao, resposta).descartadas(conferencia))
   end
+
+  # Confere o corpo contra o formato da ação ANTES de chamar a plataforma, e
+  # devolve a conferência com o corpo no envelope certo (#900).
+  def conferir_corpo!(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados)).conferida!
 
   def garantir_permitida!(acao)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
@@ -225,9 +242,9 @@ class Autonomia::Guide::Acoes
   # DELETE o corpo é sempre vazio, então a tela mostrava a frase e o aviso de que
   # não tem volta — e NADA sobre qual registro ia sumir. Se o modelo errasse o
   # id, a pessoa não tinha como perceber antes de clicar.
-  def valores_legiveis(dados)
-    alvo = (dados[:caminho] || {}).to_h
-    campos = alvo.merge(corpo_de(dados))
+  def valores_legiveis(dados, conferencia)
+    alvo = (dados[:caminho] || {}).to_h.transform_keys(&:to_s)
+    campos = alvo.merge(conferencia.valores)
     return nil if campos.blank?
 
     campos.filter_map do |campo, valor|
@@ -294,15 +311,20 @@ class Autonomia::Guide::Acoes
   # de status HTTP para quem está tentando trabalhar.
   def recusa_da_plataforma(resposta)
     dados = JSON.parse(resposta.corpo.to_s)
+    return unless dados.is_a?(Hash)
+
     motivo = dados['message'] || dados['error'] || Array(dados['errors']).join(', ')
     motivo.presence
   rescue JSON::ParserError
     nil
   end
 
+  # Algumas ações devolvem uma LISTA (POST teams/:id/team_members devolve os membros). Ler a lista
+  # como registro quebrava aqui, DEPOIS de a plataforma ter gravado, e o Guia dizia que não tinha
+  # conseguido o que tinha feito (bateria do #900, C19). Lista não tem um id só: o registro fica nil.
   def identificador(resposta)
     dados = JSON.parse(resposta.corpo.to_s)
-    dados = dados['payload'] || dados
+    dados = dados['payload'] if dados.is_a?(Hash) && dados['payload'].is_a?(Hash)
     dados.is_a?(Hash) ? dados['id'] : nil
   rescue JSON::ParserError
     nil

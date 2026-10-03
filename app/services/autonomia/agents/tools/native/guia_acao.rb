@@ -37,8 +37,8 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
           'description' => 'Preenche os ":id" da rota, como objeto JSON: {"id":"12"}. Sem isso, alterar ' \
                            'ou apagar não tem como apontar para o registro certo.' },
         { 'name' => 'corpo_json', 'type' => 'string', 'required' => false,
-          'description' => 'Os campos a gravar, como objeto JSON: {"name":"Comercial"}. Use os nomes de ' \
-                           'campo da própria plataforma, e só valores que a pessoa disse.' }
+          'description' => 'Os campos a gravar, como objeto JSON, montados pelo que formato_da_acao ' \
+                           'devolveu para esta ação, e só valores que a pessoa disse.' }
       ]
     end
   end
@@ -56,6 +56,9 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
     @operador.propor(nome: @params['acao'].to_s, dados: dados, descricao: descricao)
 
     confirmada(descricao)
+  rescue ::Autonomia::Guide::Acoes::CorpoForaDoFormato => e
+    # A ação existe; o que falta corrigir é o corpo. A recusa já traz o formato.
+    e.message
   rescue ::Autonomia::Guide::Acoes::Recusada => e
     # A recusa da própria plataforma, em português, volta PARA O MODELO — que
     # pergunta o que falta em vez de prometer o que não vai acontecer.
@@ -69,11 +72,7 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
   # no único momento em que faz falta — quando o modelo errou o nome —, e só o
   # pedaço que interessa.
   def vizinhas
-    recurso = @params['acao'].to_s.split(' ', 2).last.to_s
-    return '' if recurso.blank?
-
-    base = recurso.split('/').first
-    existentes = @operador.acoes.catalogo.select { |acao| acao.split(' ', 2).last.to_s.start_with?(base) }
+    existentes = ::Autonomia::Guide::Rotas.vizinhas(@operador.acoes.catalogo, @params['acao'])
     return '' if existentes.blank?
 
     " Para isto, o que existe é: #{existentes.join(', ')}."

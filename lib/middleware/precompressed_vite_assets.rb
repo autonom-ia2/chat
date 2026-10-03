@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
-module Middleware
+# Aninhado de propósito: config/environments/production.rb faz `require` deste arquivo na
+# configuração, antes do autoload; a forma compacta (`Middleware::...`) quebraria o boot porque
+# `Middleware` ainda não existe.
+module Middleware # rubocop:disable Style/ClassAndModuleChildren
   class PrecompressedViteAssets
     VITE_ASSET_PREFIX = '/vite/assets/'
-    CACHE_CONTROL = "public, max-age=#{1.year.to_i}"
+    CACHE_CONTROL = "public, max-age=#{1.year.to_i}".freeze
     MIME_TYPES = {
       '.css' => 'text/css',
       '.js' => 'application/javascript',
@@ -11,10 +14,11 @@ module Middleware
       '.svg' => 'image/svg+xml'
     }.freeze
 
-    ENCODINGS = [
-      ['br', '.br'],
-      ['gzip', '.gz']
-    ].freeze
+    # Em ordem de preferência: br antes de gzip.
+    ENCODINGS = {
+      'br' => '.br',
+      'gzip' => '.gz'
+    }.freeze
 
     def initialize(app)
       @app = app
@@ -61,13 +65,21 @@ module Middleware
       header = env['HTTP_ACCEPT_ENCODING'].to_s
       encodings = header.split(',').filter_map do |part|
         encoding, *params = part.strip.split(';')
-        q_value = params.find { |param| param.strip.start_with?('q=') }
-        next if q_value&.split('=', 2)&.last.to_f.zero?
+        next if refused?(params)
 
         encoding
       end
 
-      ENCODINGS.select { |encoding, _extension| encodings.include?(encoding) }
+      # `keys & encodings` mantém a ordem de preferência do servidor, não a do cliente.
+      ENCODINGS.slice(*(ENCODINGS.keys & encodings))
+    end
+
+    # Sem parametro q a codificacao vale q=1 (RFC 9110); so q=0 recusa.
+    def refused?(params)
+      q_param = params.find { |param| param.strip.start_with?('q=') }
+      return false unless q_param
+
+      q_param.split('=', 2).last.to_f.zero?
     end
 
     def compressed_response(compressed_path, original_path, encoding, request_method)

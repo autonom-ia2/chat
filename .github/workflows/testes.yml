@@ -161,6 +161,13 @@ jobs:
       - name: Instalar dependencias JS
         run: pnpm install --frozen-lockfile
 
+      # Conversores nativos que a imagem de producao (docker/Dockerfile) ja traz.
+      # As previas de empresa (Relationships::PreviewRenderer) chamam ffmpeg,
+      # pdftoppm e libvips de verdade; sem eles os specs falham com ENOENT/LoadError.
+      # Mesma lista do workflow relationships.yml.
+      - name: Instalar conversores nativos
+        run: sudo apt-get update && sudo apt-get install -y libvips42 poppler-utils ffmpeg
+
       - name: Criar banco e carregar schema
         run: |
           bundle exec rake db:create
