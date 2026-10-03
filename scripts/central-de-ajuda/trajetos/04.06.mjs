@@ -2,9 +2,8 @@
 // uma função personalizada". Rótulos conferidos em
 // app/javascript/dashboard/i18n/locale/pt_BR/customRole.json.
 //
-// Trajeto: Configurações → Funções Personalizadas → Adicionar função
-// personalizada → nome/descrição → modelo "Atendente" (preenche a matriz
-// sozinho) → Enviar.
+// Trajeto: Configurações → Funções Personalizadas → Nova função → perfil
+// "Atendente" → Continuar → nome/para quem é → Criar função → Fazer depois.
 
 export const id = '04.06';
 
@@ -47,36 +46,55 @@ export const cenas = [
     duracaoMs: 1400,
   },
   {
-    legenda: 'Clique em Adicionar função personalizada',
+    legenda: 'Clique em Nova função',
     acao: 'mover e clicar',
-    alvo: { texto: 'Adicionar função personalizada' },
+    alvo: { texto: 'Nova função' },
     zoom: 1.8,
+    aguardarTextoDepois: 'Para quem é esta função?',
   },
   {
-    legenda: 'Escreva o nome da função',
+    legenda: 'Escolha o perfil mais parecido',
+    acao: 'mover e clicar',
+    alvo: { texto: 'Atendente' },
+    zoom: 1.6,
+  },
+  {
+    legenda: 'Continue com o perfil',
+    acao: 'mover e clicar',
+    alvo: { texto: 'Continuar com Atendente' },
+    zoom: 1.6,
+    aguardarTextoDepois: 'Ajuste o que for diferente',
+  },
+  {
+    legenda: 'Dê um nome à função',
     acao: 'digitar',
-    alvo: { seletor: 'input[placeholder="Por favor, insira um nome."]' },
+    alvo: { seletor: 'input[placeholder="Ex.: Atendente noturno"]' },
+    limparAntes: true,
     texto: [NOME_FUNCAO],
     zoom: 1.8,
   },
   {
-    legenda: 'Escreva a descrição',
+    legenda: 'Diga para quem é',
     acao: 'digitar',
-    alvo: { seletor: 'textarea[placeholder="Por favor, insira uma descrição."]' },
+    alvo: {
+      seletor:
+        'input[placeholder="Ex.: Equipe de plantão que atende só as próprias conversas"]',
+    },
     texto: ['Atende sinistros da regional Norte, sem acesso a faturamento'],
     zoom: 1.8,
   },
   {
-    legenda: 'Comece do modelo Atendente',
+    legenda: 'Clique em Criar função',
     acao: 'mover e clicar',
-    alvo: { texto: 'Atendente' },
+    alvo: { texto: 'Criar função' },
     zoom: 1.8,
+    aguardarTextoDepois: 'Quem vai usar esta função?',
   },
   {
-    legenda: 'Clique em Enviar',
+    legenda: 'Atribua depois, em Configurações → Agentes',
     acao: 'mover e clicar',
-    alvo: { texto: 'Enviar' },
-    zoom: 1.8,
+    alvo: { texto: 'Fazer depois' },
+    zoom: 1.6,
     aguardarTextoDepois: NOME_FUNCAO,
   },
   {

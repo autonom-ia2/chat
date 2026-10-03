@@ -847,8 +847,8 @@
      "requer": "custom_roles",
      "prints": [],
      "fontes": [],
-     "revisar": true,
-     "nota": "02.16 está marcado obsoleto no estudo: a matriz de permissões ganhou categorias novas (Prospecção, Cotação, Autonomia, Campanhas, Conexões) depois de 08/09 (commits fc1c912db7 e 920263697f)."
+     "revisar": false,
+     "nota": "Reescrito em 03/10 para o editor em página (#888): perfil primeiro, grupos recolhíveis, ajustes finos, sensíveis com confirmação e atribuição de agentes após criar."
     },
     {
      "id": "04.07",

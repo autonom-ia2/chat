@@ -199,13 +199,14 @@
 - gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
 
 ### criar_papeis_customizados
-- titulo: Criar papeis customizados
+- titulo: Criar funcoes personalizadas
+- cobre: custom_roles_new, custom_roles_edit
 - rota: custom_roles_list
-- intent: Como crio um papel customizado?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?
-- onde_fica: Configuracoes > Papeis customizados
-- pre_requisitos: Enterprise/Cloud habilitado; saber quais permissoes o grupo deve receber
-- passos: 1. Abra Configuracoes; 2. Entre em Papeis customizados; 3. Crie ou edite um papel; 4. Marque permissoes como conversa, contato, relatorio ou CRM; 5. Salve e aplique no agente.
-- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; permissao customizada nao concede automaticamente acesso a todas as caixas.
+- intent: Como crio um papel customizado?; Como crio uma funcao personalizada?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?; Como duplico uma funcao?; Como aplico um modelo de perfil a uma funcao?
+- onde_fica: Configuracoes > Funcoes Personalizadas
+- pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
+- passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
+- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - highlight: `settings-add-role`
 
 ### criar_e_editar_times
