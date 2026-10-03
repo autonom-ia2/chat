@@ -31,6 +31,8 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaAcao,
     # #855 — o Guia executa o que tem desfazer, passo a passo, no mesmo turno.
     Autonomia::Agents::Tools::Native::GuiaExecucao,
+    # #857 — o Guia lê uma página da internet quando a busca não basta.
+    Autonomia::Agents::Tools::Native::GuiaPagina,
     Autonomia::Agents::Tools::Native::GuiaTela,
     # A Central de Ajuda (#617): o passo a passo escrito para a própria
     # pessoa, na língua da tela — melhor fonte que o manual interno para

@@ -2218,6 +2218,11 @@
       "LATER": "Depois"
     },
     "SUGGESTIONS_THIS_SCREEN": "Sobre esta tela",
-    "SUGGESTION_ARTICLE": "Me explique: {titulo}"
+    "SUGGESTION_ARTICLE": "Me explique: {titulo}",
+    "FILE": {
+      "ATTACH": "Anexar um arquivo para o Guia ler",
+      "REMOVE": "Remover {nome}",
+      "FAILED": "Não consegui anexar este arquivo. Tente de novo."
+    }
   }
 }

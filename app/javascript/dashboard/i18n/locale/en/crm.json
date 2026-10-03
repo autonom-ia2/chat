@@ -2217,6 +2217,11 @@
       "LATER": "Later"
     },
     "SUGGESTIONS_THIS_SCREEN": "About this screen",
-    "SUGGESTION_ARTICLE": "Explain: {titulo}"
+    "SUGGESTION_ARTICLE": "Explain: {titulo}",
+    "FILE": {
+      "ATTACH": "Attach a file for the Guide to read",
+      "REMOVE": "Remove {nome}",
+      "FAILED": "I could not attach this file. Try again."
+    }
   }
 }

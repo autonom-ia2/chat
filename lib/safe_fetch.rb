@@ -10,6 +10,14 @@ module SafeFetch
   # Redirecionamentos seguidos por padrão: os do ssrf_filter, que revalida o endereço a cada salto.
   # `max_redirects: 0` recusa o primeiro 3xx como `HttpError` — sem ler o corpo dele e sem ir aonde aponta.
   DEFAULT_MAX_REDIRECTS = SsrfFilter::DEFAULT_MAX_REDIRECTS
+  # O ssrf_filter conecta num IP SORTEADO entre os do site. Num servidor sem rota IPv6, um site com
+  # IPv4 e IPv6 falhava em metade das leituras ("No route to host"). Preferir IPv4 quando o site tem
+  # resolve isso; a checagem de endereço privado do ssrf_filter continua valendo sobre o que sair daqui.
+  DEFAULT_RESOLVER = proc do |hostname|
+    enderecos = SsrfFilter::DEFAULT_RESOLVER.call(hostname)
+    ipv4 = enderecos.select(&:ipv4?)
+    ipv4.presence || enderecos
+  end
   # Sem prazo por padrão: `open_timeout` e `read_timeout` valem por operação, como sempre. Quem passa
   # `total_timeout:` ganha um prazo monotônico para o CORPO, com teto por leitura, que também limita a
   # conexão e a espera pelos cabeçalhos como teto por operação — o que ele NÃO cobre (DNS, cabeçalhos

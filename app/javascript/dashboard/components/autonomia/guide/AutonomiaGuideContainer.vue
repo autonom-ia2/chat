@@ -45,7 +45,7 @@ const accountId = useMapGetter('getCurrentAccountId');
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaGuideStore();
-const { messages } = store;
+const { messages, arquivos } = store;
 const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
@@ -332,6 +332,7 @@ const requestReply = async (requestAccount, message, requestId) => {
       message,
       history: store.toHistory(),
       routeContext: route.name,
+      arquivos: store.arquivosProntos(),
     });
     if (
       desmontado ||
@@ -388,6 +389,25 @@ const resetConversation = () => {
   requestSequence += 1;
   isSending.value = false;
   store.reset();
+};
+
+// #857 — sobe o arquivo e o deixa na conversa. O erro aparece no próprio
+// arquivo e num aviso com o motivo da plataforma (tipo ou tamanho).
+const anexarArquivo = async file => {
+  const conta = accountId.value;
+  const id = store.addArquivo(file.name);
+  try {
+    const { data } = await AutonomiaGuideAPI.enviarArquivo(file);
+    if (accountId.value !== conta) return;
+    store.marcarArquivo(id, 'pronto', data.signed_id);
+  } catch (error) {
+    if (accountId.value !== conta) return;
+    store.marcarArquivo(id, 'erro');
+    useAlert(
+      motivoUtilizavel(error?.response?.data?.error) ||
+        t('AUTONOMIA_GUIDE.FILE.FAILED')
+    );
+  }
 };
 
 // GuideComposer clears the field only when this returns true. Accept = the question is in the
@@ -702,7 +722,10 @@ watch(accountId, () => {
         <GuideComposer
           class="mb-1 w-full"
           :is-busy="isSending"
+          :arquivos="arquivos"
           @send="sendMessage"
+          @anexar="anexarArquivo"
+          @remover="store.removeArquivo"
         />
       </div>
     </div>
