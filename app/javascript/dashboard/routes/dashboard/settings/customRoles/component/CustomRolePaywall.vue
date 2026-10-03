@@ -67,7 +67,7 @@ const goToBillingSettings = () => {
 
 <template>
   <div class="w-full min-h-[12rem] relative">
-    <div class="grid gap-3 sm:grid-cols-2 opacity-25 dark:opacity-20">
+    <div inert class="grid gap-3 sm:grid-cols-2 opacity-25 dark:opacity-20">
       <CustomRoleCard
         v-for="role in dummyCustomRolesData"
         :key="role.id"
