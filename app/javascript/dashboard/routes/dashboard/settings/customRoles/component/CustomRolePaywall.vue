@@ -3,11 +3,11 @@ import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useRouter } from 'vue-router';
 import BasePaywallModal from 'dashboard/routes/dashboard/settings/components/BasePaywallModal.vue';
-import CustomRoleListItem from './CustomRoleTableBody.vue';
-import { useI18n } from 'vue-i18n';
+import CustomRoleCard from './CustomRoleCard.vue';
 
 const dummyCustomRolesData = [
   {
+    id: 1,
     name: 'All Permissions',
     description: 'All permissions',
     permissions: [
@@ -20,6 +20,7 @@ const dummyCustomRolesData = [
     ],
   },
   {
+    id: 2,
     name: 'Conversation Permissions',
     description: 'Conversation permissions',
     permissions: [
@@ -29,11 +30,13 @@ const dummyCustomRolesData = [
     ],
   },
   {
+    id: 3,
     name: 'Contact Permissions',
     description: 'Contact permissions',
     permissions: ['contact_manage'],
   },
   {
+    id: 4,
     name: 'Report Permissions',
     description: 'Report permissions',
     permissions: ['report_manage'],
@@ -60,39 +63,16 @@ const goToBillingSettings = () => {
     params: { accountId: currentAccountId.value },
   });
 };
-
-const { t } = useI18n();
-const tableHeaders = computed(() => {
-  return [
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.NAME'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.DESCRIPTION'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.PERMISSIONS'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.ACTIONS'),
-  ];
-});
 </script>
 
 <template>
   <div class="w-full min-h-[12rem] relative">
-    <div class="w-full space-y-3 text-sm overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="opacity-30 dark:opacity-30">
-          <tr>
-            <th
-              v-for="thHeader in tableHeaders"
-              :key="thHeader"
-              class="py-4 ltr:pr-4 rtl:pl-4 text-start text-heading-3 text-n-slate-12"
-            >
-              <span class="mb-0">
-                {{ thHeader }}
-              </span>
-            </th>
-          </tr>
-        </thead>
-        <tbody class="opacity-25 dark:opacity-20">
-          <CustomRoleListItem :roles="dummyCustomRolesData" :loading="{}" />
-        </tbody>
-      </table>
+    <div inert class="grid gap-3 sm:grid-cols-2 opacity-25 dark:opacity-20">
+      <CustomRoleCard
+        v-for="role in dummyCustomRolesData"
+        :key="role.id"
+        :role="role"
+      />
     </div>
     <div
       class="absolute inset-0 flex flex-col items-center justify-center w-full h-full bg-gradient-to-t from-white dark:from-slate-900 to-transparent"
