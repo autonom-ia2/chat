@@ -104,11 +104,16 @@ class Autonomia::Guide::Acoes
     end.uniq.sort
   end
 
-  # O que `executar` recusaria — ação fora do catálogo, quem não administra,
-  # identificador faltando — recusado ANTES de abrir a execução, para a lista
-  # "Feito pelo Guia" não ganhar um turno vazio.
+  # O que a execução DIRETA (sem clique) recusa — ação fora do catálogo, quem
+  # não administra, identificador faltando e o que não tem volta — recusado
+  # ANTES de abrir a execução, para a lista "Feito pelo Guia" não ganhar um turno
+  # vazio. O que não tem volta fica aqui, e não só na ferramenta (#856): qualquer
+  # caminho que execute pelo turno passa por este ponto, e a confirmação não
+  # pode depender de quem chamou lembrar dela.
   def conferir!(acao, dados)
     garantir_permitida!(acao)
+    raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao)
+
     montar_caminho(acao, dados)
   end
 

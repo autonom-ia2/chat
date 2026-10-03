@@ -169,6 +169,17 @@ RSpec.describe 'Ferramentas do Guia' do
       expect(operador.execucao).to be_nil
     end
 
+    # #856 — a confirmação do que não tem volta não pode depender só da
+    # ferramenta: qualquer caminho que execute pelo contexto do turno recusa.
+    it 'recusa, já no contexto do turno, o que não tem desfazer', :aggregate_failures do
+      expect do
+        operador.executar('POST campaigns', { descricao: 'Disparar campanha.', corpo: { title: 'x' } })
+      end.to raise_error(Autonomia::Guide::Acoes::Recusada, I18n.t('autonomia.guide.needs_confirmation'))
+
+      expect(operador.execucao).to be_nil
+      expect(conta.campaigns.count).to eq(0)
+    end
+
     it 'não muda nada para quem não administra a conta' do
       agente_comum, = create_crm_agent(account: conta)
       comum = Autonomia::Guide::Contexto.new(account: conta, user: agente_comum)
