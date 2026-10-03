@@ -232,14 +232,33 @@
 - highlight: `settings-new-team`
 
 ### criar_automacoes
-- titulo: Criar automacoes
+- titulo: Criar automacoes no modo manual
 - rota: automation_list
-- intent: Como crio uma automacao?; Onde configuro regras automaticas?; Como atribuir, etiquetar ou enviar mensagem automaticamente?
-- onde_fica: Configuracoes > Automacao
+- intent: Onde fica o formulario completo de automacao?; Como edito uma automacao campo a campo?; Como atribuir, etiquetar ou enviar mensagem automaticamente pelo formulario?
+- onde_fica: Menu lateral > Automacoes > abra uma automacao > Editar no modo manual (o formulario completo de antes; saiu das Configuracoes)
 - pre_requisitos: definir gatilho, condicoes e acoes; etiquetas/times/agentes criados quando usados
-- passos: 1. Abra Configuracoes > Automacao; 2. Crie uma regra; 3. Escolha o evento gatilho; 4. Configure condicoes; 5. Escolha acoes e salve.
-- gotchas: automacoes podem se sobrepor; revise ordem, condicoes e efeitos como atribuir time, adicionar etiqueta ou enviar webhook.
+- passos: 1. Abra Automacoes no menu lateral; 2. Abra a automacao e clique em Editar no modo manual, ou em Nova automacao > Prefiro montar no modo manual; 3. Escolha o evento gatilho; 4. Configure condicoes; 5. Escolha acoes e salve.
+- gotchas: o modo manual e para quem prefere o formulario; a forma recomendada de criar e conversando na tela Automacoes; automacoes podem se sobrepor; revise ordem, condicoes e efeitos como atribuir time, adicionar etiqueta ou enviar webhook.
 - highlight: `settings-add-automation`
+
+### ver_automacoes
+- titulo: Ver, ligar e desligar automacoes
+- rota: automacoes_lista
+- intent: Quais automacoes eu tenho?; Onde vejo minhas automacoes?; Como desligo uma automacao?; Como ligo de novo uma automacao parada?; Qual automacao o Guia criou?
+- onde_fica: Menu lateral > Automacoes
+- pre_requisitos: nenhum para ver; ligar, desligar e criar exigem administrador ou funcao com Automacoes em Editar
+- passos: 1. Abra Automacoes no menu lateral; 2. Leia cada automacao, escrita como frase (Quando... se... faz...); 3. Use o interruptor da linha para ligar ou desligar; 4. Clique na frase para abrir, testar ou ajustar.
+- gotchas: a automacao desligada nao faz nada ate alguem ligar; o selo Criada pelo Guia aparece nas automacoes que o Guia criou para a propria pessoa nos ultimos 5 dias; lista vazia mostra tres modelos prontos para comecar; a automacao por etapa do funil do CRM e outra coisa e fica em Editar funil.
+
+### criar_automacao_conversando
+- titulo: Criar ou ajustar uma automacao conversando com o Guia
+- rota: automacoes_nova
+- cobre: automacoes_editar
+- intent: Quero criar uma automacao; Me ajuda a montar uma regra automatica; Quando chegar mensagem X quero que aconteca Y; Como testo uma automacao antes de ligar?; Liga esta automacao; Muda esta automacao
+- onde_fica: Menu lateral > Automacoes > Nova automacao (ou clique numa automacao da lista)
+- pre_requisitos: administrador para o Guia criar ou mudar; etiquetas, times, agentes, funis e etapas usados ja precisam existir
+- passos: 1. Abra Automacoes > Nova automacao; 2. Conte com suas palavras o que deve acontecer, ou escolha um modelo pronto; 3. O Guia cria a automacao e a tela passa a mostrar o resumo Quando > Se > Entao; 4. Clique em Testar com casos reais para ver o que ela faria nas conversas recentes; 5. Clique em Ligar quando estiver como voce quer.
+- gotchas: nesta tela a automacao nasce DESLIGADA — ao criar, mande active false e diga que ela so comeca a valer quando a pessoa clicar em Ligar; so ligue (PATCH com active true) quando a pessoa pedir com todas as letras; o registro aberto na tela chega no contexto como id=N e e a automacao que a pessoa esta vendo, entao "esta", "ela" e "essa regra" falam dela; ajuste com PATCH automation_rules/:id na mesma automacao em vez de criar outra; o teste com casos reais nao envia nem muda nada e deixa de fora a condicao que depende de um campo mudar; Editar no modo manual abre a mesma automacao no formulario completo.
 
 ### criar_respostas_prontas
 - titulo: Criar respostas prontas
