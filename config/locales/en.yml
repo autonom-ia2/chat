@@ -74,6 +74,8 @@ en:
       cannot_revoke_current: You cannot revoke the current session.
 
   errors:
+    custom_role:
+      unknown_permissions: 'has unknown keys: %{unknown}. Valid keys: %{valid}'
     crm:
       contact_already_linked: 'is already linked to this opportunity. Use the existing contact or change the link explicitly.'
       contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this opportunity.'

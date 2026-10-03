@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (174 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (175 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -222,6 +222,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
+
+### Montar as permissoes de uma funcao personalizada
+- intent: Crie uma funcao so leitura; Quero que o time de marketing veja tudo da caixa X; Crie uma funcao para quem so ve relatorios; Que permissoes uso para uma funcao?; Como dou acesso a uma caixa especifica?
+- onde_fica: Configuracoes > Funcoes Personalizadas > Nova funcao (pela API: POST /api/v1/accounts/:account_id/custom_roles)
+- rota: `custom_roles_new` - `/app/accounts/:accountId/settings/custom-roles/new`
+- gate: feature flag `custom_roles`; papel `administrator`
+- pre_requisitos: administrador; saber o que o grupo deve ver e fazer; as pessoas ja cadastradas como agentes
+- passos: 1. Traduza o pedido em areas e niveis usando so as chaves da lista em gotchas; 2. Mande nome, descricao e a lista `permissions` ja no POST, num passo so (nao crie a funcao vazia para preencher depois); 3. Mande so a chave mais alta de cada area (_manage ja inclui _view); 4. Se o pedido cita uma caixa, a funcao nao resolve isso: inclua a pessoa como agente daquela caixa em Configuracoes > Caixas de entrada > (caixa) > Agentes, e tire das caixas que ela nao deve ver; 5. Atribua a funcao a pessoa em Configuracoes > Agentes; 6. Diga ao usuario, em uma frase, o que ficou diferente do pedido e por que.
+- gotchas: chaves validas por area. Conversas: sem acesso = nenhuma chave; so as proprias = conversation_participating_manage e/ou conversation_unassigned_manage (fila de nao atribuidas); todas = conversation_manage; nao existe conversa so leitura, quem ve conversa pode responder. Contatos e empresas: contact_view / contact_manage. Base de conhecimento: knowledge_base_view / knowledge_base_manage. Relatorios: report_manage (so leitura de relatorios). Respostas prontas: canned_response_manage (sem ela, so usa). CRM: crm_view (ver), crm_manage_cards (editar), crm_move_cards, crm_view_reports, crm_manage_pipelines, crm_manage_ai, crm_export, crm_admin (liga todas as de CRM). Agentes Autonom.ia: autonomia_view / autonomia_manage. Prospeccao: prospecting_view / prospecting_manage, mais prospecting_view_all_searches. Cotacao: insurance_view / insurance_manage. Campanhas: campaign_view / campaign_manage. Caixas de entrada (so a tela de configuracao): inbox_view / inbox_manage. Automacoes: automation_view / automation_manage. Configuracoes: label_manage, attribute_manage, macro_manage, sla_manage. Nenhuma chave escolhe caixa: a pessoa so ve conversas das caixas em que e agente, e conversation_manage quer dizer todas as conversas dessas caixas. Time (Configuracoes > Times) agrupa pessoas para atribuicao e filtro; nao e funcao e nao da permissao. Administrador ignora funcao personalizada. Para "so leitura" de uma caixa, o mais proximo e conversation_manage com a pessoa agente so daquela caixa, mais contact_view, report_manage e o que mais for de leitura; avise que ela ainda consegue responder.
+- diagnostic: se a plataforma recusar com "chaves desconhecidas" (em ingles, "unknown keys"), a mensagem lista as chaves invalidas e as validas; troque pela chave valida mais proxima e mande de novo, sem oferecer suporte. Uma funcao que ficou com permissions vazio deixa a pessoa sem menu; corrija com PATCH na mesma funcao em vez de criar outra.
+- nav_target: `custom_roles_new`
 
 ### Criar e editar times
 - intent: Como crio um time?; Onde adiciono agentes a uma equipe?; Como edito membros de um time?
