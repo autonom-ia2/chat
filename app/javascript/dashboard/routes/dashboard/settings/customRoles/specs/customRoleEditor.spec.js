@@ -207,9 +207,10 @@ describe('CustomRoleEditor', () => {
   });
 
   it('goes back to the list when the plan has no custom roles', async () => {
-    const { store } = buildStore([], { features: {} });
+    const { store, actions } = buildStore([], { features: {} });
     await mountEditor(store);
 
     expect(router.replace).toHaveBeenCalledWith({ name: 'custom_roles_list' });
+    expect(actions.getCustomRole).not.toHaveBeenCalled();
   });
 });

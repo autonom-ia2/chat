@@ -81,6 +81,8 @@ watch(
 );
 
 onMounted(async () => {
+  // The watch above is already sending this page back to the list.
+  if (isBehindAPaywall.value) return null;
   if (!roles.value.length) await store.dispatch('customRole/getCustomRole');
   store.dispatch('agents/get');
   if (roleId.value) {
