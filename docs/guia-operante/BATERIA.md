@@ -14,7 +14,8 @@ pessoa ler — por exemplo, se no C01 o Guia explicou que o acesso à caixa vem 
 - Spec: `spec/services/autonomia/guide/bateria_admin_eval_spec.rb` (tags `:eval_pago` e `:bateria_guia`).
 - Conta de partida e placar: `spec/support/bateria_do_guia.rb`. A conta tem três caixas (WhatsApp
   Vendas, Sinistros com saudação ligada, Marketing), Ana e Bruno atendendo, Carla no time de marketing,
-  o funil Auto com três etapas, o card do Pedro com o Bruno e duas conversas sem responsável.
+  o funil Auto com três etapas, o card do Pedro com o Bruno e duas conversas sem responsável. A Carla
+  é membro da caixa Marketing, menos no C01, que a tira antes do pedido para ficar como na conta 18.
 - Cada cenário diz no comentário qual falha ele pega.
 
 ## Quando rodar

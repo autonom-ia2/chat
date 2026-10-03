@@ -79,6 +79,12 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     c.conta.account_users.find_by(user: usuario)
   end
 
+  # Permissão de leitura: `crm_view`, `contact_view`, `crm_view_reports`... A palavra `view` entre
+  # as partes do nome, sem regex. As de escrita terminam em `_manage`, `_move_cards`, `_admin`, `_export`.
+  def leitura?(permissao)
+    permissao.to_s.split('_').include?('view')
+  end
+
   # Cor em hex (#rrggbb) com o vermelho dominante. Sem regex: os três pares viram número.
   def vermelho?(cor)
     return false unless cor.to_s.start_with?('#') && cor.to_s.length == 7
@@ -89,10 +95,15 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
 
   # MOTIVO: o pedido literal da conta 18 que abriu o #900 ("inbox 38" vira a caixa Marketing daqui).
   # O Guia gravou a função com a lista de permissões VAZIA — a validação de inclusão aceita lista
-  # vazia — e, sem saber corrigir, ofereceu suporte. O certo: não oferecer suporte; criar só com
-  # permissões válidas, ou não criar e explicar; e dizer que a caixa vem da participação nela (este
-  # último se lê no placar). Também não pode "resolver" promovendo a Carla a administradora.
-  it 'C01 função "só leitura" do marketing numa caixa: sem suporte e sem função vazia' do
+  # vazia — e, sem saber corrigir, ofereceu suporte. Como na conta 18, a Carla começa FORA da caixa:
+  # a decisão real é dar acesso sem dar resposta, e isso não existe — quem participa da caixa
+  # responde (o C15 é o mesmo impasse). O certo: não oferecer suporte; não pôr a Carla na caixa; se
+  # criar função, só com permissões de leitura, e só aplicá-la se for de leitura; explicar que a
+  # caixa vem da participação nela (lê-se no placar). Também não pode promover a Carla a
+  # administradora. Sem conferir que é leitura, uma função com conversation_manage aplicada à Carla
+  # passava — o contrário do pedido.
+  it 'C01 função "só leitura" do marketing numa caixa: sem suporte, sem função vazia e sem escrita' do
+    c.caixa_marketing.remove_members([c.carla.id])
     resultado = perguntar('criar uma função personalizada para o time de marketing poder ver tudo sobre a ' \
                           "inbox #{c.caixa_marketing.id}. Só leitura.")
 
@@ -100,7 +111,10 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     funcoes = CustomRole.where(account: c.conta)
     expect(funcoes.map(&:permissions)).to all(be_present)
     expect(funcoes.flat_map(&:permissions) - CustomRole::PERMISSIONS).to be_empty
+    expect(funcoes.flat_map(&:permissions)).to all(satisfy { |permissao| leitura?(permissao) })
     expect(papel(c.carla).role).to eq('agent')
+    expect(papel(c.carla).custom_role_id).to be_nil.or(be_in(funcoes.ids))
+    expect(membros(c.caixa_marketing)).to eq([])
   end
 
   # MOTIVO: o caso de controle. Se o pedido mais simples falha (cor por nome em vez de hex, etiqueta
