@@ -550,8 +550,8 @@ const abrirConversa = async (carregar, aoFalhar) => {
   requestSequence += 1;
   const vez = requestSequence;
   // A pergunta que esperava resposta era da conversa que sai da tela (#859).
-  const pendente = store.pendente();
-  if (pendente) store.fecharPendente(pendente.chave);
+  const perguntaAnterior = store.pendente();
+  if (perguntaAnterior) store.fecharPendente(perguntaAnterior.chave);
   isSending.value = false;
   transcrevendo.value = false;
   abrindoConversa.value = true;

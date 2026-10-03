@@ -248,4 +248,16 @@ describe('autonomiaGuide store — conversa guardada', () => {
     expect(store.conversaAtual()).toBeNull();
     expect(store.messages).toHaveLength(0);
   });
+
+  // lote10 — a pergunta pendente (#859) é da conversa que estava na tela: abrir
+  // outra conversa guardada não deixa a resposta velha entrar nela.
+  it('abrir outra conversa solta a pergunta que esperava resposta', () => {
+    const chave = store.abrirPendente(1, 'painel');
+    store.registrarPedidoPendente(chave, 'p0');
+
+    store.hidratar({ id: 4, turnos: [turno()] }, avisos);
+
+    expect(store.pendente()).toBeNull();
+    expect(store.pendenteAtivo(chave)).toBe(false);
+  });
 });
