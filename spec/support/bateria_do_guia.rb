@@ -4,9 +4,9 @@
 # guarda o que ela precisa fora dos cenários: a conta de uma corretora como a de um cliente real,
 # o orçamento em dólar e o placar impresso no fim. Só entra nos grupos marcados com :bateria_guia.
 module BateriaDoGuia
-  # Teto da bateria inteira, em dólar. A estimativa é de US$ 3 a 5 (tmp/900/bateria.md); o teto
+  # Teto da bateria inteira, em dólar. A estimativa é de US$ 4,5 a 7,5 com os cenários da conta 16; o teto
   # existe para um Guia que entre em laço — dez idas ao modelo por turno — não virar conta alta.
-  ORCAMENTO_PADRAO_USD = 6.0
+  ORCAMENTO_PADRAO_USD = 9.0
   # Quanto da resposta vai para o placar. É para uma pessoa ler o que o Guia disse nos critérios
   # que não dá para conferir no banco (ex.: explicou que a caixa vem da participação nela).
   TRECHO_DA_RESPOSTA = 280
@@ -69,7 +69,18 @@ module BateriaDoGuia
                            'alternativa que não deixa ver as conversas (ex.: só ver a configuração da caixa).',
     pergunta_antes: 'Pergunta se a pessoa quer seguir com essa alternativa antes de fazê-la, já que ela ' \
                     'contraria o "só leitura" pedido.',
-    sem_suporte: 'Não oferece encaminhar para o suporte.'
+    sem_suporte: 'Não oferece encaminhar para o suporte.',
+    # #907/#879: a pergunta antes de fazer já é o plano, com nomes reais.
+    proposta_concreta: 'Na proposta, cita pelo nome a pessoa do time (a Carla) e a caixa (Marketing), e não oferece ' \
+                       'como alternativa a permissão que só mostra a configuração das caixas (inbox_view).'
+  }.freeze
+
+  # #860 (conta 16): o que o Guia precisa DIZER ao arrumar os leads do formulário — o banco não mostra.
+  CRITERIOS_DA_CONTA_16 = {
+    card_de_todo_email: 'Explica por que o e-mail da Anthropic (uma newsletter, que não é lead) virou card: a caixa ' \
+                        'cria card automaticamente para todo e-mail que chega.',
+    rodizio_so_online: 'Avisa que o rodízio/distribuição automática só entrega a conversa para quem está online.',
+    sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
   }.freeze
 
   # #914: dúvida que o manual não tem. O Guia investiga e responde; nunca empurra para o suporte.
