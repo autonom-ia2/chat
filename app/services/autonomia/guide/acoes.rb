@@ -84,7 +84,8 @@ class Autonomia::Guide::Acoes
     'DELETE teams/:id',
     'DELETE portals/:id',
     'DELETE sla_policies/:id',
-    'DELETE labels/:id'
+    # A segunda (#861): a conversa com o Guia fica fora do caderno (`Diario::FORA`) e, apagada, não volta.
+    'DELETE labels/:id', 'DELETE autonomia/guide/conversas/:id'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

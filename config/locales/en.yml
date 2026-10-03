@@ -476,6 +476,8 @@ en:
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'
+      already_done: 'This was already done. I will not do it again.'
+      in_progress: 'This is already being done. Wait a moment.'
       file:
         required: 'Choose a file to attach.'
         invalid_type: 'I can read PDF, Word, Excel, CSV, text, JSON, audio and image files.'

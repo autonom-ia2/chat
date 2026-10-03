@@ -149,6 +149,15 @@
     ],
     "sem_corpo": false
   },
+  "DELETE autonomia/guide/conversas/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/guide_conversas#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:44"
+    ],
+    "sem_corpo": true
+  },
   "DELETE autonomia/insurance/connection": {
     "campos": {
       "provider": {
@@ -4841,19 +4850,29 @@
   },
   "POST autonomia/guide/acoes/executar": {
     "campos": {
-      "acao": {},
-      "dados": {}
+      "acao": {
+        "tipo": "json"
+      },
+      "dados": {},
+      "pedido_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      }
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/guide#executar_acao",
+    "modelo": "Autonomia::Guide::Turno",
     "motivos": [
-      "leitura crua sem tipo: acao, dados"
+      "leitura crua sem tipo: dados"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:55",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:167",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:151",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:56"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:217",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:215",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:179",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:163",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:196"
     ],
     "sem_corpo": false
   },
@@ -4868,10 +4887,10 @@
       "leitura crua sem tipo: acao, dados"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:47",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:49",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:151",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:48"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:50",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:163",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:51"
     ],
     "sem_corpo": false
   },
@@ -4885,29 +4904,38 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:68",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:69"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:80",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:81"
     ],
     "sem_corpo": false
   },
   "POST autonomia/guide/chat": {
     "campos": {
+      "anexos": {
+        "tipo": "json"
+      },
       "arquivos": {},
+      "conversa_id": {},
       "history": {},
       "message": {},
       "route_context": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/guide#chat",
+    "modelo": "Autonomia::Guide::Turno",
     "motivos": [
-      "leitura crua sem tipo: arquivos, history, message, route_context"
+      "leitura crua sem tipo: arquivos, conversa_id, history, message, route_context"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:18",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:25",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:24",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:178",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:23"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:188",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:187",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:186",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:27",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:253",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:235",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:233"
     ],
     "sem_corpo": false
   },
@@ -4916,8 +4944,8 @@
     "controller": "api/v1/accounts/autonomia/guide#desfazer",
     "modelo": "Autonomia::Guide::Execucao",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:111",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:112"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:123",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:124"
     ],
     "sem_corpo": true
   },
@@ -4931,8 +4959,8 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:87",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:88"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:99",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:100"
     ],
     "sem_corpo": false
   },
