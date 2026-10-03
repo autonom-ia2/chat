@@ -16,7 +16,7 @@ class Crm::Conversations::CardSyncer
     return if @conversation.inbox_id.blank?
 
     pipeline_inbox = auto_create_pipeline_inbox
-    return if pipeline_inbox.blank?
+    return refresh_existing_card if pipeline_inbox.blank?
 
     sync_card(pipeline_inbox)
   end
@@ -53,6 +53,29 @@ class Crm::Conversations::CardSyncer
   # Auto-stop the AI follow-up cadence when the contact replies. Guarded internally
   # (acts only on an inbound message with an active ai_followup cadence); never
   # touches manual follow-ups or the sync/AI-evaluation flow above.
+  # Sem criação automática na caixa, o card que outra via criou (automação, Kanban) continua acompanhando a própria
+  # conversa: sem isto a troca de responsável nunca chegava a ele. Só o card principal da conversa, e sem marcá-lo como
+  # automático, então um dono escolhido à mão segue intocado.
+  def refresh_existing_card
+    return if inbox_crm_disabled?
+
+    card = nil
+    updated = false
+    Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
+      card = Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
+      card = nil unless card&.conversation_id == @conversation.id
+      updated = card.present? && refresh_card(card, auto_sync: false)
+    end
+
+    Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED) if updated
+    card
+  end
+
+  def inbox_crm_disabled?
+    setting = @account.crm_inbox_settings.find_by(inbox_id: @conversation.inbox_id)
+    setting.present? && !setting.crm_enabled?
+  end
+
   def maybe_stop_ai_followup(card)
     Crm::FollowUps::AutoFollowupCanceler.new(card: card, message: @message).maybe_cancel
   end
@@ -114,8 +137,8 @@ class Crm::Conversations::CardSyncer
     ).perform
   end
 
-  def refresh_card(card)
-    attributes = refresh_attributes(card)
+  def refresh_card(card, auto_sync: true)
+    attributes = refresh_attributes(card, auto_sync)
     return false if attributes.blank?
 
     card.update!(attributes)
@@ -124,12 +147,12 @@ class Crm::Conversations::CardSyncer
     true
   end
 
-  def refresh_attributes(card)
+  def refresh_attributes(card, auto_sync)
     attributes = {
       contact_id: @conversation.contact_id,
       inbox_id: @conversation.inbox_id,
       source: @conversation.inbox&.channel_type,
-      metadata: refreshed_metadata(card)
+      metadata: refreshed_metadata(card, auto_sync)
     }.compact
 
     merge_activity_attributes(attributes)
@@ -187,8 +210,10 @@ class Crm::Conversations::CardSyncer
     }
   end
 
-  def refreshed_metadata(card)
-    (card.metadata || {}).deep_merge(auto_sync_metadata).deep_merge(
+  def refreshed_metadata(card, auto_sync)
+    metadata = card.metadata || {}
+    metadata = metadata.deep_merge(auto_sync_metadata) if auto_sync
+    metadata.deep_merge(
       'source_conversation' => {
         'display_id' => @conversation.display_id,
         'status' => @conversation.status,
