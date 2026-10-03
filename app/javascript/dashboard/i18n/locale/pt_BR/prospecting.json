@@ -933,7 +933,8 @@
       "HIGH": "Oportunidade alta",
       "WARM": "Lead morno",
       "LOW": "Prioridade baixa",
-      "ARIA": "Prioridade {value} de 100"
+      "ARIA": "Prioridade {value} de 100",
+      "NONE": "Sem prioridade calculada"
     }
   }
 }

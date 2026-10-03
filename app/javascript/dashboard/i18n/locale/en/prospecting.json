@@ -933,7 +933,8 @@
       "HIGH": "High opportunity",
       "WARM": "Warm lead",
       "LOW": "Low priority",
-      "ARIA": "Priority {value} of 100"
+      "ARIA": "Priority {value} of 100",
+      "NONE": "No priority yet"
     }
   }
 }
