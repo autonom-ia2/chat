@@ -1,0 +1,92 @@
+{
+  "FINANCIAL": {
+    "REFRESH": "Refresh",
+    "UNAVAILABLE": "Unavailable",
+    "LOAD_ERROR": "We couldn't load your billing data right now.",
+    "INVOICES": {
+      "EYEBROW": "Billing history",
+      "TITLE": "My invoices",
+      "DESCRIPTION": "Track issued invoices, payments made and open charges.",
+      "OPEN": "Open",
+      "OPEN_HINT": "{n} invoice awaiting payment. | {n} invoices awaiting payment.",
+      "PAID": "Paid",
+      "PAID_HINT": "Invoices reconciled or paid through the gateway.",
+      "PAYMENTS": "Payments",
+      "PAYMENTS_HINT": "Payment records linked to the user.",
+      "TABLE": {
+        "TITLE": "Invoices",
+        "DESCRIPTION": "Charges issued for your subscription.",
+        "AMOUNT": "Amount",
+        "STATUS": "Status",
+        "DUE_DATE": "Due date",
+        "PAYMENT": "Payment",
+        "DOCUMENT": "Document",
+        "OPEN_INVOICE": "Open invoice",
+        "EMPTY": "No invoices found."
+      },
+      "PAYMENTS_TABLE": {
+        "TITLE": "Payments",
+        "DESCRIPTION": "Payments linked to your invoices.",
+        "SOURCE": "Source",
+        "PAID_AT": "Paid on",
+        "MANUAL": "Manual",
+        "EMPTY": "No payments recorded."
+      }
+    },
+    "SUBSCRIPTION": {
+      "EYEBROW": "Subscription and usage",
+      "TITLE": "My subscription",
+      "DESCRIPTION": "See your plan and how your charge is made up.",
+      "EMPTY_TITLE": "No subscription found",
+      "EMPTY_DESCRIPTION": "Once checkout is complete, your subscription will show here.",
+      "CARDS": {
+        "STATUS": "Status",
+        "STATUS_HINT": "Current status of the user's subscription.",
+        "MONTHLY_TOTAL": "Monthly total",
+        "MONTHLY_HINT": "Sum of items billed monthly.",
+        "YEARLY_TOTAL": "Yearly total",
+        "YEARLY_HINT": "Sum of items billed yearly.",
+        "NEXT_DUE": "Next due date",
+        "NEXT_DUE_HINT": "Expected from the current subscription period."
+      },
+      "SUMMARY": {
+        "TITLE": "Plan summary",
+        "DESCRIPTION": "Base plan and the items that make up the charge.",
+        "PLAN": "Plan",
+        "CYCLE": "Billing cycle",
+        "YEARLY": "Yearly",
+        "MONTHLY": "Monthly",
+        "QUANTITY": "Quantity"
+      },
+      "ITEMS": {
+        "TITLE": "Charge breakdown",
+        "DESCRIPTION": "Description",
+        "TYPE": "Type",
+        "QUANTITY": "Qty.",
+        "TOTAL": "Total",
+        "EMPTY": "No billing items found."
+      }
+    },
+    "SUBSCRIPTION_STATUS": {
+      "ACTIVE": "Active",
+      "CANCELED": "Canceled",
+      "PAST_DUE": "Past due",
+      "TRIALING": "Trial",
+      "UNPAID": "Unpaid"
+    },
+    "INVOICE_STATUS": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "CANCELED": "Canceled",
+      "OVERDUE": "Overdue",
+      "REFUNDED": "Refunded"
+    },
+    "PAYMENT_STATUS": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "FAILED": "Failed",
+      "REFUNDED": "Refunded",
+      "CANCELED": "Canceled"
+    }
+  }
+}

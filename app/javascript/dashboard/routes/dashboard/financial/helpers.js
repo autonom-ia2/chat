@@ -12,7 +12,7 @@ export const extractErrorMessage = error => {
   if (typeof payload?.error === 'string') return payload.error;
   if (typeof payload?.error?.message === 'string') return payload.error.message;
   if (typeof payload?.message === 'string') return payload.message;
-  return 'Nao foi possivel carregar os dados financeiros agora.';
+  return null;
 };
 
 export const formatMoney = (value, currency = 'BRL', locale = 'pt-BR') => {
@@ -33,38 +33,33 @@ export const formatDate = (value, locale = 'pt-BR') => {
   }).format(date);
 };
 
-export const subscriptionStatusLabel = status => {
-  const labels = {
-    active: 'Ativa',
-    canceled: 'Cancelada',
-    past_due: 'Em atraso',
-    trialing: 'Em teste',
-    unpaid: 'Nao paga',
-  };
-  return labels[status] || status || '-';
-};
+// Unknown statuses from the gateway are shown as they come.
+const statusLabel = (scope, statuses) => (t, status) =>
+  statuses.includes(status)
+    ? t(`FINANCIAL.${scope}.${status.toUpperCase()}`)
+    : status || '-';
 
-export const invoiceStatusLabel = status => {
-  const labels = {
-    pending: 'Pendente',
-    paid: 'Pago',
-    canceled: 'Cancelado',
-    overdue: 'Vencido',
-    refunded: 'Reembolsado',
-  };
-  return labels[status] || status || '-';
-};
-
-export const paymentStatusLabel = status => {
-  const labels = {
-    pending: 'Pendente',
-    paid: 'Pago',
-    failed: 'Falhou',
-    refunded: 'Reembolsado',
-    canceled: 'Cancelado',
-  };
-  return labels[status] || status || '-';
-};
+export const subscriptionStatusLabel = statusLabel('SUBSCRIPTION_STATUS', [
+  'active',
+  'canceled',
+  'past_due',
+  'trialing',
+  'unpaid',
+]);
+export const invoiceStatusLabel = statusLabel('INVOICE_STATUS', [
+  'pending',
+  'paid',
+  'canceled',
+  'overdue',
+  'refunded',
+]);
+export const paymentStatusLabel = statusLabel('PAYMENT_STATUS', [
+  'pending',
+  'paid',
+  'failed',
+  'refunded',
+  'canceled',
+]);
 
 export const statusToneClass = status => {
   if (['paid', 'active'].includes(status)) {

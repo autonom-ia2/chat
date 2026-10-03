@@ -344,13 +344,13 @@
     "AGENTS_AUTONOMIA": "Agents",
     "AGENTS_HUB": "My Agents",
     "AGENTS_BUILDER": "Agent builder",
-    "PROSPECTING": "Prospecção",
-    "PROSPECTING_SEARCH": "Buscar leads",
-    "PROSPECTING_LISTS": "Listas",
-    "INSURANCE": "Cotação",
-    "INSURANCE_CONNECTIONS": "Conexões",
-    "INSURANCE_AGENT": "Agente",
-    "PROSPECTING_SETTINGS": "Configurações",
+    "PROSPECTING": "Prospecting",
+    "PROSPECTING_SEARCH": "Find leads",
+    "PROSPECTING_LISTS": "Lists",
+    "INSURANCE": "Quotes",
+    "INSURANCE_CONNECTIONS": "Connections",
+    "INSURANCE_AGENT": "Agent",
+    "PROSPECTING_SETTINGS": "Settings",
     "ACTIVE": "Active",
     "COMPANIES": "Companies",
     "ALL_COMPANIES": "All Companies",
@@ -599,7 +599,9 @@
       },
       "HELP_CENTER_SEARCH": {
         "TITLE": "Help Center Search Indexing",
-        "DESCRIPTION": "Use AI for context aware search inside your help center articles."
+        "DESCRIPTION": "Use AI for context aware search inside your help center articles.",
+        "MODEL_TITLE": "Help Center Search Model",
+        "MODEL_DESCRIPTION": "Select the AI model to use for searching help center articles"
       },
       "LABEL_SUGGESTION": {
         "TITLE": "Label Suggestion",

@@ -138,7 +138,7 @@ const toggleDetails = event => {
             class="text-xs font-medium"
             :class="theme.titleClass"
           >
-            {{ theme.title }}
+            {{ t(theme.titleKey) }}
           </span>
           <span v-if="theme" class="text-n-slate-6">
             {{ DOT_SEPARATOR }}

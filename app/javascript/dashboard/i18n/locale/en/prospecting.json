@@ -927,6 +927,13 @@
           "BODY_GENERAL": "Cada card traz telefone, decisor quando encontrado e os pontos fortes que qualificam o lead. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp."
         }
       }
+    },
+    "PRIORITY": {
+      "VERY_HOT": "Very hot lead",
+      "HIGH": "High opportunity",
+      "WARM": "Warm lead",
+      "LOW": "Low priority",
+      "ARIA": "Priority {value} of 100"
     }
   }
 }

@@ -1,0 +1,92 @@
+{
+  "FINANCIAL": {
+    "REFRESH": "Atualizar",
+    "UNAVAILABLE": "Indisponível",
+    "LOAD_ERROR": "Não foi possível carregar os dados financeiros agora.",
+    "INVOICES": {
+      "EYEBROW": "Histórico de cobrança",
+      "TITLE": "Minhas faturas",
+      "DESCRIPTION": "Acompanhe faturas emitidas, pagamentos realizados e cobranças em aberto.",
+      "OPEN": "Em aberto",
+      "OPEN_HINT": "{n} fatura aguardando pagamento. | {n} faturas aguardando pagamento.",
+      "PAID": "Pagas",
+      "PAID_HINT": "Faturas conciliadas ou pagas pelo gateway.",
+      "PAYMENTS": "Pagamentos",
+      "PAYMENTS_HINT": "Registros de pagamento associados ao usuário.",
+      "TABLE": {
+        "TITLE": "Faturas",
+        "DESCRIPTION": "Lista das cobranças emitidas para sua assinatura.",
+        "AMOUNT": "Valor",
+        "STATUS": "Situação",
+        "DUE_DATE": "Vencimento",
+        "PAYMENT": "Pagamento",
+        "DOCUMENT": "Documento",
+        "OPEN_INVOICE": "Abrir fatura",
+        "EMPTY": "Nenhuma fatura encontrada."
+      },
+      "PAYMENTS_TABLE": {
+        "TITLE": "Pagamentos",
+        "DESCRIPTION": "Histórico dos pagamentos associados às suas faturas.",
+        "SOURCE": "Origem",
+        "PAID_AT": "Pago em",
+        "MANUAL": "Manual",
+        "EMPTY": "Nenhum pagamento registrado."
+      }
+    },
+    "SUBSCRIPTION": {
+      "EYEBROW": "Assinatura e consumo",
+      "TITLE": "Minha assinatura",
+      "DESCRIPTION": "Veja o plano contratado e a composição da cobrança.",
+      "EMPTY_TITLE": "Nenhuma assinatura encontrada",
+      "EMPTY_DESCRIPTION": "Quando o checkout for concluído, a assinatura aparecerá aqui.",
+      "CARDS": {
+        "STATUS": "Situação",
+        "STATUS_HINT": "Situação atual da assinatura vinculada ao usuário.",
+        "MONTHLY_TOTAL": "Total mensal",
+        "MONTHLY_HINT": "Soma dos itens com cobrança mensal.",
+        "YEARLY_TOTAL": "Total anual",
+        "YEARLY_HINT": "Soma dos itens com cobrança anual.",
+        "NEXT_DUE": "Próximo vencimento",
+        "NEXT_DUE_HINT": "Data prevista pelo período atual da assinatura."
+      },
+      "SUMMARY": {
+        "TITLE": "Resumo do plano",
+        "DESCRIPTION": "Plano base contratado e itens que compõem a cobrança.",
+        "PLAN": "Plano",
+        "CYCLE": "Ciclo",
+        "YEARLY": "Anual",
+        "MONTHLY": "Mensal",
+        "QUANTITY": "Quantidade"
+      },
+      "ITEMS": {
+        "TITLE": "Composição da cobrança",
+        "DESCRIPTION": "Descrição",
+        "TYPE": "Tipo",
+        "QUANTITY": "Qtd.",
+        "TOTAL": "Total",
+        "EMPTY": "Nenhum item de cobrança encontrado."
+      }
+    },
+    "SUBSCRIPTION_STATUS": {
+      "ACTIVE": "Ativa",
+      "CANCELED": "Cancelada",
+      "PAST_DUE": "Em atraso",
+      "TRIALING": "Em teste",
+      "UNPAID": "Não paga"
+    },
+    "INVOICE_STATUS": {
+      "PENDING": "Pendente",
+      "PAID": "Pago",
+      "CANCELED": "Cancelado",
+      "OVERDUE": "Vencido",
+      "REFUNDED": "Reembolsado"
+    },
+    "PAYMENT_STATUS": {
+      "PENDING": "Pendente",
+      "PAID": "Pago",
+      "FAILED": "Falhou",
+      "REFUNDED": "Reembolsado",
+      "CANCELED": "Cancelado"
+    }
+  }
+}

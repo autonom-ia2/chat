@@ -72,7 +72,7 @@ const handleIframeError = () => {
       v-if="showEmptyState"
       class="absolute w-full h-full top-0 left-0 flex justify-center items-center"
     >
-      <p>{{ t('PORTAL.IFRAME_ERROR') }}</p>
+      <p>{{ t('PORTAL.IFRAME_LOAD_ERROR') }}</p>
     </div>
   </div>
 </template>

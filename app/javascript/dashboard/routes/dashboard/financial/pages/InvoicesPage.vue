@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useLocale } from 'shared/composables/useLocale';
 import AutonomiaFinancialAPI from 'dashboard/api/autonomia/financial';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -14,36 +15,8 @@ import {
   unwrapCollection,
 } from '../helpers';
 
+const { t } = useI18n();
 const { resolvedLocale } = useLocale();
-
-const TEXT = {
-  eyebrow: 'Historico de cobranca',
-  title: 'Minhas faturas',
-  description:
-    'Acompanhe faturas emitidas, pagamentos realizados e cobrancas em aberto.',
-  open: 'Em aberto',
-  openHintSuffix: ' fatura(s) aguardando pagamento.',
-  paid: 'Pagas',
-  paidHint: 'Faturas conciliadas ou pagas pelo gateway.',
-  payments: 'Pagamentos',
-  paymentsHint: 'Registros de pagamento associados ao usuario.',
-  invoicesTitle: 'Faturas',
-  invoicesDescription: 'Lista das cobrancas emitidas para sua assinatura.',
-  amount: 'Valor',
-  status: 'Status',
-  dueDate: 'Vencimento',
-  payment: 'Pagamento',
-  document: 'Documento',
-  openInvoice: 'Abrir fatura',
-  unavailable: 'Indisponivel',
-  noInvoices: 'Nenhuma fatura encontrada.',
-  paymentsTitle: 'Pagamentos',
-  paymentsDescription: 'Historico dos pagamentos associados as suas faturas.',
-  source: 'Origem',
-  paidAt: 'Pago em',
-  noPayments: 'Nenhum pagamento registrado.',
-  manual: 'manual',
-};
 
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -80,7 +53,8 @@ const load = async () => {
     invoices.value = unwrapCollection(invoicesResponse.data);
     payments.value = unwrapCollection(paymentsResponse.data);
   } catch (error) {
-    errorMessage.value = extractErrorMessage(error);
+    errorMessage.value =
+      extractErrorMessage(error) || t('FINANCIAL.LOAD_ERROR');
   } finally {
     isLoading.value = false;
   }
@@ -96,20 +70,20 @@ onMounted(load);
         <span
           class="text-xs font-medium tracking-wide uppercase text-n-slate-11"
         >
-          {{ TEXT.eyebrow }}
+          {{ t('FINANCIAL.INVOICES.EYEBROW') }}
         </span>
         <div class="flex items-center justify-between gap-3">
           <div>
             <h1 class="text-2xl font-semibold text-n-slate-12">
-              {{ TEXT.title }}
+              {{ t('FINANCIAL.INVOICES.TITLE') }}
             </h1>
             <p class="mt-1 text-sm text-n-slate-11">
-              {{ TEXT.description }}
+              {{ t('FINANCIAL.INVOICES.DESCRIPTION') }}
             </p>
           </div>
           <Button
             icon="i-lucide-refresh-cw"
-            label="Atualizar"
+            :label="t('FINANCIAL.REFRESH')"
             color="slate"
             variant="faded"
             size="sm"
@@ -132,50 +106,68 @@ onMounted(load);
       <template v-else>
         <section class="grid gap-3 md:grid-cols-3">
           <article class="p-4 border rounded-lg bg-n-solid-1 border-n-weak">
-            <p class="text-sm text-n-slate-11">{{ TEXT.open }}</p>
+            <p class="text-sm text-n-slate-11">
+              {{ t('FINANCIAL.INVOICES.OPEN') }}
+            </p>
             <strong class="block mt-2 text-xl font-semibold text-n-slate-12">
               {{ formatMoney(openAmount, currency, resolvedLocale) }}
             </strong>
             <p class="mt-2 text-xs text-n-slate-10">
-              {{ openInvoices.length }}{{ TEXT.openHintSuffix }}
+              {{
+                t('FINANCIAL.INVOICES.OPEN_HINT', { n: openInvoices.length })
+              }}
             </p>
           </article>
           <article class="p-4 border rounded-lg bg-n-solid-1 border-n-weak">
-            <p class="text-sm text-n-slate-11">{{ TEXT.paid }}</p>
+            <p class="text-sm text-n-slate-11">
+              {{ t('FINANCIAL.INVOICES.PAID') }}
+            </p>
             <strong class="block mt-2 text-xl font-semibold text-n-slate-12">
               {{ paidInvoices.length }}
             </strong>
             <p class="mt-2 text-xs text-n-slate-10">
-              {{ TEXT.paidHint }}
+              {{ t('FINANCIAL.INVOICES.PAID_HINT') }}
             </p>
           </article>
           <article class="p-4 border rounded-lg bg-n-solid-1 border-n-weak">
-            <p class="text-sm text-n-slate-11">{{ TEXT.payments }}</p>
+            <p class="text-sm text-n-slate-11">
+              {{ t('FINANCIAL.INVOICES.PAYMENTS') }}
+            </p>
             <strong class="block mt-2 text-xl font-semibold text-n-slate-12">
               {{ payments.length }}
             </strong>
             <p class="mt-2 text-xs text-n-slate-10">
-              {{ TEXT.paymentsHint }}
+              {{ t('FINANCIAL.INVOICES.PAYMENTS_HINT') }}
             </p>
           </article>
         </section>
 
         <section class="p-5 border rounded-lg bg-n-solid-1 border-n-weak">
           <h2 class="text-lg font-semibold text-n-slate-12">
-            {{ TEXT.invoicesTitle }}
+            {{ t('FINANCIAL.INVOICES.TABLE.TITLE') }}
           </h2>
           <p class="mt-1 text-sm text-n-slate-11">
-            {{ TEXT.invoicesDescription }}
+            {{ t('FINANCIAL.INVOICES.TABLE.DESCRIPTION') }}
           </p>
           <div class="mt-4 overflow-hidden border rounded-lg border-n-weak">
             <table class="w-full text-sm">
               <thead class="bg-n-alpha-1 text-n-slate-11">
                 <tr>
-                  <th class="px-4 py-3 text-left">{{ TEXT.amount }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.status }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.dueDate }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.payment }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.document }}</th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.AMOUNT') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.STATUS') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.DUE_DATE') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.PAYMENT') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.DOCUMENT') }}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -198,7 +190,7 @@ onMounted(load);
                       class="px-2 py-1 text-xs font-medium rounded-full"
                       :class="statusToneClass(invoice.status)"
                     >
-                      {{ invoiceStatusLabel(invoice.status) }}
+                      {{ invoiceStatusLabel(t, invoice.status) }}
                     </span>
                   </td>
                   <td class="px-4 py-3 text-n-slate-11">
@@ -215,16 +207,16 @@ onMounted(load);
                       rel="noopener noreferrer"
                       class="text-n-brand"
                     >
-                      {{ TEXT.openInvoice }}
+                      {{ t('FINANCIAL.INVOICES.TABLE.OPEN_INVOICE') }}
                     </a>
                     <span v-else class="text-n-slate-10">
-                      {{ TEXT.unavailable }}
+                      {{ t('FINANCIAL.UNAVAILABLE') }}
                     </span>
                   </td>
                 </tr>
                 <tr v-if="!invoices.length">
                   <td colspan="5" class="px-4 py-8 text-center text-n-slate-11">
-                    {{ TEXT.noInvoices }}
+                    {{ t('FINANCIAL.INVOICES.TABLE.EMPTY') }}
                   </td>
                 </tr>
               </tbody>
@@ -234,19 +226,27 @@ onMounted(load);
 
         <section class="p-5 border rounded-lg bg-n-solid-1 border-n-weak">
           <h2 class="text-lg font-semibold text-n-slate-12">
-            {{ TEXT.paymentsTitle }}
+            {{ t('FINANCIAL.INVOICES.PAYMENTS_TABLE.TITLE') }}
           </h2>
           <p class="mt-1 text-sm text-n-slate-11">
-            {{ TEXT.paymentsDescription }}
+            {{ t('FINANCIAL.INVOICES.PAYMENTS_TABLE.DESCRIPTION') }}
           </p>
           <div class="mt-4 overflow-hidden border rounded-lg border-n-weak">
             <table class="w-full text-sm">
               <thead class="bg-n-alpha-1 text-n-slate-11">
                 <tr>
-                  <th class="px-4 py-3 text-left">{{ TEXT.amount }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.status }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.source }}</th>
-                  <th class="px-4 py-3 text-left">{{ TEXT.paidAt }}</th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.AMOUNT') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.TABLE.STATUS') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.PAYMENTS_TABLE.SOURCE') }}
+                  </th>
+                  <th class="px-4 py-3 text-left">
+                    {{ t('FINANCIAL.INVOICES.PAYMENTS_TABLE.PAID_AT') }}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -269,11 +269,14 @@ onMounted(load);
                       class="px-2 py-1 text-xs font-medium rounded-full"
                       :class="statusToneClass(payment.status)"
                     >
-                      {{ paymentStatusLabel(payment.status) }}
+                      {{ paymentStatusLabel(t, payment.status) }}
                     </span>
                   </td>
                   <td class="px-4 py-3 text-n-slate-11">
-                    {{ payment.gateway || TEXT.manual }}
+                    {{
+                      payment.gateway ||
+                      t('FINANCIAL.INVOICES.PAYMENTS_TABLE.MANUAL')
+                    }}
                   </td>
                   <td class="px-4 py-3 text-n-slate-11">
                     {{ formatDate(payment.paidAt, resolvedLocale) }}
@@ -281,7 +284,7 @@ onMounted(load);
                 </tr>
                 <tr v-if="!payments.length">
                   <td colspan="4" class="px-4 py-8 text-center text-n-slate-11">
-                    {{ TEXT.noPayments }}
+                    {{ t('FINANCIAL.INVOICES.PAYMENTS_TABLE.EMPTY') }}
                   </td>
                 </tr>
               </tbody>

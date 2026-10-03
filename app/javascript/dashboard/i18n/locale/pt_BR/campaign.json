@@ -690,9 +690,9 @@
         "AI_COMPOSE": "Criar com IA",
         "SUBJECT_LABEL": "Assunto",
         "SUBJECT_PLACEHOLDER": "Assunto do e-mail (a IA preenche)",
-        "PREVIEW_DESKTOP": "Desktop",
-        "PREVIEW_MOBILE": "Mobile",
-        "PLACEHOLDERS_TITLE": "Placeholders:",
+        "PREVIEW_DESKTOP": "Computador",
+        "PREVIEW_MOBILE": "Celular",
+        "PLACEHOLDERS_TITLE": "Campos automáticos:",
         "PLACEHOLDER_COPIED": "Placeholder copiado para a área de transferência",
         "CANCEL": "Cancelar",
         "BLOCKS": {

@@ -166,8 +166,10 @@ const scoreBreakdownEntries = lead => detail.scoreBreakdownEntries(lead, t);
                   ]"
                 >
                   {{
-                    leadPriorityTheme(selectedLeadDetail)?.title ||
-                    t('PROSPECTING.SEARCH.FIELDS.PRIORITY')
+                    t(
+                      leadPriorityTheme(selectedLeadDetail)?.titleKey ||
+                        'PROSPECTING.SEARCH.FIELDS.PRIORITY'
+                    )
                   }}
                 </p>
                 <p class="mt-1 text-sm leading-relaxed text-n-slate-11">

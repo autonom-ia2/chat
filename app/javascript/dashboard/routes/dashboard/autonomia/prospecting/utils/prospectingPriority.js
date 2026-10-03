@@ -14,7 +14,7 @@ export const priorityTheme = priority => {
       ringBg: '#d1fae5',
       ringText: '#065f46',
       cardBg: 'bg-n-teal-2',
-      title: 'Lead muito quente',
+      titleKey: 'PROSPECTING.PRIORITY.VERY_HOT',
       titleClass: 'text-n-teal-11',
     };
   }
@@ -25,7 +25,7 @@ export const priorityTheme = priority => {
       ringBg: '#dbeafe',
       ringText: '#1e40af',
       cardBg: 'bg-n-blue-2',
-      title: 'Oportunidade alta',
+      titleKey: 'PROSPECTING.PRIORITY.HIGH',
       titleClass: 'text-n-blue-11',
     };
   }
@@ -36,7 +36,7 @@ export const priorityTheme = priority => {
       ringBg: '#fef3c7',
       ringText: '#92400e',
       cardBg: 'bg-n-amber-2',
-      title: 'Lead morno',
+      titleKey: 'PROSPECTING.PRIORITY.WARM',
       titleClass: 'text-n-amber-11',
     };
   }
@@ -46,7 +46,7 @@ export const priorityTheme = priority => {
     ringBg: '#fee2e2',
     ringText: '#991b1b',
     cardBg: 'bg-n-ruby-2',
-    title: 'Prioridade baixa',
+    titleKey: 'PROSPECTING.PRIORITY.LOW',
     titleClass: 'text-n-ruby-11',
   };
 };

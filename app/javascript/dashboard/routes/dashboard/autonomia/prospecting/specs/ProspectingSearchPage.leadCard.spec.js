@@ -42,7 +42,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     const card = leadCard(wrapper, 'Padaria Sol');
 
     const ring = card.find('svg[role="img"]');
-    expect(ring.attributes('aria-label')).toBe('Prioridade 82 de 100');
+    expect(ring.attributes('aria-label')).toBe('PROSPECTING.PRIORITY.ARIA');
     expect(ring.attributes('width')).toBe('56');
     expect(ring.text()).toBe('82');
 
@@ -51,7 +51,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(card.text()).toContain(
       'PROSPECTING.SEARCH.PRIORITY_FIRST_CALL_SHORT'
     );
-    expect(card.text()).toContain('Lead muito quente');
+    expect(card.text()).toContain('PROSPECTING.PRIORITY.VERY_HOT');
     expect(card.text()).toContain(`Rua A, 10${ADDRESS_SEPARATOR}Curitiba PR`);
 
     // #678: rótulos por i18n e "Tem site" como no Orth; o chip continua link.
@@ -122,9 +122,9 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     const card = leadCard(wrapper, 'Pão Quente');
 
     expect(card.find('svg[role="img"]').attributes('aria-label')).toBe(
-      'Prioridade 40 de 100'
+      'PROSPECTING.PRIORITY.ARIA'
     );
-    expect(card.text()).toContain('Lead morno');
+    expect(card.text()).toContain('PROSPECTING.PRIORITY.WARM');
     expect(card.text()).not.toContain(
       'PROSPECTING.SEARCH.PRIORITY_FIRST_CALL_SHORT'
     );
@@ -169,7 +169,7 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     const wrapper = await mountSearchPage();
     const card = leadCard(wrapper, 'Confeitaria Lua');
 
-    expect(card.text()).toContain('Prioridade baixa');
+    expect(card.text()).toContain('PROSPECTING.PRIORITY.LOW');
     expect(card.text()).toContain('PROSPECTING.SEARCH.ENRICHMENT_TITLE');
     expect(card.text()).toContain('PROSPECTING.SEARCH.DECISION_MAKER:');
     expect(card.text()).toContain('Ana');
@@ -199,10 +199,10 @@ describe('ProspectingSearchPage · card do lead e anel de prioridade', () => {
     expect(card.find('svg').exists()).toBe(false);
     expect(card.find('div.rounded-full.bg-n-solid-2').text()).toBe('-');
     [
-      'Lead muito quente',
-      'Oportunidade alta',
-      'Lead morno',
-      'Prioridade baixa',
+      'PROSPECTING.PRIORITY.VERY_HOT',
+      'PROSPECTING.PRIORITY.HIGH',
+      'PROSPECTING.PRIORITY.WARM',
+      'PROSPECTING.PRIORITY.LOW',
     ].forEach(title => expect(card.text()).not.toContain(title));
   });
 
