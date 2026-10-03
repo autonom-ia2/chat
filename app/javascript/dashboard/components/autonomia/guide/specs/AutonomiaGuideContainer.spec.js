@@ -55,6 +55,7 @@ vi.mock('dashboard/api/autonomiaGuide', () => ({
     resposta: vi.fn(),
     executarAcao: vi.fn(),
     enviarArquivo: vi.fn(),
+    transcrever: vi.fn(),
   },
 }));
 
@@ -739,5 +740,123 @@ describe('AutonomiaGuideContainer — sugestões da tela aberta (#697)', () => {
     expect(textosDasSugestoes(wrapper)[0]).toBe(
       'AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN'
     );
+  });
+});
+
+// #895 — voz e anexos no jeito do WhatsApp.
+describe('AutonomiaGuideContainer — voz e anexos', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    URL.createObjectURL = vi.fn(() => 'blob:local');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  const composer = () => wrapper.findComponent({ name: 'GuideComposer' });
+  const audio = new Blob(['ogg'], { type: 'audio/ogg' });
+
+  it('a mensagem de voz entra como áudio, vira texto e só então o Guia é chamado', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({
+      data: { texto: 'quantos leads eu tenho' },
+    });
+    wrapper = mountGuide();
+
+    expect(composer().props('onEnviarVoz')({ audio, duracao: 4 })).toBe(true);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenCalledWith(audio);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'quantos leads eu tenho',
+        history: [{ role: 'user', content: 'quantos leads eu tenho' }],
+      })
+    );
+    const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
+    expect(balao.findComponent({ name: 'AudioPlayer' }).props('src')).toBe(
+      'blob:local'
+    );
+    expect(balao.text()).toContain('quantos leads eu tenho');
+  });
+
+  it('transcrição que falha: erro no balão, nada pedido, e tentar de novo funciona', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever
+      .mockRejectedValueOnce(new Error('rede'))
+      .mockResolvedValueOnce({ data: { texto: 'cria a etiqueta urgente' } });
+    wrapper = mountGuide();
+
+    composer().props('onEnviarVoz')({ audio, duracao: 2 });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.FAILED');
+    expect(composer().props('isBusy')).toBe(false);
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.VOICE.RETRY').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenLastCalledWith(audio);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'cria a etiqueta urgente' })
+    );
+  });
+
+  it('transcrição vazia conta como falha', async () => {
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({ data: { texto: '  ' } });
+    wrapper = mountGuide();
+
+    composer().props('onEnviarVoz')({ audio, duracao: 1 });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.FAILED');
+  });
+
+  it('só uma foto, sem texto: o balão mostra a foto e o Guia recebe a frase padrão', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+      data: { signed_id: 'foto-1', nome: 'print.png' },
+    });
+    wrapper = mountGuide();
+    const foto = new File(['png'], 'print.png', { type: 'image/png' });
+
+    composer().vm.$emit('anexar', foto);
+    await flushPromises();
+    expect(composer().props('arquivos')).toHaveLength(1);
+
+    expect(composer().props('onSend')('')).toBe(true);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE',
+        arquivos: ['foto-1'],
+      })
+    );
+    expect(composer().props('arquivos')).toHaveLength(0);
+    const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
+    expect(balao.find('img').attributes('src')).toBe('blob:local');
+  });
+
+  it('não envia enquanto um anexo ainda está subindo', async () => {
+    AutonomiaGuideAPI.enviarArquivo.mockReturnValue(new Promise(() => {}));
+    wrapper = mountGuide();
+
+    composer().vm.$emit('anexar', new File(['x'], 'a.pdf'));
+    await flushPromises();
+
+    expect(composer().props('onSend')('lê isso')).toBe(false);
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.WAIT');
   });
 });

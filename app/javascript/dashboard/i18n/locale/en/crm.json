@@ -2219,17 +2219,27 @@
     "SUGGESTIONS_THIS_SCREEN": "About this screen",
     "SUGGESTION_ARTICLE": "Explain: {titulo}",
     "FILE": {
-      "ATTACH": "Attach a file for the Guide to read",
+      "ATTACH": "Attach a photo or file",
       "REMOVE": "Remove {nome}",
-      "FAILED": "I could not attach this file. Try again."
+      "FAILED": "I could not attach this file. Try again.",
+      "UPLOADING": "Uploading…",
+      "WAIT": "Wait for the file to finish uploading, then send.",
+      "DEFAULT_MESSAGE": "Take a look at what I sent.",
+      "DROP": "Drop here to attach"
     },
     "VOICE": {
-      "START": "Talk to the Guide",
-      "STOP": "Stop recording",
-      "RECORDING": "Recording… {tempo} — tap the square to stop.",
-      "TRANSCRIBING": "Turning what you said into text…",
+      "START": "Record a voice message",
+      "RECORDING": "Recording a voice message. Tap send when you are done.",
+      "TRANSCRIBING": "Transcribing…",
       "FAILED": "I could not understand the recording. Try again.",
-      "NO_MIC": "I need access to your microphone. Allow it in the browser and try again."
+      "NO_MIC": "I need access to your microphone. Allow it in the browser and try again.",
+      "CANCEL": "Delete recording",
+      "SEND": "Send voice message",
+      "CANCELLED": "Recording deleted.",
+      "SENT": "Voice message sent. Transcribing…",
+      "RETRY": "Try again",
+      "NOTE": "Voice message",
+      "RECORD_FAILED": "I could not record the audio. Try again."
     }
   }
 }

@@ -11,6 +11,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  waveHeight: {
+    type: Number,
+    default: 100,
+  },
 });
 
 const emit = defineEmits([
@@ -28,6 +32,7 @@ const isRecording = ref(false);
 const isPlaying = ref(false);
 const hasRecording = ref(false);
 const recordedAudioUrl = ref(null);
+let isUnmounted = false;
 
 const formatTimeProgress = time => {
   const duration = intervalToDuration({ start: 0, end: time });
@@ -64,7 +69,7 @@ const initWaveSurfer = () => {
     container: waveformContainer.value,
     waveColor: '#1F93FF',
     progressColor: '#6E6F73',
-    height: 100,
+    height: props.waveHeight,
     barWidth: 2,
     barGap: 1,
     barRadius: 2,
@@ -83,6 +88,8 @@ const initWaveSurfer = () => {
   });
 
   record.value.on('record-end', async blob => {
+    // Unmounting stops the recorder too; that recording was discarded.
+    if (isUnmounted) return;
     try {
       const audioBlob = await convertAudio(blob, props.audioRecordFormat);
       // Use the converted blob's actual type, which may differ from the
@@ -125,9 +132,22 @@ const stopRecording = () => {
   }
 };
 
-const startRecording = () => {
-  record.value.startRecording();
+// startRecording asks for the microphone. A denied permission used to be an
+// unhandled rejection; it now surfaces as recordError. If the recorder was
+// unmounted while the browser was still asking, release the microphone.
+const startRecording = async () => {
   isRecording.value = true;
+  try {
+    await record.value.startRecording();
+    if (isUnmounted) {
+      record.value.stopRecording();
+      record.value.stopMic();
+    }
+  } catch (error) {
+    isRecording.value = false;
+    record.value?.stopMic();
+    emit('recordError', { error });
+  }
 };
 
 const playPause = () => {
@@ -143,6 +163,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  isUnmounted = true;
   if (recordedAudioUrl.value) {
     URL.revokeObjectURL(recordedAudioUrl.value);
     recordedAudioUrl.value = null;
