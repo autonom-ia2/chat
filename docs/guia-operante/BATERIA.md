@@ -42,7 +42,7 @@ Antes de todo lote que mexe no Guia: instrução (`lib/operator_guide/guia-instr
 (`app/services/autonomia/agents/tools/native/guia_*.rb`), `Autonomia::Guide::Acoes`, troca de modelo ou
 de esforço de raciocínio. Também depois de mudar uma tela ou endpoint que um cenário usa.
 
-Sem as variáveis abaixo os 26 exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
+Sem as variáveis abaixo os exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
 roda e não custa nada.
 
 ## Comando
@@ -100,6 +100,24 @@ total US$ 5.8400 de 9.00
 Embaixo vem o trecho do que o Guia respondeu em cada cenário. Leia nos que têm critério de texto:
 C03 (avisou do ajuste no nome), C15 (disse que não
 existe e o que é possível), C16 e C17 (perguntou qual), C18 (apontou o valor inválido).
+
+## Automações compostas (#917)
+
+C26 a C29 testam a máquina de automações inteira, com gatilhos diferentes:
+
+- **C26** — o pedido de risco de cancelamento do Rodrigo, literal (`BateriaDoGuia::PEDIDO_C26`). Dois
+  turnos: o pedido e, depois, a URL do webhook e a responsável (Ana). Toda proposta é confirmada pelo
+  mesmo caminho do botão (`Acoes#executar`), uma por turno. O banco tem de ter: o time Retenção criado,
+  a regra de tratamento (etiqueta, time, mensagem, e-mail ao time, webhook) protegida por "não tem a
+  etiqueta X" + "adicionar X" e — sem o Jev — disparada pela etiqueta do caso (ou desligada), as regras
+  de 15 e 30 minutos com atraso que reconferem aberta e sem atendente, e a transcrição ao resolver.
+  Nenhuma condição de palavras em `content`; nenhuma regra de mensagem sem `message_type` incoming. O
+  juiz confere que o Guia disse que a detecção por intenção chega com o Jev e como o alerta chega à pessoa.
+- **C27** — conversa nova "fora do horário": a automação não tem condição de horário. Nada de regra que
+  mande mensagem a toda conversa nova; o juiz confere que o Guia disse isso e apontou o horário da caixa.
+- **C28** — card entra em Proposta: automação de ETAPA do funil (retorno em 1 dia + Bruno como
+  responsável), não regra de conversa.
+- **C29** — resolvidas do WhatsApp Vendas: transcrição por e-mail, só daquela caixa, com confirmação.
 
 Um cenário que falha diz o que ficou gravado de errado. O Guia é um modelo: rode o cenário de novo
 com `-e` antes de concluir que é regressão. Falhar duas vezes seguidas é regressão.

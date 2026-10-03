@@ -493,5 +493,182 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     expect(etiquetados.map(&:id) & outros.map(&:id)).to be_empty
     expect(Crm::AiUsageEvent.where(account: c.conta, feature: 'jev_guia')).to exist
   end
+
+  # ---- Frente G (#932): as máquinas da plataforma por esquema. C26–C29 vêm do #917. ----
+  describe 'frente G' do
+    # ---- #917: a máquina de automações inteira ----
+
+    # O clique em Confirmar, pelo mesmo caminho da tela (GuideController#executar_acao).
+    def confirmar!(resultado)
+      acao = resultado.acao
+      feito = Autonomia::Guide::Acoes.new(account: c.conta, user: c.admin).executar(acao[:nome], acao[:dados])
+      expect(feito.ok).to be(true), "a confirmação de #{acao[:nome]} falhou: #{feito.mensagem} #{feito.dica}"
+    end
+
+    # Uma proposta por turno: confirma e pede o resto, até o Guia não propor mais nada.
+    def confirmando_ate_o_fim(historico, resultado, limite: 6)
+      limite.times do
+        break if resultado.acao.blank?
+
+        confirmar!(resultado)
+        pergunta = 'Confirmei. Pode seguir com o que falta.'
+        resultado = perguntar(pergunta, historico: historico)
+        respondeu!(resultado)
+        historico += turno(pergunta, resultado)
+      end
+      [historico, resultado]
+    end
+
+    def regras
+      AutomationRule.where(account: c.conta).to_a
+    end
+
+    def nomes_das_acoes(regra)
+      regra.actions.map { |acao| acao['action_name'] }
+    end
+
+    def parametros(regra, nome)
+      regra.actions.select { |acao| acao['action_name'] == nome }.flat_map { |acao| Array(acao['action_params']) }
+    end
+
+    def tem_condicao?(regra, chave, operador, valor = nil)
+      regra.conditions.any? do |condicao|
+        condicao['attribute_key'] == chave && condicao['filter_operator'] == operador &&
+          (valor.nil? || Array(condicao['values']).map(&:to_s).include?(valor.to_s))
+      end
+    end
+
+    # Nenhuma regra reage à mensagem da equipe, e intenção nunca vira lista de palavras.
+    def expect_sem_loop_e_sem_lista!
+      expect(regras.flat_map(&:conditions).select { |condicao| condicao['attribute_key'] == 'content' }).to be_empty
+      regras.select { |regra| regra.event_name == 'message_created' }.each do |regra|
+        expect(tem_condicao?(regra, 'message_type', 'equal_to', 'incoming')).to be(true), "#{regra.name} reage a qualquer mensagem"
+      end
+    end
+
+    # A regra que trata o caso: etiqueta, time, mensagem, e-mail e webhook, e só uma vez por caso —
+    # a condição "não tem a etiqueta X" com a ação "adicionar X". Sem o Jev ela dispara pela etiqueta
+    # do caso (posta pela equipe) ou fica desligada; ligada para toda mensagem, marcaria todo cliente.
+    def expect_tratamento_do_caso!(time, url)
+      tratamento = regra_de_tratamento
+      expect(tratamento).to be_present, "nenhuma regra imediata manda mensagem e webhook: #{regras.map(&:name)}"
+      expect(nomes_das_acoes(tratamento)).to include('add_label', 'assign_team', 'send_email_to_team')
+      expect_destinos!(tratamento, time, url)
+      expect_uma_vez_por_caso!(tratamento)
+    end
+
+    def expect_destinos!(regra, time, url)
+      expect(parametros(regra, 'assign_team')).to eq([time.id])
+      expect(parametros(regra, 'send_webhook_event')).to eq([url])
+      expect(times_do_email(regra)).to include(time.id)
+    end
+
+    def regra_de_tratamento
+      imediatas = regras.select { |regra| regra.execution_delay.nil? }
+      imediatas.find { |regra| nomes_das_acoes(regra).include?('send_message') && nomes_das_acoes(regra).include?('send_webhook_event') }
+    end
+
+    def times_do_email(regra)
+      parametros(regra, 'send_email_to_team').flat_map { |item| Array(item['team_ids']) }
+    end
+
+    def expect_uma_vez_por_caso!(regra)
+      marca = parametros(regra, 'add_label').find { |titulo| tem_condicao?(regra, 'labels', 'not_equal_to', titulo) }
+      expect(marca).to be_present, 'a regra de tratamento não se protege de rodar duas vezes no mesmo caso'
+      pela_etiqueta = regra.conditions.any? { |item| item['attribute_key'] == 'labels' && item['filter_operator'] == 'equal_to' }
+      expect(pela_etiqueta || !regra.active).to be(true), 'sem o Jev, a regra de tratamento ligada precisa disparar pela etiqueta do caso'
+    end
+
+    # "Se em 15 / 30 minutos ainda...": atraso em mensagem do cliente, reconferindo aberta e sem atendente.
+    def expect_avisos_com_atraso!
+      [15, 30].each do |minutos|
+        regra = regras.find { |item| item.execution_delay == minutos }
+        expect(regra).to be_present, "falta a regra de #{minutos} minutos"
+        expect(regra.event_name).to eq('message_created')
+        expect(tem_condicao?(regra, 'status', 'equal_to', 'open')).to be(true)
+        expect(tem_condicao?(regra, 'assignee_id', 'is_not_present')).to be(true)
+      end
+    end
+
+    # MOTIVO: o pedido real do Rodrigo (#917), literal. Pega: lista de palavras no lugar da intenção,
+    # regra única tentando fazer tudo, loop com a própria mensagem, mensagem repetida ao mesmo cliente,
+    # aviso de 15/30 min sem reconferir, transcrição esquecida, time criado em outro nome, e ação sem
+    # volta gravada sem confirmação. O time Retenção não existe: o Guia cria. URL do webhook e
+    # responsável só a pessoa sabe: o 2º turno traz os dois, e as confirmações são clicadas.
+    it 'C26 risco de cancelamento: várias regras, sem lista de palavras, sem loop e com confirmação', :aggregate_failures do
+      c.conta.enable_features!('delayed_automations')
+      url = 'https://hooks.corretora.com.br/cancelamento'
+      pedido = BateriaDoGuia::PEDIDO_C26
+      primeiro = perguntar(pedido)
+      respondeu!(primeiro)
+      historico = turno(pedido, primeiro)
+      historico, = confirmando_ate_o_fim(historico, primeiro)
+
+      resposta = "A URL do webhook é #{url}. O responsável pela equipe de Retenção é a Ana Ribeiro. Pode montar."
+      segundo = perguntar(resposta, historico: historico)
+      respondeu!(segundo)
+      historico += turno(resposta, segundo)
+      historico, = confirmando_ate_o_fim(historico, segundo)
+
+      time = c.conta.teams.find_by(name: 'retenção') || c.conta.teams.find_by(name: 'retencao')
+      expect(time).to be_present
+      expect_sem_loop_e_sem_lista!
+      expect_tratamento_do_caso!(time, url)
+      expect_avisos_com_atraso!
+      resolvida = regras.find { |regra| regra.event_name == 'conversation_resolved' }
+      expect(resolvida && nomes_das_acoes(resolvida)).to include('send_email_transcript')
+      textos = historico.select { |item| item[:role] == 'assistant' }.map { |item| item[:content] }.join("\n\n")
+      expect_juiz_aprova!(pedido, textos, BateriaDoGuia::CRITERIOS_C26)
+    end
+
+    # MOTIVO: gatilho de conversa criada com uma condição que a plataforma NÃO tem (horário). Pega o
+    # Guia que monta "mandar mensagem para toda conversa nova" e chama de "fora do horário", e a
+    # mensagem ao cliente gravada sem confirmação. O caminho que existe é o horário da caixa.
+    it 'C27 conversa nova fora do horário: não finge condição de horário nem manda mensagem a todos', :aggregate_failures do
+      pedido = 'Quero que toda conversa nova que chegar fora do horário comercial receba a etiqueta fora-do-horario e ' \
+               'uma mensagem avisando que respondemos no próximo dia útil.'
+      resultado = perguntar(pedido)
+
+      respondeu!(resultado)
+      expect(regras.select { |regra| nomes_das_acoes(regra).include?('send_message') }).to be_empty
+      proposta = resultado.acao
+      corpo = proposta ? proposta.dig(:dados, :corpo).to_h.deep_stringify_keys : {}
+      expect(Array(corpo['actions']).map { |acao| acao['action_name'] }).not_to include('send_message')
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_C27)
+    end
+
+    # MOTIVO: o outro motor — automação de ETAPA do funil, não regra de conversa. Pega o Guia que monta
+    # uma automation_rule com crm_stage_id, chave de action_config inventada (o executor ignora calado)
+    # e o atraso trocado (no retorno, delay_seconds é o prazo).
+    it 'C28 card entra em Proposta: automação de etapa com retorno e responsável', :aggregate_failures do
+      respondeu!(perguntar('Quando o card entrar na etapa Proposta do funil Auto, cria um retorno para ligar para o ' \
+                           'cliente em 1 dia e passa o card para o Bruno Alves.'))
+
+      automacao = Crm::StageAutomation.find_by(account: c.conta, stage: c.proposta)
+      expect(automacao).to be_present
+      expect([automacao.trigger_event, automacao.enabled]).to eq(['on_enter', true])
+      retorno = automacao.steps.find_by(action_type: 'create_follow_up')
+      expect(retorno&.action_config.to_h['title']).to be_present
+      expect(retorno&.delay_seconds).to eq(86_400)
+      expect(automacao.steps.find_by(action_type: 'assign_owner')&.action_config.to_h['owner_id'].to_s).to eq(c.bruno.id.to_s)
+      expect(regras).to be_empty
+    end
+
+    # MOTIVO: conversa resolvida + filtro de caixa + ação sem volta. Pega a regra sem a caixa (manda a
+    # transcrição de todas), o e-mail no formato errado e a gravação sem confirmação.
+    it 'C29 resolvidas do WhatsApp: transcrição por e-mail, só da caixa pedida, com confirmação', :aggregate_failures do
+      pedido = 'Nas conversas resolvidas do WhatsApp Vendas, manda a transcrição para o e-mail registro@corretora.com.br.'
+      resultado = perguntar(pedido)
+      respondeu!(resultado)
+      expect(regras).to be_empty
+      expect(resultado.acao&.dig(:nome)).to eq('POST automation_rules')
+      confirmando_ate_o_fim(turno(pedido, resultado), resultado)
+
+      regra = regras.find { |item| item.event_name == 'conversation_resolved' }
+      expect(regra).to be_present
+      expect(tem_condicao?(regra, 'inbox_id', 'equal_to', c.vendas.id)).to be(true)
+      expect(parametros(regra, 'send_email_transcript').join(',')).to include('registro@corretora.com.br')
+    end
+  end
 end
 # rubocop:enable RSpec/DescribeClass
