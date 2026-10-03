@@ -1,94 +1,400 @@
 {
   "CUSTOM_ROLE": {
-    "HEADER": "Funções personalizadas",
+    "HEADER": "Funções Personalizadas",
     "LEARN_MORE": "Aprenda mais sobre funções personalizadas",
-    "DESCRIPTION": "Funções personalizadas são funções criadas pelo proprietário ou administrador da conta. Essas funções podem ser atribuídas a agentes para definir seu acesso e permissões dentro da conta. Funções personalizadas podem ser criadas com permissões e níveis de acesso específicos para atender aos requisitos da organização.",
-    "COUNT": "{n} custom role | {n} custom roles",
-    "HEADER_BTN_TXT": "Adicionar função personalizada",
+    "DESCRIPTION": "Defina o que cada pessoa da equipe vê e pode fazer. Comece de um perfil e ajuste área por área. O que não for liberado some do menu dela.",
+    "COUNT": "{n} função personalizada | {n} funções personalizadas",
+    "HEADER_BTN_TXT": "Nova função",
     "LOADING": "Buscando funções personalizadas...",
-    "SEARCH_PLACEHOLDER": "Search custom roles...",
-    "NO_RESULTS": "No custom roles found matching your search",
+    "SEARCH_PLACEHOLDER": "Pesquisar funções personalizadas...",
+    "NO_RESULTS": "Nenhuma função personalizada encontrada correspondente à sua busca",
     "SEARCH_404": "Não há itens correspondentes a esta consulta.",
     "PAYWALL": {
       "TITLE": "Atualize para criar funções personalizadas",
       "AVAILABLE_ON": "O recurso de função personalizada está disponível apenas nos planos \"Business\" e \"Enterprise\".",
-      "UPGRADE_PROMPT": "Faça upgrade do seu plano para obter acesso a recursos avançados, como gestão de equipas, automações, atributos personalizados e muito mais.",
-      "UPGRADE_NOW": "Fazer upgrade agora",
-      "CANCEL_ANYTIME": "Pode alterar ou cancelar o plano a qualquer momento"
+      "UPGRADE_PROMPT": "Atualize seu plano para obter acesso a recursos avançados como gerenciamento de time, automações, atributos personalizados e muito mais.",
+      "UPGRADE_NOW": "Atualizar agora",
+      "CANCEL_ANYTIME": "Você pode alterar ou cancelar seu plano a qualquer momento"
     },
     "ENTERPRISE_PAYWALL": {
       "AVAILABLE_ON": "O recurso de função personalizada está disponível apenas nos planos pagos.",
-      "UPGRADE_PROMPT": "Faça upgrade para um plano pago para obter recursos avançados, como logs de auditoria, capacidade de agentes e muito mais.",
-      "ASK_ADMIN": "Por favor, entre em contato com o administrador para atualização."
+      "UPGRADE_PROMPT": "Atualize para um plano pago para acessar recursos avançados como logs de auditoria, capacidade do agente e muito mais.",
+      "ASK_ADMIN": "Entre em contato com seu administrador para fazer a atualização."
     },
     "LIST": {
-      "404": "There are no custom roles available in this account.",
-      "TITLE": "Gerir funções personalizadas",
-      "DESC": "Funções personalizadas são funções criadas pelo proprietário ou administrador da conta. Essas funções podem ser atribuídas a agentes para definir seu acesso e permissões dentro da conta. Funções personalizadas podem ser criadas com permissões e níveis de acesso específicos para atender aos requisitos da organização.",
+      "404": "Não há funções personalizadas disponíveis nesta conta.",
+      "DUPLICATE": "Duplicar",
+      "MORE_AREAS": "+{count}",
+      "HAS_SENSITIVE": "Tem permissão sensível",
+      "AGENT_COUNT": "Nenhum agente ainda | 1 agente | {n} agentes",
+      "DEFAULT_ROLES_NOTE": "Administrador e Agente são funções padrão e não aparecem aqui.",
       "TABLE_HEADER": {
-        "NAME": "Nome:",
+        "NAME": "Nome",
         "DESCRIPTION": "Descrição",
-        "PERMISSIONS": "Permissions",
+        "PERMISSIONS": "Permissões",
         "ACTIONS": "Ações"
       }
     },
     "PERMISSIONS": {
-      "CONVERSATION_MANAGE": "Manage all conversations",
-      "CONVERSATION_UNASSIGNED_MANAGE": "Manage unassigned conversations and those assigned to them",
-      "CONVERSATION_PARTICIPATING_MANAGE": "Manage participating conversations and those assigned to them",
-      "CONTACT_MANAGE": "Manage contacts",
-      "REPORT_MANAGE": "Manage reports",
-      "KNOWLEDGE_BASE_MANAGE": "Manage knowledge base"
+      "CONVERSATION_MANAGE": "Gerenciar todas conversas",
+      "CONVERSATION_UNASSIGNED_MANAGE": "Conversas não atribuídas",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Conversas que participa",
+      "CONTACT_MANAGE": "Gerenciar contatos",
+      "REPORT_MANAGE": "Gerenciar relatórios",
+      "KNOWLEDGE_BASE_MANAGE": "Gerenciar base de conhecimento",
+      "CRM_VIEW": "Visualizar CRM",
+      "CRM_MANAGE_CARDS": "Gerenciar cards do CRM",
+      "CRM_MOVE_CARDS": "Mover cards do CRM",
+      "CRM_MANAGE_PIPELINES": "Gerenciar funis e automações do CRM",
+      "CRM_MANAGE_AI": "Gerenciar IA do CRM",
+      "CRM_VIEW_REPORTS": "Visualizar relatórios do CRM",
+      "CRM_ADMIN": "Administrador do CRM (acesso total)",
+      "CRM_EXPORT": "Exportar a lista do CRM para Excel",
+      "CONTACT_VIEW": "Ver contatos",
+      "KNOWLEDGE_BASE_VIEW": "Ver base de conhecimento",
+      "AUTONOMIA_VIEW": "Ver e testar Agentes Autonom.ia",
+      "AUTONOMIA_MANAGE": "Editar Agentes Autonom.ia",
+      "CAMPAIGN_VIEW": "Ver campanhas",
+      "CAMPAIGN_MANAGE": "Editar campanhas",
+      "INBOX_VIEW": "Ver caixas de entrada",
+      "INBOX_MANAGE": "Editar caixas de entrada",
+      "CANNED_RESPONSE_MANAGE": "Editar respostas prontas",
+      "PROSPECTING_VIEW": "Ver prospecção",
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Ver buscas de todos",
+      "PROSPECTING_MANAGE": "Editar prospecção",
+      "INSURANCE_VIEW": "Ver cotação",
+      "INSURANCE_MANAGE": "Editar cotação",
+      "AUTOMATION_VIEW": "Ver automações",
+      "AUTOMATION_MANAGE": "Editar automações",
+      "LABEL_MANAGE": "Editar etiquetas",
+      "ATTRIBUTE_MANAGE": "Editar atributos personalizados",
+      "MACRO_MANAGE": "Editar macros da equipe",
+      "SLA_MANAGE": "Editar políticas de SLA"
+    },
+    "MATRIX": {
+      "GROUPS": {
+        "SERVICE": "Atendimento",
+        "CRM": "CRM",
+        "AUTONOMIA": "Autonom.ia",
+        "MARKETING": "Marketing",
+        "CONNECTIONS": "Conexões",
+        "SETTINGS": "Configurações da conta"
+      },
+      "LEVELS": {
+        "NONE": "Sem acesso",
+        "VIEW": "Ver",
+        "MANAGE": "Editar",
+        "LIMITED": "Só as próprias",
+        "ALL": "Todas"
+      },
+      "BASELINE": {
+        "USE": "Só usar",
+        "APPLY": "Só aplicar",
+        "FILL": "Só preencher",
+        "PERSONAL": "Só pessoais"
+      },
+      "MODULES": {
+        "CONVERSATIONS": {
+          "NAME": "Conversas",
+          "HINT": "Quais conversas a pessoa atende",
+          "LEVEL_LIMITED": "Vê as conversas atribuídas a ela e as que participa.",
+          "LEVEL_ALL": "Vê e atende todas as conversas da conta."
+        },
+        "CONTACTS": {
+          "NAME": "Contatos e empresas",
+          "HINT": "Contatos, empresas e relacionamentos",
+          "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
+          "LEVEL_MANAGE": "Cria, edita, importa e exporta contatos."
+        },
+        "KNOWLEDGE_BASE": {
+          "NAME": "Base de conhecimento",
+          "HINT": "Portais e artigos",
+          "LEVEL_VIEW": "Lê portais e artigos.",
+          "LEVEL_MANAGE": "Escreve e publica artigos."
+        },
+        "REPORTS": {
+          "NAME": "Relatórios",
+          "HINT": "Visão geral, CSAT, SLA, robôs e times",
+          "LEVEL_VIEW": "Abre todos os relatórios de atendimento."
+        },
+        "CANNED_RESPONSES": {
+          "NAME": "Respostas prontas",
+          "HINT": "Todos usam no atendimento",
+          "LEVEL_MANAGE": "Cria e altera respostas prontas."
+        },
+        "CRM": {
+          "NAME": "CRM",
+          "HINT": "Funis, oportunidades e agenda",
+          "LEVEL_VIEW": "Vê o quadro e as oportunidades. Não altera.",
+          "LEVEL_MANAGE": "Cria, edita e move oportunidades."
+        },
+        "AUTONOMIA": {
+          "NAME": "Agentes Autonom.ia",
+          "HINT": "Seus agentes de IA",
+          "LEVEL_VIEW": "Abre os agentes e conversa no playground.",
+          "LEVEL_MANAGE": "Cria, treina e publica agentes."
+        },
+        "PROSPECTING": {
+          "NAME": "Prospecção",
+          "HINT": "Buscas de leads e listas",
+          "LEVEL_VIEW": "Vê buscas e leads.",
+          "LEVEL_MANAGE": "Roda buscas, enriquece e cria leads. Gera custo.",
+          "SUGGESTION": "Para enviar leads a uma campanha, Campanhas precisa estar em Editar."
+        },
+        "INSURANCE": {
+          "NAME": "Cotação",
+          "HINT": "Seguradoras e agente de cotação",
+          "LEVEL_VIEW": "Vê cotações e conexões.",
+          "LEVEL_MANAGE": "Configura seguradoras e o agente de cotação."
+        },
+        "CAMPAIGNS": {
+          "NAME": "Campanhas",
+          "HINT": "E-mail, WhatsApp, SMS, links e QR codes",
+          "LEVEL_VIEW": "Vê campanhas e resultados.",
+          "LEVEL_MANAGE": "Cria e dispara campanhas. Gera custo."
+        },
+        "INBOXES": {
+          "NAME": "Caixas de entrada",
+          "HINT": "Canais, QR do WhatsApp e membros",
+          "LEVEL_VIEW": "Vê todas as caixas nas configurações.",
+          "LEVEL_MANAGE": "Cria caixas, reconecta o WhatsApp e cuida dos membros."
+        },
+        "AUTOMATIONS": {
+          "NAME": "Automações",
+          "HINT": "Regras de automação",
+          "LEVEL_VIEW": "Vê as regras.",
+          "LEVEL_MANAGE": "Cria e altera regras."
+        },
+        "LABELS": {
+          "NAME": "Etiquetas",
+          "HINT": "Todos aplicam as etiquetas existentes",
+          "LEVEL_MANAGE": "Cria e altera etiquetas."
+        },
+        "ATTRIBUTES": {
+          "NAME": "Atributos personalizados",
+          "HINT": "Todos preenchem os campos existentes",
+          "LEVEL_MANAGE": "Muda as definições dos campos."
+        },
+        "MACROS": {
+          "NAME": "Macros da equipe",
+          "HINT": "Macros pessoais continuam liberadas para todos",
+          "LEVEL_MANAGE": "Cria e publica macros para a equipe."
+        },
+        "SLA": {
+          "NAME": "SLA",
+          "HINT": "Prazos de resposta",
+          "LEVEL_MANAGE": "Cria e altera políticas de SLA."
+        }
+      }
     },
     "FORM": {
       "NAME": {
-        "LABEL": "Nome:",
-        "PLACEHOLDER": "Please enter a name.",
-        "ERROR": "Nome é obrigatório."
+        "LABEL": "Nome",
+        "PLACEHOLDER": "Ex.: Atendente noturno",
+        "ERROR": "Dê um nome com pelo menos 2 letras."
       },
       "DESCRIPTION": {
-        "LABEL": "Descrição",
-        "PLACEHOLDER": "Please enter a description.",
-        "ERROR": "Descrição obrigatória."
+        "LABEL": "Para quem é (opcional)",
+        "PLACEHOLDER": "Ex.: Equipe de plantão que atende só as próprias conversas",
+        "ERROR": "A descrição é obrigatória."
       },
       "PERMISSIONS": {
         "LABEL": "Permissões",
-        "ERROR": "Permissão requerida."
+        "ERROR": "Libere pelo menos uma área antes de salvar."
       },
       "CANCEL_BUTTON_TEXT": "Cancelar",
       "API": {
-        "ERROR_MESSAGE": "Não foi possível conectar ao servidor Woot. Por favor, tente novamente."
+        "ERROR_MESSAGE": "Não foi possível salvar a função. Tente de novo."
       }
     },
     "ADD": {
       "TITLE": "Adicionar função personalizada",
       "DESC": " Funções personalizadas permitem criar funções com permissões e níveis de acesso específicos para atender aos requisitos da organização.",
-      "SUBMIT": "Submeter",
+      "SUBMIT": "Criar função",
       "API": {
-        "SUCCESS_MESSAGE": "Função personalizada adicionada com sucesso."
+        "SUCCESS_MESSAGE": "Função criada."
       }
     },
     "EDIT": {
       "BUTTON_TEXT": "Editar",
-      "TITLE": "Editar função personalizada",
+      "TITLE": "Editar função",
       "DESC": " Funções personalizadas permitem criar funções com permissões e níveis de acesso específicos para atender aos requisitos da organização.",
-      "SUBMIT": "Atualização",
+      "SUBMIT": "Salvar alterações",
       "API": {
-        "SUCCESS_MESSAGE": "Função personalizada atualizada com sucesso."
+        "SUCCESS_MESSAGE": "Função atualizada."
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Excluir",
       "API": {
         "SUCCESS_MESSAGE": "Função personalizada excluída com sucesso.",
-        "ERROR_MESSAGE": "Não foi possível conectar ao servidor Woot. Por favor, tente novamente."
+        "ERROR_MESSAGE": "Não foi possível excluir a função. Tente de novo."
       },
       "CONFIRM": {
         "TITLE": "Confirmar exclusão",
-        "MESSAGE": "Tem certeza que deseja excluir agente ",
+        "MESSAGE": "Você tem certeza que deseja excluir ",
         "YES": "Sim, excluir ",
         "NO": "Não, manter "
       }
+    },
+    "EXTRAS": {
+      "CONVERSATION_UNASSIGNED_MANAGE": "Vê a fila de conversas sem responsável e pode assumir.",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Vê as conversas em que participa, mesmo atribuídas a outra pessoa.",
+      "CRM_MOVE_CARDS": "Arrasta oportunidades entre etapas sem editar o resto.",
+      "CRM_VIEW_REPORTS": "Painel do funil e custo de IA.",
+      "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil.",
+      "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
+      "CRM_EXPORT": "Baixa a lista com dados de clientes.",
+      "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas."
+    },
+    "EDITOR": {
+      "NEW_TITLE": "Ajuste o que for diferente",
+      "APPLY_PROFILE": "Aplicar um modelo",
+      "BASED_ON": "Partimos do modelo {name}. As áreas abaixo já vêm configuradas; abra só o grupo que quiser mudar.",
+      "CHANGE_PROFILE": "Trocar modelo",
+      "COPY_NAME": "{name} (cópia)",
+      "SEARCH_PLACEHOLDER": "Procurar permissão, por exemplo exportar",
+      "EXPAND_ALL": "Abrir tudo",
+      "COLLAPSE_ALL": "Recolher tudo",
+      "NO_MATCH": "Nenhuma permissão com “{query}”.",
+      "GROUP_COUNT": "{on} de {total} liberadas",
+      "NOTHING_GRANTED": "Nada liberado",
+      "CLEAR_GROUP": "Tirar todos",
+      "FINE_TUNING": "Ajustes finos",
+      "FINE_TUNING_COUNT": "· {on} de {total} ligados",
+      "SENSITIVE": "Sensível",
+      "GRANT_SUGGESTED": "Liberar",
+      "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
+      "ADMIN_ONLY": {
+        "TITLE": "Sempre do administrador",
+        "ITEMS": "Agentes, times, atribuição, robôs, integrações, conta, segurança, cobrança, auditoria e funções personalizadas.",
+        "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
+      },
+      "SENSITIVE_CONFIRM": {
+        "TITLE": "Liberar “{name}”?",
+        "DESCRIPTION": "Esta permissão mexe com dado pessoal ou gera custo. Libere só para quem precisa.",
+        "CONFIRM": "Liberar"
+      },
+      "APPLY_CONFIRM": {
+        "TITLE": "Aplicar {name}?",
+        "DESCRIPTION": "As permissões atuais desta função serão substituídas. Nada é salvo até você clicar em Salvar alterações.",
+        "CONFIRM": "Aplicar modelo",
+        "DONE": "Modelo {name} aplicado."
+      },
+      "INCLUDED_IN_ADMIN": "Incluído no acesso total ao CRM."
+    },
+    "SUMMARY": {
+      "CAN_TITLE": "Esta pessoa poderá",
+      "EMPTY": "Nada ainda. Libere pelo menos uma área.",
+      "SENSITIVE": "1 sensível | 1 sensível | {n} sensíveis",
+      "MENU_TITLE": "Menu que a pessoa verá",
+      "SETTINGS": "Configurações"
+    },
+    "PICKER": {
+      "TITLE": "Para quem é esta função?",
+      "DESCRIPTION": "Escolha o perfil mais parecido. Depois você ajusta só o que for diferente.",
+      "APPLY_TITLE": "Aplicar um modelo",
+      "APPLY_DESCRIPTION": "O modelo substitui as permissões atuais desta função. O nome e a descrição continuam.",
+      "BACK_TO_ROLE": "Voltar para a função",
+      "STEP": "Passo {step} de 2",
+      "AREAS": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
+      "BLANK_META": "Em branco",
+      "CAN": "Pode",
+      "CANNOT": "Não pode",
+      "ADJUST_LATER": "Você ajusta qualquer área no próximo passo.",
+      "CONTINUE": "Continuar com {name}",
+      "APPLY": "Aplicar {name}"
+    },
+    "PROFILES": {
+      "GROUPS": {
+        "SERVICE": "Atendimento",
+        "SALES": "Vendas",
+        "MARKETING": "Marketing",
+        "MANAGEMENT": "Gestão"
+      },
+      "AGENT": {
+        "NAME": "Atendente",
+        "SHORT": "Atende as próprias conversas",
+        "WHO": "Para quem atende clientes e cuida das próprias conversas."
+      },
+      "SUPERVISOR": {
+        "NAME": "Supervisor",
+        "SHORT": "Coordena o time de atendimento",
+        "WHO": "Para quem coordena o time e distribui o atendimento."
+      },
+      "SDR": {
+        "NAME": "Vendedor (SDR)",
+        "SHORT": "Prospecta e cuida do funil",
+        "WHO": "Para quem prospecta e qualifica leads."
+      },
+      "SALES_MANAGER": {
+        "NAME": "Gestor comercial",
+        "SHORT": "Dono dos funis e da meta",
+        "WHO": "Para quem é dono do funil e da meta comercial."
+      },
+      "MARKETING": {
+        "NAME": "Marketing",
+        "SHORT": "Campanhas e listas",
+        "WHO": "Para quem cria campanhas e cuida das listas."
+      },
+      "FINANCE": {
+        "NAME": "Financeiro",
+        "SHORT": "Acompanha relatórios e custo de IA",
+        "WHO": "Para quem acompanha resultados e o custo de IA."
+      },
+      "OPERATIONS": {
+        "NAME": "Operações",
+        "SHORT": "Configura a operação do dia a dia",
+        "WHO": "Para quem configura caixas, regras e agentes no dia a dia."
+      },
+      "READ_ONLY": {
+        "NAME": "Somente leitura",
+        "SHORT": "Auditor ou consultor",
+        "WHO": "Para auditor ou consultor que só precisa olhar."
+      },
+      "BLANK": {
+        "NAME": "Começar do zero",
+        "SHORT": "Sem nenhum acesso",
+        "WHO": "Tudo começa sem acesso. Você libera área por área no próximo passo."
+      },
+      "PHRASES": {
+        "OWN_CONVERSATIONS": "Atender as próprias conversas e pegar da fila",
+        "READ_CONTACTS_KB": "Consultar contatos e a base de conhecimento",
+        "MANAGE_DEALS": "Criar e mover oportunidades no CRM",
+        "OTHERS_CONVERSATIONS": "Ver conversas de outros atendentes",
+        "REPORTS": "Ver relatórios",
+        "SETTINGS": "Mexer em configurações",
+        "ALL_CONVERSATIONS": "Ver e atender todas as conversas",
+        "EDIT_CONTACTS": "Editar, importar e exportar contatos",
+        "TEAM_SETUP": "Organizar etiquetas e macros da equipe",
+        "DELETE_DATA": "Excluir conversas ou contatos",
+        "BILLING_INTEGRATIONS": "Mexer em integrações e cobrança",
+        "PROSPECT": "Buscar e enriquecer leads",
+        "SEND_CAMPAIGNS": "Disparar campanhas",
+        "EDIT_PIPELINES": "Criar e editar funis do CRM",
+        "EXPORT_CRM": "Exportar a lista do CRM",
+        "ALL_SEARCHES": "Ver as buscas de prospecção de todos",
+        "ANSWER_CONVERSATIONS": "Atender conversas",
+        "EDIT_DEALS": "Editar oportunidades no CRM",
+        "CRM_DASHBOARD": "Ver o painel do CRM e o custo de IA",
+        "CHANGE_ANYTHING": "Alterar qualquer coisa",
+        "SETUP_INBOXES": "Configurar caixas e reconectar o WhatsApp",
+        "SETUP_RULES": "Configurar automações, etiquetas, macros e SLA",
+        "PUBLISH_AGENTS": "Criar e publicar agentes Autonom.ia",
+        "SEE_EVERYTHING": "Ver contatos, CRM, campanhas e agentes"
+      }
+    },
+    "ASSIGN": {
+      "TITLE": "Função {name} criada",
+      "DESCRIPTION": "Quem vai usar esta função? Você também pode fazer isso depois, em Configurações › Agentes.",
+      "CONFIRM": "Atribuir | Atribuir a 1 agente | Atribuir a {n} agentes",
+      "LATER": "Fazer depois",
+      "EMPTY": "Ainda não há agentes para atribuir.",
+      "REPLACES": "Substitui a função personalizada atual",
+      "TOGGLE": "Atribuir a {name}",
+      "SUCCESS": "Função atribuída. | Função atribuída a 1 agente. | Função atribuída a {n} agentes.",
+      "PARTIAL_ERROR": "Não foi possível atribuir {count} agente(s). Tente de novo em Configurações › Agentes."
     }
   }
 }

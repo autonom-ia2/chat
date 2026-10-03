@@ -17,7 +17,7 @@ import {
   useCamelCase,
   useSnakeCase,
 } from 'dashboard/composables/useTransformKeys';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 
 import ContactsHeader from 'dashboard/components-next/Contacts/ContactsHeader/ContactHeader.vue';
 import CreateNewContactDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateNewContactDialog.vue';
@@ -51,7 +51,7 @@ const emit = defineEmits([
 const { t } = useI18n();
 const store = useStore();
 const router = useRouter();
-const { isAdmin } = useAdmin();
+const { checkPermissions } = usePolicy();
 
 const createNewContactDialogRef = ref(null);
 const contactExportDialogRef = ref(null);
@@ -69,7 +69,10 @@ const contactAttributes = useMapGetter('attributes/getContactAttributes');
 const labels = useMapGetter('labels/getLabels');
 const globalConfig = useMapGetter('globalConfig/get');
 const campaignImportEnabled = computed(
-  () => globalConfig.value?.campaignImportEnabled === true && isAdmin.value
+  () =>
+    globalConfig.value?.campaignImportEnabled === true &&
+    // The backend lets admins and custom roles with campaign_manage import lists.
+    checkPermissions(['administrator', 'campaign_manage'])
 );
 const hasActiveSegments = computed(
   () => props.activeSegment && props.segmentsId !== 0

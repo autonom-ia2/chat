@@ -239,6 +239,10 @@ const tailwindConfig = {
         '50%': { opacity: 1 },
         '100%': { opacity: 0.4 },
       },
+      'segment-select': {
+        '0%': { transform: 'scale(0.94)', opacity: '0.6' },
+        '100%': { transform: 'scale(1)', opacity: '1' },
+      },
       'card-select': {
         '0%, 100%': {
           transform: 'translateX(0)',
@@ -260,6 +264,7 @@ const tailwindConfig = {
       'fade-in-up': 'fade-in-up 0.3s ease-out',
       'loader-pulse': 'loader-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       'card-select': 'card-select 0.25s ease-in-out',
+      'segment-select': 'segment-select 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.2)',
       shake: 'shake 0.3s ease-in-out 0s 2',
     },
   },
