@@ -4,8 +4,8 @@ import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import GuideExecucao from './GuideExecucao.vue';
 
 // "Feito pelo Guia" (#855): tudo o que o Guia mudou para esta pessoa nos
-// últimos 5 dias, com o desfazer de cada turno. É daqui que se desfaz depois
-// de recarregar a página — a conversa do Guia não sobrevive a isso.
+// últimos 5 dias, com o desfazer de cada turno. Mora na aba "Feito pelo Guia"
+// do histórico (#861), ao lado das conversas anteriores.
 const execucoes = ref([]);
 const carregando = ref(true);
 const falhou = ref(false);

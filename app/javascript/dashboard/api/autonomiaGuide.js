@@ -26,12 +26,26 @@ class AutonomiaGuideAPI extends ApiClient {
   // #572 — não devolve a resposta: abre o pedido e devolve { id, status }. O
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
   // aqui dentro esbarrava no teto de 15s do servidor e morria com erro 500.
-  chat({ message, history, routeContext, arquivos = [] } = {}) {
+  //
+  // #861 — `conversaId` continua a conversa guardada; sem ele, o servidor abre
+  // outra e devolve o id em `conversa_id`. `anexos` ({ nome, tipo }) é o que o
+  // balão mostrou, para a conversa reabrir igual. `history` fica só durante o
+  // deploy: o servidor monta o histórico a partir da conversa guardada.
+  chat({
+    message,
+    history,
+    routeContext,
+    arquivos = [],
+    conversaId = null,
+    anexos = [],
+  } = {}) {
     return axios.post(`${this.url}/chat`, {
       message,
       history,
       route_context: routeContext,
       arquivos,
+      conversa_id: conversaId,
+      anexos,
     });
   }
 
@@ -61,8 +75,34 @@ class AutonomiaGuideAPI extends ApiClient {
 
   // Só é chamado depois da confirmação explícita na tela. O backend recusa o que
   // estiver fora do catálogo de ações e o que a pessoa não puder fazer.
-  executarAcao({ acao, dados } = {}) {
-    return axios.post(`${this.url}/acoes/executar`, { acao, dados });
+  // #861 — `pedidoId` guarda o desfecho na conversa: reabrir não mostra os
+  // botões de novo.
+  executarAcao({ acao, dados, pedidoId = null } = {}) {
+    return axios.post(`${this.url}/acoes/executar`, {
+      acao,
+      dados,
+      pedido_id: pedidoId,
+    });
+  }
+
+  // #861 — a conversa mais recente, para reabrir ao abrir o painel; `{}` se
+  // não houver nenhuma.
+  conversaAtual() {
+    return axios.get(`${this.url}/conversas/atual`);
+  }
+
+  // #861 — as conversas anteriores, 20 por página: { conversas, retencao_dias }.
+  conversas(page = 1) {
+    return axios.get(`${this.url}/conversas`, { params: { page } });
+  }
+
+  conversa(id) {
+    return axios.get(`${this.url}/conversas/${id}`);
+  }
+
+  // Sem desfazer: a tela pede confirmação antes.
+  apagarConversa(id) {
+    return axios.delete(`${this.url}/conversas/${id}`);
   }
 
   // #855 — o que o Guia fez para esta pessoa nos últimos 5 dias.
