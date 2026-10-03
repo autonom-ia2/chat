@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   MODULE_GROUPS,
   LEVELS,
@@ -13,7 +14,21 @@ const props = defineProps({
   permissions: { type: Array, required: true },
 });
 
+const { t } = useI18n();
+
 const levelKey = module => getLevel(module, props.permissions).toUpperCase();
+
+// Mid-sentence labels start lowercase but keep acronyms like CRM intact.
+const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
+
+// Built in one string so the template whitespace never lands before the comma.
+const detailOf = (module, extras) =>
+  [
+    t(`CUSTOM_ROLE.MATRIX.LEVELS.${levelKey(module)}`),
+    ...extras.map(key => t(`CUSTOM_ROLE.PERMISSIONS.${key.toUpperCase()}`)),
+  ]
+    .map(lowerFirst)
+    .join(`${t('CUSTOM_ROLE.SEPARATORS.COMMA')} `);
 
 // What the person can do, grouped like the editor, in plain words.
 const groups = computed(() =>
@@ -23,9 +38,11 @@ const groups = computed(() =>
       .filter(module => hasAccess(module, props.permissions))
       .map(module => ({
         key: module.key,
-        level: levelKey(module),
-        extras: visibleExtras(module, props.permissions).filter(key =>
-          props.permissions.includes(key)
+        detail: detailOf(
+          module,
+          visibleExtras(module, props.permissions).filter(key =>
+            props.permissions.includes(key)
+          )
         ),
       })),
   })).filter(group => group.modules.length)
@@ -83,21 +100,7 @@ const settingsItems = computed(() =>
                 {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`) }}
               </span>
               {{ $t('CUSTOM_ROLE.SEPARATORS.DOT') }}
-              {{
-                $t(`CUSTOM_ROLE.MATRIX.LEVELS.${module.level}`).toLowerCase()
-              }}
-              <span v-if="module.extras.length" class="text-n-slate-10">
-                {{ $t('CUSTOM_ROLE.SEPARATORS.COMMA') }}
-                {{
-                  module.extras
-                    .map(key =>
-                      $t(
-                        `CUSTOM_ROLE.PERMISSIONS.${key.toUpperCase()}`
-                      ).toLowerCase()
-                    )
-                    .join(', ')
-                }}
-              </span>
+              {{ module.detail }}
             </li>
           </ul>
         </div>
