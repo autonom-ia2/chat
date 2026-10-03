@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
-module Middleware
+# Aninhado de propósito: config/environments/production.rb faz `require` deste arquivo na
+# configuração, antes do autoload; a forma compacta (`Middleware::...`) quebraria o boot porque
+# `Middleware` ainda não existe.
+module Middleware # rubocop:disable Style/ClassAndModuleChildren
   class PrecompressedViteAssets
     VITE_ASSET_PREFIX = '/vite/assets/'
-    CACHE_CONTROL = "public, max-age=#{1.year.to_i}"
+    CACHE_CONTROL = "public, max-age=#{1.year.to_i}".freeze
     MIME_TYPES = {
       '.css' => 'text/css',
       '.js' => 'application/javascript',
@@ -11,10 +14,11 @@ module Middleware
       '.svg' => 'image/svg+xml'
     }.freeze
 
-    ENCODINGS = [
-      ['br', '.br'],
-      ['gzip', '.gz']
-    ].freeze
+    # Em ordem de preferência: br antes de gzip.
+    ENCODINGS = {
+      'br' => '.br',
+      'gzip' => '.gz'
+    }.freeze
 
     def initialize(app)
       @app = app
@@ -66,7 +70,8 @@ module Middleware
         encoding
       end
 
-      ENCODINGS.select { |encoding, _extension| encodings.include?(encoding) }
+      # `keys & encodings` mantém a ordem de preferência do servidor, não a do cliente.
+      ENCODINGS.slice(*(ENCODINGS.keys & encodings))
     end
 
     # Sem parametro q a codificacao vale q=1 (RFC 9110); so q=0 recusa.

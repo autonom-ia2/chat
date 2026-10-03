@@ -16,7 +16,16 @@ RSpec.describe 'Widget deletion and relationships writes', :relationships_commit
     Widget::TokenService.new(payload: { source_id: contact_inbox.source_id, inbox_id: web_widget.inbox.id }).generate_token
   end
 
-  after { account.destroy! }
+  # Sem a transação do spec, o que ele cria fica no banco. Account#destroy apaga contatos e caixas
+  # com destroy_async, e no adapter de teste essas tarefas não rodam: o contato sobrava, e o próximo
+  # spec que lê `Contact.all.first` (SMS) pegava ele no CI do lote7 (#904). Mesmo padrão dos outros
+  # specs commitados (value_patch_*, company_preview_job_capacity): apagar o que foi criado, na hora.
+  after do
+    account.contacts.destroy_all
+    account.inboxes.destroy_all
+    account.custom_attribute_definitions.destroy_all
+    account.reload.destroy!
+  end
 
   it 'removes only the requested widget key after a concurrent confirmed edit' do
     definition
