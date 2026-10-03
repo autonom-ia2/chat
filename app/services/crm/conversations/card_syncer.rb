@@ -56,19 +56,27 @@ class Crm::Conversations::CardSyncer
   # Sem criação automática na caixa, o card que outra via criou (automação, Kanban) continua acompanhando a própria
   # conversa: sem isto a troca de responsável nunca chegava a ele. Só o card principal da conversa, e sem marcá-lo como
   # automático, então um dono escolhido à mão segue intocado.
+  # Só responsável e time (sincronização sem mensagem): a mensagem não avança a atividade desse card — senão o
+  # StaleCardsJob voltaria a avaliá-lo com IA a cada período parado — nem abre lock em caixa que não tem card.
   def refresh_existing_card
+    return if @message.present?
     return if inbox_crm_disabled?
+    return if primary_conversation_card.blank?
 
     card = nil
     updated = false
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
-      card = Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
-      card = nil unless card&.conversation_id == @conversation.id
+      card = primary_conversation_card
       updated = card.present? && refresh_card(card, auto_sync: false)
     end
 
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED) if updated
     card
+  end
+
+  def primary_conversation_card
+    card = Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
+    card if card&.conversation_id == @conversation.id
   end
 
   def inbox_crm_disabled?

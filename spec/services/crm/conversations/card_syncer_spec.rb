@@ -128,6 +128,32 @@ RSpec.describe Crm::Conversations::CardSyncer do
 
       expect(card.reload.owner_id).to be_nil
     end
+
+    # Fora do card automático, a mensagem não mexe no card: avançar a atividade faria o StaleCardsJob reavaliar o card
+    # com IA paga a cada período parado, e cada mensagem abriria lock de conversa e contato à toa.
+    it 'leaves the card alone on a new message, without locking or scheduling AI' do
+      card.update!(last_activity_at: 2.days.ago, last_message_at: 2.days.ago)
+      before_activity = card.reload.last_activity_at
+      message = create_crm_message(conversation: conversation, sender: contact)
+      allow(Crm::Conversations::SyncLock).to receive(:new).and_call_original
+      allow(Crm::Ai::Observer).to receive(:new).and_call_original
+
+      described_class.new(conversation: conversation, message: message).perform
+
+      expect(card.reload.last_activity_at.to_i).to eq(before_activity.to_i)
+      expect(Crm::Conversations::SyncLock).not_to have_received(:new)
+      expect(Crm::Ai::Observer).not_to have_received(:new)
+    end
+
+    it 'does not lock the conversation when there is no card to update' do
+      conversation.update!(assignee: agent)
+      allow(Crm::Conversations::SyncLock).to receive(:new).and_call_original
+
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(Crm::Conversations::SyncLock).not_to have_received(:new)
+      expect(account.crm_cards).to be_blank
+    end
   end
 
   # rubocop:disable RSpec/MultipleExpectations
