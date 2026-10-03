@@ -15,6 +15,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const NO_PRIORITY_MARK = '-';
 
 const normalizedPriority = computed(() => {
   if (props.priority === null || props.priority === undefined) return null;
@@ -42,8 +43,10 @@ const dashOffset = computed(() => {
     v-if="normalizedPriority === null"
     class="flex shrink-0 items-center justify-center rounded-full bg-n-solid-2 text-xs text-n-slate-10"
     :style="{ width: `${size}px`, height: `${size}px` }"
+    role="img"
+    :aria-label="t('PROSPECTING.PRIORITY.NONE')"
   >
-    -
+    <span aria-hidden="true">{{ NO_PRIORITY_MARK }}</span>
   </div>
   <svg
     v-else
