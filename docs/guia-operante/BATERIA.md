@@ -2,7 +2,7 @@
 
 ## O que é
 
-Vinte pedidos que um administrador de corretora faz de verdade, mandados ao Guia de verdade — mesmo
+Vinte e cinco pedidos que um administrador de corretora faz de verdade, mandados ao Guia de verdade — mesmo
 modelo, mesma instrução, mesmas ferramentas, escrevendo pela API da plataforma no banco de teste. Cada
 cenário confere o **estado final do banco** (o que foi criado, mudado ou deixado como estava), não o
 texto da resposta. O Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
@@ -11,14 +11,25 @@ Do texto, a bateria só confere o que é objetivo: respondeu, a resposta não fo
 confiança e o Guia não ofereceu suporte (`escalate`). O resto da resposta aparece no placar, para uma
 pessoa ler. A exceção são o C01a e o C01b (o pedido da conta 18): neles um juiz — outro modelo, que lê
 o sentido da resposta — confere se o Guia explicou que a caixa vem da participação nela, disse que não
-existe conversa só leitura, propôs o mais próximo, perguntou antes e não ofereceu suporte. O juiz custa
-centavos por cenário.
+existe conversa só leitura, propôs o mais próximo, perguntou antes e não ofereceu suporte. Desde a
+#907/#879 ele também confere a **proposta concreta**: a pergunta cita pelo nome a pessoa (Carla) e a
+caixa (Marketing) e não oferece o `inbox_view` como alternativa. O C21 e o C22 também passam pelo juiz
+(no C22: explicou por que a newsletter virou card e avisou que o rodízio só pega quem está online). O
+juiz custa centavos por cenário.
 
 - Spec: `spec/services/autonomia/guide/bateria_admin_eval_spec.rb` (tags `:eval_pago` e `:bateria_guia`).
 - Conta de partida e placar: `spec/support/bateria_do_guia.rb`. A conta tem três caixas (WhatsApp
   Vendas, Sinistros com saudação ligada, Marketing), Ana e Bruno atendendo, Carla no time de marketing,
   o funil Auto com três etapas, o card do Pedro com o Bruno e duas conversas sem responsável. A Carla
   é membro da caixa Marketing, menos no C01a e C01b, que a tiram antes do pedido para ficar como na conta 18.
+- C22 a C24 (#860, a conta 16) somam à corretora a caixa de e-mail **Comercial** (`conta_formularios!`):
+  card automático ligado no funil Comercial (etapa Novo), rodízio desligado, Ana e Bruno como agentes,
+  quatro e-mails do formulário do site (três com a linha de aceite) e dois e-mails comuns (a newsletter
+  da Anthropic e um fornecedor). Como em produção, o contato do formulário nasce com o e-mail no lugar
+  do nome, sem telefone e numa empresa batizada pelo domínio, e todo e-mail vira card em Novo sem
+  responsável. C22 arruma a caixa (desliga o card automático, liga o rodízio e explica), C23 corrige
+  nome, telefone e empresa e confere que o desfazer volta tudo, C24 guarda o consentimento só de quem
+  marcou, com a prova numa nota. O C25 (o formulário vira lead certo sozinho) entra depois do Decisor (#858).
 - Cada cenário diz no comentário qual falha ele pega.
 
 ## Quando rodar
@@ -27,7 +38,7 @@ Antes de todo lote que mexe no Guia: instrução (`lib/operator_guide/guia-instr
 (`app/services/autonomia/agents/tools/native/guia_*.rb`), `Autonomia::Guide::Acoes`, troca de modelo ou
 de esforço de raciocínio. Também depois de mudar uma tela ou endpoint que um cenário usa.
 
-Sem as variáveis abaixo os 20 exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
+Sem as variáveis abaixo os 25 exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
 roda e não custa nada.
 
 ## Comando
@@ -42,13 +53,13 @@ SSL_CERT_FILE=/etc/ssl/cert.pem AUTONOMIA_EVAL_PAGO=1 OPENAI_API_KEY=<chave> \
 - `AUTONOMIA_EVAL_PAGO=1` liga a bateria. Sem ele, tudo fica pendente.
 - `OPENAI_API_KEY`: a chave da OpenAI. Nunca cole o valor em chat, commit ou log.
 - `SSL_CERT_FILE`: sem ele, no Mac, a base do Guia fica vazia e as respostas saem retidas.
-- `GUIA_ORCAMENTO_USD` (opcional, padrão 6): teto em dólar da bateria inteira.
+- `GUIA_ORCAMENTO_USD` (opcional, padrão 9): teto em dólar da bateria inteira.
 
 Para rodar só alguns cenários: `-e C07` (um) ou `-e C07 -e C19` (vários).
 
 ## Custo
 
-Estimativa de **US$ 3 a 5** a bateria inteira (cerca de 28 turnos; conta em `tmp/900/bateria.md`).
+Estimativa de **US$ 4,5 a 7,5** a bateria inteira (cerca de 31 turnos): US$ 3 a 5 do C01a ao C21 (conta em `tmp/900/bateria.md`) e US$ 1,5 a 2,5 do C22 ao C24, que corrigem vários contatos num turno só.
 O custo de cada ida ao modelo é lido de `Crm::AiUsageEvent` antes de a transação do exemplo ser
 desfeita. Quando a soma passa de `GUIA_ORCAMENTO_USD`, os cenários seguintes são pulados e aparecem
 como `pulado` no placar. O teto vale entre cenários: um cenário já começado termina, então o gasto
@@ -65,7 +76,7 @@ id   situação        US$  idas  passos
 C01a passou       0.1520     5     1/1
 C03  FALHOU       0.2100     7     1/2
 ...
-total US$ 3.8400 de 6.00
+total US$ 5.8400 de 9.00
 ```
 
 - **situação**: `passou`, `FALHOU` ou `pulado` (orçamento).
