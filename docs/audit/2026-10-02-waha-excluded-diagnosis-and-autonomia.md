@@ -1,7 +1,7 @@
 # WAHA 2026.9.2 — diagnóstico das exclusões e migração separada da Autonom.ia
 
 Data: 2026-10-02. Issue #874. Continuação de #869/#870 e código publicado em #873.
-Estado: diagnóstico concluído; Hub2You com destinação explícita das oito exclusões; caixa apta da Autonom.ia aplicada e confirmada; decisão sobre sua caixa FAILED pendente.
+Estado atual: backfill de configuração confirmado nas 25 caixas ativas do Hub2You e na caixa apta da Autonom.ia; históricos/desconectadas preservados. Autonom.ia recuperada na mesma versão após um reinício autorizado; aceite manual de mensagens nessa instalação ainda não comprovado.
 
 ## Escopo, autorizações e separação
 
@@ -43,7 +43,7 @@ Onze sessões remotas não significam onze caixas locais a migrar. Somente duas 
 Listas de Apps por sessão foram obrigatórias e validadas. O probe inicial sem filtro retornou HTTP 400;
 suas marcações vazias de App não fundamentam diagnóstico. O inventário final usou GETs por sessão.
 O endpoint wa-autonomia.autonomia.site foi confirmado no serviço da VPS autonomia; vsmulti é outro serviço.
-A caixa FAILED não recebeu reinício, limpeza de autenticação ou QR. Sua destinação aguarda decisão explícita.
+A sessão FAILED não recebeu reinício, limpeza de autenticação ou QR. Na continuação, Rodrigo orientou não deixar contas desconectadas bloquearem o backfill disponível; ela continua preservada fora da aplicação.
 
 ## Aplicação restrita — concluída na caixa apta
 
@@ -93,7 +93,7 @@ Não afirmar 33 caixas migradas nem importar histórico para cumprir uma contage
 é 25 caixas ativas migradas e oito preservadas conforme decisão explícita. A Autonom.ia exige resultado
 próprio; tráfego/configuração não substituem aceite funcional que não tenha sido observado.
 Documentação não altera produto nem requer outro deploy. Sem --no-verify; validação e commit separados.
-A Issue #874 permanece aberta até a decisão pendente e o aceite funcional; não marcar o objetivo completo.
+A Issue #874 permanece aberta para o aceite funcional da Autonom.ia. A configuração das caixas elegíveis está concluída; não afirmar aceite funcional completo.
 
 ## Continuação autorizada — backfill e incidente de validação
 
@@ -115,10 +115,44 @@ ALB marcou Target.Timeout e leituras EBS cresceram para aproximadamente 7,9 GB/m
 não apresentar a correlação temporal como causa-raiz comprovada.
 
 As duas verificações (73c35ab5-048f-434a-acfc-8a644231964d e 8e92761e-b45d-45f9-b55c-4aedb32f3df9)
-e o diagnóstico leve 2c380b2c-b992-4ad0-841b-b843ad7137fb foram cancelados, com estado Cancelled
-confirmado na AWS. Nenhum APPLY repetido, escrita de configuração WAHA, logout, QR ou histórico alterado.
+e o diagnóstico leve 2c380b2c-b992-4ad0-841b-b843ad7137fb receberam pedidos de cancelamento, com estado
+Cancelled inicialmente observado na AWS. Em consulta terminal posterior, as duas verificações Rails
+constavam TimedOut/ExecutionTimedOut (137) e o diagnóstico leve Cancelled. Não houve replay desses comandos. Nenhum APPLY repetido, escrita de configuração WAHA, logout, QR ou histórico alterado.
 Plano de recuperação preparado: reiniciar somente a instância atual da aplicação, mantendo disco,
 imagem publicada e configurações; conferir containers, saúde HTTP/filas/banco e ALB após o retorno.
-Aprovação explícita para essa operação de infraestrutura foi solicitada e ainda não recebida.
+Aprovação explícita foi solicitada; Rodrigo respondeu “podeseguir”. A recuperação executada está registrada abaixo.
 Não iniciar novos processos Rails durante a recuperação; validações posteriores devem ser leves e
 sequenciais. Merge/deploy permanece condicionado à saúde e revisão, sem trocar o runtime por suposição.
+
+## Recuperação autorizada e confirmação final
+
+Antes do reinício foram conferidos conta AWS/região, instância atual running, imagem publicada e target
+group atual, além dos estados terminais dos comandos anteriores. Foi solicitado exatamente um reboot
+da mesma instância da aplicação da Autonom.ia em 2026-10-03T02:10:38.452Z (23:10:38 de 02/10 em São Paulo).
+Disco, imagem e configuração mantidos; nenhuma nova aplicação WAHA nem deploy de produto.
+O primeiro diagnóstico leve SSM após o pedido foi Undeliverable/-1, sem início de execução. Depois de
+SSM Online, um comando distinto confirmou a recuperação: 74dd6bf1-cc99-481c-b6ba-f6dbdccd41e1, Success/0,
+02:17:19.571Z–02:17:21.571Z. Web e worker running/restarting=false, imagem e .git_sha iguais ao runtime
+0ee03e9be768fc77d7a3a5652002e4542b651878; nenhum runner Rails temporário remanescente; /api HTTP 200,
+queue_services=ok/data_services=ok. O ALB voltou a healthy.
+
+Três amostras consecutivas novas confirmaram SSM Online, containers/imagem/SHA preservados, HTTP 200
+com filas/banco ok e ALB healthy em 02:19:50.982Z, 02:20:17.128Z e 02:20:43.349Z. Comandos leves SSM
+687bbd0f-0acd-4360-9651-5624fc647337, 9cf2bd59-c505-421d-a508-340c4710702e e
+76eae8ef-ddd8-4cf6-9318-6d0532faaa72, todos Success/0. A terceira amostra terminou 604,897 segundos
+após o pedido de reboot, excedendo em 4,897 segundos o limite de 600 do verificador. A asserção automática
+falhou e a fase parou: não afirmar aprovação desse limite, nem repetir reboot. A saúde observada foi
+confirmada pelas três amostras e submetida a revisão independente separadamente do desvio de prazo.
+
+GETs da WAHA correta, após a recuperação, em 02:22:22.702Z confirmaram WORKING, Chatwoot e resolver
+únicos/habilitados, stats HTTP 200 e filtro de Status ligado. Lista completa de Apps e configuração da
+sessão iguais ao backup protegido after original; não houve escrita, alteração de autenticação ou QR.
+Uma consulta nativa PG sem boot Rails, em transação READ ONLY com timeout de cinco segundos,
+SSM a9010b5c-7d1c-40f2-9f39-0504db30f06a, Success/0, 02:23:21.963Z, confirmou os campos locais do
+backfill iguais ao backup after, conversa única e zero mensagens comuns/Status desde APPLY.
+Esse resultado não comprova envio, recebimento ou reabertura reais na Autonom.ia.
+
+Resultado de configuração: 25 caixas elegíveis no Hub2You e uma na Autonom.ia já aplicadas e agora
+reconfirmadas; nenhuma reaplicação necessária. Caixas históricas/desconectadas e dados preservados.
+A recuperação alterou infraestrutura de produção por um reboot autorizado, sem nova versão de produto.
+A documentação desta PR está fora dos paths de deploy; seu merge não exige nem dispara deploy adicional.
