@@ -9,6 +9,7 @@
 #  updated_at   :datetime         not null
 #  account_id   :integer          not null
 #  instagram_id :string           not null
+#  app_scoped_user_id :string
 #
 # Indexes
 #

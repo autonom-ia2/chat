@@ -127,7 +127,8 @@ class Instagram::CallbacksController < ApplicationController
     channel_instagram.update!(
       access_token: @long_lived_token_response['access_token'],
       expires_at: expires_at,
-      provider_name: user_details['username']
+      provider_name: user_details['username'],
+      app_scoped_user_id: user_details['id'].to_s
     )
 
     channel_instagram
@@ -140,6 +141,7 @@ class Instagram::CallbacksController < ApplicationController
       channel_instagram = Channel::Instagram.create!(
         access_token: @long_lived_token_response['access_token'],
         instagram_id: user_details['user_id'].to_s,
+        app_scoped_user_id: user_details['id'].to_s,
         account: account,
         expires_at: expires_at,
         provider_name: user_details['username']

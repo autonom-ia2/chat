@@ -2,7 +2,8 @@ require 'rails_helper'
 
 RSpec.describe 'Instagram::DataDeletionsController', type: :request do
   let(:app_secret) { 'test-instagram-secret' }
-  let!(:channel) { create(:channel_instagram) }
+  # Meta's signed_request carries the app-scoped id, which differs from the stored professional account id.
+  let!(:channel) { create(:channel_instagram, app_scoped_user_id: 'app-scoped-123') }
 
   def encode(data)
     Base64.urlsafe_encode64(data, padding: false)
@@ -31,11 +32,20 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
 
   describe 'POST /instagram/deauthorize' do
     it 'flags the channel for reauthorization without deleting the token' do
-      post_signed '/instagram/deauthorize', signed_request_for(payload_for(channel.instagram_id))
+      post_signed '/instagram/deauthorize', signed_request_for(payload_for(channel.app_scoped_user_id))
 
       expect(response).to have_http_status(:ok)
       expect(channel.reload.reauthorization_required?).to be true
       expect(channel[:access_token]).to be_present
+    end
+
+    it 'falls back to the professional account id for channels without an app-scoped id' do
+      legacy_channel = create(:channel_instagram)
+
+      post_signed '/instagram/deauthorize', signed_request_for(payload_for(legacy_channel.instagram_id))
+
+      expect(response).to have_http_status(:ok)
+      expect(legacy_channel.reload.reauthorization_required?).to be true
     end
 
     it 'returns ok when no channel matches the user' do
@@ -45,7 +55,7 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
     end
 
     it 'rejects a request signed with another secret' do
-      post_signed '/instagram/deauthorize', signed_request_for(payload_for(channel.instagram_id), 'wrong-secret')
+      post_signed '/instagram/deauthorize', signed_request_for(payload_for(channel.app_scoped_user_id), 'wrong-secret')
 
       expect(response).to have_http_status(:unauthorized)
       expect(channel.reload.reauthorization_required?).to be false
@@ -62,7 +72,7 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
     it 'revokes the stored token and keeps the inbox and its conversations' do
       conversation = create(:conversation, inbox: channel.inbox, account: channel.account)
 
-      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.instagram_id))
+      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.app_scoped_user_id))
 
       expect(response).to have_http_status(:ok)
       body = response.parsed_body
@@ -84,7 +94,7 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
     end
 
     it 'rejects a request signed with another secret' do
-      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.instagram_id), 'wrong-secret')
+      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.app_scoped_user_id), 'wrong-secret')
 
       expect(response).to have_http_status(:unauthorized)
       expect(channel.reload[:access_token]).to be_present
@@ -93,7 +103,7 @@ RSpec.describe 'Instagram::DataDeletionsController', type: :request do
 
   describe 'GET /instagram/data_deletion_status' do
     it 'shows the deletion as completed for a code we issued' do
-      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.instagram_id))
+      post_signed '/instagram/data_deletion', signed_request_for(payload_for(channel.app_scoped_user_id))
       code = response.parsed_body['confirmation_code']
 
       get '/instagram/data_deletion_status', params: { code: code }
