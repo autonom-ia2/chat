@@ -736,6 +736,7 @@ pt_BR:
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
+      needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
         expired: 'Os 5 dias para desfazer isto já passaram.'
