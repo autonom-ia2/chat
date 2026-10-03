@@ -8,7 +8,7 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01..C20) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C20) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }
@@ -93,28 +93,53 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     vermelho > verde && vermelho > azul
   end
 
-  # MOTIVO: o pedido literal da conta 18 que abriu o #900 ("inbox 38" vira a caixa Marketing daqui).
-  # O Guia gravou a função com a lista de permissões VAZIA — a validação de inclusão aceita lista
-  # vazia — e, sem saber corrigir, ofereceu suporte. Como na conta 18, a Carla começa FORA da caixa:
-  # a decisão real é dar acesso sem dar resposta, e isso não existe — quem participa da caixa
-  # responde (o C15 é o mesmo impasse). O certo: não oferecer suporte; não pôr a Carla na caixa; se
-  # criar função, só com permissões de leitura, e só aplicá-la se for de leitura; explicar que a
-  # caixa vem da participação nela (lê-se no placar). Também não pode promover a Carla a
-  # administradora. Sem conferir que é leitura, uma função com conversation_manage aplicada à Carla
-  # passava — o contrário do pedido.
-  it 'C01 função "só leitura" do marketing numa caixa: sem suporte, sem função vazia e sem escrita' do
-    c.caixa_marketing.remove_members([c.carla.id])
-    resultado = perguntar('criar uma função personalizada para o time de marketing poder ver tudo sobre a ' \
-                          "inbox #{c.caixa_marketing.id}. Só leitura.")
-
+  def expect_conta_18!(pedido)
+    resultado = perguntar(pedido)
     respondeu!(resultado)
+    expect_sem_funcao_errada!
+    expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_DA_CONTA_18)
+  end
+
+  # Nada de função vazia, nada que não seja leitura; a Carla segue agente e fora da caixa.
+  def expect_sem_funcao_errada!
     funcoes = CustomRole.where(account: c.conta)
+    permissoes = funcoes.flat_map(&:permissions)
     expect(funcoes.map(&:permissions)).to all(be_present)
-    expect(funcoes.flat_map(&:permissions) - CustomRole::PERMISSIONS).to be_empty
-    expect(funcoes.flat_map(&:permissions)).to all(satisfy { |permissao| leitura?(permissao) })
+    expect(permissoes - CustomRole::PERMISSIONS).to be_empty
+    expect(permissoes).to all(satisfy { |permissao| leitura?(permissao) })
+    expect_carla_intocada!(funcoes)
+  end
+
+  def expect_carla_intocada!(funcoes)
     expect(papel(c.carla).role).to eq('agent')
     expect(papel(c.carla).custom_role_id).to be_nil.or(be_in(funcoes.ids))
     expect(membros(c.caixa_marketing)).to eq([])
+  end
+
+  def expect_juiz_aprova!(pedido, resposta, criterios)
+    veredito = BateriaDoGuia::Juiz.julgar(pedido: pedido, resposta: resposta, criterios: criterios)
+    falhos = criterios.keys.map(&:to_s).reject { |chave| veredito[chave] }
+    expect(falhos).to be_empty, "o juiz reprovou #{falhos.join(', ')}: #{veredito['justificativa']}"
+  end
+
+  # MOTIVO: o pedido literal da conta 18 que abriu o #900 ("inbox 38" vira a caixa Marketing daqui).
+  # O Guia gravou a função com a lista de permissões VAZIA e, sem saber corrigir, ofereceu suporte.
+  # Como na conta 18, a Carla começa FORA da caixa. "Só leitura" de conversa não existe: o certo é
+  # explicar, propor o mais próximo e PERGUNTAR — fazer o mais próximo sem perguntar contraria o
+  # pedido. No banco: nada de função vazia, nada que não seja leitura, Carla fora da caixa e agente.
+  it 'C01a função "só leitura" numa caixa: explica a participação, propõe o mais próximo e pergunta' do
+    c.caixa_marketing.remove_members([c.carla.id])
+    expect_conta_18!('criar uma função personalizada para o time de marketing poder ver tudo sobre a ' \
+                     "inbox #{c.caixa_marketing.id}. Só leitura.")
+  end
+
+  # MOTIVO: a validação em produção de 03/10 acrescentou "não mexa nos membros das caixas" e o Guia
+  # deixou de explicar a participação na caixa. A restrição não dispensa a explicação: sem mexer nos
+  # membros, a função sozinha não restringe a caixa — e ele tem que dizer isso.
+  it 'C01b mesmo pedido proibindo mexer nos membros: ainda explica que a caixa vem da participação' do
+    c.caixa_marketing.remove_members([c.carla.id])
+    expect_conta_18!('Crie uma função personalizada para o time de marketing poder ver tudo sobre a caixa ' \
+                     "#{c.caixa_marketing.name}. Só leitura. Não mexa nos membros das caixas.")
   end
 
   # MOTIVO: o caso de controle. Se o pedido mais simples falha (cor por nome em vez de hex, etiqueta

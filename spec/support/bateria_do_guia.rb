@@ -56,6 +56,53 @@ module BateriaDoGuia
     end
   end
 
+  # O que o Guia precisa DIZER no pedido da conta 18 — o banco não mostra. Validado em produção em
+  # 03/10 (conta 16): ele foi honesto, mas não explicou que a caixa vem da participação nela e propôs
+  # "ver a configuração das caixas", que não é ver o que acontece na caixa.
+  CRITERIOS_DA_CONTA_18 = {
+    caixa_vem_da_participacao: 'Explica que as conversas que alguém vê dependem de a pessoa estar na caixa ' \
+                               '(ser agente/membro dela), e que a função não escolhe caixa.',
+    sem_conversa_so_leitura: 'Diz que não existe acesso às conversas apenas para leitura: quem vê as ' \
+                             'conversas de uma caixa também consegue responder nelas.',
+    propoe_o_mais_proximo: 'Propõe o caminho mais próximo do pedido — acesso às conversas com a pessoa ' \
+                           'colocada só na caixa pedida, avisando que ela poderá responder — e não uma ' \
+                           'alternativa que não deixa ver as conversas (ex.: só ver a configuração da caixa).',
+    pergunta_antes: 'Pergunta se a pessoa quer seguir com essa alternativa antes de fazê-la, já que ela ' \
+                    'contraria o "só leitura" pedido.',
+    sem_suporte: 'Não oferece encaminhar para o suporte.'
+  }.freeze
+
+  # Juiz de texto: só para o que o banco não mostra e uma pessoa precisaria ler (o Guia explicou a
+  # regra certa? propôs o mais próximo?). Quem entende linguagem é um modelo — nunca lista de palavras
+  # (regra do repo). Modelo diferente do Guia, para o juiz não concordar com o próprio jeito de errar.
+  module Juiz
+    module_function
+
+    MODELO = 'gpt-5.4'.freeze
+    INSTRUCAO = <<~TEXTO.freeze
+      Você avalia a resposta de um assistente de uma plataforma de atendimento para corretoras de seguros.
+      Recebe o pedido da pessoa, a resposta do assistente e uma lista de critérios. Para cada critério,
+      diga se a resposta o cumpre (true/false), lendo o sentido, não palavras exatas. Seja rigoroso:
+      critério cumprido só pela metade é false. Responda só no formato pedido.
+    TEXTO
+
+    def julgar(pedido:, resposta:, criterios:)
+      cliente = Crm::Ai::ResponsesClient.new(credential: { api_key: ENV.fetch('OPENAI_API_KEY') }, feature: 'eval_bateria_guia')
+      texto = "Pedido da pessoa: #{pedido}\n\nResposta do assistente: #{resposta}\n\nCritérios:\n" +
+              criterios.each_with_index.map { |(chave, frase), i| "#{i + 1}. #{chave}: #{frase}" }.join("\n")
+      raw = cliente.create(model: MODELO, instructions: INSTRUCAO,
+                           input: [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)], schema: veredito(criterios.keys))
+      JSON.parse(raw[:text])
+    end
+
+    def veredito(chaves)
+      propriedades = chaves.to_h { |chave| [chave.to_s, { type: 'boolean' }] }
+      { name: 'veredito', strict: true,
+        schema: { type: 'object', additionalProperties: false, required: chaves.map(&:to_s) + ['justificativa'],
+                  properties: propriedades.merge('justificativa' => { type: 'string' }) } }
+    end
+  end
+
   # A conta padrão: o que uma corretora pequena tem depois de alguns meses de uso. Cada cenário
   # acrescenta só o que é dele (etiquetas, automação, homônimos), para o estado de partida ser
   # sempre o mesmo e a asserção poder comparar antes e depois.

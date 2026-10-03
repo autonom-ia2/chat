@@ -9,13 +9,16 @@ texto da resposta. O Guia age sem confirmação (#855), então o que importa é 
 
 Do texto, a bateria só confere o que é objetivo: respondeu, a resposta não foi retida pelo portão de
 confiança e o Guia não ofereceu suporte (`escalate`). O resto da resposta aparece no placar, para uma
-pessoa ler — por exemplo, se no C01 o Guia explicou que o acesso à caixa vem da participação nela.
+pessoa ler. A exceção são o C01a e o C01b (o pedido da conta 18): neles um juiz — outro modelo, que lê
+o sentido da resposta — confere se o Guia explicou que a caixa vem da participação nela, disse que não
+existe conversa só leitura, propôs o mais próximo, perguntou antes e não ofereceu suporte. O juiz custa
+centavos por cenário.
 
 - Spec: `spec/services/autonomia/guide/bateria_admin_eval_spec.rb` (tags `:eval_pago` e `:bateria_guia`).
 - Conta de partida e placar: `spec/support/bateria_do_guia.rb`. A conta tem três caixas (WhatsApp
   Vendas, Sinistros com saudação ligada, Marketing), Ana e Bruno atendendo, Carla no time de marketing,
   o funil Auto com três etapas, o card do Pedro com o Bruno e duas conversas sem responsável. A Carla
-  é membro da caixa Marketing, menos no C01, que a tira antes do pedido para ficar como na conta 18.
+  é membro da caixa Marketing, menos no C01a e C01b, que a tiram antes do pedido para ficar como na conta 18.
 - Cada cenário diz no comentário qual falha ele pega.
 
 ## Quando rodar
@@ -59,7 +62,7 @@ O RSpec mostra as falhas como sempre. No fim, imprime o placar:
 
 ```
 id   situação        US$  idas  passos
-C01  passou       0.1520     5     1/1
+C01a passou       0.1520     5     1/1
 C03  FALHOU       0.2100     7     1/2
 ...
 total US$ 3.8400 de 6.00
@@ -74,7 +77,7 @@ total US$ 3.8400 de 6.00
   pergunta, ambíguo ou impossível é o certo.
 
 Embaixo vem o trecho do que o Guia respondeu em cada cenário. Leia nos que têm critério de texto:
-C01 (explicou que a caixa vem da participação), C03 (avisou do ajuste no nome), C15 (disse que não
+C03 (avisou do ajuste no nome), C15 (disse que não
 existe e o que é possível), C16 e C17 (perguntou qual), C18 (apontou o valor inválido).
 
 Um cenário que falha diz o que ficou gravado de errado. O Guia é um modelo: rode o cenário de novo
