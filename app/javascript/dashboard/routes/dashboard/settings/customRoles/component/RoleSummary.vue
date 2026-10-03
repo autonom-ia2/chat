@@ -82,12 +82,12 @@ const settingsItems = computed(() =>
               <span class="font-medium text-n-slate-12">
                 {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${module.key}.NAME`) }}
               </span>
-              ·
+              {{ $t('CUSTOM_ROLE.SEPARATORS.DOT') }}
               {{
                 $t(`CUSTOM_ROLE.MATRIX.LEVELS.${module.level}`).toLowerCase()
               }}
               <span v-if="module.extras.length" class="text-n-slate-10">
-                ,
+                {{ $t('CUSTOM_ROLE.SEPARATORS.COMMA') }}
                 {{
                   module.extras
                     .map(key =>

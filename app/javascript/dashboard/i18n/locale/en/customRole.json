@@ -395,6 +395,11 @@
       "TOGGLE": "Assign to {name}",
       "SUCCESS": "Role assigned. | Role assigned to 1 agent. | Role assigned to {n} agents.",
       "PARTIAL_ERROR": "Could not assign {count} agent(s). Try again in Settings › Agents."
+    },
+    "SEPARATORS": {
+      "DOT": "·",
+      "COMMA": ",",
+      "NONE": "—"
     }
   }
 }

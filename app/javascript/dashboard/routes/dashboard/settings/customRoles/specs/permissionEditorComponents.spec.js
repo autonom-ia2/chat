@@ -37,7 +37,9 @@ describe('PermissionRow', () => {
     const wrapper = mountRow('CANNED_RESPONSES', []);
 
     expect(radios(wrapper)).toHaveLength(2);
-    expect(wrapper.find('[aria-hidden="true"]').text()).toBe('—');
+    expect(wrapper.find('[aria-hidden="true"]').text()).toBe(
+      'CUSTOM_ROLE.SEPARATORS.NONE'
+    );
     expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.BASELINE.USE');
   });
 

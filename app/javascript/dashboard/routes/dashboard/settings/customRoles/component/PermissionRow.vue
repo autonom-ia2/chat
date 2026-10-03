@@ -114,7 +114,7 @@ const onArrow = (event, option) => {
             aria-hidden="true"
             class="grid h-8 text-xs select-none place-items-center text-n-slate-8"
           >
-            —
+            {{ $t('CUSTOM_ROLE.SEPARATORS.NONE') }}
           </span>
         </template>
       </div>

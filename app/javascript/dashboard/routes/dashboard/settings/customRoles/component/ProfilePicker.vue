@@ -187,7 +187,8 @@ const move = step => {
               <template v-if="profile">
                 {{ $t('CUSTOM_ROLE.PICKER.AREAS', areaCount) }}
                 <template v-if="sensitiveCount">
-                  · {{ $t('CUSTOM_ROLE.SUMMARY.SENSITIVE', sensitiveCount) }}
+                  {{ $t('CUSTOM_ROLE.SEPARATORS.DOT') }}
+                  {{ $t('CUSTOM_ROLE.SUMMARY.SENSITIVE', sensitiveCount) }}
                 </template>
               </template>
               <template v-else>

@@ -89,7 +89,9 @@ const hasSensitive = computed(
         class="inline-flex items-center h-6 px-2 text-xs rounded-md bg-n-alpha-2 text-n-slate-11"
       >
         {{ $t(`CUSTOM_ROLE.MATRIX.MODULES.${area.key}.NAME`) }}
-        <span class="mx-1 text-n-slate-9">·</span>
+        <span class="mx-1 text-n-slate-9">
+          {{ $t('CUSTOM_ROLE.SEPARATORS.DOT') }}
+        </span>
         <span class="font-medium text-n-slate-12">
           {{ $t(`CUSTOM_ROLE.MATRIX.LEVELS.${area.level}`) }}
         </span>

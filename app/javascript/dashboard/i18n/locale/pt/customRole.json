@@ -395,6 +395,11 @@
       "TOGGLE": "Atribuir a {name}",
       "SUCCESS": "Função atribuída. | Função atribuída a 1 agente. | Função atribuída a {n} agentes.",
       "PARTIAL_ERROR": "Não foi possível atribuir {count} agente(s). Tente de novo em Configurações › Agentes."
+    },
+    "SEPARATORS": {
+      "DOT": "·",
+      "COMMA": ",",
+      "NONE": "—"
     }
   }
 }

@@ -1,6 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { createStore } from 'vuex';
-import { defineComponent, h } from 'vue';
+import { h } from 'vue';
 import CustomRoleEditor from '../CustomRoleEditor.vue';
 import ProfilePicker from '../component/ProfilePicker.vue';
 
@@ -22,7 +22,8 @@ vi.mock('dashboard/composables', () => ({
 }));
 
 const dialogCalls = { open: 0, close: 0 };
-const DialogStub = defineComponent({
+// Stubs como objetos simples: são dublês do teste, não componentes do arquivo.
+const DialogStub = {
   props: { title: { type: String, default: '' } },
   emits: ['confirm'],
   setup(props, { expose, emit }) {
@@ -43,14 +44,14 @@ const DialogStub = defineComponent({
         }),
       ]);
   },
-});
+};
 const assignOpen = vi.fn();
-const AssignStub = defineComponent({
+const AssignStub = {
   setup(_, { expose }) {
     expose({ open: assignOpen });
     return () => h('div');
   },
-});
+};
 
 const buildStore = (roles = []) => {
   const actions = {
