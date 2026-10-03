@@ -46,7 +46,8 @@ RSpec.describe Autonomia::Guide::ChatJob do
     turno.reload
     expect(turno.status).to eq('done')
     expect(turno.resposta).to eq('Criei a etiqueta vip.')
-    expect(turno.passos).to eq([{ 'frase' => 'Criei a etiqueta vip.', 'ok' => true }])
+    # O resumo da execução leva `acao` e `registro` desde o #859 (o selo "Criada pelo Guia").
+    expect(turno.passos).to eq([{ 'acao' => 'POST labels', 'frase' => 'Criei a etiqueta vip.', 'ok' => true, 'registro' => nil }])
     expect(turno.execucao).to be_present
     expect(turno.diagnostico).to include('rodadas' => 1, 'confianca' => 0.9, 'grounded' => true)
     expect(turno.diagnostico['chamadas'].first).to include('ferramenta' => 'executar_acao', 'omitidos' => ['corpo_json'])
