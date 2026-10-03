@@ -415,6 +415,73 @@ describe('AutonomiaGuideContainer', () => {
     expect(wrapper.text()).toContain('Este funil não existe mais.');
   });
 
+  // Revisão da #861: a ação já foi feita em outra aba. O servidor recusa e
+  // devolve o resultado guardado; o cartão mostra feita, sem botões.
+  it('marks the action as done when the server says it was already done', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          error: 'Isto já foi feito.',
+          acao_estado: 'feita',
+          mensagem: 'Pronto, feito.',
+        },
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages[0]).toMatchObject({
+      acaoEstado: 'feita',
+      acaoResultado: 'Pronto, feito.',
+    });
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeFalsy();
+  });
+
+  // Revisão da #861: a conversa aberta foi apagada (outra aba, o próprio Guia,
+  // a limpeza de 30 dias). A pergunta abre uma conversa nova em vez de falhar.
+  it('starts a new conversation when the open one no longer exists', async () => {
+    const store = useAutonomiaGuideStore();
+    store.definirConversa(12);
+    AutonomiaGuideAPI.chat
+      .mockRejectedValueOnce({ response: { status: 404 } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', conversa_id: 13 },
+      });
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Assim.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'Como crio um funil?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.chat.mock.calls[0][0].conversaId).toBe(12);
+    expect(AutonomiaGuideAPI.chat.mock.calls[1][0].conversaId).toBeNull();
+    expect(store.conversaAtual()).toBe(13);
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  // Sem conversa na tela, um 404 é o Guia fora do ar para a conta: não repete.
+  it('does not retry a 404 when no conversation was open', async () => {
+    AutonomiaGuideAPI.chat.mockRejectedValue({ response: { status: 404 } });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'Como crio um funil?');
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+  });
+
   it('lets the user confirm again after declining', async () => {
     comAcaoProposta();
     AutonomiaGuideAPI.executarAcao.mockReturnValue(new Promise(() => {}));

@@ -58,16 +58,20 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   #
   # #861 — com `pedido_id`, o desfecho fica no turno: reabrir a conversa mostra
   # a ação feita (ou o motivo da falha), e não os botões de novo.
+  #
+  # A proposta guardada volta com os botões em qualquer aba ou aparelho. Uma
+  # ação que o turno já marca como feita não roda de novo (409, com o resultado
+  # guardado), e a trava impede que dois cliques ao mesmo tempo passem.
   def executar_acao
-    resultado = acoes.executar(params[:acao], dados_do_pedido)
-    registrar(resultado)
-    anotar_acao(resultado.ok, resultado.mensagem)
-    return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
+    turno = turno_da_acao
+    return executar_e_anotar if turno.nil?
+    return recusar_acao_feita(turno) if acao_feita?(turno)
 
-    render json: { mensagem: resultado.mensagem }
-  rescue ::Autonomia::Guide::Acoes::Recusada => e
-    anotar_acao(false, e.message)
-    render json: { error: e.message }, status: :unprocessable_entity
+    travou = trava_da_acao.with_lock(chave_da_trava(turno), TEMPO_DA_TRAVA) do
+      acao_feita?(turno.reload) ? recusar_acao_feita(turno) : executar_e_anotar
+      true
+    end
+    render json: { error: I18n.t('autonomia.guide.in_progress') }, status: :conflict unless travou
   end
 
   # #857 — um arquivo que a pessoa anexou na conversa. Sobe aqui e volta como signed_id; quem lê é o
@@ -184,12 +188,42 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
   end
 
-  def anotar_acao(feita, mensagem)
+  # Cobre a requisição inteira (o servidor a mata aos 15s) com folga. Se o
+  # processo cair no meio, a trava expira sozinha.
+  TEMPO_DA_TRAVA = 30.seconds
+
+  def executar_e_anotar
+    resultado = acoes.executar(params[:acao], dados_do_pedido)
+    registrar(resultado)
+    anotar_acao(resultado.ok, resultado.mensagem)
+    return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
+
+    render json: { mensagem: resultado.mensagem }
+  rescue ::Autonomia::Guide::Acoes::Recusada => e
+    anotar_acao(false, e.message)
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  def acao_feita?(turno) = turno.acao_estado == ::Autonomia::Guide::Turno::ACAO_FEITA
+
+  def recusar_acao_feita(turno)
+    render json: { error: I18n.t('autonomia.guide.already_done'), acao_estado: turno.acao_estado,
+                   mensagem: turno.acao_resultado }, status: :conflict
+  end
+
+  def turno_da_acao
     return if params[:pedido_id].blank?
 
-    turno = ::Autonomia::Guide::Turno.de(Current.account, Current.user).find_by(pedido_id: params[:pedido_id].to_s)
-    turno&.update!(acao_estado: feita ? ::Autonomia::Guide::Turno::ACAO_FEITA : ::Autonomia::Guide::Turno::ACAO_FALHOU,
-                   acao_resultado: mensagem.to_s)
+    @turno_da_acao ||= ::Autonomia::Guide::Turno.de(Current.account, Current.user).find_by(pedido_id: params[:pedido_id].to_s)
+  end
+
+  def trava_da_acao = Redis::LockManager.new
+
+  def chave_da_trava(turno) = "autonomia:guide:acao:#{turno.id}"
+
+  def anotar_acao(feita, mensagem)
+    turno_da_acao&.update!(acao_estado: feita ? ::Autonomia::Guide::Turno::ACAO_FEITA : ::Autonomia::Guide::Turno::ACAO_FALHOU,
+                           acao_resultado: mensagem.to_s)
   end
 
   # A conversa só existe para quem a começou. Id de outra pessoa (ou que não

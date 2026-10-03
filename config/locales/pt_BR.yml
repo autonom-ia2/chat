@@ -764,6 +764,8 @@ pt_BR:
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
+      already_done: 'Isto já foi feito. Não vou fazer de novo.'
+      in_progress: 'Isto já está sendo feito. Espere um instante.'
       file:
         required: 'Escolha um arquivo para anexar.'
         invalid_type: 'Eu leio PDF, Word, Excel, CSV, texto, JSON, áudio e imagem.'

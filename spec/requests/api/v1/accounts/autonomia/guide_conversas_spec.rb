@@ -188,5 +188,39 @@ RSpec.describe 'Guia da Plataforma — conversas guardadas', type: :request do
       expect(turno.reload.acao_estado).to eq('feita')
       expect(turno.acao_resultado).to eq('Pronto, feito.')
     end
+
+    # Revisão da #861: a proposta guardada volta com os botões em outra aba ou
+    # aparelho. Confirmar lá de novo não pode disparar a ação uma segunda vez.
+    it 'não executa de novo uma ação que o turno já marca como feita', :aggregate_failures do
+      turno = conversa_de(admin).turnos.first
+      turno.update!(acao_estado: 'feita', acao_resultado: 'Pronto, feito.')
+      acoes = instance_double(Autonomia::Guide::Acoes)
+      allow(Autonomia::Guide::Acoes).to receive(:new).and_return(acoes)
+      allow(acoes).to receive(:executar)
+
+      post "#{base}/acoes/executar", params: { acao: 'POST campaigns', dados: {}, pedido_id: turno.pedido_id },
+                                     headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:conflict)
+      expect(response.parsed_body).to include('acao_estado' => 'feita', 'mensagem' => 'Pronto, feito.')
+      expect(acoes).not_to have_received(:executar)
+    end
+
+    # Dois cliques ao mesmo tempo (duas abas): enquanto um executa, o outro não passa.
+    it 'recusa a confirmação enquanto a mesma ação está sendo feita', :aggregate_failures do
+      turno = conversa_de(admin).turnos.first
+      acoes = instance_double(Autonomia::Guide::Acoes)
+      allow(Autonomia::Guide::Acoes).to receive(:new).and_return(acoes)
+      allow(acoes).to receive(:executar)
+      Redis::LockManager.new.lock("autonomia:guide:acao:#{turno.id}", 30)
+
+      post "#{base}/acoes/executar", params: { acao: 'POST campaigns', dados: {}, pedido_id: turno.pedido_id },
+                                     headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:conflict)
+      expect(acoes).not_to have_received(:executar)
+    ensure
+      Redis::LockManager.new.unlock("autonomia:guide:acao:#{turno.id}")
+    end
   end
 end

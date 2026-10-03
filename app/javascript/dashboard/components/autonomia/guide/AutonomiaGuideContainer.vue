@@ -280,8 +280,21 @@ const confirmarAcao = async item => {
       avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
     });
   } catch (error) {
+    // #861 — já foi feita em outra aba ou aparelho: o servidor não repete e
+    // devolve o resultado guardado. O cartão mostra feita, sem botões.
+    const corpo = error?.response?.data;
+    if (corpo?.acao_estado === 'feita') {
+      entregarDesfecho({
+        conta,
+        id: item.id,
+        estado: 'feita',
+        resultado: corpo.mensagem,
+        avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
+      });
+      return;
+    }
     const texto =
-      motivoUtilizavel(error?.response?.data?.error) ||
+      motivoUtilizavel(corpo?.error) ||
       t('AUTONOMIA_GUIDE.ACTION.FAILED_GENERIC');
     entregarDesfecho({
       conta,
@@ -403,16 +416,39 @@ const esperarResposta = async (pedidoId, conta, vez) => {
 const anexosDe = registro =>
   (registro?.anexos || []).map(({ nome, tipo }) => ({ nome, tipo }));
 
+// #861 — a conversa da tela pode não existir mais no servidor: apagada em
+// outra aba, pelo próprio Guia ou pela limpeza de 30 dias. O 404 dela não pode
+// virar "não consegui" para sempre: a pergunta abre uma conversa nova, levando
+// o que está na tela como histórico. Sem conversa aberta, o 404 é o Guia fora
+// do ar para a conta, e não se repete.
+const abrirPedidoNoServidor = async (requestAccount, requestId, payload) => {
+  try {
+    return await AutonomiaGuideAPI.chat(payload);
+  } catch (error) {
+    const conversaSumiu =
+      error?.response?.status === 404 && Boolean(payload.conversaId);
+    if (!conversaSumiu || !aindaInteressa(requestAccount, requestId)) {
+      throw error;
+    }
+    store.definirConversa(null);
+    return AutonomiaGuideAPI.chat({ ...payload, conversaId: null });
+  }
+};
+
 const requestReply = async (requestAccount, message, requestId, registro) => {
   try {
-    const { data: pedido } = await AutonomiaGuideAPI.chat({
-      message,
-      history: store.toHistory(),
-      routeContext: route.name,
-      arquivos: store.arquivosProntos(),
-      conversaId: store.conversaAtual(),
-      anexos: anexosDe(registro),
-    });
+    const { data: pedido } = await abrirPedidoNoServidor(
+      requestAccount,
+      requestId,
+      {
+        message,
+        history: store.toHistory(),
+        routeContext: route.name,
+        arquivos: store.arquivosProntos(),
+        conversaId: store.conversaAtual(),
+        anexos: anexosDe(registro),
+      }
+    );
     if (!aindaInteressa(requestAccount, requestId)) return;
     // A primeira pergunta abre a conversa no servidor; as seguintes a continuam.
     if (pedido.conversa_id) store.definirConversa(pedido.conversa_id);
