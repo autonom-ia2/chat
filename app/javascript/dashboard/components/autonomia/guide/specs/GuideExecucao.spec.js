@@ -88,7 +88,7 @@ describe('GuideExecucao', () => {
     });
 
     expect(wrapper.text()).toContain(
-      'AUTONOMIA_GUIDE.DONE.CONFLICTS:{"total":1}'
+      'AUTONOMIA_GUIDE.DONE.CONFLICTS:{"count":1}'
     );
   });
 

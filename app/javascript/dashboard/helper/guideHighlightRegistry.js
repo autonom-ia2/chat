@@ -10,9 +10,9 @@
 export const GUIDE_HIGHLIGHT_REGISTRY = {
   // CRM Kanban
   'crm-new-pipeline': { text: 'Novo funil' },
-  'crm-new-card': { text: 'Novo card' },
+  'crm-new-card': { text: 'Nova oportunidade' },
   'crm-filters': { text: 'Filtros' },
-  'crm-configure-inboxes': { text: 'Configurar inboxes' },
+  'crm-configure-inboxes': { text: 'Configurar caixas de entrada' },
   // CRM outras telas
   'crm-new-sla': { text: 'Nova política' },
   'crm-new-token': { text: 'Criar token' },

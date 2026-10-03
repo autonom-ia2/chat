@@ -114,9 +114,9 @@ describe('CrmSendModal', () => {
       { value: 3, label: 'Vendas' },
       { value: 4, label: 'Parcerias' },
     ]);
-    expect(choice(wrapper, 'Estágio').props('modelValue')).toBe(41);
+    expect(choice(wrapper, 'Etapa').props('modelValue')).toBe(41);
     expect(wrapper.text()).toContain(
-      'Enviando 3 lead(s) para o funil Parcerias, estágio Triagem.'
+      'Enviando 3 leads para o funil Parcerias, etapa Triagem.'
     );
     expect(sendButton(wrapper).element.disabled).toBe(false);
   });
@@ -125,10 +125,10 @@ describe('CrmSendModal', () => {
     const wrapper = await mountModal();
 
     expect(choice(wrapper, 'Funil').props('modelValue')).toBe('');
-    expect(choice(wrapper, 'Estágio').props('options')).toEqual([]);
-    expect(wrapper.text()).not.toContain('Enviando 2 lead(s)');
+    expect(choice(wrapper, 'Etapa').props('options')).toEqual([]);
+    expect(wrapper.text()).not.toContain('Enviando 2 leads');
     expect(wrapper.text()).toContain(
-      'Escolha o funil e o estágio para onde os leads vão.'
+      'Escolha o funil e a etapa para onde os leads vão.'
     );
     expect(sendButton(wrapper).element.disabled).toBe(true);
   });
@@ -137,9 +137,9 @@ describe('CrmSendModal', () => {
     const wrapper = await mountModal({ pipelines: [PIPELINES[0]] });
 
     expect(choice(wrapper, 'Funil').props('modelValue')).toBe(3);
-    expect(choice(wrapper, 'Estágio').props('modelValue')).toBe(31);
+    expect(choice(wrapper, 'Etapa').props('modelValue')).toBe(31);
     expect(wrapper.text()).toContain(
-      'Enviando 2 lead(s) para o funil Vendas, estágio Novo.'
+      'Enviando 2 leads para o funil Vendas, etapa Novo.'
     );
   });
 
@@ -159,15 +159,15 @@ describe('CrmSendModal', () => {
     await choose(wrapper, 'Funil', 3);
 
     expect(CrmKanbanAPI.getStages).toHaveBeenCalledWith(3);
-    expect(choice(wrapper, 'Estágio').props('options')).toEqual([
+    expect(choice(wrapper, 'Etapa').props('options')).toEqual([
       { value: 31, label: 'Novo' },
       { value: 32, label: 'Contato' },
     ]);
-    expect(choice(wrapper, 'Estágio').props('modelValue')).toBe(31);
+    expect(choice(wrapper, 'Etapa').props('modelValue')).toBe(31);
 
-    await choose(wrapper, 'Estágio', 32);
+    await choose(wrapper, 'Etapa', 32);
     expect(wrapper.text()).toContain(
-      'Enviando 2 lead(s) para o funil Vendas, estágio Contato.'
+      'Enviando 2 leads para o funil Vendas, etapa Contato.'
     );
   });
 

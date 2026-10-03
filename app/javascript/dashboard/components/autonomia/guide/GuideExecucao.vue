@@ -107,7 +107,7 @@ const desfazer = async () => {
         {{ $t('AUTONOMIA_GUIDE.DONE.UNDONE') }}
       </p>
       <p v-if="conflitos.length" class="mb-0 text-sm text-n-amber-11">
-        {{ $t('AUTONOMIA_GUIDE.DONE.CONFLICTS', { total: conflitos.length }) }}
+        {{ $t('AUTONOMIA_GUIDE.DONE.CONFLICTS', { count: conflitos.length }) }}
       </p>
     </template>
     <p v-if="erro" class="mb-0 text-sm text-n-ruby-11">{{ erro }}</p>

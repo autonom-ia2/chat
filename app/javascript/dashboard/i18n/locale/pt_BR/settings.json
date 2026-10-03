@@ -173,7 +173,7 @@
           "SLA_MISSED_FIRST_RESPONSE": "Uma conversa perde o SLA de primeira resposta",
           "SLA_MISSED_NEXT_RESPONSE": "Uma conversa perde o SLA da próxima resposta",
           "SLA_MISSED_RESOLUTION": "Uma conversa perde o SLA de resolução",
-          "CRM_FOLLOWUP_REMINDER": "Um lembrete de follow-up do CRM está vencido",
+          "CRM_FOLLOWUP_REMINDER": "Um lembrete de retorno do CRM está vencido",
           "CONVERSATION_HANDOFF_REQUEST": "Um cliente precisa de atendimento humano e a IA chama você"
         },
         "BROWSER_PERMISSION": "Ative notificações push em seu navegador para poder recebê-las"
@@ -341,7 +341,7 @@
     "FINANCIAL": "Financeiro",
     "FINANCIAL_SUBSCRIPTION": "Assinatura",
     "FINANCIAL_INVOICES": "Faturas",
-    "AGENTS_AUTONOMIA": "Agentes",
+    "AGENTS_AUTONOMIA": "Agentes de IA",
     "AGENTS_HUB": "Meus agentes",
     "AGENTS_BUILDER": "Construtor de agentes",
     "PROSPECTING": "Prospecção",
@@ -872,7 +872,7 @@
       "GO_TO_SETTINGS": "Ir para Configurações",
       "SWITCH_TO_PRIVATE_NOTE": "Mudar para Nota Privada",
       "SWITCH_TO_REPLY": "Mudar para resposta",
-      "TOGGLE_SNOOZE_DROPDOWN": "Ativar/desativar soneca"
+      "TOGGLE_SNOOZE_DROPDOWN": "Abrir ou fechar o menu de adiar"
     }
   },
   "ASSIGNMENT_POLICY": {
@@ -900,12 +900,12 @@
         ]
       },
       "CRM_HANDOFF": {
-        "TITLE": "Handoff da IA (CRM)",
-        "DESCRIPTION": "Defina como a IA passa conversas do funil para humanos.",
+        "TITLE": "Transferir para humano (CRM)",
+        "DESCRIPTION": "Defina como a IA transfere conversas do funil para humanos.",
         "FEATURES": [
           "Transferência direta ou por convite, por funil e por etapa",
-          "Destino: caixa inteira em rodízio ou pessoa específica",
-          "Se ninguém pegar: re-notificar ou escalar para um supervisor"
+          "Destino: caixa de entrada inteira em rodízio ou pessoa específica",
+          "Se ninguém assumir: avisar de novo ou escalar para um supervisor"
         ]
       }
     },
