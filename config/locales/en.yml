@@ -474,6 +474,7 @@ en:
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'
+      needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'
         expired: 'The 5 days to undo this have passed.'
