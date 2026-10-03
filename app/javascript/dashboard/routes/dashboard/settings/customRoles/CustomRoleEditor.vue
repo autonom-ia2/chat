@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
@@ -61,11 +61,26 @@ const load = role => {
 const isFeatureEnabledOnAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
+const getAccount = useMapGetter('accounts/getAccount');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 
+// On a fresh page load the account arrives after the editor mounts; until then its
+// features read as off. Decide only once the account is there, or a direct link to
+// the editor would always bounce to the list.
+const isBehindAPaywall = computed(
+  () =>
+    !!getAccount.value(currentAccountId.value)?.id &&
+    !isFeatureEnabledOnAccount.value(currentAccountId.value, 'custom_roles')
+);
+watch(
+  isBehindAPaywall,
+  behind => {
+    if (behind) router.replace({ name: 'custom_roles_list' });
+  },
+  { immediate: true }
+);
+
 onMounted(async () => {
-  if (!isFeatureEnabledOnAccount.value(currentAccountId.value, 'custom_roles'))
-    return router.replace({ name: 'custom_roles_list' });
   if (!roles.value.length) await store.dispatch('customRole/getCustomRole');
   store.dispatch('agents/get');
   if (roleId.value) {
