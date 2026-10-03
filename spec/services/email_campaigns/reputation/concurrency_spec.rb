@@ -45,11 +45,15 @@ RSpec.describe EmailCampaigns::Reputation::Evaluator do # rubocop:disable RSpec/
 
   it 'collects 50k sends without blocking an unrelated JSON update or admission before publication' do
     connection = ActiveRecord::Base.connection
-    # The gate measures aggregation/locking at 50k, not fixture insertion speed. Slow CI
-    # runners can exceed the app's ordinary 14s statement timeout while validating 50k FKs,
-    # so only the synthetic seed transaction gets a wider local timeout.
+    # The gate measures aggregation/locking at 50k, not fixture insertion speed. Validating
+    # 50k foreign keys row by row made the seed depend on runner speed: it first exceeded the
+    # 14s timeout, then the widened 60s one (issue #904). The parents are created right here, so
+    # the per-row FK check protects nothing: the seed transaction skips it (replica role turns
+    # off the FK triggers, LOCAL to this transaction only). The queries under test run after
+    # the commit, with the normal role and the normal timeout.
     connection.transaction do
       connection.execute("SET LOCAL statement_timeout = '60s'")
+      connection.execute("SET LOCAL session_replication_role = 'replica'")
       connection.execute(<<~SQL.squish)
         INSERT INTO email_campaign_recipients (email_campaign_id, email, status, sent_at, created_at, updated_at)
         SELECT #{campaign.id}, 'synthetic-' || n || '@example.com', 1, NOW(), NOW(), NOW()

@@ -588,7 +588,9 @@ RSpec.describe Waha::ExistingInboxUpdater do
       it 'blocks Status while preserving Apps, delivery/read sync and every other session setting' do
         initial_config = remote_session['config'].deep_dup
         initial_apps = remote_apps.deep_dup
-        initial_local = [inbox.attributes, channel.attributes]
+        # Snapshot lido do banco: o objeto recem-criado guarda updated_at em nanossegundos
+        # (Linux), o Postgres guarda microssegundos, e a comparacao falhava sem mudanca real.
+        initial_local = [inbox.reload.attributes, channel.reload.attributes]
 
         result = service.perform(apply: true)
 

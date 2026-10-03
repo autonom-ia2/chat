@@ -61,13 +61,20 @@ module Middleware
       header = env['HTTP_ACCEPT_ENCODING'].to_s
       encodings = header.split(',').filter_map do |part|
         encoding, *params = part.strip.split(';')
-        q_value = params.find { |param| param.strip.start_with?('q=') }
-        next if q_value&.split('=', 2)&.last.to_f.zero?
+        next if refused?(params)
 
         encoding
       end
 
       ENCODINGS.select { |encoding, _extension| encodings.include?(encoding) }
+    end
+
+    # Sem parametro q a codificacao vale q=1 (RFC 9110); so q=0 recusa.
+    def refused?(params)
+      q_param = params.find { |param| param.strip.start_with?('q=') }
+      return false unless q_param
+
+      q_param.split('=', 2).last.to_f.zero?
     end
 
     def compressed_response(compressed_path, original_path, encoding, request_method)

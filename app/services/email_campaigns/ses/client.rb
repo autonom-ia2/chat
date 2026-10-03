@@ -2,9 +2,6 @@ require 'net/http'
 
 module EmailCampaigns
   module Ses
-    # Shared SES error. Callers (provisioner, jobs, controller) rescue EmailCampaigns::Ses::Error.
-    class Error < StandardError; end
-
     # Low-level, gem-free SESv2 HTTPS client. Signs requests with Aws::Sigv4::Signer
     # (service: ses) and dispatches via Net::HTTP. No aws-sdk-ses dependency.
     class Client

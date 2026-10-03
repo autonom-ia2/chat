@@ -17,7 +17,13 @@ RSpec.describe Relationships::CompanyPreviewJob, :relationships_committed_fixtur
     account.messages.destroy_all
     account.conversations.destroy_all
     account.contacts.destroy_all
+    # Account#destroy apaga inboxes via destroy_async, e o job nunca roda aqui:
+    # sem isto a inbox (canal, contact_inboxes, working_hours) ficava commitada.
+    account.inboxes.destroy_all
     account.reload.destroy!
+    # Auditoria e append-only e sobrevive ao destroy; sem transacao ela vazava
+    # para specs seguintes que contam Audited::Audit (ex.: enterprise/models/inbox_spec).
+    Audited::Audit.where(associated: account).or(Audited::Audit.where(auditable: account)).delete_all
   end
 
   it 'keeps 25 blobs pending through four busy-slot attempts and converts after capacity returns' do
