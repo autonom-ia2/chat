@@ -368,6 +368,11 @@ Rails.application.routes.draw do
             post 'guide/arquivos', to: 'guide#arquivo'
             post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
+            # #861 — a conversa com o Guia guardada: reabrir, listar e apagar.
+            get 'guide/conversas', to: 'guide_conversas#index'
+            get 'guide/conversas/atual', to: 'guide_conversas#atual'
+            get 'guide/conversas/:id', to: 'guide_conversas#show'
+            delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect

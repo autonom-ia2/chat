@@ -183,12 +183,12 @@ module BateriaDoGuia
   end
 
   # O que o exemplo custou e fez, lido antes do rollback. `idas` conta só as chamadas do Guia
-  # (`agente_resposta`, answerer.rb); `passos` são as escritas tentadas, `passos_ok` as que valeram.
+  # (`guia`, Chat::FEATURE, #861); `passos` são as escritas tentadas, `passos_ok` as que valeram.
   def linha_do_placar(example, conta, resposta)
     eventos = Crm::AiUsageEvent.where(account: conta)
     passos = Autonomia::Guide::Execucao.where(account: conta).flat_map(&:passos)
     Linha.new(id: id_do_cenario(example), situacao: example.exception ? 'FALHOU' : 'passou',
-              custo: eventos.sum(:cost_estimate).to_f, idas: eventos.where(feature: 'agente_resposta').count,
+              custo: eventos.sum(:cost_estimate).to_f, idas: eventos.where(feature: Autonomia::Guide::Chat::FEATURE).count,
               passos_ok: passos.count { |passo| passo['ok'] }, passos: passos.size,
               resposta: resposta.to_s.squish.truncate(TRECHO_DA_RESPOSTA))
   end

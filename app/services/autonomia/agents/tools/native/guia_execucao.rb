@@ -20,6 +20,11 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
       'executar_acao'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[acao descricao]
+    end
+
     def description
       'Faz uma mudança na conta AGORA (criar, alterar, apagar), com a permissão de quem pediu. Tudo o que ' \
         'você fizer pode ser desfeito pela pessoa por 5 dias. Chame uma vez por passo, na ordem: o retorno ' \

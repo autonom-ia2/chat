@@ -34,8 +34,12 @@ module Autonomia
       # tem que cair para 1 — senão o Guia volta a morrer em pergunta aberta.
       MAX_RODADAS = 10
 
+      # A etiqueta do custo do Guia na Gestão IA (#861), no grupo "Guia da Plataforma".
+      FEATURE = 'guia'.freeze
+
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
-      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [])
+      # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
+      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [], registro: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
@@ -43,6 +47,7 @@ module Autonomia
         @history = Array(history)
         @route_context = route_context.to_s
         @arquivos = Array(arquivos)
+        @registro = registro
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -79,7 +84,9 @@ module Autonomia
           operador: contexto,
           # Ler, olhar o que voltou e ler de novo, até dez vezes — e sempre
           # dentro do orçamento de tempo do cliente.
-          max_rodadas: MAX_RODADAS
+          max_rodadas: MAX_RODADAS,
+          # O custo do Guia separado do atendimento na Gestão IA (#861).
+          feature: FEATURE
         ).answer
 
         # A proposta nasce DENTRO da ferramenta, durante a redação — por isso é
@@ -100,6 +107,7 @@ module Autonomia
         # O que o Guia FEZ neste turno (#855) vai para a tela mesmo quando o texto
         # foi retido: a mudança já aconteceu, e a pessoa precisa ver e poder desfazer.
         execucao = contexto.execucao&.resumo
+        registrar_decisoes(result, diagnostics, text)
         return retido(execucao) if text.blank?
 
         navs = navegacoes(result)
@@ -197,7 +205,20 @@ module Autonomia
 
       def contexto
         @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user,
-                                                       account_user: @account_user)
+                                                       account_user: @account_user, registro: @registro)
+      end
+
+      # O que o Guia decidiu, para o registro do pedido (#861). Quando o portão reteve, guarda o texto
+      # que o modelo escreveu: é o que se perdia, e é por ele que se entende uma resposta que não veio.
+      def registrar_decisoes(result, diagnostics, text)
+        return if @registro.nil?
+
+        @registro.decidir(
+          fluxos: Array(result.used_knowledge), check: diagnostics&.dig(:check), confianca: result.confidence,
+          grounded: result.answered_from_knowledge == true, escalate: result.handoff.to_h[:should] == true,
+          retido: text.blank?, resposta_retida: result.raw_reply, telas: contexto.telas, artigos: contexto.artigos,
+          execution_id: contexto.execucao&.id
+        )
       end
 
       def sanitized_history

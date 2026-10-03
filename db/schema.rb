@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_03_180000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -596,6 +596,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
     t.index ["execution_id"], name: "index_autonomia_guide_changes_on_execution_id"
   end
 
+  create_table "autonomia_guide_conversations", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.string "titulo", limit: 120, default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "updated_at"], name: "idx_autonomia_guide_conversations_dono"
+    t.index ["user_id"], name: "index_autonomia_guide_conversations_on_user_id"
+  end
+
   create_table "autonomia_guide_executions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -612,6 +622,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
     t.index ["desfeita_por_id"], name: "index_autonomia_guide_executions_on_desfeita_por_id"
     t.index ["expira_em"], name: "index_autonomia_guide_executions_on_expira_em"
     t.index ["user_id"], name: "index_autonomia_guide_executions_on_user_id"
+  end
+
+  create_table "autonomia_guide_turns", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.uuid "pedido_id", null: false
+    t.text "pergunta", default: "", null: false
+    t.jsonb "anexos", default: [], null: false
+    t.string "tela"
+    t.string "status", default: "pending", null: false
+    t.text "resposta"
+    t.jsonb "navegacoes", default: [], null: false
+    t.jsonb "artigos", default: [], null: false
+    t.jsonb "acao"
+    t.string "acao_estado"
+    t.string "acao_resultado"
+    t.bigint "execution_id"
+    t.jsonb "passos", default: [], null: false
+    t.jsonb "diagnostico", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_autonomia_guide_turns_on_account_id_and_created_at"
+    t.index ["conversation_id", "created_at"], name: "index_autonomia_guide_turns_on_conversation_id_and_created_at"
+    t.index ["execution_id"], name: "index_autonomia_guide_turns_on_execution_id"
+    t.index ["pedido_id"], name: "index_autonomia_guide_turns_on_pedido_id", unique: true
   end
 
   create_table "autonomia_insurance_connections", force: :cascade do |t|
@@ -3184,9 +3220,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_guide_changes", "autonomia_guide_executions", column: "execution_id", on_delete: :cascade
+  add_foreign_key "autonomia_guide_conversations", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_conversations", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "users", column: "desfeita_por_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_executions", "users", on_delete: :cascade
+  add_foreign_key "autonomia_guide_turns", "autonomia_guide_conversations", column: "conversation_id", on_delete: :cascade
+  add_foreign_key "autonomia_guide_turns", "autonomia_guide_executions", column: "execution_id", on_delete: :nullify
   add_foreign_key "autonomia_insurance_connections", "accounts"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify

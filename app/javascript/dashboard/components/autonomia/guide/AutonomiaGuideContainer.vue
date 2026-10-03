@@ -21,7 +21,7 @@ import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
-import GuideFeitos from './GuideFeitos.vue';
+import GuideHistorico from './GuideHistorico.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
@@ -64,8 +64,18 @@ const vagas = computed(
 // Há gravação de voz no campo: nenhuma outra mensagem sai até ela ser enviada
 // ou apagada — senão o áudio se perderia sem a pessoa pedir.
 const gravandoVoz = ref(false);
-// #855 — a lista "Feito pelo Guia" ocupa o lugar da conversa enquanto aberta.
-const vendoFeitos = ref(false);
+// #861 — o histórico (conversas anteriores e "Feito pelo Guia", #855) ocupa o
+// lugar da conversa enquanto aberto.
+const vendoHistorico = ref(false);
+// #861 — reabrindo a conversa guardada. O esqueleto só aparece se demorar:
+// abrir rápido não pisca uma tela de carregamento à toa.
+const abrindoConversa = ref(false);
+const mostrarEsqueleto = ref(false);
+const falhouAoAbrir = ref(false);
+const ESPERA_DO_ESQUELETO_MS = 300;
+// A conta cuja conversa atual já foi pedida: abrir e fechar o painel não pede
+// de novo, trocar de conta pede.
+let contaCarregada = null;
 const chatContainer = ref(null);
 const panelRef = ref(null);
 
@@ -163,7 +173,10 @@ const closePanel = () => {
   });
 };
 
+// A confirmação de apagar uma conversa (#861) abre fora do painel; clicar
+// nela não é clicar fora do Guia.
 const handleClickOutside = () => {
+  if (document.querySelector('dialog[open]')) return;
   if (isSmallScreen.value && isPanelOpen.value) closePanel();
 };
 
@@ -256,6 +269,7 @@ const confirmarAcao = async item => {
     const { data } = await AutonomiaGuideAPI.executarAcao({
       acao: item.acao.nome,
       dados: item.acao.dados,
+      pedidoId: item.pedidoId,
     });
     avisarContaMudou();
     entregarDesfecho({
@@ -266,8 +280,21 @@ const confirmarAcao = async item => {
       avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
     });
   } catch (error) {
+    // #861 — já foi feita em outra aba ou aparelho: o servidor não repete e
+    // devolve o resultado guardado. O cartão mostra feita, sem botões.
+    const corpo = error?.response?.data;
+    if (corpo?.acao_estado === 'feita') {
+      entregarDesfecho({
+        conta,
+        id: item.id,
+        estado: 'feita',
+        resultado: corpo.mensagem,
+        avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
+      });
+      return;
+    }
     const texto =
-      motivoUtilizavel(error?.response?.data?.error) ||
+      motivoUtilizavel(corpo?.error) ||
       t('AUTONOMIA_GUIDE.ACTION.FAILED_GENERIC');
     entregarDesfecho({
       conta,
@@ -344,72 +371,188 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
 const avisarFalha = () =>
   store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
 
-const requestReply = async (requestAccount, message, requestId) => {
-  try {
-    const { data: pedido } = await AutonomiaGuideAPI.chat({
-      message,
-      history: store.toHistory(),
-      routeContext: route.name,
-      arquivos: store.arquivosProntos(),
+// A resposta ainda interessa: o painel está na tela, na mesma conta e na
+// mesma vez de pergunta.
+const aindaInteressa = (conta, vez) =>
+  !desmontado && vez === requestSequence && accountId.value === conta;
+
+const entregarResposta = (data, pedidoId) => {
+  if (data.status !== PRONTO) {
+    avisarFalha();
+  } else if (data.available && data.text) {
+    store.addAssistantMessage({
+      content: data.text,
+      navigation: data.navigation || null,
+      navigations: data.navigations || null,
+      acao: data.acao || null,
+      artigo: data.artigo || null,
+      artigos: data.artigos || null,
+      execucao: data.execucao || null,
+      pedidoId,
     });
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
-    const data = await buscarResposta(pedido.id, requestAccount, requestId);
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      !data ||
-      accountId.value !== requestAccount
-    )
-      return;
-    if (data.status !== PRONTO) {
-      avisarFalha();
-    } else if (data.available && data.text) {
-      store.addAssistantMessage({
-        content: data.text,
-        navigation: data.navigation || null,
-        navigations: data.navigations || null,
-        acao: data.acao || null,
-        artigo: data.artigo || null,
-        artigos: data.artigos || null,
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-    } else if (data.retido) {
-      // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
-      // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
-      // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
-      // assim (#855): mudou a conta.
-      store.addAssistantMessage({
-        content: t('AUTONOMIA_GUIDE.WITHHELD'),
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-    } else {
-      useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else if (data.retido) {
+    // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
+    // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
+    // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
+    // assim (#855): mudou a conta.
+    store.addAssistantMessage({
+      content: t('AUTONOMIA_GUIDE.WITHHELD'),
+      execucao: data.execucao || null,
+    });
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else {
+    useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
+  }
+};
+
+const esperarResposta = async (pedidoId, conta, vez) => {
+  const data = await buscarResposta(pedidoId, conta, vez);
+  if (!data || !aindaInteressa(conta, vez)) return;
+  entregarResposta(data, pedidoId);
+};
+
+// #861 — o que o balão mostrou de anexo, para a conversa reabrir igual.
+const anexosDe = registro =>
+  (registro?.anexos || []).map(({ nome, tipo }) => ({ nome, tipo }));
+
+// #861 — a conversa da tela pode não existir mais no servidor: apagada em
+// outra aba ou pelo próprio Guia. O 404 dela não pode
+// virar "não consegui" para sempre: a pergunta abre uma conversa nova, levando
+// o que está na tela como histórico. Sem conversa aberta, o 404 é o Guia fora
+// do ar para a conta, e não se repete.
+const abrirPedidoNoServidor = async (requestAccount, requestId, payload) => {
+  try {
+    return await AutonomiaGuideAPI.chat(payload);
+  } catch (error) {
+    const conversaSumiu =
+      error?.response?.status === 404 && Boolean(payload.conversaId);
+    if (!conversaSumiu || !aindaInteressa(requestAccount, requestId)) {
+      throw error;
     }
+    store.definirConversa(null);
+    return AutonomiaGuideAPI.chat({ ...payload, conversaId: null });
+  }
+};
+
+const requestReply = async (requestAccount, message, requestId, registro) => {
+  try {
+    const { data: pedido } = await abrirPedidoNoServidor(
+      requestAccount,
+      requestId,
+      {
+        message,
+        history: store.toHistory(),
+        routeContext: route.name,
+        arquivos: store.arquivosProntos(),
+        conversaId: store.conversaAtual(),
+        anexos: anexosDe(registro),
+      }
+    );
+    if (!aindaInteressa(requestAccount, requestId)) return;
+    // A primeira pergunta abre a conversa no servidor; as seguintes a continuam.
+    if (pedido.conversa_id) store.definirConversa(pedido.conversa_id);
+    await esperarResposta(pedido.id, requestAccount, requestId);
   } catch {
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
+    if (!aindaInteressa(requestAccount, requestId)) return;
     avisarFalha();
   } finally {
     if (requestId === requestSequence) isSending.value = false;
   }
 };
 
+// #861 — a conversa reaberta tinha uma pergunta ainda sem resposta: o pedido
+// segue valendo no servidor (30 minutos), e a tela volta a buscar.
+const retomarPendente = async (pedidoId, conta) => {
+  requestSequence += 1;
+  const vez = requestSequence;
+  isSending.value = true;
+  try {
+    await esperarResposta(pedidoId, conta, vez);
+  } catch {
+    if (aindaInteressa(conta, vez)) avisarFalha();
+  } finally {
+    if (vez === requestSequence) isSending.value = false;
+  }
+};
+
+const avisosDoTurno = () => ({
+  retido: t('AUTONOMIA_GUIDE.WITHHELD'),
+  falhou: t('AUTONOMIA_GUIDE.ERROR'),
+});
+
+// #861 — põe uma conversa guardada na tela. `carregar` é a chamada à API (a
+// atual ou uma da lista). Falhou: `aoFalhar` decide o que a pessoa vê, e a
+// conversa que estava na tela continua lá.
+const abrirConversa = async (carregar, aoFalhar) => {
+  const conta = accountId.value;
+  requestSequence += 1;
+  const vez = requestSequence;
+  isSending.value = false;
+  transcrevendo.value = false;
+  abrindoConversa.value = true;
+  falhouAoAbrir.value = false;
+  const esqueleto = setTimeout(() => {
+    if (vez === requestSequence) mostrarEsqueleto.value = true;
+  }, ESPERA_DO_ESQUELETO_MS);
+  try {
+    const { data } = await carregar();
+    if (!aindaInteressa(conta, vez)) return;
+    contaCarregada = conta;
+    // Nenhuma conversa guardada: fica a tela de começo, com o que já estiver
+    // no campo de digitar.
+    if (!data?.id) return;
+    const pendente = store.hidratar(data, avisosDoTurno());
+    if (pendente) retomarPendente(pendente, conta);
+  } catch {
+    if (aindaInteressa(conta, vez)) aoFalhar();
+  } finally {
+    clearTimeout(esqueleto);
+    if (accountId.value === conta) {
+      abrindoConversa.value = false;
+      mostrarEsqueleto.value = false;
+    }
+  }
+};
+
+// Ao abrir o painel, a conversa de antes volta. Quem já está conversando (o
+// painel foi só fechado e reaberto) não perde nada.
+const reabrirConversaAtual = () => {
+  if (contaCarregada === accountId.value) return;
+  if (hasMessages.value) {
+    contaCarregada = accountId.value;
+    return;
+  }
+  abrirConversa(
+    () => AutonomiaGuideAPI.conversaAtual(),
+    () => {
+      falhouAoAbrir.value = true;
+    }
+  );
+};
+
+const abrirDoHistorico = id => {
+  vendoHistorico.value = false;
+  abrirConversa(
+    () => AutonomiaGuideAPI.conversa(id),
+    () => useAlert(t('AUTONOMIA_GUIDE.HISTORY.OPEN_FAILED'))
+  );
+};
+
+// "Nova conversa" só esquece a conversa na tela: a anterior continua guardada
+// e aparece no histórico.
 const resetConversation = () => {
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
+  falhouAoAbrir.value = false;
+  contaCarregada = accountId.value;
   store.reset();
+};
+
+// Apagou a conversa que estava aberta: o painel começa outra.
+const conversaApagada = id => {
+  if (id === store.conversaAtual()) resetConversation();
 };
 
 // #857 — sobe o arquivo e o deixa na conversa. O erro aparece no próprio
@@ -447,7 +590,9 @@ const anexarArquivo = async file => {
 // trocar de conta antes da resposta, ela não cai na conversa da outra conta.
 const abrirPedido = () => {
   requestSequence += 1;
-  vendoFeitos.value = false;
+  vendoHistorico.value = false;
+  // Perguntar depois de a conversa antiga não abrir começa uma nova.
+  falhouAoAbrir.value = false;
   isSending.value = true;
   return { conta: accountId.value, pedido: requestSequence };
 };
@@ -482,8 +627,10 @@ const sendMessage = message => {
     ? message
     : t('AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE');
   const { conta, pedido } = abrirPedido();
-  store.addUserMessage(conteudo, { texto: temTexto ? message : '' });
-  requestReply(conta, conteudo, pedido);
+  const registro = store.addUserMessage(conteudo, {
+    texto: temTexto ? message : '',
+  });
+  requestReply(conta, conteudo, pedido, registro);
   return true;
 };
 
@@ -511,7 +658,7 @@ const transcreverMensagem = async (registro, conta, pedido) => {
     return;
   }
   if (!store.marcarVoz(registro.id, 'pronta', { texto })) return;
-  requestReply(conta, texto, pedido);
+  requestReply(conta, texto, pedido, registro);
 };
 
 const enviarVoz = ({ audio, duracao }) => {
@@ -566,14 +713,29 @@ watch(showPanel, async aberto => {
   panelRef.value?.focus();
 });
 
+// #861 — abrir o painel reabre a conversa guardada. Aqui embaixo, e não junto
+// do `watch` da Central: precisa de tudo o que a conversa usa já definido.
+watch(
+  showPanel,
+  aberto => {
+    if (aberto) reabrirConversaAtual();
+  },
+  { immediate: true }
+);
+
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
 watch(accountId, () => {
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
-  vendoFeitos.value = false;
+  vendoHistorico.value = false;
+  falhouAoAbrir.value = false;
+  abrindoConversa.value = false;
+  mostrarEsqueleto.value = false;
+  contaCarregada = null;
   store.reset();
+  if (showPanel.value) reabrirConversaAtual();
 });
 </script>
 
@@ -590,23 +752,27 @@ watch(accountId, () => {
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
         :title="
-          vendoFeitos
-            ? $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+          vendoHistorico
+            ? $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
             : $t('AUTONOMIA_GUIDE.TITLE')
         "
-        :can-reset="hasMessages && !vendoFeitos"
-        :vendo-feitos="vendoFeitos"
+        :can-reset="hasMessages && !vendoHistorico"
+        :vendo-historico="vendoHistorico"
         @reset="resetConversation"
-        @feitos="vendoFeitos = !vendoFeitos"
+        @historico="vendoHistorico = !vendoHistorico"
         @close="closePanel"
       />
 
-      <div v-if="vendoFeitos" class="flex-1 flex px-4 py-4 overflow-y-auto">
-        <GuideFeitos />
+      <div v-if="vendoHistorico" class="flex-1 flex px-4 py-4 overflow-y-auto">
+        <GuideHistorico
+          :conversa-atual="store.conversaAtual()"
+          @abrir="abrirDoHistorico"
+          @apagou="conversaApagada"
+        />
       </div>
 
       <div
-        v-show="!vendoFeitos"
+        v-show="!vendoHistorico"
         ref="chatContainer"
         role="log"
         aria-live="polite"
@@ -614,7 +780,42 @@ watch(accountId, () => {
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.LOG')"
         class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
       >
-        <div v-if="hasMessages" class="space-y-6 flex-1 flex flex-col w-full">
+        <!-- #861 — reabrindo a conversa guardada: dois balões de esqueleto. -->
+        <div
+          v-if="mostrarEsqueleto"
+          data-esqueleto
+          class="flex-1 flex flex-col gap-6 w-full"
+          role="status"
+        >
+          <span class="sr-only">{{
+            $t('AUTONOMIA_GUIDE.HISTORY.OPENING')
+          }}</span>
+          <div
+            class="self-end h-10 w-2/3 rounded-2xl bg-n-alpha-2 animate-pulse"
+          />
+          <div class="h-20 w-5/6 rounded-2xl bg-n-alpha-1 animate-pulse" />
+        </div>
+        <div
+          v-else-if="falhouAoAbrir"
+          data-falhou-ao-abrir
+          class="flex-1 flex flex-col items-start gap-3 px-1 py-2"
+        >
+          <p class="mb-0 text-sm text-n-slate-12">
+            {{ $t('AUTONOMIA_GUIDE.HISTORY.REOPEN_FAILED') }}
+          </p>
+          <Button
+            :label="$t('AUTONOMIA_GUIDE.HISTORY.START_NEW')"
+            icon="i-lucide-message-circle-plus"
+            blue
+            faded
+            class="min-h-11"
+            @click="resetConversation"
+          />
+        </div>
+        <div
+          v-else-if="hasMessages"
+          class="space-y-6 flex-1 flex flex-col w-full"
+        >
           <template v-for="(item, index) in messages" :key="item.id">
             <GuideUserMessage
               v-if="item.message_type === 'user'"
@@ -798,7 +999,10 @@ watch(accountId, () => {
             :label="$t('AUTONOMIA_GUIDE.THINKING')"
           />
         </div>
-        <div v-else class="flex-1 flex flex-col gap-3 px-1 py-2">
+        <div
+          v-else-if="!abrindoConversa"
+          class="flex-1 flex flex-col gap-3 px-1 py-2"
+        >
           <h3 class="text-base font-medium text-n-slate-12 leading-7">
             {{ $t('AUTONOMIA_GUIDE.TITLE') }}
           </h3>

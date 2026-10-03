@@ -18,8 +18,12 @@
 module Autonomia::Guide::Diario
   CHAVE = :autonomia_guide_diario
 
-  # O próprio caderno e a trilha de auditoria não entram nele.
-  FORA = %w[autonomia_guide_executions autonomia_guide_changes audits].freeze
+  # O próprio caderno e a trilha de auditoria não entram nele. Nem a conversa
+  # com o Guia e o registro do pedido (#861): são do Guia, não dado da conta, e o
+  # desfazer não pode apagá-los. Eles são gravados fora do caderno (`ChatJob`);
+  # isto é a rede para quem um dia gravar lá dentro.
+  FORA = %w[autonomia_guide_executions autonomia_guide_changes audits
+            autonomia_guide_conversations autonomia_guide_turns].freeze
 
   APAGAR = 'DELETE'.freeze
 

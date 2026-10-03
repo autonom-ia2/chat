@@ -13,19 +13,26 @@
 # cada passo anotado para desfazer, e — só para o que não tem volta — a
 # PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
   # tem espaço para uma lista maior de botões.
   MAX_ITENS = 5
 
-  def initialize(account:, user:, account_user: nil)
+  # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
+  def initialize(account:, user:, account_user: nil, registro: nil)
     @account = account
+    @registro = registro
     @user = user
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
     @telas = []
     @artigos = []
+  end
+
+  # O `Answerer` avisa cada ferramenta chamada no turno; vai para o registro do pedido (#861).
+  def registrar_chamada(call, output, milissegundos)
+    @registro&.registrar_chamada(call, output, milissegundos)
   end
 
   def administrador?
