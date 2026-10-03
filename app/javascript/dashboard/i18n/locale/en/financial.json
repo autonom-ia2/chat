@@ -10,7 +10,7 @@
       "OPEN": "Open",
       "OPEN_HINT": "{n} invoice awaiting payment. | {n} invoices awaiting payment.",
       "PAID": "Paid",
-      "PAID_HINT": "Invoices reconciled or paid through the gateway.",
+      "PAID_HINT": "Invoices reconciled or paid online.",
       "PAYMENTS": "Payments",
       "PAYMENTS_HINT": "Payment records linked to the user.",
       "TABLE": {
@@ -38,7 +38,7 @@
       "TITLE": "My subscription",
       "DESCRIPTION": "See your plan and how your charge is made up.",
       "EMPTY_TITLE": "No subscription found",
-      "EMPTY_DESCRIPTION": "Once checkout is complete, your subscription will show here.",
+      "EMPTY_DESCRIPTION": "Once your plan is set up, your subscription will show here.",
       "CARDS": {
         "STATUS": "Status",
         "STATUS_HINT": "Current status of the user's subscription.",

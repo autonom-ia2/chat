@@ -603,7 +603,7 @@
         "QUEUED": "Lista recebida. A importação está na fila; você pode sair desta página.",
         "PROCESSING": "Importando a lista. O envio fica indisponível até a importação terminar.",
         "COMPLETED": "Importação da lista concluída.",
-        "SUMMARY": "Importados: {imported} · Duplicados: {duplicates} · Inválidos: {invalid} · Protegidos: {suppressed} · Total: {total}",
+        "SUMMARY": "Importados: {imported} · Duplicados: {duplicates} · Inválidos: {invalid} · Fora do envio: {suppressed} · Total: {total}",
         "RETRY": "Tentar importar novamente",
         "ERRORS": {
           "FAILED": "A importação falhou. Nenhum contato desta tentativa foi adicionado. Tente novamente ou reenvie o arquivo.",
@@ -786,7 +786,7 @@
           "NOT_CONFIGURED": "Configure a chave de IA do CRM em Conexões para usar este recurso.",
           "BASE_TOO_LARGE": "Este modelo é grande demais para adaptar. Desmarque \"Adaptar o modelo atual\" para gerar do zero.",
           "PLACEHOLDERS_LABEL": "Placeholders da base",
-          "PLACEHOLDERS_HINT": "A IA pode personalizar o email com estas colunas da sua lista de contatos.",
+          "PLACEHOLDERS_HINT": "A IA pode personalizar o e-mail com estas colunas da sua lista de contatos.",
           "ASSETS_LABEL": "Recursos",
           "ASSETS_HINT": "Adicione imagens, um logo, um PDF ou um vídeo para a IA usar. Diga como cada recurso deve ser usado.",
           "ADD_IMAGE": "Imagem / Logo",

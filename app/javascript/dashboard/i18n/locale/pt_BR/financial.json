@@ -10,7 +10,7 @@
       "OPEN": "Em aberto",
       "OPEN_HINT": "{n} fatura aguardando pagamento. | {n} faturas aguardando pagamento.",
       "PAID": "Pagas",
-      "PAID_HINT": "Faturas conciliadas ou pagas pelo gateway.",
+      "PAID_HINT": "Faturas conciliadas ou pagas online.",
       "PAYMENTS": "Pagamentos",
       "PAYMENTS_HINT": "Registros de pagamento associados ao usuário.",
       "TABLE": {
@@ -38,7 +38,7 @@
       "TITLE": "Minha assinatura",
       "DESCRIPTION": "Veja o plano contratado e a composição da cobrança.",
       "EMPTY_TITLE": "Nenhuma assinatura encontrada",
-      "EMPTY_DESCRIPTION": "Quando o checkout for concluído, a assinatura aparecerá aqui.",
+      "EMPTY_DESCRIPTION": "Quando a contratação for concluída, a assinatura aparecerá aqui.",
       "CARDS": {
         "STATUS": "Situação",
         "STATUS_HINT": "Situação atual da assinatura vinculada ao usuário.",
@@ -76,10 +76,10 @@
     },
     "INVOICE_STATUS": {
       "PENDING": "Pendente",
-      "PAID": "Pago",
-      "CANCELED": "Cancelado",
-      "OVERDUE": "Vencido",
-      "REFUNDED": "Reembolsado"
+      "PAID": "Paga",
+      "CANCELED": "Cancelada",
+      "OVERDUE": "Vencida",
+      "REFUNDED": "Reembolsada"
     },
     "PAYMENT_STATUS": {
       "PENDING": "Pendente",
