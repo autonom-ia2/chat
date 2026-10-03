@@ -75,9 +75,9 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
 
     const ring = panel.find('svg[role="img"]');
     expect(ring.attributes('width')).toBe('92');
-    expect(ring.attributes('aria-label')).toBe('Prioridade 82 de 100');
+    expect(ring.attributes('aria-label')).toBe('PROSPECTING.PRIORITY.ARIA');
     expect(panel.find('div.rounded-xl').classes()).toContain('bg-n-teal-2');
-    expect(panel.text()).toContain('Lead muito quente');
+    expect(panel.text()).toContain('PROSPECTING.PRIORITY.VERY_HOT');
     expect(panel.text()).toContain('Bem avaliada e sem reservas online');
     expect(
       panel.findAll('span.rounded-full.border').map(signal => signal.text())
@@ -136,9 +136,9 @@ describe('ProspectingSearchPage · painel de detalhe do lead', () => {
     const panel = detailPanel(wrapper);
 
     expect(panel.find('svg[role="img"]').attributes('aria-label')).toBe(
-      'Prioridade 82 de 100'
+      'PROSPECTING.PRIORITY.ARIA'
     );
-    expect(panel.text()).toContain('Lead muito quente');
+    expect(panel.text()).toContain('PROSPECTING.PRIORITY.VERY_HOT');
     expect(panel.text()).toContain('Bem avaliada e sem reservas online');
     expect(panel.text()).not.toContain(
       'PROSPECTING.SEARCH.SCORE_EVALUATION_TITLE'

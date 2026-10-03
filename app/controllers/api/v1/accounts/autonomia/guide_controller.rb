@@ -21,7 +21,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       pedido,
       { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
         'mensagem' => params[:message].to_s, 'historico' => history_param,
-        'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s }
+        'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s,
+        'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
     )
 
     render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE }, status: :accepted
@@ -61,6 +62,42 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
     render json: { error: e.message }, status: :unprocessable_entity
   end
 
+  # #857 — um arquivo que a pessoa anexou na conversa. Sobe aqui e volta como signed_id; quem lê é o
+  # job da pergunta, pelos extratores da base de conhecimento. O tipo sai do CONTEÚDO (Marcel), não
+  # do nome nem do header do navegador.
+  def arquivo
+    file = params[:file]
+    return render json: { error: I18n.t('autonomia.guide.file.required') }, status: :unprocessable_entity if file.blank?
+
+    content_type = Marcel::MimeType.for(file.tempfile, name: file.original_filename).to_s
+    erro = erro_do_arquivo(file, content_type)
+    return render json: { error: erro }, status: :unprocessable_entity if erro
+
+    file.tempfile.rewind
+    blob = ActiveStorage::Blob.create_and_upload!(
+      io: file.tempfile, filename: file.original_filename, content_type: content_type, identify: false,
+      metadata: ::Autonomia::Guide::Arquivos.metadata(Current.account)
+    )
+    render json: { signed_id: ::Autonomia::Guide::Arquivos.assinar(blob), nome: blob.filename.to_s }
+  end
+
+  # #857 — a pessoa fala com o Guia pelo microfone. O áudio vira texto na hora e volta para o campo,
+  # para ela conferir antes de enviar; o arquivo é apagado assim que a transcrição sai. Áudio curto
+  # (a tela limita a gravação), para caber no teto de 15s da requisição.
+  def transcricao
+    file = params[:file]
+    content_type = tipo_da_gravacao(file)
+    return render json: { error: I18n.t('autonomia.guide.file.not_audio') }, status: :unprocessable_entity unless audio?(file, content_type)
+
+    # Com a marca do Guia: se a requisição cair antes do `ensure`, a limpeza diária apaga o áudio.
+    blob = ActiveStorage::Blob.create_and_upload!(io: file.tempfile, filename: file.original_filename,
+                                                  content_type: content_type, identify: false,
+                                                  metadata: ::Autonomia::Guide::Arquivos.metadata(Current.account))
+    render json: { texto: ::Autonomia::Guide::LeitorDeMidia.new(account: Current.account).ler(blob) }
+  ensure
+    blob&.purge
+  end
+
   # #855 — o que o Guia fez para esta pessoa nesta conta, ainda dentro do prazo
   # de desfazer. É daqui que a pessoa desfaz depois de recarregar a tela.
   def execucoes
@@ -82,6 +119,28 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   end
 
   private
+
+  MAX_AUDIO_DE_VOZ = 5.megabytes
+  # O microfone do navegador grava num recipiente de vídeo — WebM no Chrome, MP4 no Safari — e o
+  # detector de tipo os chama de vídeo. Para a voz gravada no Guia, é áudio.
+  GRAVACAO_DE_VOZ = { 'video/webm' => 'audio/webm', 'video/mp4' => 'audio/mp4' }.freeze
+
+  def tipo_da_gravacao(file)
+    return '' if file.blank?
+
+    detectado = Marcel::MimeType.for(file.tempfile, name: file.original_filename).to_s
+    GRAVACAO_DE_VOZ.fetch(detectado, detectado)
+  end
+
+  def audio?(file, content_type)
+    file.present? && ::Autonomia::Guide::LeitorDeMidia.tipo(content_type) == 'audio' && file.size <= MAX_AUDIO_DE_VOZ
+  end
+
+  def erro_do_arquivo(file, content_type)
+    return I18n.t('autonomia.guide.file.invalid_type') unless ::Autonomia::Guide::Arquivos.legivel?(content_type)
+
+    I18n.t('autonomia.guide.file.too_large') if file.size > ::Autonomia::Guide::Arquivos::MAX_BYTES
+  end
 
   LIMITE_DE_EXECUCOES = 50
 

@@ -38,8 +38,13 @@
         "LABEL": "URL da Loja",
         "PLACEHOLDER": "your-store.myshopify.com",
         "HELP": "Insira a URL meushopify.com da sua loja Shopify",
+        "INVALID_URL": "Informe um endereço válido da loja Shopify (ex.: sua-loja.myshopify.com)",
         "CANCEL": "Cancelar",
         "SUBMIT": "Conectar Loja"
+      },
+      "HELP_TEXT": {
+        "TITLE": "Como usar a integração com a Shopify?",
+        "BODY": "Com esta integração, sua loja Shopify ***{storeDomain}*** fica conectada à sua conta do Chatwoot. Veja o que dá para fazer:\n\n**Acompanhar pedidos nas conversas:** ao abrir uma conversa, a barra lateral da Shopify mostra automaticamente os pedidos recentes do cliente com base no e-mail dele. Sua equipe tem o contexto na hora, sem trocar de aba.\n\n**Ver os detalhes do pedido:** situação do pedido, situação da entrega e valor total direto no painel da conversa."
       },
       "ERROR": "Ocorreu um erro ao tentar conectar com o Shopify. Por favor, tente novamente ou entre em contato com o suporte se o problema persistir."
     },
@@ -468,6 +473,9 @@
         "DISMISS": "Fechar"
       },
       "RANGES": {
+        "INSUFFICIENT_HISTORY": "Ainda não há histórico suficiente",
+        "THIS_WEEK": "Esta semana",
+        "LAST_WEEK": "Semana passada",
         "LAST_DAYS": "Últimos {count} dias",
         "THIS_MONTH": "Este mês",
         "LAST_MONTH": "Último mês"
@@ -548,6 +556,7 @@
           },
           "DURABLE": {
             "LABEL": "Resoluções do Captain permaneceram encerradas",
+            "NOT_APPLICABLE_HINT": "Nenhuma resolução deste período tem sete dias de acompanhamento ainda. A durabilidade não está disponível.",
             "HINT": "A proporção de conversas resolvidas pelo Captain que permaneceram encerradas após sete dias.",
             "NOTE": "Apenas resoluções com tempo suficiente para serem observadas por sete dias são incluídas."
           },
@@ -587,6 +596,9 @@
         },
         "RESOLUTION_TREND": {
           "TITLE": "Tendência de resolução",
+          "COMPARISON_LABEL": "Comparação pelo dia da semana",
+          "COMPARISON_HINT": "Compara as taxas de resolução nos mesmos dias da semana, como segunda com segunda.",
+          "COMPARISON_NOTE": "Hoje é comparado até o mesmo horário do dia.",
           "CONVERSATION_COUNT": "Quantidade de conversas",
           "RESOLUTION_RATE": "Taxa de resolução",
           "CURRENT_PERIOD": "Período atual",
@@ -606,7 +618,7 @@
         },
         "USAGE": {
           "TITLE": "Uso",
-          "CREDITS": "Credits",
+          "CREDITS": "Créditos",
           "DOCUMENTS": "Documentos",
           "USED": "({percentage}% utilizado)",
           "VALUE": "{used}/{total}",
@@ -614,6 +626,7 @@
           "BUY_MORE": "Comprar mais créditos"
         },
         "KNOWLEDGE": {
+          "SUGGESTED": "Perguntas frequentes sugeridas",
           "REVIEW": "Revisar FAQs"
         }
       }
@@ -664,9 +677,93 @@
       "USER": "Você",
       "ASSISTANT": "Assistente",
       "MESSAGE_PLACEHOLDER": "Digite sua mensagem...",
+      "SEND_MESSAGE": "Enviar mensagem",
       "HEADER": "Área de testes",
       "DESCRIPTION": "Use este playground para enviar mensagens para seu assistente e verificar se ele responde com precisão, rápido e no tom que você espera.",
-      "CREDIT_NOTE": "As mensagens enviadas aqui usam os créditos do seu Capitão."
+      "CREDIT_NOTE": "As mensagens enviadas aqui usam os créditos do seu Capitão.",
+      "CLEAR_CONVERSATION": "Limpar conversa",
+      "RESPONSE_ERROR": "O Captain não conseguiu concluir este teste. Revise a configuração e tente de novo.",
+      "SETUP": {
+        "TITLE": "Configuração do teste",
+        "DESCRIPTION": "O que você muda aqui vale só para esta sessão de teste, a menos que salve um item.",
+        "TOGGLE": "Mostrar ou ocultar a configuração do teste",
+        "CLOSE": "Fechar a configuração do teste",
+        "RESET": "Restaurar a configuração do teste",
+        "TEMPORARY": "Temporário",
+        "SESSION_ONLY": "Só nesta sessão",
+        "INCLUDE_IN_TEST": "Incluir neste teste",
+        "ADD_TO_TEST": "Adicionar ao teste (↵)",
+        "LOAD_ERROR": "Não foi possível carregar a configuração salva do assistente.",
+        "INVALID_CONFIGURATION": "Complete ou remova os cenários temporários incluídos antes de enviar uma mensagem.",
+        "SAVE_SCENARIO_SUCCESS": "O cenário foi salvo e continua incluído neste teste.",
+        "SAVE_SCENARIO_ERROR": "Não foi possível salvar o cenário.",
+        "SAVE_RULE_SUCCESS": "A regra foi salva e continua incluída neste teste.",
+        "SAVE_RULE_ERROR": "Não foi possível salvar a regra.",
+        "RULE_ALREADY_SAVED": "Essa regra já está salva, então nenhuma cópia foi criada.",
+        "SCENARIOS": {
+          "TAB_TITLE": "Cenários",
+          "CREATE_TITLE": "Adicionar um cenário temporário",
+          "CREATE_HINT": "Teste um comportamento novo sem mudar a configuração do assistente.",
+          "SAVED_SUMMARY": "Cenários existentes ({count})",
+          "ADD_PERMANENTLY": "Adicionar cenário de vez",
+          "DISABLED": "Desativado",
+          "EMPTY": "Este assistente não tem cenários salvos.",
+          "COMPOSER_PLACEHOLDER": "Digite o título de um cenário temporário...",
+          "COLLAPSE": "Recolher cenário temporário",
+          "EXPAND": "Expandir cenário temporário",
+          "REMOVE": "Remover cenário temporário"
+        },
+        "GUIDELINES": {
+          "TAB_TITLE": "Orientações",
+          "CREATE_TITLE": "Adicionar uma orientação temporária",
+          "CREATE_HINT": "Teste uma preferência de resposta antes de adicioná-la ao assistente.",
+          "SAVED_SUMMARY": "Orientações existentes ({count})",
+          "ADD_PERMANENTLY": "Adicionar orientação de vez",
+          "EMPTY": "Este assistente não tem orientações de resposta salvas.",
+          "COMPOSER_PLACEHOLDER": "Digite uma orientação temporária...",
+          "PLACEHOLDER": "Adicione uma orientação de resposta",
+          "REMOVE": "Remover orientação de resposta temporária"
+        },
+        "GUARDRAILS": {
+          "TAB_TITLE": "Limites",
+          "CREATE_TITLE": "Adicionar um limite temporário",
+          "CREATE_HINT": "Teste um limite de segurança antes de adicioná-lo ao assistente.",
+          "SAVED_SUMMARY": "Limites existentes ({count})",
+          "ADD_PERMANENTLY": "Adicionar limite de vez",
+          "EMPTY": "Este assistente não tem limites salvos.",
+          "COMPOSER_PLACEHOLDER": "Digite um limite temporário...",
+          "PLACEHOLDER": "Adicione um limite",
+          "REMOVE": "Remover limite temporário"
+        },
+        "KNOWLEDGE": {
+          "TAB_TITLE": "Conhecimento",
+          "AVAILABLE_TITLE": "Conhecimento disponível para o Captain",
+          "AVAILABLE_DESCRIPTION": "As fontes salvas aparecem resumidas aqui e são gerenciadas fora do teste.",
+          "DOCUMENTS": "Documentos",
+          "FAQS": "Perguntas frequentes",
+          "TEMPORARY_TITLE": "Conhecimento temporário",
+          "ADD_PERMANENTLY": "Adicionar documento de vez",
+          "LABEL": "Texto de referência",
+          "PLACEHOLDER": "Cole ou escreva um conhecimento novo para este teste",
+          "HINT": "Este texto vai só nas mensagens de teste, a menos que você o adicione como documento."
+        },
+        "SAVE_KNOWLEDGE_SUCCESS": "Conhecimento adicionado como documento.",
+        "SAVE_KNOWLEDGE_ERROR": "Não foi possível adicionar o conhecimento como documento."
+      },
+      "RUN_DETAILS": {
+        "SUMMARY": "Detalhes da execução · {duration}ms",
+        "HANDLER_VALUE": "Atendido por: {handler}",
+        "SCENARIOS": "Nenhum cenário | Um cenário | {count} cenários",
+        "RULES": "{count} regras",
+        "KNOWLEDGE_ATTACHED": "Um conhecimento temporário foi anexado a esta execução.",
+        "NO_EVENTS": "Nenhuma chamada de ferramenta ou passagem entre cenários foi registrada.",
+        "HANDOFF": "{from} → {to}",
+        "STATUS": {
+          "RUNNING": "Em execução",
+          "COMPLETED": "Concluído",
+          "FAILED": "Falhou"
+        }
+      }
     },
     "PAYWALL": {
       "TITLE": "Atualize para usar o Capitão IA",
@@ -1313,11 +1410,11 @@
           "PLACEHOLDER": "Tipo"
         },
         "PARAM_TYPES": {
-          "STRING": "String",
+          "STRING": "Texto",
           "NUMBER": "Número",
-          "BOOLEAN": "Boolean",
-          "ARRAY": "Array",
-          "OBJECT": "Object"
+          "BOOLEAN": "Sim/Não",
+          "ARRAY": "Lista",
+          "OBJECT": "Objeto"
         },
         "PARAM_DESCRIPTION": {
           "PLACEHOLDER": "Descrição do parâmetro"
@@ -1339,7 +1436,7 @@
       }
     },
     "RESPONSES": {
-      "HEADER": "FAQs",
+      "HEADER": "Perguntas frequentes",
       "ADD_NEW": "Criar nova FAQ",
       "NO_USED_CONVERSATIONS": "Não foi encontrada nenhuma conversa para este FAQ.",
       "DOCUMENTABLE": {

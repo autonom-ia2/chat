@@ -1,3 +1,4 @@
+import financial from './financial.json';
 import relationships from './relationships.json';
 import prospecting from './prospecting.json';
 import advancedFilters from './advancedFilters.json';
@@ -56,6 +57,7 @@ import whatsappTemplateMgmt from './whatsappTemplateMgmt.json';
 import yearInReview from './yearInReview.json';
 
 export default {
+  ...financial,
   ...relationships,
   ...prospecting,
   ...advancedFilters,

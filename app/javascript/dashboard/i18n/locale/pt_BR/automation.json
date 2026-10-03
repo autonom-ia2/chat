@@ -80,13 +80,13 @@
       }
     },
     "LIST": {
+      "404": "Nenhuma regra de automação encontrada",
       "TABLE_HEADER": {
         "NAME": "Nome",
         "ACTIVE": "Ativo",
         "CREATED_ON": "Criado em",
         "ACTIONS": "Ações"
       },
-      "404": "Nenhuma regra de automação encontrada",
       "404_DELAYED": "Ainda não há regras executadas após um período de espera",
       "TABS": {
         "INSTANT": "Executadas imediatamente",
@@ -186,7 +186,7 @@
     "ACTIONS": {
       "ASSIGN_AGENT": "Atribuir ao Agente",
       "ASSIGN_TEAM": "Atribuir um Time",
-      "REMOVE_ASSIGNED_AGENT": "Remove Assigned Agent",
+      "REMOVE_ASSIGNED_AGENT": "Remover agente atribuído",
       "REMOVE_ASSIGNED_TEAM": "Remover Time Atribuído",
       "ADD_LABEL": "Adicionar uma Etiqueta",
       "REMOVE_LABEL": "Remover uma Etiqueta",
@@ -198,8 +198,8 @@
       "SEND_WEBHOOK_EVENT": "Enviar evento de Webhook",
       "SEND_ATTACHMENT": "Enviar Anexo",
       "SEND_MESSAGE": "Enviar Mensagem",
-      "DISABLE_CRM_AI_FOLLOWUP": "Desativar follow-up de IA do CRM",
-      "ENABLE_CRM_AI_FOLLOWUP": "Reativar follow-up de IA do CRM",
+      "DISABLE_CRM_AI_FOLLOWUP": "Desativar retornos da IA do CRM",
+      "ENABLE_CRM_AI_FOLLOWUP": "Reativar retornos da IA do CRM",
       "ADD_PRIVATE_NOTE": "Adicionar uma Nota Privada",
       "CHANGE_PRIORITY": "Alterar Prioridade",
       "ADD_SLA": "Adicionar SLA",

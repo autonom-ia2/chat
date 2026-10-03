@@ -56,9 +56,9 @@
       "TITLE": "Campaign import history",
       "SUBTITLE": "Track validations, imports, and campaign label undo actions.",
       "EMPTY": "No campaign import has been created yet.",
-      "BATCHES": "batches",
+      "BATCHES": "batch | batches",
       "ROWS_SEPARATOR": "/",
-      "INVALID_ROWS": "{count} rows with errors",
+      "INVALID_ROWS": "{count} row with errors | {count} rows with errors",
       "GUIDE": {
         "VALIDATE": {
           "TITLE": "Automatic validation",

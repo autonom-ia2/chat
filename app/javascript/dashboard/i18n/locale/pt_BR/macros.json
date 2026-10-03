@@ -28,14 +28,14 @@
       }
     },
     "LIST": {
+      "404": "Nenhuma macro encontrada",
       "TABLE_HEADER": {
         "NAME": "Nome",
         "CREATED BY": "Criada por",
         "LAST_UPDATED_BY": "Ultima atualização por",
         "VISIBILITY": "Visibilidade",
         "ACTIONS": "Ações"
-      },
-      "404": "Nenhuma macro encontrada"
+      }
     },
     "DELETE": {
       "TOOLTIP": "Excluir macro",
@@ -99,7 +99,7 @@
       "ASSIGN_AGENT": "Atribuir um Agente",
       "ADD_LABEL": "Adicionar uma Etiqueta",
       "REMOVE_LABEL": "Remover uma Etiqueta",
-      "REMOVE_ASSIGNED_AGENT": "Remove Assigned Agent",
+      "REMOVE_ASSIGNED_AGENT": "Remover agente atribuído",
       "REMOVE_ASSIGNED_TEAM": "Remover Time Atribuído",
       "SEND_EMAIL_TRANSCRIPT": "Enviar uma transcrição por e-mail",
       "MUTE_CONVERSATION": "Silenciar Conversa",

@@ -39,7 +39,7 @@
         "EXTERNAL": "External",
         "EXTERNAL_HINT": "Talks to customers on WhatsApp/Instagram/chat.",
         "INTERNAL": "Internal",
-        "INTERNAL_HINT": "Never talks to customers — only helps the agent."
+        "INTERNAL_HINT": "Never talks to customers — only helps your team."
       },
       "KNOWLEDGE": {
         "LABEL": "Knowledge base",
@@ -174,7 +174,7 @@
       "SAVE_FIRST_MESSAGE": "Save first message",
       "SAVED": "First message saved.",
       "STARTERS": "Suggested questions",
-      "APPROVED_SUMMARY": "{count} materials approved · {pct}% confidence",
+      "APPROVED_SUMMARY": "{count} material approved · {pct}% confidence | {count} materials approved · {pct}% confidence",
       "TEST_OPTIONAL": "Test",
       "CONNECT_TITLE": "Connect to an inbox",
       "INTERNAL_TITLE": "Internal agent (team copilot)",

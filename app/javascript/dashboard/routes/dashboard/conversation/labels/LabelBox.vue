@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import { mapGetters } from 'vuex';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePolicy } from 'dashboard/composables/usePolicy';
 import { useConversationLabels } from 'dashboard/composables/useConversationLabels';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
 import Spinner from 'shared/components/Spinner.vue';
@@ -15,7 +15,9 @@ export default {
     AddLabel,
   },
   setup() {
-    const { isAdmin } = useAdmin();
+    const { checkPermissions } = usePolicy();
+    // The backend lets admins and custom roles with label_manage create labels.
+    const canCreateLabel = checkPermissions(['administrator', 'label_manage']);
 
     const {
       savedLabels,
@@ -53,7 +55,7 @@ export default {
     };
     useKeyboardEvents(keyboardEvents);
     return {
-      isAdmin,
+      canCreateLabel,
       savedLabels,
       activeLabels,
       accountLabels,
@@ -113,7 +115,7 @@ export default {
             v-if="showSearchDropdownLabel"
             :account-labels="accountLabels"
             :selected-labels="savedLabels"
-            :allow-creation="isAdmin"
+            :allow-creation="canCreateLabel"
             @add="addLabelToConversation"
             @remove="removeLabelFromConversation"
           />

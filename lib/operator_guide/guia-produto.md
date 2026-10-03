@@ -64,9 +64,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Conversas > abrir conversa > painel de acoes/atribuicao
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
-- pre_requisitos: conversa existente; agente/time disponivel e com acesso ao inbox
+- pre_requisitos: conversa existente; agente/time disponivel e com acesso a caixa de entrada
 - passos: 1. Abra a conversa; 2. Localize o bloco de atribuicao no painel lateral; 3. Escolha agente ou time; 4. Confirme a mudanca; 5. Verifique se o nome aparece na conversa.
-- gotchas: agentes sem acesso ao inbox podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros.
+- gotchas: agentes sem acesso a caixa de entrada podem nao aparecer; usuarios com permissao restrita podem nao conseguir atuar em conversas de terceiros.
 - nav_target: `inbox_conversation`
 
 ### Resolver conversa
@@ -81,11 +81,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Adiar conversa
 - intent: Como faco snooze de uma conversa?; Onde adio um atendimento?; Quero que a conversa volte depois.; Como removo da fila ate uma data?
-- onde_fica: Conversas > abrir conversa > acoes da conversa > Snooze/Adiar
+- onde_fica: Conversas > abrir conversa > acoes da conversa > Adiar
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversa existente
-- passos: 1. Abra a conversa; 2. Use a acao de adiar/snooze; 3. Escolha um preset ou data/hora; 4. Confirme; 5. Acompanhe quando ela voltar para a fila.
+- passos: 1. Abra a conversa; 2. Use a acao de adiar; 3. Escolha um preset ou data/hora; 4. Confirme; 5. Acompanhe quando ela voltar para a fila.
 - gotchas: conversa adiada pode sumir da lista principal ate o horario escolhido; use filtros/status se precisar encontra-la antes.
 - nav_target: `inbox_conversation`
 
@@ -105,7 +105,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `inbox_conversation` - `/app/accounts/:accountId/conversations/:conversation_id`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: etiqueta criada em Configuracoes > Etiquetas
-- passos: 1. Abra a conversa; 2. Clique em etiquetas/labels no painel lateral; 3. Pesquise a etiqueta; 4. Adicione ou remova; 5. Use a sidebar de etiquetas para consultar depois.
+- passos: 1. Abra a conversa; 2. Clique em etiquetas no painel lateral; 3. Pesquise a etiqueta; 4. Adicione ou remova; 5. Use a sidebar de etiquetas para consultar depois.
 - gotchas: etiquetas ocultas ou especificas de importacao custom podem nao aparecer na sidebar; etiquetas de conversa e contato podem ser usadas em contextos diferentes.
 - nav_target: `inbox_conversation`
 
@@ -116,7 +116,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
 - pre_requisitos: conversas existentes; filtros/canais/times/etiquetas conforme o caso
 - passos: 1. Abra Conversas; 2. Use a sidebar para escolher Todas, Canal, Time ou Etiqueta; 3. Ajuste status e filtros da lista; 4. Abra a conversa desejada; 5. Limpe filtros para voltar a visao geral.
-- gotchas: rotas de canal/time/etiqueta exigem parametros reais; se nada aparecer, confira permissao, status da conversa e acesso ao inbox.
+- gotchas: rotas de canal/time/etiqueta exigem parametros reais; se nada aparecer, confira permissao, status da conversa e acesso a caixa de entrada.
 - nav_target: `home`
 - highlight: `conversations-advanced-filter`
 
@@ -198,7 +198,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: email do agente; limite/plano permitir novo usuario quando aplicavel
 - passos: 1. Abra Configuracoes; 2. Entre em Agentes; 3. Clique para adicionar/editar agente; 4. Informe dados e papel; 5. Salve e acompanhe convite/status.
-- gotchas: agente convidado pode precisar aceitar convite antes de operar; acesso a inbox tambem depende de associacao na caixa.
+- gotchas: agente convidado pode precisar aceitar convite antes de operar; o acesso a uma caixa de entrada tambem depende de estar associado a ela.
 - nav_target: `agent_list`
 - highlight: `settings-add-agent`
 
@@ -209,17 +209,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `agent_management`; papel `administrator`
 - pre_requisitos: agente existente; papel customizado criado quando for usar custom role
 - passos: 1. Abra Configuracoes > Agentes; 2. Edite o agente; 3. Escolha `administrator`, `agent` ou papel customizado; 4. Salve; 5. Revise acesso a caixas/times se necessario.
-- gotchas: papel da conta nao substitui associacao a inbox; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
+- gotchas: papel da conta nao substitui associacao a caixa de entrada; custom roles so aparecem em instalacoes Cloud/Enterprise com feature `custom_roles`.
 - nav_target: `agent_list`
 
-### Criar papeis customizados
-- intent: Como crio um papel customizado?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?
-- onde_fica: Configuracoes > Papeis customizados
+### Criar funcoes personalizadas
+- intent: Como crio um papel customizado?; Como crio uma funcao personalizada?; Onde configuro permissoes granulares?; Como limito acesso de um usuario?; Como duplico uma funcao?; Como aplico um modelo de perfil a uma funcao?
+- onde_fica: Configuracoes > Funcoes Personalizadas
 - rota: `custom_roles_list` - `/app/accounts/:accountId/settings/custom-roles/list`
 - gate: feature flag `custom_roles`; papel `administrator`
-- pre_requisitos: Enterprise/Cloud habilitado; saber quais permissoes o grupo deve receber
-- passos: 1. Abra Configuracoes; 2. Entre em Papeis customizados; 3. Crie ou edite um papel; 4. Marque permissoes como conversa, contato, relatorio ou CRM; 5. Salve e aplique no agente.
-- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; permissao customizada nao concede automaticamente acesso a todas as caixas.
+- pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
+- passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
+- gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
 - nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
 
@@ -230,7 +230,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `team_management`; papel `administrator`
 - pre_requisitos: agentes ativos para adicionar ao time
 - passos: 1. Abra Configuracoes > Times; 2. Clique em criar time; 3. Defina nome/descricao; 4. Adicione agentes; 5. Finalize e use o time em atribuicoes/filtros.
-- gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso aos inboxes usados.
+- gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso as caixas de entrada usadas.
 - leitura: times
 - nav_target: `settings_teams_new`
 - highlight: `settings-new-team`
@@ -240,7 +240,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Automacao
 - rota: `automation_list` - `/app/accounts/:accountId/settings/automation/list`
 - gate: feature flag `automations`; papel `administrator` ou `automation_view` ou `automation_manage`
-- pre_requisitos: definir gatilho, condicoes e acoes; labels/times/agentes criados quando usados
+- pre_requisitos: definir gatilho, condicoes e acoes; etiquetas/times/agentes criados quando usados
 - passos: 1. Abra Configuracoes > Automacao; 2. Crie uma regra; 3. Escolha o evento gatilho; 4. Configure condicoes; 5. Escolha acoes e salve.
 - gotchas: automacoes podem se sobrepor; revise ordem, condicoes e efeitos como atribuir time, adicionar etiqueta ou enviar webhook.
 - nav_target: `automation_list`
@@ -262,7 +262,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Macros
 - rota: `macros_new` - `/app/accounts/:accountId/settings/macros/new`
 - gate: feature flag `macros`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `macro_manage`
-- pre_requisitos: acoes desejadas disponiveis; labels/times/agentes criados quando usados
+- pre_requisitos: acoes desejadas disponiveis; etiquetas/times/agentes criados quando usados
 - passos: 1. Abra Configuracoes > Macros; 2. Clique em nova macro; 3. Defina nome/visibilidade; 4. Adicione acoes; 5. Salve e execute pela conversa quando necessario.
 - gotchas: macros publicas podem ser restritas a administradores; macro nao deve ser usada para contornar permissoes de operacao.
 - nav_target: `macros_new`
@@ -337,19 +337,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil CRM para ver conteúdo; sem funil, a tela mostra estado vazio e botão para criar funil se o usuário puder gerenciar.
-- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, score, responsável, time, caixa, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
-- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente do **estágio** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
+- passos: Abra **CRM Kanban**; selecione o funil; use **Buscar por nome** para localizar o negócio, contato ou empresa; abra **Mais filtros** para empresa, etiquetas, status, prioridade, atenção da IA, responsável, time, caixa de entrada, campanha, valor e retornos; alterne **Kanban/Lista/Calendário** no seletor superior. Para acompanhar **ganhas/perdidas**: use a visão **Lista** com filtros e veja as métricas de ganhos/perdas no **Dashboard CRM**.
+- gotchas: ganhar/perder define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; Encontrar com IA está desabilitado, aguardando uma integração específica; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e negócio em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do negócio mesmo quando compartilham um contato.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"
-- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar inboxes
+- onde_fica: Sidebar > CRM > Kanban > Criar funil (ao lado do seletor); para editar o atual, Configurar > Editar funil; também Configurar > Configurar caixas de entrada
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: caixas já criadas quando o objetivo for vincular atendimento ao funil.
-- passos: No editor, defina o nome e abra um status para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções do status; o número indica a posição atual. Melhorar com IA compara os demais status e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir status volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa e escolha o status de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar inboxes, ligar o CRM na caixa, escolher o funil e a etapa de entrada e salvar.
-- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o follow-up automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; deletar estágio abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
+- pre_requisitos: caixas de entrada já criadas quando o objetivo for vincular atendimento ao funil.
+- passos: No editor, defina o nome e abra uma etapa para editar sua descrição. Para mudar a ordem, arraste pelos pontinhos da lista ou use as setas nas opções da etapa; o número indica a posição atual. Melhorar com IA compara as demais etapas e apresenta uma sugestão: Usar esta descrição aplica, Manter minha descrição descarta. Concluir etapa volta à lista; Salvar funil persiste. Lembretes e retornos reúne os retornos e o envio opcional por IA. Mais ajustes reúne descrição geral, meta mensal, Resultados dos anúncios e, no fim, Caixas de entrada. Adicione cada caixa de entrada e escolha a etapa de entrada. Para um funil novo, salve primeiro. Também é possível abrir Configurar caixas de entrada, ligar o CRM na caixa de entrada, escolher o funil e a etapa de entrada e salvar.
+- gotchas: sugestões da IA não são aplicadas nem movem cards automaticamente; os recursos de IA do funil vêm incluídos e a reavaliação padrão é de 7 dias, respeitando os gates globais; o retorno automático existente conserva sua ativação e agenda; Google Ads exige importação agendada do feed e Meta exige integração e atribuição do anúncio — ligar a opção no funil não comprova recebimento externo; vendas de anúncios usam o status ganho do card, não a coluna Fechamento; a criação automática vem marcada na caixa ainda não configurada; trocar o funil da caixa move a criação automática para o funil novo e avisa na tela antes de salvar, e os cards que já existem ficam onde estão; desligar o CRM na caixa para a criação automática; Editar funil > Mais ajustes > Caixas de entrada continua valendo para a caixa que alimenta mais de um funil; excluir uma etapa abre confirmação e pode falhar se houver cards dependentes; arquivar funil não apaga cards.
 - leitura: funis
 - nav_target: `crm_kanban_index`
 - highlight: `crm-new-pipeline`
@@ -391,7 +391,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: card existente em funil ativo.
-- passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste estágio e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
+- passos: Arraste o card entre colunas no Kanban ou abra o drawer; ajuste etapa e responsável; para fechar, use ações de ganhar ou perder; informe valor ganho ou motivo da perda quando solicitado; reabra pelo mesmo drawer quando aplicável.
 - gotchas: se o movimento falhar, o front restaura o estado anterior; cards fechados podem aparecer melhor na Lista com filtro de resultado; perder e arquivar não deletam contato nem conversa.
 - nav_target: `crm_kanban_index`
 
@@ -400,9 +400,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Sidebar > CRM > CRM Kanban > abrir card > aba Retornos; ou CRM > Calendário > clique no dia
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
-- pre_requisitos: card existente; para follow-up de mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
+- pre_requisitos: card existente; para retorno com mensagem, a conversa vinculada precisa existir e a janela/template do canal pode ser exigida.
 - passos: Abra o card; entre em Retornos; informe título, data/hora e modo de automação; escolha mensagem/template quando houver envio automático; crie o retorno; conclua ou cancele pelo card ou calendário. Consulte Histórico para acompanhar as atividades e tentativas registradas.
-- gotchas: sem conversa vinculada não há snooze/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de follow-up; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e a timeline mostra Follow-up cancelado com o motivo.
+- gotchas: sem conversa vinculada não há adiar/envio automático; WhatsApp fora da janela pode exigir template; lembretes vencidos aparecem por popup e no filtro de retorno; envio automático para contato que não quer receber mensagens ativas é cancelado sem virar atraso, e o Histórico mostra Retorno cancelado com o motivo.
 - nav_target: `crm_kanban_index`
 
 ### Usar o card CRM a partir de uma conversa
@@ -411,7 +411,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: conversa existente; a caixa pode ter auto-criação de card configurada em CRM > Configurações da caixa.
-- passos: Abra a conversa; procure o bloco/ação de CRM; crie ou abra o card vinculado; revise contato, responsável e estágio; use o link do card para navegar ao CRM.
+- passos: Abra a conversa; procure o bloco/ação de CRM; crie ou abra o card vinculado; revise contato, responsável e etapa; use o link do card para navegar ao CRM.
 - gotchas: se a caixa estiver configurada para não criar card automaticamente, o card não aparece sozinho; em caixas "assigned only", visibilidade pode depender de atribuição/participação; cards standalone não têm conversa para abrir.
 - nav_target: `crm_kanban_index`
 
@@ -432,7 +432,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `crm_dashboard_index` - `/app/accounts/:accountId/crm/dashboard`
 - gate: papel `administrator` ou `agent` ou `crm_view_reports`
 - pre_requisitos: ao menos um funil com cards; metas e dados de reuniões aparecem quando houver configuração/dados.
-- passos: Abra CRM Dashboard; selecione funil; escolha período; revise KPIs, funil, ganho/perdido, follow-ups, carga por responsável e IA versus humano; use atualizar se dados mudaram.
+- passos: Abra CRM Dashboard; selecione funil; escolha período; revise KPIs, funil, ganho/perdido, retornos, carga por responsável e IA versus humano; use atualizar se dados mudaram.
 - gotchas: moedas diferentes não são somadas, são exibidas separadamente; métricas de reunião só carregam com `CRM_CALENDAR_MEETINGS_ENABLED=true`; sem funis a tela fica sem dados.
 - nav_target: `crm_dashboard_index`
 
@@ -449,7 +449,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 ### Configurar link público de agendamento
 - intent: "Como crio um link de agenda?"; "Onde configuro /book/:slug?"; "Como cada vendedor tem seu próprio link?"
 - onde_fica: Sidebar > CRM > CRM Calendar > Agendamento
-- pre_requisitos: caixa Google/Microsoft com calendário ativo; funil/estágio padrão recomendado; agentes membros da caixa para links por agente.
+- pre_requisitos: caixa Google/Microsoft com calendário ativo; funil/etapa padrão recomendado; agentes membros da caixa para links por agente.
 - passos: Abra CRM Calendar; clique em Agendamento; habilite o perfil da caixa; defina duração, janela, fuso, dias e horário; escolha modo fixo ou por agente; salve e copie a URL.
 - gotchas: no modo por agente, o slug base pode não funcionar e cada agente deve usar seu link individual; a página pública envia e-mail de confirmação antes de criar a reunião; links dependem de `FRONTEND_URL` correto para o e-mail de confirmação.
 - nav_target: `crm_calendar_index`
@@ -481,8 +481,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: identidade verificada ou caixa webmail elegível; arquivo CSV/XLSX de destinatários quando houver base externa.
-- passos: Clique em Nova campanha; informe nome e remetente; defina nome do remetente, e-mail, reply-to e preheader; anexe CSV/XLSX de base se necessário; salve e abra o editor.
-- gotchas: `from_email` precisa pertencer ao domínio SES verificado; envio direto trava o campo "De" com o e-mail da caixa; a importação pode gerar placeholders a partir das colunas da base.
+- passos: Clique em Nova campanha; informe nome e remetente; defina nome do remetente, e-mail, reply-to e texto de prévia; anexe CSV/XLSX de base se necessário; salve e abra o editor.
+- gotchas: `from_email` precisa pertencer ao domínio SES verificado; envio direto trava o campo "De" com o e-mail da caixa de entrada; a importação pode gerar campos de personalização a partir das colunas da base.
 - nav_target: `campaigns_email_index`
 - highlight: `campaigns-new-email`
 
@@ -493,7 +493,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
 - passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
-- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de disparar.
+- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de enviar.
 - nav_target: `campaigns_email_builder`
 
 ### Gerenciar destinatários, agendar e enviar campanha de e-mail
@@ -502,8 +502,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `campaigns_email_index` - `/app/accounts/:accountId/campaigns/email_campaigns`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: campanha em rascunho; corpo HTML salvo para agendar/enviar; destinatários importados.
-- passos: Abra Destinatários; importe CSV/XLSX adicional se precisar; confira campos e validação; na lista, clique em Disparar; a revisão mostra o que falta, remetente, público e exclusões; escolha enviar agora ou data/hora e confirme na etapa final. Pausar, Retomar e Cancelar ficam nas ações da campanha.
-- gotchas: Disparar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta placeholders ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
+- passos: Abra Destinatários; importe CSV/XLSX adicional se precisar; confira campos e validação; na lista, clique em Enviar; a revisão mostra o que falta, remetente, público e exclusões; escolha enviar agora ou data/hora e confirme na etapa final. Pausar, Retomar e Cancelar ficam nas ações da campanha.
+- gotchas: Enviar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta campos de personalização ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
 - nav_target: `campaigns_email_index`
 
 ### Ver gestão e relatório de campanhas de e-mail
@@ -556,13 +556,13 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `crm`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: importação criada; para desfazer, importação concluída ou concluída com falhas.
 - passos: Abra o histórico; aguarde status sair de uploaded/validating/importing; se estiver `ready_to_confirm`, clique Confirmar; baixe CSV de erros, normalizado ou relatório quando disponíveis; em importações concluídas, use Desfazer rótulos.
-- gotchas: desfazer remove apenas labels criadas/aplicadas por aquela importação, não deleta contatos; arquivos expiram conforme política de retenção; status em processamento atualiza a cada 5 segundos.
+- gotchas: desfazer remove apenas etiquetas criadas/aplicadas por aquela importação, não deleta contatos; arquivos expiram conforme política de retenção; status em processamento atualiza a cada 5 segundos.
 - nav_target: `contacts_campaign_imports`
 - highlight: `campaign-imports-back-to-contacts`
 
 ### Abrir hub de Agentes de IA
 - intent: "Onde ficam meus agentes?"; "Como crio um agente de IA?"; "Por que não vejo o menu Agentes?"
-- onde_fica: Sidebar > Agentes > Meus agentes
+- onde_fica: Sidebar > Agentes de IA > Meus agentes
 - rota: `autonomia_agents_index` - `/app/accounts/:accountId/agents`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: conta habilitada pelo gate isolado; credencial de IA quando a liberação for global por conta.
@@ -573,7 +573,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar agente externo com base de conhecimento
 - intent: "Como crio um agente para atender clientes?"; "Como subo materiais no construtor?"; "Como conecto no fim?"
-- onde_fica: Sidebar > Agentes > Construtor de agente
+- onde_fica: Sidebar > Agentes de IA > Construtor de agentes
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: tipo de agente escolhido; materiais opcionais em PDF, TXT, MD, JSON, XLSX ou DOCX; caixa elegível se for conectar ao atendimento.
@@ -583,17 +583,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Criar agente interno ou sem base
 - intent: "Como crio um agente interno para a equipe?"; "Como faço sem base de conhecimento?"; "Esse agente responde clientes?"
-- onde_fica: Sidebar > Agentes > Construtor de agente
+- onde_fica: Sidebar > Agentes de IA > Construtor de agentes
 - rota: `autonomia_agents_builder` - `/app/accounts/:accountId/agents/new`
 - gate: papel `administrator` ou `autonomia_manage`
 - pre_requisitos: definir atuação Interna ou Sem conhecimento na tela inicial.
 - passos: Escolha atuação Interna quando o agente for copiloto da equipe; escolha Sem conhecimento se ele deve partir só da conversa guiada; selecione o tipo ou "Outros"; responda ao construtor; finalize para revisar; abra o painel para testar.
-- gotchas: agente interno não conecta em caixa e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar handoff por falta de conhecimento.
+- gotchas: agente interno não se conecta a caixa de entrada e a aba Canais fica oculta/redireciona; atuação `both` não é escolhida no construtor, é ajuste posterior; sem base reduz respostas ancoradas e pode aumentar as transferências para humano por falta de conhecimento.
 - nav_target: `autonomia_agents_builder`
 
 ### Atualizar conhecimento e fontes do agente
 - intent: "Como adiciono conhecimento depois de criado?"; "Como reprocesso uma fonte?"; "Como vejo a qualidade da base?"
-- onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Conhecimento
+- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Conhecimento
 - rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; arquivo suportado ou URL para fonte.
@@ -603,7 +603,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Conectar ou desconectar agente de uma caixa
 - intent: "Como coloco o agente para atender uma caixa?"; "Por que uma caixa aparece ocupada?"; "Como desconecto um agente?"
-- onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Canais
+- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Canais
 - rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente ativo/finalizado; caixa elegível; cada caixa pode hospedar apenas um agente.
@@ -613,11 +613,11 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Testar, acompanhar e ajustar agente
 - intent: "Como testo o agente?"; "Como vejo desempenho?"; "Como ajusto tom, handoff ou instrução?"
-- onde_fica: Sidebar > Agentes > Meus agentes > abrir agente > Testar, Performance ou Ajustar
+- onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Testar, Desempenho ou Ajustar
 - rota: `autonomia_agent_panel` - `/app/accounts/:accountId/agents/:agentId/:tab(test|knowledge|channels|performance|tune|publish)?`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
-- passos: Use Testar para conversar e ver confiança, handoff e fontes usadas; use Performance para período 7d/30d, respostas, handoff e taxa de conhecimento; use Ajustar para saudação, fallback, tom, estratégia de handoff, limiar de confiança e atuação; em modo guiado, use Re-conversar.
+- passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
 - gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
 - nav_target: `autonomia_agent_panel`
 
@@ -720,9 +720,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `settings_inbox_show` - `/app/accounts/:accountId/settings/inboxes/:inboxId/:tab?`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_view` ou `inbox_manage`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que configurar CSAT e uma configuracao de caixa e precisa de administrador; o usuario pode apenas consultar relatorios se tiver `report_manage`.
-- pre_requisitos: caixa de entrada existente; etiquetas criadas se a regra de envio for baseada em labels
+- pre_requisitos: caixa de entrada existente; etiquetas criadas se a regra de envio for baseada em etiquetas
 - passos: 1. Abra a caixa em Configuracoes; 2. Entre na aba CSAT; 3. Ative a pesquisa; 4. Defina tipo de exibicao/mensagem ou template, conforme o canal; 5. Configure a regra por etiquetas; 6. Salve.
-- gotchas: CSAT e enviado uma vez por conversa; em canais WhatsApp a tela cria/atualiza template dedicado e mostra status de aprovacao; alterar template existente pode pedir confirmacao; se a regra por label nao bater, a pesquisa nao dispara.
+- gotchas: CSAT e enviado uma vez por conversa; em canais WhatsApp a tela cria/atualiza template dedicado e mostra status de aprovacao; alterar template existente pode pedir confirmacao; se a regra por etiqueta nao bater, a pesquisa nao e enviada.
 - nav_target: `settings_inbox_show`
 
 ### Configurar widget do site
@@ -756,7 +756,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: `administrator` e `agent` podem buscar conforme acesso; custom role com `conversation_manage`, `conversation_unassigned_manage` ou `conversation_participating_manage` ve conversas/mensagens; custom role com `contact_manage` ve contatos; custom role com `knowledge_base_manage` ve artigos. Se o perfil nao puder, explique que a busca so mostra tipos de resultado permitidos ao usuario.
 - pre_requisitos: existir dado acessivel ao usuario; para artigos, Central de Ajuda habilitada
 - passos: 1. Abra a busca global pela sidebar ou atalho; 2. Digite o termo e pressione enter; 3. Use as abas Tudo, Contatos, Conversas, Mensagens e Artigos conforme aparecerem; 4. Use Ver mais ou Carregar mais quando houver muitos resultados; 5. Abra o item encontrado para navegar ao detalhe.
-- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e inbox so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a inbox/contato/artigo.
+- gotchas: a aba Tudo mostra apenas alguns resultados por tipo; filtros avancados de data, remetente e caixa de entrada so entram no payload quando `advanced_search` esta ativo; resultados seguem permissao e acesso a caixa de entrada/contato/artigo.
 - nav_target: `search`
 - highlight: `global-search`
 
@@ -789,8 +789,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `integrations`; papel `administrator`
 - perfil: somente `administrator`. Se o perfil nao puder, diga que integrar aplicativos, webhooks e dashboard apps exige administrador.
 - pre_requisitos: credenciais da integracao ou URL do app; para dashboard app, titulo e URL valida; para Dialogflow, Project ID, JSON de credenciais e caixa de entrada
-- passos: 1. Abra Configuracoes > Integracoes; 2. Pesquise a aplicacao desejada; 3. Clique em configurar; 4. Para hooks, preencha credenciais e selecione a caixa quando a integracao for por inbox; 5. Para Dashboard Apps, abra a area propria e cadastre titulo e URL; 6. Salve e teste no contexto da conversa/caixa.
-- gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por inbox, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
+- passos: 1. Abra Configuracoes > Integracoes; 2. Pesquise a aplicacao desejada; 3. Clique em configurar; 4. Para hooks, preencha credenciais e selecione a caixa de entrada quando a integracao for por caixa de entrada; 5. Para Dashboard Apps, abra a area propria e cadastre titulo e URL; 6. Salve e teste no contexto da conversa/caixa.
+- gotchas: Dashboard App usa conteudo do tipo `frame` com URL valida; Dialogflow e uma integracao por caixa de entrada, nao um `agent_bot`; algumas integracoes so aparecem como ativas se houver credencial global ou feature habilitada; remover hook desconecta a integracao.
 - nav_target: `settings_applications`
 
 ### Ver plano e cobranca
@@ -811,8 +811,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_ai`/`crm_admin`; se o perfil nao puder, diga que ele pode visualizar o CRM quando tiver acesso, mas precisa de permissao de IA do CRM para alterar essas configuracoes.
 - pre_requisitos: funil ja criado; etapas do funil definidas; para auto-move, criterios de IA por etapa bem descritos.
-- passos: 1. Abra CRM Kanban; 2. Selecione o funil; 3. Clique em Editar funil; 4. No bloco IA do funil, habilite IA, auto-move, callback e/ou follow-up automatico; 5. Preencha criterios por etapa, handoff e horarios de envio; 6. Clique em Salvar IA ou Salvar funil.
-- gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; follow-up automatico envia mensagens, entao deve ser ligado com cuidado; contato marcado como quem nao quer receber mensagens ativas nao recebe follow-up automatico: o card mostra Parado a pedido do cliente.
+- passos: 1. Abra CRM Kanban; 2. Selecione o funil; 3. Clique em Editar funil; 4. No bloco IA do funil, habilite IA, auto-move, callback e/ou retorno automatico; 5. Preencha criterios por etapa, transferencia para humano e horarios de envio; 6. Clique em Salvar IA ou Salvar funil.
+- gotchas: o painel so aparece ao editar um funil existente; auto-move depende de criterios por etapa; callback tem modos "so lembrar", "enviar mensagem" ou "ambos"; o retorno automatico envia mensagens, entao deve ser ligado com cuidado; contato marcado como quem nao quer receber mensagens ativas nao recebe retorno automatico: o card mostra Parado a pedido do cliente.
 - nav_target: `crm_kanban_index`
 
 ### Usar sugestoes e resumo por IA no card do CRM
@@ -875,12 +875,12 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Configurar CRM por caixa de entrada
 - intent: "Como faco conversas virarem cards automaticamente?"; "Como defino funil padrao por inbox?"; "Como restringo cards da caixa para o agente atribuido?"
-- onde_fica: Sidebar > CRM > CRM Kanban > Configuracoes de inbox
+- onde_fica: Sidebar > CRM > CRM Kanban > Configurar caixas de entrada
 - rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que ele precisa de permissao para gerenciar funis/configuracoes do CRM.
 - pre_requisitos: caixas de entrada criadas; funil e etapas existentes quando quiser definir padrao.
-- passos: 1. Abra CRM Kanban; 2. Clique em Configuracoes de inbox; 3. Ative CRM na caixa desejada; 4. Escolha visibilidade entre todos os cards da inbox ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
+- passos: 1. Abra CRM Kanban; 2. Clique em Configurar caixas de entrada; 3. Ative CRM na caixa de entrada desejada; 4. Escolha visibilidade entre todos os cards da caixa de entrada ou apenas atribuidos; 5. Defina funil/etapa padrao; 6. Marque Criar card automaticamente e clique em Salvar no cartao daquela caixa; o cartao mostra "Salvo" quando gravou; 7. Repita nas outras caixas e clique em Concluir. Cada caixa salva separada: o rodape avisa quantas caixas tem alteracao nao salva, e fechar descarta o que nao foi salvo.
 - gotchas: se CRM ativo for desligado, a criacao automatica tambem e desligada; `assigned_only` muda a visibilidade de agentes; funil/etapa padrao precisam pertencer a mesma conta.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-configure-inboxes`
@@ -892,8 +892,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - perfil: `administrator`, `agent` sem custom role, ou custom role com `crm_manage_pipelines`/`crm_admin`; se o perfil nao puder, diga que automacoes de etapa fazem parte da gestao de funis.
 - pre_requisitos: funil salvo; etapa existente; agentes disponiveis quando a acao for atribuir responsavel.
-- passos: 1. Abra Editar funil; 2. No status desejado, abra Automacoes deste status; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar follow-up, Atribuir responsavel ou Mover estagio; 5. Defina atraso e parametros; 6. Salve a regra.
-- gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; follow-ups criados pela automacao aparecem no card e no calendario.
+- passos: 1. Abra Editar funil; 2. Na etapa desejada, abra Automacoes desta etapa; 3. Crie uma regra e escolha gatilho de entrada ou saida; 4. Adicione passos como Criar retorno, Atribuir responsavel ou Mover etapa; 5. Defina atraso e parametros; 6. Salve a regra.
+- gotchas: automacoes so aparecem para etapas ja salvas; regras podem encadear movimentos, entao evite loops; retornos criados pela automacao aparecem no card e no calendario.
 - nav_target: `crm_kanban_index`
 
 ### Salvar e compartilhar visoes da lista do CRM
@@ -1090,7 +1090,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: papel `administrator` ou `agent` ou `crm_view`
 - pre_requisitos: ao menos um funil; para ver reuniões/externos, caixa Google ou Microsoft com calendário ativo.
 - passos: 1. Abra o Calendário do CRM; 2. No cabeçalho, use os chips de tipo (Lembretes, WhatsApp, Previsões, Reuniões, Externos) para ligar/desligar cada camada; 3. Alterne a visão em Mês/Semana/Dia/Agenda; 4. Use Hoje e as setas para navegar; 5. Ajuste o escopo entre Meus e Todos.
-- gotchas: os chips são toggles independentes e ficam coloridos quando ativos; Externos aparece em estilo apagado/itálico e é só leitura; sem caixa com calendário conectado, Reuniões e Externos ficam vazios; o escopo Meus/Todos altera quais follow-ups aparecem.
+- gotchas: os chips são toggles independentes e ficam coloridos quando ativos; Externos aparece em estilo apagado/itálico e é só leitura; sem caixa com calendário conectado, Reuniões e Externos ficam vazios; o escopo Meus/Todos altera quais retornos aparecem.
 - nav_target: `crm_calendar_index`
 
 ### Conectar WhatsApp Oficial (Cloud API)
@@ -1216,7 +1216,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Diagnosticar IA / agente (a IA não responde nas conversas)
 - intent: Por que a IA não responde?; Meu agente de IA não está respondendo; Por que o agente automático não atende os clientes?; O bot parou de responder; Diagnosticar agente de IA
-- onde_fica: Sidebar > Agentes
+- onde_fica: Sidebar > Agentes de IA
 - rota: `autonomia_agents_index` - `/app/accounts/:accountId/agents`
 - gate: papel `administrator` ou `autonomia_view` ou `autonomia_manage`
 - passos: O Guia confere se os Agentes de IA estão habilitados na conta, se há chave de IA configurada, se existe um agente habilitado e ativo apto a atender o cliente (atuação Externo/Ambos) e se ele está conectado a uma caixa de entrada — e aponta o que falta.
@@ -1313,8 +1313,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `assignment_policy_index` - `/app/accounts/:accountId/settings/assignment-policy/index`
 - gate: feature flag `assignment_v2`; papel `administrator`
 - pre_requisitos: ser administrador da conta
-- passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Handoff da IA para a passagem da IA para uma pessoa.
-- gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Handoff da IA só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
+- passos: 1. Abra Configurações > Atribuição de Agentes; 2. Leia os cards e decida o que quer ajustar; 3. Clique em Política de atribuição para a ordem do rodízio, em Capacidade do agente para limitar quantas conversas cada pessoa aguenta, ou em Transferir para humano (CRM) para a transferência da IA para uma pessoa.
+- gotchas: a tela mostra de um a três cards conforme o que a conta tem liberado; Política de atribuição aparece sempre, Capacidade do agente só com atribuição avançada, e Transferir para humano (CRM) só com o CRM e a IA do CRM ligados; card que sumiu é liberação de recurso, não erro.
 - nav_target: `assignment_policy_index`
 
 ### Ver e organizar as políticas de atribuição
@@ -1379,22 +1379,22 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 
 ### Escolher o funil para configurar a passagem da IA
 - intent: Onde configuro a IA passando o atendimento para uma pessoa?; Em quais funis o handoff já está ligado?; Por que essa tela não aparece para mim?; Como reviso a passagem da IA de um funil específico?
-- onde_fica: Configurações > Handoff da IA (CRM)
+- onde_fica: Configurações > Transferir para humano (CRM)
 - rota: `crm_handoff_settings_index` - `/app/accounts/:accountId/settings/assignment-policy/handoff`
 - gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
 - pre_requisitos: CRM Kanban e IA do CRM ligados, pelo menos um funil criado, e permissão de administrador
-- passos: 1. Abra Configurações > Handoff da IA (CRM); 2. Veja na etiqueta de cada funil se está ligado e em qual fluxo; 3. Clique no funil que quer configurar.
+- passos: 1. Abra Configurações > Transferir para humano (CRM); 2. Veja na etiqueta de cada funil se está ligado e em qual fluxo; 3. Clique no funil que quer configurar.
 - gotchas: aqui nada é configurado, é só a lista de escolha; a etiqueta reflete o padrão do funil, não as personalizações por etapa; com o CRM ou a IA do CRM desligados a plataforma devolve você à tela inicial sem avisar; sem funil criado a lista fica vazia.
 - nav_target: `crm_handoff_settings_index`
 
 ### Definir quando e para quem a IA passa a conversa
 - intent: Como faço a IA chamar um humano no meio do atendimento?; Qual a diferença entre transferir direto e por convite?; O que acontece se ninguém pegar a conversa?; Como coloco uma regra diferente só em uma etapa do funil?; Como escolho quem recebe a conversa?
-- onde_fica: Configurações > Handoff da IA (CRM) > nome do funil
+- onde_fica: Configurações > Transferir para humano (CRM) > nome do funil
 - rota: `crm_handoff_settings_edit` - `/app/accounts/:accountId/settings/assignment-policy/handoff/:pipelineId`
 - gate: feature flag `crm`; papel `administrator` ou `crm_manage_ai`
 - pre_requisitos: um funil com etapas criadas, caixas vinculadas ao funil e agentes cadastrados
-- passos: 1. Escolha o funil no seletor do topo; 2. No padrão do funil, ligue a passagem para humano e escreva quando transferir; 3. Escolha direto ou convite e o destino; 4. Defina o tempo de espera e o que fazer se ninguém pegar; 5. Nas personalizações por etapa, deixe em Padrão o que herda e personalize onde a regra é diferente; 6. Salve.
-- gotchas: a passagem só acontece de verdade quando o funil está configurado E a caixa tem atendente como membro: caixa sem membro deixa a promessa de que alguém vai assumir sem ninguém para atribuir, e nada na tela avisa isso; salvar grava o padrão e todas as etapas de uma vez, inclusive etapa que você deixou pela metade; etapa marcada como Padrão herda e ignora o que estiver preenchido nela; no rodízio a equipe sai da caixa em que a conversa chegou; direto atribui na hora, a IA para de responder e só entrega para quem está online, enquanto convite notifica e a IA continua atendendo até alguém pegar; o tempo de espera padrão é 15 minutos, re-notificar avisa até 8 vezes e escalar exige escolher a pessoa.
+- passos: 1. Escolha o funil no seletor do topo; 2. No padrão do funil, ligue a transferência para humano e escreva quando transferir; 3. Escolha direto ou convite e o destino; 4. Defina o tempo de espera e o que fazer se ninguém pegar; 5. Nas personalizações por etapa, deixe em Padrão o que herda e personalize onde a regra é diferente; 6. Salve.
+- gotchas: a transferência só acontece de verdade quando o funil está configurado E a caixa de entrada tem atendente como membro: caixa de entrada sem membro deixa a promessa de que alguém vai assumir sem ninguém para atribuir, e nada na tela avisa isso; salvar grava o padrão e todas as etapas de uma vez, inclusive etapa que você deixou pela metade; etapa marcada como Padrão herda e ignora o que estiver preenchido nela; no rodízio a equipe sai da caixa em que a conversa chegou; direto atribui na hora, a IA para de responder e só entrega para quem está online, enquanto convite notifica e a IA continua atendendo até alguém pegar; o tempo de espera padrão é 15 minutos, Avisar de novo avisa até 8 vezes e Escalar exige escolher a pessoa.
 - nav_target: `crm_handoff_settings_edit`
 
 ### Fechar conversas paradas e exigir campos na resolução
@@ -1521,7 +1521,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: ler resultados, ordenar, filtrar, abrir o painel e ver o mapa: administrador ou funcao com Ver prospeccao ou Editar prospeccao. Enriquecer, Nao quer ser contatado e Desfazer: pode ser contatado exigem administrador ou Editar prospeccao, so nos leads que a pessoa enxerga. Avaliacao do score e Fatores de atencao, no painel, so aparecem para o administrador da conta, qualquer que seja a funcao.
 - pre_requisitos: uma busca concluida que voce enxerga
 - passos: 1. Abra a busca em Buscas recentes; 2. Leia os cards na ordem de Prioridade: o anel, G #, Posicao e Ligar 1o; 3. Use o icone Filtros para trocar o campo em Ordenar e inverter a ordem; 4. Clique num pino do mapa ou no card para abrir o painel do lead; 5. No card, use Mapa, Detalhes, WhatsApp, Ligar e os links das redes; 6. Clique em Enriquecer num lead com site para buscar mais dados; 7. Se a pessoa pediu para nao receber mensagens, clique em Nao quer ser contatado no rodape do painel e confirme em Marcar recusa.
-- gotchas: Nao quer ser contatado grava a recusa (origem Prospeccao) no contato do lead e nos contatos com o mesmo telefone ou e-mail, e campanhas e follow-ups automaticos deixam de enviar para eles; o lead ganha o selo Nao quer ser contatado no card e no topo do painel, inclusive se for descartado depois; Desfazer: pode ser contatado, confirmado em Desfazer recusa, tira a recusa dos contatos so quando nada mais a sustenta: se outro lead recusado alcanca o contato a marca fica, e se houver descadastro de e-mail ou marcacao manual a recusa continua com essa origem; o lead recusado que ganha telefone ou e-mail novo, pelo enriquecimento ou por busca refeita, marca tambem o contato desse numero ou e-mail; a faixa de cor do card segue a prioridade: 75 ou mais e Lead muito quente, 50 ou mais Oportunidade alta, 25 ou mais Lead morno e abaixo disso Prioridade baixa; Ligar 1o marca a posicao 1; o card mostra ate 4 sinais, como Tem site ou Sem site, fotos, posicao no Google, nota e avaliacoes; nota alta e oportunidade no modo GMN e ponto positivo no Geral; o numero do pino e a posicao do lead na busca, e com varios pinos proximos eles se agrupam; Distancia do centro so aparece quando a busca tem centro; ao trocar o campo de ordenar, a ordem volta a mostrar o melhor primeiro; o telefone vem no formato internacional e prefere o WhatsApp verificado, com o selo verificado; Verificando aparece enquanto a conta confere o numero pela sessao de WhatsApp dela; a verificacao precisa de um numero conectado por QR code (WhatsApp API) na conta, e sem ele nenhum lead fica verificado e a campanha fica sem quem incluir; so o selo verificado confirma o numero, o botao WhatsApp aparece mesmo sem verificacao; Enriquecer entra na fila e o card se atualiza sozinho, e pedir de novo com o lead na fila e recusado; Enriquecer fica desligado sem a pesquisa liberada pelo suporte ou sem site; sem a chave da integracao CRM Kanban AI a tela avisa e o enriquecimento traz so o que esta no site; enriquecimento parado volta a falha depois de 15 minutos rodando ou 2 horas na fila; para quem nao e administrador o painel mostra a prioridade e a frase da nota, sem os componentes; sem a chave de mapa da plataforma aparece que o mapa ainda nao esta disponivel, e o resto funciona.
+- gotchas: Nao quer ser contatado grava a recusa (origem Prospeccao) no contato do lead e nos contatos com o mesmo telefone ou e-mail, e campanhas e retornos automaticos deixam de enviar para eles; o lead ganha o selo Nao quer ser contatado no card e no topo do painel, inclusive se for descartado depois; Desfazer: pode ser contatado, confirmado em Desfazer recusa, tira a recusa dos contatos so quando nada mais a sustenta: se outro lead recusado alcanca o contato a marca fica, e se houver descadastro de e-mail ou marcacao manual a recusa continua com essa origem; o lead recusado que ganha telefone ou e-mail novo, pelo enriquecimento ou por busca refeita, marca tambem o contato desse numero ou e-mail; a faixa de cor do card segue a prioridade: 75 ou mais e Lead muito quente, 50 ou mais Oportunidade alta, 25 ou mais Lead morno e abaixo disso Prioridade baixa; Ligar 1o marca a posicao 1; o card mostra ate 4 sinais, como Tem site ou Sem site, fotos, posicao no Google, nota e avaliacoes; nota alta e oportunidade no modo GMN e ponto positivo no Geral; o numero do pino e a posicao do lead na busca, e com varios pinos proximos eles se agrupam; Distancia do centro so aparece quando a busca tem centro; ao trocar o campo de ordenar, a ordem volta a mostrar o melhor primeiro; o telefone vem no formato internacional e prefere o WhatsApp verificado, com o selo verificado; Verificando aparece enquanto a conta confere o numero pela sessao de WhatsApp dela; a verificacao precisa de um numero conectado por QR code (WhatsApp API) na conta, e sem ele nenhum lead fica verificado e a campanha fica sem quem incluir; so o selo verificado confirma o numero, o botao WhatsApp aparece mesmo sem verificacao; Enriquecer entra na fila e o card se atualiza sozinho, e pedir de novo com o lead na fila e recusado; Enriquecer fica desligado sem a pesquisa liberada pelo suporte ou sem site; sem a chave da integracao CRM Kanban AI a tela avisa e o enriquecimento traz so o que esta no site; enriquecimento parado volta a falha depois de 15 minutos rodando ou 2 horas na fila; para quem nao e administrador o painel mostra a prioridade e a frase da nota, sem os componentes; sem a chave de mapa da plataforma aparece que o mapa ainda nao esta disponivel, e o resto funciona.
 - nav_target: `autonomia_prospecting_search`
 
 ### Pesquisar a empresa e o decisor de um lead
@@ -1554,7 +1554,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - perfil: Adicionar a campanha e So criar o segmento exigem administrador ou Editar prospeccao. Escolher uma campanha existente exige tambem Editar campanhas na funcao; sem ela o campo Campanha nao aparece e da para criar so o segmento.
 - pre_requisitos: leads prontos para campanha com WhatsApp verificado; para ligar a uma campanha, uma campanha da WhatsApp API (numero por QR code) agendada ou uma de envio unico ativa
 - passos: 1. Selecione os leads na busca; 2. Clique em Adicionar a campanha; 3. Em Campanha, escolha uma campanha ou So criar o segmento, sem campanha; 4. Confira o Nome do segmento, que vem com o termo da busca; 5. Clique em Adicionar; 6. Leia o resumo: quem entrou, a campanha, os contatos criados e quem ficou de fora, com o motivo.
-- gotchas: nada e disparado aqui, a selecao vira uma lista e uma etiqueta de segmento nos contatos, e a campanha le essa etiqueta quando envia; entram so leads prontos para campanha, com telefone e WhatsApp verificado, sem bloqueio no contato e sem recusa de mensagens ativas no lead ou no contato; ficam de fora, com o motivo no resumo, descartado, contato bloqueado, Pediu para nao receber mensagens (inclui o lead marcado com Nao quer ser contatado e o contato marcado como quem nao quer receber mensagens ativas), sem telefone, sem WhatsApp verificado e ainda nao pronto; as campanhas de envio unico ativas aparecem primeiro, depois as da WhatsApp API (numero por QR code) agendadas; vao ate 500 leads por vez; nome de segmento igual a etiqueta que ja existe e recusado; descartar um lead depois tira a etiqueta do contato dele, e campanha agendada ou de envio unico que ainda nao disparou deixa de alcanca-lo; a campanha da WhatsApp API (numero por QR code) que ja comecou tira o descartado dos destinatarios que ainda esperam envio e o conta em Descartados na Prospeccao; descartar nao e recusa: para parar de vez, use Nao quer ser contatado no painel do lead, ou clique em Abrir contato no card do lead e use Marcar que nao quer receber.
+- gotchas: nada e enviado aqui, a selecao vira uma lista e uma etiqueta de segmento nos contatos, e a campanha le essa etiqueta quando envia; entram so leads prontos para campanha, com telefone e WhatsApp verificado, sem bloqueio no contato e sem recusa de mensagens ativas no lead ou no contato; ficam de fora, com o motivo no resumo, descartado, contato bloqueado, Pediu para nao receber mensagens (inclui o lead marcado com Nao quer ser contatado e o contato marcado como quem nao quer receber mensagens ativas), sem telefone, sem WhatsApp verificado e ainda nao pronto; as campanhas de envio unico ativas aparecem primeiro, depois as da WhatsApp API (numero por QR code) agendadas; vao ate 500 leads por vez; nome de segmento igual a etiqueta que ja existe e recusado; descartar um lead depois tira a etiqueta do contato dele, e campanha agendada ou de envio unico que ainda nao foi enviada deixa de alcanca-lo; a campanha da WhatsApp API (numero por QR code) que ja comecou tira o descartado dos destinatarios que ainda esperam envio e o conta em Descartados na Prospeccao; descartar nao e recusa: para parar de vez, use Nao quer ser contatado no painel do lead, ou clique em Abrir contato no card do lead e use Marcar que nao quer receber.
 - nav_target: `autonomia_prospecting_search`
 
 ### Descartar leads, desfazer o descarte e criar contatos em lote
@@ -1677,7 +1677,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
 - pre_requisitos: acesso ao cadastro; permissões de Relacionamentos e do CRM são independentes
 - passos: 1. Abra o contato ou a empresa para consultar dados, atributos e histórico; 2. Se a ficha indicar somente consulta, use as informações sem alterar o cadastro; 3. Com permissão de gerenciar oportunidades, use um contato existente ou continue sem vínculo; 4. Para criar ou editar pessoa e empresa, solicite ao administrador a permissão de gerenciar contatos.
-- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa, inclusive na lateral do atendimento. Atender conversas não concede criar oportunidades; consultar o CRM não permite arquivar ou criar/concluir/cancelar follow-ups. Reiniciar a cadência exige gerenciar a IA, enquanto o bloqueio de follow-up no contato exige gerenciar cadastros. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
+- gotchas: gerenciar oportunidades não concede edição dos cadastros compartilhados. Sem edição, ficam protegidos também notas, etiquetas, avatar e vínculo com empresa, inclusive na lateral do atendimento. Atender conversas não concede criar oportunidades; consultar o CRM não permite arquivar ou criar/concluir/cancelar retornos. Reiniciar a cadência exige gerenciar a IA, enquanto o bloqueio de retorno no contato exige gerenciar cadastros. Valores de atributos não são o mesmo que suas definições e configuração. Permissões de envio de mensagem e exclusão seguem controles próprios. A quantidade de oportunidades não é limitada por este modo: a lista segue os filtros e a visibilidade do CRM, com paginação.
 - nav_target: `contacts_edit`
 
 ### Consultar oportunidades dos contatos de uma empresa

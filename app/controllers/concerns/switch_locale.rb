@@ -46,7 +46,7 @@ module SwitchLocale
   def locale_from_user
     return unless @user
 
-    @user.ui_settings&.dig('locale')
+    preferred_locale(@user.ui_settings&.dig('locale'))
   end
 
   def set_locale(locale, &)
@@ -74,6 +74,10 @@ module SwitchLocale
   def locale_from_account(account)
     return unless account
 
-    account.locale
+    preferred_locale(account.locale)
+  end
+
+  def preferred_locale(locale)
+    LOCALE_PREFERENCE_ALIASES.fetch(locale, locale)
   end
 end

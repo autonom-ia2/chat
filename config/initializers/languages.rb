@@ -1,6 +1,11 @@
 # Based on ISO_639-3 Codes. ref: https://en.wikipedia.org/wiki/List_of_ISO_639-2_codes
 # This Hash is used in account model, so do not change the index for existing languages
 
+# Saved preferences in these locales are served in the target locale. The European
+# Portuguese catalogue is mostly untranslated English, so `pt` uses pt_BR (issue #881).
+# Kept in LANGUAGES_CONFIG so stored account locales stay valid; hidden from pickers.
+LOCALE_PREFERENCE_ALIASES = { 'pt' => 'pt_BR' }.freeze
+
 LANGUAGES_CONFIG = {
   0 => { name: 'English (en)', iso_639_3_code: 'eng', iso_639_1_code: 'en', enabled: true },
   1 => { name: 'العربية (ar)', iso_639_3_code: 'ara', iso_639_1_code: 'ar', enabled: true },

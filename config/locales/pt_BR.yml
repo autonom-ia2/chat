@@ -158,6 +158,15 @@ pt_BR:
         sdp_offer_required: 'sdp_offer é obrigatório'
         contact_phone_required: 'Número de telefone do contato é obrigatório'
         permission_request_failed: 'Falha ao enviar solicitação de permissão de chamada'
+      authentication_template_requires_phone: "Modelos de autenticação exigem o número de WhatsApp do contato e não podem ser enviados a um contato identificado só pelo BSUID."
+      template_category_required_for_bsuid: "Não foi possível confirmar a categoria do modelo para este contato identificado só pelo BSUID."
+      contact_info_request:
+        unsupported_provider: "O pedido de dados de contato só está disponível em caixas de entrada do WhatsApp Cloud."
+        phone_already_available: "Este contato já tem número de telefone."
+        invalid_identifier: "Só é possível pedir dados de contato a um usuário do WhatsApp vinculado à empresa."
+        outside_messaging_window: "Só é possível pedir dados de contato dentro da janela de atendimento de 24 horas do WhatsApp."
+        template_not_configured: "Fora da janela de atendimento de 24 horas, é preciso um modelo do WhatsApp aprovado com o botão de pedir dados de contato."
+        pending_request: "Já existe um pedido de dados de contato aguardando resposta."
     openai:
       invalid_api_key: 'Chave da OpenAI recusada. Confira se ela está correta, se não foi revogada e se a conta tem crédito em platform.openai.com.'
     inboxes:
@@ -194,6 +203,9 @@ pt_BR:
     billing:
       invalid_currency: Moeda de faturamento inválida
       currency_locked: Moeda de faturamento não pode ser alterada após o faturamento ter sido configurado
+      provider_action_unavailable: "Esta ação de cobrança não está disponível para contas cobradas pela Shopify"
+      shopify_pricing_unavailable: "Os preços da Shopify não estão disponíveis agora"
+      shopify_verification_failed: "Não foi possível verificar a cobrança pela Shopify agora"
     topup:
       credits_required: A quantidade de créditos é obrigatória
       invalid_credits: Quantidade de créditos inválida
@@ -203,6 +215,12 @@ pt_BR:
       no_payment_method: Nenhum método de pagamento encontrado. Por favor, adicione um método de pagamento antes de realizar uma compra.
     reports:
       date_range_too_long: O intervalo de datas não pode exceder 6 meses
+    crm:
+      contact_already_linked: "já está vinculado a esta oportunidade. Use o contato existente ou altere o vínculo explicitamente."
+      contact_idempotency_required: "É preciso informar uma Idempotency-Key para criar um contato nesta oportunidade."
+      contact_identity_taken: "Já existe um contato com esses dados. Use o contato existente."
+      invalid_contact_input: "Informe um contato com nome preenchido, e-mail e telefone opcionais em texto e atributos válidos."
+      contact_conversation_conflict: "não pode ser alterado enquanto esta oportunidade tiver conversas de outro contato. Revise primeiro os vínculos das conversas."
   profile:
     mfa:
       enabled: MFA habilitado com sucesso
@@ -296,6 +314,7 @@ pt_BR:
         call_permission_request_body: 'Gostaríamos de ligar para você em relação à sua conversa.'
         flow_response: 'Enviou uma resposta de um Flow'
         unsupported_message: 'Esta mensagem não está disponível.'
+        request_contact_info: "Você pode compartilhar seu número de telefone com a gente?"
       voice_call:
         twilio: 'Chamada de Voz'
         whatsapp: 'Chamada do WhatsApp'
@@ -470,6 +489,10 @@ pt_BR:
       processing_pages: 'Processando páginas %{start}-%{end} (iteração %{iteration})'
       chunk_generated: 'Bloco gerado com %{chunk_faqs} FAQs. Total até agora: %{total_faqs}'
       page_processing_error: 'Erro ao processar as páginas %{start}-%{end}: %{error}'
+      markdown_format_error: "precisa ser um arquivo Markdown"
+      markdown_size_error: "precisa ter no máximo 10.000 caracteres"
+      multiple_files_error: "Um documento pode ter só um arquivo enviado"
+      sync_not_supported_for_file: "A sincronização não está disponível para documentos enviados"
     custom_tool:
       slug_generation_failed: 'Não foi possível gerar um slug único após 5 tentativas'
       limit_exceeded: 'Você pode criar no máximo %{limit} ferramentas personalizadas por conta'
@@ -651,6 +674,9 @@ pt_BR:
 
       Transcrição:
       %{format_messages}
+    booking:
+      verification:
+        subject: "Confirme seu agendamento"
   agent_capacity_policy:
     inbox_already_assigned: 'A caixa de entrada já foi atribuída a esta política'
   portals:
@@ -736,6 +762,11 @@ pt_BR:
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
+      file:
+        required: 'Escolha um arquivo para anexar.'
+        invalid_type: 'Eu leio PDF, Word, Excel, CSV, texto, JSON, áudio e imagem.'
+        too_large: 'Este arquivo passa de 25 MB.'
+        not_audio: 'Não consegui ouvir esta gravação. Tente gravar de novo.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
@@ -765,6 +796,13 @@ pt_BR:
           - 'Não quero te passar uma informação imprecisa. Vou encaminhar seu atendimento para alguém do nosso time continuar com você.'
           - 'Essa resposta precisa de uma conferência do nosso time. Vou direcionar seu atendimento para um humano seguir com você.'
           - 'Para manter a resposta segura, vou trazer alguém do nosso time para continuar por aqui.'
+        connect_errors:
+          generic: "Não foi possível conectar esta caixa de entrada ao agente."
+          agent_internal_not_connectable: "Este é um agente interno (copiloto da equipe) e não pode ser conectado a uma caixa de entrada de clientes."
+          agent_not_active: "Ative o agente antes de conectar uma caixa de entrada."
+          inbox_has_webhook_bot: "Esta caixa de entrada já está conectada a outro bot. Desconecte-o primeiro."
+          inbox_already_connected: "Esta caixa de entrada já está conectada a um agente."
+          not_connected: "Esta caixa de entrada não está conectada ao agente."
     prospecting:
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
@@ -949,3 +987,12 @@ pt_BR:
         limit_too_high: 'Peça até %{max} leads por busca.'
         unsupported_provider: 'A fonte de busca desta conta não está disponível. Fale com o suporte.'
         lead_required: 'Escolha o lead para adicionar à lista.'
+    image_required: "É preciso enviar um arquivo de imagem."
+    image_invalid_type: "Tipo de imagem não aceito. Use PNG, JPEG, GIF ou WebP."
+    image_too_large: "A imagem é grande demais. O tamanho máximo é 5 MB."
+    source:
+      invalid_kind: "Tipo de material inválido. Use \"knowledge\" ou \"media\"."
+      limit_reached: "Este agente já tem o máximo de %{limit} materiais de conhecimento. Remova um antes de adicionar outro."
+    insurance:
+      errors:
+        encryption_unavailable: "O cofre de credenciais (ACTIVE_RECORD_ENCRYPTION) não está configurado nesta instalação; a senha do portal não pode ser guardada."

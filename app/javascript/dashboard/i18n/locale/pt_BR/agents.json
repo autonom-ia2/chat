@@ -20,11 +20,11 @@
       "OPEN": "Abrir agente",
       "EDIT_AI": "Editar com IA",
       "PUBLISH": "Publicar",
-      "DELETE": "Apagar",
+      "DELETE": "Excluir",
       "DELETE_DIALOG": {
-        "TITLE": "Apagar agente?",
-        "DESCRIPTION": "Isso apaga {name} permanentemente, incluindo conhecimento e configurações. Essa ação não pode ser desfeita.",
-        "CONFIRM": "Apagar",
+        "TITLE": "Excluir agente?",
+        "DESCRIPTION": "Isso exclui {name} permanentemente, incluindo conhecimento e configurações. Essa ação não pode ser desfeita.",
+        "CONFIRM": "Excluir",
         "CANCEL": "Cancelar"
       },
       "INTERNAL_BADGE": "Copiloto da equipe",
@@ -58,7 +58,7 @@
       },
       "RECEPTIONIST": {
         "TITLE": "Recepcionista",
-        "SUBTITLE": "Recebe, triagem e direciona cada conversa."
+        "SUBTITLE": "Recebe, faz a triagem e direciona cada conversa."
       },
       "POST_SALE": {
         "TITLE": "Pós-venda",
@@ -91,8 +91,8 @@
         "NAME": "o nome",
         "GREETING": "a saudação",
         "HUMAN_CARD": "o resumo",
-        "FALLBACK_MESSAGE": "a mensagem de fallback",
-        "HANDOFF_RULE": "a regra de passagem para humano",
+        "FALLBACK_MESSAGE": "a mensagem quando não souber responder",
+        "HANDOFF_RULE": "a regra de transferir para humano",
         "SCAFFOLD": "a configuração interna"
       },
       "TIMEOUT": "Isto está demorando mais do que o esperado. Envie sua mensagem novamente.",
@@ -174,11 +174,11 @@
       "SAVE_FIRST_MESSAGE": "Salvar primeira mensagem",
       "SAVED": "Primeira mensagem salva.",
       "STARTERS": "Perguntas sugeridas",
-      "APPROVED_SUMMARY": "{count} materiais aprovados · confiança {pct}%",
+      "APPROVED_SUMMARY": "{count} material aprovado · confiança {pct}% | {count} materiais aprovados · confiança {pct}%",
       "TEST_OPTIONAL": "Testar",
-      "CONNECT_TITLE": "Conectar a uma caixa",
+      "CONNECT_TITLE": "Conectar a uma caixa de entrada",
       "INTERNAL_TITLE": "Agente interno (copiloto da equipe)",
-      "INTERNAL_HINT": "Este agente ajuda sua equipe dentro das conversas e nunca fala com o cliente, então não há caixa para conectar.",
+      "INTERNAL_HINT": "Este agente ajuda sua equipe dentro das conversas e nunca fala com o cliente, então não há caixa de entrada para conectar.",
       "SELECT_INBOX": "Escolha uma caixa de entrada",
       "CONNECT_ACTIVATE": "Conectar e ativar",
       "ACTIVATE_INTERNAL": "Ativar copiloto",
@@ -274,7 +274,7 @@
       "ADD_SUCCESS": "Conhecimento adicionado. Estamos processando agora.",
       "ADD_ERROR": "Não foi possível adicionar esse conhecimento. Tente novamente.",
       "REMOVE_ERROR": "Não foi possível remover esse item. Tente novamente.",
-      "RESYNC_ERROR": "Não foi possível sincronizar esse item novamente. Tente novamente.",
+      "RESYNC_ERROR": "Não foi possível ressincronizar esse item. Tente novamente.",
       "REMOVE_CONFIRM_TITLE": "Remover este material?",
       "REMOVE_CONFIRM_DESC": "\"{name}\" e os trechos já indexados saem da base de conhecimento do agente. Não dá para desfazer.",
       "REMOVE_CONFIRM_BUTTON": "Remover",
@@ -376,7 +376,7 @@
       "CONNECT_ERROR": "Não foi possível conectar esse canal. Tente novamente.",
       "DISCONNECT_ERROR": "Não foi possível desconectar esse canal. Tente novamente.",
       "INTERNAL_TITLE": "Este agente é interno",
-      "INTERNAL_BODY": "Um agente interno é um copiloto da equipe e não conecta a caixas."
+      "INTERNAL_BODY": "Um agente interno é um copiloto da equipe e não se conecta a caixas de entrada."
     },
     "TUNE": {
       "MODE_TITLE": "Como você edita",
@@ -403,7 +403,7 @@
       "SIMPLE_TITLE": "Configurações rápidas",
       "GREETING": "Primeira mensagem",
       "GREETING_PLACEHOLDER": "Olá! Como posso ajudar você hoje?",
-      "FALLBACK": "Mensagem de fallback",
+      "FALLBACK": "Mensagem quando não souber responder",
       "FALLBACK_PLACEHOLDER": "Desculpe, não entendi. Vou chamar um colega de equipe.",
       "TONE": "Tom",
       "TONE_OPTIONS": {
@@ -493,7 +493,7 @@
         "HINT": "Clique em um número para abrir as conversas.",
         "HANDLED": "Conversas atendidas",
         "RESOLVED_WITHOUT_HUMAN": "Resolvidas sem humano",
-        "HANDED_OFF": "Passadas para humano",
+        "HANDED_OFF": "Transferidas para humano",
         "REOPENED": "Reabertas após resolução",
         "WRONG_REPLIES": "Respostas marcadas como erradas"
       },
@@ -512,11 +512,11 @@
       "DESCRIPTION": "Escolha se o agente atende todo mundo ou só clientes que atendem a algumas condições. Os demais vão direto para a sua equipe.",
       "EVERYONE": {
         "LABEL": "Todo mundo",
-        "DESC": "O agente responde a todas as conversas das caixas conectadas."
+        "DESC": "O agente responde a todas as conversas das caixas de entrada conectadas."
       },
       "SPECIFIC": {
         "LABEL": "Público específico",
-        "DESC": "O agente responde só a clientes que atendem às condições abaixo; os demais são passados para a equipe sem resposta."
+        "DESC": "O agente responde só a clientes que atendem às condições abaixo; os demais são transferidos para a equipe sem resposta."
       },
       "ADD_CONDITION": "Adicionar condição",
       "ADD_GROUP": "Adicionar grupo de condições",
@@ -538,7 +538,7 @@
         "LABEL": "Conversa sem contato identificado",
         "HINT": "Alguns canais abrem a conversa antes de o contato existir, então as condições acima não podem ser verificadas. Escolha o que o agente faz nesse caso.",
         "RESPOND": "Atender normalmente",
-        "HANDOFF": "Passar para humano"
+        "HANDOFF": "Transferir para humano"
       },
       "SAVE": "Salvar público-alvo"
     },
@@ -551,13 +551,13 @@
       },
       "BUSINESS_HOURS": {
         "LABEL": "Dentro do horário comercial",
-        "DESC": "O agente responde só dentro do horário comercial da caixa."
+        "DESC": "O agente responde só dentro do horário comercial da caixa de entrada."
       },
       "OUTSIDE_BUSINESS_HOURS": {
         "LABEL": "Fora do horário comercial",
-        "DESC": "O agente responde só quando a caixa está fechada."
+        "DESC": "O agente responde só quando a caixa de entrada está fechada."
       },
-      "HINT": "Usa a agenda de atendimento da caixa (CRM) quando existir; senão, o horário comercial da caixa. Caixas sem nenhum dos dois são sempre atendidas.",
+      "HINT": "Usa a agenda de atendimento da caixa de entrada (CRM) quando existir; senão, o horário comercial dela. Caixas de entrada sem nenhum dos dois são sempre atendidas.",
       "SAVE": "Salvar horário"
     },
     "FEEDBACK": {
@@ -583,7 +583,7 @@
       "ACTUATION_EXTERNAL": "Externo",
       "ACTUATION_INTERNAL": "Interno",
       "ACTUATION_BOTH": "Ambos",
-      "INTERNAL_COPILOT": "Copiloto interno"
+      "INTERNAL_COPILOT": "Copiloto da equipe"
     }
   }
 }

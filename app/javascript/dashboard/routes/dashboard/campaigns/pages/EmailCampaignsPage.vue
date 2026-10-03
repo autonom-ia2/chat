@@ -354,7 +354,7 @@ const confirmDestructive = async () => {
             >
               {{ number(drafts.length) }}
               <span class="text-sm font-normal text-n-slate-11">
-                {{ t(`${UX}.DRAFTS`) }}
+                {{ t(`${UX}.DRAFTS`, { count: drafts.length }) }}
               </span>
             </p>
             <p class="mb-0 mt-2 text-xs text-n-slate-11">

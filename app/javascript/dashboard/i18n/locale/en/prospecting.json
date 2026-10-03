@@ -790,11 +790,11 @@
     "CRM_SEND": {
       "TITLE": "Enviar ao CRM",
       "PIPELINE": "Funil",
-      "STAGE": "Estágio",
+      "STAGE": "Etapa",
       "PIPELINE_PLACEHOLDER": "Escolha o funil",
-      "STAGE_PLACEHOLDER": "Escolha o estágio",
-      "CHOOSE_DESTINATION": "Escolha o funil e o estágio para onde os leads vão.",
-      "CONFIRMATION": "Enviando {count} lead(s) para o funil {pipeline}, estágio {stage}.",
+      "STAGE_PLACEHOLDER": "Escolha a etapa",
+      "CHOOSE_DESTINATION": "Escolha o funil e a etapa para onde os leads vão.",
+      "CONFIRMATION": "Enviando {count} lead para o funil {pipeline}, etapa {stage}. | Enviando {count} leads para o funil {pipeline}, etapa {stage}.",
       "LOADING": "Carregando funis...",
       "EMPTY_TITLE": "Nenhum funil no CRM",
       "EMPTY_DESCRIPTION": "Os leads entram no CRM como cards de um funil. Crie um funil no CRM e volte aqui para enviar.",
@@ -927,6 +927,14 @@
           "BODY_GENERAL": "Cada card traz telefone, decisor quando encontrado e os pontos fortes que qualificam o lead. Clique em qualquer um para ver os detalhes, mandar ao CRM ou chamar no WhatsApp."
         }
       }
+    },
+    "PRIORITY": {
+      "VERY_HOT": "Very hot lead",
+      "HIGH": "High opportunity",
+      "WARM": "Warm lead",
+      "LOW": "Low priority",
+      "ARIA": "Priority {value} of 100",
+      "NONE": "No priority yet"
     }
   }
 }

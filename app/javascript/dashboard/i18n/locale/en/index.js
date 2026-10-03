@@ -1,3 +1,4 @@
+import financial from './financial.json';
 import relationships from './relationships.json';
 import advancedFilters from './advancedFilters.json';
 import agentBots from './agentBots.json';
@@ -55,6 +56,7 @@ import sessionLimit from './sessionLimit.json';
 import yearInReview from './yearInReview.json';
 
 export default {
+  ...financial,
   ...relationships,
   ...advancedFilters,
   ...agentBots,

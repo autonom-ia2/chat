@@ -593,7 +593,7 @@
         "BASE_PICK": "Choose file",
         "BASE_SELECTED": "Selected: {name}",
         "BASE_IMPORTING": "Importing list…",
-        "BASE_IMPORT_RESULT": "{count} contacts imported.",
+        "BASE_IMPORT_RESULT": "{count} contact imported. | {count} contacts imported.",
         "BASE_IMPORT_COLUMNS": "Detected columns: {columns}",
         "BASE_IMPORT_ERROR": "Could not import the list. The campaign was saved as a draft.",
         "CREATE_AND_OPEN": "Create and open in editor",
@@ -649,7 +649,7 @@
         "OK": "All personalization fields used in this campaign have values. Ready to send.",
         "MISSING_LABEL": "Used in the template but not found in the recipients:",
         "BLANK_LABEL": "Recipients without a value:",
-        "BLANK_ITEM": "{key}: {count} recipient(s) without a value"
+        "BLANK_ITEM": "{key}: {count} recipient without a value | {key}: {count} recipients without a value"
       },
       "BUILDER": {
         "TITLE": "Email builder",
@@ -852,7 +852,7 @@
         "QUEUED": "List received. Import queued; you can leave this page.",
         "PROCESSING": "Importing the list. Sending is unavailable until the import finishes.",
         "COMPLETED": "List import completed.",
-        "SUMMARY": "Imported: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Suppressed: {suppressed} · Total: {total}",
+        "SUMMARY": "Imported: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Excluded from sending: {suppressed} · Total: {total}",
         "RETRY": "Retry import",
         "ERRORS": {
           "FAILED": "Import failed. No contacts from this attempt were added. Retry or upload the file again.",
@@ -884,7 +884,7 @@
         "START_NEXT": "Start your next campaign",
         "REVIEW_SEND": "Review and send",
         "IN_PREPARATION": "In preparation",
-        "DRAFTS": "drafts",
+        "DRAFTS": "draft | drafts",
         "CURRENT_VIEW": "Campaigns in this view",
         "NEXT_SCHEDULE": "Next scheduled send",
         "NO_SCHEDULE": "No scheduled campaigns",
@@ -920,7 +920,7 @@
         "SENDER": "Sender",
         "AUDIENCE": "Audience",
         "SEE_LIST": "View list",
-        "ELIGIBLE": "eligible recipients",
+        "ELIGIBLE": "eligible recipient | eligible recipients",
         "EXCLUDED": "out of this send",
         "REVIEW_EXCLUSIONS": "Review exclusions",
         "WHEN": "When do you want to send?",
@@ -934,7 +934,7 @@
         "REVIEW_SCHEDULE": "Review schedule",
         "CONFIRM_SEND": "Confirm send",
         "CONFIRM_SCHEDULE": "Confirm schedule",
-        "CONFIRM_AUDIENCE": "{count} eligible recipients",
+        "CONFIRM_AUDIENCE": "{count} eligible recipient | {count} eligible recipients",
         "SEND_SUCCESS": "Campaign send started.",
         "SCHEDULE_SUCCESS": "Campaign scheduled.",
         "BACK_CAMPAIGNS": "Back to campaigns",

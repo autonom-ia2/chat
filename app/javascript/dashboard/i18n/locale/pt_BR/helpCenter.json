@@ -807,6 +807,7 @@
         "PUBLISH_CHANGES_ERROR": "Não foi possível publicar as alterações",
         "SAVE_IN_PROGRESS": "Ainda estamos salvando suas alterações mais recentes. Por favor, tente novamente em instantes.",
         "UPLOAD_IN_PROGRESS": "Há um upload de arquivo não concluído. Aguarde a conclusão ou remova-o primeiro.",
+        "CREATE_IN_PROGRESS": "O artigo ainda está sendo criado. Adicione os arquivos de novo em instantes.",
         "DISCARD_CHANGES": "Descartar alterações",
         "DISCARD_CHANGES_SUCCESS": "Alterações descartadas",
         "DISCARD_CHANGES_ERROR": "Não foi possível descartar as alterações",
@@ -1160,5 +1161,8 @@
         "AUMENTAR": "Aumentar a letra"
       }
     }
+  },
+  "PORTAL": {
+    "IFRAME_LOAD_ERROR": "Ocorreu um erro ao carregar o artigo. Por favor, atualize a página e tente novamente."
   }
 }

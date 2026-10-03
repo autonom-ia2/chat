@@ -2,28 +2,26 @@
 import { useAlert } from 'dashboard/composables';
 import SettingsLayout from '../SettingsLayout.vue';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
-import CustomRoleModal from './component/CustomRoleModal.vue';
-import CustomRoleTableBody from './component/CustomRoleTableBody.vue';
+import CustomRoleCard from './component/CustomRoleCard.vue';
 import CustomRolePaywall from './component/CustomRolePaywall.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { picoSearch } from '@chatwoot/pico-search';
-import { BaseTable } from 'dashboard/components-next/table';
 
 const store = useStore();
+const router = useRouter();
 const { t } = useI18n();
 
-const showCustomRoleModal = ref(false);
-const customRoleModalMode = ref('add');
-const selectedRole = ref(null);
 const loading = ref({});
 const showDeleteConfirmationPopup = ref(false);
 const activeResponse = ref({});
 const searchQuery = ref('');
 
 const records = useMapGetter('customRole/getCustomRoles');
+const agents = useMapGetter('agents/getAgents');
 
 const filteredRecords = computed(() => {
   const query = searchQuery.value.trim();
@@ -31,6 +29,9 @@ const filteredRecords = computed(() => {
   return picoSearch(records.value, query, ['name', 'description']);
 });
 const uiFlags = useMapGetter('customRole/getUIFlags');
+
+const agentsOf = role =>
+  agents.value.filter(agent => agent.custom_role_id === role.id);
 
 const deleteConfirmText = computed(
   () => `${t('CUSTOM_ROLE.DELETE.CONFIRM.YES')} ${activeResponse.value.name}`
@@ -67,15 +68,7 @@ const fetchCustomRoles = async () => {
 
 onMounted(() => {
   fetchCustomRoles();
-});
-
-const tableHeaders = computed(() => {
-  return [
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.NAME'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.DESCRIPTION'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.PERMISSIONS'),
-    t('CUSTOM_ROLE.LIST.TABLE_HEADER.ACTIONS'),
-  ];
+  store.dispatch('agents/get');
 });
 
 const showAlertMessage = message => {
@@ -84,22 +77,17 @@ const showAlertMessage = message => {
   useAlert(message);
 };
 
-const openAddModal = () => {
+const openNewRole = () => {
   if (isBehindAPaywall.value) return;
-  customRoleModalMode.value = 'add';
-  selectedRole.value = null;
-  showCustomRoleModal.value = true;
+  router.push({ name: 'custom_roles_new' });
 };
 
-const openEditModal = role => {
-  customRoleModalMode.value = 'edit';
-  selectedRole.value = role;
-  showCustomRoleModal.value = true;
+const openEditRole = role => {
+  router.push({ name: 'custom_roles_edit', params: { roleId: role.id } });
 };
 
-const hideCustomRoleModal = () => {
-  selectedRole.value = null;
-  showCustomRoleModal.value = false;
+const duplicateRole = role => {
+  router.push({ name: 'custom_roles_new', query: { duplicate: role.id } });
 };
 
 const openDeletePopup = response => {
@@ -123,7 +111,7 @@ const deleteCustomRole = async id => {
 };
 
 const confirmDeletion = () => {
-  loading[activeResponse.value.id] = true;
+  loading.value[activeResponse.value.id] = true;
   closeDeletePopup();
   deleteCustomRole(activeResponse.value.id);
 };
@@ -153,9 +141,10 @@ const confirmDeletion = () => {
         <template #actions>
           <Button
             :label="$t('CUSTOM_ROLE.HEADER_BTN_TXT')"
+            icon="i-lucide-plus"
             size="sm"
             :disabled="isBehindAPaywall"
-            @click="openAddModal"
+            @click="openNewRole"
           />
         </template>
       </BaseSettingsHeader>
@@ -163,37 +152,33 @@ const confirmDeletion = () => {
 
     <template #body>
       <CustomRolePaywall v-if="isBehindAPaywall" />
-      <BaseTable
-        v-else
-        :headers="tableHeaders"
-        :items="filteredRecords"
-        :no-data-message="
-          searchQuery
-            ? $t('CUSTOM_ROLE.NO_RESULTS')
-            : $t('CUSTOM_ROLE.LIST.404')
-        "
-      >
-        <template #row="{ items }">
-          <CustomRoleTableBody
-            :roles="items"
-            :loading="loading"
-            @edit="openEditModal"
+      <template v-else>
+        <p
+          v-if="!filteredRecords.length"
+          class="py-20 m-0 text-center text-base text-n-slate-11"
+        >
+          {{ $t('CUSTOM_ROLE.NO_RESULTS') }}
+        </p>
+        <div v-else class="grid gap-3 sm:grid-cols-2">
+          <CustomRoleCard
+            v-for="role in filteredRecords"
+            :key="role.id"
+            :role="role"
+            :agents="agentsOf(role)"
+            :is-deleting="!!loading[role.id]"
+            @edit="openEditRole"
+            @duplicate="duplicateRole"
             @delete="openDeletePopup"
           />
-        </template>
-      </BaseTable>
+        </div>
+        <p
+          class="flex items-center gap-1.5 mt-3 mb-0 text-label-small text-n-slate-10"
+        >
+          <span class="i-lucide-info size-3.5" />
+          {{ $t('CUSTOM_ROLE.LIST.DEFAULT_ROLES_NOTE') }}
+        </p>
+      </template>
     </template>
-
-    <woot-modal
-      v-model:show="showCustomRoleModal"
-      :on-close="hideCustomRoleModal"
-    >
-      <CustomRoleModal
-        :mode="customRoleModalMode"
-        :selected-role="selectedRole"
-        @close="hideCustomRoleModal"
-      />
-    </woot-modal>
 
     <woot-delete-modal
       v-model:show="showDeleteConfirmationPopup"

@@ -47,7 +47,7 @@ const updateContact = async updatedData => {
     } else if (error instanceof ExceptionWithMessage) {
       useAlert(error.data);
     } else {
-      useAlert(t(`${i18nPrefix}.ERROR_MESSAGE`));
+      useAlert(t('CONTACTS_LAYOUT.CARD.EDIT_DETAILS_FORM.ERROR_MESSAGE'));
     }
   }
 };

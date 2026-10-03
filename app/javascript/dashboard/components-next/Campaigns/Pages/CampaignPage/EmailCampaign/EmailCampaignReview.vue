@@ -307,7 +307,11 @@ onMounted(reload);
                     {{ number(readiness?.eligible_recipients) }}
                   </p>
                   <p class="mb-0 mt-1 text-xs text-n-slate-11">
-                    {{ t(`${UX}.ELIGIBLE`) }}
+                    {{
+                      t(`${UX}.ELIGIBLE`, {
+                        count: readiness?.eligible_recipients ?? 0,
+                      })
+                    }}
                   </p>
                 </div>
               </div>
@@ -515,7 +519,7 @@ onMounted(reload);
         <p class="mb-0 text-n-slate-12">
           {{
             t(`${UX}.CONFIRM_AUDIENCE`, {
-              count: readiness?.eligible_recipients,
+              count: readiness?.eligible_recipients ?? 0,
             })
           }}
         </p>

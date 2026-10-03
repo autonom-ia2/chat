@@ -9,7 +9,7 @@ class SafeFetch::RequestOptions
     max_redirects: SafeFetch::DEFAULT_MAX_REDIRECTS,
     headers: nil,
     sensitive_headers: [],
-    resolver: SsrfFilter::DEFAULT_RESOLVER,
+    resolver: SafeFetch::DEFAULT_RESOLVER,
     http_basic_authentication: nil,
     allowed_content_type_prefixes: SafeFetch::DEFAULT_ALLOWED_CONTENT_TYPE_PREFIXES,
     allowed_content_types: SafeFetch::DEFAULT_ALLOWED_CONTENT_TYPES,

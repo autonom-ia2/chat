@@ -19,25 +19,33 @@ vi.mock('../locale/fr/index.js', async importOriginal => {
 });
 
 describe('dashboard language catalogue loading', () => {
+  // The legacy European Portuguese catalogue is mostly English copies, so a
+  // profile or account saved as `pt` must show Brazilian Portuguese instead.
   it.each(['en', 'pt'])(
-    'fills missing Portuguese strings in Brazilian Portuguese after a %s bootstrap',
+    'shows Brazilian Portuguese for a pt preference after a %s bootstrap',
     async bootstrapLanguage => {
       const i18n = createI18n({
         legacy: false,
         ...(await buildDashboardI18nMessages(bootstrapLanguage)),
       });
       await setDashboardLocale(i18n.global, 'pt');
-      expect(i18n.global.locale.value).toBe('pt');
-      expect(i18n.global.t('PROFILE_SETTINGS.TITLE')).toBe(
-        i18n.global.getLocaleMessage('pt').PROFILE_SETTINGS.TITLE
+      expect(i18n.global.locale.value).toBe('pt_BR');
+      expect(i18n.global.availableLocales).not.toContain('pt');
+      expect(i18n.global.t('CANNED_MGMT.SEARCH_PLACEHOLDER')).toBe(
+        'Pesquisar respostas prontas...'
       );
+      expect(i18n.global.t('DATA_IMPORTS.HEADER')).toBe('Dados');
       expect(i18n.global.t('RELATIONSHIPS.TITLE')).toBe('Relacionamentos');
-      expect(i18n.global.t('CAMPAIGN.EMAIL_CAMPAIGN.WORKSPACE.FULL_VIEW')).toBe(
-        'Visão completa'
-      );
     }
   );
-  it.each(['pt_BR', 'pt', 'es'])(
+
+  it('bootstraps a pt preference straight into Brazilian Portuguese', async () => {
+    const { locale, messages } = await buildDashboardI18nMessages('pt');
+    expect(locale).toBe('pt_BR');
+    expect(Object.keys(messages)).toEqual(['en', 'pt_BR']);
+  });
+
+  it.each(['pt_BR', 'es'])(
     'renders %s after an English-only bootstrap with the real global composer',
     async language => {
       const i18n = createI18n({

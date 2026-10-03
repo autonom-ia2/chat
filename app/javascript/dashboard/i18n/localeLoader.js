@@ -1,10 +1,14 @@
 const DEFAULT_LOCALE = 'en';
-const PORTUGUESE_FALLBACK_LOCALE = 'pt_BR';
+// The legacy European Portuguese catalogue is mostly untranslated English, so
+// preferences saved as `pt` are served in Brazilian Portuguese (issue #881).
+const LOCALE_ALIASES = { pt: 'pt_BR' };
 const localeLoaders = import.meta.glob('./locale/*/index.js');
 const localeChanges = new WeakMap();
 
-const normalizeLocale = locale =>
-  String(locale || DEFAULT_LOCALE).replace('-', '_');
+const normalizeLocale = locale => {
+  const normalizedLocale = String(locale || DEFAULT_LOCALE).replace('-', '_');
+  return LOCALE_ALIASES[normalizedLocale] || normalizedLocale;
+};
 
 const localePath = locale => `./locale/${normalizeLocale(locale)}/index.js`;
 
@@ -31,23 +35,13 @@ export const buildDashboardI18nMessages = async locale => {
     resolveLocale(locale) === DEFAULT_LOCALE
       ? fallbackLocale
       : await loadDashboardLocale(locale);
-  const portugueseFallback =
-    currentLocale.locale === 'pt'
-      ? await loadDashboardLocale(PORTUGUESE_FALLBACK_LOCALE)
-      : null;
 
   return {
     locale: currentLocale.locale,
-    fallbackLocale: {
-      pt: [PORTUGUESE_FALLBACK_LOCALE, DEFAULT_LOCALE],
-      default: [DEFAULT_LOCALE],
-    },
+    fallbackLocale: fallbackLocale.locale,
     messages: {
       [fallbackLocale.locale]: fallbackLocale.messages,
       [currentLocale.locale]: currentLocale.messages,
-      ...(portugueseFallback && {
-        [portugueseFallback.locale]: portugueseFallback.messages,
-      }),
     },
   };
 };
@@ -58,22 +52,8 @@ export const setDashboardLocale = async (composer, locale) => {
 
   const { locale: resolvedLocale, messages } =
     await loadDashboardLocale(locale);
-  const portugueseFallback =
-    resolvedLocale === 'pt'
-      ? await loadDashboardLocale(PORTUGUESE_FALLBACK_LOCALE)
-      : null;
 
   if (localeChanges.get(composer) !== request) return;
-
-  if (
-    portugueseFallback &&
-    !composer.availableLocales.includes(portugueseFallback.locale)
-  ) {
-    composer.setLocaleMessage(
-      portugueseFallback.locale,
-      portugueseFallback.messages
-    );
-  }
 
   if (!composer.availableLocales.includes(resolvedLocale)) {
     composer.setLocaleMessage(resolvedLocale, messages);
