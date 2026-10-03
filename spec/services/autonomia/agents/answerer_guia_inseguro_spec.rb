@@ -5,7 +5,7 @@ require 'rails_helper'
 # o portão trocou a resposta inteira por "não tenho certeza suficiente". A
 # pessoa ficou sem saber nem o que era possível.
 #
-# O Guia que leu ou mudou a conta responde pelo que viu e fez, mesmo inseguro.
+# O Guia responde pelo que viu, fez ou investigou, mesmo inseguro (#855, #914).
 # O agente de atendimento, sem `operador`, continua com o portão de sempre.
 RSpec.describe Autonomia::Agents::Answerer do
   let(:conta_e_admin) { create_account_and_user }
@@ -64,9 +64,26 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(responder.handoff[:should]).to be(true)
   end
 
-  it 'mantém o portão para o Guia que não leu nem fez nada' do
+  # #914 — regra do Rodrigo (03/10/2026): o Guia nunca troca a resposta por "encaminhe ao
+  # suporte". Ele investiga e responde, resolve ou diz que não dá — mesmo sem ter lido a
+  # conta (a resposta pode vir da Central ou da web).
+  it 'entrega a resposta do Guia mesmo sem ter lido nem feito nada', :aggregate_failures do
     guia = Autonomia::Guide::Contexto.new(account: conta, user: admin)
 
-    expect(responder(operador: guia).handoff[:should]).to be(true)
+    resultado = responder(operador: guia)
+
+    expect(resultado.handoff[:should]).to be(false)
+    expect(resultado.reply).to include('consigo restringir')
+  end
+
+  it 'sem resposta do modelo, o Guia segue sem texto (a tela pede para perguntar de novo)' do
+    allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(
+      instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: {
+                        text: JSON.parse(inseguro).merge('reply' => '').to_json
+                      })
+    )
+    guia = Autonomia::Guide::Contexto.new(account: conta, user: admin)
+
+    expect(responder(operador: guia).reply).to be_blank
   end
 end

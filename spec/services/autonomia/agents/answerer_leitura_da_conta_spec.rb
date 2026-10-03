@@ -6,7 +6,8 @@ require 'rails_helper'
 # resposta do Guia é a leitura da conta, e o portão passou a saber disso.
 #
 # O piso continua valendo onde ele protege: agente de atendimento (sem
-# `operador`) que diz "não achei a informação do frete" vai para um humano.
+# `operador`) que diz "não achei a informação do frete" vai para um humano. No Guia o
+# portão não retém resposta (#914).
 RSpec.describe Autonomia::Agents::Answerer do
   let(:conta_e_admin) { create_account_and_user }
   let(:conta) { conta_e_admin.first }
@@ -45,10 +46,15 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(resultado.reply).to include('Não encontrei')
   end
 
-  # Sem leitura, o "não encontrei" não se apoia em nada: continua retido.
-  it 'retém o "não encontrei" do Guia que não leu nada' do
+  # #914 — o portão não troca mais a resposta do Guia por "encaminhe ao suporte". Quem garante
+  # que ele lê antes de afirmar é a instrução ("Leia antes de responder") e a bateria de cenários,
+  # não a retenção — que entregava uma oferta de suporte no lugar de qualquer resposta.
+  it 'não retém mais o "não encontrei" do Guia, mesmo sem leitura no turno', :aggregate_failures do
     guia = Autonomia::Guide::Contexto.new(account: conta, user: admin)
 
-    expect(responder(operador: guia).handoff[:should]).to be(true)
+    resultado = responder(operador: guia)
+
+    expect(resultado.handoff[:should]).to be(false)
+    expect(resultado.reply).to include('Não encontrei')
   end
 end

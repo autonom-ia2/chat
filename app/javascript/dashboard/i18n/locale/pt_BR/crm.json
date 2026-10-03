@@ -2169,7 +2169,7 @@
     "READ_ARTICLE_NAMED": "Ler: {titulo}",
     "READ_SECTION": "Para ler com calma",
     "UNAVAILABLE": "O guia está indisponível no momento.",
-    "WITHHELD": "Não tenho certeza suficiente para te responder isso sem arriscar errar. Quer que eu encaminhe para o suporte?",
+    "WITHHELD": "Não consegui montar a resposta agora. Pergunte de novo, com outras palavras.",
     "ERROR": "Não foi possível falar com o guia. Tente novamente.",
     "SENDING": "Ainda estou respondendo a pergunta anterior.",
     "SUGGESTIONS": {

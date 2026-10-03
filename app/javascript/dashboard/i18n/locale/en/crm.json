@@ -2168,7 +2168,7 @@
     "READ_ARTICLE_NAMED": "Read: {titulo}",
     "READ_SECTION": "To read later",
     "UNAVAILABLE": "The guide is unavailable right now.",
-    "WITHHELD": "I am not confident enough to answer that without risking a wrong answer. Want me to pass this to support?",
+    "WITHHELD": "I could not put an answer together right now. Try asking again, in other words.",
     "ERROR": "Could not reach the guide. Try again.",
     "SENDING": "I'm still answering your previous question.",
     "SUGGESTIONS": {
