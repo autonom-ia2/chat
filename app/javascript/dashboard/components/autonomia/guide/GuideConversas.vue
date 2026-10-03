@@ -37,10 +37,12 @@ const vazia = computed(
   () => !carregando.value && !falhou.value && !conversas.value.length
 );
 
-// "hoje", "ontem", "há 3 dias" — no idioma de quem está olhando.
+// "hoje", "ontem", "há 3 dias" — no idioma de quem está olhando. O Chatwoot
+// guarda `pt_BR`; o Intl só aceita `pt-BR` (sublinhado lança RangeError).
 const haQuanto = iso => {
   const dias = Math.floor((Date.now() - new Date(iso).getTime()) / DIA_MS);
-  return new Intl.RelativeTimeFormat(locale.value, { numeric: 'auto' }).format(
+  const idioma = locale.value.replaceAll('_', '-');
+  return new Intl.RelativeTimeFormat(idioma, { numeric: 'auto' }).format(
     -Math.max(dias, 0),
     'day'
   );

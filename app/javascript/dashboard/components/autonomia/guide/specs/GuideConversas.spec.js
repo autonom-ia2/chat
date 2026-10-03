@@ -5,7 +5,7 @@ import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import GuideConversas from '../GuideConversas.vue';
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: key => key, locale: ref('pt-BR') }),
+  useI18n: () => ({ t: key => key, locale: ref('pt_BR') }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
