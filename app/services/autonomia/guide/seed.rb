@@ -18,11 +18,12 @@ module Autonomia
       # As ferramentas que o Guia usa para ler a conta, mudar a conta com
       # desfazer (#855), propor o que não tem volta (#568), levar a pessoa até a
       # tela (#590), ler a Central de Ajuda (#617) e ler uma página da internet
-      # (#857), e consultar o formato de uma ação antes de montar o corpo (#900).
+      # (#857), consultar o formato de uma ação antes de montar o corpo (#900) e classificar muitos itens
+      # de uma vez com o Jev (#858).
       # Ficam no config canônico, então a cura reasserta: ninguém desliga
       # por acidente, e nenhum agente de conta as herda.
       FERRAMENTAS = %w[
-        ler_da_conta formato_da_acao executar_acao propor_acao mostrar_tela ler_da_central ler_pagina ler_anexo
+        ler_da_conta formato_da_acao executar_acao propor_acao mostrar_tela ler_da_central ler_pagina ler_anexo classificar_com_jev
       ].freeze
 
       # Elegibilidade = Autonomia habilitada (ENV master + conta) E uma credencial de IA resolvível

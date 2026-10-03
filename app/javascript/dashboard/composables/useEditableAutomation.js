@@ -82,9 +82,13 @@ export function useEditableAutomation() {
    */
   const generateActionsArray = (action, automationActionTypes) => {
     const params = action.action_params;
-    const inputType = automationActionTypes.find(
+    // An action the panel does not offer yet (e.g. perguntar_ao_decisor, created through the API or
+    // the Guide) keeps its raw params, so opening and saving the rule does not break or drop it.
+    const actionType = automationActionTypes.find(
       item => item.key === action.action_name
-    ).inputType;
+    );
+    if (!actionType) return [...params];
+    const { inputType } = actionType;
     if (inputType === 'multi_select' || inputType === 'search_select') {
       return [...getActionDropdownValues(action.action_name)].filter(item =>
         [...params].includes(item.id)

@@ -33,55 +33,11 @@ class Crm::StageAutomations::Runner
   def run_automation(automation, stage_id, trigger_event)
     trigger_token = build_trigger_token(stage_id, trigger_event)
     execution = find_or_create_execution!(automation, trigger_token)
-    return if execution.completed? || execution.failed?
+    # Esperando o Decisor (#858): os passos seguintes são do job dele, não de um novo disparo.
+    return if execution.completed? || execution.failed? || execution.metadata.to_h['decisor'].present?
 
-    step_results = []
-    automation.steps.ordered.each do |step|
-      result = run_step(step, execution)
-      step_results << { step_id: step.id, status: result.status, error: result.error, payload: result.payload }
-      next if result.status == :ok
-
-      execution.update!(status: :failed, error_message: result.error.to_s, completed_at: Time.current,
-                        metadata: execution.metadata.merge('step_results' => step_results))
-      return
-    end
-
-    execution.update!(
-      status: :completed,
-      completed_at: Time.current,
-      metadata: execution.metadata.merge('step_results' => step_results)
-    )
-  end
-
-  def run_step(step, execution)
-    if step.delay_seconds.positive? && step.action_type != 'create_follow_up'
-      enqueue_delayed_step(step, execution)
-      Crm::StageAutomations::StepExecutor::Result.ok(scheduled: true)
-    elsif step.delay_seconds.positive?
-      Crm::StageAutomations::StepExecutor.new(
-        card: @card.reload,
-        step: step,
-        actor: @actor,
-        automation_context: @automation_context
-      ).perform
-    else
-      Crm::StageAutomations::StepExecutor.new(
-        card: @card.reload,
-        step: step,
-        actor: @actor,
-        automation_context: @automation_context
-      ).perform
-    end
-  end
-
-  def enqueue_delayed_step(step, execution)
-    Crm::StageAutomationStepJob.set(wait: step.delay_seconds.seconds).perform_later(
-      card_id: @card.id,
-      step_id: step.id,
-      actor_id: @actor&.id,
-      execution_id: execution.id,
-      automation_context: @automation_context
-    )
+    Crm::StageAutomations::StepSequence.new(card: @card, actor: @actor, execution: execution, automation_context: @automation_context)
+                                       .perform(automation.steps.ordered.to_a)
   end
 
   def find_or_create_execution!(automation, trigger_token)

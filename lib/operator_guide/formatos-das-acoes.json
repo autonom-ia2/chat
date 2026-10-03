@@ -149,6 +149,15 @@
     ],
     "sem_corpo": false
   },
+  "DELETE autonomia/decisores/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/decisores#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:31",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
   "DELETE autonomia/insurance/connection": {
     "campos": {
       "provider": {
@@ -1378,6 +1387,48 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/decisores/:id": {
+    "campos": {
+      "campos": {
+        "campos": {
+          "chave": {},
+          "descricao": {},
+          "destino": {}
+        },
+        "tipo": "objeto"
+      },
+      "certeza_minima": {},
+      "exemplos": {
+        "campos": {
+          "origem": {},
+          "resposta": {},
+          "texto": {}
+        },
+        "tipo": "objeto"
+      },
+      "instrucoes": {},
+      "leituras": {
+        "tipo": "lista"
+      },
+      "nome": {},
+      "pergunta": {},
+      "respostas": {
+        "campos": {
+          "chave": {},
+          "descricao": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/decisores#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/prospecting/leads/:id": {
     "campos": {
       "discard_reason": {
@@ -2589,7 +2640,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -2637,7 +2689,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {
@@ -4836,6 +4889,127 @@
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:42",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:41",
       "app/controllers/api/v1/accounts/autonomia/conversation_copilot_controller.rb:65"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/decisoes/:id/resolver": {
+    "campos": {
+      "resposta": {
+        "obrigatorio": true,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/decisoes#resolver",
+    "modelo": "Autonomia::DecisorDecisao",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisoes_controller.rb:6",
+      "app/controllers/api/v1/accounts/autonomia/decisoes_controller.rb:9",
+      "app/controllers/api/v1/accounts/autonomia/decisoes_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/decisores": {
+    "campos": {
+      "campos": {
+        "campos": {
+          "chave": {},
+          "descricao": {},
+          "destino": {}
+        },
+        "tipo": "lista_de_objetos"
+      },
+      "certeza_minima": {
+        "max": 0.99,
+        "min": 0.5,
+        "padrao": 0.8,
+        "tipo": "numero"
+      },
+      "exemplos": {
+        "campos": {
+          "origem": {},
+          "resposta": {},
+          "texto": {}
+        },
+        "tipo": "lista_de_objetos"
+      },
+      "instrucoes": {
+        "max_caracteres": 4000,
+        "tipo": "string"
+      },
+      "leituras": {
+        "tipo": "lista"
+      },
+      "nome": {
+        "max_caracteres": 120,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string",
+        "unico": true
+      },
+      "pergunta": {
+        "max_caracteres": 1000,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      },
+      "respostas": {
+        "campos": {
+          "chave": {},
+          "descricao": {}
+        },
+        "tipo": "lista_de_objetos"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/decisores#create",
+    "modelo": "Autonomia::Decisor",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:21",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/decisores/:id/exemplos": {
+    "campos": {
+      "conversation_id": {
+        "obrigatorio": true
+      },
+      "resposta": {
+        "obrigatorio": true
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/decisores#exemplos",
+    "modelo": "Conversation",
+    "motivos": [
+      "leitura crua sem tipo: conversation_id, resposta"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:46",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:43",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/decisores/:id/teste": {
+    "campos": {
+      "conversation_ids": {},
+      "inbox_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/decisores#teste",
+    "modelo": "Conversation",
+    "motivos": [
+      "leitura crua sem tipo: conversation_ids"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:89",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:88",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
     ],
     "sem_corpo": false
   },
@@ -7891,7 +8065,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {
@@ -7949,7 +8124,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -10838,6 +11014,48 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/decisores/:id": {
+    "campos": {
+      "campos": {
+        "campos": {
+          "chave": {},
+          "descricao": {},
+          "destino": {}
+        },
+        "tipo": "objeto"
+      },
+      "certeza_minima": {},
+      "exemplos": {
+        "campos": {
+          "origem": {},
+          "resposta": {},
+          "texto": {}
+        },
+        "tipo": "objeto"
+      },
+      "instrucoes": {},
+      "leituras": {
+        "tipo": "lista"
+      },
+      "nome": {},
+      "pergunta": {},
+      "respostas": {
+        "campos": {
+          "chave": {},
+          "descricao": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/decisores#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/prospecting/leads/:id": {
     "campos": {
       "discard_reason": {
@@ -12012,7 +12230,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -12060,7 +12279,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {

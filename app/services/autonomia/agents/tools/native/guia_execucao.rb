@@ -48,9 +48,9 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
     return recusa_sem_contexto if @operador.nil?
 
     acao = @params['acao'].to_s
-    return sem_volta(acao) unless @operador.acoes.desfazivel?(acao)
-
     dados = { caminho: objeto('caminho_json'), corpo: objeto('corpo_json'), descricao: @params['descricao'].to_s }
+    return sem_volta(acao) unless @operador.acoes.desfazivel?(acao, dados)
+
     nao_lidos = @operador.nao_lidos(dados[:caminho])
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
@@ -76,8 +76,8 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
   end
 
   def sem_volta(acao)
-    "Não executei: \"#{acao}\" não tem desfazer (sai da plataforma ou troca credencial). Use propor_acao, " \
-      'para a pessoa confirmar na tela antes.'
+    "Não executei: \"#{acao}\" não tem desfazer (sai da plataforma, troca credencial ou deixa ligada uma " \
+      'automação que age sozinha). Use propor_acao, para a pessoa confirmar na tela antes.'
   end
 
   def vizinhas

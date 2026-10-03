@@ -377,5 +377,41 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     expect(execucoes).to be_empty
     expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_SEM_SUPORTE)
   end
+
+  # O Jev de verdade (`classificar_com_jev`), além da OpenAI: pede a chave da Typesafe.
+  def ligar_jev!
+    skip 'C30 precisa de TYPESAFE_API_KEY (o Jev de verdade)' if ENV['TYPESAFE_API_KEY'].blank? || !Chatwoot.encryption_configured?
+    AiProviderCredential.find_or_initialize_by(provider: 'typesafe').update!(api_key: ENV.fetch('TYPESAFE_API_KEY'))
+  end
+
+  def contato_com_conversa!(nome, caixa, texto)
+    contato = contato!(c.conta, nome)
+    conversa = create_crm_conversation(account: c.conta, inbox: caixa, contact: contato)
+    create(:message, conversation: conversa, account: c.conta, inbox: caixa, message_type: :incoming, content: texto)
+    contato
+  end
+
+  # MOTIVO: #858 — classificar muitos registros de uma vez é com o Jev, não com o Guia lendo um a um nem
+  # com regra em código. Pega: etiquetar quem não veio do site (tolerância zero numa fixture clara),
+  # deixar de etiquetar quem veio, e responder "de cabeça" sem classificar (sem custo jev_guia).
+  it 'C30 desses contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
+    ligar_jev!
+    site = create_crm_inbox(account: c.conta, name: 'Site da corretora', members: [c.admin])
+    do_site = ['Luana Prado', 'Otávio Reis', 'Bianca Moura'].map do |nome|
+      contato_com_conversa!(nome, site, "Formulário de contato do site\nNome: #{nome}\nProduto: Seguro auto\nMensagem: quero uma cotação")
+    end
+    outros = { 'Rui Campos' => 'Oi! Vi o anúncio de vocês no Instagram, fazem seguro de moto?',
+               'Selma Dias' => 'O João me indicou vocês, preciso renovar o seguro da casa',
+               'Tiago Nunes' => 'Sou cliente, me manda a segunda via do boleto?' }.map do |nome, texto|
+      contato_com_conversa!(nome, c.vendas, texto)
+    end
+
+    respondeu!(perguntar('Desses contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
+
+    etiquetados = c.conta.contacts.select { |contato| contato.reload.label_list.include?('lead-site') }
+    expect(etiquetados.map(&:id).sort).to eq(do_site.map(&:id).sort)
+    expect(etiquetados.map(&:id) & outros.map(&:id)).to be_empty
+    expect(Crm::AiUsageEvent.where(account: c.conta, feature: 'jev_guia')).to exist
+  end
 end
 # rubocop:enable RSpec/DescribeClass
