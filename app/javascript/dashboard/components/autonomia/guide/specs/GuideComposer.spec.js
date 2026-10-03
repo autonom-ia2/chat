@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import GuideComposer from '../GuideComposer.vue';
 
 // #857 — o clipe anexa arquivos que o Guia lê a cada pergunta.
@@ -52,5 +52,95 @@ describe('GuideComposer — arquivos', () => {
     );
 
     expect(clipe.attributes('disabled')).toBeDefined();
+  });
+});
+
+describe('GuideComposer — falar com o Guia', () => {
+  let gravadorAtual;
+
+  beforeEach(() => {
+    const trilha = { stop: vi.fn() };
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn(() =>
+          Promise.resolve({ getTracks: () => [trilha] })
+        ),
+      },
+    });
+    window.MediaRecorder = class {
+      constructor() {
+        this.state = 'inactive';
+        this.mimeType = 'audio/webm';
+        gravadorAtual = this;
+      }
+
+      start() {
+        this.state = 'recording';
+      }
+
+      stop() {
+        this.state = 'inactive';
+        this.ondataavailable({
+          data: new Blob(['voz'], { type: 'audio/webm' }),
+        });
+        this.onstop();
+      }
+    };
+  });
+
+  afterEach(() => {
+    delete window.MediaRecorder;
+  });
+
+  const botaoDeVoz = wrapper =>
+    wrapper.find('button[aria-label^="AUTONOMIA_GUIDE.VOICE"]');
+
+  it('grava, transcreve e põe o que foi falado no campo para conferir', async () => {
+    const onTranscrever = vi.fn(() =>
+      Promise.resolve('cria a etiqueta urgente')
+    );
+    const wrapper = montar({ onTranscrever });
+
+    await botaoDeVoz(wrapper).trigger('click');
+    await flushPromises();
+    expect(gravadorAtual.state).toBe('recording');
+
+    await botaoDeVoz(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(onTranscrever).toHaveBeenCalledOnce();
+    expect(wrapper.find('textarea').element.value).toBe(
+      'cria a etiqueta urgente'
+    );
+  });
+
+  it('não abre um segundo microfone com toque duplo', async () => {
+    const wrapper = montar({ onTranscrever: vi.fn() });
+
+    botaoDeVoz(wrapper).trigger('click');
+    botaoDeVoz(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledOnce();
+  });
+
+  it('avisa quando o navegador não libera o microfone', async () => {
+    navigator.mediaDevices.getUserMedia = vi.fn(() =>
+      Promise.reject(new Error('negado'))
+    );
+    const wrapper = montar({ onTranscrever: vi.fn() });
+
+    await botaoDeVoz(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('semMicrofone')).toHaveLength(1);
+  });
+
+  it('não mostra o microfone onde o navegador não grava', () => {
+    delete window.MediaRecorder;
+    const wrapper = montar({ onTranscrever: vi.fn() });
+
+    expect(botaoDeVoz(wrapper).exists()).toBe(false);
   });
 });

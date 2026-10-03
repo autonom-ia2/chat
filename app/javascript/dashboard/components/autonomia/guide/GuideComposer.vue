@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 
 // Caixa de pergunta própria do Guia, em vez do CopilotInput compartilhado.
 // O que muda em relação a ele:
@@ -24,9 +24,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // #857 — recebe o áudio gravado e devolve uma Promise com o texto falado.
+  onTranscrever: {
+    type: Function,
+    default: null,
+  },
 });
 
-const emit = defineEmits(['anexar', 'remover']);
+const emit = defineEmits(['anexar', 'remover', 'semMicrofone']);
 
 const message = ref('');
 const textareaRef = ref(null);
@@ -62,6 +67,102 @@ const handleEnterKey = event => {
   event.preventDefault();
   sendMessage();
 };
+
+// #857 — falar com o Guia. Grava, transcreve e põe o texto no campo para a
+// pessoa conferir antes de enviar. Some onde o navegador não grava.
+const MAX_SEGUNDOS_DE_GRAVACAO = 120;
+const podeGravar = computed(
+  () =>
+    Boolean(props.onTranscrever) &&
+    typeof window !== 'undefined' &&
+    typeof window.MediaRecorder !== 'undefined' &&
+    Boolean(navigator.mediaDevices?.getUserMedia)
+);
+const voz = ref('parada'); // parada | pedindo | gravando | transcrevendo
+const segundos = ref(0);
+let gravador = null;
+let pedacos = [];
+let relogio = null;
+let desmontado = false;
+
+const pararRelogio = () => {
+  clearInterval(relogio);
+  relogio = null;
+};
+
+const transcrever = async audio => {
+  voz.value = 'transcrevendo';
+  try {
+    const texto = await props.onTranscrever(audio);
+    if (texto) {
+      message.value = message.value ? `${message.value} ${texto}` : texto;
+      nextTick(adjustHeight);
+      textareaRef.value?.focus();
+    }
+  } finally {
+    voz.value = 'parada';
+  }
+};
+
+const pararGravacao = () => {
+  if (gravador?.state === 'recording') gravador.stop();
+  pararRelogio();
+};
+
+const gravar = async () => {
+  if (voz.value === 'gravando') {
+    pararGravacao();
+    return;
+  }
+  if (voz.value !== 'parada' || props.isBusy) return;
+  // Trava já: um segundo toque enquanto o navegador pede permissão não abre
+  // um segundo microfone.
+  voz.value = 'pedindo';
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    voz.value = 'parada';
+    emit('semMicrofone');
+    return;
+  }
+  // O painel fechou enquanto a permissão era pedida: solta o microfone.
+  if (desmontado) {
+    stream.getTracks().forEach(track => track.stop());
+    return;
+  }
+  pedacos = [];
+  gravador = new window.MediaRecorder(stream);
+  gravador.ondataavailable = event => {
+    if (event.data?.size) pedacos.push(event.data);
+  };
+  gravador.onstop = () => {
+    stream.getTracks().forEach(track => track.stop());
+    const audio = new Blob(pedacos, {
+      type: gravador.mimeType || 'audio/webm',
+    });
+    if (audio.size) transcrever(audio);
+    else voz.value = 'parada';
+  };
+  gravador.start();
+  voz.value = 'gravando';
+  segundos.value = 0;
+  relogio = setInterval(() => {
+    segundos.value += 1;
+    if (segundos.value >= MAX_SEGUNDOS_DE_GRAVACAO) pararGravacao();
+  }, 1000);
+};
+
+const tempoGravado = computed(() => {
+  const minutos = Math.floor(segundos.value / 60);
+  const resto = String(segundos.value % 60).padStart(2, '0');
+  return `${minutos}:${resto}`;
+});
+
+onBeforeUnmount(() => {
+  desmontado = true;
+  pararGravacao();
+});
 
 onMounted(() => {
   nextTick(adjustHeight);
@@ -129,11 +230,37 @@ onMounted(() => {
         :readonly="isBusy"
         :aria-busy="isBusy ? 'true' : 'false'"
         :placeholder="$t('CAPTAIN.COPILOT.SEND_MESSAGE')"
-        class="w-full reset-base bg-n-alpha-3 ltr:pl-12 ltr:pr-14 rtl:pl-14 rtl:pr-12 py-3 text-sm border border-n-weak rounded-lg focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
+        class="w-full reset-base bg-n-alpha-3 ltr:pl-12 ltr:pr-24 rtl:pl-24 rtl:pr-12 py-3 text-sm border border-n-weak rounded-lg focus:outline-0 focus:outline-none focus:ring-2 focus:ring-n-blue-11 focus:border-n-blue-11 resize-none overflow-y-auto max-h-[200px] mb-0 text-n-slate-12 read-only:cursor-wait read-only:opacity-60"
         rows="1"
         @input="handleInput"
         @keydown.enter.exact="handleEnterKey"
       />
+      <button
+        v-if="podeGravar"
+        type="button"
+        :disabled="isBusy || voz === 'transcrevendo' || voz === 'pedindo'"
+        :aria-label="
+          voz === 'gravando'
+            ? $t('AUTONOMIA_GUIDE.VOICE.STOP')
+            : $t('AUTONOMIA_GUIDE.VOICE.START')
+        "
+        :aria-pressed="voz === 'gravando' ? 'true' : 'false'"
+        class="absolute ltr:right-12 rtl:left-12 top-1/2 -translate-y-1/2 h-11 w-11 flex items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-60"
+        :class="
+          voz === 'gravando'
+            ? 'text-n-ruby-11 animate-pulse'
+            : 'text-n-slate-11 hover:text-n-blue-11'
+        "
+        @click="gravar"
+      >
+        <span
+          v-if="voz === 'transcrevendo'"
+          class="i-svg-spinner size-4"
+          aria-hidden="true"
+        />
+        <i v-else-if="voz === 'gravando'" class="i-lucide-square" />
+        <i v-else class="i-lucide-mic" />
+      </button>
       <button
         :disabled="isBusy"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.SEND')"
@@ -145,6 +272,18 @@ onMounted(() => {
     </form>
     <!-- Aviso, não só o campo travado: quem digita rápido não repara na
          opacidade e ficava sem nenhum sinal de que a pergunta não saiu. -->
+    <p
+      v-if="voz === 'gravando' || voz === 'transcrevendo'"
+      class="mt-1 mb-0 text-sm"
+      :class="voz === 'gravando' ? 'text-n-ruby-11' : 'text-n-slate-11'"
+      role="status"
+    >
+      {{
+        voz === 'gravando'
+          ? $t('AUTONOMIA_GUIDE.VOICE.RECORDING', { tempo: tempoGravado })
+          : $t('AUTONOMIA_GUIDE.VOICE.TRANSCRIBING')
+      }}
+    </p>
     <p v-if="isBusy" class="mt-1 mb-0 text-sm text-n-slate-11">
       {{ $t('AUTONOMIA_GUIDE.SENDING') }}
     </p>

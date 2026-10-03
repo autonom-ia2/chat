@@ -410,6 +410,21 @@ const anexarArquivo = async file => {
   }
 };
 
+// #857 — o que a pessoa falou ao microfone vira texto no campo. A falha
+// aparece como aviso com o motivo da plataforma; o campo fica como estava.
+const transcreverVoz = async audio => {
+  try {
+    const { data } = await AutonomiaGuideAPI.transcrever(audio);
+    return data.texto || '';
+  } catch (error) {
+    useAlert(
+      motivoUtilizavel(error?.response?.data?.error) ||
+        t('AUTONOMIA_GUIDE.VOICE.FAILED')
+    );
+    return '';
+  }
+};
+
 // GuideComposer clears the field only when this returns true. Accept = the question is in the
 // thread, so return right away and let the reply load behind the loader; false keeps the text.
 const sendMessage = message => {
@@ -723,7 +738,9 @@ watch(accountId, () => {
           class="mb-1 w-full"
           :is-busy="isSending"
           :arquivos="arquivos"
+          :on-transcrever="transcreverVoz"
           @send="sendMessage"
+          @sem-microfone="useAlert($t('AUTONOMIA_GUIDE.VOICE.NO_MIC'))"
           @anexar="anexarArquivo"
           @remover="store.removeArquivo"
         />

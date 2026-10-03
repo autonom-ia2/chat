@@ -366,6 +366,7 @@ Rails.application.routes.draw do
             get 'guide/execucoes', to: 'guide#execucoes'
             # #857 — arquivo anexado na conversa com o Guia.
             post 'guide/arquivos', to: 'guide#arquivo'
+            post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection

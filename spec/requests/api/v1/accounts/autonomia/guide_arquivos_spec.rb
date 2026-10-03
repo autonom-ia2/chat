@@ -21,10 +21,10 @@ RSpec.describe 'Guia da Plataforma — arquivos da conversa', type: :request do
     expect(Autonomia::Guide::Arquivos.new(account: account).ler([signed_id]).first[:text]).to include('Kcg')
   end
 
-  # O tipo sai do conteúdo, não do nome: uma imagem renomeada para .csv não passa.
+  # O tipo sai do conteúdo, não do nome: um ZIP renomeado para .csv não passa.
   it 'recusa o que não sabe ler, pelo conteúdo', :aggregate_failures do
-    png = "\x89PNG\r\n\x1A\n#{"\x00" * 32}".b
-    enviar(png, 'foto.csv', 'text/csv')
+    zip = "PK\x05\x06#{"\x00" * 18}".b
+    enviar(zip, 'planilha.csv', 'text/csv')
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['error']).to eq(I18n.t('autonomia.guide.file.invalid_type'))
@@ -39,6 +39,36 @@ RSpec.describe 'Guia da Plataforma — arquivos da conversa', type: :request do
 
     expect(ActiveStorage::Blob.where(filename: 'leads.csv')).to be_empty
     expect(ActiveStorage::Blob.exists?(outro.id)).to be(true)
+  end
+
+  describe 'falar com o Guia' do
+    let(:webm) { "\x1A\x45\xDF\xA3\x9F\x42\x86\x81\x01\x42\xF7\x81\x01\x42\xF2\x81\x04\x42\xF3\x81\x08\x42\x82\x84webm".b }
+
+    before do
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'chave' }))
+      allow(Crm::Ai::TranscriptionClient).to receive(:new)
+        .and_return(instance_double(Crm::Ai::TranscriptionClient, transcribe: 'cria uma etiqueta chamada urgente'))
+    end
+
+    def falar(conteudo, nome, tipo)
+      post "#{base}/transcricao", params: { file: Rack::Test::UploadedFile.new(StringIO.new(conteudo), tipo, original_filename: nome) },
+                                  headers: admin.create_new_auth_token
+    end
+
+    # O Chrome grava em WebM, que o detector chama de vídeo; para a voz, é áudio.
+    it 'transforma a gravação do microfone em texto e não guarda o áudio', :aggregate_failures do
+      expect { falar(webm, 'voz.webm', 'audio/webm') }.not_to change(ActiveStorage::Blob, :count)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['texto']).to eq('cria uma etiqueta chamada urgente')
+    end
+
+    it 'recusa o que não é gravação de voz' do
+      falar('nome,corretora', 'x.csv', 'text/csv')
+
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.guide.file.not_audio'))
+    end
   end
 
   it 'leva os arquivos da conversa até o Guia, atravessando a fila' do

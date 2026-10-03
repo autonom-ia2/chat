@@ -24,6 +24,14 @@ class AutonomiaGuideAPI extends ApiClient {
     });
   }
 
+  // #857 — o que a pessoa falou ao microfone, em texto: { texto }.
+  transcrever(audio) {
+    const form = new FormData();
+    const extensao = (audio.type || '').includes('mp4') ? 'mp4' : 'webm';
+    form.append('file', audio, `voz.${extensao}`);
+    return axios.post(`${this.url}/transcricao`, form);
+  }
+
   // #857 — anexa um arquivo à conversa; volta { signed_id, nome }.
   enviarArquivo(file) {
     const form = new FormData();
