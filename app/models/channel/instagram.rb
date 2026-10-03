@@ -73,6 +73,14 @@ class Channel::Instagram < ApplicationRecord
     Instagram::RefreshOauthTokenService.new(channel: self).access_token
   end
 
+  # Meta data deletion request: drop the stored token and expire it so nothing calls Instagram with it.
+  # update_columns skips the presence validation on purpose — a blank, expired token is the revoked state,
+  # and reconnecting through Instagram login writes a fresh one.
+  def revoke_access!
+    update_columns(access_token: '', expires_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    prompt_reauthorization!
+  end
+
   private
 
   def base_uri
