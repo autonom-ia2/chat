@@ -368,6 +368,15 @@ Rails.application.routes.draw do
             post 'guide/arquivos', to: 'guide#arquivo'
             post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
+            # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
+            resources :decisores, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :teste
+                post :exemplos
+                get :decisoes
+              end
+            end
+            post 'decisoes/:id/resolver', to: 'decisoes#resolver'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect

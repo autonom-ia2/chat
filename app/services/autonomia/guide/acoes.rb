@@ -84,7 +84,9 @@ class Autonomia::Guide::Acoes
     'DELETE teams/:id',
     'DELETE portals/:id',
     'DELETE sla_policies/:id',
-    'DELETE labels/:id'
+    # #858 — resolver um caso parado do Decisor retoma a automação num job, que pode mandar mensagem
+    # ou mover card fora do caderno.
+    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

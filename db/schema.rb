@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -578,6 +578,47 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
     t.index ["account_id", "status"], name: "index_autonomia_agents_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
+  end
+
+  create_table "autonomia_decisor_decisoes", force: :cascade do |t|
+    t.bigint "decisor_id", null: false
+    t.bigint "account_id", null: false
+    t.bigint "automation_rule_id"
+    t.bigint "conversation_id", null: false
+    t.bigint "message_id", null: false
+    t.string "resposta"
+    t.decimal "certeza", precision: 4, scale: 3
+    t.jsonb "campos_extraidos", default: {}, null: false
+    t.string "status", null: false
+    t.integer "proximo_passo"
+    t.text "motivo"
+    t.bigint "resolvida_por_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status", "created_at"], name: "idx_autonomia_decisoes_fila"
+    t.index ["automation_rule_id"], name: "index_autonomia_decisor_decisoes_on_automation_rule_id"
+    t.index ["conversation_id"], name: "index_autonomia_decisor_decisoes_on_conversation_id"
+    t.index ["decisor_id", "conversation_id", "message_id"], name: "idx_autonomia_decisoes_por_mensagem", unique: true
+    t.index ["message_id"], name: "index_autonomia_decisor_decisoes_on_message_id"
+    t.index ["resolvida_por_id"], name: "index_autonomia_decisor_decisoes_on_resolvida_por_id"
+  end
+
+  create_table "autonomia_decisores", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "nome", null: false
+    t.text "pergunta", null: false
+    t.text "instrucoes"
+    t.jsonb "respostas", default: [], null: false
+    t.jsonb "exemplos", default: [], null: false
+    t.jsonb "campos", default: [], null: false
+    t.decimal "certeza_minima", precision: 3, scale: 2, default: "0.8", null: false
+    t.integer "perguntas_count", default: 0, null: false
+    t.integer "duvidas_count", default: 0, null: false
+    t.integer "correcoes_count", default: 0, null: false
+    t.datetime "ultima_pergunta_em"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
   end
 
   create_table "autonomia_guide_changes", force: :cascade do |t|
@@ -3183,6 +3224,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_140000) do
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
+  add_foreign_key "autonomia_decisor_decisoes", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_decisor_decisoes", "automation_rules", on_delete: :nullify
+  add_foreign_key "autonomia_decisor_decisoes", "autonomia_decisores", column: "decisor_id", on_delete: :cascade
+  add_foreign_key "autonomia_decisor_decisoes", "conversations", on_delete: :cascade
+  add_foreign_key "autonomia_decisor_decisoes", "messages", on_delete: :cascade
+  add_foreign_key "autonomia_decisor_decisoes", "users", column: "resolvida_por_id", on_delete: :nullify
+  add_foreign_key "autonomia_decisores", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_changes", "autonomia_guide_executions", column: "execution_id", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "users", column: "desfeita_por_id", on_delete: :nullify

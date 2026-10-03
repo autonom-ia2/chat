@@ -33,6 +33,7 @@ class AutomationRule < ApplicationRecord
 
   validate :json_conditions_format
   validate :json_actions_format
+  validate :decisor_actions_format
   validate :query_operator_presence
   validate :query_operator_value
   validates :account_id, presence: true
@@ -57,7 +58,7 @@ class AutomationRule < ApplicationRecord
        remove_assigned_team send_webhook_event mute_conversation send_attachment change_status resolve_conversation
        open_conversation pending_conversation snooze_conversation change_priority send_email_transcript
        add_private_note disable_crm_ai_followup enable_crm_ai_followup crm_create_card crm_move_card_stage
-       crm_mark_card_won crm_mark_card_lost crm_assign_card_owner].freeze
+       crm_mark_card_won crm_mark_card_lost crm_assign_card_owner perguntar_ao_decisor].freeze
   end
 
   def file_base_data
@@ -91,7 +92,32 @@ class AutomationRule < ApplicationRecord
     attributes = actions.map { |obj, _| obj['action_name'] }
     actions = attributes - actions_attributes
 
-    errors.add(:actions, "Automation actions #{actions.join(',')} not supported.") if actions.any?
+    return if actions.empty?
+
+    # A lista das aceitas vai na recusa: é ela que ensina o Guia a montar o passo certo (#858).
+    errors.add(:actions, "Automation actions #{actions.join(',')} not supported. Supported actions: #{actions_attributes.join(', ')}.")
+  end
+
+  # Passo do Decisor (#858): action_params é [decisor_id, chave_que_segue]. O Decisor tem de ser da conta
+  # e a chave, uma das respostas dele — conferida por igualdade, nunca por expressão regular.
+  def decisor_actions_format
+    Array(actions).each do |action|
+      action = action.to_h.with_indifferent_access
+      next unless action[:action_name] == Autonomia::Decisores::PASSO
+
+      decisor_id, chave = Array(action[:action_params])
+      decisor = Autonomia::Decisor.find_by(id: decisor_id.to_s, account_id: account_id)
+      next errors.add(:actions, decisor_not_found_message(decisor_id)) if decisor.blank?
+      next if decisor.resposta?(chave)
+
+      errors.add(:actions, "#{Autonomia::Decisores::PASSO}: '#{chave}' is not an answer of Decisor #{decisor.id}. " \
+                           "Use one of: #{decisor.chaves.join(', ')}.")
+    end
+  end
+
+  def decisor_not_found_message(decisor_id)
+    "#{Autonomia::Decisores::PASSO}: Decisor #{decisor_id.inspect} not found in this account. " \
+      'action_params must be [decisor_id, answer_that_continues].'
   end
 
   def query_operator_presence
