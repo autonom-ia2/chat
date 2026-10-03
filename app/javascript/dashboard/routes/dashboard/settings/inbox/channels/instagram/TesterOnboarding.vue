@@ -127,7 +127,7 @@ onMounted(loadConfiguration);
               class="flex-1"
               :label="copy('USERNAME_LABEL')"
               :placeholder="copy('USERNAME_PLACEHOLDER')"
-              custom-input-class="!h-12 !min-h-12 !text-base"
+              custom-input-class="!h-12 !min-h-12 !text-base placeholder:!text-n-slate-11 placeholder:!opacity-100"
               autocomplete="off"
               autocapitalize="none"
               :spellcheck="false"

@@ -6,6 +6,7 @@ import {
   compositeColor,
   brightnessColor,
   contrastRatio,
+  computedAppearance,
 } from './visual-helpers.mjs';
 
 const white = parseComputedColor('rgb(255, 255, 255)');
@@ -55,4 +56,51 @@ test('unsupported filters/colors and unresolved transparent surfaces fail explic
   assert.throws(() => parseComputedColor('color(display-p3 1 1 1)'));
   assert.throws(() => brightnessColor(white, 'brightness(1) blur(2px)'));
   assert.throws(() => contrastRatio(white, [0, 0, 0, 0]));
+});
+
+test('placeholder fixture measures pseudo color and opacity instead of the input foreground', t => {
+  const previousWindow = globalThis.window;
+  t.after(() => {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  });
+  const inputStyle = {
+    color: 'rgb(255, 255, 255)',
+    backgroundColor: 'rgb(0, 0, 0)',
+    backgroundImage: 'none',
+    opacity: '1',
+    filter: 'none',
+  };
+  const placeholderStyle = { ...inputStyle, opacity: '0.25' };
+  const calls = [];
+  globalThis.window = {
+    getComputedStyle: (element, pseudo) => {
+      calls.push(pseudo);
+      return pseudo === '::placeholder' ? placeholderStyle : inputStyle;
+    },
+  };
+  const input = {
+    tagName: 'INPUT',
+    parentElement: null,
+    textContent: '',
+    getAttribute: () => '@suaempresa',
+  };
+  assert.equal(computedAppearance(input).contrast, 21);
+  const translucent = computedAppearance(input, '::placeholder');
+  assert.ok(translucent.contrast < MINIMUM_TEXT_CONTRAST);
+  assert.equal(translucent.pseudoOpacity, 0.25);
+  assert.deepEqual(translucent.foreground, [63.75, 63.75, 63.75, 1]);
+  placeholderStyle.opacity = '1';
+  placeholderStyle.color = 'rgb(128, 131, 141)';
+  const colored = computedAppearance(input, '::placeholder');
+  assert.equal(
+    colored.contrast,
+    contrastRatio(
+      parseComputedColor(placeholderStyle.color),
+      parseComputedColor(inputStyle.backgroundColor)
+    )
+  );
+  assert.equal(colored.color, placeholderStyle.color);
+  assert.equal(colored.text, '@suaempresa');
+  assert.ok(calls.includes('::placeholder'));
 });

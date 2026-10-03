@@ -31,6 +31,7 @@ Antes do gate, preencher a matriz sem supor que Apps, businesses ou sessões sã
 | Aceite e OAuth real do perfil selecionado | NÃO EXECUTADO | NÃO EXECUTADO |
 | Webhook e DM real, recebimento/resposta | NÃO EXECUTADO | NÃO EXECUTADO |
 | SHA, saúde e ponto de rollback | PENDENTE | PENDENTE |
+| Alerta operacional de falha/expiração integrado ao monitoramento existente | PENDENTE | PENDENTE |
 
 O probe anterior encontrou bloqueio da ferramenta. Não repetir nem delegar a chamada bloqueada.
 Os critérios externos continuam abertos; POC e fixtures não os encerram.
@@ -161,3 +162,9 @@ Não excluir/revogar testadores ou canais automaticamente. Se houver regressão 
 usar rollback blue-green manual aprovado na stack afetada e verificar ambas separadamente.
 Só há um degrau de rollback por stack; confirmar sua disponibilidade antes da publicação.
 CI verde, deploy iniciado e convite aceito não comprovam saúde nem funcionamento real de DMs.
+
+## 7. Coordenação entre instalações
+
+O lock do código usa o Redis da própria instalação. Antes de habilitar as duas stacks, conferir se compartilham App pai Meta. Apps iguais com Redis distintos não possuem exclusão mútua entre stacks por esta implementação: não tratar a trava local como garantia global. Resolver a coordenação operacional conforme a topologia validada; nenhuma infraestrutura adicional foi criada.
+
+A configuração do alerta de expiração/indisponibilidade no monitoramento existente está pendente. Os códigos próprios de falha permitem diagnóstico, mas não substituem alerta testado. Não incluir cookies, headers completos ou sessão JSON na notificação.

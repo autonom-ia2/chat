@@ -84,11 +84,15 @@ export function contrastRatio(foreground, background) {
 }
 
 // Called inside the real page, on the element that actually renders the text.
-export function computedAppearance(element) {
-  const computed = window.getComputedStyle(element);
+export function computedAppearance(element, pseudoElement = null) {
+  const computed = window.getComputedStyle(element, pseudoElement);
   let foreground = parseComputedColor(computed.color);
   let background = [0, 0, 0, 0];
   const layers = [];
+  if (pseudoElement) {
+    foreground[3] *= Number(computed.opacity);
+    foreground = brightnessColor(foreground, computed.filter);
+  }
   let ancestor = element;
   while (ancestor) {
     const style = window.getComputedStyle(ancestor);
@@ -113,8 +117,14 @@ export function computedAppearance(element) {
     ancestor = ancestor.parentElement;
   }
   return {
-    text: element.textContent.trim(),
+    text:
+      pseudoElement === '::placeholder'
+        ? element.getAttribute('placeholder')
+        : element.textContent.trim(),
     color: computed.color,
+    ...(pseudoElement
+      ? { pseudoElement, pseudoOpacity: Number(computed.opacity) }
+      : {}),
     foreground,
     background,
     contrast: contrastRatio(foreground, background),

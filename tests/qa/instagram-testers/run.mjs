@@ -457,7 +457,10 @@ async function openScreen(id, options) {
             ? element.querySelector('span.whitespace-normal') || element
             : element;
         return {
-          ...window.instagramQa.appearance(text),
+          ...window.instagramQa.appearance(
+            text,
+            type === 'placeholder' ? '::placeholder' : null
+          ),
           focusVisible: element.matches(':focus-visible'),
         };
       }, kind);
@@ -472,7 +475,10 @@ async function openScreen(id, options) {
         measured.contrast >= MINIMUM_TEXT_CONTRAST,
         `${kind} ${interaction} contrast ${measured.contrast.toFixed(3)} < ${MINIMUM_TEXT_CONTRAST}: ${measured.text}`
       );
-      if (kind === 'solid-button' && interaction === 'focus')
+      if (
+        ['solid-button', 'placeholder'].includes(kind) &&
+        interaction === 'focus'
+      )
         assert.equal(
           measured.focusVisible,
           true,
@@ -480,6 +486,31 @@ async function openScreen(id, options) {
         );
     }
     try {
+      if (stage === 'profile') {
+        assert.equal(
+          await input.count(),
+          1,
+          'Initial profile placeholder target is missing'
+        );
+        assert.equal(
+          await input.inputValue(),
+          '',
+          'Placeholder measurement requires an empty input'
+        );
+        assert.equal(
+          await input.evaluate(element =>
+            element.matches(':placeholder-shown')
+          ),
+          true,
+          'Initial profile placeholder is not displayed'
+        );
+        await page.mouse.move(0, 0);
+        await input.evaluate(element => element.blur());
+        await appearance(input, 'placeholder', 'normal');
+        await page.keyboard.press('Tab');
+        await input.focus();
+        await appearance(input, 'placeholder', 'focus');
+      }
       const solidButtons = section.locator('button.text-white:enabled');
       assert.ok(
         await solidButtons.count(),
@@ -620,7 +651,9 @@ async function openScreen(id, options) {
     await settle();
     const evidence = await health();
     await visualRegression(stage);
-    const path = resolve(output, `art-regression-${id}-${stage}.png`);
+    const prefix =
+      stage === 'profile' ? 'placeholder-regression' : 'art-regression';
+    const path = resolve(output, `${prefix}-${id}-${stage}.png`);
     await page.screenshot({
       path,
       fullPage: true,

@@ -168,8 +168,16 @@ Não há migration de banco, infraestrutura ou dependência nova para este recur
 | Integração real por stack | **NÃO EXECUTADA** | Nenhuma aprovação de produção inferida |
 
 Os relatórios concluídos registram testes backend/frontend e correções após revisão.
-A revisão visual encontrou ajustes; código alterado exige capturas/revisão atualizadas.
+A revisão visual encontrou ajustes, que foram corrigidos e aprovados em nova inspeção independente. Código alterado exige capturas/revisão atualizadas.
 O coordenador mantém a auditoria de aceite, comandos, resultados e pendências.
 Pedido mínimo autenticado, novo adaptador ao vivo, aceite/OAuth/webhook/DM real em cada
 stack seguem **NÃO EXECUTADOS**. O probe anterior foi bloqueado pela ferramenta;
 não repetir nem delegar a chamada bloqueada. cURL do POC local é evidência, não implementação de produção.
+
+## Capturas da implementação
+
+Dados sintéticos; componente real com API simulada, sem representar produção.
+
+[Desktop pendente](assets/instagram-testers-910/desktop-pendente.png) · [Tema escuro](assets/instagram-testers-910/desktop-escuro-pendente.png) · [Mobile](assets/instagram-testers-910/mobile-pendente.png) · [Convite aceito](assets/instagram-testers-910/desktop-aceito.png).
+
+Matriz completa e limites da validação: [termos de aceite](audit/instagram-tester-onboarding-910.md).

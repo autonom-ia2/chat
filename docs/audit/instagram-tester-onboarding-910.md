@@ -51,6 +51,7 @@ PASS LOCAL significa que a implementação foi exercitada por testes no ambiente
 | A31 | Sessão atual, relação dos Apps e configurações reais das duas stacks | Matriz operacional do runbook | PENDENTE EXTERNO |
 | A32 | Novo adaptador autenticado ao vivo, aceite/OAuth/webhook/DM por stack | Necessita homologação autorizada sem credenciais expostas | NÃO EXECUTADO |
 | A33 | CI/integrabilidade da versão final e aprovação de publicação | Checks do PR e aprovação de Rodrigo | GATE ANTES DO MERGE |
+| A35 | Alarme operacional de sessão/serviço em cada stack | Não há canal de alerta novo configurado; erros próprios e runbook entregues, configuração do alarme ainda precisa ser validada | PENDENTE OPERACIONAL |
 | A34 | Preservação da produção e possibilidade de interrupção/rollback | Flag OFF, sem migration, sem merge/deploy; runbook de rollback | ATENDIDO NA ENTREGA |
 
 ## 3. Execuções locais registradas
@@ -62,14 +63,14 @@ Ambiente isolado: Ruby 3.4.4, Node 24.x, PostgreSQL/Redis de teste em portas exc
 | RSpec amplo | 271 exemplos, 0 falhas, 29 arquivos | Instagram inteiro por caminho de spec + duas suites Enterprise; não é suite total do repositório |
 | Vitest | 86 testes, 0 falhas, 9 arquivos | Novo onboarding/API, reautorização, cancelamento e regressões adjacentes de caixas |
 | Browser Chromium | 33 casos, 0 falhas, 67 capturas | Componentes reais + CSS real + API interna simulada; sem shell/wizard completo ou Meta real |
-| Helpers de browser | 9 testes, 0 falhas | Fixtures, contraste, alpha/filtros e falha explícita em superfícies não suportadas |
+| Helpers de browser | 10 testes, 0 falhas | Fixtures, contraste, alpha/filtros e falha explícita em superfícies não suportadas |
 | Importador de sessão | 25 testes, 0 falhas | Dados sintéticos; parser offline/permissões/overwrite/symlinks/segurança |
-| i18n | 10 catálogos, 16.942 mensagens compiladas | Paridade de chaves/parâmetros en/pt_BR |
+| i18n | 10 catálogos, 16.986 mensagens compiladas | Paridade de chaves/parâmetros en/pt_BR |
 | Guia | 175 fluxos, 173 telas, sem explicação faltante | Fonte `porques.md` e artefatos gerados |
 
 Manifestos e logs completos permanecem localmente em `tmp/instagram-910/`, ignorado pelo Git. Fontes dos testes são versionadas e reproduzíveis; nenhum conteúdo de sessão é necessário para testes sintéticos.
 
-RuboCop sobre todos os arquivos Ruby alterados encontrou duas infrações já presentes no `DashboardController` da base (reproduzidas com `git show HEAD:...` via stdin): `Lint/NonLocalExitFromIterator` e `Style/RegexpLiteral`. Não tratar esse comando como totalmente verde; não são regressões da linha de flag adicionada. ESLint não retornou erros; avisos do resolvedor de catálogos/dynamic key são acompanhados de compilação i18n e verificação de ausência de chaves faltantes no browser. Há avisos preexistentes de depreciação Rails/Rack, Browserslist e sourcemap de dependência; não foram feitas atualizações de dependências fora do escopo.
+A inspeção inicial RuboCop reproduziu duas infrações preexistentes no `DashboardController` da base: `Lint/NonLocalExitFromIterator` e `Style/RegexpLiteral`. O hook normal de commit corrigiu somente o delimitador do regex existente, sem mudar seu padrão/comportamento; não foi criada expressão regular nova. Permanece a infração preexistente `Lint/NonLocalExitFromIterator`. Não tratar a varredura integral desses arquivos como totalmente verde, nem como regressão da linha de flag adicionada. ESLint não retornou erros; avisos do resolvedor de catálogos/dynamic key são acompanhados de compilação i18n e verificação de ausência de chaves faltantes no browser. Há avisos preexistentes de depreciação Rails/Rack, Browserslist e sourcemap de dependência; não foram feitas atualizações de dependências fora do escopo.
 
 ## 4. Revisões independentes e correções
 
@@ -95,3 +96,19 @@ O POC anterior do usuário demonstrou pesquisa, convite e `PENDING → CONFIRMED
 **Não existe garantia absoluta de ausência de regressão.** A evidência cobre as suites e renderizações descritas; integração externa, configuração produtiva e suite completa do monorepo não foram inferidas como verdes.
 
 Push de código na `main` dispara deploy nas duas stacks. Portanto, PR não deve ser mesclado enquanto os gates de CI, homologação e aprovação não forem resolvidos. Desligar a feature não equivale a impedir deploy. Não remover testadores ou canais, reenviar a clientes confirmados ou alterar secrets para fabricar evidência.
+
+## 6. Integração com a base atual
+
+A branch exclusiva foi reaplicada, sem conflito, sobre `fd7d20d0239707a42d9a9aafa38f86b4412a3920` (main após #909). O código revalidado é `80fdee5feb`; os próximos commits desta entrega registram documentação/evidências/artefatos gerados. Nenhuma mudança foi aplicada à main.
+
+Após essa atualização, passaram novamente 271 exemplos RSpec, 86 Vitest, build completo de assets, eager load (`zeitwerk:check`), i18n e mapa do Guia. O novo verificador de formatos do Guia exigiu geração: foram atualizados pelo comando oficial 492 contratos de ações (somente metadados/novos campos desta feature), e o recheck passou. O catálogo gerado continua explicitando entradas cujo tipo não é inferido; não foi editado manualmente para fingir cobertura.
+
+O browser foi reexecutado sobre o build atual: 33/33 casos, 67 capturas, hashes de fonte estáveis; 63 imagens idênticas à rodada visual aprovada. A inspeção específica das quatro imagens iniciais identificou contraste insuficiente do placeholder herdado. O campo novo recebeu override local usando `n-slate-11`, sem alterar o componente compartilhado. QA incluiu 20 medições de `::placeholder` normal/foco: mínimos 5,077:1 claro e 8,591:1 escuro, com 33/33 casos e 10/10 helpers aprovados. O diretor de arte reinspecionou os pixels e aprovou a tela inicial, mantendo a aprovação dos demais estados.
+
+Capturas representativas versionadas em `docs/assets/instagram-testers-910/`: perfis e respostas são **sintéticos**. São componentes reais, não imagens conceituais e não prova de aceite de cliente real.
+
+### Limites operacionais adicionais
+
+O lock/idempotência usa o Redis da instalação. Caso as duas stacks compartilhem o mesmo App pai mas Redis separados, essa trava não oferece exclusão mútua entre as instalações. A matriz do runbook precisa resolver esse cenário antes de habilitação conjunta. Não foi implementado serviço distribuído novo para presumir uma topologia não verificada.
+
+Foram entregues códigos de erro próprios, limites, proteção de sessão e runbook. Não foi configurado ou acionado um alarme real de monitoramento em nenhuma stack nesta execução. Esse item não deve ser apresentado como entregue só pela existência de tratamento de erro.

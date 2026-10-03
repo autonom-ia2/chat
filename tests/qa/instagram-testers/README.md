@@ -18,6 +18,8 @@ Regressões de `art-final-review.md`: em cada estágio capturado do fluxo novo, 
 
 Nos estados selecionados em 320px/390px, mede largura da linha de avatar/identidade, espaço efetivamente disponível para texto, posição e alinhamento do botão “Trocar perfil”; exige linha própria e palavras do nome sem cortes internos. O @ sintético normal de 390px deve caber numa linha. Nas instruções, exige quatro marcadores computados `decimal`/`list-item` visíveis e orientação de suporte depois do CTA tanto no DOM quanto na geometria. Cores, razões, camadas de CSS, larguras e marcadores ficam em `screens[].visualChecks`. O manifesto de hashes inclui `TesterAcceptanceInstructions.vue`.
 
+Regressão de `art-current-main.md`: no estágio inicial `profile`, com campo vazio e `:placeholder-shown`, exige contraste **≥4,5:1** do `::placeholder` em estado normal e foco. Lê a cor e a opacidade do pseudo-elemento, compõe sobre o fundo real do input e usa os mesmos helpers de superfície/filtros dos outros textos; não usa a cor regular do input como substituta. Aplica em todos os dez casos iniciais claro/escuro, incluindo 1440px e 320px. Medidas ficam como `kind: placeholder`, com `pseudoElement` e `pseudoOpacity`. As novas imagens iniciais usam prefixo `placeholder-regression-` para preservar as imagens examinadas anteriormente.
+
 PT-BR: 1440×900, 1024×768, 390×844, 320×568, claro/escuro; desktop com CSS zoom 200% nos dois temas. CSS zoom verifica reflow e alvos, mas **não é zoom da barra do navegador**. Capturas de página inteira mantêm a largura do viewport e incluem conteúdo vertical fora da primeira dobra. Os casos narrow/zoom usam nome e @ longos. Não representam o layout completo do wizard.
 
 Artefatos em `tmp/instagram-910/visual/`:
