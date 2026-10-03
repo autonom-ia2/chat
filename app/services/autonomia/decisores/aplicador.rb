@@ -1,5 +1,5 @@
 # Grava os campos extraídos pelo Decisor (#858) nos destinos que ele declara: contato, empresa e card
-# da conversa.
+# do alvo (o card da automação de etapa, ou o card da conversa).
 #
 # Só PREENCHE, nunca troca o que já existia. O texto é de terceiros: uma assinatura, um nome citado
 # ("falar com Maria da XPTO") ou o lead de um portal que manda todos os e-mails do mesmo remetente não
@@ -20,10 +20,11 @@ class Autonomia::Decisores::Aplicador
   DO_CONTATO = { 'contato.nome' => :name, 'contato.telefone' => :phone_number, 'contato.email' => :email }.freeze
   DO_CARD = { 'card.titulo' => :title, 'card.descricao' => :description }.freeze
 
-  def initialize(decisor:, conversation:)
+  def initialize(decisor:, conversation: nil, card: nil)
     @decisor = decisor
     @conversation = conversation
-    @account = conversation.account
+    @card = card
+    @account = decisor.account
   end
 
   def aplicar(valores, card_novo: false)
@@ -62,7 +63,7 @@ class Autonomia::Decisores::Aplicador
   end
 
   def contato
-    @contato ||= @conversation.contact
+    @contato ||= @card&.contact || @conversation&.contact
   end
 
   def gravar_no_contato(atributo, valor)
@@ -99,12 +100,18 @@ class Autonomia::Decisores::Aplicador
   end
 
   def gravar_no_card(atributo, valor)
-    card = Crm::Config.enabled? ? Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation) : nil
+    card = @card || card_da_conversa
     return :sem_card if card.blank?
     return unless @card_novo || card[atributo].blank?
 
     card.update!(atributo => valor)
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
     :gravado
+  end
+
+  def card_da_conversa
+    return if @conversation.nil? || !Crm::Config.enabled?
+
+    Crm::Cards::ConversationCardFinder.new(account: @account).find(@conversation)
   end
 end

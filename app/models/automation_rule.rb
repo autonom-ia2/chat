@@ -111,6 +111,7 @@ class AutomationRule < ApplicationRecord
     decisor_id, chave = Array(action[:action_params])
     decisor = Autonomia::Decisor.find_by(id: decisor_id.to_s, account_id: account_id)
     return errors.add(:actions, decisor_not_found_message(decisor_id)) if decisor.blank?
+    return errors.add(:actions, decisor.recusa_de_gatilho('regra')) if decisor.recusa_de_gatilho('regra')
     return if decisor.resposta?(chave)
 
     errors.add(:actions, "#{Autonomia::Decisores::PASSO}: '#{chave}' is not an answer of Decisor #{decisor.id}. " \

@@ -37,17 +37,25 @@ class Autonomia::Decisores::PerguntarJob < ApplicationJob
   private
 
   def decidir(rule, decisor, message, indice, chave)
+    marca = { 'regra' => rule.id, 'indice' => indice }
     decisao = Autonomia::Decisores::Pergunta.new(decisor: decisor, conversation: message.conversation, message: message,
-                                                 rule: rule, indice: indice).decisao.aguardar!(rule.id, indice)
+                                                 rule: rule, espera: marca).decisao.aguardar!(marca)
     return unless decisao.decidida? && decisao.resposta == chave.to_s
     return if @retomada && !condicoes_valem?(rule, message)
 
-    Autonomia::Decisores::Seguimento.new(decisao: decisao, rule: rule, conversation: message.conversation,
-                                         message: message, indice: indice).perform
+    seguir(decisao, marca, rule, message, indice)
   rescue TypesafeAi::Decisor::Error => e
     raise JevIndisponivel, e.code if TRANSITORIOS.include?(e.code)
 
     Rails.logger.warn("[autonomia][decisor] regra=#{rule.id} decisor=#{decisor.id} Jev recusou: #{e.code}")
+  end
+
+  def seguir(decisao, marca, rule, message, indice)
+    estado = Autonomia::Decisores::Estado.new(conversation: message.conversation, message: message,
+                                              leituras: decisao.decisor.leituras_efetivas)
+    Autonomia::Decisores::Seguimento.new(decisao: decisao, marca: marca, estado: estado).perform do
+      AutomationRules::ActionService.new(rule, rule.account, message.conversation).perform(desde: indice + 1, message: message)
+    end
   end
 
   def condicoes_valem?(rule, message)

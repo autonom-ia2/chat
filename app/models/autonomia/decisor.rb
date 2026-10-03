@@ -1,7 +1,8 @@
-# Decisor (#858): uma pergunta de múltipla escolha que a conta faz sobre cada conversa
-# ("Este e-mail é um lead?"), respondida pelo Jev com uma certeza.
+# Decisor (#858): uma pergunta de múltipla escolha que a conta faz sobre uma conversa ou um card
+# ("Este e-mail é um lead?", "É empresa grande?"), respondida pelo Jev com uma certeza. Ele lê só o que
+# declara em `leituras` (lista fechada; vazio = as mensagens do cliente, como na etapa 1).
 #
-# A automação usa o Decisor como um passo (`perguntar_ao_decisor`): os passos seguintes só rodam
+# A automação — regra de automação ou automação de etapa do CRM — usa o Decisor como um passo (`perguntar_ao_decisor`): os passos seguintes só rodam
 # quando ele responde a chave combinada com certeza suficiente. Os `campos` opcionais dizem o que
 # tirar do texto e onde gravar (contato, empresa, card) quando a resposta é a que segue.
 #
@@ -18,6 +19,21 @@ class Autonomia::Decisor < ApplicationRecord
   ORIGENS = %w[pessoa guia].freeze
   ATRIBUTO_DE_CONTATO = 'contato.atributo:'.freeze
   DESTINOS = %w[contato.nome contato.telefone contato.email empresa.nome card.titulo card.descricao].freeze
+  # O que o Decisor pode ler, de uma lista fechada. Vazio = o que a etapa 1 lia (as mensagens do cliente).
+  # Nada daqui leva o e-mail ou o telefone do contato ao Jev (`Decisores::Estado`).
+  LEITURAS = {
+    'mensagens_recentes' => 'as últimas mensagens do cliente, em qualquer canal, com o assunto do e-mail',
+    'mensagens_com_respostas' => 'as últimas mensagens do cliente e da equipe',
+    'ultima_mensagem' => 'a mensagem que disparou a automação',
+    'conversa' => 'canal, caixa, etiquetas, atributos e status da conversa',
+    'contato' => 'nome e atributos do contato (nunca e-mail ou telefone)',
+    'card' => 'título, etapa, funil, valor e metadados do card',
+    'empresa' => 'nome e atributos da empresa do contato'
+  }.freeze
+  LEITURAS_PADRAO = %w[mensagens_recentes].freeze
+  # O que cada gatilho tem para ler. A regra de automação dispara numa conversa (o contato e o card vêm
+  # dela); a automação de etapa dispara num card, e não há mensagem que a tenha disparado.
+  LEITURAS_DO_GATILHO = { 'regra' => LEITURAS.keys, 'etapa' => LEITURAS.keys - %w[ultima_mensagem] }.freeze
   # O que o Decisor guarda de cada exemplo: o bastante para o Jev reconhecer o caso, nunca a conversa inteira.
   MAX_TEXTO_DO_EXEMPLO = 1_500
 
@@ -33,6 +49,7 @@ class Autonomia::Decisor < ApplicationRecord
   validate :respostas_validas
   validate :exemplos_validos
   validate :campos_validos
+  validate :leituras_validas
 
   def chaves
     Array(respostas).map { |resposta| resposta['chave'].to_s }
@@ -52,6 +69,19 @@ class Autonomia::Decisor < ApplicationRecord
     update!(exemplos: (Array(exemplos) + [novo]).last(MAX_EXEMPLOS))
   end
 
+  def leituras_efetivas
+    Array(leituras).presence || LEITURAS_PADRAO
+  end
+
+  # A recusa que ensina quando o Decisor lê o que o gatilho do passo não tem. nil = combina.
+  def recusa_de_gatilho(gatilho)
+    faltam = leituras_efetivas - LEITURAS_DO_GATILHO.fetch(gatilho.to_s)
+    return if faltam.empty?
+
+    "#{Autonomia::Decisores::PASSO}: Decisor #{id} reads #{faltam.join(', ')}, which this trigger does not have. " \
+      "Readable here: #{LEITURAS_DO_GATILHO.fetch(gatilho.to_s).join(', ')}. Change the Decisor leituras or use another trigger."
+  end
+
   def contadores
     { perguntas: perguntas_count, duvidas: duvidas_count, correcoes: correcoes_count, ultima_pergunta_em: ultima_pergunta_em }
   end
@@ -63,6 +93,18 @@ class Autonomia::Decisor < ApplicationRecord
     self.respostas = textos(respostas)
     self.exemplos = textos(exemplos)
     self.campos = textos(campos)
+    self.leituras = Array(leituras).map(&:to_s)
+  end
+
+  def leituras_validas
+    lista = Array(leituras)
+    desconhecidas = lista - LEITURAS.keys
+    errors.add(:leituras, 'must not repeat items') if lista.uniq.size != lista.size
+    return if desconhecidas.empty?
+
+    errors.add(:leituras, "#{desconhecidas.join(', ')} cannot be read. Use any of: " \
+                          "#{LEITURAS.map { |item, o_que| "#{item} (#{o_que})" }.join('; ')}. " \
+                          'Contact e-mail and phone never go to the Jev.')
   end
 
   def textos(lista)

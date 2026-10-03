@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -584,8 +584,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
     t.bigint "decisor_id", null: false
     t.bigint "account_id", null: false
     t.bigint "automation_rule_id"
-    t.bigint "conversation_id", null: false
-    t.bigint "message_id", null: false
+    t.bigint "conversation_id"
+    t.bigint "message_id"
     t.string "resposta"
     t.decimal "certeza", precision: 4, scale: 3
     t.jsonb "campos_extraidos", default: {}, null: false
@@ -596,10 +596,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
     t.bigint "resolvida_por_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "crm_card_id"
+    t.string "gatilho"
     t.index ["account_id", "status", "created_at"], name: "idx_autonomia_decisoes_fila"
     t.index ["automation_rule_id"], name: "index_autonomia_decisor_decisoes_on_automation_rule_id"
     t.index ["conversation_id"], name: "index_autonomia_decisor_decisoes_on_conversation_id"
+    t.index ["crm_card_id"], name: "index_autonomia_decisor_decisoes_on_crm_card_id"
     t.index ["decisor_id", "conversation_id", "message_id"], name: "idx_autonomia_decisoes_por_mensagem", unique: true
+    t.index ["decisor_id", "crm_card_id", "gatilho"], name: "idx_autonomia_decisoes_por_gatilho", unique: true, where: "(gatilho IS NOT NULL)"
     t.index ["message_id"], name: "index_autonomia_decisor_decisoes_on_message_id"
     t.index ["resolvida_por_id"], name: "index_autonomia_decisor_decisoes_on_resolvida_por_id"
   end
@@ -619,6 +623,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
     t.datetime "ultima_pergunta_em"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "leituras", default: [], null: false
     t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
   end
 
@@ -3229,6 +3234,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
   add_foreign_key "autonomia_decisor_decisoes", "automation_rules", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "autonomia_decisores", column: "decisor_id", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "conversations", on_delete: :cascade
+  add_foreign_key "autonomia_decisor_decisoes", "crm_cards", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "messages", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "users", column: "resolvida_por_id", on_delete: :nullify
   add_foreign_key "autonomia_decisores", "accounts", on_delete: :cascade

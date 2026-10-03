@@ -53,7 +53,7 @@ class Autonomia::Decisores::Resolucao
   end
 
   def guardar_exemplo!(resposta)
-    estado = Autonomia::Decisores::Estado.new(conversation: @decisao.conversation, message: @decisao.message)
+    estado = Autonomia::Decisores::Estado.da_decisao(@decisao)
     @decisor.guardar_exemplo!(texto: estado.texto_do_exemplo, resposta: resposta, origem: 'pessoa', decisao_id: @decisao.id)
   end
 

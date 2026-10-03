@@ -1,9 +1,10 @@
-# Uma resposta do Decisor (#858) sobre UMA mensagem de uma conversa.
+# Uma resposta do Decisor (#858) sobre UMA mensagem de uma conversa, ou sobre um card num gatilho de etapa.
 #
-# A linha é única por (decisor, conversa, mensagem): a segunda regra que pergunta a mesma coisa sobre
-# a mesma mensagem reaproveita esta resposta, e o Jev é chamado uma vez só.
+# A linha é única por (decisor, conversa, mensagem) — ou por (decisor, card, gatilho), na automação de
+# etapa do CRM, onde não há mensagem: o gatilho é a marca daquela entrada ou saída de etapa. A segunda
+# automação que pergunta a mesma coisa sobre o mesmo alvo reaproveita esta resposta, e o Jev é chamado uma vez só.
 #
-# `esperas` lista cada regra ({regra, indice}) parada esperando a resposta chegar depois (dúvida
+# `esperas` lista cada automação ({regra, indice} ou {etapa, execucao}) parada esperando a resposta chegar depois (dúvida
 # resolvida pelo Guia ou por uma pessoa): todas retomam. `seguidas` lista as que já rodaram os passos
 # seguintes, para que uma retomada repetida não mande a mesma mensagem duas vezes. `motivo` guarda só a
 # justificativa curta, nunca a conversa.
@@ -23,12 +24,15 @@ class Autonomia::DecisorDecisao < ApplicationRecord
   belongs_to :decisor, class_name: 'Autonomia::Decisor', inverse_of: :decisoes
   belongs_to :account
   belongs_to :automation_rule, optional: true
-  belongs_to :conversation
-  belongs_to :message
+  belongs_to :conversation, optional: true
+  belongs_to :message, optional: true
+  belongs_to :card, class_name: 'Crm::Card', foreign_key: :crm_card_id, optional: true, inverse_of: false
   belongs_to :resolvida_por, class_name: 'User', optional: true
 
   validates :status, inclusion: { in: STATUSES }
-  validates :message_id, uniqueness: { scope: [:decisor_id, :conversation_id] }
+  validates :message_id, uniqueness: { scope: [:decisor_id, :conversation_id] }, allow_nil: true
+  validates :gatilho, uniqueness: { scope: [:decisor_id, :crm_card_id] }, allow_nil: true
+  validate :com_alvo
 
   scope :esperando_pessoa, -> { where(status: 'esperando_pessoa') }
 
@@ -59,10 +63,10 @@ class Autonomia::DecisorDecisao < ApplicationRecord
   # A regra passa a esperar esta decisão, se ela ainda está parada. Quem troca o status lê `esperas`
   # DEPOIS da troca, e a inscrição só entra enquanto o status é de parada: as duas não se cruzam.
   # -> a decisão relida, decidida se a resposta chegou nesse meio-tempo.
-  def aguardar!(regra_id, indice)
+  def aguardar!(marca)
     return self unless parada?
 
-    espera = [{ 'regra' => regra_id, 'indice' => indice }].to_json
+    espera = [marca].to_json
     self.class.where(id: id, status: PARADAS).where.not('esperas @> ?::jsonb', espera)
         .update_all(['esperas = esperas || ?::jsonb, updated_at = ?', espera, Time.current])
     reload
@@ -70,10 +74,16 @@ class Autonomia::DecisorDecisao < ApplicationRecord
 
   # Marca que a regra vai seguir depois desta decisão. -> false quando ela já tinha seguido: a
   # retomada chegou de novo (Guia e pessoa, retry do job) e os passos não podem rodar outra vez.
-  def seguir!(regra_id, indice)
-    marca = [{ 'regra' => regra_id, 'indice' => indice }].to_json
-    self.class.where(id: id).where.not('seguidas @> ?::jsonb', marca)
-        .update_all(['seguidas = seguidas || ?::jsonb, updated_at = ?', marca, Time.current]) == 1
+  def seguir!(marca)
+    seguida = [marca].to_json
+    self.class.where(id: id).where.not('seguidas @> ?::jsonb', seguida)
+        .update_all(['seguidas = seguidas || ?::jsonb, updated_at = ?', seguida, Time.current]) == 1
   end
   # rubocop:enable Rails/SkipsModelValidations
+
+  private
+
+  def com_alvo
+    errors.add(:base, 'needs a conversation or a card') if conversation_id.blank? && crm_card_id.blank?
+  end
 end

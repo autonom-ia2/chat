@@ -36,7 +36,7 @@ class Autonomia::Decisores::Teste
 
   def caso(conversation)
     message = conversation.messages.incoming.reorder(id: :desc).first
-    estado = message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message)
+    estado = message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas)
     estado unless estado.nil? || estado.vazio?
   end
 

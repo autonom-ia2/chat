@@ -51,7 +51,7 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
   end
 
   def decisoes
-    lista = @decisor.decisoes.includes(conversation: :contact).order(created_at: :desc).limit(50)
+    lista = @decisor.decisoes.includes({ conversation: :contact }, { card: :contact }).order(created_at: :desc).limit(50)
     lista = lista.where(status: params[:status].to_s) if params[:status].present?
     render json: { decisoes: lista.map { |decisao| decisao_json(decisao) } }
   end
@@ -72,7 +72,8 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   def decisor_params
     params.permit(:nome, :pergunta, :instrucoes, :certeza_minima, respostas: [:chave, :descricao],
-                                                                  exemplos: [:texto, :resposta, :origem], campos: [:chave, :descricao, :destino])
+                                                                  exemplos: [:texto, :resposta, :origem], campos: [:chave, :descricao, :destino],
+                                                                  leituras: [])
   end
 
   # Conversas que a pessoa enxerga: o teste mostra trechos, e quem não vê a caixa não lê a conversa.
@@ -91,7 +92,7 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   def estado_da_conversa(conversation)
     message = conversation.messages.incoming.reorder(id: :desc).first
-    message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message)
+    message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas)
   end
 
   def resumo(decisor, esperando)
@@ -101,14 +102,15 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   def completo(decisor)
     esperando = decisor.decisoes.esperando_pessoa.count
-    resumo(decisor, esperando).merge(instrucoes: decisor.instrucoes, exemplos: decisor.exemplos, campos: decisor.campos)
+    resumo(decisor, esperando).merge(instrucoes: decisor.instrucoes, exemplos: decisor.exemplos, campos: decisor.campos,
+                                     leituras: decisor.leituras_efetivas)
   end
 
   def decisao_json(decisao)
     { id: decisao.id, status: decisao.status, resposta: decisao.resposta, certeza: decisao.certeza&.to_f,
       motivo: decisao.motivo, campos_extraidos: decisao.campos_extraidos, automation_rule_id: decisao.automation_rule_id,
-      conversation_id: decisao.conversation_id, display_id: decisao.conversation.display_id,
-      contato: decisao.conversation.contact&.name, criada_em: decisao.created_at, vence_em: vence_em(decisao) }
+      conversation_id: decisao.conversation_id, display_id: decisao.conversation&.display_id, crm_card_id: decisao.crm_card_id,
+      contato: (decisao.card&.contact || decisao.conversation&.contact)&.name, criada_em: decisao.created_at, vence_em: vence_em(decisao) }
   end
 
   def vence_em(decisao)

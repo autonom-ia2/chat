@@ -1407,6 +1407,9 @@
         "tipo": "objeto"
       },
       "instrucoes": {},
+      "leituras": {
+        "tipo": "lista"
+      },
       "nome": {},
       "pergunta": {},
       "respostas": {
@@ -2637,7 +2640,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -2685,7 +2689,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {
@@ -4932,6 +4937,9 @@
         "max_caracteres": 4000,
         "tipo": "string"
       },
+      "leituras": {
+        "tipo": "lista"
+      },
       "nome": {
         "max_caracteres": 120,
         "obrigatorio": "pelo_modelo",
@@ -4999,8 +5007,8 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:37",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:89",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:88",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:87",
       "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
     ],
     "sem_corpo": false
@@ -8057,7 +8065,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {
@@ -8115,7 +8124,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -11024,6 +11034,9 @@
         "tipo": "objeto"
       },
       "instrucoes": {},
+      "leituras": {
+        "tipo": "lista"
+      },
       "nome": {},
       "pergunta": {},
       "respostas": {
@@ -12217,7 +12230,8 @@
             "um_de": [
               "create_follow_up",
               "assign_owner",
-              "move_stage"
+              "move_stage",
+              "perguntar_ao_decisor"
             ]
           },
           "delay_seconds": {
@@ -12265,7 +12279,8 @@
         "um_de": [
           "create_follow_up",
           "assign_owner",
-          "move_stage"
+          "move_stage",
+          "perguntar_ao_decisor"
         ]
       },
       "delay_seconds": {

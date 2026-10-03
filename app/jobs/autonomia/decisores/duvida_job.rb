@@ -11,7 +11,7 @@ class Autonomia::Decisores::DuvidaJob < ApplicationJob
     decisao = Autonomia::DecisorDecisao.find_by(id: decisao_id)
     return unless decisao&.status == 'duvida'
 
-    estado = Autonomia::Decisores::Estado.new(conversation: decisao.conversation, message: decisao.message)
+    estado = Autonomia::Decisores::Estado.da_decisao(decisao)
     veredito = Autonomia::Decisores::Duvida.new(decisao).perguntar(estado)
     veredito.seguro ? decidir(decisao, veredito, estado) : esperar_pessoa(decisao, veredito.motivo)
   rescue Autonomia::Decisores::Duvida::Error => e
