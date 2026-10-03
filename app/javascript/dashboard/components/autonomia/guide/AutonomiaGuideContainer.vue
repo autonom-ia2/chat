@@ -33,6 +33,22 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // (validated against the guide route allow-list + the router + the route guards). It ALSO executes
 // the actions the backend proposes — but never on its own: só depois de a pessoa ler o que vai
 // acontecer e clicar em confirmar.
+//
+// #859 — `embutido`: a mesma conversa (mesma store, mesmo backend) dentro de uma
+// tela, como na de Automações. Sem cabeçalho e sem fechar; nessas telas o painel
+// lateral e o lançador ficam escondidos (rota com `meta.guiaEmbutido`), para a
+// conversa não aparecer duas vezes.
+const props = defineProps({
+  embutido: { type: Boolean, default: false },
+  // [{ rotulo, pergunta }] — sugestões da tela, no lugar das gerais.
+  sugestoes: { type: Array, default: null },
+  introducao: { type: String, default: '' },
+  // Pedido que a pessoa escolheu antes de chegar (um modelo pronto). Sai uma vez.
+  pedidoInicial: { type: String, default: '' },
+});
+// O que o Guia fez no turno (#855), para a tela que o embute reagir.
+const emit = defineEmits(['execucao']);
+
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -92,7 +108,13 @@ const isPanelOpen = computed(
   () => uiSettings.value.is_autonomia_guide_panel_open === true
 );
 
-const showPanel = computed(() => isEnabled.value && isPanelOpen.value);
+// Na tela que já traz a conversa embutida, o painel lateral não abre por cima.
+const telaTemGuiaEmbutido = computed(() => route?.meta?.guiaEmbutido === true);
+
+const showPanel = computed(() => {
+  if (props.embutido) return isEnabled.value;
+  return isEnabled.value && isPanelOpen.value && !telaTemGuiaEmbutido.value;
+});
 
 const hasMessages = computed(() => messages.length > 0);
 
@@ -137,9 +159,12 @@ const sugestoesDaTela = computed(() =>
     }))
 );
 
-const suggestions = computed(() =>
-  sugestoesDaTela.value.length ? sugestoesDaTela.value : sugestoesGerais.value
-);
+const suggestions = computed(() => {
+  if (props.sugestoes?.length) return props.sugestoes;
+  return sugestoesDaTela.value.length
+    ? sugestoesDaTela.value
+    : sugestoesGerais.value;
+});
 
 watch(
   showPanel,
@@ -164,6 +189,7 @@ const closePanel = () => {
 };
 
 const handleClickOutside = () => {
+  if (props.embutido) return;
   if (isSmallScreen.value && isPanelOpen.value) closePanel();
 };
 
@@ -302,6 +328,9 @@ let desmontado = false;
 let requestSequence = 0;
 onBeforeUnmount(() => {
   desmontado = true;
+  // A conversa embutida é a mesma do painel lateral (#859): sair da tela não
+  // apaga o que a pessoa conversou, ela continua no painel.
+  if (props.embutido) return;
   // Solta o áudio e as miniaturas que estavam na memória do navegador.
   store.reset();
 });
@@ -350,6 +379,8 @@ const requestReply = async (requestAccount, message, requestId) => {
       message,
       history: store.toHistory(),
       routeContext: route.name,
+      // #859 — o registro aberto (ex.: a automação 42); o servidor guarda só números.
+      routeParams: route.params,
       arquivos: store.arquivosProntos(),
     });
     if (
@@ -379,6 +410,7 @@ const requestReply = async (requestAccount, message, requestId) => {
         execucao: data.execucao || null,
       });
       if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+      if (data.execucao) emit('execucao', data.execucao);
     } else if (data.retido) {
       // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
       // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
@@ -389,6 +421,7 @@ const requestReply = async (requestAccount, message, requestId) => {
         execucao: data.execucao || null,
       });
       if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+      if (data.execucao) emit('execucao', data.execucao);
     } else {
       useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
     }
@@ -553,7 +586,7 @@ watch([scrollSignal, isSending], () => scrollToBottom());
 // Esc fecha o painel de onde quer que o foco esteja (o painel é uma região
 // lateral, não um modal, então o foco pode estar fora dele).
 useEventListener(document, 'keydown', event => {
-  if (event.key !== 'Escape' || !showPanel.value) return;
+  if (props.embutido || event.key !== 'Escape' || !showPanel.value) return;
   closePanel();
 });
 
@@ -561,7 +594,7 @@ useEventListener(document, 'keydown', event => {
 // lançador, que some. Fechar devolve o foco ao lançador, e isso é feito lá,
 // quando ele reaparece.
 watch(showPanel, async aberto => {
-  if (!aberto) return;
+  if (!aberto || props.embutido) return;
   await nextTick();
   panelRef.value?.focus();
 });
@@ -575,6 +608,25 @@ watch(accountId, () => {
   vendoFeitos.value = false;
   store.reset();
 });
+
+// #859 — o modelo pronto que a pessoa escolheu na lista vira a primeira pergunta,
+// uma vez só. Espera a conta dizer que o Guia está ligado.
+let pedidoInicialEnviado = false;
+watch(
+  isEnabled,
+  ligado => {
+    if (!ligado || !props.pedidoInicial || pedidoInicialEnviado) return;
+    pedidoInicialEnviado = true;
+    sendMessage(props.pedidoInicial);
+  },
+  { immediate: true }
+);
+
+const classeDoPainel = computed(() =>
+  props.embutido
+    ? 'bg-n-surface-2 h-full w-full overflow-hidden flex rounded-xl border border-n-weak'
+    : 'bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex focus:outline-none'
+);
 </script>
 
 <template>
@@ -582,13 +634,14 @@ watch(accountId, () => {
     v-if="showPanel"
     ref="panelRef"
     v-on-click-outside="handleClickOutside"
-    role="complementary"
-    tabindex="-1"
+    :role="embutido ? 'region' : 'complementary'"
+    :tabindex="embutido ? undefined : -1"
     :aria-label="$t('AUTONOMIA_GUIDE.A11Y.PANEL')"
-    class="bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex focus:outline-none"
+    :class="classeDoPainel"
   >
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
+        v-if="!embutido"
         :title="
           vendoFeitos
             ? $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
@@ -803,7 +856,7 @@ watch(accountId, () => {
             {{ $t('AUTONOMIA_GUIDE.TITLE') }}
           </h3>
           <p class="text-sm text-n-slate-11 leading-6">
-            {{ $t('AUTONOMIA_GUIDE.KICK_OFF') }}
+            {{ introducao || $t('AUTONOMIA_GUIDE.KICK_OFF') }}
           </p>
           <div class="flex flex-col gap-2 mt-2">
             <p

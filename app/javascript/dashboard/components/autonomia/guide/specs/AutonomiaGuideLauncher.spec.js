@@ -16,6 +16,7 @@ vi.mock('dashboard/composables/useUISettings', () => ({
     updateUISettings,
   }),
 }));
+vi.mock('vue-router', () => ({ useRoute: () => ({ meta: {} }) }));
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: getter => {
     if (getter === 'accounts/getAccount') {

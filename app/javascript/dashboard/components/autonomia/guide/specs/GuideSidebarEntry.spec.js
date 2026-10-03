@@ -19,6 +19,9 @@ vi.mock('dashboard/composables/store', () => ({
     return ref(1);
   },
 }));
+// #859 — a rota aberta: tela com o Guia embutido esconde esta entrada.
+const rotaAtual = { meta: {} };
+vi.mock('vue-router', () => ({ useRoute: () => rotaAtual }));
 const corDaMarca = ref('');
 vi.mock('dashboard/composables/useBrandedSidebar', () => ({
   useBrandedSidebar: () => ({ brandedColor: corDaMarca }),
@@ -38,6 +41,7 @@ const ponto = w => w.find('[data-guia-ponto]');
 describe('GuideSidebarEntry', () => {
   beforeEach(() => {
     disponivel.value = true;
+    rotaAtual.meta = {};
     uiSettingsRef.value = { is_autonomia_guide_panel_open: false };
     window.sessionStorage.clear();
   });
@@ -50,6 +54,14 @@ describe('GuideSidebarEntry', () => {
     disponivel.value = false;
     const wrapper = montar();
     expect(wrapper.find('[data-guia-abrir]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('some na tela que já traz a conversa do Guia embutida', () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    const wrapper = montar();
+    expect(wrapper.find('[data-guia-abrir]').exists()).toBe(false);
+    expect(intro(wrapper).exists()).toBe(false);
     wrapper.unmount();
   });
 
