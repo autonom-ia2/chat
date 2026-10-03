@@ -31,6 +31,8 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaAcao,
     # #855 — o Guia executa o que tem desfazer, passo a passo, no mesmo turno.
     Autonomia::Agents::Tools::Native::GuiaExecucao,
+    # #900 — o formato de uma ação, gerado do código, para o corpo sair certo de primeira.
+    Autonomia::Agents::Tools::Native::GuiaFormato,
     # #857 — o Guia lê uma página da internet quando a busca não basta.
     Autonomia::Agents::Tools::Native::GuiaPagina,
     # #857 — o Guia lê o conteúdo de um anexo de conversa (documento, áudio, imagem).

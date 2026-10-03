@@ -199,9 +199,12 @@ RSpec.describe 'Ferramentas do Guia' do
   end
 
   describe 'propor_acao' do
+    # Corpo completo: desde a #900 a conferência recusa a campanha sem caixa
+    # nem mensagem antes de chegar à tela — a plataforma recusaria no clique.
     let(:pedido) do
+      caixa = create_crm_inbox(account: conta, name: 'Campanhas')
       { 'acao' => 'POST campaigns', 'descricao' => 'Disparar a campanha Boas-vindas.',
-        'corpo_json' => { title: 'Boas-vindas' }.to_json }
+        'corpo_json' => { title: 'Boas-vindas', message: 'Olá!', inbox_id: caixa.id }.to_json }
     end
 
     # Para o que não tem volta, a ferramenta PREPARA; quem grava é o endpoint de

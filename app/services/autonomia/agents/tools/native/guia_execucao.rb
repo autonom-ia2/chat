@@ -38,8 +38,8 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
         { 'name' => 'caminho_json', 'type' => 'string', 'required' => false,
           'description' => 'Preenche os ":id" da rota, como objeto JSON: {"id":"12"}.' },
         { 'name' => 'corpo_json', 'type' => 'string', 'required' => false,
-          'description' => 'Os campos a gravar, como objeto JSON: {"name":"Comercial"}. Use os nomes de ' \
-                           'campo da própria plataforma.' }
+          'description' => 'Os campos a gravar, como objeto JSON, montados pelo que formato_da_acao ' \
+                           'devolveu para esta ação: só os campos e valores que estão lá.' }
       ]
     end
   end
@@ -55,6 +55,8 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
     feito(@operador.executar(acao, dados))
+  rescue ::Autonomia::Guide::Acoes::CorpoForaDoFormato => e
+    e.message
   rescue ::Autonomia::Guide::Acoes::Recusada => e
     "#{e.message}#{vizinhas}"
   end
@@ -62,13 +64,15 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
   private
 
   # O retorno da plataforma conta como leitura: o id do que acabou de ser
-  # criado pode ser usado no passo seguinte sem ler a conta de novo.
+  # criado pode ser usado no passo seguinte sem ler a conta de novo. A recusa
+  # leva o que o formato sabe do campo recusado, e o sucesso avisa do campo que
+  # a plataforma pode ter descartado calada (#900).
   def feito(resultado)
-    return "Não foi feito: #{resultado.mensagem}" unless resultado.ok
+    return ["Não foi feito: #{resultado.mensagem}", resultado.dica].compact.join(' ') unless resultado.ok
 
     corpo = ::Autonomia::Guide::Resumo.new(corpo: resultado.corpo.to_s, teto: TETO).texto
     @operador.lido(corpo) if corpo.start_with?('[', '{')
-    "Feito. A plataforma respondeu: #{corpo}"
+    ["Feito. A plataforma respondeu: #{corpo}", (" Atenção: #{resultado.aviso}" if resultado.aviso)].join
   end
 
   def sem_volta(acao)
@@ -77,11 +81,7 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
   end
 
   def vizinhas
-    recurso = @params['acao'].to_s.split(' ', 2).last.to_s
-    return '' if recurso.blank?
-
-    base = recurso.split('/').first
-    existentes = @operador.acoes.catalogo.select { |acao| acao.split(' ', 2).last.to_s.start_with?(base) }
+    existentes = ::Autonomia::Guide::Rotas.vizinhas(@operador.acoes.catalogo, @params['acao'])
     return '' if existentes.blank?
 
     " Para isto, o que existe é: #{existentes.join(', ')}."

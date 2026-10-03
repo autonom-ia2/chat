@@ -31,6 +31,13 @@ class Autonomia::Guide::Formatos::Resumo
     cortar(campos(VALORES_POR_CAMPO.last))
   end
 
+  # Um campo só, numa linha: o que a recusa da plataforma junta a cada
+  # atributo recusado. Nil para campo que o formato não conhece.
+  def campo(nome)
+    campo = (@formato['campos'] || {})[nome] || (@formato['fora_do_envelope'] || {})[nome]
+    campo && "#{nome}: #{descricao(campo, VALORES_POR_CAMPO.first)}"
+  end
+
   private
 
   def montar(linhas_de_campos)

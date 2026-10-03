@@ -32,4 +32,15 @@ module Autonomia::Guide::Rotas
 
     ["#{PREFIXO}#{account_id}", *segmentos.drop(1)].join('/')
   end
+
+  # As ações do catálogo para o mesmo recurso ('POST custom_role' →
+  # 'POST custom_roles', 'PATCH custom_roles/:id'...). Volta ao modelo quando ele
+  # erra o nome da ação: o catálogo de escrita inteiro não cabe no prompt de
+  # toda pergunta, e aqui chega só o pedaço que interessa.
+  def vizinhas(catalogo, acao)
+    base = acao.to_s.split(' ', 2).last.to_s.split('/').first
+    return [] if base.blank?
+
+    catalogo.select { |existente| existente.split(' ', 2).last.to_s.start_with?(base) }
+  end
 end
