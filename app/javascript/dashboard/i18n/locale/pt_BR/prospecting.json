@@ -534,7 +534,7 @@
       "REFUSE": {
         "ACTION": "Não quer ser contatado",
         "CONFIRM_TITLE": "Marcar que não quer ser contatado?",
-        "CONFIRM_DESCRIPTION": "A recusa fica no lead, mesmo que ele seja descartado depois, e vai para o contato dele e para os contatos com o mesmo telefone ou e-mail. Campanhas e follow-ups automáticos deixam de enviar mensagem para eles.",
+        "CONFIRM_DESCRIPTION": "A recusa fica no lead, mesmo que ele seja descartado depois, e vai para o contato dele e para os contatos com o mesmo telefone ou e-mail. Campanhas e retornos automáticos deixam de enviar mensagem para eles.",
         "CONFIRM": "Marcar recusa",
         "DONE": "Recusa marcada. Ninguém mais envia mensagem ativa para este contato.",
         "ERROR": "Não foi possível marcar a recusa."
@@ -542,7 +542,7 @@
       "WITHDRAW": {
         "ACTION": "Desfazer: pode ser contatado",
         "CONFIRM_TITLE": "Desfazer a recusa?",
-        "CONFIRM_DESCRIPTION": "A pessoa volta a poder receber campanhas e follow-ups. A recusa sai dos contatos, a menos que outro lead recusado, um descadastro de e-mail ou uma marcação manual ainda a sustente.",
+        "CONFIRM_DESCRIPTION": "A pessoa volta a poder receber campanhas e retornos. A recusa sai dos contatos, a menos que outro lead recusado, um descadastro de e-mail ou uma marcação manual ainda a sustente.",
         "CONFIRM": "Desfazer recusa",
         "DONE": "Recusa desfeita.",
         "ERROR": "Não foi possível desfazer a recusa."
@@ -790,11 +790,11 @@
     "CRM_SEND": {
       "TITLE": "Enviar ao CRM",
       "PIPELINE": "Funil",
-      "STAGE": "Estágio",
+      "STAGE": "Etapa",
       "PIPELINE_PLACEHOLDER": "Escolha o funil",
-      "STAGE_PLACEHOLDER": "Escolha o estágio",
-      "CHOOSE_DESTINATION": "Escolha o funil e o estágio para onde os leads vão.",
-      "CONFIRMATION": "Enviando {count} lead(s) para o funil {pipeline}, estágio {stage}.",
+      "STAGE_PLACEHOLDER": "Escolha a etapa",
+      "CHOOSE_DESTINATION": "Escolha o funil e a etapa para onde os leads vão.",
+      "CONFIRMATION": "Enviando {count} lead para o funil {pipeline}, etapa {stage}. | Enviando {count} leads para o funil {pipeline}, etapa {stage}.",
       "LOADING": "Carregando funis...",
       "EMPTY_TITLE": "Nenhum funil no CRM",
       "EMPTY_DESCRIPTION": "Os leads entram no CRM como cards de um funil. Crie um funil no CRM e volte aqui para enviar.",

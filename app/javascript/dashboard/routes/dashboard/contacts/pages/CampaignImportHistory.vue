@@ -389,7 +389,11 @@ onBeforeUnmount(() => {
                 </p>
                 <p class="mb-0 text-xs text-n-slate-11">
                   {{ campaignImport.batch_count }}
-                  {{ t('CAMPAIGN_IMPORT.HISTORY.BATCHES') }}
+                  {{
+                    t('CAMPAIGN_IMPORT.HISTORY.BATCHES', {
+                      count: campaignImport.batch_count,
+                    })
+                  }}
                 </p>
               </td>
               <td class="min-w-0 px-2 py-4 align-top">

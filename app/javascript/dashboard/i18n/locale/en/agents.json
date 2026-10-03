@@ -174,7 +174,7 @@
       "SAVE_FIRST_MESSAGE": "Save first message",
       "SAVED": "First message saved.",
       "STARTERS": "Suggested questions",
-      "APPROVED_SUMMARY": "{count} materials approved · {pct}% confidence",
+      "APPROVED_SUMMARY": "{count} material approved · {pct}% confidence | {count} materials approved · {pct}% confidence",
       "TEST_OPTIONAL": "Test",
       "CONNECT_TITLE": "Connect to an inbox",
       "INTERNAL_TITLE": "Internal agent (team copilot)",

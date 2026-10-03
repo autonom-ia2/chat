@@ -53,7 +53,7 @@ const ownerOptions = computed(() =>
 );
 
 const statusOptions = computed(() => [
-  { value: 'open', label: t('CRM_KANBAN.LIST.COLUMNS.STATUS') },
+  { value: 'open', label: t('CRM_KANBAN.CARD_STATUS.OPEN') },
   { value: 'won', label: t('CRM_KANBAN.CALENDAR.EVENT.WIN') },
   { value: 'lost', label: t('CRM_KANBAN.CALENDAR.EVENT.LOSE') },
 ]);

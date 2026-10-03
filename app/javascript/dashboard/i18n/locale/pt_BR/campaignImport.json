@@ -6,7 +6,7 @@
       "CHOOSE_FILE": "Escolher arquivo",
       "BACK_TO_CONTACTS": "Voltar para contatos",
       "CONFIRM": "Importar",
-      "UNDO_LABELS": "Desfazer labels",
+      "UNDO_LABELS": "Desfazer etiquetas",
       "DELETE": "Excluir base"
     },
     "API": {
@@ -14,8 +14,8 @@
       "CREATE_ERROR": "Não foi possível enviar a base.",
       "CONFIRM_SUCCESS": "Importação enfileirada.",
       "CONFIRM_ERROR": "Não foi possível confirmar a importação.",
-      "UNDO_SUCCESS": "Remoção de labels enfileirada.",
-      "UNDO_ERROR": "Não foi possível desfazer as labels.",
+      "UNDO_SUCCESS": "Remoção de etiquetas enfileirada.",
+      "UNDO_ERROR": "Não foi possível desfazer as etiquetas.",
       "DELETE_SUCCESS": "Base removida.",
       "DELETE_ERROR": "Não foi possível remover a base.",
       "DOWNLOAD_ERROR": "Não foi possível baixar o arquivo."
@@ -33,7 +33,7 @@
         "BATCHES": {
           "NUMBER": "2",
           "TITLE": "Defina os lotes",
-          "BODY": "Cada contato recebe a label da campanha e uma label do lote."
+          "BODY": "Cada contato recebe a etiqueta da campanha e uma etiqueta do lote."
         },
         "REVIEW": {
           "NUMBER": "3",
@@ -54,11 +54,11 @@
     },
     "HISTORY": {
       "TITLE": "Histórico de bases de campanha",
-      "SUBTITLE": "Acompanhe validações, importações e remoções de labels de campanhas.",
+      "SUBTITLE": "Acompanhe validações, importações e remoções de etiquetas de campanhas.",
       "EMPTY": "Nenhuma base de campanha importada ainda.",
-      "BATCHES": "lotes",
+      "BATCHES": "lote | lotes",
       "ROWS_SEPARATOR": "/",
-      "INVALID_ROWS": "{count} linhas com erro",
+      "INVALID_ROWS": "{count} linha com erro | {count} linhas com erro",
       "GUIDE": {
         "VALIDATE": {
           "TITLE": "Validação automática",
@@ -69,8 +69,8 @@
           "BODY": "Bases prontas ainda não criam contatos até você clicar em Importar."
         },
         "UNDO": {
-          "TITLE": "Controle de labels",
-          "BODY": "Desfazer remove apenas as labels desse import dos contatos afetados."
+          "TITLE": "Controle de etiquetas",
+          "BODY": "Desfazer remove apenas as etiquetas dessa importação dos contatos afetados."
         }
       },
       "COLUMNS": {
@@ -88,9 +88,9 @@
       "REPORT": "Relatório"
     },
     "UNDO_DIALOG": {
-      "TITLE": "Desfazer labels da importação",
-      "DESCRIPTION": "Esta ação remove apenas as labels criadas por esta base dos contatos afetados. Os contatos não serão excluídos.",
-      "CONFIRM": "Desfazer labels"
+      "TITLE": "Desfazer etiquetas da importação",
+      "DESCRIPTION": "Esta ação remove apenas as etiquetas criadas por esta base dos contatos afetados. Os contatos não serão excluídos.",
+      "CONFIRM": "Desfazer etiquetas"
     },
     "DELETE_DIALOG": {
       "TITLE": "Excluir base enviada",
@@ -110,8 +110,8 @@
       "FAILED": "Falhou",
       "CANCELLED": "Cancelada",
       "EXPIRED": "Expirada",
-      "UNDOING_LABELS": "Desfazendo labels",
-      "LABELS_UNDONE": "Labels desfeitas",
+      "UNDOING_LABELS": "Desfazendo etiquetas",
+      "LABELS_UNDONE": "Etiquetas desfeitas",
       "UNDO_FAILED": "Falha ao desfazer"
     }
   }

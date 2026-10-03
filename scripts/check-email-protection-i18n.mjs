@@ -481,18 +481,33 @@ export function validateRuntime(locale, messages, keys) {
       const values = Object.fromEntries(
         placeholders(message).map(name => [name, `__${name}__`])
       );
-      const expected = message
-        .replace(/\{'([^']*)'\}/g, '$1')
-        .replace(/\{([a-zA-Z_][\w]*)\}/g, (_, name) => values[name]);
+      const renderLiteral = (text, vars) =>
+        text
+          .replace(/\{'([^']*)'\}/g, '$1')
+          .replace(/\{([a-zA-Z_][\w]*)\}/g, (_, name) => vars[name]);
       assert(i18n.global.te(key, locale), `${locale}: missing own key ${key}`);
       assert.notEqual(
         i18n.global.t(key, values),
         key,
         `${locale}: raw fallback ${key}`
       );
+      // "singular | plural": o vue-i18n escolhe a forma pelo `count`.
+      const forms = message.split(' | ');
+      const counts = forms.length === 2 ? [1, 2] : [0, 1, 2];
+      if (forms.length > 1) {
+        forms.forEach((form, index) => {
+          const vars = { ...values, count: counts[index] };
+          assert.equal(
+            i18n.global.t(key, vars),
+            renderLiteral(form, vars),
+            `${locale}/${key}: compiled plural form ${index}`
+          );
+        });
+        return;
+      }
       assert.equal(
         i18n.global.t(key, values),
-        expected,
+        renderLiteral(message, values),
         `${locale}/${key}: compiled output`
       );
     });

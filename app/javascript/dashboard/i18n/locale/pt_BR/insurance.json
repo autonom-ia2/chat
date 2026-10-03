@@ -132,7 +132,7 @@
       "VIDA": "Vida",
       "VIAGEM": "Viagem",
       "CONDOMINIO": "Condomínio",
-      "FIANCA_LOCATICIA": "Aluguel",
+      "FIANCA_LOCATICIA": "Fiança locatícia",
       "ACIDENTES_PESSOAIS": "Acidentes pessoais",
       "VIDA_GLOBAL": "Vida em grupo",
       "CELULAR": "Celular",
@@ -145,7 +145,7 @@
         "COLLECT": "Identifica o ramo e coleta somente os dados necessários",
         "QUOTE": "Cota nas seguradoras da sua conta AGGER e devolve os preços",
         "EXPLAIN": "Responde cobertura consultando as condições gerais, nunca de memória",
-        "HANDOFF": "Passa para a sua equipe quando o cliente decide fechar"
+        "HANDOFF": "Transfere para a sua equipe quando o cliente decide fechar"
       },
       "LOCKED_NOTE": "A jornada de cotação, os formulários do AGGER e as regras de segurança são mantidos pela {installationName}. Você define a identidade, o horário e o comportamento — e acrescenta o que a sua corretora tem de próprio.",
       "ACTIONS": {
