@@ -124,6 +124,19 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(conta.crm_cards.find_by(title: 'João').priority).to eq('high')
     end
 
+    # Bateria do #900, C19: a plataforma gravava os membros e devolvia uma LISTA; ler a lista como
+    # registro quebrava depois do sucesso, e o Guia dizia que não tinha conseguido.
+    it 'põe agentes num time, ação que devolve uma lista', :aggregate_failures do
+      agente, = create_crm_agent(account: conta)
+      executa('POST teams', { team: { name: 'Recepção' } })
+      time = conta.teams.find_by(name: 'recepção')
+
+      resultado = executa('POST teams/:team_id/team_members', { user_ids: [agente.id] }, caminho: { team_id: time.id })
+
+      expect(time.reload.members).to include(agente)
+      expect(resultado.registro).to be_nil
+    end
+
     it 'cria caixa, renomeia e põe agente nela', :aggregate_failures do
       agente, = create_crm_agent(account: conta)
 

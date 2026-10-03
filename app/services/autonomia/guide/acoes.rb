@@ -311,16 +311,23 @@ class Autonomia::Guide::Acoes
   # de status HTTP para quem está tentando trabalhar.
   def recusa_da_plataforma(resposta)
     dados = JSON.parse(resposta.corpo.to_s)
+    return unless dados.is_a?(Hash)
+
     motivo = dados['message'] || dados['error'] || Array(dados['errors']).join(', ')
     motivo.presence
   rescue JSON::ParserError
     nil
   end
 
+  # Algumas ações devolvem uma LISTA (POST teams/:id/team_members devolve os membros). Ler a lista
+  # como registro quebrava aqui, DEPOIS de a plataforma ter gravado, e o Guia dizia que não tinha
+  # conseguido o que tinha feito (bateria do #900, C19). Lista não tem um id só: o registro fica nil.
   def identificador(resposta)
     dados = JSON.parse(resposta.corpo.to_s)
-    dados = dados['payload'] || dados
-    dados.is_a?(Hash) ? dados['id'] : nil
+    return unless dados.is_a?(Hash)
+
+    dados = dados['payload'] if dados['payload'].is_a?(Hash)
+    dados['id']
   rescue JSON::ParserError
     nil
   end
