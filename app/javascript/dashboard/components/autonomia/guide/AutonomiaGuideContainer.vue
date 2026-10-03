@@ -46,8 +46,9 @@ const props = defineProps({
   // Pedido que a pessoa escolheu antes de chegar (um modelo pronto). Sai uma vez.
   pedidoInicial: { type: String, default: '' },
 });
-// O que o Guia fez no turno (#855), para a tela que o embute reagir.
-const emit = defineEmits(['execucao']);
+// O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
+// que o pedido inicial saiu, para a tela gastá-lo (#859).
+const emit = defineEmits(['execucao', 'pedidoInicialEnviado']);
 
 const { t } = useI18n();
 const route = useRoute();
@@ -67,6 +68,9 @@ const { messages, arquivos } = store;
 const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
+// Há pergunta esperando resposta — desta instância ou de outra (#859: a conversa
+// embutida e o painel lateral são a mesma conversa). Nenhuma outra sai até ela.
+const ocupado = computed(() => isSending.value || Boolean(store.pendente()));
 // #895 — a mensagem de voz está virando texto; a resposta ainda não foi pedida.
 const transcrevendo = ref(false);
 // Os anexos que esperam no campo de digitar o próximo envio.
@@ -326,11 +330,18 @@ const esperar = ms =>
 // Quem desmonta o painel não quer mais a resposta.
 let desmontado = false;
 let requestSequence = 0;
+// Cada instância (o painel lateral e a conversa embutida numa tela) tem um
+// crachá; é com ele que ela segura e solta a pergunta pendente na store.
+const cracha = Symbol('guia');
 onBeforeUnmount(() => {
   desmontado = true;
   // A conversa embutida é a mesma do painel lateral (#859): sair da tela não
-  // apaga o que a pessoa conversou, ela continua no painel.
-  if (props.embutido) return;
+  // apaga o que a pessoa conversou, ela continua no painel — e a pergunta que
+  // ainda esperava resposta fica solta para o painel terminar de buscar.
+  if (props.embutido) {
+    store.soltarPendente(cracha);
+    return;
+  }
   // Solta o áudio e as miniaturas que estavam na memória do navegador.
   store.reset();
 });
@@ -373,69 +384,85 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
 const avisarFalha = () =>
   store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
 
-const requestReply = async (requestAccount, message, requestId) => {
+// Uma resposta que já chegou: entra na conversa, e a tela que embute o Guia
+// fica sabendo o que ele fez.
+const entregarResposta = data => {
+  if (data.status !== PRONTO) {
+    avisarFalha();
+  } else if (data.available && data.text) {
+    store.addAssistantMessage({
+      content: data.text,
+      navigation: data.navigation || null,
+      navigations: data.navigations || null,
+      acao: data.acao || null,
+      artigo: data.artigo || null,
+      artigos: data.artigos || null,
+      execucao: data.execucao || null,
+    });
+    if (data.execucao) emit('execucao', data.execucao);
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else if (data.retido) {
+    // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
+    // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
+    // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
+    // assim (#855): mudou a conta.
+    store.addAssistantMessage({
+      content: t('AUTONOMIA_GUIDE.WITHHELD'),
+      execucao: data.execucao || null,
+    });
+    if (data.execucao) emit('execucao', data.execucao);
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else {
+    useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
+  }
+};
+
+const pedidoValido = (requestAccount, requestId) =>
+  !desmontado &&
+  requestId === requestSequence &&
+  accountId.value === requestAccount;
+
+// Busca a resposta de um pedido que o servidor já aceitou. Se esta instância
+// sair da tela no meio, ela para — e a pergunta continua pendente na store,
+// solta, para o painel lateral adotar (#859).
+const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
   try {
-    const { data: pedido } = await AutonomiaGuideAPI.chat({
+    const data = await buscarResposta(id, requestAccount, requestId);
+    if (!data || !pedidoValido(requestAccount, requestId)) return;
+    store.fecharPendente(chave);
+    entregarResposta(data);
+  } catch {
+    if (!pedidoValido(requestAccount, requestId)) return;
+    store.fecharPendente(chave);
+    avisarFalha();
+  } finally {
+    if (requestId === requestSequence) isSending.value = false;
+  }
+};
+
+const requestReply = async (requestAccount, message, requestId) => {
+  const chave = store.abrirPendente(requestAccount, cracha);
+  let pedido;
+  try {
+    ({ data: pedido } = await AutonomiaGuideAPI.chat({
       message,
       history: store.toHistory(),
       routeContext: route.name,
       // #859 — o registro aberto (ex.: a automação 42); o servidor guarda só números.
       routeParams: route.params,
       arquivos: store.arquivosProntos(),
-    });
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
-    const data = await buscarResposta(pedido.id, requestAccount, requestId);
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      !data ||
-      accountId.value !== requestAccount
-    )
-      return;
-    if (data.status !== PRONTO) {
-      avisarFalha();
-    } else if (data.available && data.text) {
-      store.addAssistantMessage({
-        content: data.text,
-        navigation: data.navigation || null,
-        navigations: data.navigations || null,
-        acao: data.acao || null,
-        artigo: data.artigo || null,
-        artigos: data.artigos || null,
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-      if (data.execucao) emit('execucao', data.execucao);
-    } else if (data.retido) {
-      // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
-      // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
-      // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
-      // assim (#855): mudou a conta.
-      store.addAssistantMessage({
-        content: t('AUTONOMIA_GUIDE.WITHHELD'),
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-      if (data.execucao) emit('execucao', data.execucao);
-    } else {
-      useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
-    }
+    }));
   } catch {
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
-    avisarFalha();
-  } finally {
+    // A pergunta nem chegou ao servidor. A falha fica escrita na conversa, mesmo
+    // que esta tela já tenha saído: a conversa é a mesma do painel lateral.
+    if (store.pendenteAtivo(chave)) avisarFalha();
+    store.fecharPendente(chave);
     if (requestId === requestSequence) isSending.value = false;
+    return;
   }
+  store.registrarPedidoPendente(chave, pedido.id);
+  if (!pedidoValido(requestAccount, requestId)) return;
+  await acompanharResposta({ id: pedido.id, chave, requestAccount, requestId });
 };
 
 const resetConversation = () => {
@@ -485,8 +512,33 @@ const abrirPedido = () => {
   return { conta: accountId.value, pedido: requestSequence };
 };
 
+// #859 — pergunta que outra instância soltou ao sair da tela (a conversa
+// embutida). Quem estiver montado e na mesma conta termina de buscar a resposta.
+const adotarPendente = () => {
+  if (desmontado || !isEnabled.value) return;
+  const adotado = store.adotarPendente(accountId.value, cracha);
+  if (!adotado) return;
+  requestSequence += 1;
+  isSending.value = true;
+  acompanharResposta({
+    id: adotado.id,
+    chave: adotado.chave,
+    requestAccount: accountId.value,
+    requestId: requestSequence,
+  });
+};
+
+watch(
+  () => {
+    const pendente = store.pendente();
+    return pendente ? `${pendente.chave}:${pendente.id}:${!pendente.dono}` : '';
+  },
+  adotarPendente,
+  { immediate: true }
+);
+
 const podeEnviar = () => {
-  if (isSending.value) {
+  if (ocupado.value) {
     // Antes a segunda pergunta não fazia nada e não avisava nada.
     useAlert(t('AUTONOMIA_GUIDE.SENDING'));
     return false;
@@ -581,7 +633,7 @@ const scrollSignal = computed(() =>
     .join('|')
 );
 
-watch([scrollSignal, isSending], () => scrollToBottom());
+watch([scrollSignal, ocupado], () => scrollToBottom());
 
 // Esc fecha o painel de onde quer que o foco esteja (o painel é uma região
 // lateral, não um modal, então o foco pode estar fora dele).
@@ -617,7 +669,7 @@ watch(
   ligado => {
     if (!ligado || !props.pedidoInicial || pedidoInicialEnviado) return;
     pedidoInicialEnviado = true;
-    sendMessage(props.pedidoInicial);
+    if (sendMessage(props.pedidoInicial)) emit('pedidoInicialEnviado');
   },
   { immediate: true }
 );
@@ -663,7 +715,7 @@ const classeDoPainel = computed(() =>
         ref="chatContainer"
         role="log"
         aria-live="polite"
-        :aria-busy="isSending ? 'true' : 'false'"
+        :aria-busy="ocupado ? 'true' : 'false'"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.LOG')"
         class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
       >
@@ -847,7 +899,7 @@ const classeDoPainel = computed(() =>
             </div>
           </template>
           <CopilotLoader
-            v-if="isSending && !transcrevendo"
+            v-if="ocupado && !transcrevendo"
             :label="$t('AUTONOMIA_GUIDE.THINKING')"
           />
         </div>
@@ -869,7 +921,7 @@ const classeDoPainel = computed(() =>
               v-for="(suggestion, i) in suggestions"
               :key="i"
               data-sugestao
-              :disabled="isSending || gravandoVoz"
+              :disabled="ocupado || gravandoVoz"
               class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               @click="sendMessage(suggestion.pergunta)"
             >
@@ -885,7 +937,7 @@ const classeDoPainel = computed(() =>
         <GuideComposer
           :key="accountId"
           class="mb-1 w-full"
-          :is-busy="isSending"
+          :is-busy="ocupado"
           :arquivos="pendentes"
           :on-enviar-voz="enviarVoz"
           :vagas="vagas"

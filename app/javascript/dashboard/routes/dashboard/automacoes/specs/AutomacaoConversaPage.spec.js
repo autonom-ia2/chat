@@ -49,7 +49,7 @@ const GuiaFalso = {
     introducao: { type: String, default: '' },
     pedidoInicial: { type: String, default: '' },
   },
-  emits: ['execucao'],
+  emits: ['execucao', 'pedidoInicialEnviado'],
   template: '<div data-guia-falso />',
 };
 
@@ -100,6 +100,29 @@ describe('AutomacaoConversaPage', () => {
     );
     expect(wrapper.find('[data-resumo-vazio]').exists()).toBe(true);
     expect(AutomationAPI.show).not.toHaveBeenCalled();
+  });
+
+  // Revisão #859: a página é montada de novo quando o Guia muda a conta (e ao
+  // recarregar). Com o modelo ainda na URL, a tela nova mandava o pedido outra vez.
+  it('nova: o modelo sai da URL quando o pedido sai, e a tela montada de novo não repete', async () => {
+    rota.query = { modelo: 'AGRADECER', origem: 'lista' };
+    routerReplace.mockImplementation(destino => {
+      rota.query = destino.query;
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    wrapper.findComponent(GuiaFalso).vm.$emit('pedidoInicialEnviado');
+    expect(routerReplace).toHaveBeenCalledWith({
+      name: 'automacoes_nova',
+      params: { accountId: 1 },
+      query: { origem: 'lista' },
+    });
+
+    wrapper.unmount();
+    const denovo = montar();
+    await flushPromises();
+    expect(denovo.findComponent(GuiaFalso).props('pedidoInicial')).toBe('');
   });
 
   it('nova: modelo desconhecido na URL não vira pergunta', async () => {

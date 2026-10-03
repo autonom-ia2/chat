@@ -99,6 +99,15 @@ const pedidoInicial = computed(() => {
   return t(`AUTOMACOES.MODELOS.${modelo}.PEDIDO`);
 });
 
+// O modelo vale uma pergunta só. Saiu, sai também da URL: a tela que nasce de
+// novo (o Guia mudou a conta e o painel é remontado, ou a pessoa recarregou)
+// não manda o mesmo pedido outra vez.
+const gastarModelo = () => {
+  if (!route.query.modelo) return;
+  const { modelo, ...resto } = route.query;
+  router.replace({ name: route.name, params: route.params, query: resto });
+};
+
 // Depois de cada resposta: o Guia criou a automação → a tela passa a ser a dela;
 // mexeu numa automação → o resumo é lido de novo.
 const aoExecutar = execucao => {
@@ -177,6 +186,7 @@ const mudarLigada = async ligar => {
               :introducao="$t('AUTOMACOES.CONVERSA.INTRO_GUIA')"
               :pedido-inicial="pedidoInicial"
               @execucao="aoExecutar"
+              @pedido-inicial-enviado="gastarModelo"
             />
           </div>
           <div
