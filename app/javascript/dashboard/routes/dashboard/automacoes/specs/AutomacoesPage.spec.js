@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import AutomationAPI from 'dashboard/api/automation';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
+import DecisoresAPI from 'dashboard/api/autonomia/decisores';
 import { podeMudar } from 'dashboard/composables/useCanManage';
 import AutomacoesPage from '../pages/AutomacoesPage.vue';
 
@@ -10,7 +11,12 @@ import AutomacoesPage from '../pages/AutomacoesPage.vue';
 // lista), o interruptor, o selo "criada pelo Guia" e quem só pode ver.
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
+// Com valores, a chave leva os valores junto: dá para ver o nome que a frase usa.
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key, valores) => (valores ? `${key} ${JSON.stringify(valores)}` : key),
+  }),
+}));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 // O interruptor de permissão é um ref de verdade: o template só desembrulha ref.
@@ -29,6 +35,9 @@ vi.mock('dashboard/composables/store', () => ({
 }));
 vi.mock('dashboard/api/automation', () => ({
   default: { get: vi.fn(), update: vi.fn() },
+}));
+vi.mock('dashboard/api/autonomia/decisores', () => ({
+  default: { get: vi.fn() },
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
   default: { execucoes: vi.fn() },
@@ -54,6 +63,7 @@ describe('AutomacoesPage', () => {
     vi.clearAllMocks();
     podeMudar.value = true;
     AutonomiaGuideAPI.execucoes.mockResolvedValue({ data: { execucoes: [] } });
+    DecisoresAPI.get.mockResolvedValue({ data: { decisores: [] } });
   });
 
   it('mostra o esqueleto enquanto carrega', () => {
@@ -170,5 +180,43 @@ describe('AutomacoesPage', () => {
     ).toBeDefined();
     await wrapper.find('[data-interruptor]').trigger('click');
     expect(AutomationAPI.update).not.toHaveBeenCalled();
+  });
+
+  // Revisão de integração (#858 x #859): o passo do Decisor aparece com o nome
+  // dele, carregado da API dos Decisores.
+  it('mostra o passo do Decisor com o nome dele', async () => {
+    AutomationAPI.get.mockResolvedValue({
+      data: {
+        payload: [
+          regra(7, {
+            actions: [
+              {
+                action_name: 'perguntar_ao_decisor',
+                action_params: [12, 'sim'],
+              },
+            ],
+          }),
+        ],
+      },
+    });
+    DecisoresAPI.get.mockResolvedValue({
+      data: {
+        decisores: [
+          {
+            id: 12,
+            nome: 'É lead?',
+            respostas: [{ chave: 'sim', descricao: 'Pede cotação' }],
+          },
+        ],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(DecisoresAPI.get).toHaveBeenCalled();
+    const linha = wrapper.find('li').text();
+    expect(linha).toContain('AUTOMACOES.DECISOR.PASSO');
+    expect(linha).toContain('É lead?');
+    expect(linha).not.toContain('AUTOMACOES.ACAO_DESCONHECIDA');
   });
 });

@@ -7,7 +7,8 @@ import {
 // #859 — uma automação escrita como frase, para quem nunca viu o formulário:
 // "Quando chega uma mensagem, se Caixa de Entrada é Comercial → Adicionar uma
 // Etiqueta: sinistro". Função pura: recebe a regra como a API devolve, o `t` do
-// i18n e os nomes que a tela já carregou (caixas, agentes, times, funis, etapas).
+// i18n e os nomes que a tela já carregou (caixas, agentes, times, funis, etapas,
+// Decisores).
 //
 // Os rótulos de condição e de ação são os MESMOS do modo manual
 // (settings/automation/constants.js): a pessoa reconhece a frase quando abre a
@@ -152,25 +153,50 @@ const COMPLEMENTO = {
       .join(', '),
 };
 
+// #858 — o passo do Decisor não existe no formulário antigo (não está em
+// AUTOMATION_ACTION_TYPES): "Pergunta ao Decisor É lead?: segue se a resposta
+// for “sim” (Pede cotação)". Sem o nome carregado, sai "#12".
+const PASSO_DO_DECISOR = 'perguntar_ao_decisor';
+
+const descreverPassoDoDecisor = ([decisorId, chave], { t, nomes }) => {
+  const decisor = nomes.decisores?.[String(decisorId)];
+  const resposta = (decisor?.respostas || []).find(
+    item => String(item.chave) === String(chave)
+  );
+  const descricao = resposta?.descricao
+    ? ` (${cortar(resposta.descricao)})`
+    : '';
+  return t('AUTOMACOES.DECISOR.PASSO', {
+    decisor: decisor?.nome || t('AUTOMACOES.DECISOR.NUMERO', { id: decisorId }),
+    resposta: `“${chave}”${descricao}`,
+  });
+};
+
 const descreverAcao = (acao, contexto) => {
   const { t } = contexto;
+  const params = Array.isArray(acao.action_params)
+    ? acao.action_params.map(valorCru)
+    : [acao.action_params];
+  if (acao.action_name === PASSO_DO_DECISOR)
+    return descreverPassoDoDecisor(params, contexto);
+
   const rotulo = ROTULO_DA_ACAO[acao.action_name];
   if (!rotulo) return t('AUTOMACOES.ACAO_DESCONHECIDA');
 
   const nome = t(`AUTOMATION.ACTIONS.${rotulo}`);
-  const params = Array.isArray(acao.action_params)
-    ? acao.action_params.map(valorCru)
-    : [acao.action_params];
   const complemento = COMPLEMENTO[acao.action_name]?.(params, contexto);
   return complemento ? `${nome}: ${complemento}` : nome;
 };
 
 // O nome que a tela mostra para cada passo, sem o complemento (o ensaio só sabe
 // o nome da ação).
-export const nomeDaAcao = (actionName, t) =>
-  ROTULO_DA_ACAO[actionName]
+export const nomeDaAcao = (actionName, t) => {
+  if (actionName === PASSO_DO_DECISOR)
+    return t('AUTOMACOES.DECISOR.NOME_DO_PASSO');
+  return ROTULO_DA_ACAO[actionName]
     ? t(`AUTOMATION.ACTIONS.${ROTULO_DA_ACAO[actionName]}`)
     : t('AUTOMACOES.ACAO_DESCONHECIDA');
+};
 
 const juntarCondicoes = se =>
   se

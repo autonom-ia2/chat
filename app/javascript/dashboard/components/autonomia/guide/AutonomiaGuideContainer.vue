@@ -580,8 +580,10 @@ const abrirConversa = async (carregar, aoFalhar) => {
 };
 
 // Ao abrir o painel, a conversa de antes volta. Quem já está conversando (o
-// painel foi só fechado e reaberto) não perde nada.
+// painel foi só fechado e reaberto) não perde nada. A conversa embutida (página
+// de Automações, #859) começa limpa: não traz a conversa guardada de volta.
 const reabrirConversaAtual = () => {
+  if (props.embutido) return;
   if (contaCarregada === accountId.value) return;
   if (hasMessages.value) {
     contaCarregada = accountId.value;

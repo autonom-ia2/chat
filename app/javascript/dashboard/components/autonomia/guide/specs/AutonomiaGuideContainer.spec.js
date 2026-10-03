@@ -1232,6 +1232,24 @@ describe('AutonomiaGuideContainer — embutido', () => {
     expect(wrapper.find('[role="complementary"]').exists()).toBe(false);
   });
 
+  // Decisão da integração do lote 10: a página de Automações começa limpa — não
+  // traz de volta a conversa guardada do painel lateral.
+  it('embutido começa limpo: não reabre a conversa guardada', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    AutonomiaGuideAPI.conversaAtual.mockResolvedValueOnce({
+      data: {
+        id: 7,
+        titulo: 'funis',
+        turnos: [{ id: 1, pergunta: 'quantos funis?', resposta: 'São 3.' }],
+      },
+    });
+    wrapper = montarEmbutido();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.conversaAtual).not.toHaveBeenCalled();
+    expect(useAutonomiaGuideStore().messages).toHaveLength(0);
+  });
+
   it('embutido: sem cabeçalho, com as sugestões e a introdução da tela', async () => {
     rotaAtual.meta = { guiaEmbutido: true };
     wrapper = montarEmbutido({

@@ -22,6 +22,9 @@ const QUANTIDADE = 10;
 const estado = ref('parado');
 const resultados = ref([]);
 const semTeste = ref([]);
+// Passos depois do Decisor (#858): o teste não pergunta a ele, então eles só
+// aparecem como dependentes da resposta.
+const dependeDoDecisor = ref([]);
 // Falso quando a regra inteira depende de algo mudar na hora: aí não há o que
 // testar em conversa parada, e a tela diz isso em vez de listar conversas.
 const testavel = ref(true);
@@ -38,6 +41,7 @@ const testar = async () => {
     const { data } = await AutomationAPI.ensaio(props.regraId, QUANTIDADE);
     resultados.value = data?.resultados || [];
     semTeste.value = data?.sem_teste || [];
+    dependeDoDecisor.value = data?.depende_do_decisor || [];
     testavel.value = data?.testavel !== false;
     estado.value = 'pronto';
   } catch (error) {
@@ -46,10 +50,17 @@ const testar = async () => {
   }
 };
 
+const nomesDasAcoes = lista =>
+  lista.map(acao => nomeDaAcao(acao, t)).join(', ');
+
 const fariaTexto = item =>
-  t('AUTOMACOES.ENSAIO.FARIA', {
-    acoes: item.faria.map(acao => nomeDaAcao(acao, t)).join(', '),
-  });
+  t('AUTOMACOES.ENSAIO.FARIA', { acoes: nomesDasAcoes(item.faria) });
+
+const dependeDoDecisorTexto = computed(() =>
+  t('AUTOMACOES.ENSAIO.DEPENDE_DO_DECISOR', {
+    acoes: nomesDasAcoes(dependeDoDecisor.value),
+  })
+);
 
 const partesSemTeste = computed(() =>
   semTeste.value.map(chave => nomeDoAtributo(chave, t)).join(', ')
@@ -128,6 +139,13 @@ const linkDaConversa = item => ({
           class="text-sm text-n-amber-11"
         >
           {{ $t('AUTOMACOES.ENSAIO.SEM_TESTE', { partes: partesSemTeste }) }}
+        </p>
+        <p
+          v-if="dependeDoDecisor.length"
+          data-depende-do-decisor
+          class="text-sm text-n-amber-11"
+        >
+          {{ dependeDoDecisorTexto }}
         </p>
         <ul v-if="resultados.length" class="flex flex-col gap-2">
           <li

@@ -17,6 +17,10 @@
 # mensagem automática do canal contam; atividade, resposta automática de e-mail e
 # disparo de campanha, não. O ensaio faz o mesmo com as últimas dessas mensagens: a
 # conversa é afetada se a regra pegaria alguma delas.
+#
+# O passo do Decisor (#858) não é perguntado no ensaio — seria uma chamada ao Jev por
+# conversa. `faria` para nele, e os passos seguintes voltam em `depende_do_decisor`: só
+# rodam se o Decisor der a resposta combinada (como no ActionService).
 class AutomationRules::Ensaio
   class Invalida < StandardError; end
 
@@ -41,7 +45,8 @@ class AutomationRules::Ensaio
 
     testavel = Array(@rule.conditions).empty? || regra.conditions.any?
     resultados = testavel ? conversas.map { |conversa| ensaiar(regra, conversa) } : []
-    { 'testavel' => testavel, 'resultados' => resultados, 'sem_teste' => partes_sem_teste }
+    { 'testavel' => testavel, 'resultados' => resultados, 'sem_teste' => partes_sem_teste,
+      'depende_do_decisor' => acoes_depois_do_decisor }
   end
 
   private
@@ -106,6 +111,18 @@ class AutomationRules::Ensaio
   end
 
   def acoes
-    Array(@rule.actions).pluck('action_name')
+    passo_do_decisor ? nomes_das_acoes.first(passo_do_decisor + 1) : nomes_das_acoes
+  end
+
+  def acoes_depois_do_decisor
+    passo_do_decisor ? nomes_das_acoes.drop(passo_do_decisor + 1) : []
+  end
+
+  def passo_do_decisor
+    nomes_das_acoes.index(Autonomia::Decisores::PASSO)
+  end
+
+  def nomes_das_acoes
+    @nomes_das_acoes ||= Array(@rule.actions).pluck('action_name')
   end
 end

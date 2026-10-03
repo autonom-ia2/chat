@@ -40,6 +40,9 @@ vi.mock('dashboard/composables/store', () => ({
 vi.mock('dashboard/api/automation', () => ({
   default: { show: vi.fn(), update: vi.fn(), ensaio: vi.fn() },
 }));
+vi.mock('dashboard/api/autonomia/decisores', () => ({
+  default: { get: vi.fn(() => Promise.resolve({ data: { decisores: [] } })) },
+}));
 
 const GuiaFalso = {
   name: 'AutonomiaGuideContainer',

@@ -38,6 +38,22 @@ RSpec.describe AutomationRules::Ensaio do
                                                      'faria' => %w[add_label send_message])
     expect(resultado_de(nao_casa, resultado)).to include('casou' => false, 'faria' => [])
     expect(resultado['sem_teste']).to eq([])
+    expect(resultado['depende_do_decisor']).to eq([])
+  end
+
+  # Revisão de integração (#858 x #859): o ensaio não pergunta ao Decisor, então não pode prometer
+  # os passos que só rodam depois da resposta dele.
+  it 'para a lista no passo do Decisor e devolve os passos seguintes como dependentes', :aggregate_failures do
+    decisor = create(:autonomia_decisor, account: account)
+    rule.update!(actions: [{ 'action_name' => 'add_label', 'action_params' => ['sinistro'] },
+                           { 'action_name' => 'perguntar_ao_decisor', 'action_params' => [decisor.id, 'sim'] },
+                           { 'action_name' => 'send_message', 'action_params' => ['Recebemos seu aviso.'] }])
+    casa = conversa_com('Tive um sinistro')
+
+    resultado = described_class.new(rule: rule, user: admin).perform
+
+    expect(resultado_de(casa, resultado)['faria']).to eq(%w[add_label perguntar_ao_decisor])
+    expect(resultado['depende_do_decisor']).to eq(%w[send_message])
   end
 
   it 'não executa nenhuma ação nem grava nada', :aggregate_failures do

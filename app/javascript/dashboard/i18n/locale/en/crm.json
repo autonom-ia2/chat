@@ -2353,7 +2353,8 @@
       "SEM_TESTE": "The part that depends on something changing at that moment ({partes}) is left out of the test.",
       "NAO_TESTAVEL": "This automation only acts when something changes at that moment ({partes}). That can't be tested on conversations that already happened: turn it on and watch the first times.",
       "ERRO": "The test did not answer now. Try again.",
-      "ABRIR_CONVERSA": "Open the conversation"
+      "ABRIR_CONVERSA": "Open the conversation",
+      "DEPENDE_DO_DECISOR": "The steps after the Decider ({acoes}) depend on its answer, and the test does not ask the Decider."
     },
     "QUANDO": {
       "MESSAGE_CREATED": "When a message arrives",
@@ -2393,6 +2394,11 @@
     "NAO": "no",
     "NUMERO": "no. {id}",
     "ACAO_DESCONHECIDA": "a step this screen cannot describe yet",
+    "DECISOR": {
+      "NOME_DO_PASSO": "Ask the Decider",
+      "PASSO": "Asks the Decider {decisor}: continues if the answer is {resposta}",
+      "NUMERO": "#{id}"
+    },
     "FRASE": "{quando}, if {condicoes} → {acoes}",
     "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
   }

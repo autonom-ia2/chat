@@ -8,7 +8,7 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01a, C01b, C02..C24) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C24 e C30; o C25 ainda não foi escrito) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }

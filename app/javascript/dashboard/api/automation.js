@@ -11,7 +11,8 @@ class AutomationsAPI extends ApiClient {
   }
 
   // #859 — o que a regra faria nas conversas recentes, sem executar nada:
-  // { resultados: [{ conversation_id, display_id, contato, casou, faria }], sem_teste }.
+  // { testavel, resultados: [{ conversation_id, display_id, contato, casou, faria }],
+  //   sem_teste, depende_do_decisor }.
   ensaio(automationId, quantidade) {
     return axios.post(`${this.url}/${automationId}/ensaio`, { quantidade });
   }

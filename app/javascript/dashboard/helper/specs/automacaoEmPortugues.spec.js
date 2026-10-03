@@ -170,11 +170,60 @@ describe('descreverAutomacao', () => {
       'um passo que esta tela ainda não sabe descrever',
     ]);
   });
+
+  // Revisão de integração (#858 x #859): o passo do Decisor aparecia como
+  // "um passo que esta tela ainda não sabe descrever".
+  it('descreve o passo do Decisor com o nome e a resposta que segue', () => {
+    const { entao } = descreverAutomacao(
+      regra({
+        actions: [
+          { action_name: 'perguntar_ao_decisor', action_params: [12, 'sim'] },
+          { action_name: 'add_label', action_params: ['lead'] },
+        ],
+      }),
+      {
+        t,
+        nomes: {
+          ...nomes,
+          decisores: {
+            12: {
+              nome: 'É lead?',
+              respostas: [
+                { chave: 'sim', descricao: 'Pede cotação de seguro' },
+                { chave: 'nao', descricao: 'Newsletter' },
+              ],
+            },
+          },
+        },
+      }
+    );
+
+    expect(entao).toEqual([
+      'Pergunta ao Decisor É lead?: segue se a resposta for “sim” (Pede cotação de seguro)',
+      'Adicionar uma Etiqueta: lead',
+    ]);
+  });
+
+  it('Decisor que a tela não carregou aparece pelo número', () => {
+    const { entao } = descreverAutomacao(
+      regra({
+        actions: [
+          { action_name: 'perguntar_ao_decisor', action_params: [99, 'nao'] },
+        ],
+      }),
+      { t, nomes }
+    );
+
+    expect(entao).toEqual([
+      'Pergunta ao Decisor #99: segue se a resposta for “nao”',
+    ]);
+  });
 });
 
 describe('nomeDaAcao', () => {
   it('usa o mesmo rótulo do modo manual', () => {
     expect(nomeDaAcao('resolve_conversation', t)).toBe('Resolver Conversa');
+    expect(nomeDaAcao('perguntar_ao_decisor', t)).toBe('Perguntar ao Decisor');
     expect(nomeDaAcao('qualquer_coisa', t)).toBe(
       'um passo que esta tela ainda não sabe descrever'
     );

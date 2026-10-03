@@ -2,9 +2,9 @@
 
 ## O que é
 
-Vinte e cinco pedidos que um administrador de corretora faz de verdade, mandados ao Guia de verdade — mesmo
-modelo, mesma instrução, mesmas ferramentas, escrevendo pela API da plataforma no banco de teste. Cada
-cenário confere o **estado final do banco** (o que foi criado, mudado ou deixado como estava), não o
+Vinte e seis pedidos (C01a, C01b, C02 a C24 e C30) que um administrador de corretora faz de verdade,
+mandados ao Guia de verdade — mesmo modelo, mesma instrução, mesmas ferramentas, escrevendo pela API da
+plataforma no banco de teste. Cada cenário confere o **estado final do banco** (o que foi criado, mudado ou deixado como estava), não o
 texto da resposta. O Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 
 Do texto, a bateria só confere o que é objetivo: respondeu, a resposta não foi retida pelo portão de
@@ -29,7 +29,11 @@ juiz custa centavos por cenário.
   do nome, sem telefone e numa empresa batizada pelo domínio, e todo e-mail vira card em Novo sem
   responsável. C22 arruma a caixa (desliga o card automático, liga o rodízio e explica), C23 corrige
   nome, telefone e empresa e confere que o desfazer volta tudo, C24 guarda o consentimento só de quem
-  marcou, com a prova numa nota. O C25 (o formulário vira lead certo sozinho) entra depois do Decisor (#858).
+  marcou, com a prova numa nota. O C25 (o formulário vira lead certo sozinho, com o Decisor da #858) ainda não
+  foi escrito: o Decisor já está no lote 10, mas o cenário fica para depois. Não há C26 a C29.
+- C30 (#858) põe seis contatos com conversa — três do formulário do site, três de outros canais — e pede
+  para etiquetar com `lead-site` só os do site. Pega o Guia que não classifica com o Jev
+  (`classificar_com_jev`) e responde de cabeça. Usa o Jev de verdade: precisa de `TYPESAFE_API_KEY`.
 - Cada cenário diz no comentário qual falha ele pega.
 
 ## Quando rodar
@@ -38,7 +42,7 @@ Antes de todo lote que mexe no Guia: instrução (`lib/operator_guide/guia-instr
 (`app/services/autonomia/agents/tools/native/guia_*.rb`), `Autonomia::Guide::Acoes`, troca de modelo ou
 de esforço de raciocínio. Também depois de mudar uma tela ou endpoint que um cenário usa.
 
-Sem as variáveis abaixo os 25 exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
+Sem as variáveis abaixo os 26 exemplos ficam pendentes: no CI e no `rspec` do dia a dia a bateria não
 roda e não custa nada.
 
 ## Comando
@@ -61,7 +65,11 @@ Para rodar só alguns cenários: `-e C07` (um) ou `-e C07 -e C19` (vários).
 
 ## Custo
 
-Estimativa de **US$ 4,5 a 7,5** a bateria inteira (cerca de 31 turnos): US$ 3 a 5 do C01a ao C21 (conta em `tmp/900/bateria.md`) e US$ 1,5 a 2,5 do C22 ao C24, que corrigem vários contatos num turno só.
+Estimativa de **US$ 4,7 a 8,1** a bateria inteira (cerca de 32 turnos): US$ 3 a 5 do C01a ao C21 (conta em
+`tmp/900/bateria.md`), US$ 1,5 a 2,5 do C22 ao C24, que corrigem vários contatos num turno só, e US$ 0,15 a
+0,60 do C30 — um turno do Guia; o Jev que ele chama para classificar as seis conversas sai a menos de
+US$ 0,01 (US$ 0,042 por milhão de tokens de entrada, saída grátis; ver
+`docs/audit/2026-09-30-typesafe-764-acceptance.md`). Sem `TYPESAFE_API_KEY` o C30 fica pendente e não custa.
 O custo de cada ida ao modelo é lido de `Crm::AiUsageEvent` antes de a transação do exemplo ser
 desfeita. Quando a soma passa de `GUIA_ORCAMENTO_USD`, os cenários seguintes são pulados e aparecem
 como `pulado` no placar. O teto vale entre cenários: um cenário já começado termina, então o gasto

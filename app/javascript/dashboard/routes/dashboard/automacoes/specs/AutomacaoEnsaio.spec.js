@@ -64,6 +64,50 @@ describe('AutomacaoEnsaio', () => {
     expect(wrapper.find('[data-sem-teste]').exists()).toBe(true);
   });
 
+  // Revisão de integração (#858 x #859): o teste não pergunta ao Decisor; os
+  // passos depois dele aparecem como dependentes da resposta, não como certos.
+  it('passos depois do Decisor aparecem como dependentes da resposta', async () => {
+    AutomationAPI.ensaio.mockResolvedValue({
+      data: {
+        resultados: [
+          {
+            conversation_id: 1,
+            display_id: 10,
+            contato: 'Maria',
+            casou: true,
+            faria: ['add_label', 'perguntar_ao_decisor'],
+          },
+        ],
+        sem_teste: [],
+        depende_do_decisor: ['send_message'],
+      },
+    });
+    const wrapper = montar();
+
+    await wrapper.find('[data-testar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-sem-teste]').exists()).toBe(false);
+    expect(wrapper.find('[data-depende-do-decisor]').text()).toContain(
+      'AUTOMACOES.ENSAIO.DEPENDE_DO_DECISOR'
+    );
+    expect(wrapper.find('[data-ensaio-item]').text()).toContain(
+      'AUTOMACOES.ENSAIO.FARIA'
+    );
+  });
+
+  it('sem Decisor, não fala de Decisor', async () => {
+    AutomationAPI.ensaio.mockResolvedValue({
+      data: { resultados: [], sem_teste: [] },
+    });
+    const wrapper = montar();
+
+    await wrapper.find('[data-testar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-depende-do-decisor]').exists()).toBe(false);
+  });
+
   it('sem conversa na conta, diz isso', async () => {
     AutomationAPI.ensaio.mockResolvedValue({
       data: { resultados: [], sem_teste: [] },

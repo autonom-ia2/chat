@@ -2354,7 +2354,8 @@
       "SEM_TESTE": "A parte que depende de algo mudar na hora ({partes}) não entra no teste.",
       "NAO_TESTAVEL": "Esta automação só age quando algo muda na hora ({partes}). Isso não dá para testar em conversas que já aconteceram: ligue e acompanhe as primeiras vezes.",
       "ERRO": "O teste não respondeu agora. Tente de novo.",
-      "ABRIR_CONVERSA": "Abrir a conversa"
+      "ABRIR_CONVERSA": "Abrir a conversa",
+      "DEPENDE_DO_DECISOR": "Os passos depois do Decisor ({acoes}) dependem da resposta dele, e o teste não pergunta ao Decisor."
     },
     "QUANDO": {
       "MESSAGE_CREATED": "Quando chega uma mensagem",
@@ -2394,6 +2395,11 @@
     "NAO": "não",
     "NUMERO": "nº {id}",
     "ACAO_DESCONHECIDA": "um passo que esta tela ainda não sabe descrever",
+    "DECISOR": {
+      "NOME_DO_PASSO": "Perguntar ao Decisor",
+      "PASSO": "Pergunta ao Decisor {decisor}: segue se a resposta for {resposta}",
+      "NUMERO": "#{id}"
+    },
     "FRASE": "{quando}, se {condicoes} → {acoes}",
     "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
   }
