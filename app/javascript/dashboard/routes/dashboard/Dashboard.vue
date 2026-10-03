@@ -36,6 +36,7 @@ import AutonomiaCopilotContainer from 'dashboard/components/autonomia/copilot/Au
 import AutonomiaGuideLauncher from 'dashboard/components/autonomia/guide/AutonomiaGuideLauncher.vue';
 import AutonomiaGuideContainer from 'dashboard/components/autonomia/guide/AutonomiaGuideContainer.vue';
 import GuideHighlight from 'dashboard/components/autonomia/guide/GuideHighlight.vue';
+import { versaoDaConta } from 'dashboard/components/autonomia/guide/contaMudou';
 
 import MobileSidebarLauncher from 'dashboard/components-next/sidebar/MobileSidebarLauncher.vue';
 import { useCallsStore } from 'dashboard/stores/calls';
@@ -72,6 +73,8 @@ export default {
       windowWidth,
       hasActiveCall: computed(() => callsStore.hasActiveCall),
       hasIncomingCall: computed(() => callsStore.hasIncomingCall),
+      // Remonta a página quando o Guia muda a conta (#894).
+      versaoDaConta,
     };
   },
   data() {
@@ -171,7 +174,7 @@ export default {
         />
       </UpgradePage>
       <template v-if="!showUpgradePage">
-        <router-view />
+        <router-view :key="versaoDaConta" />
         <AutonomiaGuideLauncher />
         <MobileSidebarLauncher
           :is-mobile-sidebar-open="isMobileSidebarOpen"

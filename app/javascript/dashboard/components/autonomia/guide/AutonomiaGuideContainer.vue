@@ -19,6 +19,7 @@ import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
 import GuideExecucao from './GuideExecucao.vue';
+import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideFeitos from './GuideFeitos.vue';
 import CopilotAgentMessage from 'dashboard/components-next/copilot/CopilotAgentMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
@@ -242,6 +243,7 @@ const confirmarAcao = async item => {
       acao: item.acao.nome,
       dados: item.acao.dados,
     });
+    avisarContaMudou();
     entregarDesfecho({
       conta,
       id: item.id,
@@ -360,6 +362,7 @@ const requestReply = async (requestAccount, message, requestId) => {
         artigos: data.artigos || null,
         execucao: data.execucao || null,
       });
+      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
     } else if (data.retido) {
       // O Guia está no ar e entendeu — só não está seguro o bastante para
       // afirmar. Dizer "indisponível" aqui faz a pessoa achar que o produto
@@ -369,6 +372,7 @@ const requestReply = async (requestAccount, message, requestId) => {
         content: t('AUTONOMIA_GUIDE.WITHHELD'),
         execucao: data.execucao || null,
       });
+      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
     } else {
       useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
     }

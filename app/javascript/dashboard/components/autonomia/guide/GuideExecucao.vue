@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
+import { avisarContaMudou } from './contaMudou';
 import { motivoUtilizavel } from 'dashboard/store/modules/autonomiaGuide';
 import Button from 'dashboard/components-next/button/Button.vue';
 
@@ -49,6 +50,7 @@ const desfazer = async () => {
   try {
     const { data } = await AutonomiaGuideAPI.desfazer(atual.value.id);
     atual.value = data.execucao;
+    avisarContaMudou();
   } catch (error) {
     erro.value =
       motivoUtilizavel(error?.response?.data?.error) ||
