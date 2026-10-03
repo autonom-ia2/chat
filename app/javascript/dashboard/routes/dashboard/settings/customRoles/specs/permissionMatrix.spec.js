@@ -1,12 +1,19 @@
 import {
   MODULES,
   PRESETS,
+  PROFILES,
+  BLANK_PROFILE,
   LEVELS,
   CONVERSATION_LEVELS,
   getLevel,
   setLevel,
+  levelSlots,
   visibleExtras,
   toggleExtra,
+  isExtraLocked,
+  unmetSuggestion,
+  profilePermissions,
+  sensitiveExtrasOn,
 } from '../permissionMatrix';
 
 const moduleByKey = key => MODULES.find(module => module.key === key);
@@ -120,6 +127,100 @@ describe('permissionMatrix', () => {
 
     Object.values(PRESETS).forEach(preset => {
       preset().forEach(key => expect(known).toContain(key));
+    });
+  });
+
+  describe('level slots', () => {
+    it('keeps no access, view and edit in fixed positions', () => {
+      expect(levelSlots(moduleByKey('CAMPAIGNS'))).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+      expect(levelSlots(moduleByKey('CANNED_RESPONSES'))).toEqual([
+        LEVELS.NONE,
+        null,
+        LEVELS.MANAGE,
+      ]);
+      expect(levelSlots(moduleByKey('REPORTS'))).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        null,
+      ]);
+      expect(levelSlots(moduleByKey('CONVERSATIONS'))).toEqual([
+        CONVERSATION_LEVELS.NONE,
+        CONVERSATION_LEVELS.LIMITED,
+        CONVERSATION_LEVELS.ALL,
+      ]);
+    });
+  });
+
+  describe('crm admin', () => {
+    const crm = moduleByKey('CRM');
+
+    it('turns every CRM option on, matching what the backend grants', () => {
+      const permissions = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(permissions).toEqual(
+        expect.arrayContaining([
+          'crm_admin',
+          'crm_view_reports',
+          'crm_manage_pipelines',
+          'crm_manage_ai',
+          'crm_export',
+        ])
+      );
+      expect(sensitiveExtrasOn(permissions)).toEqual([
+        'crm_manage_ai',
+        'crm_export',
+        'crm_admin',
+      ]);
+    });
+
+    it('keeps the options it includes on while crm_admin is on', () => {
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      expect(isExtraLocked('crm_export', on)).toBe(true);
+      expect(toggleExtra(crm, 'crm_export', on)).toEqual(on);
+      expect(isExtraLocked('crm_move_cards', on)).toBe(false);
+    });
+
+    it('turns off only crm_admin when switched off', () => {
+      const on = toggleExtra(crm, 'crm_admin', ['crm_view']);
+      const off = toggleExtra(crm, 'crm_admin', on);
+      expect(off).not.toContain('crm_admin');
+      expect(off).toContain('crm_export');
+    });
+  });
+
+  describe('suggestions', () => {
+    const prospecting = moduleByKey('PROSPECTING');
+
+    it('points to campaigns when prospecting can edit but campaigns cannot', () => {
+      expect(unmetSuggestion(prospecting, ['prospecting_manage']).key).toBe(
+        'CAMPAIGNS'
+      );
+      expect(
+        unmetSuggestion(prospecting, ['prospecting_manage', 'campaign_manage'])
+      ).toBeNull();
+      expect(unmetSuggestion(prospecting, ['prospecting_view'])).toBeNull();
+    });
+  });
+
+  describe('profiles', () => {
+    it('has a preset for every profile and an empty blank profile', () => {
+      PROFILES.forEach(profile => {
+        expect(profilePermissions(profile.key).length).toBeGreaterThan(0);
+      });
+      expect(profilePermissions(BLANK_PROFILE)).toEqual([]);
+    });
+
+    it('keeps the read-only profile free of any edit key', () => {
+      const permissions = profilePermissions('READ_ONLY');
+      MODULES.forEach(module => {
+        expect(getLevel(module, permissions)).not.toBe(LEVELS.MANAGE);
+      });
+      expect(permissions.some(key => key.startsWith('conversation_'))).toBe(
+        false
+      );
     });
   });
 });

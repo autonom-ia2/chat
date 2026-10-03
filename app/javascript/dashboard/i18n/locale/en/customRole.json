@@ -2,9 +2,9 @@
   "CUSTOM_ROLE": {
     "HEADER": "Custom Roles",
     "LEARN_MORE": "Learn more about custom roles",
-    "DESCRIPTION": "Custom roles are roles that are created by the account owner or admin. These roles can be assigned to agents to define their access and permissions within the account. Custom roles can be created with specific permissions and access levels to suit the requirements of the organization.",
+    "DESCRIPTION": "Decide what each person on the team sees and can do. Start from a profile and adjust area by area. Anything not granted disappears from their menu.",
     "COUNT": "{n} custom role | {n} custom roles",
-    "HEADER_BTN_TXT": "Add custom role",
+    "HEADER_BTN_TXT": "New role",
     "LOADING": "Fetching custom roles...",
     "SEARCH_PLACEHOLDER": "Search custom roles...",
     "NO_RESULTS": "No custom roles found matching your search",
@@ -23,8 +23,11 @@
     },
     "LIST": {
       "404": "There are no custom roles available in this account.",
-      "TITLE": "Manage custom roles",
-      "DESC": "Custom roles are roles that are created by the account owner or admin. These roles can be assigned to agents to define their access and permissions within the account. Custom roles can be created with specific permissions and access levels to suit the requirements of the organization.",
+      "DUPLICATE": "Duplicate",
+      "MORE_AREAS": "+{count} more",
+      "HAS_SENSITIVE": "Has sensitive permission",
+      "AGENT_COUNT": "No agents yet | 1 agent | {n} agents",
+      "DEFAULT_ROLES_NOTE": "Administrator and Agent are default roles and are not listed here.",
       "TABLE_HEADER": {
         "NAME": "Name",
         "DESCRIPTION": "Description",
@@ -69,137 +72,163 @@
       "SLA_MANAGE": "Edit SLA policies"
     },
     "MATRIX": {
-      "LEVELS": {
-        "NONE": "No access",
-        "VIEW": "View",
-        "MANAGE": "Edit",
-        "LIMITED": "Limited",
-        "ALL": "All"
-      },
-      "PRESETS": {
-        "LABEL": "Start from a template:",
-        "SUPERVISOR": "Supervisor",
-        "MARKETING": "Marketing",
-        "AGENT": "Agent"
-      },
       "GROUPS": {
-        "SERVICE": "Service",
+        "SERVICE": "Customer service",
         "CRM": "CRM",
         "AUTONOMIA": "Autonom.ia",
         "MARKETING": "Marketing",
         "CONNECTIONS": "Connections",
-        "SETTINGS": "Settings"
+        "SETTINGS": "Account settings"
+      },
+      "LEVELS": {
+        "NONE": "No access",
+        "VIEW": "View",
+        "MANAGE": "Edit",
+        "LIMITED": "Own only",
+        "ALL": "All"
+      },
+      "BASELINE": {
+        "USE": "Use only",
+        "APPLY": "Apply only",
+        "FILL": "Fill only",
+        "PERSONAL": "Personal only"
       },
       "MODULES": {
         "CONVERSATIONS": {
           "NAME": "Conversations",
-          "HINT": "Which conversations they can handle"
+          "HINT": "Which conversations this person handles",
+          "LEVEL_LIMITED": "Sees conversations assigned to them and the ones they take part in.",
+          "LEVEL_ALL": "Sees and answers every conversation in the account."
         },
         "CONTACTS": {
-          "NAME": "Contacts",
-          "HINT": "List, import and export"
+          "NAME": "Contacts and companies",
+          "HINT": "Contacts, companies and relationships",
+          "LEVEL_VIEW": "Opens and reads contacts. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits, imports and exports contacts."
         },
         "KNOWLEDGE_BASE": {
           "NAME": "Knowledge base",
-          "HINT": "Portals and articles"
+          "HINT": "Portals and articles",
+          "LEVEL_VIEW": "Reads portals and articles.",
+          "LEVEL_MANAGE": "Writes and publishes articles."
         },
         "REPORTS": {
           "NAME": "Reports",
-          "HINT": "Service dashboards"
+          "HINT": "Overview, CSAT, SLA, bots and teams",
+          "LEVEL_VIEW": "Opens every service report."
         },
         "CANNED_RESPONSES": {
           "NAME": "Canned responses",
-          "HINT": "Everyone can use them; Edit creates and changes them"
+          "HINT": "Everyone uses them while answering",
+          "LEVEL_MANAGE": "Creates and edits canned responses."
         },
         "CRM": {
           "NAME": "CRM",
-          "HINT": "Pipelines and cards"
+          "HINT": "Pipelines, deals and calendar",
+          "LEVEL_VIEW": "Sees the board and deals. Does not change them.",
+          "LEVEL_MANAGE": "Creates, edits and moves deals."
         },
         "AUTONOMIA": {
           "NAME": "Autonom.ia agents",
-          "HINT": "View and test, or create, train and publish"
-        },
-        "CAMPAIGNS": {
-          "NAME": "Campaigns",
-          "HINT": "Email, WhatsApp, SMS and contact lists"
-        },
-        "INBOXES": {
-          "NAME": "Inboxes",
-          "HINT": "Channels, WhatsApp QR code and members"
+          "HINT": "Your AI agents",
+          "LEVEL_VIEW": "Opens the agents and chats in the playground.",
+          "LEVEL_MANAGE": "Creates, trains and publishes agents."
         },
         "PROSPECTING": {
           "NAME": "Prospecting",
-          "HINT": "Lead searches, leads and lists"
+          "HINT": "Lead searches and lists",
+          "LEVEL_VIEW": "Sees searches and leads.",
+          "LEVEL_MANAGE": "Runs searches, enriches and creates leads. This has a cost.",
+          "SUGGESTION": "Sending leads to a campaign also needs Campaigns · Edit."
         },
         "INSURANCE": {
-          "NAME": "Insurance quoting",
-          "HINT": "Insurer connection and quote agent"
+          "NAME": "Quotes",
+          "HINT": "Insurer connections and quote agent",
+          "LEVEL_VIEW": "Sees quotes and connections.",
+          "LEVEL_MANAGE": "Sets up insurers and the quote agent."
+        },
+        "CAMPAIGNS": {
+          "NAME": "Campaigns",
+          "HINT": "Email, WhatsApp, SMS, links and QR codes",
+          "LEVEL_VIEW": "Sees campaigns and their results.",
+          "LEVEL_MANAGE": "Creates and sends campaigns. This has a cost."
+        },
+        "INBOXES": {
+          "NAME": "Inboxes",
+          "HINT": "Channels, WhatsApp QR and members",
+          "LEVEL_VIEW": "Sees every inbox in settings.",
+          "LEVEL_MANAGE": "Creates inboxes, reconnects WhatsApp and manages members."
         },
         "AUTOMATIONS": {
           "NAME": "Automations",
-          "HINT": "Automation rules"
+          "HINT": "Automation rules",
+          "LEVEL_VIEW": "Sees the rules.",
+          "LEVEL_MANAGE": "Creates and edits rules."
         },
         "LABELS": {
           "NAME": "Labels",
-          "HINT": "Everyone can apply them; Edit creates and changes them"
+          "HINT": "Everyone applies existing labels",
+          "LEVEL_MANAGE": "Creates and edits labels."
         },
         "ATTRIBUTES": {
           "NAME": "Custom attributes",
-          "HINT": "Everyone can fill them; Edit changes the definitions"
+          "HINT": "Everyone fills existing fields",
+          "LEVEL_MANAGE": "Changes the field definitions."
         },
         "MACROS": {
           "NAME": "Team macros",
-          "HINT": "Personal macros stay available to everyone"
+          "HINT": "Personal macros stay available to everyone",
+          "LEVEL_MANAGE": "Creates and publishes macros for the team."
         },
         "SLA": {
           "NAME": "SLA",
-          "HINT": "SLA policies"
+          "HINT": "Response time policies",
+          "LEVEL_MANAGE": "Creates and edits SLA policies."
         }
-      },
-      "FOOTNOTE": "Edit includes View. Users, custom roles, integrations, billing and security stay with administrators."
+      }
     },
     "FORM": {
       "NAME": {
         "LABEL": "Name",
-        "PLACEHOLDER": "Please enter a name.",
-        "ERROR": "Name is required."
+        "PLACEHOLDER": "E.g. Night shift agent",
+        "ERROR": "Give the role a name with at least 2 characters."
       },
       "DESCRIPTION": {
-        "LABEL": "Description",
-        "PLACEHOLDER": "Please enter a description.",
+        "LABEL": "Who it is for (optional)",
+        "PLACEHOLDER": "E.g. Night shift team that only handles its own conversations",
         "ERROR": "Description is required."
       },
       "PERMISSIONS": {
         "LABEL": "Permissions",
-        "ERROR": "Permissions are required."
+        "ERROR": "Grant at least one area before saving."
       },
       "CANCEL_BUTTON_TEXT": "Cancel",
       "API": {
-        "ERROR_MESSAGE": "Could not connect to Woot server. Please try again."
+        "ERROR_MESSAGE": "Could not save the role. Please try again."
       }
     },
     "ADD": {
       "TITLE": "Add custom role",
       "DESC": " Custom roles allows you to create roles with specific permissions and access levels to suit the requirements of the organization.",
-      "SUBMIT": "Submit",
+      "SUBMIT": "Create role",
       "API": {
-        "SUCCESS_MESSAGE": "Custom role added successfully."
+        "SUCCESS_MESSAGE": "Role created."
       }
     },
     "EDIT": {
       "BUTTON_TEXT": "Edit",
-      "TITLE": "Edit custom role",
+      "TITLE": "Edit role",
       "DESC": " Custom roles allows you to create roles with specific permissions and access levels to suit the requirements of the organization.",
-      "SUBMIT": "Update",
+      "SUBMIT": "Save changes",
       "API": {
-        "SUCCESS_MESSAGE": "Custom role updated successfully."
+        "SUCCESS_MESSAGE": "Role updated."
       }
     },
     "DELETE": {
       "BUTTON_TEXT": "Delete",
       "API": {
         "SUCCESS_MESSAGE": "Custom role deleted successfully.",
-        "ERROR_MESSAGE": "Could not connect to Woot server. Please try again."
+        "ERROR_MESSAGE": "Could not delete the role. Please try again."
       },
       "CONFIRM": {
         "TITLE": "Confirm deletion",
@@ -207,6 +236,165 @@
         "YES": "Yes, delete ",
         "NO": "No, keep "
       }
+    },
+    "EXTRAS": {
+      "CONVERSATION_UNASSIGNED_MANAGE": "Sees the queue of unassigned conversations and can take them.",
+      "CONVERSATION_PARTICIPATING_MANAGE": "Sees conversations they take part in, even if assigned to someone else.",
+      "CRM_MOVE_CARDS": "Drags deals between stages without editing anything else.",
+      "CRM_VIEW_REPORTS": "Pipeline dashboard and AI usage cost.",
+      "CRM_MANAGE_PIPELINES": "Stages, automations and pipeline inboxes.",
+      "CRM_MANAGE_AI": "Sets up and accepts AI suggestions. This has a cost.",
+      "CRM_EXPORT": "Downloads the list with customer data.",
+      "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
+      "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches."
+    },
+    "EDITOR": {
+      "NEW_TITLE": "Adjust what is different",
+      "APPLY_PROFILE": "Apply a profile",
+      "BASED_ON": "Started from the {name} profile. Areas below are already set; open only the group you want to change.",
+      "CHANGE_PROFILE": "Change profile",
+      "COPY_NAME": "{name} (copy)",
+      "SEARCH_PLACEHOLDER": "Search permissions, e.g. export",
+      "EXPAND_ALL": "Open all",
+      "COLLAPSE_ALL": "Close all",
+      "NO_MATCH": "No permission matches “{query}”.",
+      "GROUP_COUNT": "{on} of {total} granted",
+      "NOTHING_GRANTED": "Nothing granted",
+      "CLEAR_GROUP": "Remove all",
+      "FINE_TUNING": "Fine-tuning",
+      "FINE_TUNING_COUNT": "· {on} of {total} on",
+      "SENSITIVE": "Sensitive",
+      "GRANT_SUGGESTED": "Grant",
+      "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
+      "ADMIN_ONLY": {
+        "TITLE": "Always administrator only",
+        "ITEMS": "Agents, teams, assignment, bots, integrations, account settings, security, billing, audit logs and custom roles.",
+        "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
+      },
+      "SENSITIVE_CONFIRM": {
+        "TITLE": "Turn on “{name}”?",
+        "DESCRIPTION": "This permission touches personal data or has a cost. Only turn it on for people who need it.",
+        "CONFIRM": "Turn on"
+      },
+      "APPLY_CONFIRM": {
+        "TITLE": "Apply {name}?",
+        "DESCRIPTION": "The current permissions of this role will be replaced. Nothing is saved until you click Save changes.",
+        "CONFIRM": "Apply profile",
+        "DONE": "{name} profile applied."
+      },
+      "INCLUDED_IN_ADMIN": "Included in full CRM access."
+    },
+    "SUMMARY": {
+      "CAN_TITLE": "This person will be able to",
+      "EMPTY": "Nothing yet. Grant at least one area.",
+      "SENSITIVE": "1 sensitive permission | 1 sensitive permission | {n} sensitive permissions",
+      "MENU_TITLE": "Menu this person will see",
+      "SETTINGS": "Settings"
+    },
+    "PICKER": {
+      "TITLE": "Who is this role for?",
+      "DESCRIPTION": "Pick the closest profile. Next you only adjust what is different.",
+      "APPLY_TITLE": "Apply a profile",
+      "APPLY_DESCRIPTION": "The profile replaces this role's current permissions. Name and description stay.",
+      "BACK_TO_ROLE": "Back to the role",
+      "STEP": "Step {step} of 2",
+      "AREAS": "No area granted | 1 area granted | {n} areas granted",
+      "BLANK_META": "Blank",
+      "CAN": "Can",
+      "CANNOT": "Cannot",
+      "ADJUST_LATER": "You can adjust any area in the next step.",
+      "CONTINUE": "Continue with {name}",
+      "APPLY": "Apply {name}"
+    },
+    "PROFILES": {
+      "GROUPS": {
+        "SERVICE": "Customer service",
+        "SALES": "Sales",
+        "MARKETING": "Marketing",
+        "MANAGEMENT": "Management"
+      },
+      "AGENT": {
+        "NAME": "Agent",
+        "SHORT": "Handles their own conversations",
+        "WHO": "For people who answer customers and look after their own conversations."
+      },
+      "SUPERVISOR": {
+        "NAME": "Supervisor",
+        "SHORT": "Coordinates the service team",
+        "WHO": "For people who coordinate the team and distribute the work."
+      },
+      "SDR": {
+        "NAME": "Sales rep (SDR)",
+        "SHORT": "Prospects and works the pipeline",
+        "WHO": "For people who prospect and qualify leads."
+      },
+      "SALES_MANAGER": {
+        "NAME": "Sales manager",
+        "SHORT": "Owns the pipelines and the target",
+        "WHO": "For people who own the sales pipeline and the target."
+      },
+      "MARKETING": {
+        "NAME": "Marketing",
+        "SHORT": "Campaigns and lists",
+        "WHO": "For people who create campaigns and look after lists."
+      },
+      "FINANCE": {
+        "NAME": "Finance",
+        "SHORT": "Follows reports and AI cost",
+        "WHO": "For people who follow results and AI cost."
+      },
+      "OPERATIONS": {
+        "NAME": "Operations",
+        "SHORT": "Sets up day-to-day operation",
+        "WHO": "For people who set up inboxes, rules and agents day to day."
+      },
+      "READ_ONLY": {
+        "NAME": "Read only",
+        "SHORT": "Auditor or consultant",
+        "WHO": "For auditors or consultants who only need to look."
+      },
+      "BLANK": {
+        "NAME": "Start from scratch",
+        "SHORT": "No access at all",
+        "WHO": "Everything starts with no access. You grant area by area in the next step."
+      },
+      "PHRASES": {
+        "OWN_CONVERSATIONS": "Answer their own conversations and take from the queue",
+        "READ_CONTACTS_KB": "Read contacts and the knowledge base",
+        "MANAGE_DEALS": "Create and move deals in the CRM",
+        "OTHERS_CONVERSATIONS": "See other agents' conversations",
+        "REPORTS": "See reports",
+        "SETTINGS": "Change settings",
+        "ALL_CONVERSATIONS": "See and answer every conversation",
+        "EDIT_CONTACTS": "Edit, import and export contacts",
+        "TEAM_SETUP": "Organise labels and team macros",
+        "DELETE_DATA": "Delete conversations or contacts",
+        "BILLING_INTEGRATIONS": "Touch integrations and billing",
+        "PROSPECT": "Search and enrich leads",
+        "SEND_CAMPAIGNS": "Send campaigns",
+        "EDIT_PIPELINES": "Create and edit CRM pipelines",
+        "EXPORT_CRM": "Export the CRM list",
+        "ALL_SEARCHES": "See everyone's prospecting searches",
+        "ANSWER_CONVERSATIONS": "Answer conversations",
+        "EDIT_DEALS": "Edit deals in the CRM",
+        "CRM_DASHBOARD": "See the CRM dashboard and AI cost",
+        "CHANGE_ANYTHING": "Change anything",
+        "SETUP_INBOXES": "Set up inboxes and reconnect WhatsApp",
+        "SETUP_RULES": "Set up automations, labels, macros and SLA",
+        "PUBLISH_AGENTS": "Create and publish Autonom.ia agents",
+        "SEE_EVERYTHING": "See contacts, CRM, campaigns and agents"
+      }
+    },
+    "ASSIGN": {
+      "TITLE": "Role {name} created",
+      "DESCRIPTION": "Who will use this role? You can also do it later in Settings › Agents.",
+      "CONFIRM": "Assign | Assign to 1 agent | Assign to {n} agents",
+      "LATER": "Do it later",
+      "EMPTY": "There are no agents to assign yet.",
+      "REPLACES": "Replaces their current custom role",
+      "TOGGLE": "Assign to {name}",
+      "SUCCESS": "Role assigned. | Role assigned to 1 agent. | Role assigned to {n} agents.",
+      "PARTIAL_ERROR": "Could not assign {count} agent(s). Try again in Settings › Agents."
     }
   }
 }
