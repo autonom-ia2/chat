@@ -2225,7 +2225,8 @@
       "UPLOADING": "Uploading…",
       "WAIT": "Wait for the file to finish uploading, then send.",
       "DEFAULT_MESSAGE": "Take a look at what I sent.",
-      "DROP": "Drop here to attach"
+      "DROP": "Drop here to attach",
+      "LIMIT": "The Guide reads up to {max} files per conversation. Start a new conversation to send others."
     },
     "VOICE": {
       "START": "Record a voice message",
@@ -2239,7 +2240,18 @@
       "SENT": "Voice message sent. Transcribing…",
       "RETRY": "Try again",
       "NOTE": "Voice message",
-      "RECORD_FAILED": "I could not record the audio. Try again."
+      "RECORD_FAILED": "I could not record the audio. Try again.",
+      "PLAY": "Play voice message",
+      "PAUSE": "Pause",
+      "POSITION": "Audio position",
+      "POSITION_VALUE": "{atual} of {total}",
+      "SPEED": "Playback speed:",
+      "SPEED_1": "1×",
+      "SPEED_1_5": "1.5×",
+      "SPEED_2": "2×",
+      "WAITING": "Audio ready. It goes as soon as the Guide finishes answering.",
+      "FINISH_FIRST": "Send or delete the recording before sending another message.",
+      "TIME": "{atual} / {total}"
     }
   }
 }

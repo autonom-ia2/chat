@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import AudioPlayer from 'dashboard/components-next/audio/AudioPlayer.vue';
+import GuideVoz from './GuideVoz.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 // #895 — o balão de quem usa, no jeito do WhatsApp: à direita, com o texto, as
@@ -59,9 +59,9 @@ const voz = computed(() => props.item.voz);
           <span class="truncate min-w-0">{{ documento.nome }}</span>
         </li>
       </ul>
-      <div v-if="voz" class="flex flex-col gap-1 min-w-0">
+      <div v-if="voz" class="flex flex-col gap-1 w-64 max-w-full min-w-0">
         <span class="sr-only">{{ $t('AUTONOMIA_GUIDE.VOICE.NOTE') }}</span>
-        <AudioPlayer :src="voz.url" :fallback-duration="voz.duracao" />
+        <GuideVoz :src="voz.url" :duracao="voz.duracao" />
         <p
           v-if="voz.estado === 'transcrevendo'"
           class="flex items-center gap-1 mb-0 text-xs text-n-slate-11"

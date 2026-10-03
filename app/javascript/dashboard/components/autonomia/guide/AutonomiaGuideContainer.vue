@@ -13,6 +13,7 @@ import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
+  MAX_ANEXOS_POR_CONVERSA,
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 
@@ -53,6 +54,15 @@ const isSending = ref(false);
 const transcrevendo = ref(false);
 // Os anexos que esperam no campo de digitar o próximo envio.
 const pendentes = computed(() => arquivos.filter(arquivo => !arquivo.turno));
+// Quantos anexos ainda cabem: o que falhou ao subir não conta.
+const vagas = computed(
+  () =>
+    MAX_ANEXOS_POR_CONVERSA -
+    arquivos.filter(arquivo => arquivo.estado !== 'erro').length
+);
+// Há gravação de voz no campo: nenhuma outra mensagem sai até ela ser enviada
+// ou apagada — senão o áudio se perderia sem a pessoa pedir.
+const gravandoVoz = ref(false);
 // #855 — a lista "Feito pelo Guia" ocupa o lugar da conversa enquanto aberta.
 const vendoFeitos = ref(false);
 const chatContainer = ref(null);
@@ -401,7 +411,14 @@ const resetConversation = () => {
 // #857 — sobe o arquivo e o deixa na conversa. O erro aparece no próprio
 // arquivo e num aviso com o motivo da plataforma (tipo ou tamanho).
 // #895 — foto ganha miniatura, mostrada no campo e depois no balão.
+const avisarLimiteDeAnexos = () =>
+  useAlert(t('AUTONOMIA_GUIDE.FILE.LIMIT', { max: MAX_ANEXOS_POR_CONVERSA }));
+
 const anexarArquivo = async file => {
+  if (vagas.value <= 0) {
+    avisarLimiteDeAnexos();
+    return;
+  }
   const conta = accountId.value;
   const ehFoto = (file.type || '').startsWith('image/');
   const id = store.addArquivo(file.name, {
@@ -445,6 +462,10 @@ const podeEnviar = () => {
 // #895 — só anexos, sem texto, também vale: o balão mostra os anexos e o Guia
 // recebe uma frase padrão (o servidor não responde a pergunta vazia).
 const sendMessage = message => {
+  if (gravandoVoz.value) {
+    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
+    return false;
+  }
   const temTexto = Boolean(message?.trim());
   const prontos = pendentes.value.filter(item => item.estado === 'pronto');
   if (!temTexto && !prontos.length) return false;
@@ -500,7 +521,12 @@ const enviarVoz = ({ audio, duracao }) => {
 };
 
 const tentarVozDeNovo = item => {
-  if (item.voz?.estado !== 'erro' || !podeEnviar()) return;
+  if (item.voz?.estado !== 'erro') return;
+  if (gravandoVoz.value) {
+    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
+    return;
+  }
+  if (!podeEnviar()) return;
   const { conta, pedido } = abrirPedido();
   store.marcarVoz(item.id, 'transcrevendo');
   transcreverMensagem(item, conta, pedido);
@@ -786,7 +812,7 @@ watch(accountId, () => {
               v-for="(suggestion, i) in suggestions"
               :key="i"
               data-sugestao
-              :disabled="isSending"
+              :disabled="isSending || gravandoVoz"
               class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               @click="sendMessage(suggestion.pergunta)"
             >
@@ -802,10 +828,13 @@ watch(accountId, () => {
           :is-busy="isSending"
           :arquivos="pendentes"
           :on-enviar-voz="enviarVoz"
+          :vagas="vagas"
           @send="sendMessage"
           @sem-microfone="useAlert($t('AUTONOMIA_GUIDE.VOICE.NO_MIC'))"
           @gravacao-falhou="useAlert($t('AUTONOMIA_GUIDE.VOICE.RECORD_FAILED'))"
           @anexar="anexarArquivo"
+          @gravando="gravandoVoz = $event"
+          @limite-de-anexos="avisarLimiteDeAnexos"
           @remover="store.removeArquivo"
         />
       </div>

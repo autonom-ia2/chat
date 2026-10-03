@@ -781,7 +781,7 @@ describe('AutonomiaGuideContainer — voz e anexos', () => {
       })
     );
     const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
-    expect(balao.findComponent({ name: 'AudioPlayer' }).props('src')).toBe(
+    expect(balao.findComponent({ name: 'GuideVoz' }).props('src')).toBe(
       'blob:local'
     );
     expect(balao.text()).toContain('quantos leads eu tenho');
@@ -846,6 +846,80 @@ describe('AutonomiaGuideContainer — voz e anexos', () => {
     expect(composer().props('arquivos')).toHaveLength(0);
     const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
     expect(balao.find('img').attributes('src')).toBe('blob:local');
+  });
+
+  it('com gravação no campo, nenhuma outra mensagem sai (o áudio não se perde)', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    composer().vm.$emit('gravando', true);
+    await flushPromises();
+
+    expect(composer().props('onSend')('oi')).toBe(false);
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST');
+    const sugestoes = wrapper.findAll('[data-sugestao]');
+    expect(sugestoes.length).toBeGreaterThan(0);
+    sugestoes.forEach(sugestao =>
+      expect(sugestao.attributes('disabled')).toBeDefined()
+    );
+
+    composer().vm.$emit('gravando', false);
+    await flushPromises();
+    expect(
+      wrapper.find('[data-sugestao]').attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('a mensagem de voz sai mesmo com a gravação ainda marcada', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({ data: { texto: 'oi' } });
+    wrapper = mountGuide();
+    composer().vm.$emit('gravando', true);
+    await flushPromises();
+
+    expect(composer().props('onEnviarVoz')({ audio, duracao: 1 })).toBe(true);
+  });
+
+  it('o sexto anexo da conversa é recusado com aviso', async () => {
+    let numero = 0;
+    AutonomiaGuideAPI.enviarArquivo.mockImplementation(() => {
+      numero += 1;
+      return Promise.resolve({
+        data: { signed_id: `a-${numero}`, nome: `a${numero}.pdf` },
+      });
+    });
+    wrapper = mountGuide();
+
+    for (let i = 1; i <= 5; i += 1) {
+      composer().vm.$emit('anexar', new File(['x'], `a${i}.pdf`));
+    }
+    await flushPromises();
+    expect(composer().props('vagas')).toBe(0);
+
+    composer().vm.$emit('anexar', new File(['x'], 'a6.pdf'));
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.enviarArquivo).toHaveBeenCalledTimes(5);
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.LIMIT');
+  });
+
+  it('anexo que falhou ao subir não ocupa vaga', async () => {
+    AutonomiaGuideAPI.enviarArquivo.mockRejectedValue(new Error('tipo'));
+    wrapper = mountGuide();
+
+    composer().vm.$emit('anexar', new File(['x'], 'a.exe'));
+    await flushPromises();
+
+    expect(composer().props('vagas')).toBe(5);
+  });
+
+  it('o composer avisa o limite e a tela mostra a mensagem', async () => {
+    wrapper = mountGuide();
+
+    composer().vm.$emit('limiteDeAnexos');
+
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.LIMIT');
   });
 
   it('não envia enquanto um anexo ainda está subindo', async () => {

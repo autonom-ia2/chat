@@ -351,3 +351,140 @@ describe('GuideComposer — gravando', () => {
     wrapper.unmount();
   });
 });
+
+describe('GuideComposer — limite de 5 anexos por conversa', () => {
+  const tresArquivos = () =>
+    ['a.pdf', 'b.pdf', 'c.pdf'].map(nome => new File(['x'], nome));
+
+  it('arrastando mais do que cabe, anexa o que cabe e avisa do resto', async () => {
+    const wrapper = montar({ vagas: 2 });
+    const arquivos = tresArquivos();
+
+    await wrapper.trigger('drop', { dataTransfer: { files: arquivos } });
+
+    expect(wrapper.emitted('anexar')).toEqual([[arquivos[0]], [arquivos[1]]]);
+    expect(wrapper.emitted('limiteDeAnexos')).toHaveLength(1);
+  });
+
+  it('o clipe, sem vaga, avisa em vez de abrir a escolha de arquivo', async () => {
+    const wrapper = montar({ vagas: 0 });
+    const clique = vi.spyOn(
+      wrapper.find('input[type="file"]').element,
+      'click'
+    );
+
+    await botao(wrapper, 'AUTONOMIA_GUIDE.FILE.ATTACH').trigger('click');
+
+    expect(clique).not.toHaveBeenCalled();
+    expect(wrapper.emitted('limiteDeAnexos')).toHaveLength(1);
+  });
+
+  it('colar uma foto sem vaga avisa e não anexa', async () => {
+    const wrapper = montar({ vagas: 0 });
+
+    await wrapper.find('textarea').trigger('paste', {
+      clipboardData: {
+        files: [new File(['p'], 'p.png', { type: 'image/png' })],
+      },
+    });
+
+    expect(wrapper.emitted('anexar')).toBeUndefined();
+    expect(wrapper.emitted('limiteDeAnexos')).toHaveLength(1);
+  });
+
+  it('escolhendo no clipe, também recusa o que passa do limite', async () => {
+    const wrapper = montar({ vagas: 1 });
+    const input = wrapper.find('input[type="file"]');
+    const arquivos = tresArquivos();
+    Object.defineProperty(input.element, 'files', { value: arquivos });
+
+    await input.trigger('change');
+
+    expect(wrapper.emitted('anexar')).toEqual([[arquivos[0]]]);
+    expect(wrapper.emitted('limiteDeAnexos')).toHaveLength(1);
+  });
+});
+
+describe('GuideComposer — gravação nunca se perde sozinha', () => {
+  beforeEach(comMicrofone);
+
+  const gravarAte = async (wrapper, tempo) => {
+    await microfone(wrapper).trigger('click');
+    gravador(wrapper).vm.$emit('recorderProgressChanged', tempo);
+    await flushPromises();
+  };
+
+  it('avisa o painel quando começa e quando termina a gravação', async () => {
+    const wrapper = montar({ onEnviarVoz: vi.fn() });
+
+    await gravarAte(wrapper, '00:01');
+    await botao(wrapper, 'AUTONOMIA_GUIDE.VOICE.CANCEL').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('gravando')).toEqual([[true], [false]]);
+  });
+
+  it('fechar o painel no meio da gravação libera o envio de novo', async () => {
+    const wrapper = montar({ onEnviarVoz: vi.fn() });
+    await gravarAte(wrapper, '00:01');
+
+    wrapper.unmount();
+
+    expect(wrapper.emitted('gravando').at(-1)).toEqual([false]);
+  });
+
+  it('se o Guia está respondendo, o áudio espera e sai sozinho depois', async () => {
+    const onEnviarVoz = vi.fn();
+    const wrapper = montar({ onEnviarVoz });
+    await gravarAte(wrapper, '00:04');
+    await wrapper.setProps({ isBusy: true });
+
+    await botao(wrapper, 'AUTONOMIA_GUIDE.VOICE.SEND').trigger('click');
+    const audio = new File(['ogg'], 'voz.ogg', { type: 'audio/ogg' });
+    gravador(wrapper).vm.$emit('finishRecord', { file: audio });
+    await flushPromises();
+
+    expect(onEnviarVoz).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-gravacao]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.WAITING');
+
+    await wrapper.setProps({ isBusy: false });
+    await flushPromises();
+
+    expect(onEnviarVoz).toHaveBeenCalledWith({ audio, duracao: 4 });
+    expect(wrapper.find('[data-gravacao]').exists()).toBe(false);
+  });
+
+  it('aos 2 minutos com o Guia ocupado, para e espera em vez de descartar', async () => {
+    const onEnviarVoz = vi.fn();
+    const wrapper = montar({ onEnviarVoz });
+    await gravarAte(wrapper, '00:01');
+    await wrapper.setProps({ isBusy: true });
+
+    gravador(wrapper).vm.$emit('recorderProgressChanged', '02:00');
+    await flushPromises();
+    expect(stopRecording).toHaveBeenCalledOnce();
+    const audio = new File(['ogg'], 'voz.ogg', { type: 'audio/ogg' });
+    gravador(wrapper).vm.$emit('finishRecord', { file: audio });
+    await flushPromises();
+
+    expect(onEnviarVoz).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.WAITING');
+  });
+
+  it('se o painel recusa o áudio, ele continua esperando', async () => {
+    const onEnviarVoz = vi.fn(() => false);
+    const wrapper = montar({ onEnviarVoz });
+    await gravarAte(wrapper, '00:02');
+
+    await botao(wrapper, 'AUTONOMIA_GUIDE.VOICE.SEND').trigger('click');
+    gravador(wrapper).vm.$emit('finishRecord', { file: new File(['o'], 'v') });
+    await flushPromises();
+
+    expect(onEnviarVoz).toHaveBeenCalledOnce();
+    expect(wrapper.find('[data-gravacao]').exists()).toBe(true);
+    expect(
+      botao(wrapper, 'AUTONOMIA_GUIDE.VOICE.SEND').attributes('disabled')
+    ).toBeUndefined();
+  });
+});

@@ -1,5 +1,12 @@
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue';
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onBeforeUnmount,
+} from 'vue';
 import { useEventListener } from '@vueuse/core';
 import { AUDIO_FORMATS } from 'shared/constants/messages';
 import AudioRecorder from 'dashboard/components/widgets/WootWriter/AudioRecorder.vue';
@@ -32,10 +39,17 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  // #895 — recebe { audio, duracao } da mensagem de voz gravada.
+  // #895 — recebe { audio, duracao } da mensagem de voz gravada e devolve
+  // `false` quando ela não pôde entrar agora (o áudio fica esperando).
   onEnviarVoz: {
     type: Function,
     default: null,
+  },
+  // #895 — quantos anexos ainda cabem na conversa. O Guia lê no máximo 5;
+  // o que passa disso é recusado com aviso, nunca ignorado em silêncio.
+  vagas: {
+    type: Number,
+    default: Infinity,
   },
 });
 
@@ -44,6 +58,8 @@ const emit = defineEmits([
   'remover',
   'semMicrofone',
   'gravacaoFalhou',
+  'gravando',
+  'limiteDeAnexos',
 ]);
 
 const message = ref('');
@@ -68,11 +84,23 @@ const temTexto = computed(() => Boolean(message.value.trim()));
 
 const focarCampo = () => nextTick(() => textareaRef.value?.focus());
 
-// O input de arquivo é escondido; o botão do clipe é o alvo de toque (44x44).
-const escolherArquivo = () => fileRef.value?.click();
+// Clipe, colar e arrastar passam todos por aqui: entra só o que cabe, e o
+// resto é recusado com um aviso (o Guia lê até 5 arquivos por conversa).
+const anexarTodos = files => {
+  const lista = Array.from(files || []);
+  const cabem = lista.slice(0, Math.max(props.vagas, 0));
+  cabem.forEach(file => emit('anexar', file));
+  if (lista.length > cabem.length) emit('limiteDeAnexos');
+};
 
-const anexarTodos = files =>
-  Array.from(files || []).forEach(file => emit('anexar', file));
+// O input de arquivo é escondido; o botão do clipe é o alvo de toque (44x44).
+const escolherArquivo = () => {
+  if (props.vagas <= 0) {
+    emit('limiteDeAnexos');
+    return;
+  }
+  fileRef.value?.click();
+};
 
 const arquivoEscolhido = event => {
   anexarTodos(event.target.files);
@@ -121,7 +149,10 @@ const podeGravar = computed(
     Boolean(navigator.mediaDevices?.getUserMedia)
 );
 // parada | pedindo (o navegador pede o microfone) | gravando | finalizando
+// | esperando (o áudio está pronto e sai assim que o Guia terminar de responder)
 const voz = ref('parada');
+// O áudio que espera a vez: nenhuma gravação se perde sem a pessoa pedir.
+let audioEsperando = null;
 const segundos = ref(0);
 const gravando = computed(() => voz.value !== 'parada');
 const mostraMicrofone = computed(
@@ -148,7 +179,23 @@ const gravar = () => {
   anuncio.value = '';
 };
 
+// Entrega o áudio; se o Guia ainda está respondendo, ele espera a vez.
+const entregarAudio = () => {
+  if (props.isBusy || props.onEnviarVoz(audioEsperando) === false) {
+    voz.value = 'esperando';
+    return;
+  }
+  audioEsperando = null;
+  voz.value = 'parada';
+  anuncio.value = 'enviada';
+  focarCampo();
+};
+
 const enviarGravacao = () => {
+  if (voz.value === 'esperando') {
+    entregarAudio();
+    return;
+  }
   if (voz.value !== 'gravando') return;
   voz.value = 'finalizando';
   gravadorRef.value?.stopRecording();
@@ -157,6 +204,7 @@ const enviarGravacao = () => {
 // Apagar desmonta o gravador, e é isso que solta o microfone.
 const cancelarGravacao = () => {
   if (!gravando.value) return;
+  audioEsperando = null;
   voz.value = 'parada';
   anuncio.value = 'apagada';
   focarCampo();
@@ -175,11 +223,24 @@ const progressoDaGravacao = tempo => {
 const gravacaoPronta = ({ file }) => {
   // Apagada antes de o áudio ficar pronto: não manda nada.
   if (voz.value !== 'finalizando') return;
-  voz.value = 'parada';
-  props.onEnviarVoz({ audio: file, duracao: segundos.value });
-  anuncio.value = 'enviada';
-  focarCampo();
+  audioEsperando = { audio: file, duracao: segundos.value };
+  entregarAudio();
 };
+
+// O Guia terminou de responder: o áudio que esperava sai sozinho.
+watch(
+  () => props.isBusy,
+  ocupado => {
+    if (!ocupado && voz.value === 'esperando') entregarAudio();
+  }
+);
+
+// O painel precisa saber que há gravação: enquanto houver, nenhuma outra
+// mensagem sai (ela descartaria o áudio).
+watch(gravando, valor => emit('gravando', valor));
+onBeforeUnmount(() => {
+  if (gravando.value) emit('gravando', false);
+});
 
 // O microfone não abriu (permissão negada ou sem aparelho).
 const semMicrofone = () => {
@@ -321,7 +382,7 @@ onMounted(() => {
       <button
         ref="enviarVozRef"
         type="button"
-        :disabled="voz !== 'gravando' || isBusy"
+        :disabled="voz !== 'gravando' && !(voz === 'esperando' && !isBusy)"
         :aria-label="$t('AUTONOMIA_GUIDE.VOICE.SEND')"
         class="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-n-brand text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-n-blue-11 disabled:cursor-not-allowed disabled:opacity-50"
         @click="enviarGravacao"
@@ -404,6 +465,13 @@ onMounted(() => {
       <template v-else-if="anuncio === 'enviada'">
         {{ $t('AUTONOMIA_GUIDE.VOICE.SENT') }}
       </template>
+    </p>
+    <p
+      v-if="voz === 'esperando'"
+      class="mt-1 mb-0 text-sm text-n-slate-11"
+      role="status"
+    >
+      {{ $t('AUTONOMIA_GUIDE.VOICE.WAITING') }}
     </p>
     <p v-if="algumSubindo" class="mt-1 mb-0 text-sm text-n-slate-11">
       {{ $t('AUTONOMIA_GUIDE.FILE.WAIT') }}

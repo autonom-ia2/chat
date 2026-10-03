@@ -18,6 +18,11 @@ const state = reactive({
 
 let nextArquivoId = 1;
 
+// O Guia lê no máximo 5 arquivos por conversa
+// (`Autonomia::Guide::Arquivos::MAX_POR_TURNO`): a tela recusa o sexto com
+// aviso, em vez de o servidor ignorá-lo em silêncio.
+export const MAX_ANEXOS_POR_CONVERSA = 5;
+
 let nextId = 1;
 
 // Acima disso não é recado para quem usa: é dump, stack trace ou corpo de resposta.

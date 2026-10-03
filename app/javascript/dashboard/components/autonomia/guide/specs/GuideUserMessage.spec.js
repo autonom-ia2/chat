@@ -6,7 +6,7 @@ const montar = item =>
   mount(GuideUserMessage, {
     props: { item: { anexos: [], voz: null, texto: '', ...item } },
     global: {
-      stubs: { AudioPlayer: true },
+      stubs: { GuideVoz: true },
       mocks: { $t: key => key },
     },
   });
@@ -45,10 +45,10 @@ describe('GuideUserMessage', () => {
 
   it('mensagem de voz: o áudio toca com a duração já conhecida', () => {
     const wrapper = montar({ voz: { ...VOZ, estado: 'transcrevendo' } });
-    const player = wrapper.findComponent({ name: 'AudioPlayer' });
+    const player = wrapper.findComponent({ name: 'GuideVoz' });
 
     expect(player.props('src')).toBe('blob:voz');
-    expect(player.props('fallbackDuration')).toBe(4);
+    expect(player.props('duracao')).toBe(4);
     expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.TRANSCRIBING');
   });
 

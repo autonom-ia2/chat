@@ -2226,7 +2226,8 @@
       "UPLOADING": "Enviando…",
       "WAIT": "Espere o arquivo terminar de subir para enviar.",
       "DEFAULT_MESSAGE": "Veja o que enviei.",
-      "DROP": "Solte aqui para anexar"
+      "DROP": "Solte aqui para anexar",
+      "LIMIT": "O Guia lê até {max} arquivos por conversa. Comece uma nova conversa para enviar outros."
     },
     "VOICE": {
       "START": "Gravar mensagem de voz",
@@ -2240,7 +2241,18 @@
       "SENT": "Mensagem de voz enviada. Transcrevendo…",
       "RETRY": "Tentar de novo",
       "NOTE": "Mensagem de voz",
-      "RECORD_FAILED": "Não consegui gravar o áudio. Tente de novo."
+      "RECORD_FAILED": "Não consegui gravar o áudio. Tente de novo.",
+      "PLAY": "Ouvir mensagem de voz",
+      "PAUSE": "Pausar",
+      "POSITION": "Posição do áudio",
+      "POSITION_VALUE": "{atual} de {total}",
+      "SPEED": "Velocidade do áudio:",
+      "SPEED_1": "1×",
+      "SPEED_1_5": "1,5×",
+      "SPEED_2": "2×",
+      "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
+      "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
+      "TIME": "{atual} / {total}"
     }
   }
 }
