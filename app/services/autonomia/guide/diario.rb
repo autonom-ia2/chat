@@ -178,15 +178,32 @@ module Autonomia::Guide::Diario
 
   # A mesma linha alterada duas vezes: só a última alteração se compara com o
   # banco, as anteriores valem por ela.
+  #
+  # Linha que NASCEU neste passo não tem "antes" a restaurar: o que existia antes
+  # do Guia era nada. Alterá-la ou apagá-la no mesmo passo não vira mudança — só
+  # a criação conta, e só se a linha ainda existe. Sem isto, criar e apagar na
+  # mesma requisição deixava só o "apagou", e o desfazer recriava uma linha que
+  # nunca existiu (teste de produção, 03/10/2026).
   def conferidas(entradas)
-    ultima = {}.compare_by_identity
-    entradas.each_with_index { |entrada, indice| ultima[entrada.objeto] = indice if entrada.operacao == 'update' }
+    proprias = sem_o_que_nasceu_no_passo(entradas)
+    ultima = ultima_alteracao(proprias)
 
-    entradas.each_with_index.select do |entrada, indice|
+    proprias.each_with_index.select do |entrada, indice|
       next true if entrada.operacao == 'update' && ultima[entrada.objeto] != indice
 
       ficou?(entrada)
     end.map(&:first)
+  end
+
+  def sem_o_que_nasceu_no_passo(entradas)
+    nascidas = entradas.select { |entrada| entrada.operacao == 'create' }.to_set(&:objeto).compare_by_identity
+    entradas.reject { |entrada| entrada.operacao != 'create' && nascidas.include?(entrada.objeto) }
+  end
+
+  def ultima_alteracao(entradas)
+    ultima = {}.compare_by_identity
+    entradas.each_with_index { |entrada, indice| ultima[entrada.objeto] = indice if entrada.operacao == 'update' }
+    ultima
   end
 
   def ficou?(entrada)
