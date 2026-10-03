@@ -494,7 +494,7 @@ module Autonomia
       # SKU), força handoff em vez de deixar o LLM improvisar (S06). NÃO regride injeção: a recusa de injeção
       # é curta e SEM especificidade -> asks_for_specifics? falso -> não escala.
       def handoff?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction = false)
-        return false if guia_respondendo_pela_conta?(reply_present)
+        return false if guia_com_resposta?(reply_present)
 
         model_handoff_applies?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction) ||
           confidence < threshold ||
@@ -550,15 +550,15 @@ module Autonomia
           !grounded_by_instruction && used.empty? && !leu_a_conta? && business_claim?(parsed)
       end
 
-      # O Guia que leu ou mudou a conta neste turno responde pelo que viu e fez (#855).
-      # O portão existe para o atendimento ao cliente não inventar fato; aqui a base
-      # é a própria conta. Em 02/10/2026, na conta 18, o Guia leu as funções e o
-      # portão trocou a resposta por "não tenho certeza suficiente". No teste local
-      # do mesmo pedido, ele CRIOU a função, escreveu "Criei a função Marketing…" e
-      # marcou handoff só para registrar uma ressalva — o portão escondeu o que tinha
-      # mudado na conta. A ressalva vai na resposta (instrução, seção 6).
-      def guia_respondendo_pela_conta?(reply_present)
-        reply_present && leu_a_conta?
+      # O Guia (quem chama com `operador`) nunca tem a resposta trocada por "encaminhe ao
+      # suporte" (#914, regra do Rodrigo de 03/10/2026). O portão existe para o agente que
+      # atende CLIENTE não inventar fato do negócio; o Guia investiga com as ferramentas (conta,
+      # Central, web) e a instrução manda ele responder, resolver ou dizer que não dá. Antes
+      # disto, só passava quando tinha lido a conta no turno (#855); uma resposta certa tirada
+      # da Central ou da web era retida e virava a oferta de suporte. Sem resposta (falha de IA
+      # ou de infraestrutura) segue como antes: a tela diz que não conseguiu.
+      def guia_com_resposta?(reply_present)
+        reply_present && @operador.present?
       end
 
       # Fato lido da conta neste turno é base, como um trecho do conhecimento (#593).

@@ -72,6 +72,14 @@ module BateriaDoGuia
     sem_suporte: 'Não oferece encaminhar para o suporte.'
   }.freeze
 
+  # #914: dúvida que o manual não tem. O Guia investiga e responde; nunca empurra para o suporte.
+  CRITERIOS_SEM_SUPORTE = {
+    responde_objetivamente: 'Dá uma resposta objetiva à pergunta (um prazo concreto), não só "depende" ou ' \
+                            '"não sei".',
+    diz_a_fonte: 'Diz de onde vem a informação (norma, órgão regulador ou fonte consultada) ou como a pessoa confirma.',
+    sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
+  }.freeze
+
   # Juiz de texto: só para o que o banco não mostra e uma pessoa precisaria ler (o Guia explicou a
   # regra certa? propôs o mais próximo?). Quem entende linguagem é um modelo — nunca lista de palavras
   # (regra do repo). Modelo diferente do Guia, para o juiz não concordar com o próprio jeito de errar.
