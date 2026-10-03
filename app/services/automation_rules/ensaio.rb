@@ -8,13 +8,25 @@
 # painel). Do contato sai só o nome — o ensaio não precisa de e-mail nem telefone.
 #
 # Condição "mudou de valor" depende do evento que mudou o campo; numa conversa parada
-# não há evento, então essa parte sai do ensaio e volta em `sem_teste`.
+# não há evento, então essa parte sai do ensaio e volta em `sem_teste`. Quando ela é a
+# regra inteira, não sobra o que testar: `testavel` vem falso e nenhuma conversa é
+# listada — rodar o filtro sem condição diria que a regra pega todas.
+#
+# Em "mensagem criada" o listener avalia a regra a cada mensagem que não ignora
+# (AutomationRuleListener#ignore_message_created_event?): enviada, nota privada e
+# mensagem automática do canal contam; atividade, resposta automática de e-mail e
+# disparo de campanha, não. O ensaio faz o mesmo com as últimas dessas mensagens: a
+# conversa é afetada se a regra pegaria alguma delas.
 class AutomationRules::Ensaio
   class Invalida < StandardError; end
 
   MAX_CONVERSAS = 10
   MUDOU_DE_VALOR = 'attribute_changed'.freeze
   EVENTO_DE_MENSAGEM = 'message_created'.freeze
+  # Mensagens recentes lidas por conversa, e quantas delas (das que o listener
+  # consideraria) passam pelo filtro — uma consulta cada.
+  MENSAGENS_LIDAS = 20
+  MENSAGENS_ENSAIADAS = 5
 
   def initialize(rule:, user:, quantidade: nil)
     @rule = rule
@@ -27,7 +39,9 @@ class AutomationRules::Ensaio
     regra = regra_testavel
     raise Invalida, I18n.t('autonomia.automacoes.ensaio.condicoes_invalidas') unless condicoes_validas?(regra)
 
-    { 'resultados' => conversas.map { |conversa| ensaiar(regra, conversa) }, 'sem_teste' => partes_sem_teste }
+    testavel = Array(@rule.conditions).empty? || regra.conditions.any?
+    resultados = testavel ? conversas.map { |conversa| ensaiar(regra, conversa) } : []
+    { 'testavel' => testavel, 'resultados' => resultados, 'sem_teste' => partes_sem_teste }
   end
 
   private
@@ -72,14 +86,23 @@ class AutomationRules::Ensaio
   end
 
   def casou?(regra, conversa)
-    opcoes = {}
-    if @rule.event_name == EVENTO_DE_MENSAGEM
-      mensagem = conversa.messages.incoming.reorder(created_at: :desc).first
-      return false if mensagem.nil?
+    return filtro_casa?(regra, conversa, {}) unless @rule.event_name == EVENTO_DE_MENSAGEM
 
-      opcoes[:message] = mensagem
-    end
+    mensagens_consideradas(conversa).any? { |mensagem| filtro_casa?(regra, conversa, { message: mensagem }) }
+  end
+
+  def filtro_casa?(regra, conversa, opcoes)
     AutomationRules::ConditionsFilterService.new(regra, conversa, opcoes).perform == true
+  end
+
+  def mensagens_consideradas(conversa)
+    conversa.messages.where.not(message_type: :activity).reorder(created_at: :desc).limit(MENSAGENS_LIDAS)
+            .select { |mensagem| considerada_pelo_listener?(mensagem) }
+            .first(MENSAGENS_ENSAIADAS)
+  end
+
+  def considerada_pelo_listener?(mensagem)
+    !mensagem.auto_reply_email? && mensagem.additional_attributes.to_h['whatsapp_api_campaign_id'].blank?
   end
 
   def acoes

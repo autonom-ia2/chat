@@ -76,6 +76,23 @@ describe('AutomacaoEnsaio', () => {
     expect(wrapper.find('[data-ensaio-vazio]').exists()).toBe(true);
   });
 
+  // Revisão #859: regra só com "mudou de valor" não lista conversas como se
+  // todas fossem afetadas — diz que não dá para testar e por quê.
+  it('regra que só age quando algo muda: diz que não dá para testar', async () => {
+    AutomationAPI.ensaio.mockResolvedValue({
+      data: { testavel: false, resultados: [], sem_teste: ['status'] },
+    });
+    const wrapper = montar();
+
+    await wrapper.find('[data-testar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-nao-testavel]').exists()).toBe(true);
+    expect(wrapper.find('[data-ensaio-resumo]').exists()).toBe(false);
+    expect(wrapper.find('[data-ensaio-vazio]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-ensaio-item]')).toHaveLength(0);
+  });
+
   it('erro mostra o motivo do servidor ou pede para tentar de novo', async () => {
     AutomationAPI.ensaio
       .mockRejectedValueOnce({

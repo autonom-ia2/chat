@@ -60,6 +60,38 @@ RSpec.describe AutomationRules::Ensaio do
     expect(resultado_de(conversa, resultado)['casou']).to be(true)
   end
 
+  # Revisão #859: sem nenhuma condição testável, o filtro rodava sem filtro nenhum e
+  # dizia que a regra pegaria TODAS as conversas.
+  it 'regra só com "mudou de valor" não finge que pegaria todas as conversas', :aggregate_failures do
+    mudou = { 'attribute_key' => 'status', 'filter_operator' => 'attribute_changed',
+              'values' => { 'from' => ['open'], 'to' => ['resolved'] }, 'query_operator' => nil }
+    rule.update!(event_name: 'conversation_updated', conditions: [mudou])
+    conversa_com('obrigado')
+
+    resultado = described_class.new(rule: rule, user: admin).perform
+
+    expect(resultado['testavel']).to be(false)
+    expect(resultado['resultados']).to eq([])
+    expect(resultado['sem_teste']).to eq(['status'])
+  end
+
+  # Revisão #859: o listener dispara para qualquer mensagem que não seja de atividade —
+  # inclusive as enviadas e as notas privadas —, e o ensaio olhava só as recebidas.
+  it 'mensagem enviada conta, como no listener; atividade não', :aggregate_failures do
+    rule.update!(conditions: [{ 'attribute_key' => 'message_type', 'filter_operator' => 'equal_to',
+                                'values' => ['outgoing'], 'query_operator' => nil }])
+    respondida = conversa_com('oi')
+    create(:message, account: account, inbox: inbox, conversation: respondida, message_type: :outgoing, content: 'Olá!')
+    so_atividade = conversa_com('oi')
+    create(:message, account: account, inbox: inbox, conversation: so_atividade, message_type: :activity, content: 'Resolvida')
+
+    resultado = described_class.new(rule: rule, user: admin).perform
+
+    expect(resultado['testavel']).to be(true)
+    expect(resultado_de(respondida, resultado)['casou']).to be(true)
+    expect(resultado_de(so_atividade, resultado)['casou']).to be(false)
+  end
+
   it 'só olha as conversas que a pessoa enxerga e respeita a quantidade', :aggregate_failures do
     agente = create(:user, account: account, role: :agent)
     create(:inbox_member, user: agente, inbox: inbox)

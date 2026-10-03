@@ -22,6 +22,9 @@ const QUANTIDADE = 10;
 const estado = ref('parado');
 const resultados = ref([]);
 const semTeste = ref([]);
+// Falso quando a regra inteira depende de algo mudar na hora: aí não há o que
+// testar em conversa parada, e a tela diz isso em vez de listar conversas.
+const testavel = ref(true);
 const erro = ref('');
 
 const casaram = computed(
@@ -35,6 +38,7 @@ const testar = async () => {
     const { data } = await AutomationAPI.ensaio(props.regraId, QUANTIDADE);
     resultados.value = data?.resultados || [];
     semTeste.value = data?.sem_teste || [];
+    testavel.value = data?.testavel !== false;
     estado.value = 'pronto';
   } catch (error) {
     erro.value = error?.response?.data?.error || t('AUTOMACOES.ENSAIO.ERRO');
@@ -90,6 +94,13 @@ const linkDaConversa = item => ({
         class="text-sm text-n-ruby-11"
       >
         {{ erro }}
+      </p>
+      <p
+        v-else-if="estado === 'pronto' && !testavel"
+        data-nao-testavel
+        class="text-sm text-n-slate-12"
+      >
+        {{ $t('AUTOMACOES.ENSAIO.NAO_TESTAVEL', { partes: partesSemTeste }) }}
       </p>
       <template v-else-if="estado === 'pronto'">
         <p

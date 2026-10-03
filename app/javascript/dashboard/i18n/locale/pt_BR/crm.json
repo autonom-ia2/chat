@@ -2329,6 +2329,7 @@
       "FARIA": "Faria: {acoes}",
       "CONTATO_SEM_NOME": "Contato sem nome",
       "SEM_TESTE": "A parte que depende de algo mudar na hora ({partes}) não entra no teste.",
+      "NAO_TESTAVEL": "Esta automação só age quando algo muda na hora ({partes}). Isso não dá para testar em conversas que já aconteceram: ligue e acompanhe as primeiras vezes.",
       "ERRO": "O teste não respondeu agora. Tente de novo.",
       "ABRIR_CONVERSA": "Abrir a conversa"
     },

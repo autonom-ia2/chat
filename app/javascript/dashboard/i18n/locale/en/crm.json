@@ -2328,6 +2328,7 @@
       "FARIA": "Would: {acoes}",
       "CONTATO_SEM_NOME": "Contact without a name",
       "SEM_TESTE": "The part that depends on something changing at that moment ({partes}) is left out of the test.",
+      "NAO_TESTAVEL": "This automation only acts when something changes at that moment ({partes}). That can't be tested on conversations that already happened: turn it on and watch the first times.",
       "ERRO": "The test did not answer now. Try again.",
       "ABRIR_CONVERSA": "Open the conversation"
     },
