@@ -52,6 +52,25 @@ module Autonomia::Guide::Formatos
     gerados.reject { |arquivo, conteudo| File.exist?(arquivo) && File.read(arquivo) == conteudo }.keys
   end
 
+  # Onde o versionado e o código divergem, ação por ação, com o primeiro trecho
+  # diferente. Sem isso, o CI só dizia "fora de dia" — e um gerador que dá um
+  # resultado no Mac e outro no Linux não tinha como ser diagnosticado.
+  def diferencas(limite: 10)
+    versionado = ARQUIVO.exist? ? JSON.parse(ARQUIVO.read) : {}
+    atual = JSON.parse(json(Gerador.new.formatos))
+    acoes = (versionado.keys | atual.keys).sort.reject { |acao| versionado[acao] == atual[acao] }
+    acoes.first(limite).map { |acao| "#{acao}: #{primeira_divergencia(versionado[acao], atual[acao])}" }
+  end
+
+  def primeira_divergencia(antes, depois, caminho = [])
+    unless antes.is_a?(Hash) && depois.is_a?(Hash)
+      return "#{caminho.join('.')} versionado=#{antes.to_json.first(160)} código=#{depois.to_json.first(160)}"
+    end
+
+    chave = (antes.keys | depois.keys).sort.find { |nome| antes[nome] != depois[nome] }
+    primeira_divergencia(antes[chave], depois[chave], caminho + [chave])
+  end
+
   def json(formatos)
     "#{JSON.pretty_generate(ordenado(formatos))}\n"
   end

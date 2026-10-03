@@ -10,7 +10,8 @@ RSpec.describe Autonomia::Guide::Formatos do
   end
 
   it 'o formato versionado está em dia com o código (rode `bundle exec rails autonomia:guia:formatos`)' do
-    expect(described_class.fora_de_dia.map { |arquivo| arquivo.relative_path_from(Rails.root).to_s }).to eq([])
+    fora = described_class.fora_de_dia.map { |arquivo| arquivo.relative_path_from(Rails.root).to_s }
+    expect(fora).to eq([]), "fora de dia: #{fora.join(', ')}\n#{described_class.diferencas.join("\n")}"
   end
 
   it 'cobre exatamente o catálogo de ações do Guia' do
