@@ -181,13 +181,17 @@ const gravacaoPronta = ({ file }) => {
   focarCampo();
 };
 
-// Antes de gravar, o erro é o microfone (permissão negada ou sem aparelho);
-// depois de parar, é o áudio que não ficou pronto.
-const erroNaGravacao = () => {
-  const aoTerminar = voz.value === 'finalizando';
+// O microfone não abriu (permissão negada ou sem aparelho).
+const semMicrofone = () => {
   voz.value = 'parada';
-  if (aoTerminar) emit('gravacaoFalhou');
-  else emit('semMicrofone');
+  emit('semMicrofone');
+  focarCampo();
+};
+
+// O áudio gravado não ficou pronto para enviar.
+const erroNaGravacao = () => {
+  voz.value = 'parada';
+  emit('gravacaoFalhou');
   focarCampo();
 };
 
@@ -310,6 +314,7 @@ onMounted(() => {
           :wave-height="36"
           @recorder-progress-changed="progressoDaGravacao"
           @finish-record="gravacaoPronta"
+          @mic-error="semMicrofone"
           @record-error="erroNaGravacao"
         />
       </div>

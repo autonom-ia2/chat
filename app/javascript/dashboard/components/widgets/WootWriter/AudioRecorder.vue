@@ -23,6 +23,7 @@ const emit = defineEmits([
   'pause',
   'play',
   'recordError',
+  'micError',
 ]);
 
 const waveformContainer = ref(null);
@@ -133,7 +134,8 @@ const stopRecording = () => {
 };
 
 // startRecording asks for the microphone. A denied permission used to be an
-// unhandled rejection; it now surfaces as recordError. If the recorder was
+// unhandled rejection; it now surfaces as micError (recordError stays reserved
+// for a recording that could not be converted). If the recorder was
 // unmounted while the browser was still asking, release the microphone.
 const startRecording = async () => {
   isRecording.value = true;
@@ -146,7 +148,7 @@ const startRecording = async () => {
   } catch (error) {
     isRecording.value = false;
     record.value?.stopMic();
-    emit('recordError', { error });
+    emit('micError', { error });
   }
 };
 

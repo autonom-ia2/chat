@@ -7,7 +7,7 @@ const stopRecording = vi.fn();
 const GravadorFalso = {
   name: 'AudioRecorder',
   props: ['audioRecordFormat', 'waveHeight'],
-  emits: ['recorderProgressChanged', 'finishRecord', 'recordError'],
+  emits: ['recorderProgressChanged', 'finishRecord', 'recordError', 'micError'],
   methods: { stopRecording },
   template: '<div data-gravador />',
 };
@@ -328,7 +328,7 @@ describe('GuideComposer — gravando', () => {
   it('avisa quando o navegador não libera o microfone', async () => {
     const { wrapper } = await comecarGravacao();
 
-    gravador(wrapper).vm.$emit('recordError', { error: new Error('negado') });
+    gravador(wrapper).vm.$emit('micError', { error: new Error('negado') });
     await flushPromises();
 
     expect(wrapper.emitted('semMicrofone')).toHaveLength(1);
