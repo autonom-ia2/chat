@@ -13,6 +13,7 @@ import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import {
   useAutonomiaGuideStore,
   motivoUtilizavel,
+  MAX_ANEXOS_POR_CONVERSA,
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 
@@ -21,7 +22,7 @@ import GuideComposer from './GuideComposer.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideFeitos from './GuideFeitos.vue';
-import CopilotAgentMessage from 'dashboard/components-next/copilot/CopilotAgentMessage.vue';
+import GuideUserMessage from './GuideUserMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -50,6 +51,19 @@ const { messages, arquivos } = store;
 const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
+// #895 — a mensagem de voz está virando texto; a resposta ainda não foi pedida.
+const transcrevendo = ref(false);
+// Os anexos que esperam no campo de digitar o próximo envio.
+const pendentes = computed(() => arquivos.filter(arquivo => !arquivo.turno));
+// Quantos anexos ainda cabem: o que falhou ao subir não conta.
+const vagas = computed(
+  () =>
+    MAX_ANEXOS_POR_CONVERSA -
+    arquivos.filter(arquivo => arquivo.estado !== 'erro').length
+);
+// Há gravação de voz no campo: nenhuma outra mensagem sai até ela ser enviada
+// ou apagada — senão o áudio se perderia sem a pessoa pedir.
+const gravandoVoz = ref(false);
 // #855 — a lista "Feito pelo Guia" ocupa o lugar da conversa enquanto aberta.
 const vendoFeitos = ref(false);
 const chatContainer = ref(null);
@@ -288,6 +302,8 @@ let desmontado = false;
 let requestSequence = 0;
 onBeforeUnmount(() => {
   desmontado = true;
+  // Solta o áudio e as miniaturas que estavam na memória do navegador.
+  store.reset();
 });
 
 // Recursiva, e não um laço: cada busca espera a anterior, e a próxima só sai
@@ -392,14 +408,27 @@ const requestReply = async (requestAccount, message, requestId) => {
 const resetConversation = () => {
   requestSequence += 1;
   isSending.value = false;
+  transcrevendo.value = false;
   store.reset();
 };
 
 // #857 — sobe o arquivo e o deixa na conversa. O erro aparece no próprio
 // arquivo e num aviso com o motivo da plataforma (tipo ou tamanho).
+// #895 — foto ganha miniatura, mostrada no campo e depois no balão.
+const avisarLimiteDeAnexos = () =>
+  useAlert(t('AUTONOMIA_GUIDE.FILE.LIMIT', { max: MAX_ANEXOS_POR_CONVERSA }));
+
 const anexarArquivo = async file => {
+  if (vagas.value <= 0) {
+    avisarLimiteDeAnexos();
+    return;
+  }
   const conta = accountId.value;
-  const id = store.addArquivo(file.name);
+  const ehFoto = (file.type || '').startsWith('image/');
+  const id = store.addArquivo(file.name, {
+    tipo: ehFoto ? 'imagem' : 'documento',
+    previa: ehFoto ? URL.createObjectURL(file) : null,
+  });
   try {
     const { data } = await AutonomiaGuideAPI.enviarArquivo(file);
     if (accountId.value !== conta) return;
@@ -414,40 +443,97 @@ const anexarArquivo = async file => {
   }
 };
 
-// #857 — o que a pessoa falou ao microfone vira texto no campo. A falha
-// aparece como aviso com o motivo da plataforma; o campo fica como estava.
-const transcreverVoz = async audio => {
-  try {
-    const { data } = await AutonomiaGuideAPI.transcrever(audio);
-    return data.texto || '';
-  } catch (error) {
-    useAlert(
-      motivoUtilizavel(error?.response?.data?.error) ||
-        t('AUTONOMIA_GUIDE.VOICE.FAILED')
-    );
-    return '';
-  }
+// Abre a vez de uma pergunta: prende a conta e o número do pedido. Se a pessoa
+// trocar de conta antes da resposta, ela não cai na conversa da outra conta.
+const abrirPedido = () => {
+  requestSequence += 1;
+  vendoFeitos.value = false;
+  isSending.value = true;
+  return { conta: accountId.value, pedido: requestSequence };
 };
 
-// GuideComposer clears the field only when this returns true. Accept = the question is in the
-// thread, so return right away and let the reply load behind the loader; false keeps the text.
-const sendMessage = message => {
-  if (!message?.trim()) return false;
+const podeEnviar = () => {
   if (isSending.value) {
     // Antes a segunda pergunta não fazia nada e não avisava nada.
     useAlert(t('AUTONOMIA_GUIDE.SENDING'));
     return false;
   }
-  // Pin the account this request belongs to: if the user switches accounts before the reply lands,
-  // the late response must NOT be appended into the now-current account's thread (cross-account leak).
-  const requestAccount = accountId.value;
-  requestSequence += 1;
-  const requestId = requestSequence;
-  store.addUserMessage(message);
-  vendoFeitos.value = false;
-  isSending.value = true;
-  requestReply(requestAccount, message, requestId);
   return true;
+};
+
+// GuideComposer clears the field only when this returns true. Accept = the question is in the
+// thread, so return right away and let the reply load behind the loader; false keeps the text.
+// #895 — só anexos, sem texto, também vale: o balão mostra os anexos e o Guia
+// recebe uma frase padrão (o servidor não responde a pergunta vazia).
+const sendMessage = message => {
+  if (gravandoVoz.value) {
+    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
+    return false;
+  }
+  const temTexto = Boolean(message?.trim());
+  const prontos = pendentes.value.filter(item => item.estado === 'pronto');
+  if (!temTexto && !prontos.length) return false;
+  if (pendentes.value.some(item => item.estado === 'subindo')) {
+    useAlert(t('AUTONOMIA_GUIDE.FILE.WAIT'));
+    return false;
+  }
+  if (!podeEnviar()) return false;
+  const conteudo = temTexto
+    ? message
+    : t('AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE');
+  const { conta, pedido } = abrirPedido();
+  store.addUserMessage(conteudo, { texto: temTexto ? message : '' });
+  requestReply(conta, conteudo, pedido);
+  return true;
+};
+
+// #895 — a mensagem de voz vira texto aqui, e só com o texto o Guia é
+// chamado. Falhou: o balão mostra o erro e o "Tentar de novo"; nada é pedido.
+const transcreverMensagem = async (registro, conta, pedido) => {
+  const ainda = () =>
+    !desmontado && pedido === requestSequence && accountId.value === conta;
+  transcrevendo.value = true;
+  let texto = '';
+  let erro = '';
+  try {
+    const { data } = await AutonomiaGuideAPI.transcrever(registro.voz.audio);
+    texto = (data?.texto || '').trim();
+  } catch (error) {
+    erro = motivoUtilizavel(error?.response?.data?.error);
+  }
+  if (!ainda()) return;
+  transcrevendo.value = false;
+  if (!texto) {
+    store.marcarVoz(registro.id, 'erro', {
+      erro: erro || t('AUTONOMIA_GUIDE.VOICE.FAILED'),
+    });
+    isSending.value = false;
+    return;
+  }
+  if (!store.marcarVoz(registro.id, 'pronta', { texto })) return;
+  requestReply(conta, texto, pedido);
+};
+
+const enviarVoz = ({ audio, duracao }) => {
+  if (!podeEnviar()) return false;
+  const { conta, pedido } = abrirPedido();
+  const registro = store.addUserMessage('', {
+    voz: { audio, url: URL.createObjectURL(audio), duracao },
+  });
+  transcreverMensagem(registro, conta, pedido);
+  return true;
+};
+
+const tentarVozDeNovo = item => {
+  if (item.voz?.estado !== 'erro') return;
+  if (gravandoVoz.value) {
+    useAlert(t('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST'));
+    return;
+  }
+  if (!podeEnviar()) return;
+  const { conta, pedido } = abrirPedido();
+  store.marcarVoz(item.id, 'transcrevendo');
+  transcreverMensagem(item, conta, pedido);
 };
 
 // Só o número de mensagens não basta: o desfecho da ação ("Pronto, feito.")
@@ -456,7 +542,8 @@ const sendMessage = message => {
 const scrollSignal = computed(() =>
   messages
     .map(
-      item => `${item.id}:${item.acaoEstado || ''}:${item.acaoResultado || ''}`
+      item =>
+        `${item.id}:${item.acaoEstado || ''}:${item.acaoResultado || ''}:${item.voz?.estado || ''}`
     )
     .join('|')
 );
@@ -484,6 +571,7 @@ watch(showPanel, async aberto => {
 watch(accountId, () => {
   requestSequence += 1;
   isSending.value = false;
+  transcrevendo.value = false;
   vendoFeitos.value = false;
   store.reset();
 });
@@ -528,9 +616,10 @@ watch(accountId, () => {
       >
         <div v-if="hasMessages" class="space-y-6 flex-1 flex flex-col w-full">
           <template v-for="(item, index) in messages" :key="item.id">
-            <CopilotAgentMessage
+            <GuideUserMessage
               v-if="item.message_type === 'user'"
-              :message="item.message"
+              :item="item"
+              @tentar-de-novo="tentarVozDeNovo(item)"
             />
             <div v-else class="flex flex-col gap-2 w-full">
               <CopilotAssistantMessage
@@ -705,7 +794,7 @@ watch(accountId, () => {
             </div>
           </template>
           <CopilotLoader
-            v-if="isSending"
+            v-if="isSending && !transcrevendo"
             :label="$t('AUTONOMIA_GUIDE.THINKING')"
           />
         </div>
@@ -727,7 +816,7 @@ watch(accountId, () => {
               v-for="(suggestion, i) in suggestions"
               :key="i"
               data-sugestao
-              :disabled="isSending"
+              :disabled="isSending || gravandoVoz"
               class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               @click="sendMessage(suggestion.pergunta)"
             >
@@ -738,14 +827,21 @@ watch(accountId, () => {
       </div>
 
       <div class="mx-3 mt-px mb-2">
+        <!-- Uma conta, um composer: trocar de conta descarta a gravação e o áudio que
+             esperava a vez, que senão sairia na conta nova. -->
         <GuideComposer
+          :key="accountId"
           class="mb-1 w-full"
           :is-busy="isSending"
-          :arquivos="arquivos"
-          :on-transcrever="transcreverVoz"
+          :arquivos="pendentes"
+          :on-enviar-voz="enviarVoz"
+          :vagas="vagas"
           @send="sendMessage"
           @sem-microfone="useAlert($t('AUTONOMIA_GUIDE.VOICE.NO_MIC'))"
+          @gravacao-falhou="useAlert($t('AUTONOMIA_GUIDE.VOICE.RECORD_FAILED'))"
           @anexar="anexarArquivo"
+          @gravando="gravandoVoz = $event"
+          @limite-de-anexos="avisarLimiteDeAnexos"
           @remover="store.removeArquivo"
         />
       </div>

@@ -2220,17 +2220,39 @@
     "SUGGESTIONS_THIS_SCREEN": "Sobre esta tela",
     "SUGGESTION_ARTICLE": "Me explique: {titulo}",
     "FILE": {
-      "ATTACH": "Anexar um arquivo para o Guia ler",
+      "ATTACH": "Anexar foto ou arquivo",
       "REMOVE": "Remover {nome}",
-      "FAILED": "Não consegui anexar este arquivo. Tente de novo."
+      "FAILED": "Não consegui anexar este arquivo. Tente de novo.",
+      "UPLOADING": "Enviando…",
+      "WAIT": "Espere o arquivo terminar de subir para enviar.",
+      "DEFAULT_MESSAGE": "Veja o que enviei.",
+      "DROP": "Solte aqui para anexar",
+      "LIMIT": "O Guia lê até {max} arquivos por conversa. Comece uma nova conversa para enviar outros."
     },
     "VOICE": {
-      "START": "Falar com o Guia",
-      "STOP": "Parar de gravar",
-      "RECORDING": "Gravando… {tempo} — toque no quadrado para parar.",
-      "TRANSCRIBING": "Transformando o que você falou em texto…",
+      "START": "Gravar mensagem de voz",
+      "RECORDING": "Gravando mensagem de voz. Toque em enviar quando terminar.",
+      "TRANSCRIBING": "Transcrevendo…",
       "FAILED": "Não consegui entender a gravação. Tente de novo.",
-      "NO_MIC": "Preciso de acesso ao seu microfone. Libere no navegador e tente de novo."
+      "NO_MIC": "Preciso de acesso ao seu microfone. Libere no navegador e tente de novo.",
+      "CANCEL": "Apagar gravação",
+      "SEND": "Enviar mensagem de voz",
+      "CANCELLED": "Gravação apagada.",
+      "SENT": "Mensagem de voz enviada. Transcrevendo…",
+      "RETRY": "Tentar de novo",
+      "NOTE": "Mensagem de voz",
+      "RECORD_FAILED": "Não consegui gravar o áudio. Tente de novo.",
+      "PLAY": "Ouvir mensagem de voz",
+      "PAUSE": "Pausar",
+      "POSITION": "Posição do áudio",
+      "POSITION_VALUE": "{atual} de {total}",
+      "SPEED": "Velocidade do áudio:",
+      "SPEED_1": "1×",
+      "SPEED_1_5": "1,5×",
+      "SPEED_2": "2×",
+      "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
+      "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
+      "TIME": "{atual} / {total}"
     }
   }
 }

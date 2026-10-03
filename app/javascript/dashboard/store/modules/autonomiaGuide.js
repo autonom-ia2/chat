@@ -4,16 +4,24 @@
 // thread is global (not conversation-scoped) and ephemeral. Records mirror the components-next
 // copilot bubble shape; assistant records also carry `navigation` (the screen the guide suggests)
 // and `acao` (the action the guide proposes, which only runs after an explicit confirmation).
-import { reactive, readonly } from 'vue';
+import { reactive, readonly, markRaw } from 'vue';
 
 const state = reactive({
   messages: [],
   // #857 — arquivos anexados nesta conversa: { id, nome, estado, signedId }.
   // Valem para a conversa inteira: o Guia lê todos a cada pergunta.
+  // #895 — e também { tipo, previa, turno }: `previa` é a miniatura da foto
+  // (endereço local do navegador) e `turno` é a mensagem que levou o arquivo —
+  // `null` enquanto ele espera no campo de digitar.
   arquivos: [],
 });
 
 let nextArquivoId = 1;
+
+// O Guia lê no máximo 5 arquivos por conversa
+// (`Autonomia::Guide::Arquivos::MAX_POR_TURNO`): a tela recusa o sexto com
+// aviso, em vez de o servidor ignorá-lo em silêncio.
+export const MAX_ANEXOS_POR_CONVERSA = 5;
 
 let nextId = 1;
 
@@ -55,11 +63,65 @@ export const motivoUtilizavel = motivo => {
   return temStatusHttp(texto) ? '' : texto;
 };
 
-const addUserMessage = content => {
-  const record = { id: nextId, message_type: 'user', message: { content } };
+// #895 — o que ainda está no campo de digitar, esperando o próximo envio.
+const arquivosPendentes = () => state.arquivos.filter(item => !item.turno);
+
+// Mensagem de quem usa. `content` é o que vai para o histórico do Guia; `texto`
+// é o que o balão mostra — numa mensagem só com anexos o histórico leva a frase
+// padrão e o balão mostra só os anexos. Os anexos já prontos que esperavam no
+// campo passam a ser desta mensagem (como no WhatsApp) e continuam na lista da
+// conversa: o Guia segue lendo todos a cada pergunta.
+//
+// `voz` (#895): { audio, url, duracao }. O texto chega depois, pela
+// transcrição; até lá a mensagem fica fora do histórico (conteúdo vazio).
+const addUserMessage = (content, { texto = content, voz = null } = {}) => {
+  const id = nextId;
   nextId += 1;
+  const anexos = arquivosPendentes()
+    .filter(item => item.estado === 'pronto')
+    .map(item => {
+      item.turno = id;
+      return {
+        id: item.id,
+        nome: item.nome,
+        tipo: item.tipo,
+        previa: item.previa,
+      };
+    });
+  const record = {
+    id,
+    message_type: 'user',
+    message: { content: voz ? '' : content },
+    texto: voz ? '' : texto,
+    anexos,
+    voz: voz
+      ? {
+          audio: markRaw(voz.audio),
+          url: voz.url,
+          duracao: voz.duracao || 0,
+          estado: 'transcrevendo',
+          texto: '',
+          erro: '',
+        }
+      : null,
+  };
   state.messages.push(record);
-  return record;
+  return state.messages[state.messages.length - 1];
+};
+
+// #895 — o andamento da transcrição de uma mensagem de voz. Pronta, o texto
+// falado vira o conteúdo da mensagem (é ele que o Guia lê no histórico).
+// Devolve `false` quando a mensagem não existe mais ("Nova conversa").
+const marcarVoz = (id, estado, { texto = '', erro = '' } = {}) => {
+  const registro = state.messages.find(m => m.id === id);
+  if (!registro?.voz) return false;
+  registro.voz.estado = estado;
+  registro.voz.erro = erro;
+  if (estado === 'pronta') {
+    registro.voz.texto = texto;
+    registro.message.content = texto;
+  }
+  return true;
 };
 
 // O backend manda `navigations`/`artigos` (listas, #636). Durante o deploy blue/green, um pedido
@@ -101,17 +163,30 @@ const addAssistantMessage = ({
   return record;
 };
 
+const revogar = url => {
+  if (url) URL.revokeObjectURL(url);
+};
+
+// O áudio e as miniaturas vivem na memória do navegador até alguém soltar.
 const reset = () => {
+  const enderecos = new Set([
+    ...state.messages.map(m => m.voz?.url),
+    ...state.arquivos.map(item => item.previa),
+  ]);
+  enderecos.forEach(revogar);
   state.messages.splice(0, state.messages.length);
   state.arquivos.splice(0, state.arquivos.length);
 };
 
-const addArquivo = nome => {
+const addArquivo = (nome, { tipo = 'documento', previa = null } = {}) => {
   const arquivo = {
     id: nextArquivoId,
     nome,
     estado: 'subindo',
     signedId: null,
+    tipo,
+    previa,
+    turno: null,
   };
   nextArquivoId += 1;
   state.arquivos.push(arquivo);
@@ -130,7 +205,9 @@ const marcarArquivo = (id, estado, signedId = null) => {
 
 const removeArquivo = id => {
   const indice = state.arquivos.findIndex(item => item.id === id);
-  if (indice >= 0) state.arquivos.splice(indice, 1);
+  if (indice < 0) return;
+  revogar(state.arquivos[indice].previa);
+  state.arquivos.splice(indice, 1);
 };
 
 // O que vai com a pergunta: só os arquivos que já subiram.
@@ -166,7 +243,9 @@ export const useAutonomiaGuideStore = () => ({
   marcarArquivo,
   removeArquivo,
   arquivosProntos,
+  arquivosPendentes,
   addUserMessage,
+  marcarVoz,
   addAssistantMessage,
   marcarAcao,
   reset,

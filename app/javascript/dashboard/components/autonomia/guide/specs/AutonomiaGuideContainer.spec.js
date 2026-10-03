@@ -34,12 +34,17 @@ vi.mock('dashboard/composables/useUISettings', () => ({
     updateUISettings: vi.fn(),
   }),
 }));
+// A conta aberta: os testes de troca de conta mudam o valor.
+let mockContaAtual;
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: getter => {
     if (getter === 'accounts/getAccount') {
       return ref(() => ({ autonomia_guide_available: true }));
     }
-    if (getter === 'getCurrentAccountId') return ref(1);
+    if (getter === 'getCurrentAccountId') {
+      mockContaAtual = mockContaAtual || ref(1);
+      return mockContaAtual;
+    }
     // `accounts/isFeatureEnabledonAccount`: as telas usadas nestes testes exigem recurso ligado
     // na conta (#636 usa rotas reais do registro, e a maioria tem `gate` de feature).
     return ref(() => true);
@@ -55,6 +60,7 @@ vi.mock('dashboard/api/autonomiaGuide', () => ({
     resposta: vi.fn(),
     executarAcao: vi.fn(),
     enviarArquivo: vi.fn(),
+    transcrever: vi.fn(),
   },
 }));
 
@@ -151,6 +157,21 @@ describe('AutonomiaGuideContainer', () => {
     useAutonomiaGuideStore().reset();
     vi.clearAllMocks();
     vi.useRealTimers();
+  });
+
+  // Revisão do #908: um áudio que esperava a vez não pode sair na conta seguinte.
+  it('recomeça o composer ao trocar de conta, descartando gravação e áudio na espera', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    const antes = wrapper.findComponent({ name: 'GuideComposer' }).vm.$.uid;
+
+    mockContaAtual.value = 2;
+    await flushPromises();
+
+    const depois = wrapper.findComponent({ name: 'GuideComposer' }).vm.$.uid;
+    expect(depois).not.toBe(antes);
+    mockContaAtual.value = 1;
+    await flushPromises();
   });
 
   it('clears the input as soon as the question enters the thread', async () => {
@@ -739,5 +760,197 @@ describe('AutonomiaGuideContainer — sugestões da tela aberta (#697)', () => {
     expect(textosDasSugestoes(wrapper)[0]).toBe(
       'AUTONOMIA_GUIDE.SUGGESTIONS.KANBAN'
     );
+  });
+});
+
+// #895 — voz e anexos no jeito do WhatsApp.
+describe('AutonomiaGuideContainer — voz e anexos', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    URL.createObjectURL = vi.fn(() => 'blob:local');
+    URL.revokeObjectURL = vi.fn();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  const composer = () => wrapper.findComponent({ name: 'GuideComposer' });
+  const audio = new Blob(['ogg'], { type: 'audio/ogg' });
+
+  it('a mensagem de voz entra como áudio, vira texto e só então o Guia é chamado', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({
+      data: { texto: 'quantos leads eu tenho' },
+    });
+    wrapper = mountGuide();
+
+    expect(composer().props('onEnviarVoz')({ audio, duracao: 4 })).toBe(true);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenCalledWith(audio);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'quantos leads eu tenho',
+        history: [{ role: 'user', content: 'quantos leads eu tenho' }],
+      })
+    );
+    const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
+    expect(balao.findComponent({ name: 'GuideVoz' }).props('src')).toBe(
+      'blob:local'
+    );
+    expect(balao.text()).toContain('quantos leads eu tenho');
+  });
+
+  it('transcrição que falha: erro no balão, nada pedido, e tentar de novo funciona', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever
+      .mockRejectedValueOnce(new Error('rede'))
+      .mockResolvedValueOnce({ data: { texto: 'cria a etiqueta urgente' } });
+    wrapper = mountGuide();
+
+    composer().props('onEnviarVoz')({ audio, duracao: 2 });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.FAILED');
+    expect(composer().props('isBusy')).toBe(false);
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.VOICE.RETRY').trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.transcrever).toHaveBeenLastCalledWith(audio);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'cria a etiqueta urgente' })
+    );
+  });
+
+  it('transcrição vazia conta como falha', async () => {
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({ data: { texto: '  ' } });
+    wrapper = mountGuide();
+
+    composer().props('onEnviarVoz')({ audio, duracao: 1 });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.VOICE.FAILED');
+  });
+
+  it('só uma foto, sem texto: o balão mostra a foto e o Guia recebe a frase padrão', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+      data: { signed_id: 'foto-1', nome: 'print.png' },
+    });
+    wrapper = mountGuide();
+    const foto = new File(['png'], 'print.png', { type: 'image/png' });
+
+    composer().vm.$emit('anexar', foto);
+    await flushPromises();
+    expect(composer().props('arquivos')).toHaveLength(1);
+
+    expect(composer().props('onSend')('')).toBe(true);
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE',
+        arquivos: ['foto-1'],
+      })
+    );
+    expect(composer().props('arquivos')).toHaveLength(0);
+    const balao = wrapper.findComponent({ name: 'GuideUserMessage' });
+    expect(balao.find('img').attributes('src')).toBe('blob:local');
+  });
+
+  it('com gravação no campo, nenhuma outra mensagem sai (o áudio não se perde)', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    composer().vm.$emit('gravando', true);
+    await flushPromises();
+
+    expect(composer().props('onSend')('oi')).toBe(false);
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.VOICE.FINISH_FIRST');
+    const sugestoes = wrapper.findAll('[data-sugestao]');
+    expect(sugestoes.length).toBeGreaterThan(0);
+    sugestoes.forEach(sugestao =>
+      expect(sugestao.attributes('disabled')).toBeDefined()
+    );
+
+    composer().vm.$emit('gravando', false);
+    await flushPromises();
+    expect(
+      wrapper.find('[data-sugestao]').attributes('disabled')
+    ).toBeUndefined();
+  });
+
+  it('a mensagem de voz sai mesmo com a gravação ainda marcada', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.transcrever.mockResolvedValue({ data: { texto: 'oi' } });
+    wrapper = mountGuide();
+    composer().vm.$emit('gravando', true);
+    await flushPromises();
+
+    expect(composer().props('onEnviarVoz')({ audio, duracao: 1 })).toBe(true);
+  });
+
+  it('o sexto anexo da conversa é recusado com aviso', async () => {
+    let numero = 0;
+    AutonomiaGuideAPI.enviarArquivo.mockImplementation(() => {
+      numero += 1;
+      return Promise.resolve({
+        data: { signed_id: `a-${numero}`, nome: `a${numero}.pdf` },
+      });
+    });
+    wrapper = mountGuide();
+
+    for (let i = 1; i <= 5; i += 1) {
+      composer().vm.$emit('anexar', new File(['x'], `a${i}.pdf`));
+    }
+    await flushPromises();
+    expect(composer().props('vagas')).toBe(0);
+
+    composer().vm.$emit('anexar', new File(['x'], 'a6.pdf'));
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.enviarArquivo).toHaveBeenCalledTimes(5);
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.LIMIT');
+  });
+
+  it('anexo que falhou ao subir não ocupa vaga', async () => {
+    AutonomiaGuideAPI.enviarArquivo.mockRejectedValue(new Error('tipo'));
+    wrapper = mountGuide();
+
+    composer().vm.$emit('anexar', new File(['x'], 'a.exe'));
+    await flushPromises();
+
+    expect(composer().props('vagas')).toBe(5);
+  });
+
+  it('o composer avisa o limite e a tela mostra a mensagem', async () => {
+    wrapper = mountGuide();
+
+    composer().vm.$emit('limiteDeAnexos');
+
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.LIMIT');
+  });
+
+  it('não envia enquanto um anexo ainda está subindo', async () => {
+    AutonomiaGuideAPI.enviarArquivo.mockReturnValue(new Promise(() => {}));
+    wrapper = mountGuide();
+
+    composer().vm.$emit('anexar', new File(['x'], 'a.pdf'));
+    await flushPromises();
+
+    expect(composer().props('onSend')('lê isso')).toBe(false);
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.WAIT');
   });
 });

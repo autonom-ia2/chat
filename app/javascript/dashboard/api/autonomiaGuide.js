@@ -1,6 +1,17 @@
 /* global axios */
 import ApiClient from './ApiClient';
 
+const EXTENSOES_DE_AUDIO = {
+  'audio/ogg': 'ogg',
+  'audio/mp3': 'mp3',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'audio/mp4': 'mp4',
+  'video/mp4': 'mp4',
+  'audio/webm': 'webm',
+  'video/webm': 'webm',
+};
+
 // Guia da Plataforma — onboarding/suporte global (gated server-side by the account's Autonomia
 // eligibility = ENV master + the Kanban AI key). O que tem desfazer o Guia faz no próprio turno
 // (#855); `executarAcao` é só para o que não tem volta, depois da confirmação explícita na tela.
@@ -25,9 +36,12 @@ class AutonomiaGuideAPI extends ApiClient {
   }
 
   // #857 — o que a pessoa falou ao microfone, em texto: { texto }.
+  // #895 — o transcritor decide o formato pela extensão do nome, então ela tem
+  // que bater com o áudio de verdade: OGG no Chrome e no Firefox, MP3 no Safari.
   transcrever(audio) {
     const form = new FormData();
-    const extensao = (audio.type || '').includes('mp4') ? 'mp4' : 'webm';
+    const tipo = (audio.type || '').split(';')[0].trim();
+    const extensao = EXTENSOES_DE_AUDIO[tipo] || 'webm';
     form.append('file', audio, `voz.${extensao}`);
     return axios.post(`${this.url}/transcricao`, form);
   }
