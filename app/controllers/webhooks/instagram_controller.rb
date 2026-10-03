@@ -43,7 +43,7 @@ class Webhooks::InstagramController < ActionController::API
   end
 
   def instagram_relay_urls
-    @instagram_relay_urls ||= GlobalConfigService.load('INSTAGRAM_WEBHOOK_RELAY_URLS', '').to_s.split(',').map(&:strip).compact_blank
+    @instagram_relay_urls ||= GlobalConfigService.load('INSTAGRAM_WEBHOOK_RELAY_URLS', '').to_s.split(',').map(&:strip).compact_blank.uniq
   end
 
   def payload_instagram_ids
