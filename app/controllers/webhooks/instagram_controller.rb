@@ -15,6 +15,7 @@ class Webhooks::InstagramController < ActionController::API
       else
         ::Webhooks::InstagramEventsJob.perform_later(entry_params)
       end
+      relay_to_other_stacks
 
       render json: :ok
     else
@@ -24,6 +25,34 @@ class Webhooks::InstagramController < ActionController::API
   end
 
   private
+
+  # The Meta app has one Instagram webhook URL shared by every stack; events for accounts
+  # connected on another stack are forwarded there (see Webhooks::InstagramRelayJob).
+  def relay_to_other_stacks
+    return unless relay_needed?
+
+    instagram_relay_urls.each do |url|
+      ::Webhooks::InstagramRelayJob.perform_later(url, meta_request_body, request.headers[META_SIGNATURE_HEADER])
+    end
+  end
+
+  def relay_needed?
+    return false if instagram_relay_urls.empty? || request.headers[::Webhooks::InstagramRelayJob::RELAY_HEADER].present?
+
+    payload_instagram_ids.any? { |instagram_id| !local_instagram_account?(instagram_id) }
+  end
+
+  def instagram_relay_urls
+    @instagram_relay_urls ||= GlobalConfigService.load('INSTAGRAM_WEBHOOK_RELAY_URLS', '').to_s.split(',').map(&:strip).compact_blank.uniq
+  end
+
+  def payload_instagram_ids
+    Array(params.to_unsafe_hash[:entry]).flat_map { |entry| instagram_ids_from_entry(entry.with_indifferent_access) }.uniq
+  end
+
+  def local_instagram_account?(instagram_id)
+    Channel::Instagram.exists?(instagram_id: instagram_id) || Channel::FacebookPage.exists?(instagram_id: instagram_id)
+  end
 
   def contains_echo_event?(entry_params)
     return false unless entry_params.is_a?(Array)
