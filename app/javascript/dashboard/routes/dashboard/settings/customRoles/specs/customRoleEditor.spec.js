@@ -53,7 +53,10 @@ const AssignStub = {
   },
 };
 
-const buildStore = (roles = []) => {
+const buildStore = (
+  roles = [],
+  account = { features: { custom_roles: true } }
+) => {
   const actions = {
     getCustomRole: vi.fn(),
     createCustomRole: vi.fn(async (_, payload) => ({ id: 9, ...payload })),
@@ -62,7 +65,9 @@ const buildStore = (roles = []) => {
   const store = createStore({
     getters: {
       getCurrentAccountId: () => 1,
-      'accounts/isFeatureEnabledonAccount': () => () => true,
+      'accounts/getAccount': () => () => (account ? { id: 1, ...account } : {}),
+      'accounts/isFeatureEnabledonAccount': () => (_, feature) =>
+        Boolean(account?.features?.[feature]),
       'customRole/getCustomRoles': () => roles,
       'customRole/getUIFlags': () => ({}),
       'agents/getAgents': () => [],
@@ -191,5 +196,21 @@ describe('CustomRoleEditor', () => {
     expect(wrapper.find('input').element.value).toBe(
       'CUSTOM_ROLE.EDITOR.COPY_NAME:SDR'
     );
+  });
+
+  it('opens from a direct link before the account has loaded', async () => {
+    const { store } = buildStore([], null);
+    const wrapper = await mountEditor(store);
+
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(ProfilePicker).exists()).toBe(true);
+  });
+
+  it('goes back to the list when the plan has no custom roles', async () => {
+    const { store, actions } = buildStore([], { features: {} });
+    await mountEditor(store);
+
+    expect(router.replace).toHaveBeenCalledWith({ name: 'custom_roles_list' });
+    expect(actions.getCustomRole).not.toHaveBeenCalled();
   });
 });

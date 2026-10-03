@@ -88,6 +88,19 @@ RSpec.describe 'Custom Roles API', type: :request do
 
         expect(body).to include('name' => 'Support')
       end
+
+      it 'names the unknown permission keys and the valid ones when it refuses the role' do
+        expect do
+          post "/api/v1/accounts/#{account.id}/custom_roles",
+               params: { custom_role: { name: 'Marketing', permissions: %w[contact_view inbox_38_read_only] } },
+               headers: administrator.create_new_auth_token
+        end.not_to change(CustomRole, :count)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        message = response.parsed_body['message']
+        expect(message).to include('unknown keys: inbox_38_read_only.')
+        expect(message).to include('Valid keys: conversation_manage')
+      end
     end
 
     context 'when the user is an agent and is authenticated' do

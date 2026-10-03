@@ -1079,6 +1079,9 @@ Rails.application.routes.draw do
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'instagram/callback', to: 'instagram/callbacks#show'
+  post 'instagram/deauthorize', to: 'instagram/data_deletions#deauthorize'
+  post 'instagram/data_deletion', to: 'instagram/data_deletions#create'
+  get 'instagram/data_deletion_status', to: 'instagram/data_deletions#status'
   get 'tiktok/callback', to: 'tiktok/callbacks#show'
   get 'notion/callback', to: 'notion/callbacks#show'
   # ----------------------------------------------------------------------

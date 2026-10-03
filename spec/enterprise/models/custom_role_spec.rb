@@ -8,6 +8,27 @@ RSpec.describe CustomRole, type: :model do
 
   describe 'validations' do
     it { is_expected.to validate_presence_of(:name) }
+
+    it 'accepts known permission keys' do
+      role = build(:custom_role, permissions: %w[contact_view campaign_manage])
+
+      expect(role).to be_valid
+    end
+
+    it 'keeps the accepted keys on the inclusion validator, where tools read them (#900)' do
+      inclusion = described_class.validators_on(:permissions).find { |v| v.is_a?(ActiveModel::Validations::InclusionValidator) }
+
+      expect(inclusion.options[:in]).to eq(CustomRole::PERMISSIONS)
+    end
+
+    it 'lists the unknown keys and the valid ones' do
+      role = build(:custom_role, permissions: %w[contact_view conversation_read_only inbox_38])
+
+      expect(role).not_to be_valid
+      message = role.errors[:permissions].first
+      expect(message).to include('conversation_read_only, inbox_38')
+      expect(message).to include(CustomRole::PERMISSIONS.join(', '))
+    end
   end
 
   describe 'filtered unread count invalidation' do
