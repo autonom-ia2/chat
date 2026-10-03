@@ -373,6 +373,15 @@ Rails.application.routes.draw do
             get 'guide/conversas/atual', to: 'guide_conversas#atual'
             get 'guide/conversas/:id', to: 'guide_conversas#show'
             delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
+            resources :decisores, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :teste
+                post :exemplos
+                get :decisoes
+              end
+            end
+            post 'decisoes/:id/resolver', to: 'decisoes#resolver'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect

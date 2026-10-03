@@ -111,4 +111,15 @@ RSpec.describe Crm::Ai::ResponsesClient do
     expect(client.delete('resp_1')).to be(false)
     expect(request).to have_been_requested.times(3)
   end
+
+  # O teste do Decisor (#858) roda dentro da requisição: uma nova tentativa usaria o prazo inteiro de novo.
+  it 'does not retry when built with max_retries: 0' do
+    sem_retry = described_class.new(credential: { api_key: 'test-key' }, max_retries: 0)
+    allow(sem_retry).to receive(:sleep)
+    request = stub_request(:post, url).to_return(status: 429)
+
+    expect { sem_retry.create(**params) }.to raise_error(described_class::Error)
+    expect(request).to have_been_requested.once
+    expect(sem_retry).not_to have_received(:sleep)
+  end
 end

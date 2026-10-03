@@ -5,11 +5,11 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 491 |
-| Sem corpo | 131 |
-| Com corpo | 360 |
-| Com corpo e formato completo | 218 (60,6%) |
-| Com corpo e formato incompleto | 142 |
+| No catálogo | 498 |
+| Sem corpo | 132 |
+| Com corpo | 366 |
+| Com corpo e formato completo | 222 (60,7%) |
+| Com corpo e formato incompleto | 144 |
 
 ## Incompletas por motivo
 
@@ -17,7 +17,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 128 |
+| leitura crua sem tipo | 130 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -65,6 +65,8 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/builder_images` — leitura crua sem tipo: file
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: agent_id, message
+- `POST autonomia/decisores/:id/exemplos` — leitura crua sem tipo: conversation_id, resposta
+- `POST autonomia/decisores/:id/teste` — leitura crua sem tipo: conversation_ids
 - `POST autonomia/guide/acoes/executar` — leitura crua sem tipo: dados
 - `POST autonomia/guide/acoes/preparar` — leitura crua sem tipo: acao, dados
 - `POST autonomia/guide/arquivos` — leitura crua sem tipo: file

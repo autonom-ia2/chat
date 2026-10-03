@@ -8,10 +8,18 @@ class AutomationRules::ActionService < ActionService
     Current.executed_by = rule
   end
 
-  def perform
-    @rule.actions.each do |action|
+  # `desde` é o índice da ação em que começar: o Decisor (#858) retoma daqui depois de responder.
+  # `message` é a mensagem que disparou a regra, quando há uma — é sobre ela que o Decisor pergunta.
+  def perform(desde: 0, message: nil)
+    @rule.actions.each_with_index do |action, indice|
+      next if indice < desde
+
       @conversation.reload
       action = action.with_indifferent_access
+      # O Decisor não roda aqui: o EventDispatcherJob é de todos os listeners. O passo vai para um job,
+      # e os passos seguintes só rodam se ele responder a chave combinada.
+      break perguntar_ao_decisor(indice, message) if action[:action_name] == Autonomia::Decisores::PASSO
+
       begin
         send(action[:action_name], action[:action_params])
       rescue StandardError => e
@@ -23,6 +31,13 @@ class AutomationRules::ActionService < ActionService
   end
 
   private
+
+  def perguntar_ao_decisor(indice, message)
+    message_id = message&.id || @conversation.messages.incoming.reorder(id: :desc).pick(:id)
+    return Rails.logger.info("[autonomia][decisor] regra=#{@rule.id} sem mensagem recebida para perguntar") if message_id.blank?
+
+    Autonomia::Decisores::PerguntarJob.perform_later(@rule.id, @conversation.id, message_id, indice)
+  end
 
   def send_attachment(blob_ids)
     return if conversation_a_tweet?
