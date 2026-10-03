@@ -50,7 +50,12 @@ vi.mock('dashboard/api/centralDeAjuda', () => ({
   default: { get: vi.fn(() => Promise.resolve({ data: { capitulos: [] } })) },
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
-  default: { chat: vi.fn(), resposta: vi.fn(), executarAcao: vi.fn() },
+  default: {
+    chat: vi.fn(),
+    resposta: vi.fn(),
+    executarAcao: vi.fn(),
+    enviarArquivo: vi.fn(),
+  },
 }));
 
 // #572 — a pergunta abre um pedido, e a resposta se busca depois.
@@ -163,6 +168,30 @@ describe('AutonomiaGuideContainer', () => {
     await esperarUmaBusca();
     await flushPromises();
     expect(useAutonomiaGuideStore().messages).toHaveLength(2);
+  });
+
+  // #857 — o arquivo anexado vai junto de cada pergunta da conversa.
+  it('sends the attached files with the question', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+      data: { signed_id: 'arquivo-1', nome: 'leads.csv' },
+    });
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Li a planilha.' },
+    });
+    wrapper = mountGuide();
+
+    const arquivo = new File(['nome'], 'leads.csv', { type: 'text/csv' });
+    wrapper
+      .findComponent({ name: 'GuideComposer' })
+      .vm.$emit('anexar', arquivo);
+    await flushPromises();
+    await perguntar(wrapper, 'Resume a planilha');
+
+    expect(AutonomiaGuideAPI.enviarArquivo).toHaveBeenCalledWith(arquivo);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ arquivos: ['arquivo-1'] })
+    );
   });
 
   // O Guia pode ler várias vezes antes de responder. Enquanto pensa, o pedido

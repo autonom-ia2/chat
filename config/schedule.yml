@@ -230,3 +230,10 @@ autonomia_guide_limpar_execucoes_job:
   cron: '30 4 * * *'
   class: 'Autonomia::Guide::LimparExecucoesJob'
   queue: scheduled_jobs
+
+# executed every day at 04:40; apaga os arquivos anexados na conversa com o Guia depois que o link
+# deles venceu (1 dia), quando nenhuma pergunta consegue mais lê-los (#857).
+autonomia_guide_limpar_arquivos_job:
+  cron: '40 4 * * *'
+  class: 'Autonomia::Guide::LimparArquivosJob'
+  queue: scheduled_jobs

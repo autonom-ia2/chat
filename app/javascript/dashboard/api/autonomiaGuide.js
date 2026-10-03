@@ -15,12 +15,28 @@ class AutonomiaGuideAPI extends ApiClient {
   // #572 — não devolve a resposta: abre o pedido e devolve { id, status }. O
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
   // aqui dentro esbarrava no teto de 15s do servidor e morria com erro 500.
-  chat({ message, history, routeContext } = {}) {
+  chat({ message, history, routeContext, arquivos = [] } = {}) {
     return axios.post(`${this.url}/chat`, {
       message,
       history,
       route_context: routeContext,
+      arquivos,
     });
+  }
+
+  // #857 — o que a pessoa falou ao microfone, em texto: { texto }.
+  transcrever(audio) {
+    const form = new FormData();
+    const extensao = (audio.type || '').includes('mp4') ? 'mp4' : 'webm';
+    form.append('file', audio, `voz.${extensao}`);
+    return axios.post(`${this.url}/transcricao`, form);
+  }
+
+  // #857 — anexa um arquivo à conversa; volta { signed_id, nome }.
+  enviarArquivo(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/arquivos`, form);
   }
 
   // { status: 'pending' } enquanto o Guia pensa; depois 'done' com a resposta

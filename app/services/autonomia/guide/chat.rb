@@ -34,14 +34,17 @@ module Autonomia
       # tem que cair para 1 — senão o Guia volta a morrer em pergunta aberta.
       MAX_RODADAS = 10
 
-      def initialize(account:, user:, message:, history: [], route_context: nil)
+      # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
+      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [])
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
         @message = message.to_s
         @history = Array(history)
         @route_context = route_context.to_s
+        @arquivos = Array(arquivos)
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def perform
         return unavailable if @message.strip.blank?
@@ -67,7 +70,10 @@ module Autonomia
           # irrelevantes: tela errada no botão e confiança baixa, que o portão transforma em
           # "o guia está indisponível".
           retrieval_query: @message,
-          allow_web_search: false, # KB-only: o Guia responde só da nossa base, nunca de fonte externa
+          # #857 — o Guia pesquisa na internet quando precisa, por decisão dele, e lê os
+          # arquivos que a pessoa anexou na conversa. O que vem de fora é dado, nunca ordem.
+          allow_web_search: true,
+          documents: ::Autonomia::Guide::Arquivos.new(account: @account).ler(@arquivos),
           # #568 — QUEM está perguntando. É com a permissão dela que as ferramentas
           # leem a conta e preparam a mudança; não existe permissão "do agente".
           operador: contexto,

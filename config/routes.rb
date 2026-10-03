@@ -364,6 +364,9 @@ Rails.application.routes.draw do
             post 'guide/acoes/executar', to: 'guide#executar_acao'
             # #855 — o que o Guia fez nos últimos 5 dias, e o desfazer.
             get 'guide/execucoes', to: 'guide#execucoes'
+            # #857 — arquivo anexado na conversa com o Guia.
+            post 'guide/arquivos', to: 'guide#arquivo'
+            post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection

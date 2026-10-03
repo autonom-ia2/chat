@@ -2217,6 +2217,19 @@
       "LATER": "Later"
     },
     "SUGGESTIONS_THIS_SCREEN": "About this screen",
-    "SUGGESTION_ARTICLE": "Explain: {titulo}"
+    "SUGGESTION_ARTICLE": "Explain: {titulo}",
+    "FILE": {
+      "ATTACH": "Attach a file for the Guide to read",
+      "REMOVE": "Remove {nome}",
+      "FAILED": "I could not attach this file. Try again."
+    },
+    "VOICE": {
+      "START": "Talk to the Guide",
+      "STOP": "Stop recording",
+      "RECORDING": "Recording… {tempo} — tap the square to stop.",
+      "TRANSCRIBING": "Turning what you said into text…",
+      "FAILED": "I could not understand the recording. Try again.",
+      "NO_MIC": "I need access to your microphone. Allow it in the browser and try again."
+    }
   }
 }

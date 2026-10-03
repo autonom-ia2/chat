@@ -8,7 +8,12 @@ import { reactive, readonly } from 'vue';
 
 const state = reactive({
   messages: [],
+  // #857 — arquivos anexados nesta conversa: { id, nome, estado, signedId }.
+  // Valem para a conversa inteira: o Guia lê todos a cada pergunta.
+  arquivos: [],
 });
+
+let nextArquivoId = 1;
 
 let nextId = 1;
 
@@ -98,7 +103,41 @@ const addAssistantMessage = ({
 
 const reset = () => {
   state.messages.splice(0, state.messages.length);
+  state.arquivos.splice(0, state.arquivos.length);
 };
+
+const addArquivo = nome => {
+  const arquivo = {
+    id: nextArquivoId,
+    nome,
+    estado: 'subindo',
+    signedId: null,
+  };
+  nextArquivoId += 1;
+  state.arquivos.push(arquivo);
+  return arquivo.id;
+};
+
+// Devolve `false` quando o arquivo saiu da lista no meio do envio (removido ou
+// "Nova conversa"): quem chama não deve tratar o envio como parte da conversa.
+const marcarArquivo = (id, estado, signedId = null) => {
+  const arquivo = state.arquivos.find(item => item.id === id);
+  if (!arquivo) return false;
+  arquivo.estado = estado;
+  arquivo.signedId = signedId;
+  return true;
+};
+
+const removeArquivo = id => {
+  const indice = state.arquivos.findIndex(item => item.id === id);
+  if (indice >= 0) state.arquivos.splice(indice, 1);
+};
+
+// O que vai com a pergunta: só os arquivos que já subiram.
+const arquivosProntos = () =>
+  state.arquivos
+    .filter(item => item.estado === 'pronto')
+    .map(item => item.signedId);
 
 // History for the backend chat call: [{ role: 'user' | 'assistant', content }].
 const toHistory = () =>
@@ -122,6 +161,11 @@ const marcarAcao = (id, estado, resultado = null) => {
 
 export const useAutonomiaGuideStore = () => ({
   messages: readonly(state).messages,
+  arquivos: readonly(state).arquivos,
+  addArquivo,
+  marcarArquivo,
+  removeArquivo,
+  arquivosProntos,
   addUserMessage,
   addAssistantMessage,
   marcarAcao,

@@ -762,6 +762,11 @@ pt_BR:
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
+      file:
+        required: 'Escolha um arquivo para anexar.'
+        invalid_type: 'Eu leio PDF, Word, Excel, CSV, texto, JSON, áudio e imagem.'
+        too_large: 'Este arquivo passa de 25 MB.'
+        not_audio: 'Não consegui ouvir esta gravação. Tente gravar de novo.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
