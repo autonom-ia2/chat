@@ -539,6 +539,11 @@
   description: 'Configure this if you want to use a different Instagram API version. Make sure its prefixed with `v`'
   value: 'v22.0'
   locked: true
+- name: INSTAGRAM_WEBHOOK_RELAY_URLS
+  display_title: 'Instagram webhook relay URLs'
+  description: 'Comma-separated Instagram webhook URLs of other installations sharing this Meta app (e.g. https://other.example.com/webhooks/instagram). Events for Instagram accounts not connected here are forwarded to them. Leave empty to disable.'
+  value: ''
+  locked: false
 # ------- End of Instagram Channel Related Config ------- #
 
 # ------- TikTok Channel Related Config ------- #
