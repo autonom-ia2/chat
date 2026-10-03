@@ -22,15 +22,18 @@ class AutonomiaGuideAPI extends ApiClient {
 
   // history: [{ role: 'user' | 'assistant', content }]
   // routeContext: the current route name (so the guide knows where the user is).
+  // routeParams: os parâmetros da rota (#859) — o servidor guarda só os números, como
+  // "Registro aberto na tela: id=42". É contexto, não autorização.
   //
   // #572 — não devolve a resposta: abre o pedido e devolve { id, status }. O
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
   // aqui dentro esbarrava no teto de 15s do servidor e morria com erro 500.
-  chat({ message, history, routeContext, arquivos = [] } = {}) {
+  chat({ message, history, routeContext, routeParams, arquivos = [] } = {}) {
     return axios.post(`${this.url}/chat`, {
       message,
       history,
       route_context: routeContext,
+      route_params: routeParams,
       arquivos,
     });
   }

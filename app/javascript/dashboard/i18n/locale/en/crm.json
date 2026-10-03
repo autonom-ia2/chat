@@ -2253,5 +2253,124 @@
       "FINISH_FIRST": "Send or delete the recording before sending another message.",
       "TIME": "{atual} / {total}"
     }
+  },
+  "AUTOMACOES": {
+    "MENU": "Automations",
+    "LISTA": {
+      "TITULO": "Automations",
+      "SUBTITULO": "What the platform does on its own for you. Turn them on, off, or ask the Guide for a new one.",
+      "NOVA": "New automation",
+      "CARREGANDO": "Loading your automations",
+      "ERRO": "I could not load your automations. Check your connection and try again.",
+      "TENTAR_DE_NOVO": "Try again",
+      "VAZIO_TITULO": "You have no automations yet",
+      "VAZIO_TEXTO": "Start from one of these templates. The Guide builds it with you, and nothing turns on until you say so.",
+      "SELO_GUIA": "Created by the Guide",
+      "LIGADA": "On",
+      "DESLIGADA": "Off",
+      "LIGOU": "Automation turned on. It applies to the next conversations.",
+      "DESLIGOU": "Automation turned off. Nothing happens until you turn it on again.",
+      "FALHA_TROCA": "I could not change it now. Try again.",
+      "ABRIR": "Open the automation {nome}"
+    },
+    "MODELOS": {
+      "TITULO": "Ready-made templates",
+      "SINISTRO": {
+        "TITULO": "Sort out claim notices",
+        "TEXTO": "Adds the label and hands it to the right team when the message is about a claim.",
+        "PEDIDO": "I want an automation: when a message about a claim arrives, add the label claim and hand the conversation to the claims team."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Say welcome",
+        "TEXTO": "Sends a message saying you will reply soon when a new conversation starts.",
+        "PEDIDO": "I want an automation: when a new conversation starts, send a welcome message saying we will reply soon."
+      },
+      "AGRADECER": {
+        "TITULO": "Say thanks when closing",
+        "TEXTO": "Sends a thank-you when the conversation is resolved.",
+        "PEDIDO": "I want an automation: when the conversation is resolved, send a message thanking the contact."
+      }
+    },
+    "CONVERSA": {
+      "TITULO_NOVA": "New automation",
+      "TITULO_EDITAR": "Automation",
+      "VOLTAR": "Back to Automations",
+      "INTRO": "Tell me in your own words what you want to happen. The Guide builds the automation, and it stays off until you turn it on.",
+      "GUIA_FORA": "The Guide is not on for this account. You can still build the automation in manual mode.",
+      "MODO_MANUAL": "Edit in manual mode",
+      "MONTAR_MANUAL": "I prefer to build it in manual mode",
+      "CARREGANDO": "Loading the automation",
+      "ERRO": "I could not find this automation. It may have been deleted.",
+      "LIGAR": "Turn on",
+      "DESLIGAR": "Turn off",
+      "LIGADA_AVISO": "On: it already applies to the next conversations.",
+      "DESLIGADA_AVISO": "Off: nothing happens until you turn it on.",
+      "SO_LEITURA": "You can view and test this automation. Turning it on and changing it is up to the admins.",
+      "INTRO_GUIA": "Tell me what you want to automate, or start from a template."
+    },
+    "RESUMO": {
+      "TITULO": "How it works",
+      "QUANDO": "When",
+      "SE": "If",
+      "ENTAO": "Then",
+      "SEM_CONDICAO": "In every conversation",
+      "VAZIO": "As soon as the Guide builds the automation, the summary shows up here."
+    },
+    "ENSAIO": {
+      "TITULO": "Test before turning on",
+      "BOTAO": "Test with real cases",
+      "EXPLICA": "See what it would do in the most recent conversations. Nothing is sent or changed.",
+      "TESTANDO": "Testing on recent conversations",
+      "RESUMO": "{casaram} of {total} recent conversations would be affected.",
+      "SEM_CONVERSA": "There are no conversations to test yet.",
+      "CASARIA": "Would be affected",
+      "NAO_CASARIA": "Would not be affected",
+      "FARIA": "Would: {acoes}",
+      "CONTATO_SEM_NOME": "Contact without a name",
+      "SEM_TESTE": "The part that depends on something changing at that moment ({partes}) is left out of the test.",
+      "NAO_TESTAVEL": "This automation only acts when something changes at that moment ({partes}). That can't be tested on conversations that already happened: turn it on and watch the first times.",
+      "ERRO": "The test did not answer now. Try again.",
+      "ABRIR_CONVERSA": "Open the conversation"
+    },
+    "QUANDO": {
+      "MESSAGE_CREATED": "When a message arrives",
+      "CONVERSATION_CREATED": "When a new conversation starts",
+      "CONVERSATION_UPDATED": "When a conversation changes",
+      "CONVERSATION_RESOLVED": "When a conversation is resolved",
+      "CONVERSATION_OPENED": "When a conversation is reopened",
+      "DESCONHECIDO": "When something happens in the conversation"
+    },
+    "ESPERA_MINUTOS": "and {n} minutes go by",
+    "ESPERA_HORAS": "and {n} hours go by",
+    "OPERADOR": {
+      "equal_to": "is",
+      "not_equal_to": "is not",
+      "contains": "contains",
+      "does_not_contain": "does not contain",
+      "is_present": "is filled in",
+      "is_not_present": "is empty",
+      "is_greater_than": "is greater than",
+      "is_less_than": "is less than",
+      "days_before": "is in",
+      "starts_with": "starts with"
+    },
+    "MUDOU": "{atributo} changes from {de} to {para}",
+    "LIGA": {
+      "AND": "and",
+      "OR": "or"
+    },
+    "OU": "or",
+    "STATUS": {
+      "OPEN": "open",
+      "RESOLVED": "resolved",
+      "PENDING": "pending",
+      "SNOOZED": "snoozed"
+    },
+    "SIM": "yes",
+    "NAO": "no",
+    "NUMERO": "no. {id}",
+    "ACAO_DESCONHECIDA": "a step this screen cannot describe yet",
+    "FRASE": "{quando}, if {condicoes} → {acoes}",
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
   }
 }

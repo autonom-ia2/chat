@@ -5,10 +5,10 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 490 |
+| No catálogo | 491 |
 | Sem corpo | 130 |
-| Com corpo | 360 |
-| Com corpo e formato completo | 218 (60,6%) |
+| Com corpo | 361 |
+| Com corpo e formato completo | 219 (60,7%) |
 | Com corpo e formato incompleto | 142 |
 
 ## Incompletas por motivo
@@ -68,7 +68,7 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/guide/acoes/executar` — leitura crua sem tipo: acao, dados
 - `POST autonomia/guide/acoes/preparar` — leitura crua sem tipo: acao, dados
 - `POST autonomia/guide/arquivos` — leitura crua sem tipo: file
-- `POST autonomia/guide/chat` — leitura crua sem tipo: arquivos, history, message, route_context
+- `POST autonomia/guide/chat` — leitura crua sem tipo: arquivos, history, message, route_context, route_params
 - `POST autonomia/guide/transcricao` — leitura crua sem tipo: file
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior, quote_agent.broker_name, quote_agent.business_hours, quote_agent.name
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name

@@ -89,7 +89,7 @@
     "modelo": "AutomationRule",
     "origem": [
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:44",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:88"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -1190,12 +1190,12 @@
     "modelo": "AutomationRule",
     "origem": [
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:28",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:65",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:29",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:88",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:74"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
     ],
     "sem_corpo": false
   },
@@ -4316,10 +4316,10 @@
     "modelo": "AutomationRule",
     "origem": [
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:14",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:65",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:20",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:15",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:74"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
     ],
     "sem_corpo": false
   },
@@ -4335,7 +4335,21 @@
     "origem": [
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:49",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:50",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:88"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
+    ],
+    "sem_corpo": false
+  },
+  "POST automation_rules/:id/ensaio": {
+    "campos": {
+      "quantidade": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/automation_rules#ensaio",
+    "modelo": "AutomationRule",
+    "origem": [
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:60",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:64",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -4895,16 +4909,18 @@
       "arquivos": {},
       "history": {},
       "message": {},
-      "route_context": {}
+      "route_context": {},
+      "route_params": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/guide#chat",
     "motivos": [
-      "leitura crua sem tipo: arquivos, history, message, route_context"
+      "leitura crua sem tipo: arquivos, history, message, route_context, route_params"
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:18",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:191",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:24",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:178",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:23"
@@ -10667,12 +10683,12 @@
     "modelo": "AutomationRule",
     "origem": [
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:28",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:65",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:29",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:88",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:74"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
     ],
     "sem_corpo": false
   },

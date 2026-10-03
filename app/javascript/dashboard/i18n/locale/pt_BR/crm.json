@@ -2254,5 +2254,124 @@
       "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
       "TIME": "{atual} / {total}"
     }
+  },
+  "AUTOMACOES": {
+    "MENU": "Automações",
+    "LISTA": {
+      "TITULO": "Automações",
+      "SUBTITULO": "O que a plataforma faz sozinha por você. Ligue, desligue ou peça uma nova ao Guia.",
+      "NOVA": "Nova automação",
+      "CARREGANDO": "Carregando suas automações",
+      "ERRO": "Não consegui carregar suas automações. Confira a internet e tente de novo.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "VAZIO_TITULO": "Você ainda não tem automações",
+      "VAZIO_TEXTO": "Comece por um destes modelos. O Guia monta com você, e nada liga sem você mandar.",
+      "SELO_GUIA": "Criada pelo Guia",
+      "LIGADA": "Ligada",
+      "DESLIGADA": "Desligada",
+      "LIGOU": "Automação ligada. Ela já vale para as próximas conversas.",
+      "DESLIGOU": "Automação desligada. Nada mais acontece até você ligar de novo.",
+      "FALHA_TROCA": "Não consegui mudar agora. Tente de novo.",
+      "ABRIR": "Abrir a automação {nome}"
+    },
+    "MODELOS": {
+      "TITULO": "Modelos prontos",
+      "SINISTRO": {
+        "TITULO": "Separar avisos de sinistro",
+        "TEXTO": "Coloca a etiqueta e passa para o time certo quando a mensagem fala de sinistro.",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem falando de sinistro, colocar a etiqueta sinistro e passar a conversa para o time de sinistros."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Dar boas-vindas",
+        "TEXTO": "Manda uma mensagem avisando que já vão responder quando uma conversa nova começa.",
+        "PEDIDO": "Quero uma automação: quando uma conversa nova começar, mandar uma mensagem de boas-vindas dizendo que já vamos responder."
+      },
+      "AGRADECER": {
+        "TITULO": "Agradecer ao encerrar",
+        "TEXTO": "Manda um obrigado quando a conversa é resolvida.",
+        "PEDIDO": "Quero uma automação: quando a conversa for resolvida, mandar uma mensagem agradecendo o contato."
+      }
+    },
+    "CONVERSA": {
+      "TITULO_NOVA": "Nova automação",
+      "TITULO_EDITAR": "Automação",
+      "VOLTAR": "Voltar para Automações",
+      "INTRO": "Conte com suas palavras o que você quer que aconteça. O Guia monta a automação, e ela fica desligada até você ligar.",
+      "GUIA_FORA": "O Guia não está ligado nesta conta. Você ainda pode montar a automação no modo manual.",
+      "MODO_MANUAL": "Editar no modo manual",
+      "MONTAR_MANUAL": "Prefiro montar no modo manual",
+      "CARREGANDO": "Carregando a automação",
+      "ERRO": "Não encontrei esta automação. Ela pode ter sido apagada.",
+      "LIGAR": "Ligar",
+      "DESLIGAR": "Desligar",
+      "LIGADA_AVISO": "Ligada: já está valendo para as próximas conversas.",
+      "DESLIGADA_AVISO": "Desligada: nada acontece até você ligar.",
+      "SO_LEITURA": "Você pode ver e testar esta automação. Ligar e mudar fica com quem administra.",
+      "INTRO_GUIA": "Me conte o que você quer automatizar, ou comece por um modelo."
+    },
+    "RESUMO": {
+      "TITULO": "Como ela funciona",
+      "QUANDO": "Quando",
+      "SE": "Se",
+      "ENTAO": "Então",
+      "SEM_CONDICAO": "Em toda conversa",
+      "VAZIO": "Assim que o Guia montar a automação, o resumo aparece aqui."
+    },
+    "ENSAIO": {
+      "TITULO": "Testar antes de ligar",
+      "BOTAO": "Testar com casos reais",
+      "EXPLICA": "Veja o que ela faria nas conversas mais recentes. Nada é enviado nem alterado.",
+      "TESTANDO": "Testando nas conversas recentes",
+      "RESUMO": "{casaram} de {total} conversas recentes seriam afetadas.",
+      "SEM_CONVERSA": "Ainda não há conversas para testar.",
+      "CASARIA": "Seria afetada",
+      "NAO_CASARIA": "Não seria afetada",
+      "FARIA": "Faria: {acoes}",
+      "CONTATO_SEM_NOME": "Contato sem nome",
+      "SEM_TESTE": "A parte que depende de algo mudar na hora ({partes}) não entra no teste.",
+      "NAO_TESTAVEL": "Esta automação só age quando algo muda na hora ({partes}). Isso não dá para testar em conversas que já aconteceram: ligue e acompanhe as primeiras vezes.",
+      "ERRO": "O teste não respondeu agora. Tente de novo.",
+      "ABRIR_CONVERSA": "Abrir a conversa"
+    },
+    "QUANDO": {
+      "MESSAGE_CREATED": "Quando chega uma mensagem",
+      "CONVERSATION_CREATED": "Quando uma conversa nova começa",
+      "CONVERSATION_UPDATED": "Quando uma conversa muda",
+      "CONVERSATION_RESOLVED": "Quando uma conversa é resolvida",
+      "CONVERSATION_OPENED": "Quando uma conversa é reaberta",
+      "DESCONHECIDO": "Quando algo acontece na conversa"
+    },
+    "ESPERA_MINUTOS": "e passam {n} minutos",
+    "ESPERA_HORAS": "e passam {n} horas",
+    "OPERADOR": {
+      "equal_to": "é",
+      "not_equal_to": "não é",
+      "contains": "contém",
+      "does_not_contain": "não contém",
+      "is_present": "está preenchido",
+      "is_not_present": "está vazio",
+      "is_greater_than": "é maior que",
+      "is_less_than": "é menor que",
+      "days_before": "é daqui a",
+      "starts_with": "começa com"
+    },
+    "MUDOU": "{atributo} muda de {de} para {para}",
+    "LIGA": {
+      "AND": "e",
+      "OR": "ou"
+    },
+    "OU": "ou",
+    "STATUS": {
+      "OPEN": "aberta",
+      "RESOLVED": "resolvida",
+      "PENDING": "pendente",
+      "SNOOZED": "adiada"
+    },
+    "SIM": "sim",
+    "NAO": "não",
+    "NUMERO": "nº {id}",
+    "ACAO_DESCONHECIDA": "um passo que esta tela ainda não sabe descrever",
+    "FRASE": "{quando}, se {condicoes} → {acoes}",
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
   }
 }

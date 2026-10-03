@@ -21,7 +21,7 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       pedido,
       { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
         'mensagem' => params[:message].to_s, 'historico' => history_param,
-        'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s,
+        'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'locale' => I18n.locale.to_s,
         'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
     )
 
@@ -179,6 +179,23 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       next unless h.is_a?(Hash) || h.is_a?(ActionController::Parameters)
 
       { role: h[:role].to_s, content: h[:content].to_s }
+    end
+  end
+
+  MAX_PARAMETROS_DA_TELA = 5
+
+  # #859 — o registro aberto na tela (ex.: a automação 42), para o Guia saber do que a
+  # pessoa fala. É contexto, não autorização: só entram números inteiros positivos, e a
+  # conta não entra porque o Guia já sabe qual é.
+  def parametros_da_tela
+    bruto = params[:route_params]
+    return {} unless bruto.respond_to?(:to_unsafe_h)
+
+    bruto.to_unsafe_h.each_with_object({}) do |(chave, valor), saida|
+      next if chave.to_s == 'accountId' || saida.size >= MAX_PARAMETROS_DA_TELA
+
+      numero = Integer(valor.to_s, 10, exception: false)
+      saida[chave.to_s.first(40)] = numero if numero&.positive?
     end
   end
 end

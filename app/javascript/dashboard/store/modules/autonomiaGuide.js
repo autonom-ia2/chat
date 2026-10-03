@@ -14,7 +14,15 @@ const state = reactive({
   // (endereço local do navegador) e `turno` é a mensagem que levou o arquivo —
   // `null` enquanto ele espera no campo de digitar.
   arquivos: [],
+  // #859 — a pergunta que ainda espera resposta do servidor: { chave, conta, id,
+  // dono }. Fica aqui, e não em quem perguntou, porque a conversa embutida numa
+  // tela sai junto com a tela: quem pergunta "solta" o pedido ao sair, e o painel
+  // lateral (que está sempre montado) adota e termina de buscar a resposta.
+  // `id` chega quando o servidor aceita a pergunta; `dono` é quem está buscando.
+  pendente: null,
 });
+
+let nextPendente = 1;
 
 let nextArquivoId = 1;
 
@@ -176,7 +184,43 @@ const reset = () => {
   enderecos.forEach(revogar);
   state.messages.splice(0, state.messages.length);
   state.arquivos.splice(0, state.arquivos.length);
+  state.pendente = null;
 };
+
+// #859 — ciclo da pergunta pendente. Toda função recebe a `chave` (ou o dono)
+// e não faz nada quando o pendente já é outro ou sumiu ("Nova conversa", troca
+// de conta): resposta velha nunca entra na conversa nova.
+const abrirPendente = (conta, dono) => {
+  const chave = nextPendente;
+  nextPendente += 1;
+  state.pendente = { chave, conta, id: null, dono };
+  return chave;
+};
+
+const pendenteAtivo = chave => state.pendente?.chave === chave;
+
+const registrarPedidoPendente = (chave, id) => {
+  if (pendenteAtivo(chave)) state.pendente.id = id;
+};
+
+const soltarPendente = dono => {
+  if (state.pendente?.dono === dono) state.pendente.dono = null;
+};
+
+// Só adota pedido sem dono, que o servidor já aceitou, da mesma conta.
+const adotarPendente = (conta, dono) => {
+  const pendente = state.pendente;
+  if (!pendente || pendente.dono || !pendente.id || pendente.conta !== conta)
+    return null;
+  pendente.dono = dono;
+  return { chave: pendente.chave, id: pendente.id };
+};
+
+const fecharPendente = chave => {
+  if (pendenteAtivo(chave)) state.pendente = null;
+};
+
+const temPendente = () => Boolean(state.pendente);
 
 const addArquivo = (nome, { tipo = 'documento', previa = null } = {}) => {
   const arquivo = {
@@ -250,6 +294,14 @@ export const useAutonomiaGuideStore = () => ({
   marcarAcao,
   reset,
   toHistory,
+  pendente: () => readonly(state).pendente,
+  temPendente,
+  abrirPendente,
+  pendenteAtivo,
+  registrarPedidoPendente,
+  soltarPendente,
+  adotarPendente,
+  fecharPendente,
 });
 
 export default useAutonomiaGuideStore;

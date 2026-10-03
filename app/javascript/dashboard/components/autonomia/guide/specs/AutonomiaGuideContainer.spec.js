@@ -954,3 +954,182 @@ describe('AutonomiaGuideContainer — voz e anexos', () => {
     expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.WAIT');
   });
 });
+
+// #859 — a mesma conversa embutida na tela de Automações.
+describe('AutonomiaGuideContainer — embutido', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    rotaAtual.name = 'home';
+    delete rotaAtual.params;
+    delete rotaAtual.meta;
+  });
+
+  const montarEmbutido = props =>
+    mount(AutonomiaGuideContainer, {
+      attachTo: document.body,
+      props: { embutido: true, ...props },
+      global: {
+        mocks: { $t: key => key },
+        directives: { onClickOutside: {}, dompurifyHtml: {} },
+      },
+    });
+
+  it('o painel lateral não abre por cima da tela que já traz a conversa', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.find('[role="complementary"]').exists()).toBe(false);
+  });
+
+  it('embutido: sem cabeçalho, com as sugestões e a introdução da tela', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    wrapper = montarEmbutido({
+      sugestoes: [{ rotulo: 'Agradecer', pergunta: 'Quero agradecer' }],
+      introducao: 'Conte o que automatizar.',
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[role="region"]').exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'GuideHeader' }).exists()).toBe(false);
+    expect(wrapper.text()).toContain('Conte o que automatizar.');
+    expect(wrapper.find('[data-sugestao]').text()).toBe('Agradecer');
+  });
+
+  it('manda o registro aberto, avisa a tela do que o Guia fez e não apaga a conversa ao sair', async () => {
+    rotaAtual.name = 'automacoes_editar';
+    rotaAtual.params = { accountId: '1', id: '42' };
+    pedidoAberto();
+    const execucao = {
+      id: 9,
+      passos: [{ acao: 'PATCH automation_rules/:id', ok: true, registro: 42 }],
+    };
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Liguei.', execucao },
+    });
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'liga esta');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeContext: 'automacoes_editar',
+        routeParams: { accountId: '1', id: '42' },
+      })
+    );
+    expect(wrapper.emitted('execucao')).toEqual([[execucao]]);
+
+    wrapper.unmount();
+    wrapper = null;
+    expect(useAutonomiaGuideStore().messages).toHaveLength(2);
+  });
+
+  it('o modelo escolhido na lista vira a primeira pergunta, uma vez só', async () => {
+    pedidoAberto();
+    wrapper = montarEmbutido({ pedidoInicial: 'Quero agradecer' });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Quero agradecer' })
+    );
+  });
+  it('avisa a tela quando o pedido inicial sai', async () => {
+    pedidoAberto();
+    wrapper = montarEmbutido({ pedidoInicial: 'Quero agradecer' });
+    await flushPromises();
+
+    expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
+  });
+
+  // Revisão #859: a conversa embutida sai junto com a tela. Antes, a busca
+  // parava e a resposta (e o que o Guia fez) nunca entrava na conversa.
+  it('sair da tela no meio da resposta: o painel lateral termina de buscar', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta
+      .mockResolvedValueOnce({ data: { status: 'pending' } })
+      .mockResolvedValue({
+        data: { status: 'done', available: true, text: 'Criei a automação.' },
+      });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'cria uma automação que etiqueta sinistro');
+    await esperarUmaBusca();
+    await flushPromises();
+    wrapper.unmount();
+    wrapper = null;
+    await esperarUmaBusca();
+    await flushPromises();
+
+    const { messages } = useAutonomiaGuideStore();
+    expect(messages).toHaveLength(2);
+    expect(messages[1].message.content).toBe('Criei a automação.');
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-1');
+    expect(useAutonomiaGuideStore().temPendente()).toBe(false);
+    painel.unmount();
+  });
+
+  it('sair antes de o servidor aceitar a pergunta: o painel adota quando ela é aceita', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    let aceitar;
+    AutonomiaGuideAPI.chat.mockReturnValue(
+      new Promise(resolve => {
+        aceitar = resolve;
+      })
+    );
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Pronto.' },
+    });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'cria uma automação');
+    wrapper.unmount();
+    wrapper = null;
+    aceitar({ data: { id: 'pedido-2', status: 'pending' } });
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-2');
+    expect(useAutonomiaGuideStore().messages[1].message.content).toBe(
+      'Pronto.'
+    );
+    painel.unmount();
+  });
+
+  it('enquanto outra parte da tela espera a resposta, nenhuma pergunta nova sai', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+    await perguntar(wrapper, 'primeira');
+    wrapper.unmount();
+    wrapper = montarEmbutido();
+    await flushPromises();
+
+    await perguntar(wrapper, 'segunda');
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(
+      wrapper.findComponent({ name: 'GuideComposer' }).props('isBusy')
+    ).toBe(true);
+    painel.unmount();
+  });
+});
