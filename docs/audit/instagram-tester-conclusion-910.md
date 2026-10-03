@@ -62,6 +62,8 @@ As falhas anteriores foram reproduzidas, não omitidas. Foram corrigidos keyword
 
 O workflow dedicado tem quatro jobs obrigatórios: preparador Python, contratos Node/ESLint, Vitest e browser/RuboCop/sintaxe. Não usa `continue-on-error`; upload de evidência sem arquivos falha. Os checks gerais históricos de RuboCop e segurança são informativos e não substituem esse gate focal. Os 18 checks aprovados em e685cb0018 não cobrem estas correções; conferir o CI do commit novo antes de review de publicação.
 
+O primeiro CI desta rodada encontrou um contexto de variável não permitido no nível do job e formatação no caso QA da flag OFF. Foram corrigidos somente o caminho de browser e a indentação do harness; o ESLint estrito dos oito arquivos do gate passou localmente. Componentes e hashes das 60 capturas permanecem iguais. Esses ajustes não repetem nem substituem a validação operacional.
+
 ## Alvo real autorizado
 
 Rodrigo indicou **@placementseg, conta 18 do chat.hub2you.ai** para o teste real. A aba já aberta dessa conta foi conferida pelo produto: o wizard publicado ainda mostra apenas **Continuar com o Instagram**, sem busca/seleção/convite do tester. Isso é uma observação da UI atual, não prova da versão/flag do backend. Não houve convite, autorização, criação de caixa ou envio de DM nessa conferência. A homologação do código novo permanece pendente de publicação aprovada e configuração operacional. Não contornar a chamada Meta anteriormente bloqueada. Não foi lido cookie, senha ou HAR.

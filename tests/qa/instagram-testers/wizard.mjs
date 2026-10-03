@@ -445,14 +445,16 @@ const cases = [
         'Feature-off fez request antes do CTA legado'
       );
       assert.equal(
-        await q.page.getByRole('button', {
-          name: await q.page.evaluate(() =>
-            window.instagramQa.t(
-              'INBOX_MGMT.ADD.INSTAGRAM.CONTINUE_WITH_INSTAGRAM'
-            )
-          ),
-          exact: true,
-        }).count(),
+        await q.page
+          .getByRole('button', {
+            name: await q.page.evaluate(() =>
+              window.instagramQa.t(
+                'INBOX_MGMT.ADD.INSTAGRAM.CONTINUE_WITH_INSTAGRAM'
+              )
+            ),
+            exact: true,
+          })
+          .count(),
         1,
         'CTA OAuth legado não está visível'
       );
