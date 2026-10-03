@@ -109,7 +109,7 @@ RSpec.describe 'Guia da Plataforma — conversas guardadas', type: :request do
 
       expect(response.parsed_body['conversas'].pluck('id')).to eq([minha.id])
       expect(response.parsed_body['conversas'].first['turnos']).to eq(1)
-      expect(response.parsed_body['retencao_dias']).to eq(30)
+      expect(response.parsed_body).not_to have_key('retencao_dias')
     end
   end
 

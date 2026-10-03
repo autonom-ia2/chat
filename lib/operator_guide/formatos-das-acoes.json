@@ -153,8 +153,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/guide_conversas#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:35",
-      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:47"
+      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:32",
+      "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb:44"
     ],
     "sem_corpo": true
   },

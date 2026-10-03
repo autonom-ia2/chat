@@ -13,9 +13,8 @@ seguros (`args_registraveis` em `app/services/autonomia/agents/tools/native/guia
 fica só o nome, em `omitidos`. De `ler_pagina` fica só o domínio. Quando o portão retém a resposta,
 fica o texto retido, cortado em 2.000 caracteres.
 
-Tudo sai 30 dias depois da última mensagem da conversa (`Autonomia::Guide::LimparConversasJob`, todo
-dia às 04:50). A pessoa também apaga uma conversa pelo histórico do painel. Um relato precisa ser
-investigado dentro desse prazo.
+A conversa fica guardada sem prazo, sem limpeza automática (decisão do Rodrigo, 03/10/2026). Só sai
+quando a pessoa apaga pelo histórico do painel — e aí os turnos e o diagnóstico saem junto, sem volta.
 
 ## Como consultar
 

@@ -7,16 +7,11 @@
 # É de QUEM perguntou: as respostas saíram com a permissão dela, e outra pessoa
 # da mesma conta não lê — nem sabe que a conversa existe (404, como `Pedido`).
 #
-# Fica 30 dias depois da última mensagem (`LimparConversasJob`). O texto pode ter
-# dado pessoal de cliente; passado o prazo de investigar um relato, não tem por
-# que continuar guardado. A pessoa também apaga quando quiser.
+# Fica guardada sem prazo: não há limpeza automática (decisão do Rodrigo,
+# 03/10/2026). Só sai quando a pessoa apaga, pelo histórico do painel.
 class Autonomia::Guide::Conversa < ApplicationRecord
   self.table_name = 'autonomia_guide_conversations'
 
-  # Decisão do Rodrigo (03/10/2026): 30 dias cobre um relato atrasado sem
-  # guardar dado pessoal além do necessário. Mudar aqui muda a limpeza e o texto
-  # da tela, que lê este número.
-  RETENCAO = 30.days
   TAMANHO_DO_TITULO = 120
 
   belongs_to :account
@@ -26,7 +21,6 @@ class Autonomia::Guide::Conversa < ApplicationRecord
                                                     dependent: :delete_all
 
   scope :de, ->(account, user) { where(account: account, user: user) }
-  scope :vencidas, -> { where(updated_at: ..RETENCAO.ago) }
   scope :recentes, -> { order(updated_at: :desc, id: :desc) }
 
   # O título é a primeira pergunta, cortada. Sem IA: custaria uma chamada por

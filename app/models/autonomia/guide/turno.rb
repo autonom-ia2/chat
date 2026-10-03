@@ -98,8 +98,9 @@ class Autonomia::Guide::Turno < ApplicationRecord
       'criado_em' => created_at.iso8601 }
   end
 
-  # O desfazer vale 5 dias; a conversa, 30. Enquanto a execução existe, a tela
-  # recebe o resumo ao vivo (com o botão de desfazer). Depois, só o que foi feito.
+  # O desfazer vale 5 dias; a conversa fica guardada sem prazo. Enquanto a
+  # execução existe, a tela recebe o resumo ao vivo (com o botão de desfazer).
+  # Depois, só o que foi feito.
   def execucao_para_tela
     return execucao.resumo if execucao.present?
     return nil if passos.blank?

@@ -91,7 +91,7 @@ class AutonomiaGuideAPI extends ApiClient {
     return axios.get(`${this.url}/conversas/atual`);
   }
 
-  // #861 — as conversas anteriores, 20 por página: { conversas, retencao_dias }.
+  // #861 — as conversas anteriores, 20 por página: { conversas }.
   conversas(page = 1) {
     return axios.get(`${this.url}/conversas`, { params: { page } });
   }

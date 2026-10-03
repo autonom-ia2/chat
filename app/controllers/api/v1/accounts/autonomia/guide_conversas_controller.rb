@@ -14,10 +14,7 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
     pagina = [params[:page].to_i, 1].max
     lista = conversas.recentes.offset((pagina - 1) * POR_PAGINA).limit(POR_PAGINA).to_a
     contagem = ::Autonomia::Guide::Turno.where(conversation_id: lista.map(&:id)).group(:conversation_id).count
-    render json: {
-      conversas: lista.map { |conversa| conversa.resumo.merge('turnos' => contagem.fetch(conversa.id, 0)) },
-      retencao_dias: ::Autonomia::Guide::Conversa::RETENCAO.in_days.to_i
-    }
+    render json: { conversas: lista.map { |conversa| conversa.resumo.merge('turnos' => contagem.fetch(conversa.id, 0)) } }
   end
 
   # A conversa mais recente, para a tela reabrir ao abrir o painel. Sem

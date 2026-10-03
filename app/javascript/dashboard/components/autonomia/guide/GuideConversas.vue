@@ -20,13 +20,10 @@ const emit = defineEmits(['abrir', 'apagou']);
 
 const { t, locale } = useI18n();
 
-// O servidor diz quantos dias guarda; este é só o valor até a resposta chegar.
-const RETENCAO_PADRAO = 30;
 const POR_PAGINA = 20;
 const DIA_MS = 24 * 60 * 60 * 1000;
 
 const conversas = ref([]);
-const retencao = ref(RETENCAO_PADRAO);
 const carregando = ref(true);
 const falhou = ref(false);
 const pagina = ref(1);
@@ -52,7 +49,6 @@ const haQuanto = iso => {
 const buscar = async numero => {
   const { data } = await AutonomiaGuideAPI.conversas(numero);
   const lista = data?.conversas || [];
-  retencao.value = data?.retencao_dias || RETENCAO_PADRAO;
   temMais.value = lista.length === POR_PAGINA;
   pagina.value = numero;
   return lista;
@@ -133,12 +129,12 @@ onMounted(carregar);
         {{ $t('AUTONOMIA_GUIDE.HISTORY.EMPTY_TITLE') }}
       </p>
       <p class="mb-0 text-n-slate-11">
-        {{ $t('AUTONOMIA_GUIDE.HISTORY.EMPTY', { dias: retencao }) }}
+        {{ $t('AUTONOMIA_GUIDE.HISTORY.EMPTY') }}
       </p>
     </div>
     <template v-else>
       <p class="mb-0 text-xs text-n-slate-11">
-        {{ $t('AUTONOMIA_GUIDE.HISTORY.KEPT_FOR', { dias: retencao }) }}
+        {{ $t('AUTONOMIA_GUIDE.HISTORY.KEPT') }}
       </p>
       <ul class="flex flex-col gap-1 m-0 p-0 list-none">
         <li

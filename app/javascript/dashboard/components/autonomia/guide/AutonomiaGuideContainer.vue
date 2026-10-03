@@ -417,7 +417,7 @@ const anexosDe = registro =>
   (registro?.anexos || []).map(({ nome, tipo }) => ({ nome, tipo }));
 
 // #861 — a conversa da tela pode não existir mais no servidor: apagada em
-// outra aba, pelo próprio Guia ou pela limpeza de 30 dias. O 404 dela não pode
+// outra aba ou pelo próprio Guia. O 404 dela não pode
 // virar "não consegui" para sempre: a pergunta abre uma conversa nova, levando
 // o que está na tela como histórico. Sem conversa aberta, o 404 é o Guia fora
 // do ar para a conta, e não se repete.

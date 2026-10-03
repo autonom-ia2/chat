@@ -444,8 +444,8 @@ describe('AutonomiaGuideContainer', () => {
     expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeFalsy();
   });
 
-  // Revisão da #861: a conversa aberta foi apagada (outra aba, o próprio Guia,
-  // a limpeza de 30 dias). A pergunta abre uma conversa nova em vez de falhar.
+  // Revisão da #861: a conversa aberta foi apagada (em outra aba ou pelo próprio
+  // Guia). A pergunta abre uma conversa nova em vez de falhar.
   it('starts a new conversation when the open one no longer exists', async () => {
     const store = useAutonomiaGuideStore();
     store.definirConversa(12);

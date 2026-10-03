@@ -603,7 +603,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_180000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "user_id", "updated_at"], name: "idx_autonomia_guide_conversations_dono"
-    t.index ["updated_at"], name: "index_autonomia_guide_conversations_on_updated_at"
     t.index ["user_id"], name: "index_autonomia_guide_conversations_on_user_id"
   end
 

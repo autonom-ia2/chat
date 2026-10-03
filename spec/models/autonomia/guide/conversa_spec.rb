@@ -74,8 +74,8 @@ RSpec.describe Autonomia::Guide::Conversa do
       expect(turno.reload.status).to eq('retido')
     end
 
-    # O desfazer vale 5 dias; a conversa, 30. Depois da execução vencer, a tela
-    # ainda mostra o que o Guia fez, sem o botão.
+    # O desfazer vale 5 dias; a conversa fica guardada sem prazo. Depois da
+    # execução vencer, a tela ainda mostra o que o Guia fez, sem o botão.
     it 'mostra o que o Guia fez mesmo depois de a execução vencer' do
       turno.update!(passos: [{ 'frase' => 'Criei a etiqueta.', 'ok' => true }])
 

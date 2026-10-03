@@ -5,9 +5,7 @@
 # conversa é de UMA pessoa numa conta; um turno é um pedido (o mesmo id do
 # Redis), com a pergunta, a resposta e o diagnóstico para o time investigar.
 #
-# Guardado por 30 dias depois da última mensagem (`Conversa::RETENCAO`): o texto
-# pode ter dado pessoal de cliente, e passado o prazo de investigar ele não tem
-# por que continuar no banco.
+# Guardado sem prazo: só sai quando a pessoa apaga a conversa.
 class CreateAutonomiaGuideConversations < ActiveRecord::Migration[7.2]
   def change
     criar_conversas
@@ -25,7 +23,6 @@ class CreateAutonomiaGuideConversations < ActiveRecord::Migration[7.2]
     end
     add_index :autonomia_guide_conversations, [:account_id, :user_id, :updated_at],
               name: 'idx_autonomia_guide_conversations_dono'
-    add_index :autonomia_guide_conversations, :updated_at
   end
 
   def criar_turnos

@@ -70,7 +70,6 @@ describe('GuideConversas', () => {
     AutonomiaGuideAPI.conversas.mockResolvedValue({
       data: {
         conversas: [conversa(1, 'Quantos funis?'), conversa(2, 'Caixas')],
-        retencao_dias: 30,
       },
     });
     const wrapper = montar({ conversaAtual: 2 });
@@ -87,16 +86,15 @@ describe('GuideConversas', () => {
     expect(wrapper.emitted('abrir')).toEqual([[1]]);
   });
 
-  it('sem conversa, diz por quanto tempo elas ficam guardadas', async () => {
+  it('sem conversa, diz que elas ficam guardadas até a pessoa apagar', async () => {
     AutonomiaGuideAPI.conversas.mockResolvedValue({
-      data: { conversas: [], retencao_dias: 30 },
+      data: { conversas: [] },
     });
     const wrapper = montar();
     await flushPromises();
 
-    expect(wrapper.text()).toContain(
-      'AUTONOMIA_GUIDE.HISTORY.EMPTY:{"dias":30}'
-    );
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.HISTORY.EMPTY');
+    expect(wrapper.text()).not.toContain('dias');
   });
 
   it('erro ao carregar mostra o motivo e deixa tentar de novo', async () => {
