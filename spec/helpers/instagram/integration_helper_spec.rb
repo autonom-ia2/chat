@@ -96,4 +96,32 @@ RSpec.describe Instagram::IntegrationHelper do
       end
     end
   end
+
+  describe 'optional tester selection state' do
+    let(:selected) { { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001' } }
+
+    before do
+      allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
+    end
+
+    it 'adds signed selection, expiration and replay identifier only to the new flow' do
+      token = generate_instagram_token(16, 'onboarding', tester_selection: selected)
+      payload = instagram_token_payload(token)
+      expect(payload['tester_selection']).to eq(selected)
+      expect(payload['return_to']).to eq('onboarding')
+      expect(payload['exp'] - payload['iat']).to eq(15.minutes.to_i)
+      expect(payload['jti']).to be_present
+      legacy_payload = instagram_token_payload(generate_instagram_token(16))
+      expect(legacy_payload.keys).to contain_exactly('sub', 'iat')
+    end
+
+    it 'rejects expiration without changing legacy states lacking exp' do
+      bound_state = generate_instagram_token(16, nil, tester_selection: selected)
+      legacy_state = generate_instagram_token(16)
+      travel 15.minutes + 1.second do
+        expect(verify_instagram_token(bound_state)).to be_nil
+        expect(verify_instagram_token(legacy_state)).to eq(16)
+      end
+    end
+  end
 end

@@ -88,6 +88,7 @@ class DashboardController < ActionController::Base
       ENABLE_ACCOUNT_SIGNUP: GlobalConfigService.load('ENABLE_ACCOUNT_SIGNUP', 'false'),
       FB_APP_ID: GlobalConfigService.load('FB_APP_ID', ''),
       INSTAGRAM_APP_ID: GlobalConfigService.load('INSTAGRAM_APP_ID', ''),
+      INSTAGRAM_TESTER_AUTOMATION_ENABLED: Instagram::Testers::Configuration.globally_enabled?.to_s,
       TIKTOK_APP_ID: GlobalConfigService.load('TIKTOK_APP_ID', ''),
       FACEBOOK_API_VERSION: GlobalConfigService.load('FACEBOOK_API_VERSION', 'v18.0'),
       WHATSAPP_APP_ID: GlobalConfigService.load('WHATSAPP_APP_ID', ''),
@@ -175,7 +176,7 @@ class DashboardController < ActionController::Base
 
   def unsafe_redirect_value?(value)
     value = value.to_s
-    value.match?(%r{\A[A-Za-z][A-Za-z0-9+\-.]*:}) || value.start_with?('//')
+    value.match?(/\A[A-Za-z][A-Za-z0-9+\-.]*:/) || value.start_with?('//')
   end
 
   def set_application_pack

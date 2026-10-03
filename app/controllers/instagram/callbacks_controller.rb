@@ -6,6 +6,7 @@ class Instagram::CallbacksController < ApplicationController
     # Check if Instagram redirected with an error (user canceled authorization)
     # See: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
     if params[:error].present?
+      @tester_flow = instagram_token_payload(params[:state])&.key?('tester_selection')
       handle_authorization_error
       return
     end
@@ -21,6 +22,10 @@ class Instagram::CallbacksController < ApplicationController
 
   # Process the authorization code and create inbox
   def process_successful_authorization
+    return redirect_to '/app' unless account_id
+
+    prepare_tester_callback
+
     @response = instagram_client.auth_code.get_token(
       oauth_code,
       redirect_uri: "#{base_url}/#{provider_name}/callback",
@@ -39,9 +44,23 @@ class Instagram::CallbacksController < ApplicationController
     end
   end
 
+  def prepare_tester_callback
+    payload = instagram_token_payload(params[:state])
+    @tester_flow = payload&.key?('tester_selection')
+    return unless @tester_flow
+
+    Instagram::Testers::OauthBinding.claim!(payload)
+    @tester_selection = payload.fetch('tester_selection')
+  end
+
   # Handle all errors that might occur during authorization
   # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#sample-rejected-response
   def handle_error(error)
+    if @tester_flow || error.is_a?(Instagram::Testers::Error)
+      code = error.is_a?(Instagram::Testers::Error) ? error.code : 'meta_unavailable'
+      return redirect_to_error_page('error_type' => code, 'code' => 422, 'error_message' => code)
+    end
+
     Rails.logger.error("Instagram Channel creation Error: #{error.message}")
     ChatwootExceptionTracker.new(error).capture_exception
 
@@ -77,6 +96,8 @@ class Instagram::CallbacksController < ApplicationController
   # Error parameters are documented at:
   # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
   def handle_authorization_error
+    return redirect_to_error_page('error_type' => 'authorization_error', 'code' => 400, 'error_message' => 'Authorization was denied') if @tester_flow
+
     error_info = {
       'error_type' => params[:error] || 'authorization_error',
       'code' => 400,
@@ -101,6 +122,8 @@ class Instagram::CallbacksController < ApplicationController
 
   def find_or_create_inbox
     user_details = fetch_instagram_user_details(@long_lived_token_response['access_token'])
+    raise Instagram::Testers::Error, 'invalid_selection' if @tester_selection && user_details['username'] != @tester_selection.fetch('username')
+
     channel_instagram = find_channel_by_instagram_id(user_details['user_id'].to_s)
     channel_exists = channel_instagram.present?
 

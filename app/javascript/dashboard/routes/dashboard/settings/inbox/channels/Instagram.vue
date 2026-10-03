@@ -6,10 +6,19 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { useAccount } from 'dashboard/composables/useAccount';
+import { useMapGetter } from 'dashboard/composables/store';
+import TesterOnboarding from './instagram/TesterOnboarding.vue';
 import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 const { t } = useI18n();
-const { isMetaInboxCreationDisabled } = useAccount();
+const { isMetaInboxCreationDisabled, accountId } = useAccount();
+const globalConfig = useMapGetter('globalConfig/get');
+const legacyAccountId = ref(null);
+const assistedOnboarding = computed(
+  () =>
+    globalConfig.value.instagramTesterAutomationEnabled &&
+    legacyAccountId.value !== accountId.value
+);
 
 const hasError = ref(false);
 const errorStateMessage = ref('');
@@ -55,7 +64,15 @@ const requestAuthorization = async () => {
 </script>
 
 <template>
-  <div class="h-full p-6 w-full max-w-full flex-shrink-0 flex-grow-0">
+  <TesterOnboarding
+    v-if="assistedOnboarding"
+    :key="accountId"
+    :account-id="accountId"
+    :disabled="isInstagramConnectionDisabled"
+    :oauth-error="hasError"
+    @legacy="legacyAccountId = accountId"
+  />
+  <div v-else class="h-full p-6 w-full max-w-full flex-shrink-0 flex-grow-0">
     <div class="flex flex-col items-center justify-start h-full text-center">
       <div v-if="hasError" class="max-w-lg mx-auto text-center">
         <h5>{{ errorStateMessage }}</h5>
