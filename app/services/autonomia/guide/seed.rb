@@ -15,11 +15,11 @@ module Autonomia
       INSTRUCTION_PATH = Rails.root.join('lib/operator_guide/guia-instrucao.md')
       LOCK_NS = 4_242 # namespace do advisory lock (1 guia por conta, anti-corrida no lazy seed)
 
-      # As ferramentas que o Guia usa para ler a conta, propor mudança nela
-      # (#568), levar a pessoa até a tela (#590) e ler a Central de Ajuda
-      # (#617). Ficam no config canônico, então a cura reasserta: ninguém desliga
+      # As ferramentas que o Guia usa para ler a conta, mudar a conta com
+      # desfazer (#855), propor o que não tem volta (#568), levar a pessoa até a
+      # tela (#590) e ler a Central de Ajuda (#617). Ficam no config canônico, então a cura reasserta: ninguém desliga
       # por acidente, e nenhum agente de conta as herda.
-      FERRAMENTAS = %w[ler_da_conta propor_acao mostrar_tela ler_da_central].freeze
+      FERRAMENTAS = %w[ler_da_conta executar_acao propor_acao mostrar_tela ler_da_central].freeze
 
       # Elegibilidade = Autonomia habilitada (ENV master + conta) E uma credencial de IA resolvível
       # (a "chave do Kanban" — `crm_kanban_ai` hook, ou a credencial de sistema). Sem credencial o

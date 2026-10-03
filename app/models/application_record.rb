@@ -3,6 +3,9 @@ class ApplicationRecord < ActiveRecord::Base
   MAX_TEXT_COLUMN_LENGTH = 20_000
 
   include Events::Types
+  # O caderno do Guia (#855): anota o que muda enquanto o Guia age, para ele
+  # poder desfazer. Fora de uma ação do Guia, não faz nada.
+  include Autonomia::Guide::Anotavel
   self.abstract_class = true
 
   before_validation :validates_column_content_length

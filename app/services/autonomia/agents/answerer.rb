@@ -494,6 +494,8 @@ module Autonomia
       # SKU), força handoff em vez de deixar o LLM improvisar (S06). NÃO regride injeção: a recusa de injeção
       # é curta e SEM especificidade -> asks_for_specifics? falso -> não escala.
       def handoff?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction = false)
+        return false if guia_respondendo_pela_conta?(reply_present)
+
         model_handoff_applies?(parsed, confidence, answered, used, snippets, reply_present, grounded_by_instruction) ||
           confidence < threshold ||
           @unanchored_business_claim == true || # cinto: fato do negócio sem base NUNCA passa (Codex #118)
@@ -527,11 +529,11 @@ module Autonomia
 
       def normalized_handoff_reason(parsed)
         parsed['handoff_reason'].to_s
-              .unicode_normalize(:nfkd)
-              .encode('ASCII', invalid: :replace, undef: :replace, replace: '')
-              .downcase
-              .gsub(/[^a-z0-9]+/, '_')
-              .gsub(/\A_+|_+\z/, '')
+                                .unicode_normalize(:nfkd)
+                                .encode('ASCII', invalid: :replace, undef: :replace, replace: '')
+                                .downcase
+                                .gsub(/[^a-z0-9]+/, '_')
+                                .gsub(/\A_+|_+\z/, '')
       end
 
       def improvised_specifics_without_kb?(snippets, reply_present, grounded_by_instruction, parsed)
@@ -546,6 +548,17 @@ module Autonomia
       def unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         reply_present && parsed['answered_from_knowledge'] != true &&
           !grounded_by_instruction && used.empty? && !leu_a_conta? && business_claim?(parsed)
+      end
+
+      # O Guia que leu ou mudou a conta neste turno responde pelo que viu e fez (#855).
+      # O portão existe para o atendimento ao cliente não inventar fato; aqui a base
+      # é a própria conta. Em 02/10/2026, na conta 18, o Guia leu as funções e o
+      # portão trocou a resposta por "não tenho certeza suficiente". No teste local
+      # do mesmo pedido, ele CRIOU a função, escreveu "Criei a função Marketing…" e
+      # marcou handoff só para registrar uma ressalva — o portão escondeu o que tinha
+      # mudado na conta. A ressalva vai na resposta (instrução, seção 6).
+      def guia_respondendo_pela_conta?(reply_present)
+        reply_present && leu_a_conta?
       end
 
       # Fato lido da conta neste turno é base, como um trecho do conhecimento (#593).
