@@ -58,6 +58,8 @@ pt:
     sessions:
       cannot_revoke_current: You cannot revoke the current session.
   errors:
+    custom_role:
+      unknown_permissions: 'tem chaves desconhecidas: %{unknown}. Chaves válidas: %{valid}'
     account:
       not_authorized: You are not authorized to access this account
       email_limit_exceeded: The daily email limit for this account has been reached
