@@ -42,6 +42,25 @@ RSpec.describe Autonomia::Decisores::Estado do
     expect(estado(%w[contato]).para_o_jev(decisor).to_json).not_to include('joana@cliente.com')
   end
 
+  # MOTIVO: o WhatsApp grava como nome o telefone formatado, a variante sem o 9 ou o identificador cru.
+  it 'o nome que é só o telefone, em qualquer formato, não vai ao Jev' do
+    ['+55 11 98888-7777', '+551188887777', '(11) 98888-7777', '5511988887777', '120363012345678'].each do |nome|
+      contact.update!(name: nome)
+
+      expect(estado(%w[contato]).para_o_jev(decisor).dig(:contact, :name)).to be_nil, "vazou o nome #{nome}"
+    end
+  end
+
+  # MOTIVO: "nunca e-mail ou telefone" vale também para atributo personalizado (telefone_2, email_financeiro).
+  it 'atributo personalizado com e-mail ou telefone fica de fora; o resto e as datas vão' do
+    contact.update!(custom_attributes: { 'origem' => 'indicação', 'telefone_2' => '+55 21 99999-0000', 'celular' => 5_521_999_990_000,
+                                         'email_financeiro' => 'financeiro@cliente.com', 'nascimento' => '1980-05-17' })
+
+    atributos = estado(%w[contato]).para_o_jev(decisor).dig(:contact, :attributes)
+
+    expect(atributos).to eq('origem' => 'indicação', 'nascimento' => '1980-05-17')
+  end
+
   # MOTIVO: o Decisor de etapa lê o card; sem conversa, ainda tem o que ler.
   it 'lê o card, a empresa e a conversa quando declarados, e nada além disso' do
     admin = create(:user, account: account)

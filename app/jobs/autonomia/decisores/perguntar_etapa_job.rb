@@ -6,7 +6,10 @@
 # Decisor pagam uma pergunta. Resposta combinada, com certeza suficiente: grava os campos e roda os
 # passos que sobraram. Outra resposta: a execução termina ali. Dúvida: vai ao Guia, e a execução fica
 # esperando — quando a dúvida se resolve, a Retomada volta aqui com `retomada`, e o card tem de estar
-# ainda onde a automação o pegou (aberto e na etapa, na entrada; fora dela, na saída).
+# ainda onde a automação o pegou (aberto e na mesma entrada na etapa; na saída, sem saída mais nova).
+#
+# A execução que espera nunca fica "rodando" para sempre: se o passo do Decisor saiu da automação, a
+# automação foi desligada ou o Decisor apagado enquanto ela esperava, ela fecha como falha, com o motivo.
 class Autonomia::Decisores::PerguntarEtapaJob < ApplicationJob
   queue_as :medium
 
@@ -18,11 +21,12 @@ class Autonomia::Decisores::PerguntarEtapaJob < ApplicationJob
     return unless Crm::Config.enabled?
 
     @execution = Crm::StageAutomationExecution.find_by(id: execution_id)
-    @step = @execution && Crm::StageAutomationStep.find_by(id: step_id, stage_automation_id: @execution.stage_automation_id)
-    return unless esperando?
+    return unless esperando?(step_id)
 
-    decisor = Autonomia::Decisor.find_by(id: config['decisor_id'].to_s, account_id: @execution.account_id)
-    return if decisor.blank?
+    @step = Crm::StageAutomationStep.find_by(id: step_id, stage_automation_id: @execution.stage_automation_id)
+    decisor = @step&.perguntar_ao_decisor? && Autonomia::Decisor.find_by(id: config['decisor_id'].to_s, account_id: @execution.account_id)
+    motivo = motivo_para_fechar(decisor)
+    return falhar(motivo) if motivo
 
     @retomada = retomada
     decidir(decisor)
@@ -30,9 +34,21 @@ class Autonomia::Decisores::PerguntarEtapaJob < ApplicationJob
 
   private
 
-  # O passo continua sendo o do Decisor, a automação ligada e a execução ainda esperando.
-  def esperando?
-    @step&.perguntar_ao_decisor? && @step.stage_automation.enabled? && @execution.running?
+  # A execução ainda espera, e é por este passo (a espera guarda o id do passo).
+  def esperando?(step_id)
+    @execution&.running? && espera['step_id'].to_s == step_id.to_s
+  end
+
+  def motivo_para_fechar(decisor)
+    return 'o passo do Decisor saiu da automação enquanto esperava' unless @step&.perguntar_ao_decisor?
+    return 'a automação foi desligada enquanto esperava o Decisor' unless @step.stage_automation.enabled?
+
+    'o Decisor foi apagado enquanto esperava' if decisor.blank?
+  end
+
+  def falhar(motivo)
+    Rails.logger.info("[autonomia][decisor] execucao=#{@execution.id} fechada sem seguir: #{motivo}")
+    @execution.update!(status: :failed, error_message: motivo, completed_at: Time.current)
   end
 
   def decidir(decisor)
@@ -81,11 +97,22 @@ class Autonomia::Decisores::PerguntarEtapaJob < ApplicationJob
       [{ step_id: @step.id, status: :ok, payload: { decisor: decisao.status, resposta: decisao.resposta, parou: parou }.compact }]
   end
 
-  # A reconferência da retomada: a automação de entrada só segue com o card aberto e na etapa; a de saída,
-  # com o card fora dela.
+  # A reconferência da retomada. Entrada: o card aberto, na etapa, e na MESMA entrada (saiu e voltou é
+  # outra entrada, com execução própria). Saída: o card fora da etapa e sem saída mais nova da automação.
   def card_no_lugar?
     automacao = @step.stage_automation
-    card.reload.open? && (automacao.on_enter? ? card.stage_id == automacao.stage_id : card.stage_id != automacao.stage_id)
+    return false unless card.reload.open?
+    return card.stage_id == automacao.stage_id && mesma_entrada?(automacao) if automacao.on_enter?
+
+    card.stage_id != automacao.stage_id && !execucao_mais_nova?(automacao)
+  end
+
+  def mesma_entrada?(automacao)
+    Crm::StageAutomations::TriggerToken.for_enter(card: card, stage_id: automacao.stage_id) == @execution.trigger_token
+  end
+
+  def execucao_mais_nova?(automacao)
+    Crm::StageAutomationExecution.exists?(card_id: card.id, stage_automation_id: automacao.id, id: (@execution.id + 1)..)
   end
 
   def restantes

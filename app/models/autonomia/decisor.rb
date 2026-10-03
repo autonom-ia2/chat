@@ -24,7 +24,7 @@ class Autonomia::Decisor < ApplicationRecord
   LEITURAS = {
     'mensagens_recentes' => 'as últimas mensagens do cliente, em qualquer canal, com o assunto do e-mail',
     'mensagens_com_respostas' => 'as últimas mensagens do cliente e da equipe',
-    'ultima_mensagem' => 'a mensagem que disparou a automação',
+    'ultima_mensagem' => 'a mensagem que disparou a automação (num gatilho de conversa, a última recebida do cliente)',
     'conversa' => 'canal, caixa, etiquetas, atributos e status da conversa',
     'contato' => 'nome e atributos do contato (nunca e-mail ou telefone)',
     'card' => 'título, etapa, funil, valor e metadados do card',

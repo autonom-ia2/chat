@@ -124,5 +124,45 @@ RSpec.describe Autonomia::Decisores::PerguntarEtapaJob do
       expect(account.crm_follow_ups.count).to eq(0)
       expect(execucao.reload).to be_completed
     end
+
+    # MOTIVO: a tela do CRM manda todos os passos a cada salvar; renomear não pode deixar a espera sem dono.
+    it 'salvar a automação na tela enquanto espera não perde a espera: resolvida, os passos rodam' do
+      passos = automacao.steps.ordered.map { |passo| passo.attributes.slice('position', 'delay_seconds', 'action_type', 'action_config') }
+      Crm::StageAutomations::Persister.new(account: account, user: admin, stage: proposta,
+                                           attributes: { name: 'Grande (renomeada)', steps: passos }).update!(automacao)
+
+      resolver
+
+      expect(account.crm_follow_ups.pluck(:title)).to eq(['Ligar para a frota'])
+      expect(execucao.reload).to be_completed
+    end
+
+    # MOTIVO: o passo do Decisor saiu da automação; a execução não pode ficar "rodando" para sempre, calada.
+    it 'quando o passo do Decisor some da automação, a execução fecha como falha, com o motivo' do
+      automacao.steps.ordered.first.destroy!
+
+      resolver
+
+      expect(account.crm_follow_ups.count).to eq(0)
+      expect(execucao.reload).to be_failed
+      expect(execucao.error_message).to include('Decisor')
+    end
+
+    # MOTIVO: o card saiu e voltou; a entrada nova tem a sua execução, a antiga não pode rodar em dobro.
+    it 'não retoma a execução de uma entrada antiga quando o card saiu e voltou para a etapa' do
+      antiga = execucao
+      expect(decisao.gatilho).to eq(antiga.trigger_token) # a dúvida resolvida abaixo é a da entrada antiga
+      card.update!(stage: pipeline_e_novo.last)
+      card.update!(stage: proposta, entered_stage_at: 1.hour.from_now)
+      perform_enqueued_jobs(only: described_class) do
+        Crm::StageAutomations::Runner.new(card: card, actor: admin, from_stage_id: pipeline_e_novo.last.id, to_stage_id: proposta.id).perform
+      end
+
+      resolver
+
+      expect(account.crm_follow_ups.count).to eq(0)
+      expect(antiga.reload).to be_completed
+      expect(antiga.metadata['step_results'].last['payload']).to include('parou' => 'o card mudou de lugar enquanto esperava')
+    end
   end
 end

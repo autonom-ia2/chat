@@ -36,4 +36,18 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(acoes.desfazivel?('POST crm/stage_automations/:stage_automation_id/steps',
                              { caminho: { stage_automation_id: desligada.id }, corpo: passo_do_decisor })).to be(true)
   end
+
+  # MOTIVO: trocar o Decisor ou a resposta que segue numa automação ligada muda o que ela faz sozinha.
+  it 'mudar só a configuração do passo do Decisor numa automação ligada pede confirmação' do
+    ligada = automacao(enabled: true)
+    passo = ligada.steps.create!(account: conta, **passo_do_decisor)
+    outro = ligada.steps.create!(account: conta, position: 1, action_type: :create_follow_up, action_config: { title: 'Ligar' })
+    so_config = { action_config: { decisor_id: decisor.id, chave_que_segue: 'nao' } }
+
+    expect(acoes.desfazivel?('PATCH crm/stage_automations/:stage_automation_id/steps/:id',
+                             { caminho: { stage_automation_id: ligada.id, id: passo.id }, corpo: so_config })).to be(false)
+    expect(acoes.desfazivel?('PATCH crm/stage_automations/:stage_automation_id/steps/:id',
+                             { caminho: { stage_automation_id: ligada.id, id: outro.id }, corpo: { action_config: { title: 'Ligar já' } } }))
+      .to be(true)
+  end
 end

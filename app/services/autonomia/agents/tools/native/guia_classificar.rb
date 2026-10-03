@@ -4,7 +4,8 @@
 # O Jev é uma peça que o Guia usa, não um sistema à parte: a mesma pergunta de múltipla escolha do
 # Decisor, montada na hora, sobre textos ou sobre registros que o Guia JÁ LEU neste turno (conversa,
 # contato, card) — o mesmo controle de "id lido" de `executar_acao`. Nada é gravado; o resultado é uma
-# estimativa com certeza, e agir em cima dele passa pelo desfazer/confirmação de sempre.
+# estimativa com certeza, e agir em cima dele passa pelo desfazer/confirmação de sempre. Cada registro
+# sai com a visibilidade de quem pede: a conversa pelo filtro de permissão, o card pelo escopo do funil.
 #
 # O texto de cada item é DADO: o estado mandado ao Jev diz isso, e o contato nunca leva e-mail nem
 # telefone. Nenhuma expressão regular: quem entende o texto é o Jev.
@@ -144,9 +145,17 @@ class Autonomia::Agents::Tools::Native::GuiaClassificar < Autonomia::Agents::Too
     { contact: contato, conversation: contato && conversas.where(contact_id: contato.id).reorder(last_activity_at: :desc).first }
   end
 
+  # O card do funil que a pessoa enxerga; a conversa dele só entra se ela também a vê — senão o Jev lê
+  # o card sem as mensagens.
   def card_com_conversa(id)
-    card = @operador.account.crm_cards.find_by(id: id)
-    { card: card, conversation: card&.conversa_em_atendimento }
+    card = cards_visiveis.find_by(id: id)
+    conversa = card&.conversa_em_atendimento
+    { card: card, conversation: conversa && conversas.find_by(id: conversa.id) }
+  end
+
+  def cards_visiveis
+    ::Crm::Cards::VisibleScopeQuery.new(scope: @operador.account.crm_cards, account: @operador.account, user: @operador.user,
+                                        account_user: @operador.account_user).perform
   end
 
   # Só as conversas que a pessoa vê na tela.

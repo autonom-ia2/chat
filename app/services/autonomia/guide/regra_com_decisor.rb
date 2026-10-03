@@ -19,7 +19,7 @@ class Autonomia::Guide::RegraComDecisor
     return false if dados.nil?
     return regra_ligada?(acao, dados) if REGRAS.include?(acao)
     return etapa_ligada?(acao, dados) if ETAPAS.include?(acao)
-    return passo_em_etapa_ligada?(dados) if PASSOS_DE_ETAPA.include?(acao)
+    return passo_em_etapa_ligada?(acao, dados) if PASSOS_DE_ETAPA.include?(acao)
 
     false
   end
@@ -39,9 +39,14 @@ class Autonomia::Guide::RegraComDecisor
     ligada?(corpo, :enabled, automacao&.enabled) && com_decisor?(passos, :action_type)
   end
 
-  def passo_em_etapa_ligada?(dados)
+  # Mudando um passo sem dizer o tipo (só o `decisor_id` ou a `chave_que_segue`), vale o tipo gravado.
+  def passo_em_etapa_ligada?(acao, dados)
     automacao = @account.crm_stage_automations.find_by(id: caminho(dados)[:stage_automation_id])
-    automacao&.enabled? && com_decisor?([corpo(dados, :step)], :action_type)
+    return false unless automacao&.enabled?
+
+    passo = corpo(dados, :step)
+    gravado = acao.start_with?('POST') || passo.key?(:action_type) ? nil : automacao.steps.find_by(id: caminho(dados)[:id])
+    com_decisor?([gravado ? passo.merge(action_type: gravado.action_type) : passo], :action_type)
   end
 
   # Sem o campo no corpo, vale o que já está gravado; criando, nasce ligada.
