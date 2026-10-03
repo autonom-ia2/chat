@@ -269,12 +269,12 @@ module Autonomia
                    available: false, escalate: false)
       end
 
-      # O Guia está no ar e entendeu; só não está seguro o bastante para afirmar.
-      # A tela traduz isso numa frase própria, com a oferta de suporte — em vez
-      # de dizer que o produto caiu.
+      # O Guia está no ar, mas o modelo não devolveu resposta (o portão não retém mais
+      # resposta do Guia, #914). A tela pede para perguntar de novo — sem oferecer
+      # suporte e sem dizer que o produto caiu.
       def retido(execucao = nil)
         Result.new(text: nil, navigation: nil, grounded: false, confidence: nil,
-                   available: true, escalate: true, retido: true, execucao: execucao)
+                   available: true, escalate: false, retido: true, execucao: execucao)
       end
 
       def preparing

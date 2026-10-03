@@ -8,7 +8,7 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01a, C01b, C02..C20) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C21) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }
@@ -363,6 +363,19 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     expect(funcao.permissions - CustomRole::PERMISSIONS).to be_empty
     expect(funcao.permissions & %w[crm_manage_cards crm_move_cards crm_admin]).to be_present
     expect([c.ana, c.bruno, c.carla].map { |agente| papel(agente).custom_role_id }).to eq([funcao.id, funcao.id, nil])
+  end
+
+  # MOTIVO: #914 — o Guia nunca encaminha ao suporte. Uma dúvida do negócio que o manual não tem
+  # (regra da SUSEP) era retida pelo portão e virava "quer que eu encaminhe para o suporte?". O
+  # certo é investigar (web) e responder, dizendo de onde tirou. Nada é escrito na conta.
+  it 'C21 dúvida de fora da plataforma: investiga e responde, sem oferecer suporte', :aggregate_failures do
+    pedido = 'Qual é o prazo que a seguradora tem para pagar a indenização de um sinistro de auto depois que eu ' \
+             'entrego todos os documentos?'
+    resultado = perguntar(pedido)
+
+    respondeu!(resultado)
+    expect(execucoes).to be_empty
+    expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_SEM_SUPORTE)
   end
 end
 # rubocop:enable RSpec/DescribeClass

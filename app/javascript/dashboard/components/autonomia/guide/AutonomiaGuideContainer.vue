@@ -380,10 +380,10 @@ const requestReply = async (requestAccount, message, requestId) => {
       });
       if (execucaoMudouConta(data.execucao)) avisarContaMudou();
     } else if (data.retido) {
-      // O Guia está no ar e entendeu — só não está seguro o bastante para
-      // afirmar. Dizer "indisponível" aqui faz a pessoa achar que o produto
-      // caiu, e some com a oferta de suporte que é o próximo passo útil.
-      // O que ele já fez neste turno aparece mesmo assim (#855): mudou a conta.
+      // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
+      // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
+      // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
+      // assim (#855): mudou a conta.
       store.addAssistantMessage({
         content: t('AUTONOMIA_GUIDE.WITHHELD'),
         execucao: data.execucao || null,
