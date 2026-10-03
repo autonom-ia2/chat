@@ -19,8 +19,19 @@ module Autonomia::Guide::Formatos::Fontes
   end
 
   def do_controller?(arquivo)
-    caminho = relativo(arquivo)
-    caminho != arquivo && PASTAS.any? { |pasta| caminho.start_with?(pasta) }
+    do_repositorio?(arquivo) && PASTAS.any? { |pasta| relativo(arquivo).start_with?(pasta) }
+  end
+
+  # Código nosso: dentro do Rails.root e fora de onde o Bundler instala gems. No CI
+  # as gems ficam em `vendor/bundle`, DENTRO do Rails.root; só o prefixo fazia o
+  # `create` do ActiveStorage parecer nosso e o formato saía diferente do Mac.
+  def do_repositorio?(arquivo)
+    caminho = File.expand_path(arquivo.to_s)
+    caminho.start_with?(Rails.root.to_s + File::SEPARATOR) && pastas_de_gems.none? { |pasta| caminho.start_with?(pasta) }
+  end
+
+  def pastas_de_gems
+    [Bundler.bundle_path.to_s, *Gem.path].map { |pasta| File.expand_path(pasta) + File::SEPARATOR }.uniq
   end
 
   def relativo(arquivo)

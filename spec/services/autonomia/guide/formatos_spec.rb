@@ -14,6 +14,17 @@ RSpec.describe Autonomia::Guide::Formatos do
     expect(fora).to eq([]), "fora de dia: #{fora.join(', ')}\n#{described_class.diferencas.join("\n")}"
   end
 
+  # O CI instala as gems em `vendor/bundle`, dentro do Rails.root; o formato não pode mudar por isso.
+  it 'gem instalada dentro do projeto não conta como código do repositório', :aggregate_failures do
+    gems = Rails.root.join('vendor/bundle')
+    allow(Bundler).to receive(:bundle_path).and_return(gems)
+    fontes = Autonomia::Guide::Formatos::Fontes
+
+    expect(fontes.do_repositorio?(gems.join('ruby/3.4.0/gems/activestorage/app/controllers/x.rb').to_s)).to be(false)
+    expect(fontes.do_repositorio?(Rails.root.join('app/controllers/application_controller.rb').to_s)).to be(true)
+    expect(fontes.do_repositorio?('/tmp/fora/app/controllers/x.rb')).to be(false)
+  end
+
   it 'cobre exatamente o catálogo de ações do Guia' do
     catalogo = Autonomia::Guide::Acoes.new(account: nil, user: nil).catalogo
 

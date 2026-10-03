@@ -77,7 +77,7 @@ class Autonomia::Guide::Formatos::Leitor
   # `ActiveStorage::DirectUploadsController`): o que ela aceita não está aqui.
   def fora_do_repositorio(metodo)
     arquivo = metodo.source_location&.first
-    @coleta.externos << metodo.owner.name if arquivo && Formatos::Fontes.relativo(arquivo) == arquivo
+    @coleta.externos << metodo.owner.name if arquivo && !Formatos::Fontes.do_repositorio?(arquivo)
   end
 
   def examinar(node)
