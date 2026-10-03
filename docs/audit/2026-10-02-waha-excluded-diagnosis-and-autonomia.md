@@ -94,3 +94,31 @@ Não afirmar 33 caixas migradas nem importar histórico para cumprir uma contage
 próprio; tráfego/configuração não substituem aceite funcional que não tenha sido observado.
 Documentação não altera produto nem requer outro deploy. Sem --no-verify; validação e commit separados.
 A Issue #874 permanece aberta até a decisão pendente e o aceite funcional; não marcar o objetivo completo.
+
+## Continuação autorizada — backfill e incidente de validação
+
+Rodrigo orientou priorizar o backfill disponível sem deixar contas desconectadas impedirem a execução.
+Também autorizou merge/deploy caso necessários e com estado validado. Isso não autoriza apagar histórico,
+parear sessões ou afirmar que os testes manuais da Autonom.ia passaram. O backfill publicado é de
+configuração de caixas existentes; não é importação de mensagens nem recálculo histórico.
+
+Nova conferência do Hub2You: inventário SSM 7578a2f3-2770-4d18-ab25-919aa7d67351 e validação do rake
+SSM 22f0c4bb-a992-4807-a9b7-f7bd6d2a557c, ambos Success/0. Mesmos 33 canais locais e mesmas oito
+exclusões; as 25 ativas estão WORKING, com plano vazio, filtro ligado, sessões distintas e estado local
+inalterado. Nenhuma nova aplicação necessária nessa instalação. Oito mensagens comuns e zero Status
+na janela posterior às aplicações originais; isso não representa novo teste E2E em todas as caixas.
+
+Na Autonom.ia, o operador iniciou equivocadamente duas verificações Rails de leitura em paralelo na
+instância t3.small, sem conferir antes a folga de memória. Depois disso, /api deixou de responder,
+ALB marcou Target.Timeout e leituras EBS cresceram para aproximadamente 7,9 GB/min entre 21:04 e 21:06
+(horário de São Paulo, 2026-10-02). A atribuição exata de memória por processo ainda não foi obtida;
+não apresentar a correlação temporal como causa-raiz comprovada.
+
+As duas verificações (73c35ab5-048f-434a-acfc-8a644231964d e 8e92761e-b45d-45f9-b55c-4aedb32f3df9)
+e o diagnóstico leve 2c380b2c-b992-4ad0-841b-b843ad7137fb foram cancelados, com estado Cancelled
+confirmado na AWS. Nenhum APPLY repetido, escrita de configuração WAHA, logout, QR ou histórico alterado.
+Plano de recuperação preparado: reiniciar somente a instância atual da aplicação, mantendo disco,
+imagem publicada e configurações; conferir containers, saúde HTTP/filas/banco e ALB após o retorno.
+Aprovação explícita para essa operação de infraestrutura foi solicitada e ainda não recebida.
+Não iniciar novos processos Rails durante a recuperação; validações posteriores devem ser leves e
+sequenciais. Merge/deploy permanece condicionado à saúde e revisão, sem trocar o runtime por suposição.
