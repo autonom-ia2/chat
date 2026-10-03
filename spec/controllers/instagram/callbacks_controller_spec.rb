@@ -8,7 +8,7 @@ RSpec.describe Instagram::CallbacksController do
   let(:auth_code_object) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken, token: 'test_token') }
   let(:long_lived_token_response) { { 'access_token' => 'long_lived_test_token', 'expires_in' => 5_184_000 } }
-  let(:user_details) { { 'username' => 'test_user', 'user_id' => '12345' } }
+  let(:user_details) { { 'username' => 'test_user', 'user_id' => '12345', 'id' => '98765' } }
   let(:exception_tracker) { instance_double(ChatwootExceptionTracker) }
 
   before do
@@ -54,6 +54,12 @@ RSpec.describe Instagram::CallbacksController do
         expect(response).to redirect_to(app_instagram_inbox_agents_url(account_id: account.id, inbox_id: Inbox.last.id))
       end
 
+      it 'stores the app-scoped id used by Meta deauthorize and data deletion callbacks' do
+        get :show, params: valid_params
+
+        expect(Channel::Instagram.last.app_scoped_user_id).to eq('98765')
+      end
+
       it 'updates existing channel with new token' do
         existing_channel = create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token')
         existing_channel.inbox.update!(name: 'Custom Inbox Name')
@@ -66,6 +72,7 @@ RSpec.describe Instagram::CallbacksController do
         expect(existing_channel.access_token).to eq('long_lived_test_token')
         expect(existing_channel.instagram_id).to eq('12345')
         expect(existing_channel.provider_name).to eq('test_user')
+        expect(existing_channel.app_scoped_user_id).to eq('98765')
         expect(existing_channel.inbox.reload.name).to eq('Custom Inbox Name')
         expect(existing_channel.reauthorization_required?).to be false
       end

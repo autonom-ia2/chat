@@ -39,8 +39,9 @@ class Instagram::DataDeletionsController < ActionController::API
     user_id = @signed_payload['user_id'].to_s
     return if user_id.blank?
 
-    channel = Channel::Instagram.find_by(instagram_id: user_id)
-    # Meta documents this id as app-scoped; log misses so a mismatch with the stored account id is visible.
+    # Meta sends the app-scoped id (/me `id`); instagram_id (/me `user_id`) covers channels connected before
+    # app_scoped_user_id existed and not yet reconnected.
+    channel = Channel::Instagram.find_by(app_scoped_user_id: user_id) || Channel::Instagram.find_by(instagram_id: user_id)
     Rails.logger.warn("Instagram #{action_name} callback: no channel for user_id #{user_id}") if channel.nil?
     channel
   end
