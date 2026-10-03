@@ -36,8 +36,25 @@ module Autonomia::Guide::Formatos::Filtros
     case node
     when Prism::ConstantReadNode, Prism::ConstantPathNode then constante(node, escopo)
     when Prism::LocalVariableReadNode then escopo.locais.fetch(node.name) { Dinamico.new(node.slice) }
+    when Prism::CallNode then lista_do_metodo(node, escopo)
     else Dinamico.new(node.slice)
     end
+  end
+
+  # `slice(*account_user_attributes)`: método do controller, sem argumento,
+  # cujo corpo é só uma lista literal, se lê como a constante. Qualquer outra
+  # coisa fica para o `Espiao`, que executa.
+  def lista_do_metodo(node, escopo)
+    lista = lista_literal(node, escopo.modulo) if node.receiver.nil? && node.arguments.nil?
+    lista ? do_codigo(lista, Escopo.new(escopo.modulo, {})) : Dinamico.new(node.slice)
+  end
+
+  def lista_literal(node, modulo)
+    corpo = ::Autonomia::Guide::Formatos::Fontes.definicao(modulo.instance_method(node.name))&.body
+    corpo = corpo.body.first if corpo.is_a?(Prism::StatementsNode) && corpo.body.size == 1
+    corpo if corpo.is_a?(Prism::ArrayNode)
+  rescue NameError
+    nil
   end
 
   def argumentos(nodes, escopo)
@@ -77,8 +94,10 @@ module Autonomia::Guide::Formatos::Filtros
   end
 
   # Lista de filtros (como `permit(*filtros)`) → { 'campo' => { forma:, campos: } }.
+  # Achatada como o próprio `permit` faz: `permit(allowed_agent_params)` recebe
+  # a lista inteira num argumento só, e cada item dela é um campo.
   def arvore(filtros)
-    Array(filtros).each_with_object({}) do |filtro, campos|
+    Array(filtros).flatten.each_with_object({}) do |filtro, campos|
       case filtro
       when Hash then filtro.each { |chave, valor| campos[chave.is_a?(Dinamico) ? chave : chave.to_s] = forma(valor) }
       when Dinamico then campos[filtro] = { forma: :dinamico }

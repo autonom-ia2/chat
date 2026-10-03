@@ -13,7 +13,8 @@
 #   depois, se ela não aparecer no registro devolvido;
 # - valor fora de `um_de` (enum, inclusion). A lista grande demais para o
 #   arquivo (`valida_no_servidor`, como o fuso) fica com a plataforma;
-# - obrigatório ausente numa criação. Com `padrao`, o banco preenche.
+# - obrigatório ausente numa criação — só o que o código exige (`params.require`);
+#   o que só o modelo exige pode vir da própria action. Com `padrao`, o banco preenche.
 #
 # Confere o primeiro nível do corpo (dentro do envelope, quando há). O que vai
 # dentro de objeto e lista fica com a plataforma, que responde com o atributo

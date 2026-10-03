@@ -35,11 +35,16 @@ module Autonomia::Guide::Formatos::Modelo
     nil
   end
 
+  # Primeiro o modelo onde a action grava o corpo (`Destinos`); depois o que
+  # bate com o envelope; depois o que a própria action cita. O citado só num
+  # `before_action` é o que ele busca, não onde o corpo vai: o
+  # `fetch_conversation` do Linear daria à issue o enum de prioridade e os ids
+  # inteiros da conversa, e o Linear quer 0 a 4 e UUID.
   def citado(coleta)
     candidatos = coleta.modelos
     envelopes = envelopes(coleta)
     escolhido = candidatos.find { |candidato| envelopes.include?(candidato.modelo.model_name.element) }
-    (escolhido || candidatos.find(&:da_action) || candidatos.first)&.modelo
+    coleta.destino || (escolhido || candidatos.find(&:da_action))&.modelo
   end
 
   def envelopes(coleta)
@@ -127,11 +132,15 @@ module Autonomia::Guide::Formatos::Modelo
     end
   end
 
+  # A presença que o modelo exige é do registro, não do corpo: entre os dois há
+  # o que a action faz, e ela pode preencher o campo sozinha — o card tira o
+  # título do contato, o ContactInboxBuilder gera o source_id. Por isso aqui
+  # só informa (`pelo_modelo`); quem bloqueia é o `params.require` do código.
   def presenca(validador, criando)
     condicional = validador.options[:if] || validador.options[:unless]
     return { 'obrigatorio' => 'condicional' } if condicional
 
-    criando ? { 'obrigatorio' => true } : { 'nao_pode_ficar_vazio' => true }
+    criando ? { 'obrigatorio' => 'pelo_modelo' } : { 'nao_pode_ficar_vazio' => true }
   end
 
   def inclusao(validador)

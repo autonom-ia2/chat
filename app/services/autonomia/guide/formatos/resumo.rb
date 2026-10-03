@@ -8,6 +8,12 @@
 class Autonomia::Guide::Formatos::Resumo
   TETO = 2500
   TIPOS_SIMPLES = [nil, 'string', 'lista'].freeze
+  # `true` só vem do código (`params.require`); `pelo_modelo` é a presença que
+  # o modelo valida, e a action pode preencher.
+  OBRIGATORIO = {
+    true => 'obrigatório', 'condicional' => 'obrigatório em alguns casos',
+    'pelo_modelo' => 'o registro exige, mas a ação pode preencher sozinha'
+  }.freeze
   VALORES_POR_CAMPO = [40, 8].freeze
   TIPOS = {
     'string' => 'texto', 'inteiro' => 'número inteiro', 'numero' => 'número', 'booleano' => 'true/false',
@@ -95,8 +101,7 @@ class Autonomia::Guide::Formatos::Resumo
 
   def descricao(campo, limite)
     partes = [TIPOS.fetch(campo['tipo'], campo['tipo']) || 'valor']
-    partes << 'obrigatório' if campo['obrigatorio'] == true
-    partes << 'obrigatório em alguns casos' if campo['obrigatorio'] == 'condicional'
+    partes << OBRIGATORIO[campo['obrigatorio']]
     partes << 'não pode ficar vazio' if campo['nao_pode_ficar_vazio']
     partes << valores(campo, limite)
     partes << faixa(campo)
@@ -130,8 +135,10 @@ class Autonomia::Guide::Formatos::Resumo
     ["#{margem}os campos de dentro dependem do #{campo['depende_de']}:", *tipos]
   end
 
-  # Com obrigatório, o exemplo é o corpo mínimo. Sem, o exemplo só mostra o
-  # envelope — é ele que o modelo erra quando manda o corpo solto.
+  # Com obrigatório do código, o exemplo é o corpo mínimo. Sem, o exemplo só
+  # mostra o envelope — é ele que o modelo erra quando manda o corpo solto. O
+  # exigido só pelo modelo fica fora do mínimo: posto ali, o Guia inventaria o
+  # título que o card tiraria do contato.
   def exemplo
     return [] if @formato['sem_corpo'] || @formato['campos'].blank?
 
@@ -141,7 +148,7 @@ class Autonomia::Guide::Formatos::Resumo
     nenhum = if @acao.start_with?('PATCH', 'PUT')
                'Nenhum campo é obrigatório: mande só o que muda.'
              else
-               'O modelo não marca campo obrigatório; o servidor ainda pode recusar o que faltar.'
+               'O código da ação não exige campo; o servidor ainda pode recusar o que faltar.'
              end
     @formato['envelope'] ? [nenhum, "Exemplo: #{envelopado(@formato['campos'].first(1).to_h).to_json}"] : [nenhum]
   end

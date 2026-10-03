@@ -53,8 +53,11 @@ RSpec.describe Autonomia::Guide::Acoes do
         .to include('priority: altissima não é valor aceito; os aceitos são: low, medium, high, urgent')
     end
 
-    it 'recusa criação sem o obrigatório' do
-      expect(recusa('POST teams', { description: 'sem nome' })).to include('falta o obrigatório: name')
+    it 'recusa criação sem o que o código exige (params.require)' do
+      contato = create(:contact, account: conta)
+
+      expect(recusa('POST contacts/:id/call', { conversation_id: 7 }, caminho: { id: contato.id }))
+        .to include('falta o obrigatório: inbox_id')
     end
 
     it 'recusa corpo em ação que não lê corpo' do
@@ -147,6 +150,19 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
   end
 
+  # O que só o modelo exige não é barrado antes: a action pode preencher (o
+  # card tira o título do contato). Quem recusa é a plataforma, e a recusa
+  # volta com o formato.
+  describe 'o que só o modelo exige' do
+    it 'chega à plataforma, que recusa com o motivo', :aggregate_failures do
+      resultado = acoes.executar('POST teams', { corpo: { description: 'sem nome' } })
+
+      expect(resultado.ok).to be(false)
+      expect(resultado.dica).to include('name: texto; o registro exige')
+      expect(conta.teams.count).to eq(0)
+    end
+  end
+
   # A recusa da plataforma volta com o que o formato sabe do campo recusado:
   # "Title is invalid" sozinho não diz como acertar.
   describe 'a recusa que ensina' do
@@ -154,7 +170,7 @@ RSpec.describe Autonomia::Guide::Acoes do
       resultado = acoes.executar('POST labels', { corpo: { title: 'Cliente VIP' } })
 
       expect(resultado.ok).to be(false)
-      expect(resultado.dica).to include('title: texto; obrigatório')
+      expect(resultado.dica).to include('title: texto; o registro exige')
       expect(resultado.mensagem).not_to include('formato')
     end
 

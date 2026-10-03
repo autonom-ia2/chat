@@ -24,11 +24,24 @@ class Autonomia::Guide::Formatos::Resolucao
 
   def permits
     @permits ||= @coleta.permits.group_by { |permit| [permit.dono, permit.metodo] }.flat_map do |(_dono, metodo), lista|
-      resolver(metodo, lista)
+      recortar(metodo, resolver(metodo, lista))
     end
   end
 
   private
+
+  # O update da conta usa `account_params.slice(:name, :locale, ...)`, e o
+  # `account_params` é o do cadastro (aceita `account_name`, `password`...). O
+  # que o slice deixa de fora é descartado calado, então não entra no formato.
+  # Recorte com chave calculada não se resolve: o formato fica parcial.
+  def recortar(metodo, permits)
+    chaves = @coleta.recorte_de(metodo)
+    return permits unless chaves
+    return permits.tap { @motivos << "o permit de #{metodo} é recortado por valor calculado" } if chaves.any?(Filtros::Dinamico)
+
+    nomes = chaves.map(&:to_s)
+    permits.map { |caminho, arvore, envelope| [caminho, arvore.slice(*nomes), envelope] }
+  end
 
   def resolver(metodo, lista)
     estaticos = lista.map { |permit| [permit.caminho, Filtros.arvore(permit.filtros), permit.envelope] }

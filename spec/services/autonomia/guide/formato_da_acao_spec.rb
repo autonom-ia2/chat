@@ -71,7 +71,7 @@ RSpec.describe 'Formato da ação no Guia' do
       texto = executar('acao' => 'POST labels', 'descricao' => 'Criar a etiqueta.',
                        'corpo_json' => { title: 'Cliente VIP' }.to_json)
 
-      expect(texto).to include('Não foi feito:', 'O formato diz: title: texto; obrigatório')
+      expect(texto).to include('Não foi feito:', 'O formato diz: title: texto; o registro exige')
     end
 
     it 'avisa no sucesso do campo que a plataforma pode ter descartado' do

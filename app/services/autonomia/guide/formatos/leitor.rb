@@ -82,6 +82,7 @@ class Autonomia::Guide::Formatos::Leitor
 
   def examinar(node)
     return registrar_modelo(Formatos::ModelosCitados.da_constante(node, @atual[:metodo].owner)) if constante?(node)
+    return Formatos::Destinos.variavel(node, @coleta, @atual[:metodo].owner) if variavel?(node)
     return unless node.is_a?(Prism::CallNode)
 
     atual = @atual
@@ -90,12 +91,18 @@ class Autonomia::Guide::Formatos::Leitor
     registrar_corpo_cru(node)
     registrar_repasse(node)
     registrar_modelo(Formatos::ModelosCitados.da_conta(node))
+    registrar_recorte(node)
+    Formatos::Destinos.registrar(node, @coleta, @caminhos, @atual[:metodo].owner)
     seguir(node, atual)
     @atual = atual
   end
 
   def constante?(node)
     node.is_a?(Prism::ConstantReadNode) || node.is_a?(Prism::ConstantPathNode)
+  end
+
+  def variavel?(node)
+    node.is_a?(Prism::InstanceVariableWriteNode) || node.is_a?(Prism::InstanceVariableOrWriteNode)
   end
 
   def registrar_por_nome(node)
@@ -165,9 +172,18 @@ class Autonomia::Guide::Formatos::Leitor
     @coleta.modelos << Coleta::Candidato.new(modelo: modelo, da_action: @atual[:da_action]) if modelo
   end
 
+  # `account_params.slice(:name, :locale)`: a action usa só parte do montador.
+  def registrar_recorte(node)
+    return unless node.name == :slice && @caminhos.proprio?(node.receiver)
+
+    chaves = Formatos::Filtros.argumentos(node.arguments&.arguments || [], @atual[:escopo])
+    @coleta.recortes << Coleta::Recorte.new(metodo: node.receiver.name, chaves: chaves, lugar: lugar(node.receiver))
+  end
+
   def seguir(node, atual)
     return unless @caminhos.proprio?(node)
 
+    @coleta.chamadas << [node.name, lugar(node)]
     ler(node.name, da_action: atual[:da_action], profundidade: atual[:profundidade] + 1)
   end
 
@@ -187,5 +203,9 @@ class Autonomia::Guide::Formatos::Leitor
 
   def origem(node)
     Formatos::Fontes.origem(@atual[:arquivo], node)
+  end
+
+  def lugar(node)
+    [@atual[:arquivo], node.location.start_offset]
   end
 end
