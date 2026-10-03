@@ -31,6 +31,11 @@ const ERROR_MESSAGES = {
 const IMPERSONATION_URL_SEARCH_KEY = 'impersonation';
 const USER_NOT_CONFIRMED_ERROR_CODE = 'user_not_confirmed';
 const AUTH_ERROR_TOAST_DURATION = 6000;
+const AUTONOMIA_SSO_PATH = '/auth/autonomia';
+const TERMINAL_SSO_STATUS_CODES = new Set([400, 401, 403, 410, 422]);
+
+const isSafeAppRedirect = value =>
+  typeof value === 'string' && (value === '/app' || value.startsWith('/app/'));
 
 export default {
   components: {
@@ -78,6 +83,7 @@ export default {
       sessionsLimitReached: false,
       limitedSessions: [],
       redirectingToAutonomia: false,
+      ssoLoginFailure: null,
     };
   },
   validations() {
@@ -116,7 +122,33 @@ export default {
       );
     },
     autonomiaSsoUrl() {
-      return window.chatwootConfig.autonomiaSsoUrl || '/auth/autonomia';
+      return window.chatwootConfig.autonomiaSsoUrl || AUTONOMIA_SSO_PATH;
+    },
+    autonomiaRetryUrl() {
+      const fallbackUrl = new URL(AUTONOMIA_SSO_PATH, window.location.origin);
+      let configuredUrl;
+
+      try {
+        configuredUrl = new URL(this.autonomiaSsoUrl, window.location.origin);
+      } catch {
+        configuredUrl = fallbackUrl;
+      }
+
+      const retryUrl =
+        configuredUrl.origin === fallbackUrl.origin &&
+        configuredUrl.pathname === AUTONOMIA_SSO_PATH
+          ? configuredUrl
+          : fallbackUrl;
+
+      retryUrl.hash = '';
+      retryUrl.searchParams.set('prompt', 'login');
+      if (isSafeAppRedirect(this.redirectTo)) {
+        retryUrl.searchParams.set('return_to', this.redirectTo);
+      } else {
+        retryUrl.searchParams.delete('return_to');
+      }
+
+      return `${retryUrl.pathname}${retryUrl.search}`;
     },
     shouldAutoRedirectToAutonomia() {
       return (
@@ -129,9 +161,10 @@ export default {
     },
     showSilentSsoLoader() {
       return (
-        this.redirectingToAutonomia ||
-        Boolean(this.ssoAuthToken) ||
-        this.shouldAutoRedirectToAutonomia
+        !this.ssoLoginFailure &&
+        (this.redirectingToAutonomia ||
+          Boolean(this.ssoAuthToken) ||
+          this.shouldAutoRedirectToAutonomia)
       );
     },
   },
@@ -204,6 +237,7 @@ export default {
       }
     },
     submitLogin() {
+      this.ssoLoginFailure = null;
       this.loginApi.hasErrored = false;
       this.loginApi.showLoading = true;
 
@@ -250,6 +284,11 @@ export default {
             return;
           }
 
+          if (this.ssoAuthToken) {
+            this.handleSsoLoginFailure(response);
+            return;
+          }
+
           // Reset URL Params if the authentication is invalid
           if (this.email) {
             window.location = '/app/login';
@@ -259,6 +298,27 @@ export default {
             response?.message || this.$t('LOGIN.API.UNAUTH')
           );
         });
+    },
+    getAutonomiaFailureMessage(authenticationFailed) {
+      return authenticationFailed
+        ? this.$t('LOGIN.AUTONOMIA.AUTH_ERROR')
+        : this.$t('LOGIN.AUTONOMIA.TRANSIENT_ERROR');
+    },
+    handleSsoLoginFailure(response) {
+      const authenticationFailed = TERMINAL_SSO_STATUS_CODES.has(
+        response?.status
+      );
+      this.ssoLoginFailure = authenticationFailed
+        ? 'authentication'
+        : 'transient';
+      this.loginApi.hasErrored = true;
+      this.showAlertMessage(
+        this.getAutonomiaFailureMessage(authenticationFailed)
+      );
+
+      if (authenticationFailed) {
+        window.location.assign(this.autonomiaRetryUrl);
+      }
     },
     submitFormLogin() {
       if (this.v$.credentials.email.$invalid && !this.email) {
@@ -363,8 +423,36 @@ export default {
       </p>
     </section>
 
+    <section
+      v-if="ssoLoginFailure"
+      data-testid="autonomia_sso_error"
+      class="p-8 bg-white shadow sm:mx-auto mt-11 sm:w-full sm:max-w-lg dark:bg-n-solid-2 sm:shadow-lg sm:rounded-lg"
+    >
+      <p class="text-sm text-center text-n-slate-11">
+        {{ getAutonomiaFailureMessage(ssoLoginFailure === 'authentication') }}
+      </p>
+      <div class="flex flex-col gap-3 mt-6">
+        <NextButton
+          v-if="ssoLoginFailure === 'transient'"
+          lg
+          type="button"
+          data-testid="autonomia_sso_retry"
+          :label="$t('LOGIN.AUTONOMIA.RETRY')"
+          :disabled="loginApi.showLoading"
+          :is-loading="loginApi.showLoading"
+          @click="submitLogin"
+        />
+        <a
+          :href="autonomiaRetryUrl"
+          class="inline-flex items-center justify-center w-full px-4 py-3 text-base font-medium rounded-md shadow-sm text-n-slate-12 bg-n-background dark:bg-n-solid-3 ring-1 ring-inset ring-n-container hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
+        >
+          {{ $t('LOGIN.AUTONOMIA.RESTART') }}
+        </a>
+      </div>
+    </section>
+
     <!-- Session Limit Section -->
-    <section v-if="sessionsLimitReached" class="mt-11">
+    <section v-else-if="sessionsLimitReached" class="mt-11">
       <SessionLimitOverlay
         :sessions="limitedSessions"
         @revoke="handleSessionRevoke"
@@ -396,7 +484,7 @@ export default {
           <GoogleOAuthButton v-if="showGoogleOAuth" />
           <div v-if="showAutonomiaSso" class="text-center">
             <a
-              :href="autonomiaSsoUrl"
+              :href="authError ? autonomiaRetryUrl : autonomiaSsoUrl"
               class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
             >
               <Icon icon="i-lucide-cloud" class="size-5 text-n-slate-11" />

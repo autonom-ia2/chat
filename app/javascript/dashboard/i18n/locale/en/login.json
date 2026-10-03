@@ -21,7 +21,11 @@
       "NO_ACCOUNT_FOUND": "We couldn't find an account for your email address."
     },
     "AUTONOMIA": {
-      "LABEL": "Sign in with Autonomia"
+      "LABEL": "Sign in with Autonomia",
+      "AUTH_ERROR": "Your Autonomia sign-in could not be validated. We are returning you to sign in again.",
+      "TRANSIENT_ERROR": "We could not finish signing you in. Check your connection and try again.",
+      "RETRY": "Try again",
+      "RESTART": "Sign in again with Autonomia"
     },
     "FORGOT_PASSWORD": "Forgot your password?",
     "CREATE_NEW_ACCOUNT": "Create a new account",
