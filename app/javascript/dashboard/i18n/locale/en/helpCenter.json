@@ -336,8 +336,8 @@
       }
     },
     "TABLE": {
-      "LOADING_MESSAGE": "Loading articles...",
       "404": "No articles matches your search 🔍",
+      "LOADING_MESSAGE": "Loading articles...",
       "NO_ARTICLES": "There are no available articles",
       "HEADERS": {
         "TITLE": "Title",
@@ -1161,5 +1161,8 @@
         "AUMENTAR": "Larger text"
       }
     }
+  },
+  "PORTAL": {
+    "IFRAME_LOAD_ERROR": "There was an error loading the article, please refresh the page and try again."
   }
 }

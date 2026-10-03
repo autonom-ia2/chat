@@ -58,7 +58,7 @@
       },
       "RECEPTIONIST": {
         "TITLE": "Recepcionista",
-        "SUBTITLE": "Recebe, triagem e direciona cada conversa."
+        "SUBTITLE": "Recebe, faz a triagem e direciona cada conversa."
       },
       "POST_SALE": {
         "TITLE": "Pós-venda",
@@ -274,7 +274,7 @@
       "ADD_SUCCESS": "Conhecimento adicionado. Estamos processando agora.",
       "ADD_ERROR": "Não foi possível adicionar esse conhecimento. Tente novamente.",
       "REMOVE_ERROR": "Não foi possível remover esse item. Tente novamente.",
-      "RESYNC_ERROR": "Não foi possível sincronizar esse item novamente. Tente novamente.",
+      "RESYNC_ERROR": "Não foi possível ressincronizar esse item. Tente novamente.",
       "REMOVE_CONFIRM_TITLE": "Remover este material?",
       "REMOVE_CONFIRM_DESC": "\"{name}\" e os trechos já indexados saem da base de conhecimento do agente. Não dá para desfazer.",
       "REMOVE_CONFIRM_BUTTON": "Remover",

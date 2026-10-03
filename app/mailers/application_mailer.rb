@@ -66,7 +66,8 @@ class ApplicationMailer < ActionMailer::Base
   def locale_from_account(account)
     return unless account
 
-    I18n.available_locales.map(&:to_s).include?(account.locale) ? account.locale : nil
+    locale = LOCALE_PREFERENCE_ALIASES.fetch(account.locale, account.locale)
+    I18n.available_locales.map(&:to_s).include?(locale) ? locale : nil
   end
 
   def ensure_current_account(account)

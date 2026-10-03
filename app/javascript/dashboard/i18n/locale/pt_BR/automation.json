@@ -80,13 +80,13 @@
       }
     },
     "LIST": {
+      "404": "Nenhuma regra de automação encontrada",
       "TABLE_HEADER": {
         "NAME": "Nome",
         "ACTIVE": "Ativo",
         "CREATED_ON": "Criado em",
         "ACTIONS": "Ações"
       },
-      "404": "Nenhuma regra de automação encontrada",
       "404_DELAYED": "Ainda não há regras executadas após um período de espera",
       "TABS": {
         "INSTANT": "Executadas imediatamente",
@@ -186,7 +186,7 @@
     "ACTIONS": {
       "ASSIGN_AGENT": "Atribuir ao Agente",
       "ASSIGN_TEAM": "Atribuir um Time",
-      "REMOVE_ASSIGNED_AGENT": "Remove Assigned Agent",
+      "REMOVE_ASSIGNED_AGENT": "Remover agente atribuído",
       "REMOVE_ASSIGNED_TEAM": "Remover Time Atribuído",
       "ADD_LABEL": "Adicionar uma Etiqueta",
       "REMOVE_LABEL": "Remover uma Etiqueta",

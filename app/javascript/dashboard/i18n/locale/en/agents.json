@@ -39,7 +39,7 @@
         "EXTERNAL": "External",
         "EXTERNAL_HINT": "Talks to customers on WhatsApp/Instagram/chat.",
         "INTERNAL": "Internal",
-        "INTERNAL_HINT": "Never talks to customers — only helps the agent."
+        "INTERNAL_HINT": "Never talks to customers — only helps your team."
       },
       "KNOWLEDGE": {
         "LABEL": "Knowledge base",

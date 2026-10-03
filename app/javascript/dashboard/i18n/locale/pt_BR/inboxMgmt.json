@@ -436,7 +436,8 @@
           },
           "RESTRICTED_WARNING": "O cadastro integrado do WhatsApp está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Você pode utilizar a configuração manual para números compatíveis com a Cloud API. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
           "STATUS_LINK": "Ver atualizações de status",
-          "CALLING_ENABLE_FAILED": "Sua caixa de entrada do WhatsApp está pronta, mas as chamadas de voz não puderam ser ativadas — este número ainda não está cadastrado na API de Chamadas do WhatsApp Business. Entre em contato com a Meta ou com seu provedor de soluções WhatsApp Business para realizar o cadastro e, depois, ative as chamadas nas configurações de Chamadas da caixa de entrada."
+          "CALLING_ENABLE_FAILED": "Sua caixa de entrada do WhatsApp está pronta, mas as chamadas de voz não puderam ser ativadas — este número ainda não está cadastrado na API de Chamadas do WhatsApp Business. Entre em contato com a Meta ou com seu provedor de soluções WhatsApp Business para realizar o cadastro e, depois, ative as chamadas nas configurações de Chamadas da caixa de entrada.",
+          "SDK_LOAD_ERROR": "Não foi possível carregar o cadastro do WhatsApp. Tente novamente."
         },
         "API": {
           "ERROR_MESSAGE": "Não foi possível salvar o canal do WhatsApp",
@@ -586,7 +587,7 @@
         "TITLE": "Canal do Telegram",
         "DESC": "Integre com o canal do Telegram e comece a apoiar seus clientes.",
         "BOT_TOKEN": {
-          "LABEL": "Bot Token",
+          "LABEL": "Token do bot",
           "SUBTITLE": "Configure o token do bot que obteve do Telegram BotFather.",
           "PLACEHOLDER": "Bot Token"
         },
@@ -711,6 +712,9 @@
       "MORE_SETTINGS": "Mais configurações",
       "WEBSITE_SUCCESS": "Você concluiu a criação de um canal de site. Copie o código mostrado abaixo e cole-o no seu site. Na próxima vez que um cliente usar o bate-papo ao vivo, a conversa aparecerá automaticamente na sua caixa de entrada.",
       "WHATSAPP_QR_INSTRUCTION": "Escaneie o código QR acima para testar rapidamente sua caixa de entrada do WhatsApp",
+      "SMS_QR_INSTRUCTION": "Leia o QR code acima para testar rapidamente sua caixa de entrada de SMS",
+      "SMS_QR_ALT": "QR code para testar a caixa de entrada de SMS",
+      "TWILIO_CALLBACK_FALLBACK": "Os webhooks são configurados automaticamente. Se as mensagens recebidas não chegarem, use este endereço de retorno no Twilio.",
       "MESSENGER_QR_INSTRUCTION": "Escaneie o código QR acima para testar rapidamente sua caixa de entrada do Facebook Messenger",
       "TELEGRAM_QR_INSTRUCTION": "Escaneie o código QR acima para testar rapidamente sua caixa de entrada do Telegram"
     },
@@ -866,6 +870,98 @@
     },
     "CHANNEL_PREFERENCES": "Preferências do Canal",
     "WIDGET_FEATURES": "Recursos do widget",
+    "TWILIO_HEALTH": {
+      "TITLE": "Gerencie seu número do Twilio",
+      "DESCRIPTION": "Confira a conta do Twilio, o remetente e os webhooks desta caixa de entrada. Tudo o que o Chatwoot não consegue receber aparece aqui",
+      "GO_TO_SETTINGS": "Abrir o Console do Twilio",
+      "NO_DATA": "Os dados de saúde não estão disponíveis",
+      "LOADING": "Buscando os dados de saúde no Twilio…",
+      "ERROR_TITLE": "Não foi possível falar com o Twilio",
+      "STATUS": {
+        "HEALTHY": "Tudo certo",
+        "MISCONFIGURED": "Precisa de atenção"
+      },
+      "FIELDS": {
+        "ACCOUNT_NAME": {
+          "LABEL": "Conta do Twilio",
+          "TOOLTIP": "A conta do Twilio a que estas credenciais pertencem"
+        },
+        "ACCOUNT_STATUS": {
+          "LABEL": "Situação da conta",
+          "TOOLTIP": "Uma conta do Twilio suspensa ou encerrada não envia nem recebe nada"
+        },
+        "ACCOUNT_TYPE": {
+          "LABEL": "Tipo de conta",
+          "TOOLTIP": "Contas de teste só enviam mensagens ou ligam para números que você verificou no Twilio"
+        },
+        "SENDER": {
+          "LABEL": "Remetente",
+          "TOOLTIP": "O número de telefone ou serviço de mensagens usado por esta caixa de entrada"
+        },
+        "CAPABILITIES": {
+          "LABEL": "Recursos do número",
+          "TOOLTIP": "Recursos que o Twilio liberou neste número. Um recurso que esta caixa de entrada precisa e o número não tem nunca vai funcionar"
+        },
+        "VOICE_CALLING": {
+          "LABEL": "Chamadas de voz",
+          "TOOLTIP": "Se as chamadas estão ativadas para esta caixa de entrada"
+        }
+      },
+      "VALUES": {
+        "ACCOUNT_STATUSES": {
+          "ACTIVE": "Ativa",
+          "SUSPENDED": "Suspensa",
+          "CLOSED": "Encerrada"
+        },
+        "ACCOUNT_TYPES": {
+          "TRIAL": "Teste",
+          "FULL": "Completa"
+        },
+        "CAPABILITIES": {
+          "SMS": "SMS",
+          "VOICE": "Voz"
+        },
+        "SENDER_TYPES": {
+          "PHONE_NUMBER": "Número de telefone",
+          "MESSAGING_SERVICE": "Serviço de mensagens"
+        },
+        "ENABLED": "Ativado",
+        "DISABLED": "Desativado"
+      },
+      "WEBHOOKS": {
+        "TITLE": "Webhooks",
+        "DESCRIPTION": "O Twilio chama estes endereços quando chega uma mensagem ou ligação. Registre-os de novo depois de mudar o endereço da instalação",
+        "REGISTER_ALL": "Registrar webhooks",
+        "MESSAGING": "Webhook de mensagens",
+        "VOICE": "Webhook de voz",
+        "VOICE_STATUS": "Retorno de status de voz",
+        "VOICE_APP": "Ligações de saída (app TwiML)"
+      },
+      "WEBHOOK": {
+        "CONFIGURED_SUCCESS": "Webhook configurado com sucesso",
+        "NOT_SET": "não configurado",
+        "EXPECTED": "Esperado",
+        "CURRENT": "Configurado atualmente como",
+        "REASONS": {
+          "NOT_SET": "Webhook não configurado",
+          "URL_MISMATCH": "Endereço do webhook diferente",
+          "WRONG_HTTP_METHOD": "Webhook usa o método HTTP errado",
+          "OVERRIDDEN_BY_NUMBER": "O serviço de mensagens usa o webhook do número",
+          "OVERRIDDEN_BY_APPLICATION": "Substituído por um app TwiML",
+          "OVERRIDDEN_BY_TRUNK": "Substituído por um tronco SIP",
+          "MISSING_TWIML_APP": "App TwiML não criado"
+        },
+        "HINTS": {
+          "NOT_SET": "O Twilio não tem webhook neste remetente, então nada chega ao Chatwoot.",
+          "URL_MISMATCH": "O Twilio está chamando outro endereço, então o tráfego vai para outro lugar.",
+          "WRONG_HTTP_METHOD": "O endereço está certo, mas o Twilio chama com {method} em vez de POST, e o Chatwoot só responde a POST.",
+          "OVERRIDDEN_BY_NUMBER": "Este serviço de mensagens está com \"Use webhook on number\" ativado, então o Twilio ignora o webhook do serviço.",
+          "OVERRIDDEN_BY_APPLICATION": "Há um app TwiML ligado a este número, e o Twilio usa os endereços do app em vez dos do número. Desvincule-o no Console do Twilio.",
+          "OVERRIDDEN_BY_TRUNK": "Este número está ligado a um tronco SIP, então o Twilio envia as ligações para o tronco e ignora os webhooks de voz. Desvincule o tronco no Console do Twilio.",
+          "MISSING_TWIML_APP": "O Chatwoot não tem app TwiML para este número, então não dá para fazer ligações de saída."
+        }
+      }
+    },
     "ACCOUNT_HEALTH": {
       "TITLE": "Gerencie sua conta do WhatsApp",
       "DESCRIPTION": "Revise a integridade do seu número de telefone do WhatsApp, a capacidade de envio de mensagens e os detalhes da conta comercial da Meta vinculada.",
@@ -1059,7 +1155,18 @@
         "SECRET_KEY": "Chave secreta",
         "VIEW_DOCS": "Ver documentação",
         "REQUIRE_LABEL": "Exigir validação de identidade para todas as conversas",
-        "REQUIRE_DESCRIPTION": "Quando ativado, os usuários devem fornecer um token de identidade válido para iniciar conversas. Solicitações sem tokens válidos serão rejeitadas."
+        "REQUIRE_DESCRIPTION": "Quando ativado, os usuários devem fornecer um token de identidade válido para iniciar conversas. Solicitações sem tokens válidos serão rejeitadas.",
+        "ROTATE": {
+          "BUTTON": "Trocar chave",
+          "TITLE": "Trocar a chave secreta?",
+          "WARNING": "A chave atual é revogada no instante em que você troca.",
+          "WARNING_DETAIL": "Não há período de transição e não dá para desfazer.",
+          "IMPACT": "Seus servidores precisam assinar os usuários com a chave nova. Quem ainda estiver assinado com a antiga falha na verificação. Se a validação de identidade for obrigatória, essas pessoas não conseguem iniciar uma conversa.",
+          "CONFIRM": "Trocar chave",
+          "CANCEL": "Cancelar",
+          "SUCCESS": "Chave secreta trocada com sucesso",
+          "ERROR": "Não foi possível trocar a chave secreta. Tente novamente"
+        }
       },
       "INBOX_AGENTS": "Agentes",
       "INBOX_AGENTS_SUB_TEXT": "Adicionar ou remover agentes dessa caixa de entrada",

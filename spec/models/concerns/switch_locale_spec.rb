@@ -49,6 +49,21 @@ RSpec.describe 'SwitchLocale Concern', type: :controller do
       end
     end
 
+    context 'when the saved preference is European Portuguese' do
+      let(:user) { create(:user, ui_settings: { 'locale' => 'pt' }) }
+
+      before { controller.instance_variable_set(:@user, user) }
+
+      it 'serves the user preference in Brazilian Portuguese' do
+        expect(controller.send(:locale_from_user)).to eq('pt_BR')
+      end
+
+      it 'keeps a pt locale requested explicitly in params' do
+        get :index, params: { locale: 'pt' }
+        expect(response.body).to eq('pt')
+      end
+    end
+
     context 'when request is from custom domain' do
       before { request.host = portal.custom_domain }
 
@@ -90,6 +105,17 @@ RSpec.describe 'SwitchLocale Concern', type: :controller do
       end
 
       expect(result).to eq('es')
+    end
+
+    it 'serves a European Portuguese account in Brazilian Portuguese' do
+      controller.instance_variable_set(:@current_account, create(:account, locale: 'pt'))
+
+      result = nil
+      controller.send(:switch_locale_using_account_locale) do
+        result = I18n.locale.to_s
+      end
+
+      expect(result).to eq('pt_BR')
     end
   end
 end

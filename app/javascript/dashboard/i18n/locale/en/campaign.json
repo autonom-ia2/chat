@@ -852,7 +852,7 @@
         "QUEUED": "List received. Import queued; you can leave this page.",
         "PROCESSING": "Importing the list. Sending is unavailable until the import finishes.",
         "COMPLETED": "List import completed.",
-        "SUMMARY": "Imported: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Suppressed: {suppressed} · Total: {total}",
+        "SUMMARY": "Imported: {imported} · Duplicates: {duplicates} · Invalid: {invalid} · Excluded from sending: {suppressed} · Total: {total}",
         "RETRY": "Retry import",
         "ERRORS": {
           "FAILED": "Import failed. No contacts from this attempt were added. Retry or upload the file again.",

@@ -359,10 +359,10 @@
     "CAPTAIN_ASSISTANTS": "Assistentes",
     "CAPTAIN_OVERVIEW": "Visão geral",
     "CAPTAIN_DOCUMENTS": "Documentos",
-    "CAPTAIN_RESPONSES": "FAQs",
+    "CAPTAIN_RESPONSES": "Perguntas frequentes",
     "CAPTAIN_TOOLS": "Ferramentas",
     "CAPTAIN_SCENARIOS": "Cenários",
-    "CAPTAIN_PLAYGROUND": "Playground",
+    "CAPTAIN_PLAYGROUND": "Testar assistente",
     "CAPTAIN_INBOXES": "Caixas de Entrada",
     "CAPTAIN_SETTINGS": "Configurações",
     "HOME": "Principal",
@@ -599,7 +599,9 @@
       },
       "HELP_CENTER_SEARCH": {
         "TITLE": "Indexação de Pesquisa da Central de Ajuda",
-        "DESCRIPTION": "Use IA para realizar buscas com reconhecimento de contexto nos artigos da sua central de ajuda."
+        "DESCRIPTION": "Use IA para realizar buscas com reconhecimento de contexto nos artigos da sua central de ajuda.",
+        "MODEL_TITLE": "Modelo da busca na Central de Ajuda",
+        "MODEL_DESCRIPTION": "Selecione o modelo de IA usado para buscar os artigos da Central de Ajuda"
       },
       "LABEL_SUGGESTION": {
         "TITLE": "Sugestão de Etiquetas",
@@ -621,6 +623,7 @@
       "PLAN_NOTE": "Você está atualmente inscrito no plano **{plan}** com **{quantity}** licenças",
       "SEAT_COUNT": "Número de assentos",
       "RENEWS_ON": "Renovações em",
+      "CANCELS_ON": "Cancela em",
       "CURRENCY": "Moeda"
     },
     "CURRENCY": {
@@ -654,6 +657,38 @@
       "BUTTON_TXT": "Fale conosco no chat"
     },
     "NO_BILLING_USER": "A sua conta de cobrança está sendo configurada. Atualize a página e tente novamente.",
+    "SHOPIFY": {
+      "TITLE": "Cobrança pela Shopify",
+      "DESCRIPTION": "Sua assinatura do Chatwoot é cobrada e gerenciada com segurança pela Shopify.",
+      "UNAVAILABLE": "A cobrança pela Shopify está indisponível agora. Fale com o suporte se continuar assim.",
+      "LOADING": "Verificando sua assinatura na Shopify...",
+      "PLAN_TITLE": "Assinatura na Shopify",
+      "PLAN_DESCRIPTION": "Escolha ou gerencie seu plano do Chatwoot com segurança na Shopify.",
+      "CURRENT_PLAN": "Plano atual",
+      "SUBSCRIPTION_STATUS": "Situação",
+      "PRICE": "Preço",
+      "PER_MONTH": "{price} / mês",
+      "PER_YEAR": "{price} / ano",
+      "TRIAL_ENDS_ON": "Teste termina em",
+      "RENEWS_ON": "Renova em",
+      "ACCESS_UNTIL": "Acesso até",
+      "LAST_VERIFIED": "Última verificação",
+      "VIEW_PLANS": "Ver planos na Shopify",
+      "MANAGE_PLAN": "Gerenciar na Shopify",
+      "RETRY": "Tentar de novo",
+      "ERROR_TITLE": "Não conseguimos verificar sua assinatura na Shopify",
+      "ERROR_DESCRIPTION": "Tente de novo em instantes. Seu último acesso verificado não foi alterado.",
+      "STALE_TITLE": "Mostrando sua última assinatura verificada",
+      "STALE_DESCRIPTION": "Não foi possível falar com a Shopify. Seu acesso não foi alterado.",
+      "STATUS": {
+        "PENDING": "Pendente",
+        "ACTIVE": "Ativa",
+        "TRIALING": "Em teste",
+        "CANCELLED": "Cancelamento agendado",
+        "EXPIRED": "Expirada",
+        "MISSING": "Nenhum plano ativo"
+      }
+    },
     "TOPUP": {
       "BUY_CREDITS": "Comprar mais créditos",
       "MODAL_TITLE": "Comprar Créditos de IA",

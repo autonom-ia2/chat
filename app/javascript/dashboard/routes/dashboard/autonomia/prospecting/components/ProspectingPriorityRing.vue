@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { priorityTheme } from '../utils/prospectingPriority';
 
 const props = defineProps({
@@ -12,6 +13,9 @@ const props = defineProps({
     default: 56,
   },
 });
+
+const { t } = useI18n();
+const NO_PRIORITY_MARK = '-';
 
 const normalizedPriority = computed(() => {
   if (props.priority === null || props.priority === undefined) return null;
@@ -39,8 +43,10 @@ const dashOffset = computed(() => {
     v-if="normalizedPriority === null"
     class="flex shrink-0 items-center justify-center rounded-full bg-n-solid-2 text-xs text-n-slate-10"
     :style="{ width: `${size}px`, height: `${size}px` }"
+    role="img"
+    :aria-label="t('PROSPECTING.PRIORITY.NONE')"
   >
-    -
+    <span aria-hidden="true">{{ NO_PRIORITY_MARK }}</span>
   </div>
   <svg
     v-else
@@ -49,7 +55,7 @@ const dashOffset = computed(() => {
     :viewBox="`0 0 ${size} ${size}`"
     class="shrink-0"
     role="img"
-    :aria-label="`Prioridade ${normalizedPriority} de 100`"
+    :aria-label="t('PROSPECTING.PRIORITY.ARIA', { value: normalizedPriority })"
   >
     <circle
       :cx="size / 2"
