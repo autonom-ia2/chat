@@ -18,9 +18,12 @@ module Autonomia
       # As ferramentas que o Guia usa para ler a conta, mudar a conta com
       # desfazer (#855), propor o que não tem volta (#568), levar a pessoa até a
       # tela (#590), ler a Central de Ajuda (#617) e ler uma página da internet
-      # (#857). Ficam no config canônico, então a cura reasserta: ninguém desliga
+      # (#857), e consultar o formato de uma ação antes de montar o corpo (#900).
+      # Ficam no config canônico, então a cura reasserta: ninguém desliga
       # por acidente, e nenhum agente de conta as herda.
-      FERRAMENTAS = %w[ler_da_conta executar_acao propor_acao mostrar_tela ler_da_central ler_pagina ler_anexo].freeze
+      FERRAMENTAS = %w[
+        ler_da_conta formato_da_acao executar_acao propor_acao mostrar_tela ler_da_central ler_pagina ler_anexo
+      ].freeze
 
       # Elegibilidade = Autonomia habilitada (ENV master + conta) E uma credencial de IA resolvível
       # (a "chave do Kanban" — `crm_kanban_ai` hook, ou a credencial de sistema). Sem credencial o
@@ -142,9 +145,12 @@ module Autonomia
         agent.knowledge_entries.ready.where.not(column => nil).exists?
       end
 
+      # As ferramentas entram na conferência porque o `kb_version` não as vê: ferramenta nova em
+      # FERRAMENTAS, sem mexer no KB nem na instrução, não chegava aos Guias já semeados (#900).
       def canonical_state?(agent)
         agent.actuation_internal? && agent.manual? &&
-          agent.enabled == false && agent.scaffold == GUIDE_SCAFFOLD
+          agent.enabled == false && agent.scaffold == GUIDE_SCAFFOLD &&
+          agent.config.to_h['native_tool_slugs'] == FERRAMENTAS
       end
 
       def guide_agent_scope
