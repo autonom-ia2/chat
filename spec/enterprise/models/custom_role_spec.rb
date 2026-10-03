@@ -15,6 +15,12 @@ RSpec.describe CustomRole, type: :model do
       expect(role).to be_valid
     end
 
+    it 'keeps the accepted keys on the inclusion validator, where tools read them (#900)' do
+      inclusion = described_class.validators_on(:permissions).find { |v| v.is_a?(ActiveModel::Validations::InclusionValidator) }
+
+      expect(inclusion.options[:in]).to eq(CustomRole::PERMISSIONS)
+    end
+
     it 'lists the unknown keys and the valid ones' do
       role = build(:custom_role, permissions: %w[contact_view conversation_read_only inbox_38])
 

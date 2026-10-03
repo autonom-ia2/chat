@@ -90,18 +90,17 @@ class CustomRole < ApplicationRecord
   ].freeze
 
   validates :name, presence: true
-  validate :permissions_are_known
+  # The inclusion validator stays: tools read the accepted keys from it (#900). The message
+  # names the rejected keys and the accepted ones, so a person or the Guide can fix the
+  # request instead of guessing (#894).
+  validates :permissions, inclusion: { in: PERMISSIONS, message: ->(role, _data) { role.unknown_permissions_message } }
+
+  def unknown_permissions_message
+    unknown = Array(permissions) - PERMISSIONS
+    I18n.t('errors.custom_role.unknown_permissions', unknown: unknown.join(', '), valid: PERMISSIONS.join(', '))
+  end
 
   private
-
-  # Names the rejected keys and the accepted ones, so whoever sent them (a person or the
-  # Guide) can fix the request instead of guessing (#894).
-  def permissions_are_known
-    unknown = Array(permissions) - PERMISSIONS
-    return if unknown.empty?
-
-    errors.add(:permissions, I18n.t('errors.custom_role.unknown_permissions', unknown: unknown.join(', '), valid: PERMISSIONS.join(', ')))
-  end
 
   def filtered_unread_count_permissions_changed?
     previous_changes.key?('permissions')
