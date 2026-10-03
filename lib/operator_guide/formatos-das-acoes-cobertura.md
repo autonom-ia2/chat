@@ -8,8 +8,8 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 492 |
 | Sem corpo | 130 |
 | Com corpo | 362 |
-| Com corpo e formato completo | 218 (60,2%) |
-| Com corpo e formato incompleto | 144 |
+| Com corpo e formato completo | 221 (61,0%) |
+| Com corpo e formato incompleto | 141 |
 
 ## Incompletas por motivo
 
@@ -17,7 +17,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 130 |
+| leitura crua sem tipo | 127 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -136,9 +136,6 @@ Uma ação pode ter mais de um motivo.
 - `POST inboxes/:id/set_call_recording` — leitura crua sem tipo: recording_enabled, transcription_enabled
 - `POST inboxes/:id/set_inbound_calls` — leitura crua sem tipo: inbound_calls_enabled
 - `POST inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
-- `POST instagram/authorization` — leitura crua sem tipo: return_to, tester_selection_token
-- `POST instagram/testers/invite` — leitura crua sem tipo: selection_token
-- `POST instagram/testers/status` — leitura crua sem tipo: selection_token
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event
 - `POST integrations/shopify/auth` — leitura crua sem tipo: shop_domain
 - `POST integrations/slack` — leitura crua sem tipo: code, inbox_id

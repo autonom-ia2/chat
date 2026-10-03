@@ -57,12 +57,35 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end
 
+  [[], { id: '17841400000000001' }, true, 123, '', 'x' * 4097].each do |invalid_token|
+    it "rejects a supplied #{invalid_token.class} token of size #{invalid_token.to_s.size} without falling back to legacy OAuth" do
+      post path, params: { tester_selection_token: invalid_token }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+    end
+  end
+
   it 'keeps legacy authorization free of tester calls and new state fields' do
     post path, headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
     expect(state.keys).to contain_exactly('sub', 'iat')
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
+  it 'keeps the legacy onboarding return hint when the tester feature is off' do
+    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') do
+      post path, params: { return_to: 'onboarding' }, headers: headers, as: :json
+    end
+
+    expect(response).to have_http_status(:ok)
+    query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
+    state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
+    expect(state.keys).to contain_exactly('sub', 'iat', 'return_to')
+    expect(state['return_to']).to eq('onboarding')
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end
 

@@ -9322,11 +9322,8 @@
       "return_to": {},
       "tester_selection_token": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/instagram/authorizations#create",
-    "motivos": [
-      "leitura crua sem tipo: return_to, tester_selection_token"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:7",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
@@ -9339,14 +9336,11 @@
     "campos": {
       "selection_token": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/instagram/testers#invite",
-    "motivos": [
-      "leitura crua sem tipo: selection_token"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:22",
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:57"
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:23",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -9354,14 +9348,11 @@
     "campos": {
       "selection_token": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/instagram/testers#status",
-    "motivos": [
-      "leitura crua sem tipo: selection_token"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/instagram/testers_controller.rb:18",
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:57"
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
     ],
     "sem_corpo": false
   },

@@ -10,17 +10,19 @@ class Api::V1::Accounts::Instagram::TestersController < Api::V1::Accounts::BaseC
   end
 
   def search
-    username = Instagram::Testers::Validation.normalize_username(params[:username])
+    username = Instagram::Testers::Validation.normalize_username(params.permit(:username)[:username])
     results = client.search(username).map { |candidate| candidate.merge(selection_token: selection.issue(candidate)) }
     render json: { results: results }
   end
 
   def status
-    render json: { status: client.status(selected.fetch('id')) }
+    target_id = selected.fetch('id')
+    render json: { status: client.status(target_id) }
   end
 
   def invite
-    result = Instagram::Testers::Invitation.new(client: client, app_id: tester_configuration.app_id, target_id: selected.fetch('id')).perform
+    target_id = selected.fetch('id')
+    result = Instagram::Testers::Invitation.new(client: client, app_id: tester_configuration.app_id, target_id: target_id).perform
     render json: result
   end
 
@@ -54,7 +56,7 @@ class Api::V1::Accounts::Instagram::TestersController < Api::V1::Accounts::BaseC
   end
 
   def selected
-    selection.verify(params[:selection_token])
+    selection.verify(params.permit(:selection_token)[:selection_token])
   end
 
   def render_tester_error(error)

@@ -165,9 +165,10 @@ class DashboardController < ActionController::Base
   def safe_query_string
     return if request.query_string.blank?
 
-    Rack::Utils.parse_nested_query(request.query_string).each do |key, value|
-      return if key.to_s == 'return_to' && unsafe_redirect_value?(value)
+    unsafe = Rack::Utils.parse_nested_query(request.query_string).any? do |key, value|
+      key.to_s == 'return_to' && unsafe_redirect_value?(value)
     end
+    return if unsafe
 
     request.query_string
   rescue Rack::QueryParser::InvalidParameterError, Rack::Utils::ParameterTypeError

@@ -99,6 +99,28 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
     expect(response.parsed_body).to eq('status' => 'accepted')
   end
 
+  invalid_tokens = [nil, [], { id: '17841400000000001' }, true, 123, '', 'x' * 4097]
+  %w[status invite].each do |action|
+    invalid_tokens.each do |invalid_token|
+      it "rejects a #{invalid_token.class} token of size #{invalid_token.to_s.size} for #{action} before constructing the provider client" do
+        post "#{path}/#{action}", params: { selection_token: invalid_token }, headers: headers, as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+        expect(Instagram::Testers::Client).not_to have_received(:new)
+      end
+    end
+  end
+
+  it 'rejects a selection issued for a different account' do
+    other_token = Instagram::Testers::Selection.new(account_id: create(:account).id, actor_id: administrator.id, app_id: '10001').issue(candidate)
+    post "#{path}/status", params: { selection_token: other_token }, headers: headers, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
   it 'rejects a selection issued for a different actor' do
     another_admin = create(:user, account: account, role: :administrator)
     expect(client).not_to receive(:status)
