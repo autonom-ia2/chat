@@ -1,0 +1,49 @@
+# O código-fonte dos controllers, lido com o Prism (#900).
+#
+# Cada arquivo é analisado uma vez por geração: o mesmo controller atende
+# várias ações, e o mesmo concern aparece em vários controllers.
+module Autonomia::Guide::Formatos::Fontes
+  PASTAS = %w[app/controllers/ enterprise/app/controllers/ custom/app/controllers/].freeze
+
+  module_function
+
+  # O `def` de um método (UnboundMethod), ou nil se ele não mora nos
+  # controllers do repositório — gem, helper ou modelo não são lidos: o que
+  # eles fazem com `params` não é o formato da ação (e é ali que o leitor
+  # anterior pegava ruído, como as validações de IMAP do helper de caixas).
+  def definicao(metodo)
+    arquivo, linha = metodo.source_location
+    return unless arquivo && do_controller?(arquivo)
+
+    definicoes(arquivo)[[linha, metodo.name]]
+  end
+
+  def do_controller?(arquivo)
+    caminho = relativo(arquivo)
+    caminho != arquivo && PASTAS.any? { |pasta| caminho.start_with?(pasta) }
+  end
+
+  def relativo(arquivo)
+    arquivo.to_s.delete_prefix(Rails.root.to_s + File::SEPARATOR)
+  end
+
+  def origem(arquivo, node)
+    "#{relativo(arquivo)}:#{node.location.start_line}"
+  end
+
+  def definicoes(arquivo)
+    @definicoes ||= {}
+    @definicoes[arquivo] ||= indexar(Prism.parse_file(arquivo).value)
+  end
+
+  def indexar(raiz)
+    pilha = [raiz]
+    indice = {}
+    until pilha.empty?
+      node = pilha.pop
+      indice[[node.location.start_line, node.name]] = node if node.is_a?(Prism::DefNode)
+      pilha.concat(node.compact_child_nodes)
+    end
+    indice
+  end
+end
