@@ -6,8 +6,10 @@
 # - imagem: o mesmo leitor de imagem da IA do CRM, pedindo TODO o texto visível — um contrato
 #   fotografado tem que chegar inteiro, não como legenda de uma frase.
 #
-# O texto fica em cache por um dia, pelo blob: a mesma planilha ou o mesmo áudio não é extraído de
-# novo a cada pergunta da conversa.
+# Documento é lido no nosso servidor, sem IA: fica no cache (Redis) por um dia, pelo blob.
+# Áudio e imagem custam IA. Num anexo de conversa — que vive para sempre — o texto fica gravado no
+# próprio anexo (`ler_anexo`): é pago uma vez na vida do arquivo. O áudio usa o mesmo campo da IA do
+# CRM (`transcribed_text`), então o que um transcreveu o outro aproveita.
 class Autonomia::Guide::LeitorDeMidia
   CACHE = 1.day
 
@@ -49,8 +51,28 @@ class Autonomia::Guide::LeitorDeMidia
     'imagem' if tipo.start_with?('image/')
   end
 
+  # Onde o texto pago fica gravado no anexo de conversa. `transcribed_text` é o campo que a IA do CRM
+  # e a transcrição do Chatwoot já usam para áudio.
+  CAMPO_NO_ANEXO = { 'audio' => 'transcribed_text', 'imagem' => 'guia_texto_da_imagem' }.freeze
+
   def initialize(account:)
     @account = account
+  end
+
+  # Anexo de conversa: áudio e imagem são lidos uma vez e gravados no anexo; documento vai pelo cache.
+  def ler_anexo(anexo)
+    blob = anexo.file&.blob
+    return '' if blob.nil?
+
+    campo = CAMPO_NO_ANEXO[self.class.tipo(blob.content_type)]
+    return ler(blob) if campo.nil?
+
+    gravado = anexo.meta.to_h[campo].to_s
+    return gravado if gravado.present?
+
+    texto = extrair(blob)
+    gravar(anexo, campo, texto) if texto.present?
+    texto
   end
 
   # -> String (vazia quando não há o que ler).
@@ -59,6 +81,14 @@ class Autonomia::Guide::LeitorDeMidia
   end
 
   private
+
+  # A leitura já foi paga: se o anexo não salvar (um arquivo antigo que não passa na validação de
+  # hoje), o texto ainda vai para a pessoa, e a próxima leitura tenta gravar de novo.
+  def gravar(anexo, campo, texto)
+    anexo.update!(meta: anexo.meta.to_h.merge(campo => texto))
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.warn("[autonomia][guide][midia] anexo=#{anexo.id} não gravou o texto: #{e.class}: #{e.message}")
+  end
 
   def extrair(blob)
     case self.class.tipo(blob.content_type)

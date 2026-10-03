@@ -67,7 +67,7 @@ class Autonomia::Agents::Tools::Native::GuiaAnexo < Autonomia::Agents::Tools::Na
     blob = anexo.file&.blob
     return 'Este anexo não tem arquivo para ler (é um link ou um local).' if blob.nil?
 
-    texto = ::Autonomia::Guide::LeitorDeMidia.new(account: @operador.account).ler(blob)
+    texto = ::Autonomia::Guide::LeitorDeMidia.new(account: @operador.account).ler_anexo(anexo)
     return "Não consegui tirar texto de #{blob.filename} (pode ser um PDF escaneado ou um formato que não leio)." if texto.blank?
 
     em_partes(blob.filename, texto)
