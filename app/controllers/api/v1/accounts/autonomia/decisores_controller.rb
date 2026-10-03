@@ -44,7 +44,7 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
     return render_could_not_create_error("resposta must be one of: #{@decisor.chaves.join(', ')}") unless @decisor.resposta?(resposta)
 
     estado = estado_da_conversa(conversas_visiveis.find(params.require(:conversation_id)))
-    return render_could_not_create_error('conversation has no incoming message') if estado.blank?
+    return render_could_not_create_error('conversation has no incoming text message') if estado.blank? || estado.vazio?
 
     @decisor.guardar_exemplo!(texto: estado.texto_do_exemplo, resposta: resposta, origem: 'pessoa')
     render json: completo(@decisor)

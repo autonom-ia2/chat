@@ -40,7 +40,10 @@ class CreateAutonomiaDecisores < ActiveRecord::Migration[7.2]
       t.decimal :certeza, precision: 4, scale: 3
       t.jsonb :campos_extraidos, null: false, default: {}
       t.string :status, null: false
-      t.integer :proximo_passo
+      # Cada regra que ficou esperando esta decisão ({regra, indice}): quando a dúvida se resolve, todas retomam.
+      t.jsonb :esperas, null: false, default: []
+      # Cada regra que já seguiu depois desta decisão: a retomada repetida não roda os passos duas vezes.
+      t.jsonb :seguidas, null: false, default: []
       t.text :motivo
       t.references :resolvida_por, foreign_key: { to_table: :users, on_delete: :nullify }
       t.timestamps

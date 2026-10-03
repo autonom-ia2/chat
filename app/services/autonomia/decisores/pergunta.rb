@@ -2,6 +2,8 @@
 #
 # A decisão é única por (decisor, conversa, mensagem). Duas regras que perguntam a mesma coisa sobre a
 # mesma mensagem pagam UMA pergunta. Na corrida entre duas, o índice único decide e a segunda lê a primeira.
+# Conversa sem texto nenhum (só áudio ou imagem) não vai ao Jev: não há o que ler, e a decisão fica
+# `sem_conteudo`, sem seguir.
 class Autonomia::Decisores::Pergunta
   def initialize(decisor:, conversation:, message:, rule: nil, indice: nil)
     @decisor = decisor
@@ -17,7 +19,7 @@ class Autonomia::Decisores::Pergunta
 
   def self.cota_esgotada?(account)
     Autonomia::DecisorDecisao.where(account_id: account.id, created_at: Time.current.all_month)
-                             .where.not(status: 'sem_cota').count >= Autonomia::Decisores::LIMITE_MENSAL
+                             .where.not(status: %w[sem_cota sem_conteudo]).count >= Autonomia::Decisores::LIMITE_MENSAL
   end
 
   private
@@ -27,9 +29,10 @@ class Autonomia::Decisores::Pergunta
   end
 
   def nova
+    estado = Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message)
+    return criar!(status: 'sem_conteudo', motivo: 'a conversa não tem texto para ler') if estado.vazio?
     return criar!(status: 'sem_cota', motivo: 'limite mensal de perguntas da conta atingido') if self.class.cota_esgotada?(@decisor.account)
 
-    estado = Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message)
     resultado = TypesafeAi::Decisor.new.decidir(decisor: @decisor, estado: estado)
     status = resultado.certeza >= @decisor.certeza_minima ? 'decidida' : 'duvida'
     decisao = criar!(status: status, resposta: resultado.resposta, certeza: resultado.certeza)
@@ -43,7 +46,7 @@ class Autonomia::Decisores::Pergunta
   def criar!(atributos)
     Autonomia::DecisorDecisao.create!(
       decisor: @decisor, account_id: @decisor.account_id, conversation: @conversation, message: @message,
-      automation_rule: @rule, proximo_passo: @indice&.+(1), **atributos
+      automation_rule: @rule, esperas: @rule ? [{ 'regra' => @rule.id, 'indice' => @indice }] : [], **atributos
     )
   end
 

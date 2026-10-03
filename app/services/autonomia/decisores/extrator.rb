@@ -25,10 +25,12 @@ class Autonomia::Decisores::Extrator
     Return null for any field that is not present. Keep the original language of the values.
   TEXT
 
-  def initialize(decisor:, timeout: Crm::Ai::ResponsesClient::REQUEST_TIMEOUT)
+  # `timeout`/`max_retries` menores servem ao teste, que roda dentro da requisição (#858).
+  def initialize(decisor:, timeout: Crm::Ai::ResponsesClient::REQUEST_TIMEOUT, max_retries: Crm::Ai::ResponsesClient::MAX_RETRIES)
     @decisor = decisor
     @account = decisor.account
     @timeout = timeout
+    @max_retries = max_retries
   end
 
   def extrair(estado)
@@ -48,7 +50,7 @@ class Autonomia::Decisores::Extrator
     credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
     raise Error, 'ia_nao_configurada' if credencial.blank?
 
-    Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account)
+    Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account, max_retries: @max_retries)
   end
 
   def schema(campos)

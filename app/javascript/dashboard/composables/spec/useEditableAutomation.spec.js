@@ -98,6 +98,42 @@ describe('useEditableAutomation', () => {
     ]);
   });
 
+  it('opens and saves a rule with an action the panel does not offer, keeping its params', () => {
+    const automation = {
+      name: 'Lead por e-mail',
+      event_name: 'message_created',
+      conditions: [
+        {
+          attribute_key: 'content',
+          filter_operator: 'contains',
+          values: ['seguro'],
+          query_operator: null,
+        },
+      ],
+      actions: [
+        { action_name: 'perguntar_ao_decisor', action_params: [12, 'sim'] },
+        { action_name: 'assign_agent', action_params: [1] },
+      ],
+    };
+    const automationActionTypes = [
+      { key: 'assign_agent', inputType: 'search_select' },
+    ];
+
+    const { formatAutomation } = useEditableAutomation();
+    const editableAutomation = formatAutomation(
+      automation,
+      [],
+      AUTOMATIONS,
+      automationActionTypes
+    );
+    const payload = generateAutomationPayload(editableAutomation);
+
+    expect(payload.actions).toEqual([
+      { action_name: 'perguntar_ao_decisor', action_params: [12, 'sim'] },
+      { action_name: 'assign_agent', action_params: [1] },
+    ]);
+  });
+
   it.each([
     {
       description: 'multiple independent content values',

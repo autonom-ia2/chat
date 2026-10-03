@@ -4,12 +4,17 @@
 # Roda dentro da requisição, em sequência, com prazo de 10 s: o rack-timeout de produção mata tudo aos
 # 15 s. Primeiro o Jev em todas (~170 ms cada), depois a extração com o tempo que sobrar. Estourou o
 # prazo, devolve o que deu: "testei 6 de 10".
+#
+# Nenhuma chamada repete aqui dentro: uma nova tentativa usaria o prazo inteiro de novo, mais a espera.
+# A folga de cada uma é o pior caso dela — o Jev pode levar 3 s para conectar e 3 s para ler. A
+# conversa sem texto (só áudio ou imagem) fica de fora: não há o que perguntar.
 class Autonomia::Decisores::Teste
   PRAZO = 10.0
   MAX_QUANTIDADE = 10
   QUANTIDADE_PADRAO = 5
   # Abaixo disto não começa uma chamada nova: ela não terminaria antes do teto da requisição.
-  FOLGA_JEV = 1.0
+  JEV_LEITURA = 3
+  FOLGA_JEV = TypesafeAi::Client::OPEN_TIMEOUT + JEV_LEITURA
   FOLGA_EXTRACAO = 3.0
 
   def initialize(decisor:, conversations:, relogio: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
@@ -31,7 +36,8 @@ class Autonomia::Decisores::Teste
 
   def caso(conversation)
     message = conversation.messages.incoming.reorder(id: :desc).first
-    message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message)
+    estado = message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message)
+    estado unless estado.nil? || estado.vazio?
   end
 
   def decidir(estado)
@@ -56,7 +62,8 @@ class Autonomia::Decisores::Teste
       next item[:campos] = nil if item[:duvida]
       next item[:campos_pendentes] = true if restante < FOLGA_EXTRACAO
 
-      item[:campos] = Autonomia::Decisores::Extrator.new(decisor: @decisor, timeout: (restante - 1).floor).extrair(item[:estado])
+      item[:campos] = Autonomia::Decisores::Extrator.new(decisor: @decisor, timeout: (restante - 1).floor, max_retries: 0)
+                                                    .extrair(item[:estado])
     rescue Autonomia::Decisores::Extrator::Error => e
       item[:campos] = nil
       item[:erro_campos] = e.message
@@ -74,6 +81,6 @@ class Autonomia::Decisores::Teste
   end
 
   def jev
-    @jev ||= TypesafeAi::Decisor.new(client: TypesafeAi::Client.new(read_timeout: 3, retry_limit: 0))
+    @jev ||= TypesafeAi::Decisor.new(client: TypesafeAi::Client.new(read_timeout: JEV_LEITURA, retry_limit: 0))
   end
 end

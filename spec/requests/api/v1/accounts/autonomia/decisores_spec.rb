@@ -129,6 +129,28 @@ RSpec.describe 'Decisores API', type: :request do
       expect(response.parsed_body).to include('testados' => 1, 'pedidos' => 3)
     end
 
+    it 'deixa de fora a conversa sem texto, sem perguntar ao Jev' do
+      conversa_com(nil, inbox: inbox)
+
+      post "#{base}/#{decisor.id}/teste", params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('testados' => 0, 'pedidos' => 0)
+      expect(a_request(:post, jev_url)).not_to have_been_made
+    end
+
+    it 'não começa pergunta ao Jev sem tempo para o pior caso dela (conectar e ler)' do
+      2.times { |i| conversa_com("caso #{i}", inbox: inbox) }
+      tempos = [0.0, 0.1, 4.5].each
+      relogio = -> { tempos.next }
+      allow(Autonomia::Decisores::Teste).to receive(:new).and_wrap_original do |original, **args|
+        original.call(**args, relogio: relogio)
+      end
+
+      post "#{base}/#{decisor.id}/teste", params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('testados' => 1, 'pedidos' => 2)
+    end
+
     it 'mostra os campos que extrairia, sem gravar no contato' do
       decisor.update!(campos: [{ chave: 'nome', descricao: 'Nome', destino: 'contato.nome' }])
       conversation = conversa_com('Nome: Joana Lima', inbox: inbox)
@@ -139,6 +161,7 @@ RSpec.describe 'Decisores API', type: :request do
       post "#{base}/#{decisor.id}/teste", params: { inbox_id: inbox.id }, headers: admin.create_new_auth_token, as: :json
 
       expect(response.parsed_body['resultados'].first['campos']).to eq('nome' => 'Joana Lima')
+      expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 0))
       expect(conversation.contact.reload.name).not_to eq('Joana Lima')
     end
   end
@@ -170,12 +193,15 @@ RSpec.describe 'Decisores API', type: :request do
     let(:conversation) { conversa_com('Talvez eu precise de seguro') }
     let(:rule) do
       create(:automation_rule, account: account,
+                               event_name: 'message_created',
+                               conditions: [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }],
                                actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'sim'] },
                                          { action_name: 'add_label', action_params: ['lead'] }])
     end
     let!(:decisao) do
       create(:autonomia_decisor_decisao, decisor: decisor, conversation: conversation, message: conversation.messages.last,
-                                         automation_rule: rule, proximo_passo: 1, status: 'esperando_pessoa', certeza: 0.5)
+                                         automation_rule: rule, esperas: [{ 'regra' => rule.id, 'indice' => 0 }],
+                                         status: 'esperando_pessoa', certeza: 0.5)
     end
 
     it 'lista os casos esperando a pessoa' do
@@ -196,6 +222,28 @@ RSpec.describe 'Decisores API', type: :request do
       expect(decisor.reload.exemplos.last).to include('origem' => 'pessoa', 'resposta' => 'sim')
       expect(conversation.reload.label_list).to eq(['lead'])
       expect(a_request(:post, jev_url)).not_to have_been_made
+    end
+
+    it 'duplo clique retoma a automação uma vez só' do
+      headers = admin.create_new_auth_token
+      url = "/api/v1/accounts/#{account.id}/autonomia/decisoes/#{decisao.id}/resolver"
+
+      expect do
+        2.times { post url, params: { resposta: 'sim' }, headers: headers, as: :json }
+      end.to have_enqueued_job(Autonomia::Decisores::PerguntarJob).exactly(:once)
+
+      expect(response.parsed_body).to include('status' => 'resolvida', 'retomou' => false)
+      expect(decisor.reload.correcoes_count).to eq(0)
+    end
+
+    it 'caso de conversa sem texto pode ser resolvido' do
+      conversation.messages.last.update!(content: nil)
+
+      post "/api/v1/accounts/#{account.id}/autonomia/decisoes/#{decisao.id}/resolver", params: { resposta: 'sim' },
+                                                                                       headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body).to include('status' => 'resolvida', 'retomou' => true)
+      expect(decisor.reload.exemplos).to be_empty
     end
 
     it 'caso vencido vira exemplo mas não retoma' do

@@ -39,6 +39,11 @@ class Autonomia::Decisores::Estado
     [assunto, *mensagens].compact_blank.join("\n\n").first(Autonomia::Decisor::MAX_TEXTO_DO_EXEMPLO)
   end
 
+  # Nada escrito até a mensagem da pergunta: nem assunto, nem texto (só áudio, imagem, figurinha).
+  def vazio?
+    assunto.nil? && mensagens.empty?
+  end
+
   def trecho
     mensagens.last.to_s.squish.first(TRECHO)
   end

@@ -121,15 +121,16 @@ class Autonomia::Guide::Acoes
   # pode depender de quem chamou lembrar dela.
   def conferir!(acao, dados)
     garantir_permitida!(acao)
-    raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao)
+    raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao, dados)
 
     montar_caminho(acao, dados)
     conferir_corpo!(acao, dados)
   end
 
-  # Tem desfazer? Então o Guia executa direto; se não, a pessoa confirma.
-  def desfazivel?(acao)
-    SEM_DESFAZER.exclude?(acao.to_s)
+  # Tem desfazer? Então o Guia executa direto; se não, a pessoa confirma. Sem `dados`, responde pela
+  # ação só (o formato da ação não tem corpo); com eles, também pelo que o corpo faz.
+  def desfazivel?(acao, dados = nil)
+    SEM_DESFAZER.exclude?(acao.to_s) && !::Autonomia::Guide::RegraComDecisor.new(@account).fica_ligada?(acao.to_s, dados)
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação

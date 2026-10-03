@@ -13,6 +13,8 @@ RSpec.describe Autonomia::Decisores::PerguntarJob do
   let(:decisor) { create(:autonomia_decisor, account: account) }
   let(:rule) do
     create(:automation_rule, account: account,
+                             event_name: 'message_created',
+                             conditions: [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }],
                              actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'sim'] },
                                        { action_name: 'add_label', action_params: ['lead'] }])
   end
@@ -40,7 +42,8 @@ RSpec.describe Autonomia::Decisores::PerguntarJob do
     rodar
 
     expect(conversation.reload.label_list).to eq(['lead'])
-    expect(Autonomia::DecisorDecisao.last).to have_attributes(status: 'decidida', resposta: 'sim', automation_rule_id: rule.id, proximo_passo: 1)
+    expect(Autonomia::DecisorDecisao.last).to have_attributes(status: 'decidida', resposta: 'sim', automation_rule_id: rule.id,
+                                                              esperas: [{ 'regra' => rule.id, 'indice' => 0 }])
     expect(decisor.reload).to have_attributes(perguntas_count: 1, duvidas_count: 0)
     expect(decisor.ultima_pergunta_em).to be_present
   end
@@ -90,6 +93,81 @@ RSpec.describe Autonomia::Decisores::PerguntarJob do
     rodar
 
     expect(a_request(:post, jev_url)).not_to have_been_made
+  end
+
+  it 'conversa sem texto (só áudio ou imagem) não vai ao Jev e não segue' do
+    message.update!(content: nil)
+
+    rodar
+
+    expect(a_request(:post, jev_url)).not_to have_been_made
+    expect(Autonomia::DecisorDecisao.last).to have_attributes(status: 'sem_conteudo')
+    expect(decisor.reload.perguntas_count).to eq(0)
+    expect(conversation.reload.label_list).to be_empty
+  end
+
+  context 'with duas regras usando o mesmo Decisor' do
+    let(:regra_do_nao) do
+      create(:automation_rule, account: account,
+                               event_name: 'message_created',
+                               conditions: [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }],
+                               actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'nao'] },
+                                         { action_name: 'add_label', action_params: ['nao_lead'] }])
+    end
+    let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
+
+    before do
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+      allow(cliente).to receive(:create).and_return(text: { resposta: 'nao', seguro: true, motivo: 'Não pede seguro.' }.to_json)
+    end
+
+    it 'na dúvida as duas esperam, e quando o Guia decide retoma a regra da resposta dada' do
+      jev_responde('sim', 0.6)
+
+      rodar
+      described_class.perform_now(regra_do_nao.id, conversation.id, message.id, 0)
+
+      decisao = Autonomia::DecisorDecisao.sole
+      expect(decisao.esperas).to contain_exactly({ 'regra' => rule.id, 'indice' => 0 }, { 'regra' => regra_do_nao.id, 'indice' => 0 })
+      expect(a_request(:post, jev_url)).to have_been_made.once
+
+      perform_enqueued_jobs { Autonomia::Decisores::DuvidaJob.perform_now(decisao.id) }
+
+      expect(conversation.reload.label_list).to eq(['nao_lead'])
+    end
+  end
+
+  context 'when a automação é retomada depois da dúvida' do
+    let(:rule) do
+      create(:automation_rule, account: account,
+                               conditions: [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }],
+                               actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'sim'] },
+                                         { action_name: 'send_message', action_params: ['Recebemos seu pedido'] }])
+    end
+
+    before do
+      create(:autonomia_decisor_decisao, decisor: decisor, conversation: conversation, message: message, automation_rule: rule,
+                                         status: 'resolvida', resposta: 'sim', esperas: [{ 'regra' => rule.id, 'indice' => 0 }])
+    end
+
+    def enviadas
+      conversation.messages.outgoing.where(content: 'Recebemos seu pedido').count
+    end
+
+    it 'a retomada repetida (Guia e pessoa, retry) roda os passos uma vez só' do
+      2.times { described_class.perform_now(rule.id, conversation.id, message.id, 0, true) }
+
+      expect(enviadas).to eq(1)
+    end
+
+    it 'não age quando as condições da regra não valem mais (conversa resolvida enquanto esperava)' do
+      conversation.update!(status: :resolved)
+
+      described_class.perform_now(rule.id, conversation.id, message.id, 0, true)
+
+      expect(enviadas).to eq(0)
+    end
   end
 
   context 'with campos declarados no Decisor' do

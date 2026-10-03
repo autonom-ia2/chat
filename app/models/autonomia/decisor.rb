@@ -43,7 +43,10 @@ class Autonomia::Decisor < ApplicationRecord
   end
 
   # Guarda um exemplo confirmado. Os mais novos ficam: o teto de 30 descarta os mais antigos.
+  # Sem texto não há exemplo (conversa só de áudio ou imagem): -> false, sem invalidar o Decisor.
   def guardar_exemplo!(texto:, resposta:, origem:, decisao_id: nil)
+    return false if texto.to_s.strip.empty?
+
     novo = { 'texto' => texto.to_s.first(MAX_TEXTO_DO_EXEMPLO), 'resposta' => resposta.to_s, 'origem' => origem.to_s,
              'decisao_id' => decisao_id, 'criado_em' => Time.current.iso8601 }.compact
     update!(exemplos: (Array(exemplos) + [novo]).last(MAX_EXEMPLOS))

@@ -590,7 +590,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_200000) do
     t.decimal "certeza", precision: 4, scale: 3
     t.jsonb "campos_extraidos", default: {}, null: false
     t.string "status", null: false
-    t.integer "proximo_passo"
+    t.jsonb "esperas", default: [], null: false
+    t.jsonb "seguidas", default: [], null: false
     t.text "motivo"
     t.bigint "resolvida_por_id"
     t.datetime "created_at", null: false

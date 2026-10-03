@@ -1,5 +1,9 @@
-# A dúvida do Decisor (#858) vai ao Guia. Seguro: a decisão vale, vira exemplo (origem guia) e a
-# automação retoma. Inseguro, ou sem resposta do Guia: o caso espera uma pessoa por até 2 dias.
+# A dúvida do Decisor (#858) vai ao Guia. Seguro: a decisão vale, a automação retoma e o caso vira
+# exemplo (origem guia). Inseguro, ou sem resposta do Guia: o caso espera uma pessoa por até 2 dias.
+#
+# O Guia leva segundos; nesse meio-tempo a pessoa pode ter resolvido o caso. Por isso a troca de status
+# é reivindicada (só vale se ainda for `duvida`), e a retomada sai antes do exemplo: se o exemplo
+# falhar, a automação já retomou.
 class Autonomia::Decisores::DuvidaJob < ApplicationJob
   queue_as :medium
 
@@ -17,14 +21,16 @@ class Autonomia::Decisores::DuvidaJob < ApplicationJob
   private
 
   def decidir(decisao, veredito, estado)
-    decisao.update!(status: 'decidida_pelo_guia', resposta: veredito.resposta, motivo: veredito.motivo)
+    return unless decisao.reivindicar!(estava: 'duvida', status: 'decidida_pelo_guia', resposta: veredito.resposta, motivo: veredito.motivo)
+
+    Autonomia::Decisores::Retomada.enfileirar(decisao)
     decisao.decisor.guardar_exemplo!(texto: estado.texto_do_exemplo, resposta: veredito.resposta, origem: 'guia',
                                      decisao_id: decisao.id)
-    Autonomia::Decisores::Retomada.enfileirar(decisao)
   end
 
   def esperar_pessoa(decisao, motivo)
-    decisao.update!(status: 'esperando_pessoa', motivo: motivo)
+    return unless decisao.reivindicar!(estava: 'duvida', status: 'esperando_pessoa', motivo: motivo)
+
     Autonomia::Decisores::VencerJob.set(wait: Autonomia::DecisorDecisao::PRAZO_PESSOA).perform_later(decisao.id)
   end
 end

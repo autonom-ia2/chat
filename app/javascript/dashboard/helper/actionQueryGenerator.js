@@ -12,7 +12,8 @@ const formatArray = params => {
   } else if (allElementsString(params) || allElementsNumbers(params)) {
     params = [...params];
   } else {
-    params = params.map(val => val.id);
+    // Selected options become their ids; raw values (mixed ids and keys) stay as they are.
+    params = params.map(val => (val && typeof val === 'object' ? val.id : val));
   }
   return params;
 };

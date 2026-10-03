@@ -12,12 +12,14 @@ RSpec.describe Autonomia::Decisores::DuvidaJob do
   let(:decisor) { create(:autonomia_decisor, account: account) }
   let(:rule) do
     create(:automation_rule, account: account,
+                             event_name: 'message_created',
+                             conditions: [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }],
                              actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'sim'] },
                                        { action_name: 'add_label', action_params: ['lead'] }])
   end
   let!(:decisao) do
     create(:autonomia_decisor_decisao, decisor: decisor, conversation: conversation, message: message, automation_rule: rule,
-                                       proximo_passo: 1, status: 'duvida', resposta: 'sim', certeza: 0.6)
+                                       esperas: [{ 'regra' => rule.id, 'indice' => 0 }], status: 'duvida', resposta: 'sim', certeza: 0.6)
   end
   let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
 
@@ -34,12 +36,34 @@ RSpec.describe Autonomia::Decisores::DuvidaJob do
     guia_responde(resposta: 'sim', seguro: true)
 
     expect { described_class.perform_now(decisao.id) }
-      .to have_enqueued_job(Autonomia::Decisores::PerguntarJob).with(rule.id, conversation.id, message.id, 0)
+      .to have_enqueued_job(Autonomia::Decisores::PerguntarJob).with(rule.id, conversation.id, message.id, 0, true)
 
     expect(decisao.reload).to have_attributes(status: 'decidida_pelo_guia', resposta: 'sim', motivo: 'Pede preço de seguro auto.')
     expect(decisor.reload.exemplos.last).to include('resposta' => 'sim', 'origem' => 'guia', 'decisao_id' => decisao.id)
     expect(decisor.exemplos.last['texto']).to include('preço do seguro')
     expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: 'decisor_duvida', account: account))
+  end
+
+  it 'a pessoa resolveu enquanto o Guia pensava: o Guia não grava por cima nem retoma de novo' do
+    allow(cliente).to receive(:create) do
+      Autonomia::Decisores::Resolucao.new(decisao: Autonomia::DecisorDecisao.find(decisao.id), user: nil).resolver!('nao')
+      { text: { resposta: 'sim', seguro: true, motivo: 'Pede preço.' }.to_json }
+    end
+
+    expect { described_class.perform_now(decisao.id) }.to have_enqueued_job(Autonomia::Decisores::PerguntarJob).exactly(:once)
+
+    expect(decisao.reload).to have_attributes(status: 'resolvida', resposta: 'nao')
+    expect(decisor.reload.exemplos.map { |exemplo| exemplo['origem'] }).to eq(['pessoa'])
+  end
+
+  it 'conversa sem texto: o Guia decide e a automação retoma, sem travar no exemplo' do
+    message.update!(content: nil)
+    guia_responde(resposta: 'sim', seguro: true)
+
+    expect { described_class.perform_now(decisao.id) }.to have_enqueued_job(Autonomia::Decisores::PerguntarJob)
+
+    expect(decisao.reload.status).to eq('decidida_pelo_guia')
+    expect(decisor.reload.exemplos).to be_empty
   end
 
   it 'a retomada roda os passos seguintes sem perguntar ao Jev de novo' do

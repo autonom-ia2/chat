@@ -101,18 +101,28 @@ class AutomationRule < ApplicationRecord
   # Passo do Decisor (#858): action_params é [decisor_id, chave_que_segue]. O Decisor tem de ser da conta
   # e a chave, uma das respostas dele — conferida por igualdade, nunca por expressão regular.
   def decisor_actions_format
-    Array(actions).each do |action|
-      action = action.to_h.with_indifferent_access
-      next unless action[:action_name] == Autonomia::Decisores::PASSO
+    passos = Array(actions).map { |action| action.to_h.with_indifferent_access }
+                           .select { |action| action[:action_name] == Autonomia::Decisores::PASSO }
+    decisor_supported_conditions if passos.any?
+    passos.each { |action| decisor_action_format(action) }
+  end
 
-      decisor_id, chave = Array(action[:action_params])
-      decisor = Autonomia::Decisor.find_by(id: decisor_id.to_s, account_id: account_id)
-      next errors.add(:actions, decisor_not_found_message(decisor_id)) if decisor.blank?
-      next if decisor.resposta?(chave)
+  def decisor_action_format(action)
+    decisor_id, chave = Array(action[:action_params])
+    decisor = Autonomia::Decisor.find_by(id: decisor_id.to_s, account_id: account_id)
+    return errors.add(:actions, decisor_not_found_message(decisor_id)) if decisor.blank?
+    return if decisor.resposta?(chave)
 
-      errors.add(:actions, "#{Autonomia::Decisores::PASSO}: '#{chave}' is not an answer of Decisor #{decisor.id}. " \
-                           "Use one of: #{decisor.chaves.join(', ')}.")
-    end
+    errors.add(:actions, "#{Autonomia::Decisores::PASSO}: '#{chave}' is not an answer of Decisor #{decisor.id}. " \
+                         "Use one of: #{decisor.chaves.join(', ')}.")
+  end
+
+  # A retomada depois da dúvida confere as condições de novo e não reconstrói changed_attributes: a
+  # mesma razão de execution_delay_supported_conditions.
+  def decisor_supported_conditions
+    return if Array(conditions).none? { |obj| obj['filter_operator'] == 'attribute_changed' }
+
+    errors.add(:actions, "#{Autonomia::Decisores::PASSO} cannot be used with attribute_changed conditions.")
   end
 
   def decisor_not_found_message(decisor_id)

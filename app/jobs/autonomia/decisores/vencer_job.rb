@@ -7,6 +7,7 @@ class Autonomia::Decisores::VencerJob < ApplicationJob
     decisao = Autonomia::DecisorDecisao.find_by(id: decisao_id)
     return unless decisao&.vencida_por_prazo?
 
-    decisao.update!(status: 'vencida')
+    # Reivindicada: a pessoa pode estar resolvendo o caso agora mesmo.
+    decisao.reivindicar!(estava: 'esperando_pessoa', status: 'vencida')
   end
 end

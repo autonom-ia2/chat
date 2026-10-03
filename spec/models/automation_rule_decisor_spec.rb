@@ -38,4 +38,15 @@ RSpec.describe AutomationRule do
     expect(rule).not_to be_valid
     expect(rule.errors[:actions].join).to include('decidir_tudo', 'Supported actions:', 'perguntar_ao_decisor', 'crm_create_card')
   end
+
+  # A retomada depois da dúvida confere as condições de novo e não tem como reconstruir a mudança.
+  it 'recusa o Decisor em regra com condição de atributo alterado' do
+    rule = regra([decisor.id, 'sim'])
+    rule.event_name = 'conversation_updated'
+    rule.conditions = [{ attribute_key: 'status', filter_operator: 'attribute_changed', values: { from: ['open'], to: ['resolved'] },
+                         query_operator: nil }]
+
+    expect(rule).not_to be_valid
+    expect(rule.errors[:actions].join).to include('perguntar_ao_decisor cannot be used with attribute_changed')
+  end
 end
