@@ -823,7 +823,10 @@ watch(accountId, () => {
       </div>
 
       <div class="mx-3 mt-px mb-2">
+        <!-- Uma conta, um composer: trocar de conta descarta a gravação e o áudio que
+             esperava a vez, que senão sairia na conta nova. -->
         <GuideComposer
+          :key="accountId"
           class="mb-1 w-full"
           :is-busy="isSending"
           :arquivos="pendentes"

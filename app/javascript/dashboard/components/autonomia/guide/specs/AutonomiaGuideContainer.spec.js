@@ -34,12 +34,17 @@ vi.mock('dashboard/composables/useUISettings', () => ({
     updateUISettings: vi.fn(),
   }),
 }));
+// A conta aberta: os testes de troca de conta mudam o valor.
+let mockContaAtual;
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: getter => {
     if (getter === 'accounts/getAccount') {
       return ref(() => ({ autonomia_guide_available: true }));
     }
-    if (getter === 'getCurrentAccountId') return ref(1);
+    if (getter === 'getCurrentAccountId') {
+      mockContaAtual = mockContaAtual || ref(1);
+      return mockContaAtual;
+    }
     // `accounts/isFeatureEnabledonAccount`: as telas usadas nestes testes exigem recurso ligado
     // na conta (#636 usa rotas reais do registro, e a maioria tem `gate` de feature).
     return ref(() => true);
@@ -152,6 +157,21 @@ describe('AutonomiaGuideContainer', () => {
     useAutonomiaGuideStore().reset();
     vi.clearAllMocks();
     vi.useRealTimers();
+  });
+
+  // Revisão do #908: um áudio que esperava a vez não pode sair na conta seguinte.
+  it('recomeça o composer ao trocar de conta, descartando gravação e áudio na espera', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    const antes = wrapper.findComponent({ name: 'GuideComposer' }).vm.$.uid;
+
+    mockContaAtual.value = 2;
+    await flushPromises();
+
+    const depois = wrapper.findComponent({ name: 'GuideComposer' }).vm.$.uid;
+    expect(depois).not.toBe(antes);
+    mockContaAtual.value = 1;
+    await flushPromises();
   });
 
   it('clears the input as soon as the question enters the thread', async () => {
