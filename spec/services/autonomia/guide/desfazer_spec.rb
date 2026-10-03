@@ -52,6 +52,33 @@ RSpec.describe 'Caderno e desfazer do Guia' do
       expect(execucao.mudancas).to be_empty
     end
 
+    # Encontrado no teste de produção de 03/10/2026: a linha nasceu e morreu no
+    # mesmo passo, o caderno guardou só o "apagou", e o desfazer recriou uma
+    # linha que nunca existiu antes do Guia agir.
+    it 'não guarda nada da linha que nasceu e morreu no mesmo passo', :aggregate_failures do
+      gravando do
+        etiqueta = conta.labels.create!(title: 'efemera')
+        etiqueta.update!(title: 'efemera-2')
+        etiqueta.destroy!
+      end
+
+      expect(execucao.mudancas).to be_empty
+      desfazer
+      expect(conta.labels.where(title: %w[efemera efemera-2])).to be_empty
+    end
+
+    # Criada e alterada no mesmo passo: o que existia antes do Guia era nada.
+    it 'guarda só a criação da linha que nasceu e mudou no mesmo passo', :aggregate_failures do
+      gravando do
+        etiqueta = conta.labels.create!(title: 'nova')
+        etiqueta.update!(title: 'nova-2')
+      end
+
+      expect(execucao.mudancas.map(&:operacao)).to eq(['create'])
+      desfazer
+      expect(conta.labels.where(title: %w[nova nova-2])).to be_empty
+    end
+
     # Apagar sem callback não deixa "antes" para pôr de volta. A tela tem que
     # avisar, não fingir que tudo volta.
     it 'diz quando algo foi apagado sem passar pelo model' do
