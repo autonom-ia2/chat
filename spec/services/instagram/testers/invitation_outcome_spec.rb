@@ -81,13 +81,14 @@ RSpec.describe Instagram::Testers::InvitationOutcome do
       pending = "pending:#{unknown.partition(':').last}"
       newer = described_class.new(app_id: '10001', target_id: '17841400000000001')
 
-      expect(Redis::Alfred).to receive(:delete_if_equals).with(key, unknown).ordered.and_wrap_original do |original, *arguments|
+      expect(Instagram::Testers::CoordinationRedis).to receive(:delete_if_equals).with(key,
+                                                                                       unknown).ordered.and_wrap_original do |original, *arguments|
         result = original.call(*arguments)
         newer.claim!
         newer.pending! if state == 'pending'
         result
       end
-      expect(Redis::Alfred).to receive(:delete_if_equals).with(key, pending).ordered.and_call_original
+      expect(Instagram::Testers::CoordinationRedis).to receive(:delete_if_equals).with(key, pending).ordered.and_call_original
 
       expect(outcome.reconcile { 'accepted' }).to eq('accepted')
       expect(newer.state).to eq(state)

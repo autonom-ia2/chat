@@ -61,10 +61,10 @@ class Instagram::CallbacksController < ApplicationController
       return redirect_to_error_page('error_type' => code, 'code' => 422, 'error_message' => code)
     end
 
-    Rails.logger.error("Instagram Channel creation Error: #{error.message}")
-    ChatwootExceptionTracker.new(error).capture_exception
-
     error_info = extract_error_info(error)
+    safe_error = CustomExceptions::InstagramApiError.new(error_info['error_message'], error_info['code'])
+    Rails.logger.error("Instagram Channel creation Error: #{safe_error.code}")
+    ChatwootExceptionTracker.new(safe_error).capture_exception
     redirect_to_error_page(error_info)
   end
 
@@ -79,16 +79,9 @@ class Instagram::CallbacksController < ApplicationController
   # Extract error details from the exception
   def extract_error_info(error)
     if error.is_a?(OAuth2::Error)
-      begin
-        # Instagram returns JSON error response which we parse to extract error details
-        JSON.parse(error.message)
-      rescue JSON::ParseError
-        # Fall back to a generic OAuth error if JSON parsing fails
-        { 'error_type' => 'OAuthException', 'code' => 400, 'error_message' => error.message }
-      end
+      { 'error_type' => 'OAuthException', 'code' => 400, 'error_message' => 'instagram_authorization_failed' }
     else
-      # For other unexpected errors
-      { 'error_type' => error.class.name, 'code' => 500, 'error_message' => error.message }
+      { 'error_type' => 'InstagramApiError', 'code' => 500, 'error_message' => 'instagram_connection_failed' }
     end
   end
 
@@ -96,12 +89,10 @@ class Instagram::CallbacksController < ApplicationController
   # Error parameters are documented at:
   # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
   def handle_authorization_error
-    return redirect_to_error_page('error_type' => 'authorization_error', 'code' => 400, 'error_message' => 'Authorization was denied') if @tester_flow
-
     error_info = {
-      'error_type' => params[:error] || 'authorization_error',
+      'error_type' => 'authorization_error',
       'code' => 400,
-      'error_message' => params[:error_description] || 'Authorization was denied'
+      'error_message' => 'Authorization was denied'
     }
 
     Rails.logger.error("Instagram Authorization Error: #{error_info['error_message']}")
@@ -122,7 +113,9 @@ class Instagram::CallbacksController < ApplicationController
 
   def find_or_create_inbox
     user_details = fetch_instagram_user_details(@long_lived_token_response['access_token'])
-    raise Instagram::Testers::Error, 'invalid_selection' if @tester_selection && user_details['username'] != @tester_selection.fetch('username')
+    if @tester_selection && Instagram::Testers::Validation.normalize_username(user_details['username']) != @tester_selection.fetch('username')
+      raise Instagram::Testers::Error, 'invalid_selection'
+    end
 
     channel_instagram = find_channel_by_instagram_id(user_details['user_id'].to_s)
     channel_exists = channel_instagram.present?

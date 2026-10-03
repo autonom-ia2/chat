@@ -97,8 +97,8 @@ RSpec.describe Instagram::Testers::Invitation do
 
   it 'does not send if another worker atomically claims the outcome despite a stale lock' do
     allow(client).to receive(:status).and_return('absent')
-    allow(Redis::Alfred).to receive(:get).and_call_original
-    allow(Redis::Alfred).to receive(:get).with("#{key}:outcome").and_return(nil)
+    allow(Instagram::Testers::CoordinationRedis).to receive(:get).and_call_original
+    allow(Instagram::Testers::CoordinationRedis).to receive(:get).with("#{key}:outcome").and_return(nil)
     Redis::Alfred.set("#{key}:outcome", 'unknown:another-generation', ex: described_class::OUTCOME_TTL)
     expect(client).not_to receive(:invite)
     expect { invitation.perform }.to(raise_error { |error| expect(error.code).to eq('invite_unknown') })
@@ -106,9 +106,9 @@ RSpec.describe Instagram::Testers::Invitation do
 
   it 'never sends an invite if persisting the unknown claim fails' do
     allow(client).to receive(:status).and_return('absent')
-    allow(Redis::Alfred).to receive(:set).and_call_original
-    allow(Redis::Alfred).to receive(:set).with("#{key}:outcome", kind_of(String), nx: true, ex: described_class::OUTCOME_TTL)
-                                         .and_raise(Redis::BaseError, 'Synthetic claim persistence failure')
+    allow(Instagram::Testers::CoordinationRedis).to receive(:set).and_call_original
+    allow(Instagram::Testers::CoordinationRedis).to receive(:set).with("#{key}:outcome", kind_of(String), nx: true, ex: described_class::OUTCOME_TTL)
+                                                                 .and_raise(Redis::BaseError, 'Synthetic claim persistence failure')
     expect(client).not_to receive(:invite)
     expect { invitation.perform }.to raise_error do |error|
       expect(error.code).to eq('invite_unknown')

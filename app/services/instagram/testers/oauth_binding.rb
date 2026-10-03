@@ -14,6 +14,8 @@ class Instagram::Testers::OauthBinding
 
   def self.claim!(payload)
     validate_payload!(payload)
+    raise Instagram::Testers::Error, 'invalid_selection' unless payload['tester_installation'] == ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', '')
+
     selected = payload.fetch('tester_selection')
     configuration = Instagram::Testers::Configuration.new(account_id: payload.fetch('sub'))
     configuration.ensure_available!

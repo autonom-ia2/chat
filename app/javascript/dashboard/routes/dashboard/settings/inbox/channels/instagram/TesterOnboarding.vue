@@ -159,7 +159,11 @@ onMounted(loadConfiguration);
         </form>
 
         <div v-if="!selected && searched" class="flex flex-col gap-3">
-          <h2 ref="title" tabindex="-1" class="m-0 text-heading-2">
+          <h2
+            ref="title"
+            tabindex="-1"
+            class="m-0 text-heading-2 focus:outline-none"
+          >
             {{ copy('RESULTS_TITLE') }}
           </h2>
           <p class="m-0 text-body-main text-n-slate-11">
@@ -241,7 +245,7 @@ onMounted(loadConfiguration);
             <h2
               ref="title"
               tabindex="-1"
-              class="m-0 text-heading-2"
+              class="m-0 text-heading-2 focus:outline-none"
               :class="
                 status === 'accepted'
                   ? 'text-n-teal-12 dark:text-n-teal-11'

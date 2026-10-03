@@ -5,7 +5,8 @@ import { useAbortableRequest } from './useAbortableRequest';
 export const INSTAGRAM_ACCEPTANCE_URL =
   'https://www.instagram.com/accounts/manage_access/';
 const VALID_STATUSES = ['absent', 'pending', 'accepted'];
-const USERNAME_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz0123456789._';
+const USERNAME_CHARACTERS =
+  'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._';
 
 export const normalizeInstagramUsername = value => {
   const trimmed = value.trim().toLowerCase();

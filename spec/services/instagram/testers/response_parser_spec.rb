@@ -14,6 +14,11 @@ RSpec.describe Instagram::Testers::ResponseParser do
                                                         avatar_url: 'https://example.com/photo.png' }])
   end
 
+  it 'canonicalizes mixed-case usernames before signing and returning candidates' do
+    entry['text'] = 'Demo_Company'
+    expect(described_class.candidates('payload' => { 'entries' => [entry] }).first[:username]).to eq('demo_company')
+  end
+
   ['<html>Login</html>', '{}', '[]', '{"error":1357004}', '{"errors":[{"message":"synthetic"}]}'].each do |body|
     it "rejects broken typeahead response #{body}" do
       expect do

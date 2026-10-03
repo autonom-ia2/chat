@@ -1151,6 +1151,7 @@ results.cases = definitions.map(({ id, options }) => ({
 try {
   await mkdir(output, { recursive: true });
   results.sourceHashes = await fingerprints();
+  results.sourceHashesBefore = results.sourceHashes;
   const modulePath = process.env.PLAYWRIGHT_MODULE_PATH;
   if (!modulePath)
     throw new Error(
@@ -1195,7 +1196,7 @@ try {
   results.sourceHashesAfter = await fingerprints();
   assert.deepEqual(
     results.sourceHashesAfter,
-    results.sourceHashes,
+    results.sourceHashesBefore,
     'Source changed during browser QA; rerun against stable component code'
   );
 } catch (error) {

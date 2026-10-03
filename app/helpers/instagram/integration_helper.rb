@@ -10,8 +10,8 @@ module Instagram::IntegrationHelper
     return if client_secret.blank?
 
     JWT.encode(token_payload(account_id, return_to, tester_selection: tester_selection), client_secret, 'HS256')
-  rescue StandardError => e
-    Rails.logger.error("Failed to generate Instagram token: #{e.message}")
+  rescue StandardError
+    Rails.logger.error('Instagram token generation failed')
     nil
   end
 
@@ -20,6 +20,7 @@ module Instagram::IntegrationHelper
     payload[:return_to] = return_to if return_to.present?
     if tester_selection
       payload[:tester_selection] = tester_selection
+      payload[:tester_installation] = ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', '')
       payload[:exp] = (Time.current + Instagram::Testers::OauthBinding::TTL).to_i
       payload[:jti] = SecureRandom.uuid
     end
@@ -60,8 +61,8 @@ module Instagram::IntegrationHelper
                  algorithm: 'HS256',
                  verify_expiration: true
                }).first
-  rescue StandardError => e
-    Rails.logger.error("Unexpected error verifying Instagram token: #{e.message}")
+  rescue StandardError
+    Rails.logger.error('Instagram token verification failed')
     nil
   end
 end

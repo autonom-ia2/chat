@@ -74,7 +74,8 @@ class Instagram::Testers::ResponseParser
             Instagram::Testers::Validation.avatar?(entry['photo'])
     raise Instagram::Testers::Error, 'meta_unavailable' unless valid
 
-    { id: entry['uniqueID'], username: entry['text'], name: entry['subtitle'], avatar_url: entry['photo'] }
+    { id: entry['uniqueID'], username: Instagram::Testers::Validation.normalize_username(entry['text']),
+      name: entry['subtitle'], avatar_url: entry['photo'] }
   end
 
   def self.valid_name?(name)

@@ -1,170 +1,170 @@
-# Runbook: convite de testador Instagram (#910)
+# Runbook: onboarding Instagram Tester (#910 / PR #913)
 
-Use junto ao [guia do fluxo](../instagram-tester-onboarding.md),
-[segredos de produção](../production-env-secrets.md) e [gates de deploy](../production-deploy-gates.md).
-Este documento prepara uma operação futura; **nenhuma alteração de produção está autorizada**.
-O coordenador registra o aceite e as evidências em `docs/audit/`, sem dados de clientes ou segredos.
+Este runbook prepara a operação. Merge, deploy, configuração de produção, segredos,
+auth e infraestrutura exigem aprovação explícita do Rodrigo. Não executar a chamada
+Meta anteriormente bloqueada por outra ferramenta, host, proxy ou agente.
 
-## 1. Gate de publicação e ativação
+## Gate antes de publicar
 
-A flag vem OFF; habilitar exige aprovação do Rodrigo e allowlist explícita de contas.
-Merge, SSM, auth e deploy são ações sujeitas a essa aprovação.
-Seguir Issue → Branch → PR → Project update → Review → Approval → Merge → Deploy/Rollback plan.
+Push na `main` dispara deploy automático de **Autonom.ia e Hub2You**. A flag OFF
+controla a ativação, não impede a publicação do código. Seguir Issue → Branch → PR →
+Project update → Review → Approval → Merge → Deploy/Rollback.
 
-**Push de código na `main` dispara automaticamente deploy de Autonom.ia e Hub2You.**
-`lib/operator_guide/**` também dispara deploy. Os workflows podem iniciar juntos;
-não há garantia de deploy sequencial. As duas stacks precisam estar prontas antes do merge.
-A flag controla a ativação do fluxo, não a publicação do código.
-
-Antes do gate, preencher a matriz sem supor que Apps, businesses ou sessões são iguais ou diferentes:
-
-| Item operacional | Hub2You | Autonom.ia |
+| Evidência necessária | Autonom.ia | Hub2You |
 |---|---|---|
-| App pai Meta confirmado | PENDENTE | PENDENTE |
-| Business correspondente confirmado | PENDENTE | PENDENTE |
-| Nome exato do app exibido ao convidado | PENDENTE | PENDENTE |
-| Relação com OAuthApp `INSTAGRAM_APP_ID` | PENDENTE | PENDENTE |
-| `doc_id` corresponde ao adaptador atual | PENDENTE | PENDENTE |
-| Sessão autorizada validada ao vivo | NÃO EXECUTADO | NÃO EXECUTADO |
-| Contas permitidas aprovadas | PENDENTE | PENDENTE |
-| Pedido mínimo autenticado/novo adaptador ao vivo | NÃO EXECUTADO | NÃO EXECUTADO |
-| Aceite e OAuth real do perfil selecionado | NÃO EXECUTADO | NÃO EXECUTADO |
-| Webhook e DM real, recebimento/resposta | NÃO EXECUTADO | NÃO EXECUTADO |
-| SHA, saúde e ponto de rollback | PENDENTE | PENDENTE |
-| Alerta operacional de falha/expiração integrado ao monitoramento existente | PENDENTE | PENDENTE |
+| App pai, Business, administrador e nome do app conferidos | PENDENTE | PENDENTE |
+| Relação do App pai com `INSTAGRAM_APP_ID` OAuth e isolamento do fluxo legado conferidos | PENDENTE | PENDENTE |
+| Namespaces de instalação diferentes e binding de tester conferidos | PENDENTE | PENDENTE |
+| `doc_id` observado na interface autorizada corresponde ao adaptador | PENDENTE | PENDENTE |
+| Proxy Static Residential Direct e opções de substituição conferidos | PENDENTE | PENDENTE |
+| Mesmo Redis TLS de coordenação acessível pelas duas stacks | PENDENTE | PENDENTE |
+| Perfil dedicado, volume protegido, gestor supervisionado e alertas | PENDENTE | PENDENTE |
+| Sessão gerenciada publicada/renovada ao vivo sem redeploy | NÃO EXECUTADO | NÃO EXECUTADO |
+| Convite, aceite, OAuth, callback, webhook e DM reais | NÃO EXECUTADO | NÃO EXECUTADO |
+| Allowlist aprovada, SHA, saúde e ponto de rollback | PENDENTE | PENDENTE |
 
-O probe anterior encontrou bloqueio da ferramenta. Não repetir nem delegar a chamada bloqueada.
-Os critérios externos continuam abertos; POC e fixtures não os encerram.
+O código Terraform define ElastiCache separado em `infra/aws-chatwoot/main.tf` e
+`infra/aws-chatwoot-hub2you/main.tf`. Isso não prova o runtime atual. Não presumir
+Redis comum: configurar e verificar a conexão de coordenação explicitamente.
+As sessões ficam no Redis local de cada instalação, cifradas com a chave existente;
+a conexão comum contém somente locks/resultados de convite, sem cookies ou OAuth.
 
-## 2. Configuração exata
+## Configuração do backend
 
-Fonte: `app/services/instagram/testers/configuration.rb` e `.env.example`.
-Estas configurações novas são lidas diretamente de ENV; não ficam no cadastro público de InstallationConfig.
+Entregar pelo mecanismo existente do SSM, sem reconstruir `/chatwoot/prod/env`.
+Preservar todas as chaves, especialmente `SECRET_KEY_BASE` e as três chaves
+`ACTIVE_RECORD_ENCRYPTION_*`. Nunca trocar essas chaves para preparar este fluxo.
 
-| Nome | Contrato |
+| Configuração | Uso |
 |---|---|
-| `INSTAGRAM_TESTER_AUTOMATION_ENABLED` | Só a string `true` liga; ausente/padrão `false` |
-| `INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS` | IDs numéricos separados por vírgula; todos válidos; conta atual incluída |
-| `INSTAGRAM_META_DEVELOPER_APP_ID` | ID numérico do App pai de papéis, não OAuthApp |
-| `INSTAGRAM_META_BUSINESS_ID` | ID numérico do business usado no formulário/Referer |
-| `INSTAGRAM_TESTER_APP_NAME` | Nome real e não vazio mostrado no aceite |
-| `INSTAGRAM_TESTER_ROLES_DOC_ID` | ID numérico obrigatório da consulta observada, sem versão implícita |
-| `INSTAGRAM_TESTER_SESSION_JSON` | Objeto JSON completo da sessão administrativa; segredo |
+| `INSTAGRAM_TESTER_AUTOMATION_ENABLED` | Padrão OFF; somente `true` habilita |
+| `INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS` | Allowlist de contas, todos os IDs válidos |
+| `INSTAGRAM_META_DEVELOPER_APP_ID` | App pai de papéis, distinto do conceito de OAuthApp |
+| `INSTAGRAM_META_BUSINESS_ID` | Business da página autorizada |
+| `INSTAGRAM_TESTER_APP_NAME` | Nome real exibido ao convidado |
+| `INSTAGRAM_TESTER_ROLES_DOC_ID` | Consulta `RolesTable_Query` legitimamente observada |
+| `INSTAGRAM_TESTER_SESSION_SOURCE` | `managed` obrigatório em produção |
+| `INSTAGRAM_TESTER_SESSION_NAMESPACE` | Identificador estável e exclusivo por instalação |
+| `INSTAGRAM_TESTER_ADMIN_USER_ID` | Administrador autorizado; deve bater com `c_user` e `__user` |
+| `INSTAGRAM_TESTER_PROXY_AUTH_MODE/HOST/PORT` | `ip` obrigatório, IPv4 Direct fixo e IP de saída autorizado; sem usuário/senha |
+| `INSTAGRAM_TESTER_COORDINATION_REDIS_URL` | Mesmo endpoint `rediss://` autenticado nas duas stacks |
 
-IDs: strings de 1–40 dígitos ASCII. Lista vazia ou com elemento inválido não habilita a conta.
-`available` verifica formato/configuração, não faz teste de autenticação.
-Preservar `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, versão OAuth e demais configurações existentes.
-Não preencher nome, App, business ou clientes a partir de fixtures de teste.
+`INSTAGRAM_TESTER_SESSION_JSON` continua exclusivamente para preparação/teste
+sintético; produção não volta a essa ENV quando o store está indisponível.
+Nenhuma dessas informações privadas é enviada ao frontend. `available` é uma
+checagem local de configuração/sessão, não comprovação de autenticação Meta.
+OAuth/reautorização existentes usam suas configurações originais e não passam pelo
+proxy administrativo. Os tokens novos de seleção/tester OAuth são vinculados ao
+namespace de instalação, que deve ser diferente nas duas stacks; um token da outra
+stack é rejeitado antes de consumir o nonce. Tokens antigos de tester sem o claim
+precisam reiniciar a busca; o formato do JWT legado permanece preservado.
+Refresh do token OAuth **não renova cookies administrativos**.
 
-Schema do JSON: somente `cookie`, `fb_dtsg`, `lsd`, `jazoest`, `user_id`, `user_agent`
-e `extra_form`. Os seis primeiros são obrigatórios, strings não vazias de até 32 KiB,
-sem CR/LF; `user_id` é numérico. É o usuário administrativo, não o `user_id` do OAuth.
-`extra_form` é opcional e aceita somente strings válidas nas chaves:
-`__aaid`, `__req`, `__hs`, `dpr`, `__ccg`, `__rev`, `__s`, `__hsi`, `__dyn`, `qpl_active_flow_ids`.
-Campos/headers/endpoints arbitrários são recusados. Não publicar valores em PR, logs ou exemplos.
+## Gestor separado e navegador dedicado
 
-## 3. Preparar arquivo privado, offline
+O repositório não instala um navegador operacional nem um serviço no host.
+O gestor é um processo separado com Node/Playwright fixados pelo lock existente,
+perfil privado fora de Git, volume protegido e supervisão/monitoramento existentes.
+Preparar esse runtime e entregar segredos é etapa operacional sujeita a aprovação.
+Não reutilizar o Chrome pessoal, nem copiar seus cookies ou perfil.
 
-Ferramenta: `scripts/instagram_testers/prepare_session.py`, biblioteca padrão Python.
-Lê um arquivo UTF-8 contendo **uma captura Chrome Copy as cURL como texto**.
-Não executa cURL, shell, arquivos referenciados nem pedidos de rede.
-A captura deve ser obtida pelo operador autorizado; não pedir credenciais ao cliente.
+No ambiente aprovado do gestor, definir as configurações App/Business/administrador/
+consulta/proxy acima e:
 
-Salvar a entrada em local privado fora de Git; não usar argumento com conteúdo da captura.
-O caminho abaixo é ilustrativo, não instrução de capturar ou alterar sessão de produção:
+- `INSTAGRAM_TESTER_BROWSER_PROFILE`: caminho absoluto, diretório do usuário com
+  permissão 700, sem symlinks e fora de qualquer árvore Git.
+- `INSTAGRAM_TESTER_PLAYWRIGHT_MODULE`: caminho absoluto do `index.mjs` de Playwright.
+- `INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON`: lista de argumentos para executar o
+  publisher no runtime Rails aprovado da instalação. Sem shell ou credenciais nos
+  argumentos. Exemplo estrutural: `['bundle','exec','rails','runner',
+  'scripts/instagram_testers/session_publisher.rb']` em JSON válido (aspas duplas).
+  Num host separado, usar o transporte de execução operacional já autorizado,
+  com stdin preservado; não criar endpoint público para publicação.
 
-```sh
-python3 -B scripts/instagram_testers/prepare_session.py \
-  --input /private/tmp/instagram-operador/captura.txt \
-  --output /private/tmp/instagram-operador/session.json
-```
-
-A ferramenta aceita POST explícito ou inferido do corpo, URL posicional/`--url`,
-headers, cookie e formulário previstos pelo parser. Só admite HTTPS no host exato
-`developers.facebook.com` e as três rotas do adaptador; não admite relay arbitrário.
-GraphQL exige `RolesTable_Query` e `variables` contendo apenas `app_id` numérico string.
-Confere `c_user` contra `__user` e LSD do header contra formulário.
-A captura tem limite de 256 KiB; cada valor exportado, 32 KiB.
-
-A saída exige diretório privado do usuário, criado com 700 quando necessário, fora
-de qualquer árvore Git. Rejeita symlinks nos ancestrais; grava arquivo 600 com publicação atômica.
-Arquivo existente só pode ser substituído com `--replace`, se regular e do usuário.
-Sucesso é silencioso, retorno 0; erro retorna 2 com mensagem estática, sem imprimir captura.
-Só exporta o schema da sessão; não exporta App/business/docID/alvo para configurar o produto.
-Entrada e saída continuam sensíveis: manter no cofre/local privado segundo a política operacional.
-Preparar o JSON não verifica se a sessão está válida ou quais campos mínimos funcionam ao vivo.
-
-## 4. Entrega pelo SSM existente, somente após aprovação
-
-Cada stack usa `/chatwoot/prod/env`, SecureString, na respectiva conta AWS.
-O operador fornece o JSON completo em `INSTAGRAM_TESTER_SESSION_JSON` pela entrega
-de segredos existente. O preparador não importa para SSM; este runbook não cria comando de importação.
-Não rotacionar sessão, chaves ou credenciais de produção durante a implementação.
-
-Após aprovação específica, aplicar atualização cirúrgica com o mecanismo operacional existente:
-
-1. Preservar uma cópia privada conforme política de segredos e registrar apenas nomes de chaves.
-2. Comparar o conjunto de chaves antes/depois; conservar todas as chaves preexistentes.
-3. Alterar somente as configurações autorizadas para a stack correta; manter flag OFF no preparo.
-4. Conferir carregamento/versão em runtime sem exibir valores e registrar evidência sanitizada.
-
-Nunca reconstruir o parâmetro do zero. Preservar especialmente
-`ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`
-e `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`: perder/trocar essas chaves torna
-credenciais existentes ilegíveis. O histórico limitado do SSM não substitui o cofre.
-SSM cifra em repouso; JSON em ENV/runtime não é automaticamente cifrado pela aplicação.
-Não há migration, infraestrutura ou dependência nova a preparar para #910.
-
-## 5. Validação local e evidência
-
-Usar ambiente de teste isolado; nunca Rails/RSpec com ENV ou banco de produção.
-Inicializar rbenv e usar o wrapper de testes autorizado conforme AGENTS.md/MacCluster.
-Escopo backend completo, incluindo caminhos legados, callback #898 e webhook:
+**Inicialização/recuperação somente pelo operador autorizado:**
 
 ```sh
-bundle exec rspec spec/services/instagram spec/requests/api/v1/accounts/instagram \
-  spec/requests/instagram spec/controllers/instagram \
-  spec/controllers/api/v1/accounts/instagram spec/controllers/concerns/instagram_concern_spec.rb \
-  spec/controllers/concerns/instagram_concern_security_spec.rb spec/helpers/instagram/integration_helper_spec.rb \
-  spec/controllers/webhooks/instagram_controller_spec.rb spec/jobs/webhooks/instagram_events_job_spec.rb \
-  spec/builders/messages/instagram spec/models/channel/instagram_spec.rb
-pnpm test app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterOnboarding.spec.js \
-  app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/Reauthorize.spec.js \
-  app/javascript/dashboard/api/channel/instagramClient.spec.js \
-  app/javascript/dashboard/composables/spec/useAbortableRequest.spec.js
-python3 -B tests/instagram_testers/test_prepare_session.py -v
-pnpm i18n:fork:check
-pnpm guia:build
-pnpm guia:check
+node scripts/instagram_testers/session-browser.mjs
 ```
 
-Coordenador executa geração/check do Guia e revisão final. Comandos listados não significam execução.
-Navegador: seguir [README do harness](../../tests/qa/instagram-testers/README.md), com CSS do build
-e Chromium existentes. Monta `Instagram.vue` e filhos reais com API simulada e tráfego externo
-bloqueado; não é E2E completo. Manifest atual vincula screenshots ao código; zoom CSS não é zoom nativo.
-Relatórios anteriores de teste/revisão não substituem revalidação de código posteriormente alterado.
+Abre uma janela dedicada pelo mesmo proxy. O humano conclui login e 2FA e fecha a
+janela. Não há coleta de senha, tentativa automática de login ou bypass de desafio.
+Depois, o processo supervisionado executa:
 
-## 6. Homologação futura e interrupção segura
+```sh
+node scripts/instagram_testers/session-manager.mjs
+```
 
-Após autorização e desbloqueio operacional, o operador precisa validar por stack sessão/pedido mínimo,
-adaptador atual, convite/aceite, OAuth do mesmo perfil, callback, webhook e DM real.
-Usar perfil de teste autorizado; não remover/reconvidar cliente confirmado para obter evidência.
-Verificar sem registrar bodies, cookies, headers, tokens, HAR ou dados de clientes.
-OAuth usa `user_id` como `instagram_id` e `id` como `app_scoped_user_id`; não usar `uniqueID` de papel.
+A cada 15 minutos abre a página legítima de papéis e observa somente a consulta
+`RolesTable_Query` emitida pelo navegador. Não fabrica/reexecuta uma captura e não
+faz convites. Só permite GET/HEAD e o POST GraphQL exato configurado; outros métodos
+e operações são bloqueados. Confere administrador, App, Business, `doc_id`, LSD e resposta completa
+antes de publicar a sessão por stdin. Não grava captures, screenshots, HARs ou bodies.
 
-Em erro de status, não concluir ausência. Envio incerto exige consulta e respeita proteção de 24h;
-não automatizar POST de retry, limpar marcadores manualmente ou revogar testadores para testar.
-HTTP 401 permite `meta_session_expired`; outras falhas exigem diagnóstico, sem pedir senha ao cliente.
+O backend cifra cada payload antes de trocar o ponteiro ativo com WATCH/MULTI.
+A publicação exige a versão anterior esperada e captura atual; dois publicadores
+concorrentes não sobrescrevem a mesma geração. Cada request usa um único snapshot
+para cookie, headers e formulário. Validade máxima de seis horas, imposta pelo servidor.
+Falha de candidato/publicação mantém a sessão anterior ainda válida. HTTP 401/403
+invalida somente a geração rejeitada por decisão conservadora: 403 também pode ser
+permissão/bloqueio e não comprova expiração. Login/2FA/desafio param o gestor e exigem operador.
+Não reativar sessão antiga nem repetir convite após resultado ambíguo.
 
-Para interromper ativação, após aprovação, desligar a flag e confirmar o runtime atualizado;
-restringir a allowlist conforme decisão aprovada. Preservar caixas, tokens e conversas existentes.
-Não excluir/revogar testadores ou canais automaticamente. Se houver regressão de código,
-usar rollback blue-green manual aprovado na stack afetada e verificar ambas separadamente.
-Só há um degrau de rollback por stack; confirmar sua disponibilidade antes da publicação.
-CI verde, deploy iniciado e convite aceito não comprovam saúde nem funcionamento real de DMs.
+Saídas do gestor têm somente códigos estáticos de falha/recuperação. Integrar ao
+monitoramento existente e provar o alerta em homologação; código de evento/log não
+é evidência de alerta entregue. Lock local impede gestor e janela manual simultâneos.
+Após crash abrupto, remover o lock somente depois de verificar que não existe outro
+processo usando o perfil. Nunca remover automaticamente um lock possivelmente ativo.
 
-## 7. Coordenação entre instalações
+## Proxy fixo e interrupção segura
 
-O lock do código usa o Redis da própria instalação. Antes de habilitar as duas stacks, conferir se compartilham App pai Meta. Apps iguais com Redis distintos não possuem exclusão mútua entre stacks por esta implementação: não tratar a trava local como garantia global. Resolver a coordenação operacional conforme a topologia validada; nenhuma infraestrutura adicional foi criada.
+Usar o `proxy_address` e `port` de **Direct** da lista Static Residential e
+configurar `INSTAGRAM_TESTER_PROXY_AUTH_MODE=ip`. O código rejeita hostnames/backbone
+(`p.webshare.io`), não roda listas, não muda endpoint por request e não cai para
+acesso direto. Nesse modo não há `username`/`password`: o IP público de saída de
+cada host autorizado (backend e gestor) precisa estar cadastrado na autorização por
+IP do fornecedor no plano Static Residential correto. A documentação permite
+selecionar um plano específico; não presumir que o plano padrão seja o escolhido.
+Não alterar essa autorização sem aprovação. Falha 407 é controlada; timeout de escrita permanece
+`invite_unknown`, pois não prova que o convite não foi enviado.
 
-A configuração do alerta de expiração/indisponibilidade no monitoramento existente está pendente. Os códigos próprios de falha permitem diagnóstico, mas não substituem alerta testado. Não incluir cookies, headers completos ou sessão JSON na notificação.
+Conferir no console autorizado se Auto-Replace/Auto-Refresh podem trocar o endpoint.
+Não alterar assinatura nem opções automaticamente. Uma substituição real exige
+reconfiguração aprovada, nova vinculação da sessão e validação do mesmo IP no gestor
+/backend. A documentação oficial descreve [Direct](https://apidocs.webshare.io/proxy-connection)
+e o modo [IP Authorization](https://apidocs.webshare.io/ipauthorization). Também
+explica que [Auto-Replace pode substituir proxies](https://help.webshare.io/en/articles/9196557-understanding-the-auto-replace-feature).
+O runtime rejeita modo ausente, Basic e qualquer usuário/senha; não há caminho de
+credencial HTTP no gestor. Não configurar Basic como atalho.
+Não usar proxy para contornar bloqueio de ferramenta, login ou desafio Meta.
+
+## Testes seguros e homologação
+
+Os testes Ruby devem usar snapshot MacCluster e serviços isolados conforme AGENTS.md.
+Nunca herdar ENV/DB de produção. Os testes de parser, sessão, CAS, concorrência,
+expiração, revogação e proxy usam dados sintéticos; CONNECT/timeout usam apenas loopback.
+Python/Node e browser QA também não fazem chamadas Meta. O CI dedicado falha em erro,
+sem `continue-on-error`. Ver resultados reais em `docs/audit/`, vinculados à revisão.
+
+A [jornada do usuário](../instagram-tester-jornada-910.md) e os screenshots mostram
+componentes/CSS reais com backend sintético. Não são homologação da Meta nem captura
+do console externo. Essa validação externa continua pendente até estar autorizada e
+operacionalmente desbloqueada, sem repetir a chamada anteriormente bloqueada.
+
+Após autorização, homologar por stack com perfil de teste: sessão/proxy/renovação,
+busca/convite/aceite, OAuth do mesmo perfil, callback #898, webhook e DM de ida/volta.
+Não reconvidar ou revogar cliente confirmado para obter evidência. Não registrar
+cookies, senhas, headers completos, bodies, tokens, HARs ou dados de clientes.
+
+## Deploy e rollback
+
+Antes de merge: revisar commit final e CI, screenshots, matriz acima, allowlist e
+rollback das duas stacks; obter aprovação explícita. Manter flag OFF no preparo.
+A flag não impede o deploy automático da `main`.
+
+Para interromper ativação, desligar flag/allowlist no runtime aprovado e parar o
+gestor. Preservar caixas, tokens, conversas e papéis existentes. Não limpar marcadores
+de convites incertos: respeitar reconciliação e proteção de 24 horas. Em regressão de
+código, rollback blue-green aprovado por stack, verificando SHA, saúde e DM novamente.
+Não restaurar sessão invalidada como rollback. CI verde ou deploy iniciado não provam
+funcionamento real do Instagram.

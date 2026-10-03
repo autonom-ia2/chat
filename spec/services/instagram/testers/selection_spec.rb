@@ -19,6 +19,16 @@ RSpec.describe Instagram::Testers::Selection do
     end
   end
 
+  it 'rejects selection issued by another installation even with identical account, actor and app' do
+    issued = with_modified_env('INSTAGRAM_TESTER_SESSION_NAMESPACE' => 'autonomia-test') { selection.issue(candidate) }
+    with_modified_env('INSTAGRAM_TESTER_SESSION_NAMESPACE' => 'hub2you-test') do
+      other = described_class.new(account_id: 16, actor_id: 2, app_id: '10001')
+      expect { other.verify(issued) }.to raise_error do |error|
+        expect(error.code).to eq('invalid_selection')
+      end
+    end
+  end
+
   it 'rejects tampering and undocumented client types' do
     ["#{token}tampered", nil, 12, { id: candidate[:id] }].each do |value|
       expect { selection.verify(value) }.to raise_error do |error|

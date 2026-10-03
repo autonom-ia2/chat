@@ -11,7 +11,7 @@ class Instagram::Testers::Invitation
 
   def perform
     token = SecureRandom.uuid
-    acquired = Redis::Alfred.set("#{@key}:lock", token, nx: true, ex: LOCK_TTL)
+    acquired = Instagram::Testers::CoordinationRedis.set("#{@key}:lock", token, nx: true, ex: LOCK_TTL)
     raise Instagram::Testers::Error, 'busy' unless acquired
 
     reconcile_and_invite
@@ -24,7 +24,7 @@ class Instagram::Testers::Invitation
   private
 
   def release_lock(token)
-    Redis::Alfred.delete_if_equals("#{@key}:lock", token)
+    Instagram::Testers::CoordinationRedis.delete_if_equals("#{@key}:lock", token)
   rescue Redis::BaseError, ConnectionPool::TimeoutError
     raise Instagram::Testers::Error.new('invite_unknown'), cause: nil
   end

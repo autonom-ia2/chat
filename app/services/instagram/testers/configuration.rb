@@ -18,6 +18,14 @@ class Instagram::Testers::Configuration
   end
 
   def available?
+    return false unless production_session_available?
+    return false unless proxy_available?
+    return false unless managed_admin_available?
+
+    configured_values_available?
+  end
+
+  def configured_values_available?
     Instagram::Testers::Validation.id?(app_id) && Instagram::Testers::Validation.id?(business_id) &&
       Instagram::Testers::Validation.id?(doc_id) && app_name.present? && session.present?
   end
@@ -44,34 +52,81 @@ class Instagram::Testers::Configuration
     ENV.fetch('INSTAGRAM_TESTER_ROLES_DOC_ID', '')
   end
 
+  # The managed browser profile is pinned to one operator identity. The value
+  # is deliberately configuration-only; it is never inferred from a session
+  # received from the browser.
+  def admin_user_id
+    ENV.fetch('INSTAGRAM_TESTER_ADMIN_USER_ID', '')
+  end
+
   def app_name
     ENV.fetch('INSTAGRAM_TESTER_APP_NAME', '')
   end
 
-  def session
-    return @session if defined?(@session)
+  def session_snapshot
+    return managed_session_snapshot if managed_session?
 
-    value = JSON.parse(ENV.fetch('INSTAGRAM_TESTER_SESSION_JSON', ''))
-    @session = valid_session?(value) ? value : nil
-  rescue JSON::ParserError
-    @session = nil
+    { session: env_session, version: nil }.freeze
+  rescue Instagram::Testers::Error, Redis::SecureStorage::EncryptionNotConfigured, Redis::BaseError, ConnectionPool::TimeoutError
+    { session: nil, version: nil }.freeze
+  end
+
+  def session
+    session_snapshot[:session]
+  end
+
+  def proxy_fingerprint
+    proxy.fingerprint
+  end
+
+  def managed_session?
+    ENV.fetch('INSTAGRAM_TESTER_SESSION_SOURCE', 'env') == 'managed'
+  end
+
+  def proxy
+    @proxy ||= Instagram::Testers::Proxy.new
+  end
+
+  def transport_options
+    return proxy.transport_options if proxy.configured? || managed_session? || !Rails.env.test?
+
+    # Synthetic Rails tests cannot inherit an ambient proxy. Production requires
+    # the explicitly configured endpoint and never enters this branch.
+    { http_proxyaddr: nil, max_retries: 0 }
   end
 
   private
 
-  def valid_session?(value)
-    return false unless value.is_a?(Hash) && (value.keys - SESSION_KEYS).empty?
-    return false unless REQUIRED_SESSION_KEYS.all? { |key| safe_string?(value[key]) }
-    return false unless Instagram::Testers::Validation.id?(value['user_id'])
-
-    valid_extra_form?(value.fetch('extra_form', {}))
+  def managed_session_snapshot
+    store = Instagram::Testers::SessionStore.new(configuration: self)
+    store.current_snapshot
   end
 
-  def valid_extra_form?(extra)
-    extra.is_a?(Hash) && (extra.keys - EXTRA_FORM_KEYS).empty? && extra.values.all? { |item| safe_string?(item) }
+  def env_session
+    value = JSON.parse(ENV.fetch('INSTAGRAM_TESTER_SESSION_JSON', ''))
+    require_identity = !Rails.env.test?
+    normalized = Instagram::Testers::SessionSchema.normalize(value)
+    return normalized if Instagram::Testers::SessionSchema.valid?(normalized, require_identity: require_identity)
+
+    nil
+  rescue JSON::ParserError
+    nil
   end
 
-  def safe_string?(value)
-    value.is_a?(String) && value.present? && value.bytesize <= 32_768 && value.exclude?("\r") && value.exclude?("\n")
+  def production_session_available?
+    return false if Rails.env.production? && !managed_session?
+    return false if Rails.env.production? && !Instagram::Testers::CoordinationRedis.configured?
+
+    true
+  end
+
+  def proxy_available?
+    return true unless managed_session? || proxy.configured? || !Rails.env.test?
+
+    proxy.valid?
+  end
+
+  def managed_admin_available?
+    !managed_session? || Instagram::Testers::Validation.id?(admin_user_id)
   end
 end

@@ -4,7 +4,9 @@ RSpec.describe Instagram::Testers::Client do
   subject(:client) { described_class.new(configuration: configuration) }
 
   let(:configuration) do
-    instance_double(Instagram::Testers::Configuration, app_id: '10001', business_id: '10002', doc_id: '10003', session: session)
+    instance_double(Instagram::Testers::Configuration, app_id: '10001', business_id: '10002', doc_id: '10003', session: session,
+                                                       session_snapshot: { session: session, version: nil },
+                                                       transport_options: { http_proxyaddr: nil, max_retries: 0 })
   end
   let(:session) do
     { 'cookie' => 'synthetic=fixture', 'user_agent' => 'Synthetic Client', 'user_id' => '12345',
@@ -30,7 +32,8 @@ RSpec.describe Instagram::Testers::Client do
     request = stub_request(:post, search_url).with(body: base_form, headers: observed_headers)
                                              .to_return(status: 200, body: 'for (;;);{"payload":{"entries":[]}}')
     expect(HTTParty).to receive(:post).with(search_url, body: base_form, headers: observed_headers,
-                                                        timeout: described_class::TIMEOUT, follow_redirects: false).and_call_original
+                                                        timeout: described_class::TIMEOUT, follow_redirects: false,
+                                                        http_proxyaddr: nil, max_retries: 0).and_call_original
     expect(client.search('demo_company')).to eq([])
     expect(request).to have_been_requested.once
     expect(a_request(:post, invite_url)).not_to have_been_made
@@ -46,7 +49,8 @@ RSpec.describe Instagram::Testers::Client do
                                                                                      role: 'instagram testers', status: 'CONFIRMED' }] }
                                             ] } } }.to_json)
     expect(HTTParty).to receive(:post).with(roles_url, body: form, headers: headers,
-                                                       timeout: described_class::TIMEOUT, follow_redirects: false).and_call_original
+                                                       timeout: described_class::TIMEOUT, follow_redirects: false,
+                                                       http_proxyaddr: nil, max_retries: 0).and_call_original
     expect(client.status(target_id)).to eq('accepted')
     expect(request).to have_been_requested.once
     expect(a_request(:post, invite_url)).not_to have_been_made
@@ -58,7 +62,8 @@ RSpec.describe Instagram::Testers::Client do
     request = stub_request(:post, invite_url).with(body: expected_body, headers: observed_headers)
                                              .to_return(status: 200, body: 'for (;;);{"payload":{"success":true}}')
     expect(HTTParty).to receive(:post).with(invite_url, body: form, headers: observed_headers,
-                                                        timeout: described_class::TIMEOUT, follow_redirects: false).and_call_original
+                                                        timeout: described_class::TIMEOUT, follow_redirects: false,
+                                                        http_proxyaddr: nil, max_retries: 0).and_call_original
     expect(client.invite(target_id)).to be true
     expect(request).to have_been_requested.once
   end
@@ -84,7 +89,7 @@ RSpec.describe Instagram::Testers::Client do
     end
   end
 
-  [301, 403, 500].each do |http_status|
+  [301, 500].each do |http_status|
     it "does not interpret status #{http_status} as expired or successful" do
       stub_request(:post, search_url).to_return(status: http_status, body: 'synthetic', headers: { 'Location' => 'https://example.com/' })
       expect { client.search('demo_company') }.to(raise_error { |error| expect(error.code).to eq('meta_unavailable') })
@@ -104,5 +109,89 @@ RSpec.describe Instagram::Testers::Client do
     expect { client.status(target_id) }.to(raise_error { |error| expect(error.code).to eq('unknown_status') })
     stub_request(:post, roles_url).to_return(status: 200, body: '{"errors":[{}],"data":{"get_app_roles":{"app_roles":[]}}}')
     expect { client.status(target_id) }.to(raise_error { |error| expect(error.code).to eq('unknown_status') })
+  end
+
+  it 'uses one coherent snapshot for cookie, headers and form even when another session is published concurrently' do
+    expect(configuration).to receive(:session_snapshot).once.and_return(session: session, version: nil)
+    expect(configuration).not_to receive(:session)
+    stub_request(:post, roles_url).with(body: base_form.merge('av' => '12345', 'fb_api_caller_class' => 'RelayModern',
+                                                              'fb_api_req_friendly_name' => 'RolesTable_Query', 'doc_id' => '10003',
+                                                              'variables' => '{"app_id":"10001"}'), headers: observed_headers)
+                                  .to_return(status: 200, body: '{"data":{"get_app_roles":{"app_roles":[]}}}')
+    expect(client.status(target_id)).to eq('absent')
+  end
+
+  [401, 403].each do |status|
+    it "invalidates only the rejected managed version on HTTP #{status} and never retries" do
+      allow(configuration).to receive(:session_snapshot).and_return(session: session, version: 'synthetic-version')
+      store = instance_double(Instagram::Testers::SessionStore)
+      allow(Instagram::Testers::SessionStore).to receive(:new).with(configuration: configuration).and_return(store)
+      expect(store).to receive(:invalidate).with(version: 'synthetic-version', code: "http_#{status}")
+      request = stub_request(:post, search_url).to_return(status: status)
+      expect { client.search('demo_company') }.to(raise_error { |error| expect(error.code).to eq('meta_session_expired') })
+      expect(request).to have_been_requested.once
+    end
+  end
+
+  it 'does not make a request when the managed session is missing or invalidated' do
+    allow(configuration).to receive(:session_snapshot).and_return(session: nil, version: nil)
+    expect(HTTParty).not_to receive(:post)
+    expect { client.search('demo_company') }.to(raise_error { |error| expect(error.code).to eq('meta_session_expired') })
+  end
+
+  context 'with a real local CONNECT proxy and IP authorization' do
+    let(:proxy_state) { {} }
+
+    before do
+      stub_const('Instagram::Testers::Client::HOST', 'https://127.0.0.1:1')
+      WebMock.allow_net_connect!(allow_localhost: true)
+      proxy_state[:server] = TCPServer.new('127.0.0.1', 0)
+      allow(configuration).to receive(:transport_options).and_return(http_proxyaddr: '127.0.0.1',
+                                                                     http_proxyport: proxy_state[:server].addr[1],
+                                                                     http_proxyuser: nil, http_proxypass: nil, max_retries: 0)
+    end
+
+    after do
+      proxy_state[:server].close
+      proxy_state[:thread]&.kill
+      proxy_state[:thread]&.join
+      WebMock.disable_net_connect!(allow_localhost: true)
+    end
+
+    it 'classifies CONNECT 407 without forwarding to the destination or sending proxy credentials' do
+      proxy_state[:thread] = Thread.new do
+        socket = proxy_state[:server].accept
+        proxy_state[:connect_line] = socket.gets
+        proxy_state[:authorization_seen] = false
+        socket.each_line do |line|
+          break if line == "\r\n"
+
+          proxy_state[:authorization_seen] ||= line.start_with?('Proxy-Authorization:') # Record a boolean, never headers.
+        end
+        socket.write("HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+        socket.close
+      end
+      expect { client.search('demo_company') }.to raise_error do |error|
+        expect(error.code).to eq('proxy_unavailable')
+        expect(error.cause).to be_nil
+      end
+      expect(proxy_state[:connect_line]).to eq("CONNECT 127.0.0.1:1 HTTP/1.1\r\n")
+      expect(proxy_state[:authorization_seen]).to be false
+    end
+
+    it 'preserves an ambiguous invitation on CONNECT timeout without direct fallback or retry' do
+      stub_const('Instagram::Testers::Client::TIMEOUT', 0.05)
+      proxy_state[:thread] = Thread.new do
+        socket = proxy_state[:server].accept
+        proxy_state[:connect_line] = socket.gets
+        sleep 1
+        socket.close
+      end
+      expect { client.invite(target_id) }.to raise_error do |error|
+        expect(error.code).to eq('invite_unknown')
+        expect(error.cause).to be_nil
+      end
+      expect(proxy_state[:connect_line]).to start_with('CONNECT 127.0.0.1:1 ')
+    end
   end
 end

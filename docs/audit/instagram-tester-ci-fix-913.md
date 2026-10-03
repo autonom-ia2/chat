@@ -1,5 +1,7 @@
 # PR #913 — correção das duas causas de CI
 
+> Atualização posterior: este documento preserva a evidência histórica. O código, os testes de sessão/proxy e os gates operacionais da rodada de conclusão estão em [instagram-tester-conclusion-910.md](instagram-tester-conclusion-910.md). Os resultados anteriores não validam as alterações posteriores ao commit `e685cb0018`.
+
 03/10/2026. Alteração local revisada, sem merge/deploy.
 
 ## Causas comprovadas

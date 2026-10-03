@@ -6,7 +6,8 @@ RSpec.describe Instagram::Testers::OauthBinding do
   let(:client) { instance_double(Instagram::Testers::Client) }
   let(:target) { { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001' } }
   let(:payload) do
-    { 'tester_selection' => target, 'sub' => 16, 'iat' => Time.current.to_i,
+    { 'tester_selection' => target, 'tester_installation' => ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', ''), 'sub' => 16,
+      'iat' => Time.current.to_i,
       'exp' => (15.minutes.from_now).to_i, 'jti' => SecureRandom.uuid }
   end
 
@@ -35,6 +36,18 @@ RSpec.describe Instagram::Testers::OauthBinding do
   it 'claims an expiring new state only once' do
     expect { described_class.claim!(payload) }.not_to raise_error
     expect { described_class.claim!(payload) }.to(raise_error { |error| expect(error.code).to eq('invalid_selection') })
+  end
+
+  it 'rejects another installation or an old tester state without a claim before consuming its nonce' do
+    with_modified_env('INSTAGRAM_TESTER_SESSION_NAMESPACE' => 'hub2you-test') do
+      payload['tester_installation'] = 'autonomia-test'
+      expect(Redis::Alfred).not_to receive(:set)
+      [payload, payload.except('tester_installation')].each do |state|
+        expect { described_class.claim!(state) }.to raise_error do |error|
+          expect(error.code).to eq('invalid_selection')
+        end
+      end
+    end
   end
 
   it 'rejects wrong parent app, malformed selection and excessive lifetime' do

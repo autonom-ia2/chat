@@ -13,6 +13,7 @@ export const root = resolve(
 export const output = resolve(root, 'tmp/instagram-910/visual');
 export const origin = 'http://127.0.0.1:39211';
 export const pathname = '/app/accounts/910/settings/inboxes/new/instagram';
+export const wizardPathPrefix = '/app/accounts/910/settings/inboxes/new';
 
 export async function startServer() {
   await mkdir(output, { recursive: true });
@@ -92,7 +93,10 @@ export async function startServer() {
       );
       return;
     }
-    if (url.pathname !== pathname) {
+    if (
+      url.pathname !== pathname &&
+      !url.pathname.startsWith(wizardPathPrefix)
+    ) {
       next();
       return;
     }

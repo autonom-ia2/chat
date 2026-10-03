@@ -97,6 +97,41 @@ describe('Instagram assisted tester onboarding', () => {
     expect(instagramClient.getTesterConfiguration).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      query:
+        '?error_type=OAuthException&code=400&error_message=instagram_authorization_failed',
+      raw: 'instagram_authorization_failed',
+    },
+    {
+      query:
+        '?error_type=InstagramApiError&code=500&error_message=instagram_connection_failed',
+      raw: 'instagram_connection_failed',
+    },
+    {
+      query:
+        '?error_type=authorization_error&code=400&error_message=Authorization%20was%20denied',
+      raw: 'Authorization was denied',
+    },
+  ])(
+    'maps sanitized callback error %j to friendly copy without leaking its code',
+    async ({ query, raw }) => {
+      window.history.replaceState(
+        {},
+        '',
+        `/app/accounts/17/settings/inboxes/new/instagram${query}`
+      );
+      const wrapper = mount(Instagram, mountOptions);
+      await flushPromises();
+
+      expect(wrapper.text()).toContain(
+        'Houve um erro ao conectar ao Instagram, por favor, tente novamente'
+      );
+      expect(wrapper.text()).not.toContain(raw);
+      expect(window.location.search).toBe('');
+    }
+  );
+
   it('falls back to legacy only when this account is explicitly disabled', async () => {
     config.value.instagramTesterAutomationEnabled = true;
     instagramClient.getTesterConfiguration.mockResolvedValue({
@@ -134,6 +169,24 @@ describe('Instagram assisted tester onboarding', () => {
     expect(wrapper.text()).toContain('@demo_company');
     expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
     expect(instagramClient.inviteTester).not.toHaveBeenCalled();
+  });
+
+  it('accepts an uppercase username returned by the API at the UI boundary', async () => {
+    instagramClient.searchTesters.mockResolvedValue({
+      data: { results: [{ ...candidate, username: 'Demo_Company' }] },
+    });
+    const wrapper = mountTester();
+    await flushPromises();
+    await wrapper.find('input').setValue('@demo_company');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(
+      wrapper
+        .find('[aria-label="Selecionar @Demo_Company, Empresa Demo"]')
+        .exists()
+    ).toBe(true);
+    expect(wrapper.text()).toContain('@Demo_Company');
   });
 
   it('shows accessible computer instructions, exact account, app, and safe direct link for PENDING', async () => {

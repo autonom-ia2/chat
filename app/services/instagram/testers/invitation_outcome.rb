@@ -6,12 +6,12 @@ class Instagram::Testers::InvitationOutcome
   end
 
   def state
-    Redis::Alfred.get(@key)&.partition(':')&.first
+    Instagram::Testers::CoordinationRedis.get(@key)&.partition(':')&.first
   end
 
   def claim!
     @claim = "unknown:#{SecureRandom.uuid}"
-    raise Instagram::Testers::Error, 'invite_unknown' unless Redis::Alfred.set(@key, @claim, nx: true, ex: TTL)
+    raise Instagram::Testers::Error, 'invite_unknown' unless Instagram::Testers::CoordinationRedis.set(@key, @claim, nx: true, ex: TTL)
   end
 
   def pending!
@@ -19,11 +19,11 @@ class Instagram::Testers::InvitationOutcome
   end
 
   def rejected!
-    Redis::Alfred.delete_if_equals(@key, @claim) if @claim
+    Instagram::Testers::CoordinationRedis.delete_if_equals(@key, @claim) if @claim
   end
 
   def reconcile
-    snapshot = Redis::Alfred.get(@key)
+    snapshot = Instagram::Testers::CoordinationRedis.get(@key)
     status = yield
     clear_generation(snapshot) if snapshot && %w[pending accepted].include?(status)
     status
@@ -34,7 +34,7 @@ class Instagram::Testers::InvitationOutcome
   private
 
   def update_claim(&)
-    Redis::Alfred.with do |connection|
+    Instagram::Testers::CoordinationRedis.with do |connection|
       connection.watch(@key) do
         next connection.unwatch unless connection.get(@key) == @claim
 
@@ -49,7 +49,7 @@ class Instagram::Testers::InvitationOutcome
 
     # The same generation can only advance from unknown to pending. If that write
     # aborts the first deletion, the second comparison clears its final state.
-    Redis::Alfred.delete_if_equals(@key, "unknown:#{generation}")
-    Redis::Alfred.delete_if_equals(@key, "pending:#{generation}")
+    Instagram::Testers::CoordinationRedis.delete_if_equals(@key, "unknown:#{generation}")
+    Instagram::Testers::CoordinationRedis.delete_if_equals(@key, "pending:#{generation}")
   end
 end

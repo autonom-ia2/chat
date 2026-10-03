@@ -85,9 +85,9 @@ RSpec.describe Instagram::CallbacksController do
         expect(response).to redirect_to(
           app_new_instagram_inbox_url(
             account_id: account.id,
-            error_type: 'access_denied',
+            error_type: 'authorization_error',
             code: 400,
-            error_message: 'User denied access'
+            error_message: 'Authorization was denied'
           )
         )
       end
@@ -111,7 +111,7 @@ RSpec.describe Instagram::CallbacksController do
           account_id: account.id,
           error_type: 'OAuthException',
           code: 400,
-          error_message: 'Invalid OAuth code'
+          error_message: 'instagram_authorization_failed'
         )
         expect(response).to redirect_to(expected_url)
       end
@@ -127,9 +127,9 @@ RSpec.describe Instagram::CallbacksController do
 
         expected_url = app_new_instagram_inbox_url(
           account_id: account.id,
-          error_type: 'StandardError',
+          error_type: 'InstagramApiError',
           code: 500,
-          error_message: 'Unknown error'
+          error_message: 'instagram_connection_failed'
         )
         expect(response).to redirect_to(expected_url)
       end
@@ -165,6 +165,13 @@ RSpec.describe Instagram::CallbacksController do
       expect(Channel::Instagram.last.instagram_id).to eq('12345')
       expect(Channel::Instagram.last.app_scoped_user_id).to eq('98765')
       expect(Channel::Instagram.last.provider_name).to eq('test_user')
+      expect(response).to redirect_to(app_instagram_inbox_agents_url(account_id: account.id, inbox_id: Inbox.last.id))
+    end
+
+    it 'accepts the same selected username with different casing from OAuth' do
+      user_details['username'] = 'Test_User'
+      get :show, params: { code: 'valid_code', state: bound_state }
+      expect(Channel::Instagram.last.instagram_id).to eq('12345')
       expect(response).to redirect_to(app_instagram_inbox_agents_url(account_id: account.id, inbox_id: Inbox.last.id))
     end
 
@@ -206,7 +213,7 @@ RSpec.describe Instagram::CallbacksController do
       expect(response.location).to include('error_type=invalid_selection')
     end
 
-    it 'sanitizes denied authorization without changing the legacy error contract' do
+    it 'sanitizes denied authorization' do
       get :show, params: { state: bound_state, error: 'synthetic-error', error_description: 'synthetic-sensitive-description' }
       expect(response.location).to include('error_type=authorization_error')
       expect(response.location).not_to include('synthetic-sensitive-description')
@@ -234,6 +241,29 @@ RSpec.describe Instagram::CallbacksController do
       get :show, params: { code: 'valid_code', state: bound_state }
       expect(response.location).to include('error_type=meta_unavailable')
       expect(response.location).not_to include('synthetic-sensitive-provider-data')
+    end
+  end
+
+  describe 'legacy error privacy' do
+    it 'never sends a provider exception or its body to the logger, tracker or redirect' do
+      marker = 'synthetic-private-provider-marker'
+      provider_error = OAuth2::Error.new(OpenStruct.new(body: { error: marker, access_token: marker }.to_json, status: 400))
+      allow(auth_code_object).to receive(:get_token).and_raise(provider_error)
+      expect(Rails.logger).to receive(:error).with('Instagram Channel creation Error: instagram_authorization_failed')
+      expect(ChatwootExceptionTracker).to receive(:new) do |safe_error|
+        expect(safe_error.message).to eq('instagram_authorization_failed')
+        expect(safe_error.cause).to be_nil
+        exception_tracker
+      end
+      get :show, params: valid_params
+      expect(response.location).not_to include(marker)
+    end
+
+    it 'does not echo the denial description into logs or the URL' do
+      marker = 'synthetic-private-denial-marker'
+      expect(Rails.logger).to receive(:error).with('Instagram Authorization Error: Authorization was denied')
+      get :show, params: error_params.merge(error_description: marker)
+      expect(response.location).not_to include(marker)
     end
   end
 end

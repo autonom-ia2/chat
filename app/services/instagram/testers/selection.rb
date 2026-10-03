@@ -3,7 +3,8 @@ class Instagram::Testers::Selection
   PURPOSE = 'instagram_tester_selection'.freeze
 
   def initialize(account_id:, actor_id:, app_id:)
-    @scope = { 'account_id' => account_id.to_s, 'actor_id' => actor_id.to_s, 'app_id' => app_id }
+    @scope = { 'account_id' => account_id.to_s, 'actor_id' => actor_id.to_s, 'app_id' => app_id,
+               'installation' => ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', '') }
   end
 
   def issue(candidate)

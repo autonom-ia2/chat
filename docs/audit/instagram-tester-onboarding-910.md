@@ -1,5 +1,7 @@
 # #910 — termos de aceite e evidências de implementação
 
+> Atualização posterior: este documento preserva a evidência histórica. O código, os testes de sessão/proxy e os gates operacionais da rodada de conclusão estão em [instagram-tester-conclusion-910.md](instagram-tester-conclusion-910.md). Os resultados anteriores não validam as alterações posteriores ao commit `e685cb0018`.
+
 Data: 03/10/2026. Escopo: onboarding assistido de Instagram Login, código compartilhado por Autonom.ia e Hub2You.
 
 **Decisão:** implementação e validação local disponíveis para revisão; publicação/ativação NÃO liberadas. Integração real do novo adaptador por stack permanece não executada. A flag global vem desligada e exige allowlist de contas. Um teste sintético aprovado não encerra um gate externo.

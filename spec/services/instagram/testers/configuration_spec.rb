@@ -51,10 +51,46 @@ RSpec.describe Instagram::Testers::Configuration do
     end
   end
 
+  it 'reads a managed snapshot on every access without falling back to the environment session' do
+    snapshot = { session: { 'user_id' => '12345' }, version: SecureRandom.uuid }.freeze
+    managed_store = instance_double(Instagram::Testers::SessionStore, current_snapshot: snapshot)
+
+    with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed',
+                      'INSTAGRAM_TESTER_SESSION_NAMESPACE' => 'configuration-spec',
+                      'INSTAGRAM_TESTER_ADMIN_USER_ID' => '12345') do
+      allow(Instagram::Testers::SessionStore).to receive(:new).with(configuration: configuration).and_return(managed_store)
+
+      expect(configuration.session_snapshot).to equal(snapshot)
+      with_modified_env('INSTAGRAM_TESTER_SESSION_JSON' => '{"user_id":"attacker"}') do
+        expect(configuration.session_snapshot).to equal(snapshot)
+      end
+    end
+  end
+
   it 'preserves the Meta incident guardrail' do
     allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(true)
     expect { configuration.ensure_available! }.to raise_error do |error|
       expect(error.code).to eq('forbidden')
+    end
+  end
+
+  it 'requires managed sessions and explicit TLS invitation coordination in production' do
+    allow(Rails).to receive(:env).and_return(ActiveSupport::StringInquirer.new('production'))
+    expect(configuration.available?).to be false
+
+    with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_ADMIN_USER_ID' => '12345',
+                      'INSTAGRAM_TESTER_PROXY_HOST' => '127.0.0.1', 'INSTAGRAM_TESTER_PROXY_PORT' => '9100',
+                      'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip',
+                      'INSTAGRAM_TESTER_PROXY_USERNAME' => nil, 'INSTAGRAM_TESTER_PROXY_PASSWORD' => nil,
+                      'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => nil) do
+      managed_store = instance_double(Instagram::Testers::SessionStore,
+                                      current_snapshot: { session: session, version: SecureRandom.uuid }.freeze)
+      allow(Instagram::Testers::SessionStore).to receive(:new).with(configuration: configuration).and_return(managed_store)
+
+      expect(configuration.available?).to be false
+      with_modified_env('INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic@coordination.invalid:6379/0') do
+        expect(configuration.available?).to be true
+      end
     end
   end
 end
