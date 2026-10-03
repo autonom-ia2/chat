@@ -40,14 +40,16 @@ const successResponse = {
 
 async function save() {
   results.finishedAt = new Date().toISOString();
-  results.status = results.fatal
-    ? 'BLOCKED'
-    : results.checks.some(check => check.status === 'FAIL')
-      ? 'NEEDS_FIXES'
-      : 'PASS';
+  if (results.fatal) {
+    results.status = 'BLOCKED';
+  } else if (results.checks.some(item => item.status === 'FAIL')) {
+    results.status = 'NEEDS_FIXES';
+  } else {
+    results.status = 'PASS';
+  }
   results.counts = {
-    passed: results.checks.filter(check => check.status === 'PASS').length,
-    failed: results.checks.filter(check => check.status === 'FAIL').length,
+    passed: results.checks.filter(item => item.status === 'PASS').length,
+    failed: results.checks.filter(item => item.status === 'FAIL').length,
     screenshots: results.screenshots.length,
     traces: results.traces.length,
   };
@@ -62,10 +64,10 @@ async function check(name, action) {
   try {
     const evidence = await action();
     results.checks.push({ name, status: 'PASS', evidence });
-    console.log(`PASS ${name}`);
+    process.stdout.write(`PASS ${name}\n`);
   } catch (error) {
     results.checks.push({ name, status: 'FAIL', error: error.message });
-    console.log(`FAIL ${name}: ${error.message}`);
+    process.stdout.write(`FAIL ${name}: ${error.message}\n`);
   }
 }
 
@@ -214,38 +216,40 @@ try {
     }
   );
 
-  for (const status of [401, 410]) {
-    await check(
-      `${status} invalid or expired token returns to Auth without a loop`,
-      async () => {
-        const record = await runScenario(
-          `terminal-${status}`,
-          { api: jsonError(status) },
-          async ({ page, record: scenario }) => {
-            await page.getByTestId('synthetic-auth-login').waitFor();
-            await page.waitForTimeout(500);
-            assert(
-              scenario.apiAttempts === 1,
-              `Expected one API attempt, got ${scenario.apiAttempts}`
-            );
-            assert(
-              scenario.authNavigations === 1,
-              `Expected one Auth navigation, got ${scenario.authNavigations}`
-            );
-            assert(
-              new URL(page.url()).searchParams.get('prompt') === 'login',
-              'Missing prompt=login'
-            );
-          }
-        );
-        return {
-          status,
-          apiAttempts: record.apiAttempts,
-          authNavigations: record.authNavigations,
-        };
-      }
-    );
-  }
+  await Promise.all(
+    [401, 410].map(status =>
+      check(
+        `${status} invalid or expired token returns to Auth without a loop`,
+        async () => {
+          const record = await runScenario(
+            `terminal-${status}`,
+            { api: jsonError(status) },
+            async ({ page, record: scenario }) => {
+              await page.getByTestId('synthetic-auth-login').waitFor();
+              await page.waitForTimeout(500);
+              assert(
+                scenario.apiAttempts === 1,
+                `Expected one API attempt, got ${scenario.apiAttempts}`
+              );
+              assert(
+                scenario.authNavigations === 1,
+                `Expected one Auth navigation, got ${scenario.authNavigations}`
+              );
+              assert(
+                new URL(page.url()).searchParams.get('prompt') === 'login',
+                'Missing prompt=login'
+              );
+            }
+          );
+          return {
+            status,
+            apiAttempts: record.apiAttempts,
+            authNavigations: record.authNavigations,
+          };
+        }
+      )
+    )
+  );
 
   await check(
     '503 stops loading and presents retry/restart actions',
@@ -393,7 +397,7 @@ try {
   );
 } catch (error) {
   results.fatal = error.stack || error.message;
-  console.error(error);
+  process.stderr.write(`${results.fatal}\n`);
 } finally {
   if (browser) await browser.close();
   if (server) await server.close();

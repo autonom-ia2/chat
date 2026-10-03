@@ -144,7 +144,10 @@ export async function startServer() {
       );
       return;
     }
-    if (url.pathname !== '/app/login') return next();
+    if (url.pathname !== '/app/login') {
+      next();
+      return;
+    }
 
     const html = `<!doctype html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${css}"><link rel="stylesheet" href="${utilities}"></head><body><div id="app"></div><script type="module" src="/tests/qa/sso-login-recovery/entry.js"></script></body></html>`;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
