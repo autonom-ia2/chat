@@ -1,4 +1,5 @@
 """Offline fiction: no Docker, SSH, network or real infrastructure writes."""
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -24,12 +25,16 @@ class ProvisionTest(unittest.TestCase):
         source = source.replace('/etc/ssh/sshd_config.d/70-instagram-coordination.conf', str(self.sshconfig))
         source = source.replace('/home/igcoord', str(self.home))
         self.script.write_text(source)
-        self.env = {**os.environ, 'PATH': f'{self.bin}:/usr/bin:/bin', 'TEST_HOME': str(self.home)}
+        self.calls = self.base / 'calls.jsonl'
+        self.env = {**os.environ, 'PATH': f'{self.bin}:/usr/bin:/bin', 'TEST_HOME': str(self.home),
+                    'TEST_CALLS': str(self.calls)}
         fake = f'#!{os.sys.executable}\n' + r'''
-import os, sys
+import json, os, sys
 from pathlib import Path
 name = Path(sys.argv[0]).name
 a = sys.argv[1:]
+with Path(os.environ['TEST_CALLS']).open('a') as log:
+    log.write(json.dumps([name, *a]) + '\n')
 if os.environ.get('FAIL') == name:
     sys.exit(71)
 if name == 'id': print('0')
@@ -42,6 +47,10 @@ elif name == 'docker':
     elif a[:2] == ['network','ls']: print(os.environ.get('NETWORK_FAKE', ''))
     elif a[0] == 'ps': print(os.environ.get('CONTAINER_FAKE', ''))
     elif a[:2] == ['image','inspect']: print('redis@sha256:fiction')
+    elif a[0] == 'inspect':
+        fixture = json.loads(os.environ.get('PORTS_FIXTURE', '{"NetworkSettings":{"Ports":{"6379/tcp":null,"6381/tcp":[{"HostIp":"127.0.0.1","HostPort":"6381"}]}}}'))
+        if a[-1] == '{{json .NetworkSettings.Ports}}': print(json.dumps(fixture['NetworkSettings']['Ports']))
+        else: sys.exit(72)
     elif a[0] == 'run' and a[-1].startswith('id'): print('999')
     elif a[0] == 'exec':
         lines = sys.stdin.read().splitlines()[1:]
@@ -95,6 +104,12 @@ elif name == 'sshd' and '-T' in a:
         self.assertIn('127.0.0.1:6381:6381', compose)
         self.assertNotIn('network_mode: host', compose)
         self.assertIn('memswap_limit: 256m', compose)
+        calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
+        self.assertIn(['docker', 'network', 'create', '--driver', 'bridge', '--opt',
+                       'com.docker.network.bridge.host_binding_ipv4=127.0.0.1',
+                       'instagram-coordination-bridge'], calls)
+        self.assertIn(['docker', 'inspect', 'instagram-coordination-redis', '--format',
+                       '{{json .NetworkSettings.Ports}}'], calls)
         config = (self.rootdir / 'etc/redis.conf').read_text()
         for setting in ('appendfsync always', 'noeviction', 'aof-load-truncated no', 'port 0'):
             self.assertIn(setting, config)
@@ -131,6 +146,30 @@ elif name == 'sshd' and '-T' in a:
         self.assertTrue(self.rootdir.exists())
         self.assertFalse(self.sshconfig.exists())
         self.assertNotEqual(self.run_script().returncode, 0)
+
+    def test_internal_bridge_requested_binding_without_actual_port_blocks_before_ssh(self):
+        # Reproduce the diagnostic: valid requested binding, null actual publication.
+        fixture = {'HostConfig': {'PortBindings': {'6381/tcp': [
+            {'HostIp': '127.0.0.1', 'HostPort': '6381'}]}},
+            'NetworkSettings': {'Ports': {'6379/tcp': None, '6381/tcp': None}}}
+        result = self.run_script(PORTS_FIXTURE=json.dumps(fixture))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('actual_loopback_port_6381_publication_required', result.stderr)
+        self.assertTrue(self.rootdir.exists())
+        self.assertFalse(self.home.exists())
+        self.assertFalse(self.sshconfig.exists())
+        calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
+        self.assertFalse(any(call[0] == 'useradd' or call[:2] == ['docker', 'exec']
+                             or call[:2] == ['systemctl', 'reload'] for call in calls))
+
+    def test_public_actual_binding_blocks_before_ssh(self):
+        fixture = {'NetworkSettings': {'Ports': {'6381/tcp': [
+            {'HostIp': '0.0.0.0', 'HostPort': '6381'}]}}}
+        result = self.run_script(PORTS_FIXTURE=json.dumps(fixture))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('actual_loopback_port_6381_publication_required', result.stderr)
+        self.assertFalse(self.home.exists())
+        self.assertFalse(self.sshconfig.exists())
 
 
 if __name__ == '__main__':

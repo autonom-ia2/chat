@@ -60,8 +60,10 @@ except Exception:
 CODES = frozenset(('command-failed', 'account-mismatch', 'pem-shape', 'host-mismatch',
                    'source-shape', 'source-value', 'metadata-shape', 'host-key-shape',
                    'env-shape', 'redis-endpoint', 'env-value', 'tty-required', 'consent-required',
-                   'existing-type-mismatch', 'existing-mismatch', 'readback-mismatch'))
+                   'existing-type-mismatch', 'existing-mismatch', 'readback-mismatch', 'unsupported-operation'))
 STAGE = 'consent'
+FAILED_AWS = None
+PUT_ATTEMPTED = False
 
 class Failure(ValueError):
     pass
@@ -76,9 +78,29 @@ def run(args, payload=None):
 
 
 def aws(profile, service, operation, payload):
-    return json.loads(run(['aws', '--profile', profile, '--region', 'us-east-1', '--no-cli-pager',
-                           service, operation, '--cli-input-json', 'file:///dev/stdin', '--output', 'json'],
-                          json.dumps(payload)))
+    global FAILED_AWS, PUT_ATTEMPTED
+    if profile not in ('hub2you', 'financial'):
+        raise Failure('unsupported-operation')
+    stdin = None
+    if (service, operation) == ('sts', 'get-caller-identity'):
+        options = []
+    elif (service, operation) == ('ssm', 'describe-parameters'):
+        name = payload['ParameterFilters'][0]['Values'][0]
+        options = ['--parameter-filters', 'Key=Name,Option=Equals,Values=' + name]
+    elif (service, operation) == ('ssm', 'get-parameter'):
+        options = ['--name', payload['Name'], '--with-decryption']
+    elif (service, operation) == ('ssm', 'put-parameter'):
+        options = ['--name', payload['Name'], '--type', payload['Type'], '--no-overwrite', '--value', 'file:///dev/stdin']
+        stdin = payload['Value']
+    else:
+        raise Failure('unsupported-operation')
+    FAILED_AWS = (profile, service, operation)
+    if operation == 'put-parameter':
+        PUT_ATTEMPTED = True
+    result = json.loads(run(['aws', '--profile', profile, '--region', 'us-east-1', '--no-cli-pager',
+                             '--no-cli-auto-prompt', service, operation, '--output', 'json'] + options, stdin))
+    FAILED_AWS = None
+    return result
 
 
 def identity(profile, account):
@@ -145,8 +167,10 @@ def source(read):
 
 
 def main():
-    global STAGE
+    global STAGE, FAILED_AWS, PUT_ATTEMPTED
     STAGE = 'consent'
+    FAILED_AWS = None
+    PUT_ATTEMPTED = False
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apply', action='store_true')
     args = parser.parse_args()
@@ -202,7 +226,9 @@ def entrypoint():
         return 0
     except (Exception, KeyboardInterrupt) as error:
         code = error.args[0] if isinstance(error, Failure) and error.args and error.args[0] in CODES else 'unexpected-error'
-        print('aborted', STAGE, code, 'Execução interrompida; escritas anteriores podem existir.', file=sys.stderr)
+        message = ('Execução interrompida; pode haver publicação parcial nesta execução.' if PUT_ATTEMPTED
+                   else 'Nenhuma publicação iniciada nesta execução.')
+        print('aborted', STAGE, code, *(FAILED_AWS or ()), message, file=sys.stderr)
         return 1
 
 

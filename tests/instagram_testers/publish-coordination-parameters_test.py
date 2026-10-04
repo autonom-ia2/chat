@@ -19,7 +19,11 @@ SPEC.loader.exec_module(p)
 
 class PublisherTest(unittest.TestCase):
     def setUp(self):
+        environment = patch.dict(p.os.environ, {'PATH': '/synthetic/bin'}, clear=True)
+        environment.start()
+        self.addCleanup(environment.stop)
         self.calls = []
+        self.environments = []
         self.existing = {}
         self.data = {'ca': '-----BEGIN CERTIFICATE-----\nYWJj\n-----END CERTIFICATE-----\n',
                      'host': 'ssh-ed25519 ' + base64.b64encode(b'\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20' + b'x' * 32).decode()}
@@ -31,10 +35,15 @@ class PublisherTest(unittest.TestCase):
         self.account_wrong = False
         self.host_wrong = False
         self.command_fails = False
+        self.fail_operation = None
+        self.fail_profile = None
+        self.fail_identity_at = None
+        self.identities = 0
         self.readback_mode = None
 
     def fake(self, args, **kwargs):
         self.calls.append((args, kwargs.get('input')))
+        self.environments.append(kwargs.get('env'))
         if self.command_fails:
             return subprocess.CompletedProcess(args, 1, 'SECRET', 'SECRET')
         if args[0] == 'ssh':
@@ -43,27 +52,46 @@ class PublisherTest(unittest.TestCase):
             else:
                 output = json.dumps(self.data if args[-1].endswith('read') else dict.fromkeys(self.data, 'metadata-ok'))
         else:
+            if '--cli-input-json' in args:
+                return subprocess.CompletedProcess(args, 1, '', 'Invalid JSON received')
             profile = args[args.index('--profile') + 1]
-            operation = args[7]
-            payload = json.loads(kwargs['input'])
+            operation = next(arg for arg in args if arg in (
+                'get-caller-identity', 'describe-parameters', 'get-parameter', 'put-parameter'))
+            self.assertIn('--no-cli-auto-prompt', args)
+            self.assertEqual(kwargs['env']['AWS_CLI_AUTO_PROMPT'], 'off')
+            self.assertEqual(kwargs['env']['AWS_PAGER'], '')
+            if operation != 'put-parameter':
+                self.assertIsNone(kwargs.get('input'))
+            if operation == 'get-caller-identity':
+                self.identities += 1
+            if ((operation == self.fail_operation and profile == self.fail_profile)
+                    or (operation == 'get-caller-identity' and self.identities == self.fail_identity_at)):
+                return subprocess.CompletedProcess(args, 1, 'SECRET', 'SECRET Invalid JSON')
             if operation == 'get-caller-identity':
                 output = json.dumps({'Account': 'wrong' if self.account_wrong else dict((a, b) for a, b, _ in p.STACKS)[profile]})
             elif operation == 'describe-parameters':
-                name = payload['ParameterFilters'][0]['Values'][0]
+                parameter_filter = args[args.index('--parameter-filters') + 1]
+                self.assertTrue(parameter_filter.startswith('Key=Name,Option=Equals,Values='))
+                name = parameter_filter.split('Values=', 1)[1]
                 old = self.existing.get((profile, name))
                 output = json.dumps({'Parameters': [] if old is None else [{'Name': name, 'Type': old['Type']}]})
             elif operation == 'get-parameter':
-                parameter = self.existing[profile, payload['Name']].copy()
+                self.assertIn('--with-decryption', args)
+                parameter = self.existing[profile, args[args.index('--name') + 1]].copy()
                 if self.readback_mode == 'unknown':
                     raise ValueError('SECRET readback payload')
                 if self.readback_mode == 'failure':
                     return subprocess.CompletedProcess(args, 1, 'SECRET', 'SECRET')
-                if self.readback_mode in ('Type', 'Value'):
+                if self.readback_mode in ('Name', 'Type', 'Value'):
                     parameter[self.readback_mode] = 'divergent'
                 output = json.dumps({'Parameter': parameter})
             elif operation == 'put-parameter':
-                self.assertFalse(payload['Overwrite'])
-                self.existing[profile, payload['Name']] = {key: payload[key] for key in ('Name', 'Type', 'Value')}
+                self.assertIn('--no-overwrite', args)
+                self.assertNotIn('--overwrite', args)
+                self.assertEqual(args[args.index('--value') + 1], 'file:///dev/stdin')
+                name = args[args.index('--name') + 1]
+                self.existing[profile, name] = {'Name': name, 'Type': args[args.index('--type') + 1],
+                                                'Value': kwargs['input']}
                 output = '{}'
             else:
                 self.fail(operation)
@@ -93,9 +121,21 @@ class PublisherTest(unittest.TestCase):
         for i, args, body in puts:
             self.assertIn('get-caller-identity', self.calls[i - 1][0])
             self.assertIn('get-parameter', self.calls[i + 1][0])
-            self.assertEqual(json.loads(self.calls[i + 1][1]), {'Name': json.loads(body)['Name'], 'WithDecryption': True})
+            read_args, read_body = self.calls[i + 1]
+            self.assertEqual(read_args[read_args.index('--name') + 1], args[args.index('--name') + 1])
+            self.assertIn('--with-decryption', read_args)
+            self.assertIsNone(read_body)
             self.assertIn('file:///dev/stdin', args)
-            self.assertNotIn(json.loads(body)['Value'], args)
+            self.assertNotIn(body, args)
+            profile = args[args.index('--profile') + 1]
+            name = args[args.index('--name') + 1]
+            self.assertEqual(self.existing[profile, name]['Value'], body)
+            user = next(user for stack, _, user in p.STACKS if stack == profile)
+            suffix = name.removeprefix(p.PREFIX)
+            expected = (self.data[user + '.key'] if suffix == 'ssh-key' else
+                        self.data[user + '.env'] if suffix == 'redis-env' else
+                        self.data['ca'] if suffix == 'ca' else p.HOST + ' ' + self.data['host'] + '\n')
+            self.assertEqual(body, expected)
         self.assertNotIn('rediss://', output)
         self.assertNotIn('YWJj', output)
 
@@ -104,6 +144,103 @@ class PublisherTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.execute(True, tty, answer)
             self.assertEqual(self.calls, [])
+
+    def test_aws_operations_avoid_invalid_json_stdin(self):
+        self.execute(True)
+        for args, body in self.calls:
+            if args[0] == 'aws':
+                self.assertNotIn('--cli-input-json', args)
+                if 'put-parameter' not in args:
+                    self.assertIsNone(body)
+
+    def test_put_stdin_preserves_raw_multiline_without_serialization(self):
+        for value in ('  synthetic-key\nline "two"\\tail\n\n', 'synthetic-without-final-newline'):
+            with self.subTest(value=value), patch.object(p.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '{}', '')) as command:
+                p.aws('hub2you', 'ssm', 'put-parameter', {'Name': p.PREFIX + 'ssh-key',
+                      'Type': 'SecureString', 'Value': value, 'Overwrite': False})
+                self.assertEqual(command.call_args.kwargs['input'], value)
+                self.assertIn('--no-overwrite', command.call_args.args[0])
+                self.assertNotIn(value, command.call_args.args[0])
+
+    def test_synthetic_credentials_only_reach_put_stdin(self):
+        values = (self.data['ig_hub.key'], self.data['ig_auto.env'], 'a' * 64, 'b' * 64)
+        with patch.dict(p.os.environ, {'PATH': '/synthetic/bin'}, clear=True):
+            self.execute(True)
+            for (args, _), env in zip(self.calls, self.environments):
+                for value in values:
+                    self.assertNotIn(value, ' '.join(args))
+                    self.assertNotIn(value, json.dumps(env))
+            self.assertEqual(dict(p.os.environ), {'PATH': '/synthetic/bin'})
+        for value in values:
+            self.assertNotIn(value, self.stdout.getvalue() + self.stderr.getvalue())
+
+    def test_unknown_aws_operation_and_profile_fail_without_subprocess(self):
+        for profile, service, operation in (('hub2you', 'ssm', 'delete-parameter'),
+                                             ('hub2you', 'sts', 'put-parameter'),
+                                             ('SECRET', 'ssm', 'get-parameter')):
+            with patch.object(p.subprocess, 'run') as command:
+                with self.assertRaises(p.Failure):
+                    p.aws(profile, service, operation, {'Value': 'SECRET'})
+                command.assert_not_called()
+
+    def test_failure_before_first_put_never_reports_partial_publication(self):
+        for profile, operation, identity_at in (('hub2you', 'get-caller-identity', None),
+                                                 ('financial', 'describe-parameters', None),
+                                                 (None, None, 3)):
+            self.calls.clear()
+            self.identities = 0
+            self.fail_profile, self.fail_operation, self.fail_identity_at = profile, operation, identity_at
+            self.execute(True, entrypoint=True)
+            diagnostic = self.stderr.getvalue()
+            self.assertIn('Nenhuma publicação iniciada nesta execução.', diagnostic)
+            self.assertNotIn('parcial', diagnostic)
+            self.assertIn('aborted ' + ('publish' if identity_at else 'inventory') + ' command-failed', diagnostic)
+            self.assertIn((profile or 'hub2you') + ' ' + ('sts get-caller-identity' if identity_at or operation == 'get-caller-identity' else 'ssm describe-parameters'), diagnostic)
+            self.assertFalse(any('put-parameter' in args for args, _ in self.calls))
+            self.assertNotIn('SECRET', diagnostic)
+
+    def test_first_put_failure_reports_possible_partial_and_safe_context(self):
+        self.fail_profile, self.fail_operation = 'hub2you', 'put-parameter'
+        self.execute(True, entrypoint=True)
+        diagnostic = self.stderr.getvalue()
+        self.assertIn('aborted publish command-failed', diagnostic)
+        self.assertIn('hub2you ssm put-parameter', diagnostic)
+        self.assertIn('publicação parcial', diagnostic)
+        self.assertNotIn('Nenhuma publicação iniciada', diagnostic)
+        self.assertNotIn('SECRET', diagnostic)
+        self.assertNotIn('created', self.stdout.getvalue())
+        self.assertEqual(sum('put-parameter' in args for args, _ in self.calls), 1)
+
+    def test_last_existing_mismatch_prevents_all_planned_writes(self):
+        name = p.PREFIX + 'known-hosts'
+        self.existing['financial', name] = {'Name': name, 'Type': 'String', 'Value': 'divergent'}
+        self.execute(True, entrypoint=True)
+        self.assertIn('aborted compare existing-mismatch', self.stderr.getvalue())
+        self.assertIn('Nenhuma publicação iniciada nesta execução.', self.stderr.getvalue())
+        self.assertFalse(any('put-parameter' in args for args, _ in self.calls))
+
+    def test_later_identity_failure_reports_partial_and_resets_next_execution(self):
+        self.fail_identity_at = 4
+        self.execute(True, entrypoint=True)
+        self.assertIn('publicação parcial', self.stderr.getvalue())
+        self.assertIn('hub2you sts get-caller-identity', self.stderr.getvalue())
+        self.assertEqual(sum('put-parameter' in args for args, _ in self.calls), 1)
+        self.command_fails = True
+        self.execute(entrypoint=True)
+        self.assertIn('Nenhuma publicação iniciada nesta execução.', self.stderr.getvalue())
+        self.assertNotIn('parcial', self.stderr.getvalue())
+
+    def test_put_subprocess_exception_uses_static_diagnostic(self):
+        original_fake = self.fake
+        def failing_put(args, **kwargs):
+            if 'put-parameter' in args:
+                raise subprocess.TimeoutExpired(args, 60, output='SECRET', stderr='SECRET')
+            return original_fake(args, **kwargs)
+        with patch.object(self, 'fake', side_effect=failing_put):
+            self.execute(True, entrypoint=True)
+        self.assertIn('aborted publish unexpected-error hub2you ssm put-parameter', self.stderr.getvalue())
+        self.assertIn('publicação parcial', self.stderr.getvalue())
+        self.assertNotIn('SECRET', self.stderr.getvalue() + self.stdout.getvalue())
 
     def test_account_and_hostname_abort_without_put(self):
         for flag in ('account_wrong', 'host_wrong'):
@@ -211,7 +348,7 @@ class PublisherTest(unittest.TestCase):
             opened.assert_not_called()
 
     def test_failed_or_mismatched_readback_never_announces_created(self):
-        for mode, error in (('Type', 'readback-mismatch'), ('Value', 'readback-mismatch'), ('failure', 'command-failed')):
+        for mode, error in (('Name', 'readback-mismatch'), ('Type', 'readback-mismatch'), ('Value', 'readback-mismatch'), ('failure', 'command-failed')):
             self.calls.clear()
             self.existing.clear()
             self.readback_mode = mode
@@ -273,6 +410,9 @@ class PublisherTest(unittest.TestCase):
             self.readback_mode = mode
             self.execute(True, entrypoint=True)
             self.assertIn('aborted readback ' + code, self.stderr.getvalue())
+            self.assertIn('publicação parcial', self.stderr.getvalue())
+            if mode in ('failure', 'unknown'):
+                self.assertIn('hub2you ssm get-parameter', self.stderr.getvalue())
             self.assertNotIn('SECRET', self.stderr.getvalue() + self.stdout.getvalue())
             self.assertNotIn('created', self.stdout.getvalue())
 
