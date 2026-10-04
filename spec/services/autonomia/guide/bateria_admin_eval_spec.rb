@@ -1196,7 +1196,10 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
 
       pedido = 'Pegue todos os clientes que estão no funil Comercial e que tenham a data de nascimento no contato e crie no ' \
                'calendário um lembrete de aniversário.'
-      respondeu!(perguntar(pedido))
+      primeiro = perguntar(pedido)
+      respondeu!(primeiro)
+      # Perguntar a hora é natural (Rodrigo, 04/10): a pessoa responde e o Guia segue.
+      respondeu!(perguntar('Às 9h.', historico: turno(pedido, primeiro))) if Crm::FollowUp.where(account: c.conta).none? && tarefas.none?
       clicar_e_rodar!(tarefas.sole) if tarefas.any?
 
       retornos = Crm::FollowUp.where(account: c.conta)
@@ -1211,9 +1214,9 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       end
     end
 
-    # MOTIVO: conta sem fuso. Perguntar o fuso é o certo; com a resposta, o Guia grava o fuso na conta
-    # (não pergunta de novo) e cria os lembretes. Pega: chutar fuso, não gravar, parar depois da resposta.
-    it 'TL10 sem fuso na conta: pergunta uma vez, grava o fuso e cria os lembretes', :aggregate_failures do
+    # MOTIVO: conta sem fuso. Perguntar a hora e o fuso é o certo; com a resposta, o Guia cria os lembretes
+    # nesse horário. Pega: chutar o fuso, parar depois da resposta, errar a hora.
+    it 'TL10 sem fuso na conta: pergunta, e com a resposta cria os lembretes às 9h de Brasília', :aggregate_failures do
       c.conta.custom_attribute_definitions.create!(attribute_key: 'data_nascimento', attribute_display_name: 'Data de nascimento',
                                                    attribute_display_type: :date, attribute_model: :contact_attribute)
       comercial, entrada = create_crm_pipeline(account: c.conta, user: c.admin, name: 'Comercial')
@@ -1227,12 +1230,13 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       primeiro = perguntar(pedido)
       respondeu!(primeiro)
       if Crm::FollowUp.where(account: c.conta).none?
-        resposta = 'Horário de Brasília.'
+        resposta = 'Às 9h, horário de Brasília.'
         respondeu!(perguntar(resposta, historico: turno(pedido, primeiro)))
       end
 
-      expect(c.conta.reload.custom_attributes['timezone']).to eq('America/Sao_Paulo')
-      expect(Crm::FollowUp.where(account: c.conta).pluck(:card_id)).to match_array(cards.map(&:id))
+      retornos = Crm::FollowUp.where(account: c.conta)
+      expect(retornos.pluck(:card_id)).to match_array(cards.map(&:id))
+      expect(retornos.map { |retorno| retorno.due_at.in_time_zone('America/Sao_Paulo').hour }.uniq).to eq([9])
     end
 
     def desfazer_tudo!(tarefa)
