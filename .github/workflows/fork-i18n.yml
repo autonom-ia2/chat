@@ -1,10 +1,8 @@
 name: Fork translations
 on:
   pull_request:
-  # Check obrigatório da fila de merge. O push da main sai junto com o do testes.yml,
-  # depois que o ruleset da fila estiver ativo.
-  push:
-    branches: [main]
+  # Check obrigatório da fila de merge. Não roda no push da main: a fila já conferiu
+  # o commit que vai para a main.
   merge_group:
     types: [checks_requested]
 permissions:
