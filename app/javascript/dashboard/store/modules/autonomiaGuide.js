@@ -154,6 +154,7 @@ const addAssistantMessage = ({
   execucao = null,
   lembrancas = null,
   aviso = null,
+  tarefa = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -180,6 +181,8 @@ const addAssistantMessage = ({
     lembrancas: Array.isArray(lembrancas) ? [...lembrancas] : [],
     // #935 — o Guia falou primeiro: esta resposta é um aviso dele.
     aviso,
+    // #936 — a tarefa longa planejada neste turno: o cartão busca o resto pelo id.
+    tarefa,
   };
   nextId += 1;
   state.messages.push(record);
@@ -221,12 +224,17 @@ const respostaDoTurno = (turno, avisos) => {
       acaoEstado: turno.acao_estado,
       acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
+      tarefa: turno.tarefa || null,
       pedidoId: turno.pedido_id,
       aviso: turno.aviso_id ? { id: turno.aviso_id } : null,
     };
   }
   if (turno.status === 'retido') {
-    return { content: avisos.retido, execucao: turno.execucao };
+    return {
+      content: avisos.retido,
+      execucao: turno.execucao,
+      tarefa: turno.tarefa || null,
+    };
   }
   if (turno.status === 'failed') return { content: avisos.falhou };
   return null;

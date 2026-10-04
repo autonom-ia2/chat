@@ -797,6 +797,22 @@ pt_BR:
         email: 'E-mail'
         phone_number: 'Telefone'
         color: 'Cor'
+      tarefa:
+        motivo:
+          pessoa: 'Você pausou.'
+          canario: 'Parei depois dos primeiros para você conferir.'
+          falhas: 'Mais de 1 em cada 5 registros deu erro na última rodada.'
+          pendencia: 'Parte da última rodada não tem como desfazer, então parei.'
+          mensagens: 'Saiu mensagem para cliente enquanto eu trabalhava, então parei.'
+          custo: 'O gasto com IA passou do limite desta tarefa.'
+          cota_jev: 'Acabou o limite de classificações do mês.'
+          admin: 'Você não é mais administrador desta conta.'
+          gerar_falhou: 'Não consegui escrever os valores novos agora.'
+          receita_mudou: 'O plano mudou depois que você aprovou, então não continuei.'
+          erro: 'Algo deu errado. Tente retomar daqui a alguns minutos.'
+        nao_da:
+          estado: 'Esta tarefa não pode fazer isso agora. Recarregue para ver onde ela está.'
+          desfazer: 'Não sobrou nada para desfazer nesta tarefa.'
     faq:
       not_pending: 'Esta sugestão já foi revisada.'
       embedding_failed: 'Não foi possível adicionar esta FAQ à base: a credencial de IA está ausente ou falhou. Tente de novo.'

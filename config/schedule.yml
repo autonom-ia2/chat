@@ -237,6 +237,12 @@ autonomia_guide_limpar_execucoes_job:
   class: 'Autonomia::Guide::LimparExecucoesJob'
   queue: scheduled_jobs
 
+# executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
+autonomia_guide_tarefas_vigia_job:
+  cron: '*/5 * * * *'
+  class: 'Autonomia::Guide::TarefasVigiaJob'
+  queue: scheduled_jobs
+
 # executed every day at 04:40; apaga os arquivos anexados na conversa com o Guia depois que o link
 # deles venceu (1 dia), quando nenhuma pergunta consegue mais lê-los (#857).
 autonomia_guide_limpar_arquivos_job:

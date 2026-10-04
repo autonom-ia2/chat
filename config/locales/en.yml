@@ -509,6 +509,22 @@ en:
         email: 'Email'
         phone_number: 'Phone'
         color: 'Color'
+      tarefa:
+        motivo:
+          pessoa: 'You paused it.'
+          canario: 'I stopped after the first ones so you can check.'
+          falhas: 'More than 1 in 5 records failed in the last round.'
+          pendencia: 'Part of the last round cannot be undone, so I stopped.'
+          mensagens: 'A message went out to a customer while I worked, so I stopped.'
+          custo: 'The AI cost passed the limit set for this task.'
+          cota_jev: 'The monthly limit of classifications ran out.'
+          admin: 'You are no longer an admin of this account.'
+          gerar_falhou: 'I could not write the new values right now.'
+          receita_mudou: 'The plan changed after you approved it, so I did not continue.'
+          erro: 'Something went wrong. Try to resume in a few minutes.'
+        nao_da:
+          estado: 'This task cannot do that right now. Reload to see where it is.'
+          desfazer: 'There is nothing left to undo in this task.'
     image_required: 'An image file is required.'
     image_invalid_type: 'Unsupported image type. Use PNG, JPEG, GIF, or WebP.'
     image_too_large: 'Image is too large. The maximum size is 5 MB.'

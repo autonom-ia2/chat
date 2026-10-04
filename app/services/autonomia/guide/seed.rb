@@ -25,6 +25,7 @@ module Autonomia
       FERRAMENTAS = %w[
         ler_da_conta formato_da_acao executar_acao propor_acao mostrar_tela ler_da_central ler_pagina ler_anexo classificar_com_jev
         anotar_lembranca apagar_lembranca
+        planejar_tarefa
       ].freeze
 
       # Elegibilidade = Autonomia habilitada (ENV master + conta) E uma credencial de IA resolvível

@@ -108,7 +108,14 @@ class Autonomia::Guide::Turno < ApplicationRecord
     { 'pedido_id' => pedido_id, 'pergunta' => pergunta, 'anexos' => anexos, 'status' => status,
       'resposta' => resposta, 'navegacoes' => navegacoes, 'artigos' => artigos, 'acao' => acao,
       'acao_estado' => acao_estado, 'acao_resultado' => acao_resultado, 'execucao' => execucao_para_tela,
-      'aviso_id' => aviso_id, 'criado_em' => created_at.iso8601 }
+      'aviso_id' => aviso_id, 'tarefa' => tarefa_para_tela, 'criado_em' => created_at.iso8601 }
+  end
+
+  # #936 — a tarefa longa planejada neste turno: o cartão volta ao reabrir a conversa e busca o
+  # andamento em `GET tarefas/:id`.
+  def tarefa_para_tela
+    tarefa = ::Autonomia::Guide::Tarefa.where(turno_id: id).order(:id).last
+    tarefa && { 'id' => tarefa.id, 'status' => tarefa.status }
   end
 
   # O desfazer vale 5 dias; a conversa fica guardada sem prazo. Enquanto a

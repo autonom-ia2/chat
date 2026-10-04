@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import GuideExecucao from './GuideExecucao.vue';
+import GuideTarefa from './GuideTarefa.vue';
 
 // "Feito pelo Guia" (#855): tudo o que o Guia mudou para esta pessoa nos
 // últimos 5 dias, com o desfazer de cada turno. Mora na aba "Feito pelo Guia"
@@ -35,12 +36,19 @@ onMounted(async () => {
       {{ $t('AUTONOMIA_GUIDE.DONE.EMPTY') }}
     </p>
     <template v-else>
-      <GuideExecucao
-        v-for="execucao in execucoes"
-        :key="execucao.id"
-        :execucao="execucao"
-        mostrar-data
-      />
+      <template v-for="execucao in execucoes" :key="execucao.id">
+        <!-- #936 — uma tarefa longa é uma linha só, com os totais e o Desfazer tudo. -->
+        <GuideTarefa
+          v-if="execucao.tarefa_id"
+          :tarefa-id="execucao.tarefa_id"
+          :inicial="execucao.tarefa"
+        />
+        <GuideExecucao
+          v-if="!execucao.tarefa_id"
+          :execucao="execucao"
+          mostrar-data
+        />
+      </template>
     </template>
   </div>
 </template>

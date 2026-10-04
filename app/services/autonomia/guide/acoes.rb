@@ -86,7 +86,8 @@ class Autonomia::Guide::Acoes
     'DELETE sla_policies/:id',
     # #858 — resolver um caso parado do Decisor retoma a automação num job, que pode mandar mensagem
     # ou mover card fora do caderno. (A conversa com o Guia saiu do catálogo: D3, #933.)
-    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver'
+    # #936 — começar e seguir uma tarefa longa soltam lotes em centenas de registros: só a pessoa autoriza.
+    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver', 'POST autonomia/tarefas/:id/comecar', 'POST autonomia/tarefas/:id/seguir'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

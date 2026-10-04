@@ -116,8 +116,9 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # de desfazer. É daqui que a pessoa desfaz depois de recarregar a tela.
   def execucoes
     lista = ::Autonomia::Guide::Execucao.de(Current.account, Current.user).vigentes
-                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES)
-    render json: { execucoes: lista.map(&:resumo) }
+                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES).includes(:tarefa)
+    # #936 — os lotes de uma tarefa longa aparecem como uma linha só.
+    render json: { execucoes: ::Autonomia::Guide::Execucao.resumos(lista) }
   end
 
   # Só quem pediu desfaz: a execução saiu com a permissão dela. De outra pessoa
