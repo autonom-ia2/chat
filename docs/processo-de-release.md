@@ -69,14 +69,15 @@ Com o ruleset ativo:
 2. **Checks obrigatórios:** `RSpec` (um check só, que agrega as partes), `Vitest`, `trava`, `central` e
    `fork-i18n`. Rubocop, Brakeman e ESLint seguem informativos e não rodam na fila.
 3. **Como mergear:** com OK do Rodrigo e os checks verdes, `gh pr merge <N> --match-head-commit <sha>` põe o
-   PR na fila. O comando sai com sucesso **antes** do merge. Só conta como mergeado quando
-   `gh pr view <N> --json state` mostrar `MERGED`.
+   PR na fila (o repositório tem `allow_auto_merge` ligado: é por ele que o `gh` entra na fila). O comando sai
+   com sucesso **antes** do merge. Só conta como mergeado quando `gh pr view <N> --json state` mostrar
+   `MERGED`. A posição na fila: `gh api graphql -f query='query{repository(owner:"autonom-ia2",name:"chat"){pullRequest(number:N){state isInMergeQueue mergeQueueEntry{state position}}}}'`.
 4. **A fila substitui o lote manual.** Ela junta até 2 PRs por rodada, testa o código combinado uma vez e faz
    um único push na `main`, que gera um único deploy. Não é mais preciso combinar janela por mensagem nem
    montar `release/*-loteN` para juntar PRs. A validação depois do deploy (regra 4, "ok, SHA") continua.
-5. **O "Testes do fork" deixa de rodar no push da `main`** num PR próprio, logo depois da ativação: a fila já
-   testa exatamente aquele commit, e a rodada extra disputava runner com o deploy de produção (medido em
-   04/10: deploy ~1 min na fila). Até lá ele continua rodando, para nenhum merge ficar sem teste.
+5. **O "Testes do fork" e o "fork-i18n" não rodam no push da `main`:** a fila já testou exatamente aquele
+   commit, e a rodada extra disputava runner com o deploy de produção (medido em 04/10: deploy ~1 min na fila).
+   Fila ativa e testada em 04/10/2026 (#969).
 6. **PRs abertos antes da mudança** precisam de `gh pr update-branch <N>` (ou um push novo) para rodar os
    workflows novos e ganhar o check `RSpec`.
 
