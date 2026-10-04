@@ -18,6 +18,22 @@ module Autonomia::Guide::Formatos::Fontes
     definicoes(arquivo)[[linha, metodo.name]]
   end
 
+  # Método que mora fora do repositório (gem) e lê `params` no próprio corpo (#942). Só o corpo do
+  # método: o que ele chama adiante não é seguido.
+  def de_fora_le_params?(metodo, caminhos)
+    arquivo, linha = metodo.source_location
+    return false if arquivo.nil? || !File.file?(arquivo) || do_repositorio?(arquivo)
+
+    pilha = [definicoes(arquivo)[[linha, metodo.name]]&.body].compact
+    until pilha.empty?
+      node = pilha.pop
+      return true if caminhos.params?(node)
+
+      pilha.concat(node.compact_child_nodes)
+    end
+    false
+  end
+
   def do_controller?(arquivo)
     do_repositorio?(arquivo) && PASTAS.any? { |pasta| relativo(arquivo).start_with?(pasta) }
   end

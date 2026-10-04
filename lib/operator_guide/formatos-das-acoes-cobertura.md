@@ -175,3 +175,67 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/whatsapp_calls#reject` sdp_answer — repassada a Whatsapp::CallService.new
 - `api/v1/accounts/whatsapp_calls#terminate` sdp_answer — repassada a Whatsapp::CallService.new
 - `api/v1/accounts/whatsapp_calls#upload_recording` recording — repassada a @call.message.attachments.create!
+
+## Parâmetros das leituras
+
+O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida não recusa nada.
+
+| | Leituras |
+|---|---|
+| No catálogo | 299 |
+| Com parâmetros conhecidos | 248 |
+| Sem parâmetros conhecidos | 51 |
+
+### Leituras sem parâmetros conhecidos
+
+- `GET assignment_policies/:id/edit` — a rota não tem a action no controller
+- `GET assignment_policies/new` — a rota não tem a action no controller
+- `GET captain/assistant_responses/:id/edit` — a rota não tem a action no controller
+- `GET captain/assistant_responses/new` — a rota não tem a action no controller
+- `GET captain/assistants/:assistant_id/scenarios/:id/edit` — a rota não tem a action no controller
+- `GET captain/assistants/:assistant_id/scenarios/new` — a rota não tem a action no controller
+- `GET captain/assistants/:id/edit` — a rota não tem a action no controller
+- `GET captain/assistants/new` — a rota não tem a action no controller
+- `GET captain/custom_tools/:id/edit` — a rota não tem a action no controller
+- `GET captain/custom_tools/new` — a rota não tem a action no controller
+- `GET companies` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET companies/search` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET contacts` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET contacts/:contact_id/notes/:id/edit` — a rota não tem a action no controller
+- `GET contacts/:contact_id/notes/new` — a rota não tem a action no controller
+- `GET contacts/active` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET contacts/search` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET crm/calendar/events` — params inteiro repassado a ::Crm::Cards::CalendarQuery.new; params inteiro repassado a ::Crm::FollowUps::FilterQuery.new
+- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
+- `GET crm/cards/export` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
+- `GET crm/cards/summaries` — params inteiro repassado a ::Crm::Cards::GroupSummary.new
+- `GET crm/follow_ups` — params inteiro repassado a ::Crm::FollowUps::FilterQuery.new
+- `GET crm/kanban` — params inteiro repassado a Crm::Kanban::BoardContext.new
+- `GET csat_survey_responses` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET csat_survey_responses/download` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET csat_survey_responses/metrics` — lê params em código de fora do repositório (Sift#filtrate)
+- `GET data_imports/:id` — params inteiro repassado a DataImportSkipLogFinder.new
+- `GET email_campaigns/campaigns` — permit com valor calculado
+- `GET email_campaigns/reports` — permit com valor calculado
+- `GET email_campaigns/reports/:id` — permit com valor calculado
+- `GET email_campaigns/reports/:id/clicks` — permit com valor calculado
+- `GET email_campaigns/reports/:id/export` — permit com valor calculado
+- `GET email_campaigns/reports/:id/import_issues` — permit com valor calculado
+- `GET email_campaigns/reports/:id/import_issues/export` — permit com valor calculado
+- `GET email_campaigns/reports/:id/recipients` — permit com valor calculado
+- `GET email_campaigns/reports/:id/timeline` — permit com valor calculado
+- `GET integrations/hooks/:id` — a rota não tem a action no controller
+- `GET macros` — params inteiro repassado a Macro.with_visibility
+- `GET portals/:id/edit` — a rota não tem a action no controller
+- `GET portals/:portal_id/articles/new` — a rota não tem a action no controller
+- `GET portals/:portal_id/categories` — params inteiro repassado a @portal.categories.search
+- `GET portals/:portal_id/categories/:id/edit` — a rota não tem a action no controller
+- `GET portals/:portal_id/categories/new` — a rota não tem a action no controller
+- `GET portals/new` — a rota não tem a action no controller
+- `GET search` — params inteiro repassado a SearchService.new
+- `GET search/articles` — params inteiro repassado a SearchService.new
+- `GET search/contacts` — params inteiro repassado a SearchService.new
+- `GET search/conversations` — params inteiro repassado a SearchService.new
+- `GET search/messages` — params inteiro repassado a SearchService.new
+- `GET teams/:id/edit` — a rota não tem a action no controller
+- `GET teams/new` — a rota não tem a action no controller
