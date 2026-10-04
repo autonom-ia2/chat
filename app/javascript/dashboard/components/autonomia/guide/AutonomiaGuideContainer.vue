@@ -875,6 +875,26 @@ watch(avisosNovos, novos => {
   if (novos > 0 && showPanel.value) trazerAvisos();
 });
 
+// #944 — o link do push e do e-mail do aviso urgente (`?guia=aviso`) abre o
+// painel, que reabre a conversa do aviso. O parâmetro sai do endereço: recarregar
+// a página não abre o Guia de novo.
+watch(
+  () => route?.query?.guia,
+  guia => {
+    if (props.embutido || !guia) return;
+    updateUISettings({
+      is_autonomia_guide_panel_open: true,
+      is_autonomia_copilot_panel_open: false,
+      is_contact_sidebar_open: false,
+    });
+    const query = Object.fromEntries(
+      Object.entries(route.query).filter(([chave]) => chave !== 'guia')
+    );
+    router.replace({ query });
+  },
+  { immediate: true }
+);
+
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
 watch(accountId, () => {

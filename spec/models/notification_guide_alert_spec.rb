@@ -23,7 +23,7 @@ RSpec.describe Notification do
     expect([setting.email_guide_alert?, setting.push_guide_alert?]).to eq([true, true])
   end
 
-  it 'o push abre o painel da conta, não uma conversa', :aggregate_failures do
+  it 'o push abre o painel da conta com o Guia aberto, não uma conversa', :aggregate_failures do
     allow(WebPush).to receive(:payload_send)
     with_modified_env VAPID_PUBLIC_KEY: 'test', FRONTEND_URL: 'https://app.exemplo.com' do
       create(:notification_subscription, user: admin)
@@ -33,7 +33,7 @@ RSpec.describe Notification do
 
     expect(WebPush).to have_received(:payload_send) do |argumentos|
       mensagem = JSON.parse(argumentos[:message])
-      expect(mensagem['url']).to eq("https://app.exemplo.com/app/accounts/#{account.id}/dashboard")
+      expect(mensagem['url']).to eq("https://app.exemplo.com/app/accounts/#{account.id}/dashboard?guia=aviso")
       expect(mensagem['tag']).to eq("guide_alert_#{aviso.id}_#{notificacao.id}")
     end
   end
@@ -48,11 +48,12 @@ RSpec.describe Notification do
     expect(mailer).to have_received(:guide_alert).with(aviso, admin)
   end
 
-  it 'o e-mail traz o título e o texto do aviso', :aggregate_failures do
-    with_modified_env SMTP_ADDRESS: 'smtp.exemplo.com' do
+  it 'o e-mail traz o título, o texto do aviso e o link que abre o Guia', :aggregate_failures do
+    with_modified_env SMTP_ADDRESS: 'smtp.exemplo.com', FRONTEND_URL: 'https://app.exemplo.com' do
       email = AgentNotifications::GuideAlertMailer.with(account: account).guide_alert(aviso, admin).message
       expect(email.subject).to eq('The Guide has an urgent warning for you')
       expect(email.body.encoded).to include('Conexão caída: 1 agora')
+      expect(email.body.encoded).to include("https://app.exemplo.com/app/accounts/#{account.id}/dashboard?guia=aviso")
     end
   end
 

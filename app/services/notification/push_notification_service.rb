@@ -44,7 +44,7 @@ class Notification::PushNotificationService
   end
 
   def push_url
-    return "#{ENV.fetch('FRONTEND_URL', '')}/app/accounts/#{notification.account_id}/dashboard" if notification.guide_alert?
+    return ::Autonomia::Guide::Aviso.link_no_painel(notification.account_id) if notification.guide_alert?
 
     app_account_conversation_url(account_id: conversation.account_id, id: conversation.display_id)
   end
