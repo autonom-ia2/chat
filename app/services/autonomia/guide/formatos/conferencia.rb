@@ -16,14 +16,15 @@
 # - obrigatório ausente numa criação — só o que o código exige (`params.require`);
 #   o que só o modelo exige pode vir da própria action. Com `padrao`, o banco preenche.
 #
-# Confere o primeiro nível do corpo (dentro do envelope, quando há). O que vai
-# dentro de objeto e lista fica com a plataforma, que responde com o atributo
-# recusado — e a recusa também volta com o formato (`Formatos::Retorno`).
+# Confere o primeiro nível do corpo (dentro do envelope, quando há). Dentro dos
+# campos JSON, confere pelo esquema da coluna e pela conta (`por_dentro`, #932):
+# cada problema volta com o caminho exato no corpo e os valores que valem.
 class Autonomia::Guide::Formatos::Conferencia
   attr_reader :corpo
 
-  def initialize(acao, corpo)
+  def initialize(acao, corpo, conta: nil)
     @acao = acao.to_s
+    @conta = conta
     @formato = ::Autonomia::Guide::Formatos.para(@acao)
     @corpo = normalizado(corpo.to_h.deep_stringify_keys)
   end
@@ -39,7 +40,19 @@ class Autonomia::Guide::Formatos::Conferencia
   def problemas
     return [] unless @formato
 
-    @problemas ||= [*sem_corpo, *desconhecidas_recusadas, *fora_da_lista, *faltando].compact
+    @problemas ||= [*sem_corpo, *desconhecidas_recusadas, *fora_da_lista, *faltando, *por_dentro].compact
+  end
+
+  # O que está errado DENTRO dos campos JSON: [{ caminho:, motivo:, validos: }].
+  def por_dentro
+    return [] unless @formato
+
+    dentro.problemas
+  end
+
+  # O corpo faz algo sem desfazer, pelo que o esquema marca (`x-sem-volta`)?
+  def sem_volta?
+    @formato.present? && dentro.sem_volta?
   end
 
   # A própria conferência, para seguir; ou a recusa, antes de chamar a plataforma.
@@ -56,7 +69,7 @@ class Autonomia::Guide::Formatos::Conferencia
 
     [
       "Não executei #{@acao}: o corpo não bate com o formato da ação.",
-      *problemas.map { |problema| "- #{problema}" },
+      *problemas.map { |problema| "- #{em_texto(problema)}" },
       ::Autonomia::Guide::Formatos.resumo_para_o_modelo(@acao),
       'Monte o corpo de novo com este formato e tente uma vez.'
     ].compact.join("\n")
@@ -75,6 +88,17 @@ class Autonomia::Guide::Formatos::Conferencia
   end
 
   private
+
+  def dentro
+    @dentro ||= ::Autonomia::Guide::Formatos::PorDentro.new(campos.merge(fora_do_envelope), valores, conta: @conta)
+  end
+
+  def em_texto(problema)
+    return problema unless problema.is_a?(Hash)
+
+    validos = problema[:validos].present? ? "; vale: #{problema[:validos].join(', ')}" : ''
+    "#{problema[:caminho]}: #{problema[:motivo]}#{validos}"
+  end
 
   def envelope
     @formato && @formato['envelope']

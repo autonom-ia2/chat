@@ -19,7 +19,12 @@ class Autonomia::Guide::Formatos::Relatorio
   end
 
   def texto
-    [cabecalho, contagens, por_motivo, lista].join("\n")
+    [cabecalho, contagens, metricas.texto, por_motivo, lista, metricas.sem_tipo].join("\n")
+  end
+
+  # As duas métricas do #932: campos JSON com esquema e leituras cruas com tipo.
+  def metricas
+    @metricas ||= ::Autonomia::Guide::Formatos::Metricas.new(@formatos)
   end
 
   private

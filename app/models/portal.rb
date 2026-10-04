@@ -47,9 +47,7 @@ class Portal < ApplicationRecord
   before_validation :normalize_config
   validate :validate_config
   validate :validate_analytics
-  validates_with JsonSchemaValidator,
-                 schema: PortalConfigSchema::CONFIG_PARAMS_SCHEMA,
-                 attribute_resolver: ->(record) { record.config }
+  validates :config, json_schema: { schema: PortalConfigSchema::CONFIG_PARAMS_SCHEMA }
 
   scope :active, -> { where(archived: false) }
 

@@ -73,9 +73,7 @@ class Message < ApplicationRecord
   validates :inbox_id, presence: true
   validates :conversation_id, presence: true
   validates_with ContentAttributeValidator
-  validates_with JsonSchemaValidator,
-                 schema: TEMPLATE_PARAMS_SCHEMA,
-                 attribute_resolver: ->(record) { record.additional_attributes }
+  validates :additional_attributes, json_schema: { schema: TEMPLATE_PARAMS_SCHEMA }
 
   validates :content_type, presence: true
   validates :content, length: { maximum: 150_000 }

@@ -121,7 +121,7 @@ RSpec.describe 'Api::V1::Accounts::AutomationRulesController', type: :request do
 
         post "/api/v1/accounts/#{account.id}/automation_rules",
              headers: administrator.create_new_auth_token,
-             params: params
+             params: params, as: :json # o painel manda JSON; em formulário o id vira texto e o motor o ignora
 
         expect(response).to have_http_status(:success)
         expect(account.automation_rules.count).to eq(1)
@@ -140,7 +140,7 @@ RSpec.describe 'Api::V1::Accounts::AutomationRulesController', type: :request do
 
         post "/api/v1/accounts/#{account.id}/automation_rules",
              headers: administrator.create_new_auth_token,
-             params: params
+             params: params, as: :json # o painel manda JSON; em formulário o id vira texto e o motor o ignora
 
         expect(response).to have_http_status(:success)
         expect(account.automation_rules.count).to eq(1)

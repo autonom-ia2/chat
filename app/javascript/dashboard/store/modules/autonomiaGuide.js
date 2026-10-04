@@ -152,6 +152,9 @@ const addAssistantMessage = ({
   artigo = null,
   artigos = null,
   execucao = null,
+  lembrancas = null,
+  aviso = null,
+  tarefa = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -174,6 +177,12 @@ const addAssistantMessage = ({
     artigos: paraLista(artigos, artigo),
     // O que o Guia FEZ neste turno (#855), com o desfazer.
     execucao,
+    // #933 — o que o Guia anotou neste turno, para o chip "Anotei".
+    lembrancas: Array.isArray(lembrancas) ? [...lembrancas] : [],
+    // #935 — o Guia falou primeiro: esta resposta é um aviso dele.
+    aviso,
+    // #936 — a tarefa longa planejada neste turno: o cartão busca o resto pelo id.
+    tarefa,
   };
   nextId += 1;
   state.messages.push(record);
@@ -215,11 +224,17 @@ const respostaDoTurno = (turno, avisos) => {
       acaoEstado: turno.acao_estado,
       acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
+      tarefa: turno.tarefa || null,
       pedidoId: turno.pedido_id,
+      aviso: turno.aviso_id ? { id: turno.aviso_id } : null,
     };
   }
   if (turno.status === 'retido') {
-    return { content: avisos.retido, execucao: turno.execucao };
+    return {
+      content: avisos.retido,
+      execucao: turno.execucao,
+      tarefa: turno.tarefa || null,
+    };
   }
   if (turno.status === 'failed') return { content: avisos.falhou };
   return null;
@@ -244,6 +259,12 @@ const hidratar = (conversa, avisos = {}) => {
   state.pendente = null;
   let pendente = null;
   (conversa?.turnos || []).forEach(turno => {
+    // #935 — o aviso do Guia não tem pergunta: só a fala dele entra.
+    if (turno.aviso_id) {
+      const resposta = respostaDoTurno(turno, avisos);
+      if (resposta) addAssistantMessage(resposta);
+      return;
+    }
     const id = nextId;
     nextId += 1;
     state.messages.push({
@@ -359,6 +380,15 @@ const marcarAcao = (id, estado, resultado = null) => {
   return true;
 };
 
+// #933 — a pessoa tocou em "Esquecer" no chip: a anotação já saiu do servidor.
+const esquecerLembranca = (mensagemId, memoriaId) => {
+  const registro = state.messages.find(m => m.id === mensagemId);
+  if (!registro) return;
+  registro.lembrancas = registro.lembrancas.filter(
+    lembranca => lembranca.id !== memoriaId
+  );
+};
+
 export const useAutonomiaGuideStore = () => ({
   messages: readonly(state).messages,
   arquivos: readonly(state).arquivos,
@@ -371,6 +401,7 @@ export const useAutonomiaGuideStore = () => ({
   marcarVoz,
   addAssistantMessage,
   marcarAcao,
+  esquecerLembranca,
   reset,
   toHistory,
   hidratar,

@@ -56,7 +56,7 @@ class Autonomia::Agents::Tools::Native::GuiaExecucao < Autonomia::Agents::Tools:
     dados = { caminho: objeto('caminho_json'), corpo: objeto('corpo_json'), descricao: @params['descricao'].to_s }
     return sem_volta(acao) unless @operador.acoes.desfazivel?(acao, dados)
 
-    nao_lidos = @operador.nao_lidos(dados[:caminho])
+    nao_lidos = @operador.nao_lidos(dados[:caminho], dados[:corpo])
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
     feito(@operador.executar(acao, dados))

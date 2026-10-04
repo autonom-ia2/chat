@@ -32,5 +32,7 @@ class Autonomia::Decisores::DuvidaJob < ApplicationJob
     return unless decisao.reivindicar!(estava: 'duvida', status: 'esperando_pessoa', motivo: motivo)
 
     Autonomia::Decisores::VencerJob.set(wait: Autonomia::DecisorDecisao::PRAZO_PESSOA).perform_later(decisao.id)
+    # #935 — uma decisão parada esperando gente: o Guia mede já (só antecipa).
+    Autonomia::Guide::Pulso.agora(decisao.account)
   end
 end

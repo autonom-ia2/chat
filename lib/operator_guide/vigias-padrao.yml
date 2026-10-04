@@ -1,0 +1,39 @@
+# As vigias que o Guia planta numa conta na primeira vez que um administrador abre o painel (#935).
+#
+# Cada uma é dado, no mesmo formato de POST autonomia/vigias: a leitura de ler_da_conta, a medida e o
+# gatilho. Cenário novo é uma vigia nova aqui (ou pedida pela pessoa: "me avisa se…"), nunca código.
+# As de negócio o Guia propõe na conversa.
+- nome: Conexão caída
+  gravidade: urgente
+  leitura:
+    rota: inboxes
+    medida:
+      tipo: contagem
+      onde:
+        reauthorization_required: true
+  gatilho:
+    acima_de: 0
+    janela_horas: 24
+
+- nome: Decisões paradas esperando alguém
+  gravidade: agir
+  leitura:
+    rota: autonomia/decisores
+    medida:
+      tipo: soma
+      campo: esperando_pessoa
+  gatilho:
+    acima_de: 0
+    janela_horas: 24
+
+- nome: Automação disparando muito acima do normal
+  gravidade: agir
+  leitura:
+    rota: automation_rules
+    medida:
+      tipo: maior
+      campo: disparos.ultimas_24h
+  gatilho:
+    vezes_a_media: 3
+    acima_de: 10
+    janela_horas: 24

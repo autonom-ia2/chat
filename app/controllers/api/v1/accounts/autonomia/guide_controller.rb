@@ -19,6 +19,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # #861 — a pergunta entra numa conversa guardada. Sem `conversa_id`, abre uma
   # nova; com o id de uma conversa de outra pessoa, responde 404.
   def chat
+    # #935 — a primeira pergunta de um administrador planta as vigias padrão da conta (escrita só em POST).
+    ::Autonomia::Guide::VigiasPadrao.plantar(Current.account, Current.account_user)
     conversa = conversa_do_pedido
     return head :not_found if conversa.nil?
 
@@ -114,8 +116,9 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # de desfazer. É daqui que a pessoa desfaz depois de recarregar a tela.
   def execucoes
     lista = ::Autonomia::Guide::Execucao.de(Current.account, Current.user).vigentes
-                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES)
-    render json: { execucoes: lista.map(&:resumo) }
+                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES).includes(:tarefa)
+    # #936 — os lotes de uma tarefa longa aparecem como uma linha só.
+    render json: { execucoes: ::Autonomia::Guide::Execucao.resumos(lista) }
   end
 
   # Só quem pediu desfaz: a execução saiu com a permissão dela. De outra pessoa
@@ -184,7 +187,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   def pergunta(historico)
     { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
       'mensagem' => params[:message].to_s, 'historico' => historico,
-      'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'locale' => I18n.locale.to_s,
+      'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'contexto_tela' => contexto_da_tela,
+      'locale' => I18n.locale.to_s,
       'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
   end
 
@@ -255,6 +259,14 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
 
       { role: h[:role].to_s, content: h[:content].to_s }
     end
+  end
+
+  # #934 — o que a pessoa tem aberto, selecionado e filtrado, com a forma conferida. É contexto, não
+  # autorização: cada id ainda passa pela leitura prévia com a permissão dela (`Autonomia::Guide::Tela`).
+  def contexto_da_tela
+    catalogo = ::Autonomia::Guide::Consulta.new(account: Current.account, user: Current.user,
+                                                account_user: Current.account_user).catalogo
+    ::Autonomia::Guide::Tela::Forma.new(params[:tela], catalogo: catalogo).to_h
   end
 
   MAX_PARAMETROS_DA_TELA = 5

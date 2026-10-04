@@ -18,6 +18,7 @@ import ContactsList from 'dashboard/components-next/Contacts/Pages/ContactsList.
 import ContactsBulkActionBar from '../components/ContactsBulkActionBar.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import BulkActionsAPI from 'dashboard/api/bulkActions';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 
 // Only order backed by index_contacts_on_account_id_and_last_activity_at
 const DEFAULT_SORT = '-last_activity_at';
@@ -74,6 +75,10 @@ const hasMore = computed(() => meta.value?.hasMore ?? false);
 const isSearchView = computed(() => !!searchQuery.value);
 
 const selectedContactIds = ref([]);
+// #934 — os contatos selecionados vão ao Guia.
+declararContexto({
+  selecionados: () => ({ recurso: 'contacts', ids: selectedContactIds.value }),
+});
 const isBulkActionLoading = ref(false);
 const bulkDeleteDialogRef = ref(null);
 const selectedCount = computed(() => selectedContactIds.value.length);

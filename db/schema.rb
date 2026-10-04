@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_04_210000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -627,6 +627,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
     t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
   end
 
+  create_table "autonomia_guide_avisos", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.string "chave", null: false
+    t.string "estado", default: "novo", null: false
+    t.string "gravidade", default: "info", null: false
+    t.jsonb "sinal", default: {}, null: false
+    t.text "texto", null: false
+    t.bigint "turno_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id", "estado"], name: "idx_on_account_id_user_id_estado_2683fc518f"
+    t.index ["chave"], name: "index_autonomia_guide_avisos_on_chave", unique: true
+    t.index ["created_at"], name: "index_autonomia_guide_avisos_on_created_at"
+    t.index ["turno_id"], name: "index_autonomia_guide_avisos_on_turno_id"
+    t.index ["user_id"], name: "index_autonomia_guide_avisos_on_user_id"
+  end
+
   create_table "autonomia_guide_changes", force: :cascade do |t|
     t.bigint "execution_id", null: false
     t.integer "passo", null: false
@@ -664,11 +682,76 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
     t.jsonb "relatorio_desfazer", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "task_id"
+    t.jsonb "jobs", default: {}, null: false
     t.index ["account_id", "user_id", "created_at"], name: "idx_autonomia_guide_executions_dono"
     t.index ["account_id"], name: "index_autonomia_guide_executions_on_account_id"
     t.index ["desfeita_por_id"], name: "index_autonomia_guide_executions_on_desfeita_por_id"
     t.index ["expira_em"], name: "index_autonomia_guide_executions_on_expira_em"
+    t.index ["task_id"], name: "index_autonomia_guide_executions_on_task_id"
     t.index ["user_id"], name: "index_autonomia_guide_executions_on_user_id"
+  end
+
+  create_table "autonomia_guide_memorias", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "texto", limit: 200, null: false
+    t.bigint "autor_id", null: false
+    t.bigint "turno_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_autonomia_guide_memorias_on_account_id_and_user_id"
+    t.index ["turno_id"], name: "index_autonomia_guide_memorias_on_turno_id"
+    t.index ["user_id"], name: "index_autonomia_guide_memorias_on_user_id"
+  end
+
+  create_table "autonomia_guide_task_items", force: :cascade do |t|
+    t.bigint "task_id", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.integer "posicao", null: false
+    t.string "status", default: "pendente", null: false
+    t.string "erro"
+    t.string "escolha"
+    t.decimal "certeza", precision: 4, scale: 3
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["task_id", "posicao"], name: "index_autonomia_guide_task_items_on_task_id_and_posicao"
+    t.index ["task_id", "record_type", "record_id"], name: "idx_autonomia_guide_task_items_ref", unique: true
+  end
+
+  create_table "autonomia_guide_tasks", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "turno_id"
+    t.string "status", null: false
+    t.string "descricao", null: false
+    t.jsonb "receita", default: {}, null: false
+    t.string "receita_digest"
+    t.integer "total", default: 0, null: false
+    t.integer "feitos", default: 0, null: false
+    t.integer "falhas", default: 0, null: false
+    t.integer "pulados", default: 0, null: false
+    t.integer "lotes", default: 0, null: false
+    t.integer "lote_tamanho", default: 25, null: false
+    t.jsonb "amostra", default: [], null: false
+    t.jsonb "canario", default: {}, null: false
+    t.jsonb "relatorio", default: {}, null: false
+    t.decimal "custo_estimado", precision: 12, scale: 6, default: "0.0", null: false
+    t.decimal "custo", precision: 12, scale: 6, default: "0.0", null: false
+    t.decimal "teto_custo", precision: 12, scale: 6, default: "0.0", null: false
+    t.integer "jev_estimado", default: 0, null: false
+    t.integer "tempo_estimado", default: 0, null: false
+    t.string "motivo_pausa"
+    t.datetime "batimento_em"
+    t.datetime "mensagens_conferidas_ate"
+    t.datetime "expira_em", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_autonomia_guide_tasks_on_account_id_and_status"
+    t.index ["expira_em"], name: "index_autonomia_guide_tasks_on_expira_em"
+    t.index ["turno_id"], name: "index_autonomia_guide_tasks_on_turno_id"
+    t.index ["user_id"], name: "index_autonomia_guide_tasks_on_user_id"
   end
 
   create_table "autonomia_guide_turns", force: :cascade do |t|
@@ -695,6 +778,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
     t.index ["conversation_id", "created_at"], name: "index_autonomia_guide_turns_on_conversation_id_and_created_at"
     t.index ["execution_id"], name: "index_autonomia_guide_turns_on_execution_id"
     t.index ["pedido_id"], name: "index_autonomia_guide_turns_on_pedido_id", unique: true
+  end
+
+  create_table "autonomia_guide_vigias", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "criado_por_id"
+    t.string "nome", limit: 120, null: false
+    t.string "origem", default: "pessoa", null: false
+    t.jsonb "leitura", default: {}, null: false
+    t.jsonb "gatilho", default: {}, null: false
+    t.jsonb "para_quem", default: [], null: false
+    t.string "gravidade", default: "info", null: false
+    t.boolean "ativa", default: true, null: false
+    t.datetime "silenciada_ate"
+    t.jsonb "linha_de_base", default: {}, null: false
+    t.string "ultima_janela"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ativa"], name: "index_autonomia_guide_vigias_on_account_id_and_ativa"
+    t.index ["criado_por_id"], name: "index_autonomia_guide_vigias_on_criado_por_id"
   end
 
   create_table "autonomia_insurance_connections", force: :cascade do |t|
@@ -3274,14 +3376,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
   add_foreign_key "autonomia_decisor_decisoes", "messages", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "users", column: "resolvida_por_id", on_delete: :nullify
   add_foreign_key "autonomia_decisores", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_changes", "autonomia_guide_executions", column: "execution_id", on_delete: :cascade
   add_foreign_key "autonomia_guide_conversations", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_conversations", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_executions", "autonomia_guide_tasks", column: "task_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_executions", "users", column: "desfeita_por_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_executions", "users", on_delete: :cascade
+  add_foreign_key "autonomia_guide_memorias", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_memorias", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_memorias", "users", on_delete: :cascade
+  add_foreign_key "autonomia_guide_task_items", "autonomia_guide_tasks", column: "task_id", on_delete: :cascade
+  add_foreign_key "autonomia_guide_tasks", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_tasks", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_tasks", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_turns", "autonomia_guide_conversations", column: "conversation_id", on_delete: :cascade
   add_foreign_key "autonomia_guide_turns", "autonomia_guide_executions", column: "execution_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_vigias", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_vigias", "users", column: "criado_por_id", on_delete: :nullify
   add_foreign_key "autonomia_insurance_connections", "accounts"
   add_foreign_key "autonomia_prospecting_leads", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_prospecting_leads", "autonomia_prospecting_company_profiles", column: "company_profile_id", on_delete: :nullify

@@ -45,6 +45,7 @@ class AccountUser < ApplicationRecord
 
   after_create_commit :notify_creation, :create_notification_setting, unless: :integration?
   after_destroy :notify_deletion, :remove_user_from_account, unless: :integration?
+  after_destroy :apagar_o_que_o_guia_guardou
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
   after_commit :invalidate_filtered_unread_count_visibility, on: [:create, :destroy]
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_visibility_changed?
@@ -53,8 +54,9 @@ class AccountUser < ApplicationRecord
 
   def create_notification_setting
     setting = user.notification_settings.new(account_id: account.id)
-    setting.selected_email_flags = [:email_conversation_assignment, :email_conversation_handoff_request]
-    setting.selected_push_flags = [:push_conversation_assignment, :push_conversation_handoff_request]
+    # #935 — o aviso urgente do Guia (D5) chega por e-mail e push; só administrador recebe.
+    setting.selected_email_flags = [:email_conversation_assignment, :email_conversation_handoff_request, :email_guide_alert]
+    setting.selected_push_flags = [:push_conversation_assignment, :push_conversation_handoff_request, :push_guide_alert]
     setting.save!
   end
 
@@ -89,6 +91,16 @@ class AccountUser < ApplicationRecord
 
   def notify_deletion
     Rails.configuration.dispatcher.dispatch(AGENT_REMOVED, Time.zone.now, account: account)
+  end
+
+  # Quem sai da conta leva o que o Guia guardou dela ali (#933): as anotações
+  # pessoais e as conversas. O que ela anotou para a corretora fica.
+  def apagar_o_que_o_guia_guardou
+    # Sem pessoa, `user_id` nulo casaria com as anotações da corretora.
+    return if user_id.nil?
+
+    ::Autonomia::Guide::Memoria.pessoais(account_id, user_id).delete_all
+    ::Autonomia::Guide::Conversa.de(account_id, user_id).delete_all
   end
 
   def update_presence_in_redis

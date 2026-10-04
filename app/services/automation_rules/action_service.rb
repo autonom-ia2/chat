@@ -11,6 +11,8 @@ class AutomationRules::ActionService < ActionService
   # `desde` é o índice da ação em que começar: o Decisor (#858) retoma daqui depois de responder.
   # `message` é a mensagem que disparou a regra, quando há uma — é sobre ela que o Decisor pergunta.
   def perform(desde: 0, message: nil)
+    # Retomar depois do Decisor não é disparo novo (#935).
+    AutomationRules::Disparos.registrar(@rule.id) if desde.zero?
     @rule.actions.each_with_index do |action, indice|
       next if indice < desde
 

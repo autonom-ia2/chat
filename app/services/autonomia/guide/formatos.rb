@@ -26,10 +26,14 @@ module Autonomia::Guide::Formatos
     todos[acao.to_s]
   end
 
-  # O formato em texto curto, para o modelo montar o corpo certo de primeira.
-  def resumo_para_o_modelo(acao)
+  # O formato em texto curto, para o modelo montar o corpo certo de primeira. Com `campo:`, só aquele
+  # campo, ou o ramo do esquema dele ("actions.send_email_to_team").
+  def resumo_para_o_modelo(acao, campo: nil)
     formato = para(acao)
-    formato && Resumo.new(acao.to_s, formato).texto
+    return unless formato
+
+    resumo = Resumo.new(acao.to_s, formato)
+    campo.present? ? resumo.do_campo(campo) : resumo.texto
   end
 
   def todos

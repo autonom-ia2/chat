@@ -7,9 +7,9 @@ FactoryBot.define do
     actions do
       [
         {
-          'action_name' => 'send_email_to_team', 'action_params' => {
+          'action_name' => 'send_email_to_team', 'action_params' => [{
             'message' => 'Please pay attention to this conversation, its from high priority customer', 'team_ids' => [1]
-          }
+          }]
         },
         { 'action_name' => 'assign_team', 'action_params' => [1] },
         { 'action_name' => 'add_label', 'action_params' => %w[support priority_customer] },

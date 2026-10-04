@@ -253,6 +253,31 @@ const montarRegistry = (rotas, featuresEscritas = {}) => {
   ].join('\n');
 };
 
+// #934 — tela com seleção em lote (importa uma barra de ação em lote) que não
+// diz ao Guia o que está selecionado. É aviso, não falha: o lembrete é para quem
+// mexe na tela. A própria barra (arquivo ou pasta com "Bulk" no nome) não conta.
+const MARCAS_DE_SELECAO = ['BulkAction', 'BulkSelect'];
+
+const temSelecao = texto =>
+  texto
+    .split('\n')
+    .some(
+      linha =>
+        linha.startsWith('import ') &&
+        linha.includes('.vue') &&
+        MARCAS_DE_SELECAO.some(marca => linha.includes(marca))
+    );
+
+export const telasSemContexto = (pasta = r('app/javascript/dashboard')) =>
+  fs
+    .readdirSync(pasta, { recursive: true })
+    .filter(arquivo => arquivo.endsWith('.vue') && !arquivo.includes('Bulk'))
+    .filter(arquivo => {
+      const texto = fs.readFileSync(path.join(pasta, arquivo), 'utf8');
+      return temSelecao(texto) && !texto.includes('declararContexto(');
+    })
+    .sort();
+
 export const construir = async ({ escrever = true } = {}) => {
   const rotas = await lerRotas();
   const porNome = new Map(rotas.map(rota => [rota.nome, rota]));
@@ -312,6 +337,7 @@ export const construir = async ({ escrever = true } = {}) => {
     humanos,
     semExplicacao,
     semRota,
+    semContexto: telasSemContexto(),
   };
 };
 
@@ -326,4 +352,9 @@ if (process.argv[1] && process.argv[1].endsWith('build.mjs')) {
       resultado.semRota.length ? ` (${resultado.semRota.join(', ')})` : ''
     }`
   );
+  if (resultado.semContexto.length) {
+    console.log(
+      `aviso: telas com seleção que não dizem ao Guia o que está selecionado (declararContexto): ${resultado.semContexto.length}\n${resultado.semContexto.map(arquivo => `  - ${arquivo}`).join('\n')}`
+    );
+  }
 }

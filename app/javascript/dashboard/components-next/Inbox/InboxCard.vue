@@ -47,7 +47,8 @@ const getMessageClasses = {
 
 const primaryActor = computed(() => props.inboxItem?.primaryActor);
 const meta = computed(() => primaryActor.value?.meta);
-const assigneeMeta = computed(() => meta.value?.sender);
+// #935 — o aviso do Guia não é de uma conversa: não tem remetente.
+const assigneeMeta = computed(() => meta.value?.sender || {});
 const isUnread = computed(() => !props.inboxItem?.readAt);
 const inbox = computed(() => props.stateInbox);
 

@@ -16,13 +16,19 @@ import {
   MAX_ANEXOS_POR_CONVERSA,
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
+import { contextoAtual } from 'dashboard/composables/useContextoDaTela';
 
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
+import GuideEtiquetaTela from './GuideEtiquetaTela.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideHistorico from './GuideHistorico.vue';
+import GuideMemoria from './GuideMemoria.vue';
+import GuideAnotei from './GuideAnotei.vue';
+import GuideTarefa from './GuideTarefa.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
+import { useAvisosDoGuia } from './useAvisosDoGuia';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -87,6 +93,24 @@ const gravandoVoz = ref(false);
 // #861 — o histórico (conversas anteriores e "Feito pelo Guia", #855) ocupa o
 // lugar da conversa enquanto aberto.
 const vendoHistorico = ref(false);
+// #933 — "O que eu sei" ocupa o lugar da conversa enquanto aberto.
+const vendoMemoria = ref(false);
+
+const alternarHistorico = () => {
+  vendoMemoria.value = false;
+  vendoHistorico.value = !vendoHistorico.value;
+};
+
+const alternarMemoria = () => {
+  vendoHistorico.value = false;
+  vendoMemoria.value = !vendoMemoria.value;
+};
+
+const tituloDoPainel = computed(() => {
+  if (vendoMemoria.value) return t('AUTONOMIA_GUIDE.MEMORY.TITLE');
+  if (vendoHistorico.value) return t('AUTONOMIA_GUIDE.HISTORY.TITLE');
+  return t('AUTONOMIA_GUIDE.TITLE');
+});
 // #861 — reabrindo a conversa guardada. O esqueleto só aparece se demorar:
 // abrir rápido não pisca uma tela de carregamento à toa.
 const abrindoConversa = ref(false);
@@ -430,6 +454,8 @@ const entregarResposta = (data, pedidoId) => {
       artigo: data.artigo || null,
       artigos: data.artigos || null,
       execucao: data.execucao || null,
+      lembrancas: data.lembrancas || null,
+      tarefa: data.tarefa || null,
       pedidoId,
     });
     if (data.execucao) emit('execucao', data.execucao);
@@ -442,6 +468,7 @@ const entregarResposta = (data, pedidoId) => {
     store.addAssistantMessage({
       content: t('AUTONOMIA_GUIDE.WITHHELD'),
       execucao: data.execucao || null,
+      tarefa: data.tarefa || null,
     });
     if (data.execucao) emit('execucao', data.execucao);
     if (execucaoMudouConta(data.execucao)) avisarContaMudou();
@@ -489,6 +516,16 @@ const abrirPedidoNoServidor = async (chave, payload) => {
   }
 };
 
+// #934 — o que a pessoa vê na tela vai junto da pergunta. O × da etiqueta tira
+// só da próxima; na seguinte, a etiqueta volta.
+const telaAtual = computed(() => contextoAtual(route));
+const semTelaNaProxima = ref(false);
+const telaDaPergunta = () => {
+  const tela = semTelaNaProxima.value ? undefined : telaAtual.value;
+  semTelaNaProxima.value = false;
+  return tela;
+};
+
 const requestReply = async (requestAccount, message, requestId, registro) => {
   const chave = store.abrirPendente(requestAccount, cracha);
   let pedido;
@@ -499,6 +536,7 @@ const requestReply = async (requestAccount, message, requestId, registro) => {
       routeContext: route.name,
       // #859 — o registro aberto (ex.: a automação 42); o servidor guarda só números.
       routeParams: route.params,
+      tela: telaDaPergunta(),
       arquivos: store.arquivosProntos(),
       conversaId: store.conversaAtual(),
       anexos: anexosDe(registro),
@@ -657,6 +695,7 @@ const anexarArquivo = async file => {
 const abrirPedido = () => {
   requestSequence += 1;
   vendoHistorico.value = false;
+  vendoMemoria.value = false;
   // Perguntar depois de a conversa antiga não abrir começa uma nova.
   falhouAoAbrir.value = false;
   isSending.value = true;
@@ -804,15 +843,37 @@ watch(showPanel, async aberto => {
   panelRef.value?.focus();
 });
 
+// #935 — com aviso novo, abrir o painel traz a conversa do servidor (o aviso é
+// um turno dela) e marca os avisos como vistos. Com o painel aberto, o aviso que
+// chega pelo ActionCable entra do mesmo jeito. Pergunta em curso não é cortada:
+// o aviso espera a próxima abertura.
+const { quantidade: avisosNovos, marcarVistos } = useAvisosDoGuia();
+const trazerAvisos = async () => {
+  if (props.embutido || isSending.value) return;
+  await abrirConversa(
+    () => AutonomiaGuideAPI.conversaAtual(),
+    () => {
+      falhouAoAbrir.value = true;
+    }
+  );
+  marcarVistos();
+};
+
 // #861 — abrir o painel reabre a conversa guardada. Aqui embaixo, e não junto
 // do `watch` da Central: precisa de tudo o que a conversa usa já definido.
 watch(
   showPanel,
   aberto => {
-    if (aberto) reabrirConversaAtual();
+    if (!aberto) return;
+    if (avisosNovos.value > 0 && !props.embutido) trazerAvisos();
+    else reabrirConversaAtual();
   },
   { immediate: true }
 );
+
+watch(avisosNovos, novos => {
+  if (novos > 0 && showPanel.value) trazerAvisos();
+});
 
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
@@ -821,6 +882,7 @@ watch(accountId, () => {
   isSending.value = false;
   transcrevendo.value = false;
   vendoHistorico.value = false;
+  vendoMemoria.value = false;
   falhouAoAbrir.value = false;
   abrindoConversa.value = false;
   mostrarEsqueleto.value = false;
@@ -862,15 +924,13 @@ const classeDoPainel = computed(() =>
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
         v-if="!embutido"
-        :title="
-          vendoHistorico
-            ? $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
-            : $t('AUTONOMIA_GUIDE.TITLE')
-        "
-        :can-reset="hasMessages && !vendoHistorico"
+        :title="tituloDoPainel"
+        :can-reset="hasMessages && !vendoHistorico && !vendoMemoria"
         :vendo-historico="vendoHistorico"
+        :vendo-memoria="vendoMemoria"
         @reset="resetConversation"
-        @historico="vendoHistorico = !vendoHistorico"
+        @historico="alternarHistorico"
+        @memoria="alternarMemoria"
         @close="closePanel"
       />
 
@@ -883,7 +943,14 @@ const classeDoPainel = computed(() =>
       </div>
 
       <div
-        v-show="!vendoHistorico"
+        v-else-if="vendoMemoria"
+        class="flex-1 flex px-4 py-4 overflow-y-auto"
+      >
+        <GuideMemoria @perguntar="sendMessage" />
+      </div>
+
+      <div
+        v-show="!vendoHistorico && !vendoMemoria"
         ref="chatContainer"
         role="log"
         aria-live="polite"
@@ -934,6 +1001,15 @@ const classeDoPainel = computed(() =>
               @tentar-de-novo="tentarVozDeNovo(item)"
             />
             <div v-else class="flex flex-col gap-2 w-full">
+              <!-- #935 — o Guia falou primeiro: um aviso do que ele mediu na conta. -->
+              <span
+                v-if="item.aviso"
+                data-aviso
+                class="inline-flex items-center self-start gap-1 px-2 py-0.5 rounded-full bg-n-amber-3 text-n-amber-11 text-xs font-medium"
+              >
+                <span class="i-lucide-bell-ring size-3" aria-hidden="true" />
+                {{ $t('AUTONOMIA_GUIDE.AVISOS.SELO') }}
+              </span>
               <CopilotAssistantMessage
                 :message="item.message"
                 :is-last-message="index === messages.length - 1"
@@ -941,6 +1017,15 @@ const classeDoPainel = computed(() =>
               />
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
               <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
+              <!-- #936 — o trabalho grande planejado neste turno: amostra, andamento e relatório. -->
+              <GuideTarefa v-if="item.tarefa" :tarefa-id="item.tarefa.id" />
+              <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
+              <GuideAnotei
+                v-for="lembranca in item.lembrancas || []"
+                :key="lembranca.id"
+                :lembranca="lembranca"
+                @esqueceu="store.esquecerLembranca(item.id, $event)"
+              />
               <!-- Ação que não tem volta: a pessoa lê o que vai acontecer, com
                    os valores, e só então confirma. Nada executa antes disso. -->
               <div
@@ -1142,6 +1227,11 @@ const classeDoPainel = computed(() =>
       </div>
 
       <div class="mx-3 mt-px mb-2">
+        <GuideEtiquetaTela
+          :tela="telaAtual"
+          :oculta="semTelaNaProxima"
+          @remover="semTelaNaProxima = true"
+        />
         <!-- Uma conta, um composer: trocar de conta descarta a gravação e o áudio que
              esperava a vez, que senão sairia na conta nova. -->
         <GuideComposer

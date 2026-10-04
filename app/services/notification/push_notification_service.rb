@@ -33,12 +33,19 @@ class Notification::PushNotificationService
   def push_message
     {
       title: notification.push_message_title,
-      tag: "#{notification.notification_type}_#{conversation.display_id}_#{notification.id}",
+      tag: "#{notification.notification_type}_#{alvo_da_tag}_#{notification.id}",
       url: push_url
     }
   end
 
+  # O aviso do Guia (#935) não é de uma conversa: a notificação abre o painel da conta.
+  def alvo_da_tag
+    notification.guide_alert? ? notification.primary_actor_id : conversation.display_id
+  end
+
   def push_url
+    return "#{ENV.fetch('FRONTEND_URL', '')}/app/accounts/#{notification.account_id}/dashboard" if notification.guide_alert?
+
     app_account_conversation_url(account_id: conversation.account_id, id: conversation.display_id)
   end
 

@@ -36,7 +36,7 @@ RSpec.describe AutomationRule do
     rule = build(:automation_rule, account: account, actions: [{ action_name: 'decidir_tudo', action_params: [] }])
 
     expect(rule).not_to be_valid
-    expect(rule.errors[:actions].join).to include('decidir_tudo', 'Supported actions:', 'perguntar_ao_decisor', 'crm_create_card')
+    expect(rule.errors[:actions].join).to include('decidir_tudo', 'is not one of:', 'perguntar_ao_decisor', 'crm_create_card')
   end
 
   # A retomada depois da dúvida confere as condições de novo e não tem como reconstruir a mudança.

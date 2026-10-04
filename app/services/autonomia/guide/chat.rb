@@ -11,7 +11,7 @@ module Autonomia
       # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
       # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
       Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
-                          :acao, :retido, :artigo, :artigos, :execucao, keyword_init: true)
+                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, :tarefa, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -39,7 +39,10 @@ module Autonomia
 
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
       # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
-      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, arquivos: [], registro: nil)
+      # `tela` (#934): o que a pessoa tem aberto, selecionado e filtrado (`Autonomia::Guide::Tela`).
+      # `turno_id` (#933): o turno da conversa, para a anotação dizer de onde veio.
+      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, tela: {}, arquivos: [],
+                     registro: nil, turno_id: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
@@ -47,8 +50,10 @@ module Autonomia
         @history = Array(history)
         @route_context = route_context.to_s
         @route_params = route_params.to_h
+        @tela = tela.to_h
         @arquivos = Array(arquivos)
         @registro = registro
+        @turno_id = turno_id
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -113,7 +118,8 @@ module Autonomia
 
         navs = navegacoes(result)
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
-                   artigo: contexto.artigos.first, artigos: contexto.artigos,
+                   artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
+                   tarefa: contexto.tarefa,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -133,7 +139,14 @@ module Autonomia
               "Tela atual: #{@route_context.presence || 'não informada'}.#{registro_aberto} Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+        ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{diagnostic_block(diagnostics)}", @message)
+      end
+
+      # #933 — o que a pessoa e a corretora já ensinaram, como DADO. Fica aqui, na pergunta, e não
+      # na instrução: a instrução é o prefixo que o provedor guarda em cache, e mudaria a cada anotação.
+      def bloco_memoria
+        bloco = ::Autonomia::Guide::Memoria.bloco(@account, @user)
+        bloco.empty? ? '' : "\n\n#{bloco}"
       end
 
       # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).
@@ -142,6 +155,15 @@ module Autonomia
         return '' if @route_params.blank?
 
         " Registro aberto na tela: #{@route_params.map { |chave, valor| "#{chave}=#{valor}" }.join(', ')}."
+      end
+
+      # #934 — o que a pessoa está vendo, já lido com a permissão dela: o id que voltou vale como lido no
+      # turno. Vai para o diagnóstico só com rota, recurso, ids e total.
+      def bloco_tela
+        tela = ::Autonomia::Guide::Tela.new(contexto: contexto, tela: @tela)
+        texto = tela.bloco
+        @registro&.ver_tela(tela.registro)
+        texto
       end
 
       # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.
@@ -213,8 +235,8 @@ module Autonomia
       end
 
       def contexto
-        @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user,
-                                                       account_user: @account_user, registro: @registro)
+        @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user, account_user: @account_user,
+                                                       registro: @registro, turno_id: @turno_id)
       end
 
       # O que o Guia decidiu, para o registro do pedido (#861). Quando o portão reteve, guarda o texto
