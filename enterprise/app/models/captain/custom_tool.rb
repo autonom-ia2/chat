@@ -65,9 +65,7 @@ class Captain::CustomTool < ApplicationRecord
   validates :slug, presence: true, uniqueness: { scope: :account_id }, length: { maximum: MAX_SLUG_LENGTH }
   validates :title, presence: true
   validates :endpoint_url, presence: true
-  validates_with JsonSchemaValidator,
-                 schema: PARAM_SCHEMA_VALIDATION,
-                 attribute_resolver: ->(record) { record.param_schema }
+  validates :param_schema, json_schema: { schema: PARAM_SCHEMA_VALIDATION }
 
   scope :enabled, -> { where(enabled: true) }
 
