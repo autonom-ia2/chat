@@ -171,9 +171,23 @@ chown "$REDIS_UID:$REDIS_GID" tls etc tls/ca.crt tls/server.crt tls/server.key e
 chmod 750 tls etc
 chmod 640 tls/ca.crt tls/server.crt tls/server.key etc/redis.conf etc/users.acl
 docker volume create "$VOLUME" >/dev/null
-docker network create --driver bridge --internal "$NETWORK" >/dev/null
+# Dedicated bridge permits outbound NAT; TLS and loopback publication protect ingress.
+# Internal bridges do not publish host ports (moby/moby #36174, #53256).
+docker network create --driver bridge --opt com.docker.network.bridge.host_binding_ipv4=127.0.0.1 "$NETWORK" >/dev/null
 docker run --rm --network none --entrypoint sh -v "$VOLUME:/data" "$IMAGE" -c "chown $REDIS_UID:$REDIS_GID /data"
 docker compose -p instagram-coordination up -d >/dev/null
+# Check actual publication, not merely the requested HostConfig.PortBindings.
+# Fail before epoch initialization or SSH setup; preserve partial resources.
+ACTUAL_PORTS=$(docker inspect "$CONTAINER" --format '{{json .NetworkSettings.Ports}}')
+export ACTUAL_PORTS
+python3 - <<'PYPORTS'
+import json, os
+ports = json.loads(os.environ['ACTUAL_PORTS'])
+expected = [{'HostIp': '127.0.0.1', 'HostPort': '6381'}]
+if (not isinstance(ports, dict) or ports.get('6381/tcp') != expected
+        or any(bindings for port, bindings in ports.items() if port != '6381/tcp')):
+    raise SystemExit('instagram_coordination_blocked: actual_loopback_port_6381_publication_required')
+PYPORTS
 # Admin password only travels on stdin; never argv, Docker metadata or logs.
 redis_admin() {
   { cat private/ig_admin.pass; printf '%s\n' "$@"; } |
