@@ -83,4 +83,12 @@ RSpec.describe TypesafeAi::Client do
     expect { client.evaluate(state: {}, questions: {}) }.to raise_error(described_class::Error, 'typesafe_rate_limited')
     expect(request).to have_been_requested.times(3)
   end
+
+  it 'turns a connection dropped mid-response into the sanitized unavailable code' do
+    [EOFError, Errno::EPIPE, Errno::ENETUNREACH, Net::HTTPBadResponse].each do |erro|
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_raise(erro)
+      expect { described_class.new(api_key: api_key, retry_limit: 0).evaluate(state: {}, questions: {}) }
+        .to raise_error(described_class::Error, 'typesafe_unavailable')
+    end
+  end
 end

@@ -342,6 +342,39 @@ class Rack::Attack
     "#{user_identifier}:#{match_data[:account_id]}" if user_identifier.present?
   end
 
+  ## A Melhor resposta da Central (#977) chama o Jev e o custo é nosso: teto por pessoa e por conta. O serviço
+  ## tem um segundo teto (Autonomia::CentralDeAjuda::LimiteDaBusca); este corta antes de chegar ao Rails.
+  CENTRAL_BUSCA_INTELIGENTE_PATH = %w[central-de-ajuda busca_inteligente].freeze
+
+  # Id da conta quando o pedido vai para a busca inteligente; nil nos outros. Conta GET e HEAD (o Rails atende HEAD
+  # com a rota GET) e normaliza o caminho como o roteador faz (`//` vira `/`), para nenhuma grafia escapar do teto.
+  # O caminho é comparado em pedaços, sem expressão regular.
+  def self.central_busca_inteligente_account(req)
+    return unless req.get? || req.head?
+
+    partes = ActionDispatch::Journey::Router::Utils.normalize_path(req.path_without_extensions).split('/')
+    partes[4] if partes.size == 7 && partes[1..3] == %w[api v1 accounts] && partes[5..] == CENTRAL_BUSCA_INTELIGENTE_PATH
+  end
+
+  # Quem entra por token de API é identificado pelo token: nesse caminho o `uid` não é conferido, e um `uid`
+  # inventado a cada pedido abriria uma chave nova. Sem token, o `uid` é conferido pelo login da sessão.
+  throttle('/api/v1/accounts/:account_id/central-de-ajuda/busca_inteligente/user',
+           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE', '30').to_i, period: 1.minute) do |req|
+    account_id = central_busca_inteligente_account(req)
+    next unless account_id
+
+    api_access_token = req.get_header('HTTP_API_ACCESS_TOKEN') || req.get_header('api_access_token')
+    user_identifier = api_access_token.presence || req.get_header('HTTP_UID').presence
+
+    "#{user_identifier}:#{account_id}" if user_identifier.present?
+  end
+
+  # Teto da conta inteira: muitos agentes (ou tokens) na mesma conta não multiplicam o gasto sem limite.
+  throttle('/api/v1/accounts/:account_id/central-de-ajuda/busca_inteligente/account',
+           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE_ACCOUNT', '120').to_i, period: 1.minute) do |req|
+    central_busca_inteligente_account(req)
+  end
+
   ###-----------------------------------------------###
   ###-----------CRM Integration Token Throttle------###
   ###-----------------------------------------------###

@@ -153,4 +153,59 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
       expect(get_json('/busca', agente, termo: '  ')['resultados']).to eq([])
     end
   end
+
+  describe 'GET /central-de-ajuda/busca_inteligente' do
+    let(:jev_url) { 'https://api.typesafe.ai/v1/systemone' }
+
+    def responder_jev(choice, confidence = 0.8)
+      stub_request(:post, jev_url).to_return(
+        status: 200,
+        body: { model: 'jev-1.13.0', usage: { input_tokens: 900, output_tokens: 2 },
+                answers: { artigo: { type: 'choice', choice: choice, confidence: confidence } } }.to_json
+      )
+    end
+
+    before { allow(TypesafeAi::Config).to receive(:api_key).and_return('ts_test_key_not_real') }
+
+    it 'devolve o artigo escolhido pelo Jev com a certeza, só entre os que a pessoa pode ler' do
+      pedido = responder_jev('18.01', 0.74)
+
+      corpo = get_json('/busca_inteligente', agente, termo: 'o cliente não responde mais')
+
+      expect(response).to have_http_status(:ok)
+      expect(corpo['melhor']).to include('ref' => '18-01', 'titulo' => 'A janela de 24 horas')
+      expect(corpo['certeza']).to eq(0.74)
+      expect(a_request(:post, jev_url).with do |http|
+        JSON.parse(http.body).dig('questions', 'artigo', 'criteria').keys == %w[02.01 02.02 02.04 18.01 nenhum]
+      end).to have_been_made.once
+      expect(pedido).to have_been_made.once
+      expect(Crm::AiUsageEvent.where(account: conta, feature: 'central_busca').count).to eq(1)
+    end
+
+    it 'devolve vazio quando nenhum artigo responde' do
+      responder_jev('nenhum', 0.9)
+
+      expect(get_json('/busca_inteligente', agente, termo: 'boleto vencido')).to eq('melhor' => nil, 'certeza' => nil)
+    end
+
+    it 'devolve vazio, sem quebrar a tela, quando o Jev falha' do
+      stub_request(:post, jev_url).to_return(status: 503)
+
+      expect(get_json('/busca_inteligente', agente, termo: 'janela')).to eq('melhor' => nil, 'certeza' => nil)
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'não chama o Jev para termo curto nem sem a chave configurada' do
+      expect(get_json('/busca_inteligente', agente, termo: 'ab')).to eq('melhor' => nil, 'certeza' => nil)
+      allow(TypesafeAi::Config).to receive(:api_key).and_return(nil)
+      expect(get_json('/busca_inteligente', agente, termo: 'janela')).to eq('melhor' => nil, 'certeza' => nil)
+      expect(a_request(:post, jev_url)).not_to have_been_made
+    end
+
+    it 'exige login' do
+      get "/api/v1/accounts/#{conta.id}/central-de-ajuda/busca_inteligente", params: { termo: 'janela' }, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+  end
 end

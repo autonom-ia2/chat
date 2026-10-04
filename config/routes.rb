@@ -80,6 +80,7 @@ Rails.application.routes.draw do
           # Central de Ajuda da plataforma (#501): leitura para todas as contas.
           resources :central_de_ajuda, only: [:index, :show], path: 'central-de-ajuda', controller: 'central_de_ajuda' do
             get :busca, on: :collection
+            get :busca_inteligente, on: :collection
           end
           # Trilha de onboarding (épico #485): progresso pelo estado real da conta.
           resources :onboarding_progress, only: [:index], path: 'onboarding/progress' do

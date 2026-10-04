@@ -1120,7 +1120,11 @@
         "LIMPAR": "Clear search",
         "BUSCANDO": "Searching…",
         "ERRO": "The search did not respond. Try again.",
-        "PERGUNTAR_GUIA": "Ask the Guide"
+        "PERGUNTAR_GUIA": "Ask the Guide",
+        "MELHOR_RESPOSTA": "Best answer",
+        "ANUNCIO_MELHOR": "Best answer: {titulo}.",
+        "PROCURANDO_MELHOR": "Looking for the best answer…",
+        "COM_VIDEO": "Video"
       },
       "MAIS_PROCURADOS": {
         "TITULO": "Most searched:",
