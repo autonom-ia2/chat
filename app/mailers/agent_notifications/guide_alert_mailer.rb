@@ -7,7 +7,7 @@ class AgentNotifications::GuideAlertMailer < ApplicationMailer
 
     @agent = agent
     @aviso = aviso
-    @action_url = "#{ENV.fetch('FRONTEND_URL', '')}/app/accounts/#{aviso.account_id}/dashboard"
+    @action_url = ::Autonomia::Guide::Aviso.link_no_painel(aviso.account_id)
     send_mail_with_liquid(to: @agent.email, subject: I18n.t('notifications.notification_title.guide_alert')) and return
   end
 

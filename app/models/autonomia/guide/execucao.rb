@@ -58,6 +58,8 @@ class Autonomia::Guide::Execucao < ApplicationRecord
 
   scope :vigentes, -> { where('expira_em > ?', Time.current) }
   scope :de, ->(account, user) { where(account: account, user: user) }
+  # #943 — deixou alguma parte sem desfazer.
+  scope :com_pendencia, -> { where("pendencias <> '[]'::jsonb") }
 
   before_validation { self.expira_em ||= PRAZO.from_now }
 
@@ -106,6 +108,12 @@ class Autonomia::Guide::Execucao < ApplicationRecord
 
       execucao.tarefa&.resumo_feito
     end
+  end
+
+  # #943 — a pendência como leitura da conta: o nome da ação e as tabelas, sem a frase do turno.
+  def pendencia_para_tela
+    { 'id' => id, 'acoes' => passos.pluck('acao').uniq, 'pendencias' => pendencias, 'desfeita_em' => desfeita_em&.iso8601,
+      'criada_em' => created_at.iso8601 }
   end
 
   # O que a tela mostra embaixo da resposta e na lista "Feito pelo Guia".

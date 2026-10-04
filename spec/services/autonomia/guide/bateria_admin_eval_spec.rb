@@ -619,7 +619,7 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
   # MOTIVO: #858 — classificar muitos registros de uma vez é com o Jev, não com o Guia lendo um a um nem
   # com regra em código. Pega: etiquetar quem não veio do site (tolerância zero numa fixture clara),
   # deixar de etiquetar quem veio, e responder "de cabeça" sem classificar (sem custo jev_guia).
-  it 'C30 desses contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
+  it 'C30 dos meus contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
     ligar_jev!
     site = create_crm_inbox(account: c.conta, name: 'Site da corretora', members: [c.admin])
     do_site = ['Luana Prado', 'Otávio Reis', 'Bianca Moura'].map do |nome|
@@ -631,7 +631,8 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       contato_com_conversa!(nome, c.vendas, texto)
     end
 
-    respondeu!(perguntar('Desses contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
+    # Sem nada na tela, "desses" não aponta para nada e o certo é perguntar (CT06): o pedido diz quais.
+    respondeu!(perguntar('Dos meus contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
 
     etiquetados = c.conta.contacts.select { |contato| contato.reload.label_list.include?('lead-site') }
     expect(etiquetados.map(&:id).sort).to eq(do_site.map(&:id).sort)
@@ -843,7 +844,10 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       historico = turno(pedido, primeiro)
       historico, = confirmando_ate_o_fim(historico, primeiro)
 
-      resposta = "A URL do webhook é #{url}. O responsável pela equipe de Retenção é a Ana Ribeiro. Pode montar."
+      # A pessoa responde o que só ela sabe — inclusive a dúvida legítima de "sem atendimento" (sem atendente
+      # atribuído ou sem resposta humana?): perguntar ali é o certo, e o roteiro confirma como faria a pessoa.
+      resposta = "A URL do webhook é #{url}. O responsável pela equipe de Retenção é a Ana Ribeiro, e só ela fica no " \
+                 'time. "Sem atendimento" quer dizer sem atendente atribuído. Pode montar.'
       segundo = perguntar(resposta, historico: historico)
       respondeu!(segundo)
       historico += turno(resposta, segundo)
@@ -1167,6 +1171,74 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
         sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.' }
     end
 
+    # MOTIVO: pedido real do Rodrigo (04/10). Cruza funil + campo do contato + data calculada (o próximo
+    # aniversário) e cria um retorno por card, que é o que aparece no calendário do CRM. Pega: não achar o
+    # campo de nascimento, criar para quem não tem data, errar o dia/mês, pôr data no passado, criar em
+    # card de outro funil e parar no meio.
+    it 'TL09 lembrete de aniversário no calendário para os clientes do funil Comercial com nascimento', :aggregate_failures do
+      # Corretora com o fuso configurado. Sem ele, perguntar o fuso é o certo (não há padrão honesto).
+      c.conta.update!(custom_attributes: c.conta.custom_attributes.merge('timezone' => 'America/Sao_Paulo'))
+      c.conta.custom_attribute_definitions.create!(attribute_key: 'data_nascimento', attribute_display_name: 'Data de nascimento',
+                                                   attribute_display_type: :date, attribute_model: :contact_attribute)
+      comercial, entrada = create_crm_pipeline(account: c.conta, user: c.admin, name: 'Comercial')
+      hoje = Time.zone.today
+      com_data = Array.new(20) do |indice|
+        nascimento = Date.new(1970 + indice, ((indice % 12) + 1), ((indice * 3) % 27) + 1)
+        contato = contato!(c.conta, "Cliente Comercial #{indice}")
+        contato.update!(custom_attributes: { 'data_nascimento' => nascimento.iso8601 })
+        [c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}"),
+         nascimento]
+      end
+      sem_data = Array.new(5) do |indice|
+        contato = contato!(c.conta, "Sem Data #{indice}")
+        c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}")
+      end
+
+      pedido = 'Pegue todos os clientes que estão no funil Comercial e que tenham a data de nascimento no contato e crie no ' \
+               'calendário um lembrete de aniversário.'
+      primeiro = perguntar(pedido)
+      respondeu!(primeiro)
+      # Perguntar a hora é natural (Rodrigo, 04/10): a pessoa responde e o Guia segue.
+      respondeu!(perguntar('Às 9h.', historico: turno(pedido, primeiro))) if Crm::FollowUp.where(account: c.conta).none? && tarefas.none?
+      clicar_e_rodar!(tarefas.sole) if tarefas.any?
+
+      retornos = Crm::FollowUp.where(account: c.conta)
+      expect(retornos.where(card_id: sem_data.map(&:id))).to be_empty
+      expect(retornos.where.not(card_id: com_data.map { |card, _| card.id } + sem_data.map(&:id))).to be_empty
+      com_data.each do |card, nascimento|
+        do_card = retornos.where(card_id: card.id).to_a
+        expect(do_card.size).to eq(1), "#{card.title}: #{do_card.size} lembretes"
+        dia = do_card.first&.due_at&.in_time_zone&.to_date
+        expect([dia&.month, dia&.day]).to eq([nascimento.month, nascimento.day]), "#{card.title}: #{dia} para #{nascimento}"
+        expect(dia).to be >= hoje if dia
+      end
+    end
+
+    # MOTIVO: conta sem fuso. Perguntar a hora e o fuso é o certo; com a resposta, o Guia cria os lembretes
+    # nesse horário. Pega: chutar o fuso, parar depois da resposta, errar a hora.
+    it 'TL10 sem fuso na conta: pergunta, e com a resposta cria os lembretes às 9h de Brasília', :aggregate_failures do
+      c.conta.custom_attribute_definitions.create!(attribute_key: 'data_nascimento', attribute_display_name: 'Data de nascimento',
+                                                   attribute_display_type: :date, attribute_model: :contact_attribute)
+      comercial, entrada = create_crm_pipeline(account: c.conta, user: c.admin, name: 'Comercial')
+      cards = Array.new(4) do |indice|
+        contato = contato!(c.conta, "Aniversariante #{indice}")
+        contato.update!(custom_attributes: { 'data_nascimento' => Date.new(1980 + indice, indice + 2, 10).iso8601 })
+        c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}")
+      end
+      pedido = 'Pegue todos os clientes que estão no funil Comercial e que tenham a data de nascimento no contato e crie no ' \
+               'calendário um lembrete de aniversário.'
+      primeiro = perguntar(pedido)
+      respondeu!(primeiro)
+      if Crm::FollowUp.where(account: c.conta).none?
+        resposta = 'Às 9h, horário de Brasília.'
+        respondeu!(perguntar(resposta, historico: turno(pedido, primeiro)))
+      end
+
+      retornos = Crm::FollowUp.where(account: c.conta)
+      expect(retornos.pluck(:card_id)).to match_array(cards.map(&:id))
+      expect(retornos.map { |retorno| retorno.due_at.in_time_zone('America/Sao_Paulo').hour }.uniq).to eq([9])
+    end
+
     def desfazer_tudo!(tarefa)
       tarefa.mudar!('desfazer')
       Autonomia::Guide::DesfazerTarefaJob.perform_now(tarefa.id)
@@ -1225,12 +1297,14 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     it 'TL03 etiqueta como sinistro as conversas abertas sobre sinistro, pela classificação', :aggregate_failures do
       ligar_jev!
       c.conta.labels.create!(title: 'sinistro')
-      textos = ['Bati o carro ontem e preciso abrir o sinistro', 'Roubaram meu carro, como aciono o seguro?',
-                'Alagou a garagem e o carro estragou, quero acionar a apólice', 'Meu vidro quebrou, o seguro cobre?',
-                'Tive um acidente leve, preciso do guincho e abrir o processo'] +
-               Array.new(20) { |indice| "Quero uma cotação de seguro auto para o meu carro #{indice}" }
+      # Trabalho grande de verdade: 30 sinistros entre 60 conversas — etiquetar 30 é tarefa, não passo a passo.
+      relatos = ['Bati o carro ontem e preciso abrir o sinistro', 'Roubaram meu carro, como aciono o seguro?',
+                 'Alagou a garagem e o carro estragou, quero acionar a apólice', 'Meu vidro quebrou, o seguro cobre?',
+                 'Tive um acidente leve, preciso do guincho e abrir o processo']
+      textos = Array.new(30) { |indice| "#{relatos[indice % relatos.size]} (caso #{indice})" } +
+               Array.new(30) { |indice| "Quero uma cotação de seguro auto para o meu carro #{indice}" }
       casos = textos.each_with_index.to_h { |texto, indice| [contato_com_conversa!("Cliente #{indice}", c.vendas, texto), texto] }
-      sinistros = casos.keys.first(5)
+      sinistros = casos.keys.first(30)
 
       pedido = 'etiqueta como sinistro as conversas abertas que são sobre sinistro'
       respondeu!(perguntar(pedido))

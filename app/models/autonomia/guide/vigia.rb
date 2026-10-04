@@ -144,12 +144,18 @@ class Autonomia::Guide::Vigia < ApplicationRecord
 
   private
 
-  # A leitura tem de ser uma das que o Guia faz na conta (`ler_da_conta`).
+  # A leitura tem de ser uma das que o Guia faz na conta (`ler_da_conta`), com parâmetros que ela lê:
+  # parâmetro inventado seria ignorado, e a vigia mediria outra coisa sem avisar (#942).
   def rota_da_conta
     rota = leitura.is_a?(Hash) ? leitura['rota'].to_s.strip.delete_prefix('/') : ''
-    return if rota.blank? || ::Autonomia::Guide::Consulta.new(account: account, user: nil).catalogo.include?(rota)
+    return if rota.blank?
 
-    errors.add(:leitura, "rota #{rota.to_json} não é uma leitura da conta")
+    consulta = ::Autonomia::Guide::Consulta.new(account: account, user: nil)
+    return errors.add(:leitura, "rota #{rota.to_json} não é uma leitura da conta") unless consulta.catalogo.include?(rota)
+
+    parametros = leitura['parametros']
+    recusa = consulta.parametros_recusados(rota, parametros) if parametros.is_a?(Hash)
+    errors.add(:leitura, recusa) if recusa
   end
 
   def cabe_no_teto

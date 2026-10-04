@@ -71,14 +71,19 @@ class Autonomia::Guide::Formatos::Acao
     caminho.size == 1 && (DO_ENDERECO.include?(caminho.first) || @rota.partes.include?(caminho.first))
   end
 
+  public
+
   # Os `before_action` que valem para esta action e moram no controller do
   # recurso. Os da base da API (autenticação, conta) não leem corpo de ação.
+  # Público porque a leitura (`ParametrosDaLeitura`, #942) lê os mesmos.
   def callbacks
     @callbacks ||= begin
       falso = Struct.new(:action_name, :raise_on_missing_callback_actions).new(@rota.action, false)
       @klass._process_action_callbacks.select { |callback| antes?(callback) && aplica?(callback, falso) }.map(&:filter)
     end
   end
+
+  private
 
   def antes?(callback)
     callback.kind == :before && callback.filter.is_a?(Symbol) && !infraestrutura?(callback.filter)

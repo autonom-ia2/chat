@@ -16,7 +16,7 @@ class Autonomia::CentralDeAjuda::Publicador
   NOME_PORTAL = 'Central de Ajuda'.freeze
   LOCALE = 'pt_BR'.freeze
   LOCK_NS = 4_343
-  VERSAO_DO_PUBLICADOR = 1 # suba quando mudar o que a publicação grava, para republicar tudo
+  VERSAO_DO_PUBLICADOR = 2 # suba quando mudar o que a publicação grava, para republicar tudo (2: vídeo com ?v=)
 
   class Conflito < StandardError; end
 

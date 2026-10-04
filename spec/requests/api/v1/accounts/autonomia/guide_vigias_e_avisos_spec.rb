@@ -151,6 +151,17 @@ RSpec.describe 'Guia da Plataforma — vigias e avisos', type: :request do
       expect(plantadas.pluck(:origem, :criado_por_id).uniq).to eq([['padrao', admin.id]])
     end
 
+    # Conta do primeiro plantio (#935, só a marca): recebe a vigia padrão que chegou depois, e só ela.
+    it 'conta antiga recebe só a vigia padrão nova', :aggregate_failures do
+      account.update_columns(internal_attributes: { 'guia_vigias_padrao_em' => 1.day.ago.iso8601 }) # rubocop:disable Rails/SkipsModelValidations
+
+      perguntar(admin)
+
+      novas = Autonomia::Guide::VigiasPadrao.todas.select { |dados| dados['nova_em'] }.pluck('nome')
+      expect(novas).not_to be_empty
+      expect(Autonomia::Guide::Vigia.where(account: account).pluck(:nome)).to match_array(novas)
+    end
+
     it 'apagada, a vigia padrão não volta na próxima pergunta' do
       perguntar(admin)
       Autonomia::Guide::Vigia.where(account: account).destroy_all
