@@ -286,4 +286,49 @@ RSpec.describe Autonomia::Agents::Answerer do
       expect(result.reply).to include('Schengen')
     end
   end
+
+  # #941 — a falha da IA virava handoff sem rastro: não havia como saber por que o Guia ficou mudo.
+  describe 'falha da IA' do
+    let(:prompt_secreto) { 'PERGUNTA-QUE-NAO-PODE-IR-PRO-LOG' }
+
+    def capturar_log
+      linhas = []
+      allow(Rails.logger).to receive(:warn).and_wrap_original do |original, *args, &block|
+        linhas << args.first.to_s
+        original.call(*args, &block)
+      end
+      yield
+      linhas.join("\n")
+    end
+
+    it 'registra a classe do erro, o agente e a feature, nunca a mensagem que ecoa o prompt', :aggregate_failures do
+      # Arrange
+      agent = create_agent('with_knowledge' => false)
+      client = instance_double(Crm::Ai::ResponsesClient)
+      allow(client).to receive(:create_with_tool_executor)
+        .and_raise(Crm::Ai::ResponsesClient::Error, "Invalid input: #{prompt_secreto}")
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+
+      # Act
+      log = capturar_log { described_class.new(agent: agent, query: prompt_secreto, feature: 'guia').answer }
+
+      # Assert
+      expect(log).to include("[autonomia][answerer] ia indisponivel agent=#{agent.id} feature=guia Crm::Ai::ResponsesClient::Error")
+      expect(log).not_to include(prompt_secreto)
+    end
+
+    it 'registra JSON inválido do modelo pela classe, sem o texto devolvido', :aggregate_failures do
+      # Arrange
+      agent = create_agent('with_knowledge' => false)
+      client = instance_double(Crm::Ai::ResponsesClient, create_with_tool_executor: { text: "nao-json #{prompt_secreto}" })
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+
+      # Act
+      log = capturar_log { described_class.new(agent: agent, query: prompt_secreto).answer }
+
+      # Assert
+      expect(log).to include("agent=#{agent.id} feature=agente_resposta JSON::ParserError")
+      expect(log).not_to include(prompt_secreto)
+    end
+  end
 end
