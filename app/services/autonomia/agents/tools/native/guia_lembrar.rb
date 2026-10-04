@@ -13,7 +13,7 @@ class Autonomia::Agents::Tools::Native::GuiaLembrar < Autonomia::Agents::Tools::
 
   class << self
     def slug
-      'lembrar'
+      'anotar_lembranca'
     end
 
     def args_registraveis

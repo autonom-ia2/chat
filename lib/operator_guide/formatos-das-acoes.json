@@ -2060,7 +2060,7 @@
             "additionalProperties": false,
             "allOf": [
               {
-                "description": "Compara content.",
+                "description": "Compara content. Casa palavra solta no texto: \"não quero cancelar\" casa com \"cancelar\". Não serve para entender a intenção do cliente; para isso a ação perguntar_ao_decisor.",
                 "if": {
                   "properties": {
                     "attribute_key": {
@@ -3208,6 +3208,17 @@
         "tipo": "string"
       },
       "event_name": {
+        "esquema": {
+          "description": "Quando a regra roda. conversation_created: uma vez, quando a conversa nasce. conversation_opened: quando a conversa volta para aberta. conversation_resolved: uma vez, quando a conversa é resolvida — é o evento de \"ao resolver\". conversation_updated: a cada mudança na conversa (status, etiqueta, responsável): repete; não use para \"ao resolver\". message_created: a cada mensagem nova, do cliente ou da equipe; com message_type incoming, só a do cliente.",
+          "examples": [
+            "conversation_created",
+            "conversation_opened",
+            "conversation_resolved",
+            "conversation_updated",
+            "message_created"
+          ],
+          "type": "string"
+        },
         "tipo": "string"
       },
       "execution_delay": {
@@ -8144,7 +8155,7 @@
             "additionalProperties": false,
             "allOf": [
               {
-                "description": "Compara content.",
+                "description": "Compara content. Casa palavra solta no texto: \"não quero cancelar\" casa com \"cancelar\". Não serve para entender a intenção do cliente; para isso a ação perguntar_ao_decisor.",
                 "if": {
                   "properties": {
                     "attribute_key": {
@@ -9292,6 +9303,17 @@
         "tipo": "string"
       },
       "event_name": {
+        "esquema": {
+          "description": "Quando a regra roda. conversation_created: uma vez, quando a conversa nasce. conversation_opened: quando a conversa volta para aberta. conversation_resolved: uma vez, quando a conversa é resolvida — é o evento de \"ao resolver\". conversation_updated: a cada mudança na conversa (status, etiqueta, responsável): repete; não use para \"ao resolver\". message_created: a cada mensagem nova, do cliente ou da equipe; com message_type incoming, só a do cliente.",
+          "examples": [
+            "conversation_created",
+            "conversation_opened",
+            "conversation_resolved",
+            "conversation_updated",
+            "message_created"
+          ],
+          "type": "string"
+        },
         "tipo": "string"
       },
       "execution_delay": {
@@ -17594,7 +17616,7 @@
             "additionalProperties": false,
             "allOf": [
               {
-                "description": "Compara content.",
+                "description": "Compara content. Casa palavra solta no texto: \"não quero cancelar\" casa com \"cancelar\". Não serve para entender a intenção do cliente; para isso a ação perguntar_ao_decisor.",
                 "if": {
                   "properties": {
                     "attribute_key": {
@@ -18742,6 +18764,17 @@
         "tipo": "string"
       },
       "event_name": {
+        "esquema": {
+          "description": "Quando a regra roda. conversation_created: uma vez, quando a conversa nasce. conversation_opened: quando a conversa volta para aberta. conversation_resolved: uma vez, quando a conversa é resolvida — é o evento de \"ao resolver\". conversation_updated: a cada mudança na conversa (status, etiqueta, responsável): repete; não use para \"ao resolver\". message_created: a cada mensagem nova, do cliente ou da equipe; com message_type incoming, só a do cliente.",
+          "examples": [
+            "conversation_created",
+            "conversation_opened",
+            "conversation_resolved",
+            "conversation_updated",
+            "message_created"
+          ],
+          "type": "string"
+        },
         "tipo": "string"
       },
       "execution_delay": {

@@ -44,7 +44,8 @@ class Autonomia::Guide::Tela
     linhas = abertos.map { |item| "Aberto: #{item['recurso']} #{item['id']}: #{item['resumo']}" }
     ocultos = Array(@tela['aberto']).size - abertos.size
     if ocultos.positive?
-      linhas << "#{ocultos} #{plural(ocultos, 'registro aberto não está visível', 'registros abertos não estão visíveis')} para você."
+      linhas << "#{ocultos} #{plural(ocultos, 'registro aberto não foi encontrado', 'registros abertos não foram encontrados')} " \
+                '(apagado ou fora do que você vê). Diga isso à pessoa; não peça para ela identificar o registro.'
     end
     linhas.presence || ['Nada aberto.']
   end

@@ -1,12 +1,12 @@
 # O Guia APAGANDO uma anotação quando a pessoa pede para esquecer (#933).
 #
-# Fora do diário, como `lembrar`: não é mudança na conta. Só alcança as
+# Fora do diário, como `anotar_lembranca`: não é mudança na conta. Só alcança as
 # anotações que a pessoa vê (as dela e as da corretora); as da corretora, só
 # administrador apaga.
 class Autonomia::Agents::Tools::Native::GuiaEsquecer < Autonomia::Agents::Tools::Native::Base
   class << self
     def slug
-      'esquecer'
+      'apagar_lembranca'
     end
 
     def args_registraveis

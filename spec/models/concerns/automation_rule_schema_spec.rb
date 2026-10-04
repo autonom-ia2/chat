@@ -160,4 +160,11 @@ RSpec.describe AutomationRuleSchema do
       expect(erros(regra(condicoes: condicoes).tap { |registro| registro.account = outra })).to include('"ramo" is not one of')
     end
   end
+
+  # O Guia escolhe o evento pela descrição: ela tem de cobrir exatamente o que o listener escuta.
+  it 'descreve todos os eventos que o AutomationRuleListener escuta, e só eles' do
+    escutados = AutomationRuleListener.public_instance_methods(false).map(&:to_s)
+
+    expect(described_class::EVENTOS.keys).to match_array(escutados)
+  end
 end

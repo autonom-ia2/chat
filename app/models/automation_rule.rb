@@ -31,6 +31,7 @@ class AutomationRule < ApplicationRecord
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
   has_many_attached :files
 
+  validates :event_name, json_schema: { schema: AutomationRuleSchema::EVENTO }
   validates :conditions, json_schema: { schema: ->(regra) { AutomationRuleSchema.conditions(regra) } }
   validates :actions, json_schema: { schema: ->(regra) { AutomationRuleSchema.actions(regra) } }
   validate :decisor_actions_format

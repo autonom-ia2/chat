@@ -114,7 +114,7 @@ RSpec.describe Autonomia::Guide::Tela do
     operador = Autonomia::Guide::Contexto.new(account: conta, user: admin)
     tela = tela_de(operador, 'rota' => 'crm_kanban_index', 'aberto' => [{ 'recurso' => 'crm/cards', 'id' => 999_999 }])
 
-    expect(tela.bloco).to include('1 registro aberto não está visível para você')
+    expect(tela.bloco).to include('1 registro aberto não foi encontrado')
     expect(tela.bloco).not_to include('999999')
     expect(operador.leu?(999_999)).to be(false)
     expect(tela.registro).to eq('rota' => 'crm_kanban_index')

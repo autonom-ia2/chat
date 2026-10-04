@@ -17,6 +17,23 @@ class AutomationRuleSchema
   SECOES = { 'conversations' => Conversation, 'contacts' => Contact, 'messages' => Message }.freeze
   MUDOU = 'attribute_changed'.freeze
 
+  # Quando a regra roda: os eventos que o AutomationRuleListener escuta, com o que cada um faz de verdade.
+  # Só descreve (a fábrica do upstream grava evento que não existe); quem lê é o Guia.
+  EVENTOS = {
+    'conversation_created' => 'uma vez, quando a conversa nasce',
+    'conversation_opened' => 'quando a conversa volta para aberta',
+    'conversation_resolved' => 'uma vez, quando a conversa é resolvida — é o evento de "ao resolver"',
+    'conversation_updated' => 'a cada mudança na conversa (status, etiqueta, responsável): repete; não use para "ao resolver"',
+    'message_created' => 'a cada mensagem nova, do cliente ou da equipe; com message_type incoming, só a do cliente'
+  }.freeze
+  # O que o motor faz de verdade com a condição, quando não é óbvio pelo nome.
+  NOTAS = {
+    'content' => ' Casa palavra solta no texto: "não quero cancelar" casa com "cancelar". Não serve para entender a ' \
+                 "intenção do cliente; para isso a ação #{Autonomia::Decisores::PASSO}."
+  }.freeze
+  EVENTO = { 'type' => 'string', 'examples' => EVENTOS.keys,
+             'description' => "Quando a regra roda. #{EVENTOS.map { |nome, quando| "#{nome}: #{quando}" }.join('. ')}." }.freeze
+
   def self.actions(regra)
     new(regra).actions
   end
@@ -94,7 +111,7 @@ class AutomationRuleSchema
 
   def ramo_da_condicao(chave)
     validos = operadores[chave]
-    descricao = validos ? "Compara #{chave}." : "Compara #{chave}; o filtro não tem operador para ela, e a regra não casa."
+    descricao = validos ? "Compara #{chave}.#{NOTAS[chave]}" : "Compara #{chave}; o filtro não tem operador para ela, e a regra não casa."
     entao = { 'properties' => { 'values' => valores_da_condicao(chave) } }
     entao['properties']['filter_operator'] = um_de(validos + [MUDOU], "Operadores de #{chave}.") if validos
     ramo('attribute_key', chave, entao, descricao)

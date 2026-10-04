@@ -88,7 +88,7 @@ RSpec.describe 'Memória do Guia: lembrar e esquecer' do
     # AC-M6 — não é mudança na conta: nada no diário, e o texto não vai para o registro.
     it 'grava fora do diário e o registro guarda de_quem e substitui_id, sem o texto', :aggregate_failures do
       registro = Autonomia::Guide::Registro.new
-      chamada = { 'name' => 'lembrar',
+      chamada = { 'name' => 'anotar_lembranca',
                   'arguments' => { texto: 'CPF do Pedro 123.456.789-00', de_quem: 'minha', substitui_id: nil }.to_json }
 
       expect { lembrar(JSON.parse(chamada['arguments'])) }.not_to change(Autonomia::Guide::Execucao, :count)
@@ -122,7 +122,7 @@ RSpec.describe 'Memória do Guia: lembrar e esquecer' do
   end
 
   it 'chega aos Guias pela lista de ferramentas do Seed (a cura reasserta)' do
-    expect(Autonomia::Guide::Seed::FERRAMENTAS).to include('lembrar', 'esquecer')
+    expect(Autonomia::Guide::Seed::FERRAMENTAS).to include('anotar_lembranca', 'apagar_lembranca')
   end
 end
 # rubocop:enable RSpec/DescribeClass
