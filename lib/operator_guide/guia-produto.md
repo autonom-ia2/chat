@@ -12,8 +12,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `first_steps` - `/app/accounts/:accountId/primeiros-passos`
 - gate: papel `administrator`
 - pre_requisitos: nenhum
-- passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o passo em destaque, que e sempre o primeiro que ainda falta; 3. Clique em Fazer agora para ir direto a tela daquele passo; 4. Volte a lista e siga para o proximo.
-- gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; passos opcionais trazem Deixar para depois e podem ser retomados; o passo em foco mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito); a lista some do centro da tela quando o essencial termina, mas continua no menu.
+- passos: 1. Abra Primeiros passos no menu lateral; 2. Leia o painel Seu proximo passo, que e sempre o primeiro que ainda falta; 3. Assista ao video curto ao lado, quando houver; 4. Clique no botao azul do painel (o nome dele e a acao do passo, por exemplo Conectar a chave) para ir direto a tela daquele passo; 5. Volte a lista e siga para o proximo.
+- gotchas: cada passo so fica Feito quando o estado real da conta muda, nunca por clique; os passos ficam em tres etapas (Ligar a plataforma, Organizar as vendas, Crescer); passos opcionais trazem Pular por enquanto; o painel mostra os pre-requisitos externos (por exemplo, conta na OpenAI com credito) e o tempo estimado; passo que depende de outro mostra Precisa antes, sem bloquear; clicar num passo da lista abre ele no painel; Preciso de ajuda abre o Guia; a lista some do centro da tela quando o essencial termina, mas continua no menu.
 - nav_target: `first_steps`
 
 ### Criar caixa de entrada
