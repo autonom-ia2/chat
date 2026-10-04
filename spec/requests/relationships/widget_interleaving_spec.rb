@@ -22,7 +22,8 @@ RSpec.describe 'Widget deletion and relationships writes', :relationships_commit
   # specs commitados (value_patch_*, company_preview_job_capacity): apagar o que foi criado, na hora.
   after do
     account.contacts.destroy_all
-    account.inboxes.destroy_all
+    # Filhos da inbox (working_hours...) saem via destroy_async; sem transacao o job tem que rodar.
+    perform_enqueued_jobs { account.inboxes.destroy_all }
     account.custom_attribute_definitions.destroy_all
     account.reload.destroy!
   end
