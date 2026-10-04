@@ -1,8 +1,10 @@
 name: Fork translations
 on:
   pull_request:
-  push:
-    branches: [main]
+  # Check obrigatório da fila de merge. Não roda mais no push da main: a fila já
+  # confere o commit que vai para a main.
+  merge_group:
+    types: [checks_requested]
 permissions:
   contents: read
 jobs:
@@ -23,4 +25,4 @@ jobs:
         env:
           CROWDIN_SYNC: >-
             ${{ github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'chore: Update translations') }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}

@@ -57,6 +57,42 @@ da instância nova e 5,5 minutos o desligamento da antiga.
 11. **Limpeza.** Depois do merge do lote na `main`, cada sessão remove as próprias worktrees. Apagar branch remota (a do
     lote e as dos PRs) segue a regra do `/dev`: precisa do OK do Rodrigo.
 
+## Fila de merge do GitHub (aprovada em 04/10/2026, #959)
+
+Vale para toda sessão e todo agente (Claude, Codex/ChatGPT) e para pessoas. Enquanto o ruleset
+`main - fila de merge` não estiver **ativo**, as regras acima continuam valendo como estão.
+
+Com o ruleset ativo:
+
+1. **A `main` só recebe código pela fila.** Merge direto fica bloqueado. Só administradores do repositório
+   passam por cima (`gh pr merge --admin`), e só em emergência: esse push não roda a CI depois.
+2. **Checks obrigatórios:** `RSpec` (um check só, que agrega as partes), `Vitest`, `trava`, `central` e
+   `fork-i18n`. Rubocop, Brakeman e ESLint seguem informativos e não rodam na fila.
+3. **Como mergear:** com OK do Rodrigo e os checks verdes, `gh pr merge <N> --match-head-commit <sha>` põe o
+   PR na fila. O comando sai com sucesso **antes** do merge. Só conta como mergeado quando
+   `gh pr view <N> --json state` mostrar `MERGED`.
+4. **A fila substitui o lote manual.** Ela junta até 2 PRs por rodada, testa o código combinado uma vez e faz
+   um único push na `main`, que gera um único deploy. Não é mais preciso combinar janela por mensagem nem
+   montar `release/*-loteN` para juntar PRs. A validação depois do deploy (regra 4, "ok, SHA") continua.
+5. **O "Testes do fork" não roda mais no push da `main`.** A fila já testou exatamente aquele commit, e a
+   rodada extra disputava runner com o deploy de produção (medido em 04/10: deploy ~1 min na fila).
+6. **PRs abertos antes da mudança** precisam de `gh pr update-branch <N>` (ou um push novo) para rodar os
+   workflows novos e ganhar o check `RSpec`.
+
+Configuração versionada em [`docs/ci/ruleset-fila-de-merge.json`](ci/ruleset-fila-de-merge.json):
+
+```sh
+# criar desativado e conferir
+gh api -X POST repos/autonom-ia2/chat/rulesets --input docs/ci/ruleset-fila-de-merge.json --jq '.id'
+gh api repos/autonom-ia2/chat/rules/branches/main
+# ativar
+gh api -X PUT repos/autonom-ia2/chat/rulesets/<id> -f enforcement=active
+# rollback imediato (volta ao fluxo antigo)
+gh api -X PUT repos/autonom-ia2/chat/rulesets/<id> -f enforcement=disabled
+```
+
+O rollback de deploy (`workflow_dispatch` com `action=rollback`) não passa pela `main` e não é afetado.
+
 ## Melhorias propostas, pendentes de OK do Rodrigo
 
 - **Cache do build** (camadas do Docker entre execuções): encurta a etapa mais longa sem mudar o que é publicado.
