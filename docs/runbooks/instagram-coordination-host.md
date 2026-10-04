@@ -2,6 +2,8 @@
 
 Este provisionador roda **localmente no host Linux aprovado**, como root, após review do parent. Não usa SSH para instalar e não altera serviços Redis, n8n ou Traefik existentes. Não executar como startup, durante deploy de aplicação ou para recuperar estado perdido.
 
+**O coordenador já instalado no n8n não deve ser reprovisionado.** O código abaixo é NEW ONLY; correções em instalações existentes exigem diagnóstico e procedimento separado, preservando volume, epoch, certificados e credenciais.
+
 Entrada: IPv4 público e porta do **Webshare Direct**, mais o IPv4 residencial de saída esperado, conferidos previamente no inventário Webshare. Não fornecer token, senha ou cookie. A conexão HTTPS via proxy deve retornar exatamente o IP esperado, sem redirects ou fallback direto. Não chama Meta.
 
 ```sh
@@ -15,11 +17,15 @@ Antes de criar qualquer recurso, exige Docker **Server 28+**, Compose, SSH váli
 - usuário/grupo `igcoord`;
 - volume `instagram_coordination_data`, container `instagram-coordination-redis` e rede `instagram-coordination-bridge`.
 
-Falha de inspeção também bloqueia. Docker antigo é blocker: este script não atualiza Docker. A publicação é `127.0.0.1:6381` numa bridge interna dedicada, sem host network. Docker anterior ao 28 tem uma limitação documentada para portas publicadas em localhost ([Docker](https://docs.docker.com/engine/network/port-publishing/)). A configuração e TLS usam mounts separados readonly; dados ficam no volume dedicado. CPU 0,25; RAM e RAM+swap 256 MiB; 64 processos; filesystem readonly e capacidades removidas.
+Falha de inspeção também bloqueia. Docker antigo é blocker: este script não atualiza Docker. A publicação é `127.0.0.1:6381` numa bridge dedicada, **sem `--internal` e sem host network**, com `com.docker.network.bridge.host_binding_ipv4=127.0.0.1`. Docker anterior ao 28 tem uma limitação documentada para portas publicadas em localhost ([Docker](https://docs.docker.com/engine/network/port-publishing/)). A configuração e TLS usam mounts separados readonly; dados ficam no volume dedicado. CPU 0,25; RAM e RAM+swap 256 MiB; 64 processos; filesystem readonly e capacidades removidas.
+
+Depois de subir o container e antes de inicializar epoch ou configurar SSH, o script consulta `NetworkSettings.Ports`. Exige exatamente `127.0.0.1:6381` para `6381/tcp` e nenhuma outra publicação. Um binding apenas solicitado em `HostConfig.PortBindings` não comprova publicação real. Porta ausente, pública, duplicada ou adicional interrompe o provisionamento e preserva recursos para revisão; essa interrupção não desfaz uma publicação incorreta que já exista.
+
+A bridge permite saída NAT conforme rede/firewall do host; `host_binding_ipv4` restringe publicação de entrada, não destinos de saída. Host e containers ligados à mesma rede permanecem fronteiras de confiança, protegidas adicionalmente por TLS e ACL. O check não certifica regras personalizadas de roteamento direto nem substitui a verificação operacional do firewall.
 
 O host gera CA, certificado com SAN `ig-coord.internal`, senhas, epoch e três chaves SSH novos. Nenhum segredo vem do repositório. Todos ficam locais em `/opt/instagram-coordination/private`, protegido com modo 700 e arquivos 600. Não usar `cat`, tracing, logs de stdin ou cópia indiscriminada dessa pasta.
 
-Aplicações recebem **somente** sua própria chave (`ig_hub.key` ou `ig_auto.key`), seu `.env`, a CA pública e host key SSH verificada pelo parent. `ig_m4.key` permite somente Webshare. O admin, CA privada e chave TLS privada permanecem no host; nunca distribuir `ig_admin.pass`. Publicação em SSM/instalações fica a cargo do parent após aprovação, fora deste provisionador. A host key deve ser fixada fora de banda, sem aceitar automaticamente resultados de `ssh-keyscan`.
+Aplicações recebem **somente** sua própria chave (`ig_hub.key` ou `ig_auto.key`), seu `.env`, a CA pública e host key SSH verificada pelo parent. `ig_m4.key` permite somente Webshare. O admin, CA privada e chave TLS privada permanecem no host; nunca distribuir `ig_admin.pass`. Publicação em SSM/instalações fica a cargo do operador após aprovação, fora deste provisionador, conforme [procedimento dos parâmetros](instagram-coordination-parameters.md). A host key deve ser fixada fora de banda, sem aceitar automaticamente resultados de `ssh-keyscan`.
 
 As chaves novas têm `restrict`, forwarding local e `permitopen` apenas para Redis loopback e o endpoint Webshare validado; sem shell, sessão, TTY, agentes ou forwarding remoto. O script verifica a configuração efetiva de SSH antes de recarregar o serviço. Essa recarga é a única alteração a serviço compartilhado do host e precisa da aprovação operacional já prevista.
 
@@ -36,4 +42,4 @@ bash -n scripts/instagram_testers/runtime/provision-coordination-host.sh
 python3 tests/instagram_testers/provision-coordination-host_test.py
 ```
 
-O teste verifica instalação simulada, colisões, inspeções falhando, Docker antigo, mismatch Webshare, preservação em falha de persistência, recusa de re-run e ausência de segredos na saída com `bash -x`. Não homologa Docker, certificados, ACL ou SSH reais. Antes da aplicação, o parent deve revisar o SHA final, registrar a evidência em `docs/audit/` e validar isolamento, restart sem mudança de epoch, permissões ACL e WAITAOF no host autorizado. Nada deste trabalho executou infraestrutura remota.
+Os seis testes verificam instalação simulada, colisões, inspeções falhando, Docker antigo, mismatch Webshare, preservação em falha de persistência, recusa de re-run, publicação efetiva ausente/pública e ausência de segredos na saída com `bash -x`. Não homologam Docker, certificados, ACL ou SSH reais. Antes de uma nova instalação, o parent deve revisar o SHA final, registrar a evidência em `docs/audit/` e validar isolamento, restart sem mudança de epoch, permissões ACL e WAITAOF no host autorizado. A alteração do provisionador não executa infraestrutura remota.
