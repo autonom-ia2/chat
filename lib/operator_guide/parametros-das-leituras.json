@@ -628,6 +628,12 @@
       "termo"
     ]
   },
+  "central-de-ajuda/busca_inteligente": {
+    "controller": "api/v1/accounts/central_de_ajuda#busca_inteligente",
+    "parametros": [
+      "termo"
+    ]
+  },
   "companies": {
     "controller": "api/v1/accounts/companies#index",
     "motivos": [

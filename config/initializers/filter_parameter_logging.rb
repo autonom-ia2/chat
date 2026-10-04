@@ -5,7 +5,9 @@ Rails.application.config.filter_parameters += [
   :password, :secret, :_key, :auth, :crypt, :salt, :certificate, :otp, :access, :private, :protected, :ssn,
   :otp_secret, :otp_code, :backup_code, :mfa_token, :otp_backup_codes,
   :phone, :phone_number, :raw_phone, :normalized_phone,
-  :code, :state, :signed_request, :error_description, :fb_dtsg, :lsd, :cookie, :session_json
+  :code, :state, :signed_request, :error_description, :fb_dtsg, :lsd, :cookie, :session_json,
+  # O que a pessoa digita na busca da Central (#977) pode trazer dado de cliente: não vai para o log.
+  :termo
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

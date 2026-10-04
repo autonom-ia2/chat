@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { useMapGetter } from 'dashboard/composables/store';
-import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useGuiaPedido } from 'dashboard/composables/useGuiaPedido';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -13,14 +13,16 @@ import ConteudoDoArtigo from '../components/ConteudoDoArtigo.vue';
 import VideoDoTrajeto from '../components/VideoDoTrajeto.vue';
 import TamanhoDaLetra from '../components/TamanhoDaLetra.vue';
 import { useTamanhoDaLetra } from '../composables/useTamanhoDaLetra';
+import { useArtigosVistos } from '../composables/useArtigosVistos';
 
 const { t, locale } = useI18n();
 const route = useRoute();
 const store = useStore();
-const { updateUISettings } = useUISettings();
+const { pedirAoGuia } = useGuiaPedido();
 const contaAtual = useMapGetter('accounts/getAccount');
 const { destino, levar } = useLevarAteLa();
 const { classe: classeDaLetra } = useTamanhoDaLetra();
+const { marcarVisto } = useArtigosVistos();
 
 const artigo = ref(null);
 const carregando = ref(true);
@@ -39,6 +41,14 @@ const guiaDisponivel = computed(
 const levarAteLa = computed(() => {
   const alvo = artigo.value?.me_leve_ate_la;
   return alvo && destino(alvo.rota) ? alvo : null;
+});
+
+// O id do artigo começa pelo do capítulo ("10.04" é do "10"): o mesmo id que a página do assunto usa.
+const rotaDoAssunto = computed(() => {
+  const capitulo = artigo.value?.id?.split('.')[0];
+  return capitulo
+    ? { name: 'central_de_ajuda_assunto', params: { capitulo } }
+    : null;
 });
 
 const atualizadoEm = computed(() =>
@@ -62,6 +72,8 @@ const carregar = async ref_ => {
     const { data } = await CentralDeAjudaAPI.artigo(ref_);
     if (pedido !== ultimoPedido) return;
     artigo.value = data;
+    // Visto é o artigo que abriu de fato, não o que deu erro ou não vale para a conta.
+    marcarVisto(data?.id);
   } catch (e) {
     if (pedido !== ultimoPedido) return;
     artigo.value = null;
@@ -86,13 +98,6 @@ const irAteLa = () =>
     destaque: levarAteLa.value.destaque,
   });
 
-const perguntarAoGuia = () =>
-  updateUISettings({
-    is_autonomia_guide_panel_open: true,
-    is_autonomia_copilot_panel_open: false,
-    is_contact_sidebar_open: false,
-  });
-
 const rotaDoArtigo = vizinho => ({
   name: 'central_de_ajuda_artigo',
   params: { ref: vizinho.ref },
@@ -115,7 +120,14 @@ const rotaDoArtigo = vizinho => ({
             class="i-lucide-chevron-right size-4 text-n-slate-9 rtl:rotate-180"
             aria-hidden="true"
           />
-          <span class="text-n-slate-11">{{ artigo.capitulo }}</span>
+          <router-link
+            v-if="rotaDoAssunto"
+            :to="rotaDoAssunto"
+            class="inline-flex items-center min-h-11 px-3 rounded-xl text-n-blue-11 font-medium hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          >
+            {{ artigo.capitulo }}
+          </router-link>
+          <span v-else class="text-n-slate-11">{{ artigo.capitulo }}</span>
         </template>
       </nav>
 
@@ -238,7 +250,7 @@ const rotaDoArtigo = vizinho => ({
             icon="i-lucide-life-buoy"
             class="min-h-11"
             :label="t('HELP_CENTER.CENTRAL_DE_AJUDA.ARTIGO.PERGUNTE')"
-            @click="perguntarAoGuia"
+            @click="pedirAoGuia()"
           />
         </aside>
       </template>
