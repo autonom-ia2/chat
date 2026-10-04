@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.autonomia.instagram-tester-manager</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/ABSOLUTE/PATH/TO/scripts/instagram_testers/runtime/manager-launchagent-wrapper.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/ABSOLUTE/PATH/TO</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/REPLACE_ME</string>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>INSTAGRAM_TESTER_BROWSER_PROFILE</key>
+    <string>/Users/REPLACE_ME/Library/Application Support/InstagramTester/profile</string>
+    <key>INSTAGRAM_TESTER_PLAYWRIGHT_MODULE</key>
+    <string>/ABSOLUTE/PATH/TO/tests/playwright/node_modules/playwright/index.mjs</string>
+    <key>INSTAGRAM_META_DEVELOPER_APP_ID</key>
+    <string>REPLACE_WITH_APPROVED_APP_ID</string>
+    <key>INSTAGRAM_META_BUSINESS_ID</key>
+    <string>REPLACE_WITH_APPROVED_BUSINESS_ID</string>
+    <key>INSTAGRAM_TESTER_ROLES_DOC_ID</key>
+    <string>REPLACE_WITH_APPROVED_ROLES_DOC_ID</string>
+    <key>INSTAGRAM_TESTER_ADMIN_USER_ID</key>
+    <string>REPLACE_WITH_APPROVED_ADMIN_USER_ID</string>
+    <key>INSTAGRAM_TESTER_PROXY_AUTH_MODE</key>
+    <string>ip</string>
+    <key>INSTAGRAM_TESTER_PROXY_HOST</key>
+    <string>REPLACE_WITH_APPROVED_DIRECT_IPV4</string>
+    <key>INSTAGRAM_TESTER_PROXY_PORT</key>
+    <string>REPLACE_WITH_APPROVED_PROXY_PORT</string>
+    <key>INSTAGRAM_TESTER_PUBLISHER_SSH_KEY</key>
+    <string>/Users/REPLACE_ME/.ssh/instagram-publisher</string>
+    <key>INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON</key>
+    <string>["/usr/local/bin/node","/ABSOLUTE/PATH/TO/scripts/instagram_testers/runtime/publisher-tunnel.mjs","--stack","hub2you"]</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>Umask</key>
+  <integer>63</integer>
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/REPLACE_ME/Library/Logs/instagram-tester-manager.err</string>
+</dict>
+</plist>

@@ -724,6 +724,10 @@ Rails.application.routes.draw do
 
           namespace :instagram do
             resource :authorization, only: [:create]
+            get 'testers/configuration', to: 'testers#configuration'
+            get 'testers/search', to: 'testers#search'
+            post 'testers/status', to: 'testers#status'
+            post 'testers/invite', to: 'testers#invite'
           end
 
           namespace :tiktok do

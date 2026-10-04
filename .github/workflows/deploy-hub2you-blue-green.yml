@@ -327,6 +327,181 @@ jobs:
           source "$APP_DIR/runtime.env"
           START_WORKER_AFTER_DEPLOY="${START_WORKER_AFTER_DEPLOY:-true}"
 
+          prepare_instagram_tester_env() {
+            local stage_dir type_file value_file error_file
+            stage_dir="$(mktemp -d /run/instagram-tester-env.XXXXXX)"
+            type_file="$stage_dir/type"
+            value_file="$stage_dir/value"
+            error_file="$stage_dir/error"
+
+            rm -f "$APP_DIR/instagram-tester.env"
+            : > "$APP_DIR/instagram-tester.env"
+            chmod 600 "$APP_DIR/instagram-tester.env"
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-env" \
+              --with-decryption \
+              --query 'Parameter.Type' \
+              --output text > "$type_file" 2> "$error_file"; then
+              if grep -q 'ParameterNotFound' "$error_file"; then
+                rm -rf "$stage_dir"
+                return 0
+              fi
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_fetch_failed" >&2
+              return 1
+            fi
+
+            if [ "$(cat "$type_file")" != "SecureString" ]; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_type_invalid" >&2
+              return 1
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-env" \
+              --with-decryption \
+              --query 'Parameter.Value' \
+              --output text > "$value_file" 2> "$error_file"; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_fetch_failed" >&2
+              return 1
+            fi
+
+            if ! awk '
+              BEGIN {
+                allowed["INSTAGRAM_TESTER_AUTOMATION_ENABLED"] = 1
+                allowed["INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS"] = 1
+                allowed["INSTAGRAM_META_DEVELOPER_APP_ID"] = 1
+                allowed["INSTAGRAM_META_BUSINESS_ID"] = 1
+                allowed["INSTAGRAM_TESTER_APP_NAME"] = 1
+                allowed["INSTAGRAM_TESTER_ROLES_DOC_ID"] = 1
+                allowed["INSTAGRAM_TESTER_SESSION_SOURCE"] = 1
+                allowed["INSTAGRAM_TESTER_SESSION_NAMESPACE"] = 1
+                allowed["INSTAGRAM_TESTER_ADMIN_USER_ID"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_AUTH_MODE"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_HOST"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_PORT"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_REDIS_URL"] = 1
+              }
+              /^[[:space:]]*$/ || /^[[:space:]]*#/ { next }
+              {
+                separator = index($0, "=")
+                key = separator > 1 ? substr($0, 1, separator - 1) : ""
+                if (!(key in allowed) || (key in seen)) invalid = 1
+                seen[key] = 1
+              }
+              END { exit invalid }
+            ' "$value_file"; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_keys_invalid" >&2
+              return 1
+            fi
+
+            install -m 600 "$value_file" "$APP_DIR/instagram-tester.env"
+            rm -rf "$stage_dir"
+          }
+
+          prepare_instagram_tester_env
+
+          install_instagram_tester_publisher() {
+            local stage_dir source_container tester_enabled
+            tester_enabled=false
+            if grep -Eq '^INSTAGRAM_TESTER_AUTOMATION_ENABLED=true$' "$APP_DIR/instagram-tester.env"; then
+              tester_enabled=true
+            fi
+            stage_dir="$(mktemp -d /run/instagram-tester-publisher.XXXXXX)"
+            source_container="instagram-tester-publisher-source-$$"
+
+            cleanup_instagram_tester_publisher() {
+              docker rm -f "$source_container" >/dev/null 2>&1 || true
+              rm -rf "$stage_dir"
+            }
+
+            if ! docker create \
+              --name "$source_container" \
+              --entrypoint /bin/sh \
+              "$IMAGE_URI" \
+              -c 'exit 0' >/dev/null; then
+              cleanup_instagram_tester_publisher
+              echo "instagram_tester_publisher_setup_failed" >&2
+              return 1
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-publisher-public-key" \
+              --query 'Parameter.Type' \
+              --output text > "$stage_dir/parameter-type" 2> "$stage_dir/parameter-error"; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if [ "$(cat "$stage_dir/parameter-type")" != "String" ]; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_type_invalid" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-publisher-public-key" \
+              --query 'Parameter.Value' \
+              --output text > "$stage_dir/public-key" 2> "$stage_dir/parameter-error"; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if [ ! -s "$stage_dir/public-key" ]; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if ! (
+              set -e
+              docker cp \
+                "$source_container:/app/scripts/instagram_testers/runtime/forced-publisher.sh" \
+                "$stage_dir/forced-publisher.sh"
+              docker cp \
+                "$source_container:/app/scripts/instagram_testers/runtime/install-remote-publisher.sh" \
+                "$stage_dir/install-remote-publisher.sh"
+              test ! -L "$stage_dir/forced-publisher.sh"
+              test ! -L "$stage_dir/install-remote-publisher.sh"
+              test -s "$stage_dir/forced-publisher.sh"
+              test -s "$stage_dir/install-remote-publisher.sh"
+              chmod 700 "$stage_dir"
+              chmod 700 "$stage_dir/forced-publisher.sh" "$stage_dir/install-remote-publisher.sh"
+              /bin/sh "$stage_dir/install-remote-publisher.sh" < "$stage_dir/public-key"
+              test -x /usr/local/libexec/instagram-tester-publisher-root
+              test -x /usr/sbin/sshd
+              /usr/sbin/sshd -t
+              systemctl is-active --quiet sshd
+            ); then
+              cleanup_instagram_tester_publisher
+              echo "instagram_tester_publisher_setup_failed" >&2
+              return 1
+            fi
+
+            cleanup_instagram_tester_publisher
+          }
+
           if [ "$#" -gt 0 ] && [ -n "$1" ]; then
             IMAGE_URI="$1"
             {
@@ -339,8 +514,9 @@ jobs:
 
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
           docker pull "$IMAGE_URI"
-          docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
-          docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
+          install_instagram_tester_publisher
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
           systemctl restart chatwoot-web.service
           if [ "$START_WORKER_AFTER_DEPLOY" = "true" ]; then
             systemctl restart chatwoot-worker.service
@@ -362,7 +538,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-web
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
           ExecStop=/usr/bin/docker stop chatwoot-web
 
           [Install]
@@ -380,7 +556,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-worker
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
           ExecStop=/usr/bin/docker stop -t 30 chatwoot-worker
 
           [Install]

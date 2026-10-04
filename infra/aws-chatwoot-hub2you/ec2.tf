@@ -192,7 +192,9 @@ resource "aws_iam_role_policy" "ec2_app" {
         ]
         Resource = [
           aws_ssm_parameter.chatwoot_ec2_env.arn,
-          aws_ssm_parameter.chatwoot_ec2_runtime_image.arn
+          aws_ssm_parameter.chatwoot_ec2_runtime_image.arn,
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatwoot/prod/instagram-tester-env",
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/chatwoot/prod/instagram-tester-publisher-public-key"
         ]
       },
       {

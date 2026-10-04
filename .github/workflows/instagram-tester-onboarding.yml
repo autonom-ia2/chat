@@ -1,0 +1,205 @@
+name: Instagram tester onboarding
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: instagram-tester-onboarding-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python-preparer:
+    name: Python session preparer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline preparer tests
+        run: python -B tests/instagram_testers/test_prepare_session.py -v
+
+  node-contracts:
+    name: Node synthetic contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Run fixture and visual helper tests
+        run: |
+          node --test \
+            tests/qa/instagram-testers/fixtures.test.mjs \
+            tests/qa/instagram-testers/visual-helpers.test.mjs \
+            tests/instagram_testers/session-observer.test.mjs \
+            tests/instagram_testers/session-manager.test.mjs \
+            tests/instagram_testers/runtime-publisher.test.mjs
+      - name: Check browser and session helper modules
+        run: |
+          node --check tests/qa/instagram-testers/server.mjs
+          node --check tests/qa/instagram-testers/run.mjs
+          node --check tests/qa/instagram-testers/wizard.mjs
+          node --check tests/qa/instagram-testers/entry.js
+          node --check scripts/instagram_testers/session-observer.mjs
+          node --check scripts/instagram_testers/session-manager.mjs
+          node --check scripts/instagram_testers/session-browser.mjs
+          node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
+          for script in scripts/instagram_testers/runtime/*.sh; do sh -n "$script"; done
+          python -c 'import plistlib; plistlib.load(open("scripts/instagram_testers/runtime/com.autonomia.instagram-tester-manager.plist", "rb"))'
+      - name: ESLint session and browser helpers
+        run: >-
+          pnpm exec eslint
+          scripts/instagram_testers/session-observer.mjs
+          scripts/instagram_testers/session-manager.mjs
+          scripts/instagram_testers/session-browser.mjs
+          scripts/instagram_testers/runtime/publisher-tunnel.mjs
+          tests/instagram_testers/session-observer.test.mjs
+          tests/instagram_testers/session-manager.test.mjs
+          tests/instagram_testers/runtime-publisher.test.mjs
+          tests/qa/instagram-testers/wizard.mjs
+          tests/qa/instagram-testers/WizardApp.vue
+          tests/qa/instagram-testers/ReauthorizeApp.vue
+
+  vitest-focal:
+    name: Vitest Instagram onboarding
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Run focused onboarding and reauthorization specs
+        run: >-
+          pnpm exec vitest run
+          app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterOnboarding.spec.js
+          app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/Reauthorize.spec.js
+          app/javascript/dashboard/api/channel/instagramClient.spec.js
+          app/javascript/dashboard/composables/spec/useAbortableRequest.spec.js
+          --no-cache --no-coverage --maxWorkers=2 --minWorkers=1
+
+  browser-components:
+    name: Component browser QA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      NODE_ENV: production
+      RAILS_ENV: test
+      VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/instagram-910-browsers
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4.4'
+          bundler-cache: true
+      - name: RuboCop Instagram tester Ruby scope
+        run: >-
+          bundle exec rubocop
+          app/controllers/instagram/callbacks_controller.rb
+          app/helpers/instagram/integration_helper.rb
+          app/services/instagram/refresh_oauth_token_service.rb
+          app/services/instagram/testers
+          config/initializers/filter_parameter_logging.rb
+          scripts/instagram_testers/session_publisher.rb
+          spec/controllers/instagram/callbacks_controller_spec.rb
+          spec/helpers/instagram/integration_helper_spec.rb
+          spec/services/instagram/refresh_oauth_token_service_spec.rb
+          spec/services/instagram/testers
+      - name: Check Ruby Instagram tester helpers
+        run: |
+          mapfile -t ruby_files < <(
+            find app/services/instagram/testers scripts/instagram_testers \
+              -type f -name '*.rb' -print | sort
+          )
+          test "${#ruby_files[@]}" -gt 0
+          for file in "${ruby_files[@]}"; do
+            ruby -c "$file"
+          done
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install locked root dependencies
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Build real dashboard test assets
+        run: |
+          bundle exec vite build --mode test
+          compgen -G 'public/vite-test/assets/dashboard-*.css' > /dev/null
+      - name: Install locked Playwright dependencies and Chromium
+        working-directory: tests/playwright
+        run: |
+          git ls-files --error-unmatch pnpm-lock.yaml > /dev/null
+          pnpm install --frozen-lockfile --prod=false --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+          node --input-type=module -e "import { chromium } from './node_modules/playwright/index.mjs'; import { existsSync } from 'node:fs'; if (!existsSync(chromium.executablePath())) throw new Error('Installed Chromium executable missing');"
+      - name: Run real component browser harness on loopback only
+        run: |
+          PLAYWRIGHT_MODULE_PATH="$GITHUB_WORKSPACE/tests/playwright/node_modules/playwright" \
+            node tests/qa/instagram-testers/run.mjs
+          PLAYWRIGHT_MODULE_PATH="$GITHUB_WORKSPACE/tests/playwright/node_modules/playwright" \
+            node tests/qa/instagram-testers/wizard.mjs
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+
+          const report = JSON.parse(
+            await readFile('tmp/instagram-910/visual/results.json', 'utf8')
+          );
+          const wizard = JSON.parse(
+            await readFile('tmp/instagram-910/visual/wizard/results.json', 'utf8')
+          );
+          if (
+            report.status !== 'PASS' ||
+            report.counts.pass !== report.cases.length ||
+            report.counts.fail !== 0 ||
+            report.counts.blocked !== 0
+          ) {
+            throw new Error(`Unexpected browser QA result: ${JSON.stringify(report.counts)}`);
+          }
+          if (
+            wizard.status !== 'PASS' ||
+            wizard.counts.pass !== wizard.evidence.length ||
+            wizard.counts.fail !== 0 ||
+            JSON.stringify(wizard.sourceHashesBefore) !== JSON.stringify(wizard.sourceHashesAfter)
+          ) {
+            throw new Error(`Unexpected wizard QA result: ${JSON.stringify(wizard.counts)}`);
+          }
+          NODE
+      - name: Verify dependency locks were not rewritten
+        run: git diff --exit-code -- Gemfile.lock pnpm-lock.yaml tests/playwright/pnpm-lock.yaml
+      - name: Upload synthetic browser manifest and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instagram-910-browser-qa
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            tmp/instagram-910/visual/results.json
+            tmp/instagram-910/visual/*.png
+            tmp/instagram-910/visual/wizard/results.json
+            tmp/instagram-910/visual/wizard/*.png

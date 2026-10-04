@@ -9319,16 +9319,40 @@
   },
   "POST instagram/authorization": {
     "campos": {
-      "return_to": {}
+      "return_to": {},
+      "tester_selection_token": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/instagram/authorizations#create",
-    "motivos": [
-      "leitura crua sem tipo: return_to"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:5",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14"
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:7",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:35",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
+  "POST instagram/testers/invite": {
+    "campos": {
+      "selection_token": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/instagram/testers#invite",
+    "origem": [
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:23",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "POST instagram/testers/status": {
+    "campos": {
+      "selection_token": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/instagram/testers#status",
+    "origem": [
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:18",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
     ],
     "sem_corpo": false
   },

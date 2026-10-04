@@ -9,6 +9,13 @@ RSpec.describe Instagram::RefreshOauthTokenService do
     }
   end
   let(:fixed_token) { 'c061d0c51973a8fcab2ecec86f6aa41718414a10070967a5e9a58f49bf8a798e' }
+  let(:refresh_request_headers) do
+    {
+      'Accept' => 'application/json',
+      'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+      'User-Agent' => 'Ruby'
+    }
+  end
   let(:instagram_channel) do
     create(:channel_instagram,
            account: account,
@@ -17,20 +24,16 @@ RSpec.describe Instagram::RefreshOauthTokenService do
   end
   let(:service) { described_class.new(channel: instagram_channel) }
 
-  before do
+  def stub_refresh_response(status: 200, body: refresh_response.to_json)
     stub_request(:get, 'https://graph.instagram.com/refresh_access_token')
       .with(
         query: {
           'access_token' => fixed_token,
           'grant_type' => 'ig_refresh_token'
         },
-        headers: {
-          'Accept' => 'application/json',
-          'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-          'User-Agent' => 'Ruby'
-        }
+        headers: refresh_request_headers
       )
-      .to_return(status: 200, body: refresh_response.to_json, headers: { 'Content-Type' => 'application/json' })
+      .to_return(status: status, body: body, headers: { 'Content-Type' => 'application/json' })
   end
 
   describe '#access_token' do
@@ -49,17 +52,31 @@ RSpec.describe Instagram::RefreshOauthTokenService do
 
     context 'when token is eligible for refresh' do
       before do
-        instagram_channel.update!(
+        instagram_channel.assign_attributes(
           expires_at: 5.days.from_now, # Within 10 days window
           updated_at: 25.hours.ago     # More than 24 hours old
         )
       end
 
       it 'refreshes the token and updates channel' do
+        stub_refresh_response
         expect(service.access_token).to eq('new_refreshed_token')
         instagram_channel.reload
-        expect(instagram_channel.access_token).to eq('new_refreshed_token')
+        expect(instagram_channel[:access_token]).to eq('new_refreshed_token')
         expect(instagram_channel.expires_at).to be_within(1.second).of(5_184_000.seconds.from_now)
+      end
+
+      [400, 200].each do |http_status|
+        it "preserves the valid old token and sanitizes a malformed refresh response with HTTP #{http_status}" do
+          marker = 'synthetic-private-refresh-marker'
+          body = http_status == 200 ? "{\"access_token\":\"#{marker}\"" : { access_token: marker }.to_json
+          stub_refresh_response(status: http_status, body: body)
+          expect(Rails.logger).to receive(:error).with('Instagram token refresh failed')
+          expect(service.access_token).to eq(fixed_token)
+          expect(instagram_channel.reload[:access_token]).to eq(fixed_token)
+          expect(WebMock).to have_requested(:get, 'https://graph.instagram.com/refresh_access_token')
+            .with(query: { 'access_token' => fixed_token, 'grant_type' => 'ig_refresh_token' }).once
+        end
       end
     end
   end

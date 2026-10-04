@@ -31,11 +31,11 @@ RSpec.describe Instagram::IntegrationHelper do
 
     context 'when an error occurs' do
       before do
-        allow(JWT).to receive(:encode).and_raise(StandardError.new('Test error'))
+        allow(JWT).to receive(:encode).and_raise(StandardError.new('synthetic-private-token'))
       end
 
       it 'logs the error and returns nil' do
-        expect(Rails.logger).to receive(:error).with('Failed to generate Instagram token: Test error')
+        expect(Rails.logger).to receive(:error).with('Instagram token generation failed')
         expect(generate_instagram_token(account_id)).to be_nil
       end
     end
@@ -91,8 +91,41 @@ RSpec.describe Instagram::IntegrationHelper do
 
     context 'when token is invalid' do
       it 'logs the error and returns nil' do
-        expect(Rails.logger).to receive(:error).with(/Unexpected error verifying Instagram token:/)
+        expect(Rails.logger).to receive(:error).with('Instagram token verification failed')
         expect(verify_instagram_token('invalid_token')).to be_nil
+      end
+    end
+  end
+
+  describe 'optional tester selection state' do
+    around do |example|
+      with_modified_env('INSTAGRAM_TESTER_SESSION_NAMESPACE' => 'autonomia-test') { example.run }
+    end
+
+    let(:selected) { { 'id' => '17841400000000001', 'username' => 'demo_company', 'app_id' => '10001' } }
+
+    before do
+      allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
+    end
+
+    it 'adds signed selection, expiration and replay identifier only to the new flow' do
+      token = generate_instagram_token(16, 'onboarding', tester_selection: selected)
+      payload = instagram_token_payload(token)
+      expect(payload['tester_selection']).to eq(selected)
+      expect(payload['tester_installation']).to eq('autonomia-test')
+      expect(payload['return_to']).to eq('onboarding')
+      expect(payload['exp'] - payload['iat']).to eq(15.minutes.to_i)
+      expect(payload['jti']).to be_present
+      legacy_payload = instagram_token_payload(generate_instagram_token(16))
+      expect(legacy_payload.keys).to contain_exactly('sub', 'iat')
+    end
+
+    it 'rejects expiration without changing legacy states lacking exp' do
+      bound_state = generate_instagram_token(16, nil, tester_selection: selected)
+      legacy_state = generate_instagram_token(16)
+      travel 15.minutes + 1.second do
+        expect(verify_instagram_token(bound_state)).to be_nil
+        expect(verify_instagram_token(legacy_state)).to eq(16)
       end
     end
   end

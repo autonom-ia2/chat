@@ -1,0 +1,623 @@
+{
+  "title": "Instagram Tester #910 — galeria principal",
+  "generatedAt": "2026-10-03T21:06:55.795271+00:00",
+  "screenshotCount": 60,
+  "synthetic": true,
+  "network": "loopback only; external requests blocked",
+  "note": "60 capturas finais de componentes reais do produto: fluxo com flag ligada e tela legada com flag desligada; API interna sintética. Não inclui console Meta, cookies, credenciais, tokens, HAR, produção ou proxy real.",
+  "wizardResults": {
+    "status": "PASS",
+    "counts": {
+      "pass": 56,
+      "fail": 0,
+      "screenshots": 60
+    },
+    "sha256": "c68accd93d241eb62aab1198e30dc97a7131a2f134fa76c8c34818a2c5dfd3d8",
+    "sourceHashes": {
+      "tests/qa/instagram-testers/entry.js": "d6033cde00a39817319bcb149dd8e2714015c1370d75066864d4f93c39c530c2",
+      "tests/qa/instagram-testers/WizardApp.vue": "971d1694958ac2fc53da41e2044125a84d574bc5afd12f1ca08616a40ad5f79d",
+      "tests/qa/instagram-testers/ReauthorizeApp.vue": "ce5495888b0e74ad439ede55afc3eb11e4cdd66e4562c0bfc07ce4ca9945c65c",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/InboxChannels.vue": "75be4997081437034d4f61435dafdd557c5bcd296bba5eeeb3cec3e2caf128b2",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/ChannelList.vue": "98eae6acc6e0955c5d9ffe2590ac8ef860abcf3a75c0cc2e56e3d3728ac38432",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/ChannelFactory.vue": "f113e550735f3f31744dd160ef6c55b77ef8d9c95deaa72f9edcfd17c461bf67",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/AddAgents.vue": "ab356610b811a468b729670ad68b334edaeadc88f4b62f5e0b8cbef84183bf6d",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/FinishSetup.vue": "fe453859cdd32c88aa5ed528ff63199966a5021d32ebb827f82973e4642e4a35",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Instagram.vue": "b9e7037a0caa4f1a6734b372188ff8d6516465539c08e270315254ace66f82e8",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterOnboarding.vue": "4b3ad88c1a6b20fb047c8ccea5c7c233e2ff902c78cd395679fa210379757705",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/Reauthorize.vue": "c434640673c90260191441a9e006d6e5c8389696a557fed8a4e36eae149f49ba"
+    },
+    "sourceHashesAfter": {
+      "tests/qa/instagram-testers/entry.js": "d6033cde00a39817319bcb149dd8e2714015c1370d75066864d4f93c39c530c2",
+      "tests/qa/instagram-testers/WizardApp.vue": "971d1694958ac2fc53da41e2044125a84d574bc5afd12f1ca08616a40ad5f79d",
+      "tests/qa/instagram-testers/ReauthorizeApp.vue": "ce5495888b0e74ad439ede55afc3eb11e4cdd66e4562c0bfc07ce4ca9945c65c",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/InboxChannels.vue": "75be4997081437034d4f61435dafdd557c5bcd296bba5eeeb3cec3e2caf128b2",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/ChannelList.vue": "98eae6acc6e0955c5d9ffe2590ac8ef860abcf3a75c0cc2e56e3d3728ac38432",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/ChannelFactory.vue": "f113e550735f3f31744dd160ef6c55b77ef8d9c95deaa72f9edcfd17c461bf67",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/AddAgents.vue": "ab356610b811a468b729670ad68b334edaeadc88f4b62f5e0b8cbef84183bf6d",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/FinishSetup.vue": "fe453859cdd32c88aa5ed528ff63199966a5021d32ebb827f82973e4642e4a35",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Instagram.vue": "b9e7037a0caa4f1a6734b372188ff8d6516465539c08e270315254ace66f82e8",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterOnboarding.vue": "4b3ad88c1a6b20fb047c8ccea5c7c233e2ff902c78cd395679fa210379757705",
+      "app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/Reauthorize.vue": "c434640673c90260191441a9e006d6e5c8389696a557fed8a4e36eae149f49ba"
+    }
+  },
+  "entries": [
+    {
+      "file": "wizard-channels-desktop-light-choice-instagram-view-light.png",
+      "label": "choice-instagram",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 120924,
+      "sha256": "23cd161e0f7881cb137b1b1aa779799226f57e689d439d26c9883552569999e5"
+    },
+    {
+      "file": "wizard-channels-desktop-dark-choice-instagram-view-dark.png",
+      "label": "choice-instagram",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 130825,
+      "sha256": "0ffda402863d1fd29f96a0ecd8d68b95b5a4a92fedbed36d67a90f15e2207750"
+    },
+    {
+      "file": "wizard-channels-mobile-light-choice-instagram-view-light.png",
+      "label": "choice-instagram",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 97186,
+      "sha256": "881bee367e4c6f8565659198c4448514765dacfc35e44f10c3982d718b49ef6e"
+    },
+    {
+      "file": "wizard-channels-mobile-dark-choice-instagram-view-dark.png",
+      "label": "choice-instagram",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 104527,
+      "sha256": "c3adeb4a66405ec3e5524d33e0ffde5140f69b10c6a220fb51f93c460baeb025"
+    },
+    {
+      "file": "wizard-instagram-profile-desktop-light-profile-view-light.png",
+      "label": "profile",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 61123,
+      "sha256": "172a5428e446da7fdeff31316676fdbab6d60679eac633587bbeeb433ed10266"
+    },
+    {
+      "file": "wizard-instagram-profile-desktop-dark-profile-view-dark.png",
+      "label": "profile",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 60895,
+      "sha256": "804978809a3cfde0421c1884e30e52f7c7d4499c2c30cabc71db8ad7ecdd6559"
+    },
+    {
+      "file": "wizard-instagram-profile-mobile-light-profile-view-light.png",
+      "label": "profile",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 29883,
+      "sha256": "74c663caf2e1bab3c49160091d2e5af02433960fbcb3d48cdd55a5e5be06d23b"
+    },
+    {
+      "file": "wizard-instagram-profile-mobile-dark-profile-view-dark.png",
+      "label": "profile",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 29655,
+      "sha256": "53756122478f9371f9445e04de1cf50a2630579e3e9aec5ca059505781ae1995"
+    },
+    {
+      "file": "wizard-instagram-search-loading-desktop-light-loading-view-light.png",
+      "label": "loading",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 63612,
+      "sha256": "d7069dac4602c6ae47bcad1719976ab67cb36aba30bb223954ba9d0bb48f7388"
+    },
+    {
+      "file": "wizard-instagram-search-loading-desktop-dark-loading-view-dark.png",
+      "label": "loading",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 63083,
+      "sha256": "e17ab0866ebd5065fc5d0a2ce2d0d9418a3f19d5775ae63bc6ed62ade8fdedb1"
+    },
+    {
+      "file": "wizard-instagram-search-loading-mobile-light-loading-view-light.png",
+      "label": "loading",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 32109,
+      "sha256": "990af78415227a90723493eca44414a83ab81b3975b50fac370bfad31f6f174b"
+    },
+    {
+      "file": "wizard-instagram-search-loading-mobile-dark-loading-view-dark.png",
+      "label": "loading",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 31573,
+      "sha256": "ead7f94390571d7b7414e27cdee59001f1ed9072da4d0cf34cc19fd994b990ac"
+    },
+    {
+      "file": "wizard-instagram-search-empty-desktop-light-empty-view-light.png",
+      "label": "empty",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 70371,
+      "sha256": "739268afead4fea4eee6394039eb3718bd43e2c001c6b95fd194f9addf2eb183"
+    },
+    {
+      "file": "wizard-instagram-search-empty-desktop-dark-empty-view-dark.png",
+      "label": "empty",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 70075,
+      "sha256": "85392b3540218e26e7a73eacb7e6b54195a956b65525e6ccdf00b401cd6030aa"
+    },
+    {
+      "file": "wizard-instagram-search-empty-mobile-light-empty-view-light.png",
+      "label": "empty",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 38316,
+      "sha256": "efe35acf84d6b59329485bbc811e247716339edfce1e4291ec0a185da80ac39f"
+    },
+    {
+      "file": "wizard-instagram-search-empty-mobile-dark-empty-view-dark.png",
+      "label": "empty",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 37971,
+      "sha256": "953dca7ecbb97f14d42109d346bd7394424ef75c0bc6449082f9424863690613"
+    },
+    {
+      "file": "wizard-instagram-results-desktop-light-results-view-light.png",
+      "label": "results",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 86281,
+      "sha256": "d8f19b61a90559b3c8832529f5f97ebbeb7bcbbbe81046dceaf1f80c82909fbd"
+    },
+    {
+      "file": "wizard-instagram-results-desktop-dark-results-view-dark.png",
+      "label": "results",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 85663,
+      "sha256": "72a4d1d58b04ecdf6f19cf35a1767005a7952561dc378cbc390fed92f66182f0"
+    },
+    {
+      "file": "wizard-instagram-results-mobile-light-results-view-light.png",
+      "label": "results",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 51471,
+      "sha256": "f3c85fab870d57a5bbba6549b0d4bbd17684bb6c474e4843d39265292b26f3ff"
+    },
+    {
+      "file": "wizard-instagram-results-mobile-dark-results-view-dark.png",
+      "label": "results",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 50983,
+      "sha256": "cfa54eb116bd33b8c55df0afd727fa0931ffa4d914831bc4c26f795f39ab9c39"
+    },
+    {
+      "file": "wizard-instagram-absent-desktop-light-absent-view-light.png",
+      "label": "absent",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 77524,
+      "sha256": "1fbf7ea629c43da273d036156ea0aa49f1ce97f8193a3e8f591c5def8611af7a"
+    },
+    {
+      "file": "wizard-instagram-absent-desktop-dark-absent-view-dark.png",
+      "label": "absent",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 76716,
+      "sha256": "3750953aef1d414a4cbfba8cdbbb8e701d686de3d60da493f064a7424a1ccc39"
+    },
+    {
+      "file": "wizard-instagram-absent-mobile-light-absent-view-light.png",
+      "label": "absent",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 44011,
+      "sha256": "0a50daab89a59508bf04ad5eac6b6893f7d6d16aa10c2694609f09b4fe7494b4"
+    },
+    {
+      "file": "wizard-instagram-absent-mobile-dark-absent-view-dark.png",
+      "label": "absent",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 43107,
+      "sha256": "b4c1b0db4fe3a3d824b376c510e4d15eb83a9eecde3fecefb6dd23736f8c621d"
+    },
+    {
+      "file": "wizard-instagram-pending-desktop-light-pending-view-light.png",
+      "label": "pending",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 114790,
+      "sha256": "48828dc20c8801f3f6922b949bae56697acb3e8b2544e4bf2260a8c4342b8e06"
+    },
+    {
+      "file": "wizard-instagram-pending-desktop-dark-pending-view-dark.png",
+      "label": "pending",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 113673,
+      "sha256": "08098c654b8ae3555247b571cd7318051e4cf864cb3db6107513b6f5fdd87b0d"
+    },
+    {
+      "file": "wizard-instagram-pending-mobile-light-pending-view-light.png",
+      "label": "pending",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 78042,
+      "sha256": "c5542b73290ff7dfb2696eb8fd1d1d44524f62850aa577e02ce24cd0b8d20ef1"
+    },
+    {
+      "file": "wizard-instagram-pending-mobile-dark-pending-view-dark.png",
+      "label": "pending",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 76732,
+      "sha256": "fe29a1032f0cc6a94e6cef24d79db2f0f418fbf5108c03a63bb093083a0a4938"
+    },
+    {
+      "file": "wizard-instagram-accepted-desktop-light-accepted-view-light.png",
+      "label": "accepted",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 75286,
+      "sha256": "763d176dc36325e12155ff108a78bd6de77d0ca65065d50401364ec5017957f7"
+    },
+    {
+      "file": "wizard-instagram-accepted-desktop-dark-accepted-view-dark.png",
+      "label": "accepted",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 74678,
+      "sha256": "f9453dfdcd6ec529314e7e11f232b66a1203203b65e2efb296f604fbac8f03c2"
+    },
+    {
+      "file": "wizard-instagram-accepted-mobile-light-accepted-view-light.png",
+      "label": "accepted",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 42668,
+      "sha256": "f12ad0313541837638cd80624dba11018cf23351253327781395a97aba189825"
+    },
+    {
+      "file": "wizard-instagram-accepted-mobile-dark-accepted-view-dark.png",
+      "label": "accepted",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 42017,
+      "sha256": "16496a69947844c80df108f5c18c32e1b2921ae072e4c62447d4b74f04b9b690"
+    },
+    {
+      "file": "wizard-instagram-status-error-desktop-light-status-error-view-light.png",
+      "label": "status-error",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 70984,
+      "sha256": "ec9ffbe83973627f30047b60dbdd48692133865d0c13ec6adef7d184543ffb9f"
+    },
+    {
+      "file": "wizard-instagram-status-error-desktop-dark-status-error-view-dark.png",
+      "label": "status-error",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 70729,
+      "sha256": "0fb06d9eef1ae609d7f762da79b8cd7c17381f907d11b4b9eee73dad160f10d7"
+    },
+    {
+      "file": "wizard-instagram-status-error-mobile-light-status-error-view-light.png",
+      "label": "status-error",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 38253,
+      "sha256": "6b28c1e4a46be3ec2f0f8bb9d566483496d315b347d01489c6ed076168940779"
+    },
+    {
+      "file": "wizard-instagram-status-error-mobile-dark-status-error-view-dark.png",
+      "label": "status-error",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 38048,
+      "sha256": "fee01fa29cfaf17da95fba18e247392d2ffdf330c2f36f1e22f747e4637d565b"
+    },
+    {
+      "file": "wizard-instagram-config-error-desktop-light-configuration-error-view-light.png",
+      "label": "configuration-error",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 67476,
+      "sha256": "2ba8462ca16adbb2b795643a8a916c42a163585bdf3e76c38c50d754959c2e53"
+    },
+    {
+      "file": "wizard-instagram-config-error-desktop-dark-configuration-error-view-dark.png",
+      "label": "configuration-error",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 67345,
+      "sha256": "d56b73880d6d013b746eb0a13b38a900dae0351529f0717c5c12e4ee42ac8674"
+    },
+    {
+      "file": "wizard-instagram-config-error-mobile-light-configuration-error-view-light.png",
+      "label": "configuration-error",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 36078,
+      "sha256": "dd8dccf965f246c7d54c9cd402dae829b2be007db303775b570eb2723c232563"
+    },
+    {
+      "file": "wizard-instagram-config-error-mobile-dark-configuration-error-view-dark.png",
+      "label": "configuration-error",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 36343,
+      "sha256": "785d918432ca983e88557d5f6329d1e21c35cf3e788982315a48406df19e4820"
+    },
+    {
+      "file": "wizard-instagram-legacy-feature-off-desktop-light-legacy-feature-off-view-light.png",
+      "label": "legacy-feature-off",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 69821,
+      "sha256": "5051652c4ea2c49624a07a85d4e509559f6086df7354420beced1ddbf5159806"
+    },
+    {
+      "file": "wizard-instagram-legacy-feature-off-desktop-dark-legacy-feature-off-view-dark.png",
+      "label": "legacy-feature-off",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 69116,
+      "sha256": "228c6fc79bdfd394db680efec5ed9f5f0e2aa7bbd25321f8749d8f5dc505b322"
+    },
+    {
+      "file": "wizard-instagram-legacy-feature-off-mobile-light-legacy-feature-off-view-light.png",
+      "label": "legacy-feature-off",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 36318,
+      "sha256": "e3fc4545301adbadbf0e43ea72150b9296888240e5744e64330330c46421865c"
+    },
+    {
+      "file": "wizard-instagram-legacy-feature-off-mobile-dark-legacy-feature-off-view-dark.png",
+      "label": "legacy-feature-off",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 36534,
+      "sha256": "58f4bdb3293d8e3b33f6f6db60fa651e5068aaac32aaf2ba48e8713e2e10bb28"
+    },
+    {
+      "file": "wizard-agents-desktop-light-agent-list-view-light.png",
+      "label": "agent-list",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 80019,
+      "sha256": "71209246002915e19e409be5bd5f6b339c371607e7fdf06e34a42cdcffcae26e"
+    },
+    {
+      "file": "wizard-agents-desktop-light-agent-selected-view-light.png",
+      "label": "agent-selected",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 81736,
+      "sha256": "e93bc63b0a274da97a52a35a6e6cb8f9375da565032fbcdf1acd95f8c94a77b1"
+    },
+    {
+      "file": "wizard-agents-desktop-dark-agent-list-view-dark.png",
+      "label": "agent-list",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 79944,
+      "sha256": "b2a93dfd9f71c8d9047c9288d08ece647726fc4363bf17471177a2a6cd74637b"
+    },
+    {
+      "file": "wizard-agents-desktop-dark-agent-selected-view-dark.png",
+      "label": "agent-selected",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 81727,
+      "sha256": "e8edf9489cffb42a5502cf6e4dac64051eba791b7349380148ff4cb39974754a"
+    },
+    {
+      "file": "wizard-agents-mobile-light-agent-list-view-light.png",
+      "label": "agent-list",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 45982,
+      "sha256": "84375f532454b80415fb2fb600bef72f9dac857f1f7a160a9812f0c8cf979e1f"
+    },
+    {
+      "file": "wizard-agents-mobile-light-agent-selected-view-light.png",
+      "label": "agent-selected",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 46727,
+      "sha256": "c7654846f9dee30b6822a5d904ffbc4f7f9be06dee7423f49c85fc92caea81ba"
+    },
+    {
+      "file": "wizard-agents-mobile-dark-agent-list-view-dark.png",
+      "label": "agent-list",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 47407,
+      "sha256": "1fb1ad59b89c4e3689147137e62d7323edb45c081f7bbdfb5b856cf05ab81f92"
+    },
+    {
+      "file": "wizard-agents-mobile-dark-agent-selected-view-dark.png",
+      "label": "agent-selected",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 46375,
+      "sha256": "22eb450847c48ce982a7efc847b2da8d810f60127bbbd35033373aa5203351da"
+    },
+    {
+      "file": "wizard-finish-desktop-light-finish-view-light.png",
+      "label": "finish",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 54752,
+      "sha256": "f3c835eba2de9a85025cb41a5e309d6f62a0e41002e80c36056277903fb09f74"
+    },
+    {
+      "file": "wizard-finish-desktop-dark-finish-view-dark.png",
+      "label": "finish",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 54563,
+      "sha256": "3cabed0a52523c22b8f2958ad8f5ea0aa8ec10e1ba1c55e2ff3e42f0786cc8bd"
+    },
+    {
+      "file": "wizard-finish-mobile-light-finish-view-light.png",
+      "label": "finish",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 23453,
+      "sha256": "0b5d43e8e986cc8ccc805fe087721296b4265692f55cd992560db30c22037b4e"
+    },
+    {
+      "file": "wizard-finish-mobile-dark-finish-view-dark.png",
+      "label": "finish",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 23886,
+      "sha256": "7fc4febbfd4b14e538b6c6a0d71879f86d0107dd7d69828877f773388af21abe"
+    },
+    {
+      "file": "instagram-reauthorize-desktop-light-reauthorize-view-light.png",
+      "label": "reauthorize",
+      "viewport": "1440x900",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 16878,
+      "sha256": "e7a02aa5bc6d65693b4f016bbb946af8b5b1b1c03eecad34b8a530d79e8145c7"
+    },
+    {
+      "file": "instagram-reauthorize-desktop-dark-reauthorize-view-dark.png",
+      "label": "reauthorize",
+      "viewport": "1440x900",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 17113,
+      "sha256": "719804fada7f3fefd6e552bd655ee6be8106fab393558bcbc7891d31bb32aea6"
+    },
+    {
+      "file": "instagram-reauthorize-mobile-light-reauthorize-view-light.png",
+      "label": "reauthorize",
+      "viewport": "390x844",
+      "theme": "light",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 16517,
+      "sha256": "9cfec1a8edda42b10547aa8a84d45712a8c5f0bfff37ea96221219899e8bbc48"
+    },
+    {
+      "file": "instagram-reauthorize-mobile-dark-reauthorize-view-dark.png",
+      "label": "reauthorize",
+      "viewport": "390x844",
+      "theme": "dark",
+      "source": "tests/qa/instagram-testers/wizard.mjs",
+      "bytes": 16930,
+      "sha256": "0f18811b1f71ee1758eda0d6c90415e2f04c23292606b7722439db571122a132"
+    }
+  ],
+  "archivedEntries": [
+    {
+      "file": "desktop-aceito.png",
+      "label": "captura anterior do fluxo (preservada; fora da galeria principal)",
+      "viewport": null,
+      "theme": null,
+      "source": "tests/qa/instagram-testers/run.mjs",
+      "bytes": 44057,
+      "sha256": "0865f159be5ee07e326c640e3c2b80255249620c7f99e79bc513be9e4670177b"
+    },
+    {
+      "file": "desktop-escuro-pendente.png",
+      "label": "captura anterior do fluxo (preservada; fora da galeria principal)",
+      "viewport": null,
+      "theme": null,
+      "source": "tests/qa/instagram-testers/run.mjs",
+      "bytes": 84626,
+      "sha256": "f0afcaa6f148185c9f634cd433d87bec2d7d7f9220fcc2ac913862340e5401ec"
+    },
+    {
+      "file": "desktop-pendente.png",
+      "label": "captura anterior do fluxo (preservada; fora da galeria principal)",
+      "viewport": null,
+      "theme": null,
+      "source": "tests/qa/instagram-testers/run.mjs",
+      "bytes": 83014,
+      "sha256": "e441f1699bdf4142428a9c37a7861036e524b48002d007b2d12a8fafc861abdd"
+    },
+    {
+      "file": "mobile-pendente.png",
+      "label": "captura anterior do fluxo (preservada; fora da galeria principal)",
+      "viewport": null,
+      "theme": null,
+      "source": "tests/qa/instagram-testers/run.mjs",
+      "bytes": 70404,
+      "sha256": "0c77f19305f260a01d658009dafc9a6ec96c7289c19476b2a15ce7a2f0861990"
+    }
+  ]
+}
