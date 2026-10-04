@@ -42,6 +42,21 @@ const LISTA_DE_NOMES = {
   crm_stage_id: 'etapas',
 };
 
+// As variáveis de nome que o Chatwoot troca na hora do envio. Na tela, viram
+// algo que a pessoa entende ("[nome do cliente]") ou um nome de exemplo.
+const VARIAVEIS_DE_NOME = [
+  '{{contact.name}}',
+  '{{ contact.name }}',
+  '{{contact.first_name}}',
+  '{{ contact.first_name }}',
+];
+
+export const trocarNome = (texto, nome) =>
+  VARIAVEIS_DE_NOME.reduce(
+    (resultado, variavel) => resultado.split(variavel).join(nome),
+    String(texto ?? '')
+  );
+
 const cortar = texto => {
   const limpo = String(texto ?? '').trim();
   return limpo.length > MAX_TEXTO_DE_MENSAGEM
@@ -140,7 +155,8 @@ const COMPLEMENTO = {
   assign_team: (params, { t, nomes }) => nomeDe(nomes.times, params[0], t),
   add_label: params => params.join(', '),
   remove_label: params => params.join(', '),
-  send_message: params => `“${cortar(params[0])}”`,
+  send_message: (params, { t }) =>
+    `“${cortar(trocarNome(params[0], t('AUTOMACOES.VARIAVEL_NOME')))}”`,
   add_private_note: params => `“${cortar(params[0])}”`,
   crm_create_card: (params, { t, nomes }) => nomeDe(nomes.etapas, params[0], t),
   crm_move_card_stage: (params, { t, nomes }) =>

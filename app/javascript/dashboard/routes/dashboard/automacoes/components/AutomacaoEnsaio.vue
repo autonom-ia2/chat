@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutomationAPI from 'dashboard/api/automation';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -8,11 +8,14 @@ import {
   nomeDoAtributo,
 } from 'dashboard/helper/automacaoEmPortugues';
 
-// #859 — "Testar com casos reais": a regra roda nas conversas mais recentes só
-// para mostrar o que faria. O servidor não executa nada (AutomationRules::Ensaio).
+// #859/#982 — "Veja o que teria acontecido": a regra roda nas conversas mais
+// recentes só para mostrar o que faria. O servidor não executa nada
+// (AutomationRules::Ensaio). Com `automatico`, o teste roda ao abrir: a pessoa
+// vê o resultado antes de decidir ligar.
 const props = defineProps({
   regraId: { type: Number, required: true },
   accountId: { type: Number, required: true },
+  automatico: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -66,6 +69,18 @@ const partesSemTeste = computed(() =>
   semTeste.value.map(chave => nomeDoAtributo(chave, t)).join(', ')
 );
 
+const iniciais = item =>
+  (item.contato || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(parte => parte[0].toUpperCase())
+    .join('');
+
+onMounted(() => {
+  if (props.automatico) testar();
+});
+
 const linkDaConversa = item => ({
   name: 'inbox_conversation',
   params: { accountId: props.accountId, conversation_id: item.display_id },
@@ -74,42 +89,56 @@ const linkDaConversa = item => ({
 
 <template>
   <section
-    class="flex flex-col gap-3 rounded-xl border border-n-weak bg-n-solid-1 p-4"
+    class="flex flex-col gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
     :aria-label="$t('AUTOMACOES.ENSAIO.TITULO')"
   >
-    <h2 class="text-base font-medium text-n-slate-12">
-      {{ $t('AUTOMACOES.ENSAIO.TITULO') }}
-    </h2>
-    <p class="text-sm text-n-slate-11">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-semibold text-n-slate-12">
+        {{ $t('AUTOMACOES.ENSAIO.TITULO') }}
+      </h2>
+      <Button
+        data-testar
+        :label="
+          estado === 'parado'
+            ? $t('AUTOMACOES.ENSAIO.BOTAO')
+            : $t('AUTOMACOES.ENSAIO.DE_NOVO')
+        "
+        icon="i-lucide-flask-conical"
+        slate
+        faded
+        size="sm"
+        class="min-h-11"
+        :is-loading="estado === 'testando'"
+        :disabled="estado === 'testando'"
+        @click="testar"
+      />
+    </div>
+    <p class="mb-0 text-[0.9375rem] text-n-slate-11">
       {{ $t('AUTOMACOES.ENSAIO.EXPLICA') }}
     </p>
-    <Button
-      data-testar
-      :label="$t('AUTOMACOES.ENSAIO.BOTAO')"
-      icon="i-lucide-flask-conical"
-      slate
-      faded
-      class="min-h-11"
-      :is-loading="estado === 'testando'"
-      :disabled="estado === 'testando'"
-      @click="testar"
-    />
 
     <div role="status" aria-live="polite" class="flex flex-col gap-3">
-      <p v-if="estado === 'testando'" class="text-sm text-n-slate-11">
-        {{ $t('AUTOMACOES.ENSAIO.TESTANDO') }}
-      </p>
+      <div
+        v-if="estado === 'testando'"
+        class="flex flex-col gap-2"
+        aria-busy="true"
+      >
+        <span class="sr-only">{{ $t('AUTOMACOES.ENSAIO.TESTANDO') }}</span>
+        <div class="h-10 rounded-xl w-1/2 bg-n-alpha-2 animate-pulse" />
+        <div class="h-11 rounded-xl bg-n-alpha-2 animate-pulse" />
+        <div class="h-11 rounded-xl bg-n-alpha-2 animate-pulse" />
+      </div>
       <p
         v-else-if="estado === 'erro'"
         data-ensaio-erro
-        class="text-sm text-n-ruby-11"
+        class="mb-0 text-[0.9375rem] text-n-ruby-11"
       >
         {{ erro }}
       </p>
       <p
         v-else-if="estado === 'pronto' && !testavel"
         data-nao-testavel
-        class="text-sm text-n-slate-12"
+        class="mb-0 p-4 text-[0.9375rem] rounded-xl bg-n-amber-2 text-n-slate-12"
       >
         {{ $t('AUTOMACOES.ENSAIO.NAO_TESTAVEL', { partes: partesSemTeste }) }}
       </p>
@@ -117,66 +146,84 @@ const linkDaConversa = item => ({
         <p
           v-if="!resultados.length"
           data-ensaio-vazio
-          class="text-sm text-n-slate-11"
+          class="mb-0 text-[0.9375rem] text-n-slate-11"
         >
           {{ $t('AUTOMACOES.ENSAIO.SEM_CONVERSA') }}
         </p>
         <p
           v-else
           data-ensaio-resumo
-          class="text-sm font-medium text-n-slate-12"
+          class="flex flex-wrap items-baseline gap-x-3 gap-y-1 m-0"
         >
-          {{
-            $t('AUTOMACOES.ENSAIO.RESUMO', {
-              casaram,
-              total: resultados.length,
-            })
-          }}
+          <span
+            class="text-4xl font-bold tracking-tight tabular-nums text-n-teal-11"
+          >
+            {{ casaram }}
+          </span>
+          <span class="text-base text-n-slate-11">
+            {{
+              $t('AUTOMACOES.ENSAIO.RESUMO', {
+                casaram,
+                total: resultados.length,
+              })
+            }}
+          </span>
         </p>
         <p
           v-if="semTeste.length"
           data-sem-teste
-          class="text-sm text-n-amber-11"
+          class="mb-0 text-sm text-n-amber-11"
         >
           {{ $t('AUTOMACOES.ENSAIO.SEM_TESTE', { partes: partesSemTeste }) }}
         </p>
         <p
           v-if="dependeDoDecisor.length"
           data-depende-do-decisor
-          class="text-sm text-n-amber-11"
+          class="mb-0 text-sm text-n-amber-11"
         >
           {{ dependeDoDecisorTexto }}
         </p>
-        <ul v-if="resultados.length" class="flex flex-col gap-2">
+        <ul
+          v-if="resultados.length"
+          class="flex flex-col p-0 m-0 list-none divide-y divide-n-weak"
+        >
           <li
             v-for="item in resultados"
             :key="item.conversation_id"
             data-ensaio-item
-            class="flex flex-col gap-1 rounded-lg bg-n-alpha-1 p-3"
+            class="flex items-center gap-3 py-2"
           >
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-sm text-n-slate-12 truncate">
+            <span
+              class="grid text-xs font-bold rounded-full place-items-center size-8 shrink-0 bg-n-slate-3 text-n-slate-11"
+              aria-hidden="true"
+            >
+              {{ iniciais(item) }}
+            </span>
+            <span class="flex flex-col flex-1 min-w-0">
+              <span class="text-[0.9375rem] truncate text-n-slate-12">
                 {{ item.contato || $t('AUTOMACOES.ENSAIO.CONTATO_SEM_NOME') }}
               </span>
-              <span
-                class="shrink-0 text-xs font-medium"
-                :class="item.casou ? 'text-n-teal-11' : 'text-n-slate-11'"
-              >
-                {{
-                  item.casou
-                    ? $t('AUTOMACOES.ENSAIO.CASARIA')
-                    : $t('AUTOMACOES.ENSAIO.NAO_CASARIA')
-                }}
+              <span v-if="item.casou" class="text-xs truncate text-n-slate-11">
+                {{ fariaTexto(item) }}
               </span>
-            </div>
-            <span v-if="item.casou" class="text-xs text-n-slate-11">
-              {{ fariaTexto(item) }}
+            </span>
+            <span
+              class="text-sm font-semibold shrink-0"
+              :class="item.casou ? 'text-n-teal-11' : 'text-n-slate-10'"
+            >
+              {{
+                item.casou
+                  ? $t('AUTOMACOES.ENSAIO.CASARIA')
+                  : $t('AUTOMACOES.ENSAIO.NAO_CASARIA')
+              }}
             </span>
             <router-link
               :to="linkDaConversa(item)"
-              class="inline-flex items-center min-h-11 text-xs text-n-blue-11 hover:underline"
+              :aria-label="$t('AUTOMACOES.ENSAIO.ABRIR_CONVERSA')"
+              :title="$t('AUTOMACOES.ENSAIO.ABRIR_CONVERSA')"
+              class="grid rounded-lg place-items-center size-11 shrink-0 text-n-slate-11 hover:bg-n-alpha-2 hover:text-n-blue-11"
             >
-              {{ $t('AUTOMACOES.ENSAIO.ABRIR_CONVERSA') }}
+              <span class="i-lucide-external-link size-4" aria-hidden="true" />
             </router-link>
           </li>
         </ul>

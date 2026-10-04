@@ -2401,37 +2401,73 @@
     "MENU": "Automations",
     "LISTA": {
       "TITULO": "Automations",
-      "SUBTITULO": "What the platform does on its own for you. Turn them on, off, or ask the Guide for a new one.",
+      "SUBTITULO": "What the platform does on its own for you.",
       "NOVA": "New automation",
       "CARREGANDO": "Loading your automations",
       "ERRO": "I could not load your automations. Check your connection and try again.",
       "TENTAR_DE_NOVO": "Try again",
-      "VAZIO_TITULO": "You have no automations yet",
-      "VAZIO_TEXTO": "Start from one of these templates. The Guide builds it with you, and nothing turns on until you say so.",
-      "SELO_GUIA": "Created by the Guide",
+      "VAZIO_TITULO": "Or start from a ready one",
+      "VAZIO_TEXTO": "The ones brokers use the most. Tap one and check it before turning it on.",
+      "SELO_GUIA": "Built by the Guide",
       "LIGADA": "On",
       "DESLIGADA": "Off",
       "LIGOU": "Automation turned on. It applies to the next conversations.",
       "DESLIGOU": "Automation turned off. Nothing happens until you turn it on again.",
       "FALHA_TROCA": "I could not change it now. Try again.",
-      "ABRIR": "Open the automation {nome}"
+      "ABRIR": "Open the automation {nome}",
+      "MAIS_ACOES": "and {n} more",
+      "INTERRUPTOR": "Turn {nome} on or off",
+      "CONTAGEM_LIGADAS": "None on | {n} on | {n} on",
+      "CONTAGEM_DESLIGADAS": "None off | {n} off | {n} off",
+      "PREFERE_MANUAL": "Prefer to build it piece by piece?",
+      "USAR_MANUAL": "Use manual mode"
     },
     "MODELOS": {
       "TITULO": "Ready-made templates",
       "SINISTRO": {
         "TITULO": "Sort out claim notices",
-        "TEXTO": "Adds the label and hands it to the right team when the message is about a claim.",
-        "PEDIDO": "I want an automation: when a message about a claim arrives, add the label claim and hand the conversation to the claims team."
+        "TEXTO": "Claims go straight to whoever handles them, already labeled.",
+        "PEDIDO": "I want an automation: when a message about a claim arrives, add the label claim and hand the conversation to the claims team.",
+        "QUANDO": "The customer mentions a claim",
+        "FAZ": "Hands it to the claims team"
       },
       "BOAS_VINDAS": {
-        "TITULO": "Say welcome",
-        "TEXTO": "Sends a message saying you will reply soon when a new conversation starts.",
-        "PEDIDO": "I want an automation: when a new conversation starts, send a welcome message saying we will reply soon."
+        "TITULO": "Let them know we will reply",
+        "TEXTO": "First-time contacts are never left without an answer.",
+        "PEDIDO": "I want an automation: when a new conversation starts, send a welcome message saying we will reply soon.",
+        "QUANDO": "A new conversation starts",
+        "FAZ": "Sends “We will reply shortly”"
       },
       "AGRADECER": {
-        "TITULO": "Say thanks when closing",
-        "TEXTO": "Sends a thank-you when the conversation is resolved.",
-        "PEDIDO": "I want an automation: when the conversation is resolved, send a message thanking the contact."
+        "TITULO": "Thank when closing",
+        "TEXTO": "The customer gets a thank-you when the conversation ends.",
+        "PEDIDO": "I want an automation: when the conversation is resolved, send a message thanking the contact.",
+        "QUANDO": "The conversation is resolved",
+        "FAZ": "Sends a thank-you to the customer"
+      },
+      "USAR": "Use this",
+      "ROTULO_QUANDO": "When",
+      "ROTULO_FAZ": "Does",
+      "COTACAO": {
+        "TITULO": "Tag quote requests",
+        "TEXTO": "Quote requests get a label and never get lost in the queue.",
+        "QUANDO": "The customer asks for a quote",
+        "FAZ": "Adds the quote label",
+        "PEDIDO": "I want an automation: when a customer message asks for a quote, add the quote label to the conversation."
+      },
+      "DIVIDIR_LEADS": {
+        "TITULO": "Split customers across the team",
+        "TEXTO": "Every new conversation arrives with someone responsible.",
+        "QUANDO": "A new conversation starts",
+        "FAZ": "Assigns someone from the team, in turns",
+        "PEDIDO": "I want every new conversation to be assigned to someone from the team, in turns among whoever is online."
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Reply after hours",
+        "TEXTO": "At night and on weekends, customers know when we are back.",
+        "QUANDO": "A message arrives after hours",
+        "FAZ": "Tells them our business hours",
+        "PEDIDO": "I want anyone who writes outside our business hours to get a message telling them when we are back."
       }
     },
     "CONVERSA": {
@@ -2444,27 +2480,35 @@
       "MONTAR_MANUAL": "I prefer to build it in manual mode",
       "CARREGANDO": "Loading the automation",
       "ERRO": "I could not find this automation. It may have been deleted.",
-      "LIGAR": "Turn on",
+      "LIGAR": "Turn automation on",
       "DESLIGAR": "Turn off",
-      "LIGADA_AVISO": "On: it already applies to the next conversations.",
-      "DESLIGADA_AVISO": "Off: nothing happens until you turn it on.",
+      "LIGADA_AVISO": "It already applies to the next conversations.",
+      "DESLIGADA_AVISO": "It only starts working once you turn it on. You can turn it off anytime.",
       "SO_LEITURA": "You can view and test this automation. Turning it on and changing it is up to the admins.",
-      "INTRO_GUIA": "Tell me what you want to automate, or start from a template."
+      "INTRO_GUIA": "Tell me what you want to automate, or start from a template.",
+      "GUIA_NOME": "Guide",
+      "GUIA_SUBTITULO": "Builds it with you. Nothing turns on until you say so.",
+      "LIGADA_TITULO": "It is on!"
     },
     "RESUMO": {
-      "TITULO": "How it works",
+      "TITULO": "How it will work",
       "QUANDO": "When",
-      "SE": "If",
-      "ENTAO": "Then",
+      "SE": "Only if",
+      "ENTAO": "Does",
       "SEM_CONDICAO": "In every conversation",
-      "VAZIO": "As soon as the Guide builds the automation, the summary shows up here."
+      "VAZIO": "Tell the Guide what you want. It fills in these three steps here.",
+      "LIGADA": "On",
+      "DESLIGADA": "Off, waiting for you",
+      "NOME_EXEMPLO": "Carla",
+      "PREVIA": "This is how the customer sees the message.",
+      "MANDA_MENSAGEM": "Sends this message to the customer"
     },
     "ENSAIO": {
-      "TITULO": "Test before turning on",
+      "TITULO": "See what would have happened",
       "BOTAO": "Test with real cases",
       "EXPLICA": "See what it would do in the most recent conversations. Nothing is sent or changed.",
       "TESTANDO": "Testing on recent conversations",
-      "RESUMO": "{casaram} of {total} recent conversations would be affected.",
+      "RESUMO": "of {total} recent conversations would be affected",
       "SEM_CONVERSA": "There are no conversations to test yet.",
       "CASARIA": "Would be affected",
       "NAO_CASARIA": "Would not be affected",
@@ -2474,7 +2518,8 @@
       "NAO_TESTAVEL": "This automation only acts when something changes at that moment ({partes}). That can't be tested on conversations that already happened: turn it on and watch the first times.",
       "ERRO": "The test did not answer now. Try again.",
       "ABRIR_CONVERSA": "Open the conversation",
-      "DEPENDE_DO_DECISOR": "The steps after the Decider ({acoes}) depend on its answer, and the test does not ask the Decider."
+      "DEPENDE_DO_DECISOR": "The steps after the Decider ({acoes}) depend on its answer, and the test does not ask the Decider.",
+      "DE_NOVO": "Test again"
     },
     "QUANDO": {
       "MESSAGE_CREATED": "When a message arrives",
@@ -2520,6 +2565,32 @@
       "NUMERO": "#{id}"
     },
     "FRASE": "{quando}, if {condicoes} → {acoes}",
-    "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}",
+    "HEROI": {
+      "TITULO": "What do you want to happen on its own?",
+      "TEXTO": "Write it as if talking to a colleague. The Guide builds it, shows what will happen and only turns it on when you say so.",
+      "EXEMPLO": "E.g.: when someone mentions a claim, notify the claims team",
+      "MONTAR": "Build with the Guide",
+      "IDEIAS_ROTULO": "Ideas:",
+      "IDEIAS": {
+        "SINISTRO": "Notify the team when a claim comes up",
+        "FORA_DO_HORARIO": "Reply to people who write after hours",
+        "COTACAO": "Tag people asking for a quote"
+      }
+    },
+    "SUGESTAO": {
+      "ROTULO": "The Guide noticed",
+      "TEXTO": "{n} of the {total} open conversations in {caixa} have no one responsible. Do you want each new conversation to go to someone on the team?",
+      "ACEITAR": "See how it would work",
+      "AGORA_NAO": "Not now",
+      "PEDIDO": "I want every new conversation in {caixa} to be assigned to someone from the team, in turns among whoever is online."
+    },
+    "ETAPAS": {
+      "ROTULO": "Steps",
+      "CONTE": "Tell",
+      "CONFIRA": "Check",
+      "LIGUE": "Turn on"
+    },
+    "VARIAVEL_NOME": "[customer name]"
   }
 }

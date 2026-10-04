@@ -51,6 +51,7 @@ const GuiaFalso = {
     sugestoes: { type: Array, default: null },
     introducao: { type: String, default: '' },
     pedidoInicial: { type: String, default: '' },
+    semTelas: Boolean,
   },
   emits: ['execucao', 'pedidoInicialEnviado'],
   template: '<div data-guia-falso />',
@@ -97,7 +98,8 @@ describe('AutomacaoConversaPage', () => {
 
     const guia = wrapper.findComponent(GuiaFalso);
     expect(guia.props('embutido')).toBe(true);
-    expect(guia.props('sugestoes')).toHaveLength(3);
+    expect(guia.props('semTelas')).toBe(true);
+    expect(guia.props('sugestoes')).toHaveLength(6);
     expect(guia.props('pedidoInicial')).toBe(
       'AUTOMACOES.MODELOS.AGRADECER.PEDIDO'
     );
@@ -126,6 +128,29 @@ describe('AutomacaoConversaPage', () => {
     const denovo = montar();
     await flushPromises();
     expect(denovo.findComponent(GuiaFalso).props('pedidoInicial')).toBe('');
+  });
+
+  it('nova: o que a pessoa escreveu na lista vai ao Guia uma vez só', async () => {
+    window.history.replaceState({ pedidoAutomacao: 'avisar o time' }, '');
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.findComponent(GuiaFalso).props('pedidoInicial')).toBe(
+      'avisar o time'
+    );
+    wrapper.findComponent(GuiaFalso).vm.$emit('pedidoInicialEnviado');
+    await flushPromises();
+    expect(window.history.state?.pedidoAutomacao).toBeUndefined();
+    expect(wrapper.findComponent(GuiaFalso).props('pedidoInicial')).toBe('');
+  });
+
+  it('nova: etapa Conte, com os três passos esperando o Guia', async () => {
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-etapa="CONTE"]').attributes('aria-current')
+    ).toBe('step');
   });
 
   it('nova: modelo desconhecido na URL não vira pergunta', async () => {
@@ -203,6 +228,49 @@ describe('AutomacaoConversaPage', () => {
       params: { accountId: 1 },
       query: { editar: 42 },
     });
+  });
+
+  it('editar: mostra a mensagem como o cliente vê e já testa nas conversas recentes', async () => {
+    abrirRegra(42);
+    AutomationAPI.show.mockResolvedValue({
+      data: {
+        payload: regra({
+          event_name: 'conversation_resolved',
+          actions: [
+            {
+              action_name: 'send_message',
+              action_params: ['Obrigado, {{contact.name}}!'],
+            },
+          ],
+        }),
+      },
+    });
+    AutomationAPI.ensaio.mockResolvedValue({
+      data: { testavel: true, resultados: [] },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-previa]').text()).toContain(
+      'Obrigado, AUTOMACOES.RESUMO.NOME_EXEMPLO!'
+    );
+    expect(AutomationAPI.ensaio).toHaveBeenCalledWith(42, 10);
+    expect(
+      wrapper.find('[data-etapa="CONFIRA"]').attributes('aria-current')
+    ).toBe('step');
+  });
+
+  it('editar: ligada não testa sozinha de novo e mostra as etapas feitas', async () => {
+    abrirRegra(42);
+    AutomationAPI.show.mockResolvedValue({
+      data: { payload: regra({ active: true }) },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(AutomationAPI.ensaio).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ligada]').exists()).toBe(true);
+    expect(wrapper.find('[aria-current="step"]').exists()).toBe(false);
   });
 
   it('editar: o Guia mexeu na automação → o resumo é lido de novo', async () => {

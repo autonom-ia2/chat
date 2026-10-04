@@ -2402,37 +2402,73 @@
     "MENU": "Automações",
     "LISTA": {
       "TITULO": "Automações",
-      "SUBTITULO": "O que a plataforma faz sozinha por você. Ligue, desligue ou peça uma nova ao Guia.",
+      "SUBTITULO": "O que a plataforma faz sozinha por você.",
       "NOVA": "Nova automação",
       "CARREGANDO": "Carregando suas automações",
       "ERRO": "Não consegui carregar suas automações. Confira a internet e tente de novo.",
       "TENTAR_DE_NOVO": "Tentar de novo",
-      "VAZIO_TITULO": "Você ainda não tem automações",
-      "VAZIO_TEXTO": "Comece por um destes modelos. O Guia monta com você, e nada liga sem você mandar.",
-      "SELO_GUIA": "Criada pelo Guia",
+      "VAZIO_TITULO": "Ou comece por uma pronta",
+      "VAZIO_TEXTO": "As mais usadas por corretoras. Toque numa delas e confira antes de ligar.",
+      "SELO_GUIA": "Montada pelo Guia",
       "LIGADA": "Ligada",
       "DESLIGADA": "Desligada",
       "LIGOU": "Automação ligada. Ela já vale para as próximas conversas.",
       "DESLIGOU": "Automação desligada. Nada mais acontece até você ligar de novo.",
       "FALHA_TROCA": "Não consegui mudar agora. Tente de novo.",
-      "ABRIR": "Abrir a automação {nome}"
+      "ABRIR": "Abrir a automação {nome}",
+      "MAIS_ACOES": "e mais {n}",
+      "INTERRUPTOR": "Ligar ou desligar {nome}",
+      "CONTAGEM_LIGADAS": "Nenhuma ligada | {n} ligada | {n} ligadas",
+      "CONTAGEM_DESLIGADAS": "Nenhuma desligada | {n} desligada | {n} desligadas",
+      "PREFERE_MANUAL": "Prefere montar peça por peça?",
+      "USAR_MANUAL": "Usar o modo manual"
     },
     "MODELOS": {
       "TITULO": "Modelos prontos",
       "SINISTRO": {
         "TITULO": "Separar avisos de sinistro",
-        "TEXTO": "Coloca a etiqueta e passa para o time certo quando a mensagem fala de sinistro.",
-        "PEDIDO": "Quero uma automação: quando chegar uma mensagem falando de sinistro, colocar a etiqueta sinistro e passar a conversa para o time de sinistros."
+        "TEXTO": "Sinistro vai direto para quem cuida, já com etiqueta.",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem falando de sinistro, colocar a etiqueta sinistro e passar a conversa para o time de sinistros.",
+        "QUANDO": "O cliente fala de sinistro",
+        "FAZ": "Passa para o time de sinistros"
       },
       "BOAS_VINDAS": {
-        "TITULO": "Dar boas-vindas",
-        "TEXTO": "Manda uma mensagem avisando que já vão responder quando uma conversa nova começa.",
-        "PEDIDO": "Quero uma automação: quando uma conversa nova começar, mandar uma mensagem de boas-vindas dizendo que já vamos responder."
+        "TITULO": "Avisar que já vamos responder",
+        "TEXTO": "Quem chama pela primeira vez não fica sem resposta.",
+        "PEDIDO": "Quero uma automação: quando uma conversa nova começar, mandar uma mensagem de boas-vindas dizendo que já vamos responder.",
+        "QUANDO": "Chega uma conversa nova",
+        "FAZ": "Manda “Já vamos te responder”"
       },
       "AGRADECER": {
         "TITULO": "Agradecer ao encerrar",
-        "TEXTO": "Manda um obrigado quando a conversa é resolvida.",
-        "PEDIDO": "Quero uma automação: quando a conversa for resolvida, mandar uma mensagem agradecendo o contato."
+        "TEXTO": "O cliente recebe um obrigado quando o atendimento termina.",
+        "PEDIDO": "Quero uma automação: quando a conversa for resolvida, mandar uma mensagem agradecendo o contato.",
+        "QUANDO": "O atendimento é encerrado",
+        "FAZ": "Manda um obrigado ao cliente"
+      },
+      "USAR": "Usar esta",
+      "ROTULO_QUANDO": "Quando",
+      "ROTULO_FAZ": "Faz",
+      "COTACAO": {
+        "TITULO": "Marcar quem pede cotação",
+        "TEXTO": "Quem pede cotação ganha etiqueta e não se perde na fila.",
+        "QUANDO": "O cliente pede uma cotação",
+        "FAZ": "Coloca a etiqueta cotação",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo cotação, colocar a etiqueta cotação na conversa."
+      },
+      "DIVIDIR_LEADS": {
+        "TITULO": "Dividir os clientes entre o time",
+        "TEXTO": "Cada conversa nova já chega com alguém responsável.",
+        "QUANDO": "Chega uma conversa nova",
+        "FAZ": "Passa para alguém do time, em rodízio",
+        "PEDIDO": "Quero que cada conversa nova já caia para alguém do time, em rodízio entre quem está online."
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Responder fora do horário",
+        "TEXTO": "À noite e no fim de semana, o cliente sabe quando voltamos.",
+        "QUANDO": "Chega mensagem fora do expediente",
+        "FAZ": "Avisa o horário de atendimento",
+        "PEDIDO": "Quero que quem mandar mensagem fora do nosso horário de atendimento receba um aviso dizendo quando voltamos."
       }
     },
     "CONVERSA": {
@@ -2445,27 +2481,35 @@
       "MONTAR_MANUAL": "Prefiro montar no modo manual",
       "CARREGANDO": "Carregando a automação",
       "ERRO": "Não encontrei esta automação. Ela pode ter sido apagada.",
-      "LIGAR": "Ligar",
+      "LIGAR": "Ligar automação",
       "DESLIGAR": "Desligar",
-      "LIGADA_AVISO": "Ligada: já está valendo para as próximas conversas.",
-      "DESLIGADA_AVISO": "Desligada: nada acontece até você ligar.",
+      "LIGADA_AVISO": "Já está valendo para as próximas conversas.",
+      "DESLIGADA_AVISO": "Ela só começa a valer quando você ligar. Dá para desligar quando quiser.",
       "SO_LEITURA": "Você pode ver e testar esta automação. Ligar e mudar fica com quem administra.",
-      "INTRO_GUIA": "Me conte o que você quer automatizar, ou comece por um modelo."
+      "INTRO_GUIA": "Me conte o que você quer automatizar, ou comece por um modelo.",
+      "GUIA_NOME": "Guia",
+      "GUIA_SUBTITULO": "Monta com você. Nada liga sem você mandar.",
+      "LIGADA_TITULO": "Ligada!"
     },
     "RESUMO": {
-      "TITULO": "Como ela funciona",
+      "TITULO": "Como ela vai funcionar",
       "QUANDO": "Quando",
-      "SE": "Se",
-      "ENTAO": "Então",
+      "SE": "Só se",
+      "ENTAO": "Faz",
       "SEM_CONDICAO": "Em toda conversa",
-      "VAZIO": "Assim que o Guia montar a automação, o resumo aparece aqui."
+      "VAZIO": "Conte ao Guia o que você quer. Ele preenche estes três passos aqui.",
+      "LIGADA": "Ligada",
+      "DESLIGADA": "Desligada, esperando você",
+      "NOME_EXEMPLO": "Carla",
+      "PREVIA": "Assim o cliente vê a mensagem.",
+      "MANDA_MENSAGEM": "Manda esta mensagem ao cliente"
     },
     "ENSAIO": {
-      "TITULO": "Testar antes de ligar",
+      "TITULO": "Veja o que teria acontecido",
       "BOTAO": "Testar com casos reais",
       "EXPLICA": "Veja o que ela faria nas conversas mais recentes. Nada é enviado nem alterado.",
       "TESTANDO": "Testando nas conversas recentes",
-      "RESUMO": "{casaram} de {total} conversas recentes seriam afetadas.",
+      "RESUMO": "de {total} conversas recentes seriam afetadas",
       "SEM_CONVERSA": "Ainda não há conversas para testar.",
       "CASARIA": "Seria afetada",
       "NAO_CASARIA": "Não seria afetada",
@@ -2475,7 +2519,8 @@
       "NAO_TESTAVEL": "Esta automação só age quando algo muda na hora ({partes}). Isso não dá para testar em conversas que já aconteceram: ligue e acompanhe as primeiras vezes.",
       "ERRO": "O teste não respondeu agora. Tente de novo.",
       "ABRIR_CONVERSA": "Abrir a conversa",
-      "DEPENDE_DO_DECISOR": "Os passos depois do Decisor ({acoes}) dependem da resposta dele, e o teste não pergunta ao Decisor."
+      "DEPENDE_DO_DECISOR": "Os passos depois do Decisor ({acoes}) dependem da resposta dele, e o teste não pergunta ao Decisor.",
+      "DE_NOVO": "Testar de novo"
     },
     "QUANDO": {
       "MESSAGE_CREATED": "Quando chega uma mensagem",
@@ -2521,6 +2566,32 @@
       "NUMERO": "#{id}"
     },
     "FRASE": "{quando}, se {condicoes} → {acoes}",
-    "FRASE_SEM_CONDICAO": "{quando} → {acoes}"
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}",
+    "HEROI": {
+      "TITULO": "O que você quer que aconteça sozinho?",
+      "TEXTO": "Escreva como se falasse com um colega. O Guia monta tudo, mostra o que vai acontecer e só liga quando você mandar.",
+      "EXEMPLO": "Ex.: quando alguém falar de sinistro, avisar o time de sinistros",
+      "MONTAR": "Montar com o Guia",
+      "IDEIAS_ROTULO": "Ideias:",
+      "IDEIAS": {
+        "SINISTRO": "Avisar o time quando falarem de sinistro",
+        "FORA_DO_HORARIO": "Responder quem chama fora do horário",
+        "COTACAO": "Marcar quem pede cotação"
+      }
+    },
+    "SUGESTAO": {
+      "ROTULO": "O Guia notou",
+      "TEXTO": "{n} das {total} conversas abertas da caixa {caixa} estão sem responsável. Quer que cada conversa nova já caia para alguém do time?",
+      "ACEITAR": "Ver como ficaria",
+      "AGORA_NAO": "Agora não",
+      "PEDIDO": "Quero que cada conversa nova da caixa {caixa} já caia para alguém do time, em rodízio entre quem está online."
+    },
+    "ETAPAS": {
+      "ROTULO": "Etapas",
+      "CONTE": "Conte",
+      "CONFIRA": "Confira",
+      "LIGUE": "Ligue"
+    },
+    "VARIAVEL_NOME": "[nome do cliente]"
   }
 }

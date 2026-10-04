@@ -51,6 +51,9 @@ const props = defineProps({
   introducao: { type: String, default: '' },
   // Pedido que a pessoa escolheu antes de chegar (um modelo pronto). Sai uma vez.
   pedidoInicial: { type: String, default: '' },
+  // #982 — tela que já é o lugar da tarefa (Automações): "Ir para a tela" só
+  // tiraria a pessoa de onde ela está montando.
+  semTelas: { type: Boolean, default: false },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
 // que o pedido inicial saiu, para a tela gastá-lo (#859).
@@ -252,6 +255,7 @@ const navLocation = nav => destino(nav?.route_name, nav?.params);
 // vida (troca de conta reseta o thread inteiro, `watch(accountId, () => store.reset())`).
 const telasValidasCache = new WeakMap();
 const telasValidas = item => {
+  if (props.semTelas) return [];
   if (telasValidasCache.has(item)) return telasValidasCache.get(item);
 
   const valor = (item.navigations || [])
