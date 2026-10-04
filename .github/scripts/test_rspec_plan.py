@@ -91,6 +91,61 @@ class RspecPlanTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             rspec_plan.verificar(specs, [['spec/a_spec.rb', 'spec/b_spec.rb'], ['spec/b_spec.rb']], 2)
 
+    def test_estresse_aleatorio_cobre_tudo_sem_repetir(self):
+        # 300 cenários: contagem de specs, de nós e tempos aleatórios (inclusive zeros, empates e specs sem tempo).
+        import random
+        gerador = random.Random(959)
+        for cenario in range(300):
+            pasta = Path(tempfile.mkdtemp())
+            total = gerador.randint(1, 400)
+            shards = gerador.randint(1, 16)
+            specs = sorted({f'spec/d{gerador.randint(0, 9)}/s{i}_spec.rb' for i in range(total)})
+            exemplos = []
+            for spec in specs:
+                if gerador.random() < 0.85:  # parte das specs fica sem tempo (spec nova)
+                    for _ in range(gerador.randint(1, 4)):
+                        exemplos.append({'id': f'./{spec}[1:{gerador.randint(1, 9)}]',
+                                         'run_time': gerador.choice([0.0, 0.01, gerador.uniform(0, 30)])})
+            (pasta / 'tempos' / 'r').mkdir(parents=True)
+            (pasta / 'tempos' / 'r' / 'rspec_results.json').write_text(json.dumps({'examples': exemplos}))
+            (pasta / 'specs.txt').write_text('\n'.join(specs) + '\n')
+            saida = pasta / 'plan.json'
+            rspec_plan.main(['--shards', str(shards), '--specs', str(pasta / 'specs.txt'),
+                             '--tempos', str(pasta / 'tempos'), '--saida', str(saida)])
+            plano = json.loads(saida.read_text())
+            todos = sum(plano['shards'], [])
+            self.assertEqual(sorted(todos), specs, f'cenário {cenario}')
+            self.assertEqual(len(todos), len(set(todos)), f'cenário {cenario}')
+            self.assertEqual(len(plano['shards']), shards, f'cenário {cenario}')
+            if len(specs) >= shards:
+                self.assertTrue(all(plano['shards']), f'cenário {cenario}: nó vazio')
+
+    def test_equilibrio_nunca_pior_que_a_maior_spec_mais_a_media(self):
+        # Garantia do guloso (LPT): a carga máxima fica abaixo de média + maior peso.
+        import random
+        gerador = random.Random(7)
+        for _ in range(100):
+            pesos = {f'spec/s{i}_spec.rb': gerador.uniform(0.1, 60) for i in range(gerador.randint(8, 300))}
+            nos, _fonte, carga = rspec_plan.dividir(sorted(pesos), 8, pesos)
+            self.assertLessEqual(max(carga), sum(pesos.values()) / 8 + max(pesos.values()) + 1e-9)
+
+    def test_specs_de_tempo_zero_nao_se_empilham_num_no_so(self):
+        specs = [f'spec/z{i}_spec.rb' for i in range(20)] + ['spec/lento_spec.rb']
+        self.escrever_resultado('r', [{'id': f'./{s}[1:1]', 'run_time': 0.0} for s in specs[:20]]
+                                + [{'id': './spec/lento_spec.rb[1:1]', 'run_time': 50.0}])
+        plano = self.planejar(specs, 4)
+        self.assertTrue(all(plano['shards']))
+        self.assertEqual(sorted(sum(plano['shards'], [])), sorted(specs))
+
+    def test_todos_os_tempos_zero_caem_no_round_robin(self):
+        self.escrever_resultado('r', [{'id': f'./spec/z{i}_spec.rb[1:1]', 'run_time': 0.0} for i in range(6)])
+        plano = self.planejar([f'spec/z{i}_spec.rb' for i in range(6)], 3)
+        self.assertEqual(plano['fonte'], 'round-robin')
+
+    def test_shards_invalido_derruba(self):
+        with self.assertRaises(SystemExit):
+            self.planejar(['spec/a_spec.rb'], 0, com_tempos=False)
+
 
 if __name__ == '__main__':
     unittest.main()

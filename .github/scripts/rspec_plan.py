@@ -50,19 +50,26 @@ def carregar_pesos(pasta, specs):
     return pesos
 
 
+def round_robin(specs, shards):
+    nos = [[] for _ in range(shards)]
+    for indice, spec in enumerate(specs):
+        nos[indice % shards].append(spec)
+    return nos, 'round-robin', [0.0] * shards
+
+
 def dividir(specs, shards, pesos):
-    if not pesos:
-        nos = [[] for _ in range(shards)]
-        for indice, spec in enumerate(specs):
-            nos[indice % shards].append(spec)
-        return nos, 'round-robin', [0.0] * shards
+    # Sem tempo nenhum (ou todos zero) não há o que equilibrar: volta ao round-robin de antes.
+    if not pesos or not any(pesos.values()):
+        return round_robin(specs, shards)
 
     padrao = statistics.median(pesos.values())
     peso = {spec: pesos.get(spec, padrao) for spec in specs}
     nos = [[] for _ in range(shards)]
     carga = [0.0] * shards
     for spec in sorted(specs, key=lambda s: (-peso[s], s)):
-        destino = min(range(shards), key=lambda i: (carga[i], i))
+        # Empate de carga (specs de tempo zero) vai para o nó com menos arquivos: sem isso elas se
+        # empilhariam no primeiro nó e deixariam outros vazios.
+        destino = min(range(shards), key=lambda i: (carga[i], len(nos[i]), i))
         nos[destino].append(spec)
         carga[destino] += peso[spec]
     return [sorted(no) for no in nos], 'tempos', carga
