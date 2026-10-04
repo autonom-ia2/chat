@@ -125,6 +125,7 @@ const syntheticAccount = {
   id: 910,
   name: 'Conta sintética QA',
   features: {
+    instagram_assisted_onboarding: params.get('feature') !== 'off',
     channel_instagram: true,
     channel_email: true,
     channel_website: true,
@@ -147,7 +148,8 @@ const store = createStore({
       namespaced: true,
       getters: {
         get: () => ({
-          instagramTesterAutomationEnabled: params.get('feature') !== 'off',
+          instagramTesterAutomationEnabled:
+            params.get('globalFeature') !== 'off',
           installationName: 'QA Synthetic',
           apiChannelName: 'API',
         }),

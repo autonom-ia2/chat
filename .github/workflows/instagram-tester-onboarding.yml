@@ -36,6 +36,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -52,7 +55,8 @@ jobs:
             tests/qa/instagram-testers/toast-helpers.test.mjs \
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
-            tests/instagram_testers/runtime-publisher.test.mjs
+            tests/instagram_testers/runtime-publisher.test.mjs \
+            tests/instagram_testers/operator-control.test.mjs
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Check browser and session helper modules
@@ -82,6 +86,9 @@ jobs:
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs
+          tests/instagram_testers/operator-control.test.mjs
+          scripts/instagram_testers/runtime/operator-protocol.mjs
+          scripts/instagram_testers/runtime/operator-waiter.mjs
           tests/qa/instagram-testers/wizard.mjs
           tests/qa/instagram-testers/evidence.mjs
           tests/qa/instagram-testers/evidence.test.mjs

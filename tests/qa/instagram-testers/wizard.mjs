@@ -613,7 +613,7 @@ const cases = [
     id: 'instagram-reauthorize',
     flow: 'reauthorize',
     stage: 'reauthorize',
-    state: { legacy: true, oauthGate: deferred() },
+    state: { reauthorize: true, oauthGate: deferred() },
     action: async q => {
       assert.ok(
         (await q.page.locator('#app').innerText())
@@ -630,10 +630,10 @@ const cases = [
         )
           return false;
         const raw = request.postData();
-        assert.equal(
+        assert.deepEqual(
           raw ? JSON.parse(raw) : null,
-          null,
-          'Reautorização enviou seleção ou outro payload'
+          { inbox_id: 9101, return_to: 'inbox' },
+          'Reautorização exige a caixa existente e destino inbox, sem seleção'
         );
         return true;
       });
@@ -668,7 +668,7 @@ const cases = [
       q.record.reauthorizeClick = {
         method: 'POST',
         path: authorizationPath,
-        bodyKeys: [],
+        bodyKeys: ['inbox_id', 'return_to'],
         responseStatus: 200,
         externalNavigation: 'blocked',
       };

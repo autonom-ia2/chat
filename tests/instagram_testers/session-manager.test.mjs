@@ -471,10 +471,12 @@ class FakeClock {
 
 function deferred() {
   let resolvePromise;
-  const promise = new Promise(resolveValue => {
+  let rejectPromise;
+  const promise = new Promise((resolveValue, rejectValue) => {
     resolvePromise = resolveValue;
+    rejectPromise = rejectValue;
   });
-  return { promise, resolve: resolvePromise };
+  return { promise, resolve: resolvePromise, reject: rejectPromise };
 }
 
 async function syntheticManager(t, options = {}) {
@@ -567,6 +569,11 @@ async function syntheticManager(t, options = {}) {
   const pendingPublish = deferred();
   const pendingInvalidation = deferred();
   const cleanupWaiting = deferred();
+  let unlinkStarted = false;
+  const releaseUnlink = deferred();
+  const unlinkCompleted = deferred();
+  // A failed IO receipt remains observable without an unhandled rejection.
+  unlinkCompleted.promise.catch(() => {});
   const settled = run(data.env, {
     clock,
     now: () => clock.time,
@@ -586,7 +593,15 @@ async function syntheticManager(t, options = {}) {
         };
       },
       unlink: async path => {
-        await unlink(path);
+        unlinkStarted = true;
+        try {
+          if (options.deferUnlink) await releaseUnlink.promise;
+          await unlink(path);
+          unlinkCompleted.resolve();
+        } catch (error) {
+          unlinkCompleted.reject(error);
+          throw error;
+        }
         if (options.pendingUnlink) {
           cleanupWaiting.resolve();
           await new Promise(() => {});
@@ -654,9 +669,16 @@ async function syntheticManager(t, options = {}) {
     await drain();
     await clock.advance(30000);
     await settled;
+    releaseUnlink.resolve();
+    if (unlinkStarted) await unlinkCompleted.promise.catch(() => {});
     await cleanup(data);
   });
   return {
+    get unlinkStarted() {
+      return unlinkStarted;
+    },
+    unlinkCompleted: unlinkCompleted.promise,
+    releaseUnlink: releaseUnlink.resolve,
     clock,
     signals,
     entries,
@@ -783,18 +805,53 @@ for (const pending of [
   });
 }
 
-test('cleanup has a deadline even when browser close never resolves', async t => {
-  const data = await syntheticManager(t, {
-    pendingBody: true,
-    pendingClose: true,
-  });
-  data.signals.emit('SIGTERM');
-  await drain();
-  assert.equal(data.closed(), 1);
-  await data.clock.advance(30000);
-  assert.equal(await data.settled, null);
-  await assert.rejects(readFile(data.lockPath), { code: 'ENOENT' });
-});
+test(
+  'cleanup has a deadline even when browser close never resolves',
+  { timeout: 3000 },
+  async t => {
+    const data = await syntheticManager(t, {
+      pendingBody: true,
+      pendingClose: true,
+    });
+    data.signals.emit('SIGTERM');
+    await drain();
+    assert.equal(data.closed(), 1);
+    await data.clock.advance(30000);
+    assert.equal(await data.settled, null);
+    assert.equal(data.unlinkStarted, true);
+    assert.equal(data.signals.listenerCount('SIGTERM'), 0);
+    assert.equal(data.signals.listenerCount('SIGINT'), 0);
+    assert.equal(data.clock.timers.size, 0);
+    await data.unlinkCompleted;
+    await assert.rejects(readFile(data.lockPath), { code: 'ENOENT' });
+  }
+);
+
+test(
+  'cleanup deadline returns before deferred filesystem unlink completes',
+  { timeout: 3000 },
+  async t => {
+    const data = await syntheticManager(t, {
+      pendingBody: true,
+      pendingClose: true,
+      deferUnlink: true,
+    });
+    data.signals.emit('SIGTERM');
+    await drain();
+    assert.equal(data.closed(), 1);
+    await data.clock.advance(30000);
+    assert.equal(await data.settled, null);
+    assert.equal(data.unlinkStarted, true);
+    assert.equal(data.signals.listenerCount('SIGTERM'), 0);
+    assert.equal(data.signals.listenerCount('SIGINT'), 0);
+    assert.equal(data.clock.timers.size, 0);
+    // IO is deliberately blocked while the manager has already returned.
+    await readFile(data.lockPath);
+    data.releaseUnlink();
+    await data.unlinkCompleted;
+    await assert.rejects(readFile(data.lockPath), { code: 'ENOENT' });
+  }
+);
 
 for (const redirect of [
   'https://www.facebook.com/login/',

@@ -76,7 +76,18 @@ export async function responseFor(url, method, body, state) {
     endpoint === '/authorization'
       ? 'tester_selection_token'
       : 'selection_token';
-  if (endpoint !== '/authorization' || !state.legacy) {
+  if (endpoint === '/authorization' && state.reauthorize) {
+    if (
+      Object.keys(body || {})
+        .sort()
+        .join(',') !== 'inbox_id,return_to' ||
+      body.inbox_id !== 9101 ||
+      body.return_to !== 'inbox'
+    )
+      throw new Error(
+        'Reauthorization requires the exact existing inbox destination'
+      );
+  } else if (endpoint !== '/authorization' || !state.legacy) {
     if (
       Object.keys(body || {}).join(',') !== expectedKey ||
       !(state.candidates || candidates).some(

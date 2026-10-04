@@ -740,7 +740,7 @@ for (const exitFirst of [false, true]) {
 
 test('metadata writer locks in sorted name order even when caller supplies reversed keys; no database', async () => {
   const { stdout, status, stderr } = spawnSync(
-    '/Users/rodrigosilva/.rbenv/versions/3.4.4/bin/ruby',
+    'ruby',
     [
       '-e',
       `

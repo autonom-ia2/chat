@@ -863,16 +863,28 @@ for (const theme of ['light', 'dark'])
 define(
   'account-feature-off-legacy',
   {
+    feature: 'off',
     state: {
-      configuration: json({ ...configuration, enabled: false }),
       legacy: true,
     },
   },
   async q => {
     await (await q.continueButton()).waitFor();
-    assert.equal(q.record.requests.length, 1);
-    assert.equal(q.count('/configuration'), 1);
+    assert.equal(q.record.requests.length, 0);
+    assert.equal(q.count('/configuration'), 0);
     assert.equal(await q.input.count(), 0);
+  }
+);
+define(
+  'account-feature-on-configuration-disabled-unavailable',
+  { state: { configuration: json({ ...configuration, enabled: false }) } },
+  async q => {
+    await q.visibleText('UNAVAILABLE');
+    assert.equal(q.count('/configuration'), 1);
+    assert.equal(q.record.requests.length, 1);
+    assert.equal(await q.input.count(), 0);
+    assert.equal(await (await q.continueButton()).count(), 0);
+    assert.equal(q.count('/authorization'), 0);
   }
 );
 define('keyboard-focus-labels', {}, async q => {

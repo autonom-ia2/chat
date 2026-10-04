@@ -93,6 +93,26 @@ test('legacy authorization sends no selection', async () => {
   );
 });
 
+test('reauthorization requires the existing integer inbox and inbox return destination', async () => {
+  const state = { reauthorize: true };
+  const payload = { inbox_id: 9101, return_to: 'inbox' };
+  assert.equal(
+    (await responseFor(url('/authorization'), 'POST', payload, state)).status,
+    200
+  );
+  await Promise.all(
+    [
+      null,
+      { ...payload, inbox_id: 9102 },
+      { ...payload, inbox_id: '9101' },
+      { ...payload, return_to: 'new' },
+      { ...payload, tester_selection_token: candidates[0].selection_token },
+    ].map(body =>
+      assert.rejects(responseFor(url('/authorization'), 'POST', body, state))
+    )
+  );
+});
+
 test('Meta restriction preserves configuration but denies every tester action before selection validation', async () => {
   const state = { restricted: true };
   assert.deepEqual(
