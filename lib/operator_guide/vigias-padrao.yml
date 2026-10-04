@@ -26,6 +26,19 @@
     acima_de: 0
     janela_horas: 24
 
+# A pendência do Guia (#943): o que ele fez no último dia e deixou uma parte sem desfazer.
+- nome: O Guia deixou algo sem desfazer
+  gravidade: agir
+  leitura:
+    rota: autonomia/pendencias_do_guia
+    parametros:
+      horas: 24
+    medida:
+      tipo: contagem
+  gatilho:
+    acima_de: 0
+    janela_horas: 24
+
 - nome: Automação disparando muito acima do normal
   gravidade: agir
   leitura:
