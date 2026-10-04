@@ -14,7 +14,7 @@
 class JsonSchemaValidator < ActiveModel::EachValidator
   def validate_each(record, attribute, value)
     schemer = JSONSchemer.schema(esquema(record), formats: JsonSchemaFormatos::TODOS)
-    schemer.validate(value).each { |error| format_and_append_error(error, record, attribute) }
+    schemer.validate(como_gravado(value)).each { |error| format_and_append_error(error, record, attribute) }
   end
 
   # O esquema, com chaves em texto. Sem registro, o geral.
@@ -39,6 +39,12 @@ class JsonSchemaValidator < ActiveModel::EachValidator
   }.freeze
 
   private
+
+  # O valor como vai para o banco: chave em texto, e o ActionController::Parameters que o controller
+  # atribui direto à coluna vira objeto.
+  def como_gravado(value)
+    JSON.parse(value.to_json)
+  end
 
   def format_and_append_error(error, record, attribute)
     return handle_required(error, record, attribute) if error['type'] == 'required'

@@ -31,11 +31,10 @@ class AutomationRule < ApplicationRecord
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
   has_many_attached :files
 
-  validate :json_conditions_format
-  validate :json_actions_format
+  validates :conditions, json_schema: { schema: ->(regra) { AutomationRuleSchema.conditions(regra) } }
+  validates :actions, json_schema: { schema: ->(regra) { AutomationRuleSchema.actions(regra) } }
   validate :decisor_actions_format
   validate :query_operator_presence
-  validate :query_operator_value
   validates :account_id, presence: true
   validates :execution_delay, numericality: { only_integer: true, in: EXECUTION_DELAY_RANGE }, allow_nil: true
   validate :execution_delay_supported_conditions
@@ -77,27 +76,6 @@ class AutomationRule < ApplicationRecord
 
   private
 
-  def json_conditions_format
-    return if conditions.blank?
-
-    attributes = conditions.map { |obj, _| obj['attribute_key'] }
-    conditions = attributes - conditions_attributes
-    conditions -= account.custom_attribute_definitions.pluck(:attribute_key)
-    errors.add(:conditions, "Automation conditions #{conditions.join(',')} not supported.") if conditions.any?
-  end
-
-  def json_actions_format
-    return if actions.blank?
-
-    attributes = actions.map { |obj, _| obj['action_name'] }
-    actions = attributes - actions_attributes
-
-    return if actions.empty?
-
-    # A lista das aceitas vai na recusa: é ela que ensina o Guia a montar o passo certo (#858).
-    errors.add(:actions, "Automation actions #{actions.join(',')} not supported. Supported actions: #{actions_attributes.join(', ')}.")
-  end
-
   # Passo do Decisor (#858): action_params é [decisor_id, chave_que_segue]. O Decisor tem de ser da conta
   # e a chave, uma das respostas dele — conferida por igualdade, nunca por expressão regular.
   def decisor_actions_format
@@ -138,14 +116,6 @@ class AutomationRule < ApplicationRecord
     errors.add(:conditions, 'Automation conditions should have query operator.') if operators.length > 1
   end
 
-  # This validation ensures logical operators are being used correctly in automation conditions.
-  # And we don't push any unsanitized query operators to the database.
-  def query_operator_value
-    conditions.each do |obj|
-      validate_single_condition(obj)
-    end
-  end
-
   # The fire-time re-check cannot reconstruct changed_attributes, so delayed rules
   # cannot use attribute_changed conditions.
   def execution_delay_supported_conditions
@@ -175,16 +145,6 @@ class AutomationRule < ApplicationRecord
     # armed = pending + processing, the rows the sweep would otherwise still run. Rows already
     # executing are left alone: their actions are in flight and cannot be called back.
     pending_executions.armed.delete_all
-  end
-
-  def validate_single_condition(condition)
-    query_operator = condition['query_operator']
-
-    return if query_operator.nil?
-    return if query_operator.empty?
-
-    operator = query_operator.upcase
-    errors.add(:conditions, 'Query operator must be either "AND" or "OR"') unless %w[AND OR].include?(operator)
   end
 end
 
