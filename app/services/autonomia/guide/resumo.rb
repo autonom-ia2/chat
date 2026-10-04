@@ -85,7 +85,17 @@ class Autonomia::Guide::Resumo
     dados = JSON.parse(corpo.to_s)
     lista = lista_de(dados)
     return item_unico(lista, teto) unless lista.is_a?(Array)
+    # Lista de valores simples (as etiquetas de uma conversa: ["sinistro"]) não tem campo para resumir:
+    # vai como veio. Antes, achatar um texto levantava NoMethodError DEPOIS de a ação já ter valido, e o
+    # Guia dizia à pessoa que nada tinha mudado.
+    return JSON.generate(lista)[0, teto] unless lista.all?(Hash)
 
+    resumir_objetos(dados, lista, campos, teto)
+  rescue JSON::ParserError
+    corpo.to_s[0, teto]
+  end
+
+  def resumir_objetos(dados, lista, campos, teto)
     limpos = lista.map { |item| sem_segredos(item) }
     catalogo = campos.present? ? nil : catalogo_de_campos(limpos.first)
     # O orçamento é do TEXTO INTEIRO, e as notas fazem parte dele. Sem descontar
@@ -95,8 +105,6 @@ class Autonomia::Guide::Resumo
     mostrados = cabem(escolhidos(limpos, campos), teto - catalogo.to_s.length - MARGEM_DA_NOTA)
 
     "#{JSON.generate(mostrados)}#{quantos(mostrados.size, lista.size, total_de(dados))}#{catalogo}"
-  rescue JSON::ParserError
-    corpo.to_s[0, teto]
   end
 
   # Com `campos`, o que foi pedido; sem, o que identifica o item.

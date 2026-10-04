@@ -13,15 +13,23 @@ import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 // Espião estável: `useRouter()` roda de novo a cada teste, e um `vi.fn()`
 // novo a cada chamada não deixaria como afirmar QUAL rota o clique pediu.
-const { routerPush, rotaAtual } = vi.hoisted(() => ({
-  routerPush: vi.fn(),
-  rotaAtual: { name: 'home' },
-}));
+const { routerPush, routerReplace, rotaAtual, atualizarUI } = vi.hoisted(
+  () => ({
+    routerPush: vi.fn(),
+    routerReplace: vi.fn(),
+    rotaAtual: { name: 'home' },
+    atualizarUI: vi.fn(),
+  })
+);
 vi.mock('vue-router', () => ({
   useRoute: () => rotaAtual,
   // Rota real do registro do Guia (ex.: 'labels_list'): resolve de verdade, para os testes de
   // navegação (#636) poderem afirmar que o clique leva ao alvo certo.
-  useRouter: () => ({ resolve: () => ({ matched: [{}] }), push: routerPush }),
+  useRouter: () => ({
+    resolve: () => ({ matched: [{}] }),
+    push: routerPush,
+    replace: routerReplace,
+  }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useAccount', () => ({
@@ -32,7 +40,7 @@ vi.mock('dashboard/composables/useAccount', () => ({
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
     uiSettings: ref({ is_autonomia_guide_panel_open: true }),
-    updateUISettings: vi.fn(),
+    updateUISettings: atualizarUI,
   }),
 }));
 // A conta aberta: os testes de troca de conta mudam o valor.
@@ -756,6 +764,34 @@ describe('AutonomiaGuideContainer', () => {
     expect(AutonomiaGuideAPI.memorias).toHaveBeenCalled();
     expect(wrapper.find('[data-secao="pessoais"]').exists()).toBe(true);
     expect(wrapper.find('[role="log"]').isVisible()).toBe(false);
+  });
+
+  // #944 — o link do push e do e-mail do aviso urgente abre o Guia.
+  it('opens the panel from the alert link and drops the parameter from the address', async () => {
+    rotaAtual.query = { guia: 'aviso', outro: '1' };
+    try {
+      wrapper = mountGuide();
+      await flushPromises();
+
+      expect(atualizarUI).toHaveBeenCalledWith({
+        is_autonomia_guide_panel_open: true,
+        is_autonomia_copilot_panel_open: false,
+        is_contact_sidebar_open: false,
+      });
+      expect(routerReplace).toHaveBeenCalledWith({ query: { outro: '1' } });
+    } finally {
+      delete rotaAtual.query;
+    }
+  });
+
+  it('does not touch the panel without the alert link', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(atualizarUI).not.toHaveBeenCalledWith(
+      expect.objectContaining({ is_autonomia_guide_panel_open: true })
+    );
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('names the panel and the message region for screen readers', async () => {
