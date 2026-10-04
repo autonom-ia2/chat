@@ -34,21 +34,24 @@ class Crm::StageAutomations::Persister
     @attributes.slice(:name, :description, :trigger_event, :enabled, :position, :metadata).compact
   end
 
+  # A tela manda todos os passos a cada salvar. Eles são atualizados no lugar, na ordem, e só os que
+  # sobram são apagados: o id do passo sobrevive a um salvar que só renomeia — a espera do Decisor
+  # (#858) e o passo atrasado (StageAutomationStepJob) guardam esse id.
   def replace_steps!(automation)
     steps = @attributes[:steps]
     return if steps.blank?
 
-    automation.steps.destroy_all
+    existentes = automation.steps.ordered.to_a
     steps.each_with_index do |step_attrs, index|
-      attrs = step_attrs.to_h.with_indifferent_access
-      automation.steps.create!(
-        account: @account,
-        position: attrs[:position] || index,
-        delay_seconds: attrs[:delay_seconds] || 0,
-        action_type: attrs[:action_type],
-        action_config: attrs[:action_config] || {}
-      )
+      valores = step_values(step_attrs.to_h.with_indifferent_access, index)
+      existentes[index] ? existentes[index].update!(valores) : automation.steps.create!(valores)
     end
+    automation.steps.where(id: existentes.drop(steps.size).map(&:id)).destroy_all
+  end
+
+  def step_values(attrs, index)
+    { account: @account, position: attrs[:position] || index, delay_seconds: attrs[:delay_seconds] || 0,
+      action_type: attrs[:action_type], action_config: attrs[:action_config] || {} }
   end
 
   def next_position

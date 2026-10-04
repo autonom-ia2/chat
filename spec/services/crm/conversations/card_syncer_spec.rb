@@ -84,6 +84,78 @@ RSpec.describe Crm::Conversations::CardSyncer do
     expect(account.crm_cards).to be_blank
   end
 
+  context 'when the inbox does not auto-create cards but an automation already created one' do
+    let(:account) { create_account_and_user.first }
+    let(:agent) { create_crm_agent(account: account, name: 'Ana Rodízio').first }
+    let(:inbox) { create_crm_inbox(account: account, members: [agent]) }
+    let(:contact) { account.contacts.create!(name: 'Lead do Formulário', phone_number: '+5511987654321') }
+    let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
+    let(:card) do
+      _pipeline, stage = create_crm_pipeline(account: account, user: agent)
+      Crm::Cards::Creator.new(account: account, user: nil, conversation: conversation,
+                              params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }).perform
+    end
+
+    before { account.crm_inbox_settings.create!(inbox: inbox, crm_enabled: true, auto_create_card: false) }
+
+    it 'gives the card the agent the conversation was assigned to afterwards' do
+      expect(card.owner_id).to be_nil
+      conversation.update!(assignee: agent)
+
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(card.reload.owner_id).to eq(agent.id)
+      expect(card.metadata.dig('crm_auto_sync', 'source')).to be_nil
+      expect(Crm::Cards::Broadcaster).to have_received(:broadcast).with(card, Events::Types::CRM_CARD_UPDATED)
+    end
+
+    it 'keeps an owner someone already chose on the card' do
+      other_agent, = create_crm_agent(account: account, name: 'Bruno Escolhido')
+      card.update!(owner: other_agent)
+      conversation.update!(assignee: agent)
+
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(card.reload.owner_id).to eq(other_agent.id)
+    end
+
+    it 'does not touch the card when CRM is off for the inbox' do
+      card
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(crm_enabled: false)
+      conversation.update!(assignee: agent)
+
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(card.reload.owner_id).to be_nil
+    end
+
+    # Fora do card automático, a mensagem não mexe no card: avançar a atividade faria o StaleCardsJob reavaliar o card
+    # com IA paga a cada período parado, e cada mensagem abriria lock de conversa e contato à toa.
+    it 'leaves the card alone on a new message, without locking or scheduling AI' do
+      card.update!(last_activity_at: 2.days.ago, last_message_at: 2.days.ago)
+      before_activity = card.reload.last_activity_at
+      message = create_crm_message(conversation: conversation, sender: contact)
+      allow(Crm::Conversations::SyncLock).to receive(:new).and_call_original
+      allow(Crm::Ai::Observer).to receive(:new).and_call_original
+
+      described_class.new(conversation: conversation, message: message).perform
+
+      expect(card.reload.last_activity_at.to_i).to eq(before_activity.to_i)
+      expect(Crm::Conversations::SyncLock).not_to have_received(:new)
+      expect(Crm::Ai::Observer).not_to have_received(:new)
+    end
+
+    it 'does not lock the conversation when there is no card to update' do
+      conversation.update!(assignee: agent)
+      allow(Crm::Conversations::SyncLock).to receive(:new).and_call_original
+
+      described_class.new(conversation: conversation.reload).perform
+
+      expect(Crm::Conversations::SyncLock).not_to have_received(:new)
+      expect(account.crm_cards).to be_blank
+    end
+  end
+
   # rubocop:disable RSpec/MultipleExpectations
   it 'creates one hydrated card for an auto-create inbox binding' do
     account, admin = create_account_and_user

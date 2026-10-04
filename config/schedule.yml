@@ -151,6 +151,12 @@ crm_ai_exchange_rate_refresh_job:
   class: 'Crm::Ai::ExchangeRateRefreshJob'
   queue: scheduled_jobs
 
+# executed daily; refreshes Instagram Business Login tokens expiring within 10 days.
+instagram_refresh_tokens_job:
+  cron: '20 4 * * *'
+  class: 'Instagram::RefreshTokensJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; re-polls SES for pending domain verifications.
 # feature flag checked inside the job.
 email_campaign_poll_pending_identities_job:

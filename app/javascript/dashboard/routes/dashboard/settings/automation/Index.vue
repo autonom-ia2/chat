@@ -7,6 +7,7 @@ import SettingsLayout from '../SettingsLayout.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { until } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import {
   useMapGetter,
   useStoreGetters,
@@ -178,6 +179,24 @@ const openEditPopup = async response => {
 const hideEditPopup = () => {
   editDialogRef.value?.close();
 };
+
+// #859 — a tela Automações abre a regra aqui por `?editar=:id` ("Editar no modo
+// manual"). Abre uma vez, quando a lista chega.
+const route = useRoute();
+let editarPedidoAberto = false;
+watch(
+  () => [route.query.editar, records.value.length, uiFlags.value.isFetching],
+  ([editar, , buscando]) => {
+    if (editarPedidoAberto || !editar || buscando) return;
+    const regra = records.value.find(
+      item => String(item.id) === String(editar)
+    );
+    if (!regra) return;
+    editarPedidoAberto = true;
+    openEditPopup(regra);
+  },
+  { immediate: true }
+);
 
 const openDeletePopup = response => {
   showDeleteConfirmationPopup.value = true;

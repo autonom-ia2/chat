@@ -18,14 +18,15 @@ defineProps({
     type: Boolean,
     default: false,
   },
-  // #855 — a lista "Feito pelo Guia" está aberta no lugar da conversa.
-  vendoFeitos: {
+  // #861 — o histórico (conversas anteriores e "Feito pelo Guia", #855) está
+  // aberto no lugar da conversa.
+  vendoHistorico: {
     type: Boolean,
     default: false,
   },
 });
 
-defineEmits(['reset', 'feitos', 'close']);
+defineEmits(['reset', 'historico', 'close']);
 </script>
 
 <template>
@@ -38,21 +39,21 @@ defineEmits(['reset', 'feitos', 'close']);
     <div class="flex items-center gap-2 shrink-0">
       <Button
         v-tooltip="
-          vendoFeitos
+          vendoHistorico
             ? $t('AUTONOMIA_GUIDE.DONE.BACK')
-            : $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+            : $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
         "
         :aria-label="
-          vendoFeitos
+          vendoHistorico
             ? $t('AUTONOMIA_GUIDE.DONE.BACK')
-            : $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+            : $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
         "
-        :aria-pressed="vendoFeitos ? 'true' : 'false'"
-        :icon="vendoFeitos ? 'i-lucide-message-circle' : 'i-lucide-history'"
+        :aria-pressed="vendoHistorico ? 'true' : 'false'"
+        :icon="vendoHistorico ? 'i-lucide-message-circle' : 'i-lucide-history'"
         ghost
         slate
         lg
-        @click="$emit('feitos')"
+        @click="$emit('historico')"
       />
       <Button
         v-if="canReset"

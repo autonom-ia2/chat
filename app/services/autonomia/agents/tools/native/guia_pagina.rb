@@ -26,6 +26,15 @@ class Autonomia::Agents::Tools::Native::GuiaPagina < Autonomia::Agents::Tools::N
     def params
       [{ 'name' => 'url', 'type' => 'string', 'description' => 'O endereço completo, começando com https://.' }]
     end
+
+    # #861 — do endereço, só o domínio vai para o registro: o caminho e a busca
+    # podem carregar dado de quem perguntou.
+    def args_para_registro(args)
+      dominio = URI.parse(args.to_h['url'].to_s.strip).host
+      dominio.present? ? { 'dominio' => dominio } : {}
+    rescue URI::InvalidURIError
+      {}
+    end
   end
 
   def call

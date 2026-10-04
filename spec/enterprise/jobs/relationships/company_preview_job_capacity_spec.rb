@@ -17,9 +17,10 @@ RSpec.describe Relationships::CompanyPreviewJob, :relationships_committed_fixtur
     account.messages.destroy_all
     account.conversations.destroy_all
     account.contacts.destroy_all
-    # Account#destroy apaga inboxes via destroy_async, e o job nunca roda aqui:
-    # sem isto a inbox (canal, contact_inboxes, working_hours) ficava commitada.
-    account.inboxes.destroy_all
+    # Inbox e seus filhos (working_hours, contact_inboxes...) saem via destroy_async;
+    # sem transacao o job precisa rodar aqui, senao os filhos ficam commitados e
+    # quebram specs seguintes (ex.: WorkingHour.today com inbox nil).
+    perform_enqueued_jobs { account.inboxes.destroy_all }
     account.reload.destroy!
     # Auditoria e append-only e sobrevive ao destroy; sem transacao ela vazava
     # para specs seguintes que contam Audited::Audit (ex.: enterprise/models/inbox_spec).

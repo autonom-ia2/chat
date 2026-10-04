@@ -13,6 +13,11 @@ class Autonomia::Agents::Tools::Native::GuiaTela < Autonomia::Agents::Tools::Nat
       'mostrar_tela'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[tela parametros_json]
+    end
+
     def description
       'Põe, abaixo da sua resposta, o botão que leva a pessoa até a tela certa. Use sempre que a ' \
         'resposta for "é lá em tal tela" — inclusive a tela de UM registro (uma caixa, uma conversa, ' \

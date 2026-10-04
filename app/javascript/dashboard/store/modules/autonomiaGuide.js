@@ -14,7 +14,18 @@ const state = reactive({
   // (endereço local do navegador) e `turno` é a mensagem que levou o arquivo —
   // `null` enquanto ele espera no campo de digitar.
   arquivos: [],
+  // #861 — a conversa guardada no servidor. `null` até a primeira pergunta
+  // (o servidor abre a conversa e devolve o id) ou depois de "Nova conversa".
+  conversaId: null,
+  // #859 — a pergunta que ainda espera resposta do servidor: { chave, conta, id,
+  // dono }. Fica aqui, e não em quem perguntou, porque a conversa embutida numa
+  // tela sai junto com a tela: quem pergunta "solta" o pedido ao sair, e o painel
+  // lateral (que está sempre montado) adota e termina de buscar a resposta.
+  // `id` chega quando o servidor aceita a pergunta; `dono` é quem está buscando.
+  pendente: null,
 });
+
+let nextPendente = 1;
 
 let nextArquivoId = 1;
 
@@ -141,17 +152,23 @@ const addAssistantMessage = ({
   artigo = null,
   artigos = null,
   execucao = null,
+  pedidoId = null,
+  acaoEstado = null,
+  acaoResultado = null,
 } = {}) => {
   const record = {
     id: nextId,
     message_type: 'assistant',
     message: { content },
+    // #861 — o pedido que trouxe esta resposta: é com ele que o desfecho da
+    // ação fica guardado na conversa.
+    pedidoId,
     // As telas que o Guia escolheu, na ordem em que escolheu (#590, #636).
     navigations: paraLista(navigations, navigation),
     // Ação proposta: fica aguardando confirmação e guarda o desfecho depois.
     acao,
-    acaoEstado: acao ? 'aguardando' : null,
-    acaoResultado: null,
+    acaoEstado: acao ? acaoEstado || 'aguardando' : null,
+    acaoResultado,
     // Os artigos da Central que o Guia leu, na ordem de leitura (#617, #636):
     // o link "Ler" de cada um abre o artigo completo dele.
     artigos: paraLista(artigos, artigo),
@@ -176,7 +193,113 @@ const reset = () => {
   enderecos.forEach(revogar);
   state.messages.splice(0, state.messages.length);
   state.arquivos.splice(0, state.arquivos.length);
+  state.conversaId = null;
+  state.pendente = null;
 };
+
+const definirConversa = id => {
+  state.conversaId = id || null;
+};
+
+const conversaAtual = () => state.conversaId;
+
+// #861 — a resposta de um turno guardado, no formato de `addAssistantMessage`.
+// Retida e falha mostram o mesmo aviso que a tela mostrou na hora.
+const respostaDoTurno = (turno, avisos) => {
+  if (turno.status === 'done') {
+    return {
+      content: turno.resposta,
+      navigations: turno.navegacoes,
+      artigos: turno.artigos,
+      acao: turno.acao,
+      acaoEstado: turno.acao_estado,
+      acaoResultado: turno.acao_resultado,
+      execucao: turno.execucao,
+      pedidoId: turno.pedido_id,
+    };
+  }
+  if (turno.status === 'retido') {
+    return { content: avisos.retido, execucao: turno.execucao };
+  }
+  if (turno.status === 'failed') return { content: avisos.falhou };
+  return null;
+};
+
+// #861 — reabre uma conversa guardada: os turnos viram as mesmas mensagens
+// que a tela montou na hora. A foto volta sem miniatura (o arquivo é apagado
+// em 1 dia) e o áudio de voz não é guardado — fica o texto falado.
+// Devolve o pedido ainda pendente, se houver, para a tela continuar buscando.
+const hidratar = (conversa, avisos = {}) => {
+  // O que espera no campo de digitar continua lá: a pessoa pode ter anexado
+  // enquanto a conversa abria. Só sai o que era da conversa anterior.
+  [
+    ...state.messages.map(m => m.voz?.url),
+    ...state.arquivos.filter(item => item.turno).map(item => item.previa),
+  ].forEach(revogar);
+  state.messages.splice(0, state.messages.length);
+  const pendentes = arquivosPendentes();
+  state.arquivos.splice(0, state.arquivos.length, ...pendentes);
+  state.conversaId = conversa?.id || null;
+  // A pergunta que esperava resposta era da conversa que saiu (#859).
+  state.pendente = null;
+  let pendente = null;
+  (conversa?.turnos || []).forEach(turno => {
+    const id = nextId;
+    nextId += 1;
+    state.messages.push({
+      id,
+      message_type: 'user',
+      message: { content: turno.pergunta },
+      texto: turno.pergunta,
+      anexos: (turno.anexos || []).map((anexo, indice) => ({
+        id: `${turno.pedido_id}-${indice}`,
+        nome: anexo.nome,
+        tipo: anexo.tipo,
+        previa: null,
+      })),
+      voz: null,
+    });
+    const resposta = respostaDoTurno(turno, avisos);
+    if (resposta) addAssistantMessage(resposta);
+    pendente = turno.status === 'pending' ? turno.pedido_id : null;
+  });
+  return pendente;
+};
+
+// #859 — ciclo da pergunta pendente. Toda função recebe a `chave` (ou o dono)
+// e não faz nada quando o pendente já é outro ou sumiu ("Nova conversa", troca
+// de conta): resposta velha nunca entra na conversa nova.
+const abrirPendente = (conta, dono) => {
+  const chave = nextPendente;
+  nextPendente += 1;
+  state.pendente = { chave, conta, id: null, dono };
+  return chave;
+};
+
+const pendenteAtivo = chave => state.pendente?.chave === chave;
+
+const registrarPedidoPendente = (chave, id) => {
+  if (pendenteAtivo(chave)) state.pendente.id = id;
+};
+
+const soltarPendente = dono => {
+  if (state.pendente?.dono === dono) state.pendente.dono = null;
+};
+
+// Só adota pedido sem dono, que o servidor já aceitou, da mesma conta.
+const adotarPendente = (conta, dono) => {
+  const pendente = state.pendente;
+  if (!pendente || pendente.dono || !pendente.id || pendente.conta !== conta)
+    return null;
+  pendente.dono = dono;
+  return { chave: pendente.chave, id: pendente.id };
+};
+
+const fecharPendente = chave => {
+  if (pendenteAtivo(chave)) state.pendente = null;
+};
+
+const temPendente = () => Boolean(state.pendente);
 
 const addArquivo = (nome, { tipo = 'documento', previa = null } = {}) => {
   const arquivo = {
@@ -250,6 +373,17 @@ export const useAutonomiaGuideStore = () => ({
   marcarAcao,
   reset,
   toHistory,
+  hidratar,
+  definirConversa,
+  conversaAtual,
+  pendente: () => readonly(state).pendente,
+  temPendente,
+  abrirPendente,
+  pendenteAtivo,
+  registrarPedidoPendente,
+  soltarPendente,
+  adotarPendente,
+  fecharPendente,
 });
 
 export default useAutonomiaGuideStore;

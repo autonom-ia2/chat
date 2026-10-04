@@ -21,7 +21,7 @@ import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
-import GuideFeitos from './GuideFeitos.vue';
+import GuideHistorico from './GuideHistorico.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
@@ -33,6 +33,23 @@ import Button from 'dashboard/components-next/button/Button.vue';
 // (validated against the guide route allow-list + the router + the route guards). It ALSO executes
 // the actions the backend proposes — but never on its own: só depois de a pessoa ler o que vai
 // acontecer e clicar em confirmar.
+//
+// #859 — `embutido`: a mesma conversa (mesma store, mesmo backend) dentro de uma
+// tela, como na de Automações. Sem cabeçalho e sem fechar; nessas telas o painel
+// lateral e o lançador ficam escondidos (rota com `meta.guiaEmbutido`), para a
+// conversa não aparecer duas vezes.
+const props = defineProps({
+  embutido: { type: Boolean, default: false },
+  // [{ rotulo, pergunta }] — sugestões da tela, no lugar das gerais.
+  sugestoes: { type: Array, default: null },
+  introducao: { type: String, default: '' },
+  // Pedido que a pessoa escolheu antes de chegar (um modelo pronto). Sai uma vez.
+  pedidoInicial: { type: String, default: '' },
+});
+// O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
+// que o pedido inicial saiu, para a tela gastá-lo (#859).
+const emit = defineEmits(['execucao', 'pedidoInicialEnviado']);
+
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -51,6 +68,9 @@ const { messages, arquivos } = store;
 const { destino, acender } = useLevarAteLa();
 
 const isSending = ref(false);
+// Há pergunta esperando resposta — desta instância ou de outra (#859: a conversa
+// embutida e o painel lateral são a mesma conversa). Nenhuma outra sai até ela.
+const ocupado = computed(() => isSending.value || Boolean(store.pendente()));
 // #895 — a mensagem de voz está virando texto; a resposta ainda não foi pedida.
 const transcrevendo = ref(false);
 // Os anexos que esperam no campo de digitar o próximo envio.
@@ -64,8 +84,18 @@ const vagas = computed(
 // Há gravação de voz no campo: nenhuma outra mensagem sai até ela ser enviada
 // ou apagada — senão o áudio se perderia sem a pessoa pedir.
 const gravandoVoz = ref(false);
-// #855 — a lista "Feito pelo Guia" ocupa o lugar da conversa enquanto aberta.
-const vendoFeitos = ref(false);
+// #861 — o histórico (conversas anteriores e "Feito pelo Guia", #855) ocupa o
+// lugar da conversa enquanto aberto.
+const vendoHistorico = ref(false);
+// #861 — reabrindo a conversa guardada. O esqueleto só aparece se demorar:
+// abrir rápido não pisca uma tela de carregamento à toa.
+const abrindoConversa = ref(false);
+const mostrarEsqueleto = ref(false);
+const falhouAoAbrir = ref(false);
+const ESPERA_DO_ESQUELETO_MS = 300;
+// A conta cuja conversa atual já foi pedida: abrir e fechar o painel não pede
+// de novo, trocar de conta pede.
+let contaCarregada = null;
 const chatContainer = ref(null);
 const panelRef = ref(null);
 
@@ -92,7 +122,13 @@ const isPanelOpen = computed(
   () => uiSettings.value.is_autonomia_guide_panel_open === true
 );
 
-const showPanel = computed(() => isEnabled.value && isPanelOpen.value);
+// Na tela que já traz a conversa embutida, o painel lateral não abre por cima.
+const telaTemGuiaEmbutido = computed(() => route?.meta?.guiaEmbutido === true);
+
+const showPanel = computed(() => {
+  if (props.embutido) return isEnabled.value;
+  return isEnabled.value && isPanelOpen.value && !telaTemGuiaEmbutido.value;
+});
 
 const hasMessages = computed(() => messages.length > 0);
 
@@ -137,9 +173,12 @@ const sugestoesDaTela = computed(() =>
     }))
 );
 
-const suggestions = computed(() =>
-  sugestoesDaTela.value.length ? sugestoesDaTela.value : sugestoesGerais.value
-);
+const suggestions = computed(() => {
+  if (props.sugestoes?.length) return props.sugestoes;
+  return sugestoesDaTela.value.length
+    ? sugestoesDaTela.value
+    : sugestoesGerais.value;
+});
 
 watch(
   showPanel,
@@ -163,7 +202,11 @@ const closePanel = () => {
   });
 };
 
+// A confirmação de apagar uma conversa (#861) abre fora do painel; clicar
+// nela não é clicar fora do Guia.
 const handleClickOutside = () => {
+  if (document.querySelector('dialog[open]')) return;
+  if (props.embutido) return;
   if (isSmallScreen.value && isPanelOpen.value) closePanel();
 };
 
@@ -256,6 +299,7 @@ const confirmarAcao = async item => {
     const { data } = await AutonomiaGuideAPI.executarAcao({
       acao: item.acao.nome,
       dados: item.acao.dados,
+      pedidoId: item.pedidoId,
     });
     avisarContaMudou();
     entregarDesfecho({
@@ -266,8 +310,21 @@ const confirmarAcao = async item => {
       avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
     });
   } catch (error) {
+    // #861 — já foi feita em outra aba ou aparelho: o servidor não repete e
+    // devolve o resultado guardado. O cartão mostra feita, sem botões.
+    const corpo = error?.response?.data;
+    if (corpo?.acao_estado === 'feita') {
+      entregarDesfecho({
+        conta,
+        id: item.id,
+        estado: 'feita',
+        resultado: corpo.mensagem,
+        avisoSeSumiu: t('AUTONOMIA_GUIDE.ACTION.LOST'),
+      });
+      return;
+    }
     const texto =
-      motivoUtilizavel(error?.response?.data?.error) ||
+      motivoUtilizavel(corpo?.error) ||
       t('AUTONOMIA_GUIDE.ACTION.FAILED_GENERIC');
     entregarDesfecho({
       conta,
@@ -300,8 +357,18 @@ const esperar = ms =>
 // Quem desmonta o painel não quer mais a resposta.
 let desmontado = false;
 let requestSequence = 0;
+// Cada instância (o painel lateral e a conversa embutida numa tela) tem um
+// crachá; é com ele que ela segura e solta a pergunta pendente na store.
+const cracha = Symbol('guia');
 onBeforeUnmount(() => {
   desmontado = true;
+  // A conversa embutida é a mesma do painel lateral (#859): sair da tela não
+  // apaga o que a pessoa conversou, ela continua no painel — e a pergunta que
+  // ainda esperava resposta fica solta para o painel terminar de buscar.
+  if (props.embutido) {
+    store.soltarPendente(cracha);
+    return;
+  }
   // Solta o áudio e as miniaturas que estavam na memória do navegador.
   store.reset();
 });
@@ -344,72 +411,214 @@ const buscarResposta = async (id, requestAccount, requestId, tentativa = 0) => {
 const avisarFalha = () =>
   store.addAssistantMessage({ content: t('AUTONOMIA_GUIDE.ERROR') });
 
-const requestReply = async (requestAccount, message, requestId) => {
-  try {
-    const { data: pedido } = await AutonomiaGuideAPI.chat({
-      message,
-      history: store.toHistory(),
-      routeContext: route.name,
-      arquivos: store.arquivosProntos(),
+// A resposta ainda interessa: o painel está na tela, na mesma conta e na
+// mesma vez de pergunta.
+const aindaInteressa = (conta, vez) =>
+  !desmontado && vez === requestSequence && accountId.value === conta;
+
+// Uma resposta que já chegou: entra na conversa, e a tela que embute o Guia
+// fica sabendo o que ele fez (#859).
+const entregarResposta = (data, pedidoId) => {
+  if (data.status !== PRONTO) {
+    avisarFalha();
+  } else if (data.available && data.text) {
+    store.addAssistantMessage({
+      content: data.text,
+      navigation: data.navigation || null,
+      navigations: data.navigations || null,
+      acao: data.acao || null,
+      artigo: data.artigo || null,
+      artigos: data.artigos || null,
+      execucao: data.execucao || null,
+      pedidoId,
     });
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
-    const data = await buscarResposta(pedido.id, requestAccount, requestId);
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      !data ||
-      accountId.value !== requestAccount
-    )
-      return;
-    if (data.status !== PRONTO) {
-      avisarFalha();
-    } else if (data.available && data.text) {
-      store.addAssistantMessage({
-        content: data.text,
-        navigation: data.navigation || null,
-        navigations: data.navigations || null,
-        acao: data.acao || null,
-        artigo: data.artigo || null,
-        artigos: data.artigos || null,
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-    } else if (data.retido) {
-      // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
-      // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
-      // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
-      // assim (#855): mudou a conta.
-      store.addAssistantMessage({
-        content: t('AUTONOMIA_GUIDE.WITHHELD'),
-        execucao: data.execucao || null,
-      });
-      if (execucaoMudouConta(data.execucao)) avisarContaMudou();
-    } else {
-      useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
-    }
+    if (data.execucao) emit('execucao', data.execucao);
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else if (data.retido) {
+    // O Guia está no ar, mas não devolveu resposta. Dizer "indisponível" faria
+    // a pessoa achar que o produto caiu; o texto pede para perguntar de novo,
+    // sem oferecer suporte (#914). O que ele já fez neste turno aparece mesmo
+    // assim (#855): mudou a conta.
+    store.addAssistantMessage({
+      content: t('AUTONOMIA_GUIDE.WITHHELD'),
+      execucao: data.execucao || null,
+    });
+    if (data.execucao) emit('execucao', data.execucao);
+    if (execucaoMudouConta(data.execucao)) avisarContaMudou();
+  } else {
+    useAlert(t('AUTONOMIA_GUIDE.UNAVAILABLE'));
+  }
+};
+
+// Busca a resposta de um pedido que o servidor já aceitou. Se esta instância
+// sair da tela no meio, ela para — e a pergunta continua pendente na store,
+// solta, para o painel lateral adotar (#859).
+const acompanharResposta = async ({ id, chave, requestAccount, requestId }) => {
+  try {
+    const data = await buscarResposta(id, requestAccount, requestId);
+    if (!data || !aindaInteressa(requestAccount, requestId)) return;
+    store.fecharPendente(chave);
+    entregarResposta(data, id);
   } catch {
-    if (
-      desmontado ||
-      requestId !== requestSequence ||
-      accountId.value !== requestAccount
-    )
-      return;
+    if (!aindaInteressa(requestAccount, requestId)) return;
+    store.fecharPendente(chave);
     avisarFalha();
   } finally {
     if (requestId === requestSequence) isSending.value = false;
   }
 };
 
+// #861 — o que o balão mostrou de anexo, para a conversa reabrir igual.
+const anexosDe = registro =>
+  (registro?.anexos || []).map(({ nome, tipo }) => ({ nome, tipo }));
+
+// #861 — a conversa da tela pode não existir mais no servidor: apagada em
+// outra aba ou pelo próprio Guia. O 404 dela não pode
+// virar "não consegui" para sempre: a pergunta abre uma conversa nova, levando
+// o que está na tela como histórico. Sem conversa aberta, o 404 é o Guia fora
+// do ar para a conta, e não se repete.
+const abrirPedidoNoServidor = async (chave, payload) => {
+  try {
+    return await AutonomiaGuideAPI.chat(payload);
+  } catch (error) {
+    const conversaSumiu =
+      error?.response?.status === 404 && Boolean(payload.conversaId);
+    if (!conversaSumiu || !store.pendenteAtivo(chave)) throw error;
+    store.definirConversa(null);
+    return AutonomiaGuideAPI.chat({ ...payload, conversaId: null });
+  }
+};
+
+const requestReply = async (requestAccount, message, requestId, registro) => {
+  const chave = store.abrirPendente(requestAccount, cracha);
+  let pedido;
+  try {
+    ({ data: pedido } = await abrirPedidoNoServidor(chave, {
+      message,
+      history: store.toHistory(),
+      routeContext: route.name,
+      // #859 — o registro aberto (ex.: a automação 42); o servidor guarda só números.
+      routeParams: route.params,
+      arquivos: store.arquivosProntos(),
+      conversaId: store.conversaAtual(),
+      anexos: anexosDe(registro),
+    }));
+  } catch {
+    // A pergunta nem chegou ao servidor. A falha fica escrita na conversa, mesmo
+    // que esta tela já tenha saído: a conversa é a mesma do painel lateral.
+    if (store.pendenteAtivo(chave)) avisarFalha();
+    store.fecharPendente(chave);
+    if (requestId === requestSequence) isSending.value = false;
+    return;
+  }
+  // A primeira pergunta abre a conversa no servidor; as seguintes a continuam.
+  // Vale mesmo que a tela embutida tenha saído: a conversa é a mesma (#859).
+  if (pedido.conversa_id && store.pendenteAtivo(chave)) {
+    store.definirConversa(pedido.conversa_id);
+  }
+  store.registrarPedidoPendente(chave, pedido.id);
+  if (!aindaInteressa(requestAccount, requestId)) return;
+  await acompanharResposta({ id: pedido.id, chave, requestAccount, requestId });
+};
+
+// #861 — a conversa reaberta tinha uma pergunta ainda sem resposta: o pedido
+// segue valendo no servidor (30 minutos), e a tela volta a buscar. Ela entra
+// na store como pendente (#859): se esta tela sair, o painel lateral adota.
+const retomarPendente = (pedidoId, conta) => {
+  const chave = store.abrirPendente(conta, cracha);
+  store.registrarPedidoPendente(chave, pedidoId);
+  requestSequence += 1;
+  isSending.value = true;
+  acompanharResposta({
+    id: pedidoId,
+    chave,
+    requestAccount: conta,
+    requestId: requestSequence,
+  });
+};
+
+const avisosDoTurno = () => ({
+  retido: t('AUTONOMIA_GUIDE.WITHHELD'),
+  falhou: t('AUTONOMIA_GUIDE.ERROR'),
+});
+
+// #861 — põe uma conversa guardada na tela. `carregar` é a chamada à API (a
+// atual ou uma da lista). Falhou: `aoFalhar` decide o que a pessoa vê, e a
+// conversa que estava na tela continua lá.
+const abrirConversa = async (carregar, aoFalhar) => {
+  const conta = accountId.value;
+  requestSequence += 1;
+  const vez = requestSequence;
+  // A pergunta que esperava resposta era da conversa que sai da tela (#859).
+  const perguntaAnterior = store.pendente();
+  if (perguntaAnterior) store.fecharPendente(perguntaAnterior.chave);
+  isSending.value = false;
+  transcrevendo.value = false;
+  abrindoConversa.value = true;
+  falhouAoAbrir.value = false;
+  const esqueleto = setTimeout(() => {
+    if (vez === requestSequence) mostrarEsqueleto.value = true;
+  }, ESPERA_DO_ESQUELETO_MS);
+  try {
+    const { data } = await carregar();
+    if (!aindaInteressa(conta, vez)) return;
+    contaCarregada = conta;
+    // Nenhuma conversa guardada: fica a tela de começo, com o que já estiver
+    // no campo de digitar.
+    if (!data?.id) return;
+    const pendente = store.hidratar(data, avisosDoTurno());
+    if (pendente) retomarPendente(pendente, conta);
+  } catch {
+    if (aindaInteressa(conta, vez)) aoFalhar();
+  } finally {
+    clearTimeout(esqueleto);
+    if (accountId.value === conta) {
+      abrindoConversa.value = false;
+      mostrarEsqueleto.value = false;
+    }
+  }
+};
+
+// Ao abrir o painel, a conversa de antes volta. Quem já está conversando (o
+// painel foi só fechado e reaberto) não perde nada. A conversa embutida (página
+// de Automações, #859) começa limpa: não traz a conversa guardada de volta.
+const reabrirConversaAtual = () => {
+  if (props.embutido) return;
+  if (contaCarregada === accountId.value) return;
+  if (hasMessages.value) {
+    contaCarregada = accountId.value;
+    return;
+  }
+  abrirConversa(
+    () => AutonomiaGuideAPI.conversaAtual(),
+    () => {
+      falhouAoAbrir.value = true;
+    }
+  );
+};
+
+const abrirDoHistorico = id => {
+  vendoHistorico.value = false;
+  abrirConversa(
+    () => AutonomiaGuideAPI.conversa(id),
+    () => useAlert(t('AUTONOMIA_GUIDE.HISTORY.OPEN_FAILED'))
+  );
+};
+
+// "Nova conversa" só esquece a conversa na tela: a anterior continua guardada
+// e aparece no histórico.
 const resetConversation = () => {
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
+  falhouAoAbrir.value = false;
+  contaCarregada = accountId.value;
   store.reset();
+};
+
+// Apagou a conversa que estava aberta: o painel começa outra.
+const conversaApagada = id => {
+  if (id === store.conversaAtual()) resetConversation();
 };
 
 // #857 — sobe o arquivo e o deixa na conversa. O erro aparece no próprio
@@ -447,13 +656,40 @@ const anexarArquivo = async file => {
 // trocar de conta antes da resposta, ela não cai na conversa da outra conta.
 const abrirPedido = () => {
   requestSequence += 1;
-  vendoFeitos.value = false;
+  vendoHistorico.value = false;
+  // Perguntar depois de a conversa antiga não abrir começa uma nova.
+  falhouAoAbrir.value = false;
   isSending.value = true;
   return { conta: accountId.value, pedido: requestSequence };
 };
 
+// #859 — pergunta que outra instância soltou ao sair da tela (a conversa
+// embutida). Quem estiver montado e na mesma conta termina de buscar a resposta.
+const adotarPendente = () => {
+  if (desmontado || !isEnabled.value) return;
+  const adotado = store.adotarPendente(accountId.value, cracha);
+  if (!adotado) return;
+  requestSequence += 1;
+  isSending.value = true;
+  acompanharResposta({
+    id: adotado.id,
+    chave: adotado.chave,
+    requestAccount: accountId.value,
+    requestId: requestSequence,
+  });
+};
+
+watch(
+  () => {
+    const pendente = store.pendente();
+    return pendente ? `${pendente.chave}:${pendente.id}:${!pendente.dono}` : '';
+  },
+  adotarPendente,
+  { immediate: true }
+);
+
 const podeEnviar = () => {
-  if (isSending.value) {
+  if (ocupado.value) {
     // Antes a segunda pergunta não fazia nada e não avisava nada.
     useAlert(t('AUTONOMIA_GUIDE.SENDING'));
     return false;
@@ -482,8 +718,10 @@ const sendMessage = message => {
     ? message
     : t('AUTONOMIA_GUIDE.FILE.DEFAULT_MESSAGE');
   const { conta, pedido } = abrirPedido();
-  store.addUserMessage(conteudo, { texto: temTexto ? message : '' });
-  requestReply(conta, conteudo, pedido);
+  const registro = store.addUserMessage(conteudo, {
+    texto: temTexto ? message : '',
+  });
+  requestReply(conta, conteudo, pedido, registro);
   return true;
 };
 
@@ -511,7 +749,7 @@ const transcreverMensagem = async (registro, conta, pedido) => {
     return;
   }
   if (!store.marcarVoz(registro.id, 'pronta', { texto })) return;
-  requestReply(conta, texto, pedido);
+  requestReply(conta, texto, pedido, registro);
 };
 
 const enviarVoz = ({ audio, duracao }) => {
@@ -548,12 +786,12 @@ const scrollSignal = computed(() =>
     .join('|')
 );
 
-watch([scrollSignal, isSending], () => scrollToBottom());
+watch([scrollSignal, ocupado], () => scrollToBottom());
 
 // Esc fecha o painel de onde quer que o foco esteja (o painel é uma região
 // lateral, não um modal, então o foco pode estar fora dele).
 useEventListener(document, 'keydown', event => {
-  if (event.key !== 'Escape' || !showPanel.value) return;
+  if (props.embutido || event.key !== 'Escape' || !showPanel.value) return;
   closePanel();
 });
 
@@ -561,10 +799,20 @@ useEventListener(document, 'keydown', event => {
 // lançador, que some. Fechar devolve o foco ao lançador, e isso é feito lá,
 // quando ele reaparece.
 watch(showPanel, async aberto => {
-  if (!aberto) return;
+  if (!aberto || props.embutido) return;
   await nextTick();
   panelRef.value?.focus();
 });
+
+// #861 — abrir o painel reabre a conversa guardada. Aqui embaixo, e não junto
+// do `watch` da Central: precisa de tudo o que a conversa usa já definido.
+watch(
+  showPanel,
+  aberto => {
+    if (aberto) reabrirConversaAtual();
+  },
+  { immediate: true }
+);
 
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
@@ -572,9 +820,33 @@ watch(accountId, () => {
   requestSequence += 1;
   isSending.value = false;
   transcrevendo.value = false;
-  vendoFeitos.value = false;
+  vendoHistorico.value = false;
+  falhouAoAbrir.value = false;
+  abrindoConversa.value = false;
+  mostrarEsqueleto.value = false;
+  contaCarregada = null;
   store.reset();
+  if (showPanel.value) reabrirConversaAtual();
 });
+
+// #859 — o modelo pronto que a pessoa escolheu na lista vira a primeira pergunta,
+// uma vez só. Espera a conta dizer que o Guia está ligado.
+let pedidoInicialEnviado = false;
+watch(
+  isEnabled,
+  ligado => {
+    if (!ligado || !props.pedidoInicial || pedidoInicialEnviado) return;
+    pedidoInicialEnviado = true;
+    if (sendMessage(props.pedidoInicial)) emit('pedidoInicialEnviado');
+  },
+  { immediate: true }
+);
+
+const classeDoPainel = computed(() =>
+  props.embutido
+    ? 'bg-n-surface-2 h-full w-full overflow-hidden flex rounded-xl border border-n-weak'
+    : 'bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex focus:outline-none'
+);
 </script>
 
 <template>
@@ -582,39 +854,79 @@ watch(accountId, () => {
     v-if="showPanel"
     ref="panelRef"
     v-on-click-outside="handleClickOutside"
-    role="complementary"
-    tabindex="-1"
+    :role="embutido ? 'region' : 'complementary'"
+    :tabindex="embutido ? undefined : -1"
     :aria-label="$t('AUTONOMIA_GUIDE.A11Y.PANEL')"
-    class="bg-n-surface-2 h-full overflow-hidden flex-col fixed top-0 ltr:right-0 rtl:left-0 z-40 w-full max-w-sm transition-transform duration-300 ease-in-out md:static md:w-[320px] md:min-w-[320px] ltr:border-l rtl:border-r border-n-weak 2xl:min-w-[360px] 2xl:w-[360px] shadow-lg md:shadow-none flex focus:outline-none"
+    :class="classeDoPainel"
   >
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
+        v-if="!embutido"
         :title="
-          vendoFeitos
-            ? $t('AUTONOMIA_GUIDE.DONE.LIST_TITLE')
+          vendoHistorico
+            ? $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
             : $t('AUTONOMIA_GUIDE.TITLE')
         "
-        :can-reset="hasMessages && !vendoFeitos"
-        :vendo-feitos="vendoFeitos"
+        :can-reset="hasMessages && !vendoHistorico"
+        :vendo-historico="vendoHistorico"
         @reset="resetConversation"
-        @feitos="vendoFeitos = !vendoFeitos"
+        @historico="vendoHistorico = !vendoHistorico"
         @close="closePanel"
       />
 
-      <div v-if="vendoFeitos" class="flex-1 flex px-4 py-4 overflow-y-auto">
-        <GuideFeitos />
+      <div v-if="vendoHistorico" class="flex-1 flex px-4 py-4 overflow-y-auto">
+        <GuideHistorico
+          :conversa-atual="store.conversaAtual()"
+          @abrir="abrirDoHistorico"
+          @apagou="conversaApagada"
+        />
       </div>
 
       <div
-        v-show="!vendoFeitos"
+        v-show="!vendoHistorico"
         ref="chatContainer"
         role="log"
         aria-live="polite"
-        :aria-busy="isSending ? 'true' : 'false'"
+        :aria-busy="ocupado ? 'true' : 'false'"
         :aria-label="$t('AUTONOMIA_GUIDE.A11Y.LOG')"
         class="flex-1 flex px-4 py-4 overflow-y-auto items-start"
       >
-        <div v-if="hasMessages" class="space-y-6 flex-1 flex flex-col w-full">
+        <!-- #861 — reabrindo a conversa guardada: dois balões de esqueleto. -->
+        <div
+          v-if="mostrarEsqueleto"
+          data-esqueleto
+          class="flex-1 flex flex-col gap-6 w-full"
+          role="status"
+        >
+          <span class="sr-only">{{
+            $t('AUTONOMIA_GUIDE.HISTORY.OPENING')
+          }}</span>
+          <div
+            class="self-end h-10 w-2/3 rounded-2xl bg-n-alpha-2 animate-pulse"
+          />
+          <div class="h-20 w-5/6 rounded-2xl bg-n-alpha-1 animate-pulse" />
+        </div>
+        <div
+          v-else-if="falhouAoAbrir"
+          data-falhou-ao-abrir
+          class="flex-1 flex flex-col items-start gap-3 px-1 py-2"
+        >
+          <p class="mb-0 text-sm text-n-slate-12">
+            {{ $t('AUTONOMIA_GUIDE.HISTORY.REOPEN_FAILED') }}
+          </p>
+          <Button
+            :label="$t('AUTONOMIA_GUIDE.HISTORY.START_NEW')"
+            icon="i-lucide-message-circle-plus"
+            blue
+            faded
+            class="min-h-11"
+            @click="resetConversation"
+          />
+        </div>
+        <div
+          v-else-if="hasMessages"
+          class="space-y-6 flex-1 flex flex-col w-full"
+        >
           <template v-for="(item, index) in messages" :key="item.id">
             <GuideUserMessage
               v-if="item.message_type === 'user'"
@@ -794,16 +1106,19 @@ watch(accountId, () => {
             </div>
           </template>
           <CopilotLoader
-            v-if="isSending && !transcrevendo"
+            v-if="ocupado && !transcrevendo"
             :label="$t('AUTONOMIA_GUIDE.THINKING')"
           />
         </div>
-        <div v-else class="flex-1 flex flex-col gap-3 px-1 py-2">
+        <div
+          v-else-if="!abrindoConversa"
+          class="flex-1 flex flex-col gap-3 px-1 py-2"
+        >
           <h3 class="text-base font-medium text-n-slate-12 leading-7">
             {{ $t('AUTONOMIA_GUIDE.TITLE') }}
           </h3>
           <p class="text-sm text-n-slate-11 leading-6">
-            {{ $t('AUTONOMIA_GUIDE.KICK_OFF') }}
+            {{ introducao || $t('AUTONOMIA_GUIDE.KICK_OFF') }}
           </p>
           <div class="flex flex-col gap-2 mt-2">
             <p
@@ -816,7 +1131,7 @@ watch(accountId, () => {
               v-for="(suggestion, i) in suggestions"
               :key="i"
               data-sugestao
-              :disabled="isSending || gravandoVoz"
+              :disabled="ocupado || gravandoVoz"
               class="text-left text-sm text-n-slate-12 bg-n-alpha-1 hover:bg-n-alpha-2 rounded-lg px-3 py-2 min-h-11 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
               @click="sendMessage(suggestion.pergunta)"
             >
@@ -832,7 +1147,7 @@ watch(accountId, () => {
         <GuideComposer
           :key="accountId"
           class="mb-1 w-full"
-          :is-busy="isSending"
+          :is-busy="ocupado"
           :arquivos="pendentes"
           :on-enviar-voz="enviarVoz"
           :vagas="vagas"

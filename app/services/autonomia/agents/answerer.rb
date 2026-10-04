@@ -71,7 +71,7 @@ module Autonomia
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
-                     operador: nil, max_rodadas: 1, max_segundos: nil)
+                     operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta')
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
@@ -107,6 +107,9 @@ module Autonomia
         # são caras e assíncronas, é decisão que exige medição própria.
         @max_rodadas = max_rodadas
         @max_segundos = max_segundos
+        # A etiqueta do custo na Gestão IA (#861). O Guia passa 'guia': com a do atendimento, o gasto
+        # dele sumia dentro de "Assistente de respostas".
+        @feature = feature
       end
 
       # -> Autonomia::Agents::AnswerResult
@@ -277,7 +280,7 @@ module Autonomia
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
         @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
                                     images: @images, documents: @documents, audience: @audience)
-        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: 'agente_resposta', account: @agent.account)
+        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
@@ -343,9 +346,19 @@ module Autonomia
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
+          inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+          registrar_chamada(call, output, inicio)
           { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
         end
+      end
+
+      # O registro de diagnóstico do Guia (#861): quem tem `operador` anota o que chamou. O atendimento
+      # não tem, e nada muda para ele.
+      def registrar_chamada(call, output, inicio)
+        return unless @operador.respond_to?(:registrar_chamada)
+
+        @operador.registrar_chamada(call, output, ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio) * 1000).round)
       end
 
       def dispatch_tool_call(call, tools_by_slug, specialists_by_function)

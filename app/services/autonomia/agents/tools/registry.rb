@@ -41,7 +41,9 @@ module Autonomia::Agents::Tools::Registry
     # A Central de Ajuda (#617): o passo a passo escrito para a própria
     # pessoa, na língua da tela — melhor fonte que o manual interno para
     # "como eu faço X".
-    Autonomia::Agents::Tools::Native::GuiaCentral
+    Autonomia::Agents::Tools::Native::GuiaCentral,
+    # #858 — o Guia classifica muitos itens de uma vez com o Jev ("desses contatos, quais…").
+    Autonomia::Agents::Tools::Native::GuiaClassificar
   ].freeze
 
   module_function
