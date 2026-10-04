@@ -57,7 +57,7 @@ RSpec.describe 'Guia da Plataforma — pendências do Guia', type: :request do
 
   it 'a vigia padrão mede a contagem pela leitura, como quem a criou', :aggregate_failures do
     dados = Autonomia::Guide::VigiasPadrao.todas.find { |vigia| vigia['leitura']['rota'] == 'autonomia/pendencias_do_guia' }
-    vigia = Autonomia::Guide::Vigia.create!(dados.merge('account' => account, 'criado_por' => admin, 'origem' => 'padrao'))
+    vigia = Autonomia::Guide::Vigia.create!(dados.except('nova_em').merge('account' => account, 'criado_por' => admin, 'origem' => 'padrao'))
     2.times { execucao!(admin) }
 
     resposta = Autonomia::Guide::Consulta.new(account: account, user: admin).ler_cru(vigia.leitura['rota'], vigia.leitura['parametros'])
