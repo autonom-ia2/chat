@@ -78,6 +78,7 @@ RSpec.describe Instagram::Automation::OperatorControl do # rubocop:disable RSpec
   around do |example|
     with_modified_env('INSTAGRAM_TESTER_SESSION_NAMESPACE' => namespace, 'INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed',
                       'INSTAGRAM_TESTER_PROXY_HOST' => '127.0.0.1', 'INSTAGRAM_TESTER_PROXY_PORT' => '59999',
+                      'INSTAGRAM_TESTER_PROXY_IDENTITY' => '192.0.2.10:8080',
                       'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip', 'INSTAGRAM_TESTER_PROXY_USERNAME' => '',
                       'INSTAGRAM_TESTER_PROXY_PASSWORD' => '', 'ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY' => 'primary-key',
                       'ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY' => 'deterministic-key',

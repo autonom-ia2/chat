@@ -59,6 +59,10 @@ jobs:
             tests/instagram_testers/operator-control.test.mjs
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
+      - name: Validate isolated coordinator provisioning and runtime with fake infrastructure
+        run: |
+          python -B tests/instagram_testers/provision-coordination-host_test.py -v
+          python -B tests/instagram_testers/coordination-runtime_test.py -v
       - name: Check browser and session helper modules
         run: |
           node --check tests/qa/instagram-testers/server.mjs

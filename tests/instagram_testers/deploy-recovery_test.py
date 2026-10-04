@@ -125,6 +125,10 @@ def fake_aws():
         instance = arg('--instance-ids')
         command_id = f'command-{number}'
         actions = []
+        if any('INSTAGRAM_TESTER_AUTOMATION_ENABLED' in item for item in payload):
+            state.setdefault('command_suspensions', {})[command_id] = instance
+        if any('/opt/chatwoot/igcoord/check.sh' in item for item in payload):
+            state.setdefault('command_coordination_checks', {})[command_id] = instance
         if any('stop chatwoot-worker.service' in item for item in payload):
             state['workers'].append(['stop', instance])
             actions.append(['ssm-worker-stopped', instance, False])
@@ -141,6 +145,18 @@ def fake_aws():
     elif operation == 'wait':
         assert args[2] in ('command-executed', 'instance-running', 'target-deregistered')
         if args[2] == 'command-executed':
+            instance = state.get('command_coordination_checks', {}).get(arg('--command-id'))
+            if instance:
+                state.setdefault('coordination_checks', []).append([instance, number])
+                if instance in (state.get('fail_coordination_instance'), state.get('missing_coordination_instance')):
+                    save()
+                    sys.exit(78)
+            suspended = state.get('command_suspensions', {}).get(arg('--command-id'))
+            if suspended:
+                if suspended == state.get('fail_suspension_instance'):
+                    save()
+                    sys.exit(79)
+                state.setdefault('suspensions', []).append([suspended, number])
             for action in state['command_worker_actions'][arg('--command-id')]:
                 worker_event(*action)
         if args[2] == 'target-deregistered':
@@ -619,10 +635,162 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                     result = subprocess.run(['/bin/bash', '-n'], input=script, text=True, capture_output=True)
                     self.assertEqual(result.returncode, 0, result.stderr)
             source = workflow.read_text()
+            userdata = source.split("          cat > green-user-data.sh <<'USERDATA'\n", 1)[1].split('          USERDATA\n', 1)[0]
+            result = subprocess.run(['/bin/bash', '-n'], input='\n'.join(line[10:] for line in userdata.splitlines()),
+                                    text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
             nested = source.split('          cat > "$APP_DIR/deploy.sh" <<\'EOF\'\n', 1)[1].split('          EOF\n', 1)[0]
             result = subprocess.run(['/bin/bash', '-n'], input='\n'.join(line[10:] for line in nested.splitlines()),
                                     text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_coordination_failure_cannot_shift_traffic_or_remove_resources(self):
+        for workflow in WORKFLOWS:
+            for name, instance in (('Shift HTTPS listener to green', 'i-green'),
+                                   ('Switch Sidekiq workers to green', 'i-green'),
+                                   ):
+                initial = 'tg-blue' if instance == 'i-green' else 'tg-green'
+                with self.subTest(stack=workflow.name, path=name):
+                    result, state = self.execute(run_block(workflow.read_text(), name),
+                                                 listener=initial, running_workers=['i-blue'],
+                                                 fail_coordination_instance=instance)
+                    self.assertEqual(result.returncode, 78, result.stderr)
+                    self.assertEqual(state['running_workers'], ['i-blue'])
+                    self.assertEqual(state['workers'], [])
+                    self.assertEqual(state['listener'], initial)
+                    self.assertEqual(state['writes'], [])
+                    self.assertFalse(any(call[1] in ('modify-listener', 'terminate-instances', 'delete-target-group')
+                                         for call in state['calls']))
+                    self.assertFalse(any(action[0] == 'start' for action in state['workers']))
+
+    def test_coordination_proof_precedes_every_traffic_shift(self):
+        for workflow in WORKFLOWS:
+            for name, instance in (('Shift HTTPS listener to green', 'i-green'),
+                                   ('Restore previous target group', 'i-blue'),
+                                   ('Cleanup failed green resources before traffic shift', 'i-blue')):
+                result, state = self.execute(run_block(workflow.read_text(), name))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                switch = next(i for i, call in enumerate(state['calls'], 1) if call[1] == 'modify-listener')
+                proof = 'coordination_checks' if instance == 'i-green' else 'suspensions'
+                self.assertTrue(any(node == instance and number < switch
+                                    for node, number in state[proof]))
+
+    def test_old_blue_fallback_and_unavailable_coordinator_restore_general_services(self):
+        for workflow in WORKFLOWS:
+            for name in ('Restore previous target group', 'Cleanup failed green resources before traffic shift'):
+                for failure in ('missing_coordination_instance', 'fail_coordination_instance'):
+                    with self.subTest(stack=workflow.name, path=name, scenario=failure):
+                        result, state = self.execute(run_block(workflow.read_text(), name),
+                            running_workers=['i-green'], **{failure: 'i-blue'},
+                            outcomes={'synthetic': 'preserved'}, coordination_state={'epoch': 'unchanged'})
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                        self.assertEqual(state['running_workers'], ['i-blue'])
+                        self.assert_pointers(state, 'tg-blue', 'i-blue')
+                        self.assertEqual(state['outcomes'], {'synthetic': 'preserved'})
+                        self.assertEqual(state['coordination_state'], {'epoch': 'unchanged'})
+                        self.assertEqual(state.get('coordination_checks', []), [])
+                        suspension = state['suspensions'][0][1]
+                        stop = next(i for i, call in enumerate(state['calls'], 1)
+                                    if call[1] == 'send-command' and 'stop chatwoot-worker.service' in call[call.index('--parameters')+1])
+                        self.assertLess(suspension, stop)
+
+    def test_suspension_failure_preserves_last_online_worker_and_reports_error(self):
+        for workflow in WORKFLOWS:
+            for name in ('Restore previous target group', 'Cleanup failed green resources before traffic shift'):
+                result, state = self.execute(run_block(workflow.read_text(), name),
+                    running_workers=['i-green'], fail_suspension_instance='i-blue')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                self.assertEqual(state['running_workers'], ['i-green'])
+                self.assertEqual(state['workers'], [])
+                self.assertEqual(state['writes'], [])
+                self.assertEqual(state['listener'], 'tg-green')
+                self.assertFalse(any(call[1] in ('modify-listener', 'terminate-instances', 'delete-target-group')
+                                     for call in state['calls']))
+
+    def test_stopped_target_suspension_failure_never_reports_rollback_success(self):
+        for workflow in WORKFLOWS:
+            result, state = self.execute(run_block(workflow.read_text(), 'Restore previous target group'),
+                instance_state='stopped', boot_worker_enabled=True, running_workers=['i-green'],
+                fail_suspension_instance='i-blue')
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+            self.assertEqual(state['listener'], 'tg-green')
+            self.assertEqual(state['writes'], [])
+            self.assertTrue(all(len(event[2]) <= 1 for event in state['worker_timeline']))
+            self.assertFalse(any(call[1] in ('modify-listener', 'delete-target-group', 'terminate-instances')
+                                 for call in state['calls']))
+
+    def test_suspension_helper_preserves_published_process_base_env_and_outcomes(self):
+        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text()
+        for old in (False, True):
+            with self.subTest(old_blue=old):
+                app = self.directory / ('old-app' if old else 'new-app')
+                units = self.directory / ('old-units' if old else 'new-units')
+                app.mkdir(); units.mkdir()
+                (app / '.env').write_text('REDIS_URL=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
+                (app / 'instagram-tester.env').write_text('KEEP=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
+                (app / 'outcomes').write_text('preserve')
+                (app / 'igcoord').mkdir()
+                (app / 'igcoord/redis.env').write_text('REDIS_URL=coordinator\n')
+                before = {file: file.read_bytes() for file in (app / '.env', app / 'outcomes', app / 'igcoord/redis.env')}
+                published = {}
+                for service in ('chatwoot-web.service', 'chatwoot-worker.service'):
+                    overlay = '' if old else f' --env-file {app}/instagram-tester.env'
+                    command = f'/usr/bin/docker run --rm --env-file {app}/.env{overlay} previous-image:sha bundle exec synthetic'
+                    published[service] = command
+                    (units / service).write_text(f'[Service]\nExecStart={command}\n')
+                fake = self.directory / 'systemctl'
+                fake.write_text('#!/bin/sh\ncat "$TEST_UNITS/$2"\n'); fake.chmod(0o700)
+                script = helper.replace("Path('/opt/chatwoot')", f'Path({str(app)!r})').replace(
+                    "Path('/etc/systemd/system')", f'Path({str(units)!r})')
+                result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True,
+                    env={**self.env, 'PATH': f'{self.directory}:/usr/bin:/bin', 'TEST_UNITS': str(units)})
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual((app / 'instagram-tester.env').read_text(),
+                                 'KEEP=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=false\n')
+                for file, contents in before.items():
+                    self.assertEqual(file.read_bytes(), contents)
+                for service, command in published.items():
+                    self.assertEqual((units / service).read_text(), f'[Service]\nExecStart={command}\n')
+                    if old:
+                        override = (units / f'{service}.d/zz-instagram-recovery.conf').read_text()
+                        self.assertIn(command.replace(f'--env-file {app}/.env',
+                            f'--env-file {app}/.env --env-file {app}/instagram-tester.env'), override)
+                    else:
+                        self.assertFalse((units / f'{service}.d').exists())
+
+    def test_invalid_published_worker_aborts_suspension_before_writes(self):
+        app = self.directory / 'invalid-app'; app.mkdir()
+        overlay = app / 'instagram-tester.env'
+        overlay.write_text('INSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
+        fake = self.directory / 'systemctl'
+        fake.write_text(f'#!/bin/sh\nif [ "$2" = chatwoot-web.service ]; then echo "ExecStart=/usr/bin/docker run --env-file {app}/.env previous-image:sha"; else echo "ExecStart=/bin/false"; fi\n')
+        fake.chmod(0o700)
+        helper = (ROOT / 'scripts/deploy/suspend-instagram-assisted.py').read_text().replace(
+            "Path('/opt/chatwoot')", f'Path({str(app)!r})').replace(
+            "Path('/etc/systemd/system')", f'Path({str(self.directory / "units")!r})')
+        result = subprocess.run([sys.executable, '-c', helper], text=True, capture_output=True,
+            env={**self.env, 'PATH': f'{self.directory}:/usr/bin:/bin'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('instagram_recovery_published_command_missing:chatwoot-worker.service', result.stderr)
+        self.assertEqual(overlay.read_text(), 'INSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
+        self.assertFalse((self.directory / 'units').exists())
+
+    def test_all_application_containers_share_tunnel_env_and_ca_before_database_prepare(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            for line in source.splitlines():
+                if 'docker run ' not in line:
+                    continue
+                with self.subTest(stack=workflow.name, command=line.strip()):
+                    self.assertIn('--add-host ig-coord.internal:host-gateway', line)
+                    self.assertIn('--add-host ig-proxy.internal:host-gateway', line)
+                    self.assertIn('ca.crt:/run/igcoord/ca.crt:ro', line)
+                    self.assertLess(line.index('instagram-tester.env'), line.index('igcoord/redis.env'))
+            self.assertLess(source.index('"$APP_DIR/igcoord/check.sh"'), source.index('rails db:chatwoot_prepare'))
+            self.assertEqual(source.count('Wants=instagram-coordination-tunnel.service'), 2)
+            self.assertEqual(source.count('After=docker.service network-online.target instagram-coordination-tunnel.service'), 2)
 
 
 if __name__ == '__main__':

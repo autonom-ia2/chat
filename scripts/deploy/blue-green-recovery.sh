@@ -72,3 +72,20 @@ switch_listener_destination() {
   # Confirmation allows the caller to restore its worker before propagating
   # LISTENER_SWITCH_STATUS. Failed confirmation always aborts recovery here.
 }
+
+# The helper is shipped by the workflow, never required on an older target.
+# Failure propagates before stopping the remaining worker whenever target is online.
+suspend_instagram_assisted() {
+  local script parameters command_id
+  script=$(cat "$(dirname "${BASH_SOURCE[0]}")/suspend-instagram-assisted.py") || return 1
+  parameters=$(jq -cn --arg script "sudo python3 - <<'INSTAGRAM_RECOVERY'
+$script
+INSTAGRAM_RECOVERY" '["set -eu", $script, "sudo systemctl daemon-reload"]') || return 1
+  command_id=$(aws ssm send-command --instance-ids "$1" \
+    --document-name AWS-RunShellScript --parameters "commands=$parameters" \
+    --query 'Command.CommandId' --output text) || return 1
+  aws ssm wait command-executed --command-id "$command_id" --instance-id "$1" || {
+    echo "instagram_recovery_suspension_failed:$1" >&2
+    return 1
+  }
+}

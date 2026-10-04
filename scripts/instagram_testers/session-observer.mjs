@@ -45,6 +45,26 @@ export function proxyConfiguration(env) {
       Number(config.port) >= 1 &&
       Number(config.port) <= 65535
   );
+  const identity = env.INSTAGRAM_TESTER_PROXY_IDENTITY;
+  const local = config.host.split('.')[0] === '127';
+  requireSafe(identity !== undefined || !local);
+  if (identity !== undefined) {
+    requireSafe(typeof identity === 'string');
+    const parts = identity.split(':');
+    const [host, port] = parts;
+    requireSafe(
+      parts.length === 2 &&
+        isIP(host) === 4 &&
+        host.split('.')[0] !== '127' &&
+        port.length > 0 &&
+        [...port].every(char => '0123456789'.includes(char)) &&
+        Number(port) >= 1 &&
+        Number(port) <= 65535 &&
+        String(Number(port)) === port &&
+        (local || identity === `${config.host}:${Number(config.port)}`)
+    );
+    config.identity = identity;
+  }
   return Object.freeze(config);
 }
 
@@ -64,7 +84,9 @@ export function configuration(env) {
   config.rolesUrl = `https://developers.facebook.com/apps/${config.appId}/roles/roles/?business_id=${config.businessId}`;
   config.proxyFingerprint = createHash('sha256')
     .update(
-      `${config.host.toLowerCase()}:${Number(config.port)}:${config.authMode}`
+      config.identity === undefined
+        ? `${config.host.toLowerCase()}:${Number(config.port)}:${config.authMode}`
+        : `${config.identity}:${config.authMode}`
     )
     .digest('hex');
   return Object.freeze(config);

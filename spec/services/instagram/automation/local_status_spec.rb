@@ -20,8 +20,10 @@ RSpec.describe Instagram::Automation::LocalStatus do
       'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed',
       'INSTAGRAM_TESTER_SESSION_NAMESPACE' => namespace, 'INSTAGRAM_TESTER_PROXY_HOST' => '192.0.2.10',
       'INSTAGRAM_TESTER_PROXY_PORT' => '8080', 'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip',
+      'INSTAGRAM_TESTER_PROXY_IDENTITY' => '192.0.2.10:8080',
       'INSTAGRAM_TESTER_PROXY_USERNAME' => '', 'INSTAGRAM_TESTER_PROXY_PASSWORD' => '',
-      'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic-password@redis.invalid:6379/0'
+      'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic-password@redis.invalid:6379/0',
+      'INSTAGRAM_TESTER_COORDINATION_EPOCH' => 'synthetic-status-epoch', 'INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE' => ''
     )
   end
 
@@ -96,7 +98,7 @@ RSpec.describe Instagram::Automation::LocalStatus do
 
   it 'reports an unconfigured or incomplete proxy without raising a runtime parsing error' do
     with_modified_env('INSTAGRAM_TESTER_PROXY_HOST' => '', 'INSTAGRAM_TESTER_PROXY_PORT' => '',
-                      'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => '') do
+                      'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => '', 'INSTAGRAM_TESTER_PROXY_IDENTITY' => nil) do
       expect(status[:proxy]).to eq(configured: false, valid: false)
     end
     with_modified_env('INSTAGRAM_TESTER_PROXY_HOST' => '') do

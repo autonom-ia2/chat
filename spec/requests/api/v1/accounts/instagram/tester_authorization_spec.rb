@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'delegate'
 
 RSpec.describe 'Instagram authorization with tester selection', type: :request do
   let(:account) { create(:account) }
@@ -211,6 +212,17 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
   end
 
   it 'reconciles an accepted provider role during the actual OAuth preparation path' do
+    aof_commands = instance_spy(Redis)
+    allow(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).and_return([1, 0])
+    allow(Instagram::Testers::CoordinationRedis).to receive(:with).and_wrap_original do |original, &block|
+      commands = aof_commands
+      original.call do |connection|
+        wrapper = SimpleDelegator.new(connection)
+        wrapper.define_singleton_method(:redis) { commands }
+        block.call(wrapper)
+      end
+    end
+    expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).once.and_return([1, 0])
     allow(Instagram::Testers::Client).to receive(:new).and_call_original
     outcome = Instagram::Testers::InvitationOutcome.new(app_id: '10001', target_id: candidate[:id])
     outcome.claim!

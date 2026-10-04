@@ -293,3 +293,37 @@ invalidada, trocar chaves de cifra/namespace ou apagar proteção de convite inc
 Erro comprovadamente pré-transporte libera somente claim próprio; erro após início
 preserva proteção, salvo rejeição explícita validada/reconciliação prevista.
 CI verde ou deploy iniciado não provam funcionamento real do Instagram.
+
+## Adendo #960 — coordenação, 04/10/2026 UTC
+
+Este adendo atualiza a configuração acima; instalação real n8n às 14:42 UTC foi **parcial**.
+Redis novo ativo em `127.0.0.1:6381`, volume/bridge próprios, filesystem readonly,
+zero restarts, 256 MiB/0,25 CPU; 27 serviços com especificações preservadas, n8n 1/10/6.
+Parou em `epoch_write_ACL_failed:0`; `igcoord` e parâmetros SSM não foram criados.
+Código atual da aplicação não publicado. Nenhum Redis existente modificado.
+O matcher foi corrigido na fonte após reprodução **local sintética**; falta confirmação no host.
+Diagnóstico autenticado foi bloqueado pela ferramenta e não contornado.
+
+`INSTAGRAM_TESTER_COORDINATION_EPOCH` deve coincidir com `integrity:epoch` persistido.
+`INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE=/run/igcoord/ca.crt` aplica CA somente
+à conexão Redis com verificação TLS; não definir `SSL_CERT_FILE` global para essa CA.
+`INSTAGRAM_TESTER_PROXY_IDENTITY` é o IPv4:porta canônico do upstream Direct real,
+nunca tag, alias ou porta do túnel; backend e gestor mantêm o mesmo fingerprint.
+Túnel EC2: gateway Docker `16381` → n8n `127.0.0.1:6381` e `16380` → upstream Webshare;
+containers usam `ig-coord.internal:16381` e `ig-proxy.internal:16380`. M4 ainda pendente.
+Forwarding TCP não filtra HTTP/CONNECT; host/gateway Docker continuam fronteiras de confiança.
+
+Quatro parâmetros por conta/região AWS da stack, com credenciais próprias de cada stack:
+
+- `/chatwoot/prod/instagram-coordination/ssh-key` — SecureString, chave SSH dedicada;
+- `/chatwoot/prod/instagram-coordination/redis-env` — SecureString, URL autenticada/epoch/CA;
+- `/chatwoot/prod/instagram-coordination/ca` — String, CA pública;
+- `/chatwoot/prod/instagram-coordination/known-hosts` — String, host key fixada por canal confiável.
+
+Preflight/boot da green falha antes de parar a blue se coordenação/proxy não passam.
+Rollback restaura serviços gerais com assistido **OFF somente** no overlay, sem exigir
+Redis/proxy ou runtime novo na blue antiga; preservar ENV base, sessões e outcomes.
+Webshare HTTP 200/IP esperado partiu do n8n, sem Meta; não prova túneis AWS/M4.
+Faltam ACL real, continuação manual sem reset da parcial, host key, SSM, túneis e prova
+das duas stacks/AOF. TTL de proteção permanece 24 horas. CI histórico `906f…` não aprova novos diffs.
+Resultados finais e limites: [auditoria da instalação](../audit/960-coordination-installation-20261004.md).

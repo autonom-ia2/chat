@@ -118,6 +118,7 @@ RSpec.describe Instagram::Testers::Configuration do
 
     with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_ADMIN_USER_ID' => '12345',
                       'INSTAGRAM_TESTER_PROXY_HOST' => '127.0.0.1', 'INSTAGRAM_TESTER_PROXY_PORT' => '9100',
+                      'INSTAGRAM_TESTER_PROXY_IDENTITY' => '192.0.2.10:8080',
                       'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip',
                       'INSTAGRAM_TESTER_PROXY_USERNAME' => nil, 'INSTAGRAM_TESTER_PROXY_PASSWORD' => nil,
                       'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => nil) do
@@ -126,7 +127,9 @@ RSpec.describe Instagram::Testers::Configuration do
       allow(Instagram::Testers::SessionStore).to receive(:new).with(configuration: configuration).and_return(managed_store)
 
       expect(configuration.available?).to be false
-      with_modified_env('INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic@coordination.invalid:6379/0') do
+      with_modified_env('INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic@coordination.invalid:6379/0',
+                        'INSTAGRAM_TESTER_COORDINATION_EPOCH' => 'synthetic-configuration-epoch',
+                        'INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE' => '') do
         expect(configuration.available?).to be true
       end
     end

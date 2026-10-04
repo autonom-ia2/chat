@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'delegate'
 
 RSpec.describe 'Instagram tester onboarding', type: :request do
   let(:account) { create(:account) }
@@ -164,7 +165,7 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
     expect(response.parsed_body['enabled']).to be true
   end
 
-  describe 'authoritative invitation outcome reconciliation' do
+  describe 'authoritative invitation outcome reconciliation' do # rubocop:disable RSpec/MultipleMemoizedHelpers
     let(:outcome_key) { "instagram_testers:invite:10001:#{candidate[:id]}:outcome" }
     let(:roles_url) { 'https://developers.facebook.com/api/graphql/' }
     let(:invite_url) { 'https://developers.facebook.com/apps/10001/async/instagram/roles/add/' }
@@ -175,7 +176,18 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
       ] }] } } }.to_json
     end
 
+    let(:aof_commands) { instance_spy(Redis) }
+
     before do
+      allow(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).and_return([1, 0])
+      allow(Instagram::Testers::CoordinationRedis).to receive(:with).and_wrap_original do |original, &block|
+        commands = aof_commands
+        original.call do |connection|
+          wrapper = SimpleDelegator.new(connection)
+          wrapper.define_singleton_method(:redis) { commands }
+          block.call(wrapper)
+        end
+      end
       allow(Instagram::Testers::Client).to receive(:new).and_call_original
       Redis::Alfred.delete(outcome_key)
     end
@@ -195,6 +207,19 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
       post "#{path}/invite", params: { selection_token: token }, headers: headers, as: :json
       expect(response.parsed_body).to eq('status' => 'pending', 'invited' => true)
       expect(invites).to have_been_requested.twice
+    end
+
+    it 'blocks the provider POST and retry when the durability command fails' do
+      stub_request(:post, roles_url).to_return(status: 200, body: absent_body)
+      expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).once
+                                            .and_raise(Redis::CommandError, 'Synthetic unsupported WAITAOF')
+      2.times do
+        post "#{path}/invite", params: { selection_token: token }, headers: headers, as: :json
+        expect(response).to have_http_status(:service_unavailable)
+        expect(response.parsed_body).to eq('error_code' => 'invite_unknown')
+      end
+      expect(Redis::Alfred.get(outcome_key)).to start_with('unknown:')
+      expect(a_request(:post, invite_url)).not_to have_been_made
     end
 
     it 'keeps a timed-out invite guarded through status absent and a retry' do

@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-syntax -- Node fixtures register independent boundary cases without browser transpilation. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { chmod, mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,6 +28,7 @@ const env = {
   INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
   INSTAGRAM_TESTER_PROXY_PORT: '9100',
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+  INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
 };
 const config = configuration(env);
 
@@ -35,11 +37,13 @@ test('manual browser initialization validates the proxy without inventing Meta b
     INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
     INSTAGRAM_TESTER_PROXY_PORT: '9100',
     INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+    INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
   };
   assert.deepEqual(proxyConfiguration(proxyEnv), {
     host: '127.0.0.1',
     port: '9100',
     authMode: 'ip',
+    identity: '93.184.216.34:8080',
   });
   assert.throws(() => configuration(proxyEnv));
   assert.throws(() =>
@@ -188,12 +192,54 @@ test('proxy cannot be disabled, contain URL credentials, or change implicitly', 
   }
   assert.equal(config.authMode, 'ip');
   assert.equal(config.proxyFingerprint.length, 64);
-  assert.notEqual(
+  assert.equal(
     configuration({ ...env, INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.2' })
       .proxyFingerprint,
     config.proxyFingerprint
   );
 });
+test('canonical upstream preserves the original fingerprint and rejects endpoint changes', () => {
+  const direct = {
+    ...env,
+    INSTAGRAM_TESTER_PROXY_HOST: '93.184.216.34',
+    INSTAGRAM_TESTER_PROXY_PORT: '8080',
+  };
+  const original = createHash('sha256')
+    .update('93.184.216.34:8080:ip')
+    .digest('hex');
+  assert.equal(configuration(env).proxyFingerprint, original);
+  assert.equal(configuration(direct).proxyFingerprint, original);
+  assert.equal(
+    configuration({ ...direct, INSTAGRAM_TESTER_PROXY_IDENTITY: undefined })
+      .proxyFingerprint,
+    original
+  );
+  for (const patch of [
+    { INSTAGRAM_TESTER_PROXY_HOST: '93.184.216.35' },
+    { INSTAGRAM_TESTER_PROXY_PORT: '8081' },
+  ])
+    assert.throws(() => configuration({ ...direct, ...patch }));
+  for (const identity of [
+    undefined,
+    '',
+    'tag',
+    '127.0.0.1:8080',
+    '93.184.216.34:08080',
+    '93.184.216.34:0',
+    '93.184.216.34:65536',
+    '93.184.216.34:8080:extra',
+    '::1:8080',
+    '93.184.216.34:8080\n',
+  ]) {
+    assert.throws(() =>
+      configuration({ ...env, INSTAGRAM_TESTER_PROXY_IDENTITY: identity })
+    );
+  }
+  assert.throws(() =>
+    configuration({ ...env, INSTAGRAM_TESTER_PROXY_HOST: 'ig-proxy.internal' })
+  );
+});
+
 test('requires complete error-free roles; rejects login/challenge/html and partial pagination', () => {
   assert.equal(
     validateRolesResponse(`for (;;);${JSON.stringify(roles)}`),

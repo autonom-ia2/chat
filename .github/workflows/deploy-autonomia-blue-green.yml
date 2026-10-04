@@ -285,7 +285,7 @@ jobs:
           APP_DIR="/opt/chatwoot"
 
           dnf update -y
-          dnf install -y docker awscli
+          dnf install -y docker awscli openssh-clients python3
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"
@@ -377,6 +377,9 @@ jobs:
                 allowed["INSTAGRAM_TESTER_PROXY_HOST"] = 1
                 allowed["INSTAGRAM_TESTER_PROXY_PORT"] = 1
                 allowed["INSTAGRAM_TESTER_COORDINATION_REDIS_URL"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_EPOCH"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_IDENTITY"] = 1
               }
               /^[[:space:]]*$/ || /^[[:space:]]*#/ { next }
               {
@@ -506,8 +509,26 @@ jobs:
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
           docker pull "$IMAGE_URI"
           install_instagram_tester_publisher
-          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
-          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
+          # Copy runtime installers from the exact application image, never remote code.
+          install_instagram_coordination() (
+            set -euo pipefail
+            set +x
+            umask 077
+            stage_dir="$(mktemp -d /run/instagram-coordination-install.XXXXXX)"
+            source_container="instagram-coordination-source-$$"
+            trap 'docker rm -f "$source_container" >/dev/null 2>&1 || true; rm -rf "$stage_dir"' EXIT
+            docker create --name "$source_container" --entrypoint /bin/sh "$IMAGE_URI" -c 'exit 0' >/dev/null
+            for filename in install-coordination-tunnel.sh validate-coordination-env.py coordination-preflight.sh; do
+              docker cp "$source_container:/app/scripts/instagram_testers/runtime/$filename" "$stage_dir/$filename"
+              test ! -L "$stage_dir/$filename"
+              test -s "$stage_dir/$filename"
+            done
+            /bin/bash "$stage_dir/install-coordination-tunnel.sh" install "$AWS_REGION" "$APP_DIR"
+          )
+          install_instagram_coordination
+          "$APP_DIR/igcoord/check.sh"
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
           systemctl restart chatwoot-web.service
           if [ "$START_WORKER_AFTER_DEPLOY" = "true" ]; then
             systemctl restart chatwoot-worker.service
@@ -521,7 +542,8 @@ jobs:
           cat > /etc/systemd/system/chatwoot-web.service <<'EOF'
           [Unit]
           Description=Chatwoot web
-          After=docker.service network-online.target
+          After=docker.service network-online.target instagram-coordination-tunnel.service
+          Wants=instagram-coordination-tunnel.service
           Requires=docker.service
 
           [Service]
@@ -529,7 +551,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-web
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env --env-file /opt/chatwoot/igcoord/redis.env --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v /opt/chatwoot/igcoord/ca.crt:/run/igcoord/ca.crt:ro -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
           ExecStop=/usr/bin/docker stop chatwoot-web
 
           [Install]
@@ -539,7 +561,8 @@ jobs:
           cat > /etc/systemd/system/chatwoot-worker.service <<'EOF'
           [Unit]
           Description=Chatwoot worker
-          After=docker.service network-online.target
+          After=docker.service network-online.target instagram-coordination-tunnel.service
+          Wants=instagram-coordination-tunnel.service
           Requires=docker.service
 
           [Service]
@@ -547,7 +570,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-worker
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env --env-file /opt/chatwoot/igcoord/redis.env --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v /opt/chatwoot/igcoord/ca.crt:/run/igcoord/ca.crt:ro $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
           ExecStop=/usr/bin/docker stop chatwoot-worker
 
           [Install]
@@ -678,6 +701,14 @@ jobs:
 
       - name: Switch Sidekiq workers to green
         run: |
+          coordination_command_id=$(aws ssm send-command \
+            --instance-ids "$GREEN_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
+            --query 'Command.CommandId' \
+            --output text)
+          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
+
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
@@ -716,6 +747,14 @@ jobs:
       - name: Shift HTTPS listener to green
         run: |
           source scripts/deploy/blue-green-recovery.sh
+          coordination_command_id=$(aws ssm send-command \
+            --instance-ids "$GREEN_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
+            --query 'Command.CommandId' \
+            --output text)
+          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
+
           echo "PREVIOUS_WRITE_ATTEMPTED=true" >> "$GITHUB_ENV"
           record_previous_destination "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
 
@@ -800,6 +839,15 @@ jobs:
               validate_target_pair "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
             fi
           fi
+          if [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+            suspend_instagram_assisted "$BLUE_INSTANCE_ID"
+            blue_web_command_id=$(aws ssm send-command \
+              --instance-ids "$BLUE_INSTANCE_ID" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo systemctl restart chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+              --query 'Command.CommandId' --output text)
+            aws ssm wait command-executed --command-id "$blue_web_command_id" --instance-id "$BLUE_INSTANCE_ID"
+          fi
           if [ "${GREEN_WORKER_START_ATTEMPTED:-false}" = "true" ]; then
             green_stop_command_id=$(aws ssm send-command \
               --instance-ids "$GREEN_INSTANCE_ID" \
@@ -823,7 +871,7 @@ jobs:
             blue_restore_command_id=$(aws ssm send-command \
               --instance-ids "$BLUE_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl restart chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
               --query 'Command.CommandId' \
               --output text)
             aws ssm wait command-executed \
@@ -900,6 +948,17 @@ jobs:
 
           validate_target_pair "$previous_tg_arn" "$previous_instance_id"
 
+          previous_state=$(aws ec2 describe-instances \
+            --instance-ids "$previous_instance_id" \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+
+          # An online target can be suspended before stopping the last worker.
+          # A stopped target must boot after the current worker stops (no overlap).
+          if [ "$previous_state" = "running" ]; then
+            suspend_instagram_assisted "$previous_instance_id"
+          fi
+
           # The enabled worker unit can autostart at EC2 boot; stop and wait first.
           if [ "$current_instance_id" != "$previous_instance_id" ]; then
             current_command_id=$(aws ssm send-command \
@@ -913,11 +972,6 @@ jobs:
               --command-id "$current_command_id" \
               --instance-id "$current_instance_id"
           fi
-
-          previous_state=$(aws ec2 describe-instances \
-            --instance-ids "$previous_instance_id" \
-            --query 'Reservations[0].Instances[0].State.Name' \
-            --output text)
 
           if [ "$previous_state" = "stopped" ] || [ "$previous_state" = "stopping" ]; then
             aws ec2 start-instances \
@@ -938,10 +992,14 @@ jobs:
             sleep 15
           done
 
+          if [ "$previous_state" != "running" ]; then
+            suspend_instagram_assisted "$previous_instance_id"
+          fi
+
           previous_web_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["set -eu","sudo systemctl start chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+            --parameters 'commands=["set -eu","sudo systemctl restart chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -955,7 +1013,7 @@ jobs:
           previous_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl restart chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 

@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'delegate'
 
 RSpec.describe Instagram::Testers::Invitation do
   subject(:invitation) { described_class.new(client: client, app_id: '10001', target_id: target_id) }
@@ -7,7 +8,18 @@ RSpec.describe Instagram::Testers::Invitation do
   let(:client) { instance_double(Instagram::Testers::Client) }
   let(:key) { "instagram_testers:invite:10001:#{target_id}" }
 
+  let(:aof_commands) { instance_spy(Redis) }
+
   before do
+    allow(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).and_return([1, 0])
+    allow(Instagram::Testers::CoordinationRedis).to receive(:with).and_wrap_original do |original, &block|
+      commands = aof_commands
+      original.call do |connection|
+        wrapper = SimpleDelegator.new(connection)
+        wrapper.define_singleton_method(:redis) { commands }
+        block.call(wrapper)
+      end
+    end
     Redis::Alfred.delete("#{key}:lock")
     Redis::Alfred.delete("#{key}:outcome")
   end
@@ -27,6 +39,9 @@ RSpec.describe Instagram::Testers::Invitation do
 
   it 'checks status before the invite and suppresses a double submit during role propagation' do
     expect(client).to receive(:status).with(target_id).ordered.and_return('absent')
+    expect(Instagram::Testers::CoordinationRedis).to receive(:durable_set)
+      .with("#{key}:outcome", kind_of(String), ex: described_class::OUTCOME_TTL).ordered.and_call_original
+    expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).ordered.and_return([1, 0])
     expect(client).to receive(:invite).with(target_id).ordered.and_yield.and_return(true)
     expect(invitation.perform).to eq(status: 'pending', invited: true)
     allow(client).to receive(:status).with(target_id).and_return('absent')
@@ -106,9 +121,9 @@ RSpec.describe Instagram::Testers::Invitation do
 
   it 'never sends an invite if persisting the unknown claim fails' do
     allow(client).to receive(:status).and_return('absent')
-    allow(Instagram::Testers::CoordinationRedis).to receive(:set).and_call_original
-    allow(Instagram::Testers::CoordinationRedis).to receive(:set).with("#{key}:outcome", kind_of(String), nx: true, ex: described_class::OUTCOME_TTL)
-                                                                 .and_raise(Redis::BaseError, 'Synthetic claim persistence failure')
+    expect(Instagram::Testers::CoordinationRedis).to receive(:durable_set)
+      .with("#{key}:outcome", kind_of(String), ex: described_class::OUTCOME_TTL)
+      .and_raise(Redis::BaseError, 'Synthetic claim persistence failure')
     expect(client).not_to receive(:invite)
     expect { invitation.perform }.to raise_error do |error|
       expect(error.code).to eq('invite_unknown')
@@ -185,6 +200,26 @@ RSpec.describe Instagram::Testers::Invitation do
         expect(invitation.perform).to eq(status: 'pending', invited: false)
         expect(request).to have_been_requested.once
       end
+    end
+
+    [Redis::TimeoutError, Redis::CommandError].each do |failure|
+      it "blocks the provider POST and retains the claim when WAITAOF raises #{failure}" do
+        expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).once.and_raise(failure, 'Synthetic AOF failure')
+        expect { invitation.perform }.to raise_error do |error|
+          expect(error.code).to eq('invite_unknown')
+          expect(error.cause).to be_nil
+        end
+        expect(Redis::Alfred.get("#{key}:outcome")).to start_with('unknown:')
+        expect { invitation.perform }.to raise_error(Instagram::Testers::Error)
+        expect(a_request(:post, invite_url)).not_to have_been_made
+      end
+    end
+
+    it 'blocks the provider POST when local fsync is not acknowledged' do
+      expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).and_return([0, 0])
+      expect { invitation.perform }.to(raise_error { |error| expect(error.code).to eq('invite_unknown') })
+      expect(Redis::Alfred.get("#{key}:outcome")).to start_with('unknown:')
+      expect(a_request(:post, invite_url)).not_to have_been_made
     end
 
     it 'retains unknown when the transport loses the write response and never blindly repeats it' do
