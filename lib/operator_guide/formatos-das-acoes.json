@@ -5056,11 +5056,11 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:217",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:215",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:218",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:216",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:179",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:163",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:196"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:197"
     ],
     "sem_corpo": false
   },
@@ -5107,7 +5107,10 @@
       "history": {},
       "message": {},
       "route_context": {},
-      "route_params": {}
+      "route_params": {},
+      "tela": {
+        "tipo": "string"
+      }
     },
     "completo": false,
     "controller": "api/v1/accounts/autonomia/guide#chat",
@@ -5117,15 +5120,16 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:188",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:189",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:266",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:275",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:187",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:186",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:28",
       "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:27",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:253",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:235",
-      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:233"
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:254",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:236",
+      "app/controllers/api/v1/accounts/autonomia/guide_controller.rb:234"
     ],
     "sem_corpo": false
   },

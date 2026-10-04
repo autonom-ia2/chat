@@ -39,7 +39,9 @@ module Autonomia
 
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
       # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
-      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, arquivos: [], registro: nil)
+      # `tela` (#934): o que a pessoa tem aberto, selecionado e filtrado (`Autonomia::Guide::Tela`).
+      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, tela: {}, arquivos: [],
+                     registro: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
@@ -47,6 +49,7 @@ module Autonomia
         @history = Array(history)
         @route_context = route_context.to_s
         @route_params = route_params.to_h
+        @tela = tela.to_h
         @arquivos = Array(arquivos)
         @registro = registro
       end
@@ -133,7 +136,7 @@ module Autonomia
               "Tela atual: #{@route_context.presence || 'não informada'}.#{registro_aberto} Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+        "#{ctx}#{bloco_tela}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
       end
 
       # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).
@@ -142,6 +145,15 @@ module Autonomia
         return '' if @route_params.blank?
 
         " Registro aberto na tela: #{@route_params.map { |chave, valor| "#{chave}=#{valor}" }.join(', ')}."
+      end
+
+      # #934 — o que a pessoa está vendo, já lido com a permissão dela: o id que voltou vale como lido no
+      # turno. Vai para o diagnóstico só com rota, recurso, ids e total.
+      def bloco_tela
+        tela = ::Autonomia::Guide::Tela.new(contexto: contexto, tela: @tela)
+        texto = tela.bloco
+        @registro&.ver_tela(tela.registro)
+        texto
       end
 
       # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.
