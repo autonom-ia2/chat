@@ -57,7 +57,7 @@ class AutomationRules::ProcessPendingExecutionJob < ApplicationJob
       pending_execution.automation_rule,
       pending_execution.account,
       pending_execution.conversation
-    ).perform
+    ).perform(message: pending_execution.message)
     pending_execution.update!(status: :executed)
   end
 end

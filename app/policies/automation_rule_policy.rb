@@ -19,6 +19,11 @@ class AutomationRulePolicy < ApplicationPolicy
     @account_user.permission_granted?('automation_manage')
   end
 
+  # O ensaio só lê: mostra o que a regra faria, sem fazer nada (#859).
+  def ensaio?
+    @account_user.permission_granted?('automation_view')
+  end
+
   def destroy?
     @account_user.permission_granted?('automation_manage')
   end

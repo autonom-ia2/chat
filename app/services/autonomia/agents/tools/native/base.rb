@@ -13,6 +13,8 @@ class Autonomia::Agents::Tools::Native::Base
   # Toda ferramenta nativa devolve STRING para o modelo, igual à HTTP. Erro também é string: o
   # modelo lê e decide o que fazer, em vez de o turno morrer.
   MAX_OUTPUT_CHARS = 8_000
+  # Teto de cada valor que vai para o registro de diagnóstico do Guia (#861).
+  MAX_VALOR_REGISTRADO = 200
 
   # DOIS PARÂMETROS COM O MESMO NOME NO MESMO OBJETO. `objeto` monta `properties` por `to_h` — o
   # segundo apaga o primeiro em silêncio — e `required` por `pluck`, que fica com os dois: um
@@ -51,6 +53,27 @@ class Autonomia::Agents::Tools::Native::Base
     # falhar na frente do cliente.
     def available_for?(_agent)
       true
+    end
+
+    # O que do pedido do modelo pode ir para o registro de diagnóstico do Guia (#861). Por padrão,
+    # nada: o registro guarda só os NOMES dos argumentos. Cada ferramenta lista os que são seguros
+    # de guardar com valor — o recurso lido, a ação pedida —, nunca o corpo de uma escrita, que pode
+    # ter telefone ou credencial.
+    def args_registraveis
+      []
+    end
+
+    # -> { nome => valor } só dos argumentos registráveis, com o valor cortado.
+    def args_para_registro(args)
+      args.to_h.each_with_object({}) do |(nome, valor), guardados|
+        next unless args_registraveis.include?(nome.to_s)
+
+        guardados[nome.to_s] = valor.is_a?(Array) ? valor.map { |item| cortado(item) } : cortado(valor)
+      end
+    end
+
+    def cortado(valor)
+      valor.to_s.first(MAX_VALOR_REGISTRADO)
     end
 
     # ASSÍNCRONA (#313). Falso por padrão. A ferramenta que declara verdadeiro NÃO roda dentro do

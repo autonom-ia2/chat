@@ -22,6 +22,11 @@ class Autonomia::Agents::Tools::Native::GuiaCentral < Autonomia::Agents::Tools::
       'ler_da_central'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[ref termo]
+    end
+
     def description
       'Lê um artigo da Central de Ajuda — o passo a passo que a própria pessoa leria na tela. Use ' \
         'quando a pergunta for "como eu faço X": procure primeiro aqui, antes de responder pelo que ' \

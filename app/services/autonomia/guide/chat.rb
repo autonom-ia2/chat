@@ -34,15 +34,21 @@ module Autonomia
       # tem que cair para 1 — senão o Guia volta a morrer em pergunta aberta.
       MAX_RODADAS = 10
 
+      # A etiqueta do custo do Guia na Gestão IA (#861), no grupo "Guia da Plataforma".
+      FEATURE = 'guia'.freeze
+
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
-      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [])
+      # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
+      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, arquivos: [], registro: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
         @message = message.to_s
         @history = Array(history)
         @route_context = route_context.to_s
+        @route_params = route_params.to_h
         @arquivos = Array(arquivos)
+        @registro = registro
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -79,7 +85,9 @@ module Autonomia
           operador: contexto,
           # Ler, olhar o que voltou e ler de novo, até dez vezes — e sempre
           # dentro do orçamento de tempo do cliente.
-          max_rodadas: MAX_RODADAS
+          max_rodadas: MAX_RODADAS,
+          # O custo do Guia separado do atendimento na Gestão IA (#861).
+          feature: FEATURE
         ).answer
 
         # A proposta nasce DENTRO da ferramenta, durante a redação — por isso é
@@ -100,6 +108,7 @@ module Autonomia
         # O que o Guia FEZ neste turno (#855) vai para a tela mesmo quando o texto
         # foi retido: a mudança já aconteceu, e a pessoa precisa ver e poder desfazer.
         execucao = contexto.execucao&.resumo
+        registrar_decisoes(result, diagnostics, text)
         return retido(execucao) if text.blank?
 
         navs = navegacoes(result)
@@ -121,10 +130,18 @@ module Autonomia
       def role_scoped_query(diagnostics = nil)
         role = @account_user&.role.presence || 'agent'
         ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
-              "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
+              "Tela atual: #{@route_context.presence || 'não informada'}.#{registro_aberto} Adapte a resposta a este " \
               "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
               "perfil não for administrator, explique que é feito pelo administrador da conta.]"
         "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+      end
+
+      # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).
+      # Só números, filtrados no controller; é contexto, não autorização.
+      def registro_aberto
+        return '' if @route_params.blank?
+
+        " Registro aberto na tela: #{@route_params.map { |chave, valor| "#{chave}=#{valor}" }.join(', ')}."
       end
 
       # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.
@@ -197,7 +214,20 @@ module Autonomia
 
       def contexto
         @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user,
-                                                       account_user: @account_user)
+                                                       account_user: @account_user, registro: @registro)
+      end
+
+      # O que o Guia decidiu, para o registro do pedido (#861). Quando o portão reteve, guarda o texto
+      # que o modelo escreveu: é o que se perdia, e é por ele que se entende uma resposta que não veio.
+      def registrar_decisoes(result, diagnostics, text)
+        return if @registro.nil?
+
+        @registro.decidir(
+          fluxos: Array(result.used_knowledge), check: diagnostics&.dig(:check), confianca: result.confidence,
+          grounded: result.answered_from_knowledge == true, escalate: result.handoff.to_h[:should] == true,
+          retido: text.blank?, resposta_retida: result.raw_reply, telas: contexto.telas, artigos: contexto.artigos,
+          execution_id: contexto.execucao&.id
+        )
       end
 
       def sanitized_history

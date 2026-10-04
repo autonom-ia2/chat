@@ -8,7 +8,7 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01a, C01b, C02..C21) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C24 e C30; o C25 ainda não foi escrito) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }
@@ -376,6 +376,122 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     respondeu!(resultado)
     expect(execucoes).to be_empty
     expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_SEM_SUPORTE)
+  end
+
+  # #860 — a conta 16: leads de um formulário do site chegando por e-mail na caixa Comercial. A conta de
+  # partida é a corretora com a caixa Comercial por cima (conta_formularios!, em spec/support/bateria_do_guia.rb).
+  # C25 ("daqui pra frente o formulário vira lead certo sozinho") entra depois do Decisor (#858).
+  context 'with a conta 16 (formulário do site por e-mail)' do
+    let(:f) { conta_formularios!(c) }
+
+    # Todo e-mail recebido: os quatro leads e os dois comuns, com contato, conversa e card.
+    def recebidos
+      f.leads + f.comuns
+    end
+
+    def ainda_existem?(recebido)
+      [recebido.contato, recebido.conversa, recebido.card].all? { |registro| registro.class.exists?(registro.id) }
+    end
+
+    # O rodízio V1 é a chave da caixa; o da atribuição avançada é a política vinculada a ela.
+    def rodizio_ligado?(caixa)
+      caixa.reload.enable_auto_assignment? || InboxAssignmentPolicy.exists?(inbox: caixa)
+    end
+
+    def retrato(contato)
+      contato.reload
+      [contato.name, contato.phone_number, contato.company_id, Company.find_by(id: contato.company_id)&.name]
+    end
+
+    def desfazer_tudo!
+      execucoes.order(id: :desc).each { |execucao| Autonomia::Guide::Desfazer.new(execucao: execucao, user: c.admin).perform }
+    end
+
+    # MOTIVO: o pedido real da conta 16, vago de propósito. Em produção a caixa criava card para todo
+    # e-mail (a newsletter da Anthropic virou lead) e 28 de 33 leads ficaram sem responsável. O certo é
+    # desligar o card automático da caixa e ligar o rodízio — sem mandar nada a cliente e sem apagar o que
+    # chegou — e explicar por que a newsletter virou card e que o rodízio só entrega para quem está online.
+    it 'C22 leads do formulário bagunçados: tira o card automático, liga o rodízio e explica', :aggregate_failures do
+      pedido = 'Os leads do formulário do site chegam bagunçados no CRM. Arruma.'
+      expect(recebidos.map(&:card)).to all(be_present)
+      resultado = perguntar(pedido)
+
+      respondeu!(resultado)
+      expect(c.conta.crm_inbox_settings.find_by(inbox: f.comercial).auto_create_card).to be(false)
+      expect(rodizio_ligado?(f.comercial)).to be(true)
+      expect(Message.where(conversation_id: recebidos.map { |recebido| recebido.conversa.id }, message_type: :outgoing)).to be_empty
+      expect(recebidos).to all(satisfy { |recebido| ainda_existem?(recebido) })
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_DA_CONTA_16)
+    end
+
+    # MOTIVO: correção em massa lendo o corpo de cada e-mail. O contato nasceu com o e-mail no nome, sem
+    # telefone e numa empresa batizada pelo domínio; o certo é o nome, o telefone em E.164 e a empresa do
+    # formulário. Pega o e-mail comum "corrigido" junto, o telefone fora do padrão e a correção que o
+    # desfazer não vê (empresa trocada por fora do caderno).
+    it 'C23 corrige nome, telefone e empresa dos contatos do formulário, e o desfazer volta tudo', :aggregate_failures do
+      antes = recebidos.map { |recebido| retrato(recebido.contato) }
+      respondeu!(perguntar('Corrige os contatos que vieram do formulário: nome, telefone e empresa.'))
+
+      expect(f.leads.map { |lead| retrato(lead.contato).values_at(0, 1, 3) }).to eq(f.leads.map { |lead| [lead.nome, lead.telefone, lead.empresa] })
+      expect(f.comuns.map { |comum| retrato(comum.contato) }).to eq(antes.last(f.comuns.size))
+      expect(execucoes.flat_map(&:mudancas)).to be_present
+
+      desfazer_tudo!
+      expect(recebidos.map { |recebido| retrato(recebido.contato) }).to eq(antes)
+    end
+
+    # MOTIVO: não existe consentimento pronto na plataforma. O caminho é um campo no contato, preenchido
+    # só em quem marcou o aceite, e o texto do aceite numa nota do contato, como prova. Pega o campo na
+    # conversa, o consentimento dado a quem não marcou e a prova esquecida.
+    it 'C24 guarda o consentimento só de quem marcou o aceite, com a prova numa nota', :aggregate_failures do
+      expect(f.leads.count(&:aceite)).to eq(3)
+      respondeu!(perguntar('Guarda o consentimento de quem marcou no formulário.'))
+
+      campos = CustomAttributeDefinition.where(account: c.conta, attribute_model: :contact_attribute)
+      expect(campos.count).to eq(1)
+      chave = campos.first&.attribute_key
+      com_aceite, sem_aceite = recebidos.partition(&:aceite)
+      expect(com_aceite.map { |lead| lead.contato.reload.custom_attributes.to_h[chave] }).to all(be_present)
+      expect(sem_aceite.map { |recebido| recebido.contato.reload.custom_attributes.to_h[chave] }).to all(be_blank)
+      expect(com_aceite.map { |lead| Note.where(contact_id: lead.contato.id).count }).to all(be_positive)
+      expect(Note.where(contact_id: sem_aceite.map { |recebido| recebido.contato.id })).to be_empty
+    end
+  end
+
+  # O Jev de verdade (`classificar_com_jev`), além da OpenAI: pede a chave da Typesafe.
+  def ligar_jev!
+    skip 'C30 precisa de TYPESAFE_API_KEY (o Jev de verdade)' if ENV['TYPESAFE_API_KEY'].blank? || !Chatwoot.encryption_configured?
+    AiProviderCredential.find_or_initialize_by(provider: 'typesafe').update!(api_key: ENV.fetch('TYPESAFE_API_KEY'))
+  end
+
+  def contato_com_conversa!(nome, caixa, texto)
+    contato = contato!(c.conta, nome)
+    conversa = create_crm_conversation(account: c.conta, inbox: caixa, contact: contato)
+    create(:message, conversation: conversa, account: c.conta, inbox: caixa, message_type: :incoming, content: texto)
+    contato
+  end
+
+  # MOTIVO: #858 — classificar muitos registros de uma vez é com o Jev, não com o Guia lendo um a um nem
+  # com regra em código. Pega: etiquetar quem não veio do site (tolerância zero numa fixture clara),
+  # deixar de etiquetar quem veio, e responder "de cabeça" sem classificar (sem custo jev_guia).
+  it 'C30 desses contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
+    ligar_jev!
+    site = create_crm_inbox(account: c.conta, name: 'Site da corretora', members: [c.admin])
+    do_site = ['Luana Prado', 'Otávio Reis', 'Bianca Moura'].map do |nome|
+      contato_com_conversa!(nome, site, "Formulário de contato do site\nNome: #{nome}\nProduto: Seguro auto\nMensagem: quero uma cotação")
+    end
+    outros = { 'Rui Campos' => 'Oi! Vi o anúncio de vocês no Instagram, fazem seguro de moto?',
+               'Selma Dias' => 'O João me indicou vocês, preciso renovar o seguro da casa',
+               'Tiago Nunes' => 'Sou cliente, me manda a segunda via do boleto?' }.map do |nome, texto|
+      contato_com_conversa!(nome, c.vendas, texto)
+    end
+
+    respondeu!(perguntar('Desses contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
+
+    etiquetados = c.conta.contacts.select { |contato| contato.reload.label_list.include?('lead-site') }
+    expect(etiquetados.map(&:id).sort).to eq(do_site.map(&:id).sort)
+    expect(etiquetados.map(&:id) & outros.map(&:id)).to be_empty
+    expect(Crm::AiUsageEvent.where(account: c.conta, feature: 'jev_guia')).to exist
   end
 end
 # rubocop:enable RSpec/DescribeClass

@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useMapGetter } from 'dashboard/composables/store';
 
@@ -24,11 +25,16 @@ export function useGuiaDescoberta() {
   const currentAccount = useMapGetter('accounts/getAccount');
   const accountId = useMapGetter('getCurrentAccountId');
 
+  const route = useRoute();
+
   // Gate = `autonomia_guide_available`: a elegibilidade EXATA do backend (ENV mestre +
   // flag da conta + credencial de IA), então a entrada nunca aparece sem Guia de verdade.
+  // #859 — na tela que já traz a conversa embutida (`meta.guiaEmbutido`), a entrada
+  // some: abriria a mesma conversa uma segunda vez.
   const guiaDisponivel = computed(
     () =>
-      currentAccount.value(accountId.value)?.autonomia_guide_available === true
+      currentAccount.value(accountId.value)?.autonomia_guide_available ===
+        true && route?.meta?.guiaEmbutido !== true
   );
   const painelAberto = computed(
     () => uiSettings.value.is_autonomia_guide_panel_open === true

@@ -29,7 +29,9 @@ class Crm::StageAutomationStep < ApplicationRecord
   belongs_to :account
   belongs_to :stage_automation, class_name: 'Crm::StageAutomation', inverse_of: :steps
 
-  enum action_type: { create_follow_up: 0, assign_owner: 1, move_stage: 2 }
+  # `perguntar_ao_decisor` (#858): o Decisor responde sobre o card antes dos passos seguintes, que só rodam
+  # se ele responder a chave combinada. action_config: { decisor_id, chave_que_segue }.
+  enum action_type: { create_follow_up: 0, assign_owner: 1, move_stage: 2, perguntar_ao_decisor: 3 }
 
   validates :position, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validates :delay_seconds, numericality: { only_integer: true, greater_than_or_equal_to: 0 }

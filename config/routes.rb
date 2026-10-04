@@ -165,6 +165,7 @@ Rails.application.routes.draw do
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
+            post :ensaio, on: :member
           end
           resources :macros, only: [:index, :create, :show, :update, :destroy] do
             post :execute, on: :member
@@ -368,6 +369,20 @@ Rails.application.routes.draw do
             post 'guide/arquivos', to: 'guide#arquivo'
             post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
+            # #861 — a conversa com o Guia guardada: reabrir, listar e apagar.
+            get 'guide/conversas', to: 'guide_conversas#index'
+            get 'guide/conversas/atual', to: 'guide_conversas#atual'
+            get 'guide/conversas/:id', to: 'guide_conversas#show'
+            delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
+            resources :decisores, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :teste
+                post :exemplos
+                get :decisoes
+              end
+            end
+            post 'decisoes/:id/resolver', to: 'decisoes#resolver'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect
