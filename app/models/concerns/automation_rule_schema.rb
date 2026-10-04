@@ -31,6 +31,16 @@ class AutomationRuleSchema
     'content' => ' Casa palavra solta no texto: "não quero cancelar" casa com "cancelar". Não serve para entender a ' \
                  "intenção do cliente; para isso a ação #{Autonomia::Decisores::PASSO}."
   }.freeze
+  # "Se em N minutos ainda…": o que o motor faz com o atraso (#939 — sem isto o Guia não sabia a unidade).
+  ATRASO = {
+    'type' => %w[integer null], 'minimum' => AutomationRule::EXECUTION_DELAY_RANGE.min,
+    'maximum' => AutomationRule::EXECUTION_DELAY_RANGE.max,
+    'description' => "Minutos de espera antes de agir (#{AutomationRule::EXECUTION_DELAY_RANGE.min} a " \
+                     "#{AutomationRule::EXECUTION_DELAY_RANGE.max}, até 30 dias); vazio age na hora. Na hora de agir a " \
+                     'plataforma confere as condições de novo e desiste se não valem mais. Com eventos de conversa ' \
+                     'só valem condições de status e caixa; com message_created, todas menos attribute_changed. ' \
+                     'Precisa do recurso de atraso ligado na conta.'
+  }.freeze
   EVENTO = { 'type' => 'string', 'examples' => EVENTOS.keys,
              'description' => "Quando a regra roda. #{EVENTOS.map { |nome, quando| "#{nome}: #{quando}" }.join('. ')}." }.freeze
 

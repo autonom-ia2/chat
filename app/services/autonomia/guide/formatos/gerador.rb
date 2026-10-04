@@ -11,6 +11,14 @@ class Autonomia::Guide::Formatos::Gerador
     Formatos::RotasDeEscrita.todas.to_h { |rota| [rota.acao, formato(rota)] }
   end
 
+  # Os parâmetros de cada leitura do catálogo (#942).
+  def leituras
+    Formatos::RotasDeLeitura.todas.to_h do |rota|
+      klass = "#{rota.controller.camelize}Controller".safe_constantize if rota.controller.present?
+      [rota.acao, klass ? Formatos::ParametrosDaLeitura.new(klass, rota).formato : sem_controller(rota).slice('controller', 'motivos')]
+    end
+  end
+
   private
 
   def formato(rota)

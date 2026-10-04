@@ -1,0 +1,1697 @@
+{
+  "agent_bots": {
+    "controller": "api/v1/accounts/agent_bots#index",
+    "parametros": []
+  },
+  "agent_bots/:id": {
+    "controller": "api/v1/accounts/agent_bots#show",
+    "parametros": []
+  },
+  "agent_capacity_policies": {
+    "controller": "api/v1/accounts/agent_capacity_policies#index",
+    "parametros": []
+  },
+  "agent_capacity_policies/:agent_capacity_policy_id/users": {
+    "controller": "api/v1/accounts/agent_capacity_policies/users#index",
+    "parametros": []
+  },
+  "agent_capacity_policies/:id": {
+    "controller": "api/v1/accounts/agent_capacity_policies#show",
+    "parametros": []
+  },
+  "agents": {
+    "controller": "api/v1/accounts/agents#index",
+    "parametros": []
+  },
+  "ai_requests/:id": {
+    "controller": "api/v1/accounts/ai_requests#show",
+    "parametros": []
+  },
+  "applied_slas": {
+    "controller": "api/v1/accounts/applied_slas#index",
+    "parametros": [
+      "assigned_agent_id",
+      "inbox_id",
+      "label_list",
+      "page",
+      "sla_policy_id",
+      "team_id"
+    ]
+  },
+  "applied_slas/download": {
+    "controller": "api/v1/accounts/applied_slas#download",
+    "parametros": [
+      "assigned_agent_id",
+      "inbox_id",
+      "label_list",
+      "sla_policy_id",
+      "team_id"
+    ]
+  },
+  "applied_slas/metrics": {
+    "controller": "api/v1/accounts/applied_slas#metrics",
+    "parametros": [
+      "assigned_agent_id",
+      "inbox_id",
+      "label_list",
+      "sla_policy_id",
+      "team_id"
+    ]
+  },
+  "assignable_agents": {
+    "controller": "api/v1/accounts/assignable_agents#index",
+    "parametros": [
+      "inbox_ids",
+      "include_ai_assignees"
+    ]
+  },
+  "assignment_policies": {
+    "controller": "api/v1/accounts/assignment_policies#index",
+    "parametros": []
+  },
+  "assignment_policies/:assignment_policy_id/inboxes": {
+    "controller": "api/v1/accounts/assignment_policies/inboxes#index",
+    "parametros": []
+  },
+  "assignment_policies/:id": {
+    "controller": "api/v1/accounts/assignment_policies#show",
+    "parametros": []
+  },
+  "assignment_policies/:id/edit": {
+    "controller": "api/v1/accounts/assignment_policies#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "assignment_policies/new": {
+    "controller": "api/v1/accounts/assignment_policies#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "audit_logs": {
+    "controller": "api/v1/accounts/audit_logs#show",
+    "parametros": [
+      "page",
+      "q",
+      "since",
+      "sort",
+      "types",
+      "until"
+    ]
+  },
+  "automation_rules": {
+    "controller": "api/v1/accounts/automation_rules#index",
+    "parametros": []
+  },
+  "automation_rules/:id": {
+    "controller": "api/v1/accounts/automation_rules#show",
+    "parametros": []
+  },
+  "autonomia/agents": {
+    "controller": "api/v1/accounts/autonomia/agents#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/channels": {
+    "controller": "api/v1/accounts/autonomia/agents/channels#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/faq_suggestions": {
+    "controller": "api/v1/accounts/autonomia/agents/faq_suggestions#index",
+    "parametros": [
+      "page",
+      "status"
+    ]
+  },
+  "autonomia/agents/:agent_id/instruction_versions": {
+    "controller": "api/v1/accounts/autonomia/agents/instruction_versions#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/sources": {
+    "controller": "api/v1/accounts/autonomia/agents/sources#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/tools": {
+    "controller": "api/v1/accounts/autonomia/agents/tools#index",
+    "parametros": []
+  },
+  "autonomia/agents/:agent_id/tools/:id": {
+    "controller": "api/v1/accounts/autonomia/agents/tools#show",
+    "parametros": []
+  },
+  "autonomia/agents/:id": {
+    "controller": "api/v1/accounts/autonomia/agents#show",
+    "parametros": []
+  },
+  "autonomia/agents/:id/analytics": {
+    "controller": "api/v1/accounts/autonomia/agents/analytics#index",
+    "parametros": [
+      "range"
+    ]
+  },
+  "autonomia/agents/:id/analytics/conversations": {
+    "controller": "api/v1/accounts/autonomia/agents/analytics#conversations",
+    "parametros": [
+      "metric",
+      "range"
+    ]
+  },
+  "autonomia/avisos": {
+    "controller": "api/v1/accounts/autonomia/avisos#index",
+    "parametros": [
+      "estado"
+    ]
+  },
+  "autonomia/build_threads/:id": {
+    "controller": "api/v1/accounts/autonomia/agents/build_threads#show",
+    "parametros": []
+  },
+  "autonomia/conversations/:conversation_id/copilot/agents": {
+    "controller": "api/v1/accounts/autonomia/conversation_copilot#agents",
+    "parametros": []
+  },
+  "autonomia/decisores": {
+    "controller": "api/v1/accounts/autonomia/decisores#index",
+    "parametros": []
+  },
+  "autonomia/decisores/:id": {
+    "controller": "api/v1/accounts/autonomia/decisores#show",
+    "parametros": []
+  },
+  "autonomia/decisores/:id/decisoes": {
+    "controller": "api/v1/accounts/autonomia/decisores#decisoes",
+    "parametros": [
+      "status"
+    ]
+  },
+  "autonomia/financial/billing_preview": {
+    "controller": "api/v1/accounts/autonomia/financial#billing_preview",
+    "parametros": []
+  },
+  "autonomia/financial/invoices": {
+    "controller": "api/v1/accounts/autonomia/financial#invoices",
+    "parametros": []
+  },
+  "autonomia/financial/payments": {
+    "controller": "api/v1/accounts/autonomia/financial#payments",
+    "parametros": []
+  },
+  "autonomia/financial/subscription": {
+    "controller": "api/v1/accounts/autonomia/financial#subscription",
+    "parametros": []
+  },
+  "autonomia/insurance/connection": {
+    "controller": "api/v1/accounts/autonomia/insurance/connection#show",
+    "parametros": [
+      "provider"
+    ]
+  },
+  "autonomia/insurance/measurement": {
+    "controller": "api/v1/accounts/autonomia/insurance/measurement#show",
+    "parametros": [
+      "from",
+      "to"
+    ]
+  },
+  "autonomia/insurance/quote_agent": {
+    "controller": "api/v1/accounts/autonomia/insurance/quote_agent#show",
+    "parametros": []
+  },
+  "autonomia/invite_connection": {
+    "controller": "api/v1/accounts/autonomia/invite_connections#show",
+    "parametros": []
+  },
+  "autonomia/invite_connection/:inbox_id/connection": {
+    "controller": "api/v1/accounts/autonomia/invite_connections#connection",
+    "parametros": []
+  },
+  "autonomia/pendencias_do_guia": {
+    "controller": "api/v1/accounts/autonomia/pendencias_do_guia#index",
+    "parametros": [
+      "horas"
+    ]
+  },
+  "autonomia/prospecting/leads": {
+    "controller": "api/v1/accounts/autonomia/prospecting/leads#index",
+    "parametros": [
+      "list_id",
+      "status"
+    ]
+  },
+  "autonomia/prospecting/leads/:id": {
+    "controller": "api/v1/accounts/autonomia/prospecting/leads#show",
+    "parametros": []
+  },
+  "autonomia/prospecting/lists": {
+    "controller": "api/v1/accounts/autonomia/prospecting/lists#index",
+    "parametros": []
+  },
+  "autonomia/prospecting/lists/:id": {
+    "controller": "api/v1/accounts/autonomia/prospecting/lists#show",
+    "parametros": []
+  },
+  "autonomia/prospecting/lists/:id/export": {
+    "controller": "api/v1/accounts/autonomia/prospecting/lists#export",
+    "parametros": [
+      "lead_ids"
+    ]
+  },
+  "autonomia/prospecting/searches": {
+    "controller": "api/v1/accounts/autonomia/prospecting/searches#index",
+    "parametros": [
+      "page",
+      "per_page"
+    ]
+  },
+  "autonomia/prospecting/searches/:id": {
+    "controller": "api/v1/accounts/autonomia/prospecting/searches#show",
+    "parametros": []
+  },
+  "autonomia/prospecting/searches/:id/export": {
+    "controller": "api/v1/accounts/autonomia/prospecting/searches#export",
+    "parametros": [
+      "lead_ids"
+    ]
+  },
+  "autonomia/prospecting/searches/location_details": {
+    "controller": "api/v1/accounts/autonomia/prospecting/searches#location_details",
+    "parametros": [
+      "place_id"
+    ]
+  },
+  "autonomia/prospecting/searches/location_suggestions": {
+    "controller": "api/v1/accounts/autonomia/prospecting/searches#location_suggestions",
+    "parametros": [
+      "query"
+    ]
+  },
+  "autonomia/prospecting/settings": {
+    "controller": "api/v1/accounts/autonomia/prospecting/settings#show",
+    "parametros": []
+  },
+  "autonomia/tarefas": {
+    "controller": "api/v1/accounts/autonomia/tarefas#index",
+    "parametros": []
+  },
+  "autonomia/tarefas/:id": {
+    "controller": "api/v1/accounts/autonomia/tarefas#show",
+    "parametros": []
+  },
+  "autonomia/vigias": {
+    "controller": "api/v1/accounts/autonomia/vigias#index",
+    "parametros": []
+  },
+  "autonomia/vigias/:id": {
+    "controller": "api/v1/accounts/autonomia/vigias#show",
+    "parametros": []
+  },
+  "branded_email_layout": {
+    "controller": "api/v1/accounts/branded_email_layouts#show",
+    "parametros": []
+  },
+  "callbacks/register_facebook_page": {
+    "controller": "api/v1/accounts/callbacks#register_facebook_page",
+    "parametros": [
+      "inbox_name",
+      "page_access_token",
+      "page_id",
+      "user_access_token"
+    ]
+  },
+  "calls": {
+    "controller": "api/v1/accounts/calls#index",
+    "parametros": [
+      "agent_id",
+      "direction",
+      "inbox_id",
+      "page",
+      "since",
+      "status",
+      "until"
+    ]
+  },
+  "campaign_imports": {
+    "controller": "api/v1/accounts/campaign_imports#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "campaign_imports/:id": {
+    "controller": "api/v1/accounts/campaign_imports#show",
+    "parametros": []
+  },
+  "campaign_imports/:id/download": {
+    "controller": "api/v1/accounts/campaign_imports#download",
+    "parametros": [
+      "file"
+    ]
+  },
+  "campaigns": {
+    "controller": "api/v1/accounts/campaigns#index",
+    "parametros": []
+  },
+  "campaigns/:campaign_id/analytics/contacts": {
+    "controller": "api/v1/accounts/campaigns/analytics#contacts",
+    "parametros": [
+      "page",
+      "status"
+    ]
+  },
+  "campaigns/:campaign_id/analytics/metrics": {
+    "controller": "api/v1/accounts/campaigns/analytics#metrics",
+    "parametros": []
+  },
+  "campaigns/:id": {
+    "controller": "api/v1/accounts/campaigns#show",
+    "parametros": []
+  },
+  "canned_responses": {
+    "controller": "api/v1/accounts/canned_responses#index",
+    "parametros": [
+      "search"
+    ]
+  },
+  "captain/agent_sessions/:id": {
+    "controller": "api/v1/accounts/captain/agent_sessions#show",
+    "parametros": []
+  },
+  "captain/assistant_responses": {
+    "controller": "api/v1/accounts/captain/assistant_responses#index",
+    "parametros": [
+      "assistant_id",
+      "document_id",
+      "id",
+      "page",
+      "search"
+    ]
+  },
+  "captain/assistant_responses/:id": {
+    "controller": "api/v1/accounts/captain/assistant_responses#show",
+    "parametros": [
+      "assistant_id",
+      "document_id",
+      "page",
+      "search"
+    ]
+  },
+  "captain/assistant_responses/:id/drilldown": {
+    "controller": "api/v1/accounts/captain/assistant_responses#drilldown",
+    "parametros": [
+      "assistant_id",
+      "document_id",
+      "page",
+      "per_page",
+      "search"
+    ]
+  },
+  "captain/assistant_responses/:id/edit": {
+    "controller": "api/v1/accounts/captain/assistant_responses#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistant_responses/new": {
+    "controller": "api/v1/accounts/captain/assistant_responses#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistants": {
+    "controller": "api/v1/accounts/captain/assistants#index",
+    "parametros": []
+  },
+  "captain/assistants/:assistant_id/inboxes": {
+    "controller": "api/v1/accounts/captain/inboxes#index",
+    "parametros": [
+      "id",
+      "inbox_id"
+    ]
+  },
+  "captain/assistants/:assistant_id/scenarios": {
+    "controller": "api/v1/accounts/captain/scenarios#index",
+    "parametros": []
+  },
+  "captain/assistants/:assistant_id/scenarios/:id": {
+    "controller": "api/v1/accounts/captain/scenarios#show",
+    "parametros": []
+  },
+  "captain/assistants/:assistant_id/scenarios/:id/edit": {
+    "controller": "api/v1/accounts/captain/scenarios#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistants/:assistant_id/scenarios/new": {
+    "controller": "api/v1/accounts/captain/scenarios#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistants/:assistant_id/stats/overview": {
+    "controller": "api/v1/accounts/captain/assistant_stats#overview",
+    "parametros": [
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:assistant_id/stats/overview_summary": {
+    "controller": "api/v1/accounts/captain/assistant_stats#overview_summary",
+    "parametros": [
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:assistant_id/stats/resolution_flow": {
+    "controller": "api/v1/accounts/captain/assistant_stats#resolution_flow",
+    "parametros": [
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:assistant_id/stats/resolution_trend": {
+    "controller": "api/v1/accounts/captain/assistant_stats#resolution_trend",
+    "parametros": [
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:id": {
+    "controller": "api/v1/accounts/captain/assistants#show",
+    "parametros": []
+  },
+  "captain/assistants/:id/drilldown": {
+    "controller": "api/v1/accounts/captain/assistants#drilldown",
+    "parametros": [
+      "metric",
+      "page",
+      "per_page",
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:id/edit": {
+    "controller": "api/v1/accounts/captain/assistants#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistants/:id/faq_stats": {
+    "controller": "api/v1/accounts/captain/assistants#faq_stats",
+    "parametros": []
+  },
+  "captain/assistants/:id/metrics": {
+    "controller": "api/v1/accounts/captain/assistants#metrics",
+    "parametros": [
+      "range",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/:id/summary": {
+    "controller": "api/v1/accounts/captain/assistants#summary",
+    "parametros": [
+      "range",
+      "stats",
+      "timezone_offset"
+    ]
+  },
+  "captain/assistants/new": {
+    "controller": "api/v1/accounts/captain/assistants#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/assistants/tools": {
+    "controller": "api/v1/accounts/captain/assistants#tools",
+    "parametros": []
+  },
+  "captain/copilot_threads": {
+    "controller": "api/v1/accounts/captain/copilot_threads#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "captain/copilot_threads/:copilot_thread_id/copilot_messages": {
+    "controller": "api/v1/accounts/captain/copilot_messages#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "captain/custom_tools": {
+    "controller": "api/v1/accounts/captain/custom_tools#index",
+    "parametros": []
+  },
+  "captain/custom_tools/:id": {
+    "controller": "api/v1/accounts/captain/custom_tools#show",
+    "parametros": []
+  },
+  "captain/custom_tools/:id/edit": {
+    "controller": "api/v1/accounts/captain/custom_tools#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/custom_tools/new": {
+    "controller": "api/v1/accounts/captain/custom_tools#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "captain/documents": {
+    "controller": "api/v1/accounts/captain/documents#index",
+    "parametros": [
+      "assistant_id",
+      "filter",
+      "id",
+      "page",
+      "search_key",
+      "sort",
+      "source"
+    ]
+  },
+  "captain/documents/:id": {
+    "controller": "api/v1/accounts/captain/documents#show",
+    "parametros": [
+      "assistant_id",
+      "filter",
+      "page",
+      "search_key",
+      "sort",
+      "source"
+    ]
+  },
+  "captain/documents/:id/drilldown": {
+    "controller": "api/v1/accounts/captain/documents#drilldown",
+    "parametros": [
+      "assistant_id",
+      "filter",
+      "page",
+      "per_page",
+      "search_key",
+      "sort",
+      "source"
+    ]
+  },
+  "captain/faq_suggestions": {
+    "controller": "api/v1/accounts/captain/faq_suggestions#index",
+    "parametros": [
+      "assistant_id",
+      "id",
+      "page",
+      "search",
+      "status"
+    ]
+  },
+  "captain/faq_suggestions/:id": {
+    "controller": "api/v1/accounts/captain/faq_suggestions#show",
+    "parametros": [
+      "assistant_id",
+      "page",
+      "search",
+      "status"
+    ]
+  },
+  "captain/preferences": {
+    "controller": "api/v1/accounts/captain/preferences#show",
+    "parametros": []
+  },
+  "central-de-ajuda": {
+    "controller": "api/v1/accounts/central_de_ajuda#index",
+    "parametros": []
+  },
+  "central-de-ajuda/:id": {
+    "controller": "api/v1/accounts/central_de_ajuda#show",
+    "parametros": []
+  },
+  "central-de-ajuda/busca": {
+    "controller": "api/v1/accounts/central_de_ajuda#busca",
+    "parametros": [
+      "termo"
+    ]
+  },
+  "companies": {
+    "controller": "api/v1/accounts/companies#index",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "companies/:company_id/contacts": {
+    "controller": "api/v1/accounts/companies/contacts#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "companies/:company_id/contacts/search": {
+    "controller": "api/v1/accounts/companies/contacts#search",
+    "parametros": [
+      "page",
+      "q"
+    ]
+  },
+  "companies/:company_id/conversations": {
+    "controller": "api/v1/accounts/companies/conversations#index",
+    "parametros": []
+  },
+  "companies/:company_id/media": {
+    "controller": "api/v1/accounts/companies/media#index",
+    "parametros": []
+  },
+  "companies/:company_id/media/:id": {
+    "controller": "api/v1/accounts/companies/media#show",
+    "parametros": [
+      "inline"
+    ]
+  },
+  "companies/:company_id/media/:id/preview": {
+    "controller": "api/v1/accounts/companies/media#preview",
+    "parametros": []
+  },
+  "companies/:company_id/media/contacts": {
+    "controller": "api/v1/accounts/companies/media#contacts",
+    "parametros": [
+      "q"
+    ]
+  },
+  "companies/:company_id/notes": {
+    "controller": "api/v1/accounts/companies/notes#index",
+    "parametros": []
+  },
+  "companies/:id": {
+    "controller": "api/v1/accounts/companies#show",
+    "parametros": []
+  },
+  "companies/search": {
+    "controller": "api/v1/accounts/companies#search",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "companies/summary": {
+    "controller": "api/v1/accounts/companies#summary",
+    "parametros": []
+  },
+  "conta": {
+    "controller": "api/v1/accounts#show",
+    "parametros": []
+  },
+  "conta/cache_keys": {
+    "controller": "api/v1/accounts#cache_keys",
+    "parametros": []
+  },
+  "contacts": {
+    "controller": "api/v1/accounts/contacts#index",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "contacts/:contact_id/attachments": {
+    "controller": "api/v1/accounts/contacts/attachments#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "contacts/:contact_id/conversations": {
+    "controller": "api/v1/accounts/contacts/conversations#index",
+    "parametros": [
+      "conversation_id"
+    ]
+  },
+  "contacts/:contact_id/labels": {
+    "controller": "api/v1/accounts/contacts/labels#index",
+    "parametros": []
+  },
+  "contacts/:contact_id/media": {
+    "controller": "api/v1/accounts/contacts/media#index",
+    "parametros": []
+  },
+  "contacts/:contact_id/media/:id": {
+    "controller": "api/v1/accounts/contacts/media#show",
+    "parametros": [
+      "inline"
+    ]
+  },
+  "contacts/:contact_id/media/:id/preview": {
+    "controller": "api/v1/accounts/contacts/media#preview",
+    "parametros": []
+  },
+  "contacts/:contact_id/notes": {
+    "controller": "api/v1/accounts/contacts/notes#index",
+    "parametros": []
+  },
+  "contacts/:contact_id/notes/:id": {
+    "controller": "api/v1/accounts/contacts/notes#show",
+    "parametros": []
+  },
+  "contacts/:contact_id/notes/:id/edit": {
+    "controller": "api/v1/accounts/contacts/notes#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "contacts/:contact_id/notes/new": {
+    "controller": "api/v1/accounts/contacts/notes#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "contacts/:id": {
+    "controller": "api/v1/accounts/contacts#show",
+    "parametros": [
+      "include_contact_inboxes"
+    ]
+  },
+  "contacts/:id/contactable_inboxes": {
+    "controller": "api/v1/accounts/contacts#contactable_inboxes",
+    "parametros": []
+  },
+  "contacts/active": {
+    "controller": "api/v1/accounts/contacts#active",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "contacts/search": {
+    "controller": "api/v1/accounts/contacts#search",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "contacts/summary": {
+    "controller": "api/v1/accounts/contacts#summary",
+    "parametros": []
+  },
+  "conversations": {
+    "controller": "api/v1/accounts/conversations#index",
+    "parametros": [
+      "assignee_type",
+      "conversation_type",
+      "inbox_id",
+      "labels",
+      "page",
+      "q",
+      "sort_by",
+      "source_id",
+      "status",
+      "team_id",
+      "updated_within"
+    ]
+  },
+  "conversations/:conversation_id/draft_messages": {
+    "controller": "api/v1/accounts/conversations/draft_messages#show",
+    "parametros": []
+  },
+  "conversations/:conversation_id/labels": {
+    "controller": "api/v1/accounts/conversations/labels#index",
+    "parametros": []
+  },
+  "conversations/:conversation_id/messages": {
+    "controller": "api/v1/accounts/conversations/messages#index",
+    "parametros": [
+      "after",
+      "before",
+      "filter_internal_messages"
+    ]
+  },
+  "conversations/:conversation_id/participants": {
+    "controller": "api/v1/accounts/conversations/participants#show",
+    "parametros": []
+  },
+  "conversations/:id": {
+    "controller": "api/v1/accounts/conversations#show",
+    "parametros": []
+  },
+  "conversations/:id/attachments": {
+    "controller": "api/v1/accounts/conversations#attachments",
+    "parametros": [
+      "page"
+    ]
+  },
+  "conversations/:id/inbox_assistant": {
+    "controller": "api/v1/accounts/conversations#inbox_assistant",
+    "parametros": []
+  },
+  "conversations/:id/reporting_events": {
+    "controller": "api/v1/accounts/conversations#reporting_events",
+    "parametros": []
+  },
+  "conversations/meta": {
+    "controller": "api/v1/accounts/conversations#meta",
+    "parametros": [
+      "assignee_type",
+      "conversation_type",
+      "inbox_id",
+      "labels",
+      "page",
+      "q",
+      "sort_by",
+      "source_id",
+      "status",
+      "team_id",
+      "updated_within"
+    ]
+  },
+  "conversations/search": {
+    "controller": "api/v1/accounts/conversations#search",
+    "parametros": [
+      "assignee_type",
+      "conversation_type",
+      "inbox_id",
+      "labels",
+      "page",
+      "q",
+      "sort_by",
+      "source_id",
+      "status",
+      "team_id",
+      "updated_within"
+    ]
+  },
+  "conversations/unread_counts": {
+    "controller": "api/v1/accounts/conversations/unread_counts#index",
+    "parametros": []
+  },
+  "crm/ai_usage": {
+    "controller": "api/v1/accounts/crm/ai_usage#index",
+    "parametros": [
+      "group_by",
+      "page",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/ai_usage/export": {
+    "controller": "api/v1/accounts/crm/ai_usage#export",
+    "parametros": [
+      "export_format",
+      "group_by",
+      "page",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/booking_profiles": {
+    "controller": "api/v1/accounts/crm/booking_profiles#index",
+    "parametros": []
+  },
+  "crm/booking_profiles/:id/agent_links": {
+    "controller": "api/v1/accounts/crm/booking_profiles#agent_links",
+    "parametros": []
+  },
+  "crm/calendar/available_slots": {
+    "controller": "api/v1/accounts/crm/calendar#available_slots",
+    "parametros": [
+      "date",
+      "inbox_id",
+      "timezone"
+    ]
+  },
+  "crm/calendar/events": {
+    "controller": "api/v1/accounts/crm/calendar#events",
+    "motivos": [
+      "params inteiro repassado a ::Crm::Cards::CalendarQuery.new",
+      "params inteiro repassado a ::Crm::FollowUps::FilterQuery.new"
+    ]
+  },
+  "crm/cards": {
+    "controller": "api/v1/accounts/crm/cards#index",
+    "motivos": [
+      "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+    ]
+  },
+  "crm/cards/:id": {
+    "controller": "api/v1/accounts/crm/cards#show",
+    "parametros": []
+  },
+  "crm/cards/:id/current_ai_suggestion": {
+    "controller": "api/v1/accounts/crm/cards#current_ai_suggestion",
+    "parametros": []
+  },
+  "crm/cards/export": {
+    "controller": "api/v1/accounts/crm/cards#export",
+    "motivos": [
+      "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+    ]
+  },
+  "crm/cards/summaries": {
+    "controller": "api/v1/accounts/crm/cards/summaries#index",
+    "motivos": [
+      "params inteiro repassado a ::Crm::Cards::GroupSummary.new"
+    ]
+  },
+  "crm/companies/:company_id/opportunities": {
+    "controller": "api/v1/accounts/crm/company_opportunities#index",
+    "parametros": [
+      "page",
+      "result",
+      "search"
+    ]
+  },
+  "crm/contacts/:contact_id/opportunities": {
+    "controller": "api/v1/accounts/crm/contact_opportunities#index",
+    "parametros": [
+      "page",
+      "result",
+      "search"
+    ]
+  },
+  "crm/conversations/:conversation_id/card": {
+    "controller": "api/v1/accounts/crm/cards#by_conversation",
+    "parametros": []
+  },
+  "crm/conversations/card_stages": {
+    "controller": "api/v1/accounts/crm/cards#card_stages",
+    "parametros": [
+      "conversation_ids"
+    ]
+  },
+  "crm/follow_ups": {
+    "controller": "api/v1/accounts/crm/follow_ups#index",
+    "motivos": [
+      "params inteiro repassado a ::Crm::FollowUps::FilterQuery.new"
+    ]
+  },
+  "crm/follow_ups/:id": {
+    "controller": "api/v1/accounts/crm/follow_ups#show",
+    "parametros": []
+  },
+  "crm/follow_ups/messaging_window": {
+    "controller": "api/v1/accounts/crm/follow_ups#messaging_window",
+    "parametros": [
+      "at",
+      "conversation_id"
+    ]
+  },
+  "crm/follow_ups/reminders": {
+    "controller": "api/v1/accounts/crm/follow_ups#reminders",
+    "parametros": []
+  },
+  "crm/inbox_settings": {
+    "controller": "api/v1/accounts/crm/inbox_settings#index",
+    "parametros": []
+  },
+  "crm/integration_tokens": {
+    "controller": "api/v1/accounts/crm/integration_tokens#index",
+    "parametros": []
+  },
+  "crm/kanban": {
+    "controller": "api/v1/accounts/crm/kanban#index",
+    "motivos": [
+      "params inteiro repassado a Crm::Kanban::BoardContext.new"
+    ]
+  },
+  "crm/meetings": {
+    "controller": "api/v1/accounts/crm/meetings#index",
+    "parametros": [
+      "card_id",
+      "inbox_id",
+      "page",
+      "provider",
+      "status"
+    ]
+  },
+  "crm/meetings/:id": {
+    "controller": "api/v1/accounts/crm/meetings#show",
+    "parametros": []
+  },
+  "crm/meta_conversions": {
+    "controller": "api/v1/accounts/crm/meta_conversions#index",
+    "parametros": [
+      "card_id",
+      "card_ids"
+    ]
+  },
+  "crm/meta_conversions/summary": {
+    "controller": "api/v1/accounts/crm/meta_conversions#summary",
+    "parametros": [
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/pipelines": {
+    "controller": "api/v1/accounts/crm/pipelines#index",
+    "parametros": []
+  },
+  "crm/pipelines/:id": {
+    "controller": "api/v1/accounts/crm/pipelines#show",
+    "parametros": []
+  },
+  "crm/pipelines/:pipeline_id/ai_settings": {
+    "controller": "api/v1/accounts/crm/ai_settings#show",
+    "parametros": []
+  },
+  "crm/pipelines/:pipeline_id/inboxes": {
+    "controller": "api/v1/accounts/crm/pipeline_inboxes#index",
+    "parametros": []
+  },
+  "crm/pipelines/:pipeline_id/stages": {
+    "controller": "api/v1/accounts/crm/stages#index",
+    "parametros": []
+  },
+  "crm/reports/ai_vs_human": {
+    "controller": "api/v1/accounts/crm/reports#ai_vs_human",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/follow_ups": {
+    "controller": "api/v1/accounts/crm/reports#follow_ups",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/funnel": {
+    "controller": "api/v1/accounts/crm/reports#funnel",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/meetings": {
+    "controller": "api/v1/accounts/crm/reports#meetings",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/pipelines": {
+    "controller": "api/v1/accounts/crm/reports#pipelines",
+    "parametros": []
+  },
+  "crm/reports/summary": {
+    "controller": "api/v1/accounts/crm/reports#summary",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/throughput": {
+    "controller": "api/v1/accounts/crm/reports#throughput",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/reports/workload": {
+    "controller": "api/v1/accounts/crm/reports#workload",
+    "parametros": [
+      "group_by",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "crm/saved_views": {
+    "controller": "api/v1/accounts/crm/saved_views#index",
+    "parametros": [
+      "pipeline_id"
+    ]
+  },
+  "crm/service_schedules": {
+    "controller": "api/v1/accounts/crm/service_schedules#index",
+    "parametros": []
+  },
+  "crm/stage_automations/:id": {
+    "controller": "api/v1/accounts/crm/stage_automations#show",
+    "parametros": []
+  },
+  "crm/stages/:stage_id/stage_automations": {
+    "controller": "api/v1/accounts/crm/stage_automations#index",
+    "parametros": []
+  },
+  "csat_survey_responses": {
+    "controller": "api/v1/accounts/csat_survey_responses#index",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "csat_survey_responses/download": {
+    "controller": "api/v1/accounts/csat_survey_responses#download",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "csat_survey_responses/metrics": {
+    "controller": "api/v1/accounts/csat_survey_responses#metrics",
+    "motivos": [
+      "lê params em código de fora do repositório (Sift#filtrate)"
+    ]
+  },
+  "ctwa_campaigns": {
+    "controller": "api/v1/accounts/ctwa_campaigns#index",
+    "parametros": [
+      "include_origin_metrics",
+      "pipeline_id",
+      "since",
+      "until"
+    ]
+  },
+  "ctwa_tracked_links": {
+    "controller": "api/v1/accounts/ctwa_tracked_links#index",
+    "parametros": []
+  },
+  "custom_attribute_definitions": {
+    "controller": "api/v1/accounts/custom_attribute_definitions#index",
+    "parametros": [
+      "attribute_model",
+      "filter_type",
+      "id"
+    ]
+  },
+  "custom_attribute_definitions/:id": {
+    "controller": "api/v1/accounts/custom_attribute_definitions#show",
+    "parametros": [
+      "attribute_model",
+      "filter_type"
+    ]
+  },
+  "custom_filters": {
+    "controller": "api/v1/accounts/custom_filters#index",
+    "parametros": [
+      "filter_type",
+      "id"
+    ]
+  },
+  "custom_filters/:id": {
+    "controller": "api/v1/accounts/custom_filters#show",
+    "parametros": [
+      "filter_type"
+    ]
+  },
+  "custom_roles": {
+    "controller": "api/v1/accounts/custom_roles#index",
+    "parametros": []
+  },
+  "custom_roles/:id": {
+    "controller": "api/v1/accounts/custom_roles#show",
+    "parametros": []
+  },
+  "dashboard_apps": {
+    "controller": "api/v1/accounts/dashboard_apps#index",
+    "parametros": []
+  },
+  "dashboard_apps/:id": {
+    "controller": "api/v1/accounts/dashboard_apps#show",
+    "parametros": []
+  },
+  "data_imports": {
+    "controller": "api/v1/accounts/data_imports#index",
+    "parametros": []
+  },
+  "data_imports/:id": {
+    "controller": "api/v1/accounts/data_imports#show",
+    "motivos": [
+      "params inteiro repassado a DataImportSkipLogFinder.new"
+    ]
+  },
+  "data_imports/:id/error_logs": {
+    "controller": "api/v1/accounts/data_imports#error_logs",
+    "parametros": []
+  },
+  "data_imports/:id/skip_logs": {
+    "controller": "api/v1/accounts/data_imports#skip_logs",
+    "parametros": []
+  },
+  "email_campaigns/ai/campaigns/:id/status": {
+    "controller": "api/v1/accounts/email_campaigns/ai#status",
+    "parametros": []
+  },
+  "email_campaigns/campaigns": {
+    "controller": "api/v1/accounts/email_campaigns/campaigns#index",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/campaigns/:campaign_id/recipients": {
+    "controller": "api/v1/accounts/email_campaigns/recipients#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "email_campaigns/campaigns/:id": {
+    "controller": "api/v1/accounts/email_campaigns/campaigns#show",
+    "parametros": []
+  },
+  "email_campaigns/campaigns/:id/placeholders": {
+    "controller": "api/v1/accounts/email_campaigns/template_tools#placeholders",
+    "parametros": []
+  },
+  "email_campaigns/campaigns/:id/validate": {
+    "controller": "api/v1/accounts/email_campaigns/template_tools#validate",
+    "parametros": []
+  },
+  "email_campaigns/maintenance/backfills/:id": {
+    "controller": "api/v1/accounts/email_campaigns/maintenance#show",
+    "parametros": []
+  },
+  "email_campaigns/reports": {
+    "controller": "api/v1/accounts/email_campaigns/reports#index",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id": {
+    "controller": "api/v1/accounts/email_campaigns/reports#show",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/clicks": {
+    "controller": "api/v1/accounts/email_campaigns/reports#clicks",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/export": {
+    "controller": "api/v1/accounts/email_campaigns/reports#export",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/import_issues": {
+    "controller": "api/v1/accounts/email_campaigns/reports#import_issues",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/import_issues/export": {
+    "controller": "api/v1/accounts/email_campaigns/reports#export_import_issues",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/recipients": {
+    "controller": "api/v1/accounts/email_campaigns/reports#recipients",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reports/:id/timeline": {
+    "controller": "api/v1/accounts/email_campaigns/reports#timeline",
+    "motivos": [
+      "permit com valor calculado"
+    ]
+  },
+  "email_campaigns/reputation": {
+    "controller": "api/v1/accounts/email_campaigns/reputations#show",
+    "parametros": []
+  },
+  "email_campaigns/reputation/history": {
+    "controller": "api/v1/accounts/email_campaigns/reputations#history",
+    "parametros": []
+  },
+  "email_campaigns/sender_identities": {
+    "controller": "api/v1/accounts/email_campaigns/sender_identities#index",
+    "parametros": []
+  },
+  "email_campaigns/sender_identities/:id": {
+    "controller": "api/v1/accounts/email_campaigns/sender_identities#show",
+    "parametros": []
+  },
+  "email_campaigns/templates": {
+    "controller": "api/v1/accounts/email_campaigns/templates#index",
+    "parametros": [
+      "category"
+    ]
+  },
+  "email_campaigns/templates/:id": {
+    "controller": "api/v1/accounts/email_campaigns/templates#show",
+    "parametros": []
+  },
+  "email_oauth_apps/:provider": {
+    "controller": "api/v1/accounts/email_oauth_apps#show",
+    "parametros": []
+  },
+  "inbox_members/:inbox_id": {
+    "controller": "api/v1/accounts/inbox_members#show",
+    "parametros": []
+  },
+  "inboxes": {
+    "controller": "api/v1/accounts/inboxes#index",
+    "parametros": []
+  },
+  "inboxes/:id": {
+    "controller": "api/v1/accounts/inboxes#show",
+    "parametros": []
+  },
+  "inboxes/:id/agent_bot": {
+    "controller": "api/v1/accounts/inboxes#agent_bot",
+    "parametros": []
+  },
+  "inboxes/:id/assignable_agents": {
+    "controller": "api/v1/accounts/inboxes#assignable_agents",
+    "parametros": []
+  },
+  "inboxes/:id/campaigns": {
+    "controller": "api/v1/accounts/inboxes#campaigns",
+    "parametros": []
+  },
+  "inboxes/:id/health": {
+    "controller": "api/v1/accounts/inboxes#health",
+    "parametros": []
+  },
+  "inboxes/:id/message_templates": {
+    "controller": "api/v1/accounts/inboxes#message_templates",
+    "parametros": [
+      "name"
+    ]
+  },
+  "inboxes/:inbox_id/assignment_policy": {
+    "controller": "api/v1/accounts/inboxes/assignment_policies#show",
+    "parametros": [
+      "assignment_policy_id"
+    ]
+  },
+  "inboxes/:inbox_id/conference/token": {
+    "controller": "api/v1/accounts/conference#token",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/csat_template": {
+    "controller": "api/v1/accounts/inbox_csat_templates#show",
+    "parametros": []
+  },
+  "inboxes/:inbox_id/whatsapp_api_message_templates": {
+    "controller": "api/v1/accounts/whatsapp_api_message_templates#index",
+    "parametros": []
+  },
+  "instagram/testers/configuration": {
+    "controller": "api/v1/accounts/instagram/testers#configuration",
+    "parametros": []
+  },
+  "instagram/testers/search": {
+    "controller": "api/v1/accounts/instagram/testers#search",
+    "parametros": [
+      "username"
+    ]
+  },
+  "integrations/apps": {
+    "controller": "api/v1/accounts/integrations/apps#index",
+    "parametros": []
+  },
+  "integrations/apps/:id": {
+    "controller": "api/v1/accounts/integrations/apps#show",
+    "parametros": []
+  },
+  "integrations/hooks/:id": {
+    "controller": "api/v1/accounts/integrations/hooks#show",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "integrations/linear/linked_issues": {
+    "controller": "api/v1/accounts/integrations/linear#linked_issues",
+    "parametros": [
+      "assignee_id",
+      "conversation_id",
+      "description",
+      "issue_id",
+      "label_ids",
+      "link_id",
+      "priority",
+      "project_id",
+      "state_id",
+      "team_id",
+      "title"
+    ]
+  },
+  "integrations/linear/search_issue": {
+    "controller": "api/v1/accounts/integrations/linear#search_issue",
+    "parametros": [
+      "q"
+    ]
+  },
+  "integrations/linear/team_entities": {
+    "controller": "api/v1/accounts/integrations/linear#team_entities",
+    "parametros": [
+      "assignee_id",
+      "conversation_id",
+      "description",
+      "issue_id",
+      "label_ids",
+      "link_id",
+      "priority",
+      "project_id",
+      "state_id",
+      "team_id",
+      "title"
+    ]
+  },
+  "integrations/linear/teams": {
+    "controller": "api/v1/accounts/integrations/linear#teams",
+    "parametros": []
+  },
+  "integrations/shopify/orders": {
+    "controller": "api/v1/accounts/integrations/shopify#orders",
+    "parametros": [
+      "contact_id"
+    ]
+  },
+  "integrations/slack/list_all_channels": {
+    "controller": "api/v1/accounts/integrations/slack#list_all_channels",
+    "parametros": []
+  },
+  "labels": {
+    "controller": "api/v1/accounts/labels#index",
+    "parametros": []
+  },
+  "labels/:id": {
+    "controller": "api/v1/accounts/labels#show",
+    "parametros": []
+  },
+  "macros": {
+    "controller": "api/v1/accounts/macros#index",
+    "motivos": [
+      "params inteiro repassado a Macro.with_visibility"
+    ]
+  },
+  "macros/:id": {
+    "controller": "api/v1/accounts/macros#show",
+    "parametros": []
+  },
+  "notification_settings": {
+    "controller": "api/v1/accounts/notification_settings#show",
+    "parametros": []
+  },
+  "notifications": {
+    "controller": "api/v1/accounts/notifications#index",
+    "parametros": [
+      "includes",
+      "page",
+      "sort_order"
+    ]
+  },
+  "notifications/unread_count": {
+    "controller": "api/v1/accounts/notifications#unread_count",
+    "parametros": [
+      "includes",
+      "page",
+      "sort_order"
+    ]
+  },
+  "onboarding/help_center_generation": {
+    "controller": "api/v1/accounts/onboardings#help_center_generation",
+    "parametros": []
+  },
+  "onboarding/progress": {
+    "controller": "api/v1/accounts/onboarding_progress#index",
+    "parametros": []
+  },
+  "portals": {
+    "controller": "api/v1/accounts/portals#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "portals/:id": {
+    "controller": "api/v1/accounts/portals#show",
+    "parametros": [
+      "email",
+      "locale"
+    ]
+  },
+  "portals/:id/edit": {
+    "controller": "api/v1/accounts/portals#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "portals/:id/ssl_status": {
+    "controller": "api/v1/accounts/portals#ssl_status",
+    "parametros": [
+      "email"
+    ]
+  },
+  "portals/:portal_id/articles": {
+    "controller": "api/v1/accounts/articles#index",
+    "parametros": [
+      "author_id",
+      "category_slug",
+      "locale",
+      "page",
+      "query",
+      "status"
+    ]
+  },
+  "portals/:portal_id/articles/:id": {
+    "controller": "api/v1/accounts/articles#show",
+    "parametros": []
+  },
+  "portals/:portal_id/articles/:id/edit": {
+    "controller": "api/v1/accounts/articles#edit",
+    "parametros": []
+  },
+  "portals/:portal_id/articles/new": {
+    "controller": "api/v1/accounts/articles#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "portals/:portal_id/categories": {
+    "controller": "api/v1/accounts/categories#index",
+    "motivos": [
+      "params inteiro repassado a @portal.categories.search"
+    ]
+  },
+  "portals/:portal_id/categories/:id": {
+    "controller": "api/v1/accounts/categories#show",
+    "parametros": []
+  },
+  "portals/:portal_id/categories/:id/edit": {
+    "controller": "api/v1/accounts/categories#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "portals/:portal_id/categories/new": {
+    "controller": "api/v1/accounts/categories#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "portals/new": {
+    "controller": "api/v1/accounts/portals#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "relationships/configuration": {
+    "controller": "api/v1/accounts/relationships/configurations#show",
+    "parametros": []
+  },
+  "reporting_events": {
+    "controller": "api/v1/accounts/reporting_events#index",
+    "parametros": [
+      "inbox_id",
+      "name",
+      "page",
+      "user_id"
+    ]
+  },
+  "saml_settings": {
+    "controller": "api/v1/accounts/saml_settings#show",
+    "parametros": []
+  },
+  "search": {
+    "controller": "api/v1/accounts/search#index",
+    "motivos": [
+      "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "search/articles": {
+    "controller": "api/v1/accounts/search#articles",
+    "motivos": [
+      "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "search/contacts": {
+    "controller": "api/v1/accounts/search#contacts",
+    "motivos": [
+      "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "search/conversations": {
+    "controller": "api/v1/accounts/search#conversations",
+    "motivos": [
+      "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "search/messages": {
+    "controller": "api/v1/accounts/search#messages",
+    "motivos": [
+      "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "sla_policies": {
+    "controller": "api/v1/accounts/sla_policies#index",
+    "parametros": []
+  },
+  "sla_policies/:id": {
+    "controller": "api/v1/accounts/sla_policies#show",
+    "parametros": []
+  },
+  "teams": {
+    "controller": "api/v1/accounts/teams#index",
+    "parametros": []
+  },
+  "teams/:id": {
+    "controller": "api/v1/accounts/teams#show",
+    "parametros": []
+  },
+  "teams/:id/edit": {
+    "controller": "api/v1/accounts/teams#edit",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "teams/:team_id/team_members": {
+    "controller": "api/v1/accounts/team_members#index",
+    "parametros": []
+  },
+  "teams/new": {
+    "controller": "api/v1/accounts/teams#new",
+    "motivos": [
+      "a rota não tem a action no controller"
+    ]
+  },
+  "waha_inboxes/:inbox_id/connection": {
+    "controller": "api/v1/accounts/waha_inboxes#connection",
+    "parametros": []
+  },
+  "webhooks": {
+    "controller": "api/v1/accounts/webhooks#index",
+    "parametros": []
+  },
+  "whatsapp/manual/:inbox_id/webhook_status": {
+    "controller": "api/v1/accounts/whatsapp/manual_setup#webhook_status",
+    "parametros": []
+  },
+  "whatsapp_api_campaigns": {
+    "controller": "api/v1/accounts/whatsapp_api_campaigns#index",
+    "parametros": [
+      "page"
+    ]
+  },
+  "whatsapp_api_campaigns/:id": {
+    "controller": "api/v1/accounts/whatsapp_api_campaigns#show",
+    "parametros": []
+  },
+  "whatsapp_calls/:id": {
+    "controller": "api/v1/accounts/whatsapp_calls#show",
+    "parametros": []
+  }
+}
