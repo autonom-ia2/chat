@@ -2577,7 +2577,8 @@
         "SINISTRO": "Avisar o time quando falarem de sinistro",
         "FORA_DO_HORARIO": "Responder quem chama fora do horário",
         "COTACAO": "Marcar quem pede cotação"
-      }
+      },
+      "FALAR": "Falar em vez de escrever"
     },
     "SUGESTAO": {
       "ROTULO": "O Guia notou",
@@ -2592,6 +2593,15 @@
       "CONFIRA": "Confira",
       "LIGUE": "Ligue"
     },
-    "VARIAVEL_NOME": "[nome do cliente]"
+    "VARIAVEL_NOME": "[nome do cliente]",
+    "RESPOSTAS": {
+      "OTIMA": "Está ótima",
+      "CURTA": "Deixa mais curta",
+      "CURTA_PEDIDO": "Deixa a mensagem mais curta.",
+      "ESCREVER": "Quero escrever eu",
+      "ESCREVER_PEDIDO": "Quero escrever a mensagem eu mesmo.",
+      "MUDAR": "Quero mudar algo",
+      "MUDAR_PEDIDO": "Quero mudar uma coisa nesta automação."
+    }
   }
 }

@@ -2576,7 +2576,8 @@
         "SINISTRO": "Notify the team when a claim comes up",
         "FORA_DO_HORARIO": "Reply to people who write after hours",
         "COTACAO": "Tag people asking for a quote"
-      }
+      },
+      "FALAR": "Speak instead of typing"
     },
     "SUGESTAO": {
       "ROTULO": "The Guide noticed",
@@ -2591,6 +2592,15 @@
       "CONFIRA": "Check",
       "LIGUE": "Turn on"
     },
-    "VARIAVEL_NOME": "[customer name]"
+    "VARIAVEL_NOME": "[customer name]",
+    "RESPOSTAS": {
+      "OTIMA": "Looks great",
+      "CURTA": "Make it shorter",
+      "CURTA_PEDIDO": "Make the message shorter.",
+      "ESCREVER": "I want to write it",
+      "ESCREVER_PEDIDO": "I want to write the message myself.",
+      "MUDAR": "I want to change something",
+      "MUDAR_PEDIDO": "I want to change something in this automation."
+    }
   }
 }

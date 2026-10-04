@@ -69,13 +69,17 @@ const abrir = automacao =>
 // O modelo vai na URL (só chaves conhecidas); o texto livre vai no estado da
 // navegação, que um link de fora não consegue preencher: o pedido sai sozinho
 // para o Guia, então só a própria tela pode escrevê-lo.
-const nova = ({ modelo, pedido } = {}) =>
-  router.push({
+const nova = ({ modelo, pedido, porVoz } = {}) => {
+  let estadoDaNavegacao = {};
+  if (pedido) estadoDaNavegacao = { pedidoAutomacao: pedido };
+  if (porVoz) estadoDaNavegacao = { pedidoPorVoz: true };
+  return router.push({
     name: 'automacoes_nova',
     params: { accountId: accountId.value },
     query: modelo ? { modelo } : {},
-    state: pedido ? { pedidoAutomacao: pedido } : {},
+    state: estadoDaNavegacao,
   });
+};
 
 const modoManual = () =>
   router.push({
@@ -153,6 +157,7 @@ const alternar = async automacao => {
             <AutomacaoHeroi
               :desabilitado="!podeMudar"
               @pedir="pedido => nova({ pedido })"
+              @falar="nova({ porVoz: true })"
             />
             <section class="flex flex-col gap-5">
               <div>

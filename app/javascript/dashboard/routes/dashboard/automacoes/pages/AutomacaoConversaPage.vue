@@ -105,6 +105,13 @@ const pedidoEscrito = ref(
     ? window.history.state.pedidoAutomacao.slice(0, MAX_PEDIDO)
     : ''
 );
+// A pessoa tocou no microfone na lista: a conversa abre gravando. Vale uma vez.
+const comecarPorVoz = ref(window.history.state?.pedidoPorVoz === true);
+if (comecarPorVoz.value) {
+  const { pedidoPorVoz, ...restoDoEstado } = window.history.state || {};
+  window.history.replaceState(restoDoEstado, '');
+}
+
 const pedidoInicial = computed(() => {
   if (regraId.value) return '';
   const modelo = String(route.query.modelo || '');
@@ -139,6 +146,50 @@ const aoExecutar = execucao => {
     return;
   }
   if (passos.some(passoMexeuEmAutomacao)) carregar();
+};
+
+// Respostas de um toque depois da fala do Guia, enquanto a automação está
+// montada e desligada. "Está ótima" não gasta pergunta: leva ao botão Ligar.
+const ligarRef = ref(null);
+const temMensagem = computed(() =>
+  (regra.value?.actions || []).some(acao => acao.action_name === 'send_message')
+);
+const respostasRapidas = computed(() => {
+  if (!regra.value || regra.value.active) return [];
+  const otima = {
+    chave: 'OTIMA',
+    rotulo: t('AUTOMACOES.RESPOSTAS.OTIMA'),
+  };
+  if (!temMensagem.value) {
+    return [
+      otima,
+      {
+        chave: 'MUDAR',
+        rotulo: t('AUTOMACOES.RESPOSTAS.MUDAR'),
+        pergunta: t('AUTOMACOES.RESPOSTAS.MUDAR_PEDIDO'),
+      },
+    ];
+  }
+  return [
+    otima,
+    {
+      chave: 'CURTA',
+      rotulo: t('AUTOMACOES.RESPOSTAS.CURTA'),
+      pergunta: t('AUTOMACOES.RESPOSTAS.CURTA_PEDIDO'),
+    },
+    {
+      chave: 'ESCREVER',
+      rotulo: t('AUTOMACOES.RESPOSTAS.ESCREVER'),
+      pergunta: t('AUTOMACOES.RESPOSTAS.ESCREVER_PEDIDO'),
+    },
+  ];
+});
+
+const aoResponderRapido = chave => {
+  if (chave !== 'OTIMA') return;
+  const botao = ligarRef.value?.$el;
+  botao?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  botao?.focus?.();
 };
 
 // Conte (sem automação) → Confira (montada, desligada) → Ligue (ligada).
@@ -242,6 +293,9 @@ const mudarLigada = async ligar => {
                   :sugestoes="sugestoes"
                   :introducao="$t('AUTOMACOES.CONVERSA.INTRO_GUIA')"
                   :pedido-inicial="pedidoInicial"
+                  :respostas-rapidas="respostasRapidas"
+                  :comecar-por-voz="comecarPorVoz"
+                  @resposta-rapida="aoResponderRapido"
                   @execucao="aoExecutar"
                   @pedido-inicial-enviado="gastarModelo"
                 />
@@ -313,6 +367,7 @@ const mudarLigada = async ligar => {
                 <template v-if="podeMudar">
                   <div v-if="!regra.active" class="flex flex-col gap-2.5">
                     <Button
+                      ref="ligarRef"
                       data-ligar
                       :label="$t('AUTOMACOES.CONVERSA.LIGAR')"
                       icon="i-lucide-power"

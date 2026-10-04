@@ -19,7 +19,7 @@ const emit = defineEmits(['escolher']);
         type="button"
         :data-modelo="modelo.chave"
         :disabled="desabilitado"
-        class="group flex flex-col w-full gap-4 p-6 text-start rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
+        class="group flex flex-col w-full gap-4 p-6 text-start rounded-2xl ring-1 ring-inset ring-n-weak bg-n-solid-1 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
         @click="emit('escolher', modelo.chave)"
       >
         <span class="flex items-center justify-between w-full">

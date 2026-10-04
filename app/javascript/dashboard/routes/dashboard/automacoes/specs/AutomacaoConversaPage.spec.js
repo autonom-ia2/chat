@@ -52,8 +52,10 @@ const GuiaFalso = {
     introducao: { type: String, default: '' },
     pedidoInicial: { type: String, default: '' },
     semTelas: Boolean,
+    respostasRapidas: { type: Array, default: () => [] },
+    comecarPorVoz: Boolean,
   },
-  emits: ['execucao', 'pedidoInicialEnviado'],
+  emits: ['execucao', 'pedidoInicialEnviado', 'respostaRapida'],
   template: '<div data-guia-falso />',
 };
 
@@ -69,6 +71,7 @@ const regra = (extra = {}) => ({
 
 const montar = () =>
   mount(AutomacaoConversaPage, {
+    attachTo: document.body,
     global: {
       mocks: { $t: key => key },
       stubs: { AutonomiaGuideContainer: GuiaFalso, RouterLink: true },
@@ -258,6 +261,41 @@ describe('AutomacaoConversaPage', () => {
     expect(
       wrapper.find('[data-etapa="CONFIRA"]').attributes('aria-current')
     ).toBe('step');
+  });
+
+  it('editar: respostas de um toque enquanto desligada; "Está ótima" leva ao Ligar', async () => {
+    abrirRegra(42);
+    AutomationAPI.show.mockResolvedValue({
+      data: {
+        payload: regra({
+          actions: [{ action_name: 'send_message', action_params: ['Oi!'] }],
+        }),
+      },
+    });
+    AutomationAPI.ensaio.mockResolvedValue({
+      data: { testavel: true, resultados: [] },
+    });
+    const wrapper = montar();
+    await flushPromises();
+
+    const guia = wrapper.findComponent(GuiaFalso);
+    expect(guia.props('respostasRapidas').map(item => item.chave)).toEqual([
+      'OTIMA',
+      'CURTA',
+      'ESCREVER',
+    ]);
+    guia.vm.$emit('respostaRapida', 'OTIMA');
+    await flushPromises();
+    expect(wrapper.find('[data-ligar]').element).toBe(document.activeElement);
+  });
+
+  it('nova: tocou no microfone na lista → a conversa abre gravando, uma vez', async () => {
+    window.history.replaceState({ pedidoPorVoz: true }, '');
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.findComponent(GuiaFalso).props('comecarPorVoz')).toBe(true);
+    expect(window.history.state?.pedidoPorVoz).toBeUndefined();
   });
 
   it('editar: ligada não testa sozinha de novo e mostra as etapas feitas', async () => {

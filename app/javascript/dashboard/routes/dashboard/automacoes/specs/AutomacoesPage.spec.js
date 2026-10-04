@@ -139,6 +139,20 @@ describe('AutomacoesPage', () => {
     });
   });
 
+  it('vazio: o microfone abre a conversa já para falar', async () => {
+    AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = montar();
+    await flushPromises();
+
+    await wrapper.find('[data-falar]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'automacoes_nova',
+      params: { accountId: 1 },
+      query: {},
+      state: { pedidoPorVoz: true },
+    });
+  });
+
   it('vazio: quem só pode ver não monta', async () => {
     podeMudar.value = false;
     AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });

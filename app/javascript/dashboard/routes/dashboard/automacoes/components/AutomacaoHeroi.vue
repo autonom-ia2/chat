@@ -9,7 +9,7 @@ defineProps({
   desabilitado: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['pedir']);
+const emit = defineEmits(['pedir', 'falar']);
 
 const { t } = useI18n();
 const pedido = ref('');
@@ -70,6 +70,17 @@ const enviar = () => {
           class="flex-1 min-w-0 px-4 text-base bg-transparent border-0 outline-none min-h-[3.25rem] text-n-slate-12 placeholder:text-n-slate-10 disabled:cursor-not-allowed !mb-0"
         />
         <button
+          type="button"
+          data-falar
+          :disabled="desabilitado"
+          :aria-label="$t('AUTOMACOES.HEROI.FALAR')"
+          :title="$t('AUTOMACOES.HEROI.FALAR')"
+          class="hidden sm:grid place-items-center shrink-0 size-[3.25rem] rounded-xl ring-1 ring-inset ring-n-weak bg-n-slate-2 text-[#0D2344] transition hover:bg-n-slate-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
+          @click="emit('falar')"
+        >
+          <span class="i-lucide-mic size-6" aria-hidden="true" />
+        </button>
+        <button
           type="submit"
           data-montar
           :disabled="desabilitado || !pedido.trim()"
@@ -92,7 +103,7 @@ const enviar = () => {
           type="button"
           data-ideia
           :disabled="desabilitado"
-          class="px-4 py-2 text-sm transition border rounded-xl min-h-11 border-white/20 bg-white/10 text-white/90 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed"
+          class="px-4 py-2 text-sm transition rounded-xl min-h-11 ring-1 ring-inset ring-white/20 bg-white/10 text-white/90 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:cursor-not-allowed"
           @click="pedido = ideia"
         >
           {{ ideia }}

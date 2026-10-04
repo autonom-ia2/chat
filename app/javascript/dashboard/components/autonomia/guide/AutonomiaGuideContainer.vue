@@ -1,5 +1,12 @@
 <script setup>
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -54,10 +61,20 @@ const props = defineProps({
   // #982 — tela que já é o lugar da tarefa (Automações): "Ir para a tela" só
   // tiraria a pessoa de onde ela está montando.
   semTelas: { type: Boolean, default: false },
+  // #982 — respostas de um toque, mostradas depois da última fala do Guia:
+  // [{ chave, rotulo, pergunta? }]. Com `pergunta`, vai ao Guia; sem, a tela
+  // que embute decide (evento `respostaRapida`).
+  respostasRapidas: { type: Array, default: () => [] },
+  // #982 — a pessoa tocou no microfone antes de chegar: a conversa abre gravando.
+  comecarPorVoz: { type: Boolean, default: false },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
 // que o pedido inicial saiu, para a tela gastá-lo (#859).
-const emit = defineEmits(['execucao', 'pedidoInicialEnviado']);
+const emit = defineEmits([
+  'execucao',
+  'pedidoInicialEnviado',
+  'respostaRapida',
+]);
 
 const { t } = useI18n();
 const route = useRoute();
@@ -80,6 +97,21 @@ const isSending = ref(false);
 // Há pergunta esperando resposta — desta instância ou de outra (#859: a conversa
 // embutida e o painel lateral são a mesma conversa). Nenhuma outra sai até ela.
 const ocupado = computed(() => isSending.value || Boolean(store.pendente()));
+
+// #982 — o composer, para a tela de Automações abrir já gravando.
+const composerRef = ref(null);
+onMounted(() => {
+  if (!props.comecarPorVoz) return;
+  nextTick(() => composerRef.value?.gravar());
+});
+
+// #982 — respostas de um toque só depois da última fala do Guia, sem nada
+// pendente: são resposta àquela fala.
+const mostraRespostasRapidas = computed(() => {
+  if (!props.respostasRapidas.length || ocupado.value) return false;
+  const ultima = messages[messages.length - 1];
+  return Boolean(ultima) && ultima.message_type !== 'user';
+});
 // #895 — a mensagem de voz está virando texto; a resposta ainda não foi pedida.
 const transcrevendo = ref(false);
 // Os anexos que esperam no campo de digitar o próximo envio.
@@ -1022,6 +1054,7 @@ const classeDoPainel = computed(() =>
             <GuideUserMessage
               v-if="item.message_type === 'user'"
               :item="item"
+              :destaque="embutido"
               @tentar-de-novo="tentarVozDeNovo(item)"
             />
             <div v-else class="flex flex-col gap-2 w-full">
@@ -1034,11 +1067,19 @@ const classeDoPainel = computed(() =>
                 <span class="i-lucide-bell-ring size-3" aria-hidden="true" />
                 {{ $t('AUTONOMIA_GUIDE.AVISOS.SELO') }}
               </span>
-              <CopilotAssistantMessage
-                :message="item.message"
-                :is-last-message="index === messages.length - 1"
-                :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
-              />
+              <div
+                :class="
+                  embutido
+                    ? 'self-start max-w-[92%] rounded-2xl ltr:rounded-bl-md rtl:rounded-br-md border border-n-weak bg-n-solid-1 px-4 py-3 shadow-sm'
+                    : ''
+                "
+              >
+                <CopilotAssistantMessage
+                  :message="item.message"
+                  :is-last-message="index === messages.length - 1"
+                  :sender-name="$t('AUTONOMIA_GUIDE.TITLE')"
+                />
+              </div>
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
               <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
               <!-- #936 — o trabalho grande planejado neste turno: amostra, andamento e relatório. -->
@@ -1214,6 +1255,26 @@ const classeDoPainel = computed(() =>
               </div>
             </div>
           </template>
+          <div
+            v-if="mostraRespostasRapidas"
+            data-respostas-rapidas
+            class="flex flex-wrap gap-2"
+          >
+            <button
+              v-for="resposta in respostasRapidas"
+              :key="resposta.chave"
+              type="button"
+              :data-resposta="resposta.chave"
+              class="inline-flex items-center px-4 text-[0.9375rem] font-medium rounded-xl min-h-11 ring-1 ring-inset ring-n-blue-6 bg-n-solid-1 text-n-blue-11 hover:bg-n-blue-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              @click="
+                resposta.pergunta
+                  ? sendMessage(resposta.pergunta)
+                  : emit('respostaRapida', resposta.chave)
+              "
+            >
+              {{ resposta.rotulo }}
+            </button>
+          </div>
           <CopilotLoader
             v-if="ocupado && !transcrevendo"
             :label="$t('AUTONOMIA_GUIDE.THINKING')"
@@ -1259,6 +1320,7 @@ const classeDoPainel = computed(() =>
         <!-- Uma conta, um composer: trocar de conta descarta a gravação e o áudio que
              esperava a vez, que senão sairia na conta nova. -->
         <GuideComposer
+          ref="composerRef"
           :key="accountId"
           class="mb-1 w-full"
           :is-busy="ocupado"
