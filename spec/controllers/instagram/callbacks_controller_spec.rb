@@ -2,8 +2,10 @@ require 'rails_helper'
 
 RSpec.describe Instagram::CallbacksController do
   let(:account) { create(:account) }
-  let(:valid_params) { { code: 'valid_code', state: "#{account.id}|valid_token" } }
-  let(:error_params) { { error: 'access_denied', error_description: 'User denied access', state: "#{account.id}|valid_token" } }
+  let(:actor) { create(:user, account: account, role: :administrator) }
+  let(:state) { controller.generate_instagram_token(account.id, actor_id: actor.id) }
+  let(:valid_params) { { code: 'valid_code', state: state } }
+  let(:error_params) { { error: 'access_denied', error_description: 'User denied access', state: state } }
   let(:oauth_client) { instance_double(OAuth2::Client) }
   let(:auth_code_object) { instance_double(OAuth2::Strategy::AuthCode) }
   let(:access_token) { instance_double(OAuth2::AccessToken, token: 'test_token') }
@@ -11,11 +13,14 @@ RSpec.describe Instagram::CallbacksController do
   let(:user_details) { { 'username' => 'test_user', 'user_id' => '12345', 'id' => '98765' } }
   let(:exception_tracker) { instance_double(ChatwootExceptionTracker) }
 
+  around do |example|
+    with_modified_env('FRONTEND_URL' => 'https://autonomia.example', 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') { example.run }
+  end
+
   before do
-    allow(controller).to receive(:verify_instagram_token).and_return(account.id)
+    allow(GlobalConfigService).to receive(:load).and_call_original
+    allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
     allow(controller).to receive(:instagram_client).and_return(oauth_client)
-    allow(controller).to receive(:base_url).and_return('https://app.chatwoot.com')
-    allow(controller).to receive(:account).and_return(account)
     allow(oauth_client).to receive(:auth_code).and_return(auth_code_object)
     allow(controller).to receive(:exchange_for_long_lived_token).and_return(long_lived_token_response)
     allow(controller).to receive(:fetch_instagram_user_details).and_return(user_details)
@@ -23,8 +28,9 @@ RSpec.describe Instagram::CallbacksController do
     allow(exception_tracker).to receive(:capture_exception)
 
     # Stub the exact request format that's being made
-    stub_request(:post, 'https://graph.instagram.com/v22.0/12345/subscribed_apps?access_token=long_lived_test_token&subscribed_fields%5B%5D=messages&subscribed_fields%5B%5D=message_reactions&subscribed_fields%5B%5D=messaging_seen')
+    stub_request(:post, 'https://graph.instagram.com/v22.0/12345/subscribed_apps')
       .with(
+        query: { access_token: 'long_lived_test_token', subscribed_fields: %w[messages message_reactions messaging_seen] },
         headers: {
           'Accept' => '*/*',
           'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
@@ -32,6 +38,106 @@ RSpec.describe Instagram::CallbacksController do
         }
       )
       .to_return(status: 200, body: '', headers: {})
+  end
+
+  shared_examples 'revalidates OAuth actor' do
+    it 'rejects a member removed after the state was issued before exchanging tokens' do
+      issued = state
+      account.account_users.find_by!(user: actor).destroy!
+      expect(auth_code_object).not_to receive(:get_token)
+      expect(Channel::Instagram).not_to receive(:create!)
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(response.location).to include('error_type=forbidden')
+    end
+
+    it 'rejects lost inbox_manage after the state was issued before exchanging tokens' do
+      issued = state
+      account.account_users.find_by!(user: actor).update!(role: :agent)
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(response.location).to include('error_type=forbidden')
+    end
+
+    it 'rejects an account suspended after the state was issued before exchanging tokens' do
+      issued = state
+      account.suspended!
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(response.location).to include('error_type=forbidden')
+    end
+
+    it 'rechecks permission after provider requests before creating an inbox' do
+      issued = state
+      allow(controller).to receive(:fetch_instagram_user_details) do
+        account.account_users.find_by!(user: actor).update!(role: :agent)
+        user_details
+      end
+      expect do
+        get :show, params: { code: 'valid_code', state: issued }
+      end.to not_change(Channel::Instagram, :count).and not_change(Inbox, :count)
+      expect(response.location).to include('error_type=forbidden')
+    end
+
+    it 'rechecks membership after provider requests before replacing a channel token' do
+      channel = create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token')
+      issued = state
+      allow(controller).to receive(:fetch_instagram_user_details) do
+        account.account_users.find_by!(user: actor).destroy!
+        user_details
+      end
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(channel.reload.access_token).to eq('old_token')
+      expect(response.location).to include('error_type=forbidden')
+    end
+  end
+
+  describe 'legacy and reauthorization state binding with testers disabled' do
+    before do
+      allow(auth_code_object).to receive(:get_token).and_return(access_token)
+    end
+
+    it_behaves_like 'revalidates OAuth actor'
+
+    it 'rejects replay before exchanging the code a second time' do
+      issued = state
+      expect(auth_code_object).to receive(:get_token).once.and_return(access_token)
+      get :show, params: { code: 'valid_code', state: issued }
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'rejects expired legacy state before exchanging tokens' do
+      issued = state
+      expect(auth_code_object).not_to receive(:get_token)
+      travel 15.minutes + 1.second do
+        get :show, params: { code: 'valid_code', state: issued }
+        expect(response).to redirect_to('/app')
+      end
+    end
+
+    it 'rejects legacy in-flight states without security binding and requires restarting OAuth' do
+      old_state = JWT.encode({ sub: account.id, iat: Time.current.to_i }, 'synthetic_secret', 'HS256')
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: old_state }
+      expect(response).to redirect_to('/app')
+    end
+
+    it 'rejects another stack using the same secret and identifiers before token exchange' do
+      issued = state
+      expect(auth_code_object).not_to receive(:get_token)
+      with_modified_env('FRONTEND_URL' => 'https://hub2you.example') do
+        get :show, params: { code: 'valid_code', state: issued }
+        expect(response).to redirect_to('/app')
+      end
+    end
+
+    it 'rejects a cross-account actor before exchanging tokens' do
+      other_actor = create(:user, account: create(:account), role: :administrator)
+      issued = controller.generate_instagram_token(account.id, actor_id: other_actor.id)
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: issued }
+      expect(response.location).to include('error_type=forbidden')
+    end
   end
 
   describe '#show' do
@@ -137,8 +243,11 @@ RSpec.describe Instagram::CallbacksController do
   end
 
   describe 'selected tester OAuth binding' do
-    let(:selection) { { 'id' => '17841400000000001', 'username' => 'test_user', 'app_id' => '10001' } }
-    let(:bound_state) { controller.generate_instagram_token(account.id, nil, tester_selection: selection) }
+    let(:selection) do
+      { 'id' => '17841400000000001', 'username' => 'test_user', 'app_id' => '10001', 'account_id' => account.id.to_s,
+        'actor_id' => actor.id.to_s, 'installation' => Instagram::Testers::OauthBinding.installation }
+    end
+    let(:state) { controller.generate_instagram_token(account.id, actor_id: actor.id, tester_selection: selection) }
     let(:synthetic_session) do
       { cookie: 'synthetic=fixture', user_agent: 'Synthetic Client', user_id: '12345',
         fb_dtsg: 'synthetic-dtsg', lsd: 'synthetic-lsd', jazoest: '1234' }
@@ -156,12 +265,13 @@ RSpec.describe Instagram::CallbacksController do
       allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
       allow(GlobalConfig).to receive(:get_value).and_call_original
       allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(false)
-      allow(controller).to receive(:verify_instagram_token).and_call_original
       allow(auth_code_object).to receive(:get_token).and_return(access_token)
     end
 
+    it_behaves_like 'revalidates OAuth actor'
+
     it 'creates the selected profile while keeping all three identifiers distinct' do
-      get :show, params: { code: 'valid_code', state: bound_state }
+      get :show, params: { code: 'valid_code', state: state }
       expect(Channel::Instagram.last.instagram_id).to eq('12345')
       expect(Channel::Instagram.last.app_scoped_user_id).to eq('98765')
       expect(Channel::Instagram.last.provider_name).to eq('test_user')
@@ -170,7 +280,7 @@ RSpec.describe Instagram::CallbacksController do
 
     it 'accepts the same selected username with different casing from OAuth' do
       user_details['username'] = 'Test_User'
-      get :show, params: { code: 'valid_code', state: bound_state }
+      get :show, params: { code: 'valid_code', state: state }
       expect(Channel::Instagram.last.instagram_id).to eq('12345')
       expect(response).to redirect_to(app_instagram_inbox_agents_url(account_id: account.id, inbox_id: Inbox.last.id))
     end
@@ -180,7 +290,7 @@ RSpec.describe Instagram::CallbacksController do
       expect(Channel::Instagram).not_to receive(:create!)
       expect(Channel::Instagram).not_to receive(:find_by)
       expect do
-        get :show, params: { code: 'valid_code', state: bound_state }
+        get :show, params: { code: 'valid_code', state: state }
       end.to not_change(Channel::Instagram, :count).and not_change(Inbox, :count)
       expect(response.location).to include('error_type=invalid_selection')
     end
@@ -188,13 +298,13 @@ RSpec.describe Instagram::CallbacksController do
     it 'does not replace an existing token when the selected username differs' do
       channel = create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token')
       user_details['username'] = 'different_user'
-      get :show, params: { code: 'valid_code', state: bound_state }
+      get :show, params: { code: 'valid_code', state: state }
       expect(channel.reload.access_token).to eq('old_token')
       expect(response.location).to include('error_type=invalid_selection')
     end
 
     it 'rejects expired or tampered state before exchanging OAuth tokens' do
-      signed_state = bound_state
+      signed_state = state
       expect(auth_code_object).not_to receive(:get_token)
       get :show, params: { code: 'valid_code', state: "#{signed_state}tampered" }
       expect(response).to redirect_to('/app')
@@ -205,7 +315,7 @@ RSpec.describe Instagram::CallbacksController do
     end
 
     it 'rejects replay before another token exchange or write' do
-      signed_state = bound_state
+      signed_state = state
       expect(auth_code_object).to receive(:get_token).once.and_return(access_token)
       get :show, params: { code: 'valid_code', state: signed_state }
       get :show, params: { code: 'valid_code', state: signed_state }
@@ -214,7 +324,7 @@ RSpec.describe Instagram::CallbacksController do
     end
 
     it 'sanitizes denied authorization' do
-      get :show, params: { state: bound_state, error: 'synthetic-error', error_description: 'synthetic-sensitive-description' }
+      get :show, params: { state: state, error: 'synthetic-error', error_description: 'synthetic-sensitive-description' }
       expect(response.location).to include('error_type=authorization_error')
       expect(response.location).not_to include('synthetic-sensitive-description')
     end
@@ -230,7 +340,7 @@ RSpec.describe Instagram::CallbacksController do
       expect(Rails.logger).not_to receive(:error)
       expect(ChatwootExceptionTracker).not_to receive(:new)
       expect do
-        get :show, params: { code: 'valid_code', state: bound_state }
+        get :show, params: { code: 'valid_code', state: state }
       end.to not_change(Channel::Instagram, :count).and not_change(Inbox, :count)
       expect(response.location).to include('error_type=meta_unavailable')
       expect(response.location).not_to include(marker)
@@ -238,7 +348,7 @@ RSpec.describe Instagram::CallbacksController do
 
     it 'sanitizes provider exceptions for the selected flow' do
       allow(auth_code_object).to receive(:get_token).and_raise(StandardError, 'synthetic-sensitive-provider-data')
-      get :show, params: { code: 'valid_code', state: bound_state }
+      get :show, params: { code: 'valid_code', state: state }
       expect(response.location).to include('error_type=meta_unavailable')
       expect(response.location).not_to include('synthetic-sensitive-provider-data')
     end

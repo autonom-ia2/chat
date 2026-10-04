@@ -61,6 +61,9 @@ export async function responseFor(url, method, body, state) {
     );
   if (endpoint === '/testers/configuration')
     return state.configuration || json(configuration);
+  // Configuration deliberately remains public under the backend restriction.
+  if (state.restricted && endpoint.startsWith('/testers/'))
+    return json({ error_code: 'forbidden' }, 403);
   if (endpoint === '/testers/search') {
     if ([...url.searchParams.keys()].join(',') !== 'username')
       throw new Error('Search must send only username');
@@ -82,7 +85,7 @@ export async function responseFor(url, method, body, state) {
     ) {
       throw new Error(`Invalid selected-profile contract for ${endpoint}`);
     }
-  } else if (body !== null && Object.keys(body).length)
+  } else if (body !== null)
     throw new Error('Legacy authorization must not send a selection');
   if (endpoint === '/testers/status') {
     if (state.statusGate) await state.statusGate.promise;
@@ -93,5 +96,8 @@ export async function responseFor(url, method, body, state) {
     return state.invite || json({ status: 'pending', invited: true });
   }
   if (state.oauthGate) await state.oauthGate.promise;
-  return json({ url: 'https://www.instagram.com/qa-synthetic-oauth-910' });
+  return (
+    state.authorization ||
+    json({ url: 'https://www.instagram.com/qa-synthetic-oauth-910' })
+  );
 }

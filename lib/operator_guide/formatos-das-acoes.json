@@ -9547,7 +9547,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:7",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:35",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:36",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:8"
     ],
     "sem_corpo": false

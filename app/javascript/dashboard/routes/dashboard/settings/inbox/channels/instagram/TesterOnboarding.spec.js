@@ -2,6 +2,7 @@ import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils';
 import { ref } from 'vue';
 import { withFullI18n } from 'test-i18n';
 import instagramClient from 'dashboard/api/channel/instagramClient';
+import { useAlert } from 'dashboard/composables';
 import TesterOnboarding from './TesterOnboarding.vue';
 import Instagram from '../Instagram.vue';
 
@@ -21,6 +22,7 @@ vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({ accountId, isMetaInboxCreationDisabled: disabled }),
 }));
 vi.mock('dashboard/composables/store', () => ({ useMapGetter: () => config }));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 const i18n = withFullI18n('pt_BR');
 enableAutoUnmount(afterEach);
 const candidate = {
@@ -51,13 +53,20 @@ const searchAndSelect = async wrapper => {
   await wrapper.find('input').setValue('@demo_company');
   await wrapper.find('form').trigger('submit');
   await flushPromises();
-  await wrapper
-    .find('[aria-label="Selecionar @demo_company, Empresa Demo"]')
-    .trigger('click');
+  const label = i18n.global.t(
+    'INBOX_MGMT.ADD.INSTAGRAM.TESTER.SELECT_PROFILE',
+    candidate
+  );
+  await wrapper.find(`[aria-label="${label}"]`).trigger('click');
   await flushPromises();
 };
 
 beforeEach(() => {
+  window.history.replaceState(
+    {},
+    '',
+    '/app/accounts/17/settings/inboxes/new/instagram'
+  );
   i18n.global.locale.value = 'pt_BR';
   accountId.value = 17;
   disabled.value = false;
@@ -97,6 +106,101 @@ describe('Instagram assisted tester onboarding', () => {
     expect(instagramClient.getTesterConfiguration).not.toHaveBeenCalled();
   });
 
+  it('clears failed legacy OAuth loading, reports a translated error, and allows retry', async () => {
+    let rejectAuthorization;
+    instagramClient.generateAuthorization.mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          rejectAuthorization = reject;
+        })
+    );
+    const wrapper = mount(Instagram, mountOptions);
+    await button(wrapper, 'Continuar com o Instagram').trigger('click');
+    expect(
+      button(wrapper, 'Continuar com o Instagram').attributes('disabled')
+    ).toBeDefined();
+    await button(wrapper, 'Continuar com o Instagram').trigger('click');
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledTimes(1);
+    rejectAuthorization(new Error('PRIVATE PROVIDER RESPONSE'));
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith(
+      i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_AUTH')
+    );
+    expect(useAlert.mock.calls[0][0]).not.toContain(
+      'PRIVATE PROVIDER RESPONSE'
+    );
+    expect(
+      button(wrapper, 'Continuar com o Instagram').attributes('disabled')
+    ).toBeUndefined();
+    instagramClient.generateAuthorization.mockResolvedValue({
+      data: { url: window.location.href },
+    });
+    await button(wrapper, 'Continuar com o Instagram').trigger('click');
+    await flushPromises();
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledTimes(2);
+    expect(instagramClient.generateAuthorization).toHaveBeenLastCalledWith();
+  });
+
+  it('Meta restriction keeps legacy OAuth disabled and its warning visible', async () => {
+    disabled.value = true;
+    const wrapper = mount(Instagram, mountOptions);
+    await flushPromises();
+    expect(wrapper.text()).toContain('temporariamente indisponível');
+    expect(
+      button(wrapper, 'Continuar com o Instagram').attributes('disabled')
+    ).toBeDefined();
+    await button(wrapper, 'Continuar com o Instagram').trigger('click');
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['pt_BR', false],
+    ['pt_BR', true],
+    ['en', false],
+    ['en', true],
+  ])(
+    'explains callback inbox limits in %s with assisted=%s',
+    async (locale, assisted) => {
+      i18n.global.locale.value = locale;
+      config.value.instagramTesterAutomationEnabled = assisted;
+      window.history.replaceState(
+        {},
+        '',
+        '/app/accounts/17/settings/inboxes/new/instagram?error_type=CustomExceptions%3A%3AInbox%3A%3ALimitExceeded&code=402&error_message=PRIVATE%20DESCRIPTION'
+      );
+      const wrapper = mount(Instagram, mountOptions);
+      await flushPromises();
+      expect(wrapper.text()).toContain(
+        i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_INBOX_LIMIT')
+      );
+      expect(wrapper.text()).not.toContain('PRIVATE DESCRIPTION');
+      expect(wrapper.text()).not.toContain('LimitExceeded');
+      expect(window.location.search).toBe('');
+      if (assisted) expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+    }
+  );
+
+  it.each([
+    '?error_type=LimitExceeded&code=500',
+    '?error_type=CustomExceptions%3A%3AInbox%3A%3ALimitExceeded&code=500',
+    '?error_type=Other&code=402',
+  ])(
+    'maps the known limit type or 402 code without inspecting the description: %s',
+    async query => {
+      window.history.replaceState(
+        {},
+        '',
+        `/app/accounts/17/settings/inboxes/new/instagram${query}&error_message=PRIVATE`
+      );
+      const wrapper = mount(Instagram, mountOptions);
+      await flushPromises();
+      expect(wrapper.text()).toContain(
+        i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_INBOX_LIMIT')
+      );
+      expect(wrapper.text()).not.toContain('PRIVATE');
+    }
+  );
+
   it.each([
     {
       query:
@@ -131,6 +235,21 @@ describe('Instagram assisted tester onboarding', () => {
       expect(window.location.search).toBe('');
     }
   );
+
+  it('preserves assisted recovery guidance for callbacks other than inbox limits', async () => {
+    config.value.instagramTesterAutomationEnabled = true;
+    window.history.replaceState(
+      {},
+      '',
+      '/app/accounts/17/settings/inboxes/new/instagram?error_type=authorization_error&code=400&error_message=PRIVATE'
+    );
+    const wrapper = mount(Instagram, mountOptions);
+    await flushPromises();
+    expect(wrapper.find('[role="alert"]').text()).toBe(
+      i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.TESTER.OAUTH_ERROR')
+    );
+    expect(wrapper.text()).not.toContain('PRIVATE');
+  });
 
   it('falls back to legacy only when this account is explicitly disabled', async () => {
     config.value.instagramTesterAutomationEnabled = true;
@@ -445,28 +564,74 @@ describe('Instagram assisted tester onboarding', () => {
     ).toBe(true);
   });
 
-  it('Meta incident restriction blocks invite and OAuth in the assisted flow', async () => {
-    instagramClient.getTesterStatus.mockResolvedValue({
-      data: { status: 'absent' },
-    });
+  it('Meta restriction blocks search from mount while preserving its warning', async () => {
     const wrapper = mount(TesterOnboarding, {
       ...mountOptions,
       props: { accountId: 17, disabled: true },
     });
-    await searchAndSelect(wrapper);
+    await flushPromises();
+    expect(wrapper.text()).toContain('temporariamente indisponível');
     expect(
-      button(wrapper, 'Enviar convite').attributes('disabled')
+      button(wrapper, 'Buscar perfil').attributes('disabled')
     ).toBeDefined();
-    await button(wrapper, 'Enviar convite').trigger('click');
+    await wrapper.find('input').setValue('demo_company');
+    await wrapper.find('form').trigger('submit');
+    expect(instagramClient.searchTesters).not.toHaveBeenCalled();
+    expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
     expect(instagramClient.inviteTester).not.toHaveBeenCalled();
-    await button(wrapper, 'Trocar perfil').trigger('click');
-    instagramClient.getTesterStatus.mockResolvedValue({
-      data: { status: 'accepted' },
-    });
-    await searchAndSelect(wrapper);
-    expect(
-      button(wrapper, 'Continuar com o Instagram').attributes('disabled')
-    ).toBeDefined();
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
+    await wrapper.setProps({ disabled: false });
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(instagramClient.searchTesters).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['absent', 'Enviar convite'],
+    ['pending', 'Já aceitei — verificar'],
+    ['accepted', 'Continuar com o Instagram'],
+  ])(
+    'Meta restriction disables the single primary CTA for %s',
+    async (status, label) => {
+      instagramClient.getTesterStatus.mockResolvedValue({
+        data: { status },
+      });
+      const wrapper = mountTester();
+      await searchAndSelect(wrapper);
+      await wrapper.setProps({ disabled: true });
+      expect(button(wrapper, label).attributes('disabled')).toBeDefined();
+      await button(wrapper, label).trigger('click');
+      expect(instagramClient.getTesterStatus).toHaveBeenCalledTimes(1);
+      expect(instagramClient.inviteTester).not.toHaveBeenCalled();
+      expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
+      expect(wrapper.text()).toContain('temporariamente indisponível');
+      const primaryLabels = [
+        'Enviar convite',
+        'Já aceitei — verificar',
+        'Continuar com o Instagram',
+        'Verificar convite',
+      ];
+      expect(
+        wrapper
+          .findAll('button')
+          .filter(item => primaryLabels.includes(item.text()))
+      ).toHaveLength(1);
+    }
+  );
+
+  it('Meta restriction prevents selecting previously loaded search results', async () => {
+    const wrapper = mountTester();
+    await flushPromises();
+    await wrapper.find('input').setValue('demo_company');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    await wrapper.setProps({ disabled: true });
+    const profile = wrapper.find(
+      '[aria-label="Selecionar @demo_company, Empresa Demo"]'
+    );
+    expect(profile.attributes('disabled')).toBeDefined();
+    await profile.trigger('click');
+    expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
   });
 
   it('configuration request failures stay closed and recover by retry', async () => {
@@ -539,6 +704,128 @@ describe('Instagram assisted tester onboarding', () => {
     await button(wrapper, 'Trocar perfil').trigger('click');
     await flushPromises();
     expect(document.activeElement).toBe(wrapper.find('input').element);
+  });
+
+  it.each(['pt_BR', 'en'])(
+    'unavailable guidance restores the integration in %s instead of only the invite',
+    async locale => {
+      i18n.global.locale.value = locale;
+      instagramClient.getTesterConfiguration.mockResolvedValue({
+        data: { ...configuration, available: false },
+      });
+      const wrapper = mountTester();
+      await flushPromises();
+      expect(wrapper.text()).toContain(
+        i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.TESTER.MANUAL_HELP')
+      );
+      expect(wrapper.find('input').exists()).toBe(false);
+      expect(wrapper.findAll('button')).toHaveLength(1);
+      expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['pt_BR', 'search'],
+    ['en', 'search'],
+    ['pt_BR', 'status'],
+    ['en', 'status'],
+    ['pt_BR', 'invite'],
+    ['en', 'invite'],
+    ['pt_BR', 'oauth'],
+    ['en', 'oauth'],
+  ])(
+    'maps proxy_unavailable to operational support guidance in %s during %s',
+    async (locale, action) => {
+      i18n.global.locale.value = locale;
+      const failure = {
+        response: {
+          data: {
+            error_code: 'proxy_unavailable',
+            message: 'PRIVATE INFRA RESPONSE',
+          },
+        },
+      };
+      const wrapper = mountTester();
+      if (action === 'search') {
+        instagramClient.searchTesters.mockRejectedValueOnce(failure);
+        await flushPromises();
+        await wrapper.find('input').setValue('demo_company');
+        await wrapper.find('form').trigger('submit');
+      } else if (action === 'status') {
+        instagramClient.getTesterStatus.mockRejectedValueOnce(failure);
+        await searchAndSelect(wrapper);
+      } else {
+        instagramClient.getTesterStatus.mockResolvedValue({
+          data: { status: action === 'invite' ? 'absent' : 'accepted' },
+        });
+        await searchAndSelect(wrapper);
+        if (action === 'invite') {
+          instagramClient.inviteTester.mockRejectedValueOnce(failure);
+          await button(
+            wrapper,
+            i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.TESTER.INVITE')
+          ).trigger('click');
+        } else {
+          instagramClient.generateAuthorization.mockRejectedValueOnce(failure);
+          await button(
+            wrapper,
+            i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.CONTINUE_WITH_INSTAGRAM')
+          ).trigger('click');
+        }
+      }
+      await flushPromises();
+      expect(wrapper.find('[role="alert"]').text()).toBe(
+        i18n.global.t('INBOX_MGMT.ADD.INSTAGRAM.TESTER.UNAVAILABLE')
+      );
+      expect(wrapper.text()).not.toContain('proxy_unavailable');
+      expect(wrapper.text()).not.toContain('PRIVATE INFRA RESPONSE');
+      expect(wrapper.attributes('aria-busy')).toBe('false');
+    }
+  );
+
+  it('ignores stale configuration after an account switch without falling back to legacy', async () => {
+    config.value.instagramTesterAutomationEnabled = true;
+    let resolveOldConfiguration;
+    instagramClient.getTesterConfiguration.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveOldConfiguration = resolve;
+        })
+    );
+    const wrapper = mount(Instagram, mountOptions);
+    await flushPromises();
+    const signal =
+      instagramClient.getTesterConfiguration.mock.calls[0][0].signal;
+    accountId.value = 18;
+    await flushPromises();
+    expect(signal.aborted).toBe(true);
+    resolveOldConfiguration({ data: { enabled: false } });
+    await flushPromises();
+    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(true);
+    expect(wrapper.find('input').element.value).toBe('');
+    expect(instagramClient.getTesterConfiguration).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores a stale accepted status after switching accounts', async () => {
+    config.value.instagramTesterAutomationEnabled = true;
+    let resolveOldStatus;
+    instagramClient.getTesterStatus.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveOldStatus = resolve;
+        })
+    );
+    const wrapper = mount(Instagram, mountOptions);
+    await searchAndSelect(wrapper);
+    const signal = instagramClient.getTesterStatus.mock.calls[0][1].signal;
+    accountId.value = 18;
+    await flushPromises();
+    resolveOldStatus({ data: { status: 'accepted' } });
+    await flushPromises();
+    expect(signal.aborted).toBe(true);
+    expect(wrapper.find('input').element.value).toBe('');
+    expect(button(wrapper, 'Continuar com o Instagram')).toBeUndefined();
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
   });
 
   it('renders English guidance from the same catalog and never truncates action slots', async () => {

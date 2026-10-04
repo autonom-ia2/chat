@@ -30,9 +30,12 @@ jobs:
   node-contracts:
     name: Node synthetic contracts
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -44,13 +47,21 @@ jobs:
         run: |
           node --test \
             tests/qa/instagram-testers/fixtures.test.mjs \
+            tests/qa/instagram-testers/evidence.test.mjs \
             tests/qa/instagram-testers/visual-helpers.test.mjs \
+            tests/qa/instagram-testers/toast-helpers.test.mjs \
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
             tests/instagram_testers/runtime-publisher.test.mjs
+      - name: Run offline deploy recovery tests with fake infrastructure commands
+        run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Check browser and session helper modules
         run: |
           node --check tests/qa/instagram-testers/server.mjs
+          node --check tests/qa/instagram-testers/evidence.mjs
+          node --check tests/qa/instagram-testers/evidence.test.mjs
+          node --check tests/qa/instagram-testers/toast-helpers.mjs
+          node --check tests/qa/instagram-testers/toast-helpers.test.mjs
           node --check tests/qa/instagram-testers/run.mjs
           node --check tests/qa/instagram-testers/wizard.mjs
           node --check tests/qa/instagram-testers/entry.js
@@ -59,6 +70,7 @@ jobs:
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
           for script in scripts/instagram_testers/runtime/*.sh; do sh -n "$script"; done
+          bash -n scripts/deploy/blue-green-recovery.sh
           python -c 'import plistlib; plistlib.load(open("scripts/instagram_testers/runtime/com.autonomia.instagram-tester-manager.plist", "rb"))'
       - name: ESLint session and browser helpers
         run: >-
@@ -71,6 +83,10 @@ jobs:
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs
           tests/qa/instagram-testers/wizard.mjs
+          tests/qa/instagram-testers/evidence.mjs
+          tests/qa/instagram-testers/evidence.test.mjs
+          tests/qa/instagram-testers/toast-helpers.mjs
+          tests/qa/instagram-testers/toast-helpers.test.mjs
           tests/qa/instagram-testers/WizardApp.vue
           tests/qa/instagram-testers/ReauthorizeApp.vue
 
@@ -97,6 +113,7 @@ jobs:
           app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/Reauthorize.spec.js
           app/javascript/dashboard/api/channel/instagramClient.spec.js
           app/javascript/dashboard/composables/spec/useAbortableRequest.spec.js
+          app/javascript/dashboard/composables/specs/useInstagramTester.spec.js
           --no-cache --no-coverage --maxWorkers=2 --minWorkers=1
 
   browser-components:
@@ -107,7 +124,7 @@ jobs:
       NODE_ENV: production
       RAILS_ENV: test
       VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
-      PLAYWRIGHT_BROWSERS_PATH: /tmp/instagram-910-browsers
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/instagram-931-browsers
     steps:
       - uses: actions/checkout@v4
         with:
@@ -158,6 +175,8 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           node --input-type=module -e "import { chromium } from './node_modules/playwright/index.mjs'; import { existsSync } from 'node:fs'; if (!existsSync(chromium.executablePath())) throw new Error('Installed Chromium executable missing');"
       - name: Run real component browser harness on loopback only
+        env:
+          INSTAGRAM_QA_RENDER_READY: '1'
         run: |
           PLAYWRIGHT_MODULE_PATH="$GITHUB_WORKSPACE/tests/playwright/node_modules/playwright" \
             node tests/qa/instagram-testers/run.mjs
@@ -167,10 +186,10 @@ jobs:
           import { readFile } from 'node:fs/promises';
 
           const report = JSON.parse(
-            await readFile('tmp/instagram-910/visual/results.json', 'utf8')
+            await readFile('tmp/instagram-931/qa-evidence/results.json', 'utf8')
           );
           const wizard = JSON.parse(
-            await readFile('tmp/instagram-910/visual/wizard/results.json', 'utf8')
+            await readFile('tmp/instagram-931/qa-evidence/wizard/results.json', 'utf8')
           );
           if (
             report.status !== 'PASS' ||
@@ -195,11 +214,13 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: instagram-910-browser-qa
+          name: instagram-931-browser-qa
           retention-days: 7
           if-no-files-found: error
           path: |
-            tmp/instagram-910/visual/results.json
-            tmp/instagram-910/visual/*.png
-            tmp/instagram-910/visual/wizard/results.json
-            tmp/instagram-910/visual/wizard/*.png
+            tmp/instagram-931/qa-evidence/results.json
+            tmp/instagram-931/qa-evidence/*.png
+            tmp/instagram-931/qa-evidence/wizard/results.json
+            tmp/instagram-931/qa-evidence/wizard/*.png
+            tmp/instagram-931/qa-evidence/server.json
+            tmp/instagram-931/qa-evidence/current-utilities.css

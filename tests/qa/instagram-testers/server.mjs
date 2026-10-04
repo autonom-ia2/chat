@@ -10,12 +10,16 @@ export const root = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '../../..'
 );
-export const output = resolve(root, 'tmp/instagram-910/visual');
+export const output = resolve(root, 'tmp/instagram-931/qa-evidence');
 export const origin = 'http://127.0.0.1:39211';
 export const pathname = '/app/accounts/910/settings/inboxes/new/instagram';
 export const wizardPathPrefix = '/app/accounts/910/settings/inboxes/new';
 
 export async function startServer() {
+  if (process.env.INSTAGRAM_QA_RENDER_READY !== '1')
+    throw new Error(
+      'BLOCKED: coordinator must confirm dependencies/build/source readiness with INSTAGRAM_QA_RENDER_READY=1'
+    );
   await mkdir(output, { recursive: true });
   const assets = resolve(root, 'public/vite-test/assets');
   const assetNames = await readdir(assets).catch(error => {
@@ -45,7 +49,11 @@ export async function startServer() {
     from: resolve(root, 'tests/qa/instagram-testers/utilities.css'),
   });
   await writeFile(resolve(output, 'current-utilities.css'), generated.css);
-  const utilities = '/tmp/instagram-910/visual/current-utilities.css';
+  const utilities = '/tmp/instagram-931/qa-evidence/current-utilities.css';
+  const styleFiles = {
+    [css]: `public/vite-test/assets/${styles[0].name}`,
+    [utilities]: 'tmp/instagram-931/qa-evidence/current-utilities.css',
+  };
   const alias = {
     vue: 'vue/dist/vue.esm-bundler.js',
     ...Object.fromEntries(
@@ -62,6 +70,7 @@ export async function startServer() {
       }).map(([key, path]) => [key, resolve(root, 'app/javascript', path)])
     ),
   };
+  const physicalRoots = [root, await realpath(resolve(root, 'node_modules'))];
   const server = await createServer({
     configFile: false,
     envFile: false,
@@ -79,7 +88,7 @@ export async function startServer() {
       watch: null,
       fs: {
         strict: true,
-        allow: [root, await realpath(resolve(root, 'node_modules'))],
+        allow: physicalRoots,
       },
     },
     appType: 'custom',
@@ -109,6 +118,7 @@ export async function startServer() {
     origin,
     css,
     utilities,
+    styleFiles,
     startedAt: new Date().toISOString(),
     listening: false,
   };
@@ -132,5 +142,5 @@ export async function startServer() {
     );
     throw error;
   }
-  return { server, css, utilities };
+  return { server, css, utilities, styleFiles, physicalRoots };
 }

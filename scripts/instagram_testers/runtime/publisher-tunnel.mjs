@@ -7,7 +7,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const INSTANCE_ID = /^i-[0-9a-f]{8,17}$/;
 const PRIVATE_PATH = /^(\/[^\0\r\n]+)$/;
 const PUBLIC_KEY_TYPE =
@@ -154,7 +153,7 @@ export function parsePublisherOutput(output) {
   );
   requireSafe(
     result.version === null ||
-      (typeof result.version === 'string' && UUID.test(result.version))
+      (typeof result.version === 'string' && result.version.length > 0)
   );
   return result.version;
 }
@@ -315,7 +314,7 @@ export async function hostKeyViaSsm(
         commandId,
         '--details',
         '--query',
-        'Invocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
+        'CommandInvocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
         '--output',
         'json',
       ])
@@ -402,15 +401,12 @@ function abortable(promise, signal) {
       else resolve(value);
     };
     onAbort = () => finish(staticFailure());
-    if (signal.aborted) {
-      onAbort();
-      return;
-    }
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve(promise).then(
       value => finish(null, value),
       error => finish(error)
     );
+    if (signal.aborted) onAbort();
   });
 }
 
@@ -427,6 +423,10 @@ export async function runPublisher(
     freePortFn = freePort,
     waitForPortFn = waitForPort,
     hostKeyFn = hostKeyViaSsm,
+    signals = process,
+    clock = globalThis,
+    stopProcessFn = stopProcess,
+    files = { mkdtemp, writeFile, chmod, rm },
   } = {}
 ) {
   requireSafe(
@@ -440,11 +440,12 @@ export async function runPublisher(
   let activeSsh;
   const stopChildren = () => {
     controller.abort();
-    stopProcess(activeSsh);
-    stopProcess(activeTunnel, true);
+    stopProcessFn(activeSsh);
+    stopProcessFn(activeTunnel, true);
   };
   const onSignal = () => stopChildren();
   const remaining = () => {
+    if (controller.signal.aborted) throw staticFailure();
     const value = deadline - now();
     if (value <= 0) {
       stopChildren();
@@ -452,9 +453,9 @@ export async function runPublisher(
     }
     return value;
   };
-  const budgetTimer = setTimeout(stopChildren, budgetMs);
-  process.once('SIGTERM', onSignal);
-  process.once('SIGINT', onSignal);
+  const budgetTimer = clock.setTimeout(stopChildren, budgetMs);
+  signals.once('SIGTERM', onSignal);
+  signals.once('SIGINT', onSignal);
   try {
     await abortable(
       verifyAwsAccount(config, {
@@ -482,7 +483,8 @@ export async function runPublisher(
     activeTunnel = spawnImpl('aws', startSessionArguments(targetConfig, port), {
       shell: false,
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // Keep stdin alive until cleanup; EOF can close the forwarder.
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     activeTunnel.once('error', () => {});
     activeTunnel.stdout?.resume();
@@ -508,24 +510,25 @@ export async function runPublisher(
       controller.signal
     );
     const scratch = await abortable(
-      mkdtemp(join(tmpdir(), 'instagram-publisher-')),
+      files.mkdtemp(join(tmpdir(), 'instagram-publisher-')),
       controller.signal
     );
     const knownHostsPath = join(scratch, 'known_hosts');
     try {
       await abortable(
-        writeFile(knownHostsPath, knownHostsLine(rawKey, port), {
+        files.writeFile(knownHostsPath, knownHostsLine(rawKey, port), {
           mode: 0o600,
         }),
         controller.signal
       );
-      await abortable(chmod(knownHostsPath, 0o600), controller.signal);
+      await abortable(files.chmod(knownHostsPath, 0o600), controller.signal);
       return await abortable(
         new Promise((resolve, reject) => {
           let output = '';
           let settled = false;
           let timer;
           let onStdinError;
+          remaining();
           const child = spawnImpl(
             'ssh',
             publisherSshArguments(targetConfig, port, knownHostsPath),
@@ -539,7 +542,7 @@ export async function runPublisher(
           const finish = (error, value) => {
             if (settled) return;
             settled = true;
-            clearTimeout(timer);
+            clock.clearTimeout(timer);
             if (onAbort)
               controller.signal.removeEventListener('abort', onAbort);
             child.stdin?.removeListener('error', onStdinError);
@@ -548,19 +551,20 @@ export async function runPublisher(
             else resolve(value);
           };
           onStdinError = () => {
-            stopProcess(child);
+            stopProcessFn(child);
             finish(staticFailure());
           };
           onAbort = () => {
-            stopProcess(child);
+            stopProcessFn(child);
             finish(staticFailure());
           };
           controller.signal.addEventListener('abort', onAbort, { once: true });
-          timer = setTimeout(() => {
+          timer = clock.setTimeout(() => {
             child.kill();
             finish(staticFailure());
           }, remaining());
           child.stdout?.on('data', chunk => {
+            if (settled) return;
             output += chunk;
             if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES) {
               child.kill();
@@ -584,14 +588,17 @@ export async function runPublisher(
         controller.signal
       );
     } finally {
-      await rm(scratch, { recursive: true, force: true }).catch(() => {});
+      await abortable(
+        files.rm(scratch, { recursive: true, force: true }),
+        controller.signal
+      ).catch(() => {});
     }
   } finally {
-    clearTimeout(budgetTimer);
-    process.removeListener('SIGTERM', onSignal);
-    process.removeListener('SIGINT', onSignal);
-    stopProcess(activeSsh);
-    stopProcess(activeTunnel, true);
+    clock.clearTimeout(budgetTimer);
+    signals.removeListener('SIGTERM', onSignal);
+    signals.removeListener('SIGINT', onSignal);
+    stopProcessFn(activeSsh);
+    stopProcessFn(activeTunnel, true);
   }
 }
 

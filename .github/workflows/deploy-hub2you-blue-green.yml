@@ -275,7 +275,8 @@ jobs:
             echo "AMI_ID=$ami_id"
             echo "ROOT_DEVICE_NAME=$root_device_name"
             echo "TRAFFIC_SHIFT_DONE=false"
-            echo "GREEN_TG_ATTACHED=false"
+            echo "GREEN_WORKER_START_ATTEMPTED=false"
+            echo "PREVIOUS_WRITE_ATTEMPTED=false"
           } >> "$GITHUB_ENV"
 
       - name: Create green user data
@@ -475,23 +476,22 @@ jobs:
             fi
 
             if ! (
-              set -e
               docker cp \
                 "$source_container:/app/scripts/instagram_testers/runtime/forced-publisher.sh" \
-                "$stage_dir/forced-publisher.sh"
+                "$stage_dir/forced-publisher.sh" &&
               docker cp \
                 "$source_container:/app/scripts/instagram_testers/runtime/install-remote-publisher.sh" \
-                "$stage_dir/install-remote-publisher.sh"
-              test ! -L "$stage_dir/forced-publisher.sh"
-              test ! -L "$stage_dir/install-remote-publisher.sh"
-              test -s "$stage_dir/forced-publisher.sh"
-              test -s "$stage_dir/install-remote-publisher.sh"
-              chmod 700 "$stage_dir"
-              chmod 700 "$stage_dir/forced-publisher.sh" "$stage_dir/install-remote-publisher.sh"
-              /bin/sh "$stage_dir/install-remote-publisher.sh" < "$stage_dir/public-key"
-              test -x /usr/local/libexec/instagram-tester-publisher-root
-              test -x /usr/sbin/sshd
-              /usr/sbin/sshd -t
+                "$stage_dir/install-remote-publisher.sh" &&
+              test ! -L "$stage_dir/forced-publisher.sh" &&
+              test ! -L "$stage_dir/install-remote-publisher.sh" &&
+              test -s "$stage_dir/forced-publisher.sh" &&
+              test -s "$stage_dir/install-remote-publisher.sh" &&
+              chmod 700 "$stage_dir" &&
+              chmod 700 "$stage_dir/forced-publisher.sh" "$stage_dir/install-remote-publisher.sh" &&
+              /bin/sh "$stage_dir/install-remote-publisher.sh" < "$stage_dir/public-key" &&
+              test -x /usr/local/libexec/instagram-tester-publisher-root &&
+              test -x /usr/sbin/sshd &&
+              /usr/sbin/sshd -t &&
               systemctl is-active --quiet sshd
             ); then
               cleanup_instagram_tester_publisher
@@ -681,8 +681,6 @@ jobs:
             --listener-arn "$LISTENER_ARN" \
             --default-actions "Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn=$BLUE_TG_ARN,Weight=100},{TargetGroupArn=$green_tg_arn,Weight=0}]}"
 
-          echo "GREEN_TG_ATTACHED=true" >> "$GITHUB_ENV"
-
           aws elbv2 wait target-in-service \
             --target-group-arn "$green_tg_arn" \
             --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
@@ -692,7 +690,7 @@ jobs:
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo systemctl stop chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo systemctl stop chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -706,10 +704,11 @@ jobs:
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
             --output json
 
+          echo "GREEN_WORKER_START_ATTEMPTED=true" >> "$GITHUB_ENV"
           green_command_id=$(aws ssm send-command \
             --instance-ids "$GREEN_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -725,14 +724,14 @@ jobs:
 
       - name: Shift HTTPS listener to green
         run: |
-          aws ssm put-parameter --name "$PREVIOUS_TG_PARAMETER" --type String --value "$BLUE_TG_ARN" --overwrite
-          aws ssm put-parameter --name "$PREVIOUS_INSTANCE_PARAMETER" --type String --value "$BLUE_INSTANCE_ID" --overwrite
-          aws ssm put-parameter --name "$CURRENT_TG_PARAMETER" --type String --value "$GREEN_TG_ARN" --overwrite
-          aws ssm put-parameter --name "$CURRENT_INSTANCE_PARAMETER" --type String --value "$GREEN_INSTANCE_ID" --overwrite
+          source scripts/deploy/blue-green-recovery.sh
+          echo "PREVIOUS_WRITE_ATTEMPTED=true" >> "$GITHUB_ENV"
+          record_previous_destination "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
 
-          aws elbv2 modify-listener \
-            --listener-arn "$LISTENER_ARN" \
-            --default-actions "Type=forward,TargetGroupArn=$GREEN_TG_ARN"
+          switch_listener_destination "$LISTENER_ARN" "$GREEN_TG_ARN" "$GREEN_INSTANCE_ID"
+          if [ "$LISTENER_SWITCH_STATUS" -ne 0 ]; then
+            exit "$LISTENER_SWITCH_STATUS"
+          fi
 
           echo "TRAFFIC_SHIFT_DONE=true" >> "$GITHUB_ENV"
 
@@ -796,38 +795,74 @@ jobs:
       - name: Cleanup failed green resources before traffic shift
         if: failure() && env.TRAFFIC_SHIFT_DONE != 'true'
         run: |
+          source scripts/deploy/blue-green-recovery.sh
+          recovery_switch_status=0
+          if [ -n "${BLUE_INSTANCE_ID:-}${BLUE_TG_ARN:-}${GREEN_INSTANCE_ID:-}${GREEN_TG_ARN:-}" ]; then
+            # A known, unique blue binding is required before any mutation.
+            if [ -z "${LISTENER_ARN:-}" ] || [ -z "${BLUE_TG_ARN:-}" ] || [ -z "${BLUE_INSTANCE_ID:-}" ]; then
+              echo "blue_green_recovery_destination_missing" >&2
+              exit 1
+            fi
+            if [ "${PREVIOUS_WRITE_ATTEMPTED:-false}" = "true" ]; then
+              record_previous_destination "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            else
+              validate_target_pair "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            fi
+          fi
+          if [ "${GREEN_WORKER_START_ATTEMPTED:-false}" = "true" ]; then
+            green_stop_command_id=$(aws ssm send-command \
+              --instance-ids "$GREEN_INSTANCE_ID" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
+              --query 'Command.CommandId' \
+              --output text)
+            aws ssm wait command-executed \
+              --command-id "$green_stop_command_id" \
+              --instance-id "$GREEN_INSTANCE_ID"
+          fi
+
+          # Even a failed switch may have reached AWS. Confirm blue before writing
+          # pointers or removing green; failed recovery retains green for inspection.
+          if [ -n "${LISTENER_ARN:-}" ] && [ -n "${BLUE_TG_ARN:-}" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+            switch_listener_destination "$LISTENER_ARN" "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            recovery_switch_status="$LISTENER_SWITCH_STATUS"
+          fi
+
           if [ -n "${BLUE_INSTANCE_ID:-}" ]; then
             blue_restore_command_id=$(aws ssm send-command \
               --instance-ids "$BLUE_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service"]' \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
               --query 'Command.CommandId' \
-              --output text || true)
+              --output text)
+            aws ssm wait command-executed \
+              --command-id "$blue_restore_command_id" \
+              --instance-id "$BLUE_INSTANCE_ID"
+          fi
 
-            if [ -n "${blue_restore_command_id:-}" ] && [ "$blue_restore_command_id" != "None" ]; then
-              aws ssm wait command-executed \
-                --command-id "$blue_restore_command_id" \
-                --instance-id "$BLUE_INSTANCE_ID" || true
-            fi
+          # Complete worker recovery even after a confirmed switch response error;
+          # keep resources and return that original error instead of success.
+          if [ "$recovery_switch_status" -ne 0 ]; then
+            exit "$recovery_switch_status"
+          fi
+          if [ -n "${GREEN_INSTANCE_ID:-}" ]; then
+            sleep "$PUBLISHER_TRANSPORT_DRAIN_SECONDS"
           fi
 
           if [ -n "${GREEN_TG_ARN:-}" ]; then
-            if [ "${GREEN_TG_ATTACHED:-false}" = "true" ] && [ -n "${BLUE_TG_ARN:-}" ]; then
-              aws elbv2 modify-listener \
-                --listener-arn "$LISTENER_ARN" \
-                --default-actions "Type=forward,TargetGroupArn=$BLUE_TG_ARN" || true
-            fi
-
             aws elbv2 deregister-targets \
               --target-group-arn "$GREEN_TG_ARN" \
-              --targets "Id=$GREEN_INSTANCE_ID,Port=3000" || true
+              --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
+            aws elbv2 wait target-deregistered \
+              --target-group-arn "$GREEN_TG_ARN" \
+              --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
             aws elbv2 delete-target-group \
-              --target-group-arn "$GREEN_TG_ARN" || true
+              --target-group-arn "$GREEN_TG_ARN"
           fi
 
           if [ -n "${GREEN_INSTANCE_ID:-}" ]; then
             aws ec2 terminate-instances \
-              --instance-ids "$GREEN_INSTANCE_ID" || true
+              --instance-ids "$GREEN_INSTANCE_ID"
           fi
 
   rollback:
@@ -838,6 +873,11 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -846,6 +886,18 @@ jobs:
 
       - name: Restore previous target group
         run: |
+          source scripts/deploy/blue-green-recovery.sh
+          lb_arn=$(aws elbv2 describe-load-balancers \
+            --names "$ALB_NAME" \
+            --query 'LoadBalancers[0].LoadBalancerArn' \
+            --output text)
+          listener_arn=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$lb_arn" \
+            --query 'Listeners[?Port==`443`].ListenerArn | [0]' \
+            --output text)
+          read_listener_destination "$listener_arn"
+          current_instance_id="$ACTIVE_INSTANCE_ID"
+
           previous_tg_arn=$(aws ssm get-parameter \
             --name "$PREVIOUS_TG_PARAMETER" \
             --query Parameter.Value \
@@ -854,10 +906,22 @@ jobs:
             --name "$PREVIOUS_INSTANCE_PARAMETER" \
             --query Parameter.Value \
             --output text)
-          current_instance_id=$(aws ssm get-parameter \
-            --name "$CURRENT_INSTANCE_PARAMETER" \
-            --query Parameter.Value \
-            --output text)
+
+          validate_target_pair "$previous_tg_arn" "$previous_instance_id"
+
+          # The enabled worker unit can autostart at EC2 boot; stop and wait first.
+          if [ "$current_instance_id" != "$previous_instance_id" ]; then
+            current_command_id=$(aws ssm send-command \
+              --instance-ids "$current_instance_id" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
+              --query 'Command.CommandId' \
+              --output text)
+
+            aws ssm wait command-executed \
+              --command-id "$current_command_id" \
+              --instance-id "$current_instance_id"
+          fi
 
           previous_state=$(aws ec2 describe-instances \
             --instance-ids "$previous_instance_id" \
@@ -886,7 +950,7 @@ jobs:
           previous_web_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo systemctl start chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+            --parameters 'commands=["set -eu","sudo systemctl start chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -894,42 +958,21 @@ jobs:
             --command-id "$previous_web_command_id" \
             --instance-id "$previous_instance_id"
 
-          lb_arn=$(aws elbv2 describe-load-balancers \
-            --names "$ALB_NAME" \
-            --query 'LoadBalancers[0].LoadBalancerArn' \
-            --output text)
-          listener_arn=$(aws elbv2 describe-listeners \
-            --load-balancer-arn "$lb_arn" \
-            --query 'Listeners[?Port==`443`].ListenerArn | [0]' \
-            --output text)
-
-          aws elbv2 modify-listener \
-            --listener-arn "$listener_arn" \
-            --default-actions "Type=forward,TargetGroupArn=$previous_tg_arn"
-
-          # O WORKER ATUAL PARA ANTES DE O ANTERIOR SUBIR, na mesma ordem do deploy: com 30 threads em
-          # cada, os dois juntos abririam ~60 conexoes no RDS (que aceita 79) mais as das webs.
-          current_command_id=$(aws ssm send-command \
-            --instance-ids "$current_instance_id" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
-            --query 'Command.CommandId' \
-            --output text)
-
-          aws ssm wait command-executed \
-            --command-id "$current_command_id" \
-            --instance-id "$current_instance_id"
+          switch_listener_destination "$listener_arn" "$previous_tg_arn" "$previous_instance_id"
+          recovery_switch_status="$LISTENER_SWITCH_STATUS"
 
           previous_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
           aws ssm wait command-executed \
             --command-id "$previous_command_id" \
             --instance-id "$previous_instance_id"
+
+          exit "$recovery_switch_status"
 
       - name: Verify public SSO redirect after rollback
         run: |

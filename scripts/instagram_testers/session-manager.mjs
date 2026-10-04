@@ -12,10 +12,40 @@ import {
   validateRolesResponse,
 } from './session-observer.mjs';
 
-const pause = ms =>
-  new Promise(done => {
-    setTimeout(done, ms);
+const CYCLE_BUDGET_MS = 30000;
+const REFRESH_INTERVAL_MS = 900000;
+
+function cancellable(promise, signal) {
+  return new Promise((done, reject) => {
+    const abort = () => {
+      signal.removeEventListener('abort', abort);
+      reject(signal.reason);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    Promise.resolve(promise).then(
+      value => {
+        signal.removeEventListener('abort', abort);
+        if (signal.aborted) reject(signal.reason);
+        else done(value);
+      },
+      error => {
+        signal.removeEventListener('abort', abort);
+        reject(error);
+      }
+    );
+    if (signal.aborted) abort();
   });
+}
+
+function pause(ms, signal, clock) {
+  let timer;
+  return cancellable(
+    new Promise(done => {
+      timer = clock.setTimeout(done, ms);
+    }),
+    signal
+  ).finally(() => clock.clearTimeout(timer));
+}
 
 export function browserEnvironment(env) {
   // Browser children do not need Rails/AWS/proxy secrets or protocol tracing.
@@ -67,59 +97,82 @@ export async function privateProfile(path) {
   return target;
 }
 
-export function publisher(command, payload) {
+export function publisher(
+  command,
+  payload,
+  { signal, spawnImpl = spawn, clock = globalThis } = {}
+) {
   return new Promise((done, reject) => {
     if (
       !Array.isArray(command) ||
       !command.length ||
       !command.every(
         value =>
-          typeof value === 'string' && value.length && !/[\x00\r\n]/.test(value)
+          typeof value === 'string' &&
+          value.length &&
+          !['\0', '\r', '\n'].some(character => value.includes(character))
       )
     ) {
       reject(new Error('publisher_required'));
       return;
     }
-    // The operator configures the command. Captured fields never enter argv or
-    // shell code. Discard stderr; publish only the validated opaque version.
-    const child = spawn(command[0], command.slice(1), {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    // Captured fields travel only through stdin. Cancellation reaches the
+    // transport child, which closes its own SSM/SSH children on SIGTERM.
+    const child = spawnImpl(command[0], command.slice(1), {
       stdio: ['pipe', 'pipe', 'ignore'],
       shell: false,
     });
     let output = '';
-    let failed = false;
-    const timer = setTimeout(() => {
-      failed = true;
-      child.kill();
-    }, 30000);
+    let settled = false;
+    let timer;
+    let abort;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clock.clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+      if (error) reject(error);
+      else done(value);
+    };
+    abort = () => {
+      child.kill('SIGTERM');
+      finish(signal?.reason || new Error('publication_failed'));
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    timer = clock.setTimeout(abort, CYCLE_BUDGET_MS);
     child.stdout.on('data', chunk => {
+      if (settled) return;
       output += chunk;
       if (Buffer.byteLength(output) > 1024) {
-        failed = true;
-        child.kill();
+        child.kill('SIGTERM');
+        finish(new Error('publication_failed'));
       }
     });
-    child.once('error', () => {
-      clearTimeout(timer);
-      reject(new Error('publication_failed'));
-    });
+    child.once('error', () => finish(new Error('publication_failed')));
     child.stdin.on('error', () => {
-      failed = true;
+      child.kill('SIGTERM');
+      finish(new Error('publication_failed'));
     });
     child.once('exit', code => {
-      clearTimeout(timer);
       try {
-        if (failed || code !== 0) throw new Error();
+        if (code !== 0) throw new Error();
         const result = JSON.parse(output);
         if (
+          !result ||
+          Array.isArray(result) ||
           Object.keys(result).length !== 1 ||
-          !('version' in result) ||
-          (result.version !== null && !/^[a-f0-9-]{36}$/.test(result.version))
+          !Object.hasOwn(result, 'version') ||
+          (result.version !== null &&
+            (typeof result.version !== 'string' || !result.version.length))
         )
           throw new Error();
-        done(result.version);
+        finish(null, result.version);
       } catch {
-        reject(new Error('publication_failed'));
+        finish(new Error('publication_failed'));
       }
     });
     child.stdin.end(JSON.stringify(payload));
@@ -160,33 +213,35 @@ export function isAllowedBrowserRequest({
   }
 }
 
-async function requireOperator(command, version) {
-  if (version) {
-    await publisher(command, {
-      operation: 'invalidate',
-      expected_version: version,
-      code: 'operator_required',
-    }).catch(() => {});
-  }
-  throw new Error('operator_required');
-}
-
-export async function run(env = process.env) {
+export async function run(
+  env = process.env,
+  {
+    publish = publisher,
+    loadRuntime = path => import(pathToFileURL(path)),
+    signals = process,
+    clock = globalThis,
+    now = Date.now,
+    stdout = process.stdout,
+    stderr = process.stderr,
+    files = { privateProfile, open, unlink },
+  } = {}
+) {
   const config = configuration(env);
-  const profile = await privateProfile(env.INSTAGRAM_TESTER_BROWSER_PROFILE);
+  const profile = await files.privateProfile(
+    env.INSTAGRAM_TESTER_BROWSER_PROFILE
+  );
   const command = JSON.parse(
     env.INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON || 'null'
   );
   const lockPath = join(profile, '.instagram-manager.lock');
-  const lock = await open(lockPath, 'wx', 0o600);
+  const lock = await files.open(lockPath, 'wx', 0o600);
   let context;
-  let stopping = false;
   let unhealthy = null;
-  const stop = () => {
-    stopping = true;
-  };
-  process.once('SIGTERM', stop);
-  process.once('SIGINT', stop);
+  const operatorState = { required: false };
+  const shutdown = new AbortController();
+  const stop = () => shutdown.abort(new Error('manager_stopped'));
+  signals.once('SIGTERM', stop);
+  signals.once('SIGINT', stop);
   try {
     if (
       !env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE ||
@@ -195,9 +250,7 @@ export async function run(env = process.env) {
       throw new Error('browser_runtime_required');
     delete process.env.DEBUG;
     delete process.env.PWDEBUG;
-    const runtime = await import(
-      pathToFileURL(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
-    );
+    const runtime = await loadRuntime(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE);
     context = await runtime.chromium.launchPersistentContext(profile, {
       channel: 'chrome',
       headless: true,
@@ -230,119 +283,175 @@ export async function run(env = process.env) {
         return route.abort();
       return route.continue();
     });
-    while (!stopping) {
-      const expectedVersion = await publisher(command, {
-        operation: 'version',
-      });
-      const capturedAt = new Date().toISOString();
+    while (!shutdown.signal.aborted) {
+      const cycle = new AbortController();
+      const cancel = () => cycle.abort(shutdown.signal.reason);
+      shutdown.signal.addEventListener('abort', cancel, { once: true });
+      const timer = clock.setTimeout(
+        () => cycle.abort(new Error('session_update_rejected')),
+        CYCLE_BUDGET_MS
+      );
+      const wait = promise => cancellable(promise, cycle.signal);
+      const send = payload => {
+        cycle.signal.throwIfAborted();
+        return wait(publish(command, payload, { signal: cycle.signal, clock }));
+      };
       let publication = null;
       let accepting = true;
-      const observe = response => {
-        if (
-          !accepting ||
-          publication ||
-          response.url() !== 'https://developers.facebook.com/api/graphql/'
-        )
-          return;
-        publication = (async () => {
-          const request = response.request();
-          const session = observedSession(
-            {
-              url: request.url(),
-              method: request.method(),
-              headers: await request.allHeaders(),
-              body: request.postData(),
-            },
-            config
-          );
-          if (!session) {
-            publication = null;
-            return false;
-          }
-          if (response.status() === 401 || response.status() === 403) {
-            await requireOperator(command, expectedVersion);
-          }
-          if (response.status() !== 200)
-            throw new Error('session_update_rejected');
-          const rolesResponse = await response.text();
-          validateRolesResponse(rolesResponse);
-          if (!safeBrowserLocation(page.url(), config))
-            throw new Error('operator_required');
-          await publisher(command, {
-            operation: 'publish',
-            session,
-            expected_version: expectedVersion,
-            captured_at: capturedAt,
-            app_id: config.appId,
-            business_id: config.businessId,
-            proxy_fingerprint: config.proxyFingerprint,
-            roles_response: rolesResponse,
-          });
-          return true;
-        })();
-        publication.catch(() => {});
-      };
-      page.on('response', observe);
+      let observe;
       try {
-        const navigation = await page.goto(config.rolesUrl, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000,
-        });
+        // Version is part of the recoverable cycle and is opaque to this client.
+        const expectedVersion = await send({ operation: 'version' });
+        const capturedAt = new Date(now()).toISOString();
+        let operatorStop;
+        const requireOperator = () => {
+          if (!operatorStop) {
+            operatorState.required = true;
+            operatorStop = (async () => {
+              if (expectedVersion !== null) {
+                await send({
+                  operation: 'invalidate',
+                  expected_version: expectedVersion,
+                  code: 'operator_required',
+                }).catch(() => {});
+              }
+              throw new Error('operator_required');
+            })();
+          }
+          return operatorStop;
+        };
+        observe = response => {
+          if (
+            !accepting ||
+            cycle.signal.aborted ||
+            publication ||
+            response.url() !== 'https://developers.facebook.com/api/graphql/'
+          )
+            return;
+          publication = (async () => {
+            const request = response.request();
+            const headers = await wait(request.allHeaders());
+            cycle.signal.throwIfAborted();
+            const session = observedSession(
+              {
+                url: request.url(),
+                method: request.method(),
+                headers,
+                body: request.postData(),
+              },
+              config
+            );
+            if (!session) {
+              publication = null;
+              return false;
+            }
+            if ([401, 403].includes(response.status())) await requireOperator();
+            if (response.status() !== 200)
+              throw new Error('session_update_rejected');
+            const rolesResponse = await wait(response.text());
+            cycle.signal.throwIfAborted();
+            validateRolesResponse(rolesResponse);
+            if (!safeBrowserLocation(page.url(), config))
+              await requireOperator();
+            await send({
+              operation: 'publish',
+              session,
+              expected_version: expectedVersion,
+              captured_at: capturedAt,
+              app_id: config.appId,
+              business_id: config.businessId,
+              proxy_fingerprint: config.proxyFingerprint,
+              roles_response: rolesResponse,
+            });
+            return true;
+          })();
+          publication.catch(() => {});
+        };
+        page.on('response', observe);
+        const navigation = await wait(
+          page.goto(config.rolesUrl, {
+            waitUntil: 'domcontentloaded',
+            timeout: CYCLE_BUDGET_MS,
+          })
+        );
         if (
           !safeBrowserLocation(page.url(), config) ||
           [401, 403].includes(navigation?.status())
-        ) {
-          await requireOperator(command, expectedVersion);
-        }
-        const deadline = Date.now() + 30000;
-        while (!publication && Date.now() < deadline && !stopping)
-          await pause(100);
+        )
+          await requireOperator();
+        while (!publication) await pause(100, cycle.signal, clock);
         accepting = false;
-        if (!publication || !(await publication))
+        if (!(await wait(publication)))
           throw new Error('session_update_rejected');
-        // Static status only. Never log browser URLs, headers, forms or errors.
-        if (unhealthy) process.stdout.write('instagram_session_recovered\n');
+        if (unhealthy) stdout.write('instagram_session_recovered\n');
         unhealthy = null;
       } catch (error) {
+        if (shutdown.signal.aborted) break;
         const code =
-          error.message === 'operator_required'
+          operatorState.required || error.message === 'operator_required'
             ? 'operator_required'
             : 'session_update_rejected';
-        if (unhealthy !== code)
-          process.stderr.write(`instagram_session_${code}\n`);
+        if (unhealthy !== code) stderr.write(`instagram_session_${code}\n`);
         unhealthy = code;
         if (code === 'operator_required') {
-          stopping = true;
+          operatorState.required = true;
           break;
         }
       } finally {
         accepting = false;
-        page.off('response', observe);
-        if (publication) await publication.catch(() => {});
+        if (observe) page.off('response', observe);
+        // Release pending headers/body/publication; never await them in cleanup.
+        cycle.abort(new Error('session_update_rejected'));
+        clock.clearTimeout(timer);
+        shutdown.signal.removeEventListener('abort', cancel);
       }
-      // Refresh only by a legitimate browser page load. No direct HTTP fallback,
-      // proxy rotation, password/2FA handling or retry of a captured request.
-      for (let elapsed = 0; elapsed < 900000 && !stopping; elapsed += 1000)
-        await pause(1000);
+      // A transport failure waits for the normal refresh, with no captured replay.
+      await pause(REFRESH_INTERVAL_MS, shutdown.signal, clock).catch(() => {});
     }
-    if (unhealthy) throw new Error('operator_required');
+    if (operatorState.required) throw new Error('operator_required');
   } finally {
-    if (context) await context.close().catch(() => {});
-    await lock.close();
-    await unlink(lockPath).catch(() => {});
-    process.removeListener('SIGTERM', stop);
-    process.removeListener('SIGINT', stop);
+    const cleanup = async promise => {
+      const controller = new AbortController();
+      const timer = clock.setTimeout(
+        () => controller.abort(new Error('cleanup_timeout')),
+        CYCLE_BUDGET_MS
+      );
+      try {
+        return await cancellable(promise, controller.signal);
+      } finally {
+        clock.clearTimeout(timer);
+      }
+    };
+    try {
+      if (context) await cleanup(context.close()).catch(() => {});
+      await cleanup(lock.close()).catch(error => {
+        if (error.message !== 'cleanup_timeout') throw error;
+      });
+    } finally {
+      try {
+        await cleanup(files.unlink(lockPath)).catch(() => {});
+      } finally {
+        signals.removeListener('SIGTERM', stop);
+        signals.removeListener('SIGINT', stop);
+      }
+    }
   }
+}
+
+export function managerExitCode(error) {
+  return error.message === 'operator_required' ? 2 : 1;
 }
 
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
-  run().catch(() => {
+  run().catch(error => {
+    process.exitCode = managerExitCode(error);
     process.stderr.write(
-      'Instagram session manager stopped; operator required\n'
+      process.exitCode === 2
+        ? 'instagram_manager_operator_required\n'
+        : 'instagram_manager_failed\n'
     );
-    process.exitCode = 2;
   });
 }

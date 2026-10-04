@@ -1,5 +1,18 @@
 class Instagram::Testers::OauthBinding
   TTL = 15.minutes
+  STATE_VERSION = 2
+
+  # FRONTEND_URL is the configured OAuth callback base, never a request Host.
+  # Require it explicitly: localhost fallback would collapse distinct installs.
+  def self.installation
+    uri = URI.parse(ENV.fetch('FRONTEND_URL'))
+    valid = %w[http https].include?(uri.scheme) && uri.host.present? && uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil?
+    raise Instagram::Testers::Error, 'meta_unavailable' unless valid
+
+    Digest::SHA256.hexdigest("#{uri.scheme}://#{uri.host.downcase}:#{uri.port}#{uri.path.delete_suffix('/')}")
+  rescue KeyError, URI::InvalidURIError
+    raise Instagram::Testers::Error.new('meta_unavailable'), cause: nil
+  end
 
   def self.prepare(token:, account_id:, actor_id:)
     configuration = Instagram::Testers::Configuration.new(account_id: account_id)
@@ -14,30 +27,62 @@ class Instagram::Testers::OauthBinding
 
   def self.claim!(payload)
     validate_payload!(payload)
-    raise Instagram::Testers::Error, 'invalid_selection' unless payload['tester_installation'] == ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', '')
+    validate_selection!(payload) if payload.key?('tester_selection')
+    account = authorize!(payload)
 
-    selected = payload.fetch('tester_selection')
-    configuration = Instagram::Testers::Configuration.new(account_id: payload.fetch('sub'))
-    configuration.ensure_available!
-    raise Instagram::Testers::Error, 'invalid_selection' unless configuration.app_id == selected['app_id']
-
-    key = "instagram_testers:oauth:#{Digest::SHA256.hexdigest(payload['jti'])}"
+    key = "instagram:oauth:#{payload.fetch('installation')}:#{Digest::SHA256.hexdigest(payload.fetch('jti'))}"
     raise Instagram::Testers::Error, 'invalid_selection' unless Redis::Alfred.set(key, 'used', nx: true, ex: TTL.to_i * 2)
+
+    account
   rescue Redis::BaseError, ConnectionPool::TimeoutError
     raise Instagram::Testers::Error.new('meta_unavailable'), cause: nil
   end
 
+  # Reload membership and policy both before token exchange and after provider
+  # requests, before writing. This uses Enterprise custom-role permissions too.
+  def self.authorize!(payload)
+    Account.uncached do
+      account = Account.find_by(id: payload.fetch('sub'))
+      raise Instagram::Testers::Error, 'forbidden' unless account&.active?
+
+      membership = account.account_users.find_by(user_id: payload.fetch('actor_id'))
+      raise Instagram::Testers::Error, 'forbidden' unless membership
+
+      context = { user: membership.user, account: account, account_user: membership }
+      raise Instagram::Testers::Error, 'forbidden' unless InboxPolicy.new(context, Inbox).create?
+
+      account
+    end
+  end
+
   def self.validate_payload!(payload)
-    selected = payload['tester_selection']
-    valid = Instagram::Testers::Validation.target?(selected) && Instagram::Testers::Validation.id?(selected['app_id']) &&
-            valid_timing?(payload) && payload['jti'].is_a?(String) && payload['jti'].length == 36
+    valid = payload.is_a?(Hash) && valid_context?(payload) && valid_timing?(payload) &&
+            payload['jti'].is_a?(String) && payload['jti'].length == 36
     raise Instagram::Testers::Error, 'invalid_selection' unless valid
+  end
+
+  def self.valid_context?(payload)
+    payload['state_version'] == STATE_VERSION && payload['installation'] == installation &&
+      payload.values_at('sub', 'actor_id').all? { |id| id.is_a?(Integer) && id.positive? }
+  end
+
+  def self.validate_selection!(payload)
+    selected = payload['tester_selection']
+    scope = { 'account_id' => payload.fetch('sub').to_s, 'actor_id' => payload.fetch('actor_id').to_s,
+              'installation' => payload.fetch('installation') }
+    valid = Instagram::Testers::Validation.target?(selected) && Instagram::Testers::Validation.id?(selected['app_id']) &&
+            scope.all? { |key, value| selected[key] == value }
+    raise Instagram::Testers::Error, 'invalid_selection' unless valid
+
+    configuration = Instagram::Testers::Configuration.new(account_id: payload.fetch('sub'))
+    configuration.ensure_available!
+    raise Instagram::Testers::Error, 'invalid_selection' unless configuration.app_id == selected['app_id']
   end
 
   def self.valid_timing?(payload)
     payload['exp'].is_a?(Integer) && payload['iat'].is_a?(Integer) && payload['exp'] > Time.current.to_i &&
-      (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
+      payload['iat'] <= Time.current.to_i && (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
   end
 
-  private_class_method :validate_payload!, :valid_timing?
+  private_class_method :valid_context?, :validate_selection!, :valid_timing?
 end

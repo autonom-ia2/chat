@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-syntax -- Node fixtures register independent boundary cases without browser transpilation. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -317,6 +317,8 @@ test('profile must be private, outside Git and cannot follow symlinks', async ()
     await symlink(join(root, 'private'), join(root, 'link'));
     await assert.rejects(privateProfile(join(root, 'link')));
     await mkdir(join(root, 'public'), { mode: 0o755 });
+    // mkdir's mode is filtered by the caller's umask; make this fixture public.
+    await chmod(join(root, 'public'), 0o755);
     await assert.rejects(privateProfile(join(root, 'public')));
     await assert.rejects(privateProfile('relative'));
   } finally {

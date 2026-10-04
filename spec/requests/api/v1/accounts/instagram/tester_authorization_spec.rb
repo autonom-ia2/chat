@@ -16,7 +16,8 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
   end
 
   around do |example|
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
+    with_modified_env('FRONTEND_URL' => 'https://autonomia.example', 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true',
+                      'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
                       'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',
                       'INSTAGRAM_TESTER_APP_NAME' => 'Synthetic app', 'INSTAGRAM_TESTER_ROLES_DOC_ID' => '10003',
                       'INSTAGRAM_TESTER_SESSION_JSON' => session.to_json) { example.run }
@@ -37,7 +38,9 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state['tester_selection']).to eq('id' => candidate[:id], 'username' => candidate[:username], 'app_id' => '10001')
+    expect(state['tester_selection']).to eq('id' => candidate[:id], 'username' => candidate[:username], 'app_id' => '10001',
+                                            'account_id' => account.id.to_s, 'actor_id' => administrator.id.to_s,
+                                            'installation' => Instagram::Testers::OauthBinding.installation)
     expect(state['exp'] - state['iat']).to eq(15.minutes.to_i)
     expect(state['return_to']).to eq('onboarding')
     expect(query['scope']).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES.join(','))
@@ -67,24 +70,24 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     end
   end
 
-  it 'keeps legacy authorization free of tester calls and new state fields' do
+  it 'keeps legacy authorization free of tester calls with a bound state' do
     post path, headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state.keys).to contain_exactly('sub', 'iat')
+    expect(state.keys).to contain_exactly('sub', 'iat', 'actor_id', 'installation', 'state_version', 'exp', 'jti')
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end
 
   it 'keeps the legacy onboarding return hint when the tester feature is off' do
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') do
+    with_modified_env('FRONTEND_URL' => 'https://autonomia.example', 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') do
       post path, params: { return_to: 'onboarding' }, headers: headers, as: :json
     end
 
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state.keys).to contain_exactly('sub', 'iat', 'return_to')
+    expect(state.keys).to contain_exactly('sub', 'iat', 'return_to', 'actor_id', 'installation', 'state_version', 'exp', 'jti')
     expect(state['return_to']).to eq('onboarding')
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end

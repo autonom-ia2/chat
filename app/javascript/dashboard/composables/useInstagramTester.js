@@ -72,6 +72,7 @@ export function useInstagramTester({ disabled, onLegacy }) {
       invalid_selection: 'INVALID_SELECTION',
       meta_unavailable: 'UNAVAILABLE',
       meta_session_expired: 'UNAVAILABLE',
+      proxy_unavailable: 'UNAVAILABLE',
       unknown_status: 'STATUS_ERROR',
       invite_rejected: 'INVITE_ERROR',
       invite_unknown: 'INVITE_UNKNOWN',
@@ -141,7 +142,7 @@ export function useInstagramTester({ disabled, onLegacy }) {
     );
 
   const search = () => {
-    if (busy.value || !available.value) return undefined;
+    if (busy.value || disabled.value || !available.value) return undefined;
     const normalized = normalizeInstagramUsername(username.value);
     if (!isInstagramUsername(normalized)) {
       error.value = 'INVALID_USERNAME';
@@ -175,7 +176,8 @@ export function useInstagramTester({ disabled, onLegacy }) {
   };
 
   const checkStatus = () => {
-    if (busy.value || !selected.value || !available.value) return undefined;
+    if (busy.value || disabled.value || !selected.value || !available.value)
+      return undefined;
     const token = selected.value.selection_token;
     const wasPending = status.value === 'pending';
     return run(
@@ -196,7 +198,8 @@ export function useInstagramTester({ disabled, onLegacy }) {
   };
 
   const selectProfile = candidate => {
-    if (busy.value || !results.value.includes(candidate)) return undefined;
+    if (busy.value || disabled.value || !results.value.includes(candidate))
+      return undefined;
     selected.value = candidate;
     status.value = null;
     sent.value = false;

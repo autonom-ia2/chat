@@ -3,11 +3,26 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rm,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { EventEmitter } from 'node:events';
 import { configuration } from '../../scripts/instagram_testers/session-observer.mjs';
-import { run } from '../../scripts/instagram_testers/session-manager.mjs';
+import {
+  run,
+  publisher,
+  privateProfile,
+  managerExitCode,
+  isAllowedBrowserRequest,
+} from '../../scripts/instagram_testers/session-manager.mjs';
 
 const INITIAL_VERSION = '11111111-1111-4111-8111-111111111111';
 const PUBLISHED_VERSION = '22222222-2222-4222-8222-222222222222';
@@ -362,7 +377,7 @@ test('invalidates and stops on a checkpoint or two-factor redirect', async () =>
   }
 });
 
-test('rejects HTML/login response without invalidating the still-current version', async () => {
+test('SIGTERM during response body stops without invalidating the current version', async () => {
   const data = await fixture('html');
   try {
     const settled = withProcessEnv(data.processEnv, () =>
@@ -373,7 +388,7 @@ test('rejects HTML/login response without invalidating the still-current version
     );
     const error = await settled;
     const entries = await readOperations(data.operations);
-    assert.equal(error?.message, 'operator_required');
+    assert.equal(error, null);
     assert.deepEqual(
       entries.map(entry => entry.operation),
       ['version']
@@ -404,3 +419,492 @@ test('fails closed when the proxy browser cannot launch and never falls back dir
     await cleanup(data);
   }
 });
+
+async function drain() {
+  for (let index = 0; index < 20; index += 1) await Promise.resolve();
+}
+
+class FakeClock {
+  constructor() {
+    this.time = 0;
+    this.next = 0;
+    this.timers = new Map();
+  }
+
+  setTimeout(callback, milliseconds) {
+    this.next += 1;
+    const id = this.next;
+    this.timers.set(id, { at: this.time + milliseconds, callback });
+    return id;
+  }
+
+  clearTimeout(id) {
+    this.timers.delete(id);
+  }
+
+  async advance(milliseconds) {
+    const end = this.time + milliseconds;
+    while (this.timers.size) {
+      const next = [...this.timers.entries()]
+        .filter(([, timer]) => timer.at <= end)
+        .sort((a, b) => a[1].at - b[1].at)[0];
+      if (!next) break;
+      this.time = next[1].at;
+      this.timers.delete(next[0]);
+      next[1].callback();
+      await drain();
+    }
+    this.time = end;
+    await drain();
+  }
+}
+
+function deferred() {
+  let resolvePromise;
+  const promise = new Promise(resolveValue => {
+    resolvePromise = resolveValue;
+  });
+  return { promise, resolve: resolvePromise };
+}
+
+async function syntheticManager(t, options = {}) {
+  const data = await fixture('valid');
+  const clock = new FakeClock();
+  const signals = new EventEmitter();
+  const entries = [];
+  const bodies = [];
+  const headers = [];
+  const stdout = [];
+  const stderr = [];
+  const launched = deferred();
+  const config = configuration(data.env);
+  const fields = new URLSearchParams({
+    __user: baseEnv.INSTAGRAM_TESTER_ADMIN_USER_ID,
+    __bid: baseEnv.INSTAGRAM_META_BUSINESS_ID,
+    doc_id: baseEnv.INSTAGRAM_TESTER_ROLES_DOC_ID,
+    fb_api_req_friendly_name: 'RolesTable_Query',
+    variables: JSON.stringify({
+      app_id: baseEnv.INSTAGRAM_META_DEVELOPER_APP_ID,
+    }),
+    fb_dtsg: 'synthetic-dtsg',
+    lsd: 'synthetic-lsd',
+    jazoest: '1234',
+    __req: '1',
+  }).toString();
+  const request = {
+    url: () => 'https://developers.facebook.com/api/graphql/',
+    method: () => 'POST',
+    postData: () => fields,
+    allHeaders: () => {
+      const value = deferred();
+      headers.push(value);
+      if (!options.pendingHeaders)
+        value.resolve({
+          cookie: 'c_user=12345; xs=synthetic',
+          'user-agent': 'Synthetic Browser',
+          'x-fb-lsd': 'synthetic-lsd',
+        });
+      return value.promise;
+    },
+  };
+  const page = new EventEmitter();
+  let navigations = 0;
+  let routeHandler;
+  page.url = () => options.redirect || config.rolesUrl;
+  page.goto = async () => {
+    navigations += 1;
+    let continued = false;
+    await routeHandler({
+      request: () => request,
+      continue: async () => {
+        continued = true;
+      },
+      abort: async () => {
+        throw new Error('synthetic_browser_gate_rejected');
+      },
+    });
+    assert.equal(continued, true);
+    if (options.pendingNavigation) return new Promise(() => {});
+    const body = deferred();
+    bodies.push(body);
+    if (!options.pendingBody) body.resolve(rolesResponse);
+    page.emit('response', {
+      url: request.url,
+      request: () => request,
+      status: () => options.status || 200,
+      text: () => body.promise,
+    });
+    return { status: () => 200 };
+  };
+  let closed = 0;
+  const context = new EventEmitter();
+  context.pages = () => [page];
+  context.route = async (_pattern, handler) => {
+    routeHandler = handler;
+    launched.resolve();
+  };
+  context.close = async () => {
+    closed += 1;
+    if (options.pendingClose) await new Promise(() => {});
+  };
+  let versionReads = 0;
+  let currentVersion = options.initialVersion || null;
+  let publications = 0;
+  const pendingPublish = deferred();
+  const pendingInvalidation = deferred();
+  const cleanupWaiting = deferred();
+  const settled = run(data.env, {
+    clock,
+    now: () => clock.time,
+    signals,
+    files: {
+      privateProfile,
+      open: async (...args) => {
+        const handle = await open(...args);
+        return {
+          close: async () => {
+            await handle.close();
+            if (options.pendingLockClose) {
+              cleanupWaiting.resolve();
+              await new Promise(() => {});
+            }
+          },
+        };
+      },
+      unlink: async path => {
+        await unlink(path);
+        if (options.pendingUnlink) {
+          cleanupWaiting.resolve();
+          await new Promise(() => {});
+        }
+      },
+    },
+    stdout: { write: text => stdout.push(text) },
+    stderr: { write: text => stderr.push(text) },
+    loadRuntime: async () => ({
+      chromium: {
+        launchPersistentContext: async () => context,
+      },
+    }),
+    publish: async (_command, payload, { signal }) => {
+      entries.push({ payload, signal, at: clock.time });
+      signal.throwIfAborted();
+      if (payload.operation === 'version') {
+        versionReads += 1;
+        if (options.failVersion === versionReads)
+          throw new Error('publication_failed');
+        if (options.pendingVersion) return new Promise(() => {});
+        return currentVersion;
+      }
+      if (payload.operation === 'invalidate') {
+        if (options.pendingInvalidation) return pendingInvalidation.promise;
+        return null;
+      }
+      publications += 1;
+      if (options.rejectPublication === publications) {
+        currentVersion = 'opaque-revocation:1';
+        throw new Error('publication_failed');
+      }
+      if (options.pendingPublish) return pendingPublish.promise;
+      currentVersion = `opaque-generation:${publications}`;
+      return currentVersion;
+    },
+  }).then(
+    () => null,
+    error => error
+  );
+  await launched.promise;
+  await drain();
+  t.after(async () => {
+    signals.emit('SIGTERM');
+    await drain();
+    await clock.advance(30000);
+    await settled;
+    await cleanup(data);
+  });
+  return {
+    clock,
+    signals,
+    entries,
+    bodies,
+    headers,
+    stdout,
+    stderr,
+    settled,
+    pendingPublish,
+    pendingInvalidation,
+    cleanupWaiting,
+    page,
+    navigations: () => navigations,
+    closed: () => closed,
+    lockPath: join(
+      data.env.INSTAGRAM_TESTER_BROWSER_PROFILE,
+      '.instagram-manager.lock'
+    ),
+  };
+}
+
+test('three refresh cycles preserve opaque CAS versions and the 15-minute interval', async t => {
+  const data = await syntheticManager(t);
+  assert.equal(data.navigations(), 1);
+  await data.clock.advance(900000);
+  await data.clock.advance(900000);
+  const writes = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.deepEqual(
+    writes.map(entry => entry.payload.expected_version),
+    [null, 'opaque-generation:1', 'opaque-generation:2']
+  );
+  assert.deepEqual(
+    writes.map(entry => entry.at),
+    [0, 900000, 1800000]
+  );
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+  assert.equal(data.closed(), 1);
+});
+
+for (const failVersion of [1, 2]) {
+  test(`version failure in cycle ${failVersion} recovers without aggressive retry`, async t => {
+    const data = await syntheticManager(t, { failVersion });
+    if (failVersion === 2) await data.clock.advance(900000);
+    const reads = data.entries.filter(
+      entry => entry.payload.operation === 'version'
+    ).length;
+    await data.clock.advance(899999);
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'version')
+        .length,
+      reads
+    );
+    await data.clock.advance(1);
+    assert.equal(data.stdout.includes('instagram_session_recovered\n'), true);
+    assert.equal(data.stderr.length, 1);
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  });
+}
+
+for (const pending of [
+  'pendingHeaders',
+  'pendingBody',
+  'pendingPublish',
+  'pendingVersion',
+  'pendingNavigation',
+]) {
+  test(`whole-cycle deadline cancels ${pending} and permits the next cycle`, async t => {
+    const data = await syntheticManager(t, { [pending]: true });
+    await data.clock.advance(30000);
+    assert.equal(data.entries[0].signal.aborted, true);
+    assert.equal(data.page.listenerCount('response'), 0);
+    assert.deepEqual(data.stderr, [
+      'instagram_session_session_update_rejected\n',
+    ]);
+    const count = data.entries.length;
+    data.bodies[0]?.resolve(rolesResponse);
+    data.headers[0]?.resolve({ cookie: 'c_user=12345; xs=synthetic' });
+    data.pendingPublish.resolve('late-generation');
+    await drain();
+    assert.equal(data.entries.length, count);
+    await data.clock.advance(900000);
+    assert.equal(
+      data.entries.filter(entry => entry.payload.operation === 'version')
+        .length,
+      2
+    );
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+  });
+}
+
+for (const pending of [
+  'pendingHeaders',
+  'pendingBody',
+  'pendingPublish',
+  'pendingVersion',
+  'pendingNavigation',
+]) {
+  test(`SIGTERM cancels ${pending}, removes lock, and rejects stale completion`, async t => {
+    const data = await syntheticManager(t, { [pending]: true });
+    data.signals.emit('SIGTERM');
+    assert.equal(await data.settled, null);
+    assert.equal(data.closed(), 1);
+    assert.equal(data.entries[0].signal.aborted, true);
+    await assert.rejects(readFile(data.lockPath), { code: 'ENOENT' });
+    const count = data.entries.length;
+    data.bodies[0]?.resolve(rolesResponse);
+    data.headers[0]?.resolve({ cookie: 'c_user=12345; xs=synthetic' });
+    data.pendingPublish.resolve('late-generation');
+    await drain();
+    await data.clock.advance(1800000);
+    assert.equal(data.entries.length, count);
+    assert.equal(data.signals.listenerCount('SIGTERM'), 0);
+    assert.equal(data.clock.timers.size, 0);
+  });
+}
+
+test('cleanup has a deadline even when browser close never resolves', async t => {
+  const data = await syntheticManager(t, {
+    pendingBody: true,
+    pendingClose: true,
+  });
+  data.signals.emit('SIGTERM');
+  await drain();
+  assert.equal(data.closed(), 1);
+  await data.clock.advance(30000);
+  assert.equal(await data.settled, null);
+  await assert.rejects(readFile(data.lockPath), { code: 'ENOENT' });
+});
+
+for (const redirect of [
+  'https://www.facebook.com/login/',
+  'https://developers.facebook.com/checkpoint/',
+  'https://www.facebook.com/two_factor/',
+]) {
+  test(`operator redirect ${new URL(redirect).pathname} remains terminal with no retries`, async t => {
+    const data = await syntheticManager(t, { redirect });
+    assert.equal((await data.settled)?.message, 'operator_required');
+    await data.clock.advance(1800000);
+    assert.equal(data.navigations(), 1);
+    assert.equal(
+      data.entries.some(entry => entry.payload.operation === 'publish'),
+      false
+    );
+  });
+}
+
+test('exit code 2 is exclusive to operator_required; operational errors restart', () => {
+  assert.equal(managerExitCode(new Error('operator_required')), 2);
+  assert.equal(managerExitCode(new Error('publication_failed')), 1);
+  assert.equal(managerExitCode(new Error('proxy_unavailable')), 1);
+});
+
+test('publisher cancellation kills synthetic child without waiting for exit', async () => {
+  const clock = new FakeClock();
+  const controller = new AbortController();
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stdin = new EventEmitter();
+  let killed = 0;
+  child.kill = () => {
+    killed += 1;
+  };
+  child.stdin.end = () => {};
+  const result = publisher(
+    ['synthetic-child'],
+    { operation: 'version' },
+    {
+      signal: controller.signal,
+      clock,
+      spawnImpl: () => child,
+    }
+  );
+  controller.abort(new Error('manager_stopped'));
+  await assert.rejects(result, { message: 'manager_stopped' });
+  assert.equal(killed, 1);
+  child.stdout.emit('data', JSON.stringify({ version: 'late-generation' }));
+  child.emit('exit', 0);
+  assert.equal(clock.timers.size, 0);
+});
+
+test('browser gate stays closed to mutations and untrusted destinations', () => {
+  const config = configuration(baseEnv);
+  for (const url of [
+    'https://attacker.example/',
+    'http://developers.facebook.com/',
+    'https://developers.facebook.com/roles/add/',
+  ]) {
+    assert.equal(
+      isAllowedBrowserRequest({ url, method: 'GET', config }),
+      false
+    );
+  }
+  assert.equal(
+    isAllowedBrowserRequest({
+      url: 'https://developers.facebook.com/api/graphql/',
+      method: 'POST',
+      body: new URLSearchParams({
+        fb_api_req_friendly_name: 'Mutation',
+      }).toString(),
+      config,
+    }),
+    false
+  );
+});
+
+test('a hung invalidation still stops for operator_required at the cycle deadline', async t => {
+  const data = await syntheticManager(t, {
+    initialVersion: 'opaque-generation:current',
+    redirect: 'https://www.facebook.com/two_factor/',
+    pendingInvalidation: true,
+  });
+  await data.clock.advance(30000);
+  assert.equal((await data.settled)?.message, 'operator_required');
+  assert.equal(
+    data.entries.filter(entry => entry.payload.operation === 'invalidate')
+      .length,
+    1
+  );
+  await data.clock.advance(1800000);
+  assert.equal(data.navigations(), 1);
+  assert.equal(
+    data.entries.some(entry => entry.payload.operation === 'publish'),
+    false
+  );
+});
+
+test('an old body completing during a new cycle cannot publish the old capture', async t => {
+  const data = await syntheticManager(t, { pendingBody: true });
+  await data.clock.advance(30000);
+  await data.clock.advance(900000);
+  assert.equal(data.bodies.length, 2);
+  data.bodies[0].resolve(rolesResponse);
+  await drain();
+  assert.equal(
+    data.entries.some(entry => entry.payload.operation === 'publish'),
+    false
+  );
+  data.bodies[1].resolve(rolesResponse);
+  await drain();
+  const publications = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.equal(publications.length, 1);
+  assert.equal(
+    publications[0].payload.captured_at,
+    new Date(930000).toISOString()
+  );
+});
+
+test('CAS rejection reads the revocation revision and captures again on the next refresh', async t => {
+  const data = await syntheticManager(t, {
+    initialVersion: 'opaque-generation:current',
+    rejectPublication: 1,
+  });
+  await data.clock.advance(900000);
+  const writes = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.deepEqual(
+    writes.map(entry => entry.payload.expected_version),
+    ['opaque-generation:current', 'opaque-revocation:1']
+  );
+  assert.notEqual(writes[0].payload.captured_at, writes[1].payload.captured_at);
+  assert.equal(data.navigations(), 2);
+  assert.deepEqual(data.stdout, ['instagram_session_recovered\n']);
+});
+
+for (const pending of ['pendingLockClose', 'pendingUnlink']) {
+  test(`cleanup deadline bounds ${pending} and releases signal listeners`, async t => {
+    const data = await syntheticManager(t, { [pending]: true });
+    data.signals.emit('SIGTERM');
+    await drain();
+    await data.cleanupWaiting.promise;
+    await drain();
+    await data.clock.advance(30000);
+    assert.equal(await data.settled, null);
+    assert.equal(data.signals.listenerCount('SIGTERM'), 0);
+    assert.equal(data.clock.timers.size, 0);
+  });
+}

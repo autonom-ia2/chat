@@ -6,8 +6,9 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
 
   def create
     selection = tester_selection if params.key?(:tester_selection_token)
-    oauth_state = generate_instagram_token(Current.account.id, params.permit(:return_to)[:return_to], tester_selection: selection)
-    raise Instagram::Testers::Error, 'meta_unavailable' if selection && oauth_state.blank?
+    oauth_state = generate_instagram_token(Current.account.id, params.permit(:return_to)[:return_to],
+                                           actor_id: current_user.id, tester_selection: selection)
+    raise Instagram::Testers::Error, 'meta_unavailable' if oauth_state.blank?
 
     # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#step-1--get-authorization
     redirect_url = instagram_client.auth_code.authorize_url(

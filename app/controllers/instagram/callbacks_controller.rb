@@ -3,10 +3,16 @@ class Instagram::CallbacksController < ApplicationController
   include Instagram::IntegrationHelper
 
   def show
+    @oauth_payload = instagram_token_payload(params[:state])
+    return redirect_to '/app' unless @oauth_payload
+
+    @tester_flow = @oauth_payload.key?('tester_selection')
+    @account = Instagram::Testers::OauthBinding.claim!(@oauth_payload)
+    @tester_selection = @oauth_payload['tester_selection']
+
     # Check if Instagram redirected with an error (user canceled authorization)
     # See: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
     if params[:error].present?
-      @tester_flow = instagram_token_payload(params[:state])&.key?('tester_selection')
       handle_authorization_error
       return
     end
@@ -22,10 +28,6 @@ class Instagram::CallbacksController < ApplicationController
 
   # Process the authorization code and create inbox
   def process_successful_authorization
-    return redirect_to '/app' unless account_id
-
-    prepare_tester_callback
-
     @response = instagram_client.auth_code.get_token(
       oauth_code,
       redirect_uri: "#{base_url}/#{provider_name}/callback",
@@ -42,15 +44,6 @@ class Instagram::CallbacksController < ApplicationController
     else
       redirect_to app_instagram_inbox_agents_url(account_id: account_id, inbox_id: inbox.id)
     end
-  end
-
-  def prepare_tester_callback
-    payload = instagram_token_payload(params[:state])
-    @tester_flow = payload&.key?('tester_selection')
-    return unless @tester_flow
-
-    Instagram::Testers::OauthBinding.claim!(payload)
-    @tester_selection = payload.fetch('tester_selection')
   end
 
   # Handle all errors that might occur during authorization
@@ -117,6 +110,7 @@ class Instagram::CallbacksController < ApplicationController
       raise Instagram::Testers::Error, 'invalid_selection'
     end
 
+    @account = Instagram::Testers::OauthBinding.authorize!(@oauth_payload)
     channel_instagram = find_channel_by_instagram_id(user_details['user_id'].to_s)
     channel_exists = channel_instagram.present?
 
@@ -174,13 +168,11 @@ class Instagram::CallbacksController < ApplicationController
   end
 
   def account_id
-    return unless params[:state]
-
-    verify_instagram_token(params[:state])
+    @oauth_payload&.fetch('sub')
   end
 
   def return_to
-    instagram_token_return_to(params[:state])
+    @oauth_payload['return_to']
   end
 
   def oauth_code

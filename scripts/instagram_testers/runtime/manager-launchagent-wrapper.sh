@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # KeepAlive.SuccessfulExit=false restarts crashes. The manager uses exit 2 for
-# operator_required; map that terminal state to a clean exit so launchd does
+# operator_required only; operational failures use exit 1 and restart.
+# Map that terminal state to a clean exit so launchd does
 # not reopen a browser/profile until an operator explicitly starts it again.
 
 set +e
