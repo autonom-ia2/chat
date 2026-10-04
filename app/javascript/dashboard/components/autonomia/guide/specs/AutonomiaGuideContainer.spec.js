@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
@@ -8,6 +8,7 @@ import {
   motivoUtilizavel,
 } from 'dashboard/store/modules/autonomiaGuide';
 import AutonomiaGuideContainer from '../AutonomiaGuideContainer.vue';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 // Espião estável: `useRouter()` roda de novo a cada teste, e um `vi.fn()`
@@ -1390,5 +1391,87 @@ describe('AutonomiaGuideContainer — embutido', () => {
       wrapper.findComponent({ name: 'GuideComposer' }).props('isBusy')
     ).toBe(true);
     painel.unmount();
+  });
+});
+
+// #934 — o que a pessoa tem aberto e selecionado vai junto da pergunta, e o ×
+// da etiqueta tira só da próxima.
+describe('AutonomiaGuideContainer — o que está na tela (#934)', () => {
+  let wrapper;
+  let tela;
+
+  const TelaDoKanban = defineComponent({
+    setup() {
+      declararContexto({
+        selecionados: () => ({
+          recurso: 'crm/cards',
+          ids: [881, 882],
+          total: 12,
+        }),
+        filtros: { pipeline_id: 3 },
+      });
+      return () => h('div');
+    },
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    rotaAtual.name = 'crm_kanban_index';
+    rotaAtual.params = {};
+    tela = mount(TelaDoKanban);
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Feito.' },
+    });
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    tela?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    rotaAtual.name = 'home';
+  });
+
+  const perguntarEEsperar = async texto => {
+    await perguntar(wrapper, texto);
+    await esperarUmaBusca();
+    await flushPromises();
+  };
+
+  const telaEnviada = vez => AutonomiaGuideAPI.chat.mock.calls[vez][0].tela;
+
+  it('manda a seleção e os filtros, e o × tira só da próxima pergunta', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(true);
+
+    await perguntarEEsperar('move esses para Cotação');
+    expect(telaEnviada(0)).toEqual({
+      rota: 'crm_kanban_index',
+      selecionados: { recurso: 'crm/cards', ids: [881, 882], total: 12 },
+      filtros: { pipeline_id: 3 },
+    });
+
+    await wrapper.find('[data-etiqueta-tela-remover]').trigger('click');
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(false);
+    await perguntarEEsperar('quantos cards tenho?');
+    expect(telaEnviada(1)).toBeUndefined();
+
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(true);
+    await perguntarEEsperar('e esses?');
+    expect(telaEnviada(2).selecionados.total).toBe(12);
+  });
+
+  it('tela sem nada aberto ou selecionado não mostra etiqueta e manda só a rota', async () => {
+    tela.unmount();
+    tela = null;
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(false);
+    await perguntarEEsperar('oi');
+    expect(telaEnviada(0)).toEqual({ rota: 'crm_kanban_index' });
   });
 });

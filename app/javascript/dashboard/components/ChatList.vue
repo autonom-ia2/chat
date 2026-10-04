@@ -21,6 +21,7 @@ import ConversationResolveAttributesModal from 'dashboard/components-next/Conver
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useAlert } from 'dashboard/composables';
 import { useBulkActions } from 'dashboard/composables/chatlist/useBulkActions';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import { useFilter } from 'shared/composables/useFilter';
 import { useTrack } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
@@ -120,6 +121,21 @@ const {
   onAssignLabels,
   onRemoveLabels,
 } = useBulkActions();
+
+// #934 — a seleção e os filtros aplicados vão ao Guia. O id da conversa é o número que a tela mostra.
+declararContexto({
+  selecionados: () => ({
+    recurso: 'conversations',
+    ids: selectedConversations.value,
+  }),
+  filtros: () =>
+    Object.fromEntries(
+      appliedFilters.value.map(({ attributeKey, values }) => [
+        attributeKey,
+        [values].flat().map(valor => valor?.id ?? valor),
+      ])
+    ),
+});
 
 const {
   initializeStatusAndAssigneeFilterToModal,

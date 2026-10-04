@@ -2155,6 +2155,22 @@
     "INSERTED": "Inserted into the reply."
   },
   "AUTONOMIA_GUIDE": {
+    "TELA": {
+      "SELECTED": {
+        "CARDS": "Seeing: {count} card selected | Seeing: {count} cards selected",
+        "CONVERSAS": "Seeing: {count} conversation selected | Seeing: {count} conversations selected",
+        "CONTATOS": "Seeing: {count} contact selected | Seeing: {count} contacts selected",
+        "OUTROS": "Seeing: {count} item selected | Seeing: {count} items selected"
+      },
+      "OPEN": {
+        "CARDS": "Seeing: the open card",
+        "CONVERSAS": "Seeing: the open conversation",
+        "CONTATOS": "Seeing: the open contact",
+        "OUTROS": "Seeing: the open item"
+      },
+      "REMOVE": "Ask without using what is on the screen",
+      "REMOVED": "Your next question goes without what is on the screen."
+    },
     "TITLE": "Platform Guide",
     "LAUNCHER": "Platform Guide",
     "THINKING": "Thinking…",
