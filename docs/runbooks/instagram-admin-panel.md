@@ -1,5 +1,14 @@
 # Operação do painel Instagram — #950
 
+> **Atualização — 04/10/2026, 20:53 UTC:** transporte PASS encerrado nas duas stacks
+> pelo confronto AWS/recibos das 20:48 UTC (TLS/auth/epoch, proxy e egress).
+> O [runbook de release #960](instagram-release-960.md) rege o corte e os gates
+> atuais, superando as pendências históricas de transporte abaixo. ENV assistido
+> está `true` em ambas; ENV de coordenação legado presente no Hub2You e ausente
+> na Autonom.ia não representa o auxiliar novo testado. Aplicação nova, runtime
+> ativo e homologação Meta não estão comprovados. Merge/deploy ainda exigem
+> aprovação explícita do Rodrigo; iniciar gestor só após metadados/versão conferidos.
+
 Leia o [guia do painel](../instagram-admin-panel.md). Procedimentos futuros dependem de aprovação do Rodrigo para produção, auth, secrets, infraestrutura, rollout e deploy. Nenhum comando operacional de produção foi executado nesta entrega.
 
 ## Inspeção pelo SuperAdmin
@@ -61,9 +70,9 @@ O rollout salva novo bit e marcador `instagram_assisted_onboarding_rollout` sob 
 
 Backend [`SessionPublisher`](../../app/services/instagram/automation/session_publisher.rb), [`session_publisher.rb`](../../scripts/instagram_testers/session_publisher.rb), Node [`operator-protocol.mjs`](../../scripts/instagram_testers/runtime/operator-protocol.mjs), [`publisher-tunnel.mjs`](../../scripts/instagram_testers/runtime/publisher-tunnel.mjs), [`forced-publisher.sh`](../../scripts/instagram_testers/runtime/forced-publisher.sh) e gestor devem sair em conjunto, em deploy aprovado. O novo bootstrap/revisão/ator/timestamps muda o contrato; não misturar versões antigas e novas.
 
-Antes da aprovação: concluir dependência #937 draft; registrar versões compatíveis e rollback; migrar metadados para BD; validar bootstrap canônico e rejeição de revisão divergente. Caminhos do wrapper/LaunchAgent pertencem à configuração da máquina dedicada e precisam de ajuste operacional aprovado. Não instalar runtime/infraestrutura nesta entrega nem refazer secrets para obter prova.
+Antes da aprovação de merge/deploy: concluir a composição #937/#956 na release #962; registrar versões compatíveis, review/CI do candidato e rollback. Depois do deploy aprovado, persistir os cinco metadados no banco de cada instalação e validar bootstrap canônico e rejeição de revisão divergente, antes de ativar o gestor. A ordem operacional vigente está em [release #960](instagram-release-960.md). Caminhos do wrapper/LaunchAgent pertencem à máquina dedicada; a preparação deve atender às duas instalações sem gestores concorrentes no mesmo perfil. Não refazer secrets, resetar sessões ou reprovisionar o Redis para obter prova.
 
-Se a release falhar, seguir reversão conjunta previamente aprovada das versões backend/publisher/wrapper/runtime e conferir saúde. OFF por conta mitiga onboarding assistido, mas não reverte protocolo. Preservar metadados/marcador/inboxes; não apagar dados de sessão/coordenação. Cookie canônico permanece cifrado no Redis da instalação. Nenhuma infraestrutura Redis nova ou solução de 407 está demonstrada.
+Se a release falhar, seguir reversão conjunta previamente aprovada das versões backend/publisher/wrapper/runtime e conferir saúde. OFF por conta mitiga onboarding assistido, mas não reverte protocolo. Preservar metadados/marcador/inboxes; não apagar dados de sessão/coordenação. Cookie canônico permanece cifrado no Redis da instalação. Os recibos de 04/10/2026 às 20:44 UTC, referenciados em [release #960](instagram-release-960.md), comprovam o transporte dedicado e a saída Webshare das duas stacks; não comprovam sessão Meta, renovação ou conexão de caixas.
 
 `InstallationConfig` invalida nomes afetados após commit; `GlobalConfig.clear_cache` legado sem argumentos permanece. Não prometer cache linear nem zero regressão absoluta. Aprovação requer relatório final dos achados reportados na fase 1, incluindo CAS aninhado, caminho 500 controller/helper e forced protocol. A renderização da nova página opta por não carregar o widget de suporte externo; testes reais de requisição comprovaram ausência da gravação indireta de `INSTALLATION_IDENTIFIER`. As outras páginas mantêm seu comportamento. Não remover esse opt-out sem repetir a prova de GET sem escrita.
 

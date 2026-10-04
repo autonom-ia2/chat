@@ -130,15 +130,10 @@ module Autonomia
 
       private
 
-      # Injeta o PERFIL e a TELA ATUAL como CONTEXTO (dado, não fala), para a instrução adaptar a
-      # resposta e só orientar o que o perfil pode fazer. O modelo nunca confia nisso para autorizar
-      # — é só para a redação; o backend real (endpoints de domínio) é que aplica Pundit.
+      # Perfil, tela, registro aberto e fuso como CONTEXTO (dado, não fala) — ver Cabecalho.
       def role_scoped_query(diagnostics = nil)
-        role = @account_user&.role.presence || 'agent'
-        ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
-              "Tela atual: #{@route_context.presence || 'não informada'}.#{registro_aberto} Adapte a resposta a este " \
-              "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
-              "perfil não for administrator, explique que é feito pelo administrador da conta.]"
+        ctx = ::Autonomia::Guide::Cabecalho.call(account: @account, role: @account_user&.role.presence || 'agent',
+                                                 route_context: @route_context, route_params: @route_params)
         ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{diagnostic_block(diagnostics)}", @message)
       end
 
@@ -147,14 +142,6 @@ module Autonomia
       def bloco_memoria
         bloco = ::Autonomia::Guide::Memoria.bloco(@account, @user)
         bloco.empty? ? '' : "\n\n#{bloco}"
-      end
-
-      # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).
-      # Só números, filtrados no controller; é contexto, não autorização.
-      def registro_aberto
-        return '' if @route_params.blank?
-
-        " Registro aberto na tela: #{@route_params.map { |chave, valor| "#{chave}=#{valor}" }.join(', ')}."
       end
 
       # #934 — o que a pessoa está vendo, já lido com a permissão dela: o id que voltou vale como lido no

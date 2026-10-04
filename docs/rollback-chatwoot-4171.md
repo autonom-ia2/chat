@@ -193,7 +193,9 @@ aws ssm send-command --profile hub2you --region us-east-1 --instance-ids <instan
 Autonomia: `140023375763.dkr.ecr.us-east-1.amazonaws.com/chatwoot-autonomia-prod:rollback-pre-4171-7281261a`.
 
 Depois, atualizar o parâmetro SSM `/chatwoot/prod/runtime-image` para a mesma
-URI, senão o próximo boot da instância volta para a imagem 4.17.1.
+URI, senão uma instância criada pelo Terraform volta para a imagem 4.17.1. As
+instâncias green do deploy blue/green não leem esse parâmetro desde o #974: a
+imagem vai fixa no user data.
 
 ## Opção C — restaurar o banco (último recurso; perde dados gravados após o snapshot)
 

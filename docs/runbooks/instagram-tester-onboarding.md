@@ -1,5 +1,14 @@
 # Runbook: onboarding Instagram Tester (#910 / PR #913; recuperação #931)
 
+> **Atualização — 04/10/2026, 20:53 UTC:** transporte PASS encerrado nas duas stacks
+> pelo confronto AWS/recibos das 20:48 UTC (TLS/auth/epoch, proxy e egress).
+> Aplicação nova, runtime ativo e homologação Meta não estão comprovados.
+> O [runbook de release #960](instagram-release-960.md) rege o corte e os gates
+> atuais; as pendências históricas de transporte abaixo foram superadas por esse
+> recibo. ENV assistido está `true` nas duas stacks; ENV de coordenação legado
+> presente no Hub2You e ausente na Autonom.ia não representa o auxiliar novo.
+> Merge/deploy continuam sujeitos à aprovação explícita do Rodrigo.
+
 Este runbook prepara a operação. Merge, deploy, configuração de produção, segredos,
 auth e infraestrutura exigem aprovação explícita do Rodrigo. Não executar a chamada
 Meta anteriormente bloqueada por outra ferramenta, host, proxy ou agente.
@@ -294,9 +303,13 @@ Erro comprovadamente pré-transporte libera somente claim próprio; erro após i
 preserva proteção, salvo rejeição explícita validada/reconciliação prevista.
 CI verde ou deploy iniciado não provam funcionamento real do Instagram.
 
-## Adendo #960 — coordenação, 04/10/2026 UTC
+## HISTÓRICO — Adendo #960, 04/10/2026, 14:42 UTC
 
-Este adendo atualiza a configuração acima; instalação real n8n às 14:42 UTC foi **parcial**.
+**Estado parcial e pendências de transporte superados pelos recibos/confronto AWS
+das 20:48 UTC**, conforme [release #960](instagram-release-960.md). Mantido como
+histórico; não é o estado operacional atual nem prova de ativação Meta.
+
+Naquele momento, a instalação real n8n às 14:42 UTC foi **parcial**.
 Redis novo ativo em `127.0.0.1:6381`, volume/bridge próprios, filesystem readonly,
 zero restarts, 256 MiB/0,25 CPU; 27 serviços com especificações preservadas, n8n 1/10/6.
 Parou em `epoch_write_ACL_failed:0`; `igcoord` e parâmetros SSM não foram criados.

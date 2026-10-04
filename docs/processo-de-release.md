@@ -8,7 +8,14 @@ subir junto o que estiver pronto, com um deploy só, em vez de um deploy de ~40 
 Todo merge na `main` dispara o deploy blue-green completo nas duas stacks (hub2you e autonomia). Os workflows usam
 `concurrency` com `cancel-in-progress: false`, então merges seguidos não se cancelam: viram deploys em fila. Medido em
 25/09: cerca de 24 minutos são o build da imagem (feito uma vez por stack, sem cache), 3 minutos a subida e a saúde
-da instância nova e 5,5 minutos o desligamento da antiga.
+da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache do build no ECR, foram 3 min 38 s de
+build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
+instância nova liga antes do build e espera a imagem chegar ao ECR, então o boot quase todo corre junto com o build.
+
+Deploy cancelado ou com falha antes da troca de tráfego (#972): se a instância nova estiver rodando o `deploy.sh`
+(migrations), ela não é terminada no meio. Ela se desliga sozinha quando ele acaba, fica parada com a tag
+`DeployCleanup=pending`, e o próximo deploy a termina. Se ela ainda estiver de pé, o próximo deploy espera até 30 min e,
+passado isso, a termina mesmo assim e segue: só uma migration de mais de 30 min é cortada.
 
 ## Regras
 
@@ -69,14 +76,15 @@ Com o ruleset ativo:
 2. **Checks obrigatórios:** `RSpec` (um check só, que agrega as partes), `Vitest`, `trava`, `central` e
    `fork-i18n`. Rubocop, Brakeman e ESLint seguem informativos e não rodam na fila.
 3. **Como mergear:** com OK do Rodrigo e os checks verdes, `gh pr merge <N> --match-head-commit <sha>` põe o
-   PR na fila. O comando sai com sucesso **antes** do merge. Só conta como mergeado quando
-   `gh pr view <N> --json state` mostrar `MERGED`.
+   PR na fila (o repositório tem `allow_auto_merge` ligado: é por ele que o `gh` entra na fila). O comando sai
+   com sucesso **antes** do merge. Só conta como mergeado quando `gh pr view <N> --json state` mostrar
+   `MERGED`. A posição na fila: `gh api graphql -f query='query{repository(owner:"autonom-ia2",name:"chat"){pullRequest(number:N){state isInMergeQueue mergeQueueEntry{state position}}}}'`.
 4. **A fila substitui o lote manual.** Ela junta até 2 PRs por rodada, testa o código combinado uma vez e faz
    um único push na `main`, que gera um único deploy. Não é mais preciso combinar janela por mensagem nem
    montar `release/*-loteN` para juntar PRs. A validação depois do deploy (regra 4, "ok, SHA") continua.
-5. **O "Testes do fork" deixa de rodar no push da `main`** num PR próprio, logo depois da ativação: a fila já
-   testa exatamente aquele commit, e a rodada extra disputava runner com o deploy de produção (medido em
-   04/10: deploy ~1 min na fila). Até lá ele continua rodando, para nenhum merge ficar sem teste.
+5. **O "Testes do fork" e o "fork-i18n" não rodam no push da `main`:** a fila já testou exatamente aquele
+   commit, e a rodada extra disputava runner com o deploy de produção (medido em 04/10: deploy ~1 min na fila).
+   Fila ativa e testada em 04/10/2026 (#969).
 6. **PRs abertos antes da mudança** precisam de `gh pr update-branch <N>` (ou um push novo) para rodar os
    workflows novos e ganhar o check `RSpec`.
 
@@ -93,6 +101,20 @@ gh api -X PUT repos/autonom-ia2/chat/rulesets/<id> -f enforcement=disabled
 ```
 
 O rollback de deploy (`workflow_dispatch` com `action=rollback`) não passa pela `main` e não é afetado.
+
+### Medições de 04/10/2026 (#959, #961)
+
+| Etapa | Antes | Depois |
+|---|---|---|
+| CI de PR: nó mais lento do RSpec | 502 s (divisão alfabética) | 299 s (divisão por tempo + cache do Vite) |
+| Compilação dos assets de teste do Vite | ~85 s em cada nó | cache entre rodadas |
+| Do merge até a troca de tráfego | ~9 a 10 min | igual (fases do deploy em PR próprio) |
+| Conferência e "ok, SHA" depois da troca | ~5,5 min (esperava o fim do workflow) | segundos (confere na troca) |
+
+O estresse com 7, 8 e 9 nós (disparo manual do `testes.yml` com `shards`) expôs três defeitos que a ordem fixa
+escondia, todos corrigidos na causa: ciclo de carga `AutomationRule`/`AutomationRuleSchema` (#963), listas sem
+desempate na ordenação (#965) e `Current` vazando entre specs (#966). Diante de falha que depende de ordem,
+o `plan.json` da rodada (artefato `rspec-plan`) reproduz o grupo exato do nó.
 
 ## Melhorias propostas, pendentes de OK do Rodrigo
 

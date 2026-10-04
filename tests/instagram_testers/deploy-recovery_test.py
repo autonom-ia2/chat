@@ -6,6 +6,7 @@ AWS fakes return API envelopes and apply only the workflow's exact projections.
 """
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -44,7 +45,7 @@ def fake_aws():
                          'modify-listener', 'deregister-targets', 'delete-target-group'), 'elbv2'),
         **dict.fromkeys(('get-parameter', 'put-parameter', 'describe-instance-information',
                          'send-command', 'get-command-invocation'), 'ssm'),
-        **dict.fromkeys(('describe-instances', 'start-instances', 'terminate-instances'), 'ec2'),
+        **dict.fromkeys(('describe-instances', 'start-instances', 'terminate-instances', 'create-tags'), 'ec2'),
     }
     expected_service = ({'command-executed': 'ssm', 'instance-running': 'ec2',
                          'target-deregistered': 'elbv2'}[args[2]] if operation == 'wait' else expected_services[operation])
@@ -70,7 +71,34 @@ def fake_aws():
         state['running_workers'] = sorted(active)
         state.setdefault('worker_timeline', []).append([event, instance, sorted(active)])
 
-    injected_failure = number == state.get('fail_at') or (operation == 'put-parameter' and
+    command_kind = None
+    payload = None
+    if operation == 'send-command':
+        parameters = arg('--parameters')
+        if parameters.startswith('commands='):
+            payload = json.loads(parameters.removeprefix('commands='))
+            assert payload[0] == 'set -eu'
+            command_kind = 'service'
+        else:
+            parameters = json.loads(parameters)
+            assert set(parameters) == {'commands'}
+            payload = parameters['commands']
+            assert len(payload) == 1 and isinstance(payload[0], str)
+            if payload[0] == 'if [ -e /run/chatwoot-deploy.running ]; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi':
+                command_kind = 'deploy-status'
+            else:
+                assert payload[0] == ('systemd-run --unit=green-retire --no-block sh -c '
+                                      '"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now"')
+                command_kind = 'retirement'
+            assert arg('--instance-ids') == 'i-green'
+        assert isinstance(payload, list) and all(isinstance(item, str) for item in payload)
+        assert arg('--document-name') == 'AWS-RunShellScript'
+    injected_failure = (operation == state.get('fail_operation') or
+                        (command_kind is not None and command_kind == state.get('fail_command_kind')) or
+                        (operation == 'get-command-invocation' and
+                         state.get('fail_invocation_kind') is not None and
+                         state['commands'][arg('--command-id')]['kind'] == state['fail_invocation_kind']) or
+                        number == state.get('fail_at')) or (operation == 'put-parameter' and
                        '--name' in args and arg('--name') == state.get('fail_parameter'))
     if injected_failure and not state.get('fail_after_apply'):
         save()
@@ -120,10 +148,9 @@ def fake_aws():
         assert arg('--query') == 'InstanceInformationList[0].PingStatus'
         result = envelope['InstanceInformationList'][0]['PingStatus']
     elif operation == 'send-command':
-        payload = json.loads(arg('--parameters').removeprefix('commands='))
-        assert payload[0] == 'set -eu'
         instance = arg('--instance-ids')
         command_id = f'command-{number}'
+        state.setdefault('commands', {})[command_id] = {'kind': command_kind, 'instance': instance, 'payload': payload}
         actions = []
         if any('INSTAGRAM_TESTER_AUTOMATION_ENABLED' in item for item in payload):
             state.setdefault('command_suspensions', {})[command_id] = instance
@@ -140,8 +167,26 @@ def fake_aws():
         assert arg('--query') == 'Command.CommandId'
         result = envelope['Command']['CommandId']
     elif operation == 'get-command-invocation':
-        assert arg('--query') == '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
-        result = {'Status': 'Success', 'Output': 'synthetic', 'Error': ''}
+        command = state['commands'][arg('--command-id')]
+        assert arg('--instance-id') == command['instance']
+        envelope = {'Status': 'Success', 'StandardOutputContent': 'synthetic', 'StandardErrorContent': ''}
+        if command['kind'] == 'deploy-status':
+            envelope['StandardOutputContent'] = state.get('deploy_status', 'DEPLOY_IDLE')
+        elif command['kind'] == 'retirement':
+            envelope['Status'] = state.get('retirement_status', 'Success')
+            envelope['StandardOutputContent'] = ''
+            if envelope['Status'] == 'Success':
+                state['retirement_scheduled'] = True
+        query = arg('--query')
+        if query == '[Status,StandardOutputContent]':
+            assert arg('--output') == 'text'
+            assert command['kind'] in ('deploy-status', 'retirement')
+            result = f"{envelope['Status']}\t{envelope['StandardOutputContent']}"
+        else:
+            assert query == '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
+            assert arg('--output') == 'json'
+            result = {'Status': envelope['Status'], 'Output': envelope['StandardOutputContent'],
+                      'Error': envelope['StandardErrorContent']}
     elif operation == 'wait':
         assert args[2] in ('command-executed', 'instance-running', 'target-deregistered')
         if args[2] == 'command-executed':
@@ -163,6 +208,11 @@ def fake_aws():
             state['time'] += state['drain_seconds']
             state['target_drained_at'] = state['time']
         result = ''
+    elif operation == 'create-tags':
+        assert arg('--resources') == 'i-green'
+        assert arg('--tags') == 'Key=DeployCleanup,Value=pending'
+        state['tags'] = {'i-green': {'DeployCleanup': 'pending'}}
+        result = {}
     elif operation in ('start-instances', 'deregister-targets', 'delete-target-group', 'terminate-instances'):
         if operation == 'start-instances' and state.get('boot_worker_enabled'):
             worker_event('boot-worker-started', arg('--instance-ids'), True)
@@ -183,13 +233,13 @@ def fake_aws():
 
 class DeployRecoveryTest(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='deploy-recovery-', dir=ROOT / 'tmp')
+        self.temp = tempfile.TemporaryDirectory(prefix='deploy-recovery-')
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
         self.bin = self.directory / 'bin'
         self.bin.mkdir()
         # Allow only Bash's local utilities; deny infrastructure names by default.
-        for name in ('aws', 'docker', 'sshd', 'systemctl', 'sudo', 'ssh', 'curl', 'dnf', 'cloud-init', 'journalctl'):
+        for name in ('aws', 'docker', 'sshd', 'systemctl', 'sudo', 'ssh', 'curl', 'dnf', 'cloud-init', 'journalctl', 'systemd-run', 'shutdown'):
             executable = self.bin / name
             executable.write_text('#!/bin/sh\nprintf "%s\\n" unexpected_infrastructure_command >&2\nexit 99\n')
             executable.chmod(0o700)
@@ -206,6 +256,7 @@ class DeployRecoveryTest(unittest.TestCase):
             'BLUE_TG_ARN': 'tg-blue', 'BLUE_INSTANCE_ID': 'i-blue',
             'GREEN_TG_ARN': 'tg-green', 'GREEN_INSTANCE_ID': 'i-green',
             'GREEN_WORKER_START_ATTEMPTED': 'true',
+            'BLUE_WORKER_STOPPED': 'true',  # Existing recovery cases follow the worker-stop intent step.
         }
 
     def execute(self, script, **changes):
@@ -216,8 +267,18 @@ class DeployRecoveryTest(unittest.TestCase):
         state.update(changes)
         self.state_path.write_text(json.dumps(state))
         (self.directory / 'github-env').write_text('')
-        result = subprocess.run(['/bin/bash', '-euo', 'pipefail', '-c', script],
-                                cwd=ROOT, env=self.env, text=True, capture_output=True, timeout=15)
+        # Bound the whole fake process group: a timed-out child must never write into
+        # the next injection's state file after Bash has been killed.
+        with subprocess.Popen(['/bin/bash', '-euo', 'pipefail', '-c', script],
+                              cwd=ROOT, env=self.env, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, start_new_session=True) as process:
+            try:
+                stdout, stderr = process.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.communicate()
+                raise
+            result = subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
         return result, json.loads(self.state_path.read_text())
 
     def assert_pointers(self, state, target, instance):
@@ -352,6 +413,28 @@ publisher_setup() {
                         continue  # Existing bounded poll tolerates transient SSM discovery failure.
                     with self.subTest(stack=workflow.name, path=name, fail_at=number, operation=args[:2]):
                         result, failed = self.execute(script, fail_at=number, **initial)
+                        tolerant_probe = (name == 'Cleanup failed green resources before traffic shift' and
+                            (args[1] == 'get-command-invocation' or
+                             (args[1] == 'send-command' and args[args.index('--parameters')+1].startswith('{'))))
+                        if tolerant_probe:
+                            self.assert_pointers(failed, 'tg-blue', 'i-blue')
+                            self.assertEqual(failed['workers'], [['stop', 'i-green'], ['start', 'i-blue']])
+                            self.assertNotIn('tags', failed)
+                            self.assertEqual(failed['calls'][:number], success['calls'][:number])
+                            if args[1] == 'get-command-invocation':
+                                # Bounded invocation poll retries a transient failure and confirms IDLE.
+                                self.assertEqual(result.returncode, 0, result.stderr)
+                                self.assertEqual(failed['calls'][number], args)
+                                self.assertEqual(failed['calls'][-1][:2], ['ec2', 'terminate-instances'])
+                                self.assertIn('terminated_at', failed)
+                            else:
+                                # Failed probe submission leaves status unknown: keep green and fail loudly.
+                                self.assertEqual(result.returncode, 1, result.stderr)
+                                self.assertIn('blue_green_deploy_status_unknown', result.stderr)
+                                self.assertEqual(len(failed['calls']), number)
+                                self.assertNotIn('terminated_at', failed)
+                                self.assertFalse(any(call[1] == 'terminate-instances' for call in failed['calls']))
+                            continue
                         self.assertNotEqual(result.returncode, 0)
                         if args[1] == 'modify-listener':
                             self.assertEqual([call[1] for call in failed['calls'][number:]],
@@ -364,7 +447,13 @@ publisher_setup() {
                             self.assertEqual([call[call.index('--value')+1] for call in repairs], ['tg-blue', 'i-blue'])
                             self.assertEqual(failed['parameters']['previous-tg'], 'tg-blue')
                             self.assertEqual(failed['parameters']['previous-instance'], 'i-blue')
-                            self.assertFalse(any(call[1] == 'modify-listener' for call in failed['calls']))
+                            # PREVIOUS now follows a confirmed green listener and both CURRENT writes.
+                            self.assertEqual(failed['listener'], 'tg-green')
+                            self.assert_pointers(failed, 'tg-green', 'i-green')
+                            self.assertEqual(sum(call[1] == 'modify-listener' for call in failed['calls']), 1)
+                            self.assertLess(next(i for i, call in enumerate(failed['calls'], 1)
+                                                 if call[1] == 'modify-listener'), number)
+                            self.assertNotIn('TRAFFIC_SHIFT_DONE=true', (self.directory / 'github-env').read_text())
                         else:
                             self.assertEqual(len(failed['calls']), number, result.stderr)
                         self.assertEqual(failed['calls'][:number], success['calls'][:number])
@@ -386,9 +475,18 @@ publisher_setup() {
                                                   fail_after_apply=args[1] == 'modify-listener')
                     self.assertNotEqual(result.returncode, 0)
                     self.assertNotIn('TRAFFIC_SHIFT_DONE=true', (self.directory / 'github-env').read_text())
-                    result, recovered = self.execute(cleanup, listener=failed['listener'], parameters=failed['parameters'])
+                    markers = (self.directory / 'github-env').read_text()
+                    attempted = 'PREVIOUS_WRITE_ATTEMPTED=true' in markers
+                    self.env['PREVIOUS_WRITE_ATTEMPTED'] = 'true' if attempted else 'false'
+                    try:
+                        result, recovered = self.execute(cleanup, listener=failed['listener'], parameters=failed['parameters'])
+                    finally:
+                        del self.env['PREVIOUS_WRITE_ATTEMPTED']
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assert_pointers(recovered, 'tg-blue', 'i-blue')
+                    if attempted:
+                        self.assertEqual(recovered['parameters']['previous-tg'], 'tg-blue')
+                        self.assertEqual(recovered['parameters']['previous-instance'], 'i-blue')
 
     def test_failed_rollback_response_after_applied_switch_reconciles_without_success(self):
         for workflow in WORKFLOWS:
@@ -441,9 +539,21 @@ publisher_setup() {
                     self.assertNotEqual(result.returncode, 0)
                     self.assertEqual(state['parameters']['previous-tg'], 'tg-blue')
                     self.assertEqual(state['parameters']['previous-instance'], 'i-blue')
-                    self.assertEqual(state['listener'], 'tg-blue')
+                    # No further switch or worker change during PREVIOUS repair: green was confirmed first.
+                    self.assertEqual(state['listener'], 'tg-green')
+                    self.assert_pointers(state, 'tg-green', 'i-green')
                     self.assertEqual(state['workers'], [])
-                    self.assertFalse(any(call[1] == 'modify-listener' for call in state['calls']))
+                    calls = state['calls']
+                    switches = [i for i, call in enumerate(calls) if call[1] == 'modify-listener']
+                    self.assertEqual(len(switches), 1)
+                    current = [i for i, call in enumerate(calls)
+                               if call[1] == 'put-parameter' and call[call.index('--name')+1].startswith('current-')]
+                    previous = [i for i, call in enumerate(calls)
+                                if call[1] == 'put-parameter' and call[call.index('--name')+1].startswith('previous-')]
+                    self.assertEqual(len(current), 2)
+                    self.assertLess(switches[0], min(current))
+                    self.assertLess(max(current), min(previous))
+                    self.assertNotIn('TRAFFIC_SHIFT_DONE=true', (self.directory / 'github-env').read_text())
 
     def test_cleanup_waits_for_inflight_publisher_and_target_drain_before_removal(self):
         budget_source = (ROOT / 'scripts/instagram_testers/runtime/publisher-tunnel.mjs').read_text()
@@ -497,8 +607,11 @@ publisher_setup() {
             result, state = self.execute(shift, listener='tg-blue', parameters=parameters,
                                          fail_parameter='previous-instance')
             self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(state['listener'], 'tg-blue')
+            self.assertEqual(state['listener'], 'tg-green')
+            self.assert_pointers(state, 'tg-green', 'i-green')
             self.assertEqual(state['workers'], [])
+            self.assertEqual(sum(call[1] == 'modify-listener' for call in state['calls']), 1)
+            self.assertNotIn('TRAFFIC_SHIFT_DONE=true', (self.directory / 'github-env').read_text())
             self.env['PREVIOUS_WRITE_ATTEMPTED'] = 'true'
             try:
                 result, retained = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
@@ -632,16 +745,16 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                     # GitHub evaluates this input expression before Bash starts.
                     script = script.replace("${{ github.event.inputs.green_instance_type || 't3.medium' }}", 't3.medium')
                     script = script.replace("${{ github.event.inputs.green_instance_type || 't3.small' }}", 't3.small')
-                    result = subprocess.run(['/bin/bash', '-n'], input=script, text=True, capture_output=True)
+                    result = subprocess.run(['/bin/bash', '-n'], input=script, env=self.env, text=True, capture_output=True, timeout=5)
                     self.assertEqual(result.returncode, 0, result.stderr)
             source = workflow.read_text()
-            userdata = source.split("          cat > green-user-data.sh <<'USERDATA'\n", 1)[1].split('          USERDATA\n', 1)[0]
+            userdata = source.split("          cat > \"$RUNNER_TEMP/green-user-data.sh\" <<'USERDATA'\n", 1)[1].split('          USERDATA\n', 1)[0]
             result = subprocess.run(['/bin/bash', '-n'], input='\n'.join(line[10:] for line in userdata.splitlines()),
-                                    text=True, capture_output=True)
+                                    env=self.env, text=True, capture_output=True, timeout=5)
             self.assertEqual(result.returncode, 0, result.stderr)
             nested = source.split('          cat > "$APP_DIR/deploy.sh" <<\'EOF\'\n', 1)[1].split('          EOF\n', 1)[0]
             result = subprocess.run(['/bin/bash', '-n'], input='\n'.join(line[10:] for line in nested.splitlines()),
-                                    text=True, capture_output=True)
+                                    env=self.env, text=True, capture_output=True, timeout=5)
             self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_coordination_failure_cannot_shift_traffic_or_remove_resources(self):
@@ -745,7 +858,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                 script = helper.replace("Path('/opt/chatwoot')", f'Path({str(app)!r})').replace(
                     "Path('/etc/systemd/system')", f'Path({str(units)!r})')
                 result = subprocess.run([sys.executable, '-c', script], capture_output=True, text=True,
-                    env={**self.env, 'PATH': f'{self.directory}:/usr/bin:/bin', 'TEST_UNITS': str(units)})
+                    env={**self.env, 'PATH': f'{self.directory}:{self.bin}:/usr/bin:/bin', 'TEST_UNITS': str(units)}, timeout=5)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual((app / 'instagram-tester.env').read_text(),
                                  'KEEP=synthetic\nINSTAGRAM_TESTER_AUTOMATION_ENABLED=false\n')
@@ -771,7 +884,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
             "Path('/opt/chatwoot')", f'Path({str(app)!r})').replace(
             "Path('/etc/systemd/system')", f'Path({str(self.directory / "units")!r})')
         result = subprocess.run([sys.executable, '-c', helper], text=True, capture_output=True,
-            env={**self.env, 'PATH': f'{self.directory}:/usr/bin:/bin'})
+            env={**self.env, 'PATH': f'{self.directory}:{self.bin}:/usr/bin:/bin'}, timeout=5)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('instagram_recovery_published_command_missing:chatwoot-worker.service', result.stderr)
         self.assertEqual(overlay.read_text(), 'INSTAGRAM_TESTER_AUTOMATION_ENABLED=true\n')
@@ -791,6 +904,211 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
             self.assertLess(source.index('"$APP_DIR/igcoord/check.sh"'), source.index('rails db:chatwoot_prepare'))
             self.assertEqual(source.count('Wants=instagram-coordination-tunnel.service'), 2)
             self.assertEqual(source.count('After=docker.service network-online.target instagram-coordination-tunnel.service'), 2)
+
+    def test_previous_is_written_only_after_confirmed_green_and_never_on_failed_switch(self):
+        for workflow in WORKFLOWS:
+            script = run_block(workflow.read_text(), 'Shift HTTPS listener to green')
+            parameters = {'current-tg': 'tg-blue', 'current-instance': 'i-blue',
+                          'previous-tg': 'tg-older', 'previous-instance': 'i-older'}
+            result, success = self.execute(script, listener='tg-blue', parameters=parameters)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assert_pointers(success, 'tg-green', 'i-green')
+            calls = success['calls']
+            switch = next(i for i, call in enumerate(calls) if call[1] == 'modify-listener')
+            current = [i for i, call in enumerate(calls) if call[1] == 'put-parameter'
+                       and call[call.index('--name')+1].startswith('current-')]
+            previous = [i for i, call in enumerate(calls) if call[1] == 'put-parameter'
+                        and call[call.index('--name')+1].startswith('previous-')]
+            self.assertEqual([call[1] for call in calls[switch+1:min(current)]],
+                             ['describe-listeners', 'describe-target-health'])
+            self.assertEqual(len(current), 2)
+            self.assertEqual(len(previous), 2)
+            self.assertLess(max(current), min(previous))
+            self.assertTrue(all(listener == 'tg-green' for _, _, listener in success['writes']))
+            for number in range(switch+1, max(current)+2):
+                for applied in (False, True) if number == switch+1 else (False,):
+                    with self.subTest(stack=workflow.name, fail_at=number, response_lost=applied):
+                        result, state = self.execute(script, listener='tg-blue', parameters=parameters.copy(),
+                                                     fail_at=number, fail_after_apply=applied)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertEqual(state['parameters']['previous-tg'], 'tg-older')
+                        self.assertEqual(state['parameters']['previous-instance'], 'i-older')
+                        self.assertFalse(any(name.startswith('previous-') for name, _, _ in state['writes']))
+                        markers = (self.directory / 'github-env').read_text()
+                        self.assertNotIn('PREVIOUS_WRITE_ATTEMPTED=true', markers)
+                        self.assertNotIn('TRAFFIC_SHIFT_DONE=true', markers)
+
+    def test_cleanup_restarts_blue_worker_only_with_prior_intent(self):
+        for workflow in WORKFLOWS:
+            for marker in (None, 'false', 'true'):
+                with self.subTest(stack=workflow.name, marker=marker):
+                    self.env.pop('BLUE_WORKER_STOPPED', None)
+                    if marker is not None:
+                        self.env['BLUE_WORKER_STOPPED'] = marker
+                    self.env['GREEN_WORKER_START_ATTEMPTED'] = 'false'
+                    result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                        running_workers=[] if marker == 'true' else ['i-blue'])
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(state['workers'], [['start', 'i-blue']] if marker == 'true' else [])
+                    self.assertEqual(state['running_workers'], ['i-blue'])
+                    self.assert_pointers(state, 'tg-blue', 'i-blue')
+                    self.assertIn('terminated_at', state)
+        self.env['BLUE_WORKER_STOPPED'] = 'true'
+        self.env['GREEN_WORKER_START_ATTEMPTED'] = 'true'
+
+    def test_cancelled_cleanup_uses_durable_intent_after_interrupted_worker_switch(self):
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            for name in ('Refresh AWS credentials for cleanup', 'Cleanup failed green resources before traffic shift'):
+                header = source.split(f'      - name: {name}\n', 1)[1].split('        run:', 1)[0].split('      - name:', 1)[0]
+                self.assertIn("if: (failure() || cancelled()) && env.TRAFFIC_SHIFT_DONE != 'true'", header)
+            self.assertLess(source.index('      - name: Mark blue worker stop'),
+                            source.index('      - name: Switch Sidekiq workers to green'))
+            marker = source.split('      - name: Mark blue worker stop\n', 1)[1].splitlines()[0].removeprefix('        run: ')
+            self.assertEqual(marker, 'echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"')
+            switch = run_block(source, 'Switch Sidekiq workers to green')
+            _, success = self.execute(switch, running_workers=['i-blue'])
+            stop = next(i for i, call in enumerate(success['calls'], 1)
+                        if call[1] == 'send-command' and 'stop chatwoot-worker.service' in call[call.index('--parameters')+1])
+            start = next(i for i, call in enumerate(success['calls'], 1)
+                         if call[1] == 'send-command' and 'start chatwoot-worker.service' in call[call.index('--parameters')+1])
+            for number in (stop, stop+1, start, start+1):
+                with self.subTest(stack=workflow.name, interrupted_at=number):
+                    self.env.pop('BLUE_WORKER_STOPPED', None)
+                    self.env.pop('GREEN_WORKER_START_ATTEMPTED', None)
+                    result, interrupted = self.execute(marker+'\n'+switch, running_workers=['i-blue'],
+                                                       fail_at=number, fail_after_apply=True)
+                    self.assertEqual(result.returncode, 77, result.stderr)
+                    markers = dict(line.split('=', 1) for line in (self.directory / 'github-env').read_text().splitlines())
+                    self.assertEqual(markers['BLUE_WORKER_STOPPED'], 'true')
+                    self.assertNotIn('TRAFFIC_SHIFT_DONE', markers)
+                    self.env.update(markers)  # GitHub makes prior-step GITHUB_ENV durable for cancellation cleanup.
+                    result, recovered = self.execute(run_block(source, 'Cleanup failed green resources before traffic shift'),
+                                                      running_workers=interrupted['running_workers'])
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(recovered['running_workers'], ['i-blue'])
+                    self.assertEqual(recovered['workers'][-1], ['start', 'i-blue'])
+                    self.assertTrue(all(len(event[2]) <= 1 for event in recovered['worker_timeline']))
+                    self.assert_pointers(recovered, 'tg-blue', 'i-blue')
+        self.env['BLUE_WORKER_STOPPED'] = 'true'
+        self.env['GREEN_WORKER_START_ATTEMPTED'] = 'true'
+
+    def test_cleanup_running_deploy_tags_and_schedules_retirement_without_termination(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                                             deploy_status='DEPLOY_RUNNING', running_workers=['i-green'])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(state['tags'], {'i-green': {'DeployCleanup': 'pending'}})
+                self.assertTrue(state['retirement_scheduled'])
+                self.assertNotIn('terminated_at', state)
+                self.assertFalse(any(call[1] == 'terminate-instances' for call in state['calls']))
+                self.assertEqual(state['running_workers'], ['i-blue'])
+                self.assert_pointers(state, 'tg-blue', 'i-blue')
+                calls = state['calls']
+                tag = next(i for i, call in enumerate(calls) if call[1] == 'create-tags')
+                retire = next(i for i, call in enumerate(calls) if call[1] == 'send-command'
+                              and 'systemd-run --unit=green-retire' in call[call.index('--parameters')+1])
+                self.assertLess(tag, retire)
+                self.assertEqual(calls[retire+1][:2], ['ssm', 'get-command-invocation'])
+                commands = state['commands']
+                self.assertEqual([command['kind'] for command in commands.values()][-2:], ['deploy-status', 'retirement'])
+                self.assertGreaterEqual(state['target_deleted_at'], state['target_drained_at'])
+
+    def test_cleanup_retirement_failure_during_migration_preserves_instance_and_reports_error(self):
+        for workflow in WORKFLOWS:
+            for failure in ({'fail_operation': 'create-tags'}, {'fail_command_kind': 'retirement'},
+                            {'fail_invocation_kind': 'retirement'},
+                            *({'retirement_status': status} for status in ('Failed', 'Cancelled', 'TimedOut', 'InProgress'))):
+                with self.subTest(stack=workflow.name, failure=failure):
+                    result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                                                 deploy_status='DEPLOY_RUNNING', running_workers=['i-green'], **failure)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertIn('blue_green_deferred_shutdown_failed', result.stderr)
+                    self.assertNotIn('terminated_at', state)
+                    self.assertNotIn('retirement_scheduled', state)
+                    self.assertFalse(any(call[1] == 'terminate-instances' for call in state['calls']))
+                    self.assertEqual(state['running_workers'], ['i-blue'])
+                    self.assert_pointers(state, 'tg-blue', 'i-blue')
+                    if failure.get('retirement_status') == 'InProgress':
+                        command_id = next(key for key, command in state['commands'].items() if command['kind'] == 'retirement')
+                        self.assertEqual(sum(call[1] == 'get-command-invocation' and command_id in call for call in state['calls']), 6)
+
+    def test_cleanup_idle_deploy_terminates_and_propagates_termination_failure(self):
+        for workflow in WORKFLOWS:
+            for fail in (False, True):
+                with self.subTest(stack=workflow.name, termination_failed=fail):
+                    result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                        deploy_status='DEPLOY_IDLE', **({'fail_operation': 'terminate-instances'} if fail else {}))
+                    self.assertEqual(result.returncode, 77 if fail else 0, result.stderr)
+                    self.assertEqual(state['calls'][-1][:2], ['ec2', 'terminate-instances'])
+                    self.assertNotIn('tags', state)
+                    self.assertNotIn('retirement_scheduled', state)
+                    self.assertEqual('terminated_at' in state, not fail)
+                    self.assert_pointers(state, 'tg-blue', 'i-blue')
+
+    def test_remote_deploy_probe_and_retirement_commands_wait_for_migration_with_fakes(self):
+        for workflow in WORKFLOWS:
+            with self.subTest(stack=workflow.name):
+                result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                                             deploy_status='DEPLOY_RUNNING')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                commands = {command['kind']: command['payload'][0] for command in state['commands'].values()}
+                marker = self.directory / 'deploy.running'
+                self.env['MIGRATION_MARKER'] = str(marker)
+                self.env['REMOTE_LOG'] = str(self.directory / 'retirement.log')
+                marker.touch()
+                probe = commands['deploy-status'].replace('/run/chatwoot-deploy.running', '"$MIGRATION_MARKER"')
+                result, _ = self.execute(probe)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), 'DEPLOY_RUNNING')
+                marker.unlink()
+                result, _ = self.execute(probe)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), 'DEPLOY_IDLE')
+                marker.touch()
+                clock_fake = (self.bin / 'sleep').read_text()
+                (self.bin / 'systemd-run').write_text('''#!/bin/sh
+set -eu
+[ "$1" = --unit=green-retire ]; [ "$2" = --no-block ]; [ "$3" = sh ]; [ "$4" = -c ]
+printf 'scheduled\\n' >> "$REMOTE_LOG"
+shift 2
+"$@"
+''')
+                (self.bin / 'sleep').write_text('''#!/bin/sh
+set -eu
+[ "$1" = 5 ]; [ -e "$MIGRATION_MARKER" ]
+printf 'migration-wait\\n' >> "$REMOTE_LOG"
+rm "$MIGRATION_MARKER"
+''')
+                (self.bin / 'shutdown').write_text('''#!/bin/sh
+set -eu
+[ "$1" = -h ]; [ "$2" = now ]; [ ! -e "$MIGRATION_MARKER" ]
+printf 'shutdown\\n' >> "$REMOTE_LOG"
+''')
+                retirement = commands['retirement'].replace('/run/chatwoot-deploy.running', str(marker))
+                result, _ = self.execute(retirement)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(Path(self.env['REMOTE_LOG']).read_text().splitlines(),
+                                 ['scheduled', 'migration-wait', 'shutdown'])
+                # Restore the clock fake before exercising the other workflow.
+                (self.bin / 'sleep').write_text(clock_fake)
+                Path(self.env['REMOTE_LOG']).unlink()
+
+    def test_cleanup_unknown_deploy_status_during_migration_must_preserve_instance(self):
+        # Safety regression reproduced against the earlier workflow: an unavailable
+        # status probe terminated green during migration. Unknown must never mean IDLE.
+        for workflow in WORKFLOWS:
+            for failure in ({'fail_command_kind': 'deploy-status'}, {'fail_invocation_kind': 'deploy-status'}):
+                with self.subTest(stack=workflow.name, failure=failure):
+                    result, state = self.execute(run_block(workflow.read_text(), 'Cleanup failed green resources before traffic shift'),
+                                                 deploy_status='DEPLOY_RUNNING', **failure)
+                    self.assertFalse(any(call[1] == 'terminate-instances' for call in state['calls']),
+                                     'active migration was terminated after the deploy status probe failed')
+                    self.assertNotIn('terminated_at', state)
+                    self.assertEqual(result.returncode, 1, 'unknown deploy status must not report successful cleanup')
+                    self.assertIn('blue_green_deploy_status_unknown', result.stderr)
+                    self.assert_pointers(state, 'tg-blue', 'i-blue')
 
 
 if __name__ == '__main__':

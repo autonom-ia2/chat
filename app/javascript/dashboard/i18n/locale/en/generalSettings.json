@@ -82,6 +82,11 @@
         "PLACEHOLDER": "Your account name",
         "ERROR": ""
       },
+      "TIMEZONE": {
+        "LABEL": "Time zone",
+        "PLACEHOLDER": "Choose the time zone",
+        "HELP": "Reminders, reports, business hours and the Guide follow this time zone."
+      },
       "DOMAIN": {
         "LABEL": "Incoming Email Domain",
         "PLACEHOLDER": "The domain where you will receive the emails",
@@ -234,5 +239,9 @@
   "COMMON": {
     "OR": "Or",
     "CLICK_HERE": "click here"
+  },
+  "FUSO_AUTOMATICO": {
+    "AJUSTADO": "We set the account time zone to {cidade} time.",
+    "TROCAR": "Change"
   }
 }
