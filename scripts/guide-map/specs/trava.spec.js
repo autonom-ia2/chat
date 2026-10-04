@@ -6,6 +6,8 @@ import {
   motivoDaDispensa,
   decidir,
   comentarioDaTrava,
+  numeroDoPr,
+  decidirNaFila,
 } from '../trava.mjs';
 
 const tela = nome => ({
@@ -148,5 +150,115 @@ describe('o comentário no PR', () => {
     });
 
     expect(comentario).toContain('Guia não se aplica: <motivo>');
+  });
+});
+
+describe('na fila de merge', () => {
+  const corpoComMotivo = 'Guia não se aplica: tela interna de suporte';
+  const merge = (numero, sha) => ({ sha, numero, cabeca: `cabeca-${numero}` });
+  // Registro do Guia depois de cada merge do grupo: o PR 10 traz `relatorio`, o 11 traz `painel`.
+  const registros = {
+    m10: ['inicio', 'relatorio'],
+    m11: ['inicio', 'relatorio', 'painel'],
+  };
+  const registroDe = async sha => registros[sha] || null;
+  const pr = (numero, { rotulos = [], corpo = '' } = {}) => ({
+    cabeca: `cabeca-${numero}`,
+    rotulos,
+    corpo,
+  });
+
+  it('lê o número do PR no assunto do merge commit', () => {
+    expect(numeroDoPr('Merge pull request #948 from autonom-ia2/feat/x')).toBe(
+      948
+    );
+    expect(numeroDoPr('fix: outra coisa')).toBeNull();
+    expect(numeroDoPr('Merge pull request #abc from x')).toBeNull();
+  });
+
+  it('libera o grupo sem tela nova sem olhar PR nenhum', async () => {
+    const decisao = await decidirNaFila({
+      novas: [],
+      merges: [],
+      registroDe,
+      dadosDoPr: async () => {
+        throw new Error('não deveria ler PR');
+      },
+    });
+    expect(decisao).toEqual({ bloqueia: false, situacao: 'em_dia' });
+  });
+
+  it('a dispensa de um PR não cobre a tela que outro PR criou', async () => {
+    const dados = {
+      10: pr(10, { rotulos: [ROTULO_DISPENSA], corpo: corpoComMotivo }),
+      11: pr(11),
+    };
+    const decisao = await decidirNaFila({
+      novas: [tela('relatorio'), tela('painel')],
+      merges: [merge(10, 'm10'), merge(11, 'm11')],
+      registroDe,
+      dadosDoPr: async numero => dados[numero],
+    });
+    expect(decisao).toMatchObject({
+      bloqueia: true,
+      situacao: 'sem_explicacao',
+      pr: 11,
+    });
+  });
+
+  it('libera quando cada tela nova tem a dispensa do PR que a criou', async () => {
+    const dispensado = numero =>
+      pr(numero, { rotulos: [ROTULO_DISPENSA], corpo: corpoComMotivo });
+    const decisao = await decidirNaFila({
+      novas: [tela('relatorio'), tela('painel')],
+      merges: [merge(10, 'm10'), merge(11, 'm11')],
+      registroDe,
+      dadosDoPr: async numero => dispensado(numero),
+    });
+    expect(decisao).toMatchObject({ bloqueia: false, situacao: 'dispensada' });
+    expect(decisao.dispensas.map(item => item.pr)).toEqual([10, 11]);
+  });
+
+  it('bloqueia quando o PR mudou depois de entrar no grupo', async () => {
+    const decisao = await decidirNaFila({
+      novas: [tela('relatorio')],
+      merges: [merge(10, 'm10')],
+      registroDe,
+      dadosDoPr: async () => ({
+        ...pr(10, { rotulos: [ROTULO_DISPENSA], corpo: corpoComMotivo }),
+        cabeca: 'outro',
+      }),
+    });
+    expect(decisao).toMatchObject({
+      bloqueia: true,
+      situacao: 'fila_pr_divergente',
+      pr: 10,
+    });
+  });
+
+  it('bloqueia commit do grupo que não é merge de PR', async () => {
+    const decisao = await decidirNaFila({
+      novas: [tela('relatorio')],
+      merges: [{ sha: 'm10', numero: null, cabeca: null }],
+      registroDe,
+      dadosDoPr: async () => pr(10),
+    });
+    expect(decisao).toMatchObject({
+      bloqueia: true,
+      situacao: 'fila_commit_sem_pr',
+    });
+  });
+
+  it('bloqueia tela nova que nenhum merge do grupo trouxe', async () => {
+    const decisao = await decidirNaFila({
+      novas: [tela('fantasma')],
+      merges: [merge(10, 'm10')],
+      registroDe,
+      dadosDoPr: async () => pr(10),
+    });
+    expect(decisao).toMatchObject({
+      bloqueia: true,
+      situacao: 'fila_tela_sem_pr',
+    });
   });
 });

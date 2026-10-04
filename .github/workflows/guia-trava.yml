@@ -16,11 +16,18 @@ on:
     # `labeled`, `unlabeled` e `edited`: pôr o rótulo de dispensa ou escrever o
     # motivo no corpo do PR tem que reavaliar a trava sem precisar de push.
     types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+  # Fila de merge: as duas travas são checks obrigatórios e rodam de novo sobre o
+  # código combinado do grupo (o registro do Guia e o mapa da Central conflitam
+  # entre PRs).
+  merge_group:
+    types: [checks_requested]
 
-# Um push novo no mesmo PR torna a avaliação anterior inútil.
+# Um push novo no mesmo PR torna a avaliação anterior inútil. Na fila não há número
+# de PR: cada entrada tem a própria ref (gh-readonly-queue/...) e nunca é cancelada,
+# porque um check obrigatório cancelado tira o PR da fila.
 concurrency:
-  group: guia-trava-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: guia-trava-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   trava:
@@ -37,7 +44,7 @@ jobs:
       - id: escopo
         name: O PR mexe em rotas ou no Guia?
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           mexe=false
           while IFS= read -r arquivo; do
@@ -67,8 +74,13 @@ jobs:
         name: Toda tela nova tem explicação?
         if: steps.escopo.outputs.mexe == 'true'
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          # Na fila não há PR para receber o rascunho: a chave nem entra no job.
+          OPENAI_API_KEY: ${{ github.event_name == 'pull_request' && secrets.OPENAI_API_KEY || '' }}
+          EVENTO: ${{ github.event_name }}
+          # Na fila, corpo e rótulos de cada PR do grupo vêm da API (trava.mjs).
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
           # Texto de quem abriu o PR: entra como variável, nunca dentro do script.
           PR_BODY: ${{ github.event.pull_request.body }}
           ROTULOS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
@@ -79,7 +91,7 @@ jobs:
       # GitHub não deixa o workflow comentar — sem `continue-on-error`, um PR que
       # a trava decidiu liberar ficaria vermelho por causa do comentário.
       - name: Comentar no PR
-        if: steps.trava.outputs.comentario == 'novo' || steps.trava.outputs.comentario == 'resolvido'
+        if: github.event_name == 'pull_request' && (steps.trava.outputs.comentario == 'novo' || steps.trava.outputs.comentario == 'resolvido')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -126,7 +138,7 @@ jobs:
       - id: escopo
         name: O PR mexe na Central, no mapa dela ou nas rotas?
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
           mexe=false
           while IFS= read -r arquivo; do
@@ -157,7 +169,7 @@ jobs:
 
       # Mesma razão do job do Guia: o comentário é ajuda, quem barra é o último passo.
       - name: Comentar no PR
-        if: steps.central.outputs.comentario == 'novo' || steps.central.outputs.comentario == 'resolvido'
+        if: github.event_name == 'pull_request' && (steps.central.outputs.comentario == 'novo' || steps.central.outputs.comentario == 'resolvido')
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}

@@ -51,6 +51,9 @@ RSpec.configure do |config|
   config.include Skooma::RSpec[Rails.root.join('swagger/swagger.json')], type: :request
 
   config.before do
+    # Current (lib/current.rb) guarda conta/usuário por thread e não se limpa sozinho: sem isto, o que um
+    # exemplo grava (ex.: AccountBuilder grava Current.account) vaza para o seguinte conforme a ordem (#966).
+    Current.reset
     ActiveJob::Base.queue_adapter = :test
     ActiveStorage::Current.url_options = { host: 'www.example.com' }
   end

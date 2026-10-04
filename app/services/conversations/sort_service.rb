@@ -21,6 +21,8 @@ class Conversations::SortService
 
   def self.apply(scope, sort_by)
     sort_method, sort_order = SORT_OPTIONS[sort_by] || SORT_OPTIONS[DEFAULT_SORT]
-    scope.public_send(sort_method, sort_order)
+    # Desempate por id na mesma direção: sem ele, conversas com o mesmo valor (mesma última atividade)
+    # trocam de lugar entre consultas e a paginação repete ou pula conversas.
+    scope.public_send(sort_method, sort_order).order(Conversation.arel_table[:id].public_send(sort_order))
   end
 end

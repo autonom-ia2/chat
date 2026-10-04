@@ -17,6 +17,7 @@
 //   2. declarar a tela no bloco `_fora_do_guia`, com o motivo (definitivo);
 //   3. rótulo `guia-nao-se-aplica` no PR, com o motivo escrito no corpo dele.
 import fs from 'fs';
+import { execFileSync } from 'child_process';
 import { construir } from './build.mjs';
 import {
   mudancasDoMapa,
@@ -64,6 +65,115 @@ export const decidir = ({ novas, rotulos, corpo }) => {
   }
 
   return { bloqueia: true, situacao: 'sem_explicacao' };
+};
+
+// ---------------------------------------------------------------------------
+// Na fila de merge
+//
+// Na fila não existe "o PR": o commit testado junta um ou mais PRs. A dispensa
+// continua sendo de cada PR e só vale para as telas que ele criou. Cada tela nova
+// é atribuída ao primeiro merge do grupo em que ela aparece no registro, e o
+// corpo e os rótulos são lidos daquele PR, conferindo que o PR é o mesmo commit
+// que entrou no grupo. O que não dá para atribuir bloqueia: a fila nunca é mais
+// fraca que a trava do PR.
+
+// Assunto que o GitHub grava no merge commit de cada PR: formato fixo de máquina.
+const PREFIXO_DO_MERGE = 'Merge pull request #';
+
+export const numeroDoPr = assunto => {
+  const texto = String(assunto || '');
+  if (!texto.startsWith(PREFIXO_DO_MERGE)) return null;
+  const numero = texto.slice(PREFIXO_DO_MERGE.length).split(' ', 1)[0];
+  const soDigitos =
+    numero.length > 0 &&
+    [...numero].every(caractere => caractere >= '0' && caractere <= '9');
+  return soDigitos ? Number(numero) : null;
+};
+
+// merges: [{ sha, numero, cabeca }] na ordem em que entraram no grupo.
+export const decidirNaFila = async ({
+  novas,
+  merges,
+  registroDe,
+  dadosDoPr,
+}) => {
+  if (!novas.length) return { bloqueia: false, situacao: 'em_dia' };
+  if (!merges.length || merges.some(merge => !merge.numero)) {
+    return { bloqueia: true, situacao: 'fila_commit_sem_pr' };
+  }
+
+  // O dono da tela é o primeiro merge do grupo em que ela aparece no registro.
+  const registros = await Promise.all(
+    merges.map(merge => registroDe(merge.sha))
+  );
+  const donos = novas.map(tela => ({
+    tela,
+    dono: merges.find((_, indice) =>
+      (registros[indice] || []).includes(tela.nome)
+    ),
+  }));
+  if (donos.some(({ dono }) => !dono)) {
+    return { bloqueia: true, situacao: 'fila_tela_sem_pr' };
+  }
+
+  const numeros = [...new Set(donos.map(({ dono }) => dono.numero))];
+  const prs = await Promise.all(numeros.map(numero => dadosDoPr(numero)));
+  const decisoes = numeros.map((numero, indice) => {
+    const pr = prs[indice];
+    const merge = merges.find(item => item.numero === numero);
+    if (!pr || pr.cabeca !== merge.cabeca) {
+      return { bloqueia: true, situacao: 'fila_pr_divergente', pr: numero };
+    }
+    const telas = donos
+      .filter(({ dono }) => dono.numero === numero)
+      .map(({ tela }) => tela);
+    return {
+      ...decidir({ novas: telas, rotulos: pr.rotulos, corpo: pr.corpo }),
+      pr: numero,
+    };
+  });
+
+  const bloqueio = decisoes.find(decisao => decisao.bloqueia);
+  if (bloqueio) return bloqueio;
+  return {
+    bloqueia: false,
+    situacao: 'dispensada',
+    dispensas: decisoes.map(({ pr, motivo }) => ({ pr, motivo })),
+  };
+};
+
+const git = args =>
+  execFileSync('git', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim();
+
+const mergesDoGrupo = base =>
+  git(['rev-list', '--first-parent', '--reverse', `${base}..HEAD`])
+    .split('\n')
+    .filter(Boolean)
+    .map(sha => {
+      const pais = git(['rev-list', '--parents', '-n', '1', sha]).split(' ');
+      return {
+        sha,
+        numero: numeroDoPr(git(['log', '-1', '--format=%s', sha])),
+        cabeca: pais[2] || null,
+      };
+    });
+
+// Corpo e rótulos entram como dado vindo da API, nunca dentro de um comando.
+const lerDadosDoPr = numero => {
+  const saida = execFileSync(
+    'gh',
+    ['api', `repos/${process.env.REPO}/pulls/${numero}`],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }
+  );
+  const pr = JSON.parse(saida);
+  return {
+    cabeca: pr.head && pr.head.sha,
+    rotulos: (pr.labels || []).map(rotulo => rotulo.name),
+    corpo: pr.body || '',
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -181,6 +291,20 @@ const executar = async () => {
     semExplicacao: atual.semExplicacao,
     humanos: atual.humanos,
   });
+  if (process.env.EVENTO === 'merge_group') {
+    const naFila = await decidirNaFila({
+      novas,
+      merges: novas.length ? mergesDoGrupo(process.env.BASE) : [],
+      registroDe: lerRegistroDe,
+      dadosDoPr: lerDadosDoPr,
+    });
+    console.log(
+      `Fila de merge: ${naFila.situacao}${naFila.pr ? ` (PR #${naFila.pr})` : ''}. Telas novas: ${novas.length}.`
+    );
+    avisarGitHub('bloqueia', String(naFila.bloqueia));
+    return avisarGitHub('comentario', 'nenhum');
+  }
+
   const decisao = decidir({
     novas,
     rotulos: String(process.env.ROTULOS || '').split(','),
