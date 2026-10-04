@@ -156,6 +156,7 @@ class Account < ApplicationRecord
   scope :with_auto_resolve, -> { where("(settings ->> 'auto_resolve_after')::int IS NOT NULL") }
 
   before_validation :validate_limit_keys
+  before_validation :sync_reporting_timezone, if: :will_save_change_to_custom_attributes?
   after_create_commit :notify_creation
   after_update_commit :clear_unread_conversation_counts_cache, if: :saved_change_to_feature_conversation_unread_counts?
   after_update :resume_delayed_automations, if: -> { saved_change_to_feature_delayed_automations? && feature_delayed_automations? }
@@ -260,6 +261,15 @@ class Account < ApplicationRecord
 
   def validate_limit_keys
     # method overridden in enterprise module
+  end
+
+  # O fuso da conta mora em dois campos (#954): custom_attributes['timezone'], que Primeiros
+  # passos, Configurações e o Guia gravam, e settings['reporting_timezone'], que relatórios,
+  # CRM, caixas e SLA leem. Quem grava o primeiro arrasta o segundo; um nome inválido para
+  # na validação de reporting_timezone.
+  def sync_reporting_timezone
+    timezone = custom_attributes&.dig('timezone')
+    self.reporting_timezone = timezone if timezone.present?
   end
 
   def validate_reporting_timezone
