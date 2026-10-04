@@ -1179,6 +1179,22 @@
         }
       },
       "ARTIGOS_NO_CAPITULO": "{count} article | {count} articles",
+      "ASSUNTO": {
+        "VOLTAR": "Back to the Help Center",
+        "MINUTOS": "{count} min of video | {count} min of video",
+        "VISTOS": "{count} already seen | {count} already seen",
+        "CONTINUAR": "Continue: {titulo}",
+        "COMECAR": "Start",
+        "REVER": "Review from the start",
+        "ABRIR": "Open {nome}",
+        "LISTA": "Articles on this topic",
+        "VISTO": "Seen",
+        "VIDEO_DE": "Video, {duracao}",
+        "VAZIO": "This topic does not exist or has no articles for your account.",
+        "AJUDA_TITULO": "Didn't find what you needed?",
+        "AJUDA_TEXTO": "The Platform Guide answers right away, here in the dashboard.",
+        "PERGUNTAR": "Ask the Guide"
+      },
       "PREPARANDO": {
         "TITULO": "We are preparing the Help Center",
         "TEXTO": "Articles show up here in a few minutes. Come back shortly."

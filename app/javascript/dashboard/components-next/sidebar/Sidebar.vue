@@ -1124,7 +1124,11 @@ const menuItems = computed(() => {
       label: t('SIDEBAR.HELP_CENTER.TITLE'),
       icon: 'i-lucide-library-big',
       to: accountScopedRoute('central_de_ajuda'),
-      activeOn: ['central_de_ajuda', 'central_de_ajuda_artigo'],
+      activeOn: [
+        'central_de_ajuda',
+        'central_de_ajuda_assunto',
+        'central_de_ajuda_artigo',
+      ],
     },
     {
       name: 'Settings',

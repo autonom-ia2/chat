@@ -1179,6 +1179,22 @@
         }
       },
       "ARTIGOS_NO_CAPITULO": "{count} artigo | {count} artigos",
+      "ASSUNTO": {
+        "VOLTAR": "Voltar para a Central de Ajuda",
+        "MINUTOS": "{count} min de vídeo | {count} min de vídeo",
+        "VISTOS": "{count} já visto | {count} já vistos",
+        "CONTINUAR": "Continuar: {titulo}",
+        "COMECAR": "Começar",
+        "REVER": "Rever do início",
+        "ABRIR": "Abrir {nome}",
+        "LISTA": "Artigos deste assunto",
+        "VISTO": "Visto",
+        "VIDEO_DE": "Vídeo, {duracao}",
+        "VAZIO": "Este assunto não existe ou não tem artigos para a sua conta.",
+        "AJUDA_TITULO": "Não achou o que precisava?",
+        "AJUDA_TEXTO": "O Guia da Plataforma responde na hora, aqui mesmo no painel.",
+        "PERGUNTAR": "Perguntar ao Guia"
+      },
       "PREPARANDO": {
         "TITULO": "Estamos preparando a Central de Ajuda",
         "TEXTO": "Os artigos aparecem aqui em alguns minutos. Volte daqui a pouco."

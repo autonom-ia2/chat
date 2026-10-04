@@ -384,7 +384,8 @@
      "assuntos": [],
      "rotas": [
       "central_de_ajuda",
-      "central_de_ajuda_artigo"
+      "central_de_ajuda_artigo",
+      "central_de_ajuda_assunto"
      ],
      "me_leve_ate_la": {
       "rota": "central_de_ajuda",
@@ -394,7 +395,7 @@
      "prints": [],
      "fontes": [],
      "revisar": false,
-     "nota": "Cobre também central_de_ajuda_artigo (a tela de leitura de um artigo): é a própria Central em uso, não um fluxo à parte."
+     "nota": "Cobre também central_de_ajuda_artigo (a tela de leitura de um artigo) e central_de_ajuda_assunto (a página de um assunto): é a própria Central em uso, não um fluxo à parte."
     }
    ]
   },
