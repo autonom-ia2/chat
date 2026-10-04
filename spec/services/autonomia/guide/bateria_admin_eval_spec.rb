@@ -844,7 +844,10 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       historico = turno(pedido, primeiro)
       historico, = confirmando_ate_o_fim(historico, primeiro)
 
-      resposta = "A URL do webhook é #{url}. O responsável pela equipe de Retenção é a Ana Ribeiro. Pode montar."
+      # A pessoa responde o que só ela sabe — inclusive a dúvida legítima de "sem atendimento" (sem atendente
+      # atribuído ou sem resposta humana?): perguntar ali é o certo, e o roteiro confirma como faria a pessoa.
+      resposta = "A URL do webhook é #{url}. O responsável pela equipe de Retenção é a Ana Ribeiro, e só ela fica no " \
+                 'time. "Sem atendimento" quer dizer sem atendente atribuído. Pode montar.'
       segundo = perguntar(resposta, historico: historico)
       respondeu!(segundo)
       historico += turno(resposta, segundo)
