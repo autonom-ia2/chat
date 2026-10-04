@@ -21,15 +21,21 @@ RSpec.describe Onboarding::Progress do
                                   :artigo, :video, :etapa, :minutos, :acao, :depende_de)
     end
 
+    # Pasta própria do teste: o resultado não pode depender de quais vídeos já foram gravados no repositório.
     it 'entrega o vídeo do artigo da Central de Ajuda, quando existe' do
-      passos = progresso.perform.index_by { |passo| passo[:id] }
+      Dir.mktmpdir do |pasta|
+        stub_const('Autonomia::CentralDeAjuda::VideoDoArtigo::PASTA', Pathname.new(pasta))
+        %w[mp4 vtt jpg].each { |extensao| File.write(File.join(pasta, "00.03.#{extensao}"), extensao) }
 
-      expect(passos['chave_ia'][:video]).to eq(
-        'arquivo' => '/central-de-ajuda/videos/00.03.mp4',
-        'legenda' => '/central-de-ajuda/videos/00.03.vtt',
-        'poster' => '/central-de-ajuda/videos/00.03.jpg'
-      )
-      expect(passos['perfil'][:video]).to be_nil
+        passos = progresso.perform.index_by { |passo| passo[:id] }
+
+        expect(passos['chave_ia'][:video]).to eq(
+          'arquivo' => '/central-de-ajuda/videos/00.03.mp4',
+          'legenda' => '/central-de-ajuda/videos/00.03.vtt',
+          'poster' => '/central-de-ajuda/videos/00.03.jpg'
+        )
+        expect(passos['perfil'][:video]).to be_nil
+      end
     end
   end
 
