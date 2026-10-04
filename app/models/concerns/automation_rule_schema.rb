@@ -25,6 +25,11 @@ class AutomationRuleSchema
     new(regra).conditions
   end
 
+  # Os operadores de cada filtro, lidos uma vez: a regra valida a cada gravação.
+  def self.filtros
+    @filtros ||= YAML.safe_load(Rails.root.join('lib/filters/filter_keys.yml').read).freeze
+  end
+
   # Sem regra, o esquema geral: atributo personalizado vale qualquer chave da conta.
   def initialize(regra)
     @regra = regra || AutomationRule.new
@@ -133,7 +138,7 @@ class AutomationRuleSchema
   end
 
   def filtros
-    @filtros ||= YAML.safe_load(Rails.root.join('lib/filters/filter_keys.yml').read)
+    self.class.filtros
   end
 end
 
