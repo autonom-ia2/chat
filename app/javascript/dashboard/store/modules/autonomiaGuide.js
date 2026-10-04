@@ -152,6 +152,7 @@ const addAssistantMessage = ({
   artigo = null,
   artigos = null,
   execucao = null,
+  lembrancas = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -174,6 +175,8 @@ const addAssistantMessage = ({
     artigos: paraLista(artigos, artigo),
     // O que o Guia FEZ neste turno (#855), com o desfazer.
     execucao,
+    // #933 — o que o Guia anotou neste turno, para o chip "Anotei".
+    lembrancas: Array.isArray(lembrancas) ? [...lembrancas] : [],
   };
   nextId += 1;
   state.messages.push(record);
@@ -359,6 +362,15 @@ const marcarAcao = (id, estado, resultado = null) => {
   return true;
 };
 
+// #933 — a pessoa tocou em "Esquecer" no chip: a anotação já saiu do servidor.
+const esquecerLembranca = (mensagemId, memoriaId) => {
+  const registro = state.messages.find(m => m.id === mensagemId);
+  if (!registro) return;
+  registro.lembrancas = registro.lembrancas.filter(
+    lembranca => lembranca.id !== memoriaId
+  );
+};
+
 export const useAutonomiaGuideStore = () => ({
   messages: readonly(state).messages,
   arquivos: readonly(state).arquivos,
@@ -371,6 +383,7 @@ export const useAutonomiaGuideStore = () => ({
   marcarVoz,
   addAssistantMessage,
   marcarAcao,
+  esquecerLembranca,
   reset,
   toHistory,
   hidratar,

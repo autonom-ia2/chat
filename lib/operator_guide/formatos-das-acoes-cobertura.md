@@ -5,11 +5,11 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 501 |
-| Sem corpo | 132 |
-| Com corpo | 369 |
-| Com corpo e formato completo | 226 (61,2%) |
-| Com corpo e formato incompleto | 143 |
+| No catálogo | 494 |
+| Sem corpo | 130 |
+| Com corpo | 364 |
+| Com corpo e formato completo | 226 (62,1%) |
+| Com corpo e formato incompleto | 138 |
 
 ## Incompletas por motivo
 
@@ -17,7 +17,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 129 |
+| leitura crua sem tipo | 124 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -67,11 +67,6 @@ Uma ação pode ter mais de um motivo.
 - `POST autonomia/conversations/:conversation_id/copilot/chat` — leitura crua sem tipo: agent_id, message
 - `POST autonomia/decisores/:id/exemplos` — leitura crua sem tipo: conversation_id, resposta
 - `POST autonomia/decisores/:id/teste` — leitura crua sem tipo: conversation_ids
-- `POST autonomia/guide/acoes/executar` — leitura crua sem tipo: dados
-- `POST autonomia/guide/acoes/preparar` — leitura crua sem tipo: acao, dados
-- `POST autonomia/guide/arquivos` — leitura crua sem tipo: file
-- `POST autonomia/guide/chat` — leitura crua sem tipo: arquivos, conversa_id, history, message, route_context, route_params
-- `POST autonomia/guide/transcricao` — leitura crua sem tipo: file
 - `POST autonomia/insurance/quote_agent` — leitura crua sem tipo: quote_agent.behavior, quote_agent.broker_name, quote_agent.business_hours, quote_agent.name
 - `POST autonomia/prospecting/leads/:id/adopt_owner` — leitura crua sem tipo: owner_name
 - `POST autonomia/prospecting/leads/:id/research` — leitura crua sem tipo: force

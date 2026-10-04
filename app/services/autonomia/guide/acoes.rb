@@ -84,10 +84,9 @@ class Autonomia::Guide::Acoes
     'DELETE teams/:id',
     'DELETE portals/:id',
     'DELETE sla_policies/:id',
-    # A segunda (#861): a conversa com o Guia fica fora do caderno (`Diario::FORA`) e, apagada, não volta.
     # #858 — resolver um caso parado do Decisor retoma a automação num job, que pode mandar mensagem
-    # ou mover card fora do caderno.
-    'DELETE labels/:id', 'DELETE autonomia/guide/conversas/:id', 'POST autonomia/decisoes/:id/resolver'
+    # ou mover card fora do caderno. (A conversa com o Guia saiu do catálogo: D3, #933.)
+    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

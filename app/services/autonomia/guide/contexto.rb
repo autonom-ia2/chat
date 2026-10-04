@@ -13,7 +13,7 @@
 # cada passo anotado para desfazer, e — só para o que não tem volta — a
 # PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro, :turno_id
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
@@ -21,13 +21,16 @@ class Autonomia::Guide::Contexto
   MAX_ITENS = 5
 
   # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
-  def initialize(account:, user:, account_user: nil, registro: nil)
+  # `turno_id` (#933): o turno onde uma anotação nasce, para o painel dizer de que conversa ela veio.
+  def initialize(account:, user:, account_user: nil, registro: nil, turno_id: nil)
     @account = account
     @registro = registro
+    @turno_id = turno_id
     @user = user
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
     @telas = []
     @artigos = []
+    @lembrancas = {}
   end
 
   # O `Answerer` avisa cada ferramenta chamada no turno; vai para o registro do pedido (#861).
@@ -103,6 +106,21 @@ class Autonomia::Guide::Contexto
   # com o campo singular (`artigo`) enquanto o front antigo existir.
   def artigo
     @artigos.first
+  end
+
+  # O que o Guia anotou neste turno (#933), para o chip "Anotei" sob a resposta.
+  # A mesma anotação trocada duas vezes aparece uma vez, com o texto final; a
+  # que ele apagou no mesmo turno some.
+  def anotada(memoria)
+    @lembrancas[memoria.id] = memoria.lembranca
+  end
+
+  def esquecida(id)
+    @lembrancas.delete(id)
+  end
+
+  def lembrancas
+    @lembrancas.values
   end
 
   # O que as leituras deste turno devolveram. O botão de UM registro só leva a

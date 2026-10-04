@@ -24,9 +24,14 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  // #933 — "O que eu sei" está aberto no lugar da conversa.
+  vendoMemoria: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(['reset', 'historico', 'close']);
+defineEmits(['reset', 'historico', 'memoria', 'close']);
 </script>
 
 <template>
@@ -37,6 +42,26 @@ defineEmits(['reset', 'historico', 'close']);
       {{ title }}
     </h2>
     <div class="flex items-center gap-2 shrink-0">
+      <Button
+        v-tooltip="
+          vendoMemoria
+            ? $t('AUTONOMIA_GUIDE.DONE.BACK')
+            : $t('AUTONOMIA_GUIDE.MEMORY.TITLE')
+        "
+        :aria-label="
+          vendoMemoria
+            ? $t('AUTONOMIA_GUIDE.DONE.BACK')
+            : $t('AUTONOMIA_GUIDE.MEMORY.TITLE')
+        "
+        :aria-pressed="vendoMemoria ? 'true' : 'false'"
+        :icon="
+          vendoMemoria ? 'i-lucide-message-circle' : 'i-lucide-notebook-pen'
+        "
+        ghost
+        slate
+        lg
+        @click="$emit('memoria')"
+      />
       <Button
         v-tooltip="
           vendoHistorico

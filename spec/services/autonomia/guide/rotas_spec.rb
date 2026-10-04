@@ -16,6 +16,14 @@ RSpec.describe Autonomia::Guide::Rotas do
       expect(described_class.recurso('/api/v1/profile')).to be_nil
     end
 
+    # D3 (#933): pela API, o Guia conseguia apagar a própria conversa e mexer na própria memória.
+    it 'deixa de fora as rotas do próprio Guia', :aggregate_failures do
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/guide/conversas/:id')).to be_nil
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/guide_memorias/:id')).to be_nil
+      expect(described_class.recurso('/api/v1/accounts/:account_id/autonomia/decisores')).to eq('autonomia/decisores')
+      expect(Autonomia::Guide::Acoes.new(account: conta, user: admin).catalogo.select { |acao| acao.include?('autonomia/guide') }).to eq([])
+    end
+
     it 'monta o endereço sempre com o id da conta de quem pergunta', :aggregate_failures do
       expect(described_class.caminho(16, %w[inboxes 3])).to eq('/api/v1/accounts/16/inboxes/3')
       expect(described_class.caminho(16, %w[conta])).to eq('/api/v1/accounts/16')

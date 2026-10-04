@@ -43,7 +43,10 @@ module Autonomia::Agents::Tools::Registry
     # "como eu faço X".
     Autonomia::Agents::Tools::Native::GuiaCentral,
     # #858 — o Guia classifica muitos itens de uma vez com o Jev ("desses contatos, quais…").
-    Autonomia::Agents::Tools::Native::GuiaClassificar
+    Autonomia::Agents::Tools::Native::GuiaClassificar,
+    # #933 — o Guia anota e esquece o que a pessoa ensinou, entre conversas.
+    Autonomia::Agents::Tools::Native::GuiaLembrar,
+    Autonomia::Agents::Tools::Native::GuiaEsquecer
   ].freeze
 
   module_function

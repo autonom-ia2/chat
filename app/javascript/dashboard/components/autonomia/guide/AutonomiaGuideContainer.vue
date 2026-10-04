@@ -22,6 +22,8 @@ import GuideComposer from './GuideComposer.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideHistorico from './GuideHistorico.vue';
+import GuideMemoria from './GuideMemoria.vue';
+import GuideAnotei from './GuideAnotei.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
@@ -87,6 +89,24 @@ const gravandoVoz = ref(false);
 // #861 — o histórico (conversas anteriores e "Feito pelo Guia", #855) ocupa o
 // lugar da conversa enquanto aberto.
 const vendoHistorico = ref(false);
+// #933 — "O que eu sei" ocupa o lugar da conversa enquanto aberto.
+const vendoMemoria = ref(false);
+
+const alternarHistorico = () => {
+  vendoMemoria.value = false;
+  vendoHistorico.value = !vendoHistorico.value;
+};
+
+const alternarMemoria = () => {
+  vendoHistorico.value = false;
+  vendoMemoria.value = !vendoMemoria.value;
+};
+
+const tituloDoPainel = computed(() => {
+  if (vendoMemoria.value) return t('AUTONOMIA_GUIDE.MEMORY.TITLE');
+  if (vendoHistorico.value) return t('AUTONOMIA_GUIDE.HISTORY.TITLE');
+  return t('AUTONOMIA_GUIDE.TITLE');
+});
 // #861 — reabrindo a conversa guardada. O esqueleto só aparece se demorar:
 // abrir rápido não pisca uma tela de carregamento à toa.
 const abrindoConversa = ref(false);
@@ -430,6 +450,7 @@ const entregarResposta = (data, pedidoId) => {
       artigo: data.artigo || null,
       artigos: data.artigos || null,
       execucao: data.execucao || null,
+      lembrancas: data.lembrancas || null,
       pedidoId,
     });
     if (data.execucao) emit('execucao', data.execucao);
@@ -657,6 +678,7 @@ const anexarArquivo = async file => {
 const abrirPedido = () => {
   requestSequence += 1;
   vendoHistorico.value = false;
+  vendoMemoria.value = false;
   // Perguntar depois de a conversa antiga não abrir começa uma nova.
   falhouAoAbrir.value = false;
   isSending.value = true;
@@ -821,6 +843,7 @@ watch(accountId, () => {
   isSending.value = false;
   transcrevendo.value = false;
   vendoHistorico.value = false;
+  vendoMemoria.value = false;
   falhouAoAbrir.value = false;
   abrindoConversa.value = false;
   mostrarEsqueleto.value = false;
@@ -862,15 +885,13 @@ const classeDoPainel = computed(() =>
     <div class="flex flex-col h-full text-sm leading-6 tracking-tight w-full">
       <GuideHeader
         v-if="!embutido"
-        :title="
-          vendoHistorico
-            ? $t('AUTONOMIA_GUIDE.HISTORY.TITLE')
-            : $t('AUTONOMIA_GUIDE.TITLE')
-        "
-        :can-reset="hasMessages && !vendoHistorico"
+        :title="tituloDoPainel"
+        :can-reset="hasMessages && !vendoHistorico && !vendoMemoria"
         :vendo-historico="vendoHistorico"
+        :vendo-memoria="vendoMemoria"
         @reset="resetConversation"
-        @historico="vendoHistorico = !vendoHistorico"
+        @historico="alternarHistorico"
+        @memoria="alternarMemoria"
         @close="closePanel"
       />
 
@@ -883,7 +904,14 @@ const classeDoPainel = computed(() =>
       </div>
 
       <div
-        v-show="!vendoHistorico"
+        v-else-if="vendoMemoria"
+        class="flex-1 flex px-4 py-4 overflow-y-auto"
+      >
+        <GuideMemoria @perguntar="sendMessage" />
+      </div>
+
+      <div
+        v-show="!vendoHistorico && !vendoMemoria"
         ref="chatContainer"
         role="log"
         aria-live="polite"
@@ -941,6 +969,13 @@ const classeDoPainel = computed(() =>
               />
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
               <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
+              <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
+              <GuideAnotei
+                v-for="lembranca in item.lembrancas || []"
+                :key="lembranca.id"
+                :lembranca="lembranca"
+                @esqueceu="store.esquecerLembranca(item.id, $event)"
+              />
               <!-- Ação que não tem volta: a pessoa lê o que vai acontecer, com
                    os valores, e só então confirma. Nada executa antes disso. -->
               <div
