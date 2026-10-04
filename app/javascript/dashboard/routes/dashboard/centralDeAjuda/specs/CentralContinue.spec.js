@@ -63,6 +63,14 @@ const montar = (ids = ['00.02', '00.04', '00.08']) =>
     },
   });
 
+// O bloco fica na página com v-show (o CI de e-mail barra v-if na raiz): escondido e sem conteúdo montado.
+const expectEscondido = wrapper => {
+  expect(wrapper.find('section').attributes('style')).toContain(
+    'display: none'
+  );
+  expect(wrapper.find('h2').exists()).toBe(false);
+};
+
 describe('CentralContinue', () => {
   beforeEach(() => {
     trilha.carregando.value = false;
@@ -105,19 +113,19 @@ describe('CentralContinue', () => {
   it('some quando nenhum passo pendente tem artigo visível para a conta', () => {
     trilha.passos.value = [FEITO, AGENTE];
 
-    expect(montar(['00.02', '00.04']).find('section').exists()).toBe(false);
+    expectEscondido(montar(['00.02', '00.04']));
   });
 
   it('some quando a trilha está completa', () => {
     trilha.passos.value = [FEITO];
 
-    expect(montar().find('section').exists()).toBe(false);
+    expectEscondido(montar());
   });
 
   it('some quando a trilha deu erro', () => {
     trilha.erro.value = true;
 
-    expect(montar().find('section').exists()).toBe(false);
+    expectEscondido(montar());
   });
 
   it('só o administrador vê o link para todos os passos', () => {
