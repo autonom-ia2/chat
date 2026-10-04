@@ -46,7 +46,9 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::GuiaClassificar,
     # #933 — o Guia anota e esquece o que a pessoa ensinou, entre conversas.
     Autonomia::Agents::Tools::Native::GuiaLembrar,
-    Autonomia::Agents::Tools::Native::GuiaEsquecer
+    Autonomia::Agents::Tools::Native::GuiaEsquecer,
+    # #936 — o Guia planeja um trabalho grande: receita, amostra e o botão Começar para a pessoa.
+    Autonomia::Agents::Tools::Native::GuiaTarefa
   ].freeze
 
   module_function

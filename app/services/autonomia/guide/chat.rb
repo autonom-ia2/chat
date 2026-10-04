@@ -11,7 +11,7 @@ module Autonomia
       # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
       # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
       Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
-                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, keyword_init: true)
+                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, :tarefa, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -119,6 +119,7 @@ module Autonomia
         navs = navegacoes(result)
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
                    artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
+                   tarefa: contexto.tarefa,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)

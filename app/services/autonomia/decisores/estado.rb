@@ -48,6 +48,12 @@ class Autonomia::Decisores::Estado
     @leituras = leituras
   end
 
+  # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
+  # forma de e-mail ou de telefone, pela mesma decisão de cima (o nome que é o telefone também sai).
+  def self.sem_contato(dados)
+    new(leituras: []).send(:sem_contato, dados)
+  end
+
   # O estado mandado ao Jev, com as instruções e exemplos do Decisor.
   def para_o_jev(decisor)
     { task: TAREFA, **dados, instructions: decisor.instrucoes.to_s,
@@ -87,6 +93,22 @@ class Autonomia::Decisores::Estado
   end
 
   private
+
+  def sem_contato(dados)
+    case dados
+    when Hash then dados.each_with_object({}) { |(chave, valor), limpo| guardar(limpo, chave, sem_contato(valor)) }
+    when Array then dados.map { |valor| sem_contato(valor) }.reject(&:blank?)
+    else dados unless contato?(dados)
+    end
+  end
+
+  def contato?(valor)
+    email?(valor) || telefone?(valor)
+  end
+
+  def guardar(limpo, chave, valor)
+    limpo[chave.to_s] = valor unless valor.nil? || (valor.respond_to?(:empty?) && valor.empty?)
+  end
 
   def dados
     @dados ||= Array(@leituras).each_with_object({}) { |item, lido| lido.merge!(send(LEITORES.fetch(item))) }

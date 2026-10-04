@@ -78,6 +78,17 @@ class Autonomia::Guide::Consulta
     "Não consegui ler #{recurso} agora."
   end
 
+  # A resposta da leitura, inteira e em JSON, para quem precisa dos itens e não de um texto (#936,
+  # tarefas longas). Mesmo caminho e mesma permissão de `ler`; recusa com o motivo legível.
+  def json(recurso, parametros = {}, filtros = {})
+    resposta = requisitar(montar_caminho(recurso, parametros), filtros, sobras(recurso, parametros))
+    raise Recusada, indisponivel(recurso, resposta.codigo) unless resposta.codigo.to_i == 200
+
+    JSON.parse(resposta.corpo.to_s)
+  rescue JSON::ParserError
+    raise Recusada, "Não consegui ler #{recurso} agora."
+  end
+
   private
 
   # Isto vira texto que o modelo repassa para a pessoa, então não pode ser um

@@ -10424,6 +10424,61 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/tarefas/:id/cancelar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#cancelar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:38",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/tarefas/:id/comecar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#comecar",
+    "modelo": "Autonomia::Guide::Tarefa",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/tarefas/:id/desfazer": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#desfazer",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:42",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/tarefas/:id/pausar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#pausar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/tarefas/:id/retomar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#retomar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:34",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/tarefas/:id/seguir": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/tarefas#seguir",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:26",
+      "app/controllers/api/v1/accounts/autonomia/tarefas_controller.rb:70"
+    ],
+    "sem_corpo": true
+  },
   "POST bulk_actions": {
     "campos": {
       "action_name": {},

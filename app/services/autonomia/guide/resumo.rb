@@ -68,6 +68,14 @@ class Autonomia::Guide::Resumo
     resumir(@corpo, @campos, @teto)
   end
 
+  # A lista inteira e o total que a plataforma informou, sem corte e sem segredo (#936): a tarefa
+  # longa precisa do id e dos campos de cada item, não de um texto para o modelo ler.
+  def self.lista_e_total(dados)
+    resumo = new(corpo: nil)
+    lista = resumo.send(:lista_de, dados)
+    [lista.is_a?(Array) ? resumo.send(:sem_segredos, lista) : nil, resumo.send(:total_de, dados)]
+  end
+
   private
 
   # Resposta de API é verbosa e cheia de campo que não ajuda a responder. Corta
