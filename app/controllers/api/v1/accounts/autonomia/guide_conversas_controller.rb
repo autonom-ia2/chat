@@ -19,7 +19,9 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
 
   # A conversa mais recente, para a tela reabrir ao abrir o painel. Sem
   # nenhuma, `{}`: a tela mostra as sugestões de começo.
+  # #935 — a primeira abertura do Guia por um administrador planta as vigias padrão da conta.
   def atual
+    ::Autonomia::Guide::VigiasPadrao.plantar(Current.account, Current.account_user)
     conversa = conversas.recentes.first
     render json: conversa ? conversa.para_tela : {}
   end

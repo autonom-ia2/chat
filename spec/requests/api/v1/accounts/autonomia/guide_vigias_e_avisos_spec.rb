@@ -136,4 +136,31 @@ RSpec.describe 'Guia da Plataforma — vigias e avisos', type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
   end
+
+  describe 'vigias padrão' do
+    let(:atual) { "/api/v1/accounts/#{account.id}/autonomia/guide/conversas/atual" }
+
+    it 'a primeira abertura do Guia por um administrador planta as vigias padrão, uma vez só', :aggregate_failures do
+      2.times { get atual, headers: admin.create_new_auth_token, as: :json }
+
+      plantadas = Autonomia::Guide::Vigia.where(account: account)
+      expect(plantadas.pluck(:nome)).to match_array(Autonomia::Guide::VigiasPadrao.todas.pluck('nome'))
+      expect(plantadas.pluck(:origem, :criado_por_id).uniq).to eq([['padrao', admin.id]])
+    end
+
+    it 'apagada, a vigia padrão não volta na próxima abertura' do
+      get atual, headers: admin.create_new_auth_token, as: :json
+      Autonomia::Guide::Vigia.where(account: account).destroy_all
+
+      get atual, headers: admin.create_new_auth_token, as: :json
+
+      expect(Autonomia::Guide::Vigia.where(account: account)).to be_empty
+    end
+
+    it 'agente comum abrindo o Guia não planta nada' do
+      get atual, headers: agente.create_new_auth_token, as: :json
+
+      expect(Autonomia::Guide::Vigia.where(account: account)).to be_empty
+    end
+  end
 end
