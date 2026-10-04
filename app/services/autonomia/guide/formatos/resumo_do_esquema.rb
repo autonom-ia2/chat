@@ -18,7 +18,7 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
 
   # O campo inteiro: o que ele é, as chaves com valores fechados e o que cada ramo faz.
   def texto(teto)
-    linhas = ["Campo #{@caminho}:", @esquema['description'], *valores_fechados(nil), *ramos_descritos].compact
+    linhas = ["Campo #{@caminho}:", @esquema['description'], *propriedades, *valores_fechados(nil), *ramos_descritos].compact
     passa = linhas.each_index.find { |indice| linhas[0..indice].join("\n").size > teto }
     return linhas.join("\n") unless passa
 
@@ -28,7 +28,7 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
   # Só o ramo pedido ('send_email_to_team'), com a descrição do que o motor faz. Nil se não há.
   def ramo(nome, teto)
     achado = Esquemas.ramo(@esquema, nome)
-    return unless achado
+    return propriedade(nome, teto) unless achado
 
     campo, = Esquemas.do_ramo(achado)
     "Campo #{@caminho}.#{nome} (#{campo} = #{nome}):\n#{JSON.pretty_generate(achado.except('if'))}".first(teto)
@@ -39,6 +39,22 @@ class Autonomia::Guide::Formatos::ResumoDoEsquema
   # O objeto que cada item é (lista de objetos) ou o próprio objeto.
   def alvo
     @esquema['type'] == 'array' && @esquema['items'].is_a?(Hash) ? @esquema['items'] : @esquema
+  end
+
+  # Cada chave do objeto: o tipo, se é obrigatória e o que ela é. Sem isto, objeto sem valor fechado
+  # nem ramo (a leitura de uma vigia) saía como "Campo leitura:" vazio.
+  def propriedades
+    obrigatorias = Array(alvo['required'])
+    (alvo['properties'] || {}).map do |nome, trecho|
+      tipo = Array(trecho['type']).join(' ou ').presence || 'valor'
+      "- #{nome} (#{tipo}#{', obrigatório' if obrigatorias.include?(nome)})#{": #{trecho['description']}" if trecho['description']}"
+    end
+  end
+
+  # Uma chave do objeto pelo nome ("leitura.medida"), quando ela não é um ramo.
+  def propriedade(nome, teto)
+    trecho = alvo.dig('properties', nome)
+    "Campo #{@caminho}.#{nome}:\n#{JSON.pretty_generate(trecho)}".first(teto) if trecho
   end
 
   def valores_fechados(limite)
