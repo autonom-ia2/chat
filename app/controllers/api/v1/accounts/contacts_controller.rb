@@ -145,10 +145,12 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
     includes_hash = { avatar_attachment: [:blob] }
     includes_hash[:contact_inboxes] = { inbox: :channel } if @include_contact_inboxes
 
-    filtrate(contacts)
-      .includes(includes_hash)
-      .page(@current_page)
-      .per(RESULTS_PER_PAGE)
+    # Desempate por id: ordenar por um campo que empata (última atividade) sem desempate deixa a página 2
+    # repetir ou pular contatos da página 1 — na lista e nas tarefas longas do Guia, que leem página a página.
+    filtrate(contacts).order(:id)
+                      .includes(includes_hash)
+                      .page(@current_page)
+                      .per(RESULTS_PER_PAGE)
   end
 
   def fetch_contacts_with_has_more(contacts)
@@ -157,11 +159,11 @@ class Api::V1::Accounts::ContactsController < Api::V1::Accounts::BaseController
 
     # Calculate offset manually to fetch one extra record for has_more check
     offset = (@current_page.to_i - 1) * RESULTS_PER_PAGE
-    results = filtrate(contacts)
-              .includes(includes_hash)
-              .offset(offset)
-              .limit(RESULTS_PER_PAGE + 1)
-              .to_a
+    results = filtrate(contacts).order(:id)
+                                .includes(includes_hash)
+                                .offset(offset)
+                                .limit(RESULTS_PER_PAGE + 1)
+                                .to_a
 
     @has_more = results.size > RESULTS_PER_PAGE
     results = results.first(RESULTS_PER_PAGE) if @has_more
