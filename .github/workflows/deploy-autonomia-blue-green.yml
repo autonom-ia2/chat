@@ -609,6 +609,14 @@ jobs:
 
       - name: Wait for green SSM and local health
         run: |
+          # A green liga antes do build; se ela morreu no lançamento (capacidade, EBS), falha aqui em vez de esperar o SSM.
+          green_state=$(aws ec2 describe-instances --instance-ids "$GREEN_INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].State.Name' --output text)
+          echo "Estado da green: $green_state"
+          case "$green_state" in
+            shutting-down|terminated|stopping|stopped) exit 1 ;;
+          esac
+
           for attempt in $(seq 1 180); do
             ping_status=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=$GREEN_INSTANCE_ID" \
@@ -717,10 +725,13 @@ jobs:
             --target-group-arn "$green_tg_arn" \
             --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
 
+      # Passo próprio para a marca chegar ao GITHUB_ENV mesmo se o próximo for cancelado no meio. A limpeza só religa o
+      # worker do blue com ela; religar um worker que nem chegou a parar não muda nada.
+      - name: Mark blue worker stop
+        run: echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"
+
       - name: Switch Sidekiq workers to green
         run: |
-          # A limpeza só religa o worker do blue se este passo chegou a pará-lo.
-          echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
