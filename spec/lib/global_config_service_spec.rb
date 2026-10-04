@@ -40,4 +40,39 @@ describe GlobalConfigService do
       # end
     end
   end
+
+  describe '.load cache invalidation' do
+    let(:redis) { Redis::Alfred.with { |conn| conn } }
+    let(:prefix) { "#{GlobalConfig::VERSION}:#{GlobalConfig::KEY_PREFIX}" }
+
+    before do
+      GlobalConfig.clear_cache
+      redis.set("#{prefix}:UNRELATED", { value: 'keep' }.to_json)
+      allow(redis).to receive(:keys).and_call_original
+      allow(redis).to receive(:scan).and_call_original
+    end
+
+    it 'clears only the loaded key when creating a default after a cached miss' do
+      expect(GlobalConfig.get_value('CACHE_SERVICE_TARGET')).to be_nil
+
+      expect(described_class.load('CACHE_SERVICE_TARGET', 'default')).to eq('default')
+
+      expect(GlobalConfig.get_value('CACHE_SERVICE_TARGET')).to eq('default')
+      expect(GlobalConfig.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+
+    it 'clears a cached miss even when first_or_create finds an existing record' do
+      create(:installation_config, name: 'CACHE_SERVICE_TARGET', value: 'existing')
+      redis.set("#{prefix}:CACHE_SERVICE_TARGET", { value: nil }.to_json)
+
+      expect(described_class.load('CACHE_SERVICE_TARGET', 'default')).to eq('existing')
+
+      expect(GlobalConfig.get_value('CACHE_SERVICE_TARGET')).to eq('existing')
+      expect(GlobalConfig.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+  end
 end

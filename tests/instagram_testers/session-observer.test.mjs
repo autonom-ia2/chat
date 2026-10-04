@@ -1,7 +1,8 @@
 /* eslint-disable no-restricted-syntax -- Node fixtures register independent boundary cases without browser transpilation. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { chmod, mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -27,6 +28,7 @@ const env = {
   INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
   INSTAGRAM_TESTER_PROXY_PORT: '9100',
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+  INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
 };
 const config = configuration(env);
 
@@ -35,11 +37,13 @@ test('manual browser initialization validates the proxy without inventing Meta b
     INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
     INSTAGRAM_TESTER_PROXY_PORT: '9100',
     INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+    INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
   };
   assert.deepEqual(proxyConfiguration(proxyEnv), {
     host: '127.0.0.1',
     port: '9100',
     authMode: 'ip',
+    identity: '93.184.216.34:8080',
   });
   assert.throws(() => configuration(proxyEnv));
   assert.throws(() =>
@@ -188,12 +192,54 @@ test('proxy cannot be disabled, contain URL credentials, or change implicitly', 
   }
   assert.equal(config.authMode, 'ip');
   assert.equal(config.proxyFingerprint.length, 64);
-  assert.notEqual(
+  assert.equal(
     configuration({ ...env, INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.2' })
       .proxyFingerprint,
     config.proxyFingerprint
   );
 });
+test('canonical upstream preserves the original fingerprint and rejects endpoint changes', () => {
+  const direct = {
+    ...env,
+    INSTAGRAM_TESTER_PROXY_HOST: '93.184.216.34',
+    INSTAGRAM_TESTER_PROXY_PORT: '8080',
+  };
+  const original = createHash('sha256')
+    .update('93.184.216.34:8080:ip')
+    .digest('hex');
+  assert.equal(configuration(env).proxyFingerprint, original);
+  assert.equal(configuration(direct).proxyFingerprint, original);
+  assert.equal(
+    configuration({ ...direct, INSTAGRAM_TESTER_PROXY_IDENTITY: undefined })
+      .proxyFingerprint,
+    original
+  );
+  for (const patch of [
+    { INSTAGRAM_TESTER_PROXY_HOST: '93.184.216.35' },
+    { INSTAGRAM_TESTER_PROXY_PORT: '8081' },
+  ])
+    assert.throws(() => configuration({ ...direct, ...patch }));
+  for (const identity of [
+    undefined,
+    '',
+    'tag',
+    '127.0.0.1:8080',
+    '93.184.216.34:08080',
+    '93.184.216.34:0',
+    '93.184.216.34:65536',
+    '93.184.216.34:8080:extra',
+    '::1:8080',
+    '93.184.216.34:8080\n',
+  ]) {
+    assert.throws(() =>
+      configuration({ ...env, INSTAGRAM_TESTER_PROXY_IDENTITY: identity })
+    );
+  }
+  assert.throws(() =>
+    configuration({ ...env, INSTAGRAM_TESTER_PROXY_HOST: 'ig-proxy.internal' })
+  );
+});
+
 test('requires complete error-free roles; rejects login/challenge/html and partial pagination', () => {
   assert.equal(
     validateRolesResponse(`for (;;);${JSON.stringify(roles)}`),
@@ -317,18 +363,21 @@ test('profile must be private, outside Git and cannot follow symlinks', async ()
     await symlink(join(root, 'private'), join(root, 'link'));
     await assert.rejects(privateProfile(join(root, 'link')));
     await mkdir(join(root, 'public'), { mode: 0o755 });
+    // mkdir's mode is filtered by the caller's umask; make this fixture public.
+    await chmod(join(root, 'public'), 0o755);
     await assert.rejects(privateProfile(join(root, 'public')));
     await assert.rejects(privateProfile('relative'));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 });
-test('publisher uses stdin without shell, accepts only opaque version and suppresses errors', async () => {
+test('publisher uses typed stdin without shell and suppresses errors', async () => {
   const version = '12345678-1234-1234-1234-123456789abc';
-  const script = `let input='';process.stdin.on('data',v=>input+=v);process.stdin.on('end',()=>{const r=JSON.parse(input);process.stdout.write(JSON.stringify({version:r.synthetic==='$(must-not-execute)'?'${version}':null}));});`;
+  const script = `let input='';process.stdin.on('data',v=>input+=v);process.stdin.on('end',()=>{const r=JSON.parse(input);process.stdout.write(JSON.stringify({type:'session',version:r.type==='session'&&r.operation==='version'?'${version}':null}));});`;
   assert.equal(
     await publisher([process.execPath, '-e', script], {
-      synthetic: '$(must-not-execute)',
+      type: 'session',
+      operation: 'version',
     }),
     version
   );
@@ -339,7 +388,7 @@ test('publisher uses stdin without shell, accepts only opaque version and suppre
         '-e',
         "console.error('synthetic-secret');process.exit(2)",
       ],
-      {}
+      { type: 'session', operation: 'version' }
     ),
     { message: 'publication_failed' }
   );
@@ -350,9 +399,12 @@ test('publisher uses stdin without shell, accepts only opaque version and suppre
         '-e',
         'console.log(\'{"version":null,"secret":"synthetic"}\')',
       ],
-      {}
+      { type: 'session', operation: 'version' }
     ),
     { message: 'publication_failed' }
   );
-  await assert.rejects(publisher(null, {}), { message: 'publisher_required' });
+  await assert.rejects(
+    publisher(null, { type: 'session', operation: 'version' }),
+    { message: 'publisher_required' }
+  );
 });

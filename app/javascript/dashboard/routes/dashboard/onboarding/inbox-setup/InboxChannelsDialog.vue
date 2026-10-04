@@ -5,6 +5,8 @@ import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import ChannelIcon from 'dashboard/components-next/icon/ChannelIcon.vue';
 import { CHANNEL_TYPES } from 'dashboard/helper/inbox';
+import { useAccount } from 'dashboard/composables/useAccount';
+import TesterOnboarding from '../../settings/inbox/channels/instagram/TesterOnboarding.vue';
 import { useChannelConnect } from './useChannelConnect';
 import { useChannelConfig } from './useChannelConfig';
 import { CHANNEL_LIST } from './constants';
@@ -19,7 +21,7 @@ const props = defineProps({
 const emit = defineEmits(['connected']);
 
 const { t } = useI18n();
-const { connectViaOAuth, connectWhatsapp } = useChannelConnect();
+const { accountId, isMetaInboxCreationDisabled } = useAccount();
 const { isConfigured, isEnabled } = useChannelConfig();
 
 // Maps the dialog's display types to the OAuth client key the flow expects.
@@ -75,6 +77,15 @@ const dialogRef = ref(null);
 // inline view; OAuth channels redirect; the rest are no-ops for now.
 const selectedChannel = ref(null);
 
+const { connectViaOAuth, connectWhatsapp, assistedOnboarding } =
+  useChannelConnect({
+    onInstagramConnect: () => {
+      selectedChannel.value = channelCards.value.find(
+        channel => channel.type === CHANNEL_TYPES.INSTAGRAM
+      );
+    },
+  });
+
 // An inbox was created by an in-dialog form (Line/Telegram credentials or the
 // Facebook page picker); close the dialog (its @close resets the form view) and
 // let the parent refetch so the connected state and real channel icons update.
@@ -127,7 +138,11 @@ const open = preselectType => {
   // Only jump straight into a channel's view when it's actually usable;
   // otherwise show the grid (with its muted card) rather than launching SDK
   // auth with a missing credential.
-  selectedChannel.value = entry?.availability === 'available' ? entry : null;
+  selectedChannel.value =
+    entry?.availability === 'available' &&
+    (entry.type !== CHANNEL_TYPES.INSTAGRAM || assistedOnboarding.value)
+      ? entry
+      : null;
   dialogRef.value?.open();
 };
 const close = () => dialogRef.value?.close();
@@ -149,6 +164,13 @@ defineExpose({ open, close });
       v-if="selectedChannel?.type === CHANNEL_TYPES.FACEBOOK"
       @back="selectedChannel = null"
       @created="onCreated"
+    />
+    <TesterOnboarding
+      v-else-if="selectedChannel?.type === CHANNEL_TYPES.INSTAGRAM"
+      :key="accountId"
+      :account-id="accountId"
+      :disabled="isMetaInboxCreationDisabled"
+      return-to="onboarding"
     />
     <InboxChannelForm
       v-else-if="selectedChannel"

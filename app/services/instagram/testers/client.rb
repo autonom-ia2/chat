@@ -28,14 +28,15 @@ class Instagram::Testers::Client
     end
   end
 
-  def invite(target_id)
+  # The optional block marks the transport boundary after all local preflight.
+  def invite(target_id, &)
     document = request("/apps/#{@configuration.app_id}/async/instagram/roles/add/", {
                          'role' => Instagram::Testers::ResponseParser::ROLE,
                          'user_id_or_vanitys[0]' => target_id,
                          'reload_on_success' => 'false'
-                       }, error_code: 'invite_unknown', write: true)
+                       }, error_code: 'invite_unknown', write: true, &)
     success = document['payload']['success'] if document['payload'].is_a?(Hash)
-    raise Instagram::Testers::Error, 'invite_rejected' if success == false
+    raise Instagram::Testers::Error.new('invite_rejected', write_rejected: true) if success == false
     raise Instagram::Testers::Error, 'invite_unknown' unless success == true
 
     true
@@ -46,7 +47,9 @@ class Instagram::Testers::Client
   def request(path, form, error_code:, write: false, roles_query: false)
     snapshot = @configuration.session_snapshot
     session = session_for(snapshot)
-    response = HTTParty.post("#{HOST}#{path}", **request_options(session, form, roles_query))
+    options = request_options(session, form, roles_query)
+    yield if block_given?
+    response = HTTParty.post("#{HOST}#{path}", **options)
     invalidate_session_if_rejected(snapshot, response.code)
     validate_http_status!(response.code, write: write)
     Instagram::Testers::ResponseParser.parse(response.body, error_code: error_code)

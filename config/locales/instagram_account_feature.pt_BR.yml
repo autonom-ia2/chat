@@ -1,0 +1,10 @@
+pt_BR:
+  helpers:
+    label:
+      account:
+        feature_instagram_assisted_onboarding: Conexão assistida do Instagram
+  instagram_account_feature:
+    label: Conexão assistida do Instagram
+    help: "Ligado: selecione e confirme o perfil antes de conectar. Desligado: conecte diretamente com o Instagram. Isso não libera o acesso ao canal Instagram."
+    enabled: Ligado
+    disabled: Desligado

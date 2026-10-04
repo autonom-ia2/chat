@@ -59,6 +59,7 @@
         "HELP": "To add your Instagram profile as a channel, you need to authenticate your Instagram Profile by clicking on 'Continue with Instagram' ",
         "ERROR_MESSAGE": "There was an error connecting to Instagram, please try again",
         "ERROR_AUTH": "There was an error connecting to Instagram, please try again",
+        "ERROR_INBOX_LIMIT": "Your plan’s inbox limit has been reached. Contact your account administrator to free up an inbox or adjust the plan before connecting Instagram.",
         "NEW_INBOX_SUGGESTION": "This Instagram account was previously linked to a different inbox and has now been migrated here. All new messages will appear here. The old inbox will no longer be able to send or receive messages for this account.",
         "DUPLICATE_INBOX_BANNER": "This Instagram account was migrated to the new Instagram channel inbox. You won’t be able to send/receive Instagram messages from this inbox anymore.",
         "RESTRICTED_WARNING": "Instagram inbox creation is temporarily unavailable due to an API-level issue on Meta’s side, not a problem with Chatwoot. We’re working closely with Meta to resolve it as quickly as possible.",
@@ -107,8 +108,8 @@
           "STATUS_ERROR": "Couldn’t check the invitation. Try again.",
           "INVITE_ERROR": "Couldn’t send the invitation. Check its status before trying again.",
           "INVITE_UNKNOWN": "Couldn’t confirm whether the invitation was sent. Check its status before sending again.",
-          "UNAVAILABLE": "Instagram setup is currently unavailable. Try again later.",
-          "MANUAL_HELP": "Contact support to prepare the tester invitation. Then return to this screen and try again.",
+          "UNAVAILABLE": "The Instagram integration is currently unavailable. Contact support to restore it.",
+          "MANUAL_HELP": "Once support confirms the integration has been restored, return to this screen and try again.",
           "RATE_LIMITED": "Wait before trying again.",
           "BUSY": "A request is already in progress. Wait and check the invitation again.",
           "OAUTH_ERROR": "Couldn’t authorize the connection on Instagram. Select your profile or check the invitation to try again."

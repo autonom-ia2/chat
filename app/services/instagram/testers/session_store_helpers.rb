@@ -68,7 +68,7 @@ module Instagram::Testers::SessionStoreHelpers
       connection.watch(pointer_key) do
         current = read_pointer(connection)
         matches = current&.fetch('version') == expected_version || (current.nil? && expected_version.nil?)
-        matches &&= reactivation_allowed?(current, allow_reactivation_at)
+        matches &&= reactivation_allowed?(current, allow_reactivation_at) if pointer.fetch('state') == 'active'
         next connection.unwatch unless matches
 
         result = connection.multi do |transaction|

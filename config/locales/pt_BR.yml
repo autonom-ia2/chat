@@ -700,6 +700,128 @@ pt_BR:
     ssl_status:
       custom_domain_not_configured: 'Domínio personalizado não está configurado'
   super_admin:
+    instagram_automation:
+      title: 'Instagram — automação'
+      card_description: 'Configure o aplicativo Meta e verifique a saúde da automação de testers do Instagram.'
+      open: 'Gerenciar automação'
+      back: 'Voltar para Configurações'
+      description: 'Gerencie o aplicativo Meta Developer usado nos convites de testers e acompanhe sua sessão gerenciada.'
+      configuration_title: 'Identificadores do aplicativo'
+      save_before_manager: 'Salve estes identificadores antes de iniciar o gestor, mesmo quando os campos já estiverem preenchidos.'
+      time_format: '%d/%m/%Y às %H:%M'
+      errors_title: 'Revise a configuração'
+      save: 'Salvar'
+      saved: 'Configuração da automação do Instagram salva.'
+      invalid_request: 'Não foi possível verificar esta solicitação. Atualize a página e tente novamente.'
+      reconnect_queued: 'Reconexão solicitada. Acompanhe o andamento abaixo.'
+      oauth_link_description: 'Gerencie os convites de testers, o gestor dedicado e sua sessão no painel de automação. As configurações OAuth continuam abaixo.'
+      health_checked: 'Status local atualizado. A conexão remota continua sem verificação.'
+      invalid_configuration: 'Revise os identificadores do aplicativo. Não foi possível salvar a configuração.'
+      operator_channel_unavailable: 'O canal de controle do operador está indisponível. A sessão não foi alterada.'
+      health_title: 'Saúde da automação'
+      health_description: 'Esta leitura consulta a configuração local e as evidências armazenadas. Ela não testa a conexão com a Meta.'
+      global_disabled: 'A automação está desabilitada nesta instalação.'
+      check_health: 'Verificar saúde'
+      checked_at: 'Leitura local em:'
+      heartbeat_at: 'Último heartbeat do gestor:'
+      updated_at: 'Última atualização:'
+      age: 'há %{age}'
+      elapsed:
+        seconds:
+          one: '%{count} segundo'
+          other: '%{count} segundos'
+        minutes:
+          one: '%{count} minuto'
+          other: '%{count} minutos'
+        hours:
+          one: '%{count} hora'
+          other: '%{count} horas'
+      refresh: 'Atualizar status'
+      request_title: 'Solicitação de reconexão'
+      requests:
+        queued:
+          label: 'Na fila'
+          text: 'A solicitação aguarda o gestor dedicado. A sessão ainda não foi reconectada.'
+        running:
+          label: 'Em andamento'
+          text: 'O gestor está processando esta solicitação. Aguarde o resultado antes de tentar novamente.'
+        operator_required:
+          label: 'Operador necessário'
+          text: 'Um operador autorizado precisa concluir a recuperação da sessão no gestor dedicado.'
+        succeeded:
+          label: 'Concluída'
+          text: 'O gestor publicou a sessão renovada para esta solicitação. Isso não confirma a disponibilidade atual da Meta.'
+        failed:
+          label: 'Falhou'
+          text: 'Esta solicitação não foi concluída. Confira o gestor e seu status atual antes de tentar novamente.'
+      unknown_time: 'Horário desconhecido'
+      reconnect_title: 'Sessão gerenciada'
+      reconnect: 'Reconectar sessão'
+      reconnect_ready: 'A sessão precisa da atenção do operador e o gestor está disponível para iniciar a reconexão.'
+      reconnect_unavailable: 'A reconexão só fica disponível quando a sessão precisa da atenção do operador e o gestor permite o controle.'
+      fields:
+        meta_developer_app_id:
+          label: 'Meta Developer App ID'
+          hint: 'ID do aplicativo pai no Meta for Developers. É diferente do Instagram App ID usado no OAuth.'
+        business_id:
+          label: 'Business ID'
+          hint: 'ID do negócio Meta associado ao aplicativo.'
+        app_name:
+          label: 'Nome do aplicativo'
+          hint: 'Nome exibido ao tester convidado. Até 120 caracteres, sem espaços nas pontas ou caracteres de controle.'
+        admin_user_id:
+          label: 'Facebook Admin User ID'
+          hint: 'ID do usuário Facebook do administrador autorizado da sessão gerenciada.'
+        roles_doc_id:
+          label: 'RolesTable doc_id'
+          hint: 'Identificador da consulta RolesTable_Query observada na interface Meta autorizada.'
+      components:
+        configuration: 'Configuração'
+        session: 'Sessão'
+        manager: 'Gestor'
+        proxy: 'Proxy'
+        coordination: 'Coordenação'
+        meta: 'Meta'
+      states:
+        heartbeat_present:
+          label: 'Heartbeat recebido'
+          text: 'O gestor informou seu status no horário abaixo. Isso não é uma verificação da conexão com a Meta.'
+        unknown:
+          label: 'Desconhecido'
+          text: 'Nenhuma verificação conclusiva disponível.'
+        healthy:
+          label: 'Saudável'
+          text: 'A última verificação confirmou disponibilidade.'
+        configured:
+          label: 'Configurado'
+          text: 'A configuração local necessária está presente. A conexão remota não foi confirmada.'
+        session_present:
+          label: 'Sessão armazenada'
+          text: 'Há uma sessão gerenciada armazenada localmente. O aceite pela Meta não foi confirmado.'
+        session_missing:
+          label: 'Sem sessão'
+          text: 'Nenhuma sessão gerenciada atual está armazenada localmente.'
+        unmanaged:
+          label: 'Sessão não gerenciada'
+          text: 'Esta instalação não está usando uma sessão gerenciada.'
+        not_configured:
+          label: 'Não configurado'
+          text: 'Falta preencher a configuração necessária.'
+        unavailable:
+          label: 'Indisponível'
+          text: 'A última verificação não confirmou disponibilidade.'
+        degraded:
+          label: 'Requer atenção'
+          text: 'A última verificação identificou um problema operacional.'
+        expired:
+          label: 'Expirada'
+          text: 'A sessão expirou e precisa ser renovada.'
+        operator_required:
+          label: 'Operador necessário'
+          text: 'Um operador autorizado precisa reconectar a sessão.'
+        disabled:
+          label: 'Desabilitada'
+          text: 'A automação está desabilitada nesta instalação.'
     account_suspension:
       categories:
         spam: 'Spam'

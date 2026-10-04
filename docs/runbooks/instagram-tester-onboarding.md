@@ -1,8 +1,63 @@
-# Runbook: onboarding Instagram Tester (#910 / PR #913)
+# Runbook: onboarding Instagram Tester (#910 / PR #913; recuperação #931)
+
+> **Atualização — 04/10/2026, 20:53 UTC:** transporte PASS encerrado nas duas stacks
+> pelo confronto AWS/recibos das 20:48 UTC (TLS/auth/epoch, proxy e egress).
+> Aplicação nova, runtime ativo e homologação Meta não estão comprovados.
+> O [runbook de release #960](instagram-release-960.md) rege o corte e os gates
+> atuais; as pendências históricas de transporte abaixo foram superadas por esse
+> recibo. ENV assistido está `true` nas duas stacks; ENV de coordenação legado
+> presente no Hub2You e ausente na Autonom.ia não representa o auxiliar novo.
+> Merge/deploy continuam sujeitos à aprovação explícita do Rodrigo.
 
 Este runbook prepara a operação. Merge, deploy, configuração de produção, segredos,
 auth e infraestrutura exigem aprovação explícita do Rodrigo. Não executar a chamada
 Meta anteriormente bloqueada por outra ferramenta, host, proxy ou agente.
+
+## Estado da recuperação #931 — 03/10/2026
+
+PR #913 MERGED e publicação nas duas stacks são fatos **históricos**, conforme a
+consolidação da auditoria. Não comprovam readiness do #931 nem onboarding autenticado.
+O resultado local está consolidado abaixo; publicação/CI/aprovação devem ser consultados
+na PR do commit correspondente. Operação autenticada continua pendente.
+Configuração/allowlist/sessão/alarme atuais não foram inspecionados. As tabelas abaixo são requisitos de verificação futura.
+
+Ver [matriz e contratos #931](../audit/instagram-931-recovery.md) para arquivos,
+resultados completos disponíveis, bloqueios e pendências do coordenador. Relatos de
+agentes não substituem logs integrais; código corrigido, teste local e operação real
+são evidências diferentes. Esta atualização não executa CLI de produção.
+
+## Resultado local consolidado #931 — 03/10/2026, 23:01 BRT
+
+Baterias encerradas, separadas e sem soma de cobertura: backend **443/0** sem
+`FRONTEND_URL` global; fixture OAuth focal **30/0**; frontend **129/0**; runtime
+**72/0**; helpers QA **23/0**, incluindo toast; DEPLOY offline **19/0**;
+preparer **25/OK**; regressão Guia **40/0**. Autoload/build aprovados;
+i18n **17.222 mensagens/10 catálogos** (não testes); Ruby **25 arquivos/zero infrações**;
+JS **zero erros/22 warnings conhecidos**.
+
+Renders finais de 04/10/2026 UTC (03/10 BRT): componente **37/37, 73 capturas**,
+fim **01:55:02,520Z**; wizard **72/72, 76 capturas**, fim **01:57:21,093Z**.
+Ambos têm **6.658 hashes iguais antes/depois e ao disco**. Review de arte final
+aprova seu escopo e fecha copy/toast após inspecionar 12 capturas atuais.
+São componentes reais com API simulada; não comprovam Rails/Meta fim a fim.
+
+Os **12 achados estão fechados no código/evidência local**, incluindo P1 BOOT e
+userinfo Sentry, sem novo bloqueio nesses reviews. Os 14 especialistas, logs locais
+de scratch, manifestos, limites e etapas históricas datadas estão na
+[auditoria central](../audit/instagram-931-recovery.md); não repetir nem somar rodadas anteriores.
+
+**Publicação, head, CI, Project, revisão final dos docs e aprovação devem ser
+consultados na PR do commit correspondente.** Evidência local não autoriza produção.
+Configuração/allowlist/sessão/supervisor/alarmes atuais não foram inspecionados;
+operação autenticada por stack continua pendente.
+
+**Gate operacional humano ainda não executado:** pausar publishers, drenar código
+antigo e rotacionar tombstones legados pelo contrato verificado do store novo ou
+aguardar expiração efetiva antes de retomar; descartar capturas em trânsito e
+recapturar com nova revisão. Reiniciar states/seleções OAuth antigos e coordenar
+cutover de emissores/callbacks. Preservar canais, tokens persistidos, conversas e papéis.
+Preparar responsáveis, janela, revisão alvo, evidências e rollback por stack com
+aprovação operacional. Não pedir script Redis novo sem contrato verificado.
 
 ## Gate antes de publicar
 
@@ -64,11 +119,21 @@ sintético; produção não volta a essa ENV quando o store está indisponível.
 Nenhuma dessas informações privadas é enviada ao frontend. `available` é uma
 checagem local de configuração/sessão, não comprovação de autenticação Meta.
 OAuth/reautorização existentes usam suas configurações originais e não passam pelo
-proxy administrativo. Os tokens novos de seleção/tester OAuth são vinculados ao
-namespace de instalação, que deve ser diferente nas duas stacks; um token da outra
-stack é rejeitado antes de consumir o nonce. Tokens antigos de tester sem o claim
-precisam reiniciar a busca; o formato do JWT legado permanece preservado.
-Refresh do token OAuth **não renova cookies administrativos**.
+proxy administrativo. Na implementação local #931, seleção e **todos** os states
+OAuth recém-emitidos (assistido, sem seleção e reautorização) são vinculados à
+identidade do callback configurado em `FRONTEND_URL`, normalizada e representada por
+digest. Não usar Host do request ou fallback para identidade. Esse vínculo é distinto
+do namespace Redis `INSTAGRAM_TESTER_SESSION_NAMESPACE`, exclusivo por instalação.
+Não publicar URLs/configurações privadas, IDs de Apps, tokens ou valores de secrets.
+
+States novos usam versão 2, ator, conta, validade de até 15 minutos e nonce de uso
+único. O callback revalida associação/permissão antes da troca e antes da gravação,
+inclusive papéis Enterprise. Sem seleção, preserva a API/reautorização sem exigir
+flag/configuração testers; **o formato antigo do state não é preservado**. States
+anteriores em trânsito e seleções anteriores exigem reinício de OAuth e, no assistido,
+busca/seleção novas. Mudança de base de callback também exige reinício. Conferir
+App pai de papéis e OAuthApp por stack sem presumir que sejam a mesma identidade ou
+que segredo seja compartilhado. Refresh OAuth **não renova cookies administrativos**.
 
 ## Gestor separado e navegador dedicado
 
@@ -129,8 +194,13 @@ e operações são bloqueados. Confere administrador, App, Business, `doc_id`, L
 antes de publicar a sessão por stdin. Não grava captures, screenshots, HARs ou bodies.
 
 O backend cifra cada payload antes de trocar o ponteiro ativo com WATCH/MULTI.
-A publicação exige a versão anterior esperada e captura atual; dois publicadores
-concorrentes não sobrescrevem a mesma geração. Cada request usa um único snapshot
+A publicação exige a revisão anterior esperada e captura atual; dois publicadores
+concorrentes não sobrescrevem a mesma geração. `version` é opaca `string | null`.
+Na implementação #931, invalidar avança a revisão no CAS; publicação preparada com
+a revisão anterior perde mesmo com horário adiantado. Recuperar exige ler a revisão
+nova e recapturar, sem reciclar a captura recusada. Invalidar uma revisão antiga retorna
+`false` sem alterar uma substituta; `null` não sobrescreve um pointer existente.
+Cada request usa um único snapshot
 para cookie, headers e formulário. Validade máxima de seis horas, imposta pelo servidor.
 Falha de candidato/publicação mantém a sessão anterior ainda válida. HTTP 401/403
 invalida somente a geração rejeitada por decisão conservadora: 403 também pode ser
@@ -183,21 +253,90 @@ busca/convite/aceite, OAuth do mesmo perfil, callback #898, webhook e DM de ida/
 Não reconvidar ou revogar cliente confirmado para obter evidência. Não registrar
 cookies, senhas, headers completos, bodies, tokens, HARs ou dados de clientes.
 
+## Compatibilidade de sessão/OAuth no rollout #931
+
+Esta é preparação **futura sujeita a aprovação**, sem execução nesta rodada.
+Schema, namespace, cifra e TTL de sessão permanecem; sessões ativas existentes são
+legíveis. Horário de captura crescente, frescor e validade máxima continuam exigidos.
+Publicar código novo sozinho não cerca pointers já invalidados pelo código antigo.
+
+Antes de retomar automação, suspender publishers e drenar invalidadores antigos;
+instalar versões consistentes. Em cada namespace configurado, tombstone legado
+precisa avançar revisão pelo store novo, com confirmação de sucesso e sessão ainda
+indisponível, ou expirar efetivamente com publishers suspensos. Inspecionar apenas
+pointer, sem payload. Não invalidar sessões ativas automaticamente, apagar corrupção
+ou restaurar sessão antiga. Descartar capturas em trânsito e recapturar com revisão nova.
+O TTL existente limita a duração dessa proteção; não prometer revogação permanente.
+
+Não operar emissores/callbacks OAuth antigos e novos como se fossem compatíveis.
+Planejar cutover e avisar sobre reinício dos states/seleções em trânsito. Caixas,
+tokens persistidos, conversas e papéis existentes não são migrados por essa alteração.
+Detalhes e regressões estão na [auditoria #931](../audit/instagram-931-recovery.md).
+
 ## Deploy e rollback
 
 Antes de merge: revisar commit final e CI, screenshots, matriz acima, allowlist e
 rollback das duas stacks; obter aprovação explícita. Manter flag OFF no preparo.
 A flag não impede o deploy automático da `main`.
 
-Na ativação inicial somente Hub2You/conta 18, manter Autonom.ia OFF e usar coordenação
-local apenas enquanto há uma única stack ativa. Para ativar ambas com App
-compartilhado, verificar um Redis comum e o isolamento OAuth legado antes. Cada
-novo host green recebe IP de origem novo: autorizá-lo no Webshare antes de habilitar
-o onboarding; a autorização do host blue não comprova acesso do green.
+**Nota histórica do preparo #910/#913:** a ativação inicial proposta era somente
+Hub2You/conta 18, Autonom.ia OFF e coordenação local enquanto única stack ativa.
+Isso não descreve configuração atual. A consolidação registra escopo posteriormente
+ampliado para ambas stacks/contas autorizadas; homologação piloto não conclui esse escopo.
+
+No rollout futuro, verificar coordenação Redis comum quando o App for compartilhado,
+isolamento OAuth e allowlist aprovada de cada stack. Conferir o IP de origem real do
+novo host green e sua autorização no proxy antes de habilitar; autorização histórica
+do blue não comprova acesso do green. Não alterar configuração nessa rodada documental.
 
 Para interromper ativação, desligar flag/allowlist no runtime aprovado e parar o
 gestor. Preservar caixas, tokens, conversas e papéis existentes. Não limpar marcadores
 de convites incertos: respeitar reconciliação e proteção de 24 horas. Em regressão de
 código, rollback blue-green aprovado por stack, verificando SHA, saúde e DM novamente.
-Não restaurar sessão invalidada como rollback. CI verde ou deploy iniciado não provam
-funcionamento real do Instagram.
+No rollback #931, suspender publishers/automação antes: voltar ao código antigo
+reintroduz a revogação sem avanço de revisão e o contrato OAuth antigo. Descartar
+states/seleções/capturas em trânsito e exigir reinício após estabilizar emissores e
+callbacks. Conferir listener, target, workers e `CURRENT_*` juntos; o publisher não
+pode seguir green abandonado quando tráfego voltou a blue. Não restaurar sessão
+invalidada, trocar chaves de cifra/namespace ou apagar proteção de convite incerto.
+Erro comprovadamente pré-transporte libera somente claim próprio; erro após início
+preserva proteção, salvo rejeição explícita validada/reconciliação prevista.
+CI verde ou deploy iniciado não provam funcionamento real do Instagram.
+
+## HISTÓRICO — Adendo #960, 04/10/2026, 14:42 UTC
+
+**Estado parcial e pendências de transporte superados pelos recibos/confronto AWS
+das 20:48 UTC**, conforme [release #960](instagram-release-960.md). Mantido como
+histórico; não é o estado operacional atual nem prova de ativação Meta.
+
+Naquele momento, a instalação real n8n às 14:42 UTC foi **parcial**.
+Redis novo ativo em `127.0.0.1:6381`, volume/bridge próprios, filesystem readonly,
+zero restarts, 256 MiB/0,25 CPU; 27 serviços com especificações preservadas, n8n 1/10/6.
+Parou em `epoch_write_ACL_failed:0`; `igcoord` e parâmetros SSM não foram criados.
+Código atual da aplicação não publicado. Nenhum Redis existente modificado.
+O matcher foi corrigido na fonte após reprodução **local sintética**; falta confirmação no host.
+Diagnóstico autenticado foi bloqueado pela ferramenta e não contornado.
+
+`INSTAGRAM_TESTER_COORDINATION_EPOCH` deve coincidir com `integrity:epoch` persistido.
+`INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE=/run/igcoord/ca.crt` aplica CA somente
+à conexão Redis com verificação TLS; não definir `SSL_CERT_FILE` global para essa CA.
+`INSTAGRAM_TESTER_PROXY_IDENTITY` é o IPv4:porta canônico do upstream Direct real,
+nunca tag, alias ou porta do túnel; backend e gestor mantêm o mesmo fingerprint.
+Túnel EC2: gateway Docker `16381` → n8n `127.0.0.1:6381` e `16380` → upstream Webshare;
+containers usam `ig-coord.internal:16381` e `ig-proxy.internal:16380`. M4 ainda pendente.
+Forwarding TCP não filtra HTTP/CONNECT; host/gateway Docker continuam fronteiras de confiança.
+
+Quatro parâmetros por conta/região AWS da stack, com credenciais próprias de cada stack:
+
+- `/chatwoot/prod/instagram-coordination/ssh-key` — SecureString, chave SSH dedicada;
+- `/chatwoot/prod/instagram-coordination/redis-env` — SecureString, URL autenticada/epoch/CA;
+- `/chatwoot/prod/instagram-coordination/ca` — String, CA pública;
+- `/chatwoot/prod/instagram-coordination/known-hosts` — String, host key fixada por canal confiável.
+
+Preflight/boot da green falha antes de parar a blue se coordenação/proxy não passam.
+Rollback restaura serviços gerais com assistido **OFF somente** no overlay, sem exigir
+Redis/proxy ou runtime novo na blue antiga; preservar ENV base, sessões e outcomes.
+Webshare HTTP 200/IP esperado partiu do n8n, sem Meta; não prova túneis AWS/M4.
+Faltam ACL real, continuação manual sem reset da parcial, host key, SSM, túneis e prova
+das duas stacks/AOF. TTL de proteção permanece 24 horas. CI histórico `906f…` não aprova novos diffs.
+Resultados finais e limites: [auditoria da instalação](../audit/960-coordination-installation-20261004.md).

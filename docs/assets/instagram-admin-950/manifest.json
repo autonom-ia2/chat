@@ -1,0 +1,42 @@
+[
+  {
+    "file": "desktop-identificadores.png",
+    "sha256": "cd67f9dffb9b6eccabd6f4d27fd5e54e81a93f131ba69a86338465682f395e79",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "mobile-identificadores.png",
+    "sha256": "f607d58328a85f0458e6f1277b00f91ae6e2357d8b51fbd8fc6adbd7f9cfefaa",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "desktop-escuro.png",
+    "sha256": "13529268dc24f20b316dbefa81ea2a51c09f9c32d7f74e9d7d33b92b7076a62a",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "reconexao-na-fila.png",
+    "sha256": "24a6c39dabca7b62e6c0981350a307c58b01567f7b705ec141caca5474ce0a23",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "reconexao-concluida.png",
+    "sha256": "5bfc74de702fa1f49d2b7aaf6c315ee6282af63a4c3d24b5ef0734e879cb1d74",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "conta-feature.png",
+    "sha256": "9a7f4a9c189c16a59dd2ec0863805573985647eee1b849cc867c7945b4cbca4c",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "mobile-reconexao.png",
+    "sha256": "536a2d320d7fd00ffbc62663533e1c42b045fe11ab6dcccf07124b0ccab84499",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  },
+  {
+    "file": "mobile-reconexao-escuro.png",
+    "sha256": "776b61a875c93595bc5f3b30cd1c8a513f6461f94015a3f83b0e7e0797cc9daa",
+    "source": "real Rails/ERB, synthetic local fixtures; no production Meta"
+  }
+]

@@ -4,7 +4,7 @@ class Instagram::Testers::Selection
 
   def initialize(account_id:, actor_id:, app_id:)
     @scope = { 'account_id' => account_id.to_s, 'actor_id' => actor_id.to_s, 'app_id' => app_id,
-               'installation' => ENV.fetch('INSTAGRAM_TESTER_SESSION_NAMESPACE', '') }
+               'installation' => Instagram::Testers::OauthBinding.installation }
   end
 
   def issue(candidate)
@@ -19,7 +19,7 @@ class Instagram::Testers::Selection
             Instagram::Testers::Validation.target?(data)
     raise Instagram::Testers::Error, 'invalid_selection' unless valid
 
-    data.slice('id', 'username', 'app_id')
+    data
   end
 
   private

@@ -36,4 +36,72 @@ describe GlobalConfig do
       end
     end
   end
+
+  describe '.clear_cache' do
+    let(:redis) { Redis::Alfred.with { |conn| conn } }
+    let(:prefix) { "#{described_class::VERSION}:#{described_class::KEY_PREFIX}" }
+
+    before do
+      described_class.clear_cache
+      redis.set("#{prefix}:UNRELATED", { value: 'keep' }.to_json)
+      allow(redis).to receive(:keys).and_call_original
+      allow(redis).to receive(:scan).and_call_original
+    end
+
+    it 'invalidates only the requested name without enumerating Redis keys' do
+      redis.set("#{prefix}:TARGET", { value: 'old' }.to_json)
+
+      described_class.clear_cache('TARGET')
+
+      expect(redis.get("#{prefix}:TARGET")).to be_nil
+      expect(described_class.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+
+    it 'invalidates multiple names, ignoring duplicate and nil names' do
+      redis.set("#{prefix}:OLD_NAME", { value: 'old' }.to_json)
+      redis.set("#{prefix}:NEW_NAME", { value: nil }.to_json)
+
+      described_class.clear_cache('OLD_NAME', 'NEW_NAME', 'OLD_NAME', nil)
+
+      expect(redis.get("#{prefix}:OLD_NAME")).to be_nil
+      expect(redis.get("#{prefix}:NEW_NAME")).to be_nil
+      expect(described_class.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+
+    it 'does not turn an explicit nil name into a global clear' do
+      described_class.clear_cache(nil)
+
+      expect(described_class.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+
+    it 'treats a name containing a wildcard as a literal key' do
+      redis.set("#{prefix}:*", { value: 'literal' }.to_json)
+
+      described_class.clear_cache('*')
+
+      expect(redis.get("#{prefix}:*")).to be_nil
+      expect(described_class.get_value('UNRELATED')).to eq('keep')
+      expect(redis).not_to have_received(:keys)
+      expect(redis).not_to have_received(:scan)
+    end
+
+    it 'preserves the global clear without arguments and its namespace boundary' do
+      redis.set("#{prefix}:TARGET", { value: 'old' }.to_json)
+      redis.set('OTHER_CACHE:TARGET', 'keep')
+
+      described_class.clear_cache
+
+      expect(redis.get("#{prefix}:TARGET")).to be_nil
+      expect(redis.get("#{prefix}:UNRELATED")).to be_nil
+      expect(redis.get('OTHER_CACHE:TARGET')).to eq('keep')
+      expect(redis).to have_received(:keys).with("#{prefix}:*")
+      redis.del('OTHER_CACHE:TARGET')
+    end
+  end
 end
