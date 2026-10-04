@@ -74,8 +74,9 @@ Com o ruleset ativo:
 4. **A fila substitui o lote manual.** Ela junta até 2 PRs por rodada, testa o código combinado uma vez e faz
    um único push na `main`, que gera um único deploy. Não é mais preciso combinar janela por mensagem nem
    montar `release/*-loteN` para juntar PRs. A validação depois do deploy (regra 4, "ok, SHA") continua.
-5. **O "Testes do fork" não roda mais no push da `main`.** A fila já testou exatamente aquele commit, e a
-   rodada extra disputava runner com o deploy de produção (medido em 04/10: deploy ~1 min na fila).
+5. **O "Testes do fork" deixa de rodar no push da `main`** num PR próprio, logo depois da ativação: a fila já
+   testa exatamente aquele commit, e a rodada extra disputava runner com o deploy de produção (medido em
+   04/10: deploy ~1 min na fila). Até lá ele continua rodando, para nenhum merge ficar sem teste.
 6. **PRs abertos antes da mudança** precisam de `gh pr update-branch <N>` (ou um push novo) para rodar os
    workflows novos e ganhar o check `RSpec`.
 
