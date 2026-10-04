@@ -66,6 +66,13 @@ vi.mock('dashboard/api/autonomiaGuide', () => ({
     conversa: vi.fn(),
     conversas: vi.fn(() => Promise.resolve({ data: { conversas: [] } })),
     apagarConversa: vi.fn(),
+    // #933 — o que o Guia lembra.
+    memorias: vi.fn(() =>
+      Promise.resolve({
+        data: { pessoais: [], corretora: [], pode_editar_corretora: true },
+      })
+    ),
+    apagarMemoria: vi.fn(() => Promise.resolve({})),
   },
 }));
 
@@ -705,6 +712,49 @@ describe('AutonomiaGuideContainer', () => {
       name: 'settings_inbox_new',
       params: {},
     });
+  });
+
+  // #933 — o que o Guia anotou no turno aparece sob a resposta, e Esquecer apaga.
+  it('shows what the guide noted under the answer, and forgetting removes it', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'Anotei.',
+        lembrancas: [{ id: 7, texto: 'Fala curto', de_quem: 'minha' }],
+      },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'fala curto comigo');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(wrapper.find('[data-anotei]').text()).toContain(
+      'AUTONOMIA_GUIDE.MEMORY.NOTED'
+    );
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.MEMORY.FORGET').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.apagarMemoria).toHaveBeenCalledWith(7);
+    expect(wrapper.find('[data-anotei]').exists()).toBe(false);
+  });
+
+  it('opens "What I know" from the header in place of the conversation', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await wrapper
+      .find('[aria-label="AUTONOMIA_GUIDE.MEMORY.TITLE"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.memorias).toHaveBeenCalled();
+    expect(wrapper.find('[data-secao="pessoais"]').exists()).toBe(true);
+    expect(wrapper.find('[role="log"]').isVisible()).toBe(false);
   });
 
   it('names the panel and the message region for screen readers', async () => {

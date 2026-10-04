@@ -118,6 +118,20 @@ class AutonomiaGuideAPI extends ApiClient {
   desfazer(id) {
     return axios.post(`${this.url}/execucoes/${id}/desfazer`);
   }
+
+  // #933 — o que o Guia lembra: { pessoais, corretora, pode_editar_corretora, limites }.
+  memorias() {
+    return axios.get(`${this.url}_memorias`);
+  }
+
+  corrigirMemoria(id, texto) {
+    return axios.patch(`${this.url}_memorias/${id}`, { texto });
+  }
+
+  // Sem desfazer.
+  apagarMemoria(id) {
+    return axios.delete(`${this.url}_memorias/${id}`);
+  }
 }
 
 export default new AutonomiaGuideAPI();
