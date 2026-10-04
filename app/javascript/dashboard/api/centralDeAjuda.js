@@ -14,6 +14,12 @@ class CentralDeAjudaAPI extends ApiClient {
   buscar(termo) {
     return axios.get(`${this.url}/busca`, { params: { termo } });
   }
+
+  // O Jev escolhe o artigo que melhor responde ao que a pessoa escreveu (#977).
+  // Volta { melhor: artigo | null, certeza: número | null }.
+  buscarInteligente(termo) {
+    return axios.get(`${this.url}/busca_inteligente`, { params: { termo } });
+  }
 }
 
 export default new CentralDeAjudaAPI();

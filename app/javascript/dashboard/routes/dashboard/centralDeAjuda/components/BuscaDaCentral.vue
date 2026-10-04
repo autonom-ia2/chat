@@ -2,11 +2,11 @@
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { watchDebounced } from '@vueuse/core';
-import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import { useGuiaPedido } from 'dashboard/composables/useGuiaPedido';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import MelhorResposta from './MelhorResposta.vue';
+import { useBuscaDaCentral } from '../composables/useBuscaDaCentral';
 
 defineProps({
   guiaDisponivel: { type: Boolean, default: false },
@@ -14,65 +14,85 @@ defineProps({
 // Verdadeiro enquanto há texto na busca: a página esconde os assuntos para a pessoa olhar só os resultados.
 const ativa = defineModel('ativa', { type: Boolean, default: false });
 
-const ESPERA_MS = 300;
-
 const { t } = useI18n();
 const router = useRouter();
 const { pedirAoGuia } = useGuiaPedido();
+const {
+  termo,
+  temTermo,
+  erro,
+  melhor,
+  buscando,
+  aguardando,
+  emDestaque,
+  lista,
+  total,
+  adiantar,
+} = useBuscaDaCentral();
 
-const termo = ref('');
-const resultados = ref([]);
-const buscando = ref(false);
-const erro = ref(false);
 const campo = ref(null);
-let ultimaBusca = 0;
+const abrirAoChegar = ref(false);
 
-const temTermo = computed(() => termo.value.trim().length > 0);
 watch(temTermo, valor => {
   ativa.value = valor;
 });
-// Mostra "Buscando…" já na tecla, sem esperar o intervalo da busca: a lista antiga não fica na tela
-// fingindo ser a resposta nova.
-watch(termo, texto => {
-  if (texto.trim()) buscando.value = true;
+
+const semNada = computed(
+  () => !aguardando.value && !erro.value && total.value === 0
+);
+// Erro só quando não há nada para mostrar: com a escolha do Jev na tela, a mensagem a contradiria.
+const mostrarErro = computed(
+  () => !aguardando.value && erro.value && !melhor.value
+);
+
+// Uma frase só por busca: "Buscando…" até as duas terminarem, depois o resultado inteiro.
+const anuncio = computed(() => {
+  if (aguardando.value) return t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO');
+  const contagem = t(
+    'HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.RESULTADOS',
+    total.value
+  );
+  if (!emDestaque.value) return contagem;
+  const destaque = t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_MELHOR', {
+    titulo: melhor.value.titulo,
+  });
+  return `${destaque} ${contagem}`;
 });
-
-const buscar = async texto => {
-  ultimaBusca += 1;
-  const pedido = ultimaBusca;
-  if (!texto.trim()) {
-    resultados.value = [];
-    erro.value = false;
-    return;
-  }
-  buscando.value = true;
-  try {
-    const { data } = await CentralDeAjudaAPI.buscar(texto);
-    if (pedido !== ultimaBusca) return; // chegou depois de uma busca mais nova
-    resultados.value = data.resultados || [];
-    erro.value = false;
-  } catch {
-    if (pedido === ultimaBusca) erro.value = true;
-  } finally {
-    if (pedido === ultimaBusca) buscando.value = false;
-  }
-};
-
-watchDebounced(termo, buscar, { debounce: ESPERA_MS });
 
 const abrir = artigo =>
   router.push({ name: 'central_de_ajuda_artigo', params: { ref: artigo.ref } });
 
-const abrirPrimeiro = () => {
-  if (resultados.value.length) abrir(resultados.value[0]);
+// Só abre o que está na tela, e do termo atual.
+const abrirMelhorOuPrimeiro = () => {
+  if (emDestaque.value) abrir(melhor.value);
+  else if (lista.value.length) abrir(lista.value[0]);
 };
+
+// Enter logo depois de digitar: busca já o termo atual e abre quando as respostas chegarem.
+const abrirPrimeiro = () => {
+  if (!aguardando.value) {
+    abrirMelhorOuPrimeiro();
+    return;
+  }
+  abrirAoChegar.value = true;
+  adiantar();
+};
+
+watch(aguardando, valor => {
+  if (valor || !abrirAoChegar.value) return;
+  abrirAoChegar.value = false;
+  abrirMelhorOuPrimeiro();
+});
+// Mudou o texto, o Enter pendente era de outra busca.
+watch(termo, () => {
+  abrirAoChegar.value = false;
+});
 
 // O que a pessoa digitou vira a pergunta ao Guia; sem texto, o painel só abre.
 const perguntarAoGuia = () => pedirAoGuia(termo.value);
 
 const limpar = () => {
   termo.value = '';
-  resultados.value = [];
   campo.value?.focus();
 };
 </script>
@@ -128,33 +148,42 @@ const limpar = () => {
     </p>
 
     <p class="sr-only" aria-live="polite">
-      <template v-if="temTermo && buscando">
-        {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO') }}
-      </template>
-      <template v-else-if="temTermo">
-        {{
-          t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.RESULTADOS', resultados.length)
-        }}
-      </template>
+      <template v-if="temTermo">{{ anuncio }}</template>
     </p>
 
-    <p v-if="temTermo && erro" class="mb-0 text-base text-n-ruby-11">
+    <p v-if="temTermo && mostrarErro" class="mb-0 text-base text-n-ruby-11">
       {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ERRO') }}
     </p>
 
+    <!-- O cartão e a lista entram juntos, quando as duas buscas terminam: nada empurra o que já está na tela. -->
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+    >
+      <MelhorResposta
+        v-if="temTermo && !aguardando && emDestaque"
+        :artigo="melhor"
+      />
+    </Transition>
+
+    <!-- Sem nenhum resultado ainda, o que falta é a Melhor resposta: a tela diz isso, não fica em branco. -->
     <div
-      v-else-if="temTermo && buscando"
+      v-if="temTermo && aguardando"
       class="flex items-center gap-3 px-1 py-4 text-base text-n-slate-11"
     >
       <Spinner />
-      {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO') }}
+      {{
+        buscando
+          ? t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO')
+          : t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PROCURANDO_MELHOR')
+      }}
     </div>
 
     <ul
-      v-else-if="temTermo && resultados.length"
+      v-else-if="temTermo && lista.length"
       class="m-0 p-0 list-none flex flex-col gap-2"
     >
-      <li v-for="artigo in resultados" :key="artigo.ref">
+      <li v-for="artigo in lista" :key="artigo.ref">
         <router-link
           :to="{ name: 'central_de_ajuda_artigo', params: { ref: artigo.ref } }"
           class="flex flex-col gap-1 rounded-xl border border-n-weak bg-n-solid-1 px-5 py-4 hover:border-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
@@ -168,8 +197,9 @@ const limpar = () => {
       </li>
     </ul>
 
+    <!-- "Nada" só depois que as duas buscas terminaram vazias. -->
     <div
-      v-else-if="temTermo"
+      v-else-if="temTermo && semNada"
       class="flex flex-wrap items-center gap-3 rounded-xl bg-n-alpha-1 px-5 py-4"
     >
       <p class="mb-0 text-base text-n-slate-11">
