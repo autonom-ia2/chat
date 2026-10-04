@@ -30,6 +30,11 @@ on:
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      shards:
+        description: 'Numero de nos do RSpec (diagnostico: outra divisao expoe spec que depende de ordem)'
+        required: false
+        default: '8'
 
 concurrency:
   group: testes-${{ github.workflow }}-${{ github.ref }}
@@ -153,9 +158,11 @@ jobs:
       - name: Montar o plano
         id: plano
         env:
-          SHARDS: 8
+          SHARDS: ${{ inputs.shards || '8' }}
         run: |
           set -euo pipefail
+          case "$SHARDS" in ''|*[!0-9]*) echo "shards invalido: $SHARDS"; exit 1 ;; esac
+          if [ "$SHARDS" -lt 1 ] || [ "$SHARDS" -gt 12 ]; then echo "shards fora de 1..12: $SHARDS"; exit 1; fi
           LC_ALL=C find spec -name '*_spec.rb' -type f | LC_ALL=C sort > "$RUNNER_TEMP/specs.txt"
           python3 .github/scripts/rspec_plan.py --shards "$SHARDS" --specs "$RUNNER_TEMP/specs.txt" \
             --tempos "$RUNNER_TEMP/tempos" --saida plan.json | tee -a "$GITHUB_STEP_SUMMARY"
