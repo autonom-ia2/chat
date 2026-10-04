@@ -1168,6 +1168,70 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
         sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.' }
     end
 
+    # MOTIVO: pedido real do Rodrigo (04/10). Cruza funil + campo do contato + data calculada (o próximo
+    # aniversário) e cria um retorno por card, que é o que aparece no calendário do CRM. Pega: não achar o
+    # campo de nascimento, criar para quem não tem data, errar o dia/mês, pôr data no passado, criar em
+    # card de outro funil e parar no meio.
+    it 'TL09 lembrete de aniversário no calendário para os clientes do funil Comercial com nascimento', :aggregate_failures do
+      # Corretora com o fuso configurado. Sem ele, perguntar o fuso é o certo (não há padrão honesto).
+      c.conta.update!(custom_attributes: c.conta.custom_attributes.merge('timezone' => 'America/Sao_Paulo'))
+      c.conta.custom_attribute_definitions.create!(attribute_key: 'data_nascimento', attribute_display_name: 'Data de nascimento',
+                                                   attribute_display_type: :date, attribute_model: :contact_attribute)
+      comercial, entrada = create_crm_pipeline(account: c.conta, user: c.admin, name: 'Comercial')
+      hoje = Time.zone.today
+      com_data = Array.new(20) do |indice|
+        nascimento = Date.new(1970 + indice, ((indice % 12) + 1), ((indice * 3) % 27) + 1)
+        contato = contato!(c.conta, "Cliente Comercial #{indice}")
+        contato.update!(custom_attributes: { 'data_nascimento' => nascimento.iso8601 })
+        [c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}"),
+         nascimento]
+      end
+      sem_data = Array.new(5) do |indice|
+        contato = contato!(c.conta, "Sem Data #{indice}")
+        c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}")
+      end
+
+      pedido = 'Pegue todos os clientes que estão no funil Comercial e que tenham a data de nascimento no contato e crie no ' \
+               'calendário um lembrete de aniversário.'
+      respondeu!(perguntar(pedido))
+      clicar_e_rodar!(tarefas.sole) if tarefas.any?
+
+      retornos = Crm::FollowUp.where(account: c.conta)
+      expect(retornos.where(card_id: sem_data.map(&:id))).to be_empty
+      expect(retornos.where.not(card_id: com_data.map { |card, _| card.id } + sem_data.map(&:id))).to be_empty
+      com_data.each do |card, nascimento|
+        do_card = retornos.where(card_id: card.id).to_a
+        expect(do_card.size).to eq(1), "#{card.title}: #{do_card.size} lembretes"
+        dia = do_card.first&.due_at&.in_time_zone&.to_date
+        expect([dia&.month, dia&.day]).to eq([nascimento.month, nascimento.day]), "#{card.title}: #{dia} para #{nascimento}"
+        expect(dia).to be >= hoje if dia
+      end
+    end
+
+    # MOTIVO: conta sem fuso. Perguntar o fuso é o certo; com a resposta, o Guia grava o fuso na conta
+    # (não pergunta de novo) e cria os lembretes. Pega: chutar fuso, não gravar, parar depois da resposta.
+    it 'TL10 sem fuso na conta: pergunta uma vez, grava o fuso e cria os lembretes', :aggregate_failures do
+      c.conta.custom_attribute_definitions.create!(attribute_key: 'data_nascimento', attribute_display_name: 'Data de nascimento',
+                                                   attribute_display_type: :date, attribute_model: :contact_attribute)
+      comercial, entrada = create_crm_pipeline(account: c.conta, user: c.admin, name: 'Comercial')
+      cards = Array.new(4) do |indice|
+        contato = contato!(c.conta, "Aniversariante #{indice}")
+        contato.update!(custom_attributes: { 'data_nascimento' => Date.new(1980 + indice, indice + 2, 10).iso8601 })
+        c.conta.crm_cards.create!(pipeline: comercial, stage: entrada, contact: contato, owner: c.bruno, title: "Seguro — #{contato.name}")
+      end
+      pedido = 'Pegue todos os clientes que estão no funil Comercial e que tenham a data de nascimento no contato e crie no ' \
+               'calendário um lembrete de aniversário.'
+      primeiro = perguntar(pedido)
+      respondeu!(primeiro)
+      if Crm::FollowUp.where(account: c.conta).none?
+        resposta = 'Horário de Brasília.'
+        respondeu!(perguntar(resposta, historico: turno(pedido, primeiro)))
+      end
+
+      expect(c.conta.reload.custom_attributes['timezone']).to eq('America/Sao_Paulo')
+      expect(Crm::FollowUp.where(account: c.conta).pluck(:card_id)).to match_array(cards.map(&:id))
+    end
+
     def desfazer_tudo!(tarefa)
       tarefa.mudar!('desfazer')
       Autonomia::Guide::DesfazerTarefaJob.perform_now(tarefa.id)
