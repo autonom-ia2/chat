@@ -109,48 +109,21 @@ jobs:
           # The isolated Linux runtime gate builds the same Ruby/Node digests from docker.io.
           echo 'ENV CW_EDITION="ee"' >> docker/Dockerfile
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
-          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
-          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
-          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
-          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
-          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
-          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
-
-      - name: Publish runtime image parameter
-        env:
-          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        run: |
-          aws ssm put-parameter \
-            --name "$RUNTIME_IMAGE_PARAMETER" \
-            --type String \
-            --value "$IMAGE_URI" \
-            --overwrite
-
+      # Fase 3 (#974): a instância green liga antes do build. Enquanto a imagem é montada, ela instala o Docker e
+      # lê o env; o deploy.sh espera a imagem chegar ao ECR. Se o build falhar, a limpeza no fim desliga a green.
       - name: Ensure Hub2You campaign runtime flags
         run: |
           aws ssm get-parameter \
             --name "$ENV_PARAMETER" \
             --with-decryption \
             --query Parameter.Value \
-            --output text > chatwoot.env
+            --output text > "$RUNNER_TEMP/chatwoot.env"
 
           python3 - <<'PY'
+          import os
           from pathlib import Path
 
-          path = Path("chatwoot.env")
+          path = Path(os.environ["RUNNER_TEMP"]) / "chatwoot.env"
           required = {
               "DEFAULT_LOCALE": "pt_BR",
               "EMAIL_REPUTATION_PROVIDER_MONITOR": "true",
@@ -201,10 +174,10 @@ jobs:
           aws ssm put-parameter \
             --name "$ENV_PARAMETER" \
             --type SecureString \
-            --value file://chatwoot.env \
+            --value "file://$RUNNER_TEMP/chatwoot.env" \
             --overwrite
 
-          rm -f chatwoot.env
+          rm -f "$RUNNER_TEMP/chatwoot.env"
 
       - name: Discover current infrastructure
         run: |
@@ -281,8 +254,9 @@ jobs:
       - name: Create green user data
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
         run: |
-          cat > green-user-data.sh <<'USERDATA'
+          cat > "$RUNNER_TEMP/green-user-data.sh" <<'USERDATA'
           #!/bin/bash
           PS4='+ $(date -u +%T) '
           set -euxo pipefail
@@ -290,7 +264,7 @@ jobs:
           AWS_REGION="__AWS_REGION__"
           ECR_REGISTRY="__ECR_REGISTRY__"
           ENV_PARAMETER="__ENV_PARAMETER__"
-          RUNTIME_PARAMETER="__RUNTIME_PARAMETER__"
+          IMAGE_URI="__IMAGE_URI__"
           APP_DIR="/opt/chatwoot"
 
           dnf update -y
@@ -306,12 +280,6 @@ jobs:
             --query Parameter.Value \
             --output text > "$APP_DIR/.env"
           chmod 600 "$APP_DIR/.env"
-
-          IMAGE_URI="$(aws ssm get-parameter \
-            --region "$AWS_REGION" \
-            --name "$RUNTIME_PARAMETER" \
-            --query Parameter.Value \
-            --output text)"
 
           cat > "$APP_DIR/runtime.env" <<EOF
           IMAGE_URI=$IMAGE_URI
@@ -567,13 +535,40 @@ jobs:
 
           systemctl daemon-reload
           systemctl enable chatwoot-web.service
+
+          # A green liga junto com o build (#974): espera a imagem chegar ao ECR, por até 45 min (um build sem cache
+          # leva ~24). Só repete enquanto a imagem não existe; qualquer outro erro (permissão, rede) falha na hora.
+          wait_for_image() {
+            local repo_tag repository tag error_file attempt
+            repo_tag="${IMAGE_URI#*/}"
+            repository="${repo_tag%:*}"
+            tag="${repo_tag##*:}"
+            error_file="$(mktemp)"
+            for attempt in $(seq 1 540); do
+              if aws ecr describe-images --region "$AWS_REGION" --repository-name "$repository" \
+                --image-ids "imageTag=$tag" >/dev/null 2>"$error_file"; then
+                rm -f "$error_file"
+                return 0
+              fi
+              if ! grep -qF ImageNotFoundException "$error_file"; then
+                cat "$error_file" >&2
+                rm -f "$error_file"
+                return 1
+              fi
+              echo "Imagem ainda nao publicada ($attempt)"
+              sleep 5
+            done
+            rm -f "$error_file"
+            return 1
+          }
+          wait_for_image
           "$APP_DIR/deploy.sh"
           USERDATA
 
-          sed -i "s|__AWS_REGION__|$AWS_REGION|g" green-user-data.sh
-          sed -i "s|__ECR_REGISTRY__|$ECR_REGISTRY|g" green-user-data.sh
-          sed -i "s|__ENV_PARAMETER__|$ENV_PARAMETER|g" green-user-data.sh
-          sed -i "s|__RUNTIME_PARAMETER__|$RUNTIME_IMAGE_PARAMETER|g" green-user-data.sh
+          sed -i "s|__AWS_REGION__|$AWS_REGION|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__ECR_REGISTRY__|$ECR_REGISTRY|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__ENV_PARAMETER__|$ENV_PARAMETER|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__IMAGE_URI__|$IMAGE_URI|g" "$RUNNER_TEMP/green-user-data.sh"
 
       - name: Launch green EC2 instance
         run: |
@@ -583,17 +578,54 @@ jobs:
             --subnet-id "$SUBNET_ID" \
             --security-group-ids $SECURITY_GROUP_IDS \
             --iam-instance-profile "Name=$IAM_PROFILE_NAME" \
-            --user-data file://green-user-data.sh \
+            --user-data "file://$RUNNER_TEMP/green-user-data.sh" \
             --block-device-mappings "[{\"DeviceName\":\"$ROOT_DEVICE_NAME\",\"Ebs\":{\"VolumeSize\":${ROOT_VOLUME_SIZE_GB},\"VolumeType\":\"gp3\",\"Encrypted\":true,\"DeleteOnTermination\":true}}]" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=chatwoot-hub2you-prod-ec2-green-${GITHUB_RUN_ID}},{Key=Project,Value=chatwoot-autonomia},{Key=Environment,Value=prod},{Key=ManagedBy,Value=github-actions},{Key=BlueGreenRole,Value=green}]" "ResourceType=volume,Tags=[{Key=Name,Value=chatwoot-hub2you-prod-ec2-green-${GITHUB_RUN_ID}-root},{Key=Project,Value=chatwoot-autonomia},{Key=Environment,Value=prod},{Key=ManagedBy,Value=github-actions},{Key=BlueGreenRole,Value=green}]" \
             --query 'Instances[0].InstanceId' \
             --output text)
 
           echo "GREEN_INSTANCE_ID=$green_instance_id" >> "$GITHUB_ENV"
-          aws ec2 wait instance-running --instance-ids "$green_instance_id"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
+          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
+          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
+          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
+          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
+          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+
+      - name: Publish runtime image parameter
+        env:
+          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          aws ssm put-parameter \
+            --name "$RUNTIME_IMAGE_PARAMETER" \
+            --type String \
+            --value "$IMAGE_URI" \
+            --overwrite
 
       - name: Wait for green SSM and local health
         run: |
+          # A green liga antes do build; se ela morreu no lançamento (capacidade, EBS), falha aqui em vez de esperar o SSM.
+          green_state=$(aws ec2 describe-instances --instance-ids "$GREEN_INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].State.Name' --output text)
+          echo "Estado da green: $green_state"
+          case "$green_state" in
+            shutting-down|terminated|stopping|stopped) exit 1 ;;
+          esac
+
           for attempt in $(seq 1 180); do
             ping_status=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=$GREEN_INSTANCE_ID" \
@@ -701,6 +733,11 @@ jobs:
           aws elbv2 wait target-in-service \
             --target-group-arn "$green_tg_arn" \
             --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
+
+      # Passo próprio para a marca chegar ao GITHUB_ENV mesmo se o próximo for cancelado no meio. A limpeza só religa o
+      # worker do blue com ela; religar um worker que nem chegou a parar não muda nada.
+      - name: Mark blue worker stop
+        run: echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"
 
       - name: Switch Sidekiq workers to green
         run: |
@@ -814,7 +851,7 @@ jobs:
         # Desliga o verde na hora, mesmo no meio do boot (após cancelar, o GitHub dá só 5 min); ver #972.
         if: (failure() || cancelled()) && env.TRAFFIC_SHIFT_DONE != 'true'
         run: |
-          if [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+          if [ "${BLUE_WORKER_STOPPED:-false}" = "true" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
             blue_restore_command_id=$(aws ssm send-command \
               --instance-ids "$BLUE_INSTANCE_ID" \
               --document-name AWS-RunShellScript \

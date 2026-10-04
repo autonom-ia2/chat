@@ -8,7 +8,9 @@ subir junto o que estiver pronto, com um deploy só, em vez de um deploy de ~40 
 Todo merge na `main` dispara o deploy blue-green completo nas duas stacks (hub2you e autonomia). Os workflows usam
 `concurrency` com `cancel-in-progress: false`, então merges seguidos não se cancelam: viram deploys em fila. Medido em
 25/09: cerca de 24 minutos são o build da imagem (feito uma vez por stack, sem cache), 3 minutos a subida e a saúde
-da instância nova e 5,5 minutos o desligamento da antiga.
+da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache do build no ECR, foram 3 min 38 s de
+build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
+instância nova liga antes do build e espera a imagem chegar ao ECR, então o boot quase todo corre junto com o build.
 
 ## Regras
 
