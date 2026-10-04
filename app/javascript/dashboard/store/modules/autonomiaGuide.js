@@ -153,6 +153,7 @@ const addAssistantMessage = ({
   artigos = null,
   execucao = null,
   lembrancas = null,
+  aviso = null,
   pedidoId = null,
   acaoEstado = null,
   acaoResultado = null,
@@ -177,6 +178,8 @@ const addAssistantMessage = ({
     execucao,
     // #933 — o que o Guia anotou neste turno, para o chip "Anotei".
     lembrancas: Array.isArray(lembrancas) ? [...lembrancas] : [],
+    // #935 — o Guia falou primeiro: esta resposta é um aviso dele.
+    aviso,
   };
   nextId += 1;
   state.messages.push(record);
@@ -219,6 +222,7 @@ const respostaDoTurno = (turno, avisos) => {
       acaoResultado: turno.acao_resultado,
       execucao: turno.execucao,
       pedidoId: turno.pedido_id,
+      aviso: turno.aviso_id ? { id: turno.aviso_id } : null,
     };
   }
   if (turno.status === 'retido') {
@@ -247,6 +251,12 @@ const hidratar = (conversa, avisos = {}) => {
   state.pendente = null;
   let pendente = null;
   (conversa?.turnos || []).forEach(turno => {
+    // #935 — o aviso do Guia não tem pergunta: só a fala dele entra.
+    if (turno.aviso_id) {
+      const resposta = respostaDoTurno(turno, avisos);
+      if (resposta) addAssistantMessage(resposta);
+      return;
+    }
     const id = nextId;
     nextId += 1;
     state.messages.push({

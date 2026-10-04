@@ -33,6 +33,7 @@ export default {
       emailFlags: 'userNotificationSettings/getSelectedEmailFlags',
       pushFlags: 'userNotificationSettings/getSelectedPushFlags',
       isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
+      currentRole: 'getCurrentRole',
     }),
     hasPushAPISupport() {
       return !!('Notification' in window);
@@ -58,6 +59,13 @@ export default {
         if (
           !this.isCrmEnabled &&
           notification.value === 'crm_followup_reminder'
+        ) {
+          return false;
+        }
+        // #935 — só administrador recebe aviso do Guia.
+        if (
+          notification.value === 'guide_alert' &&
+          this.currentRole !== 'administrator'
         ) {
           return false;
         }

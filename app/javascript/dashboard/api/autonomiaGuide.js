@@ -137,6 +137,18 @@ class AutonomiaGuideAPI extends ApiClient {
   apagarMemoria(id) {
     return axios.delete(`${this.url}_memorias/${id}`);
   }
+
+  // #935 — os avisos do Guia para quem pede: { avisos, novos }. Só administrador.
+  avisos(estado) {
+    return axios.get(`${this.baseUrl()}/autonomia/avisos`, {
+      params: { estado },
+    });
+  }
+
+  // #935 — 'visto' quando a pessoa abre o Guia.
+  marcarAviso(id, estado) {
+    return axios.patch(`${this.baseUrl()}/autonomia/avisos/${id}`, { estado });
+  }
 }
 
 export default new AutonomiaGuideAPI();

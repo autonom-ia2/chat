@@ -2155,6 +2155,10 @@
     "INSERTED": "Inserted into the reply."
   },
   "AUTONOMIA_GUIDE": {
+    "AVISOS": {
+      "LAUNCHER_LABEL": "Ask the Guide, {count} new warning | Ask the Guide, {count} new warnings",
+      "SELO": "Warning from the Guide"
+    },
     "TELA": {
       "SELECTED": {
         "CARDS": "Seeing: {count} card selected | Seeing: {count} cards selected",

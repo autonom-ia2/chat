@@ -45,7 +45,9 @@ const notifications = computed(() => {
 
 const activeNotification = computed(() => {
   return notifications.value?.find(
-    n => n.primary_actor?.id === conversationId.value
+    n =>
+      n.primary_actor_type !== 'Autonomia::Guide::Aviso' &&
+      n.primary_actor?.id === conversationId.value
   );
 });
 
@@ -62,7 +64,9 @@ const showEmptyState = computed(() => {
 
 const activeNotificationIndex = computed(() => {
   return notifications.value?.findIndex(
-    n => n.primary_actor?.id === conversationId.value
+    n =>
+      n.primary_actor_type !== 'Autonomia::Guide::Aviso' &&
+      n.primary_actor?.id === conversationId.value
   );
 });
 

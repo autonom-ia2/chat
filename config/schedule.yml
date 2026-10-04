@@ -243,3 +243,16 @@ autonomia_guide_limpar_arquivos_job:
   cron: '40 4 * * *'
   class: 'Autonomia::Guide::LimparArquivosJob'
   queue: scheduled_jobs
+
+# executed every 15 minutes; o Guia mede as vigias das contas e avisa só o que cruzou o gatilho (#935).
+# Espalha um job por conta na fila low; sem nada cruzado, nenhuma chamada a modelo.
+autonomia_guide_pulso_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Guide::PulsoJob'
+  queue: scheduled_jobs
+
+# executed every day at 04:50; apaga os avisos do Guia com mais de 30 dias (#935).
+autonomia_guide_limpar_avisos_job:
+  cron: '50 4 * * *'
+  class: 'Autonomia::Guide::LimparAvisosJob'
+  queue: scheduled_jobs

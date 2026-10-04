@@ -94,6 +94,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'email_campaign.ai.ready': this.onEmailCampaignAiReady,
       'email_campaign.ai.failed': this.onEmailCampaignAiFailed,
       'prospecting.lead.updated': this.onProspectingLeadUpdated,
+      'guide.aviso.created': this.onGuideAvisoCreated,
     };
   }
 
@@ -366,6 +367,12 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onCopilotMessageCreated = data => {
     this.app.$store.dispatch('copilotMessages/upsert', data);
+  };
+
+  // #935 — a bolinha do Guia conta o aviso novo sem recarregar a página.
+  onGuideAvisoCreated = data => {
+    if (!this.isAValidEvent(data)) return;
+    emitter.emit(BUS_EVENTS.GUIDE_AVISO_CREATED, data);
   };
 
   onEnrichmentCompleted = () => {

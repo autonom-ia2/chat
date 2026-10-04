@@ -78,6 +78,12 @@ class Autonomia::Guide::Consulta
     "Não consegui ler #{recurso} agora."
   end
 
+  # A resposta crua da mesma leitura, como o usuário: código e corpo, sem resumo. É o que a vigia do
+  # Guia mede (#935). Levanta `Recusada` quando a leitura não é da conta.
+  def ler_cru(recurso, parametros = {})
+    requisitar(montar_caminho(recurso, parametros), {}, sobras(recurso, parametros))
+  end
+
   private
 
   # Isto vira texto que o modelo repassa para a pessoa, então não pode ser um

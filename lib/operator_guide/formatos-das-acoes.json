@@ -218,6 +218,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE autonomia/vigias/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/vigias#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:35",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:51"
+    ],
+    "sem_corpo": true
+  },
   "DELETE campaign_imports/:id": {
     "completo": true,
     "controller": "api/v1/accounts/campaign_imports#destroy",
@@ -3422,6 +3431,30 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/avisos/:id": {
+    "campos": {
+      "estado": {
+        "padrao": "novo",
+        "tipo": "string",
+        "um_de": [
+          "novo",
+          "visto",
+          "adiado",
+          "resumido"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/avisos#update",
+    "modelo": "Autonomia::Guide::Aviso",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:23",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:43",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/decisores/:id": {
     "campos": {
       "campos": {
@@ -3563,6 +3596,178 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/settings_controller.rb:8",
       "app/controllers/api/v1/accounts/autonomia/prospecting/settings_controller.rb:20"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH autonomia/vigias/:id": {
+    "campos": {
+      "ativa": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
+      "gatilho": {
+        "esquema": {
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "acima_de"
+              ]
+            },
+            {
+              "required": [
+                "abaixo_de"
+              ]
+            },
+            {
+              "required": [
+                "vezes_a_media"
+              ]
+            }
+          ],
+          "description": "Avisa quando TODAS as condições dadas valem. Dê pelo menos uma.",
+          "properties": {
+            "abaixo_de": {
+              "description": "Avisa quando a medida fica abaixo deste número.",
+              "type": "number"
+            },
+            "acima_de": {
+              "description": "Avisa quando a medida passa deste número.",
+              "type": "number"
+            },
+            "janela_horas": {
+              "description": "Avisa no máximo uma vez a cada tantas horas. Padrão: 24.",
+              "maximum": 168,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "vezes_a_media": {
+              "description": "Avisa quando a medida passa N vezes a média da última semana. Só vale com 3 dias de medições.",
+              "minimum": 1.5,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "gravidade": {
+        "padrao": "info",
+        "tipo": "string",
+        "um_de": [
+          "info",
+          "agir",
+          "urgente"
+        ]
+      },
+      "leitura": {
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "medida": {
+              "additionalProperties": false,
+              "description": "O número tirado da leitura.",
+              "if": {
+                "properties": {
+                  "tipo": {
+                    "enum": [
+                      "soma",
+                      "maior",
+                      "valor"
+                    ]
+                  }
+                }
+              },
+              "properties": {
+                "campo": {
+                  "description": "O campo numérico, com ponto para descer (ex.: \"disparos.ultimas_24h\"). Obrigatório em soma, maior e valor.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "onde": {
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "integer",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "description": "Só os itens com estes valores (ex.: {\"reauthorization_required\": true}).",
+                  "type": "object"
+                },
+                "tipo": {
+                  "description": "contagem: quantos itens; soma e maior: de um campo numérico dos itens; valor: um número da resposta.",
+                  "enum": [
+                    "contagem",
+                    "soma",
+                    "maior",
+                    "valor"
+                  ]
+                }
+              },
+              "required": [
+                "tipo"
+              ],
+              "then": {
+                "required": [
+                  "campo"
+                ]
+              },
+              "type": "object"
+            },
+            "parametros": {
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "description": "Os parâmetros da leitura, como em ler_da_conta (o id do caminho e os filtros).",
+              "type": "object"
+            },
+            "rota": {
+              "description": "A leitura da conta, igual à de ler_da_conta (ex.: \"inboxes\", \"automation_rules\").",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "rota",
+            "medida"
+          ],
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "nome": {
+        "max_caracteres": 120,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "para_quem": {
+        "esquema": {
+          "description": "Os administradores que recebem o aviso (ids). Vazio: todos os administradores.",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 50,
+          "type": "array"
+        },
+        "tipo": "lista"
+      },
+      "silenciada_ate": {
+        "tipo": "data_hora"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/vigias#update",
+    "modelo": "Autonomia::Guide::Vigia",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:51"
     ],
     "sem_corpo": false
   },
@@ -10443,6 +10648,177 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:48",
       "app/controllers/api/v1/accounts/autonomia/prospecting/searches_controller.rb:107"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/vigias": {
+    "campos": {
+      "ativa": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
+      "gatilho": {
+        "esquema": {
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "acima_de"
+              ]
+            },
+            {
+              "required": [
+                "abaixo_de"
+              ]
+            },
+            {
+              "required": [
+                "vezes_a_media"
+              ]
+            }
+          ],
+          "description": "Avisa quando TODAS as condições dadas valem. Dê pelo menos uma.",
+          "properties": {
+            "abaixo_de": {
+              "description": "Avisa quando a medida fica abaixo deste número.",
+              "type": "number"
+            },
+            "acima_de": {
+              "description": "Avisa quando a medida passa deste número.",
+              "type": "number"
+            },
+            "janela_horas": {
+              "description": "Avisa no máximo uma vez a cada tantas horas. Padrão: 24.",
+              "maximum": 168,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "vezes_a_media": {
+              "description": "Avisa quando a medida passa N vezes a média da última semana. Só vale com 3 dias de medições.",
+              "minimum": 1.5,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "gravidade": {
+        "padrao": "info",
+        "tipo": "string",
+        "um_de": [
+          "info",
+          "agir",
+          "urgente"
+        ]
+      },
+      "leitura": {
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "medida": {
+              "additionalProperties": false,
+              "description": "O número tirado da leitura.",
+              "if": {
+                "properties": {
+                  "tipo": {
+                    "enum": [
+                      "soma",
+                      "maior",
+                      "valor"
+                    ]
+                  }
+                }
+              },
+              "properties": {
+                "campo": {
+                  "description": "O campo numérico, com ponto para descer (ex.: \"disparos.ultimas_24h\"). Obrigatório em soma, maior e valor.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "onde": {
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "integer",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "description": "Só os itens com estes valores (ex.: {\"reauthorization_required\": true}).",
+                  "type": "object"
+                },
+                "tipo": {
+                  "description": "contagem: quantos itens; soma e maior: de um campo numérico dos itens; valor: um número da resposta.",
+                  "enum": [
+                    "contagem",
+                    "soma",
+                    "maior",
+                    "valor"
+                  ]
+                }
+              },
+              "required": [
+                "tipo"
+              ],
+              "then": {
+                "required": [
+                  "campo"
+                ]
+              },
+              "type": "object"
+            },
+            "parametros": {
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "description": "Os parâmetros da leitura, como em ler_da_conta (o id do caminho e os filtros).",
+              "type": "object"
+            },
+            "rota": {
+              "description": "A leitura da conta, igual à de ler_da_conta (ex.: \"inboxes\", \"automation_rules\").",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "rota",
+            "medida"
+          ],
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "nome": {
+        "max_caracteres": 120,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      },
+      "para_quem": {
+        "esquema": {
+          "description": "Os administradores que recebem o aviso (ids). Vazio: todos os administradores.",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 50,
+          "type": "array"
+        },
+        "tipo": "lista"
+      },
+      "silenciada_ate": {
+        "tipo": "data_hora"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/vigias#create",
+    "modelo": "Autonomia::Guide::Vigia",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:22",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:56"
     ],
     "sem_corpo": false
   },
@@ -18961,6 +19337,30 @@
     ],
     "sem_corpo": false
   },
+  "PUT autonomia/avisos/:id": {
+    "campos": {
+      "estado": {
+        "padrao": "novo",
+        "tipo": "string",
+        "um_de": [
+          "novo",
+          "visto",
+          "adiado",
+          "resumido"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/avisos#update",
+    "modelo": "Autonomia::Guide::Aviso",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:23",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:28",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:43",
+      "app/controllers/api/v1/accounts/autonomia/avisos_controller.rb:24"
+    ],
+    "sem_corpo": false
+  },
   "PUT autonomia/decisores/:id": {
     "campos": {
       "campos": {
@@ -19102,6 +19502,178 @@
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/prospecting/settings_controller.rb:8",
       "app/controllers/api/v1/accounts/autonomia/prospecting/settings_controller.rb:20"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/vigias/:id": {
+    "campos": {
+      "ativa": {
+        "padrao": true,
+        "tipo": "booleano"
+      },
+      "gatilho": {
+        "esquema": {
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "acima_de"
+              ]
+            },
+            {
+              "required": [
+                "abaixo_de"
+              ]
+            },
+            {
+              "required": [
+                "vezes_a_media"
+              ]
+            }
+          ],
+          "description": "Avisa quando TODAS as condições dadas valem. Dê pelo menos uma.",
+          "properties": {
+            "abaixo_de": {
+              "description": "Avisa quando a medida fica abaixo deste número.",
+              "type": "number"
+            },
+            "acima_de": {
+              "description": "Avisa quando a medida passa deste número.",
+              "type": "number"
+            },
+            "janela_horas": {
+              "description": "Avisa no máximo uma vez a cada tantas horas. Padrão: 24.",
+              "maximum": 168,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "vezes_a_media": {
+              "description": "Avisa quando a medida passa N vezes a média da última semana. Só vale com 3 dias de medições.",
+              "minimum": 1.5,
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "gravidade": {
+        "padrao": "info",
+        "tipo": "string",
+        "um_de": [
+          "info",
+          "agir",
+          "urgente"
+        ]
+      },
+      "leitura": {
+        "esquema": {
+          "additionalProperties": false,
+          "properties": {
+            "medida": {
+              "additionalProperties": false,
+              "description": "O número tirado da leitura.",
+              "if": {
+                "properties": {
+                  "tipo": {
+                    "enum": [
+                      "soma",
+                      "maior",
+                      "valor"
+                    ]
+                  }
+                }
+              },
+              "properties": {
+                "campo": {
+                  "description": "O campo numérico, com ponto para descer (ex.: \"disparos.ultimas_24h\"). Obrigatório em soma, maior e valor.",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "onde": {
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "integer",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "description": "Só os itens com estes valores (ex.: {\"reauthorization_required\": true}).",
+                  "type": "object"
+                },
+                "tipo": {
+                  "description": "contagem: quantos itens; soma e maior: de um campo numérico dos itens; valor: um número da resposta.",
+                  "enum": [
+                    "contagem",
+                    "soma",
+                    "maior",
+                    "valor"
+                  ]
+                }
+              },
+              "required": [
+                "tipo"
+              ],
+              "then": {
+                "required": [
+                  "campo"
+                ]
+              },
+              "type": "object"
+            },
+            "parametros": {
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "description": "Os parâmetros da leitura, como em ler_da_conta (o id do caminho e os filtros).",
+              "type": "object"
+            },
+            "rota": {
+              "description": "A leitura da conta, igual à de ler_da_conta (ex.: \"inboxes\", \"automation_rules\").",
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "rota",
+            "medida"
+          ],
+          "type": "object"
+        },
+        "tipo": "objeto"
+      },
+      "nome": {
+        "max_caracteres": 120,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "para_quem": {
+        "esquema": {
+          "description": "Os administradores que recebem o aviso (ids). Vazio: todos os administradores.",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 50,
+          "type": "array"
+        },
+        "tipo": "lista"
+      },
+      "silenciada_ate": {
+        "tipo": "data_hora"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/vigias#update",
+    "modelo": "Autonomia::Guide::Vigia",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:29",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:56",
+      "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:51"
     ],
     "sem_corpo": false
   },

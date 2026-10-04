@@ -33,7 +33,7 @@ class Autonomia::Guide::Conversa < ApplicationRecord
   # aconteceram. Só entra resposta de verdade — o aviso de "não consegui" que a
   # tela mostra não é fala do Guia.
   def historico(limite: ::Autonomia::Guide::Chat::MAX_HISTORY)
-    recentes = turnos.reorder(created_at: :desc, id: :desc).limit(limite).select(:id, :pergunta, :resposta)
+    recentes = turnos.reorder(created_at: :desc, id: :desc).limit(limite).select(:id, :pergunta, :resposta, :diagnostico)
     recentes.reverse.flat_map(&:mensagens).last(limite)
   end
 

@@ -19,6 +19,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # #861 — a pergunta entra numa conversa guardada. Sem `conversa_id`, abre uma
   # nova; com o id de uma conversa de outra pessoa, responde 404.
   def chat
+    # #935 — a primeira pergunta de um administrador planta as vigias padrão da conta (escrita só em POST).
+    ::Autonomia::Guide::VigiasPadrao.plantar(Current.account, Current.account_user)
     conversa = conversa_do_pedido
     return head :not_found if conversa.nil?
 
