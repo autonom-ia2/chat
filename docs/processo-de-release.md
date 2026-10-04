@@ -94,6 +94,20 @@ gh api -X PUT repos/autonom-ia2/chat/rulesets/<id> -f enforcement=disabled
 
 O rollback de deploy (`workflow_dispatch` com `action=rollback`) não passa pela `main` e não é afetado.
 
+### Medições de 04/10/2026 (#959, #961)
+
+| Etapa | Antes | Depois |
+|---|---|---|
+| CI de PR: nó mais lento do RSpec | 502 s (divisão alfabética) | 299 s (divisão por tempo + cache do Vite) |
+| Compilação dos assets de teste do Vite | ~85 s em cada nó | cache entre rodadas |
+| Do merge até a troca de tráfego | ~9 a 10 min | igual (fases do deploy em PR próprio) |
+| Conferência e "ok, SHA" depois da troca | ~5,5 min (esperava o fim do workflow) | segundos (confere na troca) |
+
+O estresse com 7, 8 e 9 nós (disparo manual do `testes.yml` com `shards`) expôs três defeitos que a ordem fixa
+escondia, todos corrigidos na causa: ciclo de carga `AutomationRule`/`AutomationRuleSchema` (#963), listas sem
+desempate na ordenação (#965) e `Current` vazando entre specs (#966). Diante de falha que depende de ordem,
+o `plan.json` da rodada (artefato `rspec-plan`) reproduz o grupo exato do nó.
+
 ## Melhorias propostas, pendentes de OK do Rodrigo
 
 - **Cache do build** (camadas do Docker entre execuções): encurta a etapa mais longa sem mudar o que é publicado.
