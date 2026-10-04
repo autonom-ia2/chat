@@ -131,6 +131,86 @@ elif name not in ('ssh', 'ssh-keygen', 'openssl', 'systemctl'):
                 validator.validate(self.stage, self.app)
             self.parameters['redis-env']['Value'] = self.parameters['redis-env']['Value'].rsplit('INSTAGRAM_TESTER_PROXY_IDENTITY=', 1)[0]
 
+    def test_dedicated_redis_accepts_both_runtime_users_and_preserves_url(self):
+        original = self.parameters['redis-env']['Value']
+        for username in ('ig_hub', 'ig_auto'):
+            with self.subTest(username=username):
+                value = original.replace('ig_hub:REDIS_SECRET_SENTINEL', f'{username}:synthetic%40password%3Avalue')
+                self.parameters['redis-env']['Value'] = value
+                self.write_inputs()
+                validator.validate(self.stage, self.app)
+                dedicated = validator.read_env(self.stage / 'redis.env')
+                self.assertEqual(dedicated['INSTAGRAM_TESTER_COORDINATION_REDIS_URL'],
+                                 value.splitlines()[0].partition('=')[2])
+                self.assertEqual(dedicated['INSTAGRAM_TESTER_COORDINATION_EPOCH'], 'synthetic-epoch-2026')
+                self.assertEqual(dedicated['INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE'], '/run/igcoord/ca.crt')
+                self.assertEqual(dedicated['INSTAGRAM_TESTER_PROXY_IDENTITY'], '93.184.216.34:8080')
+                self.assertEqual((self.stage / 'tunnel.env').read_text(), '93.184.216.34\n8080\n')
+
+    def test_dedicated_redis_rejects_missing_admin_unknown_and_encoded_users(self):
+        original = self.parameters['redis-env']['Value']
+        for userinfo in ('', ':REDIS_SECRET_SENTINEL@', 'ig_admin:REDIS_SECRET_SENTINEL@',
+                         'default:REDIS_SECRET_SENTINEL@', 'IG_HUB:REDIS_SECRET_SENTINEL@',
+                         'ig_hub_extra:REDIS_SECRET_SENTINEL@', '%69g_hub:REDIS_SECRET_SENTINEL@',
+                         'ig%5Fhub:REDIS_SECRET_SENTINEL@', 'ig_%68ub:REDIS_SECRET_SENTINEL@',
+                         '%69g_auto:REDIS_SECRET_SENTINEL@', 'ig%5fauto:REDIS_SECRET_SENTINEL@'):
+            with self.subTest(userinfo=userinfo):
+                self.parameters['redis-env']['Value'] = original.replace('ig_hub:REDIS_SECRET_SENTINEL@', userinfo)
+                self.write_inputs()
+                with self.assertRaises(ValueError):
+                    validator.validate(self.stage, self.app)
+
+    def test_dedicated_redis_rejects_password_line_breaks(self):
+        original = self.parameters['redis-env']['Value']
+        for line_break in ('\n', '\r', '\r\n', '%0a', '%0A', '%0d', '%0D', '%0D%0A'):
+            with self.subTest(line_break=line_break):
+                self.parameters['redis-env']['Value'] = original.replace('REDIS_SECRET_SENTINEL',
+                                                                        f'REDIS_SECRET_SENTINEL{line_break}suffix')
+                self.write_inputs()
+                with self.assertRaises(ValueError):
+                    validator.validate(self.stage, self.app)
+
+    def test_dedicated_redis_rejects_literal_controls_in_username_and_password(self):
+        original = self.parameters['redis-env']['Value']
+        for ordinal in (*range(32), 127):
+            for component in ('username', 'password'):
+                with self.subTest(ordinal=ordinal, component=component):
+                    username = f'ig_{chr(ordinal)}hub' if component == 'username' else 'ig_hub'
+                    password = f'REDIS_SECRET_SENTINEL{chr(ordinal)}suffix' if component == 'password' else 'REDIS_SECRET_SENTINEL'
+                    self.parameters['redis-env']['Value'] = original.replace(
+                        'ig_hub:REDIS_SECRET_SENTINEL', f'{username}:{password}')
+                    self.write_inputs()
+                    with self.assertRaises(ValueError):
+                        validator.validate(self.stage, self.app)
+
+    def test_dedicated_redis_rejects_encoded_controls_in_username_and_password(self):
+        original = self.parameters['redis-env']['Value']
+        for ordinal in (*range(32), 127):
+            for component in ('username', 'password'):
+                with self.subTest(ordinal=ordinal, component=component):
+                    username = f'ig_%{ordinal:02X}hub' if component == 'username' else 'ig_hub'
+                    password = f'REDIS_SECRET_SENTINEL%{ordinal:02X}suffix' if component == 'password' else 'REDIS_SECRET_SENTINEL'
+                    self.parameters['redis-env']['Value'] = original.replace(
+                        'ig_hub:REDIS_SECRET_SENTINEL', f'{username}:{password}')
+                    self.write_inputs()
+                    with self.assertRaises(ValueError):
+                        validator.validate(self.stage, self.app)
+
+    def test_invalid_redis_credentials_do_not_install_restart_or_leak(self):
+        original = self.parameters['redis-env']['Value']
+        for userinfo in (':REDIS_SECRET_SENTINEL', 'ig_admin:REDIS_SECRET_SENTINEL',
+                         '%69g_hub:REDIS_SECRET_SENTINEL', 'ig_hub:REDIS_SECRET_SENTINEL%0Ainjected'):
+            with self.subTest(userinfo=userinfo):
+                self.parameters['redis-env']['Value'] = original.replace('ig_hub:REDIS_SECRET_SENTINEL', userinfo)
+                self.write_inputs()
+                self.log.write_text('')
+                result = self.install()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse((self.app / 'igcoord').exists())
+                self.assertFalse(any(command == 'systemctl' for command, _ in self.calls()))
+                self.assertNotIn('REDIS_SECRET_SENTINEL', result.stdout + result.stderr)
+                self.assertIn('instagram_coordination_env_invalid', result.stderr)
+
     def test_ruby_node_fingerprints_match_with_synthetic_transports(self):
         ruby = "require 'digest'; module Instagram; module Testers; end; end; load 'app/services/instagram/testers/validation.rb'; load 'app/services/instagram/testers/proxy.rb'; print Instagram::Testers::Proxy.new.fingerprint"
         node = "import {configuration} from './scripts/instagram_testers/session-observer.mjs'; process.stdout.write(configuration(process.env).proxyFingerprint)"

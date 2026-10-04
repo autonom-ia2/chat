@@ -4,7 +4,7 @@ import ipaddress
 import json
 from pathlib import Path
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 
 def read_env(path):
@@ -36,9 +36,14 @@ def validate(stage, app):
                'INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE', 'INSTAGRAM_TESTER_PROXY_IDENTITY'}
     if dedicated.keys() - allowed:
         raise ValueError('invalid coordination keys')
-    redis = urlsplit(dedicated['INSTAGRAM_TESTER_COORDINATION_REDIS_URL'])
+    redis_url = dedicated['INSTAGRAM_TESTER_COORDINATION_REDIS_URL']
+    if any(ord(char) < 32 or ord(char) == 127 for char in redis_url):
+        raise ValueError('invalid coordination endpoint')
+    redis = urlsplit(redis_url)
     if (redis.scheme != 'rediss' or redis.hostname != 'ig-coord.internal' or redis.port != 16381
-            or not redis.password or redis.path != '/0' or redis.query or redis.fragment):
+            or redis.username not in ('ig_hub', 'ig_auto') or not redis.password
+            or any(ord(char) < 32 or ord(char) == 127 for char in unquote(redis.password))
+            or redis.path != '/0' or redis.query or redis.fragment):
         raise ValueError('invalid coordination endpoint')
     effective = read_env(app / '.env') | read_env(app / 'instagram-tester.env') | dedicated
     host = effective['INSTAGRAM_TESTER_PROXY_HOST']
