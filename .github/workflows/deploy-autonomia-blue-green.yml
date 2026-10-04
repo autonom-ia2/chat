@@ -110,7 +110,7 @@ jobs:
           echo 'ENV CW_EDITION="ee"' >> docker/Dockerfile
 
       # Fase 3 (#974): a instância green liga antes do build. Enquanto a imagem é montada, ela instala o Docker e
-      # lê o env; o deploy.sh espera a imagem chegar ao ECR. Se o build falhar, a limpeza no fim desliga a green.
+      # lê o env; o user data espera a imagem chegar ao ECR. Se o build falhar, a limpeza no fim desliga a green.
       # Mesmo padrao do step de flags do stack Hub2You: le o env parameter,
       # garante as flags exigidas preservando todas as demais linhas, regrava.
       - name: Ensure Autonomia runtime flags
@@ -552,7 +552,13 @@ jobs:
             rm -f "$error_file"
             return 1
           }
+          # wait_for_image fica fora do deploy.sh: a limpeza do workflow só preserva a green enquanto o marcador abaixo existe,
+          # e esperando a imagem não há migration para proteger (#972).
           wait_for_image
+
+          # Marcador enquanto o deploy.sh (migrations) roda; some ao sair, com sucesso ou erro (#972).
+          touch /run/chatwoot-deploy.running
+          trap 'rm -f /run/chatwoot-deploy.running' EXIT
           "$APP_DIR/deploy.sh"
           USERDATA
 
@@ -568,7 +574,7 @@ jobs:
       - name: Retire greens left by an interrupted deploy
         run: |
           leftover=""
-          for attempt in $(seq 1 360); do
+          for attempt in $(seq 1 300); do
             leftover=$(aws ec2 describe-instances \
               --filters "Name=tag:DeployCleanup,Values=pending" "Name=instance-state-name,Values=pending,running,stopping,shutting-down" \
               --query 'Reservations[].Instances[].InstanceId' \
@@ -946,7 +952,7 @@ jobs:
             }
 
             retired=false
-            status_params=$(jq -nc '{commands: ["if pidof -x deploy.sh >/dev/null; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi"]}')
+            status_params=$(jq -nc '{commands: ["if [ -e /run/chatwoot-deploy.running ]; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi"]}')
             status_id=$(aws ssm send-command --instance-ids "$GREEN_INSTANCE_ID" --document-name AWS-RunShellScript \
               --parameters "$status_params" --query 'Command.CommandId' --output text 2>/dev/null || true)
             deploy_status=""
@@ -956,7 +962,7 @@ jobs:
             echo "Green $GREEN_INSTANCE_ID: ${deploy_status:-sem resposta do SSM}"
             if [ "${deploy_status#*DEPLOY_RUNNING}" != "$deploy_status" ] \
               && aws ec2 create-tags --resources "$GREEN_INSTANCE_ID" --tags Key=DeployCleanup,Value=pending; then
-              retire_params=$(jq -nc '{commands: ["systemd-run --unit=green-retire --no-block sh -c \"while pidof -x deploy.sh >/dev/null; do sleep 5; done; shutdown -h now\""]}')
+              retire_params=$(jq -nc '{commands: ["systemd-run --unit=green-retire --no-block sh -c \"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now\""]}')
               retire_id=$(aws ssm send-command --instance-ids "$GREEN_INSTANCE_ID" --document-name AWS-RunShellScript \
                 --parameters "$retire_params" --query 'Command.CommandId' --output text 2>/dev/null || true)
               if [ -n "$retire_id" ] && [ "$retire_id" != "None" ]; then
