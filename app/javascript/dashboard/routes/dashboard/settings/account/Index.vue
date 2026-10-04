@@ -56,6 +56,7 @@ export default {
       locale: 'en',
       domain: '',
       supportEmail: '',
+      timezone: '',
       features: {},
     };
   },
@@ -85,6 +86,16 @@ export default {
       return enabledLanguages.sort((l1, l2) =>
         l1.iso_639_1_code.localeCompare(l2.iso_639_1_code)
       );
+    },
+    timezoneChoices() {
+      try {
+        return Intl.supportedValuesOf('timeZone').map(tz => ({
+          value: tz,
+          label: tz.split('_').join(' '),
+        }));
+      } catch {
+        return [];
+      }
     },
     languageChoices() {
       return this.languagesSortedByCode.map(lang => ({
@@ -128,8 +139,16 @@ export default {
   methods: {
     async initializeAccount() {
       try {
-        const { name, locale, id, domain, support_email, features } =
-          this.getAccount(this.accountId);
+        const {
+          name,
+          locale,
+          id,
+          domain,
+          support_email,
+          features,
+          custom_attributes: customAttributes,
+          settings,
+        } = this.getAccount(this.accountId);
 
         const effectiveLocale = this.uiSettings?.locale || locale;
         if (effectiveLocale) {
@@ -140,6 +159,8 @@ export default {
         this.id = id;
         this.domain = domain;
         this.supportEmail = support_email;
+        this.timezone =
+          customAttributes?.timezone || settings?.reporting_timezone || '';
         this.features = features;
       } catch (error) {
         // Ignore error
@@ -158,6 +179,7 @@ export default {
           name: this.name,
           domain: this.domain,
           support_email: this.supportEmail,
+          ...(this.timezone && { timezone: this.timezone }),
         });
         // If user locale is set, update the locale with user locale
         const updatedLocale = this.uiSettings?.locale || this.locale;
@@ -215,6 +237,21 @@ export default {
               :invalid="v$.locale.$error"
               class="w-full"
             />
+          </WithLabel>
+          <WithLabel
+            name="account-timezone"
+            :label="$t('GENERAL_SETTINGS.FORM.TIMEZONE.LABEL')"
+          >
+            <ChoiceSelect
+              v-model="timezone"
+              :options="timezoneChoices"
+              :aria-label="$t('GENERAL_SETTINGS.FORM.TIMEZONE.LABEL')"
+              :placeholder="$t('GENERAL_SETTINGS.FORM.TIMEZONE.PLACEHOLDER')"
+              class="w-full"
+            />
+            <template #help>
+              {{ $t('GENERAL_SETTINGS.FORM.TIMEZONE.HELP') }}
+            </template>
           </WithLabel>
           <WithLabel
             v-if="featureCustomReplyDomainEnabled"
