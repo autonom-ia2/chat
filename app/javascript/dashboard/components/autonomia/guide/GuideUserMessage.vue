@@ -12,6 +12,8 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  // #982 — na tela de Automações, o balão de quem pede é azul, como no WhatsApp.
+  destaque: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['tentarDeNovo']);
@@ -29,7 +31,12 @@ const voz = computed(() => props.item.voz);
 <template>
   <div class="flex justify-end w-full">
     <div
-      class="flex flex-col gap-2 max-w-[85%] min-w-0 rounded-2xl ltr:rounded-br-md rtl:rounded-bl-md bg-n-alpha-2 px-3 py-2 text-n-slate-12"
+      class="flex flex-col gap-2 max-w-[85%] min-w-0 rounded-2xl ltr:rounded-br-md rtl:rounded-bl-md"
+      :class="
+        destaque
+          ? 'bg-n-brand px-4 py-3 text-base leading-relaxed text-white'
+          : 'bg-n-alpha-2 px-3 py-2 text-n-slate-12'
+      "
     >
       <span class="sr-only">{{ $t('CAPTAIN.COPILOT.YOU') }}</span>
       <ul

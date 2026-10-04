@@ -1408,6 +1408,46 @@ describe('AutonomiaGuideContainer — embutido', () => {
     expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
   });
 
+  // #982 — na tela de Automações: balão azul de quem pede, respostas de um
+  // toque depois da fala do Guia e nada de "Ir para a tela".
+  it('respostas de um toque: com pergunta vão ao Guia, sem pergunta a tela decide', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'Montei a automação.',
+        navigations: [{ route: 'automacoes_lista' }],
+      },
+    });
+    wrapper = montarEmbutido({
+      semTelas: true,
+      respostasRapidas: [
+        { chave: 'OTIMA', rotulo: 'Está ótima' },
+        { chave: 'CURTA', rotulo: 'Mais curta', pergunta: 'Deixa mais curta.' },
+      ],
+    });
+    expect(wrapper.find('[data-respostas-rapidas]').exists()).toBe(false);
+
+    await perguntar(wrapper, 'agradecer quem encerrar');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(wrapper.find('[data-respostas-rapidas]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.GO_TO_SCREEN');
+    expect(
+      wrapper.findComponent({ name: 'GuideUserMessage' }).props('destaque')
+    ).toBe(true);
+
+    await wrapper.find('[data-resposta="OTIMA"]').trigger('click');
+    expect(wrapper.emitted('respostaRapida')).toEqual([['OTIMA']]);
+
+    await wrapper.find('[data-resposta="CURTA"]').trigger('click');
+    expect(AutonomiaGuideAPI.chat).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'Deixa mais curta.' })
+    );
+  });
+
   // Revisão #859: a conversa embutida sai junto com a tela. Antes, a busca
   // parava e a resposta (e o que o Guia fez) nunca entrava na conversa.
   it('sair da tela no meio da resposta: o painel lateral termina de buscar', async () => {

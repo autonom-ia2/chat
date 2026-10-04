@@ -11,6 +11,7 @@ import AutonomiaGuideContainer from 'dashboard/components/autonomia/guide/Autono
 import { descreverAutomacao } from 'dashboard/helper/automacaoEmPortugues';
 import AutomacaoResumo from '../components/AutomacaoResumo.vue';
 import AutomacaoEnsaio from '../components/AutomacaoEnsaio.vue';
+import AutomacaoEtapas from '../components/AutomacaoEtapas.vue';
 import { MODELOS, modeloExiste } from '../modelos';
 import { useNomesDaConta } from '../composables/useNomesDaConta';
 import {
@@ -18,9 +19,11 @@ import {
   passoMexeuEmAutomacao,
 } from '../composables/useCriadasPeloGuia';
 
-// #859 — nova automação ou uma já existente, montada conversando com o Guia.
-// A conversa fica em cima (é a mesma do painel lateral, embutida); ao lado, o
-// resumo Quando → Se → Então, o teste com casos reais e o botão Ligar.
+// #859/#982 — nova automação ou uma já existente, montada conversando com o
+// Guia. À esquerda a conversa (a mesma do painel lateral, embutida); à direita a
+// automação ao vivo — Quando → Só se → Faz, a prévia da mensagem, o que teria
+// acontecido nas conversas recentes e o botão Ligar. No topo, as etapas Conte →
+// Confira → Ligue.
 //
 // Que a automação nasce desligada nesta tela é instrução do Guia (porques.md,
 // bloco `criar_automacao_conversando`), não regra no código.
@@ -92,17 +95,39 @@ const sugestoes = computed(() =>
   }))
 );
 
-// O modelo que a pessoa escolheu na lista vira a primeira pergunta ao Guia.
+// O que a pessoa pediu na lista vira a primeira pergunta ao Guia: o modelo
+// escolhido (chave conhecida, na URL) ou o texto que ela escreveu (no estado da
+// navegação, que só a própria tela preenche — um link de fora não manda pedido
+// ao Guia em nome de ninguém).
+const MAX_PEDIDO = 500;
+const pedidoEscrito = ref(
+  typeof window.history.state?.pedidoAutomacao === 'string'
+    ? window.history.state.pedidoAutomacao.slice(0, MAX_PEDIDO)
+    : ''
+);
+// A pessoa tocou no microfone na lista: a conversa abre gravando. Vale uma vez.
+const comecarPorVoz = ref(window.history.state?.pedidoPorVoz === true);
+if (comecarPorVoz.value) {
+  const { pedidoPorVoz, ...restoDoEstado } = window.history.state || {};
+  window.history.replaceState(restoDoEstado, '');
+}
+
 const pedidoInicial = computed(() => {
+  if (regraId.value) return '';
   const modelo = String(route.query.modelo || '');
-  if (regraId.value || !modeloExiste(modelo)) return '';
-  return t(`AUTOMACOES.MODELOS.${modelo}.PEDIDO`);
+  if (modeloExiste(modelo)) return t(`AUTOMACOES.MODELOS.${modelo}.PEDIDO`);
+  return pedidoEscrito.value;
 });
 
 // O modelo vale uma pergunta só. Saiu, sai também da URL: a tela que nasce de
 // novo (o Guia mudou a conta e o painel é remontado, ou a pessoa recarregou)
 // não manda o mesmo pedido outra vez.
 const gastarModelo = () => {
+  if (pedidoEscrito.value) {
+    pedidoEscrito.value = '';
+    const { pedidoAutomacao, ...restoDoEstado } = window.history.state || {};
+    window.history.replaceState(restoDoEstado, '');
+  }
   if (!route.query.modelo) return;
   const { modelo, ...resto } = route.query;
   router.replace({ name: route.name, params: route.params, query: resto });
@@ -122,6 +147,56 @@ const aoExecutar = execucao => {
   }
   if (passos.some(passoMexeuEmAutomacao)) carregar();
 };
+
+// Respostas de um toque depois da fala do Guia, enquanto a automação está
+// montada e desligada. "Está ótima" não gasta pergunta: leva ao botão Ligar.
+const ligarRef = ref(null);
+const temMensagem = computed(() =>
+  (regra.value?.actions || []).some(acao => acao.action_name === 'send_message')
+);
+const respostasRapidas = computed(() => {
+  if (!regra.value || regra.value.active) return [];
+  const otima = {
+    chave: 'OTIMA',
+    rotulo: t('AUTOMACOES.RESPOSTAS.OTIMA'),
+  };
+  if (!temMensagem.value) {
+    return [
+      otima,
+      {
+        chave: 'MUDAR',
+        rotulo: t('AUTOMACOES.RESPOSTAS.MUDAR'),
+        pergunta: t('AUTOMACOES.RESPOSTAS.MUDAR_PEDIDO'),
+      },
+    ];
+  }
+  return [
+    otima,
+    {
+      chave: 'CURTA',
+      rotulo: t('AUTOMACOES.RESPOSTAS.CURTA'),
+      pergunta: t('AUTOMACOES.RESPOSTAS.CURTA_PEDIDO'),
+    },
+    {
+      chave: 'ESCREVER',
+      rotulo: t('AUTOMACOES.RESPOSTAS.ESCREVER'),
+      pergunta: t('AUTOMACOES.RESPOSTAS.ESCREVER_PEDIDO'),
+    },
+  ];
+});
+
+const aoResponderRapido = chave => {
+  if (chave !== 'OTIMA') return;
+  const botao = ligarRef.value?.$el;
+  botao?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+  botao?.focus?.();
+};
+
+// Conte (sem automação) → Confira (montada, desligada) → Ligue (ligada).
+const etapa = computed(() => {
+  if (!regra.value) return 1;
+  return regra.value.active ? 3 : 2;
+});
 
 const voltar = () =>
   router.push({
@@ -155,163 +230,226 @@ const mudarLigada = async ligar => {
 
 <template>
   <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
-    <header
-      class="shrink-0 flex flex-col gap-2 px-6 pt-4 pb-4 border-b border-n-weak"
-    >
-      <Button
-        :label="$t('AUTOMACOES.CONVERSA.VOLTAR')"
-        icon="i-lucide-arrow-left"
-        link
-        slate
-        class="self-start min-h-11"
-        @click="voltar"
-      />
-      <h1 class="text-xl font-medium text-n-slate-12 break-words">
-        {{ titulo }}
-      </h1>
-    </header>
-
-    <main class="flex-1 overflow-y-auto px-6 py-6">
+    <main class="flex-1 overflow-y-auto">
       <div
-        class="grid w-full max-w-6xl gap-6 mx-auto lg:grid-cols-[minmax(0,1fr)_22rem]"
+        class="flex flex-col w-full gap-7 px-5 py-6 mx-auto max-w-7xl md:px-8 md:py-8"
       >
-        <div class="flex flex-col gap-3 min-w-0">
-          <p class="text-sm text-n-slate-11">
-            {{ $t('AUTOMACOES.CONVERSA.INTRO') }}
-          </p>
-          <div v-if="guiaLigado" data-conversa class="h-[32rem]">
-            <AutonomiaGuideContainer
-              embutido
-              :sugestoes="sugestoes"
-              :introducao="$t('AUTOMACOES.CONVERSA.INTRO_GUIA')"
-              :pedido-inicial="pedidoInicial"
-              @execucao="aoExecutar"
-              @pedido-inicial-enviado="gastarModelo"
+        <header class="flex flex-col gap-4">
+          <button
+            type="button"
+            data-voltar
+            class="inline-flex items-center self-start gap-2 text-[0.9375rem] rounded-lg min-h-11 text-n-slate-11 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+            @click="voltar"
+          >
+            <span
+              class="i-lucide-arrow-left size-5 rtl:rotate-180"
+              aria-hidden="true"
+            />
+            {{ $t('AUTOMACOES.CONVERSA.VOLTAR') }}
+          </button>
+          <div class="flex flex-wrap items-center justify-between gap-5">
+            <h1
+              class="text-3xl font-bold tracking-tight break-words text-n-slate-12"
+            >
+              {{ titulo }}
+            </h1>
+            <AutomacaoEtapas
+              :atual="etapa"
+              :concluida="Boolean(regra && regra.active)"
             />
           </div>
-          <div
-            v-else
-            data-guia-fora
-            class="flex flex-col items-start gap-3 rounded-xl border border-n-weak bg-n-solid-1 p-4"
-          >
-            <p class="text-sm text-n-slate-12">
-              {{ $t('AUTOMACOES.CONVERSA.GUIA_FORA') }}
-            </p>
-            <Button
-              v-if="podeMudar"
-              :label="$t('AUTOMACOES.CONVERSA.MONTAR_MANUAL')"
-              icon="i-lucide-sliders-horizontal"
-              slate
-              faded
-              class="min-h-11"
-              @click="modoManual"
-            />
-          </div>
-        </div>
+        </header>
 
-        <aside class="flex flex-col gap-4 min-w-0">
-          <div
-            v-if="estado === 'carregando'"
-            data-carregando
-            aria-busy="true"
-            class="flex flex-col gap-3"
-          >
-            <span class="sr-only">
-              {{ $t('AUTOMACOES.CONVERSA.CARREGANDO') }}
-            </span>
-            <div class="h-40 rounded-xl bg-n-alpha-2 animate-pulse" />
-            <div class="h-24 rounded-xl bg-n-alpha-2 animate-pulse" />
-          </div>
-
-          <div
-            v-else-if="estado === 'erro'"
-            data-erro
-            role="alert"
-            class="flex flex-col items-start gap-3 rounded-xl border border-n-weak bg-n-solid-1 p-4"
-          >
-            <p class="text-sm text-n-slate-12">
-              {{ $t('AUTOMACOES.CONVERSA.ERRO') }}
-            </p>
-            <Button
-              :label="$t('AUTOMACOES.CONVERSA.VOLTAR')"
-              slate
-              faded
-              class="min-h-11"
-              @click="voltar"
-            />
-          </div>
-
-          <template v-else>
-            <AutomacaoResumo :descricao="descricao" />
-
-            <template v-if="regra">
+        <div
+          class="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] items-start"
+        >
+          <div class="flex flex-col min-w-0 gap-3">
+            <div
+              v-if="guiaLigado"
+              data-conversa
+              class="flex flex-col overflow-hidden border shadow-sm rounded-3xl border-n-weak bg-n-solid-1"
+            >
               <div
-                class="flex flex-col gap-3 rounded-xl border border-n-weak bg-n-solid-1 p-4"
+                class="flex items-center gap-3 px-5 py-4 border-b border-n-weak"
               >
-                <p
-                  data-situacao
-                  class="text-sm"
-                  :class="regra.active ? 'text-n-teal-11' : 'text-n-slate-11'"
+                <span
+                  class="grid rounded-xl place-items-center size-10 bg-[#0D2344] text-n-blue-6"
                 >
-                  {{
-                    regra.active
-                      ? $t('AUTOMACOES.CONVERSA.LIGADA_AVISO')
-                      : $t('AUTOMACOES.CONVERSA.DESLIGADA_AVISO')
-                  }}
-                </p>
+                  <span class="i-lucide-sparkles size-5" aria-hidden="true" />
+                </span>
+                <div class="min-w-0">
+                  <p class="mb-0 text-base font-semibold text-n-slate-12">
+                    {{ $t('AUTOMACOES.CONVERSA.GUIA_NOME') }}
+                  </p>
+                  <p class="mb-0 text-sm text-n-slate-11">
+                    {{ $t('AUTOMACOES.CONVERSA.GUIA_SUBTITULO') }}
+                  </p>
+                </div>
+              </div>
+              <div class="h-[38rem] [&>*]:!rounded-none [&>*]:!border-0">
+                <AutonomiaGuideContainer
+                  embutido
+                  sem-telas
+                  :sugestoes="sugestoes"
+                  :introducao="$t('AUTOMACOES.CONVERSA.INTRO_GUIA')"
+                  :pedido-inicial="pedidoInicial"
+                  :respostas-rapidas="respostasRapidas"
+                  :comecar-por-voz="comecarPorVoz"
+                  @resposta-rapida="aoResponderRapido"
+                  @execucao="aoExecutar"
+                  @pedido-inicial-enviado="gastarModelo"
+                />
+              </div>
+            </div>
+            <div
+              v-else
+              data-guia-fora
+              class="flex flex-col items-start gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
+            >
+              <p class="mb-0 text-base text-n-slate-12">
+                {{ $t('AUTOMACOES.CONVERSA.GUIA_FORA') }}
+              </p>
+              <Button
+                v-if="podeMudar"
+                :label="$t('AUTOMACOES.CONVERSA.MONTAR_MANUAL')"
+                icon="i-lucide-sliders-horizontal"
+                slate
+                faded
+                class="min-h-11"
+                @click="modoManual"
+              />
+            </div>
+          </div>
+
+          <aside class="flex flex-col min-w-0 gap-5">
+            <div
+              v-if="estado === 'carregando'"
+              data-carregando
+              aria-busy="true"
+              class="flex flex-col gap-4"
+            >
+              <span class="sr-only">
+                {{ $t('AUTOMACOES.CONVERSA.CARREGANDO') }}
+              </span>
+              <div class="h-72 rounded-3xl bg-n-alpha-2 animate-pulse" />
+              <div class="h-40 rounded-3xl bg-n-alpha-2 animate-pulse" />
+            </div>
+
+            <div
+              v-else-if="estado === 'erro'"
+              data-erro
+              role="alert"
+              class="flex flex-col items-start gap-4 p-6 border rounded-3xl border-n-weak bg-n-solid-1"
+            >
+              <p class="mb-0 text-base text-n-slate-12">
+                {{ $t('AUTOMACOES.CONVERSA.ERRO') }}
+              </p>
+              <Button
+                :label="$t('AUTOMACOES.CONVERSA.VOLTAR')"
+                slate
+                faded
+                class="min-h-11"
+                @click="voltar"
+              />
+            </div>
+
+            <template v-else>
+              <AutomacaoResumo :descricao="descricao" :regra="regra" />
+
+              <template v-if="regra">
+                <AutomacaoEnsaio
+                  :key="regra.id"
+                  :regra-id="regra.id"
+                  :account-id="accountId"
+                  :automatico="!regra.active"
+                />
+
                 <template v-if="podeMudar">
-                  <Button
-                    v-if="!regra.active"
-                    data-ligar
-                    :label="$t('AUTOMACOES.CONVERSA.LIGAR')"
-                    icon="i-lucide-power"
-                    class="min-h-11"
-                    :is-loading="ligando"
-                    :disabled="ligando"
-                    @click="mudarLigada(true)"
-                  />
-                  <Button
+                  <div v-if="!regra.active" class="flex flex-col gap-2.5">
+                    <Button
+                      ref="ligarRef"
+                      data-ligar
+                      :label="$t('AUTOMACOES.CONVERSA.LIGAR')"
+                      icon="i-lucide-power"
+                      teal
+                      size="lg"
+                      justify="center"
+                      class="w-full !min-h-14 !text-lg !font-bold !rounded-2xl shadow-lg"
+                      :is-loading="ligando"
+                      :disabled="ligando"
+                      @click="mudarLigada(true)"
+                    />
+                    <p
+                      data-situacao
+                      class="mb-0 text-sm text-center text-n-slate-11"
+                    >
+                      {{ $t('AUTOMACOES.CONVERSA.DESLIGADA_AVISO') }}
+                    </p>
+                  </div>
+                  <div
                     v-else
-                    data-desligar
-                    :label="$t('AUTOMACOES.CONVERSA.DESLIGAR')"
-                    icon="i-lucide-power-off"
-                    slate
-                    faded
-                    class="min-h-11"
-                    :is-loading="ligando"
-                    :disabled="ligando"
-                    @click="mudarLigada(false)"
-                  />
+                    data-ligada
+                    role="status"
+                    class="flex items-center gap-4 p-5 rounded-2xl bg-n-teal-3"
+                  >
+                    <span
+                      class="grid text-white rounded-full place-items-center size-10 shrink-0 bg-n-teal-10"
+                    >
+                      <span class="i-lucide-check size-5" aria-hidden="true" />
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="mb-0 text-base font-semibold text-n-teal-12">
+                        {{ $t('AUTOMACOES.CONVERSA.LIGADA_TITULO') }}
+                      </p>
+                      <p
+                        data-situacao
+                        class="mb-0 text-[0.9375rem] text-n-teal-11"
+                      >
+                        {{ $t('AUTOMACOES.CONVERSA.LIGADA_AVISO') }}
+                      </p>
+                    </div>
+                    <Button
+                      data-desligar
+                      :label="$t('AUTOMACOES.CONVERSA.DESLIGAR')"
+                      teal
+                      link
+                      class="min-h-11 shrink-0 !font-semibold"
+                      :is-loading="ligando"
+                      :disabled="ligando"
+                      @click="mudarLigada(false)"
+                    />
+                  </div>
                 </template>
-                <p v-else class="text-sm text-n-slate-11">
+                <p
+                  v-else
+                  class="mb-0 p-4 text-[0.9375rem] rounded-2xl bg-n-alpha-1 text-n-slate-11"
+                >
                   {{ $t('AUTOMACOES.CONVERSA.SO_LEITURA') }}
                 </p>
-              </div>
 
-              <AutomacaoEnsaio :regra-id="regra.id" :account-id="accountId" />
-
+                <Button
+                  data-modo-manual
+                  :label="$t('AUTOMACOES.CONVERSA.MODO_MANUAL')"
+                  icon="i-lucide-sliders-horizontal"
+                  link
+                  slate
+                  class="self-center min-h-11"
+                  @click="modoManual"
+                />
+              </template>
               <Button
+                v-else-if="podeMudar && guiaLigado"
                 data-modo-manual
-                :label="$t('AUTOMACOES.CONVERSA.MODO_MANUAL')"
+                :label="$t('AUTOMACOES.CONVERSA.MONTAR_MANUAL')"
                 icon="i-lucide-sliders-horizontal"
                 link
                 slate
-                class="self-start min-h-11"
+                class="self-center min-h-11"
                 @click="modoManual"
               />
             </template>
-            <Button
-              v-else-if="podeMudar"
-              data-modo-manual
-              :label="$t('AUTOMACOES.CONVERSA.MONTAR_MANUAL')"
-              icon="i-lucide-sliders-horizontal"
-              link
-              slate
-              class="self-start min-h-11"
-              @click="modoManual"
-            />
-          </template>
-        </aside>
+          </aside>
+        </div>
       </div>
     </main>
   </section>

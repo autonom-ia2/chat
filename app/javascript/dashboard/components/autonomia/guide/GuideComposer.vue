@@ -179,6 +179,10 @@ const gravar = () => {
   anuncio.value = '';
 };
 
+// #982 — a tela de Automações pode abrir já gravando (a pessoa tocou no
+// microfone antes de chegar aqui).
+defineExpose({ gravar });
+
 // Entrega o áudio; se o Guia ainda está respondendo, ele espera a vez.
 const entregarAudio = () => {
   if (props.isBusy || props.onEnviarVoz(audioEsperando) === false) {
