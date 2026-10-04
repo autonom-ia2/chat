@@ -23,3 +23,7 @@ O scheduler recusou execução local no M4 com pressão térmica Heavy. Foi usad
 A ordem documental foi corrigida: candidato/review/CI → aprovação e deploy → cinco metadados em cada banco → bootstrap → gestor/renovação → homologação por stack. Não há exigência de salvar dados numa tela ainda não publicada. A main posterior `f1cd8f3e38` contém #979 (Autonom.ia t3.medium); preservar essa alteração na composição final antes de pedir aprovação.
 
 Recibos e pareceres: `tmp/resume-release-2125-20261004/`. Resultado anterior do transporte: `tmp/reuse-auth-20261004/relatorios-transporte/resultado.json`. CI deve validar o SHA publicado final; nenhuma aprovação é herdada de outro commit. Nenhum merge na main, deploy, alteração Redis, nova autenticação ou convite executado nesta revisão. Exclusão real entre stacks, sessão, OAuth/webhook e mensagens seguem como gates de ativação, não como testes já aprovados.
+
+## Preservação da correção posterior #979
+
+A composição seguinte incorporou exatamente a alteração preexistente da main `f1cd8f3e38`: default manual e fallback da EC2 Autonom.ia passam a `t3.medium`. Nexo revisou o diff, YAML e scripts; não houve mudança adicional nas funções de recuperação. Blob Git Aut workflow: `edc0ecd6e8ea3af17b2453470fc7f640bcfd8617`. A configuração de memória veio da main; não foi aplicada infraestrutura nesta etapa. O CI do novo SHA continua obrigatório antes de solicitar aprovação.
