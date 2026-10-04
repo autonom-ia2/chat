@@ -1,8 +1,12 @@
 name: Fork translations
 on:
   pull_request:
+  # Check obrigatório da fila de merge. O push da main sai junto com o do testes.yml,
+  # depois que o ruleset da fila estiver ativo.
   push:
     branches: [main]
+  merge_group:
+    types: [checks_requested]
 permissions:
   contents: read
 jobs:
@@ -23,4 +27,5 @@ jobs:
         env:
           CROWDIN_SYNC: >-
             ${{ github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, 'chore: Update translations') }}
+          # A proteção do Crowdin só roda no PR do Crowdin; na fila CROWDIN_SYNC é sempre falso.
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

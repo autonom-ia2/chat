@@ -5,6 +5,9 @@ import OnboardingProgressAPI from 'dashboard/api/onboardingProgress';
 // e organiza. Daí em diante a tela deixa de tomar a home.
 export const PASSO_ESSENCIAL_FINAL = 'funil';
 
+// Etapas da tela, na ordem (config/onboarding/trilha.yml, campo `etapa`).
+export const ETAPAS = ['ligar', 'organizar', 'crescer'];
+
 export function useOnboardingTrail() {
   const passos = ref([]);
   const carregando = ref(false);
@@ -58,6 +61,24 @@ export function useOnboardingTrail() {
     );
   });
 
+  // Número do passo na trilha que a pessoa vê (o agente vê menos passos).
+  const numerados = computed(() =>
+    passos.value.map((passo, indice) => ({ ...passo, numero: indice + 1 }))
+  );
+
+  const porEtapa = computed(() =>
+    ETAPAS.map(id => ({
+      id,
+      passos: numerados.value.filter(passo => passo.etapa === id),
+    })).filter(etapa => etapa.passos.length)
+  );
+
+  const minutosRestantes = computed(() =>
+    passos.value
+      .filter(passo => passo.status === 'pendente')
+      .reduce((soma, passo) => soma + (passo.minutos || 0), 0)
+  );
+
   const pular = async passoId => {
     await OnboardingProgressAPI.skip(passoId);
     await carregar();
@@ -78,6 +99,9 @@ export function useOnboardingTrail() {
     percentual,
     passoAtual,
     essencialConcluido,
+    numerados,
+    porEtapa,
+    minutosRestantes,
     carregar,
     pular,
     retomar,

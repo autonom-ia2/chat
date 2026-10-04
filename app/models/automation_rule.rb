@@ -31,7 +31,10 @@ class AutomationRule < ApplicationRecord
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
   has_many_attached :files
 
-  validates :event_name, json_schema: { schema: AutomationRuleSchema::EVENTO }
+  # O esquema é lido na hora de validar, não ao carregar: AutomationRuleSchema lê constantes deste model, e ler
+  # as dele aqui na carga criava um ciclo que quebrava quem carregasse o esquema primeiro (#963).
+  validates :event_name, json_schema: { schema: ->(_regra) { AutomationRuleSchema::EVENTO } }
+  validates :execution_delay, json_schema: { schema: ->(_regra) { AutomationRuleSchema::ATRASO } }
   validates :conditions, json_schema: { schema: ->(regra) { AutomationRuleSchema.conditions(regra) } }
   validates :actions, json_schema: { schema: ->(regra) { AutomationRuleSchema.actions(regra) } }
   validate :decisor_actions_format

@@ -1,18 +1,40 @@
 {
   "ONBOARDING_TRAIL": {
-    "TITLE": "First steps",
-    "SUBTITLE": "Follow the list and your operation is up. We say why each step matters and take you to the right screen.",
-    "DONE_TITLE": "Your CRM is working",
+    "GREETING": "Hi, {nome}",
+    "TITLE": "Let's get your customer service ready",
+    "SUBTITLE": "One step at a time. Almost every step has a short video showing where to click.",
+    "DONE_TITLE": "Your customer service is working",
     "DONE_SUBTITLE": "The essentials are done: you receive, reply and organize. What is left is fine tuning, at your own pace.",
     "PROGRESS": "{feitos} of {total}",
-    "DO_IT": "Do it now",
-    "SKIP": "Leave for later",
-    "STUCK": "I am stuck",
+    "REMAINING": "about {minutos} min left",
+    "ALL_DONE": "all done",
+    "ETAPAS": {
+      "ligar": "Turn the platform on",
+      "organizar": "Organize your sales",
+      "crescer": "Grow"
+    },
+    "NEXT_STEP": "Your next step",
+    "CHOSEN_STEP": "Chosen step",
+    "STEP_OF": "{numero} of {total}",
+    "NEED": "Before you start, have this at hand",
+    "WAITS_FOR": "Needs first: {titulo}",
+    "HELP": "I need help",
+    "SKIP": "Skip for now",
+    "TIME": "Takes about {minutos} minutes",
+    "NO_VIDEO": "This step is quick. The written walkthrough is in the Help Center.",
+    "READ_ARTICLE": "Rather read? Open the walkthrough",
+    "OPEN_ARTICLE": "Open the walkthrough",
+    "HAS_VIDEO": "Has a video",
+    "NOW": "Now",
+    "OPTIONAL": "Optional",
+    "ESSENTIAL_READY": "The essentials are ready",
+    "ESSENTIAL_READY_TEXT": "You already receive, reply to and organize conversations. Move on to the next step whenever you like.",
+    "SEE_REST": "See what is left",
     "LOAD_ERROR": "We could not load your first steps. Refresh the page.",
     "SKIP_ERROR": "We could not skip this step. Please try again.",
     "STATUS": {
       "DONE": "Done",
-      "SKIPPED": "Left for later"
+      "SKIPPED": "Skipped"
     }
   }
 }

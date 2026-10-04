@@ -1,18 +1,40 @@
 {
   "ONBOARDING_TRAIL": {
-    "TITLE": "Primeiros passos",
-    "SUBTITLE": "Siga a lista e sua operação fica em pé. A gente mostra por que cada passo importa e leva você até a tela certa.",
-    "DONE_TITLE": "Seu CRM está funcionando",
+    "GREETING": "Olá, {nome}",
+    "TITLE": "Vamos deixar seu atendimento pronto",
+    "SUBTITLE": "Faça um passo de cada vez. Quase todos têm um vídeo curto mostrando onde clicar.",
+    "DONE_TITLE": "Seu atendimento está funcionando",
     "DONE_SUBTITLE": "O essencial está pronto: você recebe, responde e organiza. O que sobrou é ajuste fino, no seu tempo.",
     "PROGRESS": "{feitos} de {total}",
-    "DO_IT": "Fazer agora",
-    "SKIP": "Deixar para depois",
-    "STUCK": "Estou travado",
+    "REMAINING": "faltam uns {minutos} min",
+    "ALL_DONE": "tudo feito",
+    "ETAPAS": {
+      "ligar": "Ligar a plataforma",
+      "organizar": "Organizar as vendas",
+      "crescer": "Crescer"
+    },
+    "NEXT_STEP": "Seu próximo passo",
+    "CHOSEN_STEP": "Passo escolhido",
+    "STEP_OF": "{numero} de {total}",
+    "NEED": "Antes de começar, tenha em mãos",
+    "WAITS_FOR": "Precisa antes: {titulo}",
+    "HELP": "Preciso de ajuda",
+    "SKIP": "Pular por enquanto",
+    "TIME": "Leva uns {minutos} minutos",
+    "NO_VIDEO": "Este passo é rápido. O passo a passo escrito está na Central de Ajuda.",
+    "READ_ARTICLE": "Prefere ler? Abrir o passo a passo",
+    "OPEN_ARTICLE": "Abrir o passo a passo",
+    "HAS_VIDEO": "Tem vídeo",
+    "NOW": "Agora",
+    "OPTIONAL": "Opcional",
+    "ESSENTIAL_READY": "O essencial está pronto",
+    "ESSENTIAL_READY_TEXT": "Você já recebe, responde e organiza as conversas. Quando quiser, siga para o próximo passo.",
+    "SEE_REST": "Ver o que falta",
     "LOAD_ERROR": "Não foi possível carregar seus primeiros passos. Atualize a página.",
     "SKIP_ERROR": "Não foi possível pular este passo. Tente de novo.",
     "STATUS": {
       "DONE": "Feito",
-      "SKIPPED": "Deixado para depois"
+      "SKIPPED": "Pulado"
     }
   }
 }
