@@ -35,6 +35,12 @@ class Autonomia::Guide::Aviso < ApplicationRecord
   scope :de, ->(account, user) { where(account: account, user: user) }
   scope :recentes, -> { order(created_at: :desc, id: :desc) }
 
+  # O link do push e do e-mail (#944): o painel da conta com o Guia aberto, na conversa do aviso
+  # (`?guia=aviso`, lido pelo `AutonomiaGuideContainer`).
+  def self.link_no_painel(account_id)
+    "#{ENV.fetch('FRONTEND_URL', '')}/app/accounts/#{account_id}/dashboard?guia=aviso"
+  end
+
   def urgente?
     gravidade == URGENTE
   end

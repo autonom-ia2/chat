@@ -32,6 +32,7 @@ class AutomationRule < ApplicationRecord
   has_many_attached :files
 
   validates :event_name, json_schema: { schema: AutomationRuleSchema::EVENTO }
+  validates :execution_delay, json_schema: { schema: AutomationRuleSchema::ATRASO }
   validates :conditions, json_schema: { schema: ->(regra) { AutomationRuleSchema.conditions(regra) } }
   validates :actions, json_schema: { schema: ->(regra) { AutomationRuleSchema.actions(regra) } }
   validate :decisor_actions_format

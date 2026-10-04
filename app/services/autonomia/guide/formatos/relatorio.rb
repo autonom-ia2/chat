@@ -14,12 +14,13 @@ class Autonomia::Guide::Formatos::Relatorio
     'controller não encontrado'
   ].freeze
 
-  def initialize(formatos)
+  def initialize(formatos, leituras = {})
     @formatos = formatos
+    @leituras = leituras
   end
 
   def texto
-    [cabecalho, contagens, metricas.texto, por_motivo, lista, metricas.sem_tipo].join("\n")
+    [cabecalho, contagens, metricas.texto, por_motivo, lista, metricas.sem_tipo, leituras].join("\n")
   end
 
   # As duas métricas do #932: campos JSON com esquema e leituras cruas com tipo.
@@ -70,6 +71,28 @@ class Autonomia::Guide::Formatos::Relatorio
   def lista
     linhas = incompletas.sort.map { |acao, formato| "- `#{acao}` — #{Array(formato['motivos']).join('; ')}" }
     "## Ações incompletas\n\n#{linhas.join("\n")}\n"
+  end
+
+  # As leituras (#942): a que tem a lista de parâmetros recusa o que não está nela; a que não tem não
+  # recusa nada.
+  def leituras
+    sem_lista = @leituras.reject { |_recurso, leitura| leitura.key?('parametros') }
+    linhas = sem_lista.sort.map { |recurso, leitura| "- `GET #{recurso}` — #{Array(leitura['motivos']).join('; ')}" }
+    <<~TEXTO
+      ## Parâmetros das leituras
+
+      O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida não recusa nada.
+
+      | | Leituras |
+      |---|---|
+      | No catálogo | #{@leituras.size} |
+      | Com parâmetros conhecidos | #{@leituras.size - sem_lista.size} |
+      | Sem parâmetros conhecidos | #{sem_lista.size} |
+
+      ### Leituras sem parâmetros conhecidos
+
+      #{linhas.join("\n")}
+    TEXTO
   end
 
   def percentual(parte, todo)

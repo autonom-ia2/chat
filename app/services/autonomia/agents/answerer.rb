@@ -293,8 +293,16 @@ module Autonomia
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
-      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
-        nil # NÃO logar e.message (pode ecoar o prompt). error code curto fica no AnswerResult.
+      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
+        ia_indisponivel(e)
+      end
+
+      # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
+      # `ResponsesClient::Error` não carrega código à parte. O status HTTP e o código da OpenAI já
+      # saem no log do próprio cliente (`[crm][ai][openai_error]`); aqui fica de quem foi a falha (#941).
+      def ia_indisponivel(erro)
+        Rails.logger.warn("[autonomia][answerer] ia indisponivel agent=#{@agent.id} feature=#{@feature} #{erro.class}")
+        nil
       end
 
       # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).

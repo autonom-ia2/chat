@@ -3231,6 +3231,15 @@
         "tipo": "string"
       },
       "execution_delay": {
+        "esquema": {
+          "description": "Minutos de espera antes de agir (10 a 43200, até 30 dias); vazio age na hora. Na hora de agir a plataforma confere as condições de novo e desiste se não valem mais. Com eventos de conversa só valem condições de status e caixa; com message_created, todas menos attribute_changed. Precisa do recurso de atraso ligado na conta.",
+          "maximum": 43200,
+          "minimum": 10,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "so_se": "só com delayed_automations ligado na conta",
         "tipo": "inteiro"
       },
@@ -9522,6 +9531,15 @@
         "tipo": "string"
       },
       "execution_delay": {
+        "esquema": {
+          "description": "Minutos de espera antes de agir (10 a 43200, até 30 dias); vazio age na hora. Na hora de agir a plataforma confere as condições de novo e desiste se não valem mais. Com eventos de conversa só valem condições de status e caixa; com message_created, todas menos attribute_changed. Precisa do recurso de atraso ligado na conta.",
+          "maximum": 43200,
+          "minimum": 10,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "so_se": "só com delayed_automations ligado na conta",
         "tipo": "inteiro"
       },
@@ -19209,6 +19227,15 @@
         "tipo": "string"
       },
       "execution_delay": {
+        "esquema": {
+          "description": "Minutos de espera antes de agir (10 a 43200, até 30 dias); vazio age na hora. Na hora de agir a plataforma confere as condições de novo e desiste se não valem mais. Com eventos de conversa só valem condições de status e caixa; com message_created, todas menos attribute_changed. Precisa do recurso de atraso ligado na conta.",
+          "maximum": 43200,
+          "minimum": 10,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "so_se": "só com delayed_automations ligado na conta",
         "tipo": "inteiro"
       },

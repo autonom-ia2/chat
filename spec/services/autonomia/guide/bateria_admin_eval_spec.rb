@@ -619,7 +619,7 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
   # MOTIVO: #858 — classificar muitos registros de uma vez é com o Jev, não com o Guia lendo um a um nem
   # com regra em código. Pega: etiquetar quem não veio do site (tolerância zero numa fixture clara),
   # deixar de etiquetar quem veio, e responder "de cabeça" sem classificar (sem custo jev_guia).
-  it 'C30 desses contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
+  it 'C30 dos meus contatos, marca com lead-site os que vieram do formulário do site', :aggregate_failures do
     ligar_jev!
     site = create_crm_inbox(account: c.conta, name: 'Site da corretora', members: [c.admin])
     do_site = ['Luana Prado', 'Otávio Reis', 'Bianca Moura'].map do |nome|
@@ -631,7 +631,8 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       contato_com_conversa!(nome, c.vendas, texto)
     end
 
-    respondeu!(perguntar('Desses contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
+    # Sem nada na tela, "desses" não aponta para nada e o certo é perguntar (CT06): o pedido diz quais.
+    respondeu!(perguntar('Dos meus contatos, quais vieram de formulário do site? Marque com a etiqueta lead-site'))
 
     etiquetados = c.conta.contacts.select { |contato| contato.reload.label_list.include?('lead-site') }
     expect(etiquetados.map(&:id).sort).to eq(do_site.map(&:id).sort)
@@ -1225,12 +1226,14 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     it 'TL03 etiqueta como sinistro as conversas abertas sobre sinistro, pela classificação', :aggregate_failures do
       ligar_jev!
       c.conta.labels.create!(title: 'sinistro')
-      textos = ['Bati o carro ontem e preciso abrir o sinistro', 'Roubaram meu carro, como aciono o seguro?',
-                'Alagou a garagem e o carro estragou, quero acionar a apólice', 'Meu vidro quebrou, o seguro cobre?',
-                'Tive um acidente leve, preciso do guincho e abrir o processo'] +
-               Array.new(20) { |indice| "Quero uma cotação de seguro auto para o meu carro #{indice}" }
+      # Trabalho grande de verdade: 30 sinistros entre 60 conversas — etiquetar 30 é tarefa, não passo a passo.
+      relatos = ['Bati o carro ontem e preciso abrir o sinistro', 'Roubaram meu carro, como aciono o seguro?',
+                 'Alagou a garagem e o carro estragou, quero acionar a apólice', 'Meu vidro quebrou, o seguro cobre?',
+                 'Tive um acidente leve, preciso do guincho e abrir o processo']
+      textos = Array.new(30) { |indice| "#{relatos[indice % relatos.size]} (caso #{indice})" } +
+               Array.new(30) { |indice| "Quero uma cotação de seguro auto para o meu carro #{indice}" }
       casos = textos.each_with_index.to_h { |texto, indice| [contato_com_conversa!("Cliente #{indice}", c.vendas, texto), texto] }
-      sinistros = casos.keys.first(5)
+      sinistros = casos.keys.first(30)
 
       pedido = 'etiqueta como sinistro as conversas abertas que são sobre sinistro'
       respondeu!(perguntar(pedido))
