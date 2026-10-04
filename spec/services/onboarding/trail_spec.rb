@@ -17,6 +17,10 @@ RSpec.describe Onboarding::Trail do
       expect(described_class.passos.map(&:verificacao).map(&:to_sym)).to all(be_in(Onboarding::Progress::REGRAS.keys))
     end
 
+    it 'agrupa os passos nas três etapas da tela, na ordem' do
+      expect(described_class.passos.map(&:etapa).chunk_while { |a, b| a == b }.map(&:first)).to eq(%w[ligar organizar crescer])
+    end
+
     it 'mostra ao agente só o que é trabalho dele' do
       expect(described_class.para_perfil('agent').map(&:id)).to eq(%w[perfil primeira_resposta])
       expect(described_class.para_perfil('administrator').size).to eq(9)
@@ -35,7 +39,8 @@ RSpec.describe Onboarding::Trail do
       {
         'id' => 'perfil', 'ordem' => 0, 'titulo' => 'Seu perfil', 'por_que' => 'Porque sim',
         'rota' => 'profile_settings_index', 'alvo_destaque' => 'sidebar-profile-menu',
-        'verificacao' => 'perfil_configurado', 'fluxos_guia' => [], 'artigo' => 'artigo',
+        'verificacao' => 'perfil_configurado', 'fluxos_guia' => [], 'artigo' => '00.02',
+        'etapa' => 'ligar', 'minutos' => 2, 'acao' => 'Ajustar meu perfil',
         'pulavel' => false, 'perfis' => ['administrator'], 'pre_requisitos' => []
       }
     end
@@ -67,6 +72,33 @@ RSpec.describe Onboarding::Trail do
     it 'recusa pulavel fora de true ou false' do
       expect { carregar([passo_valido.merge('pulavel' => 'sim')]) }
         .to raise_error(described_class::InvalidDefinition, /pulavel fora/)
+    end
+
+    it 'recusa etapa fora das três da tela' do
+      expect { carregar([passo_valido.merge('etapa' => 'vender')]) }
+        .to raise_error(described_class::InvalidDefinition, /etapa fora/)
+    end
+
+    it 'recusa minutos que não sejam inteiro positivo' do
+      expect { carregar([passo_valido.merge('minutos' => 0)]) }
+        .to raise_error(described_class::InvalidDefinition, /minutos fora/)
+      expect { carregar([passo_valido.merge('minutos' => '5')]) }
+        .to raise_error(described_class::InvalidDefinition, /minutos fora/)
+    end
+
+    it 'recusa artigo que não existe na Central de Ajuda' do
+      expect { carregar([passo_valido.merge('artigo' => '00.99')]) }
+        .to raise_error(described_class::InvalidDefinition, /artigo inexistente/)
+    end
+
+    it 'recusa dependência de passo que não vem antes' do
+      segundo = passo_valido.merge('id' => 'chave_ia', 'ordem' => 1, 'artigo' => '00.03')
+
+      expect { carregar([passo_valido.merge('depende_de' => 'chave_ia'), segundo]) }
+        .to raise_error(described_class::InvalidDefinition, /depende de "chave_ia"/)
+      expect { carregar([passo_valido, segundo.merge('depende_de' => 'inventado')]) }
+        .to raise_error(described_class::InvalidDefinition, /depende de "inventado"/)
+      expect { carregar([passo_valido, segundo.merge('depende_de' => 'perfil')]) }.not_to raise_error
     end
   end
 end

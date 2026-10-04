@@ -17,7 +17,43 @@ RSpec.describe Onboarding::Progress do
     it 'entrega os campos que a tela precisa' do
       primeiro = progresso.perform.first
 
-      expect(primeiro).to include(:id, :ordem, :titulo, :por_que, :rota, :alvo_destaque, :pulavel, :status)
+      expect(primeiro).to include(:id, :ordem, :titulo, :por_que, :rota, :alvo_destaque, :pulavel, :status,
+                                  :artigo, :video, :etapa, :minutos, :acao, :depende_de)
+    end
+
+    it 'entrega o vídeo do artigo da Central de Ajuda, quando existe' do
+      passos = progresso.perform.index_by { |passo| passo[:id] }
+
+      expect(passos['chave_ia'][:video]).to eq(
+        'arquivo' => '/central-de-ajuda/videos/00.03.mp4',
+        'legenda' => '/central-de-ajuda/videos/00.03.vtt',
+        'poster' => '/central-de-ajuda/videos/00.03.jpg'
+      )
+      expect(passos['perfil'][:video]).to be_nil
+    end
+  end
+
+  describe 'aviso de dependência' do
+    def dependencia(passo_id, perfil_progresso = progresso)
+      perfil_progresso.perform.find { |passo| passo[:id] == passo_id }[:depende_de]
+    end
+
+    it 'avisa enquanto o passo anterior está pendente, e para quando ele fica pronto' do
+      expect(dependencia('funil')).to eq(id: 'chave_ia', titulo: 'Conectar a chave da OpenAI', pendente: true)
+
+      resolvedor = instance_double(Crm::Ai::CredentialResolver, configured?: true)
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolvedor)
+
+      expect(dependencia('funil')).to include(pendente: false)
+      expect(dependencia('perfil')).to be_nil
+    end
+
+    it 'continua avisando o agente, mesmo sem ele ver o passo de que depende' do
+      agente = create(:user, account: account, role: :agent)
+      do_agente = described_class.new(account: account, user: agente, perfil: 'agent')
+
+      expect(do_agente.perform.map { |passo| passo[:id] }).not_to include('canal')
+      expect(dependencia('primeira_resposta', do_agente)).to eq(id: 'canal', titulo: 'Conectar um canal', pendente: true)
     end
   end
 

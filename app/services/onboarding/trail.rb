@@ -6,12 +6,15 @@ class Onboarding::Trail
   class InvalidDefinition < StandardError; end
 
   PATH = Rails.root.join('config/onboarding/trilha.yml')
-  CAMPOS_OBRIGATORIOS = %w[id ordem titulo por_que rota alvo_destaque verificacao fluxos_guia artigo pulavel perfis
-                           pre_requisitos].freeze
+  CAMPOS_OBRIGATORIOS = %w[id ordem titulo por_que rota alvo_destaque verificacao fluxos_guia artigo etapa minutos acao
+                           pulavel perfis pre_requisitos].freeze
   PERFIS_VALIDOS = %w[administrator agent].freeze
+  ETAPAS = %w[ligar organizar crescer].freeze
+  PASTA_ARTIGOS = Rails.root.join('lib/central_de_ajuda')
 
   Passo = Struct.new(:id, :ordem, :titulo, :por_que, :rota, :rota_params, :alvo_destaque, :verificacao, :fluxos_guia,
-                     :video, :artigo, :pulavel, :perfis, :pre_requisitos, keyword_init: true) do
+                     :artigo, :etapa, :minutos, :acao, :depende_de, :pulavel, :perfis, :pre_requisitos,
+                     keyword_init: true) do
     def pulavel?
       pulavel == true
     end
@@ -69,15 +72,41 @@ class Onboarding::Trail
       perfis_invalidos = Array(bruto['perfis']) - PERFIS_VALIDOS
       raise InvalidDefinition, "passo #{id} com perfil desconhecido: #{perfis_invalidos.join(', ')}" if perfis_invalidos.any?
 
-      %w[titulo por_que rota alvo_destaque verificacao artigo].each do |campo|
+      %w[titulo por_que rota alvo_destaque verificacao artigo acao].each do |campo|
         raise InvalidDefinition, "passo #{id} com #{campo} em branco" if bruto[campo].to_s.strip.empty?
       end
+
+      validar_apresentacao!(bruto, id)
+    end
+
+    def validar_apresentacao!(bruto, id)
+      raise InvalidDefinition, "passo #{id} com etapa fora de #{ETAPAS.join('/')}" unless ETAPAS.include?(bruto['etapa'])
+      raise InvalidDefinition, "passo #{id} com minutos fora de inteiro positivo" unless bruto['minutos'].is_a?(Integer) && bruto['minutos'].positive?
+      raise InvalidDefinition, "passo #{id} com artigo inexistente na Central: #{bruto['artigo']}" unless artigo_existe?(bruto['artigo'].to_s)
+    end
+
+    # "00.03" mora em lib/central_de_ajuda/00/00.03-<slug>.md.
+    def artigo_existe?(artigo)
+      capitulo = artigo.split('.').first
+      Dir.glob(PASTA_ARTIGOS.join(capitulo, "#{artigo}-*.md").to_s).any?
     end
 
     def validar_conjunto!(passos)
       exigir_unico!(passos.map(&:id), 'id')
       exigir_unico!(passos.map(&:ordem), 'ordem')
       exigir_regra_conhecida!(passos)
+      exigir_dependencia_anterior!(passos)
+    end
+
+    # O passo de que outro depende precisa existir e vir antes dele na trilha.
+    def exigir_dependencia_anterior!(passos)
+      ordem_por_id = passos.to_h { |passo| [passo.id, passo.ordem] }
+      passos.select(&:depende_de).each do |passo|
+        ordem = ordem_por_id[passo.depende_de]
+        next if ordem && ordem < passo.ordem
+
+        raise InvalidDefinition, "passo #{passo.id.inspect} depende de #{passo.depende_de.inspect}, que não existe antes dele"
+      end
     end
 
     def exigir_unico!(valores, nome)

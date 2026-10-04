@@ -22,9 +22,11 @@ class Onboarding::Progress
     @perfil = perfil.to_s
   end
 
-  # [{ id:, ordem:, titulo:, por_que:, rota:, alvo_destaque:, video:, artigo:,
-  #    pulavel:, pre_requisitos:, status: 'pendente'|'feito'|'pulado' }]
+  # [{ id:, ordem:, titulo:, por_que:, rota:, alvo_destaque:, artigo:, video:, etapa:, minutos:, acao:,
+  #    depende_de: { id:, titulo:, pendente: } | nil, pulavel:, pre_requisitos:,
+  #    status: 'pendente'|'feito'|'pulado' }]
   def perform
+    @status = {}
     Onboarding::Trail.para_perfil(@perfil).map { |passo| linha(passo) }
   end
 
@@ -56,15 +58,34 @@ class Onboarding::Progress
       rota: passo.rota,
       rota_params: passo.rota_params || {},
       alvo_destaque: passo.alvo_destaque,
-      video: passo.video,
       artigo: passo.artigo,
+      video: Autonomia::CentralDeAjuda::VideoDoArtigo.para(passo.artigo),
+      etapa: passo.etapa,
+      minutos: passo.minutos,
+      acao: passo.acao,
+      depende_de: dependencia(passo),
       pulavel: passo.pulavel?,
       pre_requisitos: passo.pre_requisitos,
       status: status(passo)
     }
   end
 
+  # Vai mesmo quando o passo de que depende não aparece para o perfil (o agente não vê "Conectar um canal"):
+  # o aviso continua dizendo o que falta, e quem resolve é o administrador.
+  def dependencia(passo)
+    anterior = passo.depende_de && Onboarding::Trail.find(passo.depende_de)
+    return if anterior.blank?
+
+    { id: anterior.id, titulo: anterior.titulo, pendente: status(anterior) == 'pendente' }
+  end
+
+  # Memorizado dentro de um perform: o aviso de dependência relê o status de passos anteriores sem repetir a
+  # consulta, e cada perform novo enxerga o estado atual da conta.
   def status(passo)
+    @status[passo.id] ||= calcular_status(passo)
+  end
+
+  def calcular_status(passo)
     return 'feito' if send(REGRAS.fetch(passo.verificacao.to_sym))
     return 'pulado' if passo.pulavel? && pulados.include?(passo.id)
 
