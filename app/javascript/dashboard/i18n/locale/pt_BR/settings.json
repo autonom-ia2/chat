@@ -174,7 +174,8 @@
           "SLA_MISSED_NEXT_RESPONSE": "Uma conversa perde o SLA da próxima resposta",
           "SLA_MISSED_RESOLUTION": "Uma conversa perde o SLA de resolução",
           "CRM_FOLLOWUP_REMINDER": "Um lembrete de retorno do CRM está vencido",
-          "CONVERSATION_HANDOFF_REQUEST": "Um cliente precisa de atendimento humano e a IA chama você"
+          "CONVERSATION_HANDOFF_REQUEST": "Um cliente precisa de atendimento humano e a IA chama você",
+          "GUIDE_ALERT": "O Guia tem um aviso urgente para você"
         },
         "BROWSER_PERMISSION": "Ative notificações push em seu navegador para poder recebê-las"
       },

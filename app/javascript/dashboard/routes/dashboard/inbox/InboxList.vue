@@ -18,7 +18,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
-const { uiSettings } = useUISettings();
+const { uiSettings, updateUISettings } = useUISettings();
 
 const notificationList = ref(null);
 const page = ref(1);
@@ -165,7 +165,32 @@ const setSavedFilter = () => {
   store.dispatch('notifications/setNotificationFilters', inboxFilters.value);
 };
 
+// #935 — o aviso do Guia não abre conversa: marca como lido e abre o Guia, onde ele está.
+const abrirAvisoDoGuia = async notificationItem => {
+  const { id, primaryActorId, primaryActorType } = notificationItem;
+  updateUISettings({
+    is_autonomia_guide_panel_open: true,
+    is_autonomia_copilot_panel_open: false,
+    is_contact_sidebar_open: false,
+  });
+  try {
+    await store.dispatch('notifications/read', {
+      id,
+      primaryActorId,
+      primaryActorType,
+      unreadCount: meta.value.unreadCount,
+    });
+    store.dispatch('notifications/unReadCount');
+  } catch {
+    // o painel já abriu; marcar como lido fica para a próxima
+  }
+};
+
 const openConversation = async notificationItem => {
+  if (notificationItem.notificationType === 'guide_alert') {
+    await abrirAvisoDoGuia(notificationItem);
+    return;
+  }
   const {
     id,
     primaryActorId,

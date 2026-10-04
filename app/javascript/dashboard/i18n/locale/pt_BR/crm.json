@@ -2156,6 +2156,10 @@
     "INSERTED": "Inserido na resposta."
   },
   "AUTONOMIA_GUIDE": {
+    "AVISOS": {
+      "LAUNCHER_LABEL": "Pergunte ao Guia, {count} aviso novo | Pergunte ao Guia, {count} avisos novos",
+      "SELO": "Aviso do Guia"
+    },
     "TELA": {
       "SELECTED": {
         "CARDS": "Vendo: {count} card selecionado | Vendo: {count} cards selecionados",

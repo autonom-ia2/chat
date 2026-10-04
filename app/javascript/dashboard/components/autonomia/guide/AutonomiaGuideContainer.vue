@@ -27,6 +27,7 @@ import GuideHistorico from './GuideHistorico.vue';
 import GuideMemoria from './GuideMemoria.vue';
 import GuideAnotei from './GuideAnotei.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
+import { useAvisosDoGuia } from './useAvisosDoGuia';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -839,15 +840,37 @@ watch(showPanel, async aberto => {
   panelRef.value?.focus();
 });
 
+// #935 — com aviso novo, abrir o painel traz a conversa do servidor (o aviso é
+// um turno dela) e marca os avisos como vistos. Com o painel aberto, o aviso que
+// chega pelo ActionCable entra do mesmo jeito. Pergunta em curso não é cortada:
+// o aviso espera a próxima abertura.
+const { quantidade: avisosNovos, marcarVistos } = useAvisosDoGuia();
+const trazerAvisos = async () => {
+  if (props.embutido || isSending.value) return;
+  await abrirConversa(
+    () => AutonomiaGuideAPI.conversaAtual(),
+    () => {
+      falhouAoAbrir.value = true;
+    }
+  );
+  marcarVistos();
+};
+
 // #861 — abrir o painel reabre a conversa guardada. Aqui embaixo, e não junto
 // do `watch` da Central: precisa de tudo o que a conversa usa já definido.
 watch(
   showPanel,
   aberto => {
-    if (aberto) reabrirConversaAtual();
+    if (!aberto) return;
+    if (avisosNovos.value > 0 && !props.embutido) trazerAvisos();
+    else reabrirConversaAtual();
   },
   { immediate: true }
 );
+
+watch(avisosNovos, novos => {
+  if (novos > 0 && showPanel.value) trazerAvisos();
+});
 
 // The guide thread is a global module-level singleton; clear it when switching accounts so the
 // previous account's conversation never lingers on screen for a different account/operator.
@@ -975,6 +998,15 @@ const classeDoPainel = computed(() =>
               @tentar-de-novo="tentarVozDeNovo(item)"
             />
             <div v-else class="flex flex-col gap-2 w-full">
+              <!-- #935 — o Guia falou primeiro: um aviso do que ele mediu na conta. -->
+              <span
+                v-if="item.aviso"
+                data-aviso
+                class="inline-flex items-center self-start gap-1 px-2 py-0.5 rounded-full bg-n-amber-3 text-n-amber-11 text-xs font-medium"
+              >
+                <span class="i-lucide-bell-ring size-3" aria-hidden="true" />
+                {{ $t('AUTONOMIA_GUIDE.AVISOS.SELO') }}
+              </span>
               <CopilotAssistantMessage
                 :message="item.message"
                 :is-last-message="index === messages.length - 1"
