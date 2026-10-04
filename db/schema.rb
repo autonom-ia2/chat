@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_04_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -669,6 +669,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
     t.index ["desfeita_por_id"], name: "index_autonomia_guide_executions_on_desfeita_por_id"
     t.index ["expira_em"], name: "index_autonomia_guide_executions_on_expira_em"
     t.index ["user_id"], name: "index_autonomia_guide_executions_on_user_id"
+  end
+
+  create_table "autonomia_guide_memorias", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "texto", limit: 200, null: false
+    t.bigint "autor_id", null: false
+    t.bigint "turno_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "user_id"], name: "index_autonomia_guide_memorias_on_account_id_and_user_id"
+    t.index ["turno_id"], name: "index_autonomia_guide_memorias_on_turno_id"
+    t.index ["user_id"], name: "index_autonomia_guide_memorias_on_user_id"
   end
 
   create_table "autonomia_guide_turns", force: :cascade do |t|
@@ -3280,6 +3293,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_210000) do
   add_foreign_key "autonomia_guide_executions", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_executions", "users", column: "desfeita_por_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_executions", "users", on_delete: :cascade
+  add_foreign_key "autonomia_guide_memorias", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_guide_memorias", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
+  add_foreign_key "autonomia_guide_memorias", "users", on_delete: :cascade
   add_foreign_key "autonomia_guide_turns", "autonomia_guide_conversations", column: "conversation_id", on_delete: :cascade
   add_foreign_key "autonomia_guide_turns", "autonomia_guide_executions", column: "execution_id", on_delete: :nullify
   add_foreign_key "autonomia_insurance_connections", "accounts"

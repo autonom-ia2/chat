@@ -45,6 +45,7 @@ class AccountUser < ApplicationRecord
 
   after_create_commit :notify_creation, :create_notification_setting, unless: :integration?
   after_destroy :notify_deletion, :remove_user_from_account, unless: :integration?
+  after_destroy :apagar_o_que_o_guia_guardou
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
   after_commit :invalidate_filtered_unread_count_visibility, on: [:create, :destroy]
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_visibility_changed?
@@ -89,6 +90,16 @@ class AccountUser < ApplicationRecord
 
   def notify_deletion
     Rails.configuration.dispatcher.dispatch(AGENT_REMOVED, Time.zone.now, account: account)
+  end
+
+  # Quem sai da conta leva o que o Guia guardou dela ali (#933): as anotações
+  # pessoais e as conversas. O que ela anotou para a corretora fica.
+  def apagar_o_que_o_guia_guardou
+    # Sem pessoa, `user_id` nulo casaria com as anotações da corretora.
+    return if user_id.nil?
+
+    ::Autonomia::Guide::Memoria.pessoais(account_id, user_id).delete_all
+    ::Autonomia::Guide::Conversa.de(account_id, user_id).delete_all
   end
 
   def update_presence_in_redis

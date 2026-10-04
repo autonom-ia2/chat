@@ -374,6 +374,8 @@ Rails.application.routes.draw do
             get 'guide/conversas/atual', to: 'guide_conversas#atual'
             get 'guide/conversas/:id', to: 'guide_conversas#show'
             delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #933 — o que o Guia lembra: o painel "O que eu sei".
+            resources :guide_memorias, only: [:index, :update, :destroy]
             # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
             resources :decisores, only: [:index, :show, :create, :update, :destroy] do
               member do

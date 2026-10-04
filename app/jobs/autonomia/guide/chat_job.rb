@@ -47,7 +47,8 @@ class Autonomia::Guide::ChatJob < ApplicationJob
         ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
                                      history: pergunta['historico'], route_context: pergunta['tela'],
                                      route_params: pergunta['parametros'], arquivos: pergunta['arquivos'],
-                                     registro: @registro).perform
+                                     registro: @registro,
+                                     turno_id: ::Autonomia::Guide::Turno.where(pedido_id: pedido_id).pick(:id)).perform
       end
     end
     ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h)
