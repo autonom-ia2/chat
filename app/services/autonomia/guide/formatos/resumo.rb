@@ -19,7 +19,8 @@ class Autonomia::Guide::Formatos::Resumo
     'string' => 'texto', 'inteiro' => 'número inteiro', 'numero' => 'número', 'booleano' => 'true/false',
     'json' => 'objeto JSON', 'lista' => 'lista', 'objeto_livre' => 'objeto com chaves livres', 'objeto' => 'objeto',
     'lista_de_objetos' => 'lista de objetos', 'data' => 'data AAAA-MM-DD', 'data_hora' => 'data e hora ISO 8601',
-    'hora' => 'hora HH:MM'
+    'hora' => 'hora HH:MM', 'id' => 'id do registro (número ou texto)',
+    'arquivo' => 'arquivo enviado no formulário (o Guia não anexa arquivo)'
   }.freeze
   EXEMPLOS = { 'inteiro' => 1, 'numero' => 1, 'booleano' => true, 'lista' => [], 'objeto_livre' => {}, 'objeto' => {},
                'json' => {}, 'lista_de_objetos' => [] }.freeze
