@@ -2,7 +2,7 @@
 
 ## O que é
 
-Vinte e seis pedidos (C01a, C01b, C02 a C24 e C30) que um administrador de corretora faz de verdade,
+Trinta e quatro pedidos (C01a, C01b, C02 a C24, C26 a C34) que um administrador de corretora faz de verdade,
 mandados ao Guia de verdade — mesmo modelo, mesma instrução, mesmas ferramentas, escrevendo pela API da
 plataforma no banco de teste. Cada cenário confere o **estado final do banco** (o que foi criado, mudado ou deixado como estava), não o
 texto da resposta. O Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
@@ -30,7 +30,7 @@ juiz custa centavos por cenário.
   responsável. C22 arruma a caixa (desliga o card automático, liga o rodízio e explica), C23 corrige
   nome, telefone e empresa e confere que o desfazer volta tudo, C24 guarda o consentimento só de quem
   marcou, com a prova numa nota. O C25 (o formulário vira lead certo sozinho, com o Decisor da #858) ainda não
-  foi escrito: o Decisor já está no lote 10, mas o cenário fica para depois. Não há C26 a C29.
+  foi escrito: o Decisor já está no lote 10, mas o cenário fica para depois.
 - C30 (#858) põe seis contatos com conversa — três do formulário do site, três de outros canais — e pede
   para etiquetar com `lead-site` só os do site. Pega o Guia que não classifica com o Jev
   (`classificar_com_jev`) e responde de cabeça. Usa o Jev de verdade: precisa de `TYPESAFE_API_KEY`.
@@ -101,7 +101,10 @@ Embaixo vem o trecho do que o Guia respondeu em cada cenário. Leia nos que têm
 C03 (avisou do ajuste no nome), C15 (disse que não
 existe e o que é possível), C16 e C17 (perguntou qual), C18 (apontou o valor inválido).
 
-## Automações compostas (#917)
+## Frente G: as máquinas da plataforma (#917, #932)
+
+No `describe 'frente G'`. Os quatro primeiros vêm do #917; os outros quatro (#932) conferem que o Guia
+monta o JSON por dentro pelo esquema (`formato_da_acao` com `campo:`), sem inventar chave nem id.
 
 C26 a C29 testam a máquina de automações inteira, com gatilhos diferentes:
 
@@ -109,15 +112,25 @@ C26 a C29 testam a máquina de automações inteira, com gatilhos diferentes:
   turnos: o pedido e, depois, a URL do webhook e a responsável (Ana). Toda proposta é confirmada pelo
   mesmo caminho do botão (`Acoes#executar`), uma por turno. O banco tem de ter: o time Retenção criado,
   a regra de tratamento (etiqueta, time, mensagem, e-mail ao time, webhook) protegida por "não tem a
-  etiqueta X" + "adicionar X" e — sem o Jev — disparada pela etiqueta do caso (ou desligada), as regras
+  etiqueta X" + "adicionar X" e disparada pelo Decisor (`perguntar_ao_decisor`) ou pela etiqueta do caso
+  (ou desligada), as regras
   de 15 e 30 minutos com atraso que reconferem aberta e sem atendente, e a transcrição ao resolver.
   Nenhuma condição de palavras em `content`; nenhuma regra de mensagem sem `message_type` incoming. O
-  juiz confere que o Guia disse que a detecção por intenção chega com o Jev e como o alerta chega à pessoa.
+  juiz confere que o Guia não fez lista de palavras para a intenção e disse como o alerta chega à pessoa.
 - **C27** — conversa nova "fora do horário": a automação não tem condição de horário. Nada de regra que
   mande mensagem a toda conversa nova; o juiz confere que o Guia disse isso e apontou o horário da caixa.
 - **C28** — card entra em Proposta: automação de ETAPA do funil (retorno em 1 dia + Bruno como
   responsável), não regra de conversa.
 - **C29** — resolvidas do WhatsApp Vendas: transcrição por e-mail, só daquela caixa, com confirmação.
+- **C31** — macro com a etiqueta vip e o time Sinistros, que não existe. Gravada, a macro é válida e o
+  `assign_team` tem id de time da conta (criado); sem macro, o juiz confere que o Guia perguntou do time.
+- **C32** — funil Auto, ao sair de Proposta, move para Perdido (que não existe) em 7 dias. Se o Guia
+  pergunta, o 2º turno manda criar. O banco tem `on_exit` com `move_stage`, `target_stage_id` de etapa
+  da conta e `delay_seconds = 604800`.
+- **C33** — rodízio na WhatsApp Vendas só para Ana e Bruno: rodízio ligado, caixa válida e membros
+  exatamente Ana e Bruno.
+- **C34** — "só para quem não respondeu" na campanha: nenhuma campanha com chave de `trigger_rules`
+  fora de `url` e `time_on_page`; o juiz confere que o Guia disse o que a regra aceita, sem inventar.
 
 Um cenário que falha diz o que ficou gravado de errado. O Guia é um modelo: rode o cenário de novo
 com `-e` antes de concluir que é regressão. Falhar duas vezes seguidas é regressão.

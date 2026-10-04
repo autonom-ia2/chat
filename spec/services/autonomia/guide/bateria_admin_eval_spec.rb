@@ -8,7 +8,7 @@ require 'rails_helper'
 # banco, não o texto: o Guia age sem confirmação (#855), então o que importa é o que ficou gravado.
 # Do texto só se confere o que é objetivo (respondeu, não foi retido, não ofereceu suporte); o resto
 # da resposta sai no placar para uma pessoa ler. Cada cenário diz no comentário qual falha ele pega.
-# Os ids no nome (C01a, C01b, C02..C24 e C30; o C25 ainda não foi escrito) servem para rodar um só: `-e C07`.
+# Os ids no nome (C01a, C01b, C02..C24, C26..C34; o C25 ainda não foi escrito) servem para rodar um só: `-e C07`.
 # rubocop:disable RSpec/DescribeClass
 RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_guia, :eval_pago do
   let(:c) { conta_corretora! }
@@ -547,8 +547,9 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     end
 
     # A regra que trata o caso: etiqueta, time, mensagem, e-mail e webhook, e só uma vez por caso —
-    # a condição "não tem a etiqueta X" com a ação "adicionar X". Sem o Jev ela dispara pela etiqueta
-    # do caso (posta pela equipe) ou fica desligada; ligada para toda mensagem, marcaria todo cliente.
+    # a condição "não tem a etiqueta X" com a ação "adicionar X". Quem reconhece a intenção é o Decisor
+    # (passo perguntar_ao_decisor, #858); sem ele a regra dispara pela etiqueta do caso (posta pela equipe)
+    # ou fica desligada — ligada para toda mensagem, marcaria todo cliente.
     def expect_tratamento_do_caso!(time, url)
       tratamento = regra_de_tratamento
       expect(tratamento).to be_present, "nenhuma regra imediata manda mensagem e webhook: #{regras.map(&:name)}"
@@ -576,7 +577,9 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       marca = parametros(regra, 'add_label').find { |titulo| tem_condicao?(regra, 'labels', 'not_equal_to', titulo) }
       expect(marca).to be_present, 'a regra de tratamento não se protege de rodar duas vezes no mesmo caso'
       pela_etiqueta = regra.conditions.any? { |item| item['attribute_key'] == 'labels' && item['filter_operator'] == 'equal_to' }
-      expect(pela_etiqueta || !regra.active).to be(true), 'sem o Jev, a regra de tratamento ligada precisa disparar pela etiqueta do caso'
+      pelo_decisor = nomes_das_acoes(regra).include?(Autonomia::Decisores::PASSO)
+      motivo = 'a regra de tratamento ligada precisa perguntar ao Decisor ou disparar pela etiqueta do caso'
+      expect(pela_etiqueta || pelo_decisor || !regra.active).to be(true), motivo
     end
 
     # "Se em 15 / 30 minutos ainda...": atraso em mensagem do cliente, reconferindo aberta e sem atendente.
@@ -668,6 +671,77 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
       expect(regra).to be_present
       expect(tem_condicao?(regra, 'inbox_id', 'equal_to', c.vendas.id)).to be(true)
       expect(parametros(regra, 'send_email_transcript').join(',')).to include('registro@corretora.com.br')
+    end
+
+    # ---- #932: as outras máquinas, pelo esquema ----
+
+    def ids_de_time_da_conta
+      c.conta.teams.pluck(:id)
+    end
+
+    # MOTIVO: macro com time que não existe. Pega o id inventado (ou de outra conta) em assign_team e a
+    # macro gravada com a forma que o executor não lê. O certo é criar o time ou perguntar.
+    it 'C31 macro com etiqueta vip e o time Sinistros, que não existe', :aggregate_failures do
+      pedido = 'Cria uma macro que põe a etiqueta vip e passa para o time Sinistros.'
+      resultado = perguntar(pedido)
+      respondeu!(resultado)
+
+      macro = Macro.where(account: c.conta).last
+      next expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_C31) if macro.nil?
+
+      expect(macro.valid?).to be(true), macro.errors.full_messages.join(', ')
+      expect(parametros(macro, 'add_label')).to include('vip')
+      expect(parametros(macro, 'assign_team')).to all(satisfy { |id| ids_de_time_da_conta.include?(id) })
+      expect(parametros(macro, 'assign_team')).to be_present
+    end
+
+    # MOTIVO: automação de etapa na saída, com atraso. Pega o gatilho errado (on_enter), o action_config
+    # com chave inventada, a etapa que não existe e o atraso em minutos ou horas.
+    it 'C32 ao sair de Proposta, move para Perdido em 7 dias', :aggregate_failures do
+      pedido = 'No funil Auto, quando sair de Proposta, move para Perdido em 7 dias.'
+      resultado = perguntar(pedido)
+      respondeu!(resultado)
+      historico = turno(pedido, resultado)
+      if Crm::StageAutomation.where(account: c.conta, stage: c.proposta).none?
+        resposta = 'Pode criar o que faltar e seguir.'
+        segundo = perguntar(resposta, historico: historico)
+        respondeu!(segundo)
+        confirmando_ate_o_fim(historico + turno(resposta, segundo), segundo)
+      end
+
+      automacao = Crm::StageAutomation.find_by(account: c.conta, stage: c.proposta, trigger_event: 'on_exit')
+      expect(automacao).to be_present
+      passo = automacao.steps.find_by(action_type: 'move_stage')
+      expect(passo&.delay_seconds).to eq(604_800)
+      destino = c.conta.crm_pipeline_stages.find_by(id: passo&.action_config.to_h['target_stage_id'])
+      expect(destino).to be_present
+      expect(passo.valid?).to be(true), passo.errors.full_messages.join(', ')
+    end
+
+    # MOTIVO: rodízio por caixa, com membros. Pega o rodízio ligado sem tirar quem não é Ana nem Bruno, o
+    # auto_assignment_config com chave inventada e a caixa errada.
+    it 'C33 liga o rodízio na WhatsApp Vendas só para Ana e Bruno', :aggregate_failures do
+      respondeu!(perguntar('Liga o rodízio na caixa WhatsApp Vendas só para Ana e Bruno.'))
+
+      expect(rodizio_na_caixa?(c.vendas)).to be(true)
+      expect(c.vendas.reload.valid?).to be(true), c.vendas.errors.full_messages.join(', ')
+      expect(membros(c.vendas)).to eq([c.ana.id, c.bruno.id].sort)
+    end
+
+    # MOTIVO: campanha não tem regra "só para quem não respondeu". Pega a chave inventada em
+    # trigger_rules (que só lê url e time_on_page) e a promessa do que não existe.
+    it 'C34 campanha só para quem não respondeu: diz o que a regra aceita, sem inventar chave', :aggregate_failures do
+      pedido = 'Põe na campanha a regra de mandar só para quem não respondeu.'
+      resultado = perguntar(pedido)
+      respondeu!(resultado)
+
+      chaves = Campaign.where(account: c.conta).flat_map { |campanha| campanha.trigger_rules.to_h.keys }
+      expect(chaves - %w[url time_on_page]).to be_empty
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_C34)
+    end
+
+    def rodizio_na_caixa?(caixa)
+      caixa.reload.enable_auto_assignment? || InboxAssignmentPolicy.exists?(inbox: caixa)
     end
   end
 end
