@@ -47,9 +47,9 @@ class AccountBuilder
     @account = Account.create!(
       name: account_name,
       locale: I18n.locale,
-      custom_attributes: { 'onboarding_step' => 'account_details' },
-      # Conta nova nasce no fuso da operação: relatórios, horário de atendimento
-      # das caixas, follow-up e SLA passam a usar o horário local em vez de UTC.
+      # Conta nova nasce no fuso da operação, nos dois lugares onde a conta o guarda: relatórios,
+      # horário das caixas, follow-up e SLA (settings) e a tela e o Guia (custom_attributes).
+      custom_attributes: { 'onboarding_step' => 'account_details', 'timezone' => Crm::Timezone::Resolver.default_timezone },
       settings: { 'reporting_timezone' => Crm::Timezone::Resolver.default_timezone }
     )
     Current.account = @account
