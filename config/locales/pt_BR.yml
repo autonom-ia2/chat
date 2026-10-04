@@ -300,6 +300,7 @@ pt_BR:
       sla_missed_first_response: 'Meta de SLA de Primeira Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_next_response: 'Meta de SLA de Próxima Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_resolution: 'Meta de SLA de Resolução não alcançada para a conversa (#%{display_id})'
+      guide_alert: 'O Guia tem um aviso urgente para você'
     attachment: 'Anexo'
     no_content: 'Sem conteúdo'
   conversations:
@@ -774,6 +775,16 @@ pt_BR:
         invalid_type: 'Eu leio PDF, Word, Excel, CSV, texto, JSON, áudio e imagem.'
         too_large: 'Este arquivo passa de 25 MB.'
         not_audio: 'Não consegui ouvir esta gravação. Tente gravar de novo.'
+      avisos:
+        pergunta: 'Quer que eu veja isso com você?'
+        abrir_no_guia: 'Abra o Guia para ver'
+        varios: 'Vi %{n} coisas na conta:'
+        varios_mesmo_assunto: 'Vi %{n} coisas sobre o mesmo assunto:'
+        linha_acima: '%{nome}: %{valor} agora (o limite é %{limite}).'
+        linha_abaixo: '%{nome}: %{valor} agora (o mínimo é %{limite}).'
+        linha_media: '%{nome}: %{valor} agora, mais de %{vezes} vezes a média da semana (%{media}).'
+        resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
+        pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'

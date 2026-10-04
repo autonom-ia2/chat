@@ -37,6 +37,12 @@ class Autonomia::Guide::Turno < ApplicationRecord
   MAX_NOME_DE_ANEXO = 255
 
   class << self
+    # O aviso do Guia (#935) entra na conversa como um turno sem pergunta: o Guia falou primeiro.
+    def do_aviso(conversa, aviso)
+      create!(conversa: conversa, account_id: conversa.account_id, user_id: conversa.user_id, pedido_id: SecureRandom.uuid,
+              pergunta: '', status: PRONTO, resposta: aviso.texto, diagnostico: { 'aviso_id' => aviso.id })
+    end
+
     def abrir(conversa:, pedido_id:, pergunta:, tela:, anexos: [])
       create!(conversa: conversa, account_id: conversa.account_id, user_id: conversa.user_id, pedido_id: pedido_id,
               pergunta: pergunta.to_s, tela: tela.to_s.presence, anexos: limpar_anexos(anexos))
@@ -86,16 +92,23 @@ class Autonomia::Guide::Turno < ApplicationRecord
     end
   end
 
-  # A ida e a volta deste turno, no formato do histórico do Guia.
+  # A ida e a volta deste turno, no formato do histórico do Guia. O aviso (#935) não tem pergunta, e o
+  # Guia lê o número dele para achar o sinal em `autonomia/avisos`.
   def mensagens
+    return [{ role: 'assistant', content: "#{resposta}\n(aviso #{aviso_id})" }] if aviso_id
+
     [{ role: 'user', content: pergunta }, ({ role: 'assistant', content: resposta } if resposta.present?)].compact
+  end
+
+  def aviso_id
+    diagnostico.is_a?(Hash) ? diagnostico['aviso_id'] : nil
   end
 
   def para_tela
     { 'pedido_id' => pedido_id, 'pergunta' => pergunta, 'anexos' => anexos, 'status' => status,
       'resposta' => resposta, 'navegacoes' => navegacoes, 'artigos' => artigos, 'acao' => acao,
       'acao_estado' => acao_estado, 'acao_resultado' => acao_resultado, 'execucao' => execucao_para_tela,
-      'criado_em' => created_at.iso8601 }
+      'aviso_id' => aviso_id, 'criado_em' => created_at.iso8601 }
   end
 
   # O desfazer vale 5 dias; a conversa fica guardada sem prazo. Enquanto a

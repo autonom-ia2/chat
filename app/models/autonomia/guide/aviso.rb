@@ -23,6 +23,8 @@ class Autonomia::Guide::Aviso < ApplicationRecord
   belongs_to :account
   belongs_to :user
   belongs_to :turno, class_name: 'Autonomia::Guide::Turno', optional: true
+  # O sino mostra o aviso urgente; sem o aviso, a notificação ficaria sem o que mostrar.
+  has_many :notifications, as: :primary_actor, dependent: :delete_all
 
   validates :chave, presence: true, uniqueness: true
   validates :texto, presence: true

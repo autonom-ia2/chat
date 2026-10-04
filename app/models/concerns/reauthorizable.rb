@@ -45,6 +45,8 @@ module Reauthorizable
 
     invalidate_inbox_cache unless instance_of?(::AutomationRule)
     dispatch_inbox_reauthorization_event(true) if state_changed
+    # #935 — o Guia mede já, em vez de esperar o próximo pulso (só antecipa).
+    ::Autonomia::Guide::Pulso.agora(try(:account)) if state_changed
   end
 
   def process_integration_hook_reauthorization_emails

@@ -18,6 +18,12 @@ class Notification::EmailNotificationService
   # TODO : Clean up whatever happening over here
   # Segregate the mailers properly
   def send_notification_email
+    # O aviso do Guia (#935) não é de uma conversa: tem e-mail próprio.
+    if notification.guide_alert?
+      return AgentNotifications::GuideAlertMailer.with(account: notification.account)
+                                                 .guide_alert(notification.primary_actor, notification.user).deliver_later
+    end
+
     AgentNotifications::ConversationNotificationsMailer.with(account: notification.account).public_send(
       notification.notification_type.to_s, notification.primary_actor, notification.user, notification.secondary_actor
     ).deliver_later

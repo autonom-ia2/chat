@@ -45,7 +45,9 @@ class Notification < ApplicationRecord
     sla_missed_next_response: 7,
     sla_missed_resolution: 8,
     crm_followup_reminder: 9,
-    conversation_handoff_request: 10
+    conversation_handoff_request: 10,
+    # #935 — aviso urgente do Guia da Plataforma (o ator é o `Autonomia::Guide::Aviso`).
+    guide_alert: 11
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -102,6 +104,8 @@ class Notification < ApplicationRecord
       'sla_missed_resolution' => 'notifications.notification_title.sla_missed_resolution'
     }
 
+    return I18n.t('notifications.notification_title.guide_alert') if guide_alert?
+
     i18n_key = notification_title_map[notification_type]
     return '' unless i18n_key
 
@@ -124,6 +128,8 @@ class Notification < ApplicationRecord
       message_body(secondary_actor)
     when 'conversation_assignment', 'conversation_handoff_request', 'sla_missed_next_response', 'sla_missed_resolution'
       message_body((conversation.messages.incoming.last || conversation.messages.outgoing.last))
+    when 'guide_alert'
+      primary_actor.texto.to_s.truncate(200)
     else
       ''
     end

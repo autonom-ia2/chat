@@ -114,13 +114,27 @@ class Autonomia::Guide::Vigia < ApplicationRecord
     condicoes.any? && condicoes.all?
   end
 
+  # O que o pulso grava na vigia não é mudança de configuração: vai direto, sem validar de novo a
+  # leitura (uma rota que sumiu não pode travar o pulso) e sem passar pelo caderno do desfazer.
+  # rubocop:disable Rails/SkipsModelValidations
+
   # Soma a medição à média da última semana.
   def medir!(valor, agora = Time.current)
     amostras = [linha_de_base['amostras'].to_i, AMOSTRAS_NA_MEDIA - 1].min
     nova_media = ((media.to_f * amostras) + valor) / (amostras + 1)
-    update!(linha_de_base: { 'desde' => linha_de_base['desde'] || agora.iso8601, 'amostras' => amostras + 1,
-                             'media' => nova_media.round(4) })
+    update_columns(linha_de_base: { 'desde' => linha_de_base['desde'] || agora.iso8601, 'amostras' => amostras + 1,
+                                    'media' => nova_media.round(4) })
   end
+
+  # Avisou nesta janela: até ela acabar, a vigia não avisa de novo.
+  def avisou!(agora = Time.current)
+    update_columns(ultima_janela: janela(agora))
+  end
+
+  def pausar!(agora = Time.current)
+    update_columns(ativa: false, updated_at: agora)
+  end
+  # rubocop:enable Rails/SkipsModelValidations
 
   def para_tela
     { 'id' => id, 'nome' => nome, 'origem' => origem, 'leitura' => leitura, 'gatilho' => gatilho, 'para_quem' => para_quem,
