@@ -1,3 +1,41 @@
+# == Schema Information
+#
+# Table name: autonomia_agents
+#
+#  id                :bigint           not null, primary key
+#  actuation         :integer          default("external"), not null
+#  agent_type        :string           default("support"), not null
+#  config            :jsonb            not null
+#  enabled           :boolean          default(FALSE), not null
+#  fallback_message  :text
+#  greeting          :text
+#  handoff_rule      :text
+#  human_card        :text
+#  instruction       :text
+#  mode              :integer          default("guided"), not null
+#  name              :string           not null
+#  scaffold          :text
+#  starter_questions :jsonb            not null
+#  status            :integer          default("draft"), not null
+#  tone              :string
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  account_id        :bigint           not null
+#  created_by_id     :bigint
+#
+# Indexes
+#
+#  idx_autonomia_agents_account_actuation               (account_id,actuation)
+#  index_autonomia_agents_on_account_id                 (account_id)
+#  index_autonomia_agents_on_account_id_and_agent_type  (account_id,agent_type)
+#  index_autonomia_agents_on_account_id_and_status      (account_id,status)
+#  index_autonomia_agents_on_created_by_id              (created_by_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (created_by_id => users.id)
+#
 module Autonomia
   module Agents
     class Agent < ApplicationRecord

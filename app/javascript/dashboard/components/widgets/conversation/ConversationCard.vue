@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import Avatar from 'next/avatar/Avatar.vue';
@@ -35,6 +36,8 @@ const emit = defineEmits([
   'selectConversation',
   'deSelectConversation',
 ]);
+
+const { t } = useI18n();
 
 const hovered = ref(false);
 
@@ -87,9 +90,28 @@ const crmStage = useCrmConversationStage(
 );
 const hasCrmStage = computed(() => !!crmStage.value?.stage_name);
 
+// Pill de campanha CTWA (mesma leitura do card do Kanban): o anúncio que
+// originou a conversa é o 1º toque; "+N" sinaliza os cliques seguintes. O dado
+// já vem no payload da conversa, em snake_case como o resto de `chat`.
+const campaignPill = computed(() => {
+  const touches = props.chat.additional_attributes?.campaign_touches || [];
+  if (!touches.length) return null;
+
+  const headlineFor = touch =>
+    touch.headline || t('CRM_KANBAN.CARD.CAMPAIGN_FALLBACK');
+  return {
+    label: headlineFor(touches[0]),
+    title: touches.map(headlineFor).join(' · '),
+    extraCount: touches.length - 1,
+  };
+});
+
 const showLabelsSection = computed(() => {
   return (
-    props.chat.labels?.length > 0 || hasSlaPolicyId.value || hasCrmStage.value
+    props.chat.labels?.length > 0 ||
+    hasSlaPolicyId.value ||
+    hasCrmStage.value ||
+    !!campaignPill.value
   );
 });
 
@@ -255,12 +277,30 @@ watch(
         :conversation-labels="chat.labels"
         class="mt-0.5 mx-2 mb-0"
       >
-        <template v-if="hasSlaPolicyId || hasCrmStage" #before>
+        <template v-if="hasSlaPolicyId || hasCrmStage || campaignPill" #before>
           <CrmConversationStageChip
             v-if="hasCrmStage"
             :conversation-id="chat.id"
             class="ltr:mr-1 rtl:ml-1"
           />
+          <div
+            v-if="campaignPill"
+            class="flex h-5 min-w-fit items-center gap-1 rounded border border-n-strong px-1.5 ltr:mr-1 rtl:ml-1"
+            :title="campaignPill.title"
+          >
+            <span
+              class="i-lucide-megaphone size-3 flex-shrink-0 text-n-teal-11"
+            />
+            <span class="max-w-[8rem] truncate text-xs font-medium text-n-teal-11">
+              {{ campaignPill.label }}
+            </span>
+            <span
+              v-if="campaignPill.extraCount > 0"
+              class="text-xs font-semibold text-n-teal-11"
+            >
+              +{{ campaignPill.extraCount }}
+            </span>
+          </div>
           <SLACardLabel
             v-if="hasSlaPolicyId"
             :chat="chat"

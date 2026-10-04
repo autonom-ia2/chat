@@ -3,7 +3,6 @@
 # Table name: account_email_oauth_apps
 #
 #  id            :bigint           not null, primary key
-#  client_id     :text
 #  client_secret :text
 #  provider      :string           not null
 #  redirect_uri  :string
@@ -11,10 +10,15 @@
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
+#  client_id     :text
 #
 # Indexes
 #
 #  index_account_email_oauth_apps_on_account_id_and_provider  (account_id,provider) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (account_id => accounts.id)
 #
 
 # Credenciais do app OAuth (Azure/Google) que o cliente cadastra POR CONTA.
