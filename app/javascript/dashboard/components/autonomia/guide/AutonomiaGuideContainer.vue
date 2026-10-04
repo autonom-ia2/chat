@@ -26,6 +26,7 @@ import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideHistorico from './GuideHistorico.vue';
 import GuideMemoria from './GuideMemoria.vue';
 import GuideAnotei from './GuideAnotei.vue';
+import GuideTarefa from './GuideTarefa.vue';
 import GuideUserMessage from './GuideUserMessage.vue';
 import CopilotAssistantMessage from 'dashboard/components-next/copilot/CopilotAssistantMessage.vue';
 import CopilotLoader from 'dashboard/components-next/copilot/CopilotLoader.vue';
@@ -453,6 +454,7 @@ const entregarResposta = (data, pedidoId) => {
       artigos: data.artigos || null,
       execucao: data.execucao || null,
       lembrancas: data.lembrancas || null,
+      tarefa: data.tarefa || null,
       pedidoId,
     });
     if (data.execucao) emit('execucao', data.execucao);
@@ -465,6 +467,7 @@ const entregarResposta = (data, pedidoId) => {
     store.addAssistantMessage({
       content: t('AUTONOMIA_GUIDE.WITHHELD'),
       execucao: data.execucao || null,
+      tarefa: data.tarefa || null,
     });
     if (data.execucao) emit('execucao', data.execucao);
     if (execucaoMudouConta(data.execucao)) avisarContaMudou();
@@ -982,6 +985,8 @@ const classeDoPainel = computed(() =>
               />
               <!-- O que o Guia já fez neste turno, com o desfazer (#855). -->
               <GuideExecucao v-if="item.execucao" :execucao="item.execucao" />
+              <!-- #936 — o trabalho grande planejado neste turno: amostra, andamento e relatório. -->
+              <GuideTarefa v-if="item.tarefa" :tarefa-id="item.tarefa.id" />
               <!-- #933 — o que o Guia anotou neste turno, com "Esquecer". -->
               <GuideAnotei
                 v-for="lembranca in item.lembrancas || []"

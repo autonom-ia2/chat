@@ -137,6 +137,16 @@ class AutonomiaGuideAPI extends ApiClient {
   apagarMemoria(id) {
     return axios.delete(`${this.url}_memorias/${id}`);
   }
+
+  // #936 — uma tarefa longa do Guia: a amostra, o andamento e o relatório.
+  tarefa(id) {
+    return axios.get(`${this.baseUrl()}/autonomia/tarefas/${id}`);
+  }
+
+  // #936 — comecar, seguir, pausar, retomar, cancelar ou desfazer. Volta a tarefa atualizada.
+  comandarTarefa(id, comando) {
+    return axios.post(`${this.baseUrl()}/autonomia/tarefas/${id}/${comando}`);
+  }
 }
 
 export default new AutonomiaGuideAPI();
