@@ -108,10 +108,11 @@ RSpec.describe Autonomia::CentralDeAjuda::ArtigoFonte do
     expect(fonte.meta['video']).to be_nil
 
     %w[mp4 vtt jpg].each { |ext| File.write(videos.join("02.06.#{ext}"), ext) }
+    versao = ->(ext) { Digest::SHA256.hexdigest(ext)[0, 12] }
 
-    expect(fonte.meta['video']).to eq('arquivo' => '/central-de-ajuda/videos/02.06.mp4',
-                                      'legenda' => '/central-de-ajuda/videos/02.06.vtt',
-                                      'poster' => '/central-de-ajuda/videos/02.06.jpg')
+    expect(fonte.meta['video']).to eq('arquivo' => "/central-de-ajuda/videos/02.06.mp4?v=#{versao.call('mp4')}",
+                                      'legenda' => "/central-de-ajuda/videos/02.06.vtt?v=#{versao.call('vtt')}",
+                                      'poster' => "/central-de-ajuda/videos/02.06.jpg?v=#{versao.call('jpg')}")
     expect(fonte.sha).not_to eq(sem_video)
   end
 
