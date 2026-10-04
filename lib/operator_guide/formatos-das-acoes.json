@@ -389,7 +389,7 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:104",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:216"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
     "sem_corpo": true
   },
@@ -399,7 +399,7 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:116",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:216"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
     "sem_corpo": true
   },
@@ -4302,14 +4302,14 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:184",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:216",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:207",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:206"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208"
     ],
     "sem_corpo": false
   },
@@ -11933,11 +11933,11 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:87",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:184",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:179",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:181",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:177",
       "app/controllers/api/v1/accounts/contacts_controller.rb:175",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:173",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16"
@@ -12050,7 +12050,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:80",
       "app/controllers/api/v1/accounts/contacts_controller.rb:82",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:216"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218"
     ],
     "sem_corpo": false
   },
@@ -12093,8 +12093,8 @@
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:62",
       "app/controllers/api/v1/accounts/contacts_controller.rb:140",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:207",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:206",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208",
       "app/controllers/api/v1/accounts/contacts_controller.rb:63"
     ],
     "sem_corpo": false
@@ -20281,14 +20281,14 @@
     "modelo": "Contact",
     "origem": [
       "app/controllers/api/v1/accounts/contacts_controller.rb:96",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:184",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:220",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:186",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:222",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:24",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:22",
       "enterprise/app/controllers/enterprise/api/v1/accounts/contacts_controller.rb:16",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:216",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:207",
-      "app/controllers/api/v1/accounts/contacts_controller.rb:206"
+      "app/controllers/api/v1/accounts/contacts_controller.rb:218",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:209",
+      "app/controllers/api/v1/accounts/contacts_controller.rb:208"
     ],
     "sem_corpo": false
   },
