@@ -1,11 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { iconeDoCapitulo } from '../helpers/icones';
 import { agruparPorFamilia } from '../helpers/assuntos';
 
-// "Por assunto": os capítulos agrupados pelo que a pessoa quer fazer. Clicar no assunto abre a lista
-// de artigos dele logo abaixo.
+// "Por assunto": os capítulos agrupados pelo que a pessoa quer fazer. Cada assunto leva à página
+// dele, com a lista de artigos e o que a pessoa já viu.
 const props = defineProps({
   capitulos: { type: Array, required: true },
 });
@@ -13,14 +13,6 @@ const props = defineProps({
 const { t } = useI18n();
 
 const familias = computed(() => agruparPorFamilia(props.capitulos));
-const abertos = ref(new Set());
-
-const alternar = id => {
-  const novos = new Set(abertos.value);
-  if (novos.has(id)) novos.delete(id);
-  else novos.add(id);
-  abertos.value = novos;
-};
 
 // Assunto de capítulo novo, ainda sem nome curto, usa o título que veio da API.
 const nomeDo = assunto =>
@@ -28,9 +20,9 @@ const nomeDo = assunto =>
     ? t(`HELP_CENTER.CENTRAL_DE_AJUDA.POR_ASSUNTO.NOMES.${assunto.nome}`)
     : assunto.titulo;
 
-const rotaDoArtigo = artigo => ({
-  name: 'central_de_ajuda_artigo',
-  params: { ref: artigo.ref },
+const rotaDoAssunto = assunto => ({
+  name: 'central_de_ajuda_assunto',
+  params: { capitulo: assunto.id },
 });
 </script>
 
@@ -59,12 +51,9 @@ const rotaDoArtigo = artigo => ({
         </h3>
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
           <li v-for="assunto in familia.assuntos" :key="assunto.id">
-            <button
-              type="button"
+            <router-link
+              :to="rotaDoAssunto(assunto)"
               class="flex w-full min-h-11 items-center gap-3 rounded-xl border border-n-weak bg-n-solid-1 px-3 py-2.5 text-start hover:border-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-              :aria-expanded="abertos.has(assunto.id)"
-              :aria-controls="`assunto-${assunto.id}`"
-              @click="alternar(assunto.id)"
             >
               <span
                 class="grid size-9 shrink-0 place-items-center rounded-lg bg-n-brand/10 text-n-blue-11"
@@ -103,34 +92,10 @@ const rotaDoArtigo = artigo => ({
                 </span>
               </span>
               <span
-                class="size-5 shrink-0 text-n-slate-10"
-                :class="
-                  abertos.has(assunto.id)
-                    ? 'i-lucide-chevron-up'
-                    : 'i-lucide-chevron-down'
-                "
+                class="i-lucide-chevron-right size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
                 aria-hidden="true"
               />
-            </button>
-            <ul
-              v-show="abertos.has(assunto.id)"
-              :id="`assunto-${assunto.id}`"
-              class="m-0 mt-1 flex list-none flex-col gap-1 p-0 ltr:pl-12 rtl:pr-12"
-            >
-              <li v-for="artigo in assunto.artigos" :key="artigo.ref">
-                <router-link
-                  :to="rotaDoArtigo(artigo)"
-                  class="flex min-h-11 items-center gap-2 rounded-lg px-2 py-2 text-sm text-n-slate-12 hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-                >
-                  <span
-                    v-if="artigo.video"
-                    class="i-lucide-circle-play size-4 shrink-0 text-n-blue-11"
-                    aria-hidden="true"
-                  />
-                  {{ artigo.titulo }}
-                </router-link>
-              </li>
-            </ul>
+            </router-link>
           </li>
         </ul>
       </section>

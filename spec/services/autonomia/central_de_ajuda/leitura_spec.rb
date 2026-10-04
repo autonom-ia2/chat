@@ -7,7 +7,7 @@ RSpec.describe Autonomia::CentralDeAjuda::Leitura do
   let(:portal) { create(:portal, slug: 'plataforma', account: conta) }
   let(:video) do
     { 'arquivo' => '/central-de-ajuda/videos/02.04.mp4', 'legenda' => '/central-de-ajuda/videos/02.04.vtt',
-      'poster' => '/central-de-ajuda/videos/02.04.jpg' }
+      'poster' => '/central-de-ajuda/videos/02.04.jpg', 'duracao' => 12 }
   end
   let(:leitura) { described_class.new(account: conta, account_user: conta.account_users.find_by(user: admin)) }
 
@@ -18,16 +18,19 @@ RSpec.describe Autonomia::CentralDeAjuda::Leitura do
   end
 
   describe '#resumo' do
-    # O Guia lê `capitulos[].artigos[]` e usa `rota`: as chaves de antes ficam, a nova só se soma.
-    it 'mantém as chaves de antes e soma video' do
+    # O Guia lê `capitulos[].artigos[]` e usa `rota`: as chaves de antes ficam, as novas só se somam.
+    it 'mantém as chaves de antes e soma video, poster e duracao' do
       resumo = leitura.resumo(artigo('02.04', 'Conectar o WhatsApp', 'video' => video))
 
       expect(resumo).to eq(id: '02.04', ref: '02-04', titulo: 'Conectar o WhatsApp', descricao: 'Sobre Conectar o WhatsApp',
-                           capitulo: nil, rota: 'inbox_view', video: true)
+                           capitulo: nil, rota: 'inbox_view', video: true,
+                           poster: '/central-de-ajuda/videos/02.04.jpg', duracao: 12)
     end
 
-    it 'diz que não tem vídeo quando o artigo não publicou vídeo' do
-      expect(leitura.resumo(artigo('02.05', 'Seus avisos'))[:video]).to be(false)
+    it 'diz que não tem vídeo, pôster nem duração quando o artigo não publicou vídeo' do
+      resumo = leitura.resumo(artigo('02.05', 'Seus avisos'))
+
+      expect(resumo.values_at(:video, :poster, :duracao)).to eq([false, nil, nil])
     end
   end
 

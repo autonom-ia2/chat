@@ -72,6 +72,7 @@ export const GUIDE_ROUTE_REGISTRY = new Set([
   'captain_tools_index',
   'central_de_ajuda',
   'central_de_ajuda_artigo',
+  'central_de_ajuda_assunto',
   'companies_dashboard_index',
   'companies_dashboard_show',
   'contacts_campaign_imports',

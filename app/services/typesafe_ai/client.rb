@@ -13,7 +13,12 @@ class TypesafeAi::Client
     Errno::ECONNREFUSED,
     Errno::ECONNRESET,
     Errno::EHOSTUNREACH,
-    Errno::ETIMEDOUT
+    Errno::ETIMEDOUT,
+    # Conexão que cai no meio da resposta: sem estes, o erro escapava cru e quem chama respondia 500.
+    EOFError,
+    Errno::EPIPE,
+    Errno::ENETUNREACH,
+    Net::HTTPBadResponse
   ].freeze
 
   class Error < StandardError

@@ -25,6 +25,15 @@ class Api::V1::Accounts::CentralDeAjudaController < Api::V1::Accounts::BaseContr
     render json: { resultados: leitura.buscar(params[:termo]) }
   end
 
+  # A "Melhor resposta" escolhida pelo Jev (#977). Vem à parte porque leva meio segundo e pode falhar: a tela
+  # mostra antes a busca por palavras, e esta só chega para destacar (ou subir) o artigo escolhido.
+  def busca_inteligente
+    limite = ::Autonomia::CentralDeAjuda::LimiteDaBusca.new(account: Current.account, account_user: Current.account_user)
+    melhor = ::Autonomia::CentralDeAjuda::BuscaInteligente.new(leitura: leitura, account: Current.account, limite: limite)
+                                                          .melhor(params[:termo])
+    render json: { melhor: melhor&.dig(:artigo), certeza: melhor&.dig(:certeza) }
+  end
+
   private
 
   def leitura

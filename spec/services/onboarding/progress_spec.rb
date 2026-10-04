@@ -30,10 +30,12 @@ RSpec.describe Onboarding::Progress do
         passos = progresso.perform.index_by { |passo| passo[:id] }
 
         versao = ->(extensao) { Digest::SHA256.hexdigest(extensao)[0, 12] }
+        # `duracao` vem da última legenda (#977); aqui a legenda não tem linha de tempo, então fica nil.
         expect(passos['chave_ia'][:video]).to eq(
           'arquivo' => "/central-de-ajuda/videos/00.03.mp4?v=#{versao.call('mp4')}",
           'legenda' => "/central-de-ajuda/videos/00.03.vtt?v=#{versao.call('vtt')}",
-          'poster' => "/central-de-ajuda/videos/00.03.jpg?v=#{versao.call('jpg')}"
+          'poster' => "/central-de-ajuda/videos/00.03.jpg?v=#{versao.call('jpg')}",
+          'duracao' => nil
         )
         expect(passos['perfil'][:video]).to be_nil
       end
