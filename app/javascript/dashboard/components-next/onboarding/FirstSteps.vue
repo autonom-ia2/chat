@@ -117,7 +117,9 @@ const deslocamento = computed(
 <template>
   <section class="h-full w-full overflow-y-auto">
     <div class="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
-      <header class="flex flex-wrap items-center justify-between gap-6">
+      <header
+        class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+      >
         <div class="min-w-0 flex-1">
           <p v-if="nome" class="mb-1 text-sm text-n-slate-11">
             {{ t('ONBOARDING_TRAIL.GREETING', { nome }) }}
