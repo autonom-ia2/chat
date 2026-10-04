@@ -50,7 +50,7 @@ RSpec.describe Notification do
 
   it 'o e-mail traz o título e o texto do aviso', :aggregate_failures do
     with_modified_env SMTP_ADDRESS: 'smtp.exemplo.com' do
-      email = AgentNotifications::GuideAlertMailer.with(account: account).guide_alert(aviso, admin).deliver_now
+      email = AgentNotifications::GuideAlertMailer.with(account: account).guide_alert(aviso, admin).message
       expect(email.subject).to eq('The Guide has an urgent warning for you')
       expect(email.body.encoded).to include('Conexão caída: 1 agora')
     end

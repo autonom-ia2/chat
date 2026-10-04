@@ -25,8 +25,11 @@ RSpec.describe Autonomia::Guide::Tarefas::Amostra do
       expect(tarefa.total).to eq(60)
       expect(tarefa.itens.count).to eq(60)
       expect(tarefa.amostra.size).to eq(10)
-      expect(tarefa.amostra.first).to eq('ref' => 'CLIENTE NUMERO 1', 'antes' => { 'name' => 'CLIENTE NUMERO 1' },
-                                         'depois' => { 'name' => 'Cliente Numero 1' })
+      # A listagem de contatos não tem ordem garantida: confere a forma de cada par, não qual veio primeiro.
+      expect(tarefa.amostra).to all(satisfy do |par|
+        par['antes']['name'].start_with?('CLIENTE NUMERO') && par['depois'] == { 'name' => par['antes']['name'].titleize } &&
+          par['ref'] == par['antes']['name']
+      end)
       expect(Autonomia::Guide::Execucao.count).to eq(0)
       expect(Contact.where(id: contatos.map(&:id)).pluck(:id, :updated_at)).to match_array(carimbos)
       expect(Contact.where(id: contatos.map(&:id)).pluck(:name)).to all(start_with('CLIENTE'))

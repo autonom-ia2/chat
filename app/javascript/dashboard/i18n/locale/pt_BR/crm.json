@@ -2284,6 +2284,7 @@
       "FORGET_NAMED": "Esquecer: {texto}"
     },
     "TASK": {
+      "COST_AND_TIME": "{custo} · {tempo}",
       "LOADING": "Carregando o trabalho…",
       "LOAD_FAILED": "Não consegui carregar este trabalho. Confira a internet e tente de novo.",
       "RETRY": "Tentar de novo",

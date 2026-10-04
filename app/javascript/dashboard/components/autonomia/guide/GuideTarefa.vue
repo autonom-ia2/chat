@@ -241,7 +241,9 @@ onBeforeUnmount(() => {
           </template>
         </li>
       </ul>
-      <p class="mb-0 text-xs text-n-slate-11">{{ custo }} · {{ tempo }}</p>
+      <p class="mb-0 text-xs text-n-slate-11">
+        {{ $t('AUTONOMIA_GUIDE.TASK.COST_AND_TIME', { custo, tempo }) }}
+      </p>
       <p v-if="tarefa.jev_estimado" class="mb-0 text-xs text-n-slate-11">
         {{
           $t('AUTONOMIA_GUIDE.TASK.JEV', {

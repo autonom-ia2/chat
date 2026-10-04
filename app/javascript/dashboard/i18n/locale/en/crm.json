@@ -2283,6 +2283,7 @@
       "FORGET_NAMED": "Forget: {texto}"
     },
     "TASK": {
+      "COST_AND_TIME": "{custo} · {tempo}",
       "LOADING": "Loading the job…",
       "LOAD_FAILED": "I could not load this job. Check your connection and try again.",
       "RETRY": "Try again",

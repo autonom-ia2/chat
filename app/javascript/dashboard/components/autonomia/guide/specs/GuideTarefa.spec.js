@@ -85,8 +85,10 @@ describe('GuideTarefa', () => {
     expect(wrapper.text()).toContain(
       '"motivo":"AUTONOMIA_GUIDE.TASK.SKIP.nao_encontrado"'
     );
+    // Custo e tempo saem juntos, numa frase traduzida só.
+    expect(wrapper.text()).toContain('AUTONOMIA_GUIDE.TASK.COST_AND_TIME:');
     expect(wrapper.text()).toContain(
-      'AUTONOMIA_GUIDE.TASK.TIME:{"minutos":10}'
+      'AUTONOMIA_GUIDE.TASK.TIME:{\\"minutos\\":10}'
     );
   });
 

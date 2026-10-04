@@ -3,9 +3,14 @@
 // vezes (nada de animação contínua) e não pulsa para quem pede movimento reduzido.
 // #935 — com `numero`, vira a bolinha com a contagem de avisos novos. O nome
 // acessível ("2 avisos novos") vai no próprio botão; a bolinha é só visual.
-defineProps({
+import { computed } from 'vue';
+
+const props = defineProps({
   numero: { type: Number, default: 0 },
 });
+
+// Rótulo numérico (não é texto em língua nenhuma): acima de 9 vira "9+".
+const rotulo = computed(() => (props.numero > 9 ? '9+' : String(props.numero)));
 </script>
 
 <template>
@@ -22,7 +27,7 @@ defineProps({
     <span
       class="relative flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-n-amber-9 ring-2 ring-n-background text-xs font-medium tabular-nums text-n-amber-12 dark:text-n-amber-3"
     >
-      {{ numero > 9 ? '9+' : numero }}
+      {{ rotulo }}
     </span>
   </span>
   <span
