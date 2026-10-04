@@ -134,3 +134,30 @@ C26 a C29 testam a máquina de automações inteira, com gatilhos diferentes:
 
 Um cenário que falha diz o que ficou gravado de errado. O Guia é um modelo: rode o cenário de novo
 com `-e` antes de concluir que é regressão. Falhar duas vezes seguidas é regressão.
+
+## Placar — onda 1 das 5 frentes (04/10/2026)
+
+O teto aprovado é US$ 15 para as 5 frentes. Gasto na onda 1: **US$ 3,32**.
+
+| Rodada | Cenários | Passou | Custo |
+|---|---|---|---|
+| 1 — novos da onda 1 | C26–C29, C31–C34, M01–M08, CT01–CT06 (22) | 15 | US$ 1,76 |
+| diagnóstico com traço | M01, M03 (falha passageira, não reproduziu) e C26, C29 | — | US$ 0,56 |
+| 2 — depois das correções | C26, C29, C31, C34, CT05 | 3 | US$ 0,47 |
+| regressão | C01a, C01b, C03, C19, C21, C34 (critério corrigido) | 5 | US$ 0,54 |
+
+O que as falhas ensinaram:
+- `event_name` sem descrição levava o Guia a usar `conversation_updated` para "ao resolver".
+- `content` sem aviso virava lista de palavras.
+- O registro aberto que não existe aparecia como "não visível".
+- A instrução mandava perguntar o nome do que o Guia cria.
+- O critério do C34 só aceitava a campanha do site.
+
+Tudo isso foi corrigido.
+
+Ficaram abertos:
+- **C26:** o Guia ainda pergunta demais antes de montar as regras.
+- **C29:** numa rodada o Guia leu o pedido como "enviar agora", não como automação.
+- **C01a:** já falhava antes (#907).
+
+Os três viram Issue, tratada no fim (R1).

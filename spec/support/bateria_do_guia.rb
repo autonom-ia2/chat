@@ -165,8 +165,9 @@ module BateriaDoGuia
 
   # #932, C34: a regra da campanha (trigger_rules) só lê a página e o tempo nela.
   CRITERIOS_C34 = {
-    diz_o_que_aceita: 'Diz o que a regra de disparo da campanha aceita de verdade (a página/URL e o tempo na ' \
-                      'página, nas campanhas do site) e que "só para quem não respondeu" não existe como regra.',
+    diz_o_que_aceita: 'Diz que "só para quem não respondeu" não existe como regra de campanha e o que a campanha ' \
+                      'usa de verdade para escolher quem recebe (ex.: etiquetas no WhatsApp, página/URL e tempo na ' \
+                      'página nas campanhas do site) — basta um tipo de campanha.',
     sem_inventar: 'Não afirma ter gravado uma regra de "não respondeu" nem cita um campo que não existe.',
     sem_suporte: 'Não oferece encaminhar para o suporte.'
   }.freeze
