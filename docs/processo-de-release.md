@@ -12,6 +12,10 @@ da instância nova e 5,5 minutos o desligamento da antiga. Em 04/10, com o cache
 build e 3 min 04 s de boot, que vinha depois do build (8 min 22 s do disparo à troca do tráfego). Desde o #974 a
 instância nova liga antes do build e espera a imagem chegar ao ECR, então o boot quase todo corre junto com o build.
 
+Deploy cancelado ou com falha antes da troca de tráfego (#972): se a instância nova ainda estiver no boot, ela não é
+terminada no meio da migration. Ela se desliga sozinha ao fim do boot, fica parada com a tag `DeployCleanup=pending`, e
+o próximo deploy a termina; se ela ainda estiver de pé, o próximo deploy espera até 30 min antes de lançar outra.
+
 ## Regras
 
 1. **Um lote aberto por vez.** `release/<data>-loteN` sai da `main`. Cada sessão faz squash nele **só** do que já tem
