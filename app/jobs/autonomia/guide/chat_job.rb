@@ -43,19 +43,21 @@ class Autonomia::Guide::ChatJob < ApplicationJob
 
     @registro = ::Autonomia::Guide::Registro.new
     resultado = @registro.ativo do
-      I18n.with_locale(pergunta['locale']) do
-        ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
-                                     history: pergunta['historico'], route_context: pergunta['tela'],
-                                     route_params: pergunta['parametros'], arquivos: pergunta['arquivos'],
-                                     registro: @registro,
-                                     turno_id: ::Autonomia::Guide::Turno.where(pedido_id: pedido_id).pick(:id)).perform
-      end
+      I18n.with_locale(pergunta['locale']) { responder(account, user, pedido_id, pergunta) }
     end
     ::Autonomia::Guide::Pedido.concluir(pedido_id, resultado.to_h)
     ::Autonomia::Guide::Turno.concluir(pedido_id, resultado.to_h, diagnostico_de(resultado))
   end
 
   private
+
+  def responder(account, user, pedido_id, pergunta)
+    ::Autonomia::Guide::Chat.new(account: account, user: user, message: pergunta['mensagem'],
+                                 history: pergunta['historico'], route_context: pergunta['tela'],
+                                 route_params: pergunta['parametros'], tela: pergunta['contexto_tela'],
+                                 arquivos: pergunta['arquivos'], registro: @registro,
+                                 turno_id: ::Autonomia::Guide::Turno.where(pedido_id: pedido_id).pick(:id)).perform
+  end
 
   def sem_dono(pedido_id)
     ::Autonomia::Guide::Pedido.falhar(pedido_id)

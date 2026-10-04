@@ -184,7 +184,8 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   def pergunta(historico)
     { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
       'mensagem' => params[:message].to_s, 'historico' => historico,
-      'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'locale' => I18n.locale.to_s,
+      'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'contexto_tela' => contexto_da_tela,
+      'locale' => I18n.locale.to_s,
       'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
   end
 
@@ -255,6 +256,14 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
 
       { role: h[:role].to_s, content: h[:content].to_s }
     end
+  end
+
+  # #934 — o que a pessoa tem aberto, selecionado e filtrado, com a forma conferida. É contexto, não
+  # autorização: cada id ainda passa pela leitura prévia com a permissão dela (`Autonomia::Guide::Tela`).
+  def contexto_da_tela
+    catalogo = ::Autonomia::Guide::Consulta.new(account: Current.account, user: Current.user,
+                                                account_user: Current.account_user).catalogo
+    ::Autonomia::Guide::Tela::Forma.new(params[:tela], catalogo: catalogo).to_h
   end
 
   MAX_PARAMETROS_DA_TELA = 5

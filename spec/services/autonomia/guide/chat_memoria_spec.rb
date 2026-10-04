@@ -64,6 +64,15 @@ RSpec.describe Autonomia::Guide::Chat do
     expect(instrucoes(com).b).to eq(instrucoes(sem).b)
   end
 
+  # O teto da pergunta montada corta pelo fim; com contexto cheio, quem cede é o contexto, não a fala.
+  it 'com contexto acima do teto, a fala da pessoa chega inteira' do
+    allow_any_instance_of(described_class).to receive(:catalogos).and_return('x' * 20_000) # rubocop:disable RSpec/AnyInstance
+    query, = perguntar
+
+    expect(query).to end_with("\n\nquantos cards tem no funil do Zé?")
+    expect(query.length).to be <= Autonomia::Agents::Config::MAX_COMPOSED_QUERY_CHARS
+  end
+
   # AC-M10 — o chip "Anotei" sai na resposta do turno.
   it 'devolve o que foi anotado no turno, para o chip' do
     _, resultado = perguntar do |operador|

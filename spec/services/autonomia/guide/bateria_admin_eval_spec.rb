@@ -48,8 +48,9 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
   end
 
   # Um turno. O histórico é o da tela: o que a pessoa disse e o que o Guia respondeu.
-  def perguntar(texto, historico: [])
-    resultado = Autonomia::Guide::Chat.new(account: c.conta, user: c.admin, message: texto, history: historico).perform
+  # `tela` (#934): o que a pessoa tem aberto e selecionado, já na forma que o controller deixa passar.
+  def perguntar(texto, historico: [], tela: {}, quem: c.admin)
+    resultado = Autonomia::Guide::Chat.new(account: c.conta, user: quem, message: texto, history: historico, tela: tela).perform
     rodada[:respostas] << resultado.text
     resultado
   end
@@ -635,6 +636,97 @@ RSpec.describe 'Guia: bateria de cenários reais de administrador', :bateria_gui
     expect(etiquetados.map(&:id).sort).to eq(do_site.map(&:id).sort)
     expect(etiquetados.map(&:id) & outros.map(&:id)).to be_empty
     expect(Crm::AiUsageEvent.where(account: c.conta, feature: 'jev_guia')).to exist
+  end
+
+  # #934 — o que a pessoa tem aberto, selecionado e filtrado chega ao Guia como `tela`.
+  describe 'contexto da tela (CT)' do
+    let(:cotacao) { c.funil.stages.find_by(name: 'Cotação') }
+    let(:novo) { c.card_pedro.stage }
+
+    def card!(titulo)
+      c.conta.crm_cards.create!(pipeline: c.funil, stage: novo, contact: contato!(c.conta, titulo), title: titulo)
+    end
+
+    def kanban(selecionados: nil, aberto: nil)
+      { 'rota' => 'crm_kanban_index', 'filtros' => { 'pipeline_id' => c.funil.id },
+        'selecionados' => selecionados, 'aberto' => aberto }.compact
+    end
+
+    # MOTIVO: "esses" é a seleção da tela, e quem decide isso é o modelo. Pega mover o card errado (o do
+    # Pedro, que não está selecionado), mover só um e perguntar quais com a seleção na tela.
+    it 'CT01 move esses para Cotação: os 2 selecionados vão, nenhum outro muda', :aggregate_failures do
+      selecionados = [card!('Seguro auto — Lia Prado'), card!('Seguro auto — Rui Melo')]
+      tela = kanban(selecionados: { 'recurso' => 'crm/cards', 'ids' => selecionados.map(&:id), 'total' => 2 })
+
+      respondeu!(perguntar('move esses para Cotação', tela: tela))
+
+      expect(selecionados.map { |card| card.reload.stage_id }).to eq([cotacao.id, cotacao.id])
+      expect(c.card_pedro.reload.stage_id).to eq(novo.id)
+    end
+
+    # MOTIVO: "esse cliente aqui" é o contato aberto. Pega perguntar quem é e inventar apólice que a conta não tem.
+    it 'CT02 esse cliente aqui tem apólice vencendo? fala do Pedro aberto, sem inventar', :aggregate_failures do
+      pedido = 'esse cliente aqui tem apólice vencendo?'
+      tela = { 'rota' => 'contacts_dashboard_show', 'aberto' => [{ 'recurso' => 'contacts', 'id' => c.pedro.id }] }
+      resultado = perguntar(pedido, tela: tela)
+
+      respondeu!(resultado)
+      expect(execucoes).to be_empty
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_CT02)
+    end
+
+    # MOTIVO: "essa conversa" é a aberta. A caixa de vendas não cria card sozinha; o certo é ler e dizer a causa.
+    it 'CT03 por que essa conversa não foi para o funil? cita a causa lida na conta, sem suporte' do
+      pedido = 'por que essa conversa não foi para o funil?'
+      tela = { 'rota' => 'inbox_conversation',
+               'aberto' => [{ 'recurso' => 'conversations', 'id' => c.conversa_maria.display_id }] }
+      resultado = perguntar(pedido, tela: tela)
+
+      respondeu!(resultado)
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_CT03)
+    end
+
+    # MOTIVO: o que a pessoa não vê, a IA não vê. O Bruno não está na caixa Sinistros: a conversa de lá
+    # selecionada (por uma tela velha, por exemplo) não pode chegar ao prompt nem mudar.
+    it 'CT04 agente com conversa invisível na seleção: ela fica intacta e fora do prompt', :aggregate_failures do
+      oculta = create_crm_conversation(account: c.conta, inbox: c.sinistros, contact: contato!(c.conta, 'Caio Torres'))
+      prompts = []
+      allow(Autonomia::Agents::Answerer).to receive(:new).and_wrap_original do |original, **kwargs|
+        prompts << kwargs[:query]
+        original.call(**kwargs)
+      end
+      ids = [c.conversa_pedro.display_id, c.conversa_maria.display_id, oculta.display_id]
+      tela = { 'rota' => 'inbox_dashboard', 'selecionados' => { 'recurso' => 'conversations', 'ids' => ids, 'total' => 3 } }
+
+      respondeu!(perguntar('resolve essas conversas', tela: tela, quem: c.bruno))
+
+      selecao = prompts.first.split('Selecionados: ').last.split(' (').first
+      expect(selecao.split('ids ').last.split(', ')).not_to include(oculta.display_id.to_s)
+      expect(prompts.first).to include('1 dos selecionados não está visível')
+      expect(oculta.reload.status).to eq('open')
+    end
+
+    # MOTIVO: o card aberto não existe (apagado em outra aba). Pega apagar outro card e fingir que apagou.
+    it 'CT05 apaga esse card com o 999 inexistente: nada é apagado e diz que não encontrou', :aggregate_failures do
+      pedido = 'apaga esse card'
+      antes = c.conta.crm_cards.where.not(status: :archived).count
+      resultado = perguntar(pedido, tela: kanban(aberto: [{ 'recurso' => 'crm/cards', 'id' => 999_999 }]))
+
+      respondeu!(resultado)
+      expect(c.conta.crm_cards.where.not(status: :archived).count).to eq(antes)
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_CT05)
+    end
+
+    # MOTIVO: sem nada na tela, "esses" não aponta para nada. Pega mover todos os cards do funil.
+    it 'CT06 move esses para Cotação sem contexto: banco intacto e pergunta quais', :aggregate_failures do
+      pedido = 'move esses para Cotação'
+      outro = card!('Seguro auto — Lia Prado')
+      resultado = perguntar(pedido)
+
+      respondeu!(resultado)
+      expect([c.card_pedro, outro].map { |card| card.reload.stage_id }).to eq([novo.id, novo.id])
+      expect_juiz_aprova!(pedido, resultado.text, BateriaDoGuia::CRITERIOS_CT06)
+    end
   end
 end
 # rubocop:enable RSpec/DescribeClass

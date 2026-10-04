@@ -91,6 +91,26 @@ module BateriaDoGuia
     sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
   }.freeze
 
+  # #934 — contexto da tela: o que o Guia precisa DIZER com o que a pessoa tem aberto ou sem nada na tela.
+  CRITERIOS_CT02 = {
+    fala_do_aberto: 'Fala do cliente Pedro Lima (o contato aberto na tela) sem perguntar de quem se trata.',
+    sem_inventar: 'Não afirma que existe apólice, vencimento ou data que a conta não mostrou; se não achou, diz isso.'
+  }.freeze
+
+  CRITERIOS_CT03 = {
+    causa_da_conta: 'Explica por que a conversa não virou card no funil com uma causa concreta da conta (ex.: a caixa ' \
+                    'não cria card automaticamente), e não só uma lista genérica de possibilidades.',
+    sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
+  }.freeze
+
+  CRITERIOS_CT05 = {
+    nao_encontrou: 'Diz que não encontrou o card (ou que ele não existe ou não está visível), sem afirmar que apagou.'
+  }.freeze
+
+  CRITERIOS_CT06 = {
+    pergunta_quais: 'Pergunta quais cards a pessoa quer mover, em vez de mover algum.'
+  }.freeze
+
   # Juiz de texto: só para o que o banco não mostra e uma pessoa precisaria ler (o Guia explicou a
   # regra certa? propôs o mais próximo?). Quem entende linguagem é um modelo — nunca lista de palavras
   # (regra do repo). Modelo diferente do Guia, para o juiz não concordar com o próprio jeito de errar.

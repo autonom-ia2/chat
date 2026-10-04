@@ -2156,6 +2156,22 @@
     "INSERTED": "Inserido na resposta."
   },
   "AUTONOMIA_GUIDE": {
+    "TELA": {
+      "SELECTED": {
+        "CARDS": "Vendo: {count} card selecionado | Vendo: {count} cards selecionados",
+        "CONVERSAS": "Vendo: {count} conversa selecionada | Vendo: {count} conversas selecionadas",
+        "CONTATOS": "Vendo: {count} contato selecionado | Vendo: {count} contatos selecionados",
+        "OUTROS": "Vendo: {count} item selecionado | Vendo: {count} itens selecionados"
+      },
+      "OPEN": {
+        "CARDS": "Vendo: o card aberto",
+        "CONVERSAS": "Vendo: a conversa aberta",
+        "CONTATOS": "Vendo: o contato aberto",
+        "OUTROS": "Vendo: o registro aberto"
+      },
+      "REMOVE": "Perguntar sem usar o que está na tela",
+      "REMOVED": "A próxima pergunta vai sem o que está na tela."
+    },
     "TITLE": "Guia da Plataforma",
     "LAUNCHER": "Guia da Plataforma",
     "THINKING": "Pensando…",

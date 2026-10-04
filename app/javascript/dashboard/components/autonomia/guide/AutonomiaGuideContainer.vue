@@ -16,9 +16,11 @@ import {
   MAX_ANEXOS_POR_CONVERSA,
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
+import { contextoAtual } from 'dashboard/composables/useContextoDaTela';
 
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
+import GuideEtiquetaTela from './GuideEtiquetaTela.vue';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideHistorico from './GuideHistorico.vue';
@@ -510,6 +512,16 @@ const abrirPedidoNoServidor = async (chave, payload) => {
   }
 };
 
+// #934 — o que a pessoa vê na tela vai junto da pergunta. O × da etiqueta tira
+// só da próxima; na seguinte, a etiqueta volta.
+const telaAtual = computed(() => contextoAtual(route));
+const semTelaNaProxima = ref(false);
+const telaDaPergunta = () => {
+  const tela = semTelaNaProxima.value ? undefined : telaAtual.value;
+  semTelaNaProxima.value = false;
+  return tela;
+};
+
 const requestReply = async (requestAccount, message, requestId, registro) => {
   const chave = store.abrirPendente(requestAccount, cracha);
   let pedido;
@@ -520,6 +532,7 @@ const requestReply = async (requestAccount, message, requestId, registro) => {
       routeContext: route.name,
       // #859 — o registro aberto (ex.: a automação 42); o servidor guarda só números.
       routeParams: route.params,
+      tela: telaDaPergunta(),
       arquivos: store.arquivosProntos(),
       conversaId: store.conversaAtual(),
       anexos: anexosDe(registro),
@@ -1177,6 +1190,11 @@ const classeDoPainel = computed(() =>
       </div>
 
       <div class="mx-3 mt-px mb-2">
+        <GuideEtiquetaTela
+          :tela="telaAtual"
+          :oculta="semTelaNaProxima"
+          @remover="semTelaNaProxima = true"
+        />
         <!-- Uma conta, um composer: trocar de conta descarta a gravação e o áudio que
              esperava a vez, que senão sairia na conta nova. -->
         <GuideComposer

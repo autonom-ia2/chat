@@ -29,6 +29,9 @@ class AutonomiaGuideAPI extends ApiClient {
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
   // aqui dentro esbarrava no teto de 15s do servidor e morria com erro 500.
   //
+  // #934 — `tela`: o que a pessoa tem aberto, selecionado e filtrado (`contextoAtual`).
+  // Sem ele (o × da etiqueta), a pergunta vai só com a rota, como antes.
+  //
   // #861 — `conversaId` continua a conversa guardada; sem ele, o servidor abre
   // outra e devolve o id em `conversa_id`. `anexos` ({ nome, tipo }) é o que o
   // balão mostrou, para a conversa reabrir igual. `history` fica só durante o
@@ -38,6 +41,7 @@ class AutonomiaGuideAPI extends ApiClient {
     history,
     routeContext,
     routeParams,
+    tela,
     arquivos = [],
     conversaId = null,
     anexos = [],
@@ -47,6 +51,7 @@ class AutonomiaGuideAPI extends ApiClient {
       history,
       route_context: routeContext,
       route_params: routeParams,
+      tela,
       arquivos,
       conversa_id: conversaId,
       anexos,

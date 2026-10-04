@@ -74,13 +74,18 @@ class Autonomia::Guide::Registro
     }
   end
 
+  # #934 — o que a pessoa estava vendo: rota, recurso, ids que ela enxerga e total. Sem resumo nem filtro.
+  def ver_tela(tela)
+    @tela = tela.presence
+  end
+
   # O que vai para `Turno#diagnostico`. `erro` é só a classe: a mensagem pode
   # trazer o prompt ou dado da conta.
   def diagnostico(erro: nil)
     ultimo = @custos.last || {}
     { 'modelo' => ultimo[:model], 'effort' => ultimo[:effort], 'rodadas' => @custos.size, 'ms' => @ms,
       'custo_usd' => @custos.sum { |item| item[:cost].to_f }.round(6), 'tokens' => tokens,
-      'chamadas' => @chamadas, **@decisoes, 'erro' => erro }
+      'chamadas' => @chamadas, **@decisoes, **({ 'tela' => @tela } if @tela).to_h, 'erro' => erro }
   end
 
   private

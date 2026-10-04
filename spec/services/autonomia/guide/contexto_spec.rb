@@ -39,6 +39,23 @@ RSpec.describe Autonomia::Guide::Contexto do
     expect(contexto.leu?(caixa.id)).to be(false)
   end
 
+  # #934 (AC-CT5) — uma ação em lote aponta registros pelo corpo. Um id chutado
+  # ao lado dos lidos não passa, em qualquer rota.
+  describe '#nao_lidos com o corpo' do
+    before { contexto.lido('[{"id":881},{"id":882}]') }
+
+    it 'confere `ids`, `*_ids` e `*Ids` do corpo, além do caminho', :aggregate_failures do
+      expect(contexto.nao_lidos({}, { card_ids: [881, 99_999] })).to eq('card_ids' => '99999')
+      expect(contexto.nao_lidos({}, { ids: %w[881 882] })).to eq({})
+      expect(contexto.nao_lidos({}, { 'labelIds' => [7] })).to eq('labelIds' => '7')
+      expect(contexto.nao_lidos({ 'id' => 5 }, { ids: [881, 3] })).to eq('id' => 5, 'ids' => '3')
+    end
+
+    it 'não confunde outros campos do corpo com lista de ids' do
+      expect(contexto.nao_lidos({}, { title: 'x', stage_id: 4, payload: { ids: [1] }, inbox_id: 9 })).to eq({})
+    end
+  end
+
   # #636 — uma pergunta com várias partes chama `mostrar_tela` mais de uma vez;
   # antes só a última sobrevivia (#590), e o botão das outras partes sumia.
   describe '#mostrar' do

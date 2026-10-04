@@ -145,11 +145,31 @@ class Autonomia::Guide::Contexto
   # Instagram" precisa do id que a leitura achou, nunca de um número chutado.
   # `:inboxId`, `:conversation_id`, `:id` apontam registro; `:tab` e `:label`
   # não. É o nome que o roteador dá ao parâmetro, não texto de gente.
-  def nao_lidos(parametros)
-    parametros.to_h.select do |nome, valor|
+  #
+  # #934 — o `corpo` também aponta registro: `ids` e `*_ids` de uma ação em
+  # lote. Sem isso, "move esses" levaria junto um id chutado ao lado dos lidos.
+  def nao_lidos(parametros, corpo = {})
+    do_caminho = parametros.to_h.select do |nome, valor|
       nome = nome.to_s
       (nome == 'id' || nome.end_with?('Id') || nome.end_with?('_id')) && !leu?(valor)
     end
+    do_caminho.merge(ids_nao_lidos_do_corpo(corpo))
+  end
+
+  # As listas de ids do corpo (`ids`, `card_ids`, `labelIds`), com os ids que nenhuma leitura trouxe.
+  def ids_nao_lidos_do_corpo(corpo)
+    return {} unless corpo.is_a?(Hash)
+
+    corpo.each_with_object({}) do |(nome, valor), saida|
+      next unless lista_de_ids?(nome.to_s) && !valor.is_a?(Hash)
+
+      faltam = Array(valor).reject { |id| leu?(id) }
+      saida[nome.to_s] = faltam.join(', ') if faltam.any?
+    end
+  end
+
+  def lista_de_ids?(nome)
+    nome == 'ids' || nome.end_with?('_ids') || nome.end_with?('Ids')
   end
 
   # O Guia leu dados da conta neste turno. É o que ancora "não encontrei o
