@@ -29,8 +29,9 @@ const montar = ({ conta, admin = true, fuso = 'America/Cuiaba', falha }) => {
     ? vi.fn().mockRejectedValue(new Error('falhou'))
     : vi.fn().mockResolvedValue();
   useStore.mockReturnValue({ dispatch });
+  const contaAtual = ref(conta);
   useAccount.mockReturnValue({
-    currentAccount: ref(conta),
+    currentAccount: contaAtual,
     accountScopedRoute: name => ({ name }),
   });
   useAdmin.mockReturnValue({ isAdmin: ref(admin) });
@@ -38,6 +39,7 @@ const montar = ({ conta, admin = true, fuso = 'America/Cuiaba', falha }) => {
     resolvedOptions: () => ({ timeZone: fuso }),
   }));
   useFusoAutomatico();
+  dispatch.contaAtual = contaAtual;
   return dispatch;
 };
 
@@ -126,6 +128,17 @@ describe('useFusoAutomatico', () => {
     await flush();
 
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('trocar de conta sem recarregar ajusta a outra conta também', async () => {
+    const dispatch = montar({
+      conta: { id: 1, custom_attributes: {}, settings: {} },
+    });
+    await flush();
+    dispatch.contaAtual.value = { id: 2, custom_attributes: {}, settings: {} };
+    await flush();
+
+    expect(dispatch).toHaveBeenCalledTimes(2);
   });
 
   it('falha ao gravar fica em silêncio', async () => {

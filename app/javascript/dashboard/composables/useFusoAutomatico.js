@@ -42,7 +42,8 @@ export function useFusoAutomatico() {
   const store = useStore();
   const { currentAccount, accountScopedRoute } = useAccount();
   const { isAdmin } = useAdmin();
-  let tentou = false;
+  // Uma tentativa por conta: quem troca de conta sem recarregar também é atendido.
+  const tentadas = new Set();
 
   const ajustar = async conta => {
     const escolhido = conta.custom_attributes?.timezone;
@@ -52,7 +53,7 @@ export function useFusoAutomatico() {
     const fuso = escolhido || fusoDoNavegador();
     if (!fuso) return;
 
-    tentou = true;
+    tentadas.add(conta.id);
     try {
       await store.dispatch('accounts/update', {
         timezone: fuso,
@@ -71,7 +72,7 @@ export function useFusoAutomatico() {
   watch(
     () => [currentAccount.value?.id, isAdmin.value],
     ([id, admin]) => {
-      if (tentou || !id || !admin) return;
+      if (!id || !admin || tentadas.has(id)) return;
       if (currentAccount.value.custom_attributes?.onboarding_step) return;
       ajustar(currentAccount.value);
     },
