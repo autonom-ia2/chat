@@ -37,8 +37,10 @@ class Autonomia::Guide::Formatos::Corpo
     @raiz = colocar(@raiz, caminho, arvore)
   end
 
-  def ler(caminho, exigida:)
-    @raiz = colocar(@raiz, caminho[0...-1], { caminho.last => { forma: :escalar, cru: true, exigida: exigida } })
+  # `uso`: o tipo pelo que o código faz com a leitura; `repasse`: quem recebe a leitura inteira.
+  def ler(caminho, exigida:, uso: nil, repasse: nil)
+    leitura = { forma: :escalar, cru: true, exigida: exigida, uso: uso, repasse: repasse }.compact
+    @raiz = colocar(@raiz, caminho[0...-1], { caminho.last => leitura })
   end
 
   def livre(caminho)
@@ -106,11 +108,33 @@ class Autonomia::Guide::Formatos::Corpo
   def campo_json(nome, campo, modelo, raiz, caminho)
     json = Formatos::Modelo.anotar(modelo, nome, campo, criando: @criando)
     json['tipo'] ||= tipo_sem_modelo(nome, campo)
+    tipar_leitura(json, nome, campo, caminho)
     json['obrigatorio'] = true if campo[:exigida]
     json['so_se'] = @so_se[caminho]
     json.merge!(dentro(nome, campo, modelo, raiz, caminho))
-    @sem_tipo << caminho if campo[:cru] && campo[:forma] == :escalar && json['tipo'].nil?
     json.compact.sort.to_h
+  end
+
+  def tipar_leitura(json, nome, campo, caminho)
+    return unless campo[:cru] && campo[:forma] == :escalar && json['tipo'].nil?
+
+    json.merge!(pela_leitura(nome, campo))
+    sem_tipo(caminho, campo) if json['tipo'].nil?
+  end
+
+  # O tipo da leitura crua que nenhum modelo diz (#932): pelo uso no código e, sem uso, pelo nome
+  # (`ids` e `*_ids` são lista; `*_id` é o id de um registro, número ou texto).
+  def pela_leitura(nome, campo)
+    return { 'tipo' => campo[:uso], 'tipo_pela_leitura' => 'uso' } if campo[:uso]
+    return { 'tipo' => 'lista', 'tipo_pela_leitura' => 'nome' } if nome == 'ids' || nome.end_with?('_ids')
+    return { 'tipo' => 'id', 'tipo_pela_leitura' => 'nome' } if nome.end_with?('_id')
+
+    {}
+  end
+
+  # A que sobra sem tipo leva o motivo quando é sabido: quem recebe a leitura inteira decide.
+  def sem_tipo(caminho, campo)
+    @sem_tipo << (campo[:repasse] ? "#{caminho} (repassada a #{campo[:repasse]})" : caminho)
   end
 
   def tipo_sem_modelo(nome, campo)

@@ -23,6 +23,8 @@
 # - `destinos`: onde o corpo é gravado (`Destinos`), e `variaveis`, o modelo
 #   de cada `@x` que um `before_action` busca.
 # - `origens`: onde a leitura achou algo, para quem revisa conferir.
+# - `tipos`: o tipo de uma leitura crua pelo uso no código (`UsoDaLeitura`), e
+#   `repassadas`, a leitura entregue inteira a outro objeto, que decide o tipo.
 class Autonomia::Guide::Formatos::Coleta
   Permit = Struct.new(:caminho, :filtros, :metodo, :dono, :origem, :envelope, keyword_init: true)
   Leitura = Struct.new(:caminho, :origem, :exigida, keyword_init: true)
@@ -31,7 +33,7 @@ class Autonomia::Guide::Formatos::Coleta
   Destino = Struct.new(:modelo, :variavel, :metodo, keyword_init: true)
 
   attr_reader :permits, :leituras, :livres, :totais, :repasses, :corpo_cru, :externos, :modelos, :recursos,
-              :envelopes_flexiveis, :recortes, :chamadas, :destinos, :variaveis
+              :envelopes_flexiveis, :recortes, :chamadas, :destinos, :variaveis, :tipos, :repassadas
 
   def initialize
     @permits = []
@@ -48,6 +50,8 @@ class Autonomia::Guide::Formatos::Coleta
     @chamadas = []
     @destinos = []
     @variaveis = {}
+    @tipos = {}
+    @repassadas = {}
   end
 
   # As chaves que a action usa do montador `metodo`, ou nil quando alguma

@@ -55,7 +55,7 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
               descricao: @params['descricao'].to_s }
     return tem_volta if conhecida_com_volta?(@params['acao'].to_s, dados)
 
-    nao_lidos = @operador.nao_lidos(dados[:caminho])
+    nao_lidos = ids_nao_lidos(dados)
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
     descricao = @operador.acoes.descrever(@params['acao'].to_s, dados)
@@ -72,6 +72,9 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
   end
 
   private
+
+  # Do caminho e do corpo (#934): `ids` e `*_ids` também apontam registro.
+  def ids_nao_lidos(dados) = @operador.nao_lidos(dados[:caminho], dados[:corpo])
 
   # As ações que EXISTEM para o recurso que ele tentou. O catálogo de escrita
   # tem 16.245 caracteres e não cabe no prompt de toda pergunta; aqui ele chega

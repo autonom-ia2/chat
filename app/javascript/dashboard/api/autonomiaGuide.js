@@ -29,6 +29,9 @@ class AutonomiaGuideAPI extends ApiClient {
   // Guia trabalha num job, e a resposta se busca em `resposta(id)`. Responder
   // aqui dentro esbarrava no teto de 15s do servidor e morria com erro 500.
   //
+  // #934 — `tela`: o que a pessoa tem aberto, selecionado e filtrado (`contextoAtual`).
+  // Sem ele (o × da etiqueta), a pergunta vai só com a rota, como antes.
+  //
   // #861 — `conversaId` continua a conversa guardada; sem ele, o servidor abre
   // outra e devolve o id em `conversa_id`. `anexos` ({ nome, tipo }) é o que o
   // balão mostrou, para a conversa reabrir igual. `history` fica só durante o
@@ -38,6 +41,7 @@ class AutonomiaGuideAPI extends ApiClient {
     history,
     routeContext,
     routeParams,
+    tela,
     arquivos = [],
     conversaId = null,
     anexos = [],
@@ -47,6 +51,7 @@ class AutonomiaGuideAPI extends ApiClient {
       history,
       route_context: routeContext,
       route_params: routeParams,
+      tela,
       arquivos,
       conversa_id: conversaId,
       anexos,
@@ -117,6 +122,42 @@ class AutonomiaGuideAPI extends ApiClient {
   // #855 — volta a conta ao estado de antes daquele turno do Guia.
   desfazer(id) {
     return axios.post(`${this.url}/execucoes/${id}/desfazer`);
+  }
+
+  // #933 — o que o Guia lembra: { pessoais, corretora, pode_editar_corretora, limites }.
+  memorias() {
+    return axios.get(`${this.url}_memorias`);
+  }
+
+  corrigirMemoria(id, texto) {
+    return axios.patch(`${this.url}_memorias/${id}`, { texto });
+  }
+
+  // Sem desfazer.
+  apagarMemoria(id) {
+    return axios.delete(`${this.url}_memorias/${id}`);
+  }
+
+  // #935 — os avisos do Guia para quem pede: { avisos, novos }. Só administrador.
+  avisos(estado) {
+    return axios.get(`${this.baseUrl()}/autonomia/avisos`, {
+      params: { estado },
+    });
+  }
+
+  // #935 — 'visto' quando a pessoa abre o Guia.
+  marcarAviso(id, estado) {
+    return axios.patch(`${this.baseUrl()}/autonomia/avisos/${id}`, { estado });
+  }
+
+  // #936 — uma tarefa longa do Guia: a amostra, o andamento e o relatório.
+  tarefa(id) {
+    return axios.get(`${this.baseUrl()}/autonomia/tarefas/${id}`);
+  }
+
+  // #936 — comecar, seguir, pausar, retomar, cancelar ou desfazer. Volta a tarefa atualizada.
+  comandarTarefa(id, comando) {
+    return axios.post(`${this.baseUrl()}/autonomia/tarefas/${id}/${comando}`);
   }
 }
 

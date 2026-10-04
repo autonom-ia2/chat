@@ -43,6 +43,10 @@ export const NOTIFICATION_TYPES = [
       'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.CONVERSATION_HANDOFF_REQUEST',
     value: 'conversation_handoff_request',
   },
+  {
+    label: 'PROFILE_SETTINGS.FORM.NOTIFICATIONS.TYPES.GUIDE_ALERT',
+    value: 'guide_alert',
+  },
 ];
 
 export const EVENT_TYPES = {

@@ -374,6 +374,23 @@ Rails.application.routes.draw do
             get 'guide/conversas/atual', to: 'guide_conversas#atual'
             get 'guide/conversas/:id', to: 'guide_conversas#show'
             delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #933 — o que o Guia lembra: o painel "O que eu sei".
+            resources :guide_memorias, only: [:index, :update, :destroy]
+            # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
+            resources :vigias, only: [:index, :show, :create, :update, :destroy]
+            resources :avisos, only: [:index, :update]
+            # #936 — tarefas longas do Guia: o andamento e os controles. Fora de `guide/`, de propósito: entram
+            # no catálogo do próprio Guia (ler o andamento, pausar, cancelar, desfazer).
+            resources :tarefas, only: [:index, :show] do
+              member do
+                post :comecar
+                post :seguir
+                post :pausar
+                post :retomar
+                post :cancelar
+                post :desfazer
+              end
+            end
             # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
             resources :decisores, only: [:index, :show, :create, :update, :destroy] do
               member do

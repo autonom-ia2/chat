@@ -38,7 +38,11 @@ class Autonomia::Guide::Formatos::Acao
 
   def montar(corpo, permits)
     permits.each { |caminho, arvore, envelope| corpo.permitir(caminho, arvore, envelope: envelope) }
-    @coleta.leituras.each { |leitura| corpo.ler(leitura.caminho, exigida: leitura.exigida) unless do_endereco?(leitura.caminho) }
+    @coleta.leituras.each do |leitura|
+      next if do_endereco?(leitura.caminho)
+
+      corpo.ler(leitura.caminho, exigida: leitura.exigida, uso: @coleta.tipos[leitura.caminho], repasse: @coleta.repassadas[leitura.caminho])
+    end
     @coleta.livres.each { |leitura| corpo.livre(leitura.caminho) }
     corpo.envelope_flexivel(@coleta.envelopes_flexiveis)
     motivos_do_codigo

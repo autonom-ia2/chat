@@ -84,10 +84,10 @@ class Autonomia::Guide::Acoes
     'DELETE teams/:id',
     'DELETE portals/:id',
     'DELETE sla_policies/:id',
-    # A segunda (#861): a conversa com o Guia fica fora do caderno (`Diario::FORA`) e, apagada, não volta.
     # #858 — resolver um caso parado do Decisor retoma a automação num job, que pode mandar mensagem
-    # ou mover card fora do caderno.
-    'DELETE labels/:id', 'DELETE autonomia/guide/conversas/:id', 'POST autonomia/decisoes/:id/resolver'
+    # ou mover card fora do caderno. (A conversa com o Guia saiu do catálogo: D3, #933.)
+    # #936 — começar e seguir uma tarefa longa soltam lotes em centenas de registros: só a pessoa autoriza.
+    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver', 'POST autonomia/tarefas/:id/comecar', 'POST autonomia/tarefas/:id/seguir'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são
@@ -130,8 +130,10 @@ class Autonomia::Guide::Acoes
 
   # Tem desfazer? Então o Guia executa direto; se não, a pessoa confirma. Sem `dados`, responde pela
   # ação só (o formato da ação não tem corpo); com eles, também pelo que o corpo faz.
+  # O corpo também conta pelo esquema: o que cai num nó `x-sem-volta` (regra que manda mensagem) confirma.
   def desfazivel?(acao, dados = nil)
-    SEM_DESFAZER.exclude?(acao.to_s) && !::Autonomia::Guide::RegraComDecisor.new(@account).fica_ligada?(acao.to_s, dados)
+    SEM_DESFAZER.exclude?(acao.to_s) && !::Autonomia::Guide::RegraComDecisor.new(@account).fica_ligada?(acao.to_s, dados) &&
+      !(dados && conferencia(acao, dados).sem_volta?)
   end
 
   # O texto que a pessoa lê ANTES de confirmar. Sem isso não há confirmação
@@ -197,7 +199,8 @@ class Autonomia::Guide::Acoes
 
   # Confere o corpo contra o formato da ação ANTES de chamar a plataforma, e
   # devolve a conferência com o corpo no envelope certo (#900).
-  def conferir_corpo!(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados)).conferida!
+  def conferir_corpo!(acao, dados) = conferencia(acao, dados).conferida!
+  def conferencia(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados), conta: @account)
 
   def garantir_permitida!(acao)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
@@ -208,9 +211,7 @@ class Autonomia::Guide::Acoes
     @account_user&.role.to_s == 'administrator'
   end
 
-  def verbo_de(acao)
-    acao.to_s.split(' ', 2).first
-  end
+  def verbo_de(acao) = acao.to_s.split(' ', 2).first
 
   def recurso_de(acao)
     acao.to_s.split(' ', 2).last

@@ -174,7 +174,8 @@
           "SLA_MISSED_NEXT_RESPONSE": "A conversation misses next response SLA",
           "SLA_MISSED_RESOLUTION": "A conversation misses resolution SLA",
           "CRM_FOLLOWUP_REMINDER": "A CRM follow-up reminder is due",
-          "CONVERSATION_HANDOFF_REQUEST": "A customer needs a human and the AI invites you"
+          "CONVERSATION_HANDOFF_REQUEST": "A customer needs a human and the AI invites you",
+          "GUIDE_ALERT": "The Guide has an urgent warning for you"
         },
         "BROWSER_PERMISSION": "Enable push notifications for your browser so you’re able to receive them"
       },

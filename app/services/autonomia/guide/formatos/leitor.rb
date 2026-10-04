@@ -61,7 +61,8 @@ class Autonomia::Guide::Formatos::Leitor
     return unless definicao
 
     @atual = { metodo: metodo, arquivo: metodo.source_location.first, da_action: da_action, profundidade: profundidade,
-               escopo: Formatos::Locais.coletar(definicao.body, metodo.owner) }
+               escopo: Formatos::Locais.coletar(definicao.body, metodo.owner),
+               apelidos: Formatos::UsoDaLeitura.apelidos(definicao.body, @caminhos) }
     chama_super = false
     pilha = [definicao.body].compact
     until pilha.empty?
@@ -83,6 +84,8 @@ class Autonomia::Guide::Formatos::Leitor
   def examinar(node)
     return registrar_modelo(Formatos::ModelosCitados.da_constante(node, @atual[:metodo].owner)) if constante?(node)
     return Formatos::Destinos.variavel(node, @coleta, @atual[:metodo].owner) if variavel?(node)
+
+    registrar_uso(node)
     return unless node.is_a?(Prism::CallNode)
 
     atual = @atual
@@ -170,6 +173,13 @@ class Autonomia::Guide::Formatos::Leitor
 
   def registrar_modelo(modelo)
     @coleta.modelos << Coleta::Candidato.new(modelo: modelo, da_action: @atual[:da_action]) if modelo
+  end
+
+  # O tipo da leitura crua pelo que o código faz com ela, e a leitura entregue a outro objeto (#932).
+  def registrar_uso(node)
+    caminho, tipo = Formatos::UsoDaLeitura.tipo(node, @caminhos, @atual[:apelidos])
+    @coleta.tipos[caminho] ||= tipo if caminho
+    Formatos::UsoDaLeitura.repasses(node, @caminhos).each { |lido, quem| @coleta.repassadas[lido] ||= quem }
   end
 
   # `account_params.slice(:name, :locale)`: a action usa só parte do montador.

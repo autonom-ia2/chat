@@ -19,7 +19,8 @@ class Autonomia::Guide::Formatos::Resumo
     'string' => 'texto', 'inteiro' => 'número inteiro', 'numero' => 'número', 'booleano' => 'true/false',
     'json' => 'objeto JSON', 'lista' => 'lista', 'objeto_livre' => 'objeto com chaves livres', 'objeto' => 'objeto',
     'lista_de_objetos' => 'lista de objetos', 'data' => 'data AAAA-MM-DD', 'data_hora' => 'data e hora ISO 8601',
-    'hora' => 'hora HH:MM'
+    'hora' => 'hora HH:MM', 'id' => 'id do registro (número ou texto)',
+    'arquivo' => 'arquivo enviado no formulário (o Guia não anexa arquivo)'
   }.freeze
   EXEMPLOS = { 'inteiro' => 1, 'numero' => 1, 'booleano' => true, 'lista' => [], 'objeto_livre' => {}, 'objeto' => {},
                'json' => {}, 'lista_de_objetos' => [] }.freeze
@@ -37,6 +38,19 @@ class Autonomia::Guide::Formatos::Resumo
     cortar(campos(VALORES_POR_CAMPO.last))
   end
 
+  # Um campo pelo caminho ("actions", "steps.action_config") e, depois dele, o ramo do esquema
+  # ("actions.send_email_to_team"): é o que `formato_da_acao` devolve com `campo:` (#932).
+  def do_campo(caminho)
+    campo, achado, resto = achar(caminho.to_s.split('.'))
+    return "#{@acao} não tem o campo \"#{caminho}\". Campos: #{todos_os_campos.keys.join(', ')}." unless campo
+    return "#{achado}: #{descricao(campo, VALORES_POR_CAMPO.first)}" unless campo['esquema']
+
+    esquema = Autonomia::Guide::Formatos::ResumoDoEsquema.new(achado, campo['esquema'])
+    return esquema.texto(TETO) if resto.empty?
+
+    esquema.ramo(resto.join('.'), TETO) || "#{achado} não tem o ramo \"#{resto.join('.')}\".\n#{esquema.texto(TETO)}"
+  end
+
   # Um campo só, numa linha: o que a recusa da plataforma junta a cada
   # atributo recusado. Nil para campo que o formato não conhece.
   def campo(nome)
@@ -45,6 +59,26 @@ class Autonomia::Guide::Formatos::Resumo
   end
 
   private
+
+  def todos_os_campos
+    (@formato['campos'] || {}).merge(@formato['fora_do_envelope'] || {})
+  end
+
+  # [campo, caminho até ele, o que sobra do caminho]: desce pelos campos até um que tenha esquema.
+  def achar(partes)
+    campos = todos_os_campos
+    andados = []
+    partes.each_with_index do |parte, indice|
+      campo = campos[parte]
+      return [] unless campo
+
+      andados << parte
+      return [campo, andados.join('.'), partes.drop(indice + 1)] if campo['esquema'] || indice == partes.size - 1
+
+      campos = campo['campos'] || {}
+    end
+    []
+  end
 
   def montar(linhas_de_campos)
     [cabecalho, *aviso, *linhas_de_campos, *exemplo, rodape].compact.join("\n")
@@ -85,13 +119,23 @@ class Autonomia::Guide::Formatos::Resumo
     ['Campos:', *linhas(lista, limite, '- ')]
   end
 
-  def linhas(campos, limite, recuo)
+  def linhas(campos, limite, recuo, prefixo = nil)
     campos.flat_map do |nome, campo|
+      caminho = [prefixo, nome].compact.join('.')
       dentro = campo['campos'] || {}
-      next ["#{recuo}#{nome}: #{descricao(campo, limite)}; campos: #{dentro.keys.join(', ')}", *por_tipo(campo, recuo)] if simples?(dentro)
+      esquema = do_esquema(campo, caminho, limite, recuo)
+      next ["#{recuo}#{nome}: #{descricao(campo, limite)}; campos: #{dentro.keys.join(', ')}", *esquema, *por_tipo(campo, recuo)] if simples?(dentro)
 
-      ["#{recuo}#{nome}: #{descricao(campo, limite)}", *linhas(dentro, limite, "  #{recuo}"), *por_tipo(campo, recuo)]
+      ["#{recuo}#{nome}: #{descricao(campo, limite)}", *esquema, *linhas(dentro, limite, "  #{recuo}", caminho), *por_tipo(campo, recuo)]
     end
+  end
+
+  # O primeiro nível do esquema do campo JSON (#932): valores fechados e o aviso dos ramos.
+  def do_esquema(campo, caminho, limite, recuo)
+    return [] unless campo['esquema']
+
+    margem = ' ' * (recuo.size + 2)
+    Autonomia::Guide::Formatos::ResumoDoEsquema.new(caminho, campo['esquema']).linhas(limite).map { |linha| "#{margem}#{linha}" }
   end
 
   # Objeto cujos campos de dentro não dizem nada além do nome vai numa linha só.

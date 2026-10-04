@@ -1,7 +1,10 @@
 // @vitest-environment node
 // O gerador roda no Node (usa Vite por dentro); o jsdom padrão da suíte quebra o
 // esbuild que o Vite carrega.
-import { lerPorques, prepararJanela } from '../build.mjs';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { lerPorques, prepararJanela, telasSemContexto } from '../build.mjs';
 
 // O gerador lê o arquivo humano (porques.md). Estes testes cobrem o que dá errado
 // escrevendo à mão — e o que não pode ser reformatado pelo caminho.
@@ -77,5 +80,30 @@ describe('o navegador de mentira do gerador', () => {
     expect(() => prepararJanela()).not.toThrow();
     expect(globalThis.navigator.doNode).toBeUndefined();
     expect(globalThis.navigator.userAgent).toContain('jsdom');
+  });
+});
+
+// #934 — o lembrete do build: tela com seleção em lote que não declara contexto.
+describe('telas com seleção sem contexto para o Guia', () => {
+  it('avisa só a tela que importa uma barra de lote e não declara', () => {
+    const pasta = fs.mkdtempSync(path.join(os.tmpdir(), 'guia-contexto-'));
+    const escrever = (nome, texto) =>
+      fs.writeFileSync(path.join(pasta, nome), texto);
+    escrever(
+      'Esquecida.vue',
+      "import BulkSelectBar from './BulkSelectBar.vue';\n"
+    );
+    escrever(
+      'Declarada.vue',
+      "import CrmBulkActionBar from './CrmBulkActionBar.vue';\ndeclararContexto({});\n"
+    );
+    escrever(
+      'CrmBulkActionBar.vue',
+      "import BulkActions from './BulkActions.vue';\n"
+    );
+    escrever('SemLote.vue', "import Button from './Button.vue';\n");
+
+    expect(telasSemContexto(pasta)).toEqual(['Esquecida.vue']);
+    fs.rmSync(pasta, { recursive: true });
   });
 });

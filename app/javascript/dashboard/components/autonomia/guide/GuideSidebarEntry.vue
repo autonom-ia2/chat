@@ -1,5 +1,6 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useElementBounding, useWindowSize } from '@vueuse/core';
 import Button from 'dashboard/components-next/button/Button.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
@@ -7,6 +8,7 @@ import { useBrandedSidebar } from 'dashboard/composables/useBrandedSidebar';
 import { useMapGetter } from 'dashboard/composables/store';
 import { useGuiaDescoberta } from './useGuiaDescoberta';
 import GuideDot from './GuideDot.vue';
+import { useAvisosDoGuia } from './useAvisosDoGuia';
 
 // #697 — entrada do "Guia da Plataforma" no pé da barra lateral, acima do perfil (só
 // computador; no celular é a bolinha do AutonomiaGuideLauncher). Aqui ela tem lugar
@@ -28,6 +30,22 @@ const {
 } = useGuiaDescoberta();
 
 const botaoRef = ref(null);
+
+// #935 — a bolinha conta os avisos novos, e o nome do botão diz quantos.
+const { t } = useI18n();
+const { quantidade: avisosNovos, carregar: carregarAvisos } = useAvisosDoGuia();
+const accountId = useMapGetter('getCurrentAccountId');
+const nomeAcessivel = computed(() =>
+  avisosNovos.value > 0
+    ? t(
+        'AUTONOMIA_GUIDE.AVISOS.LAUNCHER_LABEL',
+        { count: avisosNovos.value },
+        avisosNovos.value
+      )
+    : t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')
+);
+onMounted(carregarAvisos);
+watch(accountId, carregarAvisos);
 
 // Quando o painel fecha (pelo X dele ou pelo Esc), o foco volta para este botão, senão
 // fica no nada e quem usa teclado recomeça do topo da página.
@@ -92,8 +110,8 @@ watch(
         data-guia-abrir
         icon="i-lucide-circle-help"
         :label="isCollapsed ? undefined : $t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
-        :title="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
-        :aria-label="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
+        :title="nomeAcessivel"
+        :aria-label="nomeAcessivel"
         :aria-expanded="painelAberto"
         color="blue"
         :variant="aparenciaDoBotao.variant"
@@ -103,7 +121,7 @@ watch(
         :class="[isCollapsed ? '!w-10' : 'w-full', aparenciaDoBotao.classe]"
         @click="alternarGuia"
       />
-      <GuideDot v-if="mostrarPonto" />
+      <GuideDot v-if="avisosNovos > 0 || mostrarPonto" :numero="avisosNovos" />
     </div>
     <TeleportWithDirection>
       <div

@@ -7,6 +7,7 @@ import { useEmitter } from 'dashboard/composables/emitter';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { defaultFilters } from 'dashboard/store/modules/crmKanban';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
 import CompanyAPI from 'dashboard/api/companies';
@@ -128,6 +129,15 @@ const showDrawer = ref(false);
 const drawerInitialTab = ref(null);
 const openedRouteCardId = ref(null);
 const pipelineDrawerMode = ref('create');
+// #934 — o card aberto (inclusive pelo `card_id` da rota), a seleção da lista e os filtros vão ao Guia.
+declararContexto({
+  aberto: () =>
+    showDrawer.value && selectedCard.value?.id
+      ? [{ recurso: 'crm/cards', id: selectedCard.value.id }]
+      : [],
+  selecionados: () => ({ recurso: 'crm/cards', ids: listSelection.value }),
+  filtros: () => ({ pipeline_id: currentPipelineId.value, ...filters.value }),
+});
 const showPipelineDrawer = ref(false);
 const pipelineInboxes = ref([]);
 // Authoritative, unfiltered stage list (with real total_cards_count) for the funnel-edit

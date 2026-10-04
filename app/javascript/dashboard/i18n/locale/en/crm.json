@@ -2155,6 +2155,26 @@
     "INSERTED": "Inserted into the reply."
   },
   "AUTONOMIA_GUIDE": {
+    "AVISOS": {
+      "LAUNCHER_LABEL": "Ask the Guide, {count} new warning | Ask the Guide, {count} new warnings",
+      "SELO": "Warning from the Guide"
+    },
+    "TELA": {
+      "SELECTED": {
+        "CARDS": "Seeing: {count} card selected | Seeing: {count} cards selected",
+        "CONVERSAS": "Seeing: {count} conversation selected | Seeing: {count} conversations selected",
+        "CONTATOS": "Seeing: {count} contact selected | Seeing: {count} contacts selected",
+        "OUTROS": "Seeing: {count} item selected | Seeing: {count} items selected"
+      },
+      "OPEN": {
+        "CARDS": "Seeing: the open card",
+        "CONVERSAS": "Seeing: the open conversation",
+        "CONTATOS": "Seeing: the open contact",
+        "OUTROS": "Seeing: the open item"
+      },
+      "REMOVE": "Ask without using what is on the screen",
+      "REMOVED": "Your next question goes without what is on the screen."
+    },
     "TITLE": "Platform Guide",
     "LAUNCHER": "Platform Guide",
     "THINKING": "Thinking…",
@@ -2225,6 +2245,106 @@
       "OPENING": "Opening your conversation…",
       "REOPEN_FAILED": "Couldn't open your last conversation. You can start a new one.",
       "START_NEW": "Start a new conversation"
+    },
+    "MEMORY": {
+      "TITLE": "What I know",
+      "KEPT": "This is what I remember to help you. You can fix it or delete it.",
+      "LOADING": "Loading what I know…",
+      "LOAD_FAILED": "I couldn't load what I know. Check your internet and try again.",
+      "RETRY": "Try again",
+      "ABOUT_YOU": "About you",
+      "ABOUT_COMPANY": "About the company",
+      "EMPTY_YOU_TITLE": "I haven't noted anything about you yet",
+      "EMPTY_COMPANY_TITLE": "I haven't noted anything about the company yet",
+      "EMPTY_TEXT": "Say \"remember that…\" and I'll note it.",
+      "EXAMPLE_YOU_1": "Remember that I prefer short answers",
+      "EXAMPLE_YOU_2": "Remember that you can call me by my first name",
+      "EXAMPLE_COMPANY_1": "Remember that reports here are always for the current month",
+      "EXAMPLE_COMPANY_2": "Remember that we call the main pipeline the sales pipeline",
+      "ONLY_ADMIN": "Only account admins can change what applies to the whole company.",
+      "TAUGHT_BY": "Taught by: {nome}",
+      "EDIT": "Fix",
+      "EDIT_NAMED": "Fix: {texto}",
+      "EDIT_LABEL": "What I should remember",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "SAVED": "Done, I fixed it.",
+      "SAVE_FAILED": "I couldn't save it. Write up to 200 characters and try again.",
+      "DELETE": "Delete",
+      "DELETE_NAMED": "Delete: {texto}",
+      "CONFIRM_TITLE": "Forget this?",
+      "CONFIRM_TEXT": "I'll stop remembering it. This can't be undone.",
+      "CONFIRM": "Forget",
+      "KEEP": "Keep",
+      "FORGOTTEN": "Forgotten.",
+      "DELETE_FAILED": "I couldn't forget it now. Try again.",
+      "NOTED": "Noted: {texto}",
+      "FORGET": "Forget",
+      "FORGET_NAMED": "Forget: {texto}"
+    },
+    "TASK": {
+      "COST_AND_TIME": "{custo} · {tempo}",
+      "LOADING": "Loading the job…",
+      "LOAD_FAILED": "I could not load this job. Check your connection and try again.",
+      "RETRY": "Try again",
+      "SAMPLE_TITLE": "Before starting, look at a few examples",
+      "SAMPLE_WHAT": "{descricao}: I will change {total} records, a few at a time.",
+      "SAMPLE_EMPTY": "I have no example to show.",
+      "SAMPLE_SKIPPED": "I will leave this one as it is: {motivo}",
+      "BEFORE": "Before:",
+      "AFTER": "After:",
+      "COST": "Estimated AI cost: {valor}",
+      "NO_COST": "No AI cost",
+      "TIME": "takes about {minutos} minutes",
+      "TIME_SHORT": "takes less than 1 minute",
+      "JEV": "Uses {usa} of the {restam} classifications left this month.",
+      "START": "Start",
+      "NOT_NOW": "Not now",
+      "CHECK_TITLE": "I stopped after the first {n} so you can check.",
+      "CHECK_WHAT": "This is what changed so far:",
+      "CHECK_TABLE": "{n} {nome}",
+      "CHECK_NOTHING": "Nothing changed yet.",
+      "CHECK_JOBS": "The platform will still do {n} things because of this (automations and integrations).",
+      "CONTINUE": "Continue",
+      "CANCEL": "Cancel",
+      "QUEUED": "In line. Starting in a moment.",
+      "PROGRESS": "{feitos} of {total}",
+      "PROGRESS_LABEL": "Job progress",
+      "PAUSE": "Pause",
+      "PAUSED": "Stopped at {feitos} of {total}.",
+      "RESUME": "Continue",
+      "UNDOING": "Undoing… part {feitos} of {total}.",
+      "CANCELED_BEFORE": "All right, I changed nothing.",
+      "REPORT_TITLE": {
+        "concluida": "Job done",
+        "cancelada": "Job canceled",
+        "falhou": "Job stopped",
+        "desfeita": "Job undone"
+      },
+      "DONE_COUNT": "{n} of {total} done",
+      "NOT_DONE": {
+        "pulado": "{n} left as they were: {motivo}",
+        "falhou": "{n} did not work: {motivo}"
+      },
+      "UNDONE": "Undone. {n} changes went back to how they were.",
+      "UNDO_ALL": "Undo everything",
+      "ACTION_FAILED": "I could not do it now. Try again in a moment.",
+      "SKIP": {
+        "nao_encontrado": "I could not find the record anymore",
+        "fora_da_classificacao": "the classification says it is not needed",
+        "certeza_baixa": "I was not sure, so I left it",
+        "jev_falhou": "I could not classify it",
+        "sem_valor_gerado": "I could not write the new value"
+      },
+      "TABLES": {
+        "contacts": "contacts",
+        "conversations": "conversations",
+        "crm_cards": "pipeline cards",
+        "labels": "labels",
+        "taggings": "labels applied",
+        "companies": "companies",
+        "messages": "messages"
+      }
     },
     "A11Y": {
       "PANEL": "Platform Guide",

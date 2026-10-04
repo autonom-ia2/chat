@@ -313,6 +313,7 @@ en:
       sla_missed_first_response: 'SLA target first response missed for conversation (#%{display_id})'
       sla_missed_next_response: 'SLA target next response missed for conversation (#%{display_id})'
       sla_missed_resolution: 'SLA target resolution missed for conversation (#%{display_id})'
+      guide_alert: 'The Guide has an urgent warning for you'
     attachment: 'Attachment'
     no_content: 'No content'
   conversations:
@@ -486,6 +487,16 @@ en:
         invalid_type: 'I can read PDF, Word, Excel, CSV, text, JSON, audio and image files.'
         too_large: 'This file is larger than 25 MB.'
         not_audio: 'I could not hear this recording. Try recording again.'
+      avisos:
+        pergunta: 'Want me to look into it with you?'
+        abrir_no_guia: 'Open the Guide to see it'
+        varios: 'I noticed %{n} things in the account:'
+        varios_mesmo_assunto: 'I noticed %{n} things about the same subject:'
+        linha_acima: '%{nome}: %{valor} now (the limit is %{limite}).'
+        linha_abaixo: '%{nome}: %{valor} now (the minimum is %{limite}).'
+        linha_media: '%{nome}: %{valor} now, more than %{vezes} times the weekly average (%{media}).'
+        resumo: 'Yesterday I held back %{n} warnings so I would not flood you:'
+        pausada: 'I paused the watch "%{nome}": the person who created it is no longer an admin. If you still want it, turn it back on or ask me.'
       needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'
@@ -498,6 +509,22 @@ en:
         email: 'Email'
         phone_number: 'Phone'
         color: 'Color'
+      tarefa:
+        motivo:
+          pessoa: 'You paused it.'
+          canario: 'I stopped after the first ones so you can check.'
+          falhas: 'More than 1 in 5 records failed in the last round.'
+          pendencia: 'Part of the last round cannot be undone, so I stopped.'
+          mensagens: 'A message went out to a customer while I worked, so I stopped.'
+          custo: 'The AI cost passed the limit set for this task.'
+          cota_jev: 'The monthly limit of classifications ran out.'
+          admin: 'You are no longer an admin of this account.'
+          gerar_falhou: 'I could not write the new values right now.'
+          receita_mudou: 'The plan changed after you approved it, so I did not continue.'
+          erro: 'Something went wrong. Try to resume in a few minutes.'
+        nao_da:
+          estado: 'This task cannot do that right now. Reload to see where it is.'
+          desfazer: 'There is nothing left to undo in this task.'
     image_required: 'An image file is required.'
     image_invalid_type: 'Unsupported image type. Use PNG, JPEG, GIF, or WebP.'
     image_too_large: 'Image is too large. The maximum size is 5 MB.'

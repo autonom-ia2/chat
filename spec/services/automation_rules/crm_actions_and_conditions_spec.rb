@@ -142,8 +142,12 @@ RSpec.describe AutomationRules::CrmActions do
       expect(matches?('crm_stage_id', 'equal_to', [next_stage.id])).to be(false)
     end
 
+    # O esquema já não grava o operador fora da lista; a guarda do filtro vale para a regra antiga.
     it 'rejeita operador não suportado' do
-      expect(matches?('crm_stage_id', 'is_present')).to be(false)
+      rule.update_column(:conditions, # rubocop:disable Rails/SkipsModelValidations
+                         [{ attribute_key: 'crm_stage_id', filter_operator: 'is_present', values: [], query_operator: nil }])
+
+      expect(described_class.new(rule, conversation).perform).to be(false)
     end
   end
 end
