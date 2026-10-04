@@ -8,7 +8,7 @@ RSpec.describe AutomationRules::ActionService do
     create(:automation_rule, account: account,
                              actions: [
                                { action_name: 'send_webhook_event', action_params: ['https://example.com'] },
-                               { action_name: 'send_message', action_params: { message: 'Hello' } }
+                               { action_name: 'send_message', action_params: ['Hello'] }
                              ])
   end
 

@@ -28,7 +28,7 @@ class Macro < ApplicationRecord
 
   enum visibility: { personal: 0, global: 1 }
 
-  validate :json_actions_format
+  validates :actions, json_schema: { schema: ->(macro) { MacroSchema.actions(macro) } }
 
   ACTIONS_ATTRS = %w[send_message add_label assign_team assign_agent mute_conversation change_status remove_label remove_assigned_agent
                      remove_assigned_team resolve_conversation snooze_conversation change_priority send_email_transcript
@@ -62,17 +62,6 @@ class Macro < ApplicationRecord
         filename: file.filename.to_s
       }
     end
-  end
-
-  private
-
-  def json_actions_format
-    return if actions.blank?
-
-    attributes = actions.map { |obj, _| obj['action_name'] }
-    actions = attributes - ACTIONS_ATTRS
-
-    errors.add(:actions, "Macro execution actions #{actions.join(',')} not supported.") if actions.any?
   end
 end
 

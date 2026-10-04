@@ -28,7 +28,7 @@ RSpec.describe JsonSchemaValidator, type: :validator do
     TestModelForJSONValidation = Struct.new(:additional_attributes) do
       include ActiveModel::Validations
 
-      validates_with JsonSchemaValidator, schema: schema
+      validates :additional_attributes, json_schema: { schema: schema }
     end
     # rubocop:enable Lint/ConstantDefinitionInBlock
     # rubocop:enable RSpec/LeakyConstantDeclaration

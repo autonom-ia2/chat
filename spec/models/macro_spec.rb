@@ -17,7 +17,7 @@ RSpec.describe Macro do
     it 'validation action name' do
       macro = FactoryBot.build(:macro, account: account, created_by: admin, updated_by: admin, actions: [{ action_name: :update_last_seen }])
       expect(macro).not_to be_valid
-      expect(macro.errors.full_messages).to eq(['Actions Macro execution actions update_last_seen not supported.'])
+      expect(macro.errors[:actions].join).to include('/0/action_name "update_last_seen" is not one of:', 'send_message')
     end
   end
 

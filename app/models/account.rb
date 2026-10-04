@@ -63,9 +63,7 @@ class Account < ApplicationRecord
   # (see `inbound_email_domain`). Do not repurpose it for a website or any
   # non-mail-related domain.
   validates :domain, length: { maximum: 100 }
-  validates_with JsonSchemaValidator,
-                 schema: SETTINGS_PARAMS_SCHEMA,
-                 attribute_resolver: ->(record) { record.settings }
+  validates :settings, json_schema: { schema: SETTINGS_PARAMS_SCHEMA }
   validate :validate_reporting_timezone
   validate :validate_support_email_format, if: :will_save_change_to_support_email?
 
