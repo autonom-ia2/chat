@@ -92,11 +92,11 @@ class Instagram::Testers::SessionStore
 
   def invalidate_pointer(pointer, version, code)
     return false unless pointer && pointer.fetch('version') == version
-    return true if pointer.fetch('state') == 'invalidated' && pointer['code'] == code
-    return false unless pointer.fetch('state') == 'active'
 
     invalidated_at = Time.current.utc.iso8601(6)
-    invalidated = pointer.merge('state' => 'invalidated', 'code' => code, 'updated_at' => invalidated_at,
+    # Revocation fences publishers prepared against the previous revision, regardless of capture clock skew.
+    invalidated = pointer.merge('state' => 'invalidated', 'version' => SecureRandom.uuid,
+                                'code' => code, 'updated_at' => invalidated_at,
                                 'invalidated_at' => invalidated_at)
     compare_and_set_pointer(version, invalidated)
   end

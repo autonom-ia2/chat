@@ -14,8 +14,9 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   accountId: { type: Number, required: true },
   oauthError: { type: Boolean, default: false },
+  oauthErrorMessage: { type: String, default: '' },
+  returnTo: { type: String, default: '' },
 });
-const emit = defineEmits(['legacy']);
 const { t } = useI18n();
 const copy = (key, values) =>
   t(`INBOX_MGMT.ADD.INSTAGRAM.TESTER.${key}`, values);
@@ -42,7 +43,7 @@ const {
   authorize,
 } = useInstagramTester({
   disabled: toRef(props, 'disabled'),
-  onLegacy: () => emit('legacy'),
+  returnTo: toRef(props, 'returnTo'),
 });
 const title = ref(null);
 const input = ref(null);
@@ -107,7 +108,7 @@ onMounted(loadConfiguration);
         </a>
       </Banner>
       <Banner v-if="oauthError" color="ruby" role="alert">
-        {{ copy('OAUTH_ERROR') }}
+        {{ oauthErrorMessage || copy('OAUTH_ERROR') }}
       </Banner>
       <p class="sr-only" aria-live="polite" aria-atomic="true">
         {{ loadingMessage }}
@@ -142,7 +143,7 @@ onMounted(loadConfiguration);
               type="submit"
               size="lg"
               class="w-full sm:w-auto !h-auto min-h-12 py-3 !bg-n-blue-11 dark:!bg-n-blue-8 hover:enabled:!brightness-100 focus-visible:!brightness-100 focus-visible:ring-2 focus-visible:ring-n-brand"
-              :disabled="busy"
+              :disabled="busy || disabled"
               :is-loading="busy && operation === 'search'"
             >
               <span class="whitespace-normal">{{
@@ -176,7 +177,7 @@ onMounted(loadConfiguration);
             <li v-for="candidate in results" :key="candidate.selection_token">
               <button
                 type="button"
-                :disabled="busy"
+                :disabled="busy || disabled"
                 :aria-label="copy('SELECT_PROFILE', candidate)"
                 class="flex items-center w-full min-h-16 gap-3 p-3 text-start rounded-lg hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
                 @click="selectProfile(candidate)"
@@ -330,7 +331,7 @@ onMounted(loadConfiguration);
         <Button
           v-else-if="selected"
           size="lg"
-          :disabled="busy"
+          :disabled="busy || disabled"
           :is-loading="busy && operation === 'status'"
           class="w-full sm:w-auto !h-auto min-h-12 py-3 !bg-n-blue-11 dark:!bg-n-blue-8 hover:enabled:!brightness-100 focus-visible:!brightness-100 focus-visible:ring-2 focus-visible:ring-n-brand"
           @click="checkStatus"

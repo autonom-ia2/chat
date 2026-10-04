@@ -2,12 +2,17 @@ import { mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import InboxChannelsDialog from '../../inbox-setup/InboxChannelsDialog.vue';
 
-const { isOnChatwootCloud, isMetaInboxCreationDisabled, isTiktokEnabled } =
-  vi.hoisted(() => ({
-    isOnChatwootCloud: { value: false },
-    isMetaInboxCreationDisabled: { value: false },
-    isTiktokEnabled: { value: true },
-  }));
+const {
+  isOnChatwootCloud,
+  isMetaInboxCreationDisabled,
+  isTiktokEnabled,
+  assisted,
+} = vi.hoisted(() => ({
+  isOnChatwootCloud: { value: false },
+  isMetaInboxCreationDisabled: { value: false },
+  isTiktokEnabled: { value: true },
+  assisted: { value: true },
+}));
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 vi.mock('dashboard/composables/store', () => ({
@@ -18,6 +23,7 @@ vi.mock('dashboard/composables/store', () => ({
 }));
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
+    accountId: 17,
     isCloudFeatureEnabled: feature =>
       feature !== 'channel_tiktok' || isTiktokEnabled.value,
     isOnChatwootCloud,
@@ -25,8 +31,11 @@ vi.mock('dashboard/composables/useAccount', () => ({
   }),
 }));
 vi.mock('../../inbox-setup/useChannelConnect', () => ({
-  useChannelConnect: () => ({
-    connectViaOAuth: vi.fn(),
+  useChannelConnect: ({ onInstagramConnect }) => ({
+    assistedOnboarding: assisted,
+    connectViaOAuth: vi.fn(provider => {
+      if (provider === 'instagram' && assisted.value) onInstagramConnect();
+    }),
     connectWhatsapp: vi.fn(),
   }),
 }));
@@ -39,6 +48,10 @@ const mountDialog = () =>
         Dialog: {
           template: '<div><slot /></div>',
           methods: { open() {}, close() {} },
+        },
+        TesterOnboarding: {
+          props: ['accountId', 'returnTo'],
+          template: '<div data-test="instagram-assisted">{{ returnTo }}</div>',
         },
         InboxFacebookForm: { template: '<div data-test="fb-form" />' },
         InboxChannelForm: { template: '<div data-test="channel-form" />' },
@@ -54,6 +67,41 @@ describe('InboxChannelsDialog channel availability', () => {
     isOnChatwootCloud.value = false;
     isMetaInboxCreationDisabled.value = false;
     isTiktokEnabled.value = true;
+    assisted.value = true;
+  });
+
+  it('opens the assisted Instagram view with the onboarding return hint', async () => {
+    window.chatwootConfig = { instagramAppId: 'ig-app' };
+    const wrapper = mountDialog();
+    wrapper.vm.open('instagram');
+    await nextTick();
+    expect(wrapper.find('[data-test="instagram-assisted"]').text()).toBe(
+      'onboarding'
+    );
+    expect(wrapper.find('[data-test="channel-form"]').exists()).toBe(false);
+  });
+
+  it('opens the same assisted view from the channel card', async () => {
+    window.chatwootConfig = { instagramAppId: 'ig-app' };
+    const wrapper = mountDialog();
+    const card = wrapper
+      .findAll('button')
+      .find(button => button.text().includes('INSTAGRAM.TITLE'));
+    await card.trigger('click');
+    expect(wrapper.find('[data-test="instagram-assisted"]').exists()).toBe(
+      true
+    );
+  });
+
+  it('does not mount tester onboarding while the account is OFF', async () => {
+    assisted.value = false;
+    window.chatwootConfig = { instagramAppId: 'ig-app' };
+    const wrapper = mountDialog();
+    wrapper.vm.open('instagram');
+    await nextTick();
+    expect(wrapper.find('[data-test="instagram-assisted"]').exists()).toBe(
+      false
+    );
   });
 
   it('opens the Facebook page picker when fbAppId is configured', async () => {

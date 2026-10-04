@@ -15,12 +15,15 @@ describe('Instagram reauthorization regression', () => {
     instagramClient.generateAuthorization.mockResolvedValue({
       data: { url: window.location.href },
     });
-    const wrapper = shallowMount(Reauthorize);
+    const wrapper = shallowMount(Reauthorize, { props: { inbox: { id: 42 } } });
     wrapper
       .findComponent({ name: 'InboxReconnectionRequired' })
       .vm.$emit('reauthorize');
     await flushPromises();
-    expect(instagramClient.generateAuthorization).toHaveBeenCalledWith();
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledWith({
+      inbox_id: 42,
+      return_to: 'inbox',
+    });
     expect(instagramClient.getTesterConfiguration).not.toHaveBeenCalled();
     wrapper.unmount();
   });
@@ -29,7 +32,7 @@ describe('Instagram reauthorization regression', () => {
     instagramClient.generateAuthorization.mockRejectedValue(
       new Error('network')
     );
-    const wrapper = shallowMount(Reauthorize);
+    const wrapper = shallowMount(Reauthorize, { props: { inbox: { id: 42 } } });
     wrapper
       .findComponent({ name: 'InboxReconnectionRequired' })
       .vm.$emit('reauthorize');

@@ -9,6 +9,8 @@ Email campaign operations: [maintenance, rollout and rollback runbook](docs/emai
 
 Email protection #436: [acceptance matrix, validation evidence and approval sequence](docs/email-campaigns/release-436.md).
 
+Recuperação Instagram #931: [evidência atual, pendências e contrato de rollout](docs/audit/instagram-931-recovery.md).
+
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
 
 <p>

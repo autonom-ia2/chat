@@ -59,6 +59,7 @@
         "HELP": "Para adicionar seu perfil do Instagram como um canal, você precisa autenticar seu perfil do Instagram clicando em 'Continuar com o Instagram' ",
         "ERROR_MESSAGE": "Houve um erro ao conectar ao Instagram, por favor, tente novamente",
         "ERROR_AUTH": "Houve um erro ao conectar ao Instagram, por favor, tente novamente",
+        "ERROR_INBOX_LIMIT": "O limite de caixas de entrada do seu plano foi atingido. Procure o administrador da conta para liberar uma caixa ou ajustar o plano antes de conectar o Instagram.",
         "NEW_INBOX_SUGGESTION": "Esta conta do Instagram estava conectada a uma caixa de entrada diferente e agora foi migrada para aqui. Todas as novas mensagens aparecerão aqui. A caixa de entrada antiga não poderá mais enviar ou receber mensagens para esta conta.",
         "DUPLICATE_INBOX_BANNER": "Esta conta do Instagram foi migrada para a nova caixa de entrada de canal do Instagram. Você não poderá mais enviar/receber mensagens do Instagram desta caixa de entrada.",
         "RESTRICTED_WARNING": "A criação de caixas de entrada do Instagram está temporariamente indisponível devido a um problema na API da Meta, e não por uma falha no Chatwoot. Estamos trabalhando em conjunto com a Meta para resolver a situação o mais rápido possível.",
@@ -107,8 +108,8 @@
           "STATUS_ERROR": "Não foi possível verificar o convite. Tente novamente.",
           "INVITE_ERROR": "Não foi possível enviar o convite. Verifique o convite antes de tentar novamente.",
           "INVITE_UNKNOWN": "Não foi possível confirmar o envio. Verifique o convite antes de tentar enviar novamente.",
-          "UNAVAILABLE": "A preparação do Instagram está indisponível no momento. Tente novamente mais tarde.",
-          "MANUAL_HELP": "Procure o suporte para preparar o convite de testador. Depois, volte a esta tela e tente novamente.",
+          "UNAVAILABLE": "A integração com o Instagram está indisponível no momento. Procure o suporte para restabelecê-la.",
+          "MANUAL_HELP": "Depois que o suporte confirmar o restabelecimento, volte a esta tela e tente novamente.",
           "RATE_LIMITED": "Aguarde antes de tentar novamente.",
           "BUSY": "Há uma solicitação em andamento. Aguarde e verifique o convite novamente.",
           "OAUTH_ERROR": "Não foi possível autorizar a conexão no Instagram. Selecione seu perfil ou verifique o convite para tentar novamente."

@@ -1,3 +1,5 @@
+import { computed } from 'vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore } from 'dashboard/composables/store';
@@ -20,18 +22,30 @@ const OAUTH_CLIENTS = {
   tiktok: tiktokClient,
 };
 
-export function useChannelConnect() {
+export function useChannelConnect({ onInstagramConnect } = {}) {
   const { t } = useI18n();
   const store = useStore();
-  const { isMetaInboxCreationDisabled } = useAccount();
+  const { isMetaInboxCreationDisabled, isCloudFeatureEnabled } = useAccount();
+  const assistedOnboarding = computed(() =>
+    isCloudFeatureEnabled(FEATURE_FLAGS.INSTAGRAM_ASSISTED_ONBOARDING)
+  );
   const { runEmbeddedSignup } = useWhatsappEmbeddedSignup();
 
   const connectViaOAuth = async provider => {
     const client = OAUTH_CLIENTS[provider];
     if (!client) return;
 
-    if (provider === 'instagram' && isMetaInboxCreationDisabled.value) {
+    if (
+      provider === 'instagram' &&
+      (isMetaInboxCreationDisabled.value ||
+        !isCloudFeatureEnabled(FEATURE_FLAGS.CHANNEL_INSTAGRAM))
+    ) {
       useAlert(t('ONBOARDING_INBOX_SETUP.META_RESTRICTION.MESSAGE'));
+      return;
+    }
+
+    if (provider === 'instagram' && assistedOnboarding.value) {
+      onInstagramConnect?.();
       return;
     }
 
@@ -75,5 +89,5 @@ export function useChannelConnect() {
     }
   };
 
-  return { connectViaOAuth, connectWhatsapp };
+  return { connectViaOAuth, connectWhatsapp, assistedOnboarding };
 }

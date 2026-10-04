@@ -11,14 +11,14 @@ class Instagram::Testers::InvitationOutcome
 
   def claim!
     @claim = "unknown:#{SecureRandom.uuid}"
-    raise Instagram::Testers::Error, 'invite_unknown' unless Instagram::Testers::CoordinationRedis.set(@key, @claim, nx: true, ex: TTL)
+    raise Instagram::Testers::Error, 'invite_unknown' unless Instagram::Testers::CoordinationRedis.durable_set(@key, @claim, ex: TTL)
   end
 
   def pending!
     update_claim { |transaction| transaction.set(@key, "pending:#{@claim.partition(':').last}", ex: TTL) }
   end
 
-  def rejected!
+  def release_claim!
     Instagram::Testers::CoordinationRedis.delete_if_equals(@key, @claim) if @claim
   end
 

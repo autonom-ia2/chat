@@ -1,0 +1,10 @@
+en:
+  helpers:
+    label:
+      account:
+        feature_instagram_assisted_onboarding: Instagram assisted onboarding
+  instagram_account_feature:
+    label: Instagram assisted onboarding
+    help: "On: select and confirm the Instagram profile before connecting. Off: connect directly with Instagram. This does not grant access to the Instagram channel."
+    enabled: Enabled
+    disabled: Disabled

@@ -1,4 +1,5 @@
 require 'rails_helper'
+require 'delegate'
 
 RSpec.describe 'Instagram authorization with tester selection', type: :request do
   let(:account) { create(:account) }
@@ -16,13 +17,15 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
   end
 
   around do |example|
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
+    with_modified_env('FRONTEND_URL' => 'https://autonomia.example', 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true',
+                      'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
                       'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',
                       'INSTAGRAM_TESTER_APP_NAME' => 'Synthetic app', 'INSTAGRAM_TESTER_ROLES_DOC_ID' => '10003',
                       'INSTAGRAM_TESTER_SESSION_JSON' => session.to_json) { example.run }
   end
 
   before do
+    account.enable_features!(:channel_instagram, :instagram_assisted_onboarding)
     allow(Instagram::Testers::Client).to receive(:new).and_return(client)
     allow(GlobalConfig).to receive(:get_value).and_call_original
     allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(false)
@@ -37,7 +40,9 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state['tester_selection']).to eq('id' => candidate[:id], 'username' => candidate[:username], 'app_id' => '10001')
+    expect(state['tester_selection']).to eq('id' => candidate[:id], 'username' => candidate[:username], 'app_id' => '10001',
+                                            'account_id' => account.id.to_s, 'actor_id' => administrator.id.to_s,
+                                            'installation' => Instagram::Testers::OauthBinding.installation)
     expect(state['exp'] - state['iat']).to eq(15.minutes.to_i)
     expect(state['return_to']).to eq('onboarding')
     expect(query['scope']).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES.join(','))
@@ -67,29 +72,157 @@ RSpec.describe 'Instagram authorization with tester selection', type: :request d
     end
   end
 
-  it 'keeps legacy authorization free of tester calls and new state fields' do
+  it 'keeps account-OFF legacy authorization free of tester infrastructure with a bound state' do
+    account.disable_features!(:instagram_assisted_onboarding)
+    expect(Instagram::Testers::Configuration).not_to receive(:new)
+    expect(Instagram::Testers::OauthBinding).not_to receive(:prepare)
     post path, headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state.keys).to contain_exactly('sub', 'iat')
+    expect(state.keys).to contain_exactly('sub', 'iat', 'actor_id', 'installation', 'state_version', 'exp', 'jti')
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end
 
   it 'keeps the legacy onboarding return hint when the tester feature is off' do
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') do
+    account.disable_features!('instagram_assisted_onboarding')
+    with_modified_env('FRONTEND_URL' => 'https://autonomia.example', 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false') do
       post path, params: { return_to: 'onboarding' }, headers: headers, as: :json
     end
 
     expect(response).to have_http_status(:ok)
     query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
     state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
-    expect(state.keys).to contain_exactly('sub', 'iat', 'return_to')
+    expect(state.keys).to contain_exactly('sub', 'iat', 'return_to', 'actor_id', 'installation', 'state_version', 'exp', 'jti')
     expect(state['return_to']).to eq('onboarding')
     expect(Instagram::Testers::Client).not_to have_received(:new)
   end
 
+  it 'rejects a new connection without selection while ON before consulting tester infrastructure' do
+    expect(Instagram::Testers::Client).not_to receive(:new)
+    expect(Instagram::Testers::SessionStore).not_to receive(:new)
+    post path, headers: headers, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+  end
+
+  it 'blocks an ON account when the global kill-switch is off or the legacy allowlist excludes it' do
+    [{ 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'false' },
+     { 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => (account.id + 1).to_s }].each do |settings|
+      with_modified_env(settings) do
+        post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json
+      end
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body).to eq('error_code' => 'not_enabled')
+    end
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
+  it 'blocks ON authorization when tester infrastructure is unavailable without legacy fallback' do
+    with_modified_env('INSTAGRAM_TESTER_SESSION_JSON' => '') do
+      post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json
+    end
+    expect(response).to have_http_status(:service_unavailable)
+    expect(response.parsed_body).to eq('error_code' => 'meta_unavailable')
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
+  it 'keeps account OFF direct even with an invalid tester token and missing tester infrastructure' do
+    account.disable_features!(:instagram_assisted_onboarding)
+    expect(Instagram::Testers::Configuration).not_to receive(:new)
+    expect(Instagram::Testers::OauthBinding).not_to receive(:prepare)
+    post path, params: { tester_selection_token: nil }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+  end
+
+  it 'allows explicit reauthorization of an existing account Instagram inbox without tester infrastructure' do
+    inbox = create(:channel_instagram, account: account).inbox
+    expect(Instagram::Testers::Configuration).not_to receive(:new)
+    expect(Instagram::Testers::OauthBinding).not_to receive(:prepare)
+    post path, params: { inbox_id: inbox.id, return_to: 'inbox' }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    query = Rack::Utils.parse_query(URI.parse(response.parsed_body.fetch('url')).query)
+    state = JWT.decode(query.fetch('state'), 'synthetic_secret', true, algorithm: 'HS256').first
+    expect(state['inbox_id']).to eq(inbox.id)
+    expect(state['instagram_id']).to eq(inbox.channel.instagram_id)
+    expect(state['return_to']).to eq('inbox')
+    expect(state).not_to have_key('tester_selection')
+  end
+
+  it 'rejects a return hint alone as a reauthorization bypass' do
+    post path, params: { return_to: 'inbox' }, headers: headers, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+  end
+
+  it 'rejects foreign, non-Instagram and missing inboxes as a reauthorization bypass' do
+    foreign = create(:channel_instagram).inbox
+    other_channel = create(:inbox, account: account)
+    [foreign.id, other_channel.id, 0, [], '123', true].each do |inbox_id|
+      post path, params: { inbox_id: inbox_id, return_to: 'inbox' }, headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error_code' => 'invalid_selection')
+    end
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
+  it 'rejects ambiguous reauthorization with selection or onboarding return hint' do
+    inbox = create(:channel_instagram, account: account).inbox
+    [{ inbox_id: inbox.id, return_to: 'onboarding' },
+     { inbox_id: inbox.id, return_to: 'inbox', tester_selection_token: selection_token }].each do |params|
+      post path, params: params, headers: headers, as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
+  it 'blocks Meta-restricted authorization in both account flows before provider access' do
+    allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(true)
+    expect(Instagram::Testers::Client).not_to receive(:new)
+    expect(OAuth2::Client).not_to receive(:new)
+    [true, false].each do |enabled|
+      enabled ? account.enable_features!(:instagram_assisted_onboarding) : account.disable_features!(:instagram_assisted_onboarding)
+      post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body).to eq('error_code' => 'forbidden')
+    end
+  end
+
+  it 'rejects an account without the Instagram channel in both modes before tester or OAuth access' do
+    account.disable_features!('channel_instagram')
+    expect(Instagram::Testers::Configuration).not_to receive(:new)
+    expect(OAuth2::Client).not_to receive(:new)
+    [true, false].each do |enabled|
+      enabled ? account.enable_features!(:instagram_assisted_onboarding) : account.disable_features!(:instagram_assisted_onboarding)
+      post path, params: { tester_selection_token: selection_token }, headers: headers, as: :json
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  it 'rejects reauthorization for an agent without inbox_manage' do
+    inbox = create(:channel_instagram, account: account).inbox
+    agent = create(:user, account: account, role: :agent)
+    membership = account.account_users.find_by!(user: agent)
+    expect(membership.permission_granted?('inbox_manage')).to be false
+    expect(Instagram::Testers::OauthBinding).not_to receive(:prepare)
+    post path, params: { inbox_id: inbox.id, return_to: 'inbox' }, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unauthorized)
+    expect(response.parsed_body).to eq('error' => 'You are not authorized to do this action')
+    expect(Instagram::Testers::Client).not_to have_received(:new)
+  end
+
   it 'reconciles an accepted provider role during the actual OAuth preparation path' do
+    aof_commands = instance_spy(Redis)
+    allow(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).and_return([1, 0])
+    allow(Instagram::Testers::CoordinationRedis).to receive(:with).and_wrap_original do |original, &block|
+      commands = aof_commands
+      original.call do |connection|
+        wrapper = SimpleDelegator.new(connection)
+        wrapper.define_singleton_method(:redis) { commands }
+        block.call(wrapper)
+      end
+    end
+    expect(aof_commands).to receive(:call).with(['WAITAOF', 1, 0, 2000]).once.and_return([1, 0])
     allow(Instagram::Testers::Client).to receive(:new).and_call_original
     outcome = Instagram::Testers::InvitationOutcome.new(app_id: '10001', target_id: candidate[:id])
     outcome.claim!

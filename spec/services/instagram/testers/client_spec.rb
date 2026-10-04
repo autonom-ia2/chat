@@ -77,7 +77,34 @@ RSpec.describe Instagram::Testers::Client do
 
   it 'reports an explicit boolean rejection' do
     stub_request(:post, invite_url).to_return(status: 200, body: '{"payload":{"success":false}}')
-    expect { client.invite(target_id) }.to(raise_error { |error| expect(error.code).to eq('invite_rejected') })
+    expect { client.invite(target_id) }.to raise_error do |error|
+      expect(error.code).to eq('invite_rejected')
+      expect(error.write_rejected).to be true
+    end
+  end
+
+  it 'marks transport only after preflight and immediately before HTTParty starts' do
+    started = false
+    expect(configuration).to receive(:transport_options) do
+      expect(started).to be false
+      { http_proxyaddr: nil, max_retries: 0 }
+    end
+    expect(HTTParty).to receive(:post).with(invite_url, any_args) do
+      expect(started).to be true
+      instance_double(HTTParty::Response, code: 200, body: '{"payload":{"success":true}}')
+    end
+    expect(client.invite(target_id) { started = true }).to be true
+  end
+
+  it 'does not mark transport or post an invite when the session snapshot is unavailable' do
+    allow(configuration).to receive(:session_snapshot).and_return(session: nil, version: nil)
+    started = false
+    expect(HTTParty).not_to receive(:post)
+    expect { client.invite(target_id) { started = true } }.to raise_error do |error|
+      expect(error.code).to eq('meta_session_expired')
+      expect(error.write_rejected).to be false
+    end
+    expect(started).to be false
   end
 
   it 'keeps a transport timeout indeterminate and strips the provider exception cause' do
@@ -86,6 +113,7 @@ RSpec.describe Instagram::Testers::Client do
       expect(error.code).to eq('invite_unknown')
       expect(error.message).to eq('invite_unknown')
       expect(error.cause).to be_nil
+      expect(error.write_rejected).to be false
     end
   end
 
