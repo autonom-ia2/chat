@@ -1110,7 +1110,7 @@
     },
     "CENTRAL_DE_AJUDA": {
       "TITULO": "Central de Ajuda",
-      "SUBTITULO": "Aprenda a usar a plataforma no seu ritmo. Cada artigo tem um botão que leva você até a tela certa.",
+      "SUBTITULO": "Diga o que você quer fazer. Cada resposta tem um vídeo curto e um botão que leva você até a tela certa.",
       "BUSCA": {
         "ROTULO": "Buscar na Central de Ajuda",
         "PLACEHOLDER": "O que você quer fazer?",
@@ -1119,14 +1119,86 @@
         "NADA": "Nenhum artigo com essas palavras. Tente outras palavras ou pergunte ao Guia.",
         "LIMPAR": "Limpar a busca",
         "BUSCANDO": "Buscando…",
-        "ERRO": "A busca não respondeu. Tente de novo."
+        "ERRO": "A busca não respondeu. Tente de novo.",
+        "PERGUNTAR_GUIA": "Perguntar ao Guia",
+        "MELHOR_RESPOSTA": "Melhor resposta",
+        "ANUNCIO_MELHOR": "Melhor resposta: {titulo}.",
+        "PROCURANDO_MELHOR": "Procurando a melhor resposta…",
+        "COM_VIDEO": "Vídeo"
       },
-      "COMECE": {
-        "TITULO": "Comece por aqui",
-        "SUBTITULO": "Os primeiros passos, na ordem certa."
+      "MAIS_PROCURADOS": {
+        "TITULO": "Mais procurados:",
+        "WHATSAPP": "Conectar o WhatsApp",
+        "JANELA_24H": "Janela de 24 horas",
+        "FUNIL": "Criar um funil",
+        "CONVIDAR": "Convidar o time",
+        "DISPARO": "Disparar sem perder o número"
       },
-      "ASSUNTOS": "Todos os assuntos",
+      "CONTINUE": {
+        "TITULO": "Continue de onde parou",
+        "PROGRESSO": "Primeiros passos resolvidos",
+        "X_DE_Y": "{feitos} de {total}",
+        "ASSISTIR": "Assistir",
+        "LER": "Ler o passo a passo",
+        "VER_TODOS": "Ver todos os passos",
+        "ASSISTIR_VIDEO": "Assistir ao vídeo: {titulo}"
+      },
+      "SINTOMAS": {
+        "TITULO": "Algo não funcionou?",
+        "CONVERSA_TRAVOU": "A conversa travou e não consigo responder",
+        "NUMERO_BLOQUEADO": "Meu número de WhatsApp foi bloqueado",
+        "IA_GASTANDO": "A IA está gastando mais do que eu esperava",
+        "CSAT_VAZIO": "O relatório de satisfação está vazio"
+      },
+      "POR_ASSUNTO": {
+        "TITULO": "Por assunto",
+        "VIDEOS": "{count} vídeo | {count} vídeos",
+        "FAMILIAS": {
+          "ATENDER": "Atender clientes",
+          "VENDER": "Vender e medir",
+          "AUTOMATIZAR": "Automatizar com IA",
+          "CONTA": "Sua conta",
+          "OUTROS": "Outros assuntos"
+        },
+        "NOMES": {
+          "CANAIS": "Canais e caixas de entrada",
+          "CONVERSAS": "Conversas e chamadas",
+          "CONTATOS": "Contatos e empresas",
+          "TIMES": "Times e distribuição",
+          "CRM": "CRM e funis",
+          "CAMPANHAS": "Campanhas",
+          "PROSPECCAO": "Prospecção",
+          "RELATORIOS": "Relatórios",
+          "SEGUROS": "Cotação de seguros",
+          "FINANCEIRO": "Financeiro",
+          "AGENTES_IA": "Agentes de IA",
+          "AUTOMACOES": "Automações e respostas prontas",
+          "INTEGRACOES": "Integrações e chave da OpenAI",
+          "PRIMEIROS_PASSOS": "Primeiros passos",
+          "PERFIL": "Seu perfil e avisos",
+          "EQUIPE": "Equipe e permissões",
+          "EMPRESA": "Dados da empresa",
+          "MAPA": "Mapa da plataforma",
+          "CONCEITOS": "Entenda os conceitos"
+        }
+      },
       "ARTIGOS_NO_CAPITULO": "{count} artigo | {count} artigos",
+      "ASSUNTO": {
+        "VOLTAR": "Voltar para a Central de Ajuda",
+        "MINUTOS": "{count} min de vídeo | {count} min de vídeo",
+        "VISTOS": "{count} já visto | {count} já vistos",
+        "CONTINUAR": "Continuar: {titulo}",
+        "COMECAR": "Começar",
+        "REVER": "Rever do início",
+        "ABRIR": "Abrir {nome}",
+        "LISTA": "Artigos deste assunto",
+        "VISTO": "Visto",
+        "VIDEO_DE": "Vídeo, {duracao}",
+        "VAZIO": "Este assunto não existe ou não tem artigos para a sua conta.",
+        "AJUDA_TITULO": "Não achou o que precisava?",
+        "AJUDA_TEXTO": "O Guia da Plataforma responde na hora, aqui mesmo no painel.",
+        "PERGUNTAR": "Perguntar ao Guia"
+      },
       "PREPARANDO": {
         "TITULO": "Estamos preparando a Central de Ajuda",
         "TEXTO": "Os artigos aparecem aqui em alguns minutos. Volte daqui a pouco."

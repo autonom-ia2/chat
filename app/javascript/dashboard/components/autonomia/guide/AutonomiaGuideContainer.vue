@@ -24,6 +24,7 @@ import {
 } from 'dashboard/store/modules/autonomiaGuide';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 import { contextoAtual } from 'dashboard/composables/useContextoDaTela';
+import { usePedidoPendente } from 'dashboard/composables/useGuiaPedido';
 
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
@@ -90,6 +91,7 @@ const accountId = useMapGetter('getCurrentAccountId');
 const { width: windowWidth } = useWindowSize();
 
 const store = useAutonomiaGuideStore();
+const { pedido: pedidoDoCanal, consumir: consumirPedido } = usePedidoPendente();
 const { messages, arquivos } = store;
 const { destino, acender } = useLevarAteLa();
 
@@ -944,6 +946,8 @@ watch(accountId, () => {
   mostrarEsqueleto.value = false;
   contaCarregada = null;
   store.reset();
+  // A pergunta pronta que outra tela deixou era da conta anterior (#977).
+  if (!props.embutido) consumirPedido();
   if (showPanel.value) reabrirConversaAtual();
 });
 
@@ -956,6 +960,50 @@ watch(
     if (!ligado || !props.pedidoInicial || pedidoInicialEnviado) return;
     pedidoInicialEnviado = true;
     if (sendMessage(props.pedidoInicial)) emit('pedidoInicialEnviado');
+  },
+  { immediate: true }
+);
+
+// #977 — pergunta pronta que outra tela (a Central de Ajuda) mandou pelo canal
+// do Guia. A conversa embutida não ouve o canal.
+//
+// Mesma regra do campo de digitar: chegou com uma pergunta em curso, não fica
+// guardada para sair depois — é descartada com o mesmo aviso. Senão o clique
+// duplo mandaria a pergunta duas vezes, e uma pergunta velha sairia minutos
+// depois, fora de contexto. Lê o valor atual, não o do aviso: se o envio logo
+// abaixo já gastou o pedido, não há o que descartar.
+watch(
+  pedidoDoCanal,
+  () => {
+    if (props.embutido || !pedidoDoCanal.value || !ocupado.value) return;
+    consumirPedido();
+    useAlert(t('AUTONOMIA_GUIDE.SENDING'));
+  },
+  { immediate: true }
+);
+
+// Fechar o painel desiste do pedido que ainda não saiu.
+watch(showPanel, aberto => {
+  if (!aberto && !props.embutido) consumirPedido();
+});
+
+// Sai uma vez, com o painel lateral aberto, o Guia ligado e nada em curso. A
+// única espera é a que a própria abertura causa: a conversa guardada voltando
+// (ela trocaria as mensagens e cortaria a resposta) e a pergunta dela que
+// ainda esperava resposta.
+//
+// O pedido é gasto antes de enviar: se `sendMessage` recusar, ele não volta
+// para a fila, senão tentaria de novo sem parar. Toda recusa possível aqui
+// (gravação de voz no campo, anexo subindo) já avisa a pessoa por quê.
+watch(
+  () =>
+    !props.embutido &&
+    Boolean(pedidoDoCanal.value) &&
+    showPanel.value &&
+    !ocupado.value &&
+    !abrindoConversa.value,
+  pronto => {
+    if (pronto) sendMessage(consumirPedido());
   },
   { immediate: true }
 );
