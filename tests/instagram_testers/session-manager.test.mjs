@@ -40,6 +40,7 @@ const rolesResponse = `for (;;);${JSON.stringify({
 })}`;
 
 const baseEnv = {
+  INSTAGRAM_TESTER_APP_NAME: 'Synthetic App',
   INSTAGRAM_META_DEVELOPER_APP_ID: '10001',
   INSTAGRAM_META_BUSINESS_ID: '10002',
   INSTAGRAM_TESTER_ROLES_DOC_ID: '10003',
@@ -47,6 +48,16 @@ const baseEnv = {
   INSTAGRAM_TESTER_PROXY_HOST: '127.0.0.1',
   INSTAGRAM_TESTER_PROXY_PORT: '9100',
   INSTAGRAM_TESTER_PROXY_AUTH_MODE: 'ip',
+};
+
+const bootstrapMetadata = Object.fromEntries(
+  Object.entries(baseEnv).filter(([key]) => !key.includes('PROXY'))
+);
+const bootstrap = {
+  type: 'bootstrap',
+  metadata: bootstrapMetadata,
+  revision: 'a'.repeat(64),
+  version: INITIAL_VERSION,
 };
 
 const publisherProgram = [
@@ -57,7 +68,8 @@ const publisherProgram = [
   "  const fs = require('node:fs');",
   "  fs.appendFileSync(process.env.SYNTHETIC_OPS_FILE, JSON.stringify(request) + '\\n');",
   `  const version = request.operation === 'version' ? '${INITIAL_VERSION}' : request.operation === 'publish' ? '${PUBLISHED_VERSION}' : null;`,
-  '  process.stdout.write(JSON.stringify({ version }));',
+  `  if (request.operation === 'bootstrap') { process.stdout.write(JSON.stringify(${JSON.stringify(bootstrap)})); return; }`,
+  '  process.stdout.write(JSON.stringify(request.type === "session" ? { type: "session", version } : { type: "operator", manager: { state: request.state, control_available: request.control_available, observed_at: new Date().toISOString() }, request: null }));',
   '});',
 ].join('');
 
@@ -219,9 +231,7 @@ async function waitForOperation(path, operation) {
       setTimeout(resolve, 10);
     });
   }
-  throw new Error(
-    `Synthetic operation not observed: ${operation}; observed=${JSON.stringify(await readOperations(path))}`
-  );
+  throw new Error(`Synthetic operation not observed: ${operation}`);
 }
 
 async function withProcessEnv(values, action) {
@@ -259,7 +269,7 @@ test('publishes one observed session with the expected version and proxy binding
     assert.equal(error, null);
     assert.deepEqual(
       entries.map(entry => entry.operation),
-      ['version', 'publish']
+      ['bootstrap', 'publish']
     );
     const publication = entries[1];
     assert.equal(publication.expected_version, INITIAL_VERSION);
@@ -280,7 +290,7 @@ test('publishes one observed session with the expected version and proxy binding
 });
 
 for (const status of [401, 403]) {
-  test(`invalidates the stored version and stops on HTTP ${status}`, async () => {
+  test(`preserves the stored version and stops on HTTP ${status}`, async () => {
     const data = await fixture(`status-${status}`);
     try {
       const settled = withProcessEnv(data.processEnv, () =>
@@ -294,10 +304,10 @@ for (const status of [401, 403]) {
       assert.equal(error?.message, 'operator_required');
       assert.deepEqual(
         entries.map(entry => entry.operation),
-        ['version', 'invalidate']
+        ['bootstrap', 'manager_heartbeat']
       );
-      assert.equal(entries[1].expected_version, INITIAL_VERSION);
-      assert.equal(entries[1].code, 'operator_required');
+      assert.equal(entries[1].state, 'operator_required');
+      assert.equal(entries[1].control_available, false);
     } finally {
       process.emit('SIGTERM');
       await cleanup(data);
@@ -306,7 +316,7 @@ for (const status of [401, 403]) {
 }
 
 for (const status of [401, 403]) {
-  test(`invalidates on GraphQL response HTTP ${status} with healthy navigation`, async () => {
+  test(`requests intervention on GraphQL response HTTP ${status} with healthy navigation`, async () => {
     const data = await fixture(`graphql-${status}`);
     try {
       const settled = withProcessEnv(data.processEnv, () =>
@@ -320,10 +330,10 @@ for (const status of [401, 403]) {
       assert.equal(error?.message, 'operator_required');
       assert.deepEqual(
         entries.map(entry => entry.operation),
-        ['version', 'invalidate']
+        ['bootstrap', 'manager_heartbeat']
       );
-      assert.equal(entries[1].expected_version, INITIAL_VERSION);
-      assert.equal(entries[1].code, 'operator_required');
+      assert.equal(entries[1].state, 'operator_required');
+      assert.equal(entries[1].control_available, false);
     } finally {
       process.emit('SIGTERM');
       await cleanup(data);
@@ -331,7 +341,7 @@ for (const status of [401, 403]) {
   });
 }
 
-test('invalidates and stops on a login redirect without a direct HTTP fallback', async () => {
+test('preserves session and stops on a login redirect without a direct HTTP fallback', async () => {
   const data = await fixture('redirect');
   try {
     const settled = withProcessEnv(data.processEnv, () =>
@@ -345,16 +355,16 @@ test('invalidates and stops on a login redirect without a direct HTTP fallback',
     assert.equal(error?.message, 'operator_required');
     assert.deepEqual(
       entries.map(entry => entry.operation),
-      ['version', 'invalidate']
+      ['bootstrap', 'manager_heartbeat']
     );
-    assert.equal(entries[1].code, 'operator_required');
+    assert.equal(entries[1].control_available, false);
   } finally {
     process.emit('SIGTERM');
     await cleanup(data);
   }
 });
 
-test('invalidates and stops on a checkpoint or two-factor redirect', async () => {
+test('preserves session and stops on a checkpoint or two-factor redirect', async () => {
   const data = await fixture('checkpoint-redirect');
   try {
     const settled = withProcessEnv(data.processEnv, () =>
@@ -368,9 +378,9 @@ test('invalidates and stops on a checkpoint or two-factor redirect', async () =>
     assert.equal(error?.message, 'operator_required');
     assert.deepEqual(
       entries.map(entry => entry.operation),
-      ['version', 'invalidate']
+      ['bootstrap', 'manager_heartbeat']
     );
-    assert.equal(entries[1].code, 'operator_required');
+    assert.equal(entries[1].control_available, false);
   } finally {
     process.emit('SIGTERM');
     await cleanup(data);
@@ -391,7 +401,7 @@ test('SIGTERM during response body stops without invalidating the current versio
     assert.equal(error, null);
     assert.deepEqual(
       entries.map(entry => entry.operation),
-      ['version']
+      ['bootstrap']
     );
   } finally {
     process.emit('SIGTERM');
@@ -469,6 +479,8 @@ function deferred() {
 
 async function syntheticManager(t, options = {}) {
   const data = await fixture('valid');
+  if (options.reconnectId)
+    data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
   const signals = new EventEmitter();
   const entries = [];
@@ -511,7 +523,9 @@ async function syntheticManager(t, options = {}) {
   let navigations = 0;
   let routeHandler;
   page.url = () => options.redirect || config.rolesUrl;
-  page.goto = async () => {
+  const navigated = [];
+  page.goto = async url => {
+    navigated.push(url);
     navigations += 1;
     let continued = false;
     await routeHandler({
@@ -589,24 +603,44 @@ async function syntheticManager(t, options = {}) {
     publish: async (_command, payload, { signal }) => {
       entries.push({ payload, signal, at: clock.time });
       signal.throwIfAborted();
-      if (payload.operation === 'version') {
+      if (payload.operation === 'bootstrap') {
         versionReads += 1;
         if (options.failVersion === versionReads)
           throw new Error('publication_failed');
         if (options.pendingVersion) return new Promise(() => {});
-        return currentVersion;
+        const latest =
+          options.changedMetadata && versionReads > 1
+            ? {
+                ...bootstrap,
+                metadata: { ...bootstrap.metadata, ...options.changedMetadata },
+                revision: 'b'.repeat(64),
+              }
+            : bootstrap;
+        return { ...latest, version: currentVersion };
       }
-      if (payload.operation === 'invalidate') {
-        if (options.pendingInvalidation) return pendingInvalidation.promise;
-        return null;
+      if (payload.type === 'operator') {
+        if (
+          options.pendingInvalidation &&
+          payload.state === 'operator_required'
+        )
+          return pendingInvalidation.promise;
+        return {
+          type: 'operator',
+          manager: {
+            state: payload.state,
+            control_available: payload.control_available,
+            observed_at: new Date(clock.time).toISOString(),
+          },
+          request: null,
+        };
       }
       publications += 1;
       if (options.rejectPublication === publications) {
-        currentVersion = 'opaque-revocation:1';
+        currentVersion = '00000000-0000-4000-8000-999999999999';
         throw new Error('publication_failed');
       }
       if (options.pendingPublish) return pendingPublish.promise;
-      currentVersion = `opaque-generation:${publications}`;
+      currentVersion = `00000000-0000-4000-8000-${String(publications).padStart(12, '0')}`;
       return currentVersion;
     },
   }).then(
@@ -635,6 +669,7 @@ async function syntheticManager(t, options = {}) {
     pendingInvalidation,
     cleanupWaiting,
     page,
+    navigated,
     navigations: () => navigations,
     closed: () => closed,
     lockPath: join(
@@ -654,7 +689,11 @@ test('three refresh cycles preserve opaque CAS versions and the 15-minute interv
   );
   assert.deepEqual(
     writes.map(entry => entry.payload.expected_version),
-    [null, 'opaque-generation:1', 'opaque-generation:2']
+    [
+      null,
+      '00000000-0000-4000-8000-000000000001',
+      '00000000-0000-4000-8000-000000000002',
+    ]
   );
   assert.deepEqual(
     writes.map(entry => entry.at),
@@ -670,11 +709,11 @@ for (const failVersion of [1, 2]) {
     const data = await syntheticManager(t, { failVersion });
     if (failVersion === 2) await data.clock.advance(900000);
     const reads = data.entries.filter(
-      entry => entry.payload.operation === 'version'
+      entry => entry.payload.operation === 'bootstrap'
     ).length;
     await data.clock.advance(899999);
     assert.equal(
-      data.entries.filter(entry => entry.payload.operation === 'version')
+      data.entries.filter(entry => entry.payload.operation === 'bootstrap')
         .length,
       reads
     );
@@ -709,7 +748,7 @@ for (const pending of [
     assert.equal(data.entries.length, count);
     await data.clock.advance(900000);
     assert.equal(
-      data.entries.filter(entry => entry.payload.operation === 'version')
+      data.entries.filter(entry => entry.payload.operation === 'bootstrap')
         .length,
       2
     );
@@ -793,7 +832,7 @@ test('publisher cancellation kills synthetic child without waiting for exit', as
   child.stdin.end = () => {};
   const result = publisher(
     ['synthetic-child'],
-    { operation: 'version' },
+    { type: 'session', operation: 'version' },
     {
       signal: controller.signal,
       clock,
@@ -803,8 +842,12 @@ test('publisher cancellation kills synthetic child without waiting for exit', as
   controller.abort(new Error('manager_stopped'));
   await assert.rejects(result, { message: 'manager_stopped' });
   assert.equal(killed, 1);
-  child.stdout.emit('data', JSON.stringify({ version: 'late-generation' }));
+  child.stdout.emit(
+    'data',
+    JSON.stringify({ type: 'session', version: PUBLISHED_VERSION })
+  );
   child.emit('exit', 0);
+  child.emit('close', 0);
   assert.equal(clock.timers.size, 0);
 });
 
@@ -835,15 +878,18 @@ test('browser gate stays closed to mutations and untrusted destinations', () => 
 
 test('a hung invalidation still stops for operator_required at the cycle deadline', async t => {
   const data = await syntheticManager(t, {
-    initialVersion: 'opaque-generation:current',
+    initialVersion: INITIAL_VERSION,
     redirect: 'https://www.facebook.com/two_factor/',
     pendingInvalidation: true,
   });
   await data.clock.advance(30000);
   assert.equal((await data.settled)?.message, 'operator_required');
   assert.equal(
-    data.entries.filter(entry => entry.payload.operation === 'invalidate')
-      .length,
+    data.entries.filter(
+      entry =>
+        entry.payload.operation === 'manager_heartbeat' &&
+        entry.payload.state === 'operator_required'
+    ).length,
     1
   );
   await data.clock.advance(1800000);
@@ -879,7 +925,7 @@ test('an old body completing during a new cycle cannot publish the old capture',
 
 test('CAS rejection reads the revocation revision and captures again on the next refresh', async t => {
   const data = await syntheticManager(t, {
-    initialVersion: 'opaque-generation:current',
+    initialVersion: INITIAL_VERSION,
     rejectPublication: 1,
   });
   await data.clock.advance(900000);
@@ -888,7 +934,7 @@ test('CAS rejection reads the revocation revision and captures again on the next
   );
   assert.deepEqual(
     writes.map(entry => entry.payload.expected_version),
-    ['opaque-generation:current', 'opaque-revocation:1']
+    [INITIAL_VERSION, '00000000-0000-4000-8000-999999999999']
   );
   assert.notEqual(writes[0].payload.captured_at, writes[1].payload.captured_at);
   assert.equal(data.navigations(), 2);
@@ -906,5 +952,203 @@ for (const pending of ['pendingLockClose', 'pendingUnlink']) {
     assert.equal(await data.settled, null);
     assert.equal(data.signals.listenerCount('SIGTERM'), 0);
     assert.equal(data.clock.timers.size, 0);
+  });
+}
+
+test('recovery manager exits only after its first CAS receipt so the wrapper can start continuous refresh', async t => {
+  const data = await syntheticManager(t, { reconnectId: INITIAL_VERSION });
+  assert.equal(await data.settled, null);
+  await data.clock.advance(900000);
+  const writes = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].payload.request_id, INITIAL_VERSION);
+  const heartbeats = data.entries.filter(
+    entry => entry.payload.operation === 'manager_heartbeat'
+  );
+  assert.equal(heartbeats.length, 1);
+  assert.equal(heartbeats[0].payload.state, 'healthy');
+  assert.equal(data.closed(), 1);
+});
+
+test('a changed canonical App/admin is used by the next cycle and rejects the old observed request', async t => {
+  const data = await syntheticManager(t, {
+    changedMetadata: {
+      INSTAGRAM_META_DEVELOPER_APP_ID: '20001',
+      INSTAGRAM_TESTER_ADMIN_USER_ID: '54321',
+    },
+  });
+  await data.clock.advance(900000);
+  const writes = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].payload.configuration_revision, 'a'.repeat(64));
+  assert.equal(writes[0].payload.roles_doc_id, '10003');
+  assert.equal(
+    data.navigated[1],
+    'https://developers.facebook.com/apps/20001/roles/roles/?business_id=10002'
+  );
+  assert.equal(
+    data.stderr.includes('instagram_session_session_update_rejected\n'),
+    true
+  );
+});
+
+test('shared cleanup deadline bounds several stuck cleanup operations together to 25s before child SIGKILL at28s', async t => {
+  const data = await syntheticManager(t, {
+    pendingClose: true,
+    pendingLockClose: true,
+    pendingUnlink: true,
+  });
+  data.signals.emit('SIGTERM');
+  await drain();
+  await data.clock.advance(25000);
+  assert.equal(await data.settled, null);
+  assert.equal(data.signals.listenerCount('SIGTERM'), 0);
+  assert.equal(data.clock.timers.size, 0);
+});
+
+for (const step of ['loadRuntime', 'launch', 'route']) {
+  test(`30s deadline bounds startup at ${step} and preserves resources owned by other processes`, async () => {
+    const clock = new FakeClock();
+    const signals = new EventEmitter();
+    let released = false;
+    let unlinked = false;
+    const context = new EventEmitter();
+    const page = new EventEmitter();
+    context.pages = () => [page];
+    context.route = async () => {
+      if (step === 'route') return new Promise(() => {});
+      return undefined;
+    };
+    context.close = async () => {};
+    const result = run(
+      {
+        ...baseEnv,
+        INSTAGRAM_TESTER_BROWSER_PROFILE: '/synthetic/private',
+        INSTAGRAM_TESTER_PLAYWRIGHT_MODULE: '/synthetic/runtime',
+        INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON: '["synthetic"]',
+      },
+      {
+        clock,
+        signals,
+        files: {
+          privateProfile: async path => path,
+          open: async () => ({
+            close: async () => {
+              released = true;
+            },
+          }),
+          unlink: async () => {
+            unlinked = true;
+          },
+        },
+        loadRuntime: async () => {
+          if (step === 'loadRuntime') return new Promise(() => {});
+          return {
+            chromium: {
+              launchPersistentContext: async () =>
+                step === 'launch' ? new Promise(() => {}) : context,
+            },
+          };
+        },
+        publish: async () => assert.fail('no transport before bootstrap'),
+      }
+    ).catch(error => error);
+    await drain();
+    await clock.advance(30000);
+    assert.equal((await result).message, 'operation_timeout');
+    assert.equal(released, true);
+    assert.equal(unlinked, true);
+    assert.equal(signals.listenerCount('SIGTERM'), 0);
+  });
+}
+
+test('failed profile lock acquisition never removes another process lock', async () => {
+  const clock = new FakeClock();
+  const signals = new EventEmitter();
+  await assert.rejects(
+    run(
+      { ...baseEnv, INSTAGRAM_TESTER_BROWSER_PROFILE: '/synthetic/private' },
+      {
+        clock,
+        signals,
+        files: {
+          privateProfile: async path => path,
+          open: async () => {
+            throw new Error('foreign_lock');
+          },
+          unlink: async () => assert.fail('foreign lock removed'),
+        },
+      }
+    ),
+    /foreign_lock/
+  );
+  assert.equal(signals.listenerCount('SIGTERM'), 0);
+  assert.equal(clock.timers.size, 0);
+});
+
+const emojiBootstrap = {
+  type: 'bootstrap',
+  metadata: {
+    INSTAGRAM_META_DEVELOPER_APP_ID: '1',
+    INSTAGRAM_META_BUSINESS_ID: '1',
+    INSTAGRAM_TESTER_APP_NAME: '😀'.repeat(120),
+    INSTAGRAM_TESTER_ADMIN_USER_ID: '1',
+    INSTAGRAM_TESTER_ROLES_DOC_ID: '1',
+  },
+  revision: 'a'.repeat(64),
+  version: null,
+};
+for (const exitFirst of [false, true]) {
+  test(`publisher waits for close and decodes split 781-byte UTF8 bootstrap; exitFirst=${exitFirst}`, async () => {
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stdin = new EventEmitter();
+    child.stdin.end = () => {};
+    child.kill = () => {};
+    const result = publisher(
+      ['synthetic'],
+      { type: 'session', operation: 'bootstrap' },
+      { spawnImpl: () => child }
+    );
+    const bytes = Buffer.from(JSON.stringify(emojiBootstrap));
+    assert.equal(bytes.length, 781);
+    const split = bytes.indexOf(Buffer.from('😀')) + 1;
+    if (exitFirst) child.emit('exit', 0);
+    child.stdout.emit('data', bytes.subarray(0, split));
+    child.stdout.emit('data', bytes.subarray(split));
+    if (!exitFirst) child.emit('exit', 0);
+    child.emit('close', 0);
+    assert.deepEqual(await result, emojiBootstrap);
+  });
+}
+for (const failure of ['overflow', 'error', 'abort', 'deadline', 'nonzero']) {
+  test(`publisher rejects ${failure} after exit and never accepts later close`, async () => {
+    const clock = new FakeClock();
+    const shutdown = new AbortController();
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stdin = new EventEmitter();
+    child.stdin.end = () => {};
+    child.kill = () => {};
+    const result = publisher(
+      ['synthetic'],
+      { type: 'session', operation: 'bootstrap' },
+      { clock, signal: shutdown.signal, spawnImpl: () => child }
+    );
+    const rejected = assert.rejects(result);
+    child.emit('exit', 0);
+    child.stdout.emit('data', Buffer.from(JSON.stringify(emojiBootstrap)));
+    if (failure === 'overflow')
+      child.stdout.emit('data', Buffer.alloc(244, 32));
+    if (failure === 'error') child.emit('error', new Error('synthetic'));
+    if (failure === 'abort') shutdown.abort(new Error('synthetic'));
+    if (failure === 'deadline') await clock.advance(30000);
+    child.emit('close', failure === 'nonzero' ? 1 : 0);
+    await rejected;
+    assert.equal(clock.timers.size, 0);
   });
 }

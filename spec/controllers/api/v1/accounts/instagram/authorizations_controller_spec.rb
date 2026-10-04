@@ -8,6 +8,8 @@ RSpec.describe 'Instagram Authorization API', type: :request do
   end
 
   before do
+    account.enable_features!('channel_instagram')
+    account.disable_features!('instagram_assisted_onboarding')
     allow(GlobalConfigService).to receive(:load).and_call_original
     allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
   end
@@ -31,6 +33,15 @@ RSpec.describe 'Instagram Authorization API', type: :request do
              as: :json
 
         expect(response).to have_http_status(:unauthorized)
+      end
+
+      it 'rejects an administrator when the Instagram channel is denied' do
+        account.disable_features!('channel_instagram')
+        expect(OAuth2::Client).not_to receive(:new)
+        post "/api/v1/accounts/#{account.id}/instagram/authorization",
+             headers: administrator.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:forbidden)
+        expect(response.parsed_body).to eq('error_code' => 'forbidden')
       end
 
       it 'creates a new authorization and returns the redirect url' do

@@ -5,7 +5,12 @@ import { resolve, dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import {
+  parseEnvelope,
+  validateRequest,
+} from './runtime/operator-protocol.mjs';
+import {
   configuration,
+  proxyConfiguration,
   observedSession,
   rolesQueryFields,
   safeBrowserLocation,
@@ -15,7 +20,7 @@ import {
 const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
 
-function cancellable(promise, signal) {
+export function cancellable(promise, signal) {
   return new Promise((done, reject) => {
     const abort = () => {
       signal.removeEventListener('abort', abort);
@@ -37,7 +42,7 @@ function cancellable(promise, signal) {
   });
 }
 
-function pause(ms, signal, clock) {
+export function pause(ms, signal, clock = globalThis) {
   let timer;
   return cancellable(
     new Promise(done => {
@@ -45,6 +50,41 @@ function pause(ms, signal, clock) {
     }),
     signal
   ).finally(() => clock.clearTimeout(timer));
+}
+
+// Reuse one deadline/cancellation primitive for setup, cycles, waiter transport and cleanup.
+export function deadlineScope(
+  signal,
+  clock = globalThis,
+  budgetMs = CYCLE_BUDGET_MS,
+  now = Date.now
+) {
+  const deadline = now() + budgetMs;
+  const controller = new AbortController();
+  const cancel = () =>
+    controller.abort(signal?.reason || new Error('operation_cancelled'));
+  signal?.addEventListener('abort', cancel, { once: true });
+  if (signal?.aborted) cancel();
+  const timer = clock.setTimeout(
+    () => controller.abort(new Error('operation_timeout')),
+    budgetMs
+  );
+  return {
+    signal: controller.signal,
+    remaining: () => Math.max(1, deadline - now()),
+    wait: promise => cancellable(promise, controller.signal),
+    close: () => {
+      controller.abort(new Error('operation_finished'));
+      clock.clearTimeout(timer);
+      signal?.removeEventListener('abort', cancel);
+    },
+  };
+}
+
+export function observerConfiguration(env, bootstrap) {
+  const value = parseEnvelope(JSON.stringify(bootstrap), 'bootstrap');
+  // Only the proxy/runtime settings come from local ENV; canonical IDs overwrite stale IDs.
+  return configuration({ ...env, ...value.metadata });
 }
 
 export function browserEnvironment(env) {
@@ -102,6 +142,7 @@ export function publisher(
   payload,
   { signal, spawnImpl = spawn, clock = globalThis } = {}
 ) {
+  validateRequest(payload);
   return new Promise((done, reject) => {
     if (
       !Array.isArray(command) ||
@@ -126,7 +167,8 @@ export function publisher(
       stdio: ['pipe', 'pipe', 'ignore'],
       shell: false,
     });
-    let output = '';
+    const chunks = [];
+    let outputBytes = 0;
     let settled = false;
     let timer;
     let abort;
@@ -146,31 +188,28 @@ export function publisher(
     timer = clock.setTimeout(abort, CYCLE_BUDGET_MS);
     child.stdout.on('data', chunk => {
       if (settled) return;
-      output += chunk;
-      if (Buffer.byteLength(output) > 1024) {
+      const buffer = Buffer.from(chunk);
+      outputBytes += buffer.length;
+      if (outputBytes > 1024) {
         child.kill('SIGTERM');
         finish(new Error('publication_failed'));
+        return;
       }
+      chunks.push(buffer);
     });
     child.once('error', () => finish(new Error('publication_failed')));
     child.stdin.on('error', () => {
       child.kill('SIGTERM');
       finish(new Error('publication_failed'));
     });
-    child.once('exit', code => {
+    child.once('close', code => {
       try {
         if (code !== 0) throw new Error();
-        const result = JSON.parse(output);
-        if (
-          !result ||
-          Array.isArray(result) ||
-          Object.keys(result).length !== 1 ||
-          !Object.hasOwn(result, 'version') ||
-          (result.version !== null &&
-            (typeof result.version !== 'string' || !result.version.length))
-        )
-          throw new Error();
-        finish(null, result.version);
+        const result = parseEnvelope(
+          Buffer.concat(chunks, outputBytes).toString('utf8'),
+          payload.operation === 'bootstrap' ? 'bootstrap' : payload.type
+        );
+        finish(null, result.type === 'session' ? result.version : result);
       } catch {
         finish(new Error('publication_failed'));
       }
@@ -226,23 +265,28 @@ export async function run(
     files = { privateProfile, open, unlink },
   } = {}
 ) {
-  const config = configuration(env);
-  const profile = await files.privateProfile(
-    env.INSTAGRAM_TESTER_BROWSER_PROFILE
-  );
+  let config;
+  const proxy = proxyConfiguration(env);
   const command = JSON.parse(
     env.INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON || 'null'
   );
-  const lockPath = join(profile, '.instagram-manager.lock');
-  const lock = await files.open(lockPath, 'wx', 0o600);
+  let lockPath;
+  let lock;
   let context;
   let unhealthy = null;
   const operatorState = { required: false };
+  const reconnect = { id: env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID };
   const shutdown = new AbortController();
   const stop = () => shutdown.abort(new Error('manager_stopped'));
   signals.once('SIGTERM', stop);
   signals.once('SIGINT', stop);
+  const setup = deadlineScope(shutdown.signal, clock, CYCLE_BUDGET_MS, now);
   try {
+    const profile = await setup.wait(
+      files.privateProfile(env.INSTAGRAM_TESTER_BROWSER_PROFILE)
+    );
+    lockPath = join(profile, '.instagram-manager.lock');
+    lock = await setup.wait(files.open(lockPath, 'wx', 0o600));
     if (
       !env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE ||
       !isAbsolute(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
@@ -250,48 +294,58 @@ export async function run(
       throw new Error('browser_runtime_required');
     delete process.env.DEBUG;
     delete process.env.PWDEBUG;
-    const runtime = await loadRuntime(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE);
-    context = await runtime.chromium.launchPersistentContext(profile, {
-      channel: 'chrome',
-      headless: true,
-      env: browserEnvironment(env),
-      proxy: {
-        server: `http://${config.host}:${Number(config.port)}`,
-      },
-      acceptDownloads: false,
-      serviceWorkers: 'block',
-      ignoreHTTPSErrors: false,
-    });
-    const page = context.pages()[0] || (await context.newPage());
+    const runtime = await setup.wait(
+      loadRuntime(env.INSTAGRAM_TESTER_PLAYWRIGHT_MODULE)
+    );
+    context = await setup.wait(
+      runtime.chromium
+        .launchPersistentContext(profile, {
+          channel: 'chrome',
+          headless: true,
+          timeout: setup.remaining(),
+          env: browserEnvironment(env),
+          proxy: {
+            server: `http://${proxy.host}:${Number(proxy.port)}`,
+          },
+          acceptDownloads: false,
+          serviceWorkers: 'block',
+          ignoreHTTPSErrors: false,
+        })
+        .then(value => {
+          if (setup.signal.aborted) {
+            value.close().catch(() => {});
+            throw new Error('operation_cancelled');
+          }
+          return value;
+        })
+    );
+    const page = context.pages()[0] || (await setup.wait(context.newPage()));
     for (const other of context.pages())
-      if (other !== page) await other.close();
+      if (other !== page) await setup.wait(other.close());
     context.on('page', other => {
       other.close().catch(() => {});
     });
     // Prevent writes performed by this manager. It only opens the roles page;
     // invitations remain exclusively in the reviewed backend adapter.
-    await context.route('**/*', async route => {
-      const request = route.request();
-      if (
-        !isAllowedBrowserRequest({
-          url: request.url(),
-          method: request.method(),
-          body: request.postData() || '',
-          config,
-        })
-      )
-        return route.abort();
-      return route.continue();
-    });
+    await setup.wait(
+      context.route('**/*', async route => {
+        const request = route.request();
+        if (
+          !isAllowedBrowserRequest({
+            url: request.url(),
+            method: request.method(),
+            body: request.postData() || '',
+            config,
+          })
+        )
+          return route.abort();
+        return route.continue();
+      })
+    );
+    setup.close();
     while (!shutdown.signal.aborted) {
-      const cycle = new AbortController();
-      const cancel = () => cycle.abort(shutdown.signal.reason);
-      shutdown.signal.addEventListener('abort', cancel, { once: true });
-      const timer = clock.setTimeout(
-        () => cycle.abort(new Error('session_update_rejected')),
-        CYCLE_BUDGET_MS
-      );
-      const wait = promise => cancellable(promise, cycle.signal);
+      const cycle = deadlineScope(shutdown.signal, clock);
+      const wait = cycle.wait;
       const send = payload => {
         cycle.signal.throwIfAborted();
         return wait(publish(command, payload, { signal: cycle.signal, clock }));
@@ -301,20 +355,25 @@ export async function run(
       let observe;
       try {
         // Version is part of the recoverable cycle and is opaque to this client.
-        const expectedVersion = await send({ operation: 'version' });
+        const bootstrap = await send({
+          type: 'session',
+          operation: 'bootstrap',
+        });
+        const cycleConfig = observerConfiguration(env, bootstrap);
+        config = cycleConfig;
+        const expectedVersion = bootstrap.version;
         const capturedAt = new Date(now()).toISOString();
         let operatorStop;
         const requireOperator = () => {
           if (!operatorStop) {
             operatorState.required = true;
             operatorStop = (async () => {
-              if (expectedVersion !== null) {
-                await send({
-                  operation: 'invalidate',
-                  expected_version: expectedVersion,
-                  code: 'operator_required',
-                }).catch(() => {});
-              }
+              await send({
+                type: 'operator',
+                operation: 'manager_heartbeat',
+                state: 'operator_required',
+                control_available: false,
+              }).catch(() => {});
               throw new Error('operator_required');
             })();
           }
@@ -339,7 +398,7 @@ export async function run(
                 headers,
                 body: request.postData(),
               },
-              config
+              cycleConfig
             );
             if (!session) {
               publication = null;
@@ -351,31 +410,36 @@ export async function run(
             const rolesResponse = await wait(response.text());
             cycle.signal.throwIfAborted();
             validateRolesResponse(rolesResponse);
-            if (!safeBrowserLocation(page.url(), config))
+            if (!safeBrowserLocation(page.url(), cycleConfig))
               await requireOperator();
             await send({
+              type: 'session',
               operation: 'publish',
+              ...(reconnect.id ? { request_id: reconnect.id } : {}),
               session,
               expected_version: expectedVersion,
+              configuration_revision: bootstrap.revision,
+              roles_doc_id: cycleConfig.docId,
               captured_at: capturedAt,
-              app_id: config.appId,
-              business_id: config.businessId,
-              proxy_fingerprint: config.proxyFingerprint,
+              app_id: cycleConfig.appId,
+              business_id: cycleConfig.businessId,
+              proxy_fingerprint: cycleConfig.proxyFingerprint,
               roles_response: rolesResponse,
             });
+            reconnect.id = undefined;
             return true;
           })();
           publication.catch(() => {});
         };
         page.on('response', observe);
         const navigation = await wait(
-          page.goto(config.rolesUrl, {
+          page.goto(cycleConfig.rolesUrl, {
             waitUntil: 'domcontentloaded',
             timeout: CYCLE_BUDGET_MS,
           })
         );
         if (
-          !safeBrowserLocation(page.url(), config) ||
+          !safeBrowserLocation(page.url(), cycleConfig) ||
           [401, 403].includes(navigation?.status())
         )
           await requireOperator();
@@ -383,8 +447,16 @@ export async function run(
         accepting = false;
         if (!(await wait(publication)))
           throw new Error('session_update_rejected');
+        await send({
+          type: 'operator',
+          operation: 'manager_heartbeat',
+          state: 'healthy',
+          control_available: false,
+        });
         if (unhealthy) stdout.write('instagram_session_recovered\n');
         unhealthy = null;
+        // Recovery is a bounded child: the wrapper starts continuous refresh only after its real CAS receipt.
+        if (env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID) return;
       } catch (error) {
         if (shutdown.signal.aborted) break;
         const code =
@@ -397,43 +469,36 @@ export async function run(
           operatorState.required = true;
           break;
         }
+        if (!cycle.signal.aborted)
+          await send({
+            type: 'operator',
+            operation: 'manager_heartbeat',
+            state: 'failed',
+            control_available: false,
+          }).catch(() => {});
+        if (reconnect.id) throw new Error('session_update_rejected');
       } finally {
         accepting = false;
         if (observe) page.off('response', observe);
         // Release pending headers/body/publication; never await them in cleanup.
-        cycle.abort(new Error('session_update_rejected'));
-        clock.clearTimeout(timer);
-        shutdown.signal.removeEventListener('abort', cancel);
+        cycle.close();
       }
       // A transport failure waits for the normal refresh, with no captured replay.
       await pause(REFRESH_INTERVAL_MS, shutdown.signal, clock).catch(() => {});
     }
     if (operatorState.required) throw new Error('operator_required');
   } finally {
-    const cleanup = async promise => {
-      const controller = new AbortController();
-      const timer = clock.setTimeout(
-        () => controller.abort(new Error('cleanup_timeout')),
-        CYCLE_BUDGET_MS
-      );
-      try {
-        return await cancellable(promise, controller.signal);
-      } finally {
-        clock.clearTimeout(timer);
-      }
-    };
+    setup.close();
+    const cleanup = deadlineScope(undefined, clock, 25000);
     try {
-      if (context) await cleanup(context.close()).catch(() => {});
-      await cleanup(lock.close()).catch(error => {
-        if (error.message !== 'cleanup_timeout') throw error;
-      });
+      if (context) await cleanup.wait(context.close()).catch(() => {});
+      if (lock) await cleanup.wait(lock.close()).catch(() => {});
+      // Never unlink a lock that this process failed to acquire.
+      if (lock) await cleanup.wait(files.unlink(lockPath)).catch(() => {});
     } finally {
-      try {
-        await cleanup(files.unlink(lockPath)).catch(() => {});
-      } finally {
-        signals.removeListener('SIGTERM', stop);
-        signals.removeListener('SIGINT', stop);
-      }
+      cleanup.close();
+      signals.removeListener('SIGTERM', stop);
+      signals.removeListener('SIGINT', stop);
     }
   }
 }

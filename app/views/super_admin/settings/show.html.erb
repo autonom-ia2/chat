@@ -91,6 +91,12 @@
       <h3 class="h-5 leading-5 text-n-slate-12 font-medium text-base">Features</h3>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-2 gap-y-3">
+      <div class="outline outline-1 outline-n-container p-4 rounded-lg shadow-sm">
+        <h3 class="text-n-slate-12 font-medium mb-2"><%= t('super_admin.instagram_automation.title') %></h3>
+        <p class="text-n-slate-11 mb-4"><%= t('super_admin.instagram_automation.card_description') %></p>
+        <%= link_to t('super_admin.instagram_automation.open'), super_admin_instagram_automation_path,
+                    class: 'inline-flex min-h-11 items-center rounded-md border border-n-weak px-3 py-2 text-sm font-medium text-woot-500 hover:bg-slate-25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+      </div>
       <% SuperAdmin::FeaturesHelper.available_features.each do |feature, attrs| %>
         <div class="group outline outline-1 outline-n-container p-4 rounded-lg relative shadow-sm">
           <span class="<%= attrs[:enabled] ? 'bg-green-400 text-white': 'bg-slate-300 text-slate-800' %> absolute rounded-full p-1 inline-flex right-4 top-5">

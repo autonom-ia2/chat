@@ -18,8 +18,16 @@ vi.mock('dashboard/api/channel/instagramClient', () => ({
 const accountId = ref(17);
 const disabled = ref(false);
 const config = ref({ instagramTesterAutomationEnabled: false });
+const assistedAccounts = ref({});
 vi.mock('dashboard/composables/useAccount', () => ({
-  useAccount: () => ({ accountId, isMetaInboxCreationDisabled: disabled }),
+  useAccount: () => ({
+    accountId,
+    isMetaInboxCreationDisabled: disabled,
+    isCloudFeatureEnabled: feature =>
+      feature === 'channel_instagram' ||
+      (feature === 'instagram_assisted_onboarding' &&
+        Boolean(assistedAccounts.value[accountId.value])),
+  }),
 }));
 vi.mock('dashboard/composables/store', () => ({ useMapGetter: () => config }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -69,6 +77,7 @@ beforeEach(() => {
   );
   i18n.global.locale.value = 'pt_BR';
   accountId.value = 17;
+  assistedAccounts.value = {};
   disabled.value = false;
   config.value = { instagramTesterAutomationEnabled: false };
   instagramClient.getTesterConfiguration.mockResolvedValue({
@@ -92,6 +101,34 @@ describe('Instagram assisted tester onboarding', () => {
     expect(instagramClient.searchTesters).not.toHaveBeenCalled();
     expect(instagramClient.getTesterStatus).not.toHaveBeenCalled();
     expect(instagramClient.inviteTester).not.toHaveBeenCalled();
+  });
+
+  it('uses account ON even when the old global browser config is false', async () => {
+    assistedAccounts.value = { 17: true };
+    const wrapper = mount(Instagram, mountOptions);
+    await flushPromises();
+    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(true);
+    expect(instagramClient.getTesterConfiguration).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses account OFF even when the old global browser config is true', async () => {
+    config.value.instagramTesterAutomationEnabled = true;
+    const wrapper = mount(Instagram, mountOptions);
+    await flushPromises();
+    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(false);
+    expect(wrapper.text()).toContain('Continuar com o Instagram');
+    expect(instagramClient.getTesterConfiguration).not.toHaveBeenCalled();
+  });
+
+  it('switches from account ON to account OFF and discards the selected profile', async () => {
+    assistedAccounts.value = { 17: true, 18: false };
+    const wrapper = mount(Instagram, mountOptions);
+    await searchAndSelect(wrapper);
+    accountId.value = 18;
+    await flushPromises();
+    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(false);
+    expect(wrapper.find('input').exists()).toBe(false);
+    expect(instagramClient.getTesterConfiguration).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the classic OAuth click payload unchanged with feature off', async () => {
@@ -162,7 +199,7 @@ describe('Instagram assisted tester onboarding', () => {
     'explains callback inbox limits in %s with assisted=%s',
     async (locale, assisted) => {
       i18n.global.locale.value = locale;
-      config.value.instagramTesterAutomationEnabled = assisted;
+      assistedAccounts.value = { 17: assisted };
       window.history.replaceState(
         {},
         '',
@@ -237,7 +274,7 @@ describe('Instagram assisted tester onboarding', () => {
   );
 
   it('preserves assisted recovery guidance for callbacks other than inbox limits', async () => {
-    config.value.instagramTesterAutomationEnabled = true;
+    assistedAccounts.value = { 17: true, 18: true };
     window.history.replaceState(
       {},
       '',
@@ -251,18 +288,30 @@ describe('Instagram assisted tester onboarding', () => {
     expect(wrapper.text()).not.toContain('PRIVATE');
   });
 
-  it('falls back to legacy only when this account is explicitly disabled', async () => {
-    config.value.instagramTesterAutomationEnabled = true;
+  it('blocks when an ON account receives disabled tester configuration without falling back', async () => {
+    assistedAccounts.value = { 17: true, 18: true };
     instagramClient.getTesterConfiguration.mockResolvedValue({
       data: { enabled: false },
     });
     const wrapper = mount(Instagram, mountOptions);
     await flushPromises();
-    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(false);
-    expect(wrapper.text()).toContain('Continuar com o Instagram');
+    expect(wrapper.findComponent(TesterOnboarding).exists()).toBe(true);
+    expect(wrapper.text()).toContain('Procure o suporte');
+    expect(button(wrapper, 'Continuar com o Instagram')).toBeUndefined();
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
   });
 
   it.each([
+    null,
+    {},
+    { enabled: false },
+    { ...configuration, enabled: 'true' },
+    { ...configuration, enabled: undefined },
+    { ...configuration, available: 'true' },
+    { ...configuration, available: undefined },
+    { ...configuration, app_name: '' },
+    { ...configuration, acceptance_url: undefined },
+    { ...configuration, acceptance_url: 'https://example.invalid' },
     { ...configuration, available: false },
     { ...configuration, app_name: null },
   ])('fails closed for unavailable configuration %j', async data => {
@@ -498,7 +547,7 @@ describe('Instagram assisted tester onboarding', () => {
   });
 
   it('account switch remounts and aborts status instead of reusing selection', async () => {
-    config.value.instagramTesterAutomationEnabled = true;
+    assistedAccounts.value = { 17: true, 18: true };
     instagramClient.getTesterStatus.mockImplementation(
       () => new Promise(() => {})
     );
@@ -784,7 +833,7 @@ describe('Instagram assisted tester onboarding', () => {
   );
 
   it('ignores stale configuration after an account switch without falling back to legacy', async () => {
-    config.value.instagramTesterAutomationEnabled = true;
+    assistedAccounts.value = { 17: true, 18: true };
     let resolveOldConfiguration;
     instagramClient.getTesterConfiguration.mockImplementationOnce(
       () =>
@@ -807,7 +856,7 @@ describe('Instagram assisted tester onboarding', () => {
   });
 
   it('ignores a stale accepted status after switching accounts', async () => {
-    config.value.instagramTesterAutomationEnabled = true;
+    assistedAccounts.value = { 17: true, 18: true };
     let resolveOldStatus;
     instagramClient.getTesterStatus.mockImplementationOnce(
       () =>

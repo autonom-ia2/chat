@@ -6,19 +6,16 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useAlert } from 'dashboard/composables';
 import TesterOnboarding from './instagram/TesterOnboarding.vue';
 import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 const { t } = useI18n();
-const { isMetaInboxCreationDisabled, accountId } = useAccount();
-const globalConfig = useMapGetter('globalConfig/get');
-const legacyAccountId = ref(null);
-const assistedOnboarding = computed(
-  () =>
-    globalConfig.value.instagramTesterAutomationEnabled &&
-    legacyAccountId.value !== accountId.value
+const { isMetaInboxCreationDisabled, accountId, isCloudFeatureEnabled } =
+  useAccount();
+const assistedOnboarding = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.INSTAGRAM_ASSISTED_ONBOARDING)
 );
 
 const hasError = ref(false);
@@ -26,7 +23,9 @@ const isInboxLimitError = ref(false);
 const errorStateMessage = ref('');
 const isRequestingAuthorization = ref(false);
 const isInstagramConnectionDisabled = computed(
-  () => isMetaInboxCreationDisabled.value
+  () =>
+    isMetaInboxCreationDisabled.value ||
+    !isCloudFeatureEnabled(FEATURE_FLAGS.CHANNEL_INSTAGRAM)
 );
 
 onMounted(() => {
@@ -83,7 +82,6 @@ const requestAuthorization = async () => {
     :disabled="isInstagramConnectionDisabled"
     :oauth-error="hasError"
     :oauth-error-message="isInboxLimitError ? errorStateMessage : ''"
-    @legacy="legacyAccountId = accountId"
   />
   <div v-else class="h-full p-6 w-full max-w-full flex-shrink-0 flex-grow-0">
     <div class="flex flex-col items-center justify-start h-full text-center">

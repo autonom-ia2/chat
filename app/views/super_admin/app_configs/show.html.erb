@@ -15,6 +15,7 @@
 </style>
 
 <section class="main-content__body">
+  <%= render 'super_admin/instagram_automation/oauth_link' if @config == 'instagram' %>
   <%= form_with url: super_admin_app_config_url(config: @config) , method: :post do |form| %>
     <% @allowed_configs.each do |key| %>
       <div class="flex mb-8">

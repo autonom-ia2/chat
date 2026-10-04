@@ -43,21 +43,32 @@ class Instagram::Testers::OauthBinding
   def self.authorize!(payload)
     Account.uncached do
       account = Account.find_by(id: payload.fetch('sub'))
-      raise Instagram::Testers::Error, 'forbidden' unless account&.active?
+      raise Instagram::Testers::Error, 'forbidden' unless account&.active? && account.feature_enabled?('channel_instagram')
 
-      membership = account.account_users.find_by(user_id: payload.fetch('actor_id'))
+      membership = account.account_users.lock.find_by(user_id: payload.fetch('actor_id'))
       raise Instagram::Testers::Error, 'forbidden' unless membership
 
       context = { user: membership.user, account: account, account_user: membership }
       raise Instagram::Testers::Error, 'forbidden' unless InboxPolicy.new(context, Inbox).create?
 
+      authorize_connection!(account, payload)
+
       account
     end
   end
 
+  def self.authorize_connection!(account, payload)
+    valid = if payload.key?('inbox_id')
+              account.inboxes.exists?(id: payload.fetch('inbox_id'), channel_type: 'Channel::Instagram')
+            else
+              !account.feature_enabled?('instagram_assisted_onboarding') || payload.key?('tester_selection')
+            end
+    raise Instagram::Testers::Error, 'invalid_selection' unless valid
+  end
+
   def self.validate_payload!(payload)
     valid = payload.is_a?(Hash) && valid_context?(payload) && valid_timing?(payload) &&
-            payload['jti'].is_a?(String) && payload['jti'].length == 36
+            payload['jti'].is_a?(String) && payload['jti'].length == 36 && valid_reauthorization?(payload)
     raise Instagram::Testers::Error, 'invalid_selection' unless valid
   end
 
@@ -79,10 +90,18 @@ class Instagram::Testers::OauthBinding
     raise Instagram::Testers::Error, 'invalid_selection' unless configuration.app_id == selected['app_id']
   end
 
+  def self.valid_reauthorization?(payload)
+    return true unless payload.key?('inbox_id')
+
+    payload['inbox_id'].is_a?(Integer) && payload['inbox_id'].positive? &&
+      Instagram::Testers::Validation.id?(payload['instagram_id']) &&
+      payload['return_to'] == 'inbox' && !payload.key?('tester_selection')
+  end
+
   def self.valid_timing?(payload)
     payload['exp'].is_a?(Integer) && payload['iat'].is_a?(Integer) && payload['exp'] > Time.current.to_i &&
       payload['iat'] <= Time.current.to_i && (payload['exp'] - payload['iat']).between?(1, TTL.to_i)
   end
 
-  private_class_method :valid_context?, :validate_selection!, :valid_timing?
+  private_class_method :authorize_connection!, :valid_context?, :validate_selection!, :valid_reauthorization?, :valid_timing?
 end

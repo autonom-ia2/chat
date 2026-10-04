@@ -7,21 +7,26 @@ module Instagram::IntegrationHelper
   # @param actor_id [Integer] The user who is authorized to manage account inboxes
   # @param return_to [String, nil] Optional onboarding return hint
   # @return [String, nil] The bound JWT token or nil if signing/configuration fails
-  def generate_instagram_token(account_id, return_to = nil, actor_id:, tester_selection: nil)
+  def generate_instagram_token(account_id, return_to = nil, actor_id:, tester_selection: nil, inbox: nil)
     return if client_secret.blank?
 
-    JWT.encode(token_payload(account_id, return_to, actor_id: actor_id, tester_selection: tester_selection), client_secret, 'HS256')
+    payload = token_payload(account_id, return_to, actor_id: actor_id, tester_selection: tester_selection, inbox: inbox)
+    JWT.encode(payload, client_secret, 'HS256')
   rescue StandardError
     Rails.logger.error('Instagram token generation failed')
     nil
   end
 
-  def token_payload(account_id, return_to = nil, actor_id:, tester_selection: nil)
+  def token_payload(account_id, return_to = nil, actor_id:, tester_selection: nil, inbox: nil)
     payload = { sub: account_id, actor_id: actor_id, state_version: Instagram::Testers::OauthBinding::STATE_VERSION,
                 installation: Instagram::Testers::OauthBinding.installation, iat: Time.current.to_i,
                 exp: (Time.current + Instagram::Testers::OauthBinding::TTL).to_i, jti: SecureRandom.uuid }
     payload[:return_to] = return_to if return_to.present?
     payload[:tester_selection] = tester_selection if tester_selection
+    if inbox
+      payload[:inbox_id] = inbox.id
+      payload[:instagram_id] = inbox.channel.instagram_id
+    end
     payload
   end
 

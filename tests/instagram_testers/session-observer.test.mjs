@@ -325,12 +325,13 @@ test('profile must be private, outside Git and cannot follow symlinks', async ()
     await rm(root, { recursive: true, force: true });
   }
 });
-test('publisher uses stdin without shell, accepts only opaque version and suppresses errors', async () => {
+test('publisher uses typed stdin without shell and suppresses errors', async () => {
   const version = '12345678-1234-1234-1234-123456789abc';
-  const script = `let input='';process.stdin.on('data',v=>input+=v);process.stdin.on('end',()=>{const r=JSON.parse(input);process.stdout.write(JSON.stringify({version:r.synthetic==='$(must-not-execute)'?'${version}':null}));});`;
+  const script = `let input='';process.stdin.on('data',v=>input+=v);process.stdin.on('end',()=>{const r=JSON.parse(input);process.stdout.write(JSON.stringify({type:'session',version:r.type==='session'&&r.operation==='version'?'${version}':null}));});`;
   assert.equal(
     await publisher([process.execPath, '-e', script], {
-      synthetic: '$(must-not-execute)',
+      type: 'session',
+      operation: 'version',
     }),
     version
   );
@@ -341,7 +342,7 @@ test('publisher uses stdin without shell, accepts only opaque version and suppre
         '-e',
         "console.error('synthetic-secret');process.exit(2)",
       ],
-      {}
+      { type: 'session', operation: 'version' }
     ),
     { message: 'publication_failed' }
   );
@@ -352,9 +353,12 @@ test('publisher uses stdin without shell, accepts only opaque version and suppre
         '-e',
         'console.log(\'{"version":null,"secret":"synthetic"}\')',
       ],
-      {}
+      { type: 'session', operation: 'version' }
     ),
     { message: 'publication_failed' }
   );
-  await assert.rejects(publisher(null, {}), { message: 'publisher_required' });
+  await assert.rejects(
+    publisher(null, { type: 'session', operation: 'version' }),
+    { message: 'publisher_required' }
+  );
 });

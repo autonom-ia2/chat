@@ -17,7 +17,7 @@ export const isInstagramUsername = value =>
   value.length <= 30 &&
   [...value].every(character => USERNAME_CHARACTERS.includes(character));
 
-export function useInstagramTester({ disabled, onLegacy }) {
+export function useInstagramTester({ disabled, returnTo }) {
   const request = useAbortableRequest();
   const configuration = ref(null);
   const username = ref('');
@@ -122,10 +122,6 @@ export function useInstagramTester({ disabled, onLegacy }) {
       'configuration',
       signal => instagramClient.getTesterConfiguration({ signal }),
       data => {
-        if (data.enabled === false) {
-          onLegacy();
-          return;
-        }
         if (
           data.enabled !== true ||
           data.available !== true ||
@@ -251,7 +247,10 @@ export function useInstagramTester({ disabled, onLegacy }) {
       'oauth',
       signal =>
         instagramClient.generateAuthorization(
-          { tester_selection_token: selected.value.selection_token },
+          {
+            tester_selection_token: selected.value.selection_token,
+            ...(returnTo?.value ? { return_to: returnTo.value } : {}),
+          },
           { signal }
         ),
       data => {

@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- The SSM session and its health checks are intentionally sequential. */
 
 import { spawn } from 'node:child_process';
+import { parseEnvelope, validateRequest } from './operator-protocol.mjs';
 import { createServer, createConnection } from 'node:net';
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -136,26 +137,9 @@ export function publisherSshArguments(config, localPort, knownHostsPath) {
   ];
 }
 
-export function parsePublisherOutput(output) {
-  requireSafe(typeof output === 'string');
-  requireSafe(Buffer.byteLength(output) <= MAX_OUTPUT_BYTES);
-  const trimmed = output.trim();
-  requireSafe(trimmed.startsWith('{') && trimmed.endsWith('}'));
-  let result;
-  try {
-    result = JSON.parse(trimmed);
-  } catch {
-    throw staticFailure();
-  }
-  requireSafe(result && typeof result === 'object' && !Array.isArray(result));
-  requireSafe(
-    Object.keys(result).length === 1 && Object.hasOwn(result, 'version')
-  );
-  requireSafe(
-    result.version === null ||
-      (typeof result.version === 'string' && result.version.length > 0)
-  );
-  return result.version;
+export function parsePublisherOutput(output, type) {
+  const result = parseEnvelope(output, type);
+  return result.type === 'session' ? result.version : result;
 }
 
 export function knownHostsLine(publicKey, localPort) {
@@ -183,7 +167,8 @@ export function commandRunner(
       args.every(value => typeof value === 'string' && !/[\0\r\n]/.test(value))
   );
   return new Promise((resolve, reject) => {
-    let output = '';
+    const chunks = [];
+    let outputBytes = 0;
     let settled = false;
     let timer;
     let onAbort;
@@ -213,16 +198,20 @@ export function commandRunner(
       finish(staticFailure());
     }, timeoutMs);
     child.stdout?.on('data', chunk => {
-      output += chunk;
-      if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES * 4) {
+      if (settled) return;
+      const buffer = Buffer.from(chunk);
+      outputBytes += buffer.length;
+      if (outputBytes > MAX_OUTPUT_BYTES * 4) {
         child.kill();
         finish(staticFailure());
+        return;
       }
+      chunks.push(buffer);
     });
     child.once('error', () => finish(staticFailure()));
-    child.once('exit', code => {
+    child.once('close', code => {
       if (code !== 0) finish(staticFailure());
-      else finish(null, output);
+      else finish(null, Buffer.concat(chunks, outputBytes).toString('utf8'));
     });
     child.stdin?.end(input);
   });
@@ -429,9 +418,7 @@ export async function runPublisher(
     files = { mkdtemp, writeFile, chmod, rm },
   } = {}
 ) {
-  requireSafe(
-    payload && typeof payload === 'object' && !Array.isArray(payload)
-  );
+  validateRequest(payload);
   requireSafe(Number.isInteger(budgetMs) && budgetMs > 0 && budgetMs < 30000);
   const config = runtimeConfig(stack, env);
   const deadline = now() + budgetMs;
@@ -524,7 +511,8 @@ export async function runPublisher(
       await abortable(files.chmod(knownHostsPath, 0o600), controller.signal);
       return await abortable(
         new Promise((resolve, reject) => {
-          let output = '';
+          const chunks = [];
+          let outputBytes = 0;
           let settled = false;
           let timer;
           let onStdinError;
@@ -565,19 +553,30 @@ export async function runPublisher(
           }, remaining());
           child.stdout?.on('data', chunk => {
             if (settled) return;
-            output += chunk;
-            if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES) {
+            const buffer = Buffer.from(chunk);
+            outputBytes += buffer.length;
+            if (outputBytes > MAX_OUTPUT_BYTES) {
               child.kill();
               finish(staticFailure());
+              return;
             }
+            chunks.push(buffer);
           });
           child.once('error', () => finish(staticFailure()));
           child.stdin?.on('error', onStdinError);
-          child.once('exit', code => {
+          child.once('close', code => {
             if (code !== 0) finish(staticFailure());
             else {
               try {
-                finish(null, parsePublisherOutput(output));
+                finish(
+                  null,
+                  parsePublisherOutput(
+                    Buffer.concat(chunks, outputBytes).toString('utf8'),
+                    payload.operation === 'bootstrap'
+                      ? 'bootstrap'
+                      : payload.type
+                  )
+                );
               } catch {
                 finish(staticFailure());
               }
@@ -625,8 +624,14 @@ function stackFromArgs(args) {
 export async function main(args = process.argv.slice(2), env = process.env) {
   const stack = stackFromArgs(args);
   const payload = await readInput();
-  const version = await runPublisher(payload, { stack, env });
-  process.stdout.write(JSON.stringify({ version }));
+  const result = await runPublisher(payload, { stack, env });
+  process.stdout.write(
+    JSON.stringify(
+      payload.type === 'session' && payload.operation !== 'bootstrap'
+        ? { type: 'session', version: result }
+        : result
+    )
+  );
 }
 
 if (

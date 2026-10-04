@@ -1,27 +1,28 @@
 #!/bin/sh
 
-# KeepAlive.SuccessfulExit=false restarts crashes. The manager uses exit 2 for
-# operator_required only; operational failures use exit 1 and restart.
-# Map that terminal state to a clean exit so launchd does
-# not reopen a browser/profile until an operator explicitly starts it again.
-
+# A recovery child exits only after publication; resume continuous refresh.
+# An operator_required exit waits for an explicit typed reconnect before login.
 set +e
 
-/usr/local/bin/node /ABSOLUTE/PATH/TO/scripts/instagram_testers/session-manager.mjs &
-child=$!
-trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 143' INT TERM
-wait "$child"
-status=$?
-trap - INT TERM
+while :; do
+  /usr/local/bin/node /ABSOLUTE/PATH/TO/scripts/instagram_testers/session-manager.mjs &
+  child=$!
+  trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 143' INT TERM
+  wait "$child"
+  status=$?
+  trap - INT TERM
 
-if [ "$status" -eq 2 ]; then
-  printf '%s\n' 'instagram_manager_operator_required' >&2
-  exit 0
-fi
-
-if [ "$status" -eq 0 ]; then
-  exit 0
-fi
-
-printf '%s\n' 'instagram_manager_failed' >&2
-exit 1
+  if [ "$status" -eq 2 ]; then
+    printf '%s\n' 'instagram_manager_operator_required' >&2
+    /usr/local/bin/node /ABSOLUTE/PATH/TO/scripts/instagram_testers/runtime/operator-waiter.mjs &
+    child=$!
+    trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 143' INT TERM
+    wait "$child"
+    status=$?
+    trap - INT TERM
+    [ "$status" -eq 0 ] && continue
+  fi
+  [ "$status" -eq 0 ] && exit 0
+  printf '%s\n' 'instagram_manager_failed' >&2
+  exit 1
+done

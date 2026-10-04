@@ -14,11 +14,19 @@ RSpec.describe Instagram::Testers::OauthBinding do
   end
 
   before do
+    account.enable_features!('channel_instagram')
+    account.disable_features!('instagram_assisted_onboarding')
     account.account_users.find_by!(user: actor).update!(custom_role: role)
   end
 
   it 'accepts an agent with the real Enterprise inbox_manage permission' do
     expect(described_class.claim!(payload)).to eq(account)
+  end
+
+  it 'rejects a denied Instagram channel even with the real custom permission before consuming the nonce' do
+    account.disable_features!('channel_instagram')
+    expect(Redis::Alfred).not_to receive(:set)
+    expect { described_class.claim!(payload) }.to(raise_error { |error| expect(error.code).to eq('forbidden') })
   end
 
   it 'rejects revocation of the custom permission before consuming its nonce' do

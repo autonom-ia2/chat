@@ -110,6 +110,8 @@ class Instagram::CallbacksController < ApplicationController
       raise Instagram::Testers::Error, 'invalid_selection'
     end
 
+    return reauthorize_inbox(user_details) if @oauth_payload.key?('inbox_id')
+
     @account = Instagram::Testers::OauthBinding.authorize!(@oauth_payload)
     channel_instagram = find_channel_by_instagram_id(user_details['user_id'].to_s)
     channel_exists = channel_instagram.present?
@@ -129,6 +131,24 @@ class Instagram::CallbacksController < ApplicationController
 
   def find_channel_by_instagram_id(instagram_id)
     Channel::Instagram.find_by(instagram_id: instagram_id, account: account)
+  end
+
+  def reauthorize_inbox(user_details)
+    account.with_lock do
+      @account = Instagram::Testers::OauthBinding.authorize!(@oauth_payload)
+      inbox = account.inboxes.lock.find_by(id: @oauth_payload.fetch('inbox_id'), channel_type: 'Channel::Instagram')
+      raise Instagram::Testers::Error, 'invalid_selection' unless inbox
+
+      channel = Channel::Instagram.lock.find_by(id: inbox.channel_id, account_id: account.id)
+      instagram_id = @oauth_payload.fetch('instagram_id')
+      unless channel && channel.instagram_id == instagram_id && user_details['user_id'].to_s == instagram_id
+        raise Instagram::Testers::Error, 'invalid_selection'
+      end
+
+      update_channel(channel, user_details)
+      channel.reauthorized!
+      [inbox, true]
+    end
   end
 
   def update_channel(channel_instagram, user_details)

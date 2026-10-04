@@ -1,0 +1,91 @@
+name: Instagram admin integration
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'lib/global_config*'
+      - 'config/**'
+      - 'spec/**'
+      - 'Gemfile*'
+      - '.github/workflows/instagram-admin-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: instagram-admin-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-storage:
+    name: Instagram real Redis and PostgreSQL isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 59510:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 59511:6379
+        options: >-
+          --health-cmd 'redis-cli ping'
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      RAILS_ENV: test
+      RACK_ENV: test
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: '59510'
+      POSTGRES_DATABASE: chatwoot_test
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: ''
+      REDIS_URL: redis://127.0.0.1:59511/0
+      TEST_REDIS_URL: redis://127.0.0.1:59511/0
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Prepare disposable test database
+        run: |
+          bundle exec rails db:create
+          bundle exec rails db:schema:load
+      - name: Verify cache lifecycle and concurrent publication using real storage
+        run: |
+          bundle exec rspec \
+            spec/models/installation_config_spec.rb \
+            spec/lib/global_config_spec.rb \
+            spec/lib/global_config_service_spec.rb \
+            spec/services/instagram/automation/redis_isolation_spec.rb \
+            spec/services/instagram/automation/operator_integration_spec.rb \
+            --format progress --format json --out tmp/instagram-admin-integration.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: instagram-admin-real-storage-results
+          path: tmp/instagram-admin-integration.json
+          if-no-files-found: error

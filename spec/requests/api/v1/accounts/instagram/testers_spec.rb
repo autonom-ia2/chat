@@ -25,6 +25,7 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
   around { |example| with_modified_env(settings) { example.run } }
 
   before do
+    account.enable_features!(:channel_instagram, :instagram_assisted_onboarding)
     allow(Instagram::Testers::Client).to receive(:new).and_return(client)
     allow(GlobalConfig).to receive(:get_value).and_call_original
     allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(false)

@@ -20,6 +20,8 @@ RSpec.describe Instagram::Testers::OauthBinding do
   end
 
   before do
+    account.enable_features!('channel_instagram')
+    account.disable_features!('instagram_assisted_onboarding')
     allow(Instagram::Testers::Configuration).to receive(:new).with(account_id: account.id).and_return(configuration)
     allow(Instagram::Testers::Selection).to receive(:new).with(account_id: account.id, actor_id: actor.id, app_id: '10001').and_return(selection)
     allow(Instagram::Testers::RateLimiter).to receive(:check!)

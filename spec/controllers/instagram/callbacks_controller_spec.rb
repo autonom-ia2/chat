@@ -18,6 +18,7 @@ RSpec.describe Instagram::CallbacksController do
   end
 
   before do
+    account.enable_features!('channel_instagram')
     allow(GlobalConfigService).to receive(:load).and_call_original
     allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
     allow(controller).to receive(:instagram_client).and_return(oauth_client)
@@ -242,6 +243,103 @@ RSpec.describe Instagram::CallbacksController do
     end
   end
 
+  describe 'explicit inbox reauthorization' do
+    let(:channel) { create(:channel_instagram, account: account, instagram_id: '12345', access_token: 'old_token') }
+    let(:state) { controller.generate_instagram_token(account.id, 'inbox', actor_id: actor.id, inbox: channel.inbox) }
+
+    before do
+      account.enable_features!(:instagram_assisted_onboarding)
+      allow(auth_code_object).to receive(:get_token).and_return(access_token)
+      allow(Instagram::Testers::Configuration).to receive(:new).and_call_original
+      allow(Instagram::Testers::Client).to receive(:new).and_call_original
+    end
+
+    it 'updates only the signed inbox and preserves its custom name while ON' do
+      channel.inbox.update!(name: 'Custom Inbox Name')
+      signed_state = state
+      with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true') do
+        expect do
+          get :show, params: { code: 'valid_code', state: signed_state }
+        end.to not_change(Channel::Instagram, :count).and not_change(Inbox, :count)
+      end
+      expect(channel.reload.access_token).to eq('long_lived_test_token')
+      expect(channel.inbox.name).to eq('Custom Inbox Name')
+      expect(Instagram::Testers::Configuration).not_to have_received(:new)
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+      expect(response).to redirect_to(app_instagram_inbox_settings_url(account_id: account.id, inbox_id: channel.inbox.id))
+    end
+
+    it 'rejects a different returned Instagram profile without creating or updating a channel' do
+      signed_state = state
+      user_details['user_id'] = '54321'
+      expect(Channel::Instagram).not_to receive(:create!)
+      expect do
+        get :show, params: { code: 'valid_code', state: signed_state }
+      end.to not_change(Channel::Instagram, :count).and not_change(Inbox, :count)
+      expect(channel.reload.access_token).to eq('old_token')
+      expect(Instagram::Testers::Configuration).not_to have_received(:new)
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'rejects a changed channel identity under the final write lock' do
+      signed_state = state
+      allow(controller).to receive(:fetch_instagram_user_details) do
+        channel.update!(instagram_id: '54321')
+        user_details
+      end
+      get :show, params: { code: 'valid_code', state: signed_state }
+      expect(channel.reload.access_token).to eq('old_token')
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'rejects the inbox transferred to another account during provider requests' do
+      signed_state = state
+      foreign_account = create(:account)
+      allow(controller).to receive(:fetch_instagram_user_details) do
+        channel.inbox.update!(account: foreign_account)
+        user_details
+      end
+      get :show, params: { code: 'valid_code', state: signed_state }
+      expect(channel.reload.access_token).to eq('old_token')
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'rejects an inbox removed after state issuance before exchanging provider tokens' do
+      signed_state = state
+      channel.inbox.destroy!
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: signed_state }
+      expect(Instagram::Testers::Configuration).not_to have_received(:new)
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'rejects the inbox removed during provider requests before replacing credentials' do
+      signed_state = state
+      allow(controller).to receive(:fetch_instagram_user_details) do
+        channel.inbox.destroy!
+        user_details
+      end
+      expect(Channel::Instagram).not_to receive(:create!)
+      get :show, params: { code: 'valid_code', state: signed_state }
+      expect(Channel::Instagram.exists?(channel.id)).to be false
+      expect(Instagram::Testers::Configuration).not_to have_received(:new)
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+      expect(response.location).to include('error_type=invalid_selection')
+    end
+
+    it 'revalidates membership before exchanging tokens' do
+      signed_state = state
+      account.account_users.find_by!(user: actor).destroy!
+      expect(auth_code_object).not_to receive(:get_token)
+      get :show, params: { code: 'valid_code', state: signed_state }
+      expect(Instagram::Testers::Configuration).not_to have_received(:new)
+      expect(Instagram::Testers::Client).not_to have_received(:new)
+      expect(response.location).to include('error_type=forbidden')
+    end
+  end
+
   describe 'selected tester OAuth binding' do
     let(:selection) do
       { 'id' => '17841400000000001', 'username' => 'test_user', 'app_id' => '10001', 'account_id' => account.id.to_s,
@@ -261,6 +359,7 @@ RSpec.describe Instagram::CallbacksController do
     end
 
     before do
+      account.enable_features!(:instagram_assisted_onboarding)
       allow(GlobalConfigService).to receive(:load).and_call_original
       allow(GlobalConfigService).to receive(:load).with('INSTAGRAM_APP_SECRET', nil).and_return('synthetic_secret')
       allow(GlobalConfig).to receive(:get_value).and_call_original

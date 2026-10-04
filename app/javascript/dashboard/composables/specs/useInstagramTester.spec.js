@@ -48,6 +48,41 @@ afterEach(() => {
 });
 
 describe('Instagram tester request guards and cancellation', () => {
+  it('preserves the onboarding return hint when authorizing the accepted selected profile', async () => {
+    tester = scope.run(() =>
+      useInstagramTester({ disabled, returnTo: ref('onboarding') })
+    );
+    instagramClient.getTesterStatus.mockResolvedValue({
+      data: { status: 'accepted' },
+    });
+    instagramClient.generateAuthorization.mockResolvedValue({
+      data: { url: window.location.href },
+    });
+    await tester.loadConfiguration();
+    tester.username.value = candidate.username;
+    await tester.search();
+    await tester.selectProfile(candidate);
+    await tester.authorize();
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledWith(
+      {
+        tester_selection_token: candidate.selection_token,
+        return_to: 'onboarding',
+      },
+      { signal: expect.any(AbortSignal) }
+    );
+  });
+  it('blocks disabled tester configuration for an ON account without invoking legacy OAuth', async () => {
+    instagramClient.getTesterConfiguration.mockResolvedValue({
+      data: { enabled: false },
+    });
+    await tester.loadConfiguration();
+    expect(onLegacy).not.toHaveBeenCalled();
+    expect(tester.configuration.value).toBeNull();
+    expect(tester.error.value).toBe('UNAVAILABLE');
+    await tester.authorize();
+    expect(instagramClient.generateAuthorization).not.toHaveBeenCalled();
+  });
+
   it.each([null, 'absent', 'pending', 'accepted'])(
     'rejects direct search, status, invite and OAuth calls while restricted at status %s',
     async status => {

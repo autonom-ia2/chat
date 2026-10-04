@@ -15,8 +15,8 @@ const props = defineProps({
   accountId: { type: Number, required: true },
   oauthError: { type: Boolean, default: false },
   oauthErrorMessage: { type: String, default: '' },
+  returnTo: { type: String, default: '' },
 });
-const emit = defineEmits(['legacy']);
 const { t } = useI18n();
 const copy = (key, values) =>
   t(`INBOX_MGMT.ADD.INSTAGRAM.TESTER.${key}`, values);
@@ -43,7 +43,7 @@ const {
   authorize,
 } = useInstagramTester({
   disabled: toRef(props, 'disabled'),
-  onLegacy: () => emit('legacy'),
+  returnTo: toRef(props, 'returnTo'),
 });
 const title = ref(null);
 const input = ref(null);

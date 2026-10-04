@@ -173,22 +173,28 @@ test('SSH is pinned to a temporary SSM-derived host key and cannot fall back to 
 });
 
 test('publisher output accepts only an opaque version result', () => {
-  assert.equal(parsePublisherOutput(JSON.stringify({ version })), version);
-  assert.equal(parsePublisherOutput(JSON.stringify({ version: null })), null);
   assert.equal(
-    parsePublisherOutput(JSON.stringify({ version: 'opaque-generation:2' })),
-    'opaque-generation:2'
+    parsePublisherOutput(JSON.stringify({ type: 'session', version })),
+    version
+  );
+  assert.equal(
+    parsePublisherOutput(JSON.stringify({ type: 'session', version: null })),
+    null
+  );
+  assert.throws(
+    () =>
+      parsePublisherOutput(
+        JSON.stringify({ type: 'session', version: 'opaque-generation:2' })
+      ),
+    /publication_failed/
   );
   [
-    `${JSON.stringify({ version })}\nlog=${canary}`,
+    `${JSON.stringify({ type: 'session', version })}\nlog=${canary}`,
     JSON.stringify({ version, session: canary }),
     JSON.stringify({ error: canary }),
     'not-json',
   ].forEach(invalid => {
-    assert.throws(
-      () => parsePublisherOutput(invalid),
-      /instagram_session_publication_failed/
-    );
+    assert.throws(() => parsePublisherOutput(invalid), /publication_failed/);
   });
 });
 
@@ -274,7 +280,7 @@ test('runPublisher checks the current blue-green pointer before sending stdin', 
   const calls = [];
   await assert.rejects(
     runPublisher(
-      { operation: 'publish', session: canary },
+      { type: 'session', operation: 'version' },
       {
         stack: 'hub2you',
         env: baseEnv,
@@ -303,7 +309,7 @@ test('runPublisher targets the current pointer when no override is configured', 
   const clock = new PublisherClock();
   const rejected = assert.rejects(
     runPublisher(
-      { operation: 'publish', session: canary },
+      { type: 'session', operation: 'version' },
       {
         stack: 'hub2you',
         env,
@@ -334,7 +340,7 @@ test('runPublisher enforces a sub-30s deadline and kills a detached SSM tunnel',
   const clock = new PublisherClock();
   const rejected = assert.rejects(
     runPublisher(
-      { operation: 'publish', session: canary },
+      { type: 'session', operation: 'version' },
       {
         stack: 'hub2you',
         env: baseEnv,
@@ -368,7 +374,7 @@ test('runPublisher converts SSH stdin EPIPE to a static failure and cleans both 
   const spawned = [];
   await assert.rejects(
     runPublisher(
-      { operation: 'publish', session: canary },
+      { type: 'session', operation: 'version' },
       {
         stack: 'hub2you',
         env: baseEnv,
@@ -505,7 +511,7 @@ test('synthetic Node forwarder sees EOF with ignored stdin, and pipe stays alive
   let exited;
   try {
     const result = await runPublisher(
-      { operation: 'version' },
+      { type: 'session', operation: 'version' },
       {
         stack: 'hub2you',
         env: baseEnv,
@@ -534,9 +540,10 @@ test('synthetic Node forwarder sees EOF with ignored stdin, and pipe stays alive
             queueMicrotask(() => {
               child.stdout.emit(
                 'data',
-                JSON.stringify({ version: 'opaque-generation:3' })
+                JSON.stringify({ type: 'session', version })
               );
               child.emit('exit', 0);
+              child.emit('close', 0);
             });
           return child;
         },
@@ -550,7 +557,7 @@ test('synthetic Node forwarder sees EOF with ignored stdin, and pipe stays alive
         },
       }
     );
-    assert.equal(result, 'opaque-generation:3');
+    assert.equal(result, version);
     await exited;
     assert.equal(tunnel.killed, true);
     assert.equal(tunnel.stdin.destroyed, true);
@@ -571,8 +578,12 @@ for (const stage of ['port', 'host-key', 'ssh', 'cleanup']) {
       ssh.stdin.end = () => {
         if (stage === 'cleanup')
           queueMicrotask(() => {
-            ssh.stdout.emit('data', JSON.stringify({ version }));
+            ssh.stdout.emit(
+              'data',
+              JSON.stringify({ type: 'session', version })
+            );
             ssh.emit('exit', 0);
+            ssh.emit('close', 0);
           });
       };
       let completeStage;
@@ -581,7 +592,7 @@ for (const stage of ['port', 'host-key', 'ssh', 'cleanup']) {
       });
       const children = [];
       const result = runPublisher(
-        { operation: 'version' },
+        { type: 'session', operation: 'version' },
         {
           stack: 'hub2you',
           env: baseEnv,
@@ -630,8 +641,9 @@ for (const stage of ['port', 'host-key', 'ssh', 'cleanup']) {
       completeStage(
         'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISyntheticHostKeyData== host'
       );
-      ssh.stdout.emit('data', JSON.stringify({ version: 'late-generation' }));
+      ssh.stdout.emit('data', JSON.stringify({ type: 'session', version }));
       ssh.emit('exit', 0);
+      ssh.emit('close', 0);
       await flushPublisher();
       assert.equal(children.length, count);
       assert.equal(signals.listenerCount('SIGTERM'), 0);
@@ -654,10 +666,15 @@ test('LaunchAgent wrapper treats synthetic operator and operational exit codes d
     [2, 0],
     [3, 1],
   ]) {
-    const script = source.replace(
-      command,
-      '"$SYNTHETIC_NODE" -e "process.exit(Number(process.argv[1]))" "$SYNTHETIC_STATUS"'
-    );
+    const script = source
+      .replace(
+        command,
+        '[ "$synthetic_resumed" = yes ] && exit 0; synthetic_resumed=yes; "$SYNTHETIC_NODE" -e "process.exit(Number(process.argv[1]))" "$SYNTHETIC_STATUS"'
+      )
+      .replace(
+        '/usr/local/bin/node /ABSOLUTE/PATH/TO/scripts/instagram_testers/runtime/operator-waiter.mjs',
+        '"$SYNTHETIC_NODE" -e "process.exit(0)"'
+      );
     const result = spawnSync('/bin/sh', ['-c', script], {
       encoding: 'utf8',
       env: { SYNTHETIC_NODE: process.execPath, SYNTHETIC_STATUS: String(code) },
@@ -670,3 +687,134 @@ test('LaunchAgent wrapper treats synthetic operator and operational exit codes d
     assert.equal(result.stderr, expectedStderr);
   }
 });
+
+for (const exitFirst of [false, true]) {
+  test(`transport waits for close and preserves split 781-byte UTF8 bootstrap; exitFirst=${exitFirst}`, async () => {
+    const bootstrap = {
+      type: 'bootstrap',
+      metadata: {
+        INSTAGRAM_META_DEVELOPER_APP_ID: '1',
+        INSTAGRAM_META_BUSINESS_ID: '1',
+        INSTAGRAM_TESTER_APP_NAME: '😀'.repeat(120),
+        INSTAGRAM_TESTER_ADMIN_USER_ID: '1',
+        INSTAGRAM_TESTER_ROLES_DOC_ID: '1',
+      },
+      revision: 'a'.repeat(64),
+      version: null,
+    };
+    const bytes = Buffer.from(JSON.stringify(bootstrap));
+    assert.equal(bytes.length, 781);
+    const split = bytes.indexOf(Buffer.from('😀')) + 1;
+    const result = await runPublisher(
+      { type: 'session', operation: 'bootstrap' },
+      {
+        stack: 'hub2you',
+        env: baseEnv,
+        run: syntheticRun(),
+        files: syntheticFiles,
+        signals: new EventEmitter(),
+        freePortFn: async () => 49152,
+        waitForPortFn: async () => true,
+        hostKeyFn: async () =>
+          'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISyntheticHostKeyData== host',
+        spawnImpl: command => {
+          const child = fakeChild();
+          if (command === 'ssh') {
+            child.stdin = new EventEmitter();
+            child.stdin.end = () =>
+              queueMicrotask(() => {
+                if (exitFirst) child.emit('exit', 0);
+                child.stdout.emit('data', bytes.subarray(0, split));
+                child.stdout.emit('data', bytes.subarray(split));
+                if (!exitFirst) child.emit('exit', 0);
+                child.emit('close', 0);
+              });
+          }
+          return child;
+        },
+      }
+    );
+    assert.deepEqual(result, bootstrap);
+  });
+}
+
+test('metadata writer locks in sorted name order even when caller supplies reversed keys; no database', async () => {
+  const { stdout, status, stderr } = spawnSync(
+    '/Users/rodrigosilva/.rbenv/versions/3.4.4/bin/ruby',
+    [
+      '-e',
+      `
+    module Instagram; module Automation; end; module Testers; module Validation
+      def self.id?(value); value.is_a?(String) && value.match?(/\\A[0-9]{1,40}\\z/); end
+    end; end; end
+    class String; def present?; !empty?; end; end
+    class InstallationConfig
+      WRITES = []
+      Record = Struct.new(:name, :value) do
+        def new_record?; false; end
+        def save!; InstallationConfig::WRITES << name; end
+      end
+      def self.transaction; yield; end
+      def self.find_or_initialize_by(name:); Record.new(name); end
+    end
+    load 'app/services/instagram/automation/metadata.rb'
+    klass = Instagram::Automation::Metadata
+    submitted = klass::KEYS.reverse.to_h { |key| [key, key == klass::APP_NAME_KEY ? 'Synthetic App' : '1'] }
+    klass.new.update!(submitted)
+    abort 'unsorted locks' unless InstallationConfig::WRITES == klass::KEYS.sort
+    puts 'sorted writer: OK'
+  `,
+    ],
+    { encoding: 'utf8' }
+  );
+  assert.equal(status, 0, stderr);
+  assert.equal(stdout.trim(), 'sorted writer: OK');
+});
+
+for (const failure of ['overflow', 'error', 'stdin-error', 'nonzero']) {
+  test(`transport rejects ${failure} after exit and ignores a late valid close`, async () => {
+    let ssh;
+    const result = runPublisher(
+      { type: 'session', operation: 'version' },
+      {
+        stack: 'hub2you',
+        env: baseEnv,
+        run: syntheticRun(),
+        files: syntheticFiles,
+        signals: new EventEmitter(),
+        freePortFn: async () => 49152,
+        waitForPortFn: async () => true,
+        hostKeyFn: async () =>
+          'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAISyntheticHostKeyData== host',
+        spawnImpl: command => {
+          const child = fakeChild();
+          if (command === 'ssh') {
+            ssh = child;
+            child.stdin = new EventEmitter();
+            child.stdin.end = () =>
+              queueMicrotask(() => {
+                child.emit('exit', 0);
+                if (failure === 'overflow') {
+                  child.stdout.emit('data', Buffer.alloc(1024, 32));
+                  child.stdout.emit('data', Buffer.alloc(1025, 32));
+                }
+                if (failure === 'error')
+                  child.emit('error', new Error('synthetic'));
+                if (failure === 'stdin-error')
+                  child.stdin.emit('error', new Error('synthetic'));
+                child.stdout.emit(
+                  'data',
+                  Buffer.from(JSON.stringify({ type: 'session', version }))
+                );
+                child.emit('close', failure === 'nonzero' ? 1 : 0);
+              });
+          }
+          return child;
+        },
+      }
+    );
+    await assert.rejects(result, /instagram_session_publication_failed/);
+    if (failure === 'overflow' || failure === 'stdin-error')
+      assert.equal(ssh.killed, true);
+  });
+}

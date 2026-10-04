@@ -43,7 +43,9 @@ class InstallationConfig < ApplicationRecord
   default_scope { order(created_at: :desc) }
   scope :editable, -> { where(locked: false) }
 
-  after_commit :clear_cache
+  around_save :clear_cache
+  around_destroy :clear_cache
+  after_touch :clear_cache
 
   def value
     serialized_value[:value]
@@ -62,7 +64,12 @@ class InstallationConfig < ApplicationRecord
   end
 
   def clear_cache
-    GlobalConfig.clear_cache
+    # Dirty attributes can retain a rolled-back savepoint's name. Read the row before writing.
+    names = block_given? ? [name] : []
+    names << self.class.unscoped.where(id: id).pick(:name) if persisted?
+    result = block_given? ? yield : true
+    self.class.current_transaction.after_commit { GlobalConfig.clear_cache(*names) } if result
+    result
   end
 
   def saml_sso_users_check

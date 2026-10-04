@@ -22,7 +22,7 @@ class AccountDashboard < Administrate::BaseDashboard
 
                                  attributes
                                else
-                                 {}
+                                 { feature_instagram_assisted_onboarding: InstagramAssistedOnboardingField }
                                end
 
   ATTRIBUTE_TYPES = {
@@ -62,7 +62,7 @@ class AccountDashboard < Administrate::BaseDashboard
                                       attrs << :captain_models
                                       attrs
                                     else
-                                      []
+                                      [:feature_instagram_assisted_onboarding]
                                     end
   SHOW_PAGE_ATTRIBUTES = (%i[
     id
@@ -86,7 +86,7 @@ class AccountDashboard < Administrate::BaseDashboard
                                  attrs << :captain_models
                                  attrs
                                else
-                                 []
+                                 [:feature_instagram_assisted_onboarding]
                                end
   FORM_ATTRIBUTES = (%i[
     name

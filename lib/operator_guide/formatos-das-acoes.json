@@ -15302,16 +15302,23 @@
   },
   "POST instagram/authorization": {
     "campos": {
+      "inbox_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "return_to": {},
       "tester_selection_token": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/instagram/authorizations#create",
+    "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:7",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:36",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:8"
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:41",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:47",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:46",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:39"
     ],
     "sem_corpo": false
   },

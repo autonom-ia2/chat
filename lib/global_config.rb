@@ -20,8 +20,12 @@ class GlobalConfig
       load_from_cache(arg)
     end
 
-    def clear_cache
-      cached_keys = $alfred.with { |conn| conn.keys("#{VERSION}:#{KEY_PREFIX}:*") }
+    def clear_cache(*config_keys)
+      cached_keys = if config_keys.empty?
+                      $alfred.with { |conn| conn.keys("#{VERSION}:#{KEY_PREFIX}:*") }
+                    else
+                      config_keys.compact.uniq.map { |config_key| "#{VERSION}:#{KEY_PREFIX}:#{config_key}" }
+                    end
       (cached_keys || []).each do |cached_key|
         $alfred.with { |conn| conn.expire(cached_key, 0) }
       end
