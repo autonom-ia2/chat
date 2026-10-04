@@ -474,18 +474,7 @@ jobs:
           fi
 
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
-          # A green liga junto com o build (#974): tenta o pull até a imagem chegar ao ECR, por até 45 min (um build
-          # sem cache leva ~24). Com a imagem já publicada, passa na primeira tentativa.
-          pulled=false
-          for attempt in $(seq 1 540); do
-            if docker pull "$IMAGE_URI"; then
-              pulled=true
-              break
-            fi
-            echo "Imagem ainda nao publicada ($attempt)"
-            sleep 5
-          done
-          [ "$pulled" = "true" ]
+          docker pull "$IMAGE_URI"
           install_instagram_tester_publisher
           docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
           docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
@@ -537,6 +526,33 @@ jobs:
 
           systemctl daemon-reload
           systemctl enable chatwoot-web.service
+
+          # A green liga junto com o build (#974): espera a imagem chegar ao ECR, por até 45 min (um build sem cache
+          # leva ~24). Só repete enquanto a imagem não existe; qualquer outro erro (permissão, rede) falha na hora.
+          wait_for_image() {
+            local repo_tag repository tag error_file attempt
+            repo_tag="${IMAGE_URI#*/}"
+            repository="${repo_tag%:*}"
+            tag="${repo_tag##*:}"
+            error_file="$(mktemp)"
+            for attempt in $(seq 1 540); do
+              if aws ecr describe-images --region "$AWS_REGION" --repository-name "$repository" \
+                --image-ids "imageTag=$tag" >/dev/null 2>"$error_file"; then
+                rm -f "$error_file"
+                return 0
+              fi
+              if ! grep -qF ImageNotFoundException "$error_file"; then
+                cat "$error_file" >&2
+                rm -f "$error_file"
+                return 1
+              fi
+              echo "Imagem ainda nao publicada ($attempt)"
+              sleep 5
+            done
+            rm -f "$error_file"
+            return 1
+          }
+          wait_for_image
           "$APP_DIR/deploy.sh"
           USERDATA
 
@@ -560,7 +576,6 @@ jobs:
             --output text)
 
           echo "GREEN_INSTANCE_ID=$green_instance_id" >> "$GITHUB_ENV"
-          aws ec2 wait instance-running --instance-ids "$green_instance_id"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -704,6 +719,8 @@ jobs:
 
       - name: Switch Sidekiq workers to green
         run: |
+          # A limpeza só religa o worker do blue se este passo chegou a pará-lo.
+          echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
@@ -814,7 +831,7 @@ jobs:
         # Desliga o verde na hora, mesmo no meio do boot (após cancelar, o GitHub dá só 5 min); ver #972.
         if: (failure() || cancelled()) && env.TRAFFIC_SHIFT_DONE != 'true'
         run: |
-          if [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+          if [ "${BLUE_WORKER_STOPPED:-false}" = "true" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
             blue_restore_command_id=$(aws ssm send-command \
               --instance-ids "$BLUE_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
