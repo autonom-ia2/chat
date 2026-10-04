@@ -32,7 +32,10 @@ const {
   isMetaInboxCreationDisabled,
 } = useAccount();
 const { isEnterprise } = useConfig();
-const { connectViaOAuth, connectWhatsapp } = useChannelConnect();
+const channelsDialogRef = ref(null);
+const { connectViaOAuth, connectWhatsapp } = useChannelConnect({
+  onInstagramConnect: () => channelsDialogRef.value?.open('instagram'),
+});
 
 const helpCenterGenerationId = computed(
   () => currentAccount.value?.custom_attributes?.help_center_generation_id
@@ -49,7 +52,6 @@ const {
   hasDetectedChannels,
 } = useDetectedChannels();
 
-const channelsDialogRef = ref(null);
 const showMetaRestrictionBanner = computed(
   () => isMetaInboxCreationDisabled.value
 );

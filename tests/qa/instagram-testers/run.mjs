@@ -1,12 +1,23 @@
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- Browser actions and isolated cases intentionally run sequentially. */
 /* eslint-disable @intlify/vue-i18n/no-dynamic-keys, @intlify/vue-i18n/no-missing-keys -- Harness reads real locale catalogs via browser helper and checks missing keys at runtime. */
 import assert from 'node:assert/strict';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { startServer, root, output, origin, pathname } from './server.mjs';
-import { MINIMUM_TEXT_CONTRAST } from './visual-helpers.mjs';
+import {
+  sourceFingerprints,
+  styleFingerprints,
+  dependencyMap,
+  observeStyles,
+  consumedStyleFingerprints,
+  captureUsedStyleSheets,
+} from './evidence.mjs';
+import {
+  MINIMUM_TEXT_CONTRAST,
+  primaryButtonCoverage,
+} from './visual-helpers.mjs';
+import { assertToastEvidence, readToastEvidence } from './toast-helpers.mjs';
 import {
   acceptanceUrl,
   appName,
@@ -37,27 +48,7 @@ let browser;
 let server;
 let build;
 const definitions = [];
-const sourcePaths = [
-  'app/javascript/dashboard/routes/dashboard/settings/inbox/channels/Instagram.vue',
-  'app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterOnboarding.vue',
-  'app/javascript/dashboard/routes/dashboard/settings/inbox/channels/instagram/TesterAcceptanceInstructions.vue',
-  'app/javascript/dashboard/composables/useInstagramTester.js',
-  'app/javascript/dashboard/api/channel/instagramClient.js',
-  'app/javascript/dashboard/i18n/locale/en/inboxMgmt.json',
-  'app/javascript/dashboard/i18n/locale/pt_BR/inboxMgmt.json',
-];
-async function fingerprints() {
-  return Object.fromEntries(
-    await Promise.all(
-      sourcePaths.map(async path => [
-        path,
-        createHash('sha256')
-          .update(await readFile(resolve(root, path)))
-          .digest('hex'),
-      ])
-    )
-  );
-}
+const fingerprints = () => sourceFingerprints(root);
 const define = (id, options, action) =>
   definitions.push({ id, options, action });
 const tick = () =>
@@ -86,7 +77,7 @@ async function openScreen(id, options) {
   });
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
-  const state = { ...options.state };
+  const state = { ...options.state, restricted: Boolean(options.restricted) };
   const record = {
     id,
     viewport,
@@ -98,26 +89,34 @@ async function openScreen(id, options) {
     transportDiagnostics: [],
     pageErrors: [],
     routeErrors: [],
+    expectedToast: '',
     screenshots: [],
     visualChecks: [],
   };
   results.screens.push(record);
+  const verifyConsumedStyles = observeStyles(page, record, origin, build);
   page.on('pageerror', error => record.pageErrors.push(error.message));
   page.on('console', message => {
     if (message.type() !== 'error') return;
     const location = message.location();
+    const requestPath = new URL(location.url || origin, origin).pathname;
     const expected = record.requests.some(
-      request =>
-        request.path === new URL(location.url || origin, origin).pathname &&
-        request.responseStatus >= 400
+      request => request.path === requestPath && request.responseStatus >= 400
     );
+    const expectedTimeout =
+      record.requests.some(
+        request =>
+          request.path === requestPath &&
+          request.transportFailure === 'timedout'
+      ) && message.text() === 'Failed to load resource: net::ERR_TIMED_OUT';
     if (
-      expected &&
-      message
-        .text()
-        .startsWith(
-          'Failed to load resource: the server responded with a status of '
-        )
+      expectedTimeout ||
+      (expected &&
+        message
+          .text()
+          .startsWith(
+            'Failed to load resource: the server responded with a status of '
+          ))
     )
       record.transportDiagnostics.push({
         text: message.text(),
@@ -145,7 +144,11 @@ async function openScreen(id, options) {
       await route.continue();
       return;
     }
-    const item = { method: request.method(), path: url.pathname };
+    const item = {
+      method: request.method(),
+      path: url.pathname,
+      contractValidated: false,
+    };
     record.requests.push(item);
     try {
       const raw = request.postData();
@@ -155,6 +158,16 @@ async function openScreen(id, options) {
         raw ? JSON.parse(raw) : null,
         state
       );
+      item.contractValidated = true;
+      if (
+        state.authorizationTimeout &&
+        url.pathname === '/api/v1/accounts/910/instagram/authorization'
+      ) {
+        assert.equal(state.legacy, true, 'Timeout injection is legacy-only');
+        item.transportFailure = 'timedout';
+        await route.abort('timedout');
+        return;
+      }
       item.responseStatus = response.status;
       await route.fulfill(response);
     } catch (error) {
@@ -167,6 +180,7 @@ async function openScreen(id, options) {
     theme,
     feature: options.feature || 'on',
     restricted: String(options.restricted || false),
+    ...options.query,
   });
   await page.goto(`${origin}${pathname}?${query}`, {
     waitUntil: 'domcontentloaded',
@@ -243,6 +257,8 @@ async function openScreen(id, options) {
     await settle();
   }
   async function health({ geometry = true } = {}) {
+    await verifyConsumedStyles();
+    record.styleSheetsConsumed = await captureUsedStyleSheets(page);
     const data = await page.evaluate(() => {
       const appRoot = document.querySelector('#app');
       const componentSection = appRoot.querySelector('section');
@@ -285,6 +301,8 @@ async function openScreen(id, options) {
         overlay: Boolean(document.querySelector('vite-error-overlay')),
       };
     });
+    data.toasts = await page.evaluate(readToastEvidence);
+    assertToastEvidence(data.toasts, record.expectedToast, data.viewport);
     record.latestHealth = data;
     assert.ok(
       data.ready && data.height > 0 && data.text.trim().length > 20,
@@ -511,11 +529,33 @@ async function openScreen(id, options) {
         await input.focus();
         await appearance(input, 'placeholder', 'focus');
       }
-      const solidButtons = section.locator('button.text-white:enabled');
-      assert.ok(
-        await solidButtons.count(),
-        'No enabled solid button found for contrast regression; coverage cannot be skipped'
+      const primaryButtons = await section
+        .locator('button.text-white')
+        .evaluateAll(elements =>
+          elements.map(element => ({
+            label: element.textContent.trim(),
+            disabled: element.disabled,
+          }))
+        );
+      const primaryCoverage = primaryButtonCoverage(
+        primaryButtons,
+        options.restricted === true
       );
+      record.visualChecks.push({
+        stage,
+        kind: 'primary-button-contract',
+        ...primaryCoverage,
+        primaryButtons,
+      });
+      if (options.restricted)
+        assert.equal(
+          record.requests.filter(
+            request => !request.path.endsWith('/configuration')
+          ).length,
+          0,
+          'Restricted screen sent a non-configuration request'
+        );
+      const solidButtons = section.locator('button.text-white:enabled');
       for (const index of Array.from(
         { length: await solidButtons.count() },
         (value, position) => position
@@ -654,22 +694,28 @@ async function openScreen(id, options) {
     const prefix =
       stage === 'profile' ? 'placeholder-regression' : 'art-regression';
     const path = resolve(output, `${prefix}-${id}-${stage}.png`);
+    const capturedAt = new Date().toISOString();
     await page.screenshot({
       path,
       fullPage: true,
       animations: 'disabled',
       caret: 'hide',
     });
+    const toastsAfterCapture = await page.evaluate(readToastEvidence);
+    assertToastEvidence(toastsAfterCapture, record.expectedToast, viewport);
     const item = {
       case: id,
       stage,
       file: path.slice(output.length + 1),
       bytes: (await stat(path)).size,
+      capturedAt,
       viewport,
       theme,
       zoom: options.zoom || 1,
       capture: 'fullPage at actual viewport width',
       documentWidth: evidence.documentWidth,
+      toasts: evidence.toasts,
+      toastsAfterCapture,
     };
     assert.ok(item.bytes > 0, 'Empty screenshot');
     record.screenshots.push(item.file);
@@ -817,16 +863,28 @@ for (const theme of ['light', 'dark'])
 define(
   'account-feature-off-legacy',
   {
+    feature: 'off',
     state: {
-      configuration: json({ ...configuration, enabled: false }),
       legacy: true,
     },
   },
   async q => {
     await (await q.continueButton()).waitFor();
-    assert.equal(q.record.requests.length, 1);
-    assert.equal(q.count('/configuration'), 1);
+    assert.equal(q.record.requests.length, 0);
+    assert.equal(q.count('/configuration'), 0);
     assert.equal(await q.input.count(), 0);
+  }
+);
+define(
+  'account-feature-on-configuration-disabled-unavailable',
+  { state: { configuration: json({ ...configuration, enabled: false }) } },
+  async q => {
+    await q.visibleText('UNAVAILABLE');
+    assert.equal(q.count('/configuration'), 1);
+    assert.equal(q.record.requests.length, 1);
+    assert.equal(await q.input.count(), 0);
+    assert.equal(await (await q.continueButton()).count(), 0);
+    assert.equal(q.count('/authorization'), 0);
   }
 );
 define('keyboard-focus-labels', {}, async q => {
@@ -1104,22 +1162,224 @@ define(
     assert.equal(await (await q.button('INVITE')).count(), 0);
   }
 );
-define('meta-restriction-invite', { restricted: true }, async q => {
-  await q.search();
-  await q.select();
-  assert.ok(await (await q.button('INVITE')).isDisabled());
-  assert.equal(q.count('/invite'), 0);
-});
 define(
-  'meta-restriction-oauth',
-  { restricted: true, state: { status: 'accepted' } },
+  'meta-restriction-blocks-tester-network',
+  { restricted: true },
   async q => {
-    await q.search();
-    await q.select();
-    assert.ok(await (await q.continueButton()).isDisabled());
-    assert.equal(q.count('/authorization'), 0);
+    assert.equal(q.count('/configuration'), 1);
+    assert.ok(await (await q.button('SEARCH')).isDisabled());
+    await q.input.fill('@empresa_sintetica_qa910');
+    await q.input.press('Enter');
+    await q.settle();
+    assert.equal(
+      q.count('/search'),
+      0,
+      'Restricted form sent a forbidden search'
+    );
+    for (const endpoint of ['/status', '/invite', '/authorization'])
+      assert.equal(q.count(endpoint), 0);
+    await q.shot('restricted');
   }
 );
+for (const operation of ['search', 'status'])
+  define(
+    `proxy-unavailable-${operation}-recovery`,
+    {
+      state:
+        operation === 'search'
+          ? { search: errorResponse('proxy_unavailable') }
+          : { statusResponse: errorResponse('proxy_unavailable') },
+    },
+    async q => {
+      if (operation === 'search') {
+        await q.input.fill('@empresa_sintetica_qa910');
+        await q.input.press('Enter');
+        await q.settle();
+      } else {
+        await q.search();
+        await q.select();
+      }
+      await q.visibleText('UNAVAILABLE');
+      assert.equal(q.count('/invite'), 0);
+      assert.equal(q.count('/authorization'), 0);
+      await q.shot(`proxy-${operation}-unavailable`);
+      // Operational recovery is injected; this does not repair a real proxy.
+      q.state.search = undefined;
+      q.state.statusResponse = undefined;
+      if (operation === 'search') {
+        await q.search();
+        await q.select();
+        assert.equal(q.count('/search'), 2);
+        assert.equal(q.count('/status'), 1);
+      } else {
+        assert.equal(
+          await q.input.count(),
+          0,
+          'Status failure unexpectedly discarded selected profile'
+        );
+        await q.page
+          .getByText(`@${candidates[0].username}`, { exact: true })
+          .waitFor();
+        assert.equal(q.count('/search'), 1);
+        assert.equal(q.count('/status'), 1);
+        assert.ok(
+          await (await q.button('CHECK_INVITE')).isEnabled(),
+          'Selected profile has no status recovery CTA'
+        );
+        const retryRequest = q.page.waitForRequest(
+          request =>
+            new URL(request.url()).pathname ===
+              '/api/v1/accounts/910/instagram/testers/status' &&
+            request.method() === 'POST'
+        );
+        await q.click('CHECK_INVITE');
+        assert.deepEqual(
+          (await retryRequest).postDataJSON(),
+          { selection_token: candidates[0].selection_token },
+          'Status recovery changed the selected-profile body'
+        );
+        assert.equal(
+          q.count('/search'),
+          1,
+          'Status retry searched instead of retaining selection'
+        );
+        assert.equal(q.count('/status'), 2);
+      }
+      await q.visibleText('ABSENT_TITLE');
+      assert.equal(
+        await q.page.getByRole('alert').count(),
+        0,
+        'Successful recovery retained an error'
+      );
+      assert.ok(await (await q.button('INVITE')).isEnabled());
+      assert.equal(q.count('/invite'), 0);
+      assert.equal(q.count('/authorization'), 0);
+      const failed = q.record.requests.filter(
+        item =>
+          item.path.endsWith(`/${operation}`) && item.responseStatus === 503
+      );
+      const recovered = q.record.requests.filter(
+        item =>
+          item.path.endsWith(`/${operation}`) && item.responseStatus === 200
+      );
+      assert.equal(failed.length, 1);
+      assert.equal(recovered.length, 1);
+      assert.ok(
+        [...failed, ...recovered].every(item => item.contractValidated)
+      );
+      return {
+        recovery: 'synthetic backend response restored',
+        failedContracts: q.record.requests.filter(
+          item => item.responseStatus === 503
+        ).length,
+      };
+    }
+  );
+define(
+  'legacy-oauth-failure-clears-loading',
+  {
+    feature: 'off',
+    state: {
+      legacy: true,
+      authorization: errorResponse('synthetic_authorization_failed', 503),
+    },
+  },
+  async q => {
+    const target = await q.continueButton();
+    const message = await q.page.evaluate(() =>
+      window.instagramQa.t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_AUTH')
+    );
+    assert.ok(message && message !== 'INBOX_MGMT.ADD.INSTAGRAM.ERROR_AUTH');
+    const toast = q.page
+      .locator('[data-instagram-qa-toasts]')
+      .getByText(message, { exact: true });
+    q.record.toastRecovery = [];
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      q.state.oauthGate = deferred();
+      q.state.authorizationTimeout = attempt === 1;
+      const isAuthorization = request =>
+        new URL(request.url()).pathname ===
+          '/api/v1/accounts/910/instagram/authorization' &&
+        request.method() === 'POST';
+      const requested = q.page.waitForRequest(isAuthorization);
+      const failed =
+        attempt === 1
+          ? q.page.waitForEvent('requestfailed', { predicate: isAuthorization })
+          : q.page.waitForResponse(
+              response =>
+                isAuthorization(response.request()) && response.status() === 503
+            );
+      q.record.expectedToast = message;
+      await target.click();
+      const request = await requested;
+      assert.equal(request.postData(), null, 'Legacy OAuth must send no body');
+      assert.equal(
+        await target.isDisabled(),
+        true,
+        'Legacy OAuth loading never started'
+      );
+      q.state.oauthGate.resolve();
+      const failure = await failed;
+      if (attempt === 1)
+        assert.equal(failure.failure().errorText, 'net::ERR_TIMED_OUT');
+      await toast.waitFor({ state: 'visible' });
+      await until(
+        () => target.isEnabled(),
+        'Legacy OAuth loading did not clear'
+      );
+      assert.equal(q.count('/authorization'), attempt);
+      assert.ok(q.record.requests.every(item => item.contractValidated));
+      const health = await q.health();
+      q.record.toastRecovery.push({
+        attempt,
+        failure:
+          attempt === 1 ? 'synthetic transport timedout' : 'synthetic HTTP 503',
+        checkedAt: new Date().toISOString(),
+        loadingCleared: true,
+        requests: q.count('/authorization'),
+        toasts: health.toasts,
+      });
+      if (attempt === 1) {
+        await toast.waitFor({ state: 'hidden' });
+        q.record.expectedToast = '';
+        await q.health();
+      }
+    }
+    assert.equal(q.count('/configuration'), 0);
+    assert.equal(q.count('/authorization'), 2);
+    assert.equal(
+      q.blocked.length,
+      0,
+      'Failed legacy OAuth must not navigate externally'
+    );
+    await q.shot('legacy-recovery');
+    return {
+      attempts: 2,
+      failures: ['synthetic transport timedout', 'synthetic HTTP 503'],
+      realToast: true,
+    };
+  }
+);
+for (const feature of ['on', 'off'])
+  define(
+    `oauth-plan-limit-${feature}`,
+    {
+      feature,
+      query: {
+        error_type: 'LimitExceeded',
+        code: '402',
+        error_message: 'QA_UPSTREAM_PRIVATE_MARKER_910',
+      },
+    },
+    async q => {
+      const copy = await q.page.evaluate(() =>
+        window.instagramQa.t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_INBOX_LIMIT')
+      );
+      await q.page.getByText(copy, { exact: true }).first().waitFor();
+      assert.equal(q.count('/authorization'), 0);
+      await q.shot('plan-limit');
+    }
+  );
 define(
   'english-smoke',
   {
@@ -1164,6 +1424,7 @@ try {
   build = await startServer();
   server = build.server;
   results.styles = { dashboard: build.css, utilities: build.utilities };
+  results.styleHashesBefore = await styleFingerprints(root, build);
   browser = await chromium.launch({
     headless: true,
     ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
@@ -1193,6 +1454,22 @@ try {
       await q?.close();
     }
   }
+  results.dependencyMap = await dependencyMap(
+    root,
+    server,
+    results.sourceHashesBefore,
+    build.physicalRoots
+  );
+  results.stylesConsumedHashes = consumedStyleFingerprints(
+    results.screens,
+    build
+  );
+  results.styleHashesAfter = await styleFingerprints(root, build);
+  assert.deepEqual(
+    results.styleHashesAfter,
+    results.styleHashesBefore,
+    'CSS changed during capture'
+  );
   results.sourceHashesAfter = await fingerprints();
   assert.deepEqual(
     results.sourceHashesAfter,

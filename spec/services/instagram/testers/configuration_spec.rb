@@ -1,18 +1,22 @@
 require 'rails_helper'
 
 RSpec.describe Instagram::Testers::Configuration do
-  subject(:configuration) { described_class.new(account_id: 16) }
+  subject(:configuration) { described_class.new(account_id: account.id) }
+
+  let(:account) { create(:account) }
 
   let(:session) do
     { cookie: 'synthetic=fixture', fb_dtsg: 'synthetic-dtsg', lsd: 'synthetic-lsd', jazoest: '1234',
       user_id: '12345', user_agent: 'Synthetic Test Client', extra_form: { __req: '1' } }
   end
   let(:settings) do
-    { 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => '16, 17',
+    { 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
       'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',
       'INSTAGRAM_TESTER_ROLES_DOC_ID' => '10003', 'INSTAGRAM_TESTER_APP_NAME' => 'Synthetic app',
       'INSTAGRAM_TESTER_SESSION_JSON' => session.to_json }
   end
+
+  before { account.enable_features!(:channel_instagram, :instagram_assisted_onboarding) }
 
   around { |example| with_modified_env(settings) { example.run } }
 
@@ -20,27 +24,61 @@ RSpec.describe Instagram::Testers::Configuration do
     expect(configuration.public_configuration).to eq(enabled: true, available: true, app_name: 'Synthetic app',
                                                      acceptance_url: described_class::ACCEPTANCE_URL)
     with_modified_env('INSTAGRAM_TESTER_ROLES_DOC_ID' => '') do
-      expect(configuration.available?).to be false
+      expect(described_class.new(account_id: account.id).available?).to be false
+      expect(configuration.available?).to be true
+      expect(configuration.doc_id).to eq('10003')
     end
   end
 
-  it 'defaults off without an allowlist or with a malformed allowlist' do
-    ['', '16,', '16,all'].each do |value|
+  it 'allows an empty legacy allowlist while requiring the account feature and global switch' do
+    with_modified_env('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => '') { expect(configuration.enabled?).to be true }
+    with_modified_env('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => nil) { expect(configuration.enabled?).to be true }
+    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => nil) { expect(configuration.enabled?).to be false }
+    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'yes') { expect(configuration.enabled?).to be false }
+    account.disable_features!(:instagram_assisted_onboarding)
+    expect(configuration.enabled?).to be false
+  end
+
+  it 'keeps a present allowlist as an additional restriction and fails closed when malformed' do
+    ["#{account.id},", "#{account.id},all", (account.id + 1).to_s].each do |value|
       with_modified_env('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => value) { expect(configuration.enabled?).to be false }
     end
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => nil) { expect(configuration.enabled?).to be false }
+    with_modified_env('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => " #{account.id}, #{account.id + 1} ") do
+      expect(configuration.enabled?).to be true
+    end
   end
 
-  it 'requires explicit true and an allowed account' do
-    with_modified_env('INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'yes') { expect(configuration.enabled?).to be false }
-    expect(described_class.new(account_id: 18).enabled?).to be false
+  it 'keeps the Instagram channel entitlement required even with assisted onboarding ON' do
+    account.disable_features!('channel_instagram')
+    expect(Instagram::Testers::SessionStore).not_to receive(:new)
+    expect(configuration.public_configuration).to eq(enabled: false, available: false, app_name: nil,
+                                                     acceptance_url: described_class::ACCEPTANCE_URL)
+  end
+
+  it 'does not read tester infrastructure when the account feature is off' do
+    account.disable_features!(:instagram_assisted_onboarding)
+    expect(Instagram::Testers::SessionStore).not_to receive(:new)
+    expect(Instagram::Testers::Proxy).not_to receive(:new)
+    expect(configuration.public_configuration).to eq(enabled: false, available: false, app_name: nil,
+                                                     acceptance_url: described_class::ACCEPTANCE_URL)
+  end
+
+  it 'isolates toggles and preserves explicit OFF after reload' do
+    other = create(:account)
+    other.enable_features!(:channel_instagram, :instagram_assisted_onboarding)
+    account.disable_features!(:instagram_assisted_onboarding)
+    with_modified_env('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => '') do
+      expect(configuration.enabled?).to be false
+      expect(described_class.new(account_id: other.id).enabled?).to be true
+      expect(account.reload.feature_enabled?('instagram_assisted_onboarding')).to be false
+    end
   end
 
   it 'rejects arbitrary session and instrumentation fields' do
     [session.merge(endpoint: 'https://example.com'), session.merge(extra_form: { role: 'admin' }), session.except(:lsd),
      session.merge(cookie: "synthetic\nheader")].each do |value|
       with_modified_env('INSTAGRAM_TESTER_SESSION_JSON' => value.to_json) do
-        expect(described_class.new(account_id: 16).available?).to be false
+        expect(described_class.new(account_id: account.id).available?).to be false
       end
     end
   end

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MINIMUM_TEXT_CONTRAST,
+  primaryButtonCoverage,
   parseComputedColor,
   compositeColor,
   brightnessColor,
@@ -10,6 +11,28 @@ import {
 } from './visual-helpers.mjs';
 
 const white = parseComputedColor('rgb(255, 255, 255)');
+
+test('restricted primary action contract requires disabled CTAs while normal states retain enabled contrast coverage', () => {
+  assert.deepEqual(primaryButtonCoverage([{ disabled: true }], true), {
+    restricted: true,
+    primaryCount: 1,
+    enabledContrastTargets: 0,
+    disabledCount: 1,
+  });
+  assert.equal(
+    primaryButtonCoverage([{ disabled: true }, { disabled: false }], false)
+      .enabledContrastTargets,
+    1
+  );
+  assert.throws(() => primaryButtonCoverage([{ disabled: false }], true), {
+    message: 'Restricted screen has an enabled primary action',
+  });
+  assert.throws(() => primaryButtonCoverage([{ disabled: true }], false), {
+    message:
+      'No enabled solid button found for contrast regression; coverage cannot be skipped',
+  });
+  assert.throws(() => primaryButtonCoverage([], true));
+});
 
 test('sRGB fixtures preserve canonical contrast and alpha composition', () => {
   assert.equal(contrastRatio(white, parseComputedColor('rgb(0 0 0)')), 21);

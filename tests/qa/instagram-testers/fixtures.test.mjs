@@ -93,6 +93,73 @@ test('legacy authorization sends no selection', async () => {
   );
 });
 
+test('reauthorization requires the existing integer inbox and inbox return destination', async () => {
+  const state = { reauthorize: true };
+  const payload = { inbox_id: 9101, return_to: 'inbox' };
+  assert.equal(
+    (await responseFor(url('/authorization'), 'POST', payload, state)).status,
+    200
+  );
+  await Promise.all(
+    [
+      null,
+      { ...payload, inbox_id: 9102 },
+      { ...payload, inbox_id: '9101' },
+      { ...payload, return_to: 'new' },
+      { ...payload, tester_selection_token: candidates[0].selection_token },
+    ].map(body =>
+      assert.rejects(responseFor(url('/authorization'), 'POST', body, state))
+    )
+  );
+});
+
+test('Meta restriction preserves configuration but denies every tester action before selection validation', async () => {
+  const state = { restricted: true };
+  assert.deepEqual(
+    JSON.parse(
+      (await responseFor(url('/testers/configuration'), 'GET', null, state))
+        .body
+    ),
+    configuration
+  );
+  await Promise.all(
+    [
+      ['/testers/search', 'GET'],
+      ['/testers/status', 'POST'],
+      ['/testers/invite', 'POST'],
+    ].map(async ([endpoint, method]) => {
+      const response = await responseFor(url(endpoint), method, null, state);
+      assert.equal(response.status, 403);
+      assert.deepEqual(JSON.parse(response.body), { error_code: 'forbidden' });
+    })
+  );
+});
+
+test('authorization failure fixture keeps the production POST/body contract', async () => {
+  const failure = json({ error_code: 'synthetic_authorization_failed' }, 503);
+  assert.deepEqual(
+    await responseFor(url('/authorization'), 'POST', null, {
+      legacy: true,
+      authorization: failure,
+    }),
+    failure
+  );
+  await assert.rejects(
+    responseFor(url('/authorization'), 'GET', null, {
+      legacy: true,
+      authorization: failure,
+    })
+  );
+  await assert.rejects(
+    responseFor(
+      url('/authorization'),
+      'POST',
+      { selection_token: candidates[0].selection_token },
+      { authorization: failure }
+    )
+  );
+});
+
 test('search gate keeps original response for genuine stale-response QA', async () => {
   const gate = deferred();
   const state = { searchGate: gate };

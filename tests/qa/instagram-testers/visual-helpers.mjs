@@ -1,5 +1,27 @@
 export const MINIMUM_TEXT_CONTRAST = 4.5;
 
+export function primaryButtonCoverage(buttons, restricted) {
+  if (!buttons.length)
+    throw new Error(
+      'No primary solid button found; action contract cannot be checked'
+    );
+  const enabledContrastTargets = buttons.filter(
+    button => !button.disabled
+  ).length;
+  if (restricted && enabledContrastTargets)
+    throw new Error('Restricted screen has an enabled primary action');
+  if (!restricted && !enabledContrastTargets)
+    throw new Error(
+      'No enabled solid button found for contrast regression; coverage cannot be skipped'
+    );
+  return {
+    restricted,
+    primaryCount: buttons.length,
+    enabledContrastTargets,
+    disabledCount: buttons.length - enabledContrastTargets,
+  };
+}
+
 function numericChannel(value, maximum) {
   const percentage = value.endsWith('%');
   const number = Number(percentage ? value.slice(0, -1) : value);

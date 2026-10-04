@@ -7,11 +7,12 @@ class Instagram::Testers::Error < StandardError
     'session_update_rejected' => 422, 'operator_required' => 503
   }.freeze
 
-  attr_reader :code, :http_status
+  attr_reader :code, :http_status, :write_rejected
 
-  def initialize(code)
+  def initialize(code, write_rejected: false)
     @code = code
     @http_status = STATUSES.fetch(code)
+    @write_rejected = write_rejected
     super(code)
   end
 end

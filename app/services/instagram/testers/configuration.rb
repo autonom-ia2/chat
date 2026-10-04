@@ -13,8 +13,13 @@ class Instagram::Testers::Configuration
   end
 
   def enabled?
-    ids = ENV.fetch('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS', '').split(',', -1).map(&:strip)
-    self.class.globally_enabled? && ids.all? { |id| Instagram::Testers::Validation.id?(id) } && ids.include?(@account_id)
+    return false unless self.class.globally_enabled? && account_enabled?
+
+    allowlist = ENV.fetch('INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS', '')
+    return true if allowlist.empty?
+
+    ids = allowlist.split(',', -1).map(&:strip)
+    ids.all? { |id| Instagram::Testers::Validation.id?(id) } && ids.include?(@account_id)
   end
 
   def available?
@@ -41,26 +46,26 @@ class Instagram::Testers::Configuration
   end
 
   def app_id
-    ENV.fetch('INSTAGRAM_META_DEVELOPER_APP_ID', '')
+    metadata_values.fetch('INSTAGRAM_META_DEVELOPER_APP_ID')
   end
 
   def business_id
-    ENV.fetch('INSTAGRAM_META_BUSINESS_ID', '')
+    metadata_values.fetch('INSTAGRAM_META_BUSINESS_ID')
   end
 
   def doc_id
-    ENV.fetch('INSTAGRAM_TESTER_ROLES_DOC_ID', '')
+    metadata_values.fetch('INSTAGRAM_TESTER_ROLES_DOC_ID')
   end
 
   # The managed browser profile is pinned to one operator identity. The value
   # is deliberately configuration-only; it is never inferred from a session
   # received from the browser.
   def admin_user_id
-    ENV.fetch('INSTAGRAM_TESTER_ADMIN_USER_ID', '')
+    metadata_values.fetch('INSTAGRAM_TESTER_ADMIN_USER_ID')
   end
 
   def app_name
-    ENV.fetch('INSTAGRAM_TESTER_APP_NAME', '')
+    metadata_values.fetch('INSTAGRAM_TESTER_APP_NAME')
   end
 
   def session_snapshot
@@ -96,6 +101,15 @@ class Instagram::Testers::Configuration
   end
 
   private
+
+  def account_enabled?
+    account = Account.find(@account_id)
+    account.feature_enabled?('channel_instagram') && account.feature_enabled?('instagram_assisted_onboarding')
+  end
+
+  def metadata_values
+    @metadata_values ||= Instagram::Automation::Metadata.new.values
+  end
 
   def managed_session_snapshot
     store = Instagram::Testers::SessionStore.new(configuration: self)

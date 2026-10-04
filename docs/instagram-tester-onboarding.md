@@ -2,12 +2,51 @@
 
 Este fluxo ajuda a escolher um perfil, preparar seu convite de testador e verificar o aceite
 antes de continuar pelo Instagram Login existente. Começa **desligado globalmente** e exige
-também uma lista explícita de contas permitidas. A documentação descreve o código atual;
+também uma lista explícita de contas permitidas. OFF é o padrão do código, não uma
+constatação da configuração atual. A documentação descreve a implementação local;
 não declara a funcionalidade homologada em produção.
+
+**Recuperação #931, 03/10/2026:** PR #913 mergeado/publicado é histórico.
+O resultado local das correções está consolidado abaixo; publicação/CI/aprovação devem ser consultados na PR do commit.
+Operação autenticada por stack continua pendente. Configuração, sessão e alarmes atuais são desconhecidos.
+Ver [matriz de recuperação](audit/instagram-931-recovery.md) para resultados e limites.
 
 Operação por stack: [runbook](runbooks/instagram-tester-onboarding.md).
 Entrega de segredos: [production-env-secrets.md](production-env-secrets.md).
 Publicação: [production-deploy-gates.md](production-deploy-gates.md).
+
+## Resultado local consolidado #931 — 03/10/2026, 23:01 BRT
+
+Baterias encerradas, separadas e sem soma de cobertura: backend **443/0** sem
+`FRONTEND_URL` global; fixture OAuth focal **30/0**; frontend **129/0**; runtime
+**72/0**; helpers QA **23/0**, incluindo toast; DEPLOY offline **19/0**;
+preparer **25/OK**; regressão Guia **40/0**. Autoload/build aprovados;
+i18n **17.222 mensagens/10 catálogos** (não testes); Ruby **25 arquivos/zero infrações**;
+JS **zero erros/22 warnings conhecidos**.
+
+Renders finais de 04/10/2026 UTC (03/10 BRT): componente **37/37, 73 capturas**,
+fim **01:55:02,520Z**; wizard **72/72, 76 capturas**, fim **01:57:21,093Z**.
+Ambos têm **6.658 hashes iguais antes/depois e ao disco**. Review de arte final
+aprova seu escopo e fecha copy/toast após inspecionar 12 capturas atuais.
+São componentes reais com API simulada; não comprovam Rails/Meta fim a fim.
+
+Os **12 achados estão fechados no código/evidência local**, incluindo P1 BOOT e
+userinfo Sentry, sem novo bloqueio nesses reviews. Os 14 especialistas, logs locais
+de scratch, manifestos, limites e etapas históricas datadas estão na
+[auditoria central](audit/instagram-931-recovery.md); não repetir nem somar rodadas anteriores.
+
+**Publicação, head, CI, Project, revisão final dos docs e aprovação devem ser
+consultados na PR do commit correspondente.** Evidência local não autoriza produção.
+Configuração/allowlist/sessão/supervisor/alarmes atuais não foram inspecionados;
+operação autenticada por stack continua pendente.
+
+**Gate operacional humano ainda não executado:** pausar publishers, drenar código
+antigo e rotacionar tombstones legados pelo contrato verificado do store novo ou
+aguardar expiração efetiva antes de retomar; descartar capturas em trânsito e
+recapturar com nova revisão. Reiniciar states/seleções OAuth antigos e coordenar
+cutover de emissores/callbacks. Preservar canais, tokens persistidos, conversas e papéis.
+Preparar responsáveis, janela, revisão alvo, evidências e rollback por stack com
+aprovação operacional. Não pedir script Redis novo sem contrato verificado.
 
 ## O que muda para quem conecta
 
@@ -58,6 +97,10 @@ O backend também reconcilia o estado antes de enviar; `PENDING` e `CONFIRMED` e
 Um resultado incerto permanece protegido em Redis por até 24 horas. Consultar `absent`
 durante esse período não autoriza reenvio cego. O TTL limita a proteção; não prova falha de envio.
 Leitura real de `pending`/`accepted` limpa o marcador da mesma tentativa com controle de concorrência.
+Na correção #931, falha comprovada antes do início do transporte libera somente o
+claim da própria tentativa. Após início, timeout/cancelamento/erro HTTP conserva a
+proteção; código público sozinho não permite limpá-la. Rejeição booleana explícita
+validada preserva o retry deliberado existente. Nenhum erro autoriza retry automático.
 
 Trocar perfil limpa seleção e status, preserva o termo e cancela consultas antigas.
 Durante envio, a troca fica bloqueada. Editar a busca descarta resultados anteriores;
@@ -69,7 +112,12 @@ Flag global desligada mantém a tela antiga sem chamadas aos novos endpoints.
 Com a global ligada, conta fora da lista recebe `enabled=false` e usa a tela antiga.
 Conta habilitada com configuração/sessão indisponível recebe orientação própria, suporte
 e **Tentar novamente**; a interface não libera um atalho silencioso para OAuth.
-A restrição existente `DISABLE_META_INBOX_CREATION` continua bloqueando envio e autorização.
+A restrição existente `DISABLE_META_INBOX_CREATION` bloqueia busca/status/convite e
+autorização; configuração pública continua consultável. Na correção #931 a interface
+acompanha esse gate e impede ações que o backend rejeitaria. Indisponibilidade orienta
+restabelecer a integração com suporte; preparar convite não resolve sessão/configuração.
+Limite de caixas do plano recebe orientação própria por code 402/tipo estático conhecido,
+sem exibir descrição bruta. Falha OAuth libera o loading para tentativa deliberada.
 O caminho existente de reautorização permanece sem seleção de testador obrigatória.
 
 ## Identificadores: não são intercambiáveis
@@ -102,13 +150,25 @@ Busca aceita 1–30 caracteres ASCII: letras, números, ponto e sublinhado. A fr
 remove espaços externos, um `@` inicial e normaliza para minúsculas. IDs são strings
 numéricas ASCII de 1–40 caracteres. O cliente não pode enviar um ID arbitrário para convidar.
 
-A seleção assinada dura **2 horas** e vincula conta, operador, App pai, ID e username
-retornados pela busca. O `POST /instagram/authorization` aceita opcionalmente
-`tester_selection_token`; com ele, valida a seleção e reconsulta o aceite antes do OAuth.
-Sem esse campo, preserva o contrato legado, inclusive reautorização.
-O state do novo fluxo dura **15 minutos**, tem proteção contra reutilização e carrega a seleção.
-No callback, o username retornado pelo OAuth deve ser igual ao selecionado, antes de gravar
-canal ou token. Perfil diferente/seleção inválida exige recomeçar; não se conectam perfis por aproximação.
+A seleção assinada dura **2 horas** e, na implementação #931, mantém conta, operador,
+App pai, instalação, ID e username retornados pela busca até o callback.
+O `POST /instagram/authorization` aceita opcionalmente `tester_selection_token`;
+com ele, valida a seleção e reconsulta o aceite antes do OAuth. Sem o campo, mantém
+API/reautorização sem seleção obrigatória ou configuração testers obrigatória.
+
+Todos os states recém-emitidos, inclusive sem seleção e na reautorização, usam versão 2,
+ator, conta, `iat`/`exp` de até **15 minutos** e nonce de uso único. A identidade da
+instalação é digest da base de callback normalizada de `FRONTEND_URL` configurada,
+sem Host do request ou fallback; difere do namespace Redis da sessão administrativa.
+O callback revalida associação e permissão de criar caixa antes da troca e novamente
+antes de gravar, incluindo papéis Enterprise. No assistido, também confere escopo/App
+pai e username OAuth igual ao selecionado. IDs de papéis e OAuth não são intercambiáveis.
+
+**States e seleções anteriores em trânsito são recusados após rollout.** Reiniciar OAuth
+no legado/reautorização e busca/seleção no assistido; não manter bypass para formato
+antigo. Mudança da base de callback também invalida artefatos anteriores. Caixas/tokens
+persistidos não são migrados por essa mudança. Rollout/rollback e tombstones legados
+exigem preparo próprio no [runbook](runbooks/instagram-tester-onboarding.md).
 O limite é **30 operações por minuto por conta/operador**; o lock de convite por App/alvo dura **90 segundos**.
 
 ### Erros retornados pelos endpoints de testador
@@ -118,7 +178,8 @@ O limite é **30 operações por minuto por conta/operador**; o lock de convite 
 | `invalid_username` | 422 | Corrigir o usuário |
 | `invalid_selection` | 422 | Buscar e selecionar novamente; inclui escopo/expiração inválidos |
 | `meta_unavailable` | 503 | Configuração, transporte ou serviço indisponível; suporte/verificação |
-| `meta_session_expired` | 503 | HTTP 401 observado; operador verifica sessão, sem pedir segredo ao cliente |
+| `proxy_unavailable` | 503 | Transporte administrativo indisponível; suporte restabelece integração |
+| `meta_session_expired` | 503 | HTTP 401/403; operador verifica sessão/permissão, sem pedir segredo ao cliente; 403 não prova expiração |
 | `unknown_status` | 502 | Resposta de papéis incompleta, contraditória ou inválida; consultar novamente |
 | `invite_rejected` | 422 | Meta retornou `payload.success=false`; verificar antes de tentar |
 | `invite_unknown` | 503 | Envio incerto ou proteção de resultado; reconciliar, sem retry automático |
@@ -156,27 +217,38 @@ Esquema incompleto, paginação aberta, estado desconhecido ou timeout **não s�
 
 Os nomes exatos, schema privado e preparo offline estão no [runbook](runbooks/instagram-tester-onboarding.md).
 `available=true` significa configuração estruturalmente válida, não sessão autenticada hoje.
-O JSON completo da sessão chega por ENV via entrega existente de segredos; não ganha
-criptografia automática em runtime por ser ENV. O SSM existente fornece proteção em repouso.
-Não há migration de banco, infraestrutura ou dependência nova para este recurso.
+Produção exige fonte `managed`: payload administrativo cifrado no Redis local e revisão
+opaca `string | null`, publicada pelo gestor separado. `INSTAGRAM_TESTER_SESSION_JSON`
+permanece para preparação/teste sintético; não é fallback de produção. O overlay backend
+não aceita sessão JSON nem credenciais do gestor/proxy. OAuthApp/secret existentes
+continuam na entrega de segredos; não publicar seus valores.
+
+Na correção #931, invalidar avança a revisão e impede publicação com revisão anterior,
+independentemente do relógio. Recuperação exige recaptura com a revisão nova; sessões
+ativas continuam legíveis, mas tombstones antigos exigem preparo no rollout. Schema,
+cifra, namespace e TTL permanecem, sem migration de banco. Isso descreve contrato de
+código, não sessão válida ou publisher instalado atualmente.
 
 | Evidência | O que sustenta | O que não sustenta |
 |---|---|---|
 | Screenshots/POC do usuário | Três formatos de endpoint e respostas observados | Aceite atual do produto ou integração por stack |
 | Specs/fixtures sintéticas | Contrato, controles e regressões exercitados localmente | Autenticação/funcionamento da Meta real |
-| Navegador com componente real e API simulada | Estados, texto e interação do componente | Wizard completo, Rails E2E ou OAuth/DM real |
+| Navegador com componentes/wizard reais e API simulada | Estados, texto e interação em cenários separados | Rails E2E ou OAuth/DM real |
 | Integração real por stack | **NÃO EXECUTADA** | Nenhuma aprovação de produção inferida |
 
-Os relatórios concluídos registram testes backend/frontend e correções após revisão.
-A revisão visual encontrou ajustes, que foram corrigidos e aprovados em nova inspeção independente. Código alterado exige capturas/revisão atualizadas.
-O coordenador mantém a auditoria de aceite, comandos, resultados e pendências.
+Os relatórios #910/#913 registram testes backend/frontend e revisão visual histórica.
+A aprovação visual daqueles ajustes permanece histórica. As fontes finais #931 têm
+renders e review de arte encerrados no fechamento de 03/10/2026, 23:01 BRT, conforme
+[matriz #931](audit/instagram-931-recovery.md), separados da homologação autenticada.
+O coordenador mantém logs completos, fontes/CSS consumidos e critérios de aceite.
 Pedido mínimo autenticado, novo adaptador ao vivo, aceite/OAuth/webhook/DM real em cada
 stack seguem **NÃO EXECUTADOS**. O probe anterior foi bloqueado pela ferramenta;
 não repetir nem delegar a chamada bloqueada. cURL do POC local é evidência, não implementação de produção.
 
 ## Capturas da implementação
 
-Dados sintéticos; componente real com API simulada, sem representar produção.
+Capturas históricas #910: dados sintéticos; componente real com API simulada, sem
+representar produção nem aceite visual das alterações #931.
 
 [Desktop pendente](assets/instagram-testers-910/desktop-pendente.png) · [Tema escuro](assets/instagram-testers-910/desktop-escuro-pendente.png) · [Mobile](assets/instagram-testers-910/mobile-pendente.png) · [Convite aceito](assets/instagram-testers-910/desktop-aceito.png).
 

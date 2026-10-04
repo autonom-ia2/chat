@@ -1,13 +1,13 @@
 /* eslint-disable no-await-in-loop, no-restricted-syntax -- The SSM session and its health checks are intentionally sequential. */
 
 import { spawn } from 'node:child_process';
+import { parseEnvelope, validateRequest } from './operator-protocol.mjs';
 import { createServer, createConnection } from 'node:net';
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const INSTANCE_ID = /^i-[0-9a-f]{8,17}$/;
 const PRIVATE_PATH = /^(\/[^\0\r\n]+)$/;
 const PUBLIC_KEY_TYPE =
@@ -137,26 +137,9 @@ export function publisherSshArguments(config, localPort, knownHostsPath) {
   ];
 }
 
-export function parsePublisherOutput(output) {
-  requireSafe(typeof output === 'string');
-  requireSafe(Buffer.byteLength(output) <= MAX_OUTPUT_BYTES);
-  const trimmed = output.trim();
-  requireSafe(trimmed.startsWith('{') && trimmed.endsWith('}'));
-  let result;
-  try {
-    result = JSON.parse(trimmed);
-  } catch {
-    throw staticFailure();
-  }
-  requireSafe(result && typeof result === 'object' && !Array.isArray(result));
-  requireSafe(
-    Object.keys(result).length === 1 && Object.hasOwn(result, 'version')
-  );
-  requireSafe(
-    result.version === null ||
-      (typeof result.version === 'string' && UUID.test(result.version))
-  );
-  return result.version;
+export function parsePublisherOutput(output, type) {
+  const result = parseEnvelope(output, type);
+  return result.type === 'session' ? result.version : result;
 }
 
 export function knownHostsLine(publicKey, localPort) {
@@ -184,7 +167,8 @@ export function commandRunner(
       args.every(value => typeof value === 'string' && !/[\0\r\n]/.test(value))
   );
   return new Promise((resolve, reject) => {
-    let output = '';
+    const chunks = [];
+    let outputBytes = 0;
     let settled = false;
     let timer;
     let onAbort;
@@ -214,16 +198,20 @@ export function commandRunner(
       finish(staticFailure());
     }, timeoutMs);
     child.stdout?.on('data', chunk => {
-      output += chunk;
-      if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES * 4) {
+      if (settled) return;
+      const buffer = Buffer.from(chunk);
+      outputBytes += buffer.length;
+      if (outputBytes > MAX_OUTPUT_BYTES * 4) {
         child.kill();
         finish(staticFailure());
+        return;
       }
+      chunks.push(buffer);
     });
     child.once('error', () => finish(staticFailure()));
-    child.once('exit', code => {
+    child.once('close', code => {
       if (code !== 0) finish(staticFailure());
-      else finish(null, output);
+      else finish(null, Buffer.concat(chunks, outputBytes).toString('utf8'));
     });
     child.stdin?.end(input);
   });
@@ -315,7 +303,7 @@ export async function hostKeyViaSsm(
         commandId,
         '--details',
         '--query',
-        'Invocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
+        'CommandInvocations[0].{Status:Status,Output:CommandPlugins[0].Output}',
         '--output',
         'json',
       ])
@@ -402,15 +390,12 @@ function abortable(promise, signal) {
       else resolve(value);
     };
     onAbort = () => finish(staticFailure());
-    if (signal.aborted) {
-      onAbort();
-      return;
-    }
     signal.addEventListener('abort', onAbort, { once: true });
     Promise.resolve(promise).then(
       value => finish(null, value),
       error => finish(error)
     );
+    if (signal.aborted) onAbort();
   });
 }
 
@@ -427,11 +412,13 @@ export async function runPublisher(
     freePortFn = freePort,
     waitForPortFn = waitForPort,
     hostKeyFn = hostKeyViaSsm,
+    signals = process,
+    clock = globalThis,
+    stopProcessFn = stopProcess,
+    files = { mkdtemp, writeFile, chmod, rm },
   } = {}
 ) {
-  requireSafe(
-    payload && typeof payload === 'object' && !Array.isArray(payload)
-  );
+  validateRequest(payload);
   requireSafe(Number.isInteger(budgetMs) && budgetMs > 0 && budgetMs < 30000);
   const config = runtimeConfig(stack, env);
   const deadline = now() + budgetMs;
@@ -440,11 +427,12 @@ export async function runPublisher(
   let activeSsh;
   const stopChildren = () => {
     controller.abort();
-    stopProcess(activeSsh);
-    stopProcess(activeTunnel, true);
+    stopProcessFn(activeSsh);
+    stopProcessFn(activeTunnel, true);
   };
   const onSignal = () => stopChildren();
   const remaining = () => {
+    if (controller.signal.aborted) throw staticFailure();
     const value = deadline - now();
     if (value <= 0) {
       stopChildren();
@@ -452,9 +440,9 @@ export async function runPublisher(
     }
     return value;
   };
-  const budgetTimer = setTimeout(stopChildren, budgetMs);
-  process.once('SIGTERM', onSignal);
-  process.once('SIGINT', onSignal);
+  const budgetTimer = clock.setTimeout(stopChildren, budgetMs);
+  signals.once('SIGTERM', onSignal);
+  signals.once('SIGINT', onSignal);
   try {
     await abortable(
       verifyAwsAccount(config, {
@@ -482,7 +470,8 @@ export async function runPublisher(
     activeTunnel = spawnImpl('aws', startSessionArguments(targetConfig, port), {
       shell: false,
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      // Keep stdin alive until cleanup; EOF can close the forwarder.
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     activeTunnel.once('error', () => {});
     activeTunnel.stdout?.resume();
@@ -508,24 +497,26 @@ export async function runPublisher(
       controller.signal
     );
     const scratch = await abortable(
-      mkdtemp(join(tmpdir(), 'instagram-publisher-')),
+      files.mkdtemp(join(tmpdir(), 'instagram-publisher-')),
       controller.signal
     );
     const knownHostsPath = join(scratch, 'known_hosts');
     try {
       await abortable(
-        writeFile(knownHostsPath, knownHostsLine(rawKey, port), {
+        files.writeFile(knownHostsPath, knownHostsLine(rawKey, port), {
           mode: 0o600,
         }),
         controller.signal
       );
-      await abortable(chmod(knownHostsPath, 0o600), controller.signal);
+      await abortable(files.chmod(knownHostsPath, 0o600), controller.signal);
       return await abortable(
         new Promise((resolve, reject) => {
-          let output = '';
+          const chunks = [];
+          let outputBytes = 0;
           let settled = false;
           let timer;
           let onStdinError;
+          remaining();
           const child = spawnImpl(
             'ssh',
             publisherSshArguments(targetConfig, port, knownHostsPath),
@@ -539,7 +530,7 @@ export async function runPublisher(
           const finish = (error, value) => {
             if (settled) return;
             settled = true;
-            clearTimeout(timer);
+            clock.clearTimeout(timer);
             if (onAbort)
               controller.signal.removeEventListener('abort', onAbort);
             child.stdin?.removeListener('error', onStdinError);
@@ -548,32 +539,44 @@ export async function runPublisher(
             else resolve(value);
           };
           onStdinError = () => {
-            stopProcess(child);
+            stopProcessFn(child);
             finish(staticFailure());
           };
           onAbort = () => {
-            stopProcess(child);
+            stopProcessFn(child);
             finish(staticFailure());
           };
           controller.signal.addEventListener('abort', onAbort, { once: true });
-          timer = setTimeout(() => {
+          timer = clock.setTimeout(() => {
             child.kill();
             finish(staticFailure());
           }, remaining());
           child.stdout?.on('data', chunk => {
-            output += chunk;
-            if (Buffer.byteLength(output) > MAX_OUTPUT_BYTES) {
+            if (settled) return;
+            const buffer = Buffer.from(chunk);
+            outputBytes += buffer.length;
+            if (outputBytes > MAX_OUTPUT_BYTES) {
               child.kill();
               finish(staticFailure());
+              return;
             }
+            chunks.push(buffer);
           });
           child.once('error', () => finish(staticFailure()));
           child.stdin?.on('error', onStdinError);
-          child.once('exit', code => {
+          child.once('close', code => {
             if (code !== 0) finish(staticFailure());
             else {
               try {
-                finish(null, parsePublisherOutput(output));
+                finish(
+                  null,
+                  parsePublisherOutput(
+                    Buffer.concat(chunks, outputBytes).toString('utf8'),
+                    payload.operation === 'bootstrap'
+                      ? 'bootstrap'
+                      : payload.type
+                  )
+                );
               } catch {
                 finish(staticFailure());
               }
@@ -584,14 +587,17 @@ export async function runPublisher(
         controller.signal
       );
     } finally {
-      await rm(scratch, { recursive: true, force: true }).catch(() => {});
+      await abortable(
+        files.rm(scratch, { recursive: true, force: true }),
+        controller.signal
+      ).catch(() => {});
     }
   } finally {
-    clearTimeout(budgetTimer);
-    process.removeListener('SIGTERM', onSignal);
-    process.removeListener('SIGINT', onSignal);
-    stopProcess(activeSsh);
-    stopProcess(activeTunnel, true);
+    clock.clearTimeout(budgetTimer);
+    signals.removeListener('SIGTERM', onSignal);
+    signals.removeListener('SIGINT', onSignal);
+    stopProcessFn(activeSsh);
+    stopProcessFn(activeTunnel, true);
   }
 }
 
@@ -618,8 +624,14 @@ function stackFromArgs(args) {
 export async function main(args = process.argv.slice(2), env = process.env) {
   const stack = stackFromArgs(args);
   const payload = await readInput();
-  const version = await runPublisher(payload, { stack, env });
-  process.stdout.write(JSON.stringify({ version }));
+  const result = await runPublisher(payload, { stack, env });
+  process.stdout.write(
+    JSON.stringify(
+      payload.type === 'session' && payload.operation !== 'bootstrap'
+        ? { type: 'session', version: result }
+        : result
+    )
+  );
 }
 
 if (

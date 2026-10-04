@@ -15,6 +15,7 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
     { 'INSTAGRAM_TESTER_AUTOMATION_ENABLED' => 'true', 'INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS' => account.id.to_s,
       'INSTAGRAM_META_DEVELOPER_APP_ID' => '10001', 'INSTAGRAM_META_BUSINESS_ID' => '10002',
       'INSTAGRAM_TESTER_ROLES_DOC_ID' => '10003', 'INSTAGRAM_TESTER_APP_NAME' => 'Synthetic app',
+      'FRONTEND_URL' => 'https://autonomia.example',
       'INSTAGRAM_TESTER_SESSION_JSON' => session.to_json }
   end
   let(:token) do
@@ -24,6 +25,7 @@ RSpec.describe 'Instagram tester onboarding', type: :request do
   around { |example| with_modified_env(settings) { example.run } }
 
   before do
+    account.enable_features!(:channel_instagram, :instagram_assisted_onboarding)
     allow(Instagram::Testers::Client).to receive(:new).and_return(client)
     allow(GlobalConfig).to receive(:get_value).and_call_original
     allow(GlobalConfig).to receive(:get_value).with('DISABLE_META_INBOX_CREATION').and_return(false)

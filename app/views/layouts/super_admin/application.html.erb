@@ -30,7 +30,7 @@ By default, it renders:
   <%= render "icons" %>
   <div class="flex w-full h-full">
     <%= render "navigation" -%>
-    <main class="w-full overflow-auto" role="main">
+    <main class="<%= content_for?(:instagram_automation_responsive_layout) ? 'min-w-0 flex-1 overflow-auto dark:!bg-n-background' : 'w-full overflow-auto' %>" role="main">
       <%= render "flashes" -%>
       <%= yield %>
     </main>

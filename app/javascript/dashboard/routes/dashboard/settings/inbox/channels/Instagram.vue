@@ -6,25 +6,26 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useAlert } from 'dashboard/composables';
 import TesterOnboarding from './instagram/TesterOnboarding.vue';
 import { META_RESTRICTION_STATUS_URL } from 'dashboard/constants/globals';
 
 const { t } = useI18n();
-const { isMetaInboxCreationDisabled, accountId } = useAccount();
-const globalConfig = useMapGetter('globalConfig/get');
-const legacyAccountId = ref(null);
-const assistedOnboarding = computed(
-  () =>
-    globalConfig.value.instagramTesterAutomationEnabled &&
-    legacyAccountId.value !== accountId.value
+const { isMetaInboxCreationDisabled, accountId, isCloudFeatureEnabled } =
+  useAccount();
+const assistedOnboarding = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.INSTAGRAM_ASSISTED_ONBOARDING)
 );
 
 const hasError = ref(false);
+const isInboxLimitError = ref(false);
 const errorStateMessage = ref('');
 const isRequestingAuthorization = ref(false);
 const isInstagramConnectionDisabled = computed(
-  () => isMetaInboxCreationDisabled.value
+  () =>
+    isMetaInboxCreationDisabled.value ||
+    !isCloudFeatureEnabled(FEATURE_FLAGS.CHANNEL_INSTAGRAM)
 );
 
 onMounted(() => {
@@ -37,8 +38,15 @@ onMounted(() => {
     hasError.value = true;
     const isAuthorizationError =
       errorCode === '400' || errorType === 'authorization_error';
+    isInboxLimitError.value =
+      errorCode === '402' ||
+      ['LimitExceeded', 'CustomExceptions::Inbox::LimitExceeded'].includes(
+        errorType
+      );
     errorStateMessage.value = t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_MESSAGE');
-    if (isAuthorizationError) {
+    if (isInboxLimitError.value) {
+      errorStateMessage.value = t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_INBOX_LIMIT');
+    } else if (isAuthorizationError) {
       errorStateMessage.value = t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_AUTH');
     }
   }
@@ -48,15 +56,21 @@ onMounted(() => {
 });
 
 const requestAuthorization = async () => {
-  if (isInstagramConnectionDisabled.value) return;
+  if (isInstagramConnectionDisabled.value || isRequestingAuthorization.value)
+    return;
 
   isRequestingAuthorization.value = true;
-  const response = await instagramClient.generateAuthorization();
-  const {
-    data: { url },
-  } = response;
-
-  window.location.href = url;
+  try {
+    const response = await instagramClient.generateAuthorization();
+    const {
+      data: { url },
+    } = response;
+    window.location.href = url;
+  } catch {
+    useAlert(t('INBOX_MGMT.ADD.INSTAGRAM.ERROR_AUTH'));
+  } finally {
+    isRequestingAuthorization.value = false;
+  }
 };
 </script>
 
@@ -67,7 +81,7 @@ const requestAuthorization = async () => {
     :account-id="accountId"
     :disabled="isInstagramConnectionDisabled"
     :oauth-error="hasError"
-    @legacy="legacyAccountId = accountId"
+    :oauth-error-message="isInboxLimitError ? errorStateMessage : ''"
   />
   <div v-else class="h-full p-6 w-full max-w-full flex-shrink-0 flex-grow-0">
     <div class="flex flex-col items-center justify-start h-full text-center">

@@ -17,7 +17,7 @@ export const isInstagramUsername = value =>
   value.length <= 30 &&
   [...value].every(character => USERNAME_CHARACTERS.includes(character));
 
-export function useInstagramTester({ disabled, onLegacy }) {
+export function useInstagramTester({ disabled, returnTo }) {
   const request = useAbortableRequest();
   const configuration = ref(null);
   const username = ref('');
@@ -72,6 +72,7 @@ export function useInstagramTester({ disabled, onLegacy }) {
       invalid_selection: 'INVALID_SELECTION',
       meta_unavailable: 'UNAVAILABLE',
       meta_session_expired: 'UNAVAILABLE',
+      proxy_unavailable: 'UNAVAILABLE',
       unknown_status: 'STATUS_ERROR',
       invite_rejected: 'INVITE_ERROR',
       invite_unknown: 'INVITE_UNKNOWN',
@@ -121,10 +122,6 @@ export function useInstagramTester({ disabled, onLegacy }) {
       'configuration',
       signal => instagramClient.getTesterConfiguration({ signal }),
       data => {
-        if (data.enabled === false) {
-          onLegacy();
-          return;
-        }
         if (
           data.enabled !== true ||
           data.available !== true ||
@@ -141,7 +138,7 @@ export function useInstagramTester({ disabled, onLegacy }) {
     );
 
   const search = () => {
-    if (busy.value || !available.value) return undefined;
+    if (busy.value || disabled.value || !available.value) return undefined;
     const normalized = normalizeInstagramUsername(username.value);
     if (!isInstagramUsername(normalized)) {
       error.value = 'INVALID_USERNAME';
@@ -175,7 +172,8 @@ export function useInstagramTester({ disabled, onLegacy }) {
   };
 
   const checkStatus = () => {
-    if (busy.value || !selected.value || !available.value) return undefined;
+    if (busy.value || disabled.value || !selected.value || !available.value)
+      return undefined;
     const token = selected.value.selection_token;
     const wasPending = status.value === 'pending';
     return run(
@@ -196,7 +194,8 @@ export function useInstagramTester({ disabled, onLegacy }) {
   };
 
   const selectProfile = candidate => {
-    if (busy.value || !results.value.includes(candidate)) return undefined;
+    if (busy.value || disabled.value || !results.value.includes(candidate))
+      return undefined;
     selected.value = candidate;
     status.value = null;
     sent.value = false;
@@ -248,7 +247,10 @@ export function useInstagramTester({ disabled, onLegacy }) {
       'oauth',
       signal =>
         instagramClient.generateAuthorization(
-          { tester_selection_token: selected.value.selection_token },
+          {
+            tester_selection_token: selected.value.selection_token,
+            ...(returnTo?.value ? { return_to: returnTo.value } : {}),
+          },
           { signal }
         ),
       data => {

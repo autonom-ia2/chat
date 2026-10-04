@@ -18,7 +18,7 @@ class Instagram::Testers::InvitationOutcome
     update_claim { |transaction| transaction.set(@key, "pending:#{@claim.partition(':').last}", ex: TTL) }
   end
 
-  def rejected!
+  def release_claim!
     Instagram::Testers::CoordinationRedis.delete_if_equals(@key, @claim) if @claim
   end
 

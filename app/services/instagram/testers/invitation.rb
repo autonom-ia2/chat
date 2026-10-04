@@ -39,11 +39,20 @@ class Instagram::Testers::Invitation
 
     # Persist BEFORE sending: a killed request or process must not erase an ambiguous write.
     @outcome.claim!
-    @client.invite(@target_id)
+    send_claimed_invite
     @outcome.pending!
     { status: 'pending', invited: true }
+  end
+
+  def send_claimed_invite
+    transport_started = false
+    @client.invite(@target_id) { transport_started = true }
   rescue Instagram::Testers::Error => e
-    @outcome.rejected! if e.code == 'invite_rejected'
+    @outcome.release_claim! if transport_started && e.write_rejected
     raise
+  ensure
+    # A local failure cannot have written. Once HTTParty starts, cancellation or
+    # a lost response must retain unknown, regardless of the public error code.
+    @outcome.release_claim! unless transport_started
   end
 end

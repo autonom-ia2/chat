@@ -23,6 +23,21 @@ RSpec.describe Instagram::Testers::InvitationOutcome do
     expect(outcome.state).to eq('unknown')
   end
 
+  it 'releases only its own unknown claim after a proven preflight failure' do
+    outcome.claim!
+    outcome.release_claim!
+    expect(outcome.state).to be_nil
+  end
+
+  %w[unknown pending].each do |state|
+    it "does not release a newer #{state} generation on an older preflight failure" do
+      outcome.claim!
+      Redis::Alfred.set(key, "#{state}:newer-generation", ex: described_class::TTL)
+      outcome.release_claim!
+      expect(Redis::Alfred.get(key)).to eq("#{state}:newer-generation")
+    end
+  end
+
   it 'does not clear a newer invitation that began during an older status request' do
     outcome.claim!
     outcome.pending!

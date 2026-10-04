@@ -14,6 +14,7 @@ import ChannelFactory from 'dashboard/routes/dashboard/settings/inbox/ChannelFac
 import AddAgents from 'dashboard/routes/dashboard/settings/inbox/AddAgents.vue';
 import FinishSetup from 'dashboard/routes/dashboard/settings/inbox/FinishSetup.vue';
 import WootWizard from 'components/ui/Wizard.vue';
+import SnackbarContainer from 'dashboard/components/SnackbarContainer.vue';
 import { computedAppearance } from './visual-helpers.mjs';
 
 const params = new URLSearchParams(window.location.search);
@@ -124,6 +125,7 @@ const syntheticAccount = {
   id: 910,
   name: 'Conta sintética QA',
   features: {
+    instagram_assisted_onboarding: params.get('feature') !== 'off',
     channel_instagram: true,
     channel_email: true,
     channel_website: true,
@@ -146,7 +148,8 @@ const store = createStore({
       namespaced: true,
       getters: {
         get: () => ({
-          instagramTesterAutomationEnabled: params.get('feature') !== 'off',
+          instagramTesterAutomationEnabled:
+            params.get('globalFeature') !== 'off',
           installationName: 'QA Synthetic',
           apiChannelName: 'API',
         }),
@@ -219,8 +222,13 @@ const i18n = createI18n({
 // Dynamic lookup is required by the harness; missing keys fail browser QA.
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
 window.instagramQa.t = (key, values) => i18n.global.t(key, values || {});
-const rootComponent =
-  isWizard || isReauthorize ? { setup: () => () => h(RouterView) } : App;
+// Match dashboard/App.vue: useAlert's real event bus reaches the real snackbar.
+const rootComponent = {
+  setup: () => () => [
+    h(isWizard || isReauthorize ? RouterView : App),
+    h(SnackbarContainer, { 'data-instagram-qa-toasts': '' }),
+  ],
+};
 const app = createApp(rootComponent);
 app.component('woot-wizard', WootWizard);
 app.component('woot-code', {
