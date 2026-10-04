@@ -4,13 +4,13 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { watchDebounced } from '@vueuse/core';
 import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
+import { useGuiaPedido } from 'dashboard/composables/useGuiaPedido';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 
 defineProps({
   guiaDisponivel: { type: Boolean, default: false },
 });
-const emit = defineEmits(['perguntar']);
 // Verdadeiro enquanto há texto na busca: a página esconde os assuntos para a pessoa olhar só os resultados.
 const ativa = defineModel('ativa', { type: Boolean, default: false });
 
@@ -18,6 +18,7 @@ const ESPERA_MS = 300;
 
 const { t } = useI18n();
 const router = useRouter();
+const { pedirAoGuia } = useGuiaPedido();
 
 const termo = ref('');
 const resultados = ref([]);
@@ -66,6 +67,9 @@ const abrirPrimeiro = () => {
   if (resultados.value.length) abrir(resultados.value[0]);
 };
 
+// O que a pessoa digitou vira a pergunta ao Guia; sem texto, o painel só abre.
+const perguntarAoGuia = () => pedirAoGuia(termo.value);
+
 const limpar = () => {
   termo.value = '';
   resultados.value = [];
@@ -78,40 +82,48 @@ const limpar = () => {
     <label for="busca-central" class="sr-only">
       {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ROTULO') }}
     </label>
-    <div class="relative">
-      <span
-        class="i-lucide-search absolute top-1/2 -translate-y-1/2 ltr:left-4 rtl:right-4 size-6 text-n-slate-10 pointer-events-none"
-        aria-hidden="true"
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <div class="relative flex-1 min-w-0">
+        <span
+          class="i-lucide-search absolute top-1/2 -translate-y-1/2 ltr:left-4 rtl:right-4 size-6 text-n-slate-10 pointer-events-none"
+          aria-hidden="true"
+        />
+        <input
+          id="busca-central"
+          ref="campo"
+          v-model="termo"
+          type="text"
+          inputmode="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          class="reset-base w-full h-16 ltr:pl-14 rtl:pr-14 ltr:pr-14 rtl:pl-14 text-lg rounded-2xl border border-n-weak bg-n-solid-1 shadow-sm text-n-slate-12 placeholder:text-n-slate-10 outline-none focus:border-n-brand focus:outline focus:outline-2 focus:outline-n-brand"
+          :placeholder="t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PLACEHOLDER')"
+          aria-describedby="busca-central-dica"
+          @keydown.enter.prevent="abrirPrimeiro"
+        />
+        <button
+          v-if="temTermo"
+          type="button"
+          class="absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2 size-11 grid place-items-center rounded-xl text-n-slate-11 hover:bg-n-alpha-2"
+          :aria-label="t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.LIMPAR')"
+          @click="limpar"
+        >
+          <span class="i-lucide-x size-5" aria-hidden="true" />
+        </button>
+      </div>
+      <Button
+        v-if="guiaDisponivel"
+        size="lg"
+        color="blue"
+        icon="i-lucide-sparkles"
+        class="min-h-11 sm:h-16 shrink-0"
+        :label="t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PERGUNTAR_GUIA')"
+        @click="perguntarAoGuia"
       />
-      <input
-        id="busca-central"
-        ref="campo"
-        v-model="termo"
-        type="text"
-        inputmode="search"
-        enterkeyhint="search"
-        autocomplete="off"
-        class="reset-base w-full h-16 ltr:pl-14 rtl:pr-14 ltr:pr-14 rtl:pl-14 text-lg rounded-2xl border border-n-weak bg-n-solid-1 text-n-slate-12 placeholder:text-n-slate-10 outline-none focus:border-n-brand focus:outline focus:outline-2 focus:outline-n-brand"
-        :placeholder="t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PLACEHOLDER')"
-        aria-describedby="busca-central-dica"
-        @keydown.enter.prevent="abrirPrimeiro"
-      />
-      <button
-        v-if="temTermo"
-        type="button"
-        class="absolute top-1/2 -translate-y-1/2 ltr:right-2 rtl:left-2 size-11 grid place-items-center rounded-xl text-n-slate-11 hover:bg-n-alpha-2"
-        :aria-label="t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.LIMPAR')"
-        @click="limpar"
-      >
-        <span class="i-lucide-x size-5" aria-hidden="true" />
-      </button>
     </div>
 
-    <p
-      v-show="!temTermo"
-      id="busca-central-dica"
-      class="mb-0 -mt-1 ltr:pl-1 rtl:pr-1 text-sm text-n-slate-11"
-    >
+    <!-- Os atalhos de "Mais procurados" já mostram exemplos na tela; a dica fica para o leitor de tela. -->
+    <p id="busca-central-dica" class="sr-only">
       {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.DICA') }}
     </p>
 
@@ -171,7 +183,7 @@ const limpar = () => {
         icon="i-lucide-life-buoy"
         class="min-h-11"
         :label="t('HELP_CENTER.CENTRAL_DE_AJUDA.ARTIGO.PERGUNTE')"
-        @click="emit('perguntar')"
+        @click="perguntarAoGuia"
       />
     </div>
   </div>

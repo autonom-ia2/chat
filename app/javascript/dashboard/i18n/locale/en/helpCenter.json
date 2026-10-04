@@ -1110,7 +1110,7 @@
     },
     "CENTRAL_DE_AJUDA": {
       "TITULO": "Help Center",
-      "SUBTITULO": "Learn to use the platform at your own pace. Each article has a button that takes you to the right screen.",
+      "SUBTITULO": "Tell us what you want to do. Each answer has a short video and a button that takes you to the right screen.",
       "BUSCA": {
         "ROTULO": "Search the Help Center",
         "PLACEHOLDER": "What do you want to do?",
@@ -1119,13 +1119,65 @@
         "NADA": "No article with these words. Try other words or ask the Guide.",
         "LIMPAR": "Clear search",
         "BUSCANDO": "Searching…",
-        "ERRO": "The search did not respond. Try again."
+        "ERRO": "The search did not respond. Try again.",
+        "PERGUNTAR_GUIA": "Ask the Guide"
       },
-      "COMECE": {
-        "TITULO": "Start here",
-        "SUBTITULO": "The first steps, in the right order."
+      "MAIS_PROCURADOS": {
+        "TITULO": "Most searched:",
+        "WHATSAPP": "Connect WhatsApp",
+        "JANELA_24H": "The 24-hour window",
+        "FUNIL": "Create a pipeline",
+        "CONVIDAR": "Invite your team",
+        "DISPARO": "Send campaigns without losing your number"
       },
-      "ASSUNTOS": "All topics",
+      "CONTINUE": {
+        "TITULO": "Pick up where you left off",
+        "PROGRESSO": "First steps completed",
+        "X_DE_Y": "{feitos} of {total}",
+        "ASSISTIR": "Watch",
+        "LER": "Read the step by step",
+        "VER_TODOS": "See all steps",
+        "ASSISTIR_VIDEO": "Watch the video: {titulo}"
+      },
+      "SINTOMAS": {
+        "TITULO": "Something not working?",
+        "CONVERSA_TRAVOU": "The conversation is locked and I can't reply",
+        "NUMERO_BLOQUEADO": "My WhatsApp number was blocked",
+        "IA_GASTANDO": "The AI is spending more than I expected",
+        "CSAT_VAZIO": "The satisfaction report is empty"
+      },
+      "POR_ASSUNTO": {
+        "TITULO": "By topic",
+        "VIDEOS": "{count} video | {count} videos",
+        "FAMILIAS": {
+          "ATENDER": "Serve customers",
+          "VENDER": "Sell and measure",
+          "AUTOMATIZAR": "Automate with AI",
+          "CONTA": "Your account",
+          "OUTROS": "Other topics"
+        },
+        "NOMES": {
+          "CANAIS": "Channels and inboxes",
+          "CONVERSAS": "Conversations and calls",
+          "CONTATOS": "Contacts and companies",
+          "TIMES": "Teams and assignment",
+          "CRM": "CRM and pipelines",
+          "CAMPANHAS": "Campaigns",
+          "PROSPECCAO": "Prospecting",
+          "RELATORIOS": "Reports",
+          "SEGUROS": "Insurance quotes",
+          "FINANCEIRO": "Billing",
+          "AGENTES_IA": "AI agents",
+          "AUTOMACOES": "Automations and canned responses",
+          "INTEGRACOES": "Integrations and OpenAI key",
+          "PRIMEIROS_PASSOS": "First steps",
+          "PERFIL": "Your profile and notifications",
+          "EQUIPE": "Team and permissions",
+          "EMPRESA": "Company details",
+          "MAPA": "Platform map",
+          "CONCEITOS": "Key concepts"
+        }
+      },
       "ARTIGOS_NO_CAPITULO": "{count} article | {count} articles",
       "PREPARANDO": {
         "TITULO": "We are preparing the Help Center",

@@ -21,6 +21,4 @@ const ICONES = {
   18: 'i-lucide-lightbulb',
 };
 
-export const CAPITULO_INICIAL = '00';
-
 export const iconeDoCapitulo = id => ICONES[id] || 'i-lucide-book-open';

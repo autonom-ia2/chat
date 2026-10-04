@@ -65,9 +65,12 @@ class Autonomia::CentralDeAjuda::Leitura
   end
 
   # `rota`: a tela que o artigo explica (o "Me leve até lá"); o Guia sugere os artigos da tela aberta (#697).
+  # `video`: a lista conta quantos artigos de cada assunto têm vídeo (#977). É o vídeo publicado no artigo, o
+  # mesmo que a tela dele mostra; nada é lido do disco aqui.
   def resumo(artigo)
-    { id: central(artigo)['id'], ref: self.class.ref_de(central(artigo)['id']), titulo: artigo.title,
-      descricao: artigo.description, capitulo: artigo.category&.name, rota: central(artigo).dig('me_leve_ate_la', 'rota') }
+    meta = central(artigo)
+    { id: meta['id'], ref: self.class.ref_de(meta['id']), titulo: artigo.title, descricao: artigo.description,
+      capitulo: artigo.category&.name, rota: meta.dig('me_leve_ate_la', 'rota'), video: meta['video'].present? }
   end
 
   def central(artigo) = artigo.meta.to_h['central'] || {}

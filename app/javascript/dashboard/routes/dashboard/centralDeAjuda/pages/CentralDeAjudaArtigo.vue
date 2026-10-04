@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { useMapGetter } from 'dashboard/composables/store';
-import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useGuiaPedido } from 'dashboard/composables/useGuiaPedido';
 import { useLevarAteLa } from 'dashboard/composables/useLevarAteLa';
 import CentralDeAjudaAPI from 'dashboard/api/centralDeAjuda';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -17,7 +17,7 @@ import { useTamanhoDaLetra } from '../composables/useTamanhoDaLetra';
 const { t, locale } = useI18n();
 const route = useRoute();
 const store = useStore();
-const { updateUISettings } = useUISettings();
+const { pedirAoGuia } = useGuiaPedido();
 const contaAtual = useMapGetter('accounts/getAccount');
 const { destino, levar } = useLevarAteLa();
 const { classe: classeDaLetra } = useTamanhoDaLetra();
@@ -84,13 +84,6 @@ const irAteLa = () =>
   levar({
     rota: levarAteLa.value.rota,
     destaque: levarAteLa.value.destaque,
-  });
-
-const perguntarAoGuia = () =>
-  updateUISettings({
-    is_autonomia_guide_panel_open: true,
-    is_autonomia_copilot_panel_open: false,
-    is_contact_sidebar_open: false,
   });
 
 const rotaDoArtigo = vizinho => ({
@@ -238,7 +231,7 @@ const rotaDoArtigo = vizinho => ({
             icon="i-lucide-life-buoy"
             class="min-h-11"
             :label="t('HELP_CENTER.CENTRAL_DE_AJUDA.ARTIGO.PERGUNTE')"
-            @click="perguntarAoGuia"
+            @click="pedirAoGuia()"
           />
         </aside>
       </template>
