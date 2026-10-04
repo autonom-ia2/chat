@@ -65,17 +65,18 @@ RSpec.describe InstagramConcern do
       it 'raises an error' do
         expect do
           dummy_instance.send(:exchange_for_long_lived_token, short_lived_token)
-        end.to raise_error(RuntimeError, 'Failed to exchange token: Error')
+        end.to(raise_error { |error| expect(error.code).to eq('instagram_token_exchange_failed') })
       end
     end
 
     context 'when the response is not valid JSON' do
       let(:mock_response) { instance_double(HTTParty::Response, body: 'Not JSON', success?: true) }
 
-      it 'raises a JSON parse error' do
-        allow(JSON).to receive(:parse).and_raise(JSON::ParserError.new('Invalid JSON'))
-
-        expect { dummy_instance.send(:exchange_for_long_lived_token, short_lived_token) }.to raise_error(JSON::ParserError)
+      it 'raises a safe coded parsing error' do
+        expect { dummy_instance.send(:exchange_for_long_lived_token, short_lived_token) }.to raise_error do |error|
+          expect(error.code).to eq('instagram_invalid_response')
+          expect(error.cause).to be_nil
+        end
       end
     end
   end
@@ -122,17 +123,18 @@ RSpec.describe InstagramConcern do
       it 'raises an error' do
         expect do
           dummy_instance.send(:fetch_instagram_user_details, access_token)
-        end.to raise_error(Instagram::UserDetailsService::Error, 'Failed to fetch Instagram user details: Error')
+        end.to(raise_error { |error| expect(error.code).to eq('instagram_user_details_failed') })
       end
     end
 
     context 'when the response is not valid JSON' do
       let(:mock_response) { instance_double(HTTParty::Response, body: 'Not JSON', success?: true) }
 
-      it 'raises a JSON parse error' do
-        allow(JSON).to receive(:parse).and_raise(JSON::ParserError.new('Invalid JSON'))
-
-        expect { dummy_instance.send(:fetch_instagram_user_details, access_token) }.to raise_error(JSON::ParserError)
+      it 'raises a safe coded parsing error' do
+        expect { dummy_instance.send(:fetch_instagram_user_details, access_token) }.to raise_error do |error|
+          expect(error.code).to eq('instagram_invalid_response')
+          expect(error.cause).to be_nil
+        end
       end
     end
   end

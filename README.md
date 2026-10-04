@@ -141,6 +141,10 @@ Thanks goes to all these [wonderful people](https://www.chatwoot.com/docs/contri
 
 _Chatwoot_ &copy; 2017-2026, Chatwoot Inc - Released under the MIT License.
 
+Instagram #910: [fluxo opcional de convite de testador](docs/instagram-tester-onboarding.md)
+e [runbook por stack](docs/runbooks/instagram-tester-onboarding.md). Desligado por padrão,
+com allowlist obrigatória; integração real por stack permanece pendente.
+
 ### Relacionamentos (Issue #757, extensão opcional)
 
 A implementação local reúne Contatos, Empresas e Atributos sem alterar seus endereços antigos.

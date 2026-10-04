@@ -14,6 +14,7 @@ RSpec.describe 'Relationships and legacy writers under real PostgreSQL interleav
   before { account.enable_features!('relationships_attributes', 'custom_attributes', 'companies') }
 
   after do
+    account.contacts.destroy_all
     account.destroy!
     legacy_admin.destroy!
     new_admin.destroy!

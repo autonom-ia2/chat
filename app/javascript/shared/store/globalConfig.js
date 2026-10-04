@@ -18,6 +18,7 @@ const {
   CRM_COPILOT_ENABLED: crmCopilotEnabled,
   CRM_AI_ENABLED: crmAiEnabled,
   AUTONOMIA_AGENTS_ENABLED: autonomiaAgentsEnabled,
+  INSTAGRAM_TESTER_AUTOMATION_ENABLED: instagramTesterAutomationEnabled,
   INSURANCE_QUOTING_ENABLED: insuranceQuotingEnabled,
   EMAIL_CAMPAIGN_ENABLED: emailCampaignEnabled,
   MAXIMUM_FILE_UPLOAD_SIZE: maximumFileUploadSize,
@@ -52,6 +53,9 @@ const state = {
   crmCopilotEnabled: parseBoolean(crmCopilotEnabled),
   crmAiEnabled: parseBoolean(crmAiEnabled),
   autonomiaAgentsEnabled: parseBoolean(autonomiaAgentsEnabled),
+  instagramTesterAutomationEnabled: parseBoolean(
+    instagramTesterAutomationEnabled
+  ),
   insuranceQuotingEnabled: parseBoolean(insuranceQuotingEnabled),
   emailCampaignEnabled: parseBoolean(emailCampaignEnabled),
   deploymentEnv,

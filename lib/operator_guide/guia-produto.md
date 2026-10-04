@@ -1182,9 +1182,9 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configurações > Caixas de entrada > Nova caixa > Instagram
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
-- pre_requisitos: ter os dados/credenciais do canal escolhido
-- passos: Vá em Configurações > Caixas de entrada > Nova caixa; escolha Instagram; faça login e autorize a conta do Instagram (vinculada a uma página/Meta); selecione a conta; atribua agentes e finalize.
-- gotchas: A conta do Instagram precisa ser profissional e vinculada à Meta; mensagens dependem das permissões concedidas na autorização.
+- pre_requisitos: perfil profissional do Instagram; acesso ao perfil para autorizar no Instagram Login; permissão de gerenciar caixas de entrada. Este fluxo de Instagram Login não exige Página do Facebook.
+- passos: Vá em Configurações > Caixas de entrada > Nova caixa e escolha Instagram. Se a preparação opcional de testador estiver disponível, informe o @, busque e selecione o perfil conferindo foto, @ e nome; envie convite somente quando a tela oferecer essa ação. Se estiver pendente, no navegador de um computador entre com o @ exato, abra Apps e sites > Convites do testador, localize o nome do aplicativo exibido e clique em Aceitar; o link Abrir Apps e sites leva a https://www.instagram.com/accounts/manage_access/. Volte e clique em Já aceitei — verificar. Com Convite aceito, clique em Continuar com Instagram e autorize o mesmo perfil. Sem a preparação opcional, siga o Instagram Login existente. Atribua agentes e finalize o assistente.
+- gotchas: Convite aceito não comprova propriedade do perfil, não conclui a conexão e não substitui OAuth ou App Review. Não detectamos qual perfil está aberto no Instagram: confira o @ na outra aba. Nunca peça senha, cookie ou token ao usuário. Erro ou timeout não significa convite ausente; após envio incerto, verifique antes de tentar novamente. Preparação indisponível pede suporte e nova verificação; não promete sucesso. Trocar perfil ou voltar não remove testador. Mensagens dependem das permissões concedidas e do funcionamento da integração; reautorização existente permanece disponível.
 - nav_target: `settings_inbox_new`
 - highlight: `channel-instagram`
 

@@ -34,32 +34,25 @@ module InstagramConcern
       client_id: client_id
     }
 
-    make_api_request(endpoint, params, 'Failed to exchange token')
+    make_api_request(endpoint, params, 'instagram_token_exchange_failed')
   end
 
   def fetch_instagram_user_details(access_token)
     Instagram::UserDetailsService.new(access_token: access_token).perform
   end
 
-  def make_api_request(endpoint, params, error_prefix)
+  def make_api_request(endpoint, params, error_code)
     response = HTTParty.get(
       endpoint,
       query: params,
       headers: { 'Accept' => 'application/json' }
     )
 
-    unless response.success?
-      Rails.logger.error "#{error_prefix}. Status: #{response.code}, Body: #{response.body}"
-      raise "#{error_prefix}: #{response.body}"
-    end
+    raise CustomExceptions::InstagramApiError.new(error_code, response.code), cause: nil unless response.success?
 
-    begin
-      JSON.parse(response.body)
-    rescue JSON::ParserError => e
-      ChatwootExceptionTracker.new(e).capture_exception
-      Rails.logger.error "Invalid JSON response: #{response.body}"
-      raise e
-    end
+    JSON.parse(response.body)
+  rescue JSON::ParserError
+    raise CustomExceptions::InstagramApiError.new('instagram_invalid_response', 502), cause: nil
   end
 
   def base_url
