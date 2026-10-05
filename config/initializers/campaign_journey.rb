@@ -16,7 +16,12 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::WhatsappOneoffRecipients) if ChatwootApp.enterprise?
 
   # #1002: a reply to a campaign marks the conversation in the CRM (listener on message_created).
-  # Must run before config/initializers/event_handlers.rb loads the listeners — to_prepare
-  # blocks run in initializer file order, and this file sorts first.
+  # Independent of initializer order: the prepend covers a later load_listeners, ensure_subscribed!
+  # a dispatcher that already loaded them. Never subscribed twice.
   prepend_once.call(AsyncDispatcher, CampaignJourney::AsyncDispatcherListeners)
+  CampaignJourney::AsyncDispatcherListeners.ensure_subscribed!
+end
+
+Rails.application.config.after_initialize do
+  CampaignJourney::AsyncDispatcherListeners.ensure_subscribed!
 end
