@@ -14,13 +14,13 @@ export const MODELOS = [
     tom: 'bg-n-blue-3 text-n-blue-11',
   },
   {
-    chave: 'SINISTRO',
-    icone: 'i-lucide-shield-alert',
+    chave: 'RECLAMACAO',
+    icone: 'i-lucide-message-square-warning',
     tom: 'bg-n-amber-3 text-n-amber-11',
   },
   {
-    chave: 'COTACAO',
-    icone: 'i-lucide-tag',
+    chave: 'ORCAMENTO',
+    icone: 'i-lucide-hand-coins',
     tom: 'bg-n-teal-3 text-n-teal-11',
   },
   {

@@ -13,7 +13,7 @@ const emit = defineEmits(['pedir', 'falar']);
 
 const { t } = useI18n();
 const pedido = ref('');
-const IDEIAS = ['SINISTRO', 'FORA_DO_HORARIO', 'COTACAO'];
+const IDEIAS = ['RECLAMACAO', 'FORA_DO_HORARIO', 'ORCAMENTO'];
 const ideias = computed(() =>
   IDEIAS.map(chave => t(`AUTOMACOES.HEROI.IDEIAS.${chave}`))
 );

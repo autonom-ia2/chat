@@ -2407,7 +2407,7 @@
       "ERRO": "I could not load your automations. Check your connection and try again.",
       "TENTAR_DE_NOVO": "Try again",
       "VAZIO_TITULO": "Or start from a ready one",
-      "VAZIO_TEXTO": "The ones brokers use the most. Tap one and check it before turning it on.",
+      "VAZIO_TEXTO": "The most used in customer service. Tap one and check it before turning it on.",
       "SELO_GUIA": "Built by the Guide",
       "LIGADA": "On",
       "DESLIGADA": "Off",
@@ -2424,13 +2424,6 @@
     },
     "MODELOS": {
       "TITULO": "Ready-made templates",
-      "SINISTRO": {
-        "TITULO": "Sort out claim notices",
-        "TEXTO": "Claims go straight to whoever handles them, already labeled.",
-        "PEDIDO": "I want an automation: when a message about a claim arrives, add the label claim and hand the conversation to the claims team.",
-        "QUANDO": "The customer mentions a claim",
-        "FAZ": "Hands it to the claims team"
-      },
       "BOAS_VINDAS": {
         "TITULO": "Let them know we will reply",
         "TEXTO": "First-time contacts are never left without an answer.",
@@ -2448,13 +2441,6 @@
       "USAR": "Use this",
       "ROTULO_QUANDO": "When",
       "ROTULO_FAZ": "Does",
-      "COTACAO": {
-        "TITULO": "Tag quote requests",
-        "TEXTO": "Quote requests get a label and never get lost in the queue.",
-        "QUANDO": "The customer asks for a quote",
-        "FAZ": "Adds the quote label",
-        "PEDIDO": "I want an automation: when a customer message asks for a quote, add the quote label to the conversation."
-      },
       "DIVIDIR_LEADS": {
         "TITULO": "Split customers across the team",
         "TEXTO": "Every new conversation arrives with someone responsible.",
@@ -2468,6 +2454,20 @@
         "QUANDO": "A message arrives after hours",
         "FAZ": "Tells them our business hours",
         "PEDIDO": "I want anyone who writes outside our business hours to get a message telling them when we are back."
+      },
+      "RECLAMACAO": {
+        "TITULO": "Send complaints to whoever solves them",
+        "TEXTO": "Complaints go straight to the right team, already labeled.",
+        "QUANDO": "The customer makes a complaint",
+        "FAZ": "Labels it and hands it to the right team",
+        "PEDIDO": "I want an automation: when a customer message contains a complaint, add the complaint label and hand the conversation to the team that solves it."
+      },
+      "ORCAMENTO": {
+        "TITULO": "Tag price requests",
+        "TEXTO": "Price and quote requests get a label and never get lost in the queue.",
+        "QUANDO": "The customer asks for a price or quote",
+        "FAZ": "Adds the quote label",
+        "PEDIDO": "I want an automation: when a customer message asks for a price or a quote, add the quote label to the conversation."
       }
     },
     "CONVERSA": {
@@ -2569,13 +2569,13 @@
     "HEROI": {
       "TITULO": "What do you want to happen on its own?",
       "TEXTO": "Write it as if talking to a colleague. The Guide builds it, shows what will happen and only turns it on when you say so.",
-      "EXEMPLO": "E.g.: when someone mentions a claim, notify the claims team",
+      "EXEMPLO": "E.g.: when a customer asks for a quote, notify the sales team",
       "MONTAR": "Build with the Guide",
       "IDEIAS_ROTULO": "Ideas:",
       "IDEIAS": {
-        "SINISTRO": "Notify the team when a claim comes up",
         "FORA_DO_HORARIO": "Reply to people who write after hours",
-        "COTACAO": "Tag people asking for a quote"
+        "RECLAMACAO": "Notify the team when a complaint comes in",
+        "ORCAMENTO": "Tag people asking for a price"
       },
       "FALAR": "Speak instead of typing"
     },
