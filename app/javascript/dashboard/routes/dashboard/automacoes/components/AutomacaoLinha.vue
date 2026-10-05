@@ -1,9 +1,11 @@
 <script setup>
 import { computed } from 'vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
 
 // #982 — uma automação na lista, lida como frase: Quando [evento] → [o que faz].
-// O cartão abre a automação; o interruptor grande liga e desliga ali mesmo.
+// O cartão abre a automação; "Alterar" diz isso com todas as letras (o cartão
+// clicável sozinho não se anunciava); o interruptor liga e desliga ali mesmo.
 const props = defineProps({
   automacao: { type: Object, required: true },
   descricao: { type: Object, required: true },
@@ -99,6 +101,16 @@ const outrasAcoes = computed(() => props.descricao.entao.length - 1);
         </span>
       </span>
     </button>
+    <Button
+      data-alterar
+      :label="$t('AUTOMACOES.LISTA.ALTERAR')"
+      :aria-label="$t('AUTOMACOES.LISTA.ABRIR', { nome: automacao.name })"
+      icon="i-lucide-pencil"
+      slate
+      faded
+      class="self-start min-h-11 sm:self-center shrink-0"
+      @click="emit('abrir')"
+    />
     <label
       class="flex items-center self-start gap-3 px-3 select-none sm:self-center min-h-11 shrink-0"
       :class="

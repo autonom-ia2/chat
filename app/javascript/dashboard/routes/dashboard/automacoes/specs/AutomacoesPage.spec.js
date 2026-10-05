@@ -316,6 +316,12 @@ describe('AutomacoesPage', () => {
       name: 'automacoes_editar',
       params: { accountId: 1, id: 1 },
     });
+
+    // Conta 16 (05/10): sem botão à vista, não dava para saber onde alterar.
+    routerPush.mockClear();
+    await linhas[0].find('[data-alterar]').trigger('click');
+    expect(routerPush).toHaveBeenCalledTimes(1);
+    expect(routerPush.mock.calls[0][0].name).toBe('automacoes_editar');
   });
 
   it('o interruptor liga a automação e avisa', async () => {

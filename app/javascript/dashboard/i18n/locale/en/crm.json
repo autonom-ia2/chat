@@ -2415,6 +2415,7 @@
       "DESLIGOU": "Automation turned off. Nothing happens until you turn it on again.",
       "FALHA_TROCA": "I could not change it now. Try again.",
       "ABRIR": "Open the automation {nome}",
+      "ALTERAR": "Change",
       "MAIS_ACOES": "and {n} more",
       "INTERRUPTOR": "Turn {nome} on or off",
       "CONTAGEM_LIGADAS": "None on | {n} on | {n} on",
