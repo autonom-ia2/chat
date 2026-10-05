@@ -21,39 +21,15 @@
 # (label) campaigns get the D2/D4 handling only while CAMPAIGN_JOURNEY_ENABLED is on — decided
 # with the product owner: their audience is unchanged, only no one is left without status.
 # With the flag off they run Chatwoot's code untouched (pure `super`).
-# Uses #audience_link from CampaignJourney::AudienceContacts (prepended alongside).
+# Uses #audience_link from CampaignJourney::AudienceContacts (prepended alongside) and the
+# recipient bookkeeping shared with SMS (CampaignJourney::RecipientTracking, #1004).
 module CampaignJourney::WhatsappOneoffRecipients
-  NOT_PROCESSED_REASON = 'Recipient was not processed'.freeze
-  INSERT_BATCH_SIZE = 1000
+  include CampaignJourney::RecipientTracking
 
   private
 
   def journey_send?
     audience_link.present? || CampaignJourney::Config.enabled?
-  end
-
-  # Returns the queued recipients as a lazy, batched enumerator (never the whole list in memory).
-  def register_queued_recipients(contacts)
-    insert_recipients(contacts, status: :queued)
-    campaign.campaign_recipients.queued.includes(:contact).find_each(batch_size: INSERT_BATCH_SIZE)
-  end
-
-  # Audience WhatsApp channel off at send time: everyone eligible is recorded as skipped.
-  def skip_all_recipients(contacts, reason)
-    insert_recipients(contacts, status: :skipped, error_message: reason)
-    campaign.campaign_recipients.queued.update_all(status: CampaignRecipient.statuses[:skipped], error_message: reason) # rubocop:disable Rails/SkipsModelValidations
-    []
-  end
-
-  def insert_recipients(contacts, status:, error_message: nil)
-    contacts.in_batches(of: INSERT_BATCH_SIZE) do |batch|
-      now = Time.current
-      rows = batch.pluck(:id).map do |contact_id|
-        { account_id: campaign.account_id, campaign_id: campaign.id, contact_id: contact_id, inbox_id: campaign.inbox_id,
-          status: CampaignRecipient.statuses[status], error_message: error_message, created_at: now, updated_at: now }
-      end
-      CampaignRecipient.insert_all(rows, unique_by: %i[campaign_id contact_id]) if rows.any? # rubocop:disable Rails/SkipsModelValidations
-    end
   end
 
   def process_recipient(recipient)
@@ -98,24 +74,11 @@ module CampaignJourney::WhatsappOneoffRecipients
     CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient).record_at_send(destination)
   end
 
-  def keep_as_sent(recipient, source_id, error)
-    Rails.logger.error "[CampaignJourney] campaign=#{campaign.id} recipient=#{recipient.id} accepted by Meta, mark_sent! failed: #{error.class}"
-    recipient.update_columns(status: CampaignRecipient.statuses[:sent], source_id: source_id, sent_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-  rescue StandardError => e
-    Rails.logger.error "[CampaignJourney] campaign=#{campaign.id} recipient=#{recipient.id} could not be kept as sent: #{e.class}"
-  end
-
-  def accepted_by_provider
-    @accepted_by_provider ||= Set.new
-  end
-
   def process_recipients(recipients)
     return super unless journey_send?
 
     super
-    campaign.campaign_recipients.queued.where.not(id: accepted_by_provider.to_a).find_each do |recipient|
-      recipient.mark_failed!(message: NOT_PROCESSED_REASON)
-    end
+    fail_unprocessed_recipients
   end
 
   def recipient_template_params(recipient, contact)
