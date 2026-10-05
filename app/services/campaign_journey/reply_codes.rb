@@ -6,7 +6,10 @@ require 'cgi'
 # hands it here and the conversation gets the campaign mark.
 #
 # Codes share the tracked link alphabet and length and are unique against tracked link codes
-# too, so one #CODE never means two things.
+# when generated. Known limit (accepted by the product owner, #1002): Ctwa::TrackedLink does not
+# check this table when it generates its own code, so a later tracked link could take a code a
+# campaign already has (about 1 in 10^9 per pair). If that happens, the tracked link of the inbox
+# wins (Ctwa::TrackedLinkAttributor looks it up first) and the campaign code stops marking there.
 module CampaignJourney::ReplyCodes
   module_function
 
