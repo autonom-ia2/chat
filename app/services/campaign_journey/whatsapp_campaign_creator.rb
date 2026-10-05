@@ -100,7 +100,7 @@ class CampaignJourney::WhatsappCampaignCreator
   def validate_variables!
     raise Error.new('template_not_found', 'The template is not approved in this inbox') unless template
 
-    variables.validate!(@campaign_import, template_keys: CampaignJourney::TemplatePlaceholders.keys(template_body))
+    variables.validate!(@campaign_import, template_keys: CampaignJourney::TemplateVariableKeys.keys(template))
   rescue CampaignJourney::VariableBindings::Error => e
     raise Error.new(e.message, 'The message variables do not match the template or the audience', e.details.presence)
   end

@@ -7,7 +7,8 @@
 #               '3' => { 'source' => 'fixed',   'value' => 'Equipe Hub2You' } }
 #   defaults: { '2' => 'em breve' }   # a default alone works as a fixed text
 #
-# Keys are the template body variables, positional ('1') or named ('nome'). Every variable of the
+# Keys are the template body variables, positional ('1') or named ('nome'), plus 'header.N' for a
+# TEXT header and 'button.I' for a URL button (#993, CampaignJourney::TemplateVariableKeys). Every variable of the
 # approved template needs a binding or a default; keys the template does not have are refused.
 # Values are squished (line breaks, tabs and repeated spaces become one space): Meta refuses
 # template parameters with them. A person without a value and without a default stays out with

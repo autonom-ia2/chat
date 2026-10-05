@@ -202,6 +202,8 @@ Rails.application.routes.draw do
               get :variable_suggestions, to: 'campaign_import_audiences#variable_suggestions'
               post :variable_coverage, to: 'campaign_import_audiences#variable_coverage'
               patch :channels, to: 'campaign_import_audiences#channels'
+              get :problem_rows, to: 'campaign_import_audiences#problem_rows'
+              get :sample_contact, to: 'campaign_import_audiences#sample_contact'
             end
           end
           namespace :campaign_journey do

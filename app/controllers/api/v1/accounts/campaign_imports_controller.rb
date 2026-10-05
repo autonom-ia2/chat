@@ -5,14 +5,16 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   before_action :check_authorization
 
   RESULTS_PER_PAGE = 25
+  SAVED_STATUSES = %w[completed completed_with_failures].freeze
 
+  # `saved=true` keeps saved audiences only and `q` searches the name (#993, Passo 1 of Nova campanha).
   def index
-    @campaign_imports = Current.account.campaign_imports
-                                       .includes(:user, :campaign_import_labels)
-                                       .order(created_at: :desc)
-                                       .page(@current_page)
-                                       .per(RESULTS_PER_PAGE)
-    @campaign_imports_count = Current.account.campaign_imports.count
+    scope = filtered_campaign_imports
+    @campaign_imports = scope.includes(:user, :campaign_import_labels)
+                             .order(created_at: :desc)
+                             .page(@current_page)
+                             .per(RESULTS_PER_PAGE)
+    @campaign_imports_count = scope.count
   end
 
   def create
@@ -135,6 +137,16 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     @campaign_import = Current.account.campaign_imports
                                       .includes(:user, :campaign_import_labels)
                                       .find(params[:id])
+  end
+
+  def filtered_campaign_imports
+    scope = Current.account.campaign_imports
+    scope = scope.where(status: SAVED_STATUSES) if ActiveModel::Type::Boolean.new.cast(params[:saved])
+    query = params[:q].to_s.strip.first(100)
+    return scope if query.blank?
+
+    pattern = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
+    scope.where('campaign_imports.name ILIKE :q OR campaign_imports.campaign_name ILIKE :q', q: pattern)
   end
 
   def set_current_page

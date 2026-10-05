@@ -68,6 +68,16 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # #993 (B5): masked contact and reason only, like the error report a viewer already sees.
+  def problem_rows?
+    permission_granted?('campaign_view')
+  end
+
+  # #993: a real name and values for the message preview, part of building a campaign.
+  def sample_contact?
+    permission_granted?('campaign_manage')
+  end
+
   private
 
   def permission_granted?(key)

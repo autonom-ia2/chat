@@ -5,6 +5,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   COMPANIES_CHOICE_STATUSES = %w[uploaded validating needs_column_choice ready_to_confirm validation_failed].freeze
   BOOLEAN_VALUES = %w[true false].freeze
   CHANNELS = %w[email whatsapp].freeze
+  PROBLEM_ROWS_PER_PAGE = 50
+  SAMPLE_ROW_STATUSES = %i[valid imported].freeze
 
   before_action :ensure_campaign_import_enabled
   before_action :fetch_campaign_import
@@ -81,6 +83,24 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     render 'api/v1/accounts/campaign_imports/show'
   end
 
+  # GET /campaign_imports/:id/problem_rows?page=1 (#993, B5): rows left out, reason per row, contact masked, no name.
+  def problem_rows
+    page = [params[:page].to_i, 1].max
+    scope = @campaign_import.campaign_import_rows.status_invalid.order(:row_number)
+    rows = scope.offset((page - 1) * PROBLEM_ROWS_PER_PAGE).limit(PROBLEM_ROWS_PER_PAGE)
+    render json: {
+      payload: rows.map { |row| problem_row(row) },
+      meta: { count: scope.count, page: page, per_page: PROBLEM_ROWS_PER_PAGE }
+    }
+  end
+
+  # GET /campaign_imports/:id/sample_contact (#993, PRD §6.3 "Como o cliente vê"): the first eligible row of
+  # this audience, only its own values. `payload: null` when the audience has none.
+  def sample_contact
+    row = @campaign_import.campaign_import_rows.where(status: SAMPLE_ROW_STATUSES).order(:row_number).first
+    render json: { payload: row && sample_payload(row) }
+  end
+
   # GET /campaign_imports/:id/variable_suggestions?variables[][key]=2&variables[][label]=mês de vencimento
   def variable_suggestions
     variables = params.permit(variables: [:key, :label]).fetch(:variables, []).map(&:to_h)
@@ -138,6 +158,20 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
 
   def channels_with(current, choice)
     current.merge(choice.to_h { |channel, enabled| [channel, current[channel].to_h.merge('enabled' => enabled)] })
+  end
+
+  def problem_row(row)
+    contact = row.raw_phone_masked.presence || row.email_masked.presence
+    { row_number: row.row_number, contact_masked: contact, errors: Array(row.error_messages) }
+  end
+
+  def sample_payload(row)
+    name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
+    {
+      name: name, first_name: name.split.first.to_s,
+      company_name: row.contact.try(:company)&.name.presence || row.company_name,
+      extra_values: row.extra_values.to_h
+    }
   end
 
   # Free-form maps keyed by template variable; the services check every key and value.

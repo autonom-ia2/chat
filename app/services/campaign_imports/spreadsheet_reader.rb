@@ -158,8 +158,13 @@ class CampaignImports::SpreadsheetReader
       'uncertain_targets' => uncertain, 'format' => @parsed.format, 'table_index' => candidate.table_index,
       'table_name' => candidate.table.name, 'delimiter' => candidate.table.delimiter, 'header_row' => candidate.header_row_number,
       'jev' => jev, 'targets' => targets,
-      'columns' => columns.map { |column| column.except(:examples).transform_keys(&:to_s) }
+      'columns' => columns.map { |column| column_entry(column) }
     }
+  end
+
+  # example_masked (#993): the first example in the same masked format sent to Jev, never a value.
+  def column_entry(column)
+    column.except(:examples).merge(example_masked: column[:examples].first).transform_keys(&:to_s)
   end
 
   def resolution_method(jev, needs_confirmation)

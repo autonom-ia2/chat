@@ -122,12 +122,11 @@ module CampaignJourney::WhatsappOneoffRecipients
     CampaignJourney::TemplatePlaceholders.render(campaign.message.to_s, values)
   end
 
-  # Values go in after Liquid ran on the template, so spreadsheet text is never parsed as Liquid.
+  # Values go in after Liquid ran on the template (body, TEXT header and URL buttons, #993), so spreadsheet text is never parsed as Liquid.
   def with_variable_values(params, contact, values)
     resolved_values[contact.id] = values
     params = params.deep_dup
-    processed = params['processed_params'] = params['processed_params'].to_h
-    processed['body'] = processed['body'].to_h.merge(values)
+    params['processed_params'] = CampaignJourney::TemplateVariableKeys.apply(params['processed_params'], values)
     params
   end
 

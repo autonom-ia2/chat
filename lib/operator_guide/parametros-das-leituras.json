@@ -333,7 +333,9 @@
   "campaign_imports": {
     "controller": "api/v1/accounts/campaign_imports#index",
     "parametros": [
-      "page"
+      "page",
+      "q",
+      "saved"
     ]
   },
   "campaign_imports/:id": {
@@ -345,6 +347,16 @@
     "parametros": [
       "file"
     ]
+  },
+  "campaign_imports/:id/problem_rows": {
+    "controller": "api/v1/accounts/campaign_import_audiences#problem_rows",
+    "parametros": [
+      "page"
+    ]
+  },
+  "campaign_imports/:id/sample_contact": {
+    "controller": "api/v1/accounts/campaign_import_audiences#sample_contact",
+    "parametros": []
   },
   "campaign_imports/:id/variable_suggestions": {
     "controller": "api/v1/accounts/campaign_import_audiences#variable_suggestions",
