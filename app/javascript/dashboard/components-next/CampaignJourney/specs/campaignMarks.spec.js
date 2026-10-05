@@ -104,6 +104,25 @@ describe('K6 — campaign filter options', () => {
       '123'
     );
   });
+
+  // #1004: a reply to an SMS campaign is its own origin, "Campanha SMS: <nome>".
+  it('names SMS campaign marks and gives them their own icon', () => {
+    const { campaignOptionLabel, originFromCampaign } = useCrmOrigin();
+    const sms = {
+      source: 'campaign_sms',
+      source_id: 'campaign:sms:12',
+      headline: 'Parcela outubro',
+    };
+
+    expect(campaignOptionLabel(sms)).toBe(
+      'CRM_KANBAN.ORIGIN.CAMPAIGN_SMS: Parcela outubro'
+    );
+    expect(originFromCampaign(sms)).toMatchObject({
+      source: 'campaign_sms',
+      icon: 'i-lucide-message-square-text',
+      labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_SMS',
+    });
+  });
 });
 
 describe('P1 — Origem e campanhas in the contact panel', () => {
