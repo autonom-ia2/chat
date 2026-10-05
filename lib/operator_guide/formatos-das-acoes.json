@@ -3849,7 +3849,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],
@@ -11103,7 +11103,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:11",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:8",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31"
     ],
     "sem_corpo": false
@@ -19837,7 +19837,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],
