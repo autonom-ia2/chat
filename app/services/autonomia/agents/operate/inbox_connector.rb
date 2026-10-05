@@ -53,7 +53,7 @@ module Autonomia
           return Result.new(status: :error, error: :not_connected) if agent_inbox.nil?
 
           ActiveRecord::Base.transaction do
-            release_bot_conversations(agent_inbox.agent_bot_id)
+            agent_inbox.release_bot_conversations!
             # Destrói o VÍNCULO primeiro: o after_destroy :cleanup_mirror_bot do AgentInbox remove o
             # AgentBotInbox-espelho + o AgentBot-espelho (outgoing_url NULL) NA ORDEM SEGURA. Destruir
             # o AgentBot antes violava a FK autonomia_agent_inboxes.agent_bot_id (null:false, sem
@@ -62,15 +62,6 @@ module Autonomia
             agent_inbox.destroy!
           end
           Result.new(status: :ok)
-        end
-
-        # Libera ao humano qualquer conversa em que o bot ainda esteja no comando: as `pending` e as
-        # `open` que ainda têm o espelho como ai_assignee (na caixa do espelho as conversas nascem
-        # open com assignee_agent_bot_id = espelho — ver Conversation#set_active_bot_conversation).
-        def release_bot_conversations(mirror_bot_id)
-          pending = @inbox.conversations.where(status: :pending)
-          held_by_mirror = @inbox.conversations.where(status: :open, assignee_agent_bot_id: mirror_bot_id)
-          pending.or(held_by_mirror).find_each(&:bot_handoff!)
         end
 
         def agent_operable?

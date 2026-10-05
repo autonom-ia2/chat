@@ -3,13 +3,15 @@
 # abrir o Construtor e sair deixa um agente "Novo agente" vazio pendurado no Hub. Também limpa o leak
 # pré-existente (rascunhos abandonados após o 1º turno), que nunca teve cleanup.
 #
-# Varre agentes GUIADOS ainda em `draft` + `enabled:false` cuja última atividade — do próprio agente,
-# de qualquer build thread E de qualquer fonte — é mais velha que a janela, e os destrói (cascateando
-# sources/knowledge_entries via dependent: :destroy; threads viram nil por dependent: :nullify).
-# Escopo estreito (guided + draft + disabled) nunca toca agente ativo/pausado ou manual.
+# Varre agentes GUIADOS ainda em `draft` + `enabled:false`, SEM instrução e SEM fonte (#1035), cuja
+# última atividade — do próprio agente e de qualquer build thread — é mais velha que a janela, e os
+# destrói (threads viram nil por dependent: :nullify).
+# Escopo estreito (guided + draft + disabled + vazio) nunca toca agente ativo/pausado, manual, pronto
+# para publicar ou com materiais.
 #
 # Janela ampla (48h default, ajustável por ENV) protege rascunho em construção lenta: qualquer
-# geração/edição/upload toca o updated_at do agente, da thread ou da fonte e reabre a janela.
+# geração/edição toca o updated_at do agente ou da thread e reabre a janela; um upload tira o
+# rascunho da varredura de vez.
 # Idempotente; recheck sob lock por registro (defesa em job destrutivo); cap por execução evita pico
 # de exclusão. Roda de tempos em tempos (schedule.yml).
 class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
@@ -39,15 +41,18 @@ class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
     end
   end
 
-  # Rascunhos guiados órfãos: draft + desabilitado + updated_at velho + sem atividade recente em
-  # thread NEM fonte. Os dois where.not encadeados = poupa quem tem thread OU fonte recente
-  # (id ∉ recent_threads AND id ∉ recent_sources ⇒ reaped só se ausente de ambos).
+  # Rascunhos guiados órfãos: draft + desabilitado + VAZIOS (sem instrução e sem nenhuma fonte) +
+  # updated_at velho + sem atividade recente em thread. #1035: o Construtor não muda o status ao
+  # terminar, então rascunho com instrução é agente PRONTO aguardando publicação, e rascunho com
+  # material é trabalho do dono — nenhum dos dois é vazamento. Só o "Novo agente" vazio é. (Com
+  # `where.missing(:sources)` a antiga proteção de "fonte recente" ficou contida nesta.)
   def stale_drafts(cutoff)
     Autonomia::Agents::Agent
       .guided.draft.where(enabled: false)
+      .where(instruction: [nil, ''])
+      .where.missing(:sources)
       .where('autonomia_agents.updated_at < ?', cutoff)
       .where.not(id: recent_activity_agent_ids(Autonomia::Agents::BuildThread, cutoff))
-      .where.not(id: recent_activity_agent_ids(Autonomia::Agents::Source, cutoff))
   end
 
   # IDs de agente com atividade recente na relação dada. where.not(autonomia_agent_id: nil) é

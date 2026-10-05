@@ -113,6 +113,15 @@ module Autonomia
       validates :tone, length: { maximum: MAX_TONE_LENGTH }, allow_nil: true
       validates :instruction, length: { maximum: MAX_INSTRUCTION_LENGTH }, allow_nil: true
 
+      # #1035 — quando o agente DEIXA de atender (pausa, desliga) as conversas que estavam com ele voltam
+      # para a equipe e o espelho da caixa fica inativo (conversa nova nasce sem bot); quando VOLTA a
+      # atender, o espelho é reativado. Antes, pausar deixava a conversa com o bot, que não responde, e a
+      # distribuição automática a pulava. Dentro da transação do save: se falhar, a pausa não grava.
+      after_update :sync_mirror_bots, if: :operating_changed?
+      # Excluir também devolve as conversas (o after_destroy do AgentInbox só apaga o espelho).
+      # prepend: roda antes do dependent: :destroy de agent_inboxes.
+      before_destroy :release_bot_conversations, prepend: true
+
       store_accessor :config, :model, :temperature, :business_hours, :max_turns, :guardrails
       # V2.1 — hint de construção: o dono declarou que o agente terá (ou não) base de conhecimento.
       # Reflexo no jsonb `config` (sem migração); o Construtor já lê via with_knowledge?.
@@ -298,7 +307,28 @@ module Autonomia
         true
       end
 
+      # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
+      def operating?
+        enabled? && active?
+      end
+
       private
+
+      def operating_changed?
+        return false unless saved_change_to_enabled? || saved_change_to_status?
+
+        was_enabled = attribute_before_last_save(:enabled)
+        was_active = attribute_before_last_save(:status).to_s == 'active'
+        (was_enabled && was_active) != operating?
+      end
+
+      def sync_mirror_bots
+        agent_inboxes.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
+      end
+
+      def release_bot_conversations
+        agent_inboxes.find_each(&:release_bot_conversations!)
+      end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução
       # mantida nunca entra nele — por qualquer caminho de escrita, não só pelo controller.
