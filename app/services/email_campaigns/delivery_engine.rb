@@ -74,7 +74,7 @@ module EmailCampaigns
         to: recipient.email,
         subject: rendered[:subject],
         html_body: tracked_html,
-        reply_to: @campaign.reply_to.presence || default_reply_to,
+        reply_to: EmailCampaigns::ReplyTo.for(@campaign),
         from_email: from_email,
         headers: headers
       )
@@ -117,7 +117,7 @@ module EmailCampaigns
     def render(recipient)
       renderer = EmailCampaigns::TemplateRenderer.new(recipient)
       { subject: renderer.render(@campaign.subject),
-        body_html: inject_preheader(renderer.render(@campaign.body_html), renderer.render(@campaign.preheader)) }
+        body_html: inject_preheader(renderer.render(@campaign.body_html, html: true), renderer.render(@campaign.preheader, html: true)) }
     end
 
     # Inject a hidden preheader snippet right after <body> (or at the top of the html) so inbox
@@ -140,10 +140,6 @@ module EmailCampaigns
       name = @campaign.from_name.presence
       addr = @campaign.from_email.presence || @campaign.sender_identity.from_email.presence
       addr.present? && name.present? ? "#{name} <#{addr}>" : addr
-    end
-
-    def default_reply_to
-      @campaign.sender_identity.from_email.presence
     end
 
     # RFC 8058 one-click unsubscribe — real per-recipient public endpoint (raw URL, no click
