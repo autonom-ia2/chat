@@ -151,12 +151,17 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     name = campaign_import_params[:name].to_s.strip.first(255)
     Current.account.campaign_imports.create!(
       user: Current.user, status: :uploaded, mode: 'single_label', name: name, campaign_name: name, batch_count: 1,
-      options: { default_country: 'BR', flow: CampaignImport::AUDIENCE_FLOW }, **source_file_attributes
+      options: { default_country: 'BR', flow: CampaignImport::AUDIENCE_FLOW, create_companies: create_companies_param }, **source_file_attributes
     )
   end
 
   def campaign_import_params
-    params.permit(:campaign_name, :batch_count, :name)
+    params.permit(:campaign_name, :batch_count, :name, :create_companies)
+  end
+
+  # #998 "Criar e ligar": on by default; only an explicit "false" turns it off.
+  def create_companies_param
+    campaign_import_params[:create_companies].to_s != 'false'
   end
 
   def normalized_batch_count

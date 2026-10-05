@@ -2,6 +2,8 @@
 # Contract documented in docs/campaigns/publicos/api-992.md.
 class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::BaseController
   COLUMN_CHOICE_STATUSES = %w[needs_column_choice ready_to_confirm validation_failed].freeze
+  COMPANIES_CHOICE_STATUSES = %w[uploaded validating needs_column_choice ready_to_confirm validation_failed].freeze
+  BOOLEAN_VALUES = %w[true false].freeze
 
   before_action :ensure_campaign_import_enabled
   before_action :fetch_campaign_import
@@ -27,6 +29,27 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     return render_unprocessable(error_code) if error_code
 
     CampaignImports::ValidateJob.perform_later(@campaign_import)
+    render 'api/v1/accounts/campaign_imports/show'
+  end
+
+  # PATCH /campaign_imports/:id/companies  { create_companies: true | false } (#998 "Criar e ligar")
+  # Only before saving: the importer reads the switch once the audience is queued.
+  def companies
+    value = params.permit(:create_companies)[:create_companies].to_s
+    return render_unprocessable('campaign_import.invalid_companies_choice') unless BOOLEAN_VALUES.include?(value)
+
+    error_code = nil
+    @campaign_import.with_lock do
+      @campaign_import.reload
+      unless COMPANIES_CHOICE_STATUSES.include?(@campaign_import.status)
+        error_code = 'campaign_import.companies_choice_not_available'
+        next
+      end
+
+      @campaign_import.update!(options: @campaign_import.options.to_h.merge('create_companies' => value == 'true'))
+    end
+    return render_unprocessable(error_code) if error_code
+
     render 'api/v1/accounts/campaign_imports/show'
   end
 

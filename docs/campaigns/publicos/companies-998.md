@@ -1,9 +1,9 @@
 # Companies from spreadsheet imports (#998)
 
-Rules: PRD of the audiences epic (#990), §8.2 "Empresa" and acceptance group C1–C7.
-This branch ships only the service and its spec. Wiring into `CampaignImports::Importer`
-happens on top of #992 (SchemaResolver/Validator/Importer changes), so this document is
-the contract for that step.
+Rules: PRD of the audiences epic (#990), §6.6 item 4, §8.1, §8.2 "Empresa" and acceptance
+group C1–C7. Built on top of #992 (audience flow: SpreadsheetReader, AudienceValidator,
+Importer). Only Públicos (`options.flow = "audience"`) touch companies; the old campaign base
+flow is unchanged.
 
 ## Service
 
@@ -70,43 +70,85 @@ no longer exists, nor a counter that is too high.
 - `link`: no read queries for prepared rows; writes are the company insert (only on
   `:created`) and the contact update with its counter cache.
 
-## How the importer should call it (on top of #992)
+Company lookup (domain, then normalized name) lives in `CampaignImports::CompanyResolver`
+(read-only), shared by the linker and by the preview, so both apply the same rules.
 
-Rows produced by the SchemaResolver/Validator need `company_name` and `email` (both
-optional). Inside the importer:
+## Data (migration `20261005120000_add_company_columns_to_campaign_imports`)
 
-```ruby
-def company_linker
-  @company_linker ||= CampaignImports::CompanyLinker.new(account, enabled: campaign_import.<create_companies switch>)
-end
+| Table | Column | |
+|---|---|---|
+| `campaign_import_rows` | `company_id` (bigint, index) | company the spreadsheet named: the one linked, or the one kept out for `kept_other` (nil when it did not exist) |
+| `campaign_import_rows` | `company_result` | `created` \| `reused` \| `kept_other` \| `none` (audience rows); nil on old imports and on failed rows |
+| `campaign_imports` | `companies_created_count` | rows `created` (one per company) |
+| `campaign_imports` | `companies_reused_count` | distinct `company_id` of `reused` rows that no row of the import created |
+| `campaign_imports` | `companies_kept_count` | rows `kept_other` ("mantidas") |
+| `campaign_imports` | `company_contacts_linked_count` | rows `created` + `reused` (contact ends linked to the spreadsheet company, including a contact that already had it) |
+| `campaign_imports` | `options.create_companies` | "Criar e ligar" switch; absent = on |
 
-def import_block(block, label_records)
-  company_linker.prepare(block)  # before or inside the block transaction
-  ActiveRecord::Base.transaction do
-    # ... per row, inside the row savepoint, after the contact exists:
-    result = company_linker.link(contact, company_name: row[:company_name], email: row[:email])
-    # persist result.status on the campaign_import_row (e.g. company_result) and result.company&.id
-  end
-end
+The counters are computed in `Importer#finish_import!` (and on an aborted import) **from the
+persisted rows** (`CampaignImports::ImportCompanies#counters`), not from `linker.summary`: a
+retried job starts a new linker and skips rows already imported, and the numbers still cover
+the whole import.
+
+## Importer
+
+`CampaignImports::ImportCompanies` (one per run, audience only):
+
+- `prepare(block)` before each block transaction: one query for the companies of the block.
+- `link(contact, row)` inside the row savepoint, after the contact is found/created and its
+  blank fields filled; the result goes to `company_id`/`company_result` of the row. A row that
+  fails rolls back its company with it and keeps both columns nil.
+- Every audience contact gets `skip_company_auto_association = true`: companies come only
+  from the company column. Without it, Enterprise's after_commit would create a company from a
+  business e-mail domain even with the switch off (C5) and the preview would be wrong.
+
+## Preview before saving
+
+`CampaignImports::CompanyPreview`, called by `AudienceValidator` when the audience becomes
+`ready_to_confirm`, read-only. Stored in `validation_summary.companies`:
+
+```json
+{ "available": true, "rows_with_company": 20000, "companies_created": 199,
+  "companies_reused": 1, "contacts_linked": 20000, "contacts_kept": 0 }
 ```
 
-- Call `link` inside the row savepoint, after the contact is created/found, so a failed row
-  rolls back its company together with the contact.
-- Use a single linker instance for the whole import (the dedupe and the indexes live in it).
-- Persist the per-row `status` on the import row. On a retried import the linker is new, so
-  `summary` only covers the current run; final numbers for the screen should be aggregated
-  from the persisted row statuses (`created` rows = companies created, `kept_other` rows =
-  "mantidas", etc.), the same way `finish_import!` aggregates contacts today. Rows already
-  imported are skipped by the importer, so they are not linked twice.
-- C7 ("Remover do público" does not undo companies) holds by construction: the linker has no
-  unlink path, and the undo/removal flows must not call `ContactMembershipService#remove`.
+- `available: false` (and nothing else) when the account has no `companies` feature or the
+  Enterprise overlay is absent: the screen hides the block (C6).
+- Computed regardless of the switch, so turning "Criar e ligar" on/off needs no revalidation.
+- It walks the valid rows in import order: company by `CompanyResolver`; contact by the
+  importer's match (phone with or without the 9th digit, then e-mail without case), loaded in
+  batches of 1.000 keys; a contact with another company is `contacts_kept`; a would-be-new
+  company is counted once per normalized name. Equal to the final counters when companies and
+  contacts do not change between validation and saving (spec checks it in C1–C4 and a mixed
+  file).
+
+## API
+
+- `POST /campaign_imports` with `name` accepts `create_companies` (`"false"` turns it off;
+  default on).
+- `PATCH /campaign_imports/:id/companies` `{ "create_companies": true|false }` —
+  `campaign_manage`; allowed while `uploaded`, `validating`, `needs_column_choice`,
+  `ready_to_confirm` or `validation_failed`. Errors `422`:
+  `campaign_import.invalid_companies_choice`, `campaign_import.companies_choice_not_available`,
+  `campaign_import.not_an_audience`.
+- Object: `create_companies` (boolean) and
+  `companies: { created, reused, contacts_linked, kept }` (final numbers; zero before saving).
+  Preview in `validation_summary.companies`. Details in `api-992.md` §4 and §9.
+
+## C7
+
+"Remover do público" / undo labels does not undo companies: neither `UndoLabels` nor the
+linker has an unlink path, and neither calls `ContactMembershipService#remove` (spec C7).
 
 ## Open points
 
+- With the switch on and a blank company cell, the e-mail domain auto-association is also
+  skipped (companies only from the column). Chatwoot's default would create one from a
+  business e-mail. Decision for the product owner.
 - Created companies get no `domain`, even when the row has a business e-mail. Setting it would
   make the next rows with that e-mail match by domain, but it also triggers the favicon job
   and can collide with the per-account unique domain. PRD says "cria com o nome"; kept as is.
 - A contact that keeps another company does not create the spreadsheet company (avoids empty
-  companies). If the preview should count it as "nova", the preview must use the same rule.
+  companies); the preview follows the same rule.
 - No unique index on company name: two imports running at the same time on the same account
   can each create the same name once. Within one import there is never a duplicate.

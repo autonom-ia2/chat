@@ -50,6 +50,11 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # #998: the "Criar e ligar" switch follows the import permission (PRD §4).
+  def companies?
+    permission_granted?('campaign_manage')
+  end
+
   def variable_suggestions?
     permission_granted?('campaign_manage')
   end

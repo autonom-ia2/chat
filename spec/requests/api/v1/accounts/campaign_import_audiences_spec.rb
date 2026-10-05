@@ -110,6 +110,81 @@ RSpec.describe 'Campaign import audiences API (Públicos, #992)', :aggregate_fai
     expect(response.parsed_body['error']).to eq('campaign_import.invalid_variable_mapping')
   end
 
+  describe 'companies (#998)' do
+    def ready_audience(account, user, **create_options)
+      campaign_import = create_audience_import(account: account, user: user, content: content)
+      campaign_import.update!(
+        options: campaign_import.options.merge(create_options),
+        schema_resolution: { 'manual_mapping' => { 'name' => 0, 'phone' => 1, 'company' => 2 }, 'header_row' => 1, 'table_index' => 0 }
+      )
+      CampaignImports::AudienceValidator.new(campaign_import).perform
+      campaign_import.reload
+    end
+
+    it 'shows the company preview before saving and turns "Criar e ligar" off and on' do
+      account, user = create_account_and_user
+      account.enable_features!('companies')
+      create(:company, :without_domain, account: account, name: 'Alfa')
+      campaign_import = ready_audience(account, user)
+
+      get import_path(account, campaign_import), headers: auth_headers(user)
+      payload = response.parsed_body['payload']
+      expect(payload['create_companies']).to be(true)
+      expect(payload['validation_summary']['companies']).to eq(
+        'available' => true, 'rows_with_company' => 2, 'companies_created' => 1, 'companies_reused' => 1,
+        'contacts_linked' => 2, 'contacts_kept' => 0
+      )
+      expect(payload['companies']).to eq('created' => 0, 'reused' => 0, 'contacts_linked' => 0, 'kept' => 0)
+
+      patch import_path(account, campaign_import, 'companies'), params: { create_companies: false }, headers: auth_headers(user), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']['create_companies']).to be(false)
+      expect(campaign_import.reload.create_companies?).to be(false)
+
+      patch import_path(account, campaign_import, 'companies'), params: { create_companies: true }, headers: auth_headers(user), as: :json
+      expect(response.parsed_body['payload']['create_companies']).to be(true)
+
+      perform_enqueued_jobs { post import_path(account, campaign_import, 'confirm'), headers: auth_headers(user) }
+      get import_path(account, campaign_import), headers: auth_headers(user)
+      expect(response.parsed_body['payload']['companies']).to eq('created' => 1, 'reused' => 1, 'contacts_linked' => 2, 'kept' => 0)
+    end
+
+    it 'creates an audience with "Criar e ligar" off when asked' do
+      account, user = create_account_and_user
+
+      post "/api/v1/accounts/#{account.id}/campaign_imports", params: { name: 'Clientes', create_companies: 'false', import_file: upload(content) },
+                                                              headers: auth_headers(user)
+
+      expect(response).to have_http_status(:created)
+      expect(response.parsed_body['payload']['create_companies']).to be(false)
+    end
+
+    it 'refuses an invalid value, a switch after saving, an old import and an agent without campaign_manage' do
+      account, user = create_account_and_user
+      campaign_import = ready_audience(account, user)
+
+      patch import_path(account, campaign_import, 'companies'), params: { create_companies: 'sim' }, headers: auth_headers(user), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('campaign_import.invalid_companies_choice')
+
+      campaign_import.update!(status: :queued)
+      patch import_path(account, campaign_import, 'companies'), params: { create_companies: false }, headers: auth_headers(user), as: :json
+      expect(response.parsed_body['error']).to eq('campaign_import.companies_choice_not_available')
+      expect(campaign_import.reload.create_companies?).to be(true)
+
+      old = create_campaign_import(account: account, user: user, content: "nome,telefone\nAna,11987654321\n")
+      patch import_path(account, old, 'companies'), params: { create_companies: false }, headers: auth_headers(user), as: :json
+      expect(response.parsed_body['error']).to eq('campaign_import.not_an_audience')
+
+      agent = User.create!(name: 'Agente', email: "agente-#{SecureRandom.hex(4)}@example.com", password: 'Passw0rd!23', confirmed_at: Time.current)
+      AccountUser.create!(account: account, user: agent, role: :agent)
+      campaign_import.update!(status: :ready_to_confirm)
+      patch import_path(account, campaign_import, 'companies'), params: { create_companies: false }, headers: auth_headers(agent), as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(campaign_import.reload.create_companies?).to be(true)
+    end
+  end
+
   it 'keeps the column choice behind campaign_manage' do
     account, user = create_account_and_user
     agent = User.create!(name: 'Agente', email: "agente-#{SecureRandom.hex(4)}@example.com", password: 'Passw0rd!23', confirmed_at: Time.current)

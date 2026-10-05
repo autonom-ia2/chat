@@ -110,6 +110,11 @@ class CampaignImport < ApplicationRecord
     options.to_h['flow'] == AUDIENCE_FLOW
   end
 
+  # #998 "Criar e ligar" switch of an audience: on unless explicitly turned off.
+  def create_companies?
+    options.to_h['create_companies'] != false
+  end
+
   def downloadable_error_csv?
     error_csv.attached?
   end

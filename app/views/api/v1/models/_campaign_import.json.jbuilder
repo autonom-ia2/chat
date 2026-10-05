@@ -7,6 +7,13 @@ json.flow resource.audience? ? CampaignImport::AUDIENCE_FLOW : 'campaign_base'
 json.channels resource.channels || {}
 json.extra_columns resource.extra_columns || []
 json.schema_resolution resource.schema_resolution || {}
+json.create_companies resource.create_companies?
+json.companies do
+  json.created resource.companies_created_count
+  json.reused resource.companies_reused_count
+  json.contacts_linked resource.company_contacts_linked_count
+  json.kept resource.companies_kept_count
+end
 json.campaign_slug resource.campaign_slug
 json.base_label resource.base_label
 json.mode resource.mode

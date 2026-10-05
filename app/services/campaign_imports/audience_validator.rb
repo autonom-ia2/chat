@@ -134,8 +134,11 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
     end
   end
 
+  # #998: what saving will do with companies, shown before the user confirms (read-only).
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
-    super.merge(audience_attributes(valid_rows))
+    attributes = super.merge(audience_attributes(valid_rows))
+    companies = CampaignImports::CompanyPreview.new(campaign_import.account, valid_rows).perform
+    attributes.merge(validation_summary: attributes[:validation_summary].merge(companies: companies))
   end
 
   def mark_validation_failed(global_errors, row_results, exception: nil)

@@ -7,18 +7,17 @@ class CampaignImports::ContactMatcher
   end
 
   def find(phone_number)
-    candidates = candidates_for(phone_number)
-    contacts = @account.contacts.where(phone_number: candidates).to_a
-    candidates.each do |candidate|
+    numbers = candidates(phone_number)
+    contacts = @account.contacts.where(phone_number: numbers).to_a
+    numbers.each do |candidate|
       match = contacts.find { |contact| contact.phone_number == candidate }
       return match if match
     end
     nil
   end
 
-  private
-
-  def candidates_for(phone_number)
+  # The stored numbers that count as this phone, in the order #find tries them.
+  def candidates(phone_number)
     variants = @normalizer.contact_candidates(phone_number.delete_prefix('+'))
     ([phone_number] + variants.map { |variant| "+#{variant}" }).uniq
   end

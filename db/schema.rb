@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_120000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1109,9 +1109,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
     t.string "normalized_email_hash"
     t.string "company_name"
     t.jsonb "extra_values", default: {}, null: false
+    t.bigint "company_id"
+    t.string "company_result"
     t.index ["campaign_import_id", "row_number"], name: "idx_campaign_import_rows_on_import_and_row_number", unique: true
     t.index ["campaign_import_id", "status"], name: "index_campaign_import_rows_on_campaign_import_id_and_status"
     t.index ["campaign_import_id"], name: "index_campaign_import_rows_on_campaign_import_id"
+    t.index ["company_id"], name: "index_campaign_import_rows_on_company_id"
     t.index ["contact_id"], name: "index_campaign_import_rows_on_contact_id"
     t.index ["normalized_email_hash"], name: "index_campaign_import_rows_on_normalized_email_hash"
     t.index ["normalized_phone_hash"], name: "index_campaign_import_rows_on_normalized_phone_hash"
@@ -1164,6 +1167,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
     t.jsonb "channels", default: {}, null: false
     t.jsonb "extra_columns", default: [], null: false
     t.jsonb "schema_resolution", default: {}, null: false
+    t.integer "companies_created_count", default: 0, null: false
+    t.integer "companies_reused_count", default: 0, null: false
+    t.integer "companies_kept_count", default: 0, null: false
+    t.integer "company_contacts_linked_count", default: 0, null: false
     t.index ["account_id", "campaign_slug"], name: "index_campaign_imports_on_account_id_and_campaign_slug"
     t.index ["account_id", "created_at"], name: "index_campaign_imports_on_account_id_and_created_at"
     t.index ["account_id", "status"], name: "index_campaign_imports_on_account_id_and_status"
