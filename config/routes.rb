@@ -204,6 +204,7 @@ Rails.application.routes.draw do
               patch :channels, to: 'campaign_import_audiences#channels'
               get :problem_rows, to: 'campaign_import_audiences#problem_rows'
               get :sample_contact, to: 'campaign_import_audiences#sample_contact'
+              get :contacts, to: 'campaign_import_audiences#contacts'
             end
           end
           namespace :campaign_journey do

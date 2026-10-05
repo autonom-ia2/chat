@@ -73,6 +73,11 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_view')
   end
 
+  # #993 side panel: who is in the audience, for whoever can see the audience.
+  def contacts?
+    permission_granted?('campaign_view')
+  end
+
   # #993: a real name and values for the message preview, part of building a campaign.
   def sample_contact?
     permission_granted?('campaign_manage')

@@ -121,4 +121,43 @@ RSpec.describe 'Audience preview endpoints (#993)', :aggregate_failures, type: :
       expect(response.parsed_body['payload']).to eq([])
     end
   end
+
+  describe 'side panel (PRD §6.6)' do
+    it 'lists the contacts saved by the audience, paged, for campaign_view' do
+      get audience_url('/contacts'), headers: headers_for(agent_with(['campaign_view']))
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana Souza', 'Caio Reis'])
+      expect(response.parsed_body['meta']).to eq('count' => 2, 'page' => 1, 'per_page' => 25)
+      expect(response.parsed_body['payload'].first.keys).to contain_exactly('id', 'name', 'email', 'phone_number', 'company_name')
+    end
+
+    it 'shows the campaigns that used the audience, old ones linked by the backfill included (F1)' do
+      channel = journey_cloud_channel(account)
+      campaign = create(:campaign, account: account, inbox: channel.inbox, title: 'Renovação outubro', audience: [],
+                                   template_params: journey_template_params)
+      CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: audience)
+
+      get audience_url, headers: headers_for
+
+      expect(response.parsed_body.dig('payload', 'linked_campaigns')).to eq(
+        [{ 'type' => 'Campaign', 'id' => campaign.id, 'title' => 'Renovação outubro', 'channel' => 'whatsapp_official',
+           'status' => 'active' }]
+      )
+    end
+
+    it 'old imports keep the original campaign name and list their contacts (F1)' do
+      old = create_campaign_import(account: account, user: user, content: "nome,celular\nAna,11987654321\n", batch_count: 1,
+                                   filename: 'base.csv', content_type: 'text/csv')
+      old.update!(campaign_name: 'Base de setembro')
+
+      get "/api/v1/accounts/#{account.id}/campaign_imports/#{old.id}", headers: headers_for
+      expect(response.parsed_body.dig('payload', 'campaign_name')).to eq('Base de setembro')
+      expect(response.parsed_body.dig('payload', 'name')).to be_nil
+
+      get "/api/v1/accounts/#{account.id}/campaign_imports/#{old.id}/contacts", headers: headers_for
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['payload']).to eq([])
+    end
+  end
 end

@@ -3806,9 +3806,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#channels",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:62",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:144",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:128"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:63",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:162",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:143"
     ],
     "sem_corpo": false
   },
@@ -3822,9 +3822,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#columns",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:16",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:139",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:128"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:17",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:157",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:143"
     ],
     "sem_corpo": false
   },
@@ -3835,9 +3835,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#companies",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:40",
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:41",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:128"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:42",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:143"
     ],
     "sem_corpo": false
   },
@@ -11101,8 +11101,8 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#variable_coverage",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:112",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:128"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:127",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:143"
     ],
     "sem_corpo": true
   },
@@ -11178,6 +11178,30 @@
       "variable_bindings",
       "variable_defaults"
     ]
+  },
+  "POST campaign_journey/recipient_previews": {
+    "campos": {
+      "campaign_import_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "channel": {},
+      "message_body": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/campaign_journey/recipient_previews#create",
+    "modelo": "CampaignImport",
+    "motivos": [
+      "leitura crua sem tipo: channel (repassada a ::CampaignJourney::RecipientPreview.new), message_body (repassada a ::CampaignJourney::RecipientPreview.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:9",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:10"
+    ],
+    "sem_corpo": false
   },
   "POST campaigns": {
     "campos": {

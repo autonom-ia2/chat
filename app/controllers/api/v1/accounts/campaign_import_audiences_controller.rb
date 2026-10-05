@@ -6,6 +6,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   BOOLEAN_VALUES = %w[true false].freeze
   CHANNELS = %w[email whatsapp].freeze
   PROBLEM_ROWS_PER_PAGE = 50
+  CONTACTS_PER_PAGE = 25
   SAMPLE_ROW_STATUSES = %i[valid imported].freeze
 
   before_action :ensure_campaign_import_enabled
@@ -94,6 +95,20 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     }
   end
 
+  # GET /campaign_imports/:id/contacts?page=1 (#993, side panel "Ver contatos e empresas"): the contacts
+  # saved by this audience, paged, with their company. Contacts has no list filter, so the panel reads them here.
+  def contacts
+    page = [params[:page].to_i, 1].max
+    ids = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).distinct.pluck(:contact_id)
+    scope = Current.account.contacts.where(id: ids).order(:name, :id)
+    records = scope.offset((page - 1) * CONTACTS_PER_PAGE).limit(CONTACTS_PER_PAGE)
+    records = records.includes(:company) if Contact.reflect_on_association(:company)
+    render json: {
+      payload: records.map { |contact| contact_payload(contact) },
+      meta: { count: scope.count, page: page, per_page: CONTACTS_PER_PAGE }
+    }
+  end
+
   # GET /campaign_imports/:id/sample_contact (#993, PRD §6.3 "Como o cliente vê"): the first eligible row of
   # this audience, only its own values. `payload: null` when the audience has none.
   def sample_contact
@@ -126,7 +141,10 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
 
   def fetch_campaign_import
     @campaign_import = Current.account.campaign_imports.includes(:user, :campaign_import_labels).find(params[:id])
-    render_unprocessable('campaign_import.not_an_audience') unless @campaign_import.audience?
+    # Old imports (Base Campanha) also list their contacts in the side panel (F1).
+    return if @campaign_import.audience? || action_name == 'contacts'
+
+    render_unprocessable('campaign_import.not_an_audience')
   end
 
   def check_authorization
@@ -163,6 +181,11 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   def problem_row(row)
     contact = row.raw_phone_masked.presence || row.email_masked.presence
     { row_number: row.row_number, contact_masked: contact, errors: Array(row.error_messages) }
+  end
+
+  def contact_payload(contact)
+    { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number,
+      company_name: contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'] }
   end
 
   def sample_payload(row)

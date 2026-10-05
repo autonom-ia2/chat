@@ -342,6 +342,12 @@
     "controller": "api/v1/accounts/campaign_imports#show",
     "parametros": []
   },
+  "campaign_imports/:id/contacts": {
+    "controller": "api/v1/accounts/campaign_import_audiences#contacts",
+    "parametros": [
+      "page"
+    ]
+  },
   "campaign_imports/:id/download": {
     "controller": "api/v1/accounts/campaign_imports#download",
     "parametros": [
