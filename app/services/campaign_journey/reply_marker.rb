@@ -94,15 +94,14 @@ class CampaignJourney::ReplyMarker
   def email_recipients
     scope = EmailCampaignRecipient.joins(:email_campaign).includes(:email_campaign)
                                   .merge(email_campaigns_replying_to_inbox).where(sent_at: window)
-    by_email = contact_email.present? ? scope.where('LOWER(email_campaign_recipients.email) = ?', contact_email) : scope.none
-    return by_email unless recipient_contact_column?
-
     by_contact = scope.where(contact_id: @contact.id)
-    contact_email.present? ? by_contact.or(by_email.where(contact_id: nil)) : by_contact
+    return by_contact if contact_email.blank?
+
+    by_contact.or(scope.where(contact_id: nil).where('LOWER(email_campaign_recipients.email) = ?', contact_email))
   end
 
   def same_person?(recipient)
-    return true if recipient_contact_column? && recipient.contact_id.present?
+    return true if recipient.contact_id.present?
     return true if Contact.where(account_id: @message.account_id).where('LOWER(email) = ?', contact_email).limit(2).count == 1
 
     Rails.logger.info "[CampaignJourney] reply not marked: e-mail shared by several contacts (recipient=#{recipient.id})"
@@ -113,15 +112,18 @@ class CampaignJourney::ReplyMarker
     @contact_email ||= @contact.email.to_s.strip.downcase
   end
 
-  # email_campaign_recipients.contact_id arrives with #999; until then recipients match by e-mail.
-  def recipient_contact_column?
-    EmailCampaignRecipient.column_names.include?('contact_id')
+  # Campaigns whose replies come to this inbox, in the Reply-To order of EmailCampaigns::ReplyTo:
+  # the campaign's reply inbox; else (no typed reply_to) the verified domain's reply inbox in SES
+  # mode, or the sender mailbox in direct mode.
+  def email_campaigns_replying_to_inbox
+    account_campaigns = EmailCampaign.where(account_id: @message.account_id)
+    chosen_inbox = account_campaigns.where(reply_to_inbox_id: @message.inbox_id)
+    chosen_inbox.or(account_campaigns.where(reply_to_inbox_id: nil, reply_to: [nil, '']).merge(fallback_reply_inbox(account_campaigns)))
   end
 
-  def email_campaigns_replying_to_inbox
+  def fallback_reply_inbox(account_campaigns)
     reply_identities = EmailSenderIdentity.where(account_id: @message.account_id, reply_to_inbox_id: @message.inbox_id).select(:id)
-    direct = EmailCampaign.where(account_id: @message.account_id, delivery_mode: :direct_inbox, sender_inbox_id: @message.inbox_id)
-    via_domain = EmailCampaign.where(account_id: @message.account_id, delivery_mode: :ses, sender_identity_id: reply_identities)
-    direct.or(via_domain)
+    direct = account_campaigns.where(delivery_mode: :direct_inbox, sender_inbox_id: @message.inbox_id)
+    direct.or(account_campaigns.where(delivery_mode: :ses, sender_identity_id: reply_identities))
   end
 end
