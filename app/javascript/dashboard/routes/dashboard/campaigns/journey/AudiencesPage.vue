@@ -10,6 +10,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
+import { toLocaleTag } from 'dashboard/components-next/CampaignJourney/localeTag';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -48,7 +49,7 @@ const peopleOnPage = computed(() =>
 
 const formatDate = value =>
   value
-    ? new Date(value).toLocaleDateString(locale.value, { dateStyle: 'short' })
+    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), { dateStyle: 'short' })
     : '';
 
 const fetchAudiences = async () => {

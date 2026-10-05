@@ -2,6 +2,7 @@ import { mount, flushPromises, config } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
+import ptJourney from 'dashboard/i18n/locale/pt_BR/campaignJourney.json';
 
 const stub = name => ({ default: { name, render: () => null } });
 vi.mock(
@@ -54,6 +55,7 @@ const mountPage = ({
   campaigns = [],
   audiences = false,
   customRole = null,
+  locale = 'en',
 }) => {
   const dispatched = [];
   const track = name => () => {
@@ -101,8 +103,8 @@ const mountPage = ({
   });
   const i18n = createI18n({
     legacy: false,
-    locale: 'en',
-    messages: { en: enJourney },
+    locale,
+    messages: { en: enJourney, pt_BR: ptJourney },
   });
   const wrapper = mount(CampaignJourneyPage, {
     attachTo: document.body,
@@ -247,6 +249,35 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-test="new-campaign"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('pt_BR: dates format with the BCP-47 tag (no "Invalid language tag")', async () => {
+    const { wrapper } = mountPage({
+      locale: 'pt_BR',
+      inboxes: [{ channel_type: 'Channel::Sms' }],
+      campaigns: [
+        {
+          id: 9,
+          title: 'Parcela',
+          campaign_type: 'one_off',
+          scheduled_at: 1_790_000_000,
+          inbox: { name: 'SMS', channel_type: 'Channel::Sms' },
+        },
+      ],
+    });
+    await flushPromises();
+
+    const row = wrapper.find('[data-row="sms-9"]');
+    expect(row.exists()).toBe(true);
+    expect(row.text()).toContain('Agendada');
+    expect(row.text()).toContain(
+      new Date(1_790_000_000 * 1000).toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      })
+    );
+    expect(wrapper.text()).toContain('Nova campanha');
     wrapper.unmount();
   });
 });

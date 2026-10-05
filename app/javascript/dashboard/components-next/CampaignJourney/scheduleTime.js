@@ -1,6 +1,7 @@
 // "Quando" of the review step (#993, PRD §6.4): date and time are read in the account
 // time zone, whatever the browser zone is, and sent in UTC.
 import { zonedTimeToUtc } from 'date-fns-tz';
+import { toLocaleTag } from './localeTag';
 
 const browserTimeZone = () => {
   try {
@@ -40,7 +41,7 @@ export const isFutureSchedule = (localDateTime, timeZone, now = Date.now()) => {
 
 /** Human date and time of an ISO instant in the account zone. */
 export const formatInZone = (iso, timeZone, locale) =>
-  new Date(iso).toLocaleString(locale, {
+  new Date(iso).toLocaleString(toLocaleTag(locale), {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone,

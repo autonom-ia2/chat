@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
+import { toLocaleTag } from 'dashboard/components-next/CampaignJourney/localeTag';
 import { vOnClickOutside } from '@vueuse/components';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -122,7 +123,7 @@ const statusOptions = computed(() => [
 const formatWhen = row => {
   if (row.status === JOURNEY_STATUSES.ALWAYS_ON) return t(`${NS}.ALWAYS`);
   if (!row.when) return t(`${NS}.NO_DATE`);
-  return new Date(row.when).toLocaleString(locale.value, {
+  return new Date(row.when).toLocaleString(toLocaleTag(locale.value), {
     dateStyle: 'short',
     timeStyle: 'short',
   });

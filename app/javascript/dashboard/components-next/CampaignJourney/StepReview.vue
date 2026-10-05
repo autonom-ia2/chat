@@ -10,6 +10,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
+import { toLocaleTag } from './localeTag';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -63,7 +64,7 @@ const whenText = computed(() => {
   return formatInZone(
     scheduleToUtc(props.draft.scheduledAt, props.timeZone),
     props.timeZone,
-    locale.value
+    toLocaleTag(locale.value)
   );
 });
 const actionLabel = computed(() =>
