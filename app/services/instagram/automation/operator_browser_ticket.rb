@@ -1,6 +1,6 @@
 class Instagram::Automation::OperatorBrowserTicket
   STACKS = %w[hub2you autonomia].freeze
-  ACTIVE_STATES = %w[queued running operator_required].freeze
+  ACTIVE_STATES = %w[queued running].freeze
   TICKET_TTL = 60
 
   class Unavailable < StandardError
