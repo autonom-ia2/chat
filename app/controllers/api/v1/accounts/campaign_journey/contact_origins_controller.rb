@@ -32,9 +32,10 @@ class Api::V1::Accounts::CampaignJourney::ContactOriginsController < Api::V1::Ac
     Conversations::PermissionFilterService.new(Current.account.conversations, Current.user, Current.account).perform.reorder(nil)
   end
 
-  # Old campaign bases have no name: they show the name of their campaign.
+  # Old campaign bases have no name: they show the name of their campaign. Contact imports (#1006)
+  # are not audiences, so they are left out.
   def audiences_for(contact)
-    imports = Current.account.campaign_imports
+    imports = Current.account.campaign_imports.campaign_flows
                      .where(id: CampaignImportRow.status_imported.where(contact_id: contact.id).select(:campaign_import_id))
                      .order(:created_at)
     imports.map { |import| { id: import.id, name: import.name.presence || import.campaign_name } }

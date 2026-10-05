@@ -87,6 +87,14 @@ RSpec.describe 'Journey recipient preview (#993)', :aggregate_failures, type: :r
     expect(payload).to include('total' => 3, 'receive' => 0, 'reasons' => { 'channel_disabled' => 3 })
   end
 
+  it 'a contact import (#1006) is not an audience' do
+    audience.update!(options: audience.options.merge('flow' => CampaignImport::CONTACTS_FLOW))
+
+    preview(channel: 'whatsapp_cloud')
+
+    expect(response).to have_http_status(:not_found)
+  end
+
   it 'refuses an unknown channel and needs campaign_manage' do
     preview(channel: 'telegram')
     expect(response).to have_http_status(:unprocessable_entity)

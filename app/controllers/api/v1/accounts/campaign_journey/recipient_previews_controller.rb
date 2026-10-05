@@ -7,7 +7,8 @@ class Api::V1::Accounts::CampaignJourney::RecipientPreviewsController < Api::V1:
   before_action :check_authorization
 
   def create
-    campaign_import = Current.account.campaign_imports.find(params.require(:campaign_import_id))
+    # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
+    campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
     preview = ::CampaignJourney::RecipientPreview.new(
       campaign_import, channel: params[:channel], variable_bindings: hash_param(:variable_bindings),
                        variable_defaults: hash_param(:variable_defaults), message_body: params[:message_body]

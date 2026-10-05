@@ -63,6 +63,8 @@ RSpec.describe 'Campaign journey marks API', type: :request do
       old_base = account.campaign_imports.create!(user: admin, campaign_name: 'Base setembro')
       old_base.campaign_import_rows.create!(row_number: 1, contact_id: contact.id, status: :imported)
       account.campaign_imports.create!(user: admin, name: 'Outro público')
+      contact_import = account.campaign_imports.create!(user: admin, name: 'Planilha de contatos', options: { 'flow' => CampaignImport::CONTACTS_FLOW })
+      contact_import.campaign_import_rows.create!(row_number: 1, contact_id: contact.id, status: :imported)
 
       get "/api/v1/accounts/#{account.id}/campaign_journey/contact_origins/#{contact.id}", headers: admin.create_new_auth_token, as: :json
 
