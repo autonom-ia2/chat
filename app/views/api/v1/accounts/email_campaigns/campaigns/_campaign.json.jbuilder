@@ -12,6 +12,9 @@ json.body_mjml campaign.body_mjml
 json.preheader campaign.preheader
 json.from_email campaign.from_email
 json.reply_to campaign.reply_to
+json.reply_to_inbox_id campaign.reply_to_inbox_id
+json.effective_reply_to EmailCampaigns::ReplyTo.for(campaign)
+json.audience_id CampaignAudienceLink.for_campaign(campaign)&.campaign_import_id
 json.status campaign.status
 json.scheduled_at campaign.scheduled_at
 json.sent_at campaign.sent_at

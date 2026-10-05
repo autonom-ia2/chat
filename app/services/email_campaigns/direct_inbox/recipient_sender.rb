@@ -39,7 +39,7 @@ module EmailCampaigns
       def dispatch(recipient, rendered, tracked_html, headers)
         @sender.deliver(
           to: recipient.email, subject: rendered[:subject], html_body: tracked_html,
-          from_email: @campaign.from_email, reply_to: @campaign.reply_to.presence || @campaign.from_email, headers: headers
+          from_email: @campaign.from_email, reply_to: ::EmailCampaigns::ReplyTo.for(@campaign), headers: headers
         )
       end
 
