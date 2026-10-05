@@ -128,3 +128,9 @@ export const resultCounts = contactImport => {
       (contactImport?.invalid_rows || 0),
   };
 };
+
+// Cells that do not fit the type of the attribute they would fill (left out of that row only).
+export const attributeProblems = contactImport => {
+  const problems = contactImport?.validation_summary?.attribute_problems || {};
+  return { count: problems.count || 0, rows: problems.rows || [] };
+};

@@ -42,6 +42,8 @@
       "TITLE": "Other columns",
       "HINT": "They become contact attributes",
       "NEW": "new attribute",
+      "PROBLEMS": "{count} values stay out because they do not fit the attribute; the rest of each row is imported",
+      "PROBLEM_ROW": "Row {row}: value does not fit {attribute}",
       "NONE": "The spreadsheet has no other columns."
     },
     "PEOPLE": {

@@ -41,9 +41,10 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
 {
   "existing_contacts": 41,
   "contact_attributes": [
-    { "column": "Vencimento", "key": "vencimento", "label": "Vencimento", "existing": true },
-    { "column": "Plano", "key": "plano", "label": "Plano", "existing": false }
+    { "column": "Vencimento", "key": "vencimento", "label": "Vencimento", "existing": true, "type": "date" },
+    { "column": "Plano", "key": "plano", "label": "Plano", "existing": false, "type": "text" }
   ],
+  "attribute_problems": { "count": 1, "by_attribute": { "Vencimento": 1 }, "rows": [{ "row_number": 9, "attribute": "Vencimento" }] },
   "contact_attributes_created": 1
 }
 ```
@@ -60,7 +61,12 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
   sem a flag `companies` da conta, nada é criado e a tela esconde o bloco.
 - **Colunas extras → atributos do contato (Q2):** `ContactImports::AttributeColumns`.
   - Coluna cujo cabeçalho é a chave ou o nome de um atributo de contato existente preenche esse
-    atributo (o tipo do atributo não muda; o valor é gravado como está na planilha).
+    atributo. Atributo com tipo (número, moeda, porcentagem, data, lista, caixa de seleção, link) tem
+    o valor convertido (`ContactImports::AttributeValue`: "1.234,56", "R$ 10", "15%", "15/03/2026",
+    data ISO ou número de dia do Excel, sim/não, opção da lista sem diferença de caixa) e conferido
+    pela validação tipada do fork (`Relationships::ValueValidator`). Valor que não serve fica de fora
+    só naquela linha; o resto da linha importa. A prévia mostra quantos e em quais linhas, sem o valor
+    (`validation_summary.attribute_problems`). Texto com padrão próprio (legado) é gravado como está.
   - Senão, a chave sai do cabeçalho (`HeaderMapper.normalize_key`: sem acento, minúsculas,
     espaço vira `_`); nunca repete na planilha nem toma um campo padrão do contato (`city`,
     `email`…) — ganha `_2`, `_3`. Cabeçalho sem letra nem número vira `coluna`.

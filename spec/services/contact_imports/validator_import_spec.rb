@@ -80,8 +80,8 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
 
       expect(campaign_import.validation_summary['contact_attributes']).to eq(
         [
-          { 'column' => 'Vencimento', 'key' => 'vencimento', 'label' => 'Vencimento', 'existing' => true },
-          { 'column' => 'Plano', 'key' => 'plano', 'label' => 'Plano', 'existing' => false }
+          { 'column' => 'Vencimento', 'key' => 'vencimento', 'label' => 'Vencimento', 'existing' => true, 'type' => 'text' },
+          { 'column' => 'Plano', 'key' => 'plano', 'label' => 'Plano', 'existing' => false, 'type' => 'text' }
         ]
       )
       expect(account.custom_attribute_definitions.where(attribute_key: 'plano')).to be_empty
@@ -121,6 +121,31 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(account.contacts.sole).to eq(existing)
       expect(campaign_import.campaign_import_labels).to be_empty
       expect(campaign_import.campaign_import_rows.sole).to have_attributes(contact_id: existing.id, labels_applied: [])
+    end
+  end
+
+  describe 'Q2: typed attributes' do
+    it 'converts values to the attribute type and leaves out, per row, the ones that do not fit' do
+      account.custom_attribute_definitions.create!(attribute_model: :contact_attribute, attribute_key: 'vencimento',
+                                                   attribute_display_name: 'Vencimento', attribute_display_type: :date)
+      account.custom_attribute_definitions.create!(attribute_model: :contact_attribute, attribute_key: 'plano',
+                                                   attribute_display_name: 'Plano', attribute_display_type: :list,
+                                                   attribute_values: %w[Ouro Prata])
+      campaign_import = contact_import(["Ana,#{phone(1)},,,15/03/2026,ouro", "Bia,#{phone(2)},,,amanhã,Bronze"])
+
+      expect(campaign_import.validation_summary['attribute_problems']).to eq(
+        'count' => 2, 'by_attribute' => { 'Vencimento' => 1, 'Plano' => 1 },
+        'rows' => [{ 'row_number' => 3, 'attribute' => 'Vencimento' }, { 'row_number' => 3, 'attribute' => 'Plano' }]
+      )
+      expect(campaign_import.validation_summary['contact_attributes'].pluck('type')).to eq(%w[date list])
+      expect(campaign_import.validation_summary.to_json).not_to include('amanhã', 'Bronze')
+
+      import_contacts!(campaign_import)
+
+      expect(campaign_import).to be_completed
+      expect(account.contacts.order(:name).pluck(:name, :custom_attributes)).to eq(
+        [['Ana', { 'vencimento' => '2026-03-15', 'plano' => 'Ouro' }], ['Bia', {}]]
+      )
     end
   end
 

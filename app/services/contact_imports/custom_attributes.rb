@@ -18,11 +18,16 @@ class ContactImports::CustomAttributes
   end
 
   # extra_values: { 'Vencimento' => '10/2026' } as stored on the import row (blank cells left out).
+  # A value that does not fit a typed attribute (number, date, list...) is left out; the preview
+  # already listed it (ContactImports::AttributeProblems).
   def merge!(contact, extra_values)
     current = contact.custom_attributes.to_h
-    additions = extra_values.to_h.each_with_object({}) do |(header, value), found|
-      key = keys_by_header[header]
-      found[key] = value if key && current[key].blank? && value.present?
+    additions = extra_values.to_h.each_with_object({}) do |(header, raw), found|
+      column = columns_by_header[header]
+      next if column.nil? || raw.blank? || current[column.key].to_s.strip.present?
+
+      value = column.cast(raw)
+      found[column.key] = value unless value == ContactImports::AttributeValue::INVALID
     end
     contact.update!(custom_attributes: current.merge(additions)) if additions.any?
   end
@@ -33,8 +38,8 @@ class ContactImports::CustomAttributes
     @columns ||= ContactImports::AttributeColumns.new(@account, @campaign_import.extra_columns).perform
   end
 
-  def keys_by_header
-    @keys_by_header ||= columns.to_h { |column| [column.column, column.key] }
+  def columns_by_header
+    @columns_by_header ||= columns.index_by(&:column)
   end
 
   def create_definition(column)

@@ -243,6 +243,26 @@ describe('ContactImportPage (#1006)', () => {
     wrapper.unmount();
   });
 
+  it('lists the values that do not fit a typed attribute, without the value', async () => {
+    const wrapper = mountPage();
+    await uploadWith(wrapper, {
+      ...ready,
+      validation_summary: {
+        ...ready.validation_summary,
+        attribute_problems: {
+          count: 1,
+          by_attribute: { Aniversário: 1 },
+          rows: [{ row_number: 9, attribute: 'Aniversário' }],
+        },
+      },
+    });
+
+    const problems = wrapper.get('[data-test="attribute-problems"]').text();
+    expect(problems).toContain('1 values stay out');
+    expect(problems).toContain('Row 9: value does not fit Aniversário');
+    wrapper.unmount();
+  });
+
   it('hides the companies block when the account has no companies (C6)', async () => {
     const wrapper = mountPage();
     await uploadWith(wrapper, {

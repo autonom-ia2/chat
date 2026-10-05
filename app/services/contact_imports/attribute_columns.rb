@@ -10,8 +10,13 @@
 # - A key never repeats within the file and never takes a standard contact field (name, email,
 #   city...): it gets "_2", "_3"...
 class ContactImports::AttributeColumns
-  Column = Struct.new(:column, :key, :label, :existing, keyword_init: true) do
-    def to_h = { 'column' => column, 'key' => key, 'label' => label, 'existing' => existing }
+  Column = Struct.new(:column, :key, :label, :existing, :definition, keyword_init: true) do
+    def type = definition&.attribute_display_type || 'text'
+
+    # Values of a typed attribute are converted, and left out when they do not fit (AttributeValue).
+    def cast(raw) = type == 'text' ? raw : ContactImports::AttributeValue.new(definition).cast(raw)
+
+    def to_h = { 'column' => column, 'key' => key, 'label' => label, 'existing' => existing, 'type' => type }
   end
 
   RESERVED_KEYS = CustomAttributeDefinition::STANDARD_ATTRIBUTES[:contact]
@@ -41,7 +46,7 @@ class ContactImports::AttributeColumns
     definition = definitions_by_key[self.class.normalize(header)] || definitions_by_label[self.class.normalize(header)]
     return if definition.nil? || used.include?(definition.attribute_key)
 
-    Column.new(column: header, key: definition.attribute_key, label: definition.attribute_display_name, existing: true)
+    Column.new(column: header, key: definition.attribute_key, label: definition.attribute_display_name, existing: true, definition: definition)
   end
 
   def new_column(header, used)

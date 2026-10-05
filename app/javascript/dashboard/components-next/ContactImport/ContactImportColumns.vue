@@ -11,6 +11,7 @@ import {
   columnEvidence,
   visibleTargets,
   attributeColumns,
+  attributeProblems,
 } from './contactImportView';
 
 const props = defineProps({
@@ -54,6 +55,7 @@ const rows = computed(() =>
 );
 
 const attributes = computed(() => attributeColumns(props.contactImport));
+const problems = computed(() => attributeProblems(props.contactImport));
 
 const choose = (target, value) => {
   mapping.value = { ...mapping.value, [target]: value };
@@ -127,6 +129,28 @@ const choose = (target, value) => {
       <p v-else class="mb-0 text-xs text-n-slate-11">
         {{ t(`${NS}.ATTRIBUTES.NONE`) }}
       </p>
+      <div
+        v-if="problems.count"
+        class="w-full rounded-lg bg-n-amber-2 px-3 py-2 text-xs text-n-slate-12"
+        data-test="attribute-problems"
+      >
+        <p class="mb-1 font-semibold">
+          {{ t(`${NS}.ATTRIBUTES.PROBLEMS`, { count: n(problems.count) }) }}
+        </p>
+        <ul class="m-0 list-none p-0">
+          <li
+            v-for="problem in problems.rows"
+            :key="`${problem.row_number}-${problem.attribute}`"
+          >
+            {{
+              t(`${NS}.ATTRIBUTES.PROBLEM_ROW`, {
+                row: problem.row_number,
+                attribute: problem.attribute,
+              })
+            }}
+          </li>
+        </ul>
+      </div>
     </div>
   </section>
 </template>

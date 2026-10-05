@@ -11,8 +11,8 @@ RSpec.describe ContactImports::AttributeColumns, :aggregate_failures do
   it 'builds a new key from the header without accents, case or spaces' do
     expect(columns(['Data de Vencimento', 'Plano Contratado'])).to eq(
       [
-        { 'column' => 'Data de Vencimento', 'key' => 'data_de_vencimento', 'label' => 'Data de Vencimento', 'existing' => false },
-        { 'column' => 'Plano Contratado', 'key' => 'plano_contratado', 'label' => 'Plano Contratado', 'existing' => false }
+        { 'column' => 'Data de Vencimento', 'key' => 'data_de_vencimento', 'label' => 'Data de Vencimento', 'existing' => false, 'type' => 'text' },
+        { 'column' => 'Plano Contratado', 'key' => 'plano_contratado', 'label' => 'Plano Contratado', 'existing' => false, 'type' => 'text' }
       ]
     )
   end
@@ -25,8 +25,8 @@ RSpec.describe ContactImports::AttributeColumns, :aggregate_failures do
 
     expect(columns(%w[Vencimento CPF])).to eq(
       [
-        { 'column' => 'Vencimento', 'key' => 'vencimento', 'label' => 'Vencimento da apólice', 'existing' => true },
-        { 'column' => 'CPF', 'key' => 'cpf_cliente', 'label' => 'CPF', 'existing' => true }
+        { 'column' => 'Vencimento', 'key' => 'vencimento', 'label' => 'Vencimento da apólice', 'existing' => true, 'type' => 'date' },
+        { 'column' => 'CPF', 'key' => 'cpf_cliente', 'label' => 'CPF', 'existing' => true, 'type' => 'text' }
       ]
     )
   end

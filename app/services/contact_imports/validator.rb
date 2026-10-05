@@ -7,8 +7,10 @@ class ContactImports::Validator < CampaignImports::AudienceValidator
 
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
     attributes = super
+    columns = ContactImports::AttributeColumns.new(campaign_import.account, attributes[:extra_columns]).perform
     summary = attributes[:validation_summary].merge(
-      contact_attributes: ContactImports::AttributeColumns.new(campaign_import.account, attributes[:extra_columns]).perform.map(&:to_h),
+      contact_attributes: columns.map(&:to_h),
+      attribute_problems: ContactImports::AttributeProblems.new(columns, valid_rows).perform,
       existing_contacts: ContactImports::ExistingContacts.new(campaign_import.account, valid_rows).count
     )
     attributes.merge(validation_summary: summary)
