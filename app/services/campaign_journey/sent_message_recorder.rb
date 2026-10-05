@@ -58,6 +58,8 @@ class CampaignJourney::SentMessageRecorder
       account_id: @campaign.account_id, inbox_id: @inbox.id, message_type: :outgoing, content_type: :text,
       content: @recipient.message_content.presence || @campaign.message, source_id: @recipient.source_id, status: :sent,
       sender: @campaign.sender,
+      # The text the person received already carries contact and audience values: it stays literal (#1021).
+      literal_content: true,
       additional_attributes: { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }.compact
     }
   end

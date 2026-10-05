@@ -151,4 +151,25 @@ RSpec.describe CampaignJourney::SentMessageRecorder, :aggregate_failures do
     expect(CampaignRecipient.find_by!(campaign: campaign)).to be_sent
     expect(Message.where(inbox: inbox).outgoing.count).to eq(0)
   end
+
+  # #1021: the text the person received already carries contact and audience values; Chatwoot's
+  # Liquid pass on outgoing messages must not read them as template code.
+  it 'keeps the received text literal at send and at reply, even when a value looks like Liquid' do
+    campaign = audience_campaign
+    received = 'Oi {{publico.plano}} Ana, sua apólice vai vencer.'
+    conversations = ['Ana Souza', 'Bia Lima'].each_with_index.map do |name, index|
+      contact = contact_named(name)
+      contact_inbox = ContactInbox.create!(contact: contact, inbox: inbox, source_id: "55119876543#{index}")
+      create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)
+    end
+    recipients = conversations.each_with_index.map do |conversation, index|
+      CampaignRecipient.create!(account: account, campaign: campaign, contact: conversation.contact, inbox: inbox, status: :sent,
+                                source_id: "wamid.literal-#{index}", sent_at: 1.hour.ago, message_content: received)
+    end
+
+    described_class.new(campaign: campaign, recipient: recipients.first).record_at_send('551198765430')
+    described_class.new(campaign: campaign, recipient: recipients.last).record_at_reply(conversations.last)
+
+    expect(conversations.map { |conversation| conversation.messages.outgoing.sole.content }).to eq([received, received])
+  end
 end
