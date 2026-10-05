@@ -105,11 +105,12 @@ class Crm::FollowUps::MessageSender
       ActionController::Parameters.new(
         content: rendered_body,
         private: false,
+        # Already filled by TemplateRenderer: contact values stay literal (chat#1021).
         content_attributes: {
           crm_follow_up_id: @follow_up.id,
           crm_follow_up_template_id: template.id,
           crm_follow_up_send_mode: 'template'
-        }
+        }.merge(Autonomia::LiteralMessageContent.attributes)
       )
     ).perform
   end
