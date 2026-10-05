@@ -1,6 +1,6 @@
-# PRD — Campanhas: jornada única (E-mail, WhatsApp Oficial, WhatsApp API) e Públicos
+# PRD — Campanhas: jornada única (E-mail, WhatsApp, SMS, Chat ao vivo) e Público
 
-Data: 05/10/2026 · Dono: Rodrigo · Status: proposta para aprovação · Versão 2
+Data: 05/10/2026 · Dono: Rodrigo · Status: proposta para aprovação · Versão 3 (05/10)
 
 Evidência de origem: [auditoria de 05/10/2026](../../audit/2026-10-05-auditoria-base-de-campanha.md). Épica: [#990](https://github.com/autonom-ia2/chat/issues/990) · Protótipo navegável das jornadas (v2: público primeiro, selos de canal, marca no CRM): https://claude.ai/artifact/Ji9iE3AaH6MG3h6bDP15KW (telas avulsas: https://claude.ai/artifact/DEgd2WS2gp4XuvqTbh6vwP)
 
@@ -42,7 +42,6 @@ Uma lista e uma jornada para os três canais. Quem cria campanha escolhe o canal
 
 ## 3. Fora do escopo
 
-- SMS e Chat ao vivo (continuam como estão; aparecem no menu).
 - Segmentação dinâmica por atributo. Público é lista estática (planilha ou etiqueta).
 - **Envio em etapas / lotes** (decisão de 05/10). O backend de lotes continua, invisível, sempre com 1 lote.
 - Custo por conversa da Meta.
@@ -74,18 +73,26 @@ Uma lista e uma jornada para os três canais. Quem cria campanha escolhe o canal
 | D12 | **Construção aditiva** (seção 8.0): mínimo de mudança em arquivos do Chatwoot oficial. | Atualizar o Chatwoot sem conflito. Pedido do Rodrigo em 05/10. |
 | D13 | **Selos de canal automáticos** no público (E-mail, WhatsApp, ou os dois), pela presença de e-mail ou celular válido, com a contagem; dá para desligar um canal. Na campanha, só os canais do público ficam disponíveis. | Ninguém precisa decidir o que a planilha já diz. Decisão do Rodrigo em 05/10. |
 | D14 | **Marca da campanha no CRM na resposta**, pelo mesmo mecanismo de Links e QR codes (`Ctwa::CampaignBuilder`): quem responde ganha "Campanha: <nome>" na conversa; o card mostra todas as marcas (+N). Nunca no envio. | Card com várias campanhas, sem poluir o CRM com quem não engajou nem esconder a origem real. Decisão do Rodrigo em 05/10. |
+| D15 | **Público sem etiqueta.** O público é uma lista de contatos; a campanha manda para essa lista. Novas importações não criam etiquetas `campanha_*`/`_lote_N`; as antigas ficam como estão. A identificação de quem veio da campanha é a marca de campanha (D14). | Etiqueta oculta só existia para o envio achar os contatos; poluía a conta. Decisão do Rodrigo em 05/10. |
+| D16 | **Só aparecem canais conectados**, na escolha do canal, no filtro da lista e no menu: E-mail, WhatsApp Oficial, WhatsApp API, **SMS** e **Chat ao vivo**. SMS entra na jornada (com registro por destinatário, conversa e marca no CRM). Chat ao vivo não é envio para lista: tem fluxo próprio (Quando aparece → Mensagem → Ativar), atalho no passo Público e selo "Sempre ativa" na lista. | Menos opções mortas na tela. Chat ao vivo é regra no site, não lista. Decisão do Rodrigo em 05/10. |
+| D17 | **Menu:** grupo **Campanhas** com os itens **Público** (primeiro), **Campanha**, Modelos, Links e QR codes, Gestão de campanhas. Saem E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS (rotas antigas abrem "Campanha" filtrada). | Pedido do Rodrigo em 05/10. |
+| D18 | **Resultado × Gestão.** O detalhe de uma campanha fica no **Resultado** dentro dela, com todos os motores de hoje (Gestão de e-mail e página de resultado do WhatsApp). **Gestão de campanhas** vira a visão geral multicanal: período, canais, comparativo entre campanhas, respostas e negócios no CRM. | Cada tela responde uma pergunta; nada da Gestão de hoje se perde. Recomendação aceita pelo Rodrigo em 05/10. |
+| D19 | **E-mail: nada se perde** (lista em §6.9). Além de manter tudo, dois defeitos de hoje entram no escopo: **"Respostas vão para a caixa X"** passa a funcionar (hoje o campo é gravado e ignorado) e **"Enviar teste"** passa a funcionar no envio direto pela caixa (hoje só com domínio). | Pedido do Rodrigo em 05/10. |
+| D20 | **Marcas de campanha na conversa.** O painel do contato na conversa mostra todas as marcas de origem e de campanha (hoje mostra só a primeira), igual ao card do CRM; o topo da conversa mostra a marca da campanha que a abriu. | Pedido do Rodrigo em 05/10. |
+| D21 | **Jev em todas as importações** de planilha: Públicos e a importação geral de Contatos (tela do fork no lugar da do Chatwoot), ambas criando e ligando empresas. Reaproveita `TypesafeAi::Client`, modelo fixo `jev-1.13.0`, só cabeçalhos e formato mascarado. Flag própria, sem reutilizar `TYPESAFE_JEV_ENABLED` (que desliga a importação de e-mail inteira) sem decisão do Rodrigo. | Mesmo motor e mesma regra de privacidade em todo lugar. Pedido do Rodrigo em 05/10. |
 
 ## 6. Jornada
 
-### 6.1 Todas as campanhas
+### 6.1 Campanha (lista)
 
-`Campanhas › Todas as campanhas` (nova entrada principal do menu Campanhas).
+`Campanhas › Campanha` (nova entrada principal; antes "Todas as campanhas").
 
 - Faixa de resumo: próximo envio (canal, data, pessoas, "Revisar envio"), em preparação, enviadas em 30 dias, responderam ou clicaram.
 - Filtro por canal: Todos, E-mail, WhatsApp Oficial, WhatsApp API. Filtro por situação e busca.
 - Linha: ícone do canal, nome, canal + remetente/modelo, público e pessoas, quando, barra de resultado, situação.
 - Ações: "Públicos" e **"+ Nova campanha"** (uma ação principal).
-- Menu Campanhas passa a: Todas as campanhas, Públicos, Modelos, Links e QR codes, Chat ao vivo, SMS, Gestão de campanhas. As rotas antigas de E-mails, WhatsApp Oficial e WhatsApp API abrem "Todas" já filtrada pelo canal.
+- Menu: grupo **Campanhas** com **Público**, **Campanha**, Modelos, Links e QR codes, Gestão de campanhas (D17). As rotas antigas de E-mails, WhatsApp Oficial, WhatsApp API, SMS e Chat ao vivo abrem "Campanha" filtrada pelo canal.
+- Filtro por canal mostra só os canais conectados (D16). Chat ao vivo aparece com o selo "Sempre ativa".
 
 ### 6.2 Nova campanha — Passo 1, Público
 
@@ -101,11 +108,12 @@ A primeira pergunta é "quem vai receber". **Só públicos salvos** aparecem aqu
 
 No topo, o público escolhido ("Para: Corretoras parceiras · E-mail 1.240 · WhatsApp 980 · Trocar público").
 
-**"Por onde a mensagem vai"** — três cartões: E-mail, WhatsApp Oficial, WhatsApp API. **Só ficam disponíveis os canais que o público tem**; o indisponível mostra o motivo ("Este público não tem e-mail").
+**"Por onde a mensagem vai"** — cartões dos canais **conectados**: E-mail, WhatsApp Oficial, WhatsApp API, SMS (D16). **Só ficam disponíveis os canais que o público tem**; o indisponível mostra o motivo ("Este público não tem e-mail").
 
 Campo comum: **nome da campanha**, com o aviso "Quem responder ganha a marca *Campanha: <nome>* no card do CRM" (6.7). Ao lado, prévia "Como o cliente vê" com o primeiro contato do público.
 
 - **WhatsApp Oficial:** caixa (só Cloud), modelo aprovado, e **"De onde vem cada parte da mensagem"**: cada variável do modelo ligada a um dado do contato, a uma **coluna do público** (as colunas extras da planilha ficam guardadas) ou a texto fixo. O sistema sugere a coluna pelo nome (selo "Sugerido"), sem citar IA.
+- **SMS:** caixa de SMS, texto curto com fichas do público e contador de caracteres/partes, prévia como SMS.
 - **WhatsApp API:** caixa marcada para campanha, mensagem livre com fichas do contato e do público (nome, primeiro nome, empresa e colunas extras), "Usar modelo salvo", anexo opcional, aviso do ritmo automático.
 - **E-mail** — o passo tem cinco telas, na ordem:
   1. **Canal e nome** da campanha.
@@ -122,18 +130,19 @@ Campo comum: **nome da campanha**, com o aviso "Quem responder ganha a marca *Ca
 - Lateral: vão receber (número grande) = no público com o canal − quem não recebe (recusou, descadastrou, e-mail que voltou). E-mail tem "Enviar teste para mim".
 - Confirmação final com o número de pessoas.
 
-### 6.5 Resultado
+### 6.5 Resultado (dentro de cada campanha)
 
-- WhatsApp: Público, Enviadas, Entregues, Lidas, Responderam (marcados no CRM), Falharam, Puladas.
-- E-mail: Público, Entregues, Abriram, Clicaram, Responderam (marcados no CRM), Voltaram, Descadastraram.
-- Faixa "Quem respondeu já aparece no CRM com a marca *Campanha: <nome>*" + "Ver no CRM" (abre o Kanban filtrado pela campanha).
-- Tabela por pessoa com empresa, filtro por situação, contato mascarado, motivo legível, "Abrir conversa". "Baixar resultado".
+Responde "como foi esta campanha". Reaproveita as peças que existem hoje (Gestão de campanhas de e-mail e página de resultado do WhatsApp); nenhum indicador ou ação some (D18).
+
+- **E-mail:** Enviados, Entregues (confirmados pelo provedor ou só aceitos), Abertos (aproximado), Clicaram, **Responderam** (novo, marcados no CRM), Descadastros, Bounce permanente, Temporários, Reclamações, Desconhecidos; gráfico ao longo do tempo (hora/dia); cliques por link; tabela por pessoa com motivo, verificação prévia, tentativas, último evento e "Abrir conversa"; exportar CSV filtrado; Saúde (reavaliar, retomar, problemas) e status/problemas da importação; ações Pausar, Retomar, Cancelar, Duplicar, Salvar como modelo.
+- **WhatsApp Oficial / API e SMS:** Público, Enviadas, Entregues, Lidas (Oficial), **Responderam**, Falharam (com código e motivo), Puladas; mensagem gerada por contato; faixa "processando"; tabela por pessoa com "Abrir conversa"; **exportar** (novo).
+- Faixa "Quem respondeu já aparece no CRM com a marca *Campanha: <nome>*" + "Ver no CRM" (Kanban filtrado).
 
 ### 6.6 Públicos (onde a planilha entra)
 
 - Resumo: públicos salvos, contatos em públicos, empresas ligadas, importados em 30 dias.
 - Lista: nome, **selos de canal**, pessoas e empresas, campanhas que usaram, data.
-- Painel lateral: selos, pessoas, empresas, **outras colunas guardadas**, campanhas que usaram, "Usar em nova campanha" (abre o Passo 1 com ele escolhido), "Ver contatos e empresas", "Remover do público" (tira só a marcação; nada é apagado).
+- Painel lateral: selos, pessoas, empresas, **outras colunas guardadas**, campanhas que usaram, "Usar em nova campanha" (abre o Passo 1 com ele escolhido), "Ver contatos e empresas", "Excluir público" (apaga só a lista; contatos, empresas e resultados ficam — D15).
 - **Novo público:** nome + planilha. Depois:
   1. **Colunas encontradas** (nome, celular, e-mail, empresa) com exemplo, contagem e "Trocar"; **Outras colunas** guardadas para a mensagem.
   2. **"Por onde dá para falar com essas pessoas"** — selos **marcados sozinhos** pelo que a planilha tem (tem e-mail válido → E-mail; tem celular válido → WhatsApp), cada um com a contagem; dá para **desligar** um canal. Canal sem dado aparece desligado com "sem dados".
@@ -153,6 +162,37 @@ Mesmo mecanismo de **Links e QR codes**: a campanha vira uma marca de origem na 
   - Quem só abriu ou clicou, sem mandar mensagem, não ganha marca (aparece só no resultado da campanha).
 - A gaveta do card lista a sequência: "Link: Feira 2026 → Campanha e-mail: Novidades de outubro → Campanha WhatsApp: Renovação auto — outubro".
 - Os filtros de campanha do Kanban e das Conversas passam a incluir as campanhas.
+
+### 6.8 Chat ao vivo (mensagem no site)
+
+Não usa público (D16). Entra por um atalho discreto no passo Público ("Quer uma mensagem automática no seu site, sem lista?") e pela lista.
+
+1. **Quando aparece:** site (caixa do chat do site), página (URL completa), tempo na página, só em horário de atendimento.
+2. **Mensagem:** nome (vira a marca de campanha de quem conversar), quem fala (agente ou robô), texto, prévia no widget.
+3. **Ativar:** fica na lista "Campanha" com o selo "Sempre ativa"; pausar/editar a qualquer momento. Mesmos campos e motor de hoje.
+
+### 6.9 E-mail: o que não pode se perder
+
+Tudo abaixo existe hoje e continua, com o mesmo motor (D19). Cada item tem termo de aceite no grupo L.
+
+- **Travas de envio:** lista de prontidão (assunto, conteúdo, remetente pronto, destinatários, importação concluída, higiene, reputação do provedor); aviso de variável vazia/desconhecida; confirmação com número de destinatários; recarrega antes de confirmar; data futura no agendamento.
+- **Reputação:** bloqueio por bounce ≥ 5% ou reclamação ≥ 0,1% no provedor (dado desconhecido bloqueia); política local de aviso/pausa; reavaliação ao retomar.
+- **Higiene:** verificação de domínio/MX/endereço antes do envio (modos shadow/warning/enforce), correção de domínios conhecidos, quarentena.
+- **Supressão e descadastro:** rodapé de descadastro travado no editor, `List-Unsubscribe` one-click, página de descadastro, classificação de bounce e reclamação, suprimidos e opt-out pulados na hora do envio.
+- **Remetente:** domínio verificado (DKIM/SPF/DMARC, "Verificar agora", polling) **ou** envio direto pela caixa de e-mail (1 por vez a cada 1–2 min, horário comercial, teto diário por provedor, pausa automática após falhas); "De" do domínio verificado.
+- **Respostas vão para a caixa X:** **passa a funcionar** — o envio usa a caixa escolhida como reply-to e a resposta vira conversa nela (hoje `reply_to_inbox_id` é gravado e ignorado).
+- **Conteúdo:** "Como você quer começar?" (IA, modelo, do zero); Criar com IA com briefing, recursos (imagem com papel, PDF, vídeo por link) e "adaptar o design atual", geração assíncrona com aviso global; ações de IA por bloco; blocos e propriedades; prévia computador/celular; tela cheia; personalização; salvar como modelo; biblioteca e Meus modelos.
+- **Enviar teste:** usa o primeiro destinatário como amostra e deixa o descadastro inerte; **passa a funcionar também no envio direto pela caixa**.
+- **Operação:** agendar, pausar, retomar, cancelar (pendentes viram suprimidos), duplicar (sem destinatários), excluir só rascunho sem histórico, reenvio de throttling, rastreamento de abertura e clique.
+- **Fora daqui:** `starterTemplates.js` não é usado por nada (remover em PR separado).
+
+### 6.10 Gestão de campanhas (visão geral)
+
+Responde "como vão as campanhas no geral" (D18). Período, filtro por canal (só conectados), totais (campanhas enviadas, pessoas alcançadas, responderam, viraram negócio no CRM, saúde do e-mail) e tabela comparativa por campanha com canal, data, enviadas, entregues, engajamento (abriram/leram), responderam e taxa. Clicar abre o Resultado. O detalhe de uma campanha não fica aqui.
+
+### 6.11 Marcas na conversa
+
+O painel do contato na conversa mostra **"Origem e campanhas"** com todas as marcas, na ordem (Link, Campanha WhatsApp, Campanha e-mail…), e os públicos do contato. O topo da conversa mostra a marca da campanha que a abriu. A mensagem de campanha aparece na conversa com o rótulo da campanha e do modelo (D20).
 
 ## 7. Layout
 
@@ -216,6 +256,42 @@ Objetivo: atualizar o Chatwoot oficial sem conflito.
 - Rotas novas no roteador; `pnpm guia:build` e blocos em `lib/operator_guide/porques.md` para Todas as campanhas, Nova campanha e Públicos; remover os fluxos "Base Campanha" e "Histórico de bases".
 - `pnpm i18n:fork:check`.
 
+### 8.6 Envio para a lista do público (sem etiqueta)
+
+- Público = `campaign_imports` + `campaign_import_rows.contact_id`; campanha ↔ público por `campaign_audience_links`.
+- Módulo do fork `CampaignJourney::AudienceContacts` entrega os contatos do público aos serviços de envio (WhatsApp Oficial, WhatsApp API, SMS, e-mail), prepended por initializer; os serviços do Chatwoot não são editados.
+- Novas importações não chamam `LabelPlanner`; importações e campanhas antigas por etiqueta continuam funcionando sem mudança.
+- E-mail: destinatários da campanha passam a vir dos contatos do público (com `contact_id`), mantendo `email_campaign_recipients` e todas as travas de §6.9.
+
+### 8.7 Jev em todas as importações
+
+- Um serviço só para ler planilha (Públicos e Importar contatos), reaproveitando `CampaignImports::Parser`/`SchemaResolver` e `TypesafeAi::ImportSchemaResolver` generalizado (alvos: nome, celular, e-mail, empresa; resto vira coluna extra/atributo).
+- `TypesafeAi::Client#evaluate`, modelo fixo `jev-1.13.0` (nunca `jev-latest`), retries e erros sanitizados existentes; chave em `AiProviderCredential.for('typesafe')`.
+- Payload só com cabeçalhos, contagens e formato mascarado; limiares atuais (≥ 0,8 por coluna).
+- Flag própria do fork para a jornada (ex.: `CAMPAIGN_JOURNEY_JEV_ENABLED`); `TYPESAFE_JEV_ENABLED` continua governando a importação de e-mail atual. Jev indisponível → escolha manual na tela, nunca alias silencioso.
+- Importar contatos: tela do fork na entrada do menu ⋮ de Contatos; colunas extras viram atributos personalizados do contato; cria/liga empresas (§8.2). O importador do Chatwoot fica intacto atrás da flag.
+
+### 8.8 SMS
+
+- Módulo do fork nos serviços `Sms::OneoffSmsCampaignService` / `Twilio::OneoffSmsCampaignService`: `CampaignRecipient` por contato (`mark_sent!`/`mark_failed!` com motivo), conversa e mensagem de saída com `campaign_id`, resposta marcada por contato+caixa (padrão do WhatsApp) e marca no CRM (D14).
+- Callbacks de status (Twilio `StatusCallback`, Bandwidth) para entregue/falhou quando disponíveis.
+- Corrigir `getSMSCampaigns` para filtrar medium SMS (hoje lista campanhas de WhatsApp via Twilio).
+
+### 8.9 E-mail: respostas e teste
+
+- **Reply-to por caixa:** quando a campanha escolhe "Respostas vão para a caixa X", o envio (SES e direto) usa o endereço dessa caixa no `Reply-To`; a resposta entra como conversa nela, ligada ao contato e à campanha (marca D14).
+- **Enviar teste no envio direto:** `test_sends_controller` passa a enviar pela caixa quando `delivery_mode = direct_inbox`, com as mesmas regras (amostra do primeiro destinatário, descadastro inerte).
+
+### 8.10 Canais conectados
+
+- Composable do fork `useAvailableCampaignChannels()` decide, por canal, "recurso ligado" + "tem caixa ou remetente":
+  - E-mail: `EMAIL_CAMPAIGN_ENABLED` + `CRM_KANBAN_ENABLED` e (domínio verificado ou caixa de e-mail).
+  - WhatsApp Oficial: recurso `whatsapp_campaign` e caixa WhatsApp Cloud.
+  - WhatsApp API: `WHATSAPP_API_CAMPAIGNS_ENABLED` e caixa API marcada para campanha.
+  - SMS: caixa de SMS (Twilio SMS ou Bandwidth).
+  - Chat ao vivo: caixa de site.
+- O mesmo resultado alimenta menu, escolha de canal e filtros; o backend recusa criar campanha em canal não conectado (422).
+
 ## 9. Termos de aceite
 
 Formato **Dado · Quando · Então**. Só passa com evidência (teste automatizado citado no PR ou captura do produto construído).
@@ -239,6 +315,50 @@ Formato **Dado · Quando · Então**. Só passa com evidência (teste automatiza
 - **K5** Dado resposta por e-mail que vira conversa na caixa das respostas, então a conversa ganha a marca.
 - **K6** O filtro de campanha do Kanban e das Conversas lista as campanhas e filtra os cards marcados.
 - **K7** Marca de campanha não substitui a primeira origem de uma conversa que já veio de anúncio ou link (aparece como toque seguinte).
+
+### L. E-mail sem perder nada (§6.9)
+
+- **L1** Cada trava da lista de prontidão (assunto, conteúdo, remetente, destinatários, importação, higiene, reputação) impede o envio na jornada nova exatamente como hoje — spec por trava.
+- **L2** Provedor com bounce ≥ 5% ou reclamação ≥ 0,1% (ou dado desconhecido) bloqueia o envio e mostra o motivo.
+- **L3** Rodapé de descadastro continua travado no editor; `List-Unsubscribe` one-click continua no cabeçalho.
+- **L4** Envio direto pela caixa: horário comercial, teto diário e pausa automática funcionam como hoje.
+- **L5** "Respostas vão para a caixa X": e-mail de teste e envio real saem com `Reply-To` da caixa; a resposta vira conversa nessa caixa, ligada ao contato e com a marca da campanha.
+- **L6** "Enviar teste" funciona no envio por domínio e no envio direto; não conta no resultado.
+- **L7** Criar com IA (briefing, recursos, adaptar), ações por bloco, biblioteca/Meus modelos, salvar como modelo, tela cheia, celular/computador e personalização funcionam dentro da jornada.
+- **L8** Pausar, retomar, cancelar, duplicar e excluir rascunho funcionam a partir do Resultado e da lista.
+
+### M. Canais conectados, SMS e Chat ao vivo
+
+- **M1** Conta sem caixa de SMS não vê SMS em lugar nenhum (menu, escolha, filtro); ao conectar, aparece sem deploy.
+- **M2** Mesma regra para E-mail, WhatsApp Oficial, WhatsApp API e Chat ao vivo (§8.10); API recusa canal não conectado.
+- **M3** SMS: cada destinatário fica com situação (enviado/entregue/falhou com motivo); o envio aparece na conversa; resposta conta em "Responderam" e marca no CRM.
+- **M4** A lista de SMS não mostra campanhas de WhatsApp via Twilio.
+- **M5** Chat ao vivo: atalho no passo Público leva a Quando aparece → Mensagem → Ativar; aparece na lista com "Sempre ativa"; quem conversa ganha a marca.
+
+### N. Público sem etiqueta
+
+- **N1** Importação nova não cria nenhuma etiqueta (teste de banco).
+- **N2** Campanha de cada canal envia exatamente para os contatos do público (sem etiqueta), respeitando recusa/descadastro.
+- **N3** Campanhas e importações antigas por etiqueta continuam enviando e aparecendo.
+- **N4** "Excluir público" apaga só a lista; contatos, empresas, conversas e resultados ficam.
+
+### O. Resultado × Gestão de campanhas
+
+- **O1** Todo indicador, gráfico, tabela, filtro, exportação e ação da Gestão de campanhas de hoje existe no Resultado da campanha de e-mail (checklist item a item no PR).
+- **O2** Resultado do WhatsApp mantém tudo da página atual e ganha exportação, "Responderam" e "Abrir conversa".
+- **O3** Gestão de campanhas mostra só a visão geral multicanal (período, canal, totais, comparativo) e leva ao Resultado ao clicar.
+
+### P. Marcas na conversa
+
+- **P1** Conversa de contato com link + duas campanhas mostra as três marcas na ordem no painel do contato.
+- **P2** A mensagem enviada pela campanha aparece na conversa com o nome da campanha.
+
+### Q. Jev em todas as importações
+
+- **Q1** Públicos e Importar contatos usam o mesmo serviço de leitura com Jev; spec prova que o payload não tem nome, número nem e-mail.
+- **Q2** Importar contatos cria/reaproveita/liga empresas com as mesmas regras de C1–C7 e grava colunas extras como atributos do contato.
+- **Q3** Jev desligado ou indisponível: escolha manual das colunas, sem erro e sem alias silencioso.
+- **Q4** Rodada real paga do Jev só com teto aprovado pelo Rodrigo, registrada em `docs/audit/`.
 
 ### A. Lugar e navegação
 
@@ -300,7 +420,7 @@ Formato **Dado · Quando · Então**. Só passa com evidência (teste automatiza
 ### F. Públicos
 
 - **F1** As 13 importações antigas da conta 6 aparecem com nome, contatos e a campanha que as usou (vínculo inferido pela etiqueta, migração idempotente).
-- **F2** "Remover do público" tira só as etiquetas daquela importação; nada é apagado; a campanha concluída mantém o resultado.
+- **F2** "Excluir público" apaga só a lista; nada é apagado da base; a campanha concluída mantém o resultado (ver N4).
 - **F3** "Usar em nova campanha" abre a campanha com o público já escolhido no Passo 1.
 - **F4** Nome técnico de etiqueta não aparece em nenhum texto da interface.
 
@@ -327,20 +447,33 @@ Formato **Dado · Quando · Então**. Só passa com evidência (teste automatiza
 - **I5** Rollback escrito: `CAMPAIGN_JOURNEY_ENABLED=false` volta as telas antigas; `CAMPAIGN_IMPORT_ENABLED=false` esconde Públicos; migrations não são revertidas.
 - **I6** Primeiro envio real por canal acompanhado em produção: zero destinatários sem situação.
 
-## 10. Entrega em PRs
+## 10. Como será construído e testado
+
+- **Orquestração dinâmica:** cada PR é feito com orquestração de agentes (workflow): implementação, revisor independente e tester em paralelo por fatia, com verificação cruzada antes de declarar pronto. Tamanho do workflow combinado com o Rodrigo por PR.
+- **Testes reais no chat2you local:** instância local do Chatwoot (rails + vite numa worktree em `/dev/worktrees/chat2you/`, `Procfile.worktree`, banco e portas por worktree, conta de desenvolvimento criada por script) — a mesma usada pelas outras sessões. Cada termo de aceite é exercitado ponta a ponta nela (planilhas sintéticas, envio para caixas e números de teste), além de RSpec/Vitest. Suíte Ruby em paralelo pelos snapshots do MacCluster (`/Users/Shared/maccluster-workspaces/chat2you/`), nunca sobrescrevendo o checkout ativo.
+- **Envio real** só para números e endereços de teste, com OK do Rodrigo por rodada; nunca para clientes. Rodada paga do Jev só com teto aprovado.
+- **Produção:** só leitura (psql via SSM, sem `rails runner`), e só com necessidade; merge e deploy pela fila, um PR por vez, avisando as outras sessões e com "ok, SHA" depois; rollback escrito antes.
+- **Pronto quando:** aceite com evidência (spec citado ou captura do chat2you local), revisor independente, tester de produção no primeiro envio real de cada canal.
+
+## 11. Entrega em PRs
 
 | PR | Issue | Conteúdo | Aceite |
 |---|---|---|---|
 | 1 | #991 | Correções: lotes (backend), importar só válidas, busca com/sem 9, blocos de 500, guarda de caixa Cloud, log | B5–B7, B10, D1, I1, I2 |
 | 2 | #992 | Colunas pelo Jev: celular, e-mail, empresa e variáveis; escolha manual | B1–B4, B1a–B1c |
 | 3 | #998 | Empresas na importação (criar, reaproveitar, ligar, manter) | C1–C7 |
-| 4 | #993 | Todas as campanhas, Públicos, jornada em 3 passos para WhatsApp Oficial (Público → Mensagem → Revisar), selos de canal, criação de público com volta para a campanha, resultado WhatsApp, flag e redirecionamentos | A, B8–B9, D2–D6, E, F, G, H + J1–J7 |
-| 5 | #999 | WhatsApp API e E-mail dentro da jornada (Passo 1 de cada canal, Passo 2 de e-mail com contatos, resultado e-mail, fim do formulário lateral) | D7, D8, E1 (e-mail), G, H |
-| 6 | #1002 | Marca da campanha no CRM na resposta (WhatsApp e e-mail), filtros de campanha | K1–K7 |
+| 4 | #993 | Menu (Público, Campanha), lista "Campanha" com canais conectados, Públicos, jornada em 3 passos para WhatsApp Oficial (Público → Mensagem → Revisar), selos de canal, criação de público com volta para a campanha, resultado WhatsApp, flag e redirecionamentos | A, B8–B9, D2–D6, E, F, G, H + J1–J7 |
+| 5 | #999 | WhatsApp API e E-mail dentro da jornada (Passo 1 de cada canal, Passo 2 de e-mail com contatos, resultado e-mail, fim do formulário lateral) + reply-to por caixa e teste no envio direto (§8.9), lista "não pode perder" (§6.9) | D7, D8, E1 (e-mail), G, H + L1–L7 |
+| 6 | #1002 | Marca da campanha no CRM na resposta (WhatsApp, SMS, e-mail, Chat ao vivo), filtros de campanha e marcas na conversa | K1–K7, P1–P2 |
+| 7 | #1005 | Público sem etiqueta: envio para a lista do público | N1–N4 |
+| 8 | #1007 | Resultado por campanha com todos os motores + Gestão como visão geral | O1–O3, L8 |
+| 9 | #1004 | SMS na jornada (registro, conversa, marca) | M1–M4 |
+| 10 | #1008 | Chat ao vivo com fluxo próprio | M5 |
+| 11 | #1006 | Importar contatos com Jev e empresas | Q1–Q4 |
 
 Cada PR com `Refs #990`; o último fecha a épica.
 
-## 11. Riscos
+## 12. Riscos
 
 | Risco | Mitigação |
 |---|---|
