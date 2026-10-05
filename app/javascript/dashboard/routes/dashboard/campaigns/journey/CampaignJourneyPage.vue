@@ -1,5 +1,6 @@
 <script setup>
-// "Campanha" (#993, PRD §6.1): every campaign of every connected channel in one list.
+// "Campanha" (#993, PRD §6.1): every existing campaign of every channel in one list.
+// "Nova campanha" only offers connected channels (M1–M2).
 // Creation still opens the existing flow of the chosen channel; the 3-step journey
 // comes in a later slice.
 import { computed, onMounted, ref } from 'vue';
@@ -27,6 +28,7 @@ import {
   JOURNEY_STATUSES,
   STATUS_ORDER,
   buildJourneyRows,
+  filterChannels,
   filterJourneyRows,
 } from 'dashboard/components-next/CampaignJourney/campaignRows';
 import { useAvailableCampaignChannels } from 'dashboard/components-next/CampaignJourney/useAvailableCampaignChannels';
@@ -74,7 +76,7 @@ const rows = computed(() =>
     emailCampaigns: features.value.emailCampaigns
       ? emailCampaigns.value || []
       : [],
-  }).filter(row => channels.value.includes(row.channel))
+  })
 );
 
 const visibleRows = computed(() =>
@@ -82,8 +84,11 @@ const visibleRows = computed(() =>
     channel: channelFilter.value,
     status: statusFilter.value,
     search: search.value,
-    connectedChannels: channels.value,
   })
+);
+
+const channelChips = computed(() =>
+  filterChannels(rows.value, channels.value)
 );
 
 const channelLabel = channel =>
@@ -318,7 +323,7 @@ onMounted(fetchAll);
             :aria-label="t(`${NS}.CHANNEL_FILTER`)"
           >
             <button
-              v-for="channel in ['', ...channels]"
+              v-for="channel in ['', ...channelChips]"
               :key="channel || 'all'"
               type="button"
               class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"

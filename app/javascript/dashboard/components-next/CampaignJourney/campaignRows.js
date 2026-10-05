@@ -4,7 +4,7 @@
 // that manages it today, so nothing about the old flows changes.
 import { CAMPAIGN_TYPES } from 'shared/constants/campaign';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { CAMPAIGN_CHANNELS } from './campaignChannels';
+import { CAMPAIGN_CHANNELS, CHANNEL_ORDER } from './campaignChannels';
 
 export const JOURNEY_STATUSES = {
   DRAFT: 'draft',
@@ -152,17 +152,27 @@ export const buildJourneyRows = ({
     .sort((a, b) => (b.sortTime || 0) - (a.sortTime || 0));
 
 /**
- * Applies the list filters. Rows of channels that are not connected are hidden too,
- * so the list never shows a channel the account cannot use (PRD M1–M2).
+ * Channels offered as filter chips: connected ones plus any channel that still has
+ * campaigns, so campaigns of a channel disconnected later stay reachable.
+ */
+export const filterChannels = (rows, connectedChannels = []) =>
+  CHANNEL_ORDER.filter(
+    channel =>
+      connectedChannels.includes(channel) ||
+      rows.some(row => row.channel === channel)
+  );
+
+/**
+ * Applies the list filters. Every existing campaign is listed, whatever the channel
+ * state today (decision of 05/10).
  */
 export const filterJourneyRows = (
   rows,
-  { channel = '', status = '', search = '', connectedChannels = [] } = {}
+  { channel = '', status = '', search = '' } = {}
 ) => {
   const query = search.trim().toLocaleLowerCase();
   return rows.filter(
     row =>
-      connectedChannels.includes(row.channel) &&
       (!channel || row.channel === channel) &&
       (!status || row.status === status) &&
       (!query ||

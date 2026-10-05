@@ -499,9 +499,9 @@
 - rota: campaigns_journey_index
 - intent: Onde vejo todas as minhas campanhas?; Onde ficam as campanhas de WhatsApp, e-mail e SMS juntas?; Como filtro as campanhas por canal ou situação?; Qual é o próximo envio agendado?; Onde está a tela Campanha?
 - onde_fica: Menu lateral > Campanhas > Campanha
-- pre_requisitos: nova jornada de campanhas ligada na instalação (CAMPAIGN_JOURNEY_ENABLED); pelo menos um canal de campanha conectado (caixa de e-mail ou domínio verificado, WhatsApp Oficial pela Cloud API, WhatsApp API marcada para campanha, caixa de SMS ou chat do site).
+- pre_requisitos: nova jornada de campanhas ligada na instalação (CAMPAIGN_JOURNEY_ENABLED); pelo menos um canal de campanha conectado (domínio de envio verificado ou caixa de webmail aceita no envio direto, WhatsApp Oficial pela Cloud API, WhatsApp API marcada para campanha, caixa de SMS ou chat do site).
 - passos: 1. Abra Campanhas > Campanha no menu lateral; 2. Veja no topo o próximo envio, quantas estão em preparação, quantas saíram nos últimos 30 dias e quantas ficam sempre ativas; 3. Use os botões de canal para ver só um canal; 4. Use Filtrar por situação e a busca para achar uma campanha; 5. Clique em Abrir para ir à tela que cuida daquela campanha hoje (resultado do WhatsApp Oficial, lista de e-mails, WhatsApp API, SMS ou Chat ao vivo).
-- gotchas: só aparecem canais conectados nesta conta: sem caixa de SMS, o SMS não aparece nem no filtro nem na lista; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; a lista junta as telas antigas, que continuam funcionando pelos endereços de antes; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
+- gotchas: a lista mostra todas as campanhas que existem, mesmo de um canal desconectado depois; o filtro mostra os canais conectados e os que ainda têm campanhas; Nova campanha só oferece canais conectados; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; a lista junta as telas antigas, que continuam funcionando pelos endereços de antes; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
 
 ### criar_campanha_escolhendo_o_canal
 - titulo: Criar campanha escolhendo o canal
@@ -510,7 +510,7 @@
 - onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha
 - pre_requisitos: permissão para gerenciar campanhas (administrador ou função com campaign_manage); canal conectado.
 - passos: 1. Abra Campanhas > Campanha; 2. Clique em Nova campanha; 3. Escolha o canal na lista (só aparecem os conectados); 4. Preencha o formulário do canal, o mesmo de antes; 5. Salve; a campanha entra na lista.
-- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; os passos Público, Mensagem e Revisar ainda vão chegar, por enquanto cada canal abre o formulário que já existia.
+- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API; para e-mail, é preciso domínio de envio verificado ou caixa de webmail como Gmail ou Outlook, uma caixa de domínio próprio sem domínio verificado não basta); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; os passos Público, Mensagem e Revisar ainda vão chegar, por enquanto cada canal abre o formulário que já existia.
 
 ### ver_publicos_de_campanha
 - titulo: Ver os públicos de campanha

@@ -137,7 +137,7 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
     wrapper.unmount();
   });
 
-  it('channel filter chips only list connected channels', async () => {
+  it('channel filter chips list connected channels without campaigns too', async () => {
     const { wrapper } = mountPage({
       inboxes: [{ channel_type: 'Channel::WebWidget' }],
       campaigns: [
@@ -160,6 +160,40 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
     expect(wrapper.find('[data-row="live_chat-4"]').text()).toContain(
       'Always on'
     );
+    wrapper.unmount();
+  });
+
+  it('SMS disconnected with an old campaign: listed and filterable, but not offered in Nova campanha', async () => {
+    const { wrapper } = mountPage({
+      inboxes: [{ channel_type: 'Channel::WebWidget' }],
+      campaigns: [
+        {
+          id: 2,
+          title: 'Parcela antiga',
+          campaign_type: 'one_off',
+          campaign_status: 'completed',
+          scheduled_at: 1_700_000_000,
+          inbox: { name: 'SMS removido', channel_type: 'Channel::Sms' },
+        },
+      ],
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-row="sms-2"]').text()).toContain(
+      'Parcela antiga'
+    );
+    expect(
+      wrapper
+        .findAll('[data-filter]')
+        .map(chip => chip.attributes('data-filter'))
+    ).toEqual(['all', 'sms', 'live_chat']);
+
+    await wrapper.find('[data-test="new-campaign"]').trigger('click');
+    expect(
+      wrapper
+        .findAll('[data-channel]')
+        .map(button => button.attributes('data-channel'))
+    ).toEqual(['live_chat']);
     wrapper.unmount();
   });
 });

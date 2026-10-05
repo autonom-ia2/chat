@@ -1,7 +1,11 @@
-// Campaign channels of the new journey (#993, PRD §8.10). One decision feeds the
-// sidebar, the channel chooser and the list filters: a channel only shows up when its
-// feature is on AND the account has an inbox (or sender) able to send it.
+// Campaign channels of the new journey (#993, PRD §8.10). A channel is "connected" when
+// its feature is on AND the account has an inbox (or sender) able to send it. Only
+// connected channels can be chosen in "Nova campanha" (M1–M2); the list keeps showing
+// campaigns of channels disconnected later (decision of 05/10).
+// E-mail counts as connected only with a sender the engine can really use: a verified
+// domain or a webmail inbox accepted for direct send (see emailSenders.js).
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
+import { hasUsableEmailSender } from './emailSenders';
 
 export const CAMPAIGN_CHANNELS = {
   EMAIL: 'email',
@@ -49,7 +53,6 @@ const isSmsInbox = inbox =>
   inbox.channel_type === INBOX_TYPES.SMS ||
   (inbox.channel_type === INBOX_TYPES.TWILIO && inbox.medium === 'sms');
 
-const isEmailInbox = inbox => inbox.channel_type === INBOX_TYPES.EMAIL;
 const isWebsiteInbox = inbox => inbox.channel_type === INBOX_TYPES.WEB;
 
 /**
@@ -66,14 +69,11 @@ export const connectedCampaignChannels = ({
   features = {},
 } = {}) => {
   const has = predicate => inboxes.some(predicate);
-  const hasVerifiedDomain = senderIdentities.some(
-    identity => identity.status === 'verified'
-  );
 
   const connected = {
     [CAMPAIGN_CHANNELS.EMAIL]:
       features.emailCampaigns === true &&
-      (hasVerifiedDomain || has(isEmailInbox)),
+      hasUsableEmailSender({ inboxes, senderIdentities }),
     [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]:
       features.whatsappCampaigns === true && has(isWhatsappCloud),
     [CAMPAIGN_CHANNELS.WHATSAPP_API]:

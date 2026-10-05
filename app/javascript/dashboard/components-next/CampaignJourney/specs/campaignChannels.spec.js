@@ -17,7 +17,8 @@ const ALL_FEATURES = {
 };
 
 const INBOXES = {
-  email: { channel_type: 'Channel::Email' },
+  email: { channel_type: 'Channel::Email', email: 'vendas@acme.com.br' },
+  webmail: { channel_type: 'Channel::Email', email: 'loja@Gmail.com' },
   whatsappCloud: {
     channel_type: 'Channel::Whatsapp',
     provider: 'whatsapp_cloud',
@@ -49,7 +50,7 @@ describe('connectedCampaignChannels (PRD §8.10, M1–M2)', () => {
           INBOXES.sms,
           INBOXES.whatsappApi,
           INBOXES.whatsappCloud,
-          INBOXES.email,
+          INBOXES.webmail,
         ],
         features: ALL_FEATURES,
       })
@@ -97,19 +98,24 @@ describe('connectedCampaignChannels (PRD §8.10, M1–M2)', () => {
     ).toBe(false);
   });
 
-  it('M2: e-mail needs the feature and a verified domain or an e-mail inbox', () => {
+  it('M2: e-mail needs the feature and a sender the engine can use (verified domain or webmail inbox)', () => {
     const email = ({ inboxes = [], senderIdentities = [], features }) =>
       connectedCampaignChannels({
         inboxes,
         senderIdentities,
         features: features || ALL_FEATURES,
       }).includes(CAMPAIGN_CHANNELS.EMAIL);
-    expect(email({ inboxes: [INBOXES.email] })).toBe(true);
+    expect(email({ inboxes: [INBOXES.webmail] })).toBe(true);
     expect(email({ senderIdentities: [{ status: 'verified' }] })).toBe(true);
+    // Own-domain inbox without a verified domain: the dialog offers no sender.
+    expect(email({ inboxes: [INBOXES.email] })).toBe(false);
+    expect(email({ inboxes: [{ channel_type: 'Channel::Email' }] })).toBe(
+      false
+    );
     expect(email({ senderIdentities: [{ status: 'pending' }] })).toBe(false);
     expect(
       email({
-        inboxes: [INBOXES.email],
+        inboxes: [INBOXES.webmail],
         features: { ...ALL_FEATURES, emailCampaigns: false },
       })
     ).toBe(false);

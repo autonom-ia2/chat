@@ -1,6 +1,8 @@
-import { buildJourneyRows, filterJourneyRows } from '../campaignRows';
-
-const ALL = ['email', 'whatsapp_official', 'whatsapp_api', 'sms', 'live_chat'];
+import {
+  buildJourneyRows,
+  filterChannels,
+  filterJourneyRows,
+} from '../campaignRows';
 
 const data = {
   campaigns: [
@@ -88,30 +90,34 @@ describe('Campanha list rows (PRD §6.1)', () => {
     expect(routes.email).toEqual({ name: 'campaigns_email_index' });
   });
 
-  it('filters by channel, status and search, and never shows unconnected channels', () => {
+  it('filters by channel, status and search', () => {
     const rows = buildJourneyRows(data);
 
     expect(
-      filterJourneyRows(rows, { channel: 'sms', connectedChannels: ALL }).map(
-        row => row.name
-      )
+      filterJourneyRows(rows, { channel: 'sms' }).map(row => row.name)
     ).toEqual(['Parcela']);
     expect(
-      filterJourneyRows(rows, {
-        status: 'draft',
-        connectedChannels: ALL,
-      }).map(row => row.name)
+      filterJourneyRows(rows, { status: 'draft' }).map(row => row.name)
     ).toEqual(['Novidades']);
     expect(
-      filterJourneyRows(rows, {
-        search: 'news@',
-        connectedChannels: ALL,
-      }).map(row => row.name)
+      filterJourneyRows(rows, { search: 'news@' }).map(row => row.name)
     ).toEqual(['Novidades']);
+    expect(filterJourneyRows(rows)).toHaveLength(rows.length);
+  });
+
+  it('SMS disconnected with an old campaign: the campaign stays listed and SMS stays a filter', () => {
+    const rows = buildJourneyRows(data);
+    const connectedWithoutSms = ['live_chat'];
+
+    expect(filterJourneyRows(rows).map(row => row.channel)).toContain('sms');
+    expect(filterChannels(rows, connectedWithoutSms)).toContain('sms');
+  });
+
+  it('filter chips: connected channels plus channels that still have campaigns, in display order', () => {
+    expect(filterChannels([], ['sms', 'email'])).toEqual(['email', 'sms']);
     expect(
-      filterJourneyRows(rows, { connectedChannels: ['email'] }).map(
-        row => row.channel
-      )
-    ).toEqual(['email']);
+      filterChannels([{ channel: 'whatsapp_api' }], ['live_chat'])
+    ).toEqual(['whatsapp_api', 'live_chat']);
+    expect(filterChannels([], [])).toEqual([]);
   });
 });
