@@ -112,7 +112,8 @@
       "EXPIRED": "Expirada",
       "UNDOING_LABELS": "Desfazendo etiquetas",
       "LABELS_UNDONE": "Etiquetas desfeitas",
-      "UNDO_FAILED": "Falha ao desfazer"
+      "UNDO_FAILED": "Falha ao desfazer",
+      "NEEDS_COLUMN_CHOICE": "Escolha as colunas"
     }
   }
 }

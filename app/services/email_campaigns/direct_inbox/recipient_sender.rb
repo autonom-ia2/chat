@@ -39,7 +39,7 @@ module EmailCampaigns
       def dispatch(recipient, rendered, tracked_html, headers)
         @sender.deliver(
           to: recipient.email, subject: rendered[:subject], html_body: tracked_html,
-          from_email: @campaign.from_email, reply_to: @campaign.reply_to.presence || @campaign.from_email, headers: headers
+          from_email: @campaign.from_email, reply_to: ::EmailCampaigns::ReplyTo.for(@campaign), headers: headers
         )
       end
 
@@ -76,7 +76,7 @@ module EmailCampaigns
 
       def render(recipient)
         renderer = ::EmailCampaigns::TemplateRenderer.new(recipient)
-        { subject: renderer.render(@campaign.subject), body_html: renderer.render(@campaign.body_html) }
+        { subject: renderer.render(@campaign.subject), body_html: renderer.render(@campaign.body_html, html: true) }
       end
 
       def unsubscribe_headers(recipient)

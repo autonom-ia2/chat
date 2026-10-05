@@ -681,6 +681,8 @@
         "SEND_TEST_SUBMIT": "Enviar",
         "SEND_TEST_SUCCESS": "E-mail de teste enviado",
         "SEND_TEST_ERROR": "Não foi possível enviar o e-mail de teste",
+        "SEND_TEST_ONLY_SELF": "O e-mail de teste vai só para o seu endereço",
+        "SEND_TEST_RATE_LIMITED": "Muitos testes para esta campanha. Tente de novo daqui a uma hora",
         "SAVE_TEMPLATE": "Salvar como modelo",
         "SAVE_TEMPLATE_NAME_LABEL": "Nome do modelo",
         "SAVE_TEMPLATE_NAME_PLACEHOLDER": "ex.: Convite para live",

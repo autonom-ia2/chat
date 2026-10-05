@@ -34,6 +34,7 @@ import SidebarChangelogCard from './SidebarChangelogCard.vue';
 import SidebarChangelogButton from './SidebarChangelogButton.vue';
 import GuideSidebarEntry from 'dashboard/components/autonomia/guide/GuideSidebarEntry.vue';
 import { prospectingSidebarItems } from 'dashboard/routes/dashboard/autonomia/prospecting/utils/prospectingSidebar';
+import { withCampaignJourney } from 'dashboard/components-next/CampaignJourney/journeySidebar';
 import ChannelLeaf from './ChannelLeaf.vue';
 import ChannelIcon from 'next/icon/ChannelIcon.vue';
 import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
@@ -143,6 +144,13 @@ const emailCampaignEnabled = computed(
   () =>
     globalConfig.value?.emailCampaignEnabled === true && crmKanbanEnabled.value
 );
+// New campaign journey (#993): CAMPAIGN_JOURNEY_ENABLED swaps the Campanhas entries.
+const campaignJourneyMenu = computed(() => ({
+  enabled: globalConfig.value?.campaignJourneyEnabled === true,
+  audiencesEnabled: globalConfig.value?.campaignImportEnabled === true,
+  t,
+  accountScopedRoute,
+}));
 
 const currentUser = useMapGetter('getCurrentUser');
 const currentRole = useMapGetter('getCurrentRole');
@@ -1055,7 +1063,7 @@ const menuItems = computed(() => {
       icon: 'i-lucide-megaphone',
       // Links and QR codes follow email campaigns, before WhatsApp templates.
       // They require CRM, independently of the email add-on.
-      children: [
+      children: withCampaignJourney(campaignJourneyMenu.value, [
         ...(emailCampaignEnabled.value
           ? [
               {
@@ -1115,7 +1123,7 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-      ],
+      ]),
     },
     // Central de Ajuda da plataforma (#501): a tela de leitura, aberta a todas as contas. O editor de
     // portais do Chatwoot saiu do menu: a Central é só leitura e o conteúdo vem do repositório.

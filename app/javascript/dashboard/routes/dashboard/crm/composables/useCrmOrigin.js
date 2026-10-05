@@ -25,7 +25,33 @@ export const CRM_ORIGIN_SOURCE_META = {
     icon: 'i-lucide-link',
     labelKey: 'CRM_KANBAN.ORIGIN.TRACKED_LINK',
   },
+  // Campaign marks (#1002): set when the recipient replies to the campaign.
+  campaign_whatsapp: {
+    icon: 'i-lucide-send',
+    labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_WHATSAPP',
+  },
+  campaign_email: {
+    icon: 'i-lucide-mail',
+    labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_EMAIL',
+  },
+  // #993: who talked through a live chat campaign of the website.
+  campaign_live_chat: {
+    icon: 'i-lucide-app-window',
+    labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_LIVE_CHAT',
+  },
+  // #1004: reply to an SMS campaign.
+  campaign_sms: {
+    icon: 'i-lucide-message-square-text',
+    labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_SMS',
+  },
 };
+
+export const CAMPAIGN_MARK_SOURCES = [
+  'campaign_whatsapp',
+  'campaign_email',
+  'campaign_live_chat',
+  'campaign_sms',
+];
 
 const FALLBACK_SOURCE = 'meta_ctwa';
 const UNKNOWN_SOURCE_META = {
@@ -100,6 +126,14 @@ export function useCrmOrigin() {
         return t('CRM_KANBAN.ORIGIN.META_PAID');
       case 'tracked_link':
         return t('CRM_KANBAN.ORIGIN.TRACKED_LINK');
+      case 'campaign_whatsapp':
+        return t('CRM_KANBAN.ORIGIN.CAMPAIGN_WHATSAPP');
+      case 'campaign_email':
+        return t('CRM_KANBAN.ORIGIN.CAMPAIGN_EMAIL');
+      case 'campaign_live_chat':
+        return t('CRM_KANBAN.ORIGIN.CAMPAIGN_LIVE_CHAT');
+      case 'campaign_sms':
+        return t('CRM_KANBAN.ORIGIN.CAMPAIGN_SMS');
       default:
         return t('CRM_KANBAN.ORIGIN.UNKNOWN');
     }
@@ -178,6 +212,15 @@ export function useCrmOrigin() {
       .join(origins.some(adHierarchyLabel) ? '\n' : ' · ');
   };
 
+  // Campaign filter option (/ctwa_campaigns row): campaign marks read
+  // "Campanha WhatsApp: <nome>" so they stand apart from ads and links.
+  const campaignOptionLabel = option => {
+    const name = option?.headline || String(option?.source_id ?? '');
+    if (!CAMPAIGN_MARK_SOURCES.includes(option?.source)) return name;
+
+    return `${sourceLabel(option)}: ${name}`;
+  };
+
   return {
     originFromCampaign: buildCrmOrigin,
     originFromCampaigns: buildCrmOriginFromCampaigns,
@@ -185,5 +228,6 @@ export function useCrmOrigin() {
     formatOriginTitle,
     adHierarchyLines,
     originLabelOverHierarchy,
+    campaignOptionLabel,
   };
 }

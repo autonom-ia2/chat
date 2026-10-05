@@ -333,18 +333,53 @@
   "campaign_imports": {
     "controller": "api/v1/accounts/campaign_imports#index",
     "parametros": [
-      "page"
+      "page",
+      "q",
+      "saved"
     ]
   },
   "campaign_imports/:id": {
     "controller": "api/v1/accounts/campaign_imports#show",
     "parametros": []
   },
+  "campaign_imports/:id/contacts": {
+    "controller": "api/v1/accounts/campaign_import_audiences#contacts",
+    "parametros": [
+      "page"
+    ]
+  },
   "campaign_imports/:id/download": {
     "controller": "api/v1/accounts/campaign_imports#download",
     "parametros": [
       "file"
     ]
+  },
+  "campaign_imports/:id/problem_rows": {
+    "controller": "api/v1/accounts/campaign_import_audiences#problem_rows",
+    "parametros": [
+      "page"
+    ]
+  },
+  "campaign_imports/:id/sample_contact": {
+    "controller": "api/v1/accounts/campaign_import_audiences#sample_contact",
+    "parametros": []
+  },
+  "campaign_imports/:id/variable_suggestions": {
+    "controller": "api/v1/accounts/campaign_import_audiences#variable_suggestions",
+    "parametros": [
+      "variables"
+    ]
+  },
+  "campaign_journey/campaign_names": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_names#index",
+    "parametros": [
+      "campaign_ids",
+      "whatsapp_api_campaign_ids"
+    ]
+  },
+  "campaign_journey/contact_origins/:id": {
+    "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
+    "parametros": []
   },
   "campaigns": {
     "controller": "api/v1/accounts/campaigns#index",

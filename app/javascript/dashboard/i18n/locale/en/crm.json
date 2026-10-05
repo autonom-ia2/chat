@@ -147,6 +147,10 @@
         "TIKTOK_ADS": "TikTok Ads",
         "META_PAID": "Meta paid",
         "TRACKED_LINK": "Tracked link",
+        "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
+        "CAMPAIGN_EMAIL": "Email campaign",
+        "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+        "CAMPAIGN_SMS": "SMS campaign",
         "UNKNOWN": "Unknown"
       }
     }
@@ -202,6 +206,10 @@
       "TIKTOK_ADS": "TikTok Ads",
       "META_PAID": "Meta paid",
       "TRACKED_LINK": "Tracked link",
+      "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
+      "CAMPAIGN_EMAIL": "Email campaign",
+      "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+      "CAMPAIGN_SMS": "SMS campaign",
       "INSTAGRAM_POST": "Instagram post",
       "FACEBOOK_POST": "Facebook post",
       "UNKNOWN": "Unknown origin",
@@ -1975,6 +1983,13 @@
       "REORDER_HELP": "Drag the dots or use the arrows in the stage options.",
       "REORDER_STAGE": "Reorder {name}. Drag or use the up and down arrow keys.",
       "ORDER_CHANGED": "{name} is now stage {position} of {total}."
+    },
+    "ORIGIN_JOURNEY": {
+      "TITLE": "Origin and campaigns",
+      "AUDIENCES": "Audiences",
+      "EMPTY": "No origin or campaign yet.",
+      "CAMPAIGN_MESSAGE": "Campaign: {name}",
+      "CAMPAIGN_MESSAGE_TEMPLATE": "Campaign: {name} · template {template}"
     }
   },
   "crm": {

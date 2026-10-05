@@ -184,7 +184,14 @@ module Ctwa::CampaignBuilder
     return 'google_ads' if ref[:gclid].present?
     return 'tiktok_ads' if ref[:ttclid].present?
     return 'meta_paid' if meta_paid?(ref)
-    return 'tracked_link' if %w[tracked_link bridge].include?(ref[:source_type].to_s)
+
+    source_for_type(ref[:source_type].to_s)
+  end
+
+  def source_for_type(source_type)
+    return 'tracked_link' if %w[tracked_link bridge].include?(source_type)
+    # Campaign marks (#1002): campaign_whatsapp / campaign_email are their own origins.
+    return source_type if CampaignJourney::CampaignMarks::SOURCES.include?(source_type)
 
     ORGANIC_SOURCE
   end

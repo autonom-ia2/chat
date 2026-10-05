@@ -308,7 +308,9 @@ defineExpose({
     :is-label-view="isLabelView"
     :is-active-view="isActiveView"
     :has-active-filters="hasAppliedFilters"
-    :campaign-import-enabled="campaignImportEnabled"
+    :campaign-import-enabled="
+      campaignImportEnabled && !globalConfig?.campaignJourneyEnabled
+    "
     :button-label="t('CONTACTS_LAYOUT.HEADER.MESSAGE_BUTTON')"
     @search="emit('search', $event)"
     @update:sort="emit('update:sort', $event)"

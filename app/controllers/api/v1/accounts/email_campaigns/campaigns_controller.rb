@@ -115,7 +115,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
       preheader: source.preheader,
       from_name: source.from_name,
       from_email: source.from_email,
-      reply_to: source.reply_to,
+      reply_to: source.reply_to, reply_to_inbox: source.reply_to_inbox,
       delivery_mode: source.delivery_mode,
       sender_identity: source.sender_identity,
       sender_inbox: source.sender_inbox,
@@ -150,7 +150,7 @@ class Api::V1::Accounts::EmailCampaigns::CampaignsController < Api::V1::Accounts
   def campaign_params
     params.require(:email_campaign)
           .permit(:name, :subject, :from_name, :body_html, :reply_to, :sender_identity_id,
-                  :body_mjml, :preheader, :from_email, :delivery_mode, :sender_inbox_id)
+                  :body_mjml, :preheader, :from_email, :delivery_mode, :sender_inbox_id, :reply_to_inbox_id)
   end
 
   def render_unprocessable(code)

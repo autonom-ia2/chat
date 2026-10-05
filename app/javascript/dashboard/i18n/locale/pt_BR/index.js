@@ -12,6 +12,7 @@ import bulkActions from './bulkActions.json';
 import calls from './calls.json';
 import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
+import campaignJourney from './campaignJourney.json';
 import emailCampaignProtection from './emailCampaignProtection.json';
 import emailCampaignImportRecovery from './emailCampaignImportRecovery.json';
 import cannedMgmt from './cannedMgmt.json';
@@ -71,6 +72,7 @@ export default {
   ...calls,
   ...campaign,
   ...campaignImport,
+  ...campaignJourney,
   ...emailCampaignProtection,
   ...emailCampaignImportRecovery,
   ...cannedMgmt,

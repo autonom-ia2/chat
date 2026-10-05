@@ -1,6 +1,7 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import { campaignJourneyRoutes } from './journey/campaignJourney.routes';
 
 const CampaignsPageRouteView = () =>
   import('./pages/CampaignsPageRouteView.vue');
@@ -151,6 +152,7 @@ const campaignsRoutes = {
           beforeEnter: requireEmailCampaigns,
           component: () => import('./pages/EmailTemplatesPage.vue'),
         },
+        ...campaignJourneyRoutes,
       ],
     },
   ],

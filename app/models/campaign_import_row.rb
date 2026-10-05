@@ -4,9 +4,13 @@
 #
 #  id                    :bigint           not null, primary key
 #  batch_index           :integer
+#  company_name          :string
+#  email_masked          :string
 #  error_messages        :jsonb            not null
+#  extra_values          :jsonb            not null
 #  labels_applied        :jsonb            not null
 #  normalized_name       :string
+#  normalized_email_hash :string
 #  normalized_phone_hash :string
 #  raw_name              :string
 #  raw_phone_masked      :string
@@ -24,6 +28,7 @@
 #  index_campaign_import_rows_on_campaign_import_id             (campaign_import_id)
 #  index_campaign_import_rows_on_campaign_import_id_and_status  (campaign_import_id,status)
 #  index_campaign_import_rows_on_contact_id                     (contact_id)
+#  index_campaign_import_rows_on_normalized_email_hash          (normalized_email_hash)
 #  index_campaign_import_rows_on_normalized_phone_hash          (normalized_phone_hash)
 #
 class CampaignImportRow < ApplicationRecord
