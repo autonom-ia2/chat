@@ -53,8 +53,9 @@ class Meta::ConversionsApiClient
   private
 
   def meta_error_code(raw_body)
-    parsed = JSON.parse(raw_body.to_s)
-    parsed.is_a?(Hash) ? parsed.dig('error', 'code') : nil
+    error = JSON.parse(raw_body.to_s)
+    error = error['error'] if error.is_a?(Hash)
+    error.is_a?(Hash) ? error['code'] : nil
   rescue JSON::ParserError
     nil
   end
