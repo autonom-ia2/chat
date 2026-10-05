@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { parseAllowedOrigins } from './trackedLinkWebsite';
+import { originHost, parseAllowedOrigins } from './trackedLinkWebsite';
 
 // The "site where the button lives" field, shared by the create dialog and the
 // website panel. People paste what they see in the browser (a full page link or
@@ -20,9 +20,10 @@ const { t } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
 
 const parsed = computed(() => parseAllowedOrigins(text.value));
-const accepted = computed(() =>
-  parsed.value.origins.map(origin => new URL(origin).host)
-);
+// Two lines can point to the same site (http and https on localhost): show it once.
+const accepted = computed(() => [
+  ...new Set(parsed.value.origins.map(originHost)),
+]);
 const error = computed(() => {
   if (!props.touched) return '';
   if (parsed.value.invalid.length) {
@@ -86,7 +87,7 @@ const hintId = computed(() => `${props.id}-hint`);
       <p class="m-0 text-xs text-n-slate-10">{{ t(`${NS}.ORIGINS_MULTI`) }}</p>
       <details class="group">
         <summary
-          class="inline-flex min-h-6 cursor-pointer list-none items-center gap-1 rounded text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
+          class="inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand [&::-webkit-details-marker]:hidden"
         >
           <span class="i-lucide-shield-check size-3.5" aria-hidden="true" />
           {{ t(`${NS}.ORIGINS_WHY_TITLE`) }}

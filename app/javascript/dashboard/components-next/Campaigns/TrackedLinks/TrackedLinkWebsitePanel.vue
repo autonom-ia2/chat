@@ -5,7 +5,11 @@ import { useAlert } from 'dashboard/composables';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
-import { parseAllowedOrigins, signalStatus } from './trackedLinkWebsite';
+import {
+  originHost,
+  parseAllowedOrigins,
+  signalStatus,
+} from './trackedLinkWebsite';
 import AllowedOriginsField from './AllowedOriginsField.vue';
 
 const props = defineProps({
@@ -35,13 +39,6 @@ const signalLabel = computed(() =>
       })
 );
 const allowedOrigins = computed(() => props.link.allowed_origins || []);
-const hostOf = origin => {
-  try {
-    return new URL(origin).host;
-  } catch {
-    return origin;
-  }
-};
 const parsedDraft = computed(() => parseAllowedOrigins(draft.value));
 
 watch(
@@ -181,7 +178,7 @@ const saveOrigins = async () => {
           class="flex min-w-0 list-none items-center gap-2 text-sm"
         >
           <span class="i-lucide-globe size-4 shrink-0 text-n-slate-10" />
-          <span class="truncate" :title="origin">{{ hostOf(origin) }}</span>
+          <span class="truncate" :title="origin">{{ originHost(origin) }}</span>
         </li>
       </ul>
       <p v-else class="m-0 mt-3 text-sm text-n-amber-11">

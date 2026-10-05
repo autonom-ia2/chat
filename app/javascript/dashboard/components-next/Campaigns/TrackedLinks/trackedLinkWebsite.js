@@ -28,8 +28,19 @@ export const normalizeOrigin = value => {
   if (!['http:', 'https:'].includes(url.protocol)) return null;
   if (!url.hostname.includes('.')) return null;
   // People type or copy http:// out of habit; the live site answers on https,
-  // which is what the browser sends in the Origin header.
-  return `https://${url.host}`;
+  // which is what the browser sends in the Origin header. Default ports are
+  // dropped so the origin matches the one the server keeps.
+  const port = ['80', '443'].includes(url.port) ? '' : url.port;
+  return `https://${url.hostname}${port ? `:${port}` : ''}`;
+};
+
+// "https://placement.com.br" -> "placement.com.br": the site people recognize.
+export const originHost = origin => {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return String(origin ?? '');
+  }
 };
 
 // One address per line. Returns the de-duplicated origins plus what is wrong.

@@ -37,6 +37,18 @@ describe('AllowedOriginsField', () => {
     expect(hosts).toEqual(['placement.com.br', 'lp.placement.com.br']);
   });
 
+  it('shows each accepted site once, even when two lines point to it', () => {
+    const wrapper = mountField({
+      modelValue: 'http://localhost:3000\nhttps://localhost:3000',
+    });
+    const hosts = wrapper
+      .get('[data-testid="allowed-origins-preview"]')
+      .findAll('span.rounded-full')
+      .map(chip => chip.text());
+
+    expect(hosts).toEqual(['localhost:3000']);
+  });
+
   it('shows no preview while the field is empty', () => {
     const wrapper = mountField();
 

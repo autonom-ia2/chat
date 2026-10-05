@@ -53,7 +53,7 @@ const openWebsiteError = once(async dialog => {
   document.querySelector('input[value="website"]').click();
   await tick();
   await type('dialog input[type="text"]', 'LP Seguro Viagem');
-  await type('#tracked-link-origins', 'http://placement.com.br');
+  await type('#tracked-link-origins', 'minha página');
 });
 const openWebsiteEmpty = once(async dialog => {
   dialog.open();
