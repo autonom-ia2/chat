@@ -6,9 +6,9 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Ações |
 |---|---|
 | No catálogo | 511 |
-| Sem corpo | 138 |
-| Com corpo | 373 |
-| Com corpo e formato completo | 302 (81,0%) |
+| Sem corpo | 139 |
+| Com corpo | 372 |
+| Com corpo e formato completo | 301 (80,9%) |
 | Com corpo e formato incompleto | 71 |
 
 ## Por dentro dos campos
@@ -16,7 +16,7 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 150 |
-| Leituras cruas tipadas | 101 de 171 |
+| Leituras cruas tipadas | 100 de 170 |
 
 ## Incompletas por motivo
 
@@ -56,7 +56,6 @@ Uma ação pode ter mais de um motivo.
 - `POST callbacks/facebook_pages` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/reauthorize_page` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/register_facebook_page` — leitura crua sem tipo: inbox_name
-- `POST campaign_journey/campaigns` — leitura crua sem tipo: channel (repassada a ::CampaignJourney::WhatsappCampaignCreator.new)
 - `POST captain/assistants/:id/playground` — leitura crua sem tipo: playground_config
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
@@ -82,6 +81,7 @@ Uma ação pode ter mais de um motivo.
 - `POST data_imports/:id/retry` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/start` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST email_campaigns/campaigns/:id/resolve_video` — leitura crua sem tipo: poster_url, url (repassada a EmailCampaigns::VideoAsset.from_url)
+- `POST email_campaigns/campaigns/:id/test_send` — leitura crua sem tipo: to_email
 - `POST email_campaigns/maintenance/backfills` — lê o corpo cru da requisição
 - `POST email_campaigns/maintenance/backfills/:id/retry` — lê o corpo cru da requisição
 - `POST email_campaigns/reputation/override` — leitura crua sem tipo: duration_seconds (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), message_budget (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), reason (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...)
@@ -131,7 +131,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/callbacks#facebook_pages` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#reauthorize_page` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#register_facebook_page` inbox_name — o código não converte nem compara o valor
-- `api/v1/accounts/campaign_journey/campaigns#create` channel — repassada a ::CampaignJourney::WhatsappCampaignCreator.new
 - `api/v1/accounts/captain/assistants#playground` playground_config — o código não converte nem compara o valor
 - `api/v1/accounts/captain/bulk_actions#create` type — repassada a MODEL_TYPE.include?
 - `api/v1/accounts/captain/tasks#follow_up` follow_up_context — o código não converte nem compara o valor
@@ -162,6 +161,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/reputations#override` message_budget — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` reason — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#provider_release` reason — repassada a ::EmailCampaigns::Reputation::ProviderRelease.new.call
+- `api/v1/accounts/email_campaigns/test_sends#create` to_email — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find

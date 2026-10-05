@@ -5634,6 +5634,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}
@@ -11107,6 +11108,9 @@
   },
   "POST campaign_journey/campaigns": {
     "campos": {
+      "delivery_mode": {},
+      "from_email": {},
+      "from_name": {},
       "inbox_id": {
         "obrigatorio": "pelo_modelo",
         "tipo": "inteiro"
@@ -11115,9 +11119,14 @@
         "obrigatorio": "pelo_modelo",
         "tipo": "string"
       },
+      "preheader": {},
+      "reply_to_inbox_id": {},
       "scheduled_at": {
         "tipo": "data_hora"
       },
+      "sender_identity_id": {},
+      "sender_inbox_id": {},
+      "subject": {},
       "template_params": {
         "tipo": "objeto_livre"
       },
@@ -11132,7 +11141,7 @@
         "tipo": "objeto_livre"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/campaign_journey/campaigns#create",
     "corpo_plano": false,
     "envelope": "campaign",
@@ -11141,20 +11150,31 @@
         "obrigatorio": true,
         "tipo": "inteiro"
       },
-      "channel": {}
+      "channel": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
     },
     "modelo": "Campaign",
-    "motivos": [
-      "leitura crua sem tipo: channel (repassada a ::CampaignJourney::WhatsappCampaignCreator.new)"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:8",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:78",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:84",
       "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:32",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:11",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:9"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:44",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:14",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
+      "delivery_mode",
+      "from_email",
+      "from_name",
+      "preheader",
+      "reply_to_inbox_id",
+      "sender_identity_id",
+      "sender_inbox_id",
+      "subject",
       "variable_bindings",
       "variable_defaults"
     ]
@@ -14470,6 +14490,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}
@@ -14486,28 +14507,17 @@
     "sem_corpo": false
   },
   "POST email_campaigns/campaigns/:campaign_id/recipients": {
-    "campos": {
-      "import_file": {
-        "tipo": "arquivo",
-        "tipo_pela_leitura": "uso"
-      }
-    },
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#create",
-    "modelo": "EmailCampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:15",
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:93",
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:16",
       "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
     ],
-    "sem_corpo": false
+    "sem_corpo": true
   },
   "POST email_campaigns/campaigns/:campaign_id/recipients/retry_import": {
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#retry_import",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:29",
       "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
     ],
     "sem_corpo": true
@@ -14650,18 +14660,18 @@
   },
   "POST email_campaigns/campaigns/:id/test_send": {
     "campos": {
-      "to_email": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      }
+      "to_email": {}
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/email_campaigns/test_sends#create",
     "modelo": "EmailCampaign",
+    "motivos": [
+      "leitura crua sem tipo: to_email"
+    ],
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:2",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:6",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:3"
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:9",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:13",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10"
     ],
     "sem_corpo": false
   },
@@ -21633,6 +21643,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}
