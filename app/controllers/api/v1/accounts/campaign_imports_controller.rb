@@ -34,12 +34,12 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
 
     @campaign_import.with_lock do
       @campaign_import.reload
-      unless @campaign_import.deletable_before_import?
+      unless @campaign_import.deletable?
         error_code = 'campaign_import.delete_not_available'
         next
       end
 
-      @campaign_import.destroy!
+      destroy_campaign_import!
       deleted = true
     end
 
@@ -109,6 +109,13 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   end
 
   private
+
+  # Públicos (#1005, F2/N4): deleting an audience removes only the list.
+  def destroy_campaign_import!
+    return CampaignImports::AudienceDeletion.new(@campaign_import).perform if @campaign_import.audience?
+
+    @campaign_import.destroy!
+  end
 
   def ensure_campaign_import_enabled
     render json: { error: 'campaign_import.disabled' }, status: :not_found unless CampaignImports::Config.enabled?

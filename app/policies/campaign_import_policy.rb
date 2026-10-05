@@ -63,6 +63,11 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # #1005 (J5): turning an audience channel on or off changes who a campaign can reach.
+  def channels?
+    permission_granted?('campaign_manage')
+  end
+
   private
 
   def permission_granted?(key)

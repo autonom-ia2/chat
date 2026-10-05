@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_120000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1073,6 +1073,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_120000) do
     t.index ["account_id", "created_at"], name: "index_calls_on_account_id_and_created_at"
     t.index ["message_id"], name: "index_calls_on_message_id"
     t.index ["provider", "provider_call_id"], name: "index_calls_on_provider_and_provider_call_id", unique: true
+  end
+
+  create_table "campaign_audience_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campaign_type", null: false
+    t.bigint "campaign_id", null: false
+    t.bigint "campaign_import_id"
+    t.jsonb "variable_bindings", default: {}, null: false
+    t.jsonb "variable_defaults", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
+    t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
+    t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
   end
 
   create_table "campaign_import_labels", force: :cascade do |t|
@@ -3438,6 +3452,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_120000) do
   add_foreign_key "autonomia_prospecting_settings", "crm_pipeline_stages", column: "default_crm_stage_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipelines", column: "default_crm_pipeline_id", on_delete: :nullify
   add_foreign_key "autonomia_user_links", "users", on_delete: :cascade
+  add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
   add_foreign_key "campaign_recipients", "accounts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade

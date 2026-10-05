@@ -62,6 +62,8 @@
 class CampaignImport < ApplicationRecord
   DELETABLE_BEFORE_IMPORT_STATUSES = %w[uploaded validation_failed ready_to_confirm failed cancelled expired needs_column_choice].freeze
   AUDIENCE_FLOW = 'audience'.freeze
+  # Públicos (#1005, F2/N4): an audience can be deleted after it was saved, but not while it is being worked on.
+  AUDIENCE_DELETE_BLOCKED_STATUSES = %w[validating confirmed queued importing undoing_labels].freeze
 
   belongs_to :account
   belongs_to :user
@@ -69,6 +71,7 @@ class CampaignImport < ApplicationRecord
 
   has_many :campaign_import_rows, dependent: :destroy
   has_many :campaign_import_labels, dependent: :destroy
+  has_many :campaign_audience_links, dependent: :nullify
 
   has_one_attached :original_file
   has_one_attached :normalized_csv
@@ -121,6 +124,11 @@ class CampaignImport < ApplicationRecord
 
   def downloadable_report_csv?
     report_csv.attached?
+  end
+
+  # Old campaign bases only before contacts exist; audiences also after saving (only the list goes).
+  def deletable?
+    audience? ? AUDIENCE_DELETE_BLOCKED_STATUSES.exclude?(status) : deletable_before_import?
   end
 
   def deletable_before_import?
