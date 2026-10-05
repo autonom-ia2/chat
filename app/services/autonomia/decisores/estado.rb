@@ -6,12 +6,13 @@
 # extração. O que NÃO vai é o e-mail e o telefone do contato — nem quando o nome dele é o próprio
 # e-mail ou telefone, que é o que a plataforma põe quando não sabe o nome, nem como atributo
 # personalizado (um valor com forma de e-mail ou de telefone fica de fora). As mensagens são as 5
-# últimas até a mensagem da pergunta, cada uma cortada em 1.500 caracteres.
+# últimas até a mensagem da pergunta, cada uma cortada em 5.000 caracteres (#1000: formulário de
+# site por e-mail tem cabeçalho e rodapé).
 #
 # Sem `leituras`, lê o que a etapa 1 lia: canal, assunto e as mensagens do cliente.
 class Autonomia::Decisores::Estado
   MAX_MENSAGENS = 5
-  MAX_CARACTERES = 1_500
+  MAX_CARACTERES = 5_000
   TRECHO = 140
   MAX_ATRIBUTOS = 30
   MAX_VALOR = 300

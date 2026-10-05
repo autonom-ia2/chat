@@ -18,7 +18,9 @@ class Autonomia::Decisor < ApplicationRecord
   MAX_CAMPOS = 10
   ORIGENS = %w[pessoa guia].freeze
   ATRIBUTO_DE_CONTATO = 'contato.atributo:'.freeze
-  DESTINOS = %w[contato.nome contato.telefone contato.email empresa.nome card.titulo card.descricao].freeze
+  # contato.cargo e contato.biografia são os campos "Cargo" e "Biografia" da ficha do contato (#1000).
+  DESTINOS = %w[contato.nome contato.telefone contato.email contato.cargo contato.biografia empresa.nome card.titulo
+                card.descricao].freeze
   # O que o Decisor pode ler, de uma lista fechada. Vazio = o que a etapa 1 lia (as mensagens do cliente).
   # Nada daqui leva o e-mail ou o telefone do contato ao Jev (`Decisores::Estado`).
   LEITURAS = {
@@ -137,9 +139,19 @@ class Autonomia::Decisor < ApplicationRecord
     return errors.add(:campos, "must have at most #{MAX_CAMPOS} fields") if lista.size > MAX_CAMPOS
     return errors.add(:campos, 'each field needs chave, descricao and destino') unless lista.all? { |item| campo_completo?(item) }
 
+    chaves_e_trocar_validos(lista)
+    destinos_validos(lista)
+  end
+
+  def chaves_e_trocar_validos(lista)
     nomes = lista.map { |item| item['chave'].to_s }
     errors.add(:campos, 'chave must be unique') if nomes.uniq.size != nomes.size
-    destinos_validos(lista)
+    errors.add(:campos, 'trocar must be true or false') unless lista.all? { |item| trocar_valido?(item['trocar']) }
+  end
+
+  # `trocar` (#1000) é opcional: sem ele, o campo só preenche o que está vazio.
+  def trocar_valido?(valor)
+    [nil, true, false, 'true', 'false'].include?(valor)
   end
 
   def campo_completo?(item)

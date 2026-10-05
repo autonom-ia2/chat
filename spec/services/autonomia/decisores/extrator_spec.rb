@@ -29,7 +29,8 @@ RSpec.describe Autonomia::Decisores::Extrator do
     expect(cliente).to have_received(:create) do |**args|
       schema = args[:schema][:schema]
       expect(schema[:required]).to eq(%w[nome telefone empresa])
-      expect(schema[:properties]['telefone'][:description]).to include('E.164')
+      # #1000 — o código do país é completado pelo Aplicador, não inventado pelo modelo.
+      expect(schema[:properties]['telefone'][:description]).to include('country code only if written')
       expect(JSON.parse(args[:input])['messages'].first).to include('Joana Lima')
     end
   end

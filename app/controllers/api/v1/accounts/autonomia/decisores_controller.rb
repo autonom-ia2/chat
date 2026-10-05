@@ -72,8 +72,8 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   def decisor_params
     params.permit(:nome, :pergunta, :instrucoes, :certeza_minima, respostas: [:chave, :descricao],
-                                                                  exemplos: [:texto, :resposta, :origem], campos: [:chave, :descricao, :destino],
-                                                                  leituras: [])
+                                                                  exemplos: [:texto, :resposta, :origem],
+                                                                  campos: [:chave, :descricao, :destino, :trocar], leituras: [])
   end
 
   # Conversas que a pessoa enxerga: o teste mostra trechos, e quem não vê a caixa não lê a conversa.

@@ -13,10 +13,13 @@ class Autonomia::Decisores::Extrator
   MAX_VALOR = 500
   # Dica de formato por destino: o valor sai pronto para gravar, e a validação do próprio registro confere.
   FORMATOS = {
-    'contato.telefone' => 'international E.164 format with country code, digits only after +, e.g. +5511999998888',
+    # O código do país quem completa é o Aplicador (Decisores::Telefone): o modelo não deve inventá-lo.
+    'contato.telefone' => 'the phone number exactly as written, with area code; include the country code only if written',
     'contato.email' => 'a single email address',
     'contato.nome' => 'the person full name, not an email address',
-    'empresa.nome' => 'the company name as written by the person'
+    'empresa.nome' => 'the company name as written by the person',
+    'contato.cargo' => 'the job title or role as written',
+    'contato.biografia' => 'a short text with the requested details, as written'
   }.freeze
   INSTRUCOES = <<~TEXT.freeze
     Extract the requested fields from this customer conversation.
