@@ -31,9 +31,9 @@ import CrmCardAutoFollowupStatus from './CrmCardAutoFollowupStatus.vue';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
-import OriginSequence from 'dashboard/components-next/CampaignJourney/OriginSequence.vue';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
+import CrmOriginList from './CrmOriginList.vue';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
 
 const props = defineProps({
@@ -1755,8 +1755,19 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </div>
 
+            <!-- More than one touch: every origin, first to last (#1034). -->
             <div
-              v-if="originPill"
+              v-if="originPill?.origins.length > 1"
+              class="grid min-w-0 gap-2"
+              data-testid="crm-origin-touches"
+            >
+              <p class="m-0 text-xs font-medium text-n-slate-11">
+                {{ t('CRM_KANBAN.ORIGIN.LIST.TITLE') }}
+              </p>
+              <CrmOriginList :campaigns="card.campaigns" />
+            </div>
+            <div
+              v-else-if="originPill"
               class="grid min-w-0 justify-items-start gap-1"
             >
               <CrmCardPill
@@ -1765,11 +1776,6 @@ useFixedPanelPresence(computed(() => props.show));
                 :title="formatOriginTitle(originPill)"
               >
                 {{ originLabelOverHierarchy(originPill) }}
-                <template v-if="originPill.extraCount > 0" #trail>
-                  <span class="shrink-0 font-semibold">
-                    {{ `+${originPill.extraCount}` }}
-                  </span>
-                </template>
               </CrmCardPill>
               <ul
                 v-if="originAdLines.length"
@@ -1785,10 +1791,6 @@ useFixedPanelPresence(computed(() => props.show));
                 </li>
               </ul>
             </div>
-            <OriginSequence
-              v-if="originPill?.extraCount > 0"
-              :origins="originPill.origins"
-            />
 
             <CrmCardLeadForm
               v-if="card?.lead_form"

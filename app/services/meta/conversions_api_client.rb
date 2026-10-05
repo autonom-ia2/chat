@@ -21,7 +21,9 @@ class Meta::ConversionsApiClient
   # on purpose: Meta tokens can carry -, _, |, +, /, = so a [A-Za-z0-9] class misses them.
   SENSITIVE_PATTERN = %r{[A-Za-z0-9_\-|+/=.]{20,}}
 
-  Result = Struct.new(:ok, :http_code, :body, :error, keyword_init: true)
+  # error_code: Meta's numeric error code (190 invalid token, 10/200-299 permission, …), nil on
+  # success or network failure. Lets callers tell a dead token from a passing outage.
+  Result = Struct.new(:ok, :http_code, :body, :error, :error_code, keyword_init: true)
 
   def initialize(access_token:, dataset_id:, api_version: nil)
     @access_token = access_token
@@ -42,12 +44,21 @@ class Meta::ConversionsApiClient
     )
 
     body = sanitize(response.body)
-    Result.new(ok: response.success?, http_code: response.code, body: body, error: response.success? ? nil : body)
+    Result.new(ok: response.success?, http_code: response.code, body: body, error: response.success? ? nil : body,
+               error_code: response.success? ? nil : meta_error_code(response.body))
   rescue StandardError => e
     Result.new(ok: false, http_code: nil, body: nil, error: sanitize(e.message))
   end
 
   private
+
+  def meta_error_code(raw_body)
+    error = JSON.parse(raw_body.to_s)
+    error = error['error'] if error.is_a?(Hash)
+    error.is_a?(Hash) ? error['code'] : nil
+  rescue JSON::ParserError
+    nil
+  end
 
   def sanitize(text)
     return if text.nil?

@@ -33,9 +33,10 @@ module Ctwa::CampaignBuilder
     return if referral.blank?
 
     ref = referral.to_h.symbolize_keys
+    ref = bound_source_url(ref)
     return if ref[:source_id].blank? && ref[:ctwa_clid].blank? && ref[:source_url].blank?
 
-    ref = normalize_source_url_referral(bound_source_url(ref))
+    ref = normalize_source_url_referral(ref)
 
     {
       'source' => source_for(ref),
@@ -71,6 +72,7 @@ module Ctwa::CampaignBuilder
     # Cards mirror the conversation's campaign data, so linked cards re-broadcast after
     # a write to keep board pills/filters live (job no-ops without linked cards).
     Crm::Cards::RebroadcastConversationCardsJob.perform_later(conversation.id) if persisted && Crm::Config.enabled?
+    Crm::MetaAds::EnrichTouchesJob.enqueue_for(conversation, touch) if persisted
 
     persisted
   end
@@ -149,10 +151,21 @@ module Ctwa::CampaignBuilder
 
   # External webhook input: the URL is bounded for EVERY referral shape before anything
   # derives from it or persists it into the conversation jsonb.
+  # It becomes a clickable link on the card, so only http(s) survives (#1034); anything else
+  # (javascript:, data:) is dropped before it can count as the touch's only signal.
   def bound_source_url(ref)
     return ref if ref[:source_url].blank?
 
-    ref.merge(source_url: ref[:source_url].to_s.first(MAX_SOURCE_URL_LENGTH))
+    url = ref[:source_url].to_s.first(MAX_SOURCE_URL_LENGTH)
+    return ref.except(:source_url) unless http_url?(url)
+
+    ref.merge(source_url: url)
+  end
+
+  # Only the scheme is checked: Meta may send imperfect URLs (spaces) that are still real posts.
+  def http_url?(url)
+    scheme, rest = url.strip.split(':', 2)
+    rest.to_s.start_with?('//') && %w[http https].include?(scheme.to_s.downcase)
   end
 
   # source_url arrives already bounded by build. Only attribution identifiers are

@@ -20,10 +20,16 @@ class Crm::Cards::PayloadBuilder
     lead_form: :lead_form_payload
   }.freeze
 
+  # Nomes da Meta (#1034): campaign_name/adset_name/ad_name, gravados por Crm::MetaAds::TouchEnricher.
+  CAMPAIGN_TOUCH_FIELDS = %w[
+    source source_id source_type headline source_url utm_campaign utm_term utm_content utm_id
+    campaign_name adset_name ad_name touched_at
+  ].freeze
+
   # CTWA multi-touch: aggregates campaign_touches from ALL conversations linked to
   # the card (crm_card_conversations, plus the primary as fallback for legacy cards
   # without a link row), ordered first touch -> last. Slim item (no body/ctwa_clid):
-  # {source, source_id, headline, source_url, touched_at, conversation_id}. Single source of
+  # CAMPAIGN_TOUCH_FIELDS + conversation_id. Single source of
   # truth for the shape — Crm::Kanban::CardPayloadBuilder delegates here so board,
   # list and websocket payloads never drift. Legacy touches without touched_at sort
   # first via to_s -> '' (they are the origin touch, so oldest-first stays correct).
@@ -41,19 +47,7 @@ class Crm::Cards::PayloadBuilder
     touches.filter_map do |touch|
       next unless touch.is_a?(Hash)
 
-      {
-        source: touch['source'],
-        source_id: touch['source_id'],
-        source_type: touch['source_type'],
-        headline: touch['headline'],
-        source_url: touch['source_url'],
-        utm_campaign: touch['utm_campaign'],
-        utm_term: touch['utm_term'],
-        utm_content: touch['utm_content'],
-        utm_id: touch['utm_id'],
-        touched_at: touch['touched_at'],
-        conversation_id: conversation.id
-      }
+      CAMPAIGN_TOUCH_FIELDS.to_h { |field| [field.to_sym, touch[field]] }.merge(conversation_id: conversation.id)
     end
   end
 

@@ -81,13 +81,14 @@ class Autonomia::Guide::Acoes
     'DELETE companies/:id',
     'DELETE contacts/:id',
     'DELETE conversations/:id',
-    'DELETE teams/:id',
-    'DELETE portals/:id',
+    'DELETE teams/:id', 'DELETE portals/:id',
     'DELETE sla_policies/:id',
     # #858 — resolver um caso parado do Decisor retoma a automação num job, que pode mandar mensagem
     # ou mover card fora do caderno. (A conversa com o Guia saiu do catálogo: D3, #933.)
     # #936 — começar e seguir uma tarefa longa soltam lotes em centenas de registros: só a pessoa autoriza.
-    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver', 'POST autonomia/tarefas/:id/comecar', 'POST autonomia/tarefas/:id/seguir'
+    'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver', 'POST autonomia/tarefas/:id/comecar', 'POST autonomia/tarefas/:id/seguir',
+    # #1034 — trocar o token de anúncios da Meta troca credencial em uso e solta a resolução retroativa num job.
+    'PUT crm/meta_ads_connection', 'PATCH crm/meta_ads_connection'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

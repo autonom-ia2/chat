@@ -2143,6 +2143,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
     t.index ["reminder_id"], name: "index_crm_meetings_on_reminder_id"
   end
 
+  create_table "crm_meta_ad_objects", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "meta_object_id", null: false
+    t.string "object_type"
+    t.string "name", limit: 255
+    t.string "campaign_id"
+    t.string "adset_id"
+    t.datetime "fetched_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "meta_object_id"], name: "idx_crm_meta_ad_objects_account_object", unique: true
+  end
+
+  create_table "crm_meta_ads_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.text "access_token", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "last_checked_at"
+    t.string "last_error", limit: 255
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
+  end
+
   create_table "crm_meta_conversion_events", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "pipeline_id"
@@ -3538,6 +3562,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
+  add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"

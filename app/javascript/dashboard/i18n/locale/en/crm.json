@@ -215,7 +215,21 @@
       "UNKNOWN": "Unknown origin",
       "CAMPAIGN_PART": "Campaign: {name}",
       "ADSET_PART": "Ad set: {name}",
-      "AD_PART": "Ad: {name}"
+      "AD_PART": "Ad: {name}",
+      "META_ID": "ID {id}",
+      "LEVEL": {
+        "CAMPAIGN": "Campaign",
+        "ADSET": "Ad set",
+        "AD": "Ad"
+      },
+      "LIST": {
+        "TITLE": "Contact origins",
+        "COUNT": "{count} touch | {count} touches",
+        "FIRST": "First touch",
+        "LAST": "Latest touch",
+        "NEW_TAB": "(opens in a new tab)",
+        "MORE_ARIA": "See all origins ({count} more)"
+      }
     },
     "META_SYNC_STATUS": {
       "LABEL_ACCEPTED": "Sent",
@@ -374,6 +388,51 @@
         "NO_CAMPAIGN": "No campaign",
         "CAMPAIGNS_EMPTY_TITLE": "No campaigns yet",
         "CAMPAIGNS_EMPTY_HINT": "Paste the ad text into your Meta ads. Each campaign shows up here after its first click."
+      },
+      "META_ADS": {
+        "TITLE": "Meta campaign names",
+        "DESCRIPTION": "Meta's automatic parameters send numbers. Connect your ad account so the CRM shows the campaign, ad set and ad names.",
+        "DESCRIPTION_CONNECTED": "The CRM shows the campaign, ad set and ad names instead of the numbers Meta sends.",
+        "STATUS": {
+          "NOT_CONNECTED": "Not connected",
+          "CONNECTED": "Connected",
+          "ATTENTION": "Needs attention"
+        },
+        "CHECKED": "Checked {time}",
+        "ATTENTION_HINT": "Meta refused the saved token. Connect again with a new one.",
+        "LAST_ERROR": "Meta said: {error}",
+        "CONNECT": "Connect",
+        "RECONNECT": "Connect again",
+        "REPLACE": "Replace token",
+        "REMOVE": "Remove",
+        "REMOVE_TITLE": "Remove the Meta connection?",
+        "REMOVE_HINT": "Names already shown in the CRM stay. New touches will show the numbers again.",
+        "REMOVE_SUCCESS": "Meta connection removed.",
+        "REMOVE_ERROR": "Could not remove the connection. Try again.",
+        "LOADING": "Checking the connection…",
+        "LOAD_ERROR": "Could not check the Meta connection.",
+        "RETRY": "Try again",
+        "DIALOG": {
+          "TITLE": "Connect to Meta",
+          "DESCRIPTION": "Paste an ads token. It reads your campaign names and sends website sales to the Pixel; nothing changes in your ads.",
+          "STEPS_TITLE": "In Business Manager:",
+          "STEP_1": "Open Business settings → Users → System users. If there is none, create one.",
+          "STEP_2": "Click Assign assets and give the user access to your ad account and to the website Pixel (under Datasets). Without the ad account the names never show; without the Pixel, sales never reach Meta.",
+          "STEP_3": "Only then click Generate new token, choose the app, check ads_read and set the expiration to Never.",
+          "STEP_4": "Copy the token and paste it here.",
+          "TOKEN_LABEL": "Access token",
+          "TOKEN_PLACEHOLDER": "Paste the token here",
+          "TOKEN_PRIVACY": "The token is stored encrypted and is never shown again.",
+          "SAVE": "Test and save",
+          "SAVED": "Connected. Names start showing in a few minutes.",
+          "ERROR_MISSING_ADS_READ": "This token lacks the ads_read permission. Generate a new one in Business Manager with ads_read checked.",
+          "ERROR_INVALID_TOKEN": "Meta refused this token. Check that you copied all of it and that it has not expired.",
+          "ERROR_NO_AD_ACCOUNT": "The token has ads_read but cannot see any ad account. In Business Manager, open the system user, click Assign assets and pick the ad account. Then test again.",
+          "ERROR_TOKEN_REQUIRED": "Paste the token before testing.",
+          "ERROR_ENCRYPTION": "Server encryption is not configured, so the token cannot be stored. Contact support.",
+          "ERROR_FORBIDDEN": "Only an account administrator can connect Meta.",
+          "ERROR_GENERIC": "Could not test the token now. Try again in a moment."
+        }
       }
     },
     "DASHBOARD": {
@@ -1377,7 +1436,7 @@
       "CREATE": "Create pipeline",
       "META_SYNC_PIXEL": "Website Pixel (ID)",
       "META_SYNC_PIXEL_PLACEHOLDER": "Example: 1234567890123456",
-      "META_SYNC_PIXEL_HELP": "For leads that arrive through a landing page. The WhatsApp connection needs access to this Pixel in Business Manager."
+      "META_SYNC_PIXEL_HELP": "For leads that arrive through a landing page. Sales go through the \"Meta campaign names\" token (Campaigns → Links and QR codes), generated after assigning this Pixel to the system user."
     },
     "GOOGLE_SYNC": {
       "TITLE": "Google Ads",

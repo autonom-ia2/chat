@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import CrmKanbanCard from 'dashboard/routes/dashboard/crm/components/CrmKanbanCard.vue';
 import { useCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
 import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
-import OriginSequence from '../OriginSequence.vue';
+import CrmOriginList from 'dashboard/routes/dashboard/crm/components/CrmOriginList.vue';
 import ContactOriginsPanel from '../ContactOriginsPanel.vue';
 import CampaignMessageLabel from '../CampaignMessageLabel.vue';
 import ConversationCampaignMark from '../ConversationCampaignMark.vue';
@@ -47,11 +47,15 @@ const EXPECTED_SEQUENCE = [
   'CRM_KANBAN.ORIGIN.CAMPAIGN_WHATSAPP: Renovação auto — outubro',
 ];
 
+// Every touch in CrmOriginList (#1037), first to last; each row carries its label.
 const sequenceTexts = wrapper =>
-  wrapper
-    .find('[data-test-id="origin-sequence"]')
-    .findAll('li')
-    .map(item => item.text());
+  wrapper.findAll('[data-crm-origin-touch]').map(item => item.text());
+
+const expectSequence = (wrapper, expected) => {
+  const rows = sequenceTexts(wrapper);
+  expect(rows).toHaveLength(expected.length);
+  expected.forEach((label, index) => expect(rows[index]).toContain(label));
+};
 
 describe('K3 — card with a link and two campaigns', () => {
   it('shows the first mark with +2 on the card', () => {
@@ -80,16 +84,16 @@ describe('K3 — card with a link and two campaigns', () => {
     expect(wrapper.text()).toContain('+2');
   });
 
-  it('lists the three marks in order (drawer sequence)', () => {
+  it('lists the three marks in order (drawer origin list)', () => {
     const { originFromCampaigns } = useCrmOrigin();
     const origin = originFromCampaigns([LINK, EMAIL, WHATSAPP]);
 
-    const wrapper = mount(OriginSequence, {
-      props: { origins: origin.origins },
+    const wrapper = mount(CrmOriginList, {
+      props: { campaigns: [LINK, EMAIL, WHATSAPP] },
     });
 
     expect(origin.extraCount).toBe(2);
-    expect(sequenceTexts(wrapper)).toEqual(EXPECTED_SEQUENCE);
+    expectSequence(wrapper, EXPECTED_SEQUENCE);
   });
 });
 
@@ -154,7 +158,7 @@ describe('P1 — Origem e campanhas in the contact panel', () => {
 
     expect(CampaignJourneyAPI.getContactOrigins).toHaveBeenCalledWith(12);
     expect(wrapper.text()).toContain('CRM_KANBAN.ORIGIN_JOURNEY.TITLE');
-    expect(sequenceTexts(wrapper)).toEqual(EXPECTED_SEQUENCE);
+    expectSequence(wrapper, EXPECTED_SEQUENCE);
     expect(wrapper.find('[data-test-id="contact-audiences"]').text()).toBe(
       'Clientes auto'
     );
@@ -174,7 +178,7 @@ describe('P1 — Origem e campanhas in the contact panel', () => {
     });
     await flushPromises();
 
-    expect(sequenceTexts(wrapper)).toEqual(EXPECTED_SEQUENCE.slice(0, 2));
+    expectSequence(wrapper, EXPECTED_SEQUENCE.slice(0, 2));
   });
 });
 

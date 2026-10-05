@@ -52,7 +52,31 @@ module Autonomia
       # os remove). Espelho da nossa criação: outgoing_url NULL → NUNCA toca a Gabriela (webhook real).
       after_destroy :cleanup_mirror_bot
 
+      # #1035 — liga/desliga o espelho conforme o agente atende ou não. Desligando: inativa ANTES de
+      # liberar, para que nenhuma conversa nova nasça com o bot enquanto as atuais voltam para a equipe.
+      def sync_mirror!(operating:)
+        if operating
+          mirror_bot_inboxes.inactive.find_each { |bot_inbox| bot_inbox.update!(status: :active) }
+        else
+          mirror_bot_inboxes.active.find_each { |bot_inbox| bot_inbox.update!(status: :inactive) }
+          release_bot_conversations!
+        end
+      end
+
+      # Devolve ao humano as conversas em que o bot ainda está no comando: as `pending` da caixa e as
+      # `open` que têm o espelho como ai_assignee (na caixa do espelho elas nascem open — ver
+      # Conversation#set_active_bot_conversation). Mesmo caminho do disconnect manual.
+      def release_bot_conversations!
+        pending = inbox.conversations.where(status: :pending)
+        held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
+        pending.or(held_by_mirror).find_each(&:bot_handoff!)
+      end
+
       private
+
+      def mirror_bot_inboxes
+        AgentBotInbox.where(inbox_id: inbox_id, agent_bot_id: agent_bot_id)
+      end
 
       def linked_records_must_belong_to_account
         return if account_id.blank?
@@ -66,7 +90,7 @@ module Autonomia
       end
 
       def cleanup_mirror_bot
-        AgentBotInbox.where(inbox_id: inbox_id, agent_bot_id: agent_bot_id).destroy_all
+        mirror_bot_inboxes.destroy_all
         # Guarda dura: só remove o AgentBot se for o espelho (outgoing_url NULL). Um bot webhook
         # (Gabriela) jamais é apagado por este caminho, mesmo que algum dado fique inconsistente.
         AgentBot.where(id: agent_bot_id, outgoing_url: nil).find_each(&:destroy)

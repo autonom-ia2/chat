@@ -6,6 +6,7 @@ import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAdmin } from 'dashboard/composables/useAdmin';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -15,12 +16,14 @@ import CreateTrackedLinkDialog from 'dashboard/components-next/Campaigns/Tracked
 import TrackedLinkWebsitePanel from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkWebsitePanel.vue';
 import TrackedLinkCampaignTable from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkCampaignTable.vue';
 import TrackedLinkReadyBadge from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkReadyBadge.vue';
+import MetaAdsNamesCard from 'dashboard/components-next/Campaigns/TrackedLinks/MetaAdsNamesCard.vue';
 
 const { t, locale } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
 const store = useStore();
 const inboxes = useMapGetter('inboxes/getWhatsAppInboxes');
 const canManage = useCanManage('campaign_manage');
+const { isAdmin } = useAdmin();
 const request = useAbortableRequest();
 const isLoading = request.isPending;
 const links = ref([]);
@@ -342,6 +345,7 @@ onMounted(fetchLinks);
                 </p>
               </div>
             </div>
+            <MetaAdsNamesCard v-if="isAdmin" class="mt-4" />
           </section>
 
           <aside

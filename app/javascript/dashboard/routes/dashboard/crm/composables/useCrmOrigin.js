@@ -53,10 +53,53 @@ export const CAMPAIGN_MARK_SOURCES = [
   'campaign_sms',
 ];
 
+// The card keeps up to 20 touches (Ctwa::CampaignBuilder); never list more.
+export const CRM_ORIGIN_MAX_TOUCHES = 20;
+
 const FALLBACK_SOURCE = 'meta_ctwa';
 const UNKNOWN_SOURCE_META = {
   icon: 'i-lucide-circle-help',
   labelKey: 'CRM_KANBAN.ORIGIN.UNKNOWN',
+};
+
+const text = value => String(value ?? '').trim();
+
+// A Meta object ID (campaign, ad set, ad) is a string of 6 to 30 digits —
+// the same rule as Crm::MetaAds::NameResolver (docs/crm/origens-nomes-meta.md §3).
+// Checked character by character, never with a regular expression.
+const META_ID_MIN = 6;
+const META_ID_MAX = 30;
+export const isMetaObjectId = value => {
+  const candidate = text(value);
+  return (
+    candidate.length >= META_ID_MIN &&
+    candidate.length <= META_ID_MAX &&
+    [...candidate].every(char => char >= '0' && char <= '9')
+  );
+};
+
+// "1202…0416": long IDs keep both ends, the full value goes in the title.
+const ID_EDGE = 4;
+export const shortMetaId = value => {
+  const id = text(value);
+  if (id.length <= ID_EDGE * 2 + 1) return id;
+  return `${id.slice(0, ID_EDGE)}…${id.slice(-ID_EDGE)}`;
+};
+
+// source_url is external webhook input (the CTWA referral is only length-bound
+// on the server). Keep it only as an http(s) address, so it can never become a
+// javascript: or data: link in the CRM.
+const LINK_PROTOCOLS = ['http:', 'https:'];
+export const safeSourceUrl = value => {
+  const candidate = text(value);
+  if (!candidate) return '';
+  try {
+    return LINK_PROTOCOLS.includes(new URL(candidate).protocol)
+      ? candidate
+      : '';
+  } catch {
+    return '';
+  }
 };
 
 const normalizeSource = source => String(source || FALLBACK_SOURCE).trim();
@@ -78,20 +121,29 @@ export const buildCrmOrigin = campaign => {
 
   const source = sourceForCampaign(campaign);
   const meta = sourceMetaFor(source);
+  const headline = text(campaign.headline);
+  // A CTWA touch carries the ad itself (source_id = ad id); until its name is
+  // resolved, the ad's own headline is the best name it has.
+  const adName = text(campaign.ad_name);
+  const adFromHeadline = !adName && source === 'meta_ctwa' && Boolean(headline);
 
   return {
     source,
     icon: meta.icon,
     labelKey: meta.labelKey,
-    headline: String(campaign.headline || '').trim(),
+    headline,
     sourceId: campaign.source_id,
     sourceType: campaign.source_type,
-    sourceUrl: String(campaign.source_url || '').trim(),
-    // Landing page clicks (#1011) carry the Meta names through the UTMs pasted
-    // in the ad: utm_campaign = campaign, utm_term = ad set, utm_content = ad.
-    campaign: String(campaign.utm_campaign || '').trim(),
-    adset: String(campaign.utm_term || '').trim(),
-    ad: String(campaign.utm_content || '').trim(),
+    sourceUrl: safeSourceUrl(campaign.source_url),
+    touchedAt: campaign.touched_at || null,
+    // Names resolved from the Meta API (#1034) win; otherwise the UTMs pasted in
+    // the ad (#1011): utm_campaign = campaign, utm_term = ad set, utm_content = ad.
+    // Meta's automatic parameters send IDs there — see hierarchyItems.
+    campaign: text(campaign.campaign_name) || text(campaign.utm_campaign),
+    adset: text(campaign.adset_name) || text(campaign.utm_term),
+    ad: adName || (adFromHeadline ? headline : text(campaign.utm_content)),
+    adFromHeadline,
+    utmCampaign: text(campaign.utm_campaign),
   };
 };
 
@@ -110,7 +162,32 @@ export const buildCrmOriginFromCampaigns = campaigns => {
 };
 
 export function useCrmOrigin() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+
+  const intlLocale = () =>
+    text(locale?.value || 'en')
+      .split('_')
+      .join('-');
+
+  // Short date of a touch ("10/07"; the year only when it is not this year),
+  // with the full date and time for the title.
+  const touchDate = origin => {
+    const date = new Date(origin?.touchedAt || '');
+    if (!origin?.touchedAt || Number.isNaN(date.getTime())) return null;
+    const sameYear = date.getFullYear() === new Date().getFullYear();
+    return {
+      iso: date.toISOString(),
+      label: new Intl.DateTimeFormat(intlLocale(), {
+        day: '2-digit',
+        month: '2-digit',
+        ...(sameYear ? {} : { year: 'numeric' }),
+      }).format(date),
+      title: new Intl.DateTimeFormat(intlLocale(), {
+        dateStyle: 'long',
+        timeStyle: 'short',
+      }).format(date),
+    };
+  };
 
   const sourceLabel = origin => {
     switch (origin?.source) {
@@ -146,7 +223,7 @@ export function useCrmOrigin() {
     hostname === domain || hostname.endsWith(`.${domain}`);
 
   const sourceUrlLabel = origin => {
-    const sourceUrl = origin?.sourceUrl;
+    const sourceUrl = safeSourceUrl(origin?.sourceUrl);
     if (!sourceUrl) return '';
 
     let hostname;
@@ -177,15 +254,52 @@ export function useCrmOrigin() {
     return sourceUrlLabel(origin) || label;
   };
 
-  // One translated line per Meta level the ad sent: campaign, ad set, ad.
+  // Shown value for one level: the name, or "ID 1202…0416" when Meta only sent
+  // the number (the full ID stays in the title).
+  const levelValue = value =>
+    isMetaObjectId(value)
+      ? {
+          value: t('CRM_KANBAN.ORIGIN.META_ID', { id: shortMetaId(value) }),
+          title: value,
+        }
+      : { value, title: value };
+
+  // One item per Meta level the touch has: campaign, ad set, ad. Literal keys:
+  // the project forbids building i18n keys at runtime.
+  const LEVELS = [
+    {
+      field: 'campaign',
+      level: () => t('CRM_KANBAN.ORIGIN.LEVEL.CAMPAIGN'),
+      line: name => t('CRM_KANBAN.ORIGIN.CAMPAIGN_PART', { name }),
+    },
+    {
+      field: 'adset',
+      level: () => t('CRM_KANBAN.ORIGIN.LEVEL.ADSET'),
+      line: name => t('CRM_KANBAN.ORIGIN.ADSET_PART', { name }),
+    },
+    {
+      field: 'ad',
+      level: () => t('CRM_KANBAN.ORIGIN.LEVEL.AD'),
+      line: name => t('CRM_KANBAN.ORIGIN.AD_PART', { name }),
+    },
+  ];
+
+  const hierarchyItems = origin =>
+    LEVELS.filter(({ field }) => origin?.[field]).map(
+      ({ field, level, line }) => {
+        const shown = levelValue(origin[field]);
+        return {
+          field,
+          level: level(),
+          ...shown,
+          line: line(shown.value),
+        };
+      }
+    );
+
+  // One translated line per Meta level: "Campaign: …", "Ad set: …", "Ad: …".
   const adHierarchyLines = origin =>
-    [
-      ['campaign', 'CRM_KANBAN.ORIGIN.CAMPAIGN_PART'],
-      ['adset', 'CRM_KANBAN.ORIGIN.ADSET_PART'],
-      ['ad', 'CRM_KANBAN.ORIGIN.AD_PART'],
-    ]
-      .filter(([field]) => origin?.[field])
-      .map(([field, key]) => t(key, { name: origin[field] }));
+    hierarchyItems(origin).map(item => item.line);
 
   const adHierarchyLabel = origin => adHierarchyLines(origin).join(' · ');
 
@@ -193,13 +307,26 @@ export function useCrmOrigin() {
   // (docs/crm/ponte-lp-atribuicao.md §3). Where the campaign already has its
   // own line under the label, drop that suffix so the name is not repeated.
   const originLabelOverHierarchy = origin => {
+    // The CTWA headline already shows as the "Ad" line.
+    if (origin?.adFromHeadline) return sourceLabel(origin);
     if (!origin?.campaign) return humanizedOriginLabel(origin);
-    const suffix = ` · ${origin.campaign}`;
-    const headline = origin.headline.endsWith(suffix)
+    // Before the name is resolved the suffix is the raw utm_campaign (an ID).
+    const suffix = [origin.campaign, origin.utmCampaign]
+      .filter(Boolean)
+      .map(value => ` · ${value}`)
+      .find(value => origin.headline.endsWith(value));
+    const headline = suffix
       ? origin.headline.slice(0, -suffix.length)
       : origin.headline;
     return humanizedOriginLabel({ ...origin, headline });
   };
+
+  // A CTWA touch whose only level is its own headline reads better as
+  // "Meta Click-to-WhatsApp: <headline>" than as a lone "Ad: <headline>".
+  const titleHierarchy = item =>
+    item.adFromHeadline && !item.campaign && !item.adset
+      ? ''
+      : adHierarchyLabel(item);
 
   const formatOriginTitle = origin => {
     if (!origin) return '';
@@ -207,9 +334,9 @@ export function useCrmOrigin() {
     return origins
       .map(
         item =>
-          adHierarchyLabel(item) || item.sourceUrl || humanizedOriginLabel(item)
+          titleHierarchy(item) || item.sourceUrl || humanizedOriginLabel(item)
       )
-      .join(origins.some(adHierarchyLabel) ? '\n' : ' · ');
+      .join(origins.some(titleHierarchy) ? '\n' : ' · ');
   };
 
   // Campaign filter option (/ctwa_campaigns row): campaign marks read
@@ -224,7 +351,11 @@ export function useCrmOrigin() {
   return {
     originFromCampaign: buildCrmOrigin,
     originFromCampaigns: buildCrmOriginFromCampaigns,
+    sourceLabel,
+    sourceUrlLabel,
     humanizedOriginLabel,
+    hierarchyItems,
+    touchDate,
     formatOriginTitle,
     adHierarchyLines,
     originLabelOverHierarchy,

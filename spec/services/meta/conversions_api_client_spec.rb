@@ -39,6 +39,27 @@ RSpec.describe Meta::ConversionsApiClient do
       expect(result.error).not_to include(token)
     end
 
+    it "exposes Meta's numeric error code, and nil when the body has none it can read" do
+      {
+        '{"error":{"code":190,"message":"expired"}}' => 190,
+        '{"error":{"code":200}}' => 200,
+        '{"error":"plain text"}' => nil,
+        'not json' => nil
+      }.each do |body, code|
+        stub_request(:post, endpoint).to_return(status: 400, body: body)
+
+        result = client.post_events([event])
+
+        expect([result.ok, result.http_code, result.error_code]).to eq([false, 400, code]), body
+      end
+    end
+
+    it 'has no error code on success' do
+      stub_request(:post, endpoint).to_return(status: 200, body: '{"events_received":1}')
+
+      expect(client.post_events([event]).error_code).to be_nil
+    end
+
     it 'never surfaces the token when the HTTP call raises' do
       allow(HTTParty).to receive(:post).and_raise(StandardError.new("network down token=#{token}"))
 

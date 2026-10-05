@@ -6,10 +6,10 @@ require 'rails_helper'
 RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
   let(:account) { create(:account) }
 
-  def create_agent(status: :draft, enabled: false, mode: :guided, updated_ago: 3.days)
+  def create_agent(status: :draft, enabled: false, mode: :guided, updated_ago: 3.days, instruction: nil)
     agent = Autonomia::Agents::Agent.create!(
       account: account, name: 'Novo agente', agent_type: 'custom',
-      mode: mode, status: status, enabled: enabled, actuation: :external
+      mode: mode, status: status, enabled: enabled, actuation: :external, instruction: instruction
     )
     # update_column pula o touch de updated_at para simular inatividade.
     agent.update_column(:updated_at, updated_ago.ago) # rubocop:disable Rails/SkipsModelValidations
@@ -24,17 +24,36 @@ RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
     expect(Autonomia::Agents::Agent.exists?(orphan.id)).to be(false)
   end
 
-  it 'cascades the destroy to the draft sources' do
-    orphan = create_agent
+  # #1035 — o Construtor não muda o status ao terminar: rascunho com instrução é agente PRONTO
+  # esperando publicação. Apagá-lo depois de 48h perdia o agente inteiro.
+  it 'never reaps a finished draft that has an instruction' do
+    finished = create_agent(instruction: 'Atenda os clientes da loja.')
+
+    described_class.new.perform
+
+    expect(Autonomia::Agents::Agent.exists?(finished.id)).to be(true)
+  end
+
+  # #1035 — material enviado é trabalho do dono, mesmo velho e sem instrução.
+  it 'never reaps a stale draft that has materials' do
+    agent = create_agent
     source = Autonomia::Agents::Source.create!(
-      account: account, agent: orphan, source_type: 'txt', reference: 'faq.txt'
+      account: account, agent: agent, source_type: 'txt', reference: 'faq.txt'
     )
-    # fonte também velha, senão a proteção de atividade recente pouparia o agente.
     source.update_column(:updated_at, 3.days.ago) # rubocop:disable Rails/SkipsModelValidations
 
     described_class.new.perform
 
-    expect(Autonomia::Agents::Source.exists?(source.id)).to be(false)
+    expect(Autonomia::Agents::Agent.exists?(agent.id)).to be(true)
+    expect(Autonomia::Agents::Source.exists?(source.id)).to be(true)
+  end
+
+  it 'still reaps an empty draft whose instruction is a blank string' do
+    orphan = create_agent(instruction: '')
+
+    described_class.new.perform
+
+    expect(Autonomia::Agents::Agent.exists?(orphan.id)).to be(false)
   end
 
   it 'spares a draft whose build thread was active within the window' do

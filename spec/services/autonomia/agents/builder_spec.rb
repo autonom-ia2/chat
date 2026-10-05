@@ -406,4 +406,56 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(truncated).to be_empty
     end
   end
+
+  # #1035 — o rascunho nascia 'custom' e o builder_agent_type lia o rascunho antes da escolha: o
+  # esqueleto do modelo clicado sumia no meio da entrevista. Cada caso cobre um failure mode.
+  describe 'draft agent type follows the opening choice (#1035)' do
+    def open_and_run(type)
+      thread.persist_start_options!(type: type, with_knowledge: false)
+      thread.save!
+      thread.append_message!('user', 'Quero um agente para a minha loja')
+      stub_model_output('needs_more_info' => true, 'next_question' => 'Qual o nome da loja?')
+      builder.run!(thread.begin_build!)
+      thread.reload.agent
+    end
+
+    it 'creates the draft with the chosen type' do
+      # Act
+      draft = open_and_run('sdr')
+
+      # Assert
+      expect(draft.agent_type).to eq('sdr')
+    end
+
+    it 'keeps the chosen skeleton in the context after the draft exists' do
+      # Arrange
+      open_and_run('sdr')
+
+      # Act
+      context = described_class.new(account: account, build_thread: thread.reload).send(:skeleton_context)
+
+      # Assert
+      expect(context).to include(described_class::SKELETON_INSTRUCTIONS['sdr'])
+    end
+
+    it 'never creates an insurance_quote draft (its type is immutable once persisted)' do
+      # Act
+      draft = open_and_run('insurance_quote')
+
+      # Assert
+      expect(draft.agent_type).to eq('custom')
+    end
+
+    it 'falls back to custom when no type was chosen' do
+      # Arrange
+      thread.append_message!('user', 'Quero um agente')
+      stub_model_output('needs_more_info' => true, 'next_question' => 'Para que negócio?')
+
+      # Act
+      builder.run!(thread.begin_build!)
+
+      # Assert
+      expect(thread.reload.agent.agent_type).to eq('custom')
+    end
+  end
 end

@@ -6,7 +6,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
 import { buildCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
-import OriginSequence from './OriginSequence.vue';
+import CrmOriginList from 'dashboard/routes/dashboard/crm/components/CrmOriginList.vue';
 
 const props = defineProps({
   contactId: { type: [Number, String], default: null },
@@ -25,8 +25,10 @@ const conversationMarks = computed(() => {
   return campaign ? [campaign] : [];
 });
 
+// Touches as the API sends them; CrmOriginList builds each origin with useCrmOrigin (#1037).
+const touches = computed(() => marks.value ?? conversationMarks.value);
 const origins = computed(() =>
-  (marks.value ?? conversationMarks.value).map(buildCrmOrigin).filter(Boolean)
+  touches.value.map(buildCrmOrigin).filter(Boolean)
 );
 
 const load = async contactId => {
@@ -59,7 +61,7 @@ watch(() => props.contactId, load, { immediate: true });
     <h3 class="text-xs font-medium text-n-slate-11">
       {{ t('CRM_KANBAN.ORIGIN_JOURNEY.TITLE') }}
     </h3>
-    <OriginSequence v-if="origins.length" :origins="origins" />
+    <CrmOriginList v-if="origins.length" :campaigns="touches" />
     <div v-if="audiences.length" class="flex flex-col gap-1">
       <span class="text-xs text-n-slate-11">
         {{ t('CRM_KANBAN.ORIGIN_JOURNEY.AUDIENCES') }}
