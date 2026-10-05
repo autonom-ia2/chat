@@ -404,10 +404,6 @@
         "WON": "Negócios ganhos",
         "WON_INFO": "Cards marcados como ganhos no período selecionado.",
         "LOST": "Negócios perdidos",
-        "PREVIEW_TITLE": "Como vai ficar",
-        "PREVIEW_LOADING": "Montando a prévia…",
-        "PREVIEW_CHANGES": "muda",
-        "MORE_ADJUSTMENTS": "e mais {n} ajuste | e mais {n} ajustes",
         "LOST_INFO": "Cards marcados como perdidos no período selecionado.",
         "WIN_RATE": "Taxa de ganho (qtd)",
         "WIN_RATE_INFO": "Negócios ganhos dividido por ganhos mais perdidos no período.",
@@ -2283,7 +2279,11 @@
       "RUNNING": "Fazendo agora…",
       "FAILED": "Não consegui fazer isso. Você pode fazer direto na tela.",
       "FAILED_GENERIC": "Não consegui fazer isso e não sei dizer o motivo. Você pode fazer direto na tela.",
-      "LOST": "Esta ação foi executada, mas não consegui mostrar o resultado aqui. Confira na tela antes de pedir de novo."
+      "LOST": "Esta ação foi executada, mas não consegui mostrar o resultado aqui. Confira na tela antes de pedir de novo.",
+      "PREVIEW_TITLE": "Como vai ficar",
+      "PREVIEW_LOADING": "Montando a prévia…",
+      "PREVIEW_CHANGES": "muda",
+      "MORE_ADJUSTMENTS": "e mais {n} ajuste | e mais {n} ajustes"
     },
     "DONE": {
       "TITLE": "O que eu fiz",
