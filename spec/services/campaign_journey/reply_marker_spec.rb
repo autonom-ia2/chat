@@ -163,6 +163,36 @@ RSpec.describe CampaignJourney::ReplyMarker do
       expect(campaign_touches(message.conversation).pluck('source_id')).to eq(["campaign:email:#{email_campaign.id}"])
     end
 
+    it 'K5: matches the audience recipient by contact, even when the address differs' do
+      email_campaign = create(:email_campaign, account: account, reply_to_inbox: email_inbox, name: 'Público outubro')
+      create(:email_campaign_recipient, email_campaign: email_campaign, contact: contact, email: 'ana.antigo@example.org',
+                                        status: :delivered, sent_at: 2.hours.ago)
+      message = incoming_message(email_inbox)
+
+      described_class.new(message).perform
+
+      expect(message.conversation.reload.additional_attributes['campaign']).to include(
+        'source' => 'campaign_email', 'source_id' => "campaign:email:#{email_campaign.id}", 'headline' => 'Público outubro'
+      )
+    end
+
+    it 'does not take the recipient of another contact that has the same address' do
+      other = create(:contact, account: account, email: 'bia@example.org')
+      email_campaign = create(:email_campaign, account: account, reply_to_inbox: email_inbox)
+      create(:email_campaign_recipient, email_campaign: email_campaign, contact: other, email: 'ana@example.org',
+                                        status: :sent, sent_at: 1.hour.ago)
+
+      expect(described_class.new(incoming_message(email_inbox)).perform).to be(false)
+    end
+
+    it 'follows the Reply-To order: a typed reply_to sends replies away from the domain reply inbox' do
+      identity = create(:email_sender_identity, account: account, reply_to_inbox_id: email_inbox.id)
+      email_campaign = create(:email_campaign, account: account, sender_identity: identity, reply_to: 'vendas@example.org')
+      create(:email_campaign_recipient, email_campaign: email_campaign, email: 'ana@example.org', status: :sent, sent_at: 1.hour.ago)
+
+      expect(described_class.new(incoming_message(email_inbox)).perform).to be(false)
+    end
+
     it 'does not mark when two contacts of the account share the e-mail of the recipient' do
       # Chatwoot validates e-mail uniqueness per account without case; the DB index is
       # case-sensitive, so legacy rows can still differ only by case.
@@ -207,7 +237,6 @@ RSpec.describe CampaignJourney::ReplyMarker do
       whatsapp = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
       email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account))
       api_inbox = create_whatsapp_api_inbox(account: account)
-      EmailCampaignRecipient.column_names
 
       [whatsapp, email_inbox, api_inbox].each do |inbox|
         message = preloaded(incoming_message(inbox))

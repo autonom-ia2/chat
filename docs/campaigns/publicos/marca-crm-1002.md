@@ -12,9 +12,9 @@ WhatsApp e e-mail). A conversa dessa mensagem ganha a marca pelo mesmo mecanismo
 |---|---|---|---|
 | WhatsApp Oficial | `campaign_recipients` (enviado, entregue ou lido) | `campaign_whatsapp` | `campaign:whatsapp:<id>` |
 | WhatsApp API | `whatsapp_api_campaign_recipients` (enviado) | `campaign_whatsapp` | `campaign:whatsapp_api:<id>` |
-| E-mail | `email_campaign_recipients` com o e-mail do contato, de campanha cujas respostas vão para a caixa (caixa de envio no modo direto; caixa de resposta do domínio no modo SES) | `campaign_email` | `campaign:email:<id>` |
+| E-mail | `email_campaign_recipients` do contato (`contact_id`) ou com o e-mail dele, de campanha cujas respostas vão para a caixa, na ordem de `EmailCampaigns::ReplyTo`: caixa de respostas da campanha; sem ela e sem reply_to digitado, caixa de resposta do domínio (SES) ou caixa de envio (direto) | `campaign_email` | `campaign:email:<id>` |
 
-- E-mail: destinatário com `contact_id` (público, #999) casa pelo contato; sem `contact_id`, casa
+- E-mail: destinatário com `contact_id` (público, #999) casa pelo contato (destinatário de outro contato nunca é tomado); sem `contact_id`, casa
   pelo endereço sem diferença de caixa **e só se um único contato da conta tiver esse e-mail**
   (senão não marca e registra log sem dado pessoal). Índice do fork
   `idx_email_campaign_recipients_lower_email_sent_at` (migration `20261005150000`, concorrente).

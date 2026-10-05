@@ -7,7 +7,7 @@
 # CampaignJourney::StalledCampaignsJob closes them).
 class CampaignImports::AudienceUsage
   # Engine of each linked campaign type → audience channel it reads.
-  CHANNEL_BY_CAMPAIGN_TYPE = { 'Campaign' => 'whatsapp' }.freeze
+  CHANNEL_BY_CAMPAIGN_TYPE = { 'Campaign' => 'whatsapp', 'WhatsappApiCampaign' => 'whatsapp', 'EmailCampaign' => 'email' }.freeze
   SCHEDULER_WINDOW = 3.days
 
   def initialize(campaign_import)
@@ -25,7 +25,10 @@ class CampaignImports::AudienceUsage
     pending_campaigns.any?
   end
 
+  # E-mail and WhatsApp API campaigns (#999): finished when terminal; an e-mail draft has not
+  # been scheduled yet, so it does not hold the audience (its send re-checks the channel).
   def finished?(campaign)
+    return campaign.terminal? || campaign.try(:draft?) == true if campaign.respond_to?(:terminal?)
     return false unless campaign.respond_to?(:completed?)
     return true if campaign.completed?
 
@@ -35,7 +38,7 @@ class CampaignImports::AudienceUsage
   def self.error_payload(campaigns)
     {
       error: 'campaign_import.audience_in_use', code: 'audience_in_use',
-      campaigns: campaigns.map { |campaign| { title: campaign.title, display_id: campaign.try(:display_id) } }
+      campaigns: campaigns.map { |campaign| { title: campaign.try(:title) || campaign.try(:name), display_id: campaign.try(:display_id) } }
     }
   end
 end

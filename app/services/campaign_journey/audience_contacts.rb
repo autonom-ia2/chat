@@ -11,8 +11,14 @@ require 'digest'
 # WhatsApp. Contacts that refused active messages (#737) stay out of the total (PRD B8).
 # The audience's WhatsApp channel must be on at send time; off → nobody, every eligible contact
 # is recorded as skipped with CHANNEL_DISABLED_REASON (fails closed).
+#
+# E-mail (#999) follows the same rule: only rows that HAD a valid e-mail (normalized_email_hash)
+# whose contact still has that address (case-insensitive). A row with only a phone never receives
+# e-mail, even if the contact has an e-mail on file. One recipient per address (first row wins).
 module CampaignJourney::AudienceContacts
   BATCH_SIZE = 1000
+  CHANNELS = %i[whatsapp email sms].freeze
+  EmailMatch = Struct.new(:contact_id, :email, :row, keyword_init: true)
   CHANNEL_DISABLED_REASON = 'Canal WhatsApp desligado no público'.freeze
 
   # SMS (#1004) goes to the same phone the row brought: the WhatsApp rule above.
@@ -20,11 +26,16 @@ module CampaignJourney::AudienceContacts
 
   class << self
     def contacts_for(link, channel:)
-      raise ArgumentError, "unsupported channel #{channel}" unless PHONE_CHANNELS.include?(channel)
+      raise ArgumentError, "unsupported channel #{channel}" unless CHANNELS.include?(channel)
       return Contact.none if link&.campaign_import.blank?
 
       account = link.campaign.account
-      account.contacts.where(id: whatsapp_contact_ids(link.campaign_import, account: account)).not_opted_out
+      ids = if PHONE_CHANNELS.include?(channel)
+              whatsapp_contact_ids(link.campaign_import, account: account)
+            else
+              email_matches(link.campaign_import, account: account).map(&:contact_id)
+            end
+      account.contacts.where(id: ids).not_opted_out
     end
 
     # Contact ids whose row had a valid mobile that the contact still has. Same rule for the
@@ -42,13 +53,34 @@ module CampaignJourney::AudienceContacts
       ids.uniq
     end
 
-    # channels of a saved audience with the WhatsApp count recomputed by the rule above; a
-    # channel left without contacts is turned off (it cannot be turned on again, J6).
+    # Rows that had a valid e-mail that their contact still has, one per address (the first row wins).
+    def email_matches(campaign_import, account:)
+      return [] if campaign_import.blank? || campaign_import.account_id != account.id
+
+      seen = Set.new
+      matches = []
+      email_rows(campaign_import).in_batches(of: BATCH_SIZE) do |batch|
+        rows = batch.to_a
+        emails = account.contacts.where(id: rows.map(&:contact_id)).pluck(:id, :email).to_h
+        rows.each do |row|
+          email = row_email(row, emails[row.contact_id])
+          matches << EmailMatch.new(contact_id: row.contact_id, email: email, row: row) if email && seen.add?(email)
+        end
+      end
+      matches
+    end
+
+    # channels of a saved audience with the WhatsApp and e-mail counts recomputed by the rules
+    # above; a channel left without contacts is turned off (it cannot be turned on again, J6).
     def recounted_channels(campaign_import)
+      account = campaign_import.account
+      counts = { 'whatsapp' => whatsapp_contact_ids(campaign_import, account: account).size,
+                 'email' => email_matches(campaign_import, account: account).size }
       channels = campaign_import.channels.to_h
-      count = whatsapp_contact_ids(campaign_import, account: campaign_import.account).size
-      whatsapp = channels['whatsapp'].to_h
-      channels.merge('whatsapp' => whatsapp.merge('count' => count, 'enabled' => whatsapp['enabled'] == true && count.positive?))
+      counts.reduce(channels) do |result, (name, count)|
+        channel = channels[name].to_h
+        result.merge(name => channel.merge('count' => count, 'enabled' => channel['enabled'] == true && count.positive?))
+      end
     end
 
     # Old imports (Base Campanha) have no channel switch; audiences need WhatsApp on.
@@ -59,10 +91,31 @@ module CampaignJourney::AudienceContacts
       campaign_import.channels.to_h.dig('whatsapp', 'enabled') == true
     end
 
+    # E-mail only exists for audiences, and needs the channel on (fails closed).
+    def email_enabled?(campaign_import)
+      campaign_import.present? && campaign_import.audience? && campaign_import.channels.to_h.dig('email', 'enabled') == true
+    end
+
     private
 
     def phone_rows(campaign_import)
       campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).where.not(normalized_phone_hash: nil)
+    end
+
+    def email_rows(campaign_import)
+      campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).where.not(normalized_email_hash: nil)
+    end
+
+    # The contact's normalized e-mail when it is the one the row brought, else nil.
+    def row_email(row, address)
+      email = normalized_email(address)
+      email if email && Digest::SHA256.hexdigest(email) == row.normalized_email_hash
+    end
+
+    def normalized_email(address)
+      EmailCampaigns::EmailNormalizer.normalize!(address).email
+    rescue EmailCampaigns::EmailNormalizer::Error
+      nil
     end
 
     def phone_hashes(matcher, phone_number)

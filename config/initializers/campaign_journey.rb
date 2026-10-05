@@ -22,6 +22,18 @@ Rails.application.config.to_prepare do
   prepend_once.call(Twilio::DeliveryStatusService, CampaignJourney::SmsDeliveryStatus::TwilioCallback)
   prepend_once.call(Webhooks::SmsEventsJob, CampaignJourney::SmsDeliveryStatus::BandwidthCallback)
 
+  # #999: WhatsApp API campaigns linked to an audience resolve its contacts; {{contact.company}}
+  # without a company skips the person ("falta empresa") unless the campaign has a default text.
+  prepend_once.call(WhatsappApiCampaigns::AudienceResolver, CampaignJourney::WhatsappApiAudience::Resolver)
+  prepend_once.call(WhatsappApiCampaigns::DeliveryEngine, CampaignJourney::WhatsappApiAudience::Delivery)
+  # #999: an e-mail campaign linked to an audience takes no spreadsheet of recipients.
+  prepend_once.call(Api::V1::Accounts::EmailCampaigns::RecipientsController, CampaignJourney::EmailRecipientsGuard)
+  # #999: an e-mail campaign linked to an audience is sendable only while the audience e-mail channel is on.
+  prepend_once.call(EmailCampaign, CampaignJourney::EmailAudienceGate::Campaign)
+  prepend_once.call(EmailCampaigns::Presentation::SendReadiness, CampaignJourney::EmailAudienceGate::Readiness)
+  # #999 review M2: a due linked e-mail campaign syncs its list before the hygiene/admission checks.
+  prepend_once.call(EmailCampaigns::Scheduler, CampaignJourney::EmailAudienceGate::Scheduler)
+
   # #1002: a reply to a campaign marks the conversation in the CRM (listener on message_created).
   # Independent of initializer order: the prepend covers a later load_listeners, ensure_subscribed!
   # a dispatcher that already loaded them. Never subscribed twice.
