@@ -14660,18 +14660,18 @@
   },
   "POST email_campaigns/campaigns/:id/test_send": {
     "campos": {
-      "to_email": {}
+      "to_email": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/email_campaigns/test_sends#create",
     "modelo": "EmailCampaign",
-    "motivos": [
-      "leitura crua sem tipo: to_email"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:9",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:13",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10"
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:55",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:11"
     ],
     "sem_corpo": false
   },

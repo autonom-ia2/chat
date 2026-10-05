@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 511 |
 | Sem corpo | 139 |
 | Com corpo | 372 |
-| Com corpo e formato completo | 301 (80,9%) |
-| Com corpo e formato incompleto | 71 |
+| Com corpo e formato completo | 302 (81,2%) |
+| Com corpo e formato incompleto | 70 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 150 |
-| Leituras cruas tipadas | 100 de 170 |
+| Leituras cruas tipadas | 101 de 170 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 56 |
+| leitura crua sem tipo | 55 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -81,7 +81,6 @@ Uma ação pode ter mais de um motivo.
 - `POST data_imports/:id/retry` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/start` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST email_campaigns/campaigns/:id/resolve_video` — leitura crua sem tipo: poster_url, url (repassada a EmailCampaigns::VideoAsset.from_url)
-- `POST email_campaigns/campaigns/:id/test_send` — leitura crua sem tipo: to_email
 - `POST email_campaigns/maintenance/backfills` — lê o corpo cru da requisição
 - `POST email_campaigns/maintenance/backfills/:id/retry` — lê o corpo cru da requisição
 - `POST email_campaigns/reputation/override` — leitura crua sem tipo: duration_seconds (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), message_budget (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...), reason (repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...)
@@ -161,7 +160,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/reputations#override` message_budget — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` reason — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#provider_release` reason — repassada a ::EmailCampaigns::Reputation::ProviderRelease.new.call
-- `api/v1/accounts/email_campaigns/test_sends#create` to_email — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
