@@ -22,6 +22,8 @@ RSpec.describe Autonomia::Guide::FluxosDaTela do
   it 'traz o fluxo da tela e os que dizem cobrir a tela, e só eles' do
     expect(described_class.para(agent, 'automacoes_nova')).to eq([criar, decisor])
     expect(described_class.para(agent, 'automacoes_editar')).to eq([criar, decisor])
+    expect(described_class.para(agent, 'automacoes_lista')).to eq([decisor, lista])
+    expect(described_class.para(agent, 'automacoes_nova')).not_to include(parecido)
   end
 
   it 'sem tela ou sem agente, não traz nada' do
