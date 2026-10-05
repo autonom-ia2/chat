@@ -4,46 +4,28 @@ require 'stringio'
 module CampaignImports
   class Importer
     Error = Class.new(StandardError)
+    BLOCK_SIZE = 500
 
     def initialize(campaign_import)
       @campaign_import = campaign_import
       @account = campaign_import.account
     end
 
+    # Rows are written in blocks, each in its own transaction, and every row in its own
+    # savepoint: one bad row is marked as failed and the rest of the base still imports.
+    # Rows already imported are skipped, so a retried job does not duplicate work.
     def perform
       return unless transition_to_importing!
 
-      imported_count = 0
-      existing_count = 0
-
       with_suppressed_contact_events do
-        ActiveRecord::Base.transaction do
-          label_records = ensure_labels!
-
-          normalized_rows.each do |row|
-            contact = account.contacts.find_by(phone_number: row[:phone_number])
-            was_existing = contact.present?
-            contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number])
-            contact.update!(name: row[:name]) if contact.name.blank? && row[:name].present?
-            apply_labels!(contact, label_records[:base], label_records[:batches].fetch(row[:batch_index]))
-            mark_row_imported!(row, contact, was_existing, label_records)
-
-            imported_count += 1
-            existing_count += 1 if was_existing
-          end
-
-          update_label_counts!
-          attach_report_csv(imported_count, existing_count)
-          campaign_import.update!(
-            status: :completed,
-            imported_contacts_count: imported_count,
-            existing_contacts_count: existing_count,
-            failed_contacts_count: 0,
-            import_finished_at: Time.current
-          )
-        end
+        label_records = ActiveRecord::Base.transaction { ensure_labels! }
+        normalized_rows.each_slice(BLOCK_SIZE) { |block| import_block(block, label_records) }
+        finish_import!
       end
     rescue StandardError => e
+      Rails.logger.error(
+        "[CampaignImports::Importer] import_id=#{campaign_import.id} #{e.class}: #{SafeLogMessage.call(e.message)}"
+      )
       campaign_import.update!(
         status: :failed,
         failed_contacts_count: campaign_import.valid_rows,
@@ -76,6 +58,52 @@ module CampaignImports
       yield
     ensure
       Current.suppress_contact_events = previous
+    end
+
+    def import_block(block, label_records)
+      import_rows = campaign_import.campaign_import_rows.where(row_number: block.pluck(:row_number)).index_by(&:row_number)
+      ActiveRecord::Base.transaction do
+        block.each do |row|
+          import_row = import_rows.fetch(row[:row_number])
+          next if import_row.status_imported?
+
+          import_one(row, import_row, label_records)
+        end
+      end
+    end
+
+    def import_one(row, import_row, label_records)
+      ActiveRecord::Base.transaction(requires_new: true) do
+        contact = find_existing_contact(row[:phone_number])
+        was_existing = contact.present?
+        contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number])
+        contact.update!(name: row[:name]) if contact.name.blank? && row[:name].present?
+        apply_labels!(contact, label_records[:base], label_records[:batches].fetch(row[:batch_index]))
+        mark_row_imported!(import_row, row, contact, was_existing, label_records)
+      end
+    rescue StandardError => e
+      import_row.update!(
+        status: :import_failed,
+        error_messages: Array(import_row.error_messages) + ["import_failed:#{e.class.name}"]
+      )
+    end
+
+    # Brazilian mobiles may be stored with or without the ninth digit. The exact number
+    # wins; otherwise the first stored variant is reused instead of creating a duplicate.
+    def find_existing_contact(phone_number)
+      candidates = phone_candidates(phone_number)
+      contacts = account.contacts.where(phone_number: candidates).to_a
+      candidates.each do |candidate|
+        match = contacts.find { |contact| contact.phone_number == candidate }
+        return match if match
+      end
+      nil
+    end
+
+    def phone_candidates(phone_number)
+      digits = phone_number.delete_prefix('+')
+      variants = Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.contact_candidates(digits)
+      ([phone_number] + variants.map { |variant| "+#{variant}" }).uniq
     end
 
     def ensure_labels!
@@ -121,19 +149,33 @@ module CampaignImports
       contact.save!
     end
 
-    def mark_row_imported!(row, contact, was_existing, label_records)
-      import_row = campaign_import.campaign_import_rows.find_by!(row_number: row[:row_number])
-      applied_labels = [
-        label_records[:base].title,
-        label_records[:batches].fetch(row[:batch_index]).title
-      ]
+    def mark_row_imported!(import_row, row, contact, was_existing, label_records)
       import_row.update!(
         contact_id: contact.id,
         was_existing_contact: was_existing,
-        labels_applied: applied_labels,
+        labels_applied: [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title],
         batch_index: row[:batch_index],
         status: :imported
       )
+    end
+
+    def finish_import!
+      rows = campaign_import.campaign_import_rows
+      imported_count = rows.status_imported.count
+      existing_count = rows.status_imported.where(was_existing_contact: true).count
+      failed_count = rows.status_import_failed.count
+
+      ActiveRecord::Base.transaction do
+        update_label_counts!
+        attach_report_csv(imported_count, existing_count, failed_count)
+        campaign_import.update!(
+          status: failed_count.zero? ? :completed : :completed_with_failures,
+          imported_contacts_count: imported_count,
+          existing_contacts_count: existing_count,
+          failed_contacts_count: failed_count,
+          import_finished_at: Time.current
+        )
+      end
     end
 
     def update_label_counts!
@@ -147,12 +189,13 @@ module CampaignImports
       end
     end
 
-    def attach_report_csv(imported_count, existing_count)
+    def attach_report_csv(imported_count, existing_count, failed_count)
       rows = [
-        { 'metric' => 'status', 'value' => 'completed' },
+        { 'metric' => 'status', 'value' => failed_count.zero? ? 'completed' : 'completed_with_failures' },
         { 'metric' => 'imported_contacts_count', 'value' => imported_count },
         { 'metric' => 'existing_contacts_count', 'value' => existing_count },
         { 'metric' => 'created_contacts_count', 'value' => imported_count - existing_count },
+        { 'metric' => 'failed_contacts_count', 'value' => failed_count },
         { 'metric' => 'base_label', 'value' => campaign_import.base_label },
         { 'metric' => 'batch_count', 'value' => campaign_import.batch_count }
       ]

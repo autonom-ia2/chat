@@ -37,4 +37,56 @@ RSpec.describe CampaignImports::Importer do
     expect(campaign_import.reload).to be_labels_undone
     expect(account.contacts.count).to eq(2)
   end
+
+  describe 'robustness' do
+    def validated_import(content, batch_count: 1)
+      account, user = create_account_and_user
+      campaign_import = create_campaign_import(account: account, user: user, content: content, batch_count: batch_count)
+      CampaignImports::Validator.new(campaign_import).perform
+      campaign_import.update!(status: :queued)
+      [account, campaign_import.reload]
+    end
+
+    it 'reuses a contact stored without the ninth digit instead of creating a duplicate' do
+      account, campaign_import = validated_import("nome,telefone\nAna,45988887777\n")
+      legacy = account.contacts.create!(name: 'Ana antiga', phone_number: '+554588887777')
+
+      described_class.new(campaign_import).perform
+
+      expect(campaign_import.reload).to be_completed
+      expect(account.contacts.count).to eq(1)
+      expect(campaign_import.campaign_import_rows.status_imported.pick(:contact_id)).to eq(legacy.id)
+      expect(campaign_import.existing_contacts_count).to eq(1)
+    end
+
+    it 'prefers the exact number when both variants exist' do
+      account, campaign_import = validated_import("nome,telefone\nAna,45988887777\n")
+      account.contacts.create!(name: 'Sem nove', phone_number: '+554588887777')
+      exact = account.contacts.create!(name: 'Com nove', phone_number: '+5545988887777')
+
+      described_class.new(campaign_import).perform
+
+      expect(campaign_import.campaign_import_rows.status_imported.pick(:contact_id)).to eq(exact.id)
+    end
+
+    it 'marks only the failing row and imports the rest, in blocks' do
+      stub_const('CampaignImports::Importer::BLOCK_SIZE', 2)
+      account, campaign_import = validated_import("nome,telefone\nAna,11987654321\nBia,21987654321\nCaio,31987654321\n")
+      importer = described_class.new(campaign_import)
+      allow(importer).to receive(:find_existing_contact).and_wrap_original do |method, phone|
+        raise ActiveRecord::RecordInvalid, Contact.new if phone == '+5521987654321'
+
+        method.call(phone)
+      end
+
+      importer.perform
+
+      campaign_import.reload
+      expect(campaign_import).to be_completed_with_failures
+      expect(campaign_import.imported_contacts_count).to eq(2)
+      expect(campaign_import.failed_contacts_count).to eq(1)
+      expect(campaign_import.campaign_import_rows.status_import_failed.pick(:row_number)).to eq(3)
+      expect(account.contacts.count).to eq(2)
+    end
+  end
 end
