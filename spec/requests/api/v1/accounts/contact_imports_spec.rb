@@ -110,6 +110,11 @@ RSpec.describe 'Contact imports API (#1006)', :aggregate_failures, type: :reques
     end
     expect(contact_import.reload).to have_attributes(status: 'ready_to_confirm', valid_rows: 1, invalid_rows: 1)
 
+    get imports_path(contact_import.id), headers: auth_headers(admin)
+    problem_rows = response.parsed_body['payload']['problem_rows']
+    expect(problem_rows.map { |row| row.slice('row_number', 'errors') }).to eq([{ 'row_number' => 2, 'errors' => ['invalid_brazilian_mobile_number'] }])
+    expect(problem_rows.to_json).not_to include('Ana')
+
     get imports_path(contact_import.id, 'download'), headers: auth_headers(admin)
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('invalid_brazilian_mobile_number')

@@ -5,6 +5,7 @@
 # with contact_manage). Contract in docs/campaigns/publicos/contact-imports-1006.md.
 class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseController
   BOOLEAN_VALUES = %w[true false].freeze
+  PROBLEM_ROWS_SHOWN = 20
 
   before_action :ensure_contact_import_enabled
   before_action -> { authorize(Contact, :import?) }
@@ -101,7 +102,7 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
   end
 
   def render_import(status: :ok)
-    render 'api/v1/accounts/campaign_imports/show', status: status
+    render 'api/v1/accounts/contact_imports/show', status: status
   end
 
   def render_unprocessable(code)
