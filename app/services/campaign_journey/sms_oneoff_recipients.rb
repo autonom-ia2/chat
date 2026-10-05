@@ -8,8 +8,8 @@
 #
 # - Who receives: the audience's contacts by the phone rule (CampaignJourney::AudienceContacts,
 #   same as WhatsApp: the row brought that mobile and the contact still has it); who refused
-#   messages (#737) stays out of the total. The audience phone channel (`channels.whatsapp`, the
-#   mobile badge) must be on at send time; off → everyone skipped with CHANNEL_DISABLED_REASON.
+#   messages (#737) stays out of the total. The audience SMS badge (`channels.sms`) must be on at
+#   send time; off → everyone skipped with CHANNEL_DISABLED_REASON.
 # - D2: one `queued` CampaignRecipient per contact before the first SMS; after the run everyone
 #   has a final status (CampaignJourney::RecipientTracking).
 # - D5: refusal is read again right before each SMS → skipped "opted_out".
@@ -31,7 +31,7 @@ module CampaignJourney::SmsOneoffRecipients
 
   OPTED_OUT_REASON = 'opted_out'.freeze
   NO_PHONE_REASON = 'Contact has no phone number'.freeze
-  CHANNEL_DISABLED_REASON = 'Canal de celular desligado no público'.freeze
+  CHANNEL_DISABLED_REASON = 'Canal SMS desligado no público'.freeze
 
   private
 
@@ -40,7 +40,7 @@ module CampaignJourney::SmsOneoffRecipients
     return send_untracked unless defined?(CampaignRecipient)
 
     contacts = CampaignJourney::AudienceContacts.contacts_for(sms_audience_link, channel: :sms)
-    return skip_all_recipients(contacts, CHANNEL_DISABLED_REASON) unless audience_phone_enabled?
+    return skip_all_recipients(contacts, CHANNEL_DISABLED_REASON) unless audience_sms_enabled?
 
     register_queued_recipients(contacts).each { |recipient| process_sms_recipient(recipient) }
     fail_unprocessed_recipients
@@ -52,8 +52,8 @@ module CampaignJourney::SmsOneoffRecipients
     @sms_audience_link = CampaignAudienceLink.for_campaign(campaign)
   end
 
-  def audience_phone_enabled?
-    CampaignJourney::AudienceContacts.whatsapp_enabled?(sms_audience_link.campaign_import)
+  def audience_sms_enabled?
+    CampaignJourney::AudienceContacts.sms_enabled?(sms_audience_link.campaign_import)
   end
 
   def sms_message
@@ -100,7 +100,7 @@ module CampaignJourney::SmsOneoffRecipients
 
   # Open source build: same audience and tokens, no recipient rows.
   def send_untracked
-    return unless audience_phone_enabled?
+    return unless audience_sms_enabled?
 
     CampaignJourney::AudienceContacts.contacts_for(sms_audience_link, channel: :sms).find_each do |contact|
       next if Contact.opted_out.exists?(id: contact.id) || contact.phone_number.blank?

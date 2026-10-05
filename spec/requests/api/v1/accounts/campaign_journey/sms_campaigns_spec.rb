@@ -10,7 +10,8 @@ RSpec.describe 'Campaign journey SMS campaigns API (#1004)', :aggregate_failures
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
-  let(:inbox) { journey_twilio_sms_inbox(account) }
+  # Created before the audience: the sms badge is born on only with an SMS inbox connected.
+  let!(:inbox) { journey_twilio_sms_inbox(account) }
   let(:audience) do
     saved_audience(account: account, user: user, content: "Nome,Celular,Vencimento\nAna Souza,11987654321,10/2026\nBia Lima,21987654321,\n")
   end
@@ -72,7 +73,7 @@ RSpec.describe 'Campaign journey SMS campaigns API (#1004)', :aggregate_failures
 
   # J4 for SMS: the audience needs its phone channel.
   it 'refuses an audience without phones enabled (channel_not_in_audience)' do
-    audience.update!(channels: audience.channels.merge('whatsapp' => audience.channels['whatsapp'].merge('enabled' => false)))
+    audience.update!(channels: audience.channels.merge('sms' => audience.channels['sms'].merge('enabled' => false)))
 
     create_sms_campaign
 

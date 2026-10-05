@@ -6,7 +6,8 @@
 # will never send. `processing` campaigns stay pending until they finish (or
 # CampaignJourney::StalledCampaignsJob closes them).
 class CampaignImports::AudienceUsage
-  # Engine of each linked campaign type → audience channel it reads.
+  # Engine of each linked campaign type → audience channel it reads. A Chatwoot Campaign on an SMS
+  # inbox reads the sms badge (#1004).
   CHANNEL_BY_CAMPAIGN_TYPE = { 'Campaign' => 'whatsapp', 'WhatsappApiCampaign' => 'whatsapp', 'EmailCampaign' => 'email' }.freeze
   SCHEDULER_WINDOW = 3.days
 
@@ -17,8 +18,14 @@ class CampaignImports::AudienceUsage
   # A campaign type without a completed? notion counts as pending (safe side).
   def pending_campaigns(channel: nil)
     links = @campaign_import.campaign_audience_links.includes(:campaign)
-    links = links.where(campaign_type: CHANNEL_BY_CAMPAIGN_TYPE.select { |_type, name| name == channel }.keys) if channel
-    links.filter_map(&:campaign).reject { |campaign| finished?(campaign) }
+    campaigns = links.filter_map(&:campaign).reject { |campaign| finished?(campaign) }
+    channel ? campaigns.select { |campaign| channel_of(campaign) == channel } : campaigns
+  end
+
+  def channel_of(campaign)
+    return 'sms' if campaign.is_a?(Campaign) && CampaignJourney::CampaignMarks.sms_inbox?(campaign.inbox)
+
+    CHANNEL_BY_CAMPAIGN_TYPE[campaign.class.name]
   end
 
   def in_use?

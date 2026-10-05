@@ -11,6 +11,17 @@ class CampaignJourney::SmsCampaignCreator < CampaignJourney::AudienceCampaignCre
     { variable_bindings: {}, variable_defaults: message.defaults }
   end
 
+  # The audience needs its SMS badge on with phones (old imports: any imported contact).
+  def audience_available?
+    return @campaign_import.imported_contacts_count.positive? unless @campaign_import.audience?
+
+    CampaignJourney::AudienceContacts.sms_enabled?(@campaign_import) && @campaign_import.channels.to_h.dig('sms', 'count').to_i.positive?
+  end
+
+  def channel_missing_message
+    'This audience has SMS turned off or no phone numbers'
+  end
+
   def validate_inbox!
     return if @channel == CHANNEL && CampaignJourney::CampaignMarks.sms_inbox?(inbox)
 

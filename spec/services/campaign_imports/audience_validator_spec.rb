@@ -30,7 +30,10 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
         'name' => 'Segurado', 'phone' => 'Fone 1', 'email' => nil, 'company' => 'Corretora'
       )
       expect(campaign_import.extra_columns).to eq(['Vencimento'])
-      expect(campaign_import.channels).to eq('email' => { 'enabled' => false, 'count' => 0 }, 'whatsapp' => { 'enabled' => true, 'count' => 2 })
+      expect(campaign_import.channels).to eq(
+        'email' => { 'enabled' => false, 'count' => 0 }, 'whatsapp' => { 'enabled' => true, 'count' => 2 },
+        'sms' => { 'enabled' => false, 'count' => 2 }
+      )
       rows = campaign_import.campaign_import_rows.order(:row_number)
       expect(rows.pluck(:company_name, :extra_values)).to eq([['Corretora Alfa', { 'Vencimento' => '10/2026' }],
                                                               ['Beta Seguros', { 'Vencimento' => '11/2026' }]])
@@ -191,7 +194,10 @@ RSpec.describe CampaignImports::AudienceValidator, :aggregate_failures do
       expect(campaign_import).to be_ready_to_confirm
       expect(campaign_import.valid_rows).to eq(3)
       expect(campaign_import.invalid_rows).to eq(4)
-      expect(campaign_import.channels).to eq('email' => { 'enabled' => true, 'count' => 2 }, 'whatsapp' => { 'enabled' => true, 'count' => 2 })
+      expect(campaign_import.channels).to eq(
+        'email' => { 'enabled' => true, 'count' => 2 }, 'whatsapp' => { 'enabled' => true, 'count' => 2 },
+        'sms' => { 'enabled' => false, 'count' => 2 }
+      )
       errors = campaign_import.campaign_import_rows.status_invalid.order(:row_number).pluck(:row_number, :error_messages)
       expect(errors).to eq(
         [[5, ['duplicate_phone_in_file']], [6, ['duplicate_email_in_file']],

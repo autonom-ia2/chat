@@ -5,8 +5,8 @@
 # delete or channel switch cannot slip in between.
 #
 # Subclasses give the channel rules: #validate_inbox!, #validate_feature!, #validate_message!,
-# #campaign_attributes and #link_attributes. Both channels go to the audience's phones, so the
-# audience needs its phone channel (`channels.whatsapp`, the mobile badge).
+# #campaign_attributes and #link_attributes, and #audience_available? when the channel has its own
+# audience badge (SMS: `channels.sms`; WhatsApp: `channels.whatsapp`).
 class CampaignJourney::AudienceCampaignCreator
   class Error < StandardError
     attr_reader :code, :details
@@ -83,9 +83,13 @@ class CampaignJourney::AudienceCampaignCreator
 
   def validate_audience!
     raise Error.new('audience_not_ready', 'The audience has not finished saving') unless READY_STATUSES.include?(@campaign_import.status)
-    return if self.class.phone_available?(@campaign_import)
+    return if audience_available?
 
     raise Error.new('channel_not_in_audience', channel_missing_message)
+  end
+
+  def audience_available?
+    self.class.phone_available?(@campaign_import)
   end
 
   def channel_missing_message
