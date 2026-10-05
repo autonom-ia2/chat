@@ -20,7 +20,10 @@ export const withCampaignJourney = (
           name: 'Campaign Audiences',
           label: t('CAMPAIGN_JOURNEY.SIDEBAR.AUDIENCES'),
           to: accountScopedRoute('campaigns_journey_audiences'),
-          activeOn: ['campaigns_journey_audiences'],
+          activeOn: [
+            'campaigns_journey_audiences',
+            'campaigns_journey_audience_new',
+          ],
         },
       ]
     : [];
@@ -34,7 +37,12 @@ export const withCampaignJourney = (
       name: 'Campaign Journey',
       label: t('CAMPAIGN_JOURNEY.SIDEBAR.CAMPAIGNS'),
       to: accountScopedRoute('campaigns_journey_index'),
-      activeOn: ['campaigns_journey_index'],
+      activeOn: [
+        'campaigns_journey_index',
+        'campaigns_journey_new',
+        'campaigns_journey_live_chat_new',
+        'campaigns_journey_live_chat_edit',
+      ],
     },
     ...kept,
   ];

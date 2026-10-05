@@ -71,4 +71,17 @@ describe('Campanhas menu (PRD D17, A5)', () => {
       'Campaign WhatsApp Templates',
     ]);
   });
+
+  it('keeps the group lit on the creation pages of the journey', () => {
+    const [audiences, campaigns] = withCampaignJourney(options(), LEGACY);
+
+    expect(audiences.activeOn).toContain('campaigns_journey_audience_new');
+    expect(campaigns.activeOn).toEqual(
+      expect.arrayContaining([
+        'campaigns_journey_new',
+        'campaigns_journey_live_chat_new',
+        'campaigns_journey_live_chat_edit',
+      ])
+    );
+  });
 });
