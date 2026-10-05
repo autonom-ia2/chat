@@ -1,9 +1,11 @@
 # Runtime Instagram na VPS — #995 (preparação para review)
 
-A entrega é código e validação sintética. Nenhum passo operacional abaixo foi
-executado. Desenvolvimento foi aprovado; merge, deploy, IAM/SSM, credenciais,
-Tailscale, configuração de produção e login Meta precisam de aprovação explícita
-separada. Review independente ainda pertence à etapa do Argos/coordenador.
+A instalação do runtime e a publicação HTTPS privada foram aprovadas por Rodrigo
+no escopo da [issue #995](https://github.com/autonom-ia2/chat/issues/995).
+A aprovação não comprova execução ou homologação: registrar cada etapa concluída
+e os bloqueios reais antes de avançar. O onboarding assistido permanece OFF até
+a aceitação operacional. IAM/SSM, credenciais e login Meta seguem o escopo de
+aprovação correspondente, sem ampliar permissões para contornar bloqueios.
 
 ## Pacote e requisitos
 
@@ -99,6 +101,54 @@ O responsável autorizado deve provisionar por stack:
 - Chaves de assinatura diferentes por bytes entre stacks, hex >=64 caracteres
   e tamanho par. Cada Rails recebe a sua chave correspondente, stack e URL HTTPS;
   gateway recebe somente sua chave e issuer. Esta entrega não gera secrets.
+
+### Persistência da configuração Rails
+
+Usar o `SecureString` principal existente `/chatwoot/prod/env`, referenciado por
+`ENV_PARAMETER` nos dois workflows blue/green. Os caminhos são iguais, mas ficam
+em contas AWS diferentes, ambas na região `us-east-1`:
+
+| Stack | Conta AWS | Parâmetro principal |
+| --- | --- | --- |
+| hub2you | `354307071110` | `/chatwoot/prod/env` |
+| autonomia | `140023375763` | `/chatwoot/prod/env` |
+
+Registrar somente estas três chaves adicionais no parâmetro principal de cada
+stack, em provisionamento autorizado que preserve as demais entradas:
+
+| Variável Rails | Valor por stack |
+| --- | --- |
+| `INSTAGRAM_TESTER_RUNTIME_STACK` | `hub2you` ou `autonomia`, conforme a conta AWS |
+| `INSTAGRAM_TESTER_OPERATOR_BROWSER_URL` | `https://srv707880-claudete.tail0c0b18.ts.net/STACK/`, substituindo `STACK` pelo nome exato e preservando a barra final |
+| `INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY` | A chave exclusiva da mesma stack provisionada em `gateway.env`; nunca registrar o valor |
+
+Esse caminho já é consumido pelo deploy: o bootstrap da nova instância lê o
+parâmetro para `/opt/chatwoot/.env` com modo 0600; web e worker usam esse arquivo
+via `--env-file`. As etapas de ajuste de flags dos workflows preservam as linhas
+que não pertencem ao seu conjunto `required`, incluindo as três chaves acima.
+Não é necessário criar outro parâmetro, alterar units ou ampliar a allowlist de
+`/chatwoot/prod/instagram-tester-env`. Essa allowlist não aceita essas três chaves:
+adicioná-las ao parâmetro específico causaria `instagram_tester_env_keys_invalid`
+no próximo deploy. Não duplicar a configuração entre os dois parâmetros.
+
+O Rails deriva `iss` da origem de `FRONTEND_URL`; não lê
+`INSTAGRAM_TESTER_OPERATOR_ISSUER`. Preencher essa variável apenas no
+`gateway.env`, com a origem HTTPS exata do `FRONTEND_URL` efetivo do Rails da
+mesma stack, sem caminho nem barra final. Conferir esse valor explicitamente:
+o workflow Autonomia declara `DOMAIN_NAME=agents.autonomia.site`, portanto não
+inferir issuer de um nome lembrado, de outro ambiente ou da URL da VPS.
+
+Serializar o provisionamento com o workflow, que também lê e regrava o parâmetro
+principal. Concluir a atualização antes da leitura do env pela nova green e
+usar o próximo blue/green autorizado para carregar as três chaves. Atualizar SSM
+não altera o ambiente de containers que já estão rodando; executar `deploy.sh`
+na instância existente também não refaz a leitura inicial do parâmetro principal.
+Não reiniciar Rails/worker durante a instalação da VPS somente para antecipar
+esse carregamento. Validar na green os nomes/valores não secretos e a presença
+válida da chave, sem imprimir env, hash da chave, JWT ou cookies. Comparar a chave
+com a do gateway em memória no provisionamento autorizado e emitir apenas o
+resultado booleano. Manter `INSTAGRAM_TESTER_AUTOMATION_ENABLED=false` e não
+colocar `INSTAGRAM_TESTER_RUNTIME_MODE=vps` no Rails.
 
 Home e subdiretório do publisher: `/var/lib/instagram-publisher-STACK` e
 `publisher`, 0700, dono `igpub-STACK`, grupo primário `igpub-STACK`.

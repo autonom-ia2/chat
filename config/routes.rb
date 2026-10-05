@@ -405,6 +405,7 @@ Rails.application.routes.draw do
             # #861 — a conversa com o Guia guardada: reabrir, listar e apagar.
             get 'guide/conversas', to: 'guide_conversas#index'
             get 'guide/conversas/atual', to: 'guide_conversas#atual'
+            get 'guide/conversas/da_automacao/:automacao_id', to: 'guide_conversas#da_automacao'
             get 'guide/conversas/:id', to: 'guide_conversas#show'
             delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
             # #933 — o que o Guia lembra: o painel "O que eu sei".

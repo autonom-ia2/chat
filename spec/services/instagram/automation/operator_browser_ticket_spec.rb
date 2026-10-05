@@ -54,13 +54,14 @@ RSpec.describe Instagram::Automation::OperatorBrowserTicket do
     end
   end
 
-  it 'accepts only the current actor and the three active request states' do
-    %w[queued running operator_required].each do |state|
+  it 'accepts only the current actor and queued or running requests' do
+    %w[queued running].each do |state|
       expect(described_class.eligible?(control: control.merge('state' => state), actor_id: 42)).to be(true)
     end
     [nil, control.merge('actor_id' => 43), control.merge('actor_id' => '42'),
-     control.merge('state' => 'succeeded'), control.merge('state' => 'failed'),
+     control.merge('state' => 'operator_required'), control.merge('state' => 'succeeded'), control.merge('state' => 'failed'),
      control.merge('created_at' => (now - 3600).iso8601)].each do |invalid|
+      expect(described_class.eligible?(control: invalid, actor_id: 42)).to be(false)
       expect { described_class.new.call(control: invalid, actor_id: 42) }.to raise_error(described_class::Unavailable)
     end
     with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'env') do

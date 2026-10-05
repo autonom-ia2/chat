@@ -55,6 +55,7 @@ const GuiaFalso = {
     respostasRapidas: { type: Array, default: () => [] },
     comecarPorVoz: Boolean,
     anexosIniciais: { type: Array, default: () => [] },
+    automacaoId: { type: Number, default: null },
   },
   emits: ['execucao', 'pedidoInicialEnviado', 'respostaRapida'],
   template: '<div data-guia-falso />',
@@ -177,6 +178,26 @@ describe('AutomacaoConversaPage', () => {
       name: 'automacoes_editar',
       params: { accountId: 1, id: 42 },
     });
+  });
+
+  // Conta 16 (05/10): na automação que já existe, o Guia oferecia os modelos de
+  // automação nova e não sabia de qual automação se tratava.
+  it('editar: o Guia recebe a automação e sugestões de mudança, não os modelos', async () => {
+    abrirRegra(42);
+    AutomationAPI.show.mockResolvedValue({ data: { payload: regra() } });
+    const wrapper = montar();
+    await flushPromises();
+
+    const guia = wrapper.findComponent(GuiaFalso);
+    expect(guia.props('automacaoId')).toBe(42);
+    expect(guia.props('introducao')).toBe(
+      'AUTOMACOES.CONVERSA.INTRO_GUIA_EDITAR'
+    );
+    expect(guia.props('sugestoes').map(item => item.rotulo)).toEqual([
+      'AUTOMACOES.CONVERSA.EDITAR.QUANDO.TITULO',
+      'AUTOMACOES.CONVERSA.EDITAR.FAZ.TITULO',
+      'AUTOMACOES.CONVERSA.EDITAR.EXPLICAR.TITULO',
+    ]);
   });
 
   it('editar: esqueleto enquanto carrega', () => {

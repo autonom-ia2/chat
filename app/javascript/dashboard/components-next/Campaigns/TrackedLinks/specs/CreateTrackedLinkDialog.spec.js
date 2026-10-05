@@ -79,7 +79,7 @@ describe('CreateTrackedLinkDialog', () => {
     wrapper.unmount();
   });
 
-  it('blocks creation until the allowed pages are valid https addresses', async () => {
+  it('blocks creation until the site address is readable', async () => {
     const wrapper = mountDialog();
     await wrapper.vm.open();
     await wrapper.get('input[value="website"]').setValue(true);
@@ -89,7 +89,7 @@ describe('CreateTrackedLinkDialog', () => {
     expect(submit().attributes('disabled')).toBeDefined();
 
     const origins = wrapper.get('#tracked-link-origins');
-    await origins.setValue('http://placement.com.br');
+    await origins.setValue('minha página');
     await origins.trigger('blur');
     expect(submit().attributes('disabled')).toBeDefined();
     expect(origins.attributes('aria-invalid')).toBe('true');

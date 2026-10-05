@@ -324,14 +324,18 @@
         "USAGE_WEBSITE_HINT": "A page that leads to WhatsApp. Brings the ad campaign along.",
         "USAGE_WEBSITE_SHORT": "Website",
         "WEBSITE_NAME_PLACEHOLDER": "Example: Travel insurance landing page",
-        "ORIGINS_LABEL": "Allowed websites",
-        "ORIGINS_PLACEHOLDER": "https://yoursite.com",
-        "ORIGINS_HINT": "One address per line, up to 5. Only these websites can report clicks.",
-        "ORIGINS_INVALID": "Check: {list}. Use the address with https://.",
+        "ORIGINS_LABEL": "Website with the button",
+        "ORIGINS_PLACEHOLDER": "yourcompany.com/your-page",
+        "ORIGINS_HINT": "Paste the address of the page that has the WhatsApp button, as it shows in the browser. The full link is fine: we only use the site.",
+        "ORIGINS_PREVIEW": "We will accept clicks from:",
+        "ORIGINS_MULTI": "Is the button on more than one site? Add one per line (up to 5).",
+        "ORIGINS_WHY_TITLE": "Why do we ask for this?",
+        "ORIGINS_WHY": "It is a safety lock: only the sites on this list can record clicks for this source, so no one outside can invent visits in your CRM.",
+        "ORIGINS_INVALID": "We could not read {list} as a website address. Copy it straight from the browser address bar (it starts with https://).",
         "ORIGINS_TOO_MANY": "Use up to 5 addresses.",
-        "ORIGINS_REQUIRED": "Add at least one address.",
-        "ORIGINS_NONE": "No website allowed yet. Clicks will not be recorded.",
-        "ORIGINS_SAVED": "Websites updated.",
+        "ORIGINS_REQUIRED": "Paste the address of the page that has the button.",
+        "ORIGINS_NONE": "No website added yet. Clicks will not be recorded.",
+        "ORIGINS_SAVED": "Website updated.",
         "ORIGINS_SAVE_ERROR": "Could not save. Please try again.",
         "WEBSITE_PREVIEW_DOMAIN": "yoursite.com",
         "WEBSITE_PREVIEW_BUTTON": "Chat on WhatsApp",
@@ -343,7 +347,7 @@
         "CREATE_MISSING": "To create, fill in: {list}.",
         "MISSING_NAME": "name",
         "MISSING_INBOX": "destination WhatsApp",
-        "MISSING_ORIGINS": "a valid website address",
+        "MISSING_ORIGINS": "website address",
         "READY_WEBSITE": "READY FOR THE WEBSITE",
         "WEBSITE_WAITING": "WAITING FOR THE FIRST CLICK",
         "WEBSITE_NEEDS_ORIGINS": "WEBSITE NOT ALLOWED YET",
@@ -2574,6 +2578,21 @@
       "DESLIGADA_AVISO": "It only starts working once you turn it on. You can turn it off anytime.",
       "SO_LEITURA": "You can view and test this automation. Turning it on and changing it is up to the admins.",
       "INTRO_GUIA": "Tell me what you want to automate, or start from a template.",
+      "INTRO_GUIA_EDITAR": "This automation is already set up. Tell me what you want to change.",
+      "EDITAR": {
+        "QUANDO": {
+          "TITULO": "Change when it runs",
+          "PEDIDO": "I want to change when this automation runs."
+        },
+        "FAZ": {
+          "TITULO": "Change what it does",
+          "PEDIDO": "I want to change what this automation does."
+        },
+        "EXPLICAR": {
+          "TITULO": "Explain what it does",
+          "PEDIDO": "Explain in simple words what this automation does today."
+        }
+      },
       "GUIA_NOME": "Guide",
       "GUIA_SUBTITULO": "Builds it with you. Nothing turns on until you say so.",
       "LIGADA_TITULO": "It is on!"
