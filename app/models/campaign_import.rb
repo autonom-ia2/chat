@@ -7,11 +7,13 @@
 #  batch_count                     :integer          default(0), not null
 #  campaign_name                   :string
 #  campaign_slug                   :string
+#  channels                        :jsonb            not null
 #  completed_at                    :datetime
 #  confirmed_at                    :datetime
 #  duplicate_file_rows             :integer          default(0), not null
 #  existing_contacts_count         :integer          default(0), not null
 #  existing_contacts_updated_count :integer          default(0), not null
+#  extra_columns                   :jsonb            not null
 #  failed_at                       :datetime
 #  failed_contacts_count           :integer          default(0), not null
 #  failed_records                  :integer          default(0), not null
@@ -21,11 +23,13 @@
 #  invalid_rows                    :integer          default(0), not null
 #  labels_payload                  :jsonb            not null
 #  mode                            :string
+#  name                            :string
 #  new_contacts_count              :integer          default(0), not null
 #  new_contacts_estimate           :integer          default(0), not null
 #  options                         :jsonb            not null
 #  processed_records               :integer          default(0), not null
 #  queued_at                       :datetime
+#  schema_resolution               :jsonb            not null
 #  source_byte_size                :bigint
 #  source_content_type             :string
 #  source_filename                 :string
@@ -56,7 +60,8 @@
 #  index_campaign_imports_on_user_id                       (user_id)
 #
 class CampaignImport < ApplicationRecord
-  DELETABLE_BEFORE_IMPORT_STATUSES = %w[uploaded validation_failed ready_to_confirm failed cancelled expired].freeze
+  DELETABLE_BEFORE_IMPORT_STATUSES = %w[uploaded validation_failed ready_to_confirm failed cancelled expired needs_column_choice].freeze
+  AUDIENCE_FLOW = 'audience'.freeze
 
   belongs_to :account
   belongs_to :user
@@ -85,7 +90,9 @@ class CampaignImport < ApplicationRecord
     expired: 11,
     undoing_labels: 12,
     labels_undone: 13,
-    undo_failed: 14
+    undo_failed: 14,
+    # Públicos (#992): the columns were not found with confidence; the user picks them.
+    needs_column_choice: 15
   }
 
   enum undo_status: {
@@ -97,6 +104,11 @@ class CampaignImport < ApplicationRecord
 
   validates :account_id, :user_id, presence: true
   validates :mode, inclusion: { in: %w[single_label batches] }, allow_blank: true
+
+  # Públicos (#992) imports carry a name and read phone, email, company and extra columns.
+  def audience?
+    options.to_h['flow'] == AUDIENCE_FLOW
+  end
 
   def downloadable_error_csv?
     error_csv.attached?

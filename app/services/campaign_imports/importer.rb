@@ -78,10 +78,10 @@ module CampaignImports
 
     def import_one(row, import_row, label_records)
       ActiveRecord::Base.transaction(requires_new: true) do
-        contact = find_existing_contact(row[:phone_number])
+        contact = find_contact(row)
         was_existing = contact.present?
-        contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number])
-        contact.update!(name: row[:name]) if contact.name.blank? && row[:name].present?
+        contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number], email: row[:email])
+        ContactBlankFields.new(account).fill!(contact, row)
         mark_row_imported!(import_row, row, contact, was_existing, label_records)
         contact
       end
@@ -95,6 +95,13 @@ module CampaignImports
 
     def row_label_titles(row, label_records)
       [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title]
+    end
+
+    # Públicos rows may carry only an email: the phone (with or without the 9th digit) wins,
+    # then the email, compared without case. Never a duplicate contact.
+    def find_contact(row)
+      contact = find_existing_contact(row[:phone_number]) if row[:phone_number]
+      contact || (row[:email] && ContactBlankFields.new(account).contact_with_email(row[:email]))
     end
 
     def find_existing_contact(phone_number)
@@ -127,12 +134,13 @@ module CampaignImports
 
         csv_data = campaign_import.normalized_csv.download
         CSV.parse(csv_data, headers: true).map do |row|
-          normalized = PhoneNormalizer.normalize!(row['phone_number'])
+          normalized = row['phone_number'].present? ? PhoneNormalizer.normalize!(row['phone_number']) : nil
           {
             row_number: row['row_number'].to_i,
             name: row['name'].to_s.strip,
-            phone_number: normalized.phone_number,
-            phone_hash: normalized.hash,
+            phone_number: normalized&.phone_number,
+            phone_hash: normalized&.hash,
+            email: row['email'].presence,
             batch_index: row['batch_index'].to_i
           }
         end

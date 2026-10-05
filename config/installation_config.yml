@@ -225,6 +225,12 @@
   description: 'Write-only credential stored with Active Record Encryption. Leave blank to keep the current key.'
   locked: false
   type: secret
+- name: CAMPAIGN_JOURNEY_JEV_ENABLED
+  display_title: 'Use Jev to find audience columns'
+  description: 'Campaign audiences: ask Jev which columns hold phone, email, name and company. When off, the user picks the columns.'
+  value: false
+  locked: false
+  type: boolean
 
 - name: CAPTAIN_EMBEDDING_MODEL
   display_title: 'Embedding Model (optional)'
