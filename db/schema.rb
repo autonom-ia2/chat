@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_140000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1218,6 +1218,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
     t.index ["contact_id"], name: "index_campaign_recipients_on_contact_id"
     t.index ["inbox_id"], name: "index_campaign_recipients_on_inbox_id"
     t.index ["source_id"], name: "index_campaign_recipients_on_source_id", unique: true, where: "(source_id IS NOT NULL)"
+  end
+
+  create_table "campaign_reply_codes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campaign_type", null: false
+    t.bigint "campaign_id", null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_reply_codes_on_account_id"
+    t.index ["campaign_type", "campaign_id"], name: "index_campaign_reply_codes_on_campaign_type_and_campaign_id", unique: true
+    t.index ["code"], name: "index_campaign_reply_codes_on_code", unique: true
   end
 
   create_table "campaigns", force: :cascade do |t|
@@ -3458,6 +3470,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
+  add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade

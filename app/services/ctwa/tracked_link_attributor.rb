@@ -31,7 +31,8 @@ class Ctwa::TrackedLinkAttributor
     # O codigo tem de pertencer a inbox em que a mensagem chegou: colar o marcador de um link
     # de outra inbox da mesma conta nao pode atribuir a conversa a ele.
     link = Ctwa::TrackedLink.for_account(conversation.account).find_by(code: code, inbox_id: conversation.inbox_id)
-    return if link.blank?
+    # Not a link of this inbox: it may be a campaign's code (e-mail button to WhatsApp, #1002).
+    return CampaignJourney::ReplyCodes.attribute!(conversation, code) if link.blank?
 
     already_counted = conversation_already_on_link?(conversation, link)
 
