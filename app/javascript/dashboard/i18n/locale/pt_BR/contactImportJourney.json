@@ -42,7 +42,7 @@
       "TITLE": "Outras colunas",
       "HINT": "Viram atributos do contato",
       "NEW": "atributo novo",
-      "PROBLEMS": "{count} valores ficam de fora porque não servem para o atributo; o resto de cada linha é importado",
+      "PROBLEMS": "{count} valor fica de fora porque não serve para o atributo; o resto da linha é importado | {count} valores ficam de fora porque não servem para o atributo; o resto de cada linha é importado",
       "PROBLEM_ROW": "Linha {row}: valor não serve para {attribute}",
       "NONE": "A planilha não tem outras colunas."
     },

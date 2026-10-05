@@ -44,26 +44,37 @@ const errorMessage = ref('');
 const fileInput = ref(null);
 let pollTimer = null;
 
-const stage = computed(() => (sending.value ? 'reading' : stageFor(contactImport.value)));
+const stage = computed(() =>
+  sending.value ? 'reading' : stageFor(contactImport.value)
+);
 const status = computed(() => contactImport.value?.status);
 const needsChoice = computed(() => status.value === 'needs_column_choice');
 const isReady = computed(() => status.value === 'ready_to_confirm');
 const refused = computed(() => status.value === 'validation_failed');
 const people = computed(() => peopleCounts(contactImport.value));
-const fileErrors = computed(() => (refused.value ? globalErrors(contactImport.value) : []));
+const fileErrors = computed(() =>
+  refused.value ? globalErrors(contactImport.value) : []
+);
 
 const columnsChanged = computed(
   () => !sameMapping(mapping.value, currentMapping(contactImport.value))
 );
 const canApplyColumns = computed(
-  () => (needsChoice.value || columnsChanged.value) && hasContactColumn(mapping.value)
+  () =>
+    (needsChoice.value || columnsChanged.value) &&
+    hasContactColumn(mapping.value)
 );
 const canImport = computed(() => isReady.value && !columnsChanged.value);
 const showCompanies = computed(
-  () => companiesAvailable(contactImport.value) && mapping.value.company !== NO_COLUMN
+  () =>
+    companiesAvailable(contactImport.value) &&
+    mapping.value.company !== NO_COLUMN
 );
 const companyColumnName = computed(
-  () => columnsOf(contactImport.value).find(column => column.index === mapping.value.company)?.header || ''
+  () =>
+    columnsOf(contactImport.value).find(
+      column => column.index === mapping.value.company
+    )?.header || ''
 );
 
 const reasonText = code =>
@@ -167,7 +178,9 @@ watch(createCompanies, async value => {
 
 const downloadProblems = async () => {
   try {
-    const { data } = await ContactImportsAPI.downloadProblems(contactImport.value.id);
+    const { data } = await ContactImportsAPI.downloadProblems(
+      contactImport.value.id
+    );
     downloadCsvFile(`contatos_${contactImport.value.id}_problemas.csv`, data);
   } catch {
     fail();
@@ -188,8 +201,12 @@ onBeforeUnmount(stopPolling);
 </script>
 
 <template>
-  <section class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2">
-    <div class="mx-auto flex w-full max-w-[60rem] flex-col gap-5 p-4 sm:p-5 lg:p-8">
+  <section
+    class="flex h-full w-full min-w-0 flex-col overflow-y-auto bg-n-slate-2"
+  >
+    <div
+      class="mx-auto flex w-full max-w-[60rem] flex-col gap-5 p-4 pb-24 sm:p-5 sm:pb-24 lg:p-8"
+    >
       <nav
         class="flex items-center gap-2 text-xs text-n-slate-11"
         :aria-label="t(`${NS}.BREADCRUMB`)"
@@ -207,11 +224,17 @@ onBeforeUnmount(stopPolling);
         </span>
       </nav>
       <header class="min-w-0">
-        <h1 class="mb-0 text-[1.75rem] font-semibold leading-tight tracking-tight text-n-slate-12">
+        <h1
+          class="mb-0 text-[1.75rem] font-semibold leading-tight tracking-tight text-n-slate-12"
+        >
           {{ t(`${NS}.TITLE`) }}
         </h1>
         <p class="mb-0 mt-2 text-sm leading-6 text-n-slate-11">
-          {{ stage === 'review' ? t(`${NS}.REVIEW_SUBTITLE`) : t(`${NS}.SUBTITLE`) }}
+          {{
+            stage === 'review'
+              ? t(`${NS}.REVIEW_SUBTITLE`)
+              : t(`${NS}.SUBTITLE`)
+          }}
         </p>
       </header>
 
@@ -242,8 +265,13 @@ onBeforeUnmount(stopPolling);
           data-test="drop-zone"
           @click="chooseFile"
         >
-          <span class="i-lucide-upload size-6 text-n-blue-11" aria-hidden="true" />
-          <strong class="text-sm text-n-slate-12">{{ t(`${NS}.UPLOAD.LABEL`) }}</strong>
+          <span
+            class="i-lucide-upload size-6 text-n-blue-11"
+            aria-hidden="true"
+          />
+          <strong class="text-sm text-n-slate-12">{{
+            t(`${NS}.UPLOAD.LABEL`)
+          }}</strong>
           <span class="text-xs text-n-slate-11">
             {{ t(`${NS}.UPLOAD.HINT`, { size: MAX_FILE_MB }) }}
           </span>
@@ -261,7 +289,9 @@ onBeforeUnmount(stopPolling);
       </div>
 
       <template v-else-if="stage === 'review'">
-        <div class="flex flex-col gap-4 rounded-2xl border border-n-weak bg-n-solid-1 p-5 shadow-sm">
+        <div
+          class="flex flex-col gap-4 rounded-2xl border border-n-weak bg-n-solid-1 p-5 shadow-sm"
+        >
           <div
             class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-n-weak bg-n-slate-2 px-4 py-3"
           >
@@ -270,7 +300,11 @@ onBeforeUnmount(stopPolling);
                 {{ contactImport.source_filename }}
               </strong>
               <span class="text-xs text-n-slate-11">
-                {{ t(`${NS}.FILE.ROWS`, { count: n(contactImport.total_rows || 0) }) }}
+                {{
+                  t(`${NS}.FILE.ROWS`, {
+                    count: n(contactImport.total_rows || 0),
+                  })
+                }}
               </span>
             </div>
             <Button
@@ -283,13 +317,27 @@ onBeforeUnmount(stopPolling);
             />
           </div>
 
-          <div v-if="needsChoice" class="rounded-xl bg-n-amber-2 px-4 py-3" data-test="choose-columns">
-            <strong class="text-sm text-n-slate-12">{{ t(`${NS}.COLUMNS.CHOOSE_TITLE`) }}</strong>
-            <p class="mb-0 text-xs text-n-slate-11">{{ t(`${NS}.COLUMNS.CHOOSE_HINT`) }}</p>
+          <div
+            v-if="needsChoice"
+            class="rounded-xl bg-n-amber-2 px-4 py-3"
+            data-test="choose-columns"
+          >
+            <strong class="text-sm text-n-slate-12">{{
+              t(`${NS}.COLUMNS.CHOOSE_TITLE`)
+            }}</strong>
+            <p class="mb-0 text-xs text-n-slate-11">
+              {{ t(`${NS}.COLUMNS.CHOOSE_HINT`) }}
+            </p>
           </div>
-          <ul v-if="fileErrors.length" role="alert" class="m-0 list-none rounded-xl bg-n-ruby-3 px-4 py-3 text-sm text-n-ruby-11">
+          <ul
+            v-if="fileErrors.length"
+            role="alert"
+            class="m-0 list-none rounded-xl bg-n-ruby-3 px-4 py-3 text-sm text-n-ruby-11"
+          >
             <li class="font-semibold">{{ t(`${NS}.ERRORS.FILE_REFUSED`) }}</li>
-            <li v-for="code in fileErrors" :key="code">{{ reasonText(code) }}</li>
+            <li v-for="code in fileErrors" :key="code">
+              {{ reasonText(code) }}
+            </li>
           </ul>
 
           <ContactImportColumns
@@ -297,8 +345,14 @@ onBeforeUnmount(stopPolling);
             :contact-import="contactImport"
             :show-attributes="isReady && !columnsChanged"
           />
-          <div v-if="needsChoice || columnsChanged" class="flex flex-wrap items-center justify-end gap-3">
-            <span v-if="!hasContactColumn(mapping)" class="text-xs text-n-ruby-11">
+          <div
+            v-if="needsChoice || columnsChanged"
+            class="flex flex-wrap items-center justify-end gap-3"
+          >
+            <span
+              v-if="!hasContactColumn(mapping)"
+              class="text-xs text-n-ruby-11"
+            >
               {{ t(`${NS}.COLUMNS.NEED_CONTACT`) }}
             </span>
             <Button
@@ -311,12 +365,26 @@ onBeforeUnmount(stopPolling);
           </div>
 
           <template v-if="isReady && !columnsChanged">
-            <div class="grid gap-3 md:grid-cols-2">
+            <div class="grid items-start gap-3 md:grid-cols-2">
               <div class="rounded-xl bg-n-teal-3 p-4" data-test="people-ready">
-                <p class="mb-0 text-2xl font-semibold tabular-nums text-n-slate-12">{{ n(people.ready) }}</p>
-                <strong class="text-sm text-n-slate-12">{{ t(`${NS}.PEOPLE.READY`) }}</strong>
-                <p class="mb-0 text-xs text-n-slate-11" data-test="people-split">
-                  {{ t(`${NS}.PEOPLE.SPLIT`, { existing: n(people.existing), new: n(people.created) }) }}
+                <p
+                  class="mb-0 text-2xl font-semibold tabular-nums text-n-slate-12"
+                >
+                  {{ n(people.ready) }}
+                </p>
+                <strong class="text-sm text-n-slate-12">{{
+                  t(`${NS}.PEOPLE.READY`)
+                }}</strong>
+                <p
+                  class="mb-0 text-xs text-n-slate-11"
+                  data-test="people-split"
+                >
+                  {{
+                    t(`${NS}.PEOPLE.SPLIT`, {
+                      existing: n(people.existing),
+                      new: n(people.created),
+                    })
+                  }}
                 </p>
               </div>
               <ContactImportProblems
@@ -376,8 +444,14 @@ onBeforeUnmount(stopPolling);
         class="flex flex-col items-start gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
         data-test="failed"
       >
-        <p class="mb-0 text-sm text-n-ruby-11">{{ t(`${NS}.ERRORS.IMPORT_FAILED`) }}</p>
-        <Button :label="t(`${NS}.ACTIONS.NEW_IMPORT`)" class="!min-h-11" @click="startOver" />
+        <p class="mb-0 text-sm text-n-ruby-11">
+          {{ t(`${NS}.ERRORS.IMPORT_FAILED`) }}
+        </p>
+        <Button
+          :label="t(`${NS}.ACTIONS.NEW_IMPORT`)"
+          class="!min-h-11"
+          @click="startOver"
+        />
       </div>
     </div>
   </section>

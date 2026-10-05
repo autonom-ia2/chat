@@ -137,7 +137,13 @@ const choose = (target, value) => {
         data-test="attribute-problems"
       >
         <p class="mb-1 font-semibold">
-          {{ t(`${NS}.ATTRIBUTES.PROBLEMS`, { count: n(problems.count) }) }}
+          {{
+            t(
+              `${NS}.ATTRIBUTES.PROBLEMS`,
+              { count: n(problems.count) },
+              problems.count
+            )
+          }}
         </p>
         <ul class="m-0 list-none p-0">
           <li

@@ -260,7 +260,7 @@ describe('ContactImportPage (#1006)', () => {
     });
 
     const problems = wrapper.get('[data-test="attribute-problems"]').text();
-    expect(problems).toContain('1 values stay out');
+    expect(problems).toContain('1 value stays out');
     expect(problems).toContain('Row 9: value does not fit Aniversário');
     wrapper.unmount();
   });
