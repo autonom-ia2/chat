@@ -113,6 +113,16 @@ RSpec.describe SuperAdmin::InstagramAutomationsController do
     expect(helper.instagram_automation_reconnect_available?(status)).to be(true)
   end
 
+  it 'hides browser access and permits a new reconnect after a request ends requiring an operator' do
+    status = {
+      managed_session: true, operator_browser_configured: true, operator_required: true, control_available: true,
+      control: active.merge('state' => 'operator_required')
+    }
+    helper = controller.view_context
+    expect(helper.instagram_automation_browser_available?(status)).to be(false)
+    expect(helper.instagram_automation_reconnect_available?(status)).to be(true)
+  end
+
   it 'rejects missing and invalid CSRF before reading control or issuing a ticket' do
     request.set_header('HTTP_ACCEPT', 'application/json')
     expect(control).not_to receive(:status)
@@ -136,7 +146,8 @@ RSpec.describe SuperAdmin::InstagramAutomationsController do
   end
 
   it 'fails with a fixed message for another actor, absent request, expired request or completed request' do
-    [nil, active.merge('actor_id' => 43), active.merge('state' => 'succeeded'),
+    [active.merge('state' => 'operator_required'), active.merge('state' => 'succeeded'), active.merge('state' => 'failed'),
+     nil, active.merge('actor_id' => 43),
      active.merge('created_at' => 1.hour.ago.utc.iso8601(3))].each do |value|
       allow(control).to receive(:status).and_return(control: value)
       controller.process(:browser)
