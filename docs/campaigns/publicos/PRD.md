@@ -2,7 +2,7 @@
 
 Data: 05/10/2026 · Dono: Rodrigo · Status: proposta para aprovação · Versão 2
 
-Evidência de origem: [auditoria de 05/10/2026](../../audit/2026-10-05-auditoria-base-de-campanha.md). Épica: [#990](https://github.com/autonom-ia2/chat/issues/990) · Mockup: https://claude.ai/artifact/DEgd2WS2gp4XuvqTbh6vwP
+Evidência de origem: [auditoria de 05/10/2026](../../audit/2026-10-05-auditoria-base-de-campanha.md). Épica: [#990](https://github.com/autonom-ia2/chat/issues/990) · Protótipo navegável das jornadas: https://claude.ai/artifact/Ji9iE3AaH6MG3h6bDP15KW (telas avulsas: https://claude.ai/artifact/DEgd2WS2gp4XuvqTbh6vwP)
 
 ## 1. Problema
 
@@ -70,7 +70,7 @@ Uma lista e uma jornada para os três canais. Quem cria campanha escolhe o canal
 | D8 | **A mensagem é montada antes do público.** O que ela usa (variáveis do modelo, nome, empresa) vira a lista do que procurar na planilha. | Alvo conhecido acerta a coluna e mostra de onde sai cada pedaço da mensagem. |
 | D9 | **Jornada única:** "Todas as campanhas" (lista com filtro por canal) + "Nova campanha" com o canal escolhido no Passo 1. Os 3 passos são os mesmos; só o conteúdo do Passo 1 e as colunas exigidas no Passo 2 mudam por canal. | Um jeito de fazer, três canais. |
 | D10 | **Empresas:** se a planilha tiver coluna de empresa (corretora, clínica, construtora…), o sistema cria a empresa que não existe, reaproveita a que existe e liga ao contato. Contato que já tem **outra** empresa mantém a dele (contado como "mantida"). Pode ser desligado no Passo 2. | Pedido do Rodrigo; a empresa é o cliente real no B2B de seguros. Não sobrescrever evita estragar cadastro bom. |
-| D11 | **E-mail também cria contatos** ao subir a planilha (hoje a lista fica só na campanha). Descadastro e e-mail que voltou continuam valendo e o contato não recebe. | Uma base só: o contato do e-mail é o mesmo do WhatsApp, com empresa e histórico. **Confirmar com o Rodrigo** — muda o comportamento atual do e-mail. |
+| D11 | **E-mail também cria contatos** ao subir a planilha (hoje a lista fica só na campanha). Descadastro e e-mail que voltou continuam valendo e o contato não recebe. | Uma base só: o contato do e-mail é o mesmo do WhatsApp, com empresa e histórico. **Confirmado pelo Rodrigo em 05/10.** |
 | D12 | **Construção aditiva** (seção 8.0): mínimo de mudança em arquivos do Chatwoot oficial. | Atualizar o Chatwoot sem conflito. Pedido do Rodrigo em 05/10. |
 
 ## 6. Jornada
@@ -91,7 +91,12 @@ Topo: **"Por onde a mensagem vai"** — três cartões: E-mail, WhatsApp Oficial
 
 - **WhatsApp Oficial:** caixa (só Cloud), modelo aprovado (cartões com categoria e idioma), variáveis do modelo — cada uma vem de um dado do contato, de uma coluna da planilha ou de texto fixo. Prévia em balão de WhatsApp com botões do modelo.
 - **WhatsApp API:** caixa (só caixas marcadas para campanha), mensagem livre com dados inseridos como fichas ("primeiro nome", "nome", "empresa"), "Usar modelo salvo", anexo opcional (imagem, vídeo, PDF), aviso do ritmo automático (uma por vez, intervalo seguro; cada envio aparece na conversa).
-- **E-mail:** remetente (só domínios verificados), para onde vão as respostas (caixa de entrada), assunto, texto de prévia, conteúdo (miniatura do modelo, "Trocar modelo", "Abrir editor" — abre o `EmailBuilderPage` existente e volta para a jornada). Prévia como caixa de entrada.
+- **E-mail** — o Passo 1 tem cinco telas, na ordem:
+  1. **Canal e nome** da campanha.
+  2. **Como você quer começar?** (`WelcomeChooser` existente): Criar com IA (recomendado), Escolher um modelo, Começar do zero.
+  3. **Criar com IA** (`AiComposerDialog` existente, em página): briefing, objetivo (promoção, novidade, evento, relacionamento), tom, campos de personalização (nome, primeiro nome, **empresa**) e recursos (logo, imagem, PDF, vídeo); tela de progresso enquanto gera. **Ou Biblioteca de modelos** (`EmailTemplatesPage` existente): Biblioteca e Meus modelos, filtro por objetivo, busca, prévia, "Usar este" e "Adaptar com IA" (mantém o layout, reescreve os textos).
+  4. **Editor** (`EmailBuilderPage` existente, sem mudança interna): blocos (Texto, Título, Botão, Imagem, Hero, Oferta, Benefícios, Depoimento, Produtos, Imagem + texto, Vídeo), propriedades, computador/celular, personalização, envio de teste e ações de IA por bloco (Reescrever, Encurtar, Mais persuasivo).
+  5. **Detalhes do envio**: remetente (domínio verificado), caixa das respostas, assunto com sugestões da IA, texto de prévia e prévia de como aparece na caixa de entrada.
 
 ### 6.3 Passo 2, Público
 
@@ -234,6 +239,11 @@ Formato **Dado · Quando · Então**. Só passa com evidência (teste automatiza
 - **D6** Resposta de número sem o 9 entra na conversa do contato importado (webhook simulado).
 - **D7** WhatsApp API: ficha "empresa" vira o nome da empresa do contato; sem empresa, a linha fica de fora com motivo "falta empresa" (ou texto padrão).
 - **D8** E-mail: "Enviar teste para mim" chega só ao usuário logado e não conta no resultado.
+- **D9** E-mail: depois de canal e nome, a jornada mostra "Como você quer começar?" com Criar com IA, Escolher um modelo e Começar do zero; cada opção leva à tela certa e o passo continua marcado como 1 (Mensagem).
+- **D10** E-mail com IA: dado briefing, objetivo, tom e um recurso (logo), quando gerar, então o editor abre com assunto, prévia e layout montados, usando as fichas nome/primeiro nome/empresa; erro ou IA não configurada mostra a mensagem atual do produto e permite seguir pelo modelo ou do zero.
+- **D11** E-mail com modelo: Biblioteca e Meus modelos, filtro por objetivo, busca, prévia e "Usar este"; "Adaptar com IA" mantém o layout e reescreve os textos.
+- **D12** O editor existente abre dentro da jornada e "Continuar" leva a Detalhes do envio sem perder o conteúdo; nenhuma mudança interna no editor (aceite H).
+- **D13** Detalhes do envio: só domínios verificados; caixa das respostas escolhida; assunto com sugestões da IA (quando configurada); prévia de caixa de entrada atualiza ao trocar o assunto.
 
 ### E. Resultado
 
@@ -291,7 +301,7 @@ Cada PR com `Refs #990`; o último fecha a épica.
 | Conflito em atualização do Chatwoot | Regra 8.0 + aceite H; flag para voltar às telas antigas |
 | Empresa duplicada por grafia diferente | Domínio antes do nome; nome normalizado; uma por importação; contagem "já existiam" visível antes de confirmar |
 | Sobrescrever empresa certa | Nunca troca empresa já ligada; conta como "mantida" |
-| E-mail criar milhares de contatos (D11) | Só na confirmação; contagem de novos visível; decisão pendente do Rodrigo |
+| E-mail criar milhares de contatos (D11) | Só na confirmação; contagem de novos visível antes de confirmar |
 | Jev indisponível ou caro | Fallback determinístico + escolha manual; uma chamada por arquivo |
 | Limite da Meta | Motivo de falha legível; aviso na revisão |
 | Importações antigas sem vínculo | Migração idempotente pela etiqueta |
