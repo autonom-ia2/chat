@@ -18,7 +18,7 @@ A base de campanha (planilha de nome + celular) mora no menu ⋮ de **Contatos**
 
 ## 2. Objetivo
 
-Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê quem vai receber e quem ficou de fora, escolhe enviar tudo ou em etapas, e depois acompanha enviados, entregues, lidos, respondidos e falhas — sem passar por Contatos e sem conhecer etiqueta.
+Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê quem vai receber e quem ficou de fora, agenda o envio e depois acompanha enviados, entregues, lidos, respondidos e falhas — sem passar por Contatos e sem conhecer etiqueta.
 
 ### Métricas de sucesso
 
@@ -35,6 +35,7 @@ Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê q
 - Importação de destinatários de **e-mail** (continua dentro da campanha de e-mail; já usa Jev). Unificar com Públicos é outra fase.
 - Campanhas de SMS e Chat ao vivo (SMS poderá escolher um Público em fase futura; nada muda nele agora).
 - Segmentação por atributo/filtro dinâmico. Público aqui é **lista estática** vinda de planilha ou etiqueta.
+- **Envio em etapas / lotes.** Fora por decisão de 05/10 (simplicidade). O backend de lotes continua, invisível, sempre com 1 lote.
 - Custo estimado por conversa da Meta (não temos tabela de preço confiável na base).
 - Juntar os 6 contatos duplicados já existentes (operação de banco de produção, decisão separada do Rodrigo).
 
@@ -50,12 +51,12 @@ Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê q
 |---|---|---|
 | D1 | **Públicos** vira subpágina própria em **Campanhas**, compartilhada pelos canais WhatsApp. Sai do menu ⋮ de Contatos ("Base Campanha" e "Histórico de bases"). | A base gera contatos + etiquetas, que servem a qualquer canal. Uma página por tipo duplicaria histórico. É o padrão de Mailchimp (Audience), Klaviyo (Lists & segments) e HubSpot (Lists). |
 | D2 | O caminho principal é **subir a planilha dentro de "Nova campanha"**. Públicos é para reaproveitar, consultar e desfazer. | Uso real 1:1. |
-| D3 | **Lotes saem da importação** e viram **"Enviar em etapas"** no disparo. | Lote nunca foi usado; aquecimento manual foi. |
+| D3 | **Lotes saem da interface** (importação, Públicos e campanha). Sem envio em etapas: a campanha envia tudo no horário escolhido. O código de lotes fica no backend, sempre com 1 lote. Decisão do Rodrigo em 05/10: simplicidade primeiro. | Lote nunca foi usado (`batch_count = 1` nas 13). Quem quiser aquecer número cria campanhas menores, como já faz. |
 | D4 | **Importa as linhas válidas**; as inválidas ficam listadas com motivo e baixáveis. | Recusar 100 por 1 é atrito sem ganho. |
 | D5 | **O sistema acha as colunas sozinho** (nome, celular e cada variável do modelo) usando o Jev por baixo. **A interface nunca cita o Jev**: diz só "colunas encontradas". O modelo recebe cabeçalhos, formato mascarado e a lista do que o modelo de mensagem precisa; nunca nome ou número. | Mesmo contrato de privacidade do e-mail (#764). O usuário quer o resultado, não o nome da ferramenta. |
 | D8 | **O modelo de mensagem é escolhido antes do público.** As variáveis dele (`{{1}}` nome, `{{2}}` mês de vencimento…) viram a lista do que procurar na planilha. | Com o alvo conhecido, achar a coluna é mais certeiro (ex.: `{{2}} mês de vencimento` → coluna *Vencimento*), e o usuário vê de onde sai cada pedaço da mensagem antes de enviar. |
 | D6 | O nome técnico da etiqueta some da interface. O usuário vê o **nome do público**. A etiqueta continua existindo por baixo. | Ninguém deve decorar `campanha_7_envio_100_annt_nova_11`. |
-| D7 | Criação em **página com etapas**, no layout das campanhas de e-mail (#800), não no formulário flutuante. | Padrão visual atual do produto. |
+| D7 | Criação em **página com passos**, no layout das campanhas de e-mail (#800), não no formulário flutuante. | Padrão visual atual do produto. |
 
 ## 6. Jornada
 
@@ -85,8 +86,6 @@ Duas opções, lado a lado:
 
 Abaixo, em ambos:
 
-- **Como enviar:** "Tudo de uma vez" (padrão) ou "Em etapas".
-- Em etapas: tamanhos sugeridos (20, 40, 100, 200, depois o restante — editáveis), intervalo entre etapas (padrão 1 dia, mínimo 1 hora) e horário de início. A tela mostra a régua: "Etapa 1 · 20 · seg 06/10 09:00 → Etapa 2 · 40 · ter 07/10 09:00 …".
 
 **Passo 3 — Revisar e agendar**
 - Resumo: caixa, modelo com prévia, público, quantos recebem, quantos ficam de fora e por quê.
@@ -97,7 +96,6 @@ Abaixo, em ambos:
 ### 6.2 Depois do envio — detalhe da campanha
 
 - Faixa de resultado: Público · Enviadas · Entregues · Lidas · Responderam · Falharam · Puladas.
-- Etapas (quando houver): situação de cada uma; "Pausar próximas etapas" e "Retomar".
 - Tabela de destinatários com filtro por situação, número mascarado, motivo da falha traduzido (ex.: "Número sem WhatsApp", "Limite diário da Meta atingido") e link para a conversa quando houver resposta.
 - "Baixar resultado" (CSV, número mascarado).
 
@@ -113,7 +111,7 @@ Abaixo, em ambos:
 
 ### 6.4 WhatsApp API
 
-A página WhatsApp API usa o mesmo Passo 2 (planilha ou público salvo). Etapas usam o ritmo já existente do canal; não muda o motor de envio.
+A página WhatsApp API usa o mesmo Passo 2 (planilha ou público salvo). O motor de envio do canal não muda.
 
 ## 7. Layout
 
@@ -122,7 +120,7 @@ Seguir o padrão do workspace de e-mail (#800, `EmailCampaignsPage.vue`) e as re
 - Moldura `max-w-[90rem]`, caminho "Campanhas › WhatsApp Oficial", título + subtítulo, **uma** ação principal à direita.
 - Faixa de resumo contínua; primeiro bloco em azul-marinho `#0D2344`.
 - Lista em cartão, abas por situação (Rascunho, Agendadas, Enviando, Concluídas), busca.
-- Criação em página com etapas numeradas (`aria-current="step"`), como `EmailBuilderPage.vue`.
+- Criação em página com passos numerados (`aria-current="step"`), como `EmailBuilderPage.vue`.
 - Detalhes de público em painel lateral de 37rem; abaixo de 1280px, sobreposto.
 - Escolhas com `ChoiceSelect`. Nenhum `<select>` nativo, nenhum `ComboBox`/`TagMultiSelectComboBox` antigo nas telas tocadas.
 - Tailwind e tokens `n-*`; sem CSS próprio.
@@ -135,8 +133,7 @@ Seguir o padrão do workspace de e-mail (#800, `EmailCampaignsPage.vue`) e as re
 - `campaigns.campaign_import_id` e `whatsapp_api_campaigns.campaign_import_id` (nullable, índice): liga campanha ao público.
 - `campaign_imports.name` (nome do público mostrado ao usuário; preenchido com `campaign_name` nas existentes).
 - `campaign_imports.schema_resolution` (jsonb; mesmo formato do e-mail: método, colunas, sem dados de linha).
-- `campaigns.delivery_stages` (jsonb): `[{size, scheduled_at, status, started_at, finished_at}]`. Vazio = tudo de uma vez.
-- Nenhuma coluna removida. `batch_count`/`_lote_N` deixam de ser criados em novas importações; os antigos ficam como estão.
+- Nenhuma coluna removida. Novas importações gravam `batch_count = 1` (sem etiquetas `_lote_N` além da do lote único, como hoje); o campo não aparece em nenhuma tela. Os antigos ficam como estão.
 
 ### 8.2 Importação
 
@@ -152,7 +149,6 @@ Seguir o padrão do workspace de e-mail (#800, `EmailCampaignsPage.vue`) e as re
 
 - Guarda de caixa: criação/edição recusa caixa que não seja `whatsapp_cloud` (422 com código explicável), antes de qualquer `mark_processing!`.
 - Público por `campaign_import_id` (contatos com status importado) ou etiquetas, como hoje.
-- Etapas: o job de disparo processa só os `campaign_recipients` pendentes da etapa vencida; a campanha fica `processing` até a última etapa; "pausar" impede o agendamento das próximas.
 - Destinatários registrados **antes** do envio (situação `queued`), atualizados por `mark_sent!`/`mark_failed!`/`mark_skipped!` e pelo webhook de status (já existente).
 - "Respondeu" = mensagem recebida do contato na mesma caixa até 72h depois de `sent_at`.
 
@@ -163,7 +159,7 @@ Seguir o padrão do workspace de e-mail (#800, `EmailCampaignsPage.vue`) e as re
 
 ### 8.5 Guia da Plataforma e i18n
 
-- Rotas novas (`campaigns_audiences_index`, criação com etapas) entram no roteador; rodar `pnpm guia:build` e escrever os blocos em `lib/operator_guide/porques.md`. Remover os fluxos de "Base Campanha" e "Histórico de bases" de Contatos.
+- Rotas novas (`campaigns_audiences_index`, criação em passos) entram no roteador; rodar `pnpm guia:build` e escrever os blocos em `lib/operator_guide/porques.md`. Remover os fluxos de "Base Campanha" e "Histórico de bases" de Contatos.
 - Textos novos em `en.json` (+ `pt_BR` quando o catálogo for do fork, conforme `docs/i18n/fork-translations.md`; `pnpm i18n:fork:check`).
 
 ### 8.6 Rotas e redirecionamentos
@@ -201,8 +197,7 @@ Formato: **Dado** · **Quando** · **Então**. Um item só passa com evidência 
 
 - **C1** Dado uma conta com caixa WhatsApp não-Cloud, quando abre o Passo 1, então essa caixa não aparece; e a API de criação recusa com 422 e código explicável se ela for enviada à força.
 - **C2** Dado "Tudo de uma vez", quando o horário chega, então todos os destinatários elegíveis ficam com situação registrada (`sent`, `failed` ou `skipped` com motivo) — zero destinatários sem situação depois que a campanha conclui.
-- **C3** Dado "Em etapas" com 20/40/restante e intervalo de 1 dia, quando agendado, então a etapa 1 envia exatamente 20, a 2 envia 40 no dia seguinte, e a 3 o restante; nenhum contato recebe duas vezes.
-- **C4** Dado uma campanha em etapas, quando o usuário pausa, então nenhuma etapa futura dispara até "Retomar".
+- **C3** Dado a criação, a importação, Públicos e o detalhe da campanha, quando o usuário navega, então nenhuma tela mostra lote, quantidade de lotes ou envio em etapas; toda importação nova grava `batch_count = 1`.
 - **C5** Dado um erro da Meta para um número, quando o envio falha, então o destinatário fica `failed` com motivo legível em português na tela, e os demais seguem.
 - **C6** Dado um contato que recusou mensagens durante o disparo, quando chega a vez dele, então é pulado com motivo "recusou mensagens" (regra #737 preservada).
 - **C7** Dado um destinatário que responde de um número sem o 9, quando a mensagem chega, então ela entra na conversa do contato importado (nenhum contato novo) — teste com webhook simulado.
@@ -223,10 +218,10 @@ Formato: **Dado** · **Quando** · **Então**. Um item só passa com evidência 
 
 ### F. Layout e acessibilidade
 
-- **F1** As telas de WhatsApp Oficial, Nova campanha e Públicos seguem o padrão do #800 (moldura, faixa de resumo, lista com abas, criação com etapas) — revisão visual comparando com o mockup aprovado.
+- **F1** As telas de WhatsApp Oficial, Nova campanha e Públicos seguem o padrão do #800 (moldura, faixa de resumo, lista com abas, criação em passos) — revisão visual comparando com o mockup aprovado.
 - **F2** Nenhum `<select>` nativo nem `ComboBox` antigo nas telas tocadas; spec automatizado no estilo de `uxAcceptance444.spec.js` cobre os arquivos novos.
 - **F3** Sem rolagem horizontal nem texto cortado em 1440, 1280, 1024, 768 e 390px, tema claro e escuro (capturas no PR).
-- **F4** Navegação completa por teclado nos 3 passos; etapas com `aria-current="step"`; alvos de toque ≥ 44px; contraste ≥ 4.5:1.
+- **F4** Navegação completa por teclado nos 3 passos; passos com `aria-current="step"`; alvos de toque ≥ 44px; contraste ≥ 4.5:1.
 
 ### G. Correções
 
@@ -237,16 +232,16 @@ Formato: **Dado** · **Quando** · **Então**. Um item só passa com evidência 
 
 - **H1** `pnpm guia:check`, `pnpm i18n:fork:check`, RuboCop, ESLint, RSpec e Vitest dos arquivos tocados verdes; saída lida, não só o código de saída.
 - **H2** Revisor independente antes do merge; tester de produção com roteiro listado antes de rodar.
-- **H3** Rollback escrito antes do deploy: desligar `CAMPAIGN_IMPORT_ENABLED` esconde a entrada; migrations aditivas não são revertidas; etapas pendentes ficam pausadas.
+- **H3** Rollback escrito antes do deploy: desligar `CAMPAIGN_IMPORT_ENABLED` esconde a entrada; migrations aditivas não são revertidas; campanhas agendadas e ainda não disparadas continuam agendadas.
 - **H4** Primeiro disparo real em produção acompanhado: zero destinatários sem situação, comparação de entregues com o painel da Meta.
 
 ## 10. Entrega em PRs
 
 | PR | Conteúdo | Aceite |
 |---|---|---|
-| 1 — Correções (#991) | `LabelPlanner`, importar só válidas, busca com/sem 9, blocos de 500, guarda de caixa Cloud, log da exceção | B5–B7, B10, C1, G1, G2 |
+| 1 — Correções (#991) | `LabelPlanner` (backend, sem tela), importar só válidas, busca com/sem 9, blocos de 500, guarda de caixa Cloud, log da exceção | B5–B7, B10, C1, G1, G2 |
 | 2 — Jev para telefone (#992) | Modo telefone no `SchemaResolver` + resolvedor TypeSafe, escolha manual de colunas | B1–B4 |
-| 3 — Públicos e jornada (#993) | Página Públicos, criação em 3 passos, etapas, detalhe com resultados, remoção do menu de Contatos, layout #800 | A, B8–B9, C2–C7, D, E, F |
+| 3 — Públicos e jornada (#993) | Página Públicos, criação em 3 passos, detalhe com resultados, remoção do menu de Contatos, layout #800 | A, B8–B9, C2, C3, C5–C7, D, E, F |
 
 Cada PR com `Refs #990`; o último fecha a épica.
 
@@ -254,8 +249,7 @@ Cada PR com `Refs #990`; o último fecha a épica.
 
 | Risco | Mitigação |
 |---|---|
-| Etapas mudam o motor do WhatsApp Oficial (overlay enterprise) | Isolar em job de etapa; manter caminho "tudo de uma vez" idêntico ao atual; spec das duas rotas |
 | Jev indisponível ou caro | Fallback determinístico + escolha manual; uma chamada por arquivo ambíguo; desligável no SuperAdmin |
 | Importar parcialmente esconde problema da planilha | Contagem e download dos problemas sempre visíveis antes de confirmar |
-| Limite de mensagens da Meta por dia | Sugestão de etapas e motivo de falha legível; não fazemos retentativa automática nesta fase |
+| Limite de mensagens da Meta por dia | Motivo de falha legível e aviso na revisão quando o público passar do limite conhecido da caixa; não fazemos retentativa automática nesta fase |
 | Importações antigas sem vínculo com campanha | Migração de dados liga por etiqueta (sabemos que é 1:1 na conta 6) e é idempotente |
