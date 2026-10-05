@@ -23,11 +23,15 @@ const {
   erro,
   melhor,
   buscando,
+  procurandoAlternativa,
   aguardando,
   emDestaque,
+  alternativa,
+  alternativaEmDestaque,
   lista,
   total,
   adiantar,
+  dispensarAlternativa,
 } = useBuscaDaCentral();
 
 const campo = ref(null);
@@ -56,7 +60,11 @@ const anuncio = computed(() => {
   const destaque = t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_MELHOR', {
     titulo: melhor.value.titulo,
   });
-  return `${destaque} ${contagem}`;
+  if (!alternativaEmDestaque.value) return `${destaque} ${contagem}`;
+  const tambem = t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_ALTERNATIVA', {
+    titulo: alternativa.value.titulo,
+  });
+  return `${destaque} ${tambem} ${contagem}`;
 });
 
 const abrir = artigo =>
@@ -75,6 +83,7 @@ const abrirPrimeiro = () => {
     return;
   }
   abrirAoChegar.value = true;
+  dispensarAlternativa();
   adiantar();
 };
 
@@ -166,6 +175,18 @@ const limpar = () => {
       />
     </Transition>
 
+    <!-- A alternativa (#985) entra junto com a resposta: a tela espera por ela até um teto curto. -->
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+    >
+      <MelhorResposta
+        v-if="temTermo && !aguardando && alternativaEmDestaque"
+        :artigo="alternativa"
+        secundaria
+      />
+    </Transition>
+
     <!-- Sem nenhum resultado ainda, o que falta é a Melhor resposta: a tela diz isso, não fica em branco. -->
     <div
       v-if="temTermo && aguardando"
@@ -173,29 +194,45 @@ const limpar = () => {
     >
       <Spinner />
       {{
-        buscando
+        buscando || procurandoAlternativa
           ? t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO')
           : t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PROCURANDO_MELHOR')
       }}
     </div>
 
-    <ul
+    <section
       v-else-if="temTermo && lista.length"
-      class="m-0 p-0 list-none flex flex-col gap-2"
+      class="flex flex-col gap-2"
+      :aria-labelledby="emDestaque ? 'busca-central-outros' : undefined"
     >
-      <li v-for="artigo in lista" :key="artigo.ref">
-        <router-link
-          :to="{ name: 'central_de_ajuda_artigo', params: { ref: artigo.ref } }"
-          class="flex flex-col gap-1 rounded-xl border border-n-weak bg-n-solid-1 px-5 py-4 hover:border-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-        >
-          <span class="text-lg font-medium text-n-slate-12">
-            {{ artigo.titulo }}
-          </span>
-          <span class="text-base text-n-slate-11">{{ artigo.descricao }}</span>
-          <span class="text-sm text-n-slate-10">{{ artigo.capitulo }}</span>
-        </router-link>
-      </li>
-    </ul>
+      <!-- Com a Melhor resposta na tela, a busca por palavras é só complemento (#985). -->
+      <h2
+        v-if="emDestaque"
+        id="busca-central-outros"
+        class="mb-0 mt-2 px-1 text-sm font-semibold text-n-slate-11"
+      >
+        {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.OUTROS') }}
+      </h2>
+      <ul class="m-0 p-0 list-none flex flex-col gap-2">
+        <li v-for="artigo in lista" :key="artigo.ref">
+          <router-link
+            :to="{
+              name: 'central_de_ajuda_artigo',
+              params: { ref: artigo.ref },
+            }"
+            class="flex flex-col gap-1 rounded-xl border border-n-weak bg-n-solid-1 px-5 py-4 hover:border-n-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          >
+            <span class="text-lg font-medium text-n-slate-12">
+              {{ artigo.titulo }}
+            </span>
+            <span class="text-base text-n-slate-11">{{
+              artigo.descricao
+            }}</span>
+            <span class="text-sm text-n-slate-10">{{ artigo.capitulo }}</span>
+          </router-link>
+        </li>
+      </ul>
+    </section>
 
     <!-- "Nada" só depois que as duas buscas terminaram vazias. -->
     <div

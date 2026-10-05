@@ -2,8 +2,10 @@
 # serviço, com a identidade já autenticada, para valer qualquer que seja a grafia do pedido; o Rack::Attack é a
 # primeira camada. Estourou, a busca fica sem Melhor resposta e a lista por palavras continua.
 class Autonomia::CentralDeAjuda::LimiteDaBusca
-  POR_PESSOA_POR_MINUTO = ENV.fetch('CENTRAL_BUSCA_LIMITE_PESSOA_MINUTO', '30').to_i
-  POR_CONTA_POR_DIA = ENV.fetch('CENTRAL_BUSCA_LIMITE_CONTA_DIA', '2000').to_i
+  # Cada busca faz até duas chamadas (Melhor resposta e alternativa, #985): os tetos contam chamadas e foram
+  # dobrados para manter as mesmas ~30 buscas por minuto por pessoa e ~2000 por dia por conta.
+  POR_PESSOA_POR_MINUTO = ENV.fetch('CENTRAL_BUSCA_LIMITE_PESSOA_MINUTO', '60').to_i
+  POR_CONTA_POR_DIA = ENV.fetch('CENTRAL_BUSCA_LIMITE_CONTA_DIA', '4000').to_i
   PREFIXO = 'autonomia/central_de_ajuda/limite_da_busca'.freeze
 
   def initialize(account:, account_user:)
