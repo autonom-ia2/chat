@@ -263,7 +263,7 @@ useOnEnter(enter);
             {{ t(`${NS}.EMPTY`) }}
           </p>
           <template v-else>
-            <ul class="m-0 flex list-none flex-col p-0 lg:hidden">
+            <ul class="m-0 flex list-none flex-col p-0 xl:hidden">
               <li
                 v-for="row in rows"
                 :key="`card-${row.channel}-${row.id}`"
@@ -323,7 +323,7 @@ useOnEnter(enter);
                 </router-link>
               </li>
             </ul>
-            <div class="hidden max-w-full overflow-x-auto lg:block">
+            <div class="hidden max-w-full overflow-x-auto xl:block">
               <table class="w-full border-collapse text-sm" data-overview-rows>
                 <thead>
                   <tr class="border-b border-n-weak text-xs text-n-slate-11">

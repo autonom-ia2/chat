@@ -199,7 +199,7 @@ defineExpose({ fetchRows, choose });
       {{ t(`${NS}.EMPTY`) }}
     </p>
     <template v-else>
-      <ul class="m-0 flex list-none flex-col p-0 lg:hidden" data-people-cards>
+      <ul class="m-0 flex list-none flex-col p-0 xl:hidden" data-people-cards>
         <li
           v-for="row in rows"
           :key="`card-${row.id}`"
@@ -252,7 +252,7 @@ defineExpose({ fetchRows, choose });
           </div>
         </li>
       </ul>
-      <div class="hidden max-w-full overflow-x-auto lg:block">
+      <div class="hidden max-w-full overflow-x-auto xl:block">
         <table class="w-full border-collapse text-sm" data-people-rows>
           <thead>
             <tr

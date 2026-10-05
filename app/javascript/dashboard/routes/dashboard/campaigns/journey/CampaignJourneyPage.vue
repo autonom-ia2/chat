@@ -449,7 +449,7 @@ useOnEnter(fetchAll);
                 {{ statusLabel(row.status) }}
               </span>
             </p>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center justify-end gap-1 md:w-40">
               <router-link
                 :to="row.route"
                 class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
