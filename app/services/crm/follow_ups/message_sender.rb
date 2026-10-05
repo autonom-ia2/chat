@@ -99,7 +99,8 @@ class Crm::FollowUps::MessageSender
       variables: template_variables
     ).render
 
-    Messages::MessageBuilder.new(
+    # Already filled by TemplateRenderer: contact values stay literal (chat#1021).
+    Autonomia::LiteralMessageBuilder.new(
       sender,
       conversation,
       ActionController::Parameters.new(
@@ -110,7 +111,8 @@ class Crm::FollowUps::MessageSender
           crm_follow_up_template_id: template.id,
           crm_follow_up_send_mode: 'template'
         }
-      )
+      ),
+      literal_content: true
     ).perform
   end
 
@@ -121,7 +123,9 @@ class Crm::FollowUps::MessageSender
     # erro nosso. Vira Result.failed pelo rescue do #perform, com motivo legível.
     raise 'template_name_required' if metadata['template_name'].to_s.strip.blank?
 
-    Messages::MessageBuilder.new(
+    # processed_params are final values written by the AI composer (template_processed_params), so they
+    # stay literal (chat#1021). message_body keeps the Liquid pass: a person may have written it.
+    Autonomia::LiteralMessageBuilder.new(
       sender,
       conversation,
       ActionController::Parameters.new(
@@ -132,7 +136,8 @@ class Crm::FollowUps::MessageSender
           crm_follow_up_id: @follow_up.id,
           crm_follow_up_send_mode: 'template'
         }
-      )
+      ),
+      literal_template_params: true
     ).perform
   end
 
