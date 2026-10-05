@@ -1,0 +1,90 @@
+{
+  "reviewed_at": "2026-10-05T22:30:30Z",
+  "reviewer": "independent_audit",
+  "decision": "APPROVED_SCOPED_A5_DIAGNOSTIC_PREPARATION_NO_BLOCKERS",
+  "scope": "Independent static review of physical read limits, passive close projection, callback/output, wrapper bootstrap and pins; read of focused tests and complete cloud/Mac logs. No AWS/VPS, source promotion, session or infrastructure action by reviewer.",
+  "candidate_directory": "aws/auth-a5",
+  "source_sha256": {
+    "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+    "ssm_close_diagnostic.py": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+    "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+    "preflight-live-proofs-auth-candidate.py": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+    "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+    "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7"
+  },
+  "supporting_files": {
+    "README.md": "e863606648f2fd3aed797093946c5bb8e06bc7ef2f67de1d442ae15964007227",
+    "PREPARED.json": "ff279ce52eea6ca78252ef91c510dc1b708da4778f7f76328693e22629ad8260",
+    "test_close_diagnostic.py": "a3f3b1d2c1f821ac6910ef81214b5413cad51fcd2242e60081c4574962008e7e",
+    "auth-a5-collector.diff": "79996917adcd440211ab0c0e600388a81853dbe3cbc3d7d35a0452219c455923",
+    "auth-a5-wrapper.diff": "b9c9263cca776a0ae8066a755fdc941df80e9b35266ee034bbe28afd1b9577d5",
+    "auth-a5-preflight.diff": "d1feb2c20f772309c60d1a0911476ae8f4d2dbd725f9fcc2df2d5f27457ae2bc",
+    "auth-a5-fixture-result.json": "a5d648606e4cbadc52ad7d0e7b0e18d8ef07fd13d6601da716ae6a385fe39769",
+    "auth-a5-fixture.log": "0a06c349bc7b9b104429a03e14c5475ff4b8b5c31d6843c0cb049e9f4b60c160"
+  },
+  "validation": {
+    "Mac_sources_and_docs_readback": "Six operational Python sources plus README/PREPARED compared byte-for-byte with the reviewed cloud files; all exact and manifest hashes match.",
+    "Mac_fixtures": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "log_elapsed_s": 0.022,
+      "log_read_in_full": true,
+      "result_read_in_full": true,
+      "process_pid": 51813,
+      "process_exit_code": 0,
+      "process_provenance": "Author and root confirmed completed normal Mac process; reviewer independently read resulting full log/receipt and reconciled six source hashes."
+    },
+    "cloud_fixtures": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "log_read_in_full": true,
+      "log_elapsed_s": 0.036,
+      "reviewer_did_not_repeat_suite": true
+    },
+    "unchanged": {
+      "FrameReader_source_bytes_equal_to_A4": true,
+      "FrameReader_source_comparison": "Independent exact source segment comparison, in addition to author's AST equality.",
+      "service_and_metadata_parser_bytes_unchanged": true,
+      "existing_protocol_guards_and_caps_unchanged": true
+    }
+  },
+  "physical_read_review": [
+    "A5 is invoked only for A_to_B after the original control_frame_invalid rejection. Eligibility is close + control_payload_over_125 with declared integer length 126..512.",
+    "Before any diagnostic payload read, the helper reapplies original per-frame, frame-count, total-payload and monotonic deadline limits. It reserves declared payload/count and uses existing exact().",
+    "One attempt only. Close length 1, ping/pong, length >512, exhausted budget and expired deadline do not read payload. No second frame, ACK, protocol feed, resynchronization or retry.",
+    "EOF, timeout and partial reads remain incomplete with fixed reasons. The original frame stays invalid and the original stop_reason remains control_frame_invalid; finally still closes the socket.",
+    "C0 does not take this invalid-close read branch. Its observation remains partial and cannot become full authentication through A5.",
+    "The inherited post-TCP/TLS HTTP/observer limits are not a ten-second global DNS/TCP/TLS guarantee; external SSH timeout remains an ambiguous outcome requiring reconciliation."
+  ],
+  "projection_review": [
+    "At most 512 bytes remain in memory for passive inspection. Output is a fixed schema of enums, integers and booleans; no raw reason, arbitrary JSON, literal IDs, TokenValue, URL, payload hash or exception text.",
+    "The first two bytes are decoded as an unsigned integer and the rest uses strict UTF-8. This neither validates an RFC close code nor accepts the invalid frame.",
+    "Typed codes require exact allowlisted literals in explicit JSON code fields or a closed textual prefix. Duplicate/conflicting/unknown codes and arbitrary namespaces remain unrecognized; no #suffix salvage.",
+    "known_session_context_valid means exact known-ID token occurrence in the reason, not a protocol field or validated causal binding. typed_code_with_session_context records co-occurrence only.",
+    "Lexical hints may occur in negated or ambiguous text and do not classify refusal. No field automatically upgrades this diagnostic to authentication, foreign-access denial or cutover eligibility."
+  ],
+  "integration_review": [
+    "Wrapper bootstrap loads metadata, new close helper, then auth module, and records the helper hash in the source map. Preflight pins the exact updated collector/wrapper/helper hashes.",
+    "Fresh C0 must have the A5 source map and compatible CURRENT; A4 C0 cannot be reused with the changed source map.",
+    "Checkpoint captures the bounded projection before inherited finally/cleanup. Service d878 and parser 498 remain unchanged. Existing pending/known-session reconciliation remains intact.",
+    "No compositor or cutover consumer gate was modified."
+  ],
+  "focused_coverage": [
+    "126/175/512 boundaries, second frame untouched and one attempt only",
+    "Close1/ping/pong/>512 exclusions before read",
+    "Existing caps and deadline before payload allocation/read",
+    "EOF/timeout/partial19 bytes with incomplete status and reserved budget",
+    "UTF-8, duplicate/conflicting JSON codes, unknown namespaces/prefixes, exact ID token boundaries, no private output",
+    "Real observation handler preserves stop and does not feed invalid frame",
+    "C0 invalid close leaves payload unread",
+    "Wrapper source hash binding and cleanup/diagnostic-only fields"
+  ],
+  "findings": [],
+  "root_authorized_next_step": "The recorded root authorization may proceed after this review: preserve A4 and its receipts, exclusively create/pin the new helper and promote exact approved bytes, complete one fresh compatible C0 Hub with conclusive cleanup, then one A5 Hub and stop for interpretation. No additional reviewer permission is required for that already authorized sequence.",
+  "evidence_boundary": "A4 observed a rejected close header of 175 declared bytes; it did not observe payload/code/reason. A5 preparation does not establish what the server will send. Code plus ID presence alone is not a causal finding or automatic refusal proof; assess any live result with its actual control and context without adding an internal-IAM-causality requirement.",
+  "actual_A5_execution_performed_by_reviewer": false,
+  "foreign_access_classified": false,
+  "cutover_eligible": false
+}

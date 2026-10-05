@@ -1,0 +1,11 @@
+--- display-gateway/display-gateway-remote.py
++++ display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377/display-gateway-remote.py
+@@ -14,7 +14,7 @@
+ import time
+ from urllib.parse import urlsplit
+ 
+-SHA = '4998091221c2a60ab8e7e6ee3316a6ceb0c0a0bc'
++SHA = '3783da330716bf92346e5b017a6a491fdb8f1377'
+ NODE = Path('/opt/instagram-meta-tools/node-v24.21.0-linux-x64/bin/node')
+ STACKS = ('hub2you', 'autonomia')
+ STACK = None

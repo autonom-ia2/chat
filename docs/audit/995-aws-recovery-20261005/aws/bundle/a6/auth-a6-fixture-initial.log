@@ -1,0 +1,26 @@
+test_contractions_quotes_and_case_preserve_negation (__main__.OrderedTerms.test_contractions_quotes_and_case_preserve_negation) ... ok
+test_order_negation_comparisons_and_swapped_sessions (__main__.OrderedTerms.test_order_negation_comparisons_and_swapped_sessions) ... ok
+test_placeholders_require_exact_ids_without_suffix_salvage (__main__.OrderedTerms.test_placeholders_require_exact_ids_without_suffix_salvage) ... ok
+test_private_unknown_spans_urls_and_tokens_are_only_other (__main__.OrderedTerms.test_private_unknown_spans_urls_and_tokens_are_only_other) ... ok
+test_project_close_adds_only_ordered_observation (__main__.OrderedTerms.test_project_close_adds_only_ordered_observation) ... ok
+test_term_limit_late_negation_and_byte_limit_are_explicit (__main__.OrderedTerms.test_term_limit_late_negation_and_byte_limit_are_explicit) ... FAIL
+test_unicode_unknown_atoms_do_not_salvage_known_words (__main__.OrderedTerms.test_unicode_unknown_atoms_do_not_salvage_known_words) ... ok
+
+======================================================================
+FAIL: test_term_limit_late_negation_and_byte_limit_are_explicit (__main__.OrderedTerms.test_term_limit_late_negation_and_byte_limit_are_explicit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/810b2f03b507/aws-auth-a6/test_reason_terms.py", line 90, in test_term_limit_late_negation_and_byte_limit_are_explicit
+    self.assertEqual(result["terms"], ["SESSION"]*subject.MAX_REASON_TERMS)
+AssertionError: Lists differ: [] != ['SESSION', 'SESSION', 'SESSION', 'SESSION[657 chars]ION']
+
+Second list contains 64 additional elements.
+First extra element 0:
+'SESSION'
+
+Diff is 901 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.004s
+
+FAILED (failures=1)

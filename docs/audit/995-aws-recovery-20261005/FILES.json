@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "record_type": "git_documentary_consolidation_file_manifest",
+  "repository": "autonom-ia2/chat",
+  "branch": "audit/995-aws-recovery-20261005",
+  "parent_commit": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "parent_tree": "4959339843ca4428f730415debeee9d95769984d",
+  "git_directory": "docs/audit/995-aws-recovery-20261005",
+  "generated_at": "2026-10-05 23:39:53 UTC",
+  "files_excluding_this_manifest": 66,
+  "total_bytes_excluding_this_manifest": 626532,
+  "git_mode": "100644",
+  "scope": "Public source and documentary preservation only; not a VPS package, cold-copy completion, PKI backup, operational restore, promotion or deployment receipt beyond each explicitly labelled historical record.",
+  "historical_files_preserved_exactly": true,
+  "files": [
+    {
+      "path": "aws/bundle/a5/auth_diagnostic.py",
+      "bytes": 24975,
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "git_blob_sha1": "beeee3424ad5805055912b109cb0641d8b993069"
+    },
+    {
+      "path": "aws/bundle/a5/preflight-live-proofs-auth-candidate.py",
+      "bytes": 2983,
+      "sha256": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+      "git_blob_sha1": "ce6c305bc10aa984c664e2499e73bac1ef7c0131"
+    },
+    {
+      "path": "aws/bundle/a5/PREPARED.json",
+      "bytes": 3181,
+      "sha256": "ff279ce52eea6ca78252ef91c510dc1b708da4778f7f76328693e22629ad8260",
+      "git_blob_sha1": "2c04c831671c6fd669ba00332ab6275388d783c6"
+    },
+    {
+      "path": "aws/bundle/a5/probe-client-auth-candidate.py",
+      "bytes": 26261,
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "git_blob_sha1": "3007dc767e6c7216e7cc55df437759e288122646"
+    },
+    {
+      "path": "aws/bundle/a5/README.md",
+      "bytes": 5762,
+      "sha256": "e863606648f2fd3aed797093946c5bb8e06bc7ef2f67de1d442ae15964007227",
+      "git_blob_sha1": "2ed4427903a957facb7051d7dcfaef75017b65bd"
+    },
+    {
+      "path": "aws/bundle/a5/service-proof-auth-candidate.py",
+      "bytes": 24765,
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "git_blob_sha1": "a3191d0eea5834e83d405aabc65c4898e7f419f3"
+    },
+    {
+      "path": "aws/bundle/a5/ssm_close_diagnostic.py",
+      "bytes": 8362,
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "git_blob_sha1": "bc8242c070a156636f930e622d4fbe5744e087ec"
+    },
+    {
+      "path": "aws/bundle/a5/ssm_metadata.py",
+      "bytes": 13203,
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+      "git_blob_sha1": "d8fda622e2e539c4cd8c40d30b7441d9799256a5"
+    },
+    {
+      "path": "aws/bundle/a6/auth_diagnostic.py",
+      "bytes": 24975,
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "git_blob_sha1": "beeee3424ad5805055912b109cb0641d8b993069"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-fixture-cloud-result.json",
+      "bytes": 998,
+      "sha256": "3232e1fcaf74c54b7472d41ff225a6c80ef4713efd26a03d7da2ed4ccbffeeec",
+      "git_blob_sha1": "b39695328b49a833f38fa6f8fda66c6e8a7d802f"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-fixture-cloud.log",
+      "bytes": 1250,
+      "sha256": "8f195a91ba0847c1f47b39c8bdc0d8c5f0c1031f4424c8cdad710721c02bef8f",
+      "git_blob_sha1": "ab0fc35904eda90d077b64a1d827a18ba8119de8"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-fixture-initial-result.json",
+      "bytes": 999,
+      "sha256": "d3b2f46949613422b54edea69f5041fb70e7f8cfe286757e9e8e631797e075a9",
+      "git_blob_sha1": "1f735a5bbe875f590c732356aeaf288c5b35f0e3"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-fixture-initial.log",
+      "bytes": 1885,
+      "sha256": "fbdab16f1bcc068c7cb02137db6bba6fe6cdc1b21ae21e03c0f82ada365d97e8",
+      "git_blob_sha1": "f37705471b92ef6f6b49b1d6ce65995357f57f2c"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-helper.diff",
+      "bytes": 6192,
+      "sha256": "c6d5858a638714c941b80368239448c4f99343bef39d221c123504f2049c6f2a",
+      "git_blob_sha1": "d7864d84e7d1611e0b95c2f2a08a8a3e763c3acb"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-preflight.diff",
+      "bytes": 1548,
+      "sha256": "88a7e0f78efab2ea66ad6b1adbb400b240bcf5fa4c92fa4d45a5d54f04872611",
+      "git_blob_sha1": "f4b85ed7490877a7259116b8c3f9a63796183efa"
+    },
+    {
+      "path": "aws/bundle/a6/auth-a6-promotion.diff",
+      "bytes": 4143,
+      "sha256": "87a27414ff34c66e7c4448bd5669f2351de7058549922d3c468e922dca575709",
+      "git_blob_sha1": "33e7946571f723c515c8be8cc5377cc4561cfa7d"
+    },
+    {
+      "path": "aws/bundle/a6/mac-fixture/auth-a6-fixture-result.json",
+      "bytes": 998,
+      "sha256": "3232e1fcaf74c54b7472d41ff225a6c80ef4713efd26a03d7da2ed4ccbffeeec",
+      "git_blob_sha1": "b39695328b49a833f38fa6f8fda66c6e8a7d802f"
+    },
+    {
+      "path": "aws/bundle/a6/mac-fixture/auth-a6-fixture.log",
+      "bytes": 798,
+      "sha256": "69ab362bb8fe1a278bb9ce321de7d32cb2808ba5f1479fa6676aa324d83a769a",
+      "git_blob_sha1": "42a245776b4fe5c16ab6ea5e36b972b78087ed29"
+    },
+    {
+      "path": "aws/bundle/a6/preflight-live-proofs-auth-candidate.py",
+      "bytes": 2983,
+      "sha256": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8",
+      "git_blob_sha1": "354d8d81fe55dab799505f550742c35505b9d6f6"
+    },
+    {
+      "path": "aws/bundle/a6/PREPARED.json",
+      "bytes": 3694,
+      "sha256": "58a78a35a52375d75dd77a56030085d6d4ed744acfb82bdd493eda28dd884078",
+      "git_blob_sha1": "e5b07c4aa90615996bf47a3198ab014a34271595"
+    },
+    {
+      "path": "aws/bundle/a6/probe-client-auth-candidate.py",
+      "bytes": 26261,
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "git_blob_sha1": "3007dc767e6c7216e7cc55df437759e288122646"
+    },
+    {
+      "path": "aws/bundle/a6/promote-auth-a6.py",
+      "bytes": 4010,
+      "sha256": "3e56e68df186e26fd03c0ed80251ea217251608e0c309208f2fcfdccb1872643",
+      "git_blob_sha1": "7071540c86589c7d834c5aa80333ed7b8e66d2a1"
+    },
+    {
+      "path": "aws/bundle/a6/README.md",
+      "bytes": 4279,
+      "sha256": "7679da5e5107bbfea4b9844f870b8a20cc0c179dc63d006b3881cfc288e5e9ee",
+      "git_blob_sha1": "1015f70beeda2b460e94cecca59c159d68276233"
+    },
+    {
+      "path": "aws/bundle/a6/service-proof-auth-candidate.py",
+      "bytes": 24765,
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "git_blob_sha1": "a3191d0eea5834e83d405aabc65c4898e7f419f3"
+    },
+    {
+      "path": "aws/bundle/a6/ssm_close_diagnostic-a5-baseline.py",
+      "bytes": 8362,
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "git_blob_sha1": "bc8242c070a156636f930e622d4fbe5744e087ec"
+    },
+    {
+      "path": "aws/bundle/a6/ssm_close_diagnostic.py",
+      "bytes": 13166,
+      "sha256": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0",
+      "git_blob_sha1": "217680d2bdb67ff0689c48811bdc228fae2a147b"
+    },
+    {
+      "path": "aws/bundle/a6/ssm_metadata.py",
+      "bytes": 13203,
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+      "git_blob_sha1": "d8fda622e2e539c4cd8c40d30b7441d9799256a5"
+    },
+    {
+      "path": "aws/bundle/a6/test_reason_terms.py",
+      "bytes": 8602,
+      "sha256": "7ba739ff1cad5e83a18c207b78eca8c1e117464d66b757c4a5957d8aedc876ad",
+      "git_blob_sha1": "5956a597698250b41246fe038478ecdd3cfaf21e"
+    },
+    {
+      "path": "aws/bundle/ACCESS-INCIDENT-before-session-termination.json",
+      "bytes": 3138,
+      "sha256": "54a872c5de7c202a78195b494cd5972cf7b6f177244009a4b98b86ecbc985e2f",
+      "git_blob_sha1": "f9c28e9e0b019882e21685765491e724e9a76016"
+    },
+    {
+      "path": "aws/bundle/ACCESS-INCIDENT.json",
+      "bytes": 4342,
+      "sha256": "734f1563d667fd0b81d6036eab3ba349f4d2d691748d784f5a8e808a9233a79e",
+      "git_blob_sha1": "e612ef23620e6d64fde2f506f5a6aef94ee247a3"
+    },
+    {
+      "path": "aws/bundle/AWS-HANDOFF-last-read-Mac.md",
+      "bytes": 37686,
+      "sha256": "d338b6adb5a73510321c603cda833f794c8282eb4dfd09f21e5b0e0844d1bd8b",
+      "git_blob_sha1": "d953182dd0d18fc633b18fb1b37c860f7c5b962e"
+    },
+    {
+      "path": "aws/bundle/live-a5/auth-a5-promotion-20261005.json",
+      "bytes": 1568,
+      "sha256": "97bf7e8ddf3b2b5d411399b5d2551e00340e22a9d3c2b6176670843f3c61ccb8",
+      "git_blob_sha1": "4b2d21195c4877bf5be5c057df1e381e4d592282"
+    },
+    {
+      "path": "aws/bundle/live-a5/proof-auth-binding-66ae220f67e74d299f76130466bbff2b.json",
+      "bytes": 54861,
+      "sha256": "a3a38330dec414347954136b3e5f4bc058f1d8dca9685dc18e420decf08dad80",
+      "git_blob_sha1": "60f220c19911904d3d6def11ca31310118c27561"
+    },
+    {
+      "path": "aws/bundle/live-a5/proof-protocol-control-54a12d7f3eda4d638544b45a806d5239.json",
+      "bytes": 32290,
+      "sha256": "f0e6fe67161dc0f23162ce110d2b30fbe6b8ceff58bce8d8c63769589c476f6d",
+      "git_blob_sha1": "3fdd31c8a8f96c98e53afbe0178e1bff2335e10a"
+    },
+    {
+      "path": "aws/bundle/MANIFEST.json",
+      "bytes": 14678,
+      "sha256": "8f2127f3fabbf8b96f5e1b33a368ef85675b254303bd3bb11c398d682f2ddc4e",
+      "git_blob_sha1": "a32f6035839a5a21876888e5673b2356cd443bc1"
+    },
+    {
+      "path": "aws/bundle/README.md",
+      "bytes": 1816,
+      "sha256": "ef4171605f08621ff52990a3c496a736c10e9d1316059abae2f2c47a8712e47a",
+      "git_blob_sha1": "bff6f055f8781aec202981179cec7331a72bb269"
+    },
+    {
+      "path": "aws/bundle/RECOVERY-SOURCE-INDEX.json",
+      "bytes": 5710,
+      "sha256": "3e3e3a892e6d58a2a1f6450a30d8c8671cb3f33c909cc23bf26694565e2a332a",
+      "git_blob_sha1": "b3ed72876037cf3323695b9ee710474b8fda2950"
+    },
+    {
+      "path": "aws/bundle/RECOVERY.md",
+      "bytes": 3888,
+      "sha256": "7821ed6dfcf6b19d1d4c2b99143e2d502763bf3cd322e888e5ff531de40a4364",
+      "git_blob_sha1": "123869ab9d4bcce3b2da7bf2fd03c1710a60f92e"
+    },
+    {
+      "path": "aws/bundle/REFERENCES.md",
+      "bytes": 2563,
+      "sha256": "a6214f3d2d0792370da77086c68836aa76db80265af08ec2c26d69a27f43897d",
+      "git_blob_sha1": "ed0c64faba913ec3678a155ae6ee351b5f5e6b5c"
+    },
+    {
+      "path": "aws/bundle/RESUME-CHECKPOINT.md",
+      "bytes": 4614,
+      "sha256": "90b121a9031daf6e054c33946b02ef065836723e370f04752f9523af22d45bc9",
+      "git_blob_sha1": "8a06298e9bdcda63ce726b3ab14fbe809262c0e9"
+    },
+    {
+      "path": "aws/bundle/reviews/a6-projection-review.json",
+      "bytes": 4567,
+      "sha256": "9ae3ae73d29de8e71523319ca02c8ce533c7f57bda67da96893fe5ee5965252d",
+      "git_blob_sha1": "e7576073f541c1487547c801c8faa696cbec2a0e"
+    },
+    {
+      "path": "aws/bundle/reviews/aws-auth-a5-review.json",
+      "bytes": 7282,
+      "sha256": "9ec25c4b48c9120fac6372eaf68782198fb5a3d19a20cf385c3b6eb2bb7b79ac",
+      "git_blob_sha1": "e22ca6facdd076f13463955ad9498c7305b1104b"
+    },
+    {
+      "path": "aws/bundle/reviews/aws-auth-a6-promotion-review.json",
+      "bytes": 3658,
+      "sha256": "a6f80fb6f88210b4344a3abc6970ac5c82208df057f9005f92ab919a6ae133a8",
+      "git_blob_sha1": "6e59772271347ba3e9bb02f712c3077f6414c327"
+    },
+    {
+      "path": "aws/bundle/source-evidence/auth-runtime-readonly-20261005T205522Z.json",
+      "bytes": 3713,
+      "sha256": "8e186de747f5fd8c0b1b567d375a8d5c2295aecd32e63c7f88e43f5cdb12eacc",
+      "git_blob_sha1": "58839d417b89647bb159d96b0c3edbcb6911909c"
+    },
+    {
+      "path": "aws/bundle/source-evidence/SOURCE_INDEX.json",
+      "bytes": 3831,
+      "sha256": "99de7a80d116ed8fbb20badd70bf40977bd125a62b38fccbfde34f240aa234d7",
+      "git_blob_sha1": "69081d4ba6b1654b536691451feb500f73230649"
+    },
+    {
+      "path": "aws/review/aws-A5-A6-public-bundle-review.json",
+      "bytes": 6663,
+      "sha256": "5fe7d91e0b44e77e908a3c21c01fdd514c715f104d160cf47a3ce1566a5f1840",
+      "git_blob_sha1": "8e1c39b5a7a36206c43fc7cfc7a7dcf61ccaab4f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7014,
+      "sha256": "9aee3a42174bb30a563a6ddda06c5eafe74cd3b98cce58c3fdd2ff2c9bafd27d",
+      "git_blob_sha1": "6e713d540bcec876f539b7f793a1f7f1caf8f005"
+    },
+    {
+      "path": "recovery-source-v2/create-cold-snapshot-v2.py",
+      "bytes": 8909,
+      "sha256": "3a6f4110922934f3da0a363008053b474595986cffc9bee685bfa8339868a831",
+      "git_blob_sha1": "cd806669d8ab91ccbeb5176199be173367345515"
+    },
+    {
+      "path": "recovery-source-v2/expanded-recovery-source-plan-review.json",
+      "bytes": 2989,
+      "sha256": "176720ca548aa723b1aace0bf246552629043a62a5b03ef4bebd09bb0726780d",
+      "git_blob_sha1": "7ce59bae8da76f49e4ca7c22d71830f36aedc3fc"
+    },
+    {
+      "path": "recovery-source-v2/PREPARED.json",
+      "bytes": 3110,
+      "sha256": "3863eab79ca9bd273c4b762f78b9879e9c66dc41d2c0d536b9120118c0398b61",
+      "git_blob_sha1": "67668b4aecd287ecf7e3ed562c7606294c05e98c"
+    },
+    {
+      "path": "recovery-source-v2/PROVENANCE.md",
+      "bytes": 1487,
+      "sha256": "98c762fab398c3318aff6c7b9d0702f79491aad15c06e246461659c7b0de3204",
+      "git_blob_sha1": "9b44dad62905bb637ed1ea2cafbbbe6efe2c3017"
+    },
+    {
+      "path": "recovery-source-v2/recovery-source-allowlist-v2.json",
+      "bytes": 32219,
+      "sha256": "18326e1844d21b6f86b755134128b64724d2bf9c95dc44cd8daeb36620a1cd0c",
+      "git_blob_sha1": "66ae02538a1c2e8a8a8efc73a22c7237be8850d2"
+    },
+    {
+      "path": "recovery-source-v2/recovery-source-plan-v2.md",
+      "bytes": 8427,
+      "sha256": "5184877dc3e3117ea6eba1f3bd3f4d0898377fd62c52ea5d97572e3d6f644c38",
+      "git_blob_sha1": "0c087bbb67692e1709b521cd15f5f988a489328a"
+    },
+    {
+      "path": "release/pr1039-approved-blob-manifest-c46.json",
+      "bytes": 5050,
+      "sha256": "96a38045bce73aad58687ca26ce0480b7a876852a4c4a41eb81bea01d89fc11e",
+      "git_blob_sha1": "bf504a340d1373e4dd346a53e9012c9026a4d585"
+    },
+    {
+      "path": "release/pr1039-ci-complete-c46.json",
+      "bytes": 10783,
+      "sha256": "cf6b0319c62c8641733c7838a9be32e3db85d9de81e09dafc3e0465970686fca",
+      "git_blob_sha1": "af46709dcd66da26f3d407fc8698d3000f05a8bc"
+    },
+    {
+      "path": "release/pr1039-deploy-complete-3783.json",
+      "bytes": 7111,
+      "sha256": "77bcd503224575fb58b6a5ed19a1fad52930529ac80ea4ad251fe2bfad691f15",
+      "git_blob_sha1": "56a08d9f4ffaad3524f92e03cdf65b6dce2ff733"
+    },
+    {
+      "path": "release/pr1039-merge-complete-c46.json",
+      "bytes": 22432,
+      "sha256": "767c9088b385397a38a3d0fcc9c34b42f0c1f27de655b2da9377449486716637",
+      "git_blob_sha1": "c8d24b727aa5120064337f61a8d0b4f4e5052587"
+    },
+    {
+      "path": "review/cold-snapshot-v2-copier-review.json",
+      "bytes": 3518,
+      "sha256": "d13372f55d079595dc1389ccf591d070c8e95a9e2819cb678d4ef714492407b0",
+      "git_blob_sha1": "eaec6c97296fee076ec1c95d618404174fe4a470"
+    },
+    {
+      "path": "runtime-3783/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377/display-gateway-remote.py",
+      "bytes": 13491,
+      "sha256": "22cc71edbeaa5c689177c541f91bd2163fa8799f3a3f8c1fe473140f346a4de1",
+      "git_blob_sha1": "d78cde689e38d1342f5663d07c21731af44c302d"
+    },
+    {
+      "path": "runtime-3783/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377/display-gateway.py",
+      "bytes": 1884,
+      "sha256": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+      "git_blob_sha1": "c6a4279259b30b30fec951175eb672dabd5b63fe"
+    },
+    {
+      "path": "runtime-3783/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377/PREPARED.json",
+      "bytes": 1573,
+      "sha256": "717980aca43f274dd3865adb3951ef8aa0b54fc29987013e184abf3b8e79961d",
+      "git_blob_sha1": "bc08a7dc9abc7ac3594e7c04fad988b5ff751dc0"
+    },
+    {
+      "path": "runtime-3783/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377/repin.patch",
+      "bytes": 425,
+      "sha256": "08308c908fc3cfb197a6261d8e0701e641cbf42b96667e204abf257820a567e0",
+      "git_blob_sha1": "76bd46dcc2a09a39a697841b53927ee276afbb10"
+    },
+    {
+      "path": "runtime-3783/merge-3783-source-inventory/HANDOFF.md",
+      "bytes": 5396,
+      "sha256": "b2fb55a973b1f16d1abe18b15f1ab6aef7e7e1745c4f0c8c89cc3719d691b5e9",
+      "git_blob_sha1": "b30c65f78b2459823add44373e51e9a1fb92c250"
+    },
+    {
+      "path": "runtime-3783/merge-3783-source-inventory/source-inventory.json",
+      "bytes": 23226,
+      "sha256": "25ee03c819e6289b8b197111f04992d337de00afc76dfe3ccd05f6ca02411ac5",
+      "git_blob_sha1": "7faed5e66765bd5cfe0624612be9cb244a017f34"
+    },
+    {
+      "path": "runtime-3783/review/dg-3783-cloud-review.json",
+      "bytes": 3342,
+      "sha256": "aef094ce8239a1f4b8223dd5bddfe326edd57070b4bb131e8b6be23cae8b0f4d",
+      "git_blob_sha1": "1c4f07b02339ef920d18ca8cdec3a18a36c85c2c"
+    },
+    {
+      "path": "runtime-3783/review/merge-3783-DG-source-inventory-review.json",
+      "bytes": 4675,
+      "sha256": "5c799ea67372e212be7b8459d3c362357b2f91f726eb71ec22bb1f99f5a98c6f",
+      "git_blob_sha1": "d7c51572eef1b66c857e6acc1ef90269994b30b8"
+    }
+  ]
+}
+

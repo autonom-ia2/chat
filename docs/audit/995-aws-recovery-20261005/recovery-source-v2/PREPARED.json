@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "record_type": "cold_snapshot_copier_preparation_not_execution",
+  "prepared_at": "2026-10-05T23:02:30Z",
+  "status": "PREPARED_CLOUD_ONLY_MAC_SESSION_UNAVAILABLE",
+  "copier": {
+    "path": "/workspace/scratch/810b2f03b507/recovery-source-v2/create-cold-snapshot-v2.py",
+    "sha256": "3a6f4110922934f3da0a363008053b474595986cffc9bee685bfa8339868a831",
+    "bytes": 8909,
+    "ast_parse": "passed",
+    "executed": false
+  },
+  "governing_documents": {
+    "recovery-source-allowlist-v2.json": "18326e1844d21b6f86b755134128b64724d2bf9c95dc44cd8daeb36620a1cd0c",
+    "recovery-source-plan-v2.md": "5184877dc3e3117ea6eba1f3bd3f4d0898377fd62c52ea5d97572e3d6f644c38",
+    "expanded-recovery-source-plan-review.json": "176720ca548aa723b1aace0bf246552629043a62a5b03ef4bebd09bb0726780d"
+  },
+  "allowlist": {
+    "required": 51,
+    "optional": 3,
+    "total": 54,
+    "expected_source_bytes": 556567
+  },
+  "target": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/recovery/cold-snapshot-v2",
+  "snapshot_created_by_this_agent": false,
+  "actual_snapshot_manifest_created": false,
+  "live_source_revalidation_completed": false,
+  "source_files_copied": 0,
+  "mac_writes_attempted": 0,
+  "source_imports_or_executions": 0,
+  "tests_repeated": 0,
+  "tracked_changes_commit_push": false,
+  "observed_connection_failures": [
+    {
+      "operation": "read_multiple_files_public_governing_documents",
+      "result": "McpServerError: Connection timed out.",
+      "error_code": "UNAVAILABLE"
+    },
+    {
+      "operation": "read_text_file_public_allowlist",
+      "result": "McpServerError: Connection timed out.",
+      "error_code": "UNAVAILABLE"
+    },
+    {
+      "operation": "start_process_public_governing_document_read_only",
+      "result": "MCP request timed out",
+      "pid_returned": false,
+      "mutation_in_command": false
+    },
+    {
+      "operation": "root_connection_probe",
+      "observed_at": "2026-10-05T23:01:40Z",
+      "result": "McpServerError: Session terminated",
+      "error_code": "INVALID_ARGUMENT",
+      "source": "root report"
+    }
+  ],
+  "current_coordination": "Root suspended further Mac probes; no route, guard, MCP, service or ACL change made.",
+  "pending_additions": [
+    "Final AWS owner-approved source set",
+    "DG activation source for actual future merged SHA"
+  ],
+  "resume": "After the normal Mac session returns, reconcile the exact destination without broad scanning, stage and hash-check this copier, then invoke it once normally. It refuses an existing destination and does not resume or overwrite partial contents. Source drift is recorded per item and other explicit entries continue. No copied source is imported or executed.",
+  "limits": [
+    "AST and static preparation are not a completed copy or operational proof.",
+    "No claim that a directory created by another agent is absent; this agent made no destination write.",
+    "Public source restoration preserves original layout/modes and requires later state reconciliation; it does not authorize live operations."
+  ]
+}

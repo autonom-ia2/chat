@@ -1,0 +1,628 @@
+{
+  "observed_at": "2026-10-05T23:19:53.404Z",
+  "state": "MERGED_AUTOMATIC_DEPLOYS_IN_PROGRESS",
+  "repo": "autonom-ia2/chat",
+  "pr": 1039,
+  "source_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+  "merged_at": "2026-10-05T23:18:33Z",
+  "release_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "pr_url": "https://github.com/autonom-ia2/chat/pull/1039",
+  "group": {
+    "sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+    "run_ids": [
+      37386874571,
+      37386874644,
+      37386874758
+    ],
+    "check_filter": "Exact three merge_group run IDs; post-merge push checks on the same commit are excluded",
+    "checks": [
+      {
+        "id": 112025060567,
+        "name": "RSpec",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112025060567"
+      },
+      {
+        "id": 112022297825,
+        "name": "RSpec (5/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297825"
+      },
+      {
+        "id": 112022297818,
+        "name": "RSpec (1/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297818"
+      },
+      {
+        "id": 112022297814,
+        "name": "RSpec (0/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297814"
+      },
+      {
+        "id": 112022297790,
+        "name": "RSpec (7/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297790"
+      },
+      {
+        "id": 112022297786,
+        "name": "RSpec (6/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297786"
+      },
+      {
+        "id": 112022297767,
+        "name": "RSpec (3/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297767"
+      },
+      {
+        "id": 112022297761,
+        "name": "RSpec (2/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297761"
+      },
+      {
+        "id": 112022297744,
+        "name": "RSpec (4/8)",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022297744"
+      },
+      {
+        "id": 112022185176,
+        "name": "ESLint",
+        "status": "completed",
+        "conclusion": "skipped",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022185176"
+      },
+      {
+        "id": 112022185003,
+        "name": "Rubocop",
+        "status": "completed",
+        "conclusion": "skipped",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022185003"
+      },
+      {
+        "id": 112022184827,
+        "name": "central",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874758/job/112022184827"
+      },
+      {
+        "id": 112022184637,
+        "name": "Brakeman e bundle-audit",
+        "status": "completed",
+        "conclusion": "skipped",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022184637"
+      },
+      {
+        "id": 112022184442,
+        "name": "trava",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874758/job/112022184442"
+      },
+      {
+        "id": 112022183812,
+        "name": "Vitest",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022183812"
+      },
+      {
+        "id": 112022183478,
+        "name": "RSpec - plano",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874571/job/112022183478"
+      },
+      {
+        "id": 112022183319,
+        "name": "fork-i18n",
+        "status": "completed",
+        "conclusion": "success",
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37386874644/job/112022183319"
+      }
+    ],
+    "success": 14,
+    "configured_skips": [
+      "Rubocop",
+      "ESLint",
+      "Brakeman e bundle-audit"
+    ],
+    "required_checks_all_success": true
+  },
+  "published_source": {
+    "observed_at": "2026-10-05T23:21:04.859Z",
+    "comparison_url": "https://github.com/autonom-ia2/chat/compare/c46cf166438b64626d45125450ec2ed4826915aa...3783da330716bf92346e5b017a6a491fdb8f1377",
+    "status": "ahead",
+    "merge_base_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+    "ahead_by": 11,
+    "behind_by": 0,
+    "total_commits": 11,
+    "comparison_file_count": 72,
+    "files_limit": 300,
+    "comparison_files_complete": true,
+    "approved_path_count": 22,
+    "approved_path_differences": [],
+    "approved_paths_unchanged": true,
+    "changed_files": [
+      {
+        "path": "app/controllers/api/v1/accounts/autonomia/guide_conversas_controller.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "cd498a46922a022eaff2c2a231e5cceb4a65b262"
+      },
+      {
+        "path": "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "5ad36342707506b21b43ada0946fb9af2a818640"
+      },
+      {
+        "path": "app/javascript/dashboard/api/autonomiaGuide.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "d7ceb7947d40b8558dc2a5556e180b826cec3678"
+      },
+      {
+        "path": "app/javascript/dashboard/api/crmMetaAdsConnection.js",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "a14a6827c66aed27544e3912232cfd1b46458b3e"
+      },
+      {
+        "path": "app/javascript/dashboard/components-next/Campaigns/TrackedLinks/MetaAdsConnectDialog.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "be856f4a874bd59254123acdcd8afd13a2849f0b"
+      },
+      {
+        "path": "app/javascript/dashboard/components-next/Campaigns/TrackedLinks/MetaAdsNamesCard.story.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "2cb69cb455a1ad38beb88ad228709aadcf38c6d8"
+      },
+      {
+        "path": "app/javascript/dashboard/components-next/Campaigns/TrackedLinks/MetaAdsNamesCard.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "8083fda9bc785948e5fc88dc8473f46bf66f9cad"
+      },
+      {
+        "path": "app/javascript/dashboard/components-next/Campaigns/TrackedLinks/specs/MetaAdsNamesCard.spec.js",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "9375ba53e21a0e3bd0c02fb35022d9b2876f86a7"
+      },
+      {
+        "path": "app/javascript/dashboard/components/autonomia/guide/AutonomiaGuideContainer.vue",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "7f134f924474ba18bd60179f499f18718d5a39ad"
+      },
+      {
+        "path": "app/javascript/dashboard/components/autonomia/guide/specs/AutonomiaGuideContainer.spec.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "17aff73f2b2afbb224815d30b52d26ecc6856e9d"
+      },
+      {
+        "path": "app/javascript/dashboard/i18n/locale/en/crm.json",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "3da6e0cd811ec4cc72e693c12b6d43db49ffa451"
+      },
+      {
+        "path": "app/javascript/dashboard/i18n/locale/pt_BR/crm.json",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "71c66f2e73b7a95ba4e7645c6f9084dbfc087858"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/automacoes/pages/AutomacaoConversaPage.vue",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "930a20f2b9e61eabd593d7ab356a3cb34924913a"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/automacoes/specs/AutomacaoConversaPage.spec.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "c99ec9c0f3d15f80fe62dea5ea49a0585baf982f"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/campaigns/pages/TrackedLinksPage.vue",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "c5037f4232ebf29dd0761f8483699c8bcba3bfa8"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/campaigns/pages/specs/TrackedLinksPage.metaAds.spec.js",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "41405aff45073b5d812ad2b671fa3fac5f5e2c48"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.spec.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "7cd00ecd2a1d52d527061230bf0a62c0e0ffc288"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmCardDrawer.vue",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "970852bde1eb44a506cacc3545155929863e6b66"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmKanbanCard.vue",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b9106172deb595a51ee8657606b9ddc272085a7a"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmOriginList.spec.js",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "271e0b16675e9947e6d6f84e56c09afd0ad2286d"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmOriginList.story.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "a696455358d75328573895484521c67989f3982d"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmOriginList.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "180bf753124ce287be98de125dd6a7278ffaa4e8"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmOriginMorePopover.spec.js",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "f89c46775cb2347db9ae8016ec8dd7e38bc8e5c7"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/components/CrmOriginMorePopover.vue",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "b8aec9ba1d885bb355323b511746655697d79efc"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/composables/useCrmOrigin.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b663bee7a9ad9d86f2e3ec8784b5e444e0422a67"
+      },
+      {
+        "path": "app/javascript/dashboard/routes/dashboard/crm/composables/useCrmOrigin.spec.js",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "3ca61f45721a6fc8fb92d3fc2a1f92116313a8db"
+      },
+      {
+        "path": "app/jobs/autonomia/agents/reap_stale_drafts_job.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "3941dc8fdf22d7e15b82b6dd04c57f7089b6589f"
+      },
+      {
+        "path": "app/jobs/crm/meta_ads/backfill_job.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "6939527657d22527eaff0e36ca9a5f6e9b52f039"
+      },
+      {
+        "path": "app/jobs/crm/meta_ads/enrich_touches_job.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "d23d5bb08b73c01cdb10a56ebd4c7eeb3d4e11c1"
+      },
+      {
+        "path": "app/jobs/crm/meta_capi/dispatch_job.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "9373a44ff62b1ad285abf04f058009857896f829"
+      },
+      {
+        "path": "app/models/autonomia/agents/agent.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "6d82d359a21c7bd2ed99d52e9da5205ab0df5a00"
+      },
+      {
+        "path": "app/models/autonomia/agents/agent_inbox.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "46c85052d70bb1c82353b7dc0bd0e91ca0757047"
+      },
+      {
+        "path": "app/models/crm/meta_ad_object.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "1599368f81a5e0ffd897cff56f7749cefd9b125a"
+      },
+      {
+        "path": "app/models/crm/meta_ads_connection.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "f0557c35b7a770bd1d411f208eb7782a54a95457"
+      },
+      {
+        "path": "app/policies/crm/meta_ads_connection_policy.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "ebdd2afd7ef2db8e5d547c55390365b740927ddd"
+      },
+      {
+        "path": "app/services/autonomia/agents/builder.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "2c4e6bcb6ad776173bd19fe7069001bc0925cbaa"
+      },
+      {
+        "path": "app/services/autonomia/agents/operate/inbox_connector.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b8a5eabb3764665495b8ada401e6617a03f76fca"
+      },
+      {
+        "path": "app/services/autonomia/guide/acoes.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b543a323851f0b63b144ca633e4057e15baef0b9"
+      },
+      {
+        "path": "app/services/crm/cards/payload_builder.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "df22492f2f392997e0bcfb06722c44331559fa40"
+      },
+      {
+        "path": "app/services/crm/meta_ads/name_resolver.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "74e4cef109ffebf5d253f6f6f56d408437c7ef93"
+      },
+      {
+        "path": "app/services/crm/meta_ads/touch_enricher.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "a48623a20e6b536f604ab6288a0ea75e5970fc11"
+      },
+      {
+        "path": "app/services/ctwa/campaign_builder.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "aca6ad83d441ac7b52a98e03a9db7122fc6d88ca"
+      },
+      {
+        "path": "app/services/meta/ads_graph_client.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "5fa044355a5ff9458e9ae614b871159e49624bd4"
+      },
+      {
+        "path": "app/services/meta/conversions_api_client.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "8fa2b033887667624542aca8ca25f1772acd9cea"
+      },
+      {
+        "path": "config/routes.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b08a434b203ea8a4a04ae4a4cc9928f248bd0640"
+      },
+      {
+        "path": "db/migrate/20261005140000_create_crm_meta_ads_tables.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "8a1f7d4970c9eb3fb7aa1d588048f5ac12e6108c"
+      },
+      {
+        "path": "db/schema.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "5c8f1b89af46e8d33c0783cd251b05dd1e299ffa"
+      },
+      {
+        "path": "docs/agentes-ia-redesign/DIAGNOSTICO.md",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "3d95688cd5ddcbae90840d0570070a2420c60494"
+      },
+      {
+        "path": "docs/crm/origens-nomes-meta.md",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "4dcc28098b984573120a1ed1b1a5b2e9d0d3982e"
+      },
+      {
+        "path": "docs/crm/ponte-lp-atribuicao.md",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b661b671261d43e098f7d3816c0ce764fe6b31ce"
+      },
+      {
+        "path": "lib/operator_guide/formatos-das-acoes-cobertura.md",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "fbff186fe4310e73cf5184b6f880b3c927e135ab"
+      },
+      {
+        "path": "lib/operator_guide/formatos-das-acoes.json",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "f0f641fcf988876b60c0eff3b6fd21d7bbbbae9a"
+      },
+      {
+        "path": "lib/operator_guide/guia-produto.md",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "084d5f0584af8d7d8deb49ceb74999d55ead6cc8"
+      },
+      {
+        "path": "lib/operator_guide/parametros-das-leituras.json",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "77cc0ef25ac9a559c407d3e9f03fb1def98c412b"
+      },
+      {
+        "path": "lib/operator_guide/porques.md",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "df1130d5e07103b7a9cb1d0fb8b9797504f1644b"
+      },
+      {
+        "path": "spec/jobs/autonomia/agents/reap_stale_drafts_job_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "08694102ca0d9ab09676b36e0da106cc3970ba38"
+      },
+      {
+        "path": "spec/jobs/crm/meta_ads/backfill_job_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "026782868ce6382dc746129313a82ae338a4f179"
+      },
+      {
+        "path": "spec/jobs/crm/meta_ads/enrich_touches_job_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "80d0c6436018e4d0ddeaad6bbd2a8f407701a4f7"
+      },
+      {
+        "path": "spec/jobs/crm/meta_capi/dispatch_job_website_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "8f07347e765bd100135c11b941e9571cf9490b62"
+      },
+      {
+        "path": "spec/models/autonomia/agents/agent_operating_sync_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "c7db97aa3c904a5b7c52522df2fb5991975c432f"
+      },
+      {
+        "path": "spec/models/crm/meta_ads_connection_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "b9f712c8636818e538de0538cb38512c5e4fb4e8"
+      },
+      {
+        "path": "spec/requests/api/v1/accounts/autonomia/guide_conversas_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "01444feb0a0572bb0bffeff3e8d3e9566de31a1e"
+      },
+      {
+        "path": "spec/requests/api/v1/accounts/crm/meta_ads_connections_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "19a0f01c21dd0c5894b7007d85460979a070d2da"
+      },
+      {
+        "path": "spec/services/autonomia/agents/builder_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "b3ba58286509ef0ebd2b2f1b522fb5427868b241"
+      },
+      {
+        "path": "spec/services/crm/cards/payload_builder_lead_form_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "c8447f879b2cd1d6a142f4f010abec1e30711790"
+      },
+      {
+        "path": "spec/services/crm/cards/payload_builder_meta_names_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "6039bc4684e5e4cf131c42d01ff789a1ad8c6efa"
+      },
+      {
+        "path": "spec/services/crm/cards/payload_builder_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "4bec94e2acd0b5e752eec15112c6a2dde999e5de"
+      },
+      {
+        "path": "spec/services/crm/kanban/board_payload_builder_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "7252a00cf8fed26734d01659a3a72fc23842768c"
+      },
+      {
+        "path": "spec/services/crm/meta_ads/name_resolver_spec.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "13a1f876c5a8689d5ee860603e14d0113a8f2c86"
+      },
+      {
+        "path": "spec/services/ctwa/campaign_builder_website_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "3ab3cd3ea908288930ad0c4b35226d2e2559895d"
+      },
+      {
+        "path": "spec/services/meta/conversions_api_client_spec.rb",
+        "previous_path": null,
+        "status": "modified",
+        "git_blob_sha": "c35426f0e91ceb1f1519c65e0c70b64e29301fde"
+      },
+      {
+        "path": "spec/support/meta_ads_helpers.rb",
+        "previous_path": null,
+        "status": "added",
+        "git_blob_sha": "fe8b23bd2a8ce95d0c42de8086a7d1bf9fe418a9"
+      }
+    ]
+  },
+  "deploys": [
+    {
+      "id": 37387738073,
+      "name": "Deploy Autonomia Chatwoot Blue Green",
+      "path": ".github/workflows/deploy-autonomia-blue-green.yml",
+      "head_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+      "event": "push",
+      "status": "in_progress",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-10-05T23:18:35Z",
+      "updated_at": "2026-10-05T23:18:39Z",
+      "html_url": "https://github.com/autonom-ia2/chat/actions/runs/37387738073"
+    },
+    {
+      "id": 37387737879,
+      "name": "Deploy Hub2You Chatwoot Blue Green",
+      "path": ".github/workflows/deploy-hub2you-blue-green.yml",
+      "head_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+      "event": "push",
+      "status": "in_progress",
+      "conclusion": null,
+      "run_attempt": 1,
+      "created_at": "2026-10-05T23:18:35Z",
+      "updated_at": "2026-10-05T23:18:38Z",
+      "html_url": "https://github.com/autonom-ia2/chat/actions/runs/37387737879"
+    }
+  ],
+  "no_second_enqueue": true,
+  "no_manual_deploy": true,
+  "local_mcp_paused": true,
+  "postdeploy_ssm_verification_not_claimed": true
+}

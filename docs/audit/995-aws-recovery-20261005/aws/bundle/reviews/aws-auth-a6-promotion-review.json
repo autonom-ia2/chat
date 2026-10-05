@@ -1,0 +1,46 @@
+{
+  "reviewed_at": "2026-10-05T22:55:14Z",
+  "reviewer": "independent_audit",
+  "decision": "APPROVED_FOCAL_A6_PROMOTER_NO_BLOCKERS",
+  "source": {
+    "cloud_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/promote-auth-a6.py",
+    "intended_Mac_path": "tmp/approved-1023-20261005/aws/promote-auth-a6.py",
+    "sha256": "3e56e68df186e26fd03c0ed80251ea217251608e0c309208f2fcfdccb1872643",
+    "diff_sha256": "87a27414ff34c66e7c4448bd5669f2351de7058549922d3c468e922dca575709",
+    "diff_baseline": "promote-auth-a4.py; reused promotion body, not a diff against A5",
+    "Mac_provenance": "Author readback of the exact hash confirmed by root. Independent Mac reads timed out; reviewed cloud bytes hash independently matches. No repeated Filesystem call."
+  },
+  "scope": "Static source/diff review only. No promoter execution, new tests, AWS/VPS actions or source mutation.",
+  "targets": [
+    {
+      "target": "ssm_close_diagnostic.py",
+      "candidate": "auth-a6/ssm_close_diagnostic.py",
+      "backup": "ssm_close_diagnostic-reviewed-a5.py",
+      "old_sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "new_sha256": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0"
+    },
+    {
+      "target": "preflight-live-proofs.py",
+      "candidate": "auth-a6/preflight-live-proofs-auth-candidate.py",
+      "backup": "preflight-live-proofs-reviewed-a5.py",
+      "old_sha256": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+      "new_sha256": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8"
+    }
+  ],
+  "checks": [
+    "Both candidate hashes and both active A5 target hashes are checked before durable intent or replacement. Metadata requires regular file, single link and current UID.",
+    "Service d878, wrapper e299, collector161, metadata parser498 and identity provisioner5280 are hash-checked unchanged modules, not promotion targets.",
+    "An existing promotion receipt blocks a fresh invocation. Intent is created exclusively mode0600 and fsynced before any target replacement.",
+    "Existing backups are retained only if their bytes match the old hash. Missing backups are created exclusively with O_EXCL/O_NOFOLLOW, mode0600 and fsync; no backup is overwritten or deleted.",
+    "Each target is rechecked at the old hash with its backup, then a new exclusive stage file is written/fsynced and checked against the new hash before os.replace. Target readback must match the new hash.",
+    "Each completed row is journaled. Caught failure records partial_requires_reconciliation without automatic rollback or replay; process interruption can leave intent/partial state, which still blocks rerun.",
+    "Only these two active files are replaced. Additional writes are their named backups/stages and the A6 promotion receipt. No AWS/VPS calls or live proof invocation is present."
+  ],
+  "limits": [
+    "The two-file promotion is not one atomic transaction and does not implement automatic recovery. Reconciliation must inspect actual target/stage/backup hashes; promoted[] can lag a completed replace if interrupted before its journal update.",
+    "The operation is for the coordinator's serialized local source window. It does not claim compare-and-swap against concurrent writers.",
+    "This review covers the promoter only, not the A6 vocabulary's semantics or live eligibility. auth_binding_released remains false; root coordinates subsequent preflight/C0/live authorization.",
+    "Report is persisted in the permitted review subtree of cloud scratch while the Mac connector is unavailable; no Mac persistence is claimed."
+  ],
+  "findings": []
+}

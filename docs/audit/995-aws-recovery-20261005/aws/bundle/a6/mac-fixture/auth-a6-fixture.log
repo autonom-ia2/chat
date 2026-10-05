@@ -1,0 +1,13 @@
+test_atomic_operators_keep_comparisons_distinct_without_mining_spans (__main__.OrderedTerms) ... ok
+test_contractions_quotes_and_case_preserve_negation (__main__.OrderedTerms) ... ok
+test_order_negation_comparisons_and_swapped_sessions (__main__.OrderedTerms) ... ok
+test_placeholders_require_exact_ids_without_suffix_salvage (__main__.OrderedTerms) ... ok
+test_private_unknown_spans_urls_and_tokens_are_only_other (__main__.OrderedTerms) ... ok
+test_project_close_adds_only_ordered_observation (__main__.OrderedTerms) ... ok
+test_term_limit_late_negation_and_byte_limit_are_explicit (__main__.OrderedTerms) ... ok
+test_unicode_unknown_atoms_do_not_salvage_known_words (__main__.OrderedTerms) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.002s
+
+OK
