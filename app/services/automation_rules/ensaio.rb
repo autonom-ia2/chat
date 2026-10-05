@@ -5,7 +5,8 @@
 # Nenhum `ActionService` é chamado, nenhuma linha é gravada.
 #
 # As conversas são as mais recentes que a pessoa enxerga (a mesma regra de caixa do
-# painel). Do contato sai só o nome — o ensaio não precisa de e-mail nem telefone.
+# painel) e, se a regra é presa a uma caixa, só as daquela caixa. Do contato sai só o
+# nome — o ensaio não precisa de e-mail nem telefone.
 #
 # Condição "mudou de valor" depende do evento que mudou o campo; numa conversa parada
 # não há evento, então essa parte sai do ensaio e volta em `sem_teste`. Quando ela é a
@@ -80,7 +81,21 @@ class AutomationRules::Ensaio
 
   def conversas
     visiveis = Conversations::PermissionFilterService.new(@account.conversations, @user, @account).perform
+    visiveis = visiveis.where(inbox_id: caixas_da_regra) if caixas_da_regra
     visiveis.includes(:contact).order(last_activity_at: :desc).limit(@quantidade)
+  end
+
+  # Regra presa a uma caixa ("caixa igual a", ligada às outras por E) só pode pegar conversa daquela
+  # caixa. Sem isto, as mais recentes da conta seriam quase todas de outra caixa e o ensaio diria
+  # "0 de 10" sem ter olhado nenhuma conversa da regra (#1009). Com OU, a caixa não basta e a busca
+  # continua na conta inteira.
+  def caixas_da_regra
+    return @caixas_da_regra if defined?(@caixas_da_regra)
+
+    condicoes = Array(@rule.conditions)
+    com_ou = condicoes.any? { |condicao| condicao['query_operator'].to_s.casecmp?('or') }
+    caixa = condicoes.find { |condicao| condicao['attribute_key'] == 'inbox_id' && condicao['filter_operator'] == 'equal_to' }
+    @caixas_da_regra = caixa && !com_ou ? Array(caixa['values']) : nil
   end
 
   def ensaiar(regra, conversa)
