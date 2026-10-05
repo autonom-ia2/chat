@@ -79,7 +79,7 @@ module CampaignJourneySmsHelpers
       body = JSON.parse(request.body)
       sent << body
       if failing.include?(body['to'])
-        { status: 400, headers: { 'Content-Type' => 'application/json' }, body: { description: "'to' is invalid" }.to_json }
+        { status: 400, headers: { 'Content-Type' => 'application/json' }, body: { description: "'to' #{body['to']} is not a mobile number" }.to_json }
       else
         { status: 202, headers: { 'Content-Type' => 'application/json' }, body: { id: "bw-#{sent.size}" }.to_json }
       end

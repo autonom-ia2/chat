@@ -6,7 +6,8 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
-  let(:inbox) { journey_twilio_sms_inbox(account) }
+  # Created before the audience: the sms badge is born on only with an SMS inbox connected.
+  let!(:inbox) { journey_twilio_sms_inbox(account) }
   let(:mapping) { { 'name' => 0, 'phone' => 1, 'email' => 2 } }
   let(:content) do
     "Nome,Celular,Email,Vencimento\nAna Souza,11987654321,,10/2026\nBia Lima,,bia@beta.com.br,11/2026\n" \
@@ -127,10 +128,10 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
       .to eq('Ana Souza' => ['skipped', 'falta empresa'], 'Caio Reis' => ['skipped', 'falta empresa, vencimento'])
   end
 
-  it 'records everyone as skipped when the audience phone channel is off at send time' do
+  it 'records everyone as skipped when the audience SMS badge is off at send time' do
     sent = stub_twilio_sms
     campaign = sms_campaign
-    audience.update!(channels: audience.channels.merge('whatsapp' => audience.channels['whatsapp'].merge('enabled' => false)))
+    audience.update!(channels: audience.channels.merge('sms' => audience.channels['sms'].merge('enabled' => false)))
 
     send_sms(campaign)
 
@@ -140,10 +141,21 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
     expect(campaign.reload).to be_completed
   end
 
+  # The SMS badge is its own: WhatsApp off does not stop SMS.
+  it 'sends SMS with the WhatsApp badge of the audience off' do
+    sent = stub_twilio_sms
+    audience.update!(channels: audience.channels.merge('whatsapp' => audience.channels['whatsapp'].merge('enabled' => false)))
+
+    send_sms(sms_campaign(defaults: { 'publico.vencimento' => 'em breve' }))
+
+    expect(sent.size).to eq(2)
+  end
+
   describe 'Bandwidth' do
     let(:inbox) { journey_bandwidth_inbox(account) }
 
-    it 'sends through Bandwidth with the message id as source id, and a refusal fails with a reason' do
+    # Bandwidth's own reason, with the phone masked (SafeLogMessage).
+    it 'sends through Bandwidth with the message id as source id, and a refusal fails with the masked reason' do
       sent = stub_bandwidth_sms(failing: ['+5531987654321'])
       campaign = sms_campaign(defaults: { 'publico.vencimento' => 'em breve' })
 
@@ -152,7 +164,7 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
       expect(sent.pluck('to')).to contain_exactly('+5511987654321', '+5531987654321')
       by_name = recipients(campaign)
       expect([by_name['Ana Souza'].status, by_name['Ana Souza'].source_id]).to eq(%w[sent bw-1])
-      expect([by_name['Caio Reis'].status, by_name['Caio Reis'].error_message]).to eq(['failed', CampaignJourney::SmsSender::NO_ID_REASON])
+      expect([by_name['Caio Reis'].status, by_name['Caio Reis'].error_message]).to eq(['failed', "'to' +<DIGITS> is not a mobile number"])
     end
   end
 
