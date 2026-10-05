@@ -406,11 +406,11 @@
         "RETRY": "Tentar de novo",
         "DIALOG": {
           "TITLE": "Conectar à Meta",
-          "DESCRIPTION": "Cole um token que leia os seus anúncios. Só lemos os nomes; nada muda na sua conta de anúncios.",
+          "DESCRIPTION": "Cole um token de anúncios. Ele lê os nomes das campanhas e envia ao Pixel as vendas que vieram do site; nada muda nos seus anúncios.",
           "STEPS_TITLE": "No Gerenciador de Negócios:",
           "STEP_1": "Abra Configurações do negócio → Usuários → Usuários do sistema. Se não houver nenhum, crie um.",
-          "STEP_2": "Clique em Atribuir ativos e dê ao usuário acesso à sua conta de anúncios. Sem isso, os nomes não aparecem.",
-          "STEP_3": "Clique em Gerar novo token, escolha o app, marque ads_read e, na validade, escolha Nunca.",
+          "STEP_2": "Clique em Atribuir ativos e dê ao usuário acesso à sua conta de anúncios e ao Pixel do site (em Conjuntos de dados). Sem a conta, os nomes não aparecem; sem o Pixel, as vendas não chegam à Meta.",
+          "STEP_3": "Só depois disso, clique em Gerar novo token, escolha o app, marque ads_read e, na validade, escolha Nunca.",
           "STEP_4": "Copie o token e cole aqui.",
           "TOKEN_LABEL": "Token de acesso",
           "TOKEN_PLACEHOLDER": "Cole o token aqui",
@@ -1428,7 +1428,7 @@
       "CREATE": "Criar funil",
       "META_SYNC_PIXEL": "Pixel do site (ID)",
       "META_SYNC_PIXEL_PLACEHOLDER": "Ex.: 1234567890123456",
-      "META_SYNC_PIXEL_HELP": "Vale para leads que chegam por landing page. A conexão do WhatsApp precisa ter permissão nesse Pixel no Gerenciador de Negócios."
+      "META_SYNC_PIXEL_HELP": "Vale para leads que chegam por landing page. As vendas vão pelo token de \"Nomes das campanhas da Meta\" (Campanhas → Links e QR codes), gerado depois de atribuir este Pixel ao usuário do sistema."
     },
     "GOOGLE_SYNC": {
       "TITLE": "Google Ads",

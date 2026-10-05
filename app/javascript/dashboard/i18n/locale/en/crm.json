@@ -406,11 +406,11 @@
         "RETRY": "Try again",
         "DIALOG": {
           "TITLE": "Connect to Meta",
-          "DESCRIPTION": "Paste a token that can read your ads. We only read names; nothing changes in your ad account.",
+          "DESCRIPTION": "Paste an ads token. It reads your campaign names and sends website sales to the Pixel; nothing changes in your ads.",
           "STEPS_TITLE": "In Business Manager:",
           "STEP_1": "Open Business settings → Users → System users. If there is none, create one.",
-          "STEP_2": "Click Assign assets and give the user access to your ad account. Without it, the names never show.",
-          "STEP_3": "Click Generate new token, choose the app, check ads_read and set the expiration to Never.",
+          "STEP_2": "Click Assign assets and give the user access to your ad account and to the website Pixel (under Datasets). Without the ad account the names never show; without the Pixel, sales never reach Meta.",
+          "STEP_3": "Only then click Generate new token, choose the app, check ads_read and set the expiration to Never.",
           "STEP_4": "Copy the token and paste it here.",
           "TOKEN_LABEL": "Access token",
           "TOKEN_PLACEHOLDER": "Paste the token here",
@@ -1428,7 +1428,7 @@
       "CREATE": "Create pipeline",
       "META_SYNC_PIXEL": "Website Pixel (ID)",
       "META_SYNC_PIXEL_PLACEHOLDER": "Example: 1234567890123456",
-      "META_SYNC_PIXEL_HELP": "For leads that arrive through a landing page. The WhatsApp connection needs access to this Pixel in Business Manager."
+      "META_SYNC_PIXEL_HELP": "For leads that arrive through a landing page. Sales go through the \"Meta campaign names\" token (Campaigns → Links and QR codes), generated after assigning this Pixel to the system user."
     },
     "GOOGLE_SYNC": {
       "TITLE": "Google Ads",

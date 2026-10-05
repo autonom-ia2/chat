@@ -115,6 +115,28 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     end
   end
 
+  # #1034: the token that can reach the Pixel is the Meta Ads one (generated after the system
+  # user got the Pixel); the WhatsApp token stays only as a fallback.
+  describe 'which token reaches the Pixel' do
+    it 'uses the active Meta Ads connection token when there is one' do
+      create_meta_ads_connection(account, token: 'EAAGanunciostoken1234567890abcdefPIXEL')
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new)
+        .with(access_token: 'EAAGanunciostoken1234567890abcdefPIXEL', dataset_id: '2164882667623689')
+    end
+
+    it 'falls back to the WhatsApp connection token when the Meta Ads connection is invalid or missing' do
+      create_meta_ads_connection(account, status: 'invalid', token: 'EAAGanunciostoken1234567890abcdefPIXEL')
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new)
+        .with(access_token: channel.provider_config['api_key'], dataset_id: '2164882667623689')
+    end
+  end
+
   context 'when the WhatsApp connection has no token' do
     let(:conversation) { create(:conversation, account: account, inbox: create_crm_inbox(account: account)) }
 

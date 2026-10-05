@@ -87,8 +87,8 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # look for the browser signals the landing page sent with the click. A card that came
   # from a website button but has no signals (no marketing consent, or an inferred click)
   # skips with 'missing_signals' so the reason is visible (CA-3.4); any other card keeps
-  # today's 'missing_ctwa_clid' skip. The event goes to the funnel's Pixel with the
-  # WhatsApp connection token (the same credential, no new secret).
+  # today's 'missing_ctwa_clid' skip. The event goes to the funnel's Pixel with the account's
+  # Meta Ads token when connected (see website_access_token), else the WhatsApp token.
   def deliver_website(row, card, event_id, event_type, activity)
     signals = Crm::MetaCapi::WebsiteSignalResolver.resolve(card)
     return skip_without_signals(row, card) if signals.empty?
@@ -96,7 +96,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     row.assign_attributes(attribution_mode: 'website', ctwa_clid: nil, dataset_id: website_pixel_id(card))
     return skip(row, 'missing_pixel') if row.dataset_id.blank?
 
-    access_token = resolve_credentials(card)[:access_token]
+    access_token = website_access_token(card)
     return skip(row, 'missing_credentials') if access_token.blank?
 
     event_name = Crm::MetaCapi::WebsitePayloadBuilder.canonical_event_name(event_type: event_type, stage_type: row.funnel_stage_type)
@@ -120,6 +120,15 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
               Ctwa::TrackedLinkClick.joins(:tracked_link)
                                     .exists?(account_id: card.account_id, conversation_id: conversation_ids, ctwa_tracked_links: { usage: 'website' })
     skip(row, website ? 'missing_signals' : 'missing_ctwa_clid')
+  end
+
+  # Meta only lets a token reach a Pixel when it was generated after the Pixel was assigned to
+  # its system user; the WhatsApp token predates that and carries WhatsApp scopes only. The
+  # account's Meta Ads token (#1034) is the one marketing generates with the Pixel and the ad
+  # account assigned, so it goes first; the WhatsApp token stays as a fallback.
+  def website_access_token(card)
+    connection = ::Crm::MetaAdsConnection.find_by(account_id: card.account_id, status: 'active')
+    connection&.access_token.presence || resolve_credentials(card)[:access_token]
   end
 
   # Pixel id per funnel, digits only (sanitized on write by the pipelines controller).

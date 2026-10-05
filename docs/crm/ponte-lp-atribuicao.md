@@ -195,10 +195,14 @@ está sendo recusada agora. A tela deve mostrar o bloqueio junto do "último avi
   `negotiation → InitiateCheckout`.
 - Linha do registro: `attribution_mode = 'website'`, `dataset_id = pixel_id`.
 
-Permissão: a conexão do WhatsApp da conta 18 hoje **não** lê o Pixel `2164882667623689`
-(`(#100) Missing Permission`, verificado em 05/10/2026). Antes de ligar, o marketing precisa dar ao usuário de sistema
-da conexão acesso ao Pixel no Gerenciador de Negócios. Sem isso o envio cai em erro com a mensagem da Meta visível no
-card.
+Permissão: a conexão do WhatsApp da conta 18 **não** lê o Pixel `2164882667623689` (`(#100) Missing Permission`,
+verificado em 05/10/2026). A mesma resposta veio de novo depois de o marketing atribuir o Pixel ao usuário do sistema.
+O motivo: a Meta só deixa um token chegar ao Pixel se ele for gerado **depois** dessa atribuição, e o token do WhatsApp
+é anterior e só tem escopos de WhatsApp.
+
+Decisão (#1034): o envio usa o token de anúncios da conta (`Crm::MetaAdsConnection`) quando ele está ativo, e o do
+WhatsApp fica só como reserva. O marketing atribui ao usuário do sistema a conta de anúncios **e** o Pixel, e só depois
+gera esse token. Um token só serve para os nomes das campanhas e para as vendas.
 
 ## 7. Retenção do dado pessoal (LGPD)
 
