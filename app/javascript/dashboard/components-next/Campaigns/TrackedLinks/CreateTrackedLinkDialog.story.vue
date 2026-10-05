@@ -55,6 +55,25 @@ const openWebsiteError = once(async dialog => {
   await type('dialog input[type="text"]', 'LP Seguro Viagem');
   await type('#tracked-link-origins', 'http://placement.com.br');
 });
+const openWebsiteEmpty = once(async dialog => {
+  dialog.open();
+  await tick();
+  document.querySelector('input[value="website"]').click();
+  await tick();
+});
+// What people really do (#1030): paste the whole page link from the browser.
+const openWebsitePasted = once(async dialog => {
+  dialog.open();
+  await tick();
+  document.querySelector('input[value="website"]').click();
+  await tick();
+  await type('dialog input[type="text"]', 'LP Seguro Viagem');
+  await chooseInbox(0);
+  await type(
+    '#tracked-link-origins',
+    'https://placement.com.br/seguro-viagem?utm_source=meta'
+  );
+});
 </script>
 
 <!-- eslint-disable vue/no-undef-components -->
@@ -71,6 +90,18 @@ const openWebsiteError = once(async dialog => {
     <Variant title="Website · origin error">
       <div class="min-h-screen bg-n-background">
         <CreateTrackedLinkDialog :ref="openWebsiteError" :inboxes="inboxes" />
+      </div>
+    </Variant>
+    <Variant title="Website · empty">
+      <div class="flex min-h-screen bg-n-background">
+        <aside class="w-60 shrink-0 bg-n-solid-3" />
+        <CreateTrackedLinkDialog :ref="openWebsiteEmpty" :inboxes="inboxes" />
+      </div>
+    </Variant>
+    <Variant title="Website · pasted page link">
+      <div class="flex min-h-screen bg-n-background">
+        <aside class="w-60 shrink-0 bg-n-solid-3" />
+        <CreateTrackedLinkDialog :ref="openWebsitePasted" :inboxes="inboxes" />
       </div>
     </Variant>
   </Story>

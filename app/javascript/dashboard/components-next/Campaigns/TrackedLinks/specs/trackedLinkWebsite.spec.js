@@ -16,12 +16,13 @@ describe('normalizeOrigin', () => {
       'https://www.placement.com.br:8443',
     ],
     ['http://localhost:3000', 'http://localhost:3000'],
+    // People type or copy http:// out of habit; the live site answers on https.
+    ['http://placement.com.br/seguro-viagem', 'https://placement.com.br'],
   ])('turns %s into %s', (input, expected) => {
     expect(normalizeOrigin(input)).toBe(expected);
   });
 
   it.each([
-    'http://placement.com.br',
     'ftp://placement.com.br',
     'https://placement',
     'https://user:pass@placement.com.br',
@@ -46,8 +47,8 @@ describe('parseAllowedOrigins', () => {
   });
 
   it('flags invalid lines, too many origins and an empty list', () => {
-    expect(parseAllowedOrigins('http://site.com.br').invalid).toEqual([
-      'http://site.com.br',
+    expect(parseAllowedOrigins('minha página').invalid).toEqual([
+      'minha página',
     ]);
     const six = Array.from({ length: 6 }, (_, i) => `https://s${i}.com`);
     expect(parseAllowedOrigins(six.join('\n'))).toMatchObject({

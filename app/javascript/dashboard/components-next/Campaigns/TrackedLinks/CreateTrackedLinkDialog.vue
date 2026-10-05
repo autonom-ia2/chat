@@ -6,6 +6,7 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 import TrackedLinkWebsitePreview from './TrackedLinkWebsitePreview.vue';
+import AllowedOriginsField from './AllowedOriginsField.vue';
 import { parseAllowedOrigins } from './trackedLinkWebsite';
 
 const props = defineProps({
@@ -39,15 +40,6 @@ const inboxName = computed(
   () => props.inboxes.find(inbox => inbox.id === inboxId.value)?.name
 );
 const origins = computed(() => parseAllowedOrigins(originsText.value));
-const originsError = computed(() => {
-  const parsed = origins.value;
-  if (parsed.invalid.length) {
-    return t(`${NS}.ORIGINS_INVALID`, { list: parsed.invalid.join(', ') });
-  }
-  if (parsed.isTooMany) return t(`${NS}.ORIGINS_TOO_MANY`);
-  if (parsed.isEmpty) return t(`${NS}.ORIGINS_REQUIRED`);
-  return '';
-});
 const canCreate = computed(
   () =>
     name.value.trim() &&
@@ -111,7 +103,7 @@ defineExpose({ open, close });
     <dialog
       ref="dialog"
       aria-labelledby="tracked-link-create-title"
-      class="w-[min(64rem,calc(100vw-2rem))] max-h-[92vh] p-0 overflow-y-auto rounded-2xl border border-n-weak bg-n-solid-1 text-n-slate-12 shadow-xl backdrop:bg-black/50"
+      class="w-[min(60rem,calc(100vw-2rem))] max-h-[92vh] p-0 overflow-y-auto rounded-2xl border border-n-weak bg-n-solid-1 text-n-slate-12 shadow-xl backdrop:bg-modal-backdrop-light backdrop:backdrop-blur-[4px] dark:backdrop:bg-modal-backdrop-dark"
       @cancel="cancel"
     >
       <form @submit.prevent="create">
@@ -234,47 +226,14 @@ defineExpose({ open, close });
                 {{ t(`${NS}.DESTINATION_HINT`) }}
               </p>
             </div>
-            <div v-if="isWebsite">
-              <label
-                for="tracked-link-origins"
-                class="block mb-2 text-sm font-medium"
-              >
-                {{ t(`${NS}.ORIGINS_LABEL`) }}
-              </label>
-              <textarea
-                id="tracked-link-origins"
-                v-model="originsText"
-                rows="3"
-                spellcheck="false"
-                autocapitalize="off"
-                :placeholder="t(`${NS}.ORIGINS_PLACEHOLDER`)"
-                :disabled="isSaving"
-                :aria-invalid="originsTouched && !!originsError"
-                aria-describedby="tracked-link-origins-hint"
-                class="w-full rounded-lg border bg-n-solid-2 px-3 py-3 font-mono text-sm text-n-slate-12 focus:ring-2 focus:ring-n-brand focus:outline-none"
-                :class="
-                  originsTouched && originsError
-                    ? 'border-n-ruby-8'
-                    : 'border-n-weak'
-                "
-                @blur="originsTouched = true"
-              />
-              <p
-                id="tracked-link-origins-hint"
-                class="m-0 mt-2 text-xs"
-                :class="
-                  originsTouched && originsError
-                    ? 'text-n-ruby-11'
-                    : 'text-n-slate-11'
-                "
-              >
-                {{
-                  originsTouched && originsError
-                    ? originsError
-                    : t(`${NS}.ORIGINS_HINT`)
-                }}
-              </p>
-            </div>
+            <AllowedOriginsField
+              v-if="isWebsite"
+              id="tracked-link-origins"
+              v-model="originsText"
+              :disabled="isSaving"
+              :touched="originsTouched"
+              @blur="originsTouched = true"
+            />
             <div v-else>
               <label
                 for="tracked-link-message"
@@ -346,7 +305,7 @@ defineExpose({ open, close });
           </aside>
         </div>
         <footer
-          class="flex flex-wrap items-center justify-between gap-3 px-7 py-5 border-t border-n-weak"
+          class="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-n-weak bg-n-solid-1 px-7 py-5"
         >
           <p class="m-0 text-xs text-n-slate-11">
             {{
