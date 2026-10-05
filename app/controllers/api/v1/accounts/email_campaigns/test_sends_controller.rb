@@ -1,26 +1,75 @@
+# Test send (PRD §6.9, §8.9; acceptance D8, L5, L6). Renders with the first recipient as sample and
+# an inert unsubscribe link, never creates a recipient or event (it does not count in the results),
+# and goes out the same way the real send does: the verified domain (SES) or the campaign's inbox
+# (direct_inbox), with the same Reply-To.
+#
+# The test goes only to the logged-in user's own email ("Enviar teste para mim", D8): without
+# `to_email`, or with `to_email` equal to it (case-insensitive). Any other address → 422
+# email_campaign.test_send_only_self.
 class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts::EmailCampaigns::BaseController
   def create
     campaign = EmailCampaign.where(account: Current.account).find(params[:id])
     authorize campaign, :update?
 
-    to_email = params[:to_email].to_s.strip
+    to_email = Current.user.email.to_s.strip
+    return render_unprocessable('email_campaign.test_send_only_self') unless own_address?(to_email)
     return render_unprocessable('email_campaign.invalid_email') unless Devise.email_regexp.match?(to_email)
-    return render_unprocessable('email_campaign.sender_identity_missing') if campaign.sender_identity.blank?
+    return render_unprocessable(missing_sender_code(campaign)) unless campaign.sender_ready?
+    return render json: { error: 'email_campaign.test_send_rate_limited' }, status: :too_many_requests if rate_limited?(campaign)
 
-    renderer = EmailCampaigns::TemplateRenderer.new(sample_recipient(campaign, to_email), inert_unsubscribe: true)
-    message_id = EmailCampaigns::Ses::Sender.new(campaign.sender_identity).deliver(
-      to: to_email,
-      subject: renderer.render(campaign.subject),
-      html_body: inject_preheader(renderer.render(campaign.body_html), renderer.render(campaign.preheader)),
-      reply_to: campaign.reply_to.presence || campaign.sender_identity.from_email.presence,
-      from_email: from_email(campaign)
-    )
-    render json: { message_id: message_id }
+    render json: { message_id: deliver(campaign, to_email), to_email: to_email }
   rescue EmailCampaigns::Ses::Error => e
     render json: { error: e.message }, status: :unprocessable_entity
+  rescue DirectSendFailed
+    render_unprocessable('email_campaign.test_send_failed')
   end
 
   private
+
+  DirectSendFailed = Class.new(StandardError)
+  # #999 review B7: at most this many test sends per user and campaign in a rolling hour.
+  RATE_LIMIT = 10
+  RATE_PERIOD = 1.hour
+
+  def rate_limited?(campaign)
+    key = "email_campaign_test_send:#{Current.user.id}:#{campaign.id}"
+    count = Redis::Alfred.incr(key)
+    Redis::Alfred.expire(key, RATE_PERIOD.to_i) if count == 1
+    count > RATE_LIMIT
+  end
+
+  def deliver(campaign, to_email)
+    renderer = EmailCampaigns::TemplateRenderer.new(sample_recipient(campaign, to_email), inert_unsubscribe: true)
+    return deliver_direct(campaign, to_email, renderer) if campaign.direct_inbox?
+
+    EmailCampaigns::Ses::Sender.new(campaign.sender_identity).deliver(
+      to: to_email,
+      subject: renderer.render(campaign.subject),
+      html_body: inject_preheader(renderer.render(campaign.body_html, html: true), renderer.render(campaign.preheader, html: true)),
+      reply_to: EmailCampaigns::ReplyTo.for(campaign),
+      from_email: from_email(campaign)
+    )
+  end
+
+  # Same rendering as EmailCampaigns::DirectInbox::RecipientSender, through the campaign's inbox.
+  def deliver_direct(campaign, to_email, renderer)
+    EmailCampaigns::DirectInbox::Sender.new(campaign.sender_inbox).deliver(
+      to: to_email, subject: renderer.render(campaign.subject), html_body: renderer.render(campaign.body_html, html: true),
+      from_email: campaign.from_email, reply_to: EmailCampaigns::ReplyTo.for(campaign)
+    )
+  rescue StandardError => e
+    Rails.logger.error("[EmailCampaigns::TestSendsController] direct test send failed campaign=#{campaign.id} #{e.class.name}")
+    raise DirectSendFailed
+  end
+
+  def own_address?(user_email)
+    requested = params[:to_email].to_s.strip
+    requested.blank? || requested.casecmp?(user_email)
+  end
+
+  def missing_sender_code(campaign)
+    campaign.direct_inbox? ? 'email_campaign.sender_inbox_missing' : 'email_campaign.sender_identity_missing'
+  end
 
   # Render with the first real recipient (real custom_data drops) or a fake in-memory one.
   def sample_recipient(campaign, to_email)

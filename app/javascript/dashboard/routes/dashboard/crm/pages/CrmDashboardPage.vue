@@ -59,6 +59,18 @@ const ORIGIN_SOURCES = [
     icon: 'i-lucide-link',
     barClass: 'bg-n-slate-9',
   },
+  {
+    key: 'campaign_whatsapp',
+    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_WHATSAPP',
+    icon: 'i-lucide-send',
+    barClass: 'bg-n-iris-9',
+  },
+  {
+    key: 'campaign_email',
+    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_EMAIL',
+    icon: 'i-lucide-mail',
+    barClass: 'bg-n-brand',
+  },
 ];
 
 const ORIGIN_FALLBACK = {

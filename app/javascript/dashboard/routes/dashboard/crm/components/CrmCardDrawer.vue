@@ -31,6 +31,7 @@ import CrmCardAutoFollowupStatus from './CrmCardAutoFollowupStatus.vue';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
+import OriginSequence from 'dashboard/components-next/CampaignJourney/OriginSequence.vue';
 import CrmCardPill from './CrmCardPill.vue';
 
 const props = defineProps({
@@ -1800,6 +1801,10 @@ useFixedPanelPresence(computed(() => props.show));
                 </template>
               </CrmCardPill>
             </div>
+            <OriginSequence
+              v-if="originPill?.extraCount > 0"
+              :origins="originPill.origins"
+            />
 
             <div class="grid divide-y divide-n-weak text-sm">
               <div

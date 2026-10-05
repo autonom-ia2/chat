@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1218,6 +1218,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
     t.index ["contact_id"], name: "index_campaign_recipients_on_contact_id"
     t.index ["inbox_id"], name: "index_campaign_recipients_on_inbox_id"
     t.index ["source_id"], name: "index_campaign_recipients_on_source_id", unique: true, where: "(source_id IS NOT NULL)"
+  end
+
+  create_table "campaign_reply_codes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campaign_type", null: false
+    t.bigint "campaign_id", null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_reply_codes_on_account_id"
+    t.index ["campaign_type", "campaign_id"], name: "index_campaign_reply_codes_on_campaign_type_and_campaign_id", unique: true
+    t.index ["code"], name: "index_campaign_reply_codes_on_code", unique: true
   end
 
   create_table "campaigns", force: :cascade do |t|
@@ -2522,7 +2534,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
     t.string "preflight_suggestion", limit: 320
     t.datetime "preflight_checked_at"
     t.datetime "preflight_valid_until"
+    t.bigint "contact_id"
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
+    t.index "lower((email)::text), sent_at", name: "idx_email_campaign_recipients_lower_email_sent_at"
+    t.index ["contact_id"], name: "index_email_campaign_recipients_on_contact_id"
     t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
     t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
     t.index ["email_campaign_id", "sent_at"], name: "idx_email_reputation_sent_cohort", where: "(sent_at IS NOT NULL)"
@@ -2590,8 +2605,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
     t.bigint "preflight_cursor", default: 0, null: false
     t.bigint "preflight_ceiling", default: 0, null: false
     t.jsonb "pause_reason", default: {}, null: false
+    t.bigint "reply_to_inbox_id"
     t.index ["account_id", "status", "scheduled_at"], name: "idx_email_campaigns_account_status_scheduled"
     t.index ["account_id"], name: "index_email_campaigns_on_account_id"
+    t.index ["reply_to_inbox_id"], name: "index_email_campaigns_on_reply_to_inbox_id"
     t.index ["sender_identity_id"], name: "index_email_campaigns_on_sender_identity_id"
     t.index ["sender_inbox_id"], name: "index_email_campaigns_on_sender_inbox_id"
   end
@@ -3458,6 +3475,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "inboxes", on_delete: :cascade
+  add_foreign_key "campaign_reply_codes", "accounts", on_delete: :cascade
   add_foreign_key "contacts", "users", column: "opted_out_by_id", on_delete: :nullify, validate: false
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
@@ -3540,10 +3558,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   add_foreign_key "email_campaign_import_issues", "email_campaign_imports", on_delete: :cascade
   add_foreign_key "email_campaign_import_issues", "email_campaigns", on_delete: :cascade
   add_foreign_key "email_campaign_imports", "email_campaigns"
+  add_foreign_key "email_campaign_recipients", "contacts", on_delete: :nullify, validate: false
   add_foreign_key "email_campaign_recipients", "email_campaigns"
   add_foreign_key "email_campaign_templates", "accounts"
   add_foreign_key "email_campaigns", "accounts"
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"
+  add_foreign_key "email_campaigns", "inboxes", column: "reply_to_inbox_id", on_delete: :nullify, validate: false
   add_foreign_key "email_campaigns", "inboxes", column: "sender_inbox_id", on_delete: :nullify
   add_foreign_key "email_events", "email_campaign_recipients", column: "recipient_id"
   add_foreign_key "email_protection_maintenance_runs", "accounts", on_delete: :cascade

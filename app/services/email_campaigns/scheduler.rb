@@ -30,8 +30,10 @@ module EmailCampaigns
       end
       ActiveRecord.after_all_transactions_commit { EmailCampaigns::DeliveryJob.perform_later(campaign.id) } if enqueue && Config.enabled?
     rescue StandardError => e
+      safe_message = EmailCampaigns::SafeErrorMessage.call(e.message)
+      Rails.logger.error("[EmailCampaigns::Scheduler] campaign=#{campaign.id} #{e.class.name}: #{safe_message}")
       campaign.with_delivery_lock do
-        campaign.update(status: :failed, last_error: e.message.to_s.truncate(500)) if campaign.scheduled? || campaign.sending?
+        campaign.update(status: :failed, last_error: safe_message) if campaign.scheduled? || campaign.sending?
       end
     end
   end
