@@ -14670,7 +14670,7 @@
     "modelo": "EmailCampaign",
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:55",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:66",
       "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:11"
     ],
     "sem_corpo": false
