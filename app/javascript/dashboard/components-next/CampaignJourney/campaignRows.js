@@ -1,14 +1,11 @@
 // One list for every campaign channel (#993, PRD §6.1). Read-only aggregation of the
 // stores that already exist: Chatwoot campaigns (WhatsApp Oficial, SMS, Chat ao vivo),
-// WhatsApp API campaigns and e-mail campaigns. Each row keeps the route of the page
-// that manages it today, so nothing about the old flows changes.
+// WhatsApp API campaigns and e-mail campaigns. Each row opens the Resultado of its campaign
+// (#1007); the old pages stay reachable at their own addresses.
 import { CAMPAIGN_TYPES } from 'shared/constants/campaign';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import {
-  CAMPAIGN_CHANNELS,
-  CHANNEL_ORDER,
-  LEGACY_QUERY,
-} from './campaignChannels';
+import { CAMPAIGN_CHANNELS, CHANNEL_ORDER } from './campaignChannels';
+import { resultRoute } from 'dashboard/components-next/CampaignResult/resultMetrics';
 
 export const JOURNEY_STATUSES = {
   DRAFT: 'draft',
@@ -84,18 +81,13 @@ const chatwootStatus = (campaign, channel) => {
     : JOURNEY_STATUSES.SCHEDULED;
 };
 
-// The old channel pages are still where these campaigns are handled until each campaign
-// gets its own Resultado (#1007). With the journey on, their addresses redirect to this
-// list (PRD A3); `legacy=1` marks the visit as coming from here so it opens the old page.
-const legacyPage = name => ({ name, query: { [LEGACY_QUERY]: '1' } });
-
+// "Abrir" opens the Resultado of the campaign (#1007). Chat ao vivo has no list to measure, so
+// it opens its own journey page, where it is edited and paused (#1008).
 const CHATWOOT_ROUTES = {
-  [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: campaign => ({
-    name: 'campaigns_whatsapp_analytics',
-    params: { campaignId: campaign.id },
-  }),
-  [CAMPAIGN_CHANNELS.SMS]: () => legacyPage('campaigns_sms_index'),
-  // #1008: live chat messages are edited and paused in their own journey page.
+  [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: campaign =>
+    resultRoute(CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL, campaign.id),
+  [CAMPAIGN_CHANNELS.SMS]: campaign =>
+    resultRoute(CAMPAIGN_CHANNELS.SMS, campaign.id),
   [CAMPAIGN_CHANNELS.LIVE_CHAT]: campaign => ({
     name: 'campaigns_journey_live_chat_edit',
     params: { campaignId: campaign.id },
@@ -129,7 +121,7 @@ const fromWhatsappApiCampaign = campaign => ({
   sortTime: toTime(campaign.scheduled_at) || toTime(campaign.created_at),
   sent: campaign.sent_count ?? null,
   total: campaign.recipients_count ?? null,
-  route: legacyPage('campaigns_whatsapp_api_index'),
+  route: resultRoute(CAMPAIGN_CHANNELS.WHATSAPP_API, campaign.id),
 });
 
 const fromEmailCampaign = campaign => {
@@ -144,7 +136,9 @@ const fromEmailCampaign = campaign => {
     sortTime: when || toTime(campaign.updated_at),
     sent: campaign.sent_count ?? null,
     total: campaign.recipients_count ?? null,
-    route: legacyPage('campaigns_email_index'),
+    route: resultRoute(CAMPAIGN_CHANNELS.EMAIL, campaign.id),
+    // The e-mail actions of the row (L8, #1007) read the campaign itself.
+    source: campaign,
   };
 };
 

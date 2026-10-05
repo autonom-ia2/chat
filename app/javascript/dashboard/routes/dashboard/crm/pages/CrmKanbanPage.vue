@@ -10,6 +10,7 @@ import { useCrmPermissions } from '../composables/useCrmPermissions';
 import { declararContexto } from 'dashboard/composables/useContextoDaTela';
 import crmMeetingsAPI from 'dashboard/api/crmMeetings';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
+import { campaignSourceIdsFromQuery } from 'dashboard/components-next/CampaignResult/resultMetrics';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CompanyAPI from 'dashboard/api/companies';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
@@ -1936,6 +1937,12 @@ useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, handleRealtimeConnected);
 useEmitter(BUS_EVENTS.CRM_BOARD_REFETCH, handleServerFilterRefetch);
 
 onMounted(async () => {
+  // "Ver no CRM" of a campaign result (#1007) opens the board filtered by that campaign mark.
+  const campaignSourceIds = campaignSourceIdsFromQuery(route.query);
+  if (campaignSourceIds.length) {
+    filters.value = { ...filters.value, campaignSourceIds };
+    await store.dispatch('crmKanban/setFilters', filters.value);
+  }
   await refreshData();
   // Seed the per-pipeline column layout for the resolved initial pipeline.
   if (currentPipelineId.value) {

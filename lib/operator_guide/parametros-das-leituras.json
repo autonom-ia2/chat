@@ -381,6 +381,31 @@
     "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
     "parametros": []
   },
+  "campaign_journey/overview": {
+    "controller": "api/v1/accounts/campaign_journey/overviews#show",
+    "parametros": [
+      "channel",
+      "days",
+      "page"
+    ]
+  },
+  "campaign_journey/results/:channel/:id": {
+    "controller": "api/v1/accounts/campaign_journey/results#show",
+    "parametros": []
+  },
+  "campaign_journey/results/:channel/:id/export": {
+    "controller": "api/v1/accounts/campaign_journey/results#export",
+    "parametros": [
+      "status"
+    ]
+  },
+  "campaign_journey/results/:channel/:id/recipients": {
+    "controller": "api/v1/accounts/campaign_journey/results#recipients",
+    "parametros": [
+      "page",
+      "status"
+    ]
+  },
   "campaigns": {
     "controller": "api/v1/accounts/campaigns#index",
     "parametros": []
