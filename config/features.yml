@@ -294,3 +294,8 @@
   display_name: Relationships navigation
   enabled: false
   column: feature_flags_ext_1
+
+- name: instagram_assisted_onboarding
+  display_name: Instagram Assisted Onboarding
+  enabled: true
+  column: feature_flags_ext_1

@@ -14,12 +14,18 @@ module Autonomia::Guide::Rotas
   DENTRO_DA_CONTA = "#{PREFIXO}:account_id/".freeze
   A_CONTA = "#{PREFIXO}:id".freeze
   CONTA = 'conta'.freeze
+  # As rotas do próprio Guia (conversa, memória, pedido) ficam fora do alcance
+  # dele (D3, #933): pela API ele conseguia apagar a própria conversa.
+  DO_PROPRIO_GUIA = 'autonomia/guide'.freeze
 
   module_function
 
   # O recurso de uma rota da API, ou nil quando ela não é da conta.
   def recurso(caminho)
-    return caminho.delete_prefix(DENTRO_DA_CONTA).presence if caminho.start_with?(DENTRO_DA_CONTA)
+    if caminho.start_with?(DENTRO_DA_CONTA)
+      recurso = caminho.delete_prefix(DENTRO_DA_CONTA)
+      return recurso.start_with?(DO_PROPRIO_GUIA) ? nil : recurso.presence
+    end
     return CONTA if caminho == A_CONTA
     return "#{CONTA}/#{caminho.delete_prefix("#{A_CONTA}/")}" if caminho.start_with?("#{A_CONTA}/")
 

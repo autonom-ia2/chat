@@ -2156,6 +2156,26 @@
     "INSERTED": "Inserido na resposta."
   },
   "AUTONOMIA_GUIDE": {
+    "AVISOS": {
+      "LAUNCHER_LABEL": "Pergunte ao Guia, {count} aviso novo | Pergunte ao Guia, {count} avisos novos",
+      "SELO": "Aviso do Guia"
+    },
+    "TELA": {
+      "SELECTED": {
+        "CARDS": "Vendo: {count} card selecionado | Vendo: {count} cards selecionados",
+        "CONVERSAS": "Vendo: {count} conversa selecionada | Vendo: {count} conversas selecionadas",
+        "CONTATOS": "Vendo: {count} contato selecionado | Vendo: {count} contatos selecionados",
+        "OUTROS": "Vendo: {count} item selecionado | Vendo: {count} itens selecionados"
+      },
+      "OPEN": {
+        "CARDS": "Vendo: o card aberto",
+        "CONVERSAS": "Vendo: a conversa aberta",
+        "CONTATOS": "Vendo: o contato aberto",
+        "OUTROS": "Vendo: o registro aberto"
+      },
+      "REMOVE": "Perguntar sem usar o que está na tela",
+      "REMOVED": "A próxima pergunta vai sem o que está na tela."
+    },
     "TITLE": "Guia da Plataforma",
     "LAUNCHER": "Guia da Plataforma",
     "THINKING": "Pensando…",
@@ -2203,6 +2223,129 @@
       "LOADING": "Carregando o que eu fiz…",
       "LOAD_FAILED": "Não consegui carregar o que eu fiz. Tente de novo em instantes.",
       "EMPTY": "Nada feito pelo Guia nos últimos 5 dias."
+    },
+    "HISTORY": {
+      "TITLE": "Histórico",
+      "TAB_CONVERSAS": "Conversas",
+      "LOADING": "Carregando suas conversas…",
+      "LOAD_FAILED": "Não consegui carregar suas conversas. Tente de novo em instantes.",
+      "RETRY": "Tentar de novo",
+      "EMPTY_TITLE": "Nenhuma conversa ainda",
+      "EMPTY": "Suas conversas com o Guia ficam guardadas aqui até você apagar.",
+      "KEPT": "Ficam guardadas até você apagar.",
+      "NO_TITLE": "Conversa sem título",
+      "DELETE": "Apagar conversa",
+      "DELETE_NAMED": "Apagar a conversa {titulo}",
+      "MORE": "Ver mais conversas",
+      "CONFIRM_TITLE": "Apagar esta conversa?",
+      "CONFIRM_TEXT": "Não dá para desfazer.",
+      "CONFIRM": "Apagar",
+      "KEEP": "Manter",
+      "DELETE_FAILED": "Não consegui apagar a conversa. Tente de novo.",
+      "OPEN_FAILED": "Não consegui abrir esta conversa. Tente de novo.",
+      "OPENING": "Abrindo sua conversa…",
+      "REOPEN_FAILED": "Não consegui abrir sua última conversa. Você pode começar outra.",
+      "START_NEW": "Começar outra conversa"
+    },
+    "MEMORY": {
+      "TITLE": "O que eu sei",
+      "KEPT": "Isto é o que eu lembro para te ajudar. Você pode corrigir ou apagar.",
+      "LOADING": "Carregando o que eu sei…",
+      "LOAD_FAILED": "Não consegui carregar o que eu sei. Confira a internet e tente de novo.",
+      "RETRY": "Tentar de novo",
+      "ABOUT_YOU": "Sobre você",
+      "ABOUT_COMPANY": "Sobre a corretora",
+      "EMPTY_YOU_TITLE": "Ainda não anotei nada sobre você",
+      "EMPTY_COMPANY_TITLE": "Ainda não anotei nada sobre a corretora",
+      "EMPTY_TEXT": "Diga \"lembra que…\" e eu anoto.",
+      "EXAMPLE_YOU_1": "Lembra que eu prefiro respostas curtas",
+      "EXAMPLE_YOU_2": "Lembra que pode me chamar pelo primeiro nome",
+      "EXAMPLE_COMPANY_1": "Lembra que relatório aqui é sempre do mês corrente",
+      "EXAMPLE_COMPANY_2": "Lembra que a gente chama o funil principal de funil de vendas",
+      "ONLY_ADMIN": "Só quem administra a conta muda o que vale para a corretora.",
+      "TAUGHT_BY": "Quem ensinou: {nome}",
+      "EDIT": "Corrigir",
+      "EDIT_NAMED": "Corrigir: {texto}",
+      "EDIT_LABEL": "O que eu devo lembrar",
+      "SAVE": "Salvar",
+      "CANCEL": "Cancelar",
+      "SAVED": "Pronto, corrigi.",
+      "SAVE_FAILED": "Não consegui salvar. Escreva até 200 letras e tente de novo.",
+      "DELETE": "Apagar",
+      "DELETE_NAMED": "Apagar: {texto}",
+      "CONFIRM_TITLE": "Esquecer isto?",
+      "CONFIRM_TEXT": "Eu paro de lembrar. Não dá para desfazer.",
+      "CONFIRM": "Esquecer",
+      "KEEP": "Manter",
+      "FORGOTTEN": "Esqueci.",
+      "DELETE_FAILED": "Não consegui esquecer agora. Tente de novo.",
+      "NOTED": "Anotei: {texto}",
+      "FORGET": "Esquecer",
+      "FORGET_NAMED": "Esquecer: {texto}"
+    },
+    "TASK": {
+      "COST_AND_TIME": "{custo} · {tempo}",
+      "LOADING": "Carregando o trabalho…",
+      "LOAD_FAILED": "Não consegui carregar este trabalho. Confira a internet e tente de novo.",
+      "RETRY": "Tentar de novo",
+      "SAMPLE_TITLE": "Antes de começar, veja alguns exemplos",
+      "SAMPLE_WHAT": "{descricao}: vou mudar {total} registros, aos poucos.",
+      "SAMPLE_EMPTY": "Não tenho exemplo para mostrar.",
+      "SAMPLE_SKIPPED": "Este eu deixo como está: {motivo}",
+      "BEFORE": "Antes:",
+      "AFTER": "Depois:",
+      "COST": "Custo estimado com IA: {valor}",
+      "NO_COST": "Sem custo de IA",
+      "TIME": "leva uns {minutos} minutos",
+      "TIME_SHORT": "leva menos de 1 minuto",
+      "JEV": "Vai usar {usa} das {restam} classificações que restam neste mês.",
+      "START": "Começar",
+      "NOT_NOW": "Agora não",
+      "CHECK_TITLE": "Parei depois dos primeiros {n} para você conferir.",
+      "CHECK_WHAT": "Isto foi o que mudou até aqui:",
+      "CHECK_TABLE": "{n} {nome}",
+      "CHECK_NOTHING": "Nada mudou ainda.",
+      "CHECK_JOBS": "A plataforma ainda vai fazer {n} coisas por causa disso (automações e integrações).",
+      "CONTINUE": "Seguir",
+      "CANCEL": "Cancelar",
+      "QUEUED": "Na fila. Começo em instantes.",
+      "PROGRESS": "{feitos} de {total}",
+      "PROGRESS_LABEL": "Andamento do trabalho",
+      "PAUSE": "Pausar",
+      "PAUSED": "Parado em {feitos} de {total}.",
+      "RESUME": "Continuar",
+      "UNDOING": "Desfazendo… parte {feitos} de {total}.",
+      "CANCELED_BEFORE": "Tudo bem, não mudei nada.",
+      "REPORT_TITLE": {
+        "concluida": "Trabalho feito",
+        "cancelada": "Trabalho cancelado",
+        "falhou": "Trabalho parado",
+        "desfeita": "Trabalho desfeito"
+      },
+      "DONE_COUNT": "{n} de {total} feitos",
+      "NOT_DONE": {
+        "pulado": "{n} deixados como estavam: {motivo}",
+        "falhou": "{n} não deram certo: {motivo}"
+      },
+      "UNDONE": "Desfeito. {n} mudanças voltaram a ser como eram.",
+      "UNDO_ALL": "Desfazer tudo",
+      "ACTION_FAILED": "Não consegui agora. Tente de novo em instantes.",
+      "SKIP": {
+        "nao_encontrado": "não encontrei mais o registro",
+        "fora_da_classificacao": "pela classificação, não precisa",
+        "certeza_baixa": "fiquei em dúvida, então não mexi",
+        "jev_falhou": "não consegui classificar",
+        "sem_valor_gerado": "não consegui escrever o valor novo"
+      },
+      "TABLES": {
+        "contacts": "contatos",
+        "conversations": "conversas",
+        "crm_cards": "cards do funil",
+        "labels": "etiquetas",
+        "taggings": "etiquetas aplicadas",
+        "companies": "empresas",
+        "messages": "mensagens"
+      }
     },
     "A11Y": {
       "PANEL": "Guia da Plataforma",
@@ -2253,6 +2396,215 @@
       "WAITING": "Áudio pronto. Ele vai assim que o Guia terminar de responder.",
       "FINISH_FIRST": "Envie ou apague a gravação antes de mandar outra mensagem.",
       "TIME": "{atual} / {total}"
+    }
+  },
+  "AUTOMACOES": {
+    "MENU": "Automações",
+    "LISTA": {
+      "TITULO": "Automações",
+      "SUBTITULO": "O que a plataforma faz sozinha por você.",
+      "NOVA": "Nova automação",
+      "CARREGANDO": "Carregando suas automações",
+      "ERRO": "Não consegui carregar suas automações. Confira a internet e tente de novo.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "VAZIO_TITULO": "Ou comece por uma pronta",
+      "VAZIO_TEXTO": "As mais usadas no atendimento. Toque numa delas e confira antes de ligar.",
+      "SELO_GUIA": "Montada pelo Guia",
+      "LIGADA": "Ligada",
+      "DESLIGADA": "Desligada",
+      "LIGOU": "Automação ligada. Ela já vale para as próximas conversas.",
+      "DESLIGOU": "Automação desligada. Nada mais acontece até você ligar de novo.",
+      "FALHA_TROCA": "Não consegui mudar agora. Tente de novo.",
+      "ABRIR": "Abrir a automação {nome}",
+      "MAIS_ACOES": "e mais {n}",
+      "INTERRUPTOR": "Ligar ou desligar {nome}",
+      "CONTAGEM_LIGADAS": "Nenhuma ligada | {n} ligada | {n} ligadas",
+      "CONTAGEM_DESLIGADAS": "Nenhuma desligada | {n} desligada | {n} desligadas",
+      "PREFERE_MANUAL": "Prefere montar peça por peça?",
+      "USAR_MANUAL": "Usar o modo manual"
+    },
+    "MODELOS": {
+      "TITULO": "Modelos prontos",
+      "BOAS_VINDAS": {
+        "TITULO": "Avisar que já vamos responder",
+        "TEXTO": "Quem chama pela primeira vez não fica sem resposta.",
+        "PEDIDO": "Quero uma automação: quando uma conversa nova começar, mandar uma mensagem de boas-vindas dizendo que já vamos responder.",
+        "QUANDO": "Chega uma conversa nova",
+        "FAZ": "Manda “Já vamos te responder”"
+      },
+      "AGRADECER": {
+        "TITULO": "Agradecer ao encerrar",
+        "TEXTO": "O cliente recebe um obrigado quando o atendimento termina.",
+        "PEDIDO": "Quero uma automação: quando a conversa for resolvida, mandar uma mensagem agradecendo o contato.",
+        "QUANDO": "O atendimento é encerrado",
+        "FAZ": "Manda um obrigado ao cliente"
+      },
+      "USAR": "Usar esta",
+      "ROTULO_QUANDO": "Quando",
+      "ROTULO_FAZ": "Faz",
+      "DIVIDIR_LEADS": {
+        "TITULO": "Dividir os clientes entre o time",
+        "TEXTO": "Cada conversa nova já chega com alguém responsável.",
+        "QUANDO": "Chega uma conversa nova",
+        "FAZ": "Passa para alguém do time, em rodízio",
+        "PEDIDO": "Quero que cada conversa nova já caia para alguém do time, em rodízio entre quem está online."
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Responder fora do horário",
+        "TEXTO": "À noite e no fim de semana, o cliente sabe quando voltamos.",
+        "QUANDO": "Chega mensagem fora do expediente",
+        "FAZ": "Avisa o horário de atendimento",
+        "PEDIDO": "Quero que quem mandar mensagem fora do nosso horário de atendimento receba um aviso dizendo quando voltamos."
+      },
+      "RECLAMACAO": {
+        "TITULO": "Passar reclamações para quem resolve",
+        "TEXTO": "Reclamação vai direto para o time certo, já com etiqueta.",
+        "QUANDO": "O cliente faz uma reclamação",
+        "FAZ": "Etiqueta e passa para o time certo",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente com uma reclamação, colocar a etiqueta reclamação e passar a conversa para o time que resolve."
+      },
+      "ORCAMENTO": {
+        "TITULO": "Marcar quem pede orçamento",
+        "TEXTO": "Quem pede preço ou orçamento ganha etiqueta e não se perde na fila.",
+        "QUANDO": "O cliente pede preço ou orçamento",
+        "FAZ": "Coloca a etiqueta orçamento",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo preço ou orçamento, colocar a etiqueta orçamento na conversa."
+      }
+    },
+    "CONVERSA": {
+      "TITULO_NOVA": "Nova automação",
+      "TITULO_EDITAR": "Automação",
+      "VOLTAR": "Voltar para Automações",
+      "INTRO": "Conte com suas palavras o que você quer que aconteça. O Guia monta a automação, e ela fica desligada até você ligar.",
+      "GUIA_FORA": "O Guia não está ligado nesta conta. Você ainda pode montar a automação no modo manual.",
+      "MODO_MANUAL": "Editar no modo manual",
+      "MONTAR_MANUAL": "Prefiro montar no modo manual",
+      "CARREGANDO": "Carregando a automação",
+      "ERRO": "Não encontrei esta automação. Ela pode ter sido apagada.",
+      "LIGAR": "Ligar automação",
+      "DESLIGAR": "Desligar",
+      "LIGADA_AVISO": "Já está valendo para as próximas conversas.",
+      "DESLIGADA_AVISO": "Ela só começa a valer quando você ligar. Dá para desligar quando quiser.",
+      "SO_LEITURA": "Você pode ver e testar esta automação. Ligar e mudar fica com quem administra.",
+      "INTRO_GUIA": "Me conte o que você quer automatizar, ou comece por um modelo.",
+      "GUIA_NOME": "Guia",
+      "GUIA_SUBTITULO": "Monta com você. Nada liga sem você mandar.",
+      "LIGADA_TITULO": "Ligada!"
+    },
+    "RESUMO": {
+      "TITULO": "Como ela vai funcionar",
+      "QUANDO": "Quando",
+      "SE": "Só se",
+      "ENTAO": "Faz",
+      "SEM_CONDICAO": "Em toda conversa",
+      "VAZIO": "Conte ao Guia o que você quer. Ele preenche estes três passos aqui.",
+      "LIGADA": "Ligada",
+      "DESLIGADA": "Desligada, esperando você",
+      "NOME_EXEMPLO": "Carla",
+      "PREVIA": "Assim o cliente vê a mensagem.",
+      "MANDA_MENSAGEM": "Manda esta mensagem ao cliente"
+    },
+    "ENSAIO": {
+      "TITULO": "Veja o que teria acontecido",
+      "BOTAO": "Testar com casos reais",
+      "EXPLICA": "Veja o que ela faria nas conversas mais recentes. Nada é enviado nem alterado.",
+      "TESTANDO": "Testando nas conversas recentes",
+      "RESUMO": "de {total} conversas recentes seriam afetadas",
+      "SEM_CONVERSA": "Ainda não há conversas para testar.",
+      "CASARIA": "Seria afetada",
+      "NAO_CASARIA": "Não seria afetada",
+      "FARIA": "Faria: {acoes}",
+      "CONTATO_SEM_NOME": "Contato sem nome",
+      "SEM_TESTE": "A parte que depende de algo mudar na hora ({partes}) não entra no teste.",
+      "NAO_TESTAVEL": "Esta automação só age quando algo muda na hora ({partes}). Isso não dá para testar em conversas que já aconteceram: ligue e acompanhe as primeiras vezes.",
+      "ERRO": "O teste não respondeu agora. Tente de novo.",
+      "ABRIR_CONVERSA": "Abrir a conversa",
+      "DEPENDE_DO_DECISOR": "Os passos depois do Decisor ({acoes}) dependem da resposta dele, e o teste não pergunta ao Decisor.",
+      "DE_NOVO": "Testar de novo"
+    },
+    "QUANDO": {
+      "MESSAGE_CREATED": "Quando chega uma mensagem",
+      "CONVERSATION_CREATED": "Quando uma conversa nova começa",
+      "CONVERSATION_UPDATED": "Quando uma conversa muda",
+      "CONVERSATION_RESOLVED": "Quando uma conversa é resolvida",
+      "CONVERSATION_OPENED": "Quando uma conversa é reaberta",
+      "DESCONHECIDO": "Quando algo acontece na conversa"
+    },
+    "ESPERA_MINUTOS": "e passam {n} minutos",
+    "ESPERA_HORAS": "e passam {n} horas",
+    "OPERADOR": {
+      "equal_to": "é",
+      "not_equal_to": "não é",
+      "contains": "contém",
+      "does_not_contain": "não contém",
+      "is_present": "está preenchido",
+      "is_not_present": "está vazio",
+      "is_greater_than": "é maior que",
+      "is_less_than": "é menor que",
+      "days_before": "é daqui a",
+      "starts_with": "começa com"
+    },
+    "MUDOU": "{atributo} muda de {de} para {para}",
+    "LIGA": {
+      "AND": "e",
+      "OR": "ou"
+    },
+    "OU": "ou",
+    "STATUS": {
+      "OPEN": "aberta",
+      "RESOLVED": "resolvida",
+      "PENDING": "pendente",
+      "SNOOZED": "adiada"
+    },
+    "SIM": "sim",
+    "NAO": "não",
+    "NUMERO": "nº {id}",
+    "ACAO_DESCONHECIDA": "um passo que esta tela ainda não sabe descrever",
+    "DECISOR": {
+      "NOME_DO_PASSO": "Perguntar ao Decisor",
+      "PASSO": "Pergunta ao Decisor {decisor}: segue se a resposta for {resposta}",
+      "NUMERO": "#{id}"
+    },
+    "FRASE": "{quando}, se {condicoes} → {acoes}",
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}",
+    "HEROI": {
+      "TITULO": "O que você quer que aconteça sozinho?",
+      "TEXTO": "Escreva como se falasse com um colega. O Guia monta tudo, mostra o que vai acontecer e só liga quando você mandar.",
+      "EXEMPLO": "Ex.: quando um cliente pedir orçamento, avisar o time de vendas",
+      "MONTAR": "Montar com o Guia",
+      "IDEIAS_ROTULO": "Ideias:",
+      "IDEIAS": {
+        "FORA_DO_HORARIO": "Responder quem chama fora do horário",
+        "RECLAMACAO": "Avisar o time quando chegar uma reclamação",
+        "ORCAMENTO": "Marcar quem pede orçamento"
+      },
+      "FALAR": "Falar em vez de escrever",
+      "ANEXAR": "Juntar print ou arquivo",
+      "REMOVER": "Tirar {nome}",
+      "DICA_ANEXO": "Dica: cole um print (Ctrl+V) ou arraste um arquivo para mostrar o que você quer."
+    },
+    "SUGESTAO": {
+      "ROTULO": "O Guia notou",
+      "TEXTO": "{n} das {total} conversas abertas da caixa {caixa} estão sem responsável. Quer que cada conversa nova já caia para alguém do time?",
+      "ACEITAR": "Ver como ficaria",
+      "AGORA_NAO": "Agora não",
+      "PEDIDO": "Quero que cada conversa nova da caixa {caixa} já caia para alguém do time, em rodízio entre quem está online."
+    },
+    "ETAPAS": {
+      "ROTULO": "Etapas",
+      "CONTE": "Conte",
+      "CONFIRA": "Confira",
+      "LIGUE": "Ligue"
+    },
+    "VARIAVEL_NOME": "[nome do cliente]",
+    "RESPOSTAS": {
+      "OTIMA": "Está ótima",
+      "CURTA": "Deixa mais curta",
+      "CURTA_PEDIDO": "Deixa a mensagem mais curta.",
+      "ESCREVER": "Quero escrever eu",
+      "ESCREVER_PEDIDO": "Quero escrever a mensagem eu mesmo.",
+      "MUDAR": "Quero mudar algo",
+      "MUDAR_PEDIDO": "Quero mudar uma coisa nesta automação."
     }
   }
 }

@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
@@ -8,19 +8,32 @@ import {
   motivoUtilizavel,
 } from 'dashboard/store/modules/autonomiaGuide';
 import AutonomiaGuideContainer from '../AutonomiaGuideContainer.vue';
+import { declararContexto } from 'dashboard/composables/useContextoDaTela';
+import {
+  useGuiaPedido,
+  usePedidoPendente,
+} from 'dashboard/composables/useGuiaPedido';
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: key => key }) }));
 // Espião estável: `useRouter()` roda de novo a cada teste, e um `vi.fn()`
 // novo a cada chamada não deixaria como afirmar QUAL rota o clique pediu.
-const { routerPush, rotaAtual } = vi.hoisted(() => ({
-  routerPush: vi.fn(),
-  rotaAtual: { name: 'home' },
-}));
+const { routerPush, routerReplace, rotaAtual, atualizarUI } = vi.hoisted(
+  () => ({
+    routerPush: vi.fn(),
+    routerReplace: vi.fn(),
+    rotaAtual: { name: 'home' },
+    atualizarUI: vi.fn(),
+  })
+);
 vi.mock('vue-router', () => ({
   useRoute: () => rotaAtual,
   // Rota real do registro do Guia (ex.: 'labels_list'): resolve de verdade, para os testes de
   // navegação (#636) poderem afirmar que o clique leva ao alvo certo.
-  useRouter: () => ({ resolve: () => ({ matched: [{}] }), push: routerPush }),
+  useRouter: () => ({
+    resolve: () => ({ matched: [{}] }),
+    push: routerPush,
+    replace: routerReplace,
+  }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/useAccount', () => ({
@@ -31,15 +44,20 @@ vi.mock('dashboard/composables/useAccount', () => ({
 vi.mock('dashboard/composables/useUISettings', () => ({
   useUISettings: () => ({
     uiSettings: ref({ is_autonomia_guide_panel_open: true }),
-    updateUISettings: vi.fn(),
+    updateUISettings: atualizarUI,
   }),
 }));
 // A conta aberta: os testes de troca de conta mudam o valor.
 let mockContaAtual;
+// O Guia ligado na conta: o canal do Guia (#977) espera ele ligar.
+let mockGuiaLigado;
 vi.mock('dashboard/composables/store', () => ({
   useMapGetter: getter => {
     if (getter === 'accounts/getAccount') {
-      return ref(() => ({ autonomia_guide_available: true }));
+      mockGuiaLigado = mockGuiaLigado || ref(true);
+      return ref(() => ({
+        autonomia_guide_available: mockGuiaLigado.value,
+      }));
     }
     if (getter === 'getCurrentAccountId') {
       mockContaAtual = mockContaAtual || ref(1);
@@ -61,6 +79,18 @@ vi.mock('dashboard/api/autonomiaGuide', () => ({
     executarAcao: vi.fn(),
     enviarArquivo: vi.fn(),
     transcrever: vi.fn(),
+    // #861 — sem conversa guardada, a não ser no teste que diz o contrário.
+    conversaAtual: vi.fn(() => Promise.resolve({ data: {} })),
+    conversa: vi.fn(),
+    conversas: vi.fn(() => Promise.resolve({ data: { conversas: [] } })),
+    apagarConversa: vi.fn(),
+    // #933 — o que o Guia lembra.
+    memorias: vi.fn(() =>
+      Promise.resolve({
+        data: { pessoais: [], corretora: [], pode_editar_corretora: true },
+      })
+    ),
+    apagarMemoria: vi.fn(() => Promise.resolve({})),
   },
 }));
 
@@ -410,6 +440,73 @@ describe('AutonomiaGuideContainer', () => {
     expect(wrapper.text()).toContain('Este funil não existe mais.');
   });
 
+  // Revisão da #861: a ação já foi feita em outra aba. O servidor recusa e
+  // devolve o resultado guardado; o cartão mostra feita, sem botões.
+  it('marks the action as done when the server says it was already done', async () => {
+    comAcaoProposta();
+    AutonomiaGuideAPI.executarAcao.mockRejectedValue({
+      response: {
+        status: 409,
+        data: {
+          error: 'Isto já foi feito.',
+          acao_estado: 'feita',
+          mensagem: 'Pronto, feito.',
+        },
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().messages[0]).toMatchObject({
+      acaoEstado: 'feita',
+      acaoResultado: 'Pronto, feito.',
+    });
+    expect(findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM')).toBeFalsy();
+  });
+
+  // Revisão da #861: a conversa aberta foi apagada (em outra aba ou pelo próprio
+  // Guia). A pergunta abre uma conversa nova em vez de falhar.
+  it('starts a new conversation when the open one no longer exists', async () => {
+    const store = useAutonomiaGuideStore();
+    store.definirConversa(12);
+    AutonomiaGuideAPI.chat
+      .mockRejectedValueOnce({ response: { status: 404 } })
+      .mockResolvedValueOnce({
+        data: { id: 'pedido-2', status: 'pending', conversa_id: 13 },
+      });
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Assim.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'Como crio um funil?');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledTimes(2);
+    expect(AutonomiaGuideAPI.chat.mock.calls[0][0].conversaId).toBe(12);
+    expect(AutonomiaGuideAPI.chat.mock.calls[1][0].conversaId).toBeNull();
+    expect(store.conversaAtual()).toBe(13);
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  // Sem conversa na tela, um 404 é o Guia fora do ar para a conta: não repete.
+  it('does not retry a 404 when no conversation was open', async () => {
+    AutonomiaGuideAPI.chat.mockRejectedValue({ response: { status: 404 } });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'Como crio um funil?');
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+  });
+
   it('lets the user confirm again after declining', async () => {
     comAcaoProposta();
     AutonomiaGuideAPI.executarAcao.mockReturnValue(new Promise(() => {}));
@@ -633,6 +730,77 @@ describe('AutonomiaGuideContainer', () => {
       name: 'settings_inbox_new',
       params: {},
     });
+  });
+
+  // #933 — o que o Guia anotou no turno aparece sob a resposta, e Esquecer apaga.
+  it('shows what the guide noted under the answer, and forgetting removes it', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'Anotei.',
+        lembrancas: [{ id: 7, texto: 'Fala curto', de_quem: 'minha' }],
+      },
+    });
+    wrapper = mountGuide();
+
+    await perguntar(wrapper, 'fala curto comigo');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(wrapper.find('[data-anotei]').text()).toContain(
+      'AUTONOMIA_GUIDE.MEMORY.NOTED'
+    );
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.MEMORY.FORGET').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.apagarMemoria).toHaveBeenCalledWith(7);
+    expect(wrapper.find('[data-anotei]').exists()).toBe(false);
+  });
+
+  it('opens "What I know" from the header in place of the conversation', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await wrapper
+      .find('[aria-label="AUTONOMIA_GUIDE.MEMORY.TITLE"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.memorias).toHaveBeenCalled();
+    expect(wrapper.find('[data-secao="pessoais"]').exists()).toBe(true);
+    expect(wrapper.find('[role="log"]').isVisible()).toBe(false);
+  });
+
+  // #944 — o link do push e do e-mail do aviso urgente abre o Guia.
+  it('opens the panel from the alert link and drops the parameter from the address', async () => {
+    rotaAtual.query = { guia: 'aviso', outro: '1' };
+    try {
+      wrapper = mountGuide();
+      await flushPromises();
+
+      expect(atualizarUI).toHaveBeenCalledWith({
+        is_autonomia_guide_panel_open: true,
+        is_autonomia_copilot_panel_open: false,
+        is_contact_sidebar_open: false,
+      });
+      expect(routerReplace).toHaveBeenCalledWith({ query: { outro: '1' } });
+    } finally {
+      delete rotaAtual.query;
+    }
+  });
+
+  it('does not touch the panel without the alert link', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(atualizarUI).not.toHaveBeenCalledWith(
+      expect.objectContaining({ is_autonomia_guide_panel_open: true })
+    );
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 
   it('names the panel and the message region for screen readers', async () => {
@@ -952,5 +1120,714 @@ describe('AutonomiaGuideContainer — voz e anexos', () => {
     expect(composer().props('onSend')('lê isso')).toBe(false);
     expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
     expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.FILE.WAIT');
+  });
+});
+
+// #861 — a conversa fica guardada: abrir o painel reabre a atual, e a pergunta
+// seguinte continua a mesma conversa no servidor.
+describe('AutonomiaGuideContainer — conversa guardada', () => {
+  let wrapper;
+
+  const turno = (extra = {}) => ({
+    pedido_id: 'p1',
+    pergunta: 'quantos funis?',
+    anexos: [],
+    status: 'done',
+    resposta: 'São 3.',
+    navegacoes: [],
+    artigos: [],
+    acao: null,
+    acao_estado: null,
+    acao_resultado: null,
+    execucao: null,
+    ...extra,
+  });
+
+  const conversaGuardada = turnos =>
+    AutonomiaGuideAPI.conversaAtual.mockResolvedValueOnce({
+      data: { id: 7, titulo: 'funis', turnos },
+    });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('reabre a conversa atual ao abrir o painel', async () => {
+    conversaGuardada([turno()]);
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.conversaAtual).toHaveBeenCalledOnce();
+    expect(
+      useAutonomiaGuideStore().messages.map(m => m.message.content)
+    ).toEqual(['quantos funis?', 'São 3.']);
+  });
+
+  it('continua a mesma conversa na pergunta seguinte', async () => {
+    conversaGuardada([turno()]);
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'Vendas, Pós e Renovação.',
+      },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'e quais são?');
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ conversaId: 7, message: 'e quais são?' })
+    );
+  });
+
+  it('guarda a conversa que o servidor abriu na primeira pergunta', async () => {
+    AutonomiaGuideAPI.chat.mockResolvedValue({
+      data: { id: 'pedido-1', status: 'pending', conversa_id: 12 },
+    });
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Oi!' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await perguntar(wrapper, 'oi');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().conversaAtual()).toBe(12);
+    expect(useAutonomiaGuideStore().messages[1].pedidoId).toBe('pedido-1');
+  });
+
+  it('volta a buscar a resposta de uma pergunta que ficou pendente', async () => {
+    conversaGuardada([
+      turno({ pedido_id: 'p9', status: 'pending', resposta: null }),
+    ]);
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Chegou.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('p9');
+    expect(useAutonomiaGuideStore().messages[1].message.content).toBe(
+      'Chegou.'
+    );
+  });
+
+  it('a ação que esperava confirmação volta com os botões, e confirmar guarda o desfecho', async () => {
+    conversaGuardada([turno({ acao: ACAO })]);
+    AutonomiaGuideAPI.executarAcao.mockResolvedValue({
+      data: { mensagem: 'Pronto.' },
+    });
+    wrapper = mountGuide();
+    await flushPromises();
+
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.ACTION.CONFIRM').trigger(
+      'click'
+    );
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.executarAcao).toHaveBeenCalledWith(
+      expect.objectContaining({ acao: ACAO.nome, pedidoId: 'p1' })
+    );
+  });
+
+  it('se a conversa não abre, diz isso e deixa começar outra', async () => {
+    AutonomiaGuideAPI.conversaAtual.mockRejectedValueOnce(new Error('rede'));
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.find('[data-falhou-ao-abrir]').exists()).toBe(true);
+    await findByLabel(wrapper, 'AUTONOMIA_GUIDE.HISTORY.START_NEW').trigger(
+      'click'
+    );
+
+    expect(wrapper.find('[data-falhou-ao-abrir]').exists()).toBe(false);
+    expect(wrapper.find('[data-sugestao]').exists()).toBe(true);
+  });
+
+  it('mostra o esqueleto só quando abrir demora', async () => {
+    let abrir;
+    AutonomiaGuideAPI.conversaAtual.mockReturnValueOnce(
+      new Promise(resolve => {
+        abrir = resolve;
+      })
+    );
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(wrapper.find('[data-esqueleto]').exists()).toBe(false);
+    expect(wrapper.find('[data-sugestao]').exists()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(300);
+    expect(wrapper.find('[data-esqueleto]').exists()).toBe(true);
+
+    abrir({ data: { id: 7, turnos: [turno()] } });
+    await flushPromises();
+    expect(wrapper.find('[data-esqueleto]').exists()).toBe(false);
+  });
+
+  it('"Nova conversa" começa outra sem apagar a guardada', async () => {
+    conversaGuardada([turno()]);
+    wrapper = mountGuide();
+    await flushPromises();
+
+    wrapper.findComponent({ name: 'GuideHeader' }).vm.$emit('reset');
+    await flushPromises();
+
+    expect(useAutonomiaGuideStore().conversaAtual()).toBeNull();
+    expect(useAutonomiaGuideStore().messages).toHaveLength(0);
+    expect(AutonomiaGuideAPI.apagarConversa).not.toHaveBeenCalled();
+  });
+});
+
+// #859 — a mesma conversa embutida na tela de Automações.
+describe('AutonomiaGuideContainer — embutido', () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    rotaAtual.name = 'home';
+    delete rotaAtual.params;
+    delete rotaAtual.meta;
+  });
+
+  const montarEmbutido = props =>
+    mount(AutonomiaGuideContainer, {
+      attachTo: document.body,
+      props: { embutido: true, ...props },
+      global: {
+        mocks: { $t: key => key },
+        directives: { onClickOutside: {}, dompurifyHtml: {} },
+      },
+    });
+
+  it('o painel lateral não abre por cima da tela que já traz a conversa', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.find('[role="complementary"]').exists()).toBe(false);
+  });
+
+  // Decisão da integração do lote 10: a página de Automações começa limpa — não
+  // traz de volta a conversa guardada do painel lateral.
+  it('embutido começa limpo: não reabre a conversa guardada', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    AutonomiaGuideAPI.conversaAtual.mockResolvedValueOnce({
+      data: {
+        id: 7,
+        titulo: 'funis',
+        turnos: [{ id: 1, pergunta: 'quantos funis?', resposta: 'São 3.' }],
+      },
+    });
+    wrapper = montarEmbutido();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.conversaAtual).not.toHaveBeenCalled();
+    expect(useAutonomiaGuideStore().messages).toHaveLength(0);
+  });
+
+  it('embutido: sem cabeçalho, com as sugestões e a introdução da tela', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    wrapper = montarEmbutido({
+      sugestoes: [{ rotulo: 'Agradecer', pergunta: 'Quero agradecer' }],
+      introducao: 'Conte o que automatizar.',
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[role="region"]').exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'GuideHeader' }).exists()).toBe(false);
+    expect(wrapper.text()).toContain('Conte o que automatizar.');
+    expect(wrapper.find('[data-sugestao]').text()).toBe('Agradecer');
+  });
+
+  it('manda o registro aberto, avisa a tela do que o Guia fez e não apaga a conversa ao sair', async () => {
+    rotaAtual.name = 'automacoes_editar';
+    rotaAtual.params = { accountId: '1', id: '42' };
+    pedidoAberto();
+    const execucao = {
+      id: 9,
+      passos: [{ acao: 'PATCH automation_rules/:id', ok: true, registro: 42 }],
+    };
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Liguei.', execucao },
+    });
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'liga esta');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeContext: 'automacoes_editar',
+        routeParams: { accountId: '1', id: '42' },
+      })
+    );
+    expect(wrapper.emitted('execucao')).toEqual([[execucao]]);
+
+    wrapper.unmount();
+    wrapper = null;
+    expect(useAutonomiaGuideStore().messages).toHaveLength(2);
+  });
+
+  it('o modelo escolhido na lista vira a primeira pergunta, uma vez só', async () => {
+    pedidoAberto();
+    wrapper = montarEmbutido({ pedidoInicial: 'Quero agradecer' });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Quero agradecer' })
+    );
+  });
+  it('avisa a tela quando o pedido inicial sai', async () => {
+    pedidoAberto();
+    wrapper = montarEmbutido({ pedidoInicial: 'Quero agradecer' });
+    await flushPromises();
+
+    expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
+  });
+
+  // #982 — prints e arquivos juntados na lista de Automações sobem antes e vão
+  // junto com o pedido inicial.
+  it('anexos iniciais sobem antes e saem junto com o pedido', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+      data: { signed_id: 'print-1', nome: 'print.png' },
+    });
+    const arquivo = new File(['x'], 'print.png', { type: 'image/png' });
+    wrapper = montarEmbutido({
+      pedidoInicial: 'Quero isto do print',
+      anexosIniciais: [arquivo],
+    });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.enviarArquivo).toHaveBeenCalledWith(arquivo);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Quero isto do print',
+        arquivos: ['print-1'],
+      })
+    );
+    expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
+  });
+
+  // #982 — na tela de Automações: balão azul de quem pede, respostas de um
+  // toque depois da fala do Guia e nada de "Ir para a tela".
+  it('respostas de um toque: com pergunta vão ao Guia, sem pergunta a tela decide', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: {
+        status: 'done',
+        available: true,
+        text: 'Montei a automação.',
+        navigations: [{ route: 'automacoes_lista' }],
+      },
+    });
+    wrapper = montarEmbutido({
+      semTelas: true,
+      respostasRapidas: [
+        { chave: 'OTIMA', rotulo: 'Está ótima' },
+        { chave: 'CURTA', rotulo: 'Mais curta', pergunta: 'Deixa mais curta.' },
+      ],
+    });
+    expect(wrapper.find('[data-respostas-rapidas]').exists()).toBe(false);
+
+    await perguntar(wrapper, 'agradecer quem encerrar');
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(wrapper.find('[data-respostas-rapidas]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('AUTONOMIA_GUIDE.GO_TO_SCREEN');
+    expect(
+      wrapper.findComponent({ name: 'GuideUserMessage' }).props('destaque')
+    ).toBe(true);
+
+    await wrapper.find('[data-resposta="OTIMA"]').trigger('click');
+    expect(wrapper.emitted('respostaRapida')).toEqual([['OTIMA']]);
+
+    await wrapper.find('[data-resposta="CURTA"]').trigger('click');
+    expect(AutonomiaGuideAPI.chat).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: 'Deixa mais curta.' })
+    );
+  });
+
+  // Revisão #859: a conversa embutida sai junto com a tela. Antes, a busca
+  // parava e a resposta (e o que o Guia fez) nunca entrava na conversa.
+  it('sair da tela no meio da resposta: o painel lateral termina de buscar', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta
+      .mockResolvedValueOnce({ data: { status: 'pending' } })
+      .mockResolvedValue({
+        data: { status: 'done', available: true, text: 'Criei a automação.' },
+      });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'cria uma automação que etiqueta sinistro');
+    await esperarUmaBusca();
+    await flushPromises();
+    wrapper.unmount();
+    wrapper = null;
+    await esperarUmaBusca();
+    await flushPromises();
+
+    const { messages } = useAutonomiaGuideStore();
+    expect(messages).toHaveLength(2);
+    expect(messages[1].message.content).toBe('Criei a automação.');
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-1');
+    expect(useAutonomiaGuideStore().temPendente()).toBe(false);
+    painel.unmount();
+  });
+
+  it('sair antes de o servidor aceitar a pergunta: o painel adota quando ela é aceita', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    let aceitar;
+    AutonomiaGuideAPI.chat.mockReturnValue(
+      new Promise(resolve => {
+        aceitar = resolve;
+      })
+    );
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Pronto.' },
+    });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+
+    await perguntar(wrapper, 'cria uma automação');
+    wrapper.unmount();
+    wrapper = null;
+    aceitar({ data: { id: 'pedido-2', status: 'pending' } });
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.resposta).toHaveBeenCalledWith('pedido-2');
+    expect(useAutonomiaGuideStore().messages[1].message.content).toBe(
+      'Pronto.'
+    );
+    painel.unmount();
+  });
+
+  it('enquanto outra parte da tela espera a resposta, nenhuma pergunta nova sai', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'pending' },
+    });
+    const painel = mountGuide();
+    wrapper = montarEmbutido();
+    await perguntar(wrapper, 'primeira');
+    wrapper.unmount();
+    wrapper = montarEmbutido();
+    await flushPromises();
+
+    await perguntar(wrapper, 'segunda');
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(
+      wrapper.findComponent({ name: 'GuideComposer' }).props('isBusy')
+    ).toBe(true);
+    painel.unmount();
+  });
+});
+
+// #934 — o que a pessoa tem aberto e selecionado vai junto da pergunta, e o ×
+// da etiqueta tira só da próxima.
+describe('AutonomiaGuideContainer — o que está na tela (#934)', () => {
+  let wrapper;
+  let tela;
+
+  const TelaDoKanban = defineComponent({
+    setup() {
+      declararContexto({
+        selecionados: () => ({
+          recurso: 'crm/cards',
+          ids: [881, 882],
+          total: 12,
+        }),
+        filtros: { pipeline_id: 3 },
+      });
+      return () => h('div');
+    },
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    rotaAtual.name = 'crm_kanban_index';
+    rotaAtual.params = {};
+    tela = mount(TelaDoKanban);
+    pedidoAberto();
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'Feito.' },
+    });
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    tela?.unmount();
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+    rotaAtual.name = 'home';
+  });
+
+  const perguntarEEsperar = async texto => {
+    await perguntar(wrapper, texto);
+    await esperarUmaBusca();
+    await flushPromises();
+  };
+
+  const telaEnviada = vez => AutonomiaGuideAPI.chat.mock.calls[vez][0].tela;
+
+  it('manda a seleção e os filtros, e o × tira só da próxima pergunta', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(true);
+
+    await perguntarEEsperar('move esses para Cotação');
+    expect(telaEnviada(0)).toEqual({
+      rota: 'crm_kanban_index',
+      selecionados: { recurso: 'crm/cards', ids: [881, 882], total: 12 },
+      filtros: { pipeline_id: 3 },
+    });
+
+    await wrapper.find('[data-etiqueta-tela-remover]').trigger('click');
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(false);
+    await perguntarEEsperar('quantos cards tenho?');
+    expect(telaEnviada(1)).toBeUndefined();
+
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(true);
+    await perguntarEEsperar('e esses?');
+    expect(telaEnviada(2).selecionados.total).toBe(12);
+  });
+
+  it('tela sem nada aberto ou selecionado não mostra etiqueta e manda só a rota', async () => {
+    tela.unmount();
+    tela = null;
+    wrapper = mountGuide();
+    await flushPromises();
+
+    expect(wrapper.find('[data-etiqueta-tela]').exists()).toBe(false);
+    await perguntarEEsperar('oi');
+    expect(telaEnviada(0)).toEqual({ rota: 'crm_kanban_index' });
+  });
+});
+
+describe('AutonomiaGuideContainer — pergunta pronta de outra tela (#977)', () => {
+  let wrapper;
+
+  const respostaPronta = () =>
+    AutonomiaGuideAPI.resposta.mockResolvedValue({
+      data: { status: 'done', available: true, text: 'É em Canais.' },
+    });
+
+  const mensagens = () =>
+    useAutonomiaGuideStore().messages.map(m => m.message.content);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    pedidoAberto();
+    respostaPronta();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    wrapper = null;
+    usePedidoPendente().consumir();
+    mockGuiaLigado.value = true;
+    useAutonomiaGuideStore().reset();
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  it('a pergunta pendente vira uma mensagem enviada uma vez só', async () => {
+    useGuiaPedido().pedirAoGuia('Como conecto o WhatsApp?');
+    wrapper = mountGuide();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Como conecto o WhatsApp?' })
+    );
+    expect(mensagens()).toEqual(['Como conecto o WhatsApp?', 'É em Canais.']);
+    expect(usePedidoPendente().pedido.value).toBe('');
+  });
+
+  it('com o painel já aberto, a pergunta que chega sai na hora', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Criar um funil' })
+    );
+  });
+
+  it('espera o Guia ligar na conta', async () => {
+    mockGuiaLigado.value = false;
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+
+    mockGuiaLigado.value = true;
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+  });
+
+  // Mesma regra do campo de digitar: com pergunta em curso, avisa e não guarda.
+  it('com uma pergunta em curso, descarta e avisa em vez de mandar depois', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+    await perguntar(wrapper, 'quantos funis?');
+
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    await flushPromises();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.SENDING');
+    expect(usePedidoPendente().pedido.value).toBe('');
+
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'quantos funis?' })
+    );
+  });
+
+  it('clicar duas vezes envia uma vez só', async () => {
+    wrapper = mountGuide();
+    await flushPromises();
+
+    useGuiaPedido().pedirAoGuia('conectar whatsapp');
+    await flushPromises();
+    useGuiaPedido().pedirAoGuia('conectar whatsapp');
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(useAlert).toHaveBeenCalledWith('AUTONOMIA_GUIDE.SENDING');
+    expect(usePedidoPendente().pedido.value).toBe('');
+  });
+
+  it('fechar o painel descarta a pergunta que esperava', async () => {
+    // A conversa guardada ainda voltando: o pedido espera por ela.
+    AutonomiaGuideAPI.conversaAtual.mockReturnValueOnce(new Promise(() => {}));
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    wrapper = mountGuide();
+    await flushPromises();
+    expect(usePedidoPendente().pedido.value).toBe('Criar um funil');
+
+    mockGuiaLigado.value = false;
+    await flushPromises();
+    expect(usePedidoPendente().pedido.value).toBe('');
+
+    mockGuiaLigado.value = true;
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+  });
+
+  // Mandar antes de a conversa guardada voltar faria ela trocar as mensagens e
+  // cortar a resposta da pergunta pronta.
+  it('espera a conversa guardada voltar e continua nela', async () => {
+    AutonomiaGuideAPI.conversaAtual.mockResolvedValueOnce({
+      data: {
+        id: 7,
+        titulo: 'funis',
+        turnos: [
+          {
+            pedido_id: 'p1',
+            pergunta: 'quantos funis?',
+            anexos: [],
+            status: 'done',
+            resposta: 'São 3.',
+            navegacoes: [],
+            artigos: [],
+          },
+        ],
+      },
+    });
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    wrapper = mountGuide();
+    await flushPromises();
+    await esperarUmaBusca();
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledOnce();
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({ conversaId: 7, message: 'Criar um funil' })
+    );
+    expect(mensagens()).toEqual([
+      'quantos funis?',
+      'São 3.',
+      'Criar um funil',
+      'É em Canais.',
+    ]);
+  });
+
+  it('a conversa embutida não ouve o canal', async () => {
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    wrapper = mount(AutonomiaGuideContainer, {
+      attachTo: document.body,
+      props: { embutido: true },
+      global: {
+        mocks: { $t: key => key },
+        directives: { onClickOutside: {}, dompurifyHtml: {} },
+      },
+    });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    expect(usePedidoPendente().pedido.value).toBe('Criar um funil');
+  });
+
+  it('trocar de conta descarta a pergunta que esperava', async () => {
+    mockGuiaLigado.value = false;
+    useGuiaPedido().pedirAoGuia('Criar um funil');
+    wrapper = mountGuide();
+    await flushPromises();
+
+    mockContaAtual.value = 2;
+    await flushPromises();
+    mockGuiaLigado.value = true;
+    await flushPromises();
+
+    expect(usePedidoPendente().pedido.value).toBe('');
+    expect(AutonomiaGuideAPI.chat).not.toHaveBeenCalled();
+    mockContaAtual.value = 1;
+    await flushPromises();
   });
 });

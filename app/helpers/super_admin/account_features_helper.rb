@@ -10,7 +10,11 @@ module SuperAdmin::AccountFeaturesHelper
   # Returns a hash mapping feature names to their display names
   def self.feature_display_names
     account_features.each_with_object({}) do |feature, hash|
-      hash[feature['name']] = feature['display_name']
+      hash[feature['name']] = if feature['name'] == 'instagram_assisted_onboarding'
+                                I18n.t('instagram_account_feature.label')
+                              else
+                                feature['display_name']
+                              end
     end
   end
 

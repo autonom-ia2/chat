@@ -40,13 +40,21 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     permitted_params.extract!(:suspension_category, :suspension_reason)
     permitted_params[:limits] = permitted_params[:limits].to_h.compact if permitted_params.key?(:limits)
     permitted_params[:captain_models] = permitted_params[:captain_models].to_h.compact_blank.presence if permitted_params.key?(:captain_models)
-    permitted_params[:selected_feature_flags] = params[:enabled_features].keys.map(&:to_sym) if params[:enabled_features].present?
+    if params[:enabled_features].present?
+      permitted_params[:selected_feature_flags] = params[:enabled_features].select { |_key, value| value == 'true' }.keys.map(&:to_sym)
+    end
     permitted_params
   end
 
   def update
-    apply_suspension_metadata
-    super
+    requested_resource.with_lock do
+      apply_suspension_metadata
+      if params.dig(:enabled_features, :feature_instagram_assisted_onboarding).present? ||
+         params.dig(:account, :feature_instagram_assisted_onboarding).present?
+        requested_resource.internal_attributes[Instagram::Automation::AccountRollout::MARKER] = true
+      end
+      super
+    end
   end
 
   # See https://administrate-prototype.herokuapp.com/customizing_controller_actions

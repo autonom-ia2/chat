@@ -4,20 +4,29 @@ module Instagram::IntegrationHelper
   # Generates a signed JWT token for Instagram integration
   #
   # @param account_id [Integer] The account ID to encode in the token
+  # @param actor_id [Integer] The user who is authorized to manage account inboxes
   # @param return_to [String, nil] Optional onboarding return hint
-  # @return [String, nil] The encoded JWT token or nil if client secret is missing
-  def generate_instagram_token(account_id, return_to = nil)
+  # @return [String, nil] The bound JWT token or nil if signing/configuration fails
+  def generate_instagram_token(account_id, return_to = nil, actor_id:, tester_selection: nil, inbox: nil)
     return if client_secret.blank?
 
-    JWT.encode(token_payload(account_id, return_to), client_secret, 'HS256')
-  rescue StandardError => e
-    Rails.logger.error("Failed to generate Instagram token: #{e.message}")
+    payload = token_payload(account_id, return_to, actor_id: actor_id, tester_selection: tester_selection, inbox: inbox)
+    JWT.encode(payload, client_secret, 'HS256')
+  rescue StandardError
+    Rails.logger.error('Instagram token generation failed')
     nil
   end
 
-  def token_payload(account_id, return_to = nil)
-    payload = { sub: account_id, iat: Time.current.to_i }
+  def token_payload(account_id, return_to = nil, actor_id:, tester_selection: nil, inbox: nil)
+    payload = { sub: account_id, actor_id: actor_id, state_version: Instagram::Testers::OauthBinding::STATE_VERSION,
+                installation: Instagram::Testers::OauthBinding.installation, iat: Time.current.to_i,
+                exp: (Time.current + Instagram::Testers::OauthBinding::TTL).to_i, jti: SecureRandom.uuid }
     payload[:return_to] = return_to if return_to.present?
+    payload[:tester_selection] = tester_selection if tester_selection
+    if inbox
+      payload[:inbox_id] = inbox.id
+      payload[:instagram_id] = inbox.channel.instagram_id
+    end
     payload
   end
 
@@ -38,6 +47,12 @@ module Instagram::IntegrationHelper
     decode_token(token, client_secret)&.dig('return_to')
   end
 
+  def instagram_token_payload(token)
+    return if token.blank? || client_secret.blank?
+
+    decode_token(token, client_secret)
+  end
+
   private
 
   def client_secret
@@ -45,12 +60,11 @@ module Instagram::IntegrationHelper
   end
 
   def decode_token(token, secret)
-    JWT.decode(token, secret, true, {
-                 algorithm: 'HS256',
-                 verify_expiration: true
-               }).first
-  rescue StandardError => e
-    Rails.logger.error("Unexpected error verifying Instagram token: #{e.message}")
+    payload = JWT.decode(token, secret, true, algorithm: 'HS256', verify_expiration: true).first
+    Instagram::Testers::OauthBinding.validate_payload!(payload)
+    payload
+  rescue StandardError
+    Rails.logger.error('Instagram token verification failed')
     nil
   end
 end

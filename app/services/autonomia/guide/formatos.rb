@@ -18,6 +18,8 @@
 module Autonomia::Guide::Formatos
   ARQUIVO = Rails.root.join('lib/operator_guide/formatos-das-acoes.json')
   RELATORIO = Rails.root.join('lib/operator_guide/formatos-das-acoes-cobertura.md')
+  # Os parâmetros que cada leitura (`ler_da_conta`) lê, pelo mesmo gerador (#942).
+  LEITURAS = Rails.root.join('lib/operator_guide/parametros-das-leituras.json')
 
   module_function
 
@@ -26,25 +28,47 @@ module Autonomia::Guide::Formatos
     todos[acao.to_s]
   end
 
-  # O formato em texto curto, para o modelo montar o corpo certo de primeira.
-  def resumo_para_o_modelo(acao)
+  # O formato em texto curto, para o modelo montar o corpo certo de primeira. Com `campo:`, só aquele
+  # campo, ou o ramo do esquema dele ("actions.send_email_to_team").
+  def resumo_para_o_modelo(acao, campo: nil)
     formato = para(acao)
-    formato && Resumo.new(acao.to_s, formato).texto
+    return unless formato
+
+    resumo = Resumo.new(acao.to_s, formato)
+    campo.present? ? resumo.do_campo(campo) : resumo.texto
   end
 
   def todos
     @todos ||= JSON.parse(ARQUIVO.read).freeze
   end
 
-  # O que o código diz agora, nos dois arquivos versionados.
+  def leituras
+    @leituras ||= JSON.parse(LEITURAS.read).freeze
+  end
+
+  # A recusa de parâmetro que a leitura não lê, com os que ela lê (#942); nil quando segue. Leitura
+  # sem lista conhecida (`motivos` no arquivo) não recusa nada: lá o gerador não teve certeza.
+  def recusa_da_leitura(recurso, nomes)
+    aceitos = leituras.dig(recurso.to_s, 'parametros')
+    fora = aceitos && (nomes.map(&:to_s) - aceitos)
+    return if fora.blank?
+
+    aceitam = aceitos.any? ? "os que ela lê são: #{aceitos.join(', ')}" : 'ela não lê nenhum'
+    "#{recurso} não lê #{fora.join(', ')} (a plataforma ignoraria sem avisar); #{aceitam}."
+  end
+
+  # O que o código diz agora, nos arquivos versionados.
   def gerados
-    formatos = Gerador.new.formatos
-    { ARQUIVO => json(formatos), RELATORIO => Relatorio.new(formatos).texto }
+    gerador = Gerador.new
+    formatos = gerador.formatos
+    leituras = gerador.leituras
+    { ARQUIVO => json(formatos), LEITURAS => json(leituras), RELATORIO => Relatorio.new(formatos, leituras).texto }
   end
 
   def escrever!
     gerados.each { |arquivo, conteudo| File.write(arquivo, conteudo) }
     @todos = nil
+    @leituras = nil
   end
 
   # Os arquivos versionados que não batem com o código.

@@ -31,10 +31,14 @@ class AutomationRule < ApplicationRecord
   has_many :pending_executions, class_name: 'AutomationRulePendingExecution', dependent: :delete_all
   has_many_attached :files
 
-  validate :json_conditions_format
-  validate :json_actions_format
+  # O esquema é lido na hora de validar, não ao carregar: AutomationRuleSchema lê constantes deste model, e ler
+  # as dele aqui na carga criava um ciclo que quebrava quem carregasse o esquema primeiro (#963).
+  validates :event_name, json_schema: { schema: ->(_regra) { AutomationRuleSchema::EVENTO } }
+  validates :execution_delay, json_schema: { schema: ->(_regra) { AutomationRuleSchema::ATRASO } }
+  validates :conditions, json_schema: { schema: ->(regra) { AutomationRuleSchema.conditions(regra) } }
+  validates :actions, json_schema: { schema: ->(regra) { AutomationRuleSchema.actions(regra) } }
+  validate :decisor_actions_format
   validate :query_operator_presence
-  validate :query_operator_value
   validates :account_id, presence: true
   validates :execution_delay, numericality: { only_integer: true, in: EXECUTION_DELAY_RANGE }, allow_nil: true
   validate :execution_delay_supported_conditions
@@ -57,7 +61,7 @@ class AutomationRule < ApplicationRecord
        remove_assigned_team send_webhook_event mute_conversation send_attachment change_status resolve_conversation
        open_conversation pending_conversation snooze_conversation change_priority send_email_transcript
        add_private_note disable_crm_ai_followup enable_crm_ai_followup crm_create_card crm_move_card_stage
-       crm_mark_card_won crm_mark_card_lost crm_assign_card_owner].freeze
+       crm_mark_card_won crm_mark_card_lost crm_assign_card_owner perguntar_ao_decisor].freeze
   end
 
   def file_base_data
@@ -76,22 +80,37 @@ class AutomationRule < ApplicationRecord
 
   private
 
-  def json_conditions_format
-    return if conditions.blank?
-
-    attributes = conditions.map { |obj, _| obj['attribute_key'] }
-    conditions = attributes - conditions_attributes
-    conditions -= account.custom_attribute_definitions.pluck(:attribute_key)
-    errors.add(:conditions, "Automation conditions #{conditions.join(',')} not supported.") if conditions.any?
+  # Passo do Decisor (#858): action_params é [decisor_id, chave_que_segue]. O Decisor tem de ser da conta
+  # e a chave, uma das respostas dele — conferida por igualdade, nunca por expressão regular.
+  def decisor_actions_format
+    passos = Array(actions).map { |action| action.to_h.with_indifferent_access }
+                           .select { |action| action[:action_name] == Autonomia::Decisores::PASSO }
+    decisor_supported_conditions if passos.any?
+    passos.each { |action| decisor_action_format(action) }
   end
 
-  def json_actions_format
-    return if actions.blank?
+  def decisor_action_format(action)
+    decisor_id, chave = Array(action[:action_params])
+    decisor = Autonomia::Decisor.find_by(id: decisor_id.to_s, account_id: account_id)
+    return errors.add(:actions, decisor_not_found_message(decisor_id)) if decisor.blank?
+    return errors.add(:actions, decisor.recusa_de_gatilho('regra')) if decisor.recusa_de_gatilho('regra')
+    return if decisor.resposta?(chave)
 
-    attributes = actions.map { |obj, _| obj['action_name'] }
-    actions = attributes - actions_attributes
+    errors.add(:actions, "#{Autonomia::Decisores::PASSO}: '#{chave}' is not an answer of Decisor #{decisor.id}. " \
+                         "Use one of: #{decisor.chaves.join(', ')}.")
+  end
 
-    errors.add(:actions, "Automation actions #{actions.join(',')} not supported.") if actions.any?
+  # A retomada depois da dúvida confere as condições de novo e não reconstrói changed_attributes: a
+  # mesma razão de execution_delay_supported_conditions.
+  def decisor_supported_conditions
+    return if Array(conditions).none? { |obj| obj['filter_operator'] == 'attribute_changed' }
+
+    errors.add(:actions, "#{Autonomia::Decisores::PASSO} cannot be used with attribute_changed conditions.")
+  end
+
+  def decisor_not_found_message(decisor_id)
+    "#{Autonomia::Decisores::PASSO}: Decisor #{decisor_id.inspect} not found in this account. " \
+      'action_params must be [decisor_id, answer_that_continues].'
   end
 
   def query_operator_presence
@@ -99,14 +118,6 @@ class AutomationRule < ApplicationRecord
 
     operators = conditions.select { |obj, _| obj['query_operator'].nil? }
     errors.add(:conditions, 'Automation conditions should have query operator.') if operators.length > 1
-  end
-
-  # This validation ensures logical operators are being used correctly in automation conditions.
-  # And we don't push any unsanitized query operators to the database.
-  def query_operator_value
-    conditions.each do |obj|
-      validate_single_condition(obj)
-    end
   end
 
   # The fire-time re-check cannot reconstruct changed_attributes, so delayed rules
@@ -138,16 +149,6 @@ class AutomationRule < ApplicationRecord
     # armed = pending + processing, the rows the sweep would otherwise still run. Rows already
     # executing are left alone: their actions are in flight and cannot be called back.
     pending_executions.armed.delete_all
-  end
-
-  def validate_single_condition(condition)
-    query_operator = condition['query_operator']
-
-    return if query_operator.nil?
-    return if query_operator.empty?
-
-    operator = query_operator.upcase
-    errors.add(:conditions, 'Query operator must be either "AND" or "OR"') unless %w[AND OR].include?(operator)
   end
 end
 

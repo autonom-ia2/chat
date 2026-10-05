@@ -59,6 +59,9 @@ class Autonomia::Guide::Consulta
   # estourar esse limite corta JSON no meio.
   def ler(recurso, parametros = {}, filtros = {}, campos: nil, teto: TETO_PADRAO)
     caminho = montar_caminho(recurso, parametros)
+    recusa = parametros_recusados(recurso, parametros, filtros)
+    raise Recusada, recusa if recusa
+
     resposta = requisitar(caminho, filtros, sobras(recurso, parametros))
 
     return indisponivel(recurso, resposta.codigo) unless resposta.codigo.to_i == 200
@@ -76,6 +79,32 @@ class Autonomia::Guide::Consulta
       "#{Array(e.backtrace).first(5).join("\n")}"
     )
     "Não consegui ler #{recurso} agora."
+  end
+
+  # A resposta crua da mesma leitura, como o usuário: código e corpo, sem resumo. É o que a vigia do
+  # Guia mede (#935). Levanta `Recusada` quando a leitura não é da conta.
+  def ler_cru(recurso, parametros = {})
+    requisitar(montar_caminho(recurso, parametros), {}, sobras(recurso, parametros))
+  end
+
+  # A resposta da leitura, inteira e em JSON, para quem precisa dos itens e não de um texto (#936,
+  # tarefas longas). Mesmo caminho e mesma permissão de `ler`; recusa com o motivo legível.
+  def json(recurso, parametros = {}, filtros = {})
+    resposta = requisitar(montar_caminho(recurso, parametros), filtros, sobras(recurso, parametros))
+    raise Recusada, indisponivel(recurso, resposta.codigo) unless resposta.codigo.to_i == 200
+
+    JSON.parse(resposta.corpo.to_s)
+  rescue JSON::ParserError
+    raise Recusada, "Não consegui ler #{recurso} agora."
+  end
+
+  # A frase que recusa parâmetro que a leitura não lê, com os que ela lê; nil quando segue (#942).
+  # A plataforma ignora o parâmetro que não conhece e responde 200: o Guia pediu conversas sem
+  # responsável há uma hora, recebeu todas, e não tinha como saber. Quem diz o que cada leitura lê é o
+  # código, pelo gerador dos formatos. A vigia usa a mesma conferência ao ser criada.
+  def parametros_recusados(recurso, parametros, filtros = {})
+    limpo = recurso.to_s.strip.delete_prefix('/')
+    ::Autonomia::Guide::Formatos.recusa_da_leitura(limpo, sobras(limpo, parametros).keys | filtros_enviados(filtros).keys)
   end
 
   private
@@ -127,7 +156,11 @@ class Autonomia::Guide::Consulta
   # O token nunca é registrado em log.
   def requisitar(caminho, filtros, sobras)
     ::Autonomia::Guide::ChamadaInterna.new(user: @user)
-                                      .chamar(:get, caminho, filtros: sobras.merge(filtros.slice(*%w[status page sort]).compact))
+                                      .chamar(:get, caminho, filtros: sobras.merge(filtros_enviados(filtros)))
+  end
+
+  def filtros_enviados(filtros)
+    (filtros || {}).transform_keys(&:to_s).slice(*%w[status page sort]).compact
   end
 
   # O parâmetro que não preenche um `:` do caminho segue como filtro da leitura,

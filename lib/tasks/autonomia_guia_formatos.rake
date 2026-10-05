@@ -7,6 +7,11 @@ namespace :autonomia do
     task formatos: :environment do
       Autonomia::Guide::Formatos.escrever!
       puts "[guia:formatos] #{Autonomia::Guide::Formatos.todos.size} ações escritas em #{Autonomia::Guide::Formatos::ARQUIVO}"
+      metricas = Autonomia::Guide::Formatos::Metricas.new(Autonomia::Guide::Formatos.todos)
+      puts "[guia:formatos] campos aninhados com vocabulário: #{metricas.com_esquema} de #{metricas.aninhados.size}"
+      puts "[guia:formatos] leituras cruas tipadas: #{metricas.tipadas} de #{metricas.tipadas + metricas.sem_tipo_lista.size}"
+      leituras = Autonomia::Guide::Formatos.leituras
+      puts "[guia:formatos] leituras (GET) com parâmetros conhecidos: #{leituras.count { |_r, l| l.key?('parametros') }} de #{leituras.size}"
     end
 
     namespace :formatos do

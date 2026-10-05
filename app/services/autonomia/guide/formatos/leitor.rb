@@ -61,7 +61,8 @@ class Autonomia::Guide::Formatos::Leitor
     return unless definicao
 
     @atual = { metodo: metodo, arquivo: metodo.source_location.first, da_action: da_action, profundidade: profundidade,
-               escopo: Formatos::Locais.coletar(definicao.body, metodo.owner) }
+               escopo: Formatos::Locais.coletar(definicao.body, metodo.owner),
+               apelidos: Formatos::UsoDaLeitura.apelidos(definicao.body, @caminhos) }
     chama_super = false
     pilha = [definicao.body].compact
     until pilha.empty?
@@ -83,6 +84,8 @@ class Autonomia::Guide::Formatos::Leitor
   def examinar(node)
     return registrar_modelo(Formatos::ModelosCitados.da_constante(node, @atual[:metodo].owner)) if constante?(node)
     return Formatos::Destinos.variavel(node, @coleta, @atual[:metodo].owner) if variavel?(node)
+
+    registrar_uso(node)
     return unless node.is_a?(Prism::CallNode)
 
     atual = @atual
@@ -90,6 +93,7 @@ class Autonomia::Guide::Formatos::Leitor
     registrar_recurso(node)
     registrar_corpo_cru(node)
     registrar_repasse(node)
+    registrar_de_fora(node)
     registrar_modelo(Formatos::ModelosCitados.da_conta(node))
     registrar_recorte(node)
     Formatos::Destinos.registrar(node, @coleta, @caminhos, @atual[:metodo].owner)
@@ -165,11 +169,41 @@ class Autonomia::Guide::Formatos::Leitor
     return if @caminhos.proprio?(node) || @caminhos.de(node.receiver)
     return unless argumentos(node).any? { |argumento| params_inteiro?(argumento) }
 
-    @coleta.repasses << "#{node.receiver&.slice || 'self'}.#{node.name}".truncate(80)
+    quem = "#{node.receiver&.slice || 'self'}.#{node.name}".truncate(80)
+    @coleta.repasses << quem
+    registrar_para_classe(node, quem)
+  end
+
+  # `ConversationFinder.new(Current.user, params)`: quem recebe é uma classe, e a posição do
+  # `params` diz em que argumento do `initialize` ele chega (#942).
+  def registrar_para_classe(node, quem)
+    posicao = (node.arguments&.arguments || []).index { |argumento| @caminhos.params?(argumento) }
+    return unless node.name == :new && constante?(node.receiver) && posicao
+
+    @coleta.para_classe << Coleta::ParaClasse.new(quem: quem, constante: node.receiver.slice, modulo: @atual[:metodo].owner,
+                                                  posicao: posicao)
+  end
+
+  # Método de gem chamado como se fosse do controller, que lê `params` no próprio corpo (#942).
+  def registrar_de_fora(node)
+    return unless node.receiver.nil? || node.receiver.is_a?(Prism::SelfNode)
+    return if @caminhos.params?(node) || @caminhos.proprio?(node)
+
+    metodo = @klass.instance_method(node.name)
+    @coleta.de_fora << "#{metodo.owner}##{node.name}" if Formatos::Fontes.de_fora_le_params?(metodo, @caminhos)
+  rescue NameError
+    nil
   end
 
   def registrar_modelo(modelo)
     @coleta.modelos << Coleta::Candidato.new(modelo: modelo, da_action: @atual[:da_action]) if modelo
+  end
+
+  # O tipo da leitura crua pelo que o código faz com ela, e a leitura entregue a outro objeto (#932).
+  def registrar_uso(node)
+    caminho, tipo = Formatos::UsoDaLeitura.tipo(node, @caminhos, @atual[:apelidos])
+    @coleta.tipos[caminho] ||= tipo if caminho
+    Formatos::UsoDaLeitura.repasses(node, @caminhos).each { |lido, quem| @coleta.repassadas[lido] ||= quem }
   end
 
   # `account_params.slice(:name, :locale)`: a action usa só parte do montador.

@@ -15,17 +15,22 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # Antes a resposta saía desta requisição, e o `rack-timeout` de produção mata
   # qualquer requisição aos 15 segundos: em 21/09/2026 uma pergunta que exigiu
   # duas leituras morreu aos 15,2s com erro 500.
+  #
+  # #861 — a pergunta entra numa conversa guardada. Sem `conversa_id`, abre uma
+  # nova; com o id de uma conversa de outra pessoa, responde 404.
   def chat
-    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
-    ::Autonomia::Guide::ChatJob.perform_later(
-      pedido,
-      { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
-        'mensagem' => params[:message].to_s, 'historico' => history_param,
-        'tela' => params[:route_context].to_s, 'locale' => I18n.locale.to_s,
-        'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
-    )
+    # #935 — a primeira pergunta de um administrador planta as vigias padrão da conta (escrita só em POST).
+    ::Autonomia::Guide::VigiasPadrao.plantar(Current.account, Current.account_user)
+    conversa = conversa_do_pedido
+    return head :not_found if conversa.nil?
 
-    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE }, status: :accepted
+    historico = historico_de(conversa)
+    pedido = ::Autonomia::Guide::Pedido.abrir(account: Current.account, user: Current.user)
+    ::Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: pedido, pergunta: params[:message],
+                                    tela: params[:route_context], anexos: params[:anexos])
+    ::Autonomia::Guide::ChatJob.perform_later(pedido, pergunta(historico))
+
+    render json: { id: pedido, status: ::Autonomia::Guide::Pedido::PENDENTE, conversa_id: conversa.id }, status: :accepted
   end
 
   # O estado do pedido e, quando pronto, a resposta — com os mesmos campos que a
@@ -52,14 +57,23 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   end
 
   # Só chega aqui depois da confirmação explícita na tela.
+  #
+  # #861 — com `pedido_id`, o desfecho fica no turno: reabrir a conversa mostra
+  # a ação feita (ou o motivo da falha), e não os botões de novo.
+  #
+  # A proposta guardada volta com os botões em qualquer aba ou aparelho. Uma
+  # ação que o turno já marca como feita não roda de novo (409, com o resultado
+  # guardado), e a trava impede que dois cliques ao mesmo tempo passem.
   def executar_acao
-    resultado = acoes.executar(params[:acao], dados_do_pedido)
-    registrar(resultado)
-    return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
+    turno = turno_da_acao
+    return executar_e_anotar if turno.nil?
+    return recusar_acao_feita(turno) if acao_feita?(turno)
 
-    render json: { mensagem: resultado.mensagem }
-  rescue ::Autonomia::Guide::Acoes::Recusada => e
-    render json: { error: e.message }, status: :unprocessable_entity
+    travou = trava_da_acao.with_lock(chave_da_trava(turno), TEMPO_DA_TRAVA) do
+      acao_feita?(turno.reload) ? recusar_acao_feita(turno) : executar_e_anotar
+      true
+    end
+    render json: { error: I18n.t('autonomia.guide.in_progress') }, status: :conflict unless travou
   end
 
   # #857 — um arquivo que a pessoa anexou na conversa. Sobe aqui e volta como signed_id; quem lê é o
@@ -102,8 +116,9 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
   # de desfazer. É daqui que a pessoa desfaz depois de recarregar a tela.
   def execucoes
     lista = ::Autonomia::Guide::Execucao.de(Current.account, Current.user).vigentes
-                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES)
-    render json: { execucoes: lista.map(&:resumo) }
+                                        .order(created_at: :desc).limit(LIMITE_DE_EXECUCOES).includes(:tarefa)
+    # #936 — os lotes de uma tarefa longa aparecem como uma linha só.
+    render json: { execucoes: ::Autonomia::Guide::Execucao.resumos(lista) }
   end
 
   # Só quem pediu desfaz: a execução saiu com a permissão dela. De outra pessoa
@@ -168,6 +183,70 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
     )
   end
 
+  # Quem perguntou, o quê, o histórico, a tela e o idioma: tudo o que o job precisa, serializável.
+  def pergunta(historico)
+    { 'account_id' => Current.account.id, 'user_id' => Current.user.id,
+      'mensagem' => params[:message].to_s, 'historico' => historico,
+      'tela' => params[:route_context].to_s, 'parametros' => parametros_da_tela, 'contexto_tela' => contexto_da_tela,
+      'locale' => I18n.locale.to_s,
+      'arquivos' => Array(params[:arquivos]).map(&:to_s).first(::Autonomia::Guide::Arquivos::MAX_POR_TURNO) }
+  end
+
+  # Cobre a requisição inteira (o servidor a mata aos 15s) com folga. Se o
+  # processo cair no meio, a trava expira sozinha.
+  TEMPO_DA_TRAVA = 30.seconds
+
+  def executar_e_anotar
+    resultado = acoes.executar(params[:acao], dados_do_pedido)
+    registrar(resultado)
+    anotar_acao(resultado.ok, resultado.mensagem)
+    return render json: { error: resultado.mensagem }, status: :unprocessable_entity unless resultado.ok
+
+    render json: { mensagem: resultado.mensagem }
+  rescue ::Autonomia::Guide::Acoes::Recusada => e
+    anotar_acao(false, e.message)
+    render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  def acao_feita?(turno) = turno.acao_estado == ::Autonomia::Guide::Turno::ACAO_FEITA
+
+  def recusar_acao_feita(turno)
+    render json: { error: I18n.t('autonomia.guide.already_done'), acao_estado: turno.acao_estado,
+                   mensagem: turno.acao_resultado }, status: :conflict
+  end
+
+  def turno_da_acao
+    return if params[:pedido_id].blank?
+
+    @turno_da_acao ||= ::Autonomia::Guide::Turno.de(Current.account, Current.user).find_by(pedido_id: params[:pedido_id].to_s)
+  end
+
+  def trava_da_acao = Redis::LockManager.new
+
+  def chave_da_trava(turno) = "autonomia:guide:acao:#{turno.id}"
+
+  def anotar_acao(feita, mensagem)
+    turno_da_acao&.update!(acao_estado: feita ? ::Autonomia::Guide::Turno::ACAO_FEITA : ::Autonomia::Guide::Turno::ACAO_FALHOU,
+                           acao_resultado: mensagem.to_s)
+  end
+
+  # A conversa só existe para quem a começou. Id de outra pessoa (ou que não
+  # existe) vira nil, e a ação responde 404.
+  def conversa_do_pedido
+    conversas = ::Autonomia::Guide::Conversa.de(Current.account, Current.user)
+    return conversas.find_by(id: params[:conversa_id]) if params[:conversa_id].present?
+
+    conversas.create!(titulo: ::Autonomia::Guide::Conversa.titulo_para(params[:message]))
+  end
+
+  # O histórico sai dos turnos guardados. O `history` do cliente vale só quando a
+  # conversa ainda não tem turno: é o caso da tela antiga, que não manda
+  # `conversa_id`, durante o deploy blue/green. Depois dele, o parâmetro sai.
+  def historico_de(conversa)
+    turnos = conversa.historico
+    turnos.any? ? turnos : history_param
+  end
+
   def ensure_guide_enabled
     head :not_found unless ::Autonomia::Guide::Seed.eligible?(Current.account)
   end
@@ -179,6 +258,31 @@ class Api::V1::Accounts::Autonomia::GuideController < Api::V1::Accounts::BaseCon
       next unless h.is_a?(Hash) || h.is_a?(ActionController::Parameters)
 
       { role: h[:role].to_s, content: h[:content].to_s }
+    end
+  end
+
+  # #934 — o que a pessoa tem aberto, selecionado e filtrado, com a forma conferida. É contexto, não
+  # autorização: cada id ainda passa pela leitura prévia com a permissão dela (`Autonomia::Guide::Tela`).
+  def contexto_da_tela
+    catalogo = ::Autonomia::Guide::Consulta.new(account: Current.account, user: Current.user,
+                                                account_user: Current.account_user).catalogo
+    ::Autonomia::Guide::Tela::Forma.new(params[:tela], catalogo: catalogo).to_h
+  end
+
+  MAX_PARAMETROS_DA_TELA = 5
+
+  # #859 — o registro aberto na tela (ex.: a automação 42), para o Guia saber do que a
+  # pessoa fala. É contexto, não autorização: só entram números inteiros positivos, e a
+  # conta não entra porque o Guia já sabe qual é.
+  def parametros_da_tela
+    bruto = params[:route_params]
+    return {} unless bruto.respond_to?(:to_unsafe_h)
+
+    bruto.to_unsafe_h.each_with_object({}) do |(chave, valor), saida|
+      next if chave.to_s == 'accountId' || saida.size >= MAX_PARAMETROS_DA_TELA
+
+      numero = Integer(valor.to_s, 10, exception: false)
+      saida[chave.to_s.first(40)] = numero if numero&.positive?
     end
   end
 end

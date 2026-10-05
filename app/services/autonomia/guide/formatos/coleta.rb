@@ -23,15 +23,22 @@
 # - `destinos`: onde o corpo é gravado (`Destinos`), e `variaveis`, o modelo
 #   de cada `@x` que um `before_action` busca.
 # - `origens`: onde a leitura achou algo, para quem revisa conferir.
+# - `tipos`: o tipo de uma leitura crua pelo uso no código (`UsoDaLeitura`), e
+#   `repassadas`, a leitura entregue inteira a outro objeto, que decide o tipo.
+# - `para_classe`: o `params` inteiro entregue ao `new` de uma classe nossa, com a posição — a
+#   leitura de GET segue até ela (`Repassado`, #942).
+# - `de_fora`: método de gem chamado pelo controller que lê `params` por conta própria (o
+#   `filtrate` do Sift): o que a rota aceita passa a depender de código que não é lido (#942).
 class Autonomia::Guide::Formatos::Coleta
   Permit = Struct.new(:caminho, :filtros, :metodo, :dono, :origem, :envelope, keyword_init: true)
   Leitura = Struct.new(:caminho, :origem, :exigida, keyword_init: true)
   Candidato = Struct.new(:modelo, :da_action, keyword_init: true)
   Recorte = Struct.new(:metodo, :chaves, :lugar, keyword_init: true)
   Destino = Struct.new(:modelo, :variavel, :metodo, keyword_init: true)
+  ParaClasse = Struct.new(:quem, :constante, :modulo, :posicao, keyword_init: true)
 
   attr_reader :permits, :leituras, :livres, :totais, :repasses, :corpo_cru, :externos, :modelos, :recursos,
-              :envelopes_flexiveis, :recortes, :chamadas, :destinos, :variaveis
+              :envelopes_flexiveis, :recortes, :chamadas, :destinos, :variaveis, :tipos, :repassadas, :para_classe, :de_fora
 
   def initialize
     @permits = []
@@ -48,6 +55,10 @@ class Autonomia::Guide::Formatos::Coleta
     @chamadas = []
     @destinos = []
     @variaveis = {}
+    @tipos = {}
+    @repassadas = {}
+    @para_classe = []
+    @de_fora = []
   end
 
   # As chaves que a action usa do montador `metodo`, ou nil quando alguma

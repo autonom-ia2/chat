@@ -41,8 +41,11 @@ module Crm
       # telemetria nem o conteúdo. :account (padrão) isola por conta (multi-tenant). :feature usa só a
       # feature — válido quando o prefixo (instructions) é conta-agnóstico (ex.: classify), consolidando
       # o roteamento entre contas p/ subir o hit-rate global do mesmo prefixo.
-      def initialize(credential:, feature: nil, account: nil, pipeline: nil, cache_key_scope: :account)
+      # `max_retries: 0` é para quem chama dentro da requisição web, com prazo (o teste do Decisor, #858):
+      # cada nova tentativa usa o `timeout` inteiro de novo, mais a espera, e passaria do teto de 15 s.
+      def initialize(credential:, feature: nil, account: nil, pipeline: nil, cache_key_scope: :account, max_retries: MAX_RETRIES)
         @credential = credential
+        @max_retries = max_retries
         @feature = feature
         @account = account
         @pipeline = pipeline
@@ -221,9 +224,9 @@ module Crm
         loop do
           begin
             response = yield
-            return response unless RETRYABLE_STATUS_CODES.include?(response.code.to_i) && retries < MAX_RETRIES
+            return response unless RETRYABLE_STATUS_CODES.include?(response.code.to_i) && retries < @max_retries
           rescue *NETWORK_ERRORS => e
-            if retries >= MAX_RETRIES
+            if retries >= @max_retries
               log_exception(operation || 'openai.request', e, model: model, response_id: response_id, started_at: started_at)
               raise Error, "network_timeout: #{e.class.name.demodulize.underscore}"
             end

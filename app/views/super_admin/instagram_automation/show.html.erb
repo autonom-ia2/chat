@@ -1,0 +1,123 @@
+<% content_for(:title) { t('super_admin.instagram_automation.title') } %>
+<% content_for(:disable_super_admin_support_widget, 'true') %>
+<% content_for(:instagram_automation_responsive_layout, 'true') %>
+
+<header class="border-b border-n-weak px-4 py-6 sm:px-8" role="banner">
+  <%= link_to t('super_admin.instagram_automation.back'), super_admin_settings_path,
+              class: 'inline-flex min-h-11 items-center text-sm text-n-blue-text rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+  <h1 id="page-title" class="mt-2 text-xl font-semibold text-n-slate-12"><%= content_for(:title) %></h1>
+  <p class="mt-2 mb-0 max-w-3xl text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.description') %></p>
+</header>
+
+<div id="instagram-automation" class="px-4 py-6 sm:px-8 space-y-6">
+  <% if @errors.present? %>
+    <div role="alert" aria-labelledby="instagram-errors-title" class="rounded-lg border border-red-300 bg-red-50 p-4 text-red-800">
+      <h2 id="instagram-errors-title" class="text-sm font-semibold"><%= t('super_admin.instagram_automation.errors_title') %></h2>
+      <ul class="mt-2 mb-0 list-disc ps-5 text-sm">
+        <% @errors.each do |error| %>
+          <li><%= error %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <section aria-labelledby="instagram-configuration-title" class="rounded-lg border border-n-weak p-4 sm:p-6">
+    <h2 id="instagram-configuration-title" class="text-base font-semibold text-n-slate-12"><%= t('super_admin.instagram_automation.configuration_title') %></h2>
+    <p class="mt-2 mb-0 text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.save_before_manager') %></p>
+    <%= form_with url: super_admin_instagram_automation_path, scope: :instagram_automation, method: :post, local: true,
+                  class: 'mt-4 space-y-5' do |form| %>
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <% { meta_developer_app_id: 'INSTAGRAM_META_DEVELOPER_APP_ID', business_id: 'INSTAGRAM_META_BUSINESS_ID',
+             app_name: 'INSTAGRAM_TESTER_APP_NAME', admin_user_id: 'INSTAGRAM_TESTER_ADMIN_USER_ID',
+             roles_doc_id: 'INSTAGRAM_TESTER_ROLES_DOC_ID' }.each do |field, config_key| %>
+          <div class="min-w-0">
+            <%= form.label config_key, t("super_admin.instagram_automation.fields.#{field}.label"),
+                           class: 'block text-sm font-medium text-n-slate-12 mb-2' %>
+            <%= form.text_field config_key, value: @metadata.fetch(config_key),
+                                inputmode: field == :app_name ? 'text' : 'numeric', autocomplete: 'off',
+                                maxlength: field == :app_name ? Instagram::Automation::Metadata::APP_NAME_MAX_LENGTH : 40,
+                                aria: { describedby: "instagram-#{field}-hint" },
+                                class: 'block min-h-11 w-full rounded-md border border-n-weak bg-n-solid-1 px-3 py-2 text-sm text-n-slate-12 placeholder:text-n-slate-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+            <p id="instagram-<%= field %>-hint" class="mt-2 mb-0 text-sm text-n-slate-11"><%= t("super_admin.instagram_automation.fields.#{field}.hint") %></p>
+          </div>
+        <% end %>
+      </div>
+      <%= form.submit t('super_admin.instagram_automation.save'),
+                      class: '!min-h-11 w-full sm:w-auto rounded-md !bg-[rgb(var(--blue-11,8_109_224))] dark:!bg-[rgb(var(--blue-8,48_106_186))] px-4 py-2 text-sm font-medium !text-white cursor-pointer hover:!bg-[rgb(var(--blue-12,11_50_101))] dark:hover:!bg-[rgb(var(--blue-7,40_89_156))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-woot-500' %>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="instagram-health-title" class="rounded-lg border border-n-weak p-4 sm:p-6">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 id="instagram-health-title" class="text-base font-semibold text-n-slate-12"><%= t('super_admin.instagram_automation.health_title') %></h2>
+        <p class="mt-2 mb-0 text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.health_description') %></p>
+        <p class="mt-2 mb-0 text-sm text-n-slate-11">
+          <%= t('super_admin.instagram_automation.checked_at') %>
+          <% if @status[:checked_at].present? %>
+            <time datetime="<%= @status[:checked_at].iso8601(3) %>"><%= l(@status[:checked_at], format: t('super_admin.instagram_automation.time_format')) %></time>
+          <% else %>
+            <%= t('super_admin.instagram_automation.unknown_time') %>
+          <% end %>
+        </p>
+        <% unless @status.fetch(:global_gate) %>
+          <p class="mt-2 mb-0 text-sm font-medium text-n-slate-12"><%= t('super_admin.instagram_automation.global_disabled') %></p>
+        <% end %>
+      </div>
+      <%= button_to t('super_admin.instagram_automation.check_health'), health_super_admin_instagram_automation_path,
+                    method: :post, form_class: 'w-full sm:w-auto shrink-0',
+                    class: '!min-h-11 w-full rounded-md border border-n-weak !bg-[rgb(var(--blue-11,8_109_224))] dark:!bg-[rgb(var(--blue-8,48_106_186))] px-4 py-2 text-sm font-medium !text-white hover:!bg-[rgb(var(--blue-12,11_50_101))] dark:hover:!bg-[rgb(var(--blue-7,40_89_156))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+    </div>
+    <div role="status" aria-live="polite" aria-atomic="true" class="mt-5 divide-y divide-n-weak border-y border-n-weak">
+      <% instagram_automation_statuses(@status).each do |component, state| %>
+        <% state = 'unknown' unless I18n.exists?("super_admin.instagram_automation.states.#{state}.label") %>
+        <div data-component="<%= component %>" class="grid min-w-0 gap-2 py-4 sm:grid-cols-3 sm:gap-6">
+          <h3 class="text-sm font-semibold text-n-slate-12"><%= t("super_admin.instagram_automation.components.#{component}") %></h3>
+          <div class="sm:col-span-2">
+            <p class="m-0 text-sm font-medium text-n-slate-12"><%= t("super_admin.instagram_automation.states.#{state}.label") %></p>
+            <p class="mt-1 mb-0 text-sm text-n-slate-11"><%= t("super_admin.instagram_automation.states.#{state}.text") %></p>
+            <% if component == :manager %>
+              <p class="mt-2 mb-0 text-sm text-n-slate-11">
+                <%= t('super_admin.instagram_automation.heartbeat_at') %>
+                <% heartbeat_at = instagram_automation_time(@status.dig(:manager, 'observed_at')) %>
+                <% if heartbeat_at %>
+                  <time datetime="<%= heartbeat_at.iso8601(3) %>"><%= l(heartbeat_at, format: t('super_admin.instagram_automation.time_format')) %></time>
+                  · <%= instagram_automation_age(heartbeat_at) %>
+                <% else %>
+                  <%= t('super_admin.instagram_automation.unknown_time') %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section aria-labelledby="instagram-reconnect-title" class="rounded-lg border border-n-weak p-4 sm:p-6">
+    <h2 id="instagram-reconnect-title" class="text-base font-semibold text-n-slate-12"><%= t('super_admin.instagram_automation.reconnect_title') %></h2>
+    <% reconnect_available = instagram_automation_reconnect_available?(@status) %>
+    <% request = @status[:control] %>
+    <% if request %>
+      <div data-request-state="<%= request.fetch('state') %>" role="status" aria-live="polite" class="mt-3 border-s-2 border-n-weak ps-4">
+        <p class="m-0 text-sm font-medium text-n-slate-12"><%= t('super_admin.instagram_automation.request_title') %>: <%= t("super_admin.instagram_automation.requests.#{request.fetch('state')}.label") %></p>
+        <p class="mt-1 mb-0 text-sm text-n-slate-11"><%= t("super_admin.instagram_automation.requests.#{request.fetch('state')}.text") %></p>
+        <p class="mt-2 mb-0 text-sm text-n-slate-11">
+          <%= t('super_admin.instagram_automation.updated_at') %>
+          <% updated_at = instagram_automation_time(request.fetch('updated_at')) %>
+          <time datetime="<%= updated_at.iso8601(3) %>"><%= l(updated_at, format: t('super_admin.instagram_automation.time_format')) %></time>
+          · <%= instagram_automation_age(updated_at) %>
+        </p>
+      </div>
+    <% end %>
+    <p id="instagram-reconnect-hint" class="mt-2 mb-4 text-sm text-n-slate-11">
+      <%= t("super_admin.instagram_automation.#{reconnect_available ? 'reconnect_ready' : 'reconnect_unavailable'}") %>
+    </p>
+    <%= button_to t('super_admin.instagram_automation.reconnect'), reconnect_super_admin_instagram_automation_path,
+                  method: :post, disabled: !reconnect_available, aria: { describedby: 'instagram-reconnect-hint' },
+                  form_class: 'w-full sm:w-auto',
+                  class: '!min-h-11 w-full sm:w-auto rounded-md border border-n-weak !bg-[rgb(var(--blue-11,8_109_224))] dark:!bg-[rgb(var(--blue-8,48_106_186))] px-4 py-2 text-sm font-medium !text-white hover:!bg-[rgb(var(--blue-12,11_50_101))] dark:hover:!bg-[rgb(var(--blue-7,40_89_156))] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+    <%= link_to t('super_admin.instagram_automation.refresh'), super_admin_instagram_automation_path,
+                class: 'mt-3 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-n-blue-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+  </section>
+</div>

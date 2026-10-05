@@ -13,7 +13,12 @@ class TypesafeAi::Client
     Errno::ECONNREFUSED,
     Errno::ECONNRESET,
     Errno::EHOSTUNREACH,
-    Errno::ETIMEDOUT
+    Errno::ETIMEDOUT,
+    # Conexão que cai no meio da resposta: sem estes, o erro escapava cru e quem chama respondia 500.
+    EOFError,
+    Errno::EPIPE,
+    Errno::ENETUNREACH,
+    Net::HTTPBadResponse
   ].freeze
 
   class Error < StandardError
@@ -26,9 +31,14 @@ class TypesafeAi::Client
     end
   end
 
-  def initialize(api_key: TypesafeAi::Config.api_key, sleeper: ->(seconds) { sleep(seconds) })
+  # `read_timeout`/`retry_limit` menores servem a quem chama dentro da requisição web (o teste do
+  # Decisor, #858), que tem prazo de 10 s por causa do teto de 15 s do rack-timeout.
+  def initialize(api_key: TypesafeAi::Config.api_key, sleeper: ->(seconds) { sleep(seconds) }, read_timeout: READ_TIMEOUT,
+                 retry_limit: MAX_RETRIES)
     @api_key = api_key.to_s
     @sleeper = sleeper
+    @read_timeout = read_timeout
+    @retry_limit = retry_limit
   end
 
   def models
@@ -47,7 +57,7 @@ class TypesafeAi::Client
 
   private
 
-  def request(method, path, body: nil, retry_limit: MAX_RETRIES)
+  def request(method, path, body: nil, retry_limit: @retry_limit)
     raise Error, 'typesafe_not_configured' if @api_key.blank?
 
     response = request_with_retries(method, path, body, retry_limit)
@@ -94,7 +104,7 @@ class TypesafeAi::Client
       request.body = JSON.generate(body)
     end
 
-    Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
+    Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: OPEN_TIMEOUT, read_timeout: @read_timeout) do |http|
       http.request(request)
     end
   end

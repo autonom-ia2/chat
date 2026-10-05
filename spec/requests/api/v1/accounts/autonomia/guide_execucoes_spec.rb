@@ -10,7 +10,7 @@ RSpec.describe 'Guia da Plataforma — o que ele fez', type: :request do
   let(:execucao) do
     execucao = Autonomia::Guide::Execucao.abrir(account: account, user: admin)
     Autonomia::Guide::Diario.gravando(execucao, 0) { account.labels.create!(title: 'nova') }
-    execucao.registrar_passo(acao: 'POST labels', frase: 'Criei a etiqueta nova.', feito: true)
+    execucao.registrar_passo(acao: 'POST labels', frase: 'Criei a etiqueta nova.', feito: true, registro: 7)
     execucao
   end
 
@@ -21,7 +21,8 @@ RSpec.describe 'Guia da Plataforma — o que ele fez', type: :request do
     get rota, headers: admin.create_new_auth_token, as: :json
 
     item = response.parsed_body['execucoes'].first
-    expect(item['passos']).to eq([{ 'frase' => 'Criei a etiqueta nova.', 'ok' => true }])
+    # #859 — a tela de automações lê a ação e o registro para o selo "criada pelo Guia".
+    expect(item['passos']).to eq([{ 'acao' => 'POST labels', 'frase' => 'Criei a etiqueta nova.', 'ok' => true, 'registro' => 7 }])
     expect(item['desfazivel']).to be(true)
   end
 

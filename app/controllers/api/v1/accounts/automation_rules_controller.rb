@@ -2,7 +2,7 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
   include AttachmentConcern
 
   before_action :check_authorization
-  before_action :fetch_automation_rule, only: [:show, :update, :destroy, :clone]
+  before_action :fetch_automation_rule, only: [:show, :update, :destroy, :clone, :ensaio]
   before_action :ensure_execution_delay_allowed, only: [:create, :update]
 
   def index
@@ -54,6 +54,16 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
 
     @automation_rule = automation_rule.dup
     @automation_rule.save!
+  end
+
+  # O que a regra faria nas conversas mais recentes, sem executar nada (#859).
+  def ensaio
+    return head :not_found if @automation_rule.nil?
+
+    render json: AutomationRules::Ensaio.new(rule: @automation_rule, user: Current.user,
+                                             quantidade: params.permit(:quantidade)[:quantidade]).perform
+  rescue AutomationRules::Ensaio::Invalida => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   private

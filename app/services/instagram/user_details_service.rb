@@ -1,12 +1,5 @@
 class Instagram::UserDetailsService
-  class Error < StandardError
-    attr_reader :http_status
-
-    def initialize(message, http_status)
-      @http_status = http_status
-      super(message)
-    end
-  end
+  class Error < CustomExceptions::InstagramApiError; end
 
   pattr_initialize [:access_token!]
 
@@ -20,15 +13,10 @@ class Instagram::UserDetailsService
       headers: { 'Accept' => 'application/json' }
     )
 
-    unless response.success?
-      Rails.logger.error "Failed to fetch Instagram user details. Status: #{response.code}, Body: #{response.body}"
-      raise Error.new("Failed to fetch Instagram user details: #{response.body}", response.code)
-    end
+    raise Error.new('instagram_user_details_failed', response.code), cause: nil unless response.success?
 
     JSON.parse(response.body)
-  rescue JSON::ParserError => e
-    ChatwootExceptionTracker.new(e).capture_exception
-    Rails.logger.error "Invalid JSON response: #{response.body}"
-    raise
+  rescue JSON::ParserError
+    raise Error.new('instagram_invalid_response', 502), cause: nil
   end
 end

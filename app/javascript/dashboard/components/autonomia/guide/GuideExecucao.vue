@@ -23,9 +23,12 @@ const props = defineProps({
 
 const { t, locale } = useI18n();
 
-// Data e hora no formato do idioma de quem está olhando.
+// Data e hora no formato do idioma de quem está olhando. O idioma vem como o
+// Chatwoot guarda (`pt_BR`), e o Intl só aceita a tag BCP 47 (`pt-BR`): com o
+// sublinhado ele lança RangeError, e o cartão "Feito pelo Guia" (com o
+// Desfazer) não aparecia — no ambiente local o painel ficava em "Pensando…".
 const quando = iso =>
-  new Intl.DateTimeFormat(locale.value, {
+  new Intl.DateTimeFormat(locale.value.replaceAll('_', '-'), {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(iso));

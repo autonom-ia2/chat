@@ -24,7 +24,9 @@ vi.mock('dashboard/composables', () => ({
 }));
 
 vi.mock('vuex', () => ({
-  useStore: () => ({ getters: { getCurrentAccountId: 7 } }),
+  useStore: () => ({
+    getters: { getCurrentAccountId: 7, getCurrentUser: { name: 'Rodrigo' } },
+  }),
 }));
 
 const atualizarUISettings = vi.fn();
@@ -39,18 +41,39 @@ vi.mock('dashboard/composables/store', () => ({
   }),
 }));
 
+const ETAPA = {
+  perfil: 'ligar',
+  chave_ia: 'ligar',
+  canal: 'ligar',
+  equipe: 'organizar',
+  funil: 'organizar',
+  campanha: 'crescer',
+};
+
 const passo = (id, ordem, status, extra = {}) => ({
   id,
   ordem,
   status,
   titulo: `Título ${id}`,
   por_que: `Por que ${id}`,
+  acao: `Ação ${id}`,
   rota: `rota_${id}`,
   rota_params: {},
+  etapa: ETAPA[id] || 'ligar',
+  minutos: 5,
+  artigo: '00.03',
+  video: null,
+  depende_de: null,
   pulavel: false,
   pre_requisitos: [],
   ...extra,
 });
+
+const VIDEO = {
+  arquivo: '/central-de-ajuda/videos/00.03.mp4',
+  legenda: '/central-de-ajuda/videos/00.03.vtt',
+  poster: '/central-de-ajuda/videos/00.03.jpg',
+};
 
 const TRILHA = [
   passo('perfil', 0, 'feito'),
@@ -58,9 +81,14 @@ const TRILHA = [
     rota: 'settings_applications_integration',
     rota_params: { integration_id: 'crm_kanban_ai' },
     pre_requisitos: ['Conta na OpenAI com crédito'],
+    video: VIDEO,
   }),
-  passo('canal', 2, 'pendente'),
-  passo('equipe', 5, 'pendente', { pulavel: true }),
+  passo('canal', 2, 'pendente', { minutos: 10 }),
+  passo('equipe', 5, 'pendente', {
+    pulavel: true,
+    minutos: 3,
+    depende_de: { id: 'canal', titulo: 'Título canal', pendente: true },
+  }),
 ];
 
 const montar = async (passos = TRILHA) => {
@@ -69,6 +97,14 @@ const montar = async (passos = TRILHA) => {
     global: {
       stubs: {
         Spinner: true,
+        VideoDoTrajeto: {
+          props: ['video'],
+          template: '<video :src="video.arquivo" />',
+        },
+        RouterLink: {
+          props: ['to'],
+          template: '<a :data-ref="to.params.ref"><slot /></a>',
+        },
         Button: {
           props: ['label'],
           emits: ['click'],
@@ -83,6 +119,13 @@ const montar = async (passos = TRILHA) => {
 
 const botoes = (wrapper, texto) =>
   wrapper.findAll('button').filter(botao => botao.text() === texto);
+
+const painel = wrapper => wrapper.find('article');
+
+const linha = (wrapper, id) =>
+  wrapper
+    .findAll('li button')
+    .find(botao => botao.text().includes(`Título ${id}`));
 
 describe('FirstSteps', () => {
   beforeEach(() => {
@@ -100,13 +143,29 @@ describe('FirstSteps', () => {
     expect(raiz.classes()).toContain('h-full');
   });
 
-  it('mostra o progresso contando feitos e pulados', async () => {
+  it('cumprimenta pelo nome e mostra o progresso contando feitos e pulados', async () => {
     const wrapper = await montar();
 
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.GREETING|Rodrigo');
     expect(wrapper.text()).toContain('ONBOARDING_TRAIL.PROGRESS|1,4');
     expect(
       wrapper.find('[role="progressbar"]').attributes('aria-valuenow')
     ).toBe('25');
+  });
+
+  it('soma o tempo só dos passos que faltam', async () => {
+    const wrapper = await montar();
+
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.REMAINING|18');
+  });
+
+  it('agrupa a trilha nas etapas, com o progresso de cada uma', async () => {
+    const wrapper = await montar();
+
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.ETAPAS.ligar');
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.ETAPAS.organizar');
+    expect(wrapper.text()).not.toContain('ONBOARDING_TRAIL.ETAPAS.crescer');
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.PROGRESS|1,3');
   });
 
   it('conta o passo pulado como resolvido, e marca na lista', async () => {
@@ -117,23 +176,27 @@ describe('FirstSteps', () => {
     ]);
 
     expect(wrapper.text()).toContain('ONBOARDING_TRAIL.PROGRESS|2,3');
-    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.STATUS.SKIPPED');
-    expect(wrapper.findAll('li')[2].html()).toContain('i-lucide-circle-slash');
+    expect(linha(wrapper, 'equipe').text()).toContain(
+      'ONBOARDING_TRAIL.STATUS.SKIPPED'
+    );
+    expect(linha(wrapper, 'equipe').attributes('disabled')).toBeDefined();
   });
 
-  it('põe em foco o primeiro passo pendente, e só ele mostra pré-requisitos', async () => {
+  it('abre no painel o primeiro passo pendente, com o que separar antes', async () => {
     const wrapper = await montar();
-    const cartoes = wrapper.findAll('li');
 
-    expect(cartoes[1].classes().join(' ')).toContain('border-n-brand');
-    expect(cartoes[1].text()).toContain('Conta na OpenAI com crédito');
-    expect(cartoes[2].classes().join(' ')).not.toContain('border-n-brand');
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.NEXT_STEP');
+    expect(painel(wrapper).text()).toContain('Título chave_ia');
+    expect(painel(wrapper).text()).toContain('Conta na OpenAI com crédito');
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.TIME|5');
+    expect(linha(wrapper, 'chave_ia').attributes('aria-current')).toBe('step');
   });
 
-  it('leva à tela certa, com os parâmetros da rota', async () => {
+  it('tem um único botão principal, com o verbo do passo, que leva à tela certa', async () => {
     const wrapper = await montar();
 
-    await botoes(wrapper, 'ONBOARDING_TRAIL.DO_IT')[0].trigger('click');
+    expect(botoes(wrapper, 'Ação canal')).toHaveLength(0);
+    await botoes(wrapper, 'Ação chave_ia')[0].trigger('click');
 
     expect(push).toHaveBeenCalledWith({
       name: 'settings_applications_integration',
@@ -141,8 +204,54 @@ describe('FirstSteps', () => {
     });
   });
 
-  it('só oferece deixar para depois nos passos puláveis', async () => {
+  it('mostra o vídeo da Central e o link do artigo no passo que tem vídeo', async () => {
     const wrapper = await montar();
+
+    expect(painel(wrapper).find('video').attributes('src')).toBe(VIDEO.arquivo);
+    expect(painel(wrapper).find('a').attributes('data-ref')).toBe('00.03');
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.READ_ARTICLE');
+  });
+
+  it('sem vídeo, aponta o passo a passo escrito', async () => {
+    const wrapper = await montar();
+
+    await linha(wrapper, 'canal').trigger('click');
+
+    expect(painel(wrapper).find('video').exists()).toBe(false);
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.NO_VIDEO');
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.OPEN_ARTICLE');
+  });
+
+  it('abre no painel o passo escolhido na lista', async () => {
+    const wrapper = await montar();
+
+    await linha(wrapper, 'canal').trigger('click');
+
+    expect(painel(wrapper).text()).toContain('ONBOARDING_TRAIL.CHOSEN_STEP');
+    expect(painel(wrapper).text()).toContain('Título canal');
+  });
+
+  it('avisa a dependência pendente sem bloquear o passo', async () => {
+    const wrapper = await montar();
+
+    expect(linha(wrapper, 'equipe').text()).toContain(
+      'ONBOARDING_TRAIL.WAITS_FOR|Título canal'
+    );
+
+    await linha(wrapper, 'equipe').trigger('click');
+
+    expect(painel(wrapper).text()).toContain(
+      'ONBOARDING_TRAIL.WAITS_FOR|Título canal'
+    );
+    expect(botoes(wrapper, 'Ação equipe')).toHaveLength(1);
+  });
+
+  it('só oferece pular nos passos puláveis', async () => {
+    const wrapper = await montar();
+
+    expect(botoes(wrapper, 'ONBOARDING_TRAIL.SKIP')).toHaveLength(0);
+
+    await linha(wrapper, 'equipe').trigger('click');
 
     expect(botoes(wrapper, 'ONBOARDING_TRAIL.SKIP')).toHaveLength(1);
   });
@@ -150,6 +259,7 @@ describe('FirstSteps', () => {
   it('pula o passo e recarrega a trilha', async () => {
     const wrapper = await montar();
     OnboardingProgressAPI.skip.mockResolvedValue({});
+    await linha(wrapper, 'equipe').trigger('click');
 
     await botoes(wrapper, 'ONBOARDING_TRAIL.SKIP')[0].trigger('click');
     await flushPromises();
@@ -161,6 +271,7 @@ describe('FirstSteps', () => {
   it('avisa quando não consegue pular', async () => {
     const wrapper = await montar();
     OnboardingProgressAPI.skip.mockRejectedValue(new Error('falhou'));
+    await linha(wrapper, 'equipe').trigger('click');
 
     await botoes(wrapper, 'ONBOARDING_TRAIL.SKIP')[0].trigger('click');
     await flushPromises();
@@ -168,13 +279,13 @@ describe('FirstSteps', () => {
     expect(alerta).toHaveBeenCalledWith('ONBOARDING_TRAIL.SKIP_ERROR');
   });
 
-  it('abre o Guia pelo "Estou travado", só no passo em foco', async () => {
+  it('abre o Guia pelo "Preciso de ajuda"', async () => {
     const wrapper = await montar();
 
-    const travado = botoes(wrapper, 'ONBOARDING_TRAIL.STUCK');
-    expect(travado).toHaveLength(1);
+    const ajuda = botoes(wrapper, 'ONBOARDING_TRAIL.HELP');
+    expect(ajuda).toHaveLength(1);
 
-    await travado[0].trigger('click');
+    await ajuda[0].trigger('click');
 
     expect(atualizarUISettings).toHaveBeenCalledWith({
       is_autonomia_guide_panel_open: true,
@@ -182,14 +293,14 @@ describe('FirstSteps', () => {
     });
   });
 
-  it('esconde o "Estou travado" quando o Guia não está disponível', async () => {
+  it('esconde o "Preciso de ajuda" quando o Guia não está disponível', async () => {
     guiaDisponivel = false;
     const wrapper = await montar();
 
-    expect(botoes(wrapper, 'ONBOARDING_TRAIL.STUCK')).toHaveLength(0);
+    expect(botoes(wrapper, 'ONBOARDING_TRAIL.HELP')).toHaveLength(0);
   });
 
-  it('comemora quando o essencial está pronto', async () => {
+  it('comemora quando o essencial está pronto, e mostra o resto a pedido', async () => {
     const wrapper = await montar([
       passo('perfil', 0, 'feito'),
       passo('chave_ia', 1, 'feito'),
@@ -200,7 +311,12 @@ describe('FirstSteps', () => {
     ]);
 
     expect(wrapper.text()).toContain('ONBOARDING_TRAIL.DONE_TITLE');
-    expect(wrapper.text()).not.toContain('ONBOARDING_TRAIL.TITLE');
+    expect(wrapper.text()).toContain('ONBOARDING_TRAIL.ESSENTIAL_READY');
+    expect(wrapper.find('article').exists()).toBe(false);
+
+    await botoes(wrapper, 'ONBOARDING_TRAIL.SEE_REST')[0].trigger('click');
+
+    expect(painel(wrapper).text()).toContain('Título equipe');
   });
 
   it('avisa quando a trilha não carrega', async () => {

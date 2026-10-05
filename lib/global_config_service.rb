@@ -11,7 +11,7 @@ class GlobalConfigService
 
     i = InstallationConfig.where(name: config_key).first_or_create(value: config_value, locked: false)
     # To clear a nil value that might have been cached in the previous call
-    GlobalConfig.clear_cache
+    GlobalConfig.clear_cache(config_key)
     i.value
   end
 

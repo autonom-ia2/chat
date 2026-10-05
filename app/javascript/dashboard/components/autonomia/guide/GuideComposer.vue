@@ -1,4 +1,5 @@
 <script setup>
+import { TIPOS_DE_ANEXO } from 'dashboard/store/modules/autonomiaGuide';
 import {
   ref,
   computed,
@@ -71,8 +72,7 @@ const arrastando = ref(false);
 // O que a região viva anuncia ao leitor de tela: gravando, apagada, enviada.
 const anuncio = ref('');
 
-const TIPOS_ACEITOS =
-  '.pdf,.docx,.xlsx,.csv,.txt,.md,.json,image/png,image/jpeg,image/webp,image/gif';
+const TIPOS_ACEITOS = TIPOS_DE_ANEXO;
 
 const anexoEsperando = computed(() =>
   props.arquivos.some(arquivo => arquivo.estado !== 'erro')
@@ -178,6 +178,10 @@ const gravar = () => {
   voz.value = 'pedindo';
   anuncio.value = '';
 };
+
+// #982 — a tela de Automações pode abrir já gravando (a pessoa tocou no
+// microfone antes de chegar aqui).
+defineExpose({ gravar });
 
 // Entrega o áudio; se o Guia ainda está respondendo, ele espera a vez.
 const entregarAudio = () => {

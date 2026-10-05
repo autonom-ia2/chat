@@ -2155,6 +2155,26 @@
     "INSERTED": "Inserted into the reply."
   },
   "AUTONOMIA_GUIDE": {
+    "AVISOS": {
+      "LAUNCHER_LABEL": "Ask the Guide, {count} new warning | Ask the Guide, {count} new warnings",
+      "SELO": "Warning from the Guide"
+    },
+    "TELA": {
+      "SELECTED": {
+        "CARDS": "Seeing: {count} card selected | Seeing: {count} cards selected",
+        "CONVERSAS": "Seeing: {count} conversation selected | Seeing: {count} conversations selected",
+        "CONTATOS": "Seeing: {count} contact selected | Seeing: {count} contacts selected",
+        "OUTROS": "Seeing: {count} item selected | Seeing: {count} items selected"
+      },
+      "OPEN": {
+        "CARDS": "Seeing: the open card",
+        "CONVERSAS": "Seeing: the open conversation",
+        "CONTATOS": "Seeing: the open contact",
+        "OUTROS": "Seeing: the open item"
+      },
+      "REMOVE": "Ask without using what is on the screen",
+      "REMOVED": "Your next question goes without what is on the screen."
+    },
     "TITLE": "Platform Guide",
     "LAUNCHER": "Platform Guide",
     "THINKING": "Thinking…",
@@ -2202,6 +2222,129 @@
       "LOADING": "Loading what I did…",
       "LOAD_FAILED": "I could not load what I did. Try again in a moment.",
       "EMPTY": "Nothing done by the Guide in the last 5 days."
+    },
+    "HISTORY": {
+      "TITLE": "History",
+      "TAB_CONVERSAS": "Conversations",
+      "LOADING": "Loading your conversations…",
+      "LOAD_FAILED": "Couldn't load your conversations. Try again in a moment.",
+      "RETRY": "Try again",
+      "EMPTY_TITLE": "No conversations yet",
+      "EMPTY": "Your conversations with the Guide stay here until you delete them.",
+      "KEPT": "Kept until you delete them.",
+      "NO_TITLE": "Untitled conversation",
+      "DELETE": "Delete conversation",
+      "DELETE_NAMED": "Delete the conversation {titulo}",
+      "MORE": "Show more conversations",
+      "CONFIRM_TITLE": "Delete this conversation?",
+      "CONFIRM_TEXT": "This can't be undone.",
+      "CONFIRM": "Delete",
+      "KEEP": "Keep",
+      "DELETE_FAILED": "Couldn't delete the conversation. Try again.",
+      "OPEN_FAILED": "Couldn't open this conversation. Try again.",
+      "OPENING": "Opening your conversation…",
+      "REOPEN_FAILED": "Couldn't open your last conversation. You can start a new one.",
+      "START_NEW": "Start a new conversation"
+    },
+    "MEMORY": {
+      "TITLE": "What I know",
+      "KEPT": "This is what I remember to help you. You can fix it or delete it.",
+      "LOADING": "Loading what I know…",
+      "LOAD_FAILED": "I couldn't load what I know. Check your internet and try again.",
+      "RETRY": "Try again",
+      "ABOUT_YOU": "About you",
+      "ABOUT_COMPANY": "About the company",
+      "EMPTY_YOU_TITLE": "I haven't noted anything about you yet",
+      "EMPTY_COMPANY_TITLE": "I haven't noted anything about the company yet",
+      "EMPTY_TEXT": "Say \"remember that…\" and I'll note it.",
+      "EXAMPLE_YOU_1": "Remember that I prefer short answers",
+      "EXAMPLE_YOU_2": "Remember that you can call me by my first name",
+      "EXAMPLE_COMPANY_1": "Remember that reports here are always for the current month",
+      "EXAMPLE_COMPANY_2": "Remember that we call the main pipeline the sales pipeline",
+      "ONLY_ADMIN": "Only account admins can change what applies to the whole company.",
+      "TAUGHT_BY": "Taught by: {nome}",
+      "EDIT": "Fix",
+      "EDIT_NAMED": "Fix: {texto}",
+      "EDIT_LABEL": "What I should remember",
+      "SAVE": "Save",
+      "CANCEL": "Cancel",
+      "SAVED": "Done, I fixed it.",
+      "SAVE_FAILED": "I couldn't save it. Write up to 200 characters and try again.",
+      "DELETE": "Delete",
+      "DELETE_NAMED": "Delete: {texto}",
+      "CONFIRM_TITLE": "Forget this?",
+      "CONFIRM_TEXT": "I'll stop remembering it. This can't be undone.",
+      "CONFIRM": "Forget",
+      "KEEP": "Keep",
+      "FORGOTTEN": "Forgotten.",
+      "DELETE_FAILED": "I couldn't forget it now. Try again.",
+      "NOTED": "Noted: {texto}",
+      "FORGET": "Forget",
+      "FORGET_NAMED": "Forget: {texto}"
+    },
+    "TASK": {
+      "COST_AND_TIME": "{custo} · {tempo}",
+      "LOADING": "Loading the job…",
+      "LOAD_FAILED": "I could not load this job. Check your connection and try again.",
+      "RETRY": "Try again",
+      "SAMPLE_TITLE": "Before starting, look at a few examples",
+      "SAMPLE_WHAT": "{descricao}: I will change {total} records, a few at a time.",
+      "SAMPLE_EMPTY": "I have no example to show.",
+      "SAMPLE_SKIPPED": "I will leave this one as it is: {motivo}",
+      "BEFORE": "Before:",
+      "AFTER": "After:",
+      "COST": "Estimated AI cost: {valor}",
+      "NO_COST": "No AI cost",
+      "TIME": "takes about {minutos} minutes",
+      "TIME_SHORT": "takes less than 1 minute",
+      "JEV": "Uses {usa} of the {restam} classifications left this month.",
+      "START": "Start",
+      "NOT_NOW": "Not now",
+      "CHECK_TITLE": "I stopped after the first {n} so you can check.",
+      "CHECK_WHAT": "This is what changed so far:",
+      "CHECK_TABLE": "{n} {nome}",
+      "CHECK_NOTHING": "Nothing changed yet.",
+      "CHECK_JOBS": "The platform will still do {n} things because of this (automations and integrations).",
+      "CONTINUE": "Continue",
+      "CANCEL": "Cancel",
+      "QUEUED": "In line. Starting in a moment.",
+      "PROGRESS": "{feitos} of {total}",
+      "PROGRESS_LABEL": "Job progress",
+      "PAUSE": "Pause",
+      "PAUSED": "Stopped at {feitos} of {total}.",
+      "RESUME": "Continue",
+      "UNDOING": "Undoing… part {feitos} of {total}.",
+      "CANCELED_BEFORE": "All right, I changed nothing.",
+      "REPORT_TITLE": {
+        "concluida": "Job done",
+        "cancelada": "Job canceled",
+        "falhou": "Job stopped",
+        "desfeita": "Job undone"
+      },
+      "DONE_COUNT": "{n} of {total} done",
+      "NOT_DONE": {
+        "pulado": "{n} left as they were: {motivo}",
+        "falhou": "{n} did not work: {motivo}"
+      },
+      "UNDONE": "Undone. {n} changes went back to how they were.",
+      "UNDO_ALL": "Undo everything",
+      "ACTION_FAILED": "I could not do it now. Try again in a moment.",
+      "SKIP": {
+        "nao_encontrado": "I could not find the record anymore",
+        "fora_da_classificacao": "the classification says it is not needed",
+        "certeza_baixa": "I was not sure, so I left it",
+        "jev_falhou": "I could not classify it",
+        "sem_valor_gerado": "I could not write the new value"
+      },
+      "TABLES": {
+        "contacts": "contacts",
+        "conversations": "conversations",
+        "crm_cards": "pipeline cards",
+        "labels": "labels",
+        "taggings": "labels applied",
+        "companies": "companies",
+        "messages": "messages"
+      }
     },
     "A11Y": {
       "PANEL": "Platform Guide",
@@ -2252,6 +2395,215 @@
       "WAITING": "Audio ready. It goes as soon as the Guide finishes answering.",
       "FINISH_FIRST": "Send or delete the recording before sending another message.",
       "TIME": "{atual} / {total}"
+    }
+  },
+  "AUTOMACOES": {
+    "MENU": "Automations",
+    "LISTA": {
+      "TITULO": "Automations",
+      "SUBTITULO": "What the platform does on its own for you.",
+      "NOVA": "New automation",
+      "CARREGANDO": "Loading your automations",
+      "ERRO": "I could not load your automations. Check your connection and try again.",
+      "TENTAR_DE_NOVO": "Try again",
+      "VAZIO_TITULO": "Or start from a ready one",
+      "VAZIO_TEXTO": "The most used in customer service. Tap one and check it before turning it on.",
+      "SELO_GUIA": "Built by the Guide",
+      "LIGADA": "On",
+      "DESLIGADA": "Off",
+      "LIGOU": "Automation turned on. It applies to the next conversations.",
+      "DESLIGOU": "Automation turned off. Nothing happens until you turn it on again.",
+      "FALHA_TROCA": "I could not change it now. Try again.",
+      "ABRIR": "Open the automation {nome}",
+      "MAIS_ACOES": "and {n} more",
+      "INTERRUPTOR": "Turn {nome} on or off",
+      "CONTAGEM_LIGADAS": "None on | {n} on | {n} on",
+      "CONTAGEM_DESLIGADAS": "None off | {n} off | {n} off",
+      "PREFERE_MANUAL": "Prefer to build it piece by piece?",
+      "USAR_MANUAL": "Use manual mode"
+    },
+    "MODELOS": {
+      "TITULO": "Ready-made templates",
+      "BOAS_VINDAS": {
+        "TITULO": "Let them know we will reply",
+        "TEXTO": "First-time contacts are never left without an answer.",
+        "PEDIDO": "I want an automation: when a new conversation starts, send a welcome message saying we will reply soon.",
+        "QUANDO": "A new conversation starts",
+        "FAZ": "Sends “We will reply shortly”"
+      },
+      "AGRADECER": {
+        "TITULO": "Thank when closing",
+        "TEXTO": "The customer gets a thank-you when the conversation ends.",
+        "PEDIDO": "I want an automation: when the conversation is resolved, send a message thanking the contact.",
+        "QUANDO": "The conversation is resolved",
+        "FAZ": "Sends a thank-you to the customer"
+      },
+      "USAR": "Use this",
+      "ROTULO_QUANDO": "When",
+      "ROTULO_FAZ": "Does",
+      "DIVIDIR_LEADS": {
+        "TITULO": "Split customers across the team",
+        "TEXTO": "Every new conversation arrives with someone responsible.",
+        "QUANDO": "A new conversation starts",
+        "FAZ": "Assigns someone from the team, in turns",
+        "PEDIDO": "I want every new conversation to be assigned to someone from the team, in turns among whoever is online."
+      },
+      "FORA_DO_HORARIO": {
+        "TITULO": "Reply after hours",
+        "TEXTO": "At night and on weekends, customers know when we are back.",
+        "QUANDO": "A message arrives after hours",
+        "FAZ": "Tells them our business hours",
+        "PEDIDO": "I want anyone who writes outside our business hours to get a message telling them when we are back."
+      },
+      "RECLAMACAO": {
+        "TITULO": "Send complaints to whoever solves them",
+        "TEXTO": "Complaints go straight to the right team, already labeled.",
+        "QUANDO": "The customer makes a complaint",
+        "FAZ": "Labels it and hands it to the right team",
+        "PEDIDO": "I want an automation: when a customer message contains a complaint, add the complaint label and hand the conversation to the team that solves it."
+      },
+      "ORCAMENTO": {
+        "TITULO": "Tag price requests",
+        "TEXTO": "Price and quote requests get a label and never get lost in the queue.",
+        "QUANDO": "The customer asks for a price or quote",
+        "FAZ": "Adds the quote label",
+        "PEDIDO": "I want an automation: when a customer message asks for a price or a quote, add the quote label to the conversation."
+      }
+    },
+    "CONVERSA": {
+      "TITULO_NOVA": "New automation",
+      "TITULO_EDITAR": "Automation",
+      "VOLTAR": "Back to Automations",
+      "INTRO": "Tell me in your own words what you want to happen. The Guide builds the automation, and it stays off until you turn it on.",
+      "GUIA_FORA": "The Guide is not on for this account. You can still build the automation in manual mode.",
+      "MODO_MANUAL": "Edit in manual mode",
+      "MONTAR_MANUAL": "I prefer to build it in manual mode",
+      "CARREGANDO": "Loading the automation",
+      "ERRO": "I could not find this automation. It may have been deleted.",
+      "LIGAR": "Turn automation on",
+      "DESLIGAR": "Turn off",
+      "LIGADA_AVISO": "It already applies to the next conversations.",
+      "DESLIGADA_AVISO": "It only starts working once you turn it on. You can turn it off anytime.",
+      "SO_LEITURA": "You can view and test this automation. Turning it on and changing it is up to the admins.",
+      "INTRO_GUIA": "Tell me what you want to automate, or start from a template.",
+      "GUIA_NOME": "Guide",
+      "GUIA_SUBTITULO": "Builds it with you. Nothing turns on until you say so.",
+      "LIGADA_TITULO": "It is on!"
+    },
+    "RESUMO": {
+      "TITULO": "How it will work",
+      "QUANDO": "When",
+      "SE": "Only if",
+      "ENTAO": "Does",
+      "SEM_CONDICAO": "In every conversation",
+      "VAZIO": "Tell the Guide what you want. It fills in these three steps here.",
+      "LIGADA": "On",
+      "DESLIGADA": "Off, waiting for you",
+      "NOME_EXEMPLO": "Carla",
+      "PREVIA": "This is how the customer sees the message.",
+      "MANDA_MENSAGEM": "Sends this message to the customer"
+    },
+    "ENSAIO": {
+      "TITULO": "See what would have happened",
+      "BOTAO": "Test with real cases",
+      "EXPLICA": "See what it would do in the most recent conversations. Nothing is sent or changed.",
+      "TESTANDO": "Testing on recent conversations",
+      "RESUMO": "of {total} recent conversations would be affected",
+      "SEM_CONVERSA": "There are no conversations to test yet.",
+      "CASARIA": "Would be affected",
+      "NAO_CASARIA": "Would not be affected",
+      "FARIA": "Would: {acoes}",
+      "CONTATO_SEM_NOME": "Contact without a name",
+      "SEM_TESTE": "The part that depends on something changing at that moment ({partes}) is left out of the test.",
+      "NAO_TESTAVEL": "This automation only acts when something changes at that moment ({partes}). That can't be tested on conversations that already happened: turn it on and watch the first times.",
+      "ERRO": "The test did not answer now. Try again.",
+      "ABRIR_CONVERSA": "Open the conversation",
+      "DEPENDE_DO_DECISOR": "The steps after the Decider ({acoes}) depend on its answer, and the test does not ask the Decider.",
+      "DE_NOVO": "Test again"
+    },
+    "QUANDO": {
+      "MESSAGE_CREATED": "When a message arrives",
+      "CONVERSATION_CREATED": "When a new conversation starts",
+      "CONVERSATION_UPDATED": "When a conversation changes",
+      "CONVERSATION_RESOLVED": "When a conversation is resolved",
+      "CONVERSATION_OPENED": "When a conversation is reopened",
+      "DESCONHECIDO": "When something happens in the conversation"
+    },
+    "ESPERA_MINUTOS": "and {n} minutes go by",
+    "ESPERA_HORAS": "and {n} hours go by",
+    "OPERADOR": {
+      "equal_to": "is",
+      "not_equal_to": "is not",
+      "contains": "contains",
+      "does_not_contain": "does not contain",
+      "is_present": "is filled in",
+      "is_not_present": "is empty",
+      "is_greater_than": "is greater than",
+      "is_less_than": "is less than",
+      "days_before": "is in",
+      "starts_with": "starts with"
+    },
+    "MUDOU": "{atributo} changes from {de} to {para}",
+    "LIGA": {
+      "AND": "and",
+      "OR": "or"
+    },
+    "OU": "or",
+    "STATUS": {
+      "OPEN": "open",
+      "RESOLVED": "resolved",
+      "PENDING": "pending",
+      "SNOOZED": "snoozed"
+    },
+    "SIM": "yes",
+    "NAO": "no",
+    "NUMERO": "no. {id}",
+    "ACAO_DESCONHECIDA": "a step this screen cannot describe yet",
+    "DECISOR": {
+      "NOME_DO_PASSO": "Ask the Decider",
+      "PASSO": "Asks the Decider {decisor}: continues if the answer is {resposta}",
+      "NUMERO": "#{id}"
+    },
+    "FRASE": "{quando}, if {condicoes} → {acoes}",
+    "FRASE_SEM_CONDICAO": "{quando} → {acoes}",
+    "HEROI": {
+      "TITULO": "What do you want to happen on its own?",
+      "TEXTO": "Write it as if talking to a colleague. The Guide builds it, shows what will happen and only turns it on when you say so.",
+      "EXEMPLO": "E.g.: when a customer asks for a quote, notify the sales team",
+      "MONTAR": "Build with the Guide",
+      "IDEIAS_ROTULO": "Ideas:",
+      "IDEIAS": {
+        "FORA_DO_HORARIO": "Reply to people who write after hours",
+        "RECLAMACAO": "Notify the team when a complaint comes in",
+        "ORCAMENTO": "Tag people asking for a price"
+      },
+      "FALAR": "Speak instead of typing",
+      "ANEXAR": "Attach a screenshot or file",
+      "REMOVER": "Remove {nome}",
+      "DICA_ANEXO": "Tip: paste a screenshot (Ctrl+V) or drop a file to show what you want."
+    },
+    "SUGESTAO": {
+      "ROTULO": "The Guide noticed",
+      "TEXTO": "{n} of the {total} open conversations in {caixa} have no one responsible. Do you want each new conversation to go to someone on the team?",
+      "ACEITAR": "See how it would work",
+      "AGORA_NAO": "Not now",
+      "PEDIDO": "I want every new conversation in {caixa} to be assigned to someone from the team, in turns among whoever is online."
+    },
+    "ETAPAS": {
+      "ROTULO": "Steps",
+      "CONTE": "Tell",
+      "CONFIRA": "Check",
+      "LIGUE": "Turn on"
+    },
+    "VARIAVEL_NOME": "[customer name]",
+    "RESPOSTAS": {
+      "OTIMA": "Looks great",
+      "CURTA": "Make it shorter",
+      "CURTA_PEDIDO": "Make the message shorter.",
+      "ESCREVER": "I want to write it",
+      "ESCREVER_PEDIDO": "I want to write the message myself.",
+      "MUDAR": "I want to change something",
+      "MUDAR_PEDIDO": "I want to change something in this automation."
     }
   }
 }

@@ -11,7 +11,7 @@ module Autonomia
       # antes do deploy e lido depois — ou o contrário — não pode cair num campo que sumiu. São
       # sempre o PRIMEIRO item de `navigations`/`artigos`. O front novo lê as listas.
       Result = Struct.new(:text, :navigation, :navigations, :grounded, :confidence, :available, :escalate,
-                          :acao, :retido, :artigo, :artigos, :execucao, keyword_init: true)
+                          :acao, :retido, :artigo, :artigos, :execucao, :lembrancas, :tarefa, keyword_init: true)
 
       # Quantas mensagens da conversa seguem junto. Eram 12 — seis idas e voltas,
       # curto demais para quem está configurando a conta e vai perguntando uma
@@ -34,15 +34,26 @@ module Autonomia
       # tem que cair para 1 — senão o Guia volta a morrer em pergunta aberta.
       MAX_RODADAS = 10
 
+      # A etiqueta do custo do Guia na Gestão IA (#861), no grupo "Guia da Plataforma".
+      FEATURE = 'guia'.freeze
+
       # rubocop:disable Metrics/ParameterLists -- cada argumento é uma parte distinta da pergunta (#857).
-      def initialize(account:, user:, message:, history: [], route_context: nil, arquivos: [])
+      # `registro` (#861): o diagnóstico do pedido, que o `ChatJob` grava no turno depois daqui.
+      # `tela` (#934): o que a pessoa tem aberto, selecionado e filtrado (`Autonomia::Guide::Tela`).
+      # `turno_id` (#933): o turno da conversa, para a anotação dizer de onde veio.
+      def initialize(account:, user:, message:, history: [], route_context: nil, route_params: {}, tela: {}, arquivos: [],
+                     registro: nil, turno_id: nil)
         @account = account
         @user = user
         @account_user = account&.account_users&.find_by(user_id: user&.id)
         @message = message.to_s
         @history = Array(history)
         @route_context = route_context.to_s
+        @route_params = route_params.to_h
+        @tela = tela.to_h
         @arquivos = Array(arquivos)
+        @registro = registro
+        @turno_id = turno_id
       end
       # rubocop:enable Metrics/ParameterLists
 
@@ -70,6 +81,9 @@ module Autonomia
           # irrelevantes: tela errada no botão e confiança baixa, que o portão transforma em
           # "o guia está indisponível".
           retrieval_query: @message,
+          # Os fluxos da tela em que a pessoa está entram sempre: a busca pelo texto do pedido pode
+          # não trazê-los (pedido longo, cheio de palavras de outro assunto).
+          fixos: ::Autonomia::Guide::FluxosDaTela.para(agent, @route_context),
           # #857 — o Guia pesquisa na internet quando precisa, por decisão dele, e lê os
           # arquivos que a pessoa anexou na conversa. O que vem de fora é dado, nunca ordem.
           allow_web_search: true,
@@ -79,7 +93,9 @@ module Autonomia
           operador: contexto,
           # Ler, olhar o que voltou e ler de novo, até dez vezes — e sempre
           # dentro do orçamento de tempo do cliente.
-          max_rodadas: MAX_RODADAS
+          max_rodadas: MAX_RODADAS,
+          # O custo do Guia separado do atendimento na Gestão IA (#861).
+          feature: FEATURE
         ).answer
 
         # A proposta nasce DENTRO da ferramenta, durante a redação — por isso é
@@ -100,11 +116,13 @@ module Autonomia
         # O que o Guia FEZ neste turno (#855) vai para a tela mesmo quando o texto
         # foi retido: a mudança já aconteceu, e a pessoa precisa ver e poder desfazer.
         execucao = contexto.execucao&.resumo
+        registrar_decisoes(result, diagnostics, text)
         return retido(execucao) if text.blank?
 
         navs = navegacoes(result)
         Result.new(text: text, navigation: navs.first, navigations: navs, acao: acao, execucao: execucao,
-                   artigo: contexto.artigos.first, artigos: contexto.artigos,
+                   artigo: contexto.artigos.first, artigos: contexto.artigos, lembrancas: contexto.lembrancas,
+                   tarefa: contexto.tarefa,
                    grounded: result.answered_from_knowledge == true,
                    confidence: result.confidence,
                    available: true, escalate: result.handoff.to_h[:should] == true)
@@ -115,16 +133,27 @@ module Autonomia
 
       private
 
-      # Injeta o PERFIL e a TELA ATUAL como CONTEXTO (dado, não fala), para a instrução adaptar a
-      # resposta e só orientar o que o perfil pode fazer. O modelo nunca confia nisso para autorizar
-      # — é só para a redação; o backend real (endpoints de domínio) é que aplica Pundit.
+      # Perfil, tela, registro aberto e fuso como CONTEXTO (dado, não fala) — ver Cabecalho.
       def role_scoped_query(diagnostics = nil)
-        role = @account_user&.role.presence || 'agent'
-        ctx = "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
-              "Tela atual: #{@route_context.presence || 'não informada'}. Adapte a resposta a este " \
-              "perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o " \
-              "perfil não for administrator, explique que é feito pelo administrador da conta.]"
-        "#{ctx}#{catalogos}#{diagnostic_block(diagnostics)}\n\n#{@message}"
+        ctx = ::Autonomia::Guide::Cabecalho.call(account: @account, role: @account_user&.role.presence || 'agent',
+                                                 route_context: @route_context, route_params: @route_params)
+        ::Autonomia::Guide::PerguntaMontada.call("#{ctx}#{bloco_tela}#{catalogos}#{bloco_memoria}#{diagnostic_block(diagnostics)}", @message)
+      end
+
+      # #933 — o que a pessoa e a corretora já ensinaram, como DADO. Fica aqui, na pergunta, e não
+      # na instrução: a instrução é o prefixo que o provedor guarda em cache, e mudaria a cada anotação.
+      def bloco_memoria
+        bloco = ::Autonomia::Guide::Memoria.bloco(@account, @user)
+        bloco.empty? ? '' : "\n\n#{bloco}"
+      end
+
+      # #934 — o que a pessoa está vendo, já lido com a permissão dela: o id que voltou vale como lido no
+      # turno. Vai para o diagnóstico só com rota, recurso, ids e total.
+      def bloco_tela
+        tela = ::Autonomia::Guide::Tela.new(contexto: contexto, tela: @tela)
+        texto = tela.bloco
+        @registro&.ver_tela(tela.registro)
+        texto
       end
 
       # O MAPA do que as ferramentas alcançam, para o modelo saber o que pedir.
@@ -196,8 +225,21 @@ module Autonomia
       end
 
       def contexto
-        @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user,
-                                                       account_user: @account_user)
+        @contexto ||= ::Autonomia::Guide::Contexto.new(account: @account, user: @user, account_user: @account_user,
+                                                       registro: @registro, turno_id: @turno_id)
+      end
+
+      # O que o Guia decidiu, para o registro do pedido (#861). Quando o portão reteve, guarda o texto
+      # que o modelo escreveu: é o que se perdia, e é por ele que se entende uma resposta que não veio.
+      def registrar_decisoes(result, diagnostics, text)
+        return if @registro.nil?
+
+        @registro.decidir(
+          fluxos: Array(result.used_knowledge), check: diagnostics&.dig(:check), confianca: result.confidence,
+          grounded: result.answered_from_knowledge == true, escalate: result.handoff.to_h[:should] == true,
+          retido: text.blank?, resposta_retida: result.raw_reply, telas: contexto.telas, artigos: contexto.artigos,
+          execution_id: contexto.execucao&.id
+        )
       end
 
       def sanitized_history

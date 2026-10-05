@@ -2,10 +2,11 @@
 # obrigatório, valores válidos, faixa e padrão.
 #
 # Só entra o que a reflexão do ActiveRecord dá com certeza. Validação escrita
-# como método (`validate :json_conditions_format`) não é introspectável e fica
-# de fora — quem recusa é o servidor, na hora. Lambda de validação nunca é
-# chamada: `options[:in]` só vale quando já é lista ou faixa fixa, e
-# `options[:message]` nem é lido.
+# como método (`validate :metodo`) não é introspectável e fica de fora — quem
+# recusa é o servidor, na hora. Lambda de validação nunca é chamada:
+# `options[:in]` só vale quando já é lista ou faixa fixa, e `options[:message]`
+# nem é lido. A exceção é o esquema JSON da coluna (`Esquemas`): ele é a regra
+# declarada, e o tipo do campo sai dele.
 module Autonomia::Guide::Formatos::Modelo
   LISTA_GRANDE = 40
   EXEMPLOS = 5
@@ -55,9 +56,11 @@ module Autonomia::Guide::Formatos::Modelo
   def anotar(modelo, nome, campo, criando:)
     return {} unless modelo
 
+    esquema = Autonomia::Guide::Formatos::Esquemas.da_coluna(modelo, nome)
     {
-      'tipo' => tipo(modelo, nome, campo),
-      'padrao' => padrao(modelo, nome)
+      'tipo' => (esquema && Autonomia::Guide::Formatos::Esquemas.tipo(esquema)) || tipo(modelo, nome, campo),
+      'padrao' => padrao(modelo, nome),
+      'esquema' => esquema
     }.compact.merge(validacoes(modelo, nome, criando)).compact
   end
 

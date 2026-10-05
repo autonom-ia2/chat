@@ -18,6 +18,11 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
       'propor_acao'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[acao descricao]
+    end
+
     def description
       'Prepara, para a pessoa confirmar na tela, uma ação que NÃO tem desfazer: enviar mensagem a cliente, ' \
         'disparar campanha, trocar credencial, importar em lote. NÃO executa: a tela mostra o resumo com ' \
@@ -45,11 +50,12 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
 
   def call
     return recusa_sem_contexto if @operador.nil?
-    return tem_volta if conhecida_com_volta?(@params['acao'].to_s)
 
     dados = { caminho: objeto('caminho_json'), corpo: objeto('corpo_json'),
               descricao: @params['descricao'].to_s }
-    nao_lidos = @operador.nao_lidos(dados[:caminho])
+    return tem_volta if conhecida_com_volta?(@params['acao'].to_s, dados)
+
+    nao_lidos = ids_nao_lidos(dados)
     return sem_leitura(nao_lidos) if nao_lidos.any?
 
     descricao = @operador.acoes.descrever(@params['acao'].to_s, dados)
@@ -66,6 +72,9 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
   end
 
   private
+
+  # Do caminho e do corpo (#934): `ids` e `*_ids` também apontam registro.
+  def ids_nao_lidos(dados) = @operador.nao_lidos(dados[:caminho], dados[:corpo])
 
   # As ações que EXISTEM para o recurso que ele tentou. O catálogo de escrita
   # tem 16.245 caracteres e não cabe no prompt de toda pergunta; aqui ele chega
@@ -107,8 +116,8 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
   end
 
   # Ação fora do catálogo segue para `descrever`, que recusa e lista as vizinhas.
-  def conhecida_com_volta?(acao)
-    @operador.acoes.catalogo.include?(acao) && @operador.acoes.desfazivel?(acao)
+  def conhecida_com_volta?(acao, dados)
+    @operador.acoes.catalogo.include?(acao) && @operador.acoes.desfazivel?(acao, dados)
   end
 
   def tem_volta

@@ -8,7 +8,7 @@ module Crm
         return if account.blank? || feature.blank? || model.blank?
 
         tokens = extract_tokens(usage)
-        Crm::AiUsageEvent.create!(
+        event = Crm::AiUsageEvent.create!(
           account_id: id_of(account),
           pipeline_id: id_of(pipeline),
           feature: feature.to_s,
@@ -18,19 +18,33 @@ module Crm
           cached_tokens: tokens[:cached],
           cache_write_tokens: tokens[:cache_write],
           output_tokens: tokens[:output],
-          cost_estimate: Pricing.cost(
-            model: model,
-            input_tokens: tokens[:input],
-            cached_tokens: tokens[:cached],
-            cache_write_tokens: tokens[:cache_write],
-            output_tokens: tokens[:output]
-          ),
+          cost_estimate: cost_for(model, tokens),
           latency_ms: latency_ms,
           created_at: Time.current
         )
+        notify(event, tokens)
+        event
       rescue StandardError => e
         Rails.logger.warn("[crm][ai][usage] record failed feature=#{feature} model=#{model}: #{e.class}: #{e.message}")
         nil
+      end
+
+      def self.cost_for(model, tokens)
+        Pricing.cost(model: model, input_tokens: tokens[:input], cached_tokens: tokens[:cached],
+                     cache_write_tokens: tokens[:cache_write], output_tokens: tokens[:output])
+      end
+
+      EVENT_NAME = 'crm.ai_usage'.freeze
+
+      # Quem precisa somar o custo de UM trabalho (o registro de um pedido ao Guia, #861) assina este
+      # evento enquanto o trabalho roda. A tabela continua sendo a fonte da Gestão IA; isto é só aviso.
+      def self.notify(event, tokens)
+        ActiveSupport::Notifications.instrument(
+          EVENT_NAME,
+          event_id: event.id, feature: event.feature, model: event.model, effort: event.reasoning_effort,
+          tokens: { in: tokens[:input], cached: tokens[:cached], out: tokens[:output] },
+          cost: event.cost_estimate.to_f, latency_ms: event.latency_ms
+        )
       end
 
       def self.id_of(value)

@@ -12,15 +12,18 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  // #982 — na tela de Automações, o balão de quem pede é azul, como no WhatsApp.
+  destaque: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['tentarDeNovo']);
 
-const fotos = computed(() =>
-  (props.item.anexos || []).filter(anexo => anexo.tipo === 'imagem')
-);
+// #861 — numa conversa reaberta a foto volta sem miniatura (o arquivo é
+// apagado em 1 dia): aparece na lista, pelo nome, com o ícone de imagem.
+const comPrevia = anexo => anexo.tipo === 'imagem' && anexo.previa;
+const fotos = computed(() => (props.item.anexos || []).filter(comPrevia));
 const documentos = computed(() =>
-  (props.item.anexos || []).filter(anexo => anexo.tipo !== 'imagem')
+  (props.item.anexos || []).filter(anexo => !comPrevia(anexo))
 );
 const voz = computed(() => props.item.voz);
 </script>
@@ -28,7 +31,12 @@ const voz = computed(() => props.item.voz);
 <template>
   <div class="flex justify-end w-full">
     <div
-      class="flex flex-col gap-2 max-w-[85%] min-w-0 rounded-2xl ltr:rounded-br-md rtl:rounded-bl-md bg-n-alpha-2 px-3 py-2 text-n-slate-12"
+      class="flex flex-col gap-2 max-w-[85%] min-w-0 rounded-2xl ltr:rounded-br-md rtl:rounded-bl-md"
+      :class="
+        destaque
+          ? 'bg-n-brand px-4 py-3 text-base leading-relaxed text-white'
+          : 'bg-n-alpha-2 px-3 py-2 text-n-slate-12'
+      "
     >
       <span class="sr-only">{{ $t('CAPTAIN.COPILOT.YOU') }}</span>
       <ul
@@ -53,7 +61,12 @@ const voz = computed(() => props.item.voz);
           class="flex items-center gap-2 min-w-0 rounded-lg bg-n-alpha-1 px-2 py-2 text-sm"
         >
           <span
-            class="i-lucide-file-text size-5 shrink-0 text-n-slate-11"
+            class="size-5 shrink-0 text-n-slate-11"
+            :class="
+              documento.tipo === 'imagem'
+                ? 'i-lucide-image'
+                : 'i-lucide-file-text'
+            "
             aria-hidden="true"
           />
           <span class="truncate min-w-0">{{ documento.nome }}</span>

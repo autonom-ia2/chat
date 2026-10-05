@@ -50,9 +50,10 @@ describe Macros::ExecutionService, type: :service do
   end
 
   context 'when the macro uses a change_status action' do
+    # O esquema já recusa o status numérico; a guarda do executor vale para a macro antiga.
     let(:macro) do
-      create(:macro, account: account, created_by: user, updated_by: user,
-                     actions: [{ 'action_name' => 'change_status', 'action_params' => [status] }])
+      build(:macro, account: account, created_by: user, updated_by: user,
+                    actions: [{ 'action_name' => 'change_status', 'action_params' => [status] }]).tap { |macro| macro.save!(validate: false) }
     end
 
     context 'with a resolved status' do

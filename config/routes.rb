@@ -80,6 +80,7 @@ Rails.application.routes.draw do
           # Central de Ajuda da plataforma (#501): leitura para todas as contas.
           resources :central_de_ajuda, only: [:index, :show], path: 'central-de-ajuda', controller: 'central_de_ajuda' do
             get :busca, on: :collection
+            get :busca_inteligente, on: :collection
           end
           # Trilha de onboarding (épico #485): progresso pelo estado real da conta.
           resources :onboarding_progress, only: [:index], path: 'onboarding/progress' do
@@ -165,6 +166,7 @@ Rails.application.routes.draw do
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
+            post :ensaio, on: :member
           end
           resources :macros, only: [:index, :create, :show, :update, :destroy] do
             post :execute, on: :member
@@ -368,6 +370,39 @@ Rails.application.routes.draw do
             post 'guide/arquivos', to: 'guide#arquivo'
             post 'guide/transcricao', to: 'guide#transcricao'
             post 'guide/execucoes/:id/desfazer', to: 'guide#desfazer'
+            # #861 — a conversa com o Guia guardada: reabrir, listar e apagar.
+            get 'guide/conversas', to: 'guide_conversas#index'
+            get 'guide/conversas/atual', to: 'guide_conversas#atual'
+            get 'guide/conversas/:id', to: 'guide_conversas#show'
+            delete 'guide/conversas/:id', to: 'guide_conversas#destroy'
+            # #933 — o que o Guia lembra: o painel "O que eu sei".
+            resources :guide_memorias, only: [:index, :update, :destroy]
+            # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
+            resources :vigias, only: [:index, :show, :create, :update, :destroy]
+            resources :avisos, only: [:index, :update]
+            # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
+            get 'pendencias_do_guia', to: 'pendencias_do_guia#index'
+            # #936 — tarefas longas do Guia: o andamento e os controles. Fora de `guide/`, de propósito: entram
+            # no catálogo do próprio Guia (ler o andamento, pausar, cancelar, desfazer).
+            resources :tarefas, only: [:index, :show] do
+              member do
+                post :comecar
+                post :seguir
+                post :pausar
+                post :retomar
+                post :cancelar
+                post :desfazer
+              end
+            end
+            # #858 — Decisor: a pergunta que a automação faz sobre a conversa antes de seguir.
+            resources :decisores, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :teste
+                post :exemplos
+                get :decisoes
+              end
+            end
+            post 'decisoes/:id/resolver', to: 'decisoes#resolver'
             resource :invite_connection, only: [:show] do
               get ':inbox_id/connection', action: :connection
               post ':inbox_id/reconnect', action: :reconnect
@@ -724,6 +759,10 @@ Rails.application.routes.draw do
 
           namespace :instagram do
             resource :authorization, only: [:create]
+            get 'testers/configuration', to: 'testers#configuration'
+            get 'testers/search', to: 'testers#search'
+            post 'testers/status', to: 'testers#status'
+            post 'testers/invite', to: 'testers#invite'
           end
 
           namespace :tiktok do
@@ -1102,6 +1141,10 @@ Rails.application.routes.draw do
     namespace :super_admin do
       root to: 'dashboard#index'
 
+      resource :instagram_automation, only: [:show, :create] do
+        post :health, on: :collection
+        post :reconnect, on: :collection
+      end
       resource :app_config, only: [:show, :create]
       post 'app_config/test_typesafe', to: 'app_configs#test_typesafe', as: :test_typesafe_app_config
       resource :push_diagnostics, only: [:show, :create] do

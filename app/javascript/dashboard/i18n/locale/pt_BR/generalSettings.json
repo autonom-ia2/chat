@@ -82,6 +82,11 @@
         "PLACEHOLDER": "Nome da sua conta",
         "ERROR": ""
       },
+      "TIMEZONE": {
+        "LABEL": "Fuso horário",
+        "PLACEHOLDER": "Escolha o fuso horário",
+        "HELP": "Lembretes, relatórios, horário de atendimento e o Guia seguem este fuso."
+      },
       "DOMAIN": {
         "LABEL": "Domínio de recebimento de e-mails",
         "PLACEHOLDER": "O domínio onde você receberá os e-mails",
@@ -234,5 +239,9 @@
   "COMMON": {
     "OR": "Ou",
     "CLICK_HERE": "clique aqui"
+  },
+  "FUSO_AUTOMATICO": {
+    "AJUSTADO": "Ajustamos o fuso da conta para o horário de {cidade}.",
+    "TROCAR": "Trocar"
   }
 }

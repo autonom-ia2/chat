@@ -9,6 +9,8 @@ Email campaign operations: [maintenance, rollout and rollback runbook](docs/emai
 
 Email protection #436: [acceptance matrix, validation evidence and approval sequence](docs/email-campaigns/release-436.md).
 
+Recuperação Instagram #931: [evidência atual, pendências e contrato de rollout](docs/audit/instagram-931-recovery.md).
+
 The modern customer support platform, an open-source alternative to Intercom, Zendesk, Salesforce Service Cloud etc.
 
 <p>
@@ -140,6 +142,10 @@ Thanks goes to all these [wonderful people](https://www.chatwoot.com/docs/contri
 <a href="https://github.com/chatwoot/chatwoot/graphs/contributors"><img src="https://opencollective.com/chatwoot/contributors.svg?width=890&button=false" /></a>
 
 _Chatwoot_ &copy; 2017-2026, Chatwoot Inc - Released under the MIT License.
+
+Instagram #910: [fluxo opcional de convite de testador](docs/instagram-tester-onboarding.md)
+e [runbook por stack](docs/runbooks/instagram-tester-onboarding.md). Desligado por padrão,
+com allowlist obrigatória; integração real por stack permanece pendente.
 
 ### Relacionamentos (Issue #757, extensão opcional)
 

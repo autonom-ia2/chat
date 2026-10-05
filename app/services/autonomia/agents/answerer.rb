@@ -71,13 +71,17 @@ module Autonomia
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
-                     operador: nil, max_rodadas: 1, max_segundos: nil)
+                     operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
+                     fixos: [])
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
         # do embedding. O caller passa aqui só a pergunta, usada exclusivamente no retrieval.
         @retrieval_query = retrieval_query.to_s.presence || @query
+        # Trechos que entram sempre, antes dos que a busca achar (o Guia: os fluxos da tela em que a
+        # pessoa está). Vazio para os demais agentes: nada muda para eles.
+        @fixos = Array(fixos)
         @history = history
         @images = Array(images)
         # Texto dos PDFs que o cliente anexou NESTE turno (#319). Na renovação é a apólice.
@@ -107,6 +111,9 @@ module Autonomia
         # são caras e assíncronas, é decisão que exige medição própria.
         @max_rodadas = max_rodadas
         @max_segundos = max_segundos
+        # A etiqueta do custo na Gestão IA (#861). O Guia passa 'guia': com a do atendimento, o gasto
+        # dele sumia dentro de "Assistente de respostas".
+        @feature = feature
       end
 
       # -> Autonomia::Agents::AnswerResult
@@ -257,7 +264,7 @@ module Autonomia
         # Default histórico preservado: chave ausente = COM base (retrieval roda normalmente).
         return [] if @agent.knowledge_disabled?
 
-        Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K)
+        com_fixos(Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
       rescue Autonomia::Agents::Retriever::RetrievalError
         # #14 — falha de INFRA. Operate (instrução-dirigido): NÃO silencia o bot — degrada p/ [] e
         # segue pela instrução. Fluxo GATEADO (Guia/copiloto): re-levanta → `answer` faz handoff seguro.
@@ -266,6 +273,15 @@ module Autonomia
       rescue StandardError => e
         Rails.logger.warn("[autonomia][answerer] retrieve degraded agent=#{@agent.id} #{e.class}")
         []
+      end
+
+      # Os fixos vêm primeiro e não se repetem; o total segue o teto da resposta, então quem sai é o
+      # trecho de menor nota da busca.
+      def com_fixos(achados)
+        return achados if @fixos.empty?
+
+        ids = @fixos.map(&:id)
+        (@fixos + achados.reject { |trecho| ids.include?(trecho.id) }).first(Config::ANSWER_TOP_K)
       end
 
       # Roda o LLM (síncrono, schema, gpt-6.1-sol) e devolve o hash parseado, ou nil em qualquer
@@ -277,7 +293,7 @@ module Autonomia
         # O prompt e o cliente ficam na instância: a reescrita pedida pela conferência de preços os reusa.
         @prompt = PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets,
                                     images: @images, documents: @documents, audience: @audience)
-        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: 'agente_resposta', account: @agent.account)
+        @cliente = Crm::Ai::ResponsesClient.new(credential: credential, feature: @feature, account: @agent.account)
         raw = @cliente.create_with_tool_executor(
           model: Config::ANSWERER_MODEL,
           instructions: @prompt.instructions,
@@ -290,8 +306,16 @@ module Autonomia
         ) { |calls| execute_tool_calls(calls) }
         parsed = JSON.parse(raw[:text])
         parsed.is_a?(Hash) ? parsed : nil # JSON não-objeto (ex.: "[]") -> handoff seguro, nunca 500.
-      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError
-        nil # NÃO logar e.message (pode ecoar o prompt). error code curto fica no AnswerResult.
+      rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
+        ia_indisponivel(e)
+      end
+
+      # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
+      # `ResponsesClient::Error` não carrega código à parte. O status HTTP e o código da OpenAI já
+      # saem no log do próprio cliente (`[crm][ai][openai_error]`); aqui fica de quem foi a falha (#941).
+      def ia_indisponivel(erro)
+        Rails.logger.warn("[autonomia][answerer] ia indisponivel agent=#{@agent.id} feature=#{@feature} #{erro.class}")
+        nil
       end
 
       # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).
@@ -343,9 +367,19 @@ module Autonomia
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
         specialists_by_function = enabled_specialists.index_by(&:function_name)
         Array(calls).map do |call|
+          inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           output = dispatch_tool_call(call, tools_by_slug, specialists_by_function)
+          registrar_chamada(call, output, inicio)
           { type: 'function_call_output', call_id: call['call_id'], output: output.to_s.truncate(8_000) }
         end
+      end
+
+      # O registro de diagnóstico do Guia (#861): quem tem `operador` anota o que chamou. O atendimento
+      # não tem, e nada muda para ele.
+      def registrar_chamada(call, output, inicio)
+        return unless @operador.respond_to?(:registrar_chamada)
+
+        @operador.registrar_chamada(call, output, ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio) * 1000).round)
       end
 
       def dispatch_tool_call(call, tools_by_slug, specialists_by_function)

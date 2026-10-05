@@ -38,7 +38,11 @@ class Autonomia::Guide::Formatos::Acao
 
   def montar(corpo, permits)
     permits.each { |caminho, arvore, envelope| corpo.permitir(caminho, arvore, envelope: envelope) }
-    @coleta.leituras.each { |leitura| corpo.ler(leitura.caminho, exigida: leitura.exigida) unless do_endereco?(leitura.caminho) }
+    @coleta.leituras.each do |leitura|
+      next if do_endereco?(leitura.caminho)
+
+      corpo.ler(leitura.caminho, exigida: leitura.exigida, uso: @coleta.tipos[leitura.caminho], repasse: @coleta.repassadas[leitura.caminho])
+    end
     @coleta.livres.each { |leitura| corpo.livre(leitura.caminho) }
     corpo.envelope_flexivel(@coleta.envelopes_flexiveis)
     motivos_do_codigo
@@ -67,14 +71,19 @@ class Autonomia::Guide::Formatos::Acao
     caminho.size == 1 && (DO_ENDERECO.include?(caminho.first) || @rota.partes.include?(caminho.first))
   end
 
+  public
+
   # Os `before_action` que valem para esta action e moram no controller do
   # recurso. Os da base da API (autenticação, conta) não leem corpo de ação.
+  # Público porque a leitura (`ParametrosDaLeitura`, #942) lê os mesmos.
   def callbacks
     @callbacks ||= begin
       falso = Struct.new(:action_name, :raise_on_missing_callback_actions).new(@rota.action, false)
       @klass._process_action_callbacks.select { |callback| antes?(callback) && aplica?(callback, falso) }.map(&:filter)
     end
   end
+
+  private
 
   def antes?(callback)
     callback.kind == :before && callback.filter.is_a?(Symbol) && !infraestrutura?(callback.filter)

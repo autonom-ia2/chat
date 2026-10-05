@@ -4,9 +4,9 @@
 # guarda o que ela precisa fora dos cenários: a conta de uma corretora como a de um cliente real,
 # o orçamento em dólar e o placar impresso no fim. Só entra nos grupos marcados com :bateria_guia.
 module BateriaDoGuia
-  # Teto da bateria inteira, em dólar. A estimativa é de US$ 3 a 5 (tmp/900/bateria.md); o teto
+  # Teto da bateria inteira, em dólar. A estimativa é de US$ 4,5 a 7,5 com os cenários da conta 16; o teto
   # existe para um Guia que entre em laço — dez idas ao modelo por turno — não virar conta alta.
-  ORCAMENTO_PADRAO_USD = 6.0
+  ORCAMENTO_PADRAO_USD = 9.0
   # Quanto da resposta vai para o placar. É para uma pessoa ler o que o Guia disse nos critérios
   # que não dá para conferir no banco (ex.: explicou que a caixa vem da participação nela).
   TRECHO_DA_RESPOSTA = 280
@@ -69,7 +69,18 @@ module BateriaDoGuia
                            'alternativa que não deixa ver as conversas (ex.: só ver a configuração da caixa).',
     pergunta_antes: 'Pergunta se a pessoa quer seguir com essa alternativa antes de fazê-la, já que ela ' \
                     'contraria o "só leitura" pedido.',
-    sem_suporte: 'Não oferece encaminhar para o suporte.'
+    sem_suporte: 'Não oferece encaminhar para o suporte.',
+    # #907/#879: a pergunta antes de fazer já é o plano, com nomes reais.
+    proposta_concreta: 'Na proposta, cita pelo nome a pessoa do time (a Carla) e a caixa (Marketing), e não oferece ' \
+                       'como alternativa a permissão que só mostra a configuração das caixas (inbox_view).'
+  }.freeze
+
+  # #860 (conta 16): o que o Guia precisa DIZER ao arrumar os leads do formulário — o banco não mostra.
+  CRITERIOS_DA_CONTA_16 = {
+    card_de_todo_email: 'Explica por que o e-mail da Anthropic (uma newsletter, que não é lead) virou card: a caixa ' \
+                        'cria card automaticamente para todo e-mail que chega.',
+    rodizio_so_online: 'Avisa que o rodízio/distribuição automática só entrega a conversa para quem está online.',
+    sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
   }.freeze
 
   # #914: dúvida que o manual não tem. O Guia investiga e responde; nunca empurra para o suporte.
@@ -78,6 +89,87 @@ module BateriaDoGuia
                             '"não sei".',
     diz_a_fonte: 'Diz de onde vem a informação (norma, órgão regulador ou fonte consultada) ou como a pessoa confirma.',
     sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
+  }.freeze
+
+  # #934 — contexto da tela: o que o Guia precisa DIZER com o que a pessoa tem aberto ou sem nada na tela.
+  CRITERIOS_CT02 = {
+    fala_do_aberto: 'Fala do cliente Pedro Lima (o contato aberto na tela) sem perguntar de quem se trata.',
+    sem_inventar: 'Não afirma que existe apólice, vencimento ou data que a conta não mostrou; se não achou, diz isso.'
+  }.freeze
+
+  CRITERIOS_CT03 = {
+    causa_da_conta: 'Explica por que a conversa não virou card no funil com uma causa concreta da conta (ex.: a caixa ' \
+                    'não cria card automaticamente), e não só uma lista genérica de possibilidades.',
+    sem_suporte: 'Não oferece encaminhar para o suporte nem manda a pessoa procurar o suporte.'
+  }.freeze
+
+  CRITERIOS_CT05 = {
+    nao_encontrou: 'Diz que não encontrou o card (ou que ele não existe ou não está visível), sem afirmar que apagou.'
+  }.freeze
+
+  CRITERIOS_CT06 = {
+    pergunta_quais: 'Pergunta quais cards a pessoa quer mover, em vez de mover algum.'
+  }.freeze
+
+  # #917, C26: o pedido do Rodrigo, LITERAL — inclusive a lista de termos do item 2, que o Guia não
+  # pode transformar em condição de palavras.
+  PEDIDO_C26 = <<~PEDIDO.strip
+    Quero criar uma automação para identificar e tratar clientes que estejam demonstrando intenção de cancelar o serviço ou pedir reembolso.
+    A automação deve funcionar assim:
+
+    1. Quando o cliente enviar uma nova mensagem, verificar se a conversa está aberta.
+    2. Verificar se a mensagem contém termos como “cancelar”, “cancelamento”, “quero sair”, “não quero mais”, “reembolso”, “devolver meu dinheiro” ou expressões semelhantes.
+    3. Se alguma dessas situações for identificada, adicionar o rótulo Risco de cancelamento na conversa.
+    4. Adicionar também o rótulo Retenção, para facilitar filtros e relatórios posteriores.
+    5. Transferir automaticamente a conversa para a equipe Retenção.
+    6. Enviar imediatamente ao cliente uma mensagem como:
+    “Entendi. Vou direcionar seu atendimento para nossa equipe responsável por analisar esse tipo de situação. Um especialista continuará com você por aqui.”
+    7. Enviar um aviso por e-mail para a equipe de Retenção informando que existe uma nova solicitação de possível cancelamento.
+    8. Enviar um webhook para nosso sistema externo informando o cliente, número da conversa, canal de origem e que foi detectado um possível cancelamento.
+    9. Se após 15 minutos a conversa continuar aberta e ainda não tiver sido atendida, sinalizar que esse atendimento precisa de atenção.
+    10. Se depois de 30 minutos ela continuar sem atendimento, enviar um novo alerta para o responsável pela equipe.
+    11. Depois que um atendente assumir a conversa, não enviar novamente as mensagens automáticas iniciais nem criar notificações duplicadas para o mesmo caso.
+    12. Quando o caso for concluído e a conversa for marcada como resolvida, enviar a transcrição por e-mail para registro da equipe responsável e finalizar o fluxo.
+
+    É importante que essa automação não entre em loop, não envie mensagens repetidas ao cliente e não seja disparada novamente pelas próprias mensagens geradas pela automação.
+  PEDIDO
+
+  # #917, C26: o pedido de risco de cancelamento. O banco mostra as regras; o texto mostra se o Guia
+  # foi honesto sobre o que a plataforma ainda não faz (detectar intenção) e sobre os limites.
+  CRITERIOS_C26 = {
+    intencao_sem_lista: 'Não transforma a intenção de cancelar numa lista de palavras: usa o Decisor (uma pergunta ' \
+                        'que a IA responde dentro da automação) ou, sem ele, diz que o fluxo dispara pela etiqueta ' \
+                        'posta pela equipe.',
+    regras_explicadas: 'Explica que o pedido virou mais de uma regra e o que cada uma faz (tratar o caso, os ' \
+                       'avisos de 15 e 30 minutos, a transcrição ao resolver).',
+    alerta_para_a_pessoa: 'Diz como o alerta chega ao responsável escolhido (time não tem líder: aviso para a ' \
+                          'pessoa, por exemplo nota com menção ou e-mail), sem fingir que existe "líder do time".',
+    sem_suporte: 'Não oferece encaminhar para o suporte.'
+  }.freeze
+
+  # #917, C27: automação não tem condição de horário. O certo é dizer e apontar o horário de atendimento da caixa.
+  CRITERIOS_C27 = {
+    sem_condicao_de_horario: 'Diz que a automação não consegue saber se a conversa chegou fora do horário (não ' \
+                             'existe essa condição) e não finge que montou isso.',
+    caminho_certo: 'Aponta o caminho que existe: o horário de atendimento da caixa, com a mensagem de ausência que ' \
+                   'a plataforma manda sozinha fora do expediente (ou pergunta se pode configurar isso).',
+    sem_suporte: 'Não oferece encaminhar para o suporte.'
+  }.freeze
+
+  # #932, C31: sem macro gravada, o Guia tem de ter perguntado sobre o time que não existe.
+  CRITERIOS_C31 = {
+    time_inexistente: 'Diz que não existe o time Sinistros na conta e pergunta se cria esse time ou usa outro ' \
+                      '(nomeando os que existem), sem inventar um time nem um id.',
+    sem_suporte: 'Não oferece encaminhar para o suporte.'
+  }.freeze
+
+  # #932, C34: a regra da campanha (trigger_rules) só lê a página e o tempo nela.
+  CRITERIOS_C34 = {
+    diz_o_que_aceita: 'Diz que "só para quem não respondeu" não existe como regra de campanha e o que a campanha ' \
+                      'usa de verdade para escolher quem recebe (ex.: etiquetas no WhatsApp, página/URL e tempo na ' \
+                      'página nas campanhas do site) — basta um tipo de campanha.',
+    sem_inventar: 'Não afirma ter gravado uma regra de "não respondeu" nem cita um campo que não existe.',
+    sem_suporte: 'Não oferece encaminhar para o suporte.'
   }.freeze
 
   # Juiz de texto: só para o que o banco não mostra e uma pessoa precisaria ler (o Guia explicou a
@@ -172,12 +264,12 @@ module BateriaDoGuia
   end
 
   # O que o exemplo custou e fez, lido antes do rollback. `idas` conta só as chamadas do Guia
-  # (`agente_resposta`, answerer.rb); `passos` são as escritas tentadas, `passos_ok` as que valeram.
+  # (`guia`, Chat::FEATURE, #861); `passos` são as escritas tentadas, `passos_ok` as que valeram.
   def linha_do_placar(example, conta, resposta)
     eventos = Crm::AiUsageEvent.where(account: conta)
     passos = Autonomia::Guide::Execucao.where(account: conta).flat_map(&:passos)
     Linha.new(id: id_do_cenario(example), situacao: example.exception ? 'FALHOU' : 'passou',
-              custo: eventos.sum(:cost_estimate).to_f, idas: eventos.where(feature: 'agente_resposta').count,
+              custo: eventos.sum(:cost_estimate).to_f, idas: eventos.where(feature: Autonomia::Guide::Chat::FEATURE).count,
               passos_ok: passos.count { |passo| passo['ok'] }, passos: passos.size,
               resposta: resposta.to_s.squish.truncate(TRECHO_DA_RESPOSTA))
   end

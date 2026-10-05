@@ -3,6 +3,13 @@ class Instagram::CallbacksController < ApplicationController
   include Instagram::IntegrationHelper
 
   def show
+    @oauth_payload = instagram_token_payload(params[:state])
+    return redirect_to '/app' unless @oauth_payload
+
+    @tester_flow = @oauth_payload.key?('tester_selection')
+    @account = Instagram::Testers::OauthBinding.claim!(@oauth_payload)
+    @tester_selection = @oauth_payload['tester_selection']
+
     # Check if Instagram redirected with an error (user canceled authorization)
     # See: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
     if params[:error].present?
@@ -42,10 +49,15 @@ class Instagram::CallbacksController < ApplicationController
   # Handle all errors that might occur during authorization
   # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#sample-rejected-response
   def handle_error(error)
-    Rails.logger.error("Instagram Channel creation Error: #{error.message}")
-    ChatwootExceptionTracker.new(error).capture_exception
+    if @tester_flow || error.is_a?(Instagram::Testers::Error)
+      code = error.is_a?(Instagram::Testers::Error) ? error.code : 'meta_unavailable'
+      return redirect_to_error_page('error_type' => code, 'code' => 422, 'error_message' => code)
+    end
 
     error_info = extract_error_info(error)
+    safe_error = CustomExceptions::InstagramApiError.new(error_info['error_message'], error_info['code'])
+    Rails.logger.error("Instagram Channel creation Error: #{safe_error.code}")
+    ChatwootExceptionTracker.new(safe_error).capture_exception
     redirect_to_error_page(error_info)
   end
 
@@ -60,16 +72,9 @@ class Instagram::CallbacksController < ApplicationController
   # Extract error details from the exception
   def extract_error_info(error)
     if error.is_a?(OAuth2::Error)
-      begin
-        # Instagram returns JSON error response which we parse to extract error details
-        JSON.parse(error.message)
-      rescue JSON::ParseError
-        # Fall back to a generic OAuth error if JSON parsing fails
-        { 'error_type' => 'OAuthException', 'code' => 400, 'error_message' => error.message }
-      end
+      { 'error_type' => 'OAuthException', 'code' => 400, 'error_message' => 'instagram_authorization_failed' }
     else
-      # For other unexpected errors
-      { 'error_type' => error.class.name, 'code' => 500, 'error_message' => error.message }
+      { 'error_type' => 'InstagramApiError', 'code' => 500, 'error_message' => 'instagram_connection_failed' }
     end
   end
 
@@ -78,9 +83,9 @@ class Instagram::CallbacksController < ApplicationController
   # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#canceled-authorization
   def handle_authorization_error
     error_info = {
-      'error_type' => params[:error] || 'authorization_error',
+      'error_type' => 'authorization_error',
       'code' => 400,
-      'error_message' => params[:error_description] || 'Authorization was denied'
+      'error_message' => 'Authorization was denied'
     }
 
     Rails.logger.error("Instagram Authorization Error: #{error_info['error_message']}")
@@ -101,6 +106,13 @@ class Instagram::CallbacksController < ApplicationController
 
   def find_or_create_inbox
     user_details = fetch_instagram_user_details(@long_lived_token_response['access_token'])
+    if @tester_selection && Instagram::Testers::Validation.normalize_username(user_details['username']) != @tester_selection.fetch('username')
+      raise Instagram::Testers::Error, 'invalid_selection'
+    end
+
+    return reauthorize_inbox(user_details) if @oauth_payload.key?('inbox_id')
+
+    @account = Instagram::Testers::OauthBinding.authorize!(@oauth_payload)
     channel_instagram = find_channel_by_instagram_id(user_details['user_id'].to_s)
     channel_exists = channel_instagram.present?
 
@@ -119,6 +131,24 @@ class Instagram::CallbacksController < ApplicationController
 
   def find_channel_by_instagram_id(instagram_id)
     Channel::Instagram.find_by(instagram_id: instagram_id, account: account)
+  end
+
+  def reauthorize_inbox(user_details)
+    account.with_lock do
+      @account = Instagram::Testers::OauthBinding.authorize!(@oauth_payload)
+      inbox = account.inboxes.lock.find_by(id: @oauth_payload.fetch('inbox_id'), channel_type: 'Channel::Instagram')
+      raise Instagram::Testers::Error, 'invalid_selection' unless inbox
+
+      channel = Channel::Instagram.lock.find_by(id: inbox.channel_id, account_id: account.id)
+      instagram_id = @oauth_payload.fetch('instagram_id')
+      unless channel && channel.instagram_id == instagram_id && user_details['user_id'].to_s == instagram_id
+        raise Instagram::Testers::Error, 'invalid_selection'
+      end
+
+      update_channel(channel, user_details)
+      channel.reauthorized!
+      [inbox, true]
+    end
   end
 
   def update_channel(channel_instagram, user_details)
@@ -158,13 +188,11 @@ class Instagram::CallbacksController < ApplicationController
   end
 
   def account_id
-    return unless params[:state]
-
-    verify_instagram_token(params[:state])
+    @oauth_payload&.fetch('sub')
   end
 
   def return_to
-    instagram_token_return_to(params[:state])
+    @oauth_payload['return_to']
   end
 
   def oauth_code

@@ -80,7 +80,7 @@ describe Conversations::FilterService do
         params[:payload] = payload
         result = filter_service.new(params, user_1, account).perform
         expected = account.conversations.where("additional_attributes ->> 'browser_language' IN (?) AND status IN (?)", ['en'], [1, 2])
-        expect(result[:conversations].map(&:id)).to eq expected.sort_on_last_activity_at.ids
+        expect(result[:conversations].map(&:id)).to eq Conversations::SortService.apply(expected, nil).ids
       end
 
       it 'sorts by the whitelisted sort_by param' do
@@ -96,7 +96,7 @@ describe Conversations::FilterService do
         params[:sort_by] = 'drop table conversations'
         result = filter_service.new(params, user_1, account).perform
         expected = account.conversations.where("additional_attributes ->> 'browser_language' IN (?) AND status IN (?)", ['en'], [1, 2])
-        expect(result[:conversations].map(&:id)).to eq expected.sort_on_last_activity_at.ids
+        expect(result[:conversations].map(&:id)).to eq Conversations::SortService.apply(expected, nil).ids
       end
 
       it 'filter conversations by priority' do

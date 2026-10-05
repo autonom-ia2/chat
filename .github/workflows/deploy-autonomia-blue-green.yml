@@ -39,7 +39,8 @@ on:
       green_instance_type:
         description: EC2 instance type for the new green instance.
         required: false
-        default: t3.small
+        # t3.medium (4 GB) desde 04/10 (#978): no t3.small, web + worker deixavam ~95 MB livres e um pico derrubou o web.
+        default: t3.medium
         type: string
       confirm_production:
         description: Confirm that this operation may change production.
@@ -109,36 +110,8 @@ jobs:
           # The isolated Linux runtime gate builds the same Ruby/Node digests from docker.io.
           echo 'ENV CW_EDITION="ee"' >> docker/Dockerfile
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
-          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
-          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
-          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
-          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
-          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
-          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
-
-      - name: Publish runtime image parameter
-        env:
-          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-        run: |
-          aws ssm put-parameter \
-            --name "$RUNTIME_IMAGE_PARAMETER" \
-            --type String \
-            --value "$IMAGE_URI" \
-            --overwrite
-
+      # Fase 3 (#974): a instância green liga antes do build. Enquanto a imagem é montada, ela instala o Docker e
+      # lê o env; o user data espera a imagem chegar ao ECR. Se o build falhar, a limpeza no fim desliga a green.
       # Mesmo padrao do step de flags do stack Hub2You: le o env parameter,
       # garante as flags exigidas preservando todas as demais linhas, regrava.
       - name: Ensure Autonomia runtime flags
@@ -147,12 +120,13 @@ jobs:
             --name "$ENV_PARAMETER" \
             --with-decryption \
             --query Parameter.Value \
-            --output text > chatwoot.env
+            --output text > "$RUNNER_TEMP/chatwoot.env"
 
           python3 - <<'PY'
+          import os
           from pathlib import Path
 
-          path = Path("chatwoot.env")
+          path = Path(os.environ["RUNNER_TEMP"]) / "chatwoot.env"
           required = {
               "DEFAULT_LOCALE": "pt_BR",
               "EMAIL_REPUTATION_PROVIDER_MONITOR": "true",
@@ -192,10 +166,10 @@ jobs:
           aws ssm put-parameter \
             --name "$ENV_PARAMETER" \
             --type SecureString \
-            --value file://chatwoot.env \
+            --value "file://$RUNNER_TEMP/chatwoot.env" \
             --overwrite
 
-          rm -f chatwoot.env
+          rm -f "$RUNNER_TEMP/chatwoot.env"
 
       - name: Discover current infrastructure
         run: |
@@ -266,25 +240,28 @@ jobs:
             echo "AMI_ID=$ami_id"
             echo "ROOT_DEVICE_NAME=$root_device_name"
             echo "TRAFFIC_SHIFT_DONE=false"
-            echo "GREEN_TG_ATTACHED=false"
+            echo "GREEN_WORKER_START_ATTEMPTED=false"
+            echo "PREVIOUS_WRITE_ATTEMPTED=false"
           } >> "$GITHUB_ENV"
 
       - name: Create green user data
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
         run: |
-          cat > green-user-data.sh <<'USERDATA'
+          cat > "$RUNNER_TEMP/green-user-data.sh" <<'USERDATA'
           #!/bin/bash
+          PS4='+ $(date -u +%T) '
           set -euxo pipefail
 
           AWS_REGION="__AWS_REGION__"
           ECR_REGISTRY="__ECR_REGISTRY__"
           ENV_PARAMETER="__ENV_PARAMETER__"
-          RUNTIME_PARAMETER="__RUNTIME_PARAMETER__"
+          IMAGE_URI="__IMAGE_URI__"
           APP_DIR="/opt/chatwoot"
 
           dnf update -y
-          dnf install -y docker awscli
+          dnf install -y docker awscli openssh-clients python3
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"
@@ -297,12 +274,6 @@ jobs:
             --output text > "$APP_DIR/.env"
           chmod 600 "$APP_DIR/.env"
 
-          IMAGE_URI="$(aws ssm get-parameter \
-            --region "$AWS_REGION" \
-            --name "$RUNTIME_PARAMETER" \
-            --query Parameter.Value \
-            --output text)"
-
           cat > "$APP_DIR/runtime.env" <<EOF
           IMAGE_URI=$IMAGE_URI
           AWS_REGION=$AWS_REGION
@@ -312,11 +283,189 @@ jobs:
 
           cat > "$APP_DIR/deploy.sh" <<'EOF'
           #!/bin/bash
+          PS4='+ $(date -u +%T) '
           set -euxo pipefail
 
           APP_DIR="/opt/chatwoot"
           source "$APP_DIR/runtime.env"
           START_WORKER_AFTER_DEPLOY="${START_WORKER_AFTER_DEPLOY:-true}"
+
+          prepare_instagram_tester_env() {
+            local stage_dir type_file value_file error_file
+            stage_dir="$(mktemp -d /run/instagram-tester-env.XXXXXX)"
+            type_file="$stage_dir/type"
+            value_file="$stage_dir/value"
+            error_file="$stage_dir/error"
+
+            rm -f "$APP_DIR/instagram-tester.env"
+            : > "$APP_DIR/instagram-tester.env"
+            chmod 600 "$APP_DIR/instagram-tester.env"
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-env" \
+              --with-decryption \
+              --query 'Parameter.Type' \
+              --output text > "$type_file" 2> "$error_file"; then
+              if grep -q 'ParameterNotFound' "$error_file"; then
+                rm -rf "$stage_dir"
+                return 0
+              fi
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_fetch_failed" >&2
+              return 1
+            fi
+
+            if [ "$(cat "$type_file")" != "SecureString" ]; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_type_invalid" >&2
+              return 1
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-env" \
+              --with-decryption \
+              --query 'Parameter.Value' \
+              --output text > "$value_file" 2> "$error_file"; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_fetch_failed" >&2
+              return 1
+            fi
+
+            if ! awk '
+              BEGIN {
+                allowed["INSTAGRAM_TESTER_AUTOMATION_ENABLED"] = 1
+                allowed["INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS"] = 1
+                allowed["INSTAGRAM_META_DEVELOPER_APP_ID"] = 1
+                allowed["INSTAGRAM_META_BUSINESS_ID"] = 1
+                allowed["INSTAGRAM_TESTER_APP_NAME"] = 1
+                allowed["INSTAGRAM_TESTER_ROLES_DOC_ID"] = 1
+                allowed["INSTAGRAM_TESTER_SESSION_SOURCE"] = 1
+                allowed["INSTAGRAM_TESTER_SESSION_NAMESPACE"] = 1
+                allowed["INSTAGRAM_TESTER_ADMIN_USER_ID"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_AUTH_MODE"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_HOST"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_PORT"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_REDIS_URL"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_EPOCH"] = 1
+                allowed["INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE"] = 1
+                allowed["INSTAGRAM_TESTER_PROXY_IDENTITY"] = 1
+              }
+              /^[[:space:]]*$/ || /^[[:space:]]*#/ { next }
+              {
+                separator = index($0, "=")
+                key = separator > 1 ? substr($0, 1, separator - 1) : ""
+                if (!(key in allowed) || (key in seen)) invalid = 1
+                seen[key] = 1
+              }
+              END { exit invalid }
+            ' "$value_file"; then
+              rm -rf "$stage_dir"
+              echo "instagram_tester_env_keys_invalid" >&2
+              return 1
+            fi
+
+            install -m 600 "$value_file" "$APP_DIR/instagram-tester.env"
+            rm -rf "$stage_dir"
+          }
+
+          prepare_instagram_tester_env
+
+          install_instagram_tester_publisher() {
+            local stage_dir source_container tester_enabled
+            tester_enabled=false
+            if grep -Eq '^INSTAGRAM_TESTER_AUTOMATION_ENABLED=true$' "$APP_DIR/instagram-tester.env"; then
+              tester_enabled=true
+            fi
+            stage_dir="$(mktemp -d /run/instagram-tester-publisher.XXXXXX)"
+            source_container="instagram-tester-publisher-source-$$"
+
+            cleanup_instagram_tester_publisher() {
+              docker rm -f "$source_container" >/dev/null 2>&1 || true
+              rm -rf "$stage_dir"
+            }
+
+            if ! docker create \
+              --name "$source_container" \
+              --entrypoint /bin/sh \
+              "$IMAGE_URI" \
+              -c 'exit 0' >/dev/null; then
+              cleanup_instagram_tester_publisher
+              echo "instagram_tester_publisher_setup_failed" >&2
+              return 1
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-publisher-public-key" \
+              --query 'Parameter.Type' \
+              --output text > "$stage_dir/parameter-type" 2> "$stage_dir/parameter-error"; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if [ "$(cat "$stage_dir/parameter-type")" != "String" ]; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_type_invalid" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if ! aws ssm get-parameter \
+              --region "$AWS_REGION" \
+              --name "/chatwoot/prod/instagram-tester-publisher-public-key" \
+              --query 'Parameter.Value' \
+              --output text > "$stage_dir/public-key" 2> "$stage_dir/parameter-error"; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if [ ! -s "$stage_dir/public-key" ]; then
+              cleanup_instagram_tester_publisher
+              if [ "$tester_enabled" = "true" ]; then
+                echo "instagram_tester_publisher_key_unavailable" >&2
+                return 1
+              fi
+              return 0
+            fi
+
+            if ! (
+              docker cp \
+                "$source_container:/app/scripts/instagram_testers/runtime/forced-publisher.sh" \
+                "$stage_dir/forced-publisher.sh" &&
+              docker cp \
+                "$source_container:/app/scripts/instagram_testers/runtime/install-remote-publisher.sh" \
+                "$stage_dir/install-remote-publisher.sh" &&
+              test ! -L "$stage_dir/forced-publisher.sh" &&
+              test ! -L "$stage_dir/install-remote-publisher.sh" &&
+              test -s "$stage_dir/forced-publisher.sh" &&
+              test -s "$stage_dir/install-remote-publisher.sh" &&
+              chmod 700 "$stage_dir" &&
+              chmod 700 "$stage_dir/forced-publisher.sh" "$stage_dir/install-remote-publisher.sh" &&
+              /bin/sh "$stage_dir/install-remote-publisher.sh" < "$stage_dir/public-key" &&
+              test -x /usr/local/libexec/instagram-tester-publisher-root &&
+              test -x /usr/sbin/sshd &&
+              /usr/sbin/sshd -t &&
+              systemctl is-active --quiet sshd
+            ); then
+              cleanup_instagram_tester_publisher
+              echo "instagram_tester_publisher_setup_failed" >&2
+              return 1
+            fi
+
+            cleanup_instagram_tester_publisher
+          }
 
           if [ "$#" -gt 0 ] && [ -n "$1" ]; then
             IMAGE_URI="$1"
@@ -330,8 +479,27 @@ jobs:
 
           aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
           docker pull "$IMAGE_URI"
-          docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
-          docker run --rm --env-file "$APP_DIR/.env" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
+          install_instagram_tester_publisher
+          # Copy runtime installers from the exact application image, never remote code.
+          install_instagram_coordination() (
+            set -euo pipefail
+            set +x
+            umask 077
+            stage_dir="$(mktemp -d /run/instagram-coordination-install.XXXXXX)"
+            source_container="instagram-coordination-source-$$"
+            trap 'docker rm -f "$source_container" >/dev/null 2>&1 || true; rm -rf "$stage_dir"' EXIT
+            docker create --name "$source_container" --entrypoint /bin/sh "$IMAGE_URI" -c 'exit 0' >/dev/null
+            for filename in install-coordination-tunnel.sh validate-coordination-env.py coordination-preflight.sh; do
+              docker cp "$source_container:/app/scripts/instagram_testers/runtime/$filename" "$stage_dir/$filename"
+              test ! -L "$stage_dir/$filename"
+              test -s "$stage_dir/$filename"
+            done
+            /bin/bash "$stage_dir/install-coordination-tunnel.sh" install "$AWS_REGION" "$APP_DIR"
+          )
+          install_instagram_coordination
+          "$APP_DIR/igcoord/check.sh"
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails db:chatwoot_prepare
+          docker run --rm --env-file "$APP_DIR/.env" --env-file "$APP_DIR/instagram-tester.env" --env-file "$APP_DIR/igcoord/redis.env" --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v "$APP_DIR/igcoord/ca.crt:/run/igcoord/ca.crt:ro" "$IMAGE_URI" bundle exec rails runner 'EmailCampaigns::Reputation::ProviderMonitor.new.call; abort("SES provider preflight failed") if EmailCampaigns::Reputation::ProviderGate.protection.present?'
           systemctl restart chatwoot-web.service
           if [ "$START_WORKER_AFTER_DEPLOY" = "true" ]; then
             systemctl restart chatwoot-worker.service
@@ -345,7 +513,8 @@ jobs:
           cat > /etc/systemd/system/chatwoot-web.service <<'EOF'
           [Unit]
           Description=Chatwoot web
-          After=docker.service network-online.target
+          After=docker.service network-online.target instagram-coordination-tunnel.service
+          Wants=instagram-coordination-tunnel.service
           Requires=docker.service
 
           [Service]
@@ -353,7 +522,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-web
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-web --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env --env-file /opt/chatwoot/igcoord/redis.env --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v /opt/chatwoot/igcoord/ca.crt:/run/igcoord/ca.crt:ro -p 3000:3000 $IMAGE_URI bundle exec rails s -p 3000 -b 0.0.0.0
           ExecStop=/usr/bin/docker stop chatwoot-web
 
           [Install]
@@ -363,7 +532,8 @@ jobs:
           cat > /etc/systemd/system/chatwoot-worker.service <<'EOF'
           [Unit]
           Description=Chatwoot worker
-          After=docker.service network-online.target
+          After=docker.service network-online.target instagram-coordination-tunnel.service
+          Wants=instagram-coordination-tunnel.service
           Requires=docker.service
 
           [Service]
@@ -371,7 +541,7 @@ jobs:
           RestartSec=10
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-worker
-          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
+          ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env --env-file /opt/chatwoot/igcoord/redis.env --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v /opt/chatwoot/igcoord/ca.crt:/run/igcoord/ca.crt:ro $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
           ExecStop=/usr/bin/docker stop chatwoot-worker
 
           [Install]
@@ -380,34 +550,145 @@ jobs:
 
           systemctl daemon-reload
           systemctl enable chatwoot-web.service
+
+          # A green liga junto com o build (#974): espera a imagem chegar ao ECR, por até 45 min (um build sem cache
+          # leva ~24). Só repete enquanto a imagem não existe; qualquer outro erro (permissão, rede) falha na hora.
+          wait_for_image() {
+            local repo_tag repository tag error_file attempt
+            repo_tag="${IMAGE_URI#*/}"
+            repository="${repo_tag%:*}"
+            tag="${repo_tag##*:}"
+            error_file="$(mktemp)"
+            for attempt in $(seq 1 540); do
+              if aws ecr describe-images --region "$AWS_REGION" --repository-name "$repository" \
+                --image-ids "imageTag=$tag" >/dev/null 2>"$error_file"; then
+                rm -f "$error_file"
+                return 0
+              fi
+              if ! grep -qF ImageNotFoundException "$error_file"; then
+                cat "$error_file" >&2
+                rm -f "$error_file"
+                return 1
+              fi
+              echo "Imagem ainda nao publicada ($attempt)"
+              sleep 5
+            done
+            rm -f "$error_file"
+            return 1
+          }
+          # wait_for_image fica fora do deploy.sh: a limpeza do workflow só preserva a green enquanto o marcador abaixo existe,
+          # e esperando a imagem não há migration para proteger (#972).
+          wait_for_image
+
+          # Marcador enquanto o deploy.sh (migrations) roda; some ao sair, com sucesso ou erro (#972).
+          touch /run/chatwoot-deploy.running
+          trap 'rm -f /run/chatwoot-deploy.running' EXIT
           "$APP_DIR/deploy.sh"
           USERDATA
 
-          sed -i "s|__AWS_REGION__|$AWS_REGION|g" green-user-data.sh
-          sed -i "s|__ECR_REGISTRY__|$ECR_REGISTRY|g" green-user-data.sh
-          sed -i "s|__ENV_PARAMETER__|$ENV_PARAMETER|g" green-user-data.sh
-          sed -i "s|__RUNTIME_PARAMETER__|$RUNTIME_IMAGE_PARAMETER|g" green-user-data.sh
+          sed -i "s|__AWS_REGION__|$AWS_REGION|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__ECR_REGISTRY__|$ECR_REGISTRY|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__ENV_PARAMETER__|$ENV_PARAMETER|g" "$RUNNER_TEMP/green-user-data.sh"
+          sed -i "s|__IMAGE_URI__|$IMAGE_URI|g" "$RUNNER_TEMP/green-user-data.sh"
+
+      # Uma limpeza que pega a green rodando o deploy.sh (migrations) não a termina (#972): ela se desliga sozinha quando o
+      # deploy.sh acaba e fica parada com a tag DeployCleanup=pending. Aqui essas greens são terminadas. Uma que ainda
+      # esteja de pé segura o deploy por até 30 min, porque duas migrations juntas esbarram no lock do Rails; passado
+      # isso, é terminada mesmo assim, para um deploy interrompido nunca travar os seguintes.
+      - name: Retire greens left by an interrupted deploy
+        run: |
+          leftover=""
+          for attempt in $(seq 1 300); do
+            leftover=$(aws ec2 describe-instances \
+              --filters "Name=tag:DeployCleanup,Values=pending" "Name=instance-state-name,Values=pending,running,stopping,shutting-down" \
+              --query 'Reservations[].Instances[].InstanceId' \
+              --output text)
+            if [ -z "$leftover" ]; then
+              break
+            fi
+            echo "Esperando a green $leftover terminar o boot e parar ($attempt)"
+            sleep 5
+          done
+          if [ -n "$leftover" ]; then
+            echo "A green $leftover continua de pé depois de 30 min; terminando para seguir com o deploy."
+            # shellcheck disable=SC2086 # uma ou mais IDs separadas por espaço
+            aws ec2 terminate-instances --instance-ids $leftover
+          fi
+
+          stopped=$(aws ec2 describe-instances \
+            --filters "Name=tag:DeployCleanup,Values=pending" "Name=instance-state-name,Values=stopped" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text)
+          if [ -n "$stopped" ]; then
+            echo "Terminando greens paradas por um deploy interrompido: $stopped"
+            # shellcheck disable=SC2086 # uma ou mais IDs separadas por espaço
+            aws ec2 terminate-instances --instance-ids $stopped
+          fi
+
+      # A espera acima pode levar 30 min e o login dura 1 h (#972).
+      - name: Refresh AWS credentials after leftover check
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Launch green EC2 instance
         run: |
           green_instance_id=$(aws ec2 run-instances \
             --image-id "$AMI_ID" \
-            --instance-type "${{ github.event.inputs.green_instance_type || 't3.small' }}" \
+            --instance-type "${{ github.event.inputs.green_instance_type || 't3.medium' }}" \
             --subnet-id "$SUBNET_ID" \
             --security-group-ids $SECURITY_GROUP_IDS \
             --iam-instance-profile "Name=$IAM_PROFILE_NAME" \
-            --user-data file://green-user-data.sh \
+            --user-data "file://$RUNNER_TEMP/green-user-data.sh" \
             --block-device-mappings "[{\"DeviceName\":\"$ROOT_DEVICE_NAME\",\"Ebs\":{\"VolumeSize\":${ROOT_VOLUME_SIZE_GB},\"VolumeType\":\"gp3\",\"Encrypted\":true,\"DeleteOnTermination\":true}}]" \
             --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=chatwoot-autonomia-prod-ec2-green-${GITHUB_RUN_ID}},{Key=Project,Value=chatwoot-autonomia},{Key=Environment,Value=prod},{Key=ManagedBy,Value=github-actions},{Key=BlueGreenRole,Value=green}]" "ResourceType=volume,Tags=[{Key=Name,Value=chatwoot-autonomia-prod-ec2-green-${GITHUB_RUN_ID}-root},{Key=Project,Value=chatwoot-autonomia},{Key=Environment,Value=prod},{Key=ManagedBy,Value=github-actions},{Key=BlueGreenRole,Value=green}]" \
             --query 'Instances[0].InstanceId' \
             --output text)
 
           echo "GREEN_INSTANCE_ID=$green_instance_id" >> "$GITHUB_ENV"
-          aws ec2 wait instance-running --instance-ids "$green_instance_id"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.STABLE_IMAGE_TAG }}
+          # Cache das camadas no próprio ECR de cada stack (tag buildcache), em mode=max: guarda também a etapa
+          # pre-builder, cujo bundle install levava ~19 dos ~24 min do build (medido em 25/09). No ECR não há o limite
+          # de 10 GB do cache do GitHub (já estourado), cada conta AWS fica com o seu, e PR de fork não lê.
+          # ignore-error mantém o deploy de pé se a gravação do cache falhar.
+          cache-from: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to: type=registry,ref=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true
+
+      - name: Publish runtime image parameter
+        env:
+          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          aws ssm put-parameter \
+            --name "$RUNTIME_IMAGE_PARAMETER" \
+            --type String \
+            --value "$IMAGE_URI" \
+            --overwrite
 
       - name: Wait for green SSM and local health
         run: |
-          for attempt in $(seq 1 60); do
+          # A green liga antes do build; se ela morreu no lançamento (capacidade, EBS), falha aqui em vez de esperar o SSM.
+          green_state=$(aws ec2 describe-instances --instance-ids "$GREEN_INSTANCE_ID" \
+            --query 'Reservations[0].Instances[0].State.Name' --output text)
+          echo "Estado da green: $green_state"
+          case "$green_state" in
+            shutting-down|terminated|stopping|stopped) exit 1 ;;
+          esac
+
+          for attempt in $(seq 1 180); do
             ping_status=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=$GREEN_INSTANCE_ID" \
               --query 'InstanceInformationList[0].PingStatus' \
@@ -416,17 +697,29 @@ jobs:
               break
             fi
             echo "Waiting for SSM on $GREEN_INSTANCE_ID, attempt $attempt"
-            sleep 15
+            sleep 5
           done
 
+          # Saúde do green, em ordem: espera o cloud-init; se ele deu erro e o serviço web nem ficou ativo (o
+          # deploy.sh morreu antes de subir o web), falha na hora (antes esperava 15 min); com o serviço ativo, segue
+          # para a checagem de sempre, só avisando. Depois espera o web
+          # (checagem a cada 2 s, mesmo limite de 15 min), mostra o horário de cada etapa do boot e confere que a
+          # imagem que subiu é deste commit. Tudo aqui acontece antes da troca de tráfego.
+          health_params=$(jq -nc --arg sha "$GITHUB_SHA" '{commands: [
+            "cloud-init status --wait >/dev/null 2>&1 || true",
+            "if cloud-init status 2>/dev/null | grep -qF \"status: error\"; then if systemctl is-active --quiet chatwoot-web.service; then echo \"AVISO: cloud-init com erro, mas o servico web esta ativo; segue para a checagem\"; else echo \"cloud-init com erro e o servico web nem ficou ativo\"; journalctl -u chatwoot-web.service --no-pager -n 160; tail -200 /var/log/cloud-init-output.log; exit 1; fi; fi",
+            "ok=0; for i in $(seq 1 450); do if curl -fs --max-time 5 http://127.0.0.1:3000/ >/dev/null; then ok=1; break; fi; sleep 2; done; if [ \"$ok\" -ne 1 ]; then journalctl -u chatwoot-web.service --no-pager -n 160; tail -160 /var/log/cloud-init-output.log; exit 1; fi",
+            "echo \"Horarios do boot:\"; grep -F -e \" dnf \" -e \"docker pull\" -e \"docker run\" -e \"systemctl\" -e \"chatwoot_prepare\" /var/log/cloud-init-output.log | head -80 || true",
+            ("imagem=$(docker exec chatwoot-web cat /app/.git_sha 2>/dev/null || true); if [ \"$imagem\" != \"" + $sha + "\" ]; then echo \"Imagem errada no green: commit $imagem, esperado " + $sha + "\"; exit 1; fi; echo \"Imagem confere: $imagem\"")
+          ]}')
           command_id=$(aws ssm send-command \
             --instance-ids "$GREEN_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["cloud-init status --wait || true","for i in $(seq 1 90); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 10; done; journalctl -u chatwoot-web.service --no-pager -n 160; tail -160 /var/log/cloud-init-output.log; exit 1"]' \
+            --parameters "$health_params" \
             --query 'Command.CommandId' \
             --output text)
 
-          for attempt in $(seq 1 80); do
+          for attempt in $(seq 1 240); do
             command_status=$(aws ssm get-command-invocation \
               --command-id "$command_id" \
               --instance-id "$GREEN_INSTANCE_ID" \
@@ -447,7 +740,7 @@ jobs:
                 ;;
               *)
                 echo "Waiting for green local health command, attempt $attempt, status=${command_status:-unknown}"
-                sleep 15
+                sleep 5
                 ;;
             esac
           done
@@ -466,6 +759,13 @@ jobs:
             --instance-id "$GREEN_INSTANCE_ID" \
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
             --output json
+
+      # Build sem cache e boot podem passar de uma hora desde o último login (#972).
+      - name: Refresh AWS credentials before traffic steps
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Register green target group
         run: |
@@ -492,22 +792,36 @@ jobs:
             --target-group-arn "$green_tg_arn" \
             --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
 
+          # Marca antes da chamada: se o job cair durante ela, a limpeza devolve o listener ao blue (idempotente).
+          echo "GREEN_TG_ATTACHED=true" >> "$GITHUB_ENV"
+
           aws elbv2 modify-listener \
             --listener-arn "$LISTENER_ARN" \
             --default-actions "Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn=$BLUE_TG_ARN,Weight=100},{TargetGroupArn=$green_tg_arn,Weight=0}]}"
-
-          echo "GREEN_TG_ATTACHED=true" >> "$GITHUB_ENV"
 
           aws elbv2 wait target-in-service \
             --target-group-arn "$green_tg_arn" \
             --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
 
+      # Passo próprio para a marca chegar ao GITHUB_ENV mesmo se o próximo for cancelado no meio. A limpeza só religa o
+      # worker do blue com ela; religar um worker que nem chegou a parar não muda nada.
+      - name: Mark blue worker stop
+        run: echo "BLUE_WORKER_STOPPED=true" >> "$GITHUB_ENV"
+
       - name: Switch Sidekiq workers to green
         run: |
+          coordination_command_id=$(aws ssm send-command \
+            --instance-ids "$GREEN_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
+            --query 'Command.CommandId' \
+            --output text)
+          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
+
           blue_command_id=$(aws ssm send-command \
             --instance-ids "$BLUE_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo systemctl stop chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo systemctl stop chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -521,10 +835,11 @@ jobs:
             --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}' \
             --output json
 
+          echo "GREEN_WORKER_START_ATTEMPTED=true" >> "$GITHUB_ENV"
           green_command_id=$(aws ssm send-command \
             --instance-ids "$GREEN_INSTANCE_ID" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -540,14 +855,23 @@ jobs:
 
       - name: Shift HTTPS listener to green
         run: |
-          aws ssm put-parameter --name "$PREVIOUS_TG_PARAMETER" --type String --value "$BLUE_TG_ARN" --overwrite
-          aws ssm put-parameter --name "$PREVIOUS_INSTANCE_PARAMETER" --type String --value "$BLUE_INSTANCE_ID" --overwrite
-          aws ssm put-parameter --name "$CURRENT_TG_PARAMETER" --type String --value "$GREEN_TG_ARN" --overwrite
-          aws ssm put-parameter --name "$CURRENT_INSTANCE_PARAMETER" --type String --value "$GREEN_INSTANCE_ID" --overwrite
+          source scripts/deploy/blue-green-recovery.sh
+          coordination_command_id=$(aws ssm send-command \
+            --instance-ids "$GREEN_INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --parameters 'commands=["set -eu","sudo /opt/chatwoot/igcoord/check.sh"]' \
+            --query 'Command.CommandId' \
+            --output text)
+          aws ssm wait command-executed --command-id "$coordination_command_id" --instance-id "$GREEN_INSTANCE_ID"
 
-          aws elbv2 modify-listener \
-            --listener-arn "$LISTENER_ARN" \
-            --default-actions "Type=forward,TargetGroupArn=$GREEN_TG_ARN"
+          switch_listener_destination "$LISTENER_ARN" "$GREEN_TG_ARN" "$GREEN_INSTANCE_ID"
+          if [ "$LISTENER_SWITCH_STATUS" -ne 0 ]; then
+            exit "$LISTENER_SWITCH_STATUS"
+          fi
+
+          # Record PREVIOUS only after the listener and CURRENT confirm green.
+          echo "PREVIOUS_WRITE_ATTEMPTED=true" >> "$GITHUB_ENV"
+          record_previous_destination "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
 
           echo "TRAFFIC_SHIFT_DONE=true" >> "$GITHUB_ENV"
 
@@ -608,41 +932,146 @@ jobs:
               --target-group-arn "$OLD_PREVIOUS_TG_ARN" || true
           fi
 
+      # O primeiro login dura 1 h e o job pode chegar a 120 min (#972): renova a credencial antes da limpeza.
+      - name: Refresh AWS credentials for cleanup
+        if: (failure() || cancelled()) && env.TRAFFIC_SHIFT_DONE != 'true'
+        continue-on-error: true
+        timeout-minutes: 1
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Cleanup failed green resources before traffic shift
-        if: failure() && env.TRAFFIC_SHIFT_DONE != 'true'
+        # Também no cancelamento (manual ou timeout): cancelar entre parar o worker azul e ligar o verde deixava a
+        # plataforma sem Sidekiq. Os comandos daqui já toleram falha parcial e podem rodar mais de uma vez.
+        if: (failure() || cancelled()) && env.TRAFFIC_SHIFT_DONE != 'true'
         run: |
+          source scripts/deploy/blue-green-recovery.sh
+          recovery_switch_status=0
+          if [ -n "${BLUE_INSTANCE_ID:-}${BLUE_TG_ARN:-}${GREEN_INSTANCE_ID:-}${GREEN_TG_ARN:-}" ]; then
+            # A known, unique blue binding is required before any mutation.
+            if [ -z "${LISTENER_ARN:-}" ] || [ -z "${BLUE_TG_ARN:-}" ] || [ -z "${BLUE_INSTANCE_ID:-}" ]; then
+              echo "blue_green_recovery_destination_missing" >&2
+              exit 1
+            fi
+            if [ "${PREVIOUS_WRITE_ATTEMPTED:-false}" = "true" ]; then
+              record_previous_destination "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            else
+              validate_target_pair "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            fi
+          fi
           if [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+            suspend_instagram_assisted "$BLUE_INSTANCE_ID"
+            blue_web_command_id=$(aws ssm send-command \
+              --instance-ids "$BLUE_INSTANCE_ID" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo systemctl restart chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+              --query 'Command.CommandId' --output text)
+            aws ssm wait command-executed --command-id "$blue_web_command_id" --instance-id "$BLUE_INSTANCE_ID"
+          fi
+          if [ "${GREEN_WORKER_START_ATTEMPTED:-false}" = "true" ]; then
+            green_stop_command_id=$(aws ssm send-command \
+              --instance-ids "$GREEN_INSTANCE_ID" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
+              --query 'Command.CommandId' \
+              --output text)
+            aws ssm wait command-executed \
+              --command-id "$green_stop_command_id" \
+              --instance-id "$GREEN_INSTANCE_ID"
+          fi
+
+          # Even a failed switch may have reached AWS. Confirm blue before writing
+          # pointers or removing green; failed recovery retains green for inspection.
+          if [ -n "${LISTENER_ARN:-}" ] && [ -n "${BLUE_TG_ARN:-}" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
+            switch_listener_destination "$LISTENER_ARN" "$BLUE_TG_ARN" "$BLUE_INSTANCE_ID"
+            recovery_switch_status="$LISTENER_SWITCH_STATUS"
+          fi
+
+          if [ "${BLUE_WORKER_STOPPED:-false}" = "true" ] && [ -n "${BLUE_INSTANCE_ID:-}" ]; then
             blue_restore_command_id=$(aws ssm send-command \
               --instance-ids "$BLUE_INSTANCE_ID" \
               --document-name AWS-RunShellScript \
-              --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service"]' \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl restart chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
               --query 'Command.CommandId' \
-              --output text || true)
+              --output text)
+            aws ssm wait command-executed \
+              --command-id "$blue_restore_command_id" \
+              --instance-id "$BLUE_INSTANCE_ID"
+          fi
 
-            if [ -n "${blue_restore_command_id:-}" ] && [ "$blue_restore_command_id" != "None" ]; then
-              aws ssm wait command-executed \
-                --command-id "$blue_restore_command_id" \
-                --instance-id "$BLUE_INSTANCE_ID" || true
-            fi
+          # Complete worker recovery even after a confirmed switch response error;
+          # keep resources and return that original error instead of success.
+          if [ "$recovery_switch_status" -ne 0 ]; then
+            exit "$recovery_switch_status"
+          fi
+          if [ -n "${GREEN_INSTANCE_ID:-}" ]; then
+            sleep "$PUBLISHER_TRANSPORT_DRAIN_SECONDS"
           fi
 
           if [ -n "${GREEN_TG_ARN:-}" ]; then
-            if [ "${GREEN_TG_ATTACHED:-false}" = "true" ] && [ -n "${BLUE_TG_ARN:-}" ]; then
-              aws elbv2 modify-listener \
-                --listener-arn "$LISTENER_ARN" \
-                --default-actions "Type=forward,TargetGroupArn=$BLUE_TG_ARN" || true
-            fi
-
             aws elbv2 deregister-targets \
               --target-group-arn "$GREEN_TG_ARN" \
-              --targets "Id=$GREEN_INSTANCE_ID,Port=3000" || true
+              --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
+            aws elbv2 wait target-deregistered \
+              --target-group-arn "$GREEN_TG_ARN" \
+              --targets "Id=$GREEN_INSTANCE_ID,Port=3000"
             aws elbv2 delete-target-group \
-              --target-group-arn "$GREEN_TG_ARN" || true
+              --target-group-arn "$GREEN_TG_ARN"
           fi
 
           if [ -n "${GREEN_INSTANCE_ID:-}" ]; then
-            aws ec2 terminate-instances \
-              --instance-ids "$GREEN_INSTANCE_ID" || true
+            # Green rodando o deploy.sh pode estar no meio das migrations (#972): em vez de terminar, ela se desliga sozinha
+            # quando ele acaba, e o próximo deploy a termina. Esperando a imagem, ou com o boot já terminado, não há
+            # migration: termina na hora, como em qualquer falha deste caminho.
+            ssm_output() {
+              local command_id=$1 output=""
+              for _ in $(seq 1 6); do
+                sleep 5
+                output=$(aws ssm get-command-invocation --command-id "$command_id" --instance-id "$GREEN_INSTANCE_ID" \
+                  --query '[Status,StandardOutputContent]' --output text 2>/dev/null || true)
+                case "$output" in Success*|Failed*|Cancelled*|TimedOut*|Undeliverable*|Terminated*) break ;; esac
+              done
+              printf '%s' "$output"
+            }
+
+            retired=false
+            status_params=$(jq -nc '{commands: ["if [ -e /run/chatwoot-deploy.running ]; then echo DEPLOY_RUNNING; else echo DEPLOY_IDLE; fi"]}')
+            status_id=$(aws ssm send-command --instance-ids "$GREEN_INSTANCE_ID" --document-name AWS-RunShellScript \
+              --parameters "$status_params" --query 'Command.CommandId' --output text 2>/dev/null || true)
+            deploy_status=""
+            if [ -n "$status_id" ] && [ "$status_id" != "None" ]; then
+              deploy_status=$(ssm_output "$status_id")
+            fi
+            case "$deploy_status" in
+              $'Success\tDEPLOY_RUNNING'|$'Success\tDEPLOY_IDLE') ;;
+              *)
+                echo "blue_green_deploy_status_unknown" >&2
+                exit 1
+                ;;
+            esac
+            echo "Green $GREEN_INSTANCE_ID: ${deploy_status:-sem resposta do SSM}"
+            if [ "${deploy_status#*DEPLOY_RUNNING}" != "$deploy_status" ] \
+              && aws ec2 create-tags --resources "$GREEN_INSTANCE_ID" --tags Key=DeployCleanup,Value=pending; then
+              retire_params=$(jq -nc '{commands: ["systemd-run --unit=green-retire --no-block sh -c \"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now\""]}')
+              retire_id=$(aws ssm send-command --instance-ids "$GREEN_INSTANCE_ID" --document-name AWS-RunShellScript \
+                --parameters "$retire_params" --query 'Command.CommandId' --output text 2>/dev/null || true)
+              if [ -n "$retire_id" ] && [ "$retire_id" != "None" ]; then
+                case "$(ssm_output "$retire_id")" in Success*) retired=true ;; esac
+              fi
+            fi
+
+            if [ "$retired" = "true" ]; then
+              echo "Green $GREEN_INSTANCE_ID rodando o deploy.sh: desliga sozinha quando ele acabar; o próximo deploy a remove."
+            elif [ "${deploy_status#*DEPLOY_RUNNING}" != "$deploy_status" ]; then
+              echo "blue_green_deferred_shutdown_failed" >&2
+              exit 1
+            else
+              echo "Terminando a green $GREEN_INSTANCE_ID agora."
+              aws ec2 terminate-instances \
+                --instance-ids "$GREEN_INSTANCE_ID"
+            fi
           fi
 
   rollback:
@@ -653,6 +1082,11 @@ jobs:
     environment: production
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -661,6 +1095,18 @@ jobs:
 
       - name: Restore previous target group
         run: |
+          source scripts/deploy/blue-green-recovery.sh
+          lb_arn=$(aws elbv2 describe-load-balancers \
+            --names "$ALB_NAME" \
+            --query 'LoadBalancers[0].LoadBalancerArn' \
+            --output text)
+          listener_arn=$(aws elbv2 describe-listeners \
+            --load-balancer-arn "$lb_arn" \
+            --query 'Listeners[?Port==`443`].ListenerArn | [0]' \
+            --output text)
+          read_listener_destination "$listener_arn"
+          current_instance_id="$ACTIVE_INSTANCE_ID"
+
           previous_tg_arn=$(aws ssm get-parameter \
             --name "$PREVIOUS_TG_PARAMETER" \
             --query Parameter.Value \
@@ -669,15 +1115,33 @@ jobs:
             --name "$PREVIOUS_INSTANCE_PARAMETER" \
             --query Parameter.Value \
             --output text)
-          current_instance_id=$(aws ssm get-parameter \
-            --name "$CURRENT_INSTANCE_PARAMETER" \
-            --query Parameter.Value \
-            --output text)
+
+          validate_target_pair "$previous_tg_arn" "$previous_instance_id"
 
           previous_state=$(aws ec2 describe-instances \
             --instance-ids "$previous_instance_id" \
             --query 'Reservations[0].Instances[0].State.Name' \
             --output text)
+
+          # An online target can be suspended before stopping the last worker.
+          # A stopped target must boot after the current worker stops (no overlap).
+          if [ "$previous_state" = "running" ]; then
+            suspend_instagram_assisted "$previous_instance_id"
+          fi
+
+          # The enabled worker unit can autostart at EC2 boot; stop and wait first.
+          if [ "$current_instance_id" != "$previous_instance_id" ]; then
+            current_command_id=$(aws ssm send-command \
+              --instance-ids "$current_instance_id" \
+              --document-name AWS-RunShellScript \
+              --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
+              --query 'Command.CommandId' \
+              --output text)
+
+            aws ssm wait command-executed \
+              --command-id "$current_command_id" \
+              --instance-id "$current_instance_id"
+          fi
 
           if [ "$previous_state" = "stopped" ] || [ "$previous_state" = "stopping" ]; then
             aws ec2 start-instances \
@@ -698,10 +1162,14 @@ jobs:
             sleep 15
           done
 
+          if [ "$previous_state" != "running" ]; then
+            suspend_instagram_assisted "$previous_instance_id"
+          fi
+
           previous_web_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo systemctl start chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
+            --parameters 'commands=["set -eu","sudo systemctl restart chatwoot-web.service","for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/ && exit 0; sleep 5; done; journalctl -u chatwoot-web.service --no-pager -n 120; exit 1"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -709,23 +1177,13 @@ jobs:
             --command-id "$previous_web_command_id" \
             --instance-id "$previous_instance_id"
 
-          lb_arn=$(aws elbv2 describe-load-balancers \
-            --names "$ALB_NAME" \
-            --query 'LoadBalancers[0].LoadBalancerArn' \
-            --output text)
-          listener_arn=$(aws elbv2 describe-listeners \
-            --load-balancer-arn "$lb_arn" \
-            --query 'Listeners[?Port==`443`].ListenerArn | [0]' \
-            --output text)
-
-          aws elbv2 modify-listener \
-            --listener-arn "$listener_arn" \
-            --default-actions "Type=forward,TargetGroupArn=$previous_tg_arn"
+          switch_listener_destination "$listener_arn" "$previous_tg_arn" "$previous_instance_id"
+          recovery_switch_status="$LISTENER_SWITCH_STATUS"
 
           previous_command_id=$(aws ssm send-command \
             --instance-ids "$previous_instance_id" \
             --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl start chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
+            --parameters 'commands=["set -eu","sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=true | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl enable chatwoot-worker.service","sudo systemctl restart chatwoot-worker.service","sudo systemctl is-active --quiet chatwoot-worker.service"]' \
             --query 'Command.CommandId' \
             --output text)
 
@@ -733,16 +1191,7 @@ jobs:
             --command-id "$previous_command_id" \
             --instance-id "$previous_instance_id"
 
-          current_command_id=$(aws ssm send-command \
-            --instance-ids "$current_instance_id" \
-            --document-name AWS-RunShellScript \
-            --parameters 'commands=["sudo sed -i /^START_WORKER_AFTER_DEPLOY=/d /opt/chatwoot/runtime.env","echo START_WORKER_AFTER_DEPLOY=false | sudo tee -a /opt/chatwoot/runtime.env","sudo systemctl stop chatwoot-worker.service"]' \
-            --query 'Command.CommandId' \
-            --output text)
-
-          aws ssm wait command-executed \
-            --command-id "$current_command_id" \
-            --instance-id "$current_instance_id"
+          exit "$recovery_switch_status"
 
       - name: Verify public SSO redirect after rollback
         run: |

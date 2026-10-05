@@ -18,8 +18,15 @@
 module Autonomia::Guide::Diario
   CHAVE = :autonomia_guide_diario
 
-  # O próprio caderno e a trilha de auditoria não entram nele.
-  FORA = %w[autonomia_guide_executions autonomia_guide_changes audits].freeze
+  # O próprio caderno e a trilha de auditoria não entram nele. Nem a conversa
+  # com o Guia e o registro do pedido (#861): são do Guia, não dado da conta, e o
+  # desfazer não pode apagá-los. Eles são gravados fora do caderno (`ChatJob`);
+  # isto é a rede para quem um dia gravar lá dentro. A memória (#933) também:
+  # quem a desfaz é a pessoa, no painel. A tarefa longa (#936) e os itens dela também: são o
+  # controle da máquina, e o desfazer de um lote não pode voltar o contador dela.
+  FORA = %w[autonomia_guide_executions autonomia_guide_changes audits
+            autonomia_guide_conversations autonomia_guide_turns autonomia_guide_memorias
+            autonomia_guide_tasks autonomia_guide_task_items].freeze
 
   APAGAR = 'DELETE'.freeze
 
@@ -36,13 +43,16 @@ module Autonomia::Guide::Diario
   Entrada = Struct.new(:objeto, :tabela, :record_type, :record_id, :operacao, :antes, :depois, keyword_init: true)
 
   class Sessao
-    attr_reader :entradas, :apagadas_por_sql
+    # `jobs` (#936): TODO job que o passo deixou na fila, por classe — a pausa de segurança de uma
+    # tarefa longa mostra quantos. Os que apagam continuam virando pendência.
+    attr_reader :entradas, :apagadas_por_sql, :jobs
 
     def initialize
       @entradas = []
       @antes = {}.compare_by_identity
       @apagadas_por_sql = Hash.new(0)
       @jobs_que_apagam = []
+      @jobs = Hash.new(0)
     end
 
     def guardar_antes(objeto, linha)
@@ -59,6 +69,7 @@ module Autonomia::Guide::Diario
 
     def job_enfileirado(job)
       nome = job.class.name
+      @jobs[nome] += 1
       @jobs_que_apagam << nome if JOBS_QUE_APAGAM.include?(nome)
     end
 
@@ -90,7 +101,12 @@ module Autonomia::Guide::Diario
 
   # Executa o bloco anotando tudo, e grava as mudanças como o passo `passo` da
   # execução. Devolve o que o bloco devolveu.
-  def gravando(execucao, passo)
+  #
+  # `ao_persistir` (#936) recebe o que o bloco devolveu e roda na MESMA transação que grava as
+  # mudanças: o item de uma tarefa longa fica `feito` junto com o que dá para desfazer dele, nunca
+  # um sem o outro. O bloco em si fica fora de transação, de propósito: o que a plataforma enfileira
+  # ao confirmar (`after_commit`) tem de acontecer aqui dentro, onde o caderno ouve.
+  def gravando(execucao, passo, ao_persistir: nil)
     raise ArgumentError, 'o caderno do Guia já está aberto nesta thread' if ativo?
 
     atual = Sessao.new
@@ -99,7 +115,10 @@ module Autonomia::Guide::Diario
 
     resultado = yield
     Thread.current[CHAVE] = nil
-    persistir(execucao, passo, atual)
+    ActiveRecord::Base.transaction do
+      persistir(execucao, passo, atual)
+      ao_persistir&.call(resultado)
+    end
     resultado
   ensure
     Array(ouvintes).each { |ouvinte| ActiveSupport::Notifications.unsubscribe(ouvinte) }
@@ -133,6 +152,7 @@ module Autonomia::Guide::Diario
     # Em lote e sem callback: a mudança é registro do caderno, não dado da conta.
     ::Autonomia::Guide::Mudanca.insert_all!(linhas) if linhas.any? # rubocop:disable Rails/SkipsModelValidations
     execucao.anotar_pendencias(atual.pendencias)
+    execucao.anotar_jobs(atual.jobs)
   end
 
   # A linha como o Postgres a tem, ou só as colunas pedidas. Campo cifrado volta

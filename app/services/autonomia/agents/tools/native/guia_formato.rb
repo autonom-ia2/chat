@@ -11,6 +11,11 @@ class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::
       'formato_da_acao'
     end
 
+    # #861 — o que pode ir para o registro de diagnóstico, com valor.
+    def args_registraveis
+      %w[acao campo]
+    end
+
     def description
       'Diz o que uma ação de escrita aceita: onde vão os campos, quais existem, de que tipo, quais são ' \
         'obrigatórios e quais valores cada lista aceita. Consulte ANTES de executar_acao ou propor_acao e ' \
@@ -21,7 +26,10 @@ class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::
       [
         { 'name' => 'acao', 'type' => 'string',
           'description' => 'A ação, em linguagem de rota: "POST custom_roles", "PATCH inboxes/:id", ' \
-                           '"POST crm/pipelines".' }
+                           '"POST crm/pipelines".' },
+        { 'name' => 'campo', 'type' => 'string', 'required' => false,
+          'description' => 'Só um campo JSON da ação, ou um ramo dele, quando o resumo mandar pedir: "actions", ' \
+                           '"actions.send_email_to_team", "steps.action_config.move_stage".' }
       ]
     end
   end
@@ -32,7 +40,7 @@ class Autonomia::Agents::Tools::Native::GuiaFormato < Autonomia::Agents::Tools::
     acao = @params['acao'].to_s.strip
     return fora_do_catalogo(acao) unless @operador.acoes.catalogo.include?(acao)
 
-    formato = ::Autonomia::Guide::Formatos.resumo_para_o_modelo(acao)
+    formato = ::Autonomia::Guide::Formatos.resumo_para_o_modelo(acao, campo: @params['campo'].to_s.strip.presence)
     return sem_formato(acao) if formato.nil?
 
     [formato, (sem_volta unless @operador.acoes.desfazivel?(acao))].compact.join("\n")

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
@@ -9,13 +9,14 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useOnboardingTrail } from 'dashboard/composables/useOnboardingTrail';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import FirstStepsFocus from './FirstStepsFocus.vue';
+import FirstStepsTrail from './FirstStepsTrail.vue';
 
 const { t } = useI18n();
 const router = useRouter();
 const store = useStore();
 
 const {
-  passos,
   carregando,
   erro,
   resolvidos,
@@ -23,14 +24,18 @@ const {
   percentual,
   passoAtual,
   essencialConcluido,
+  numerados,
+  porEtapa,
+  minutosRestantes,
   carregar,
   pular,
 } = useOnboardingTrail();
 
 const accountId = computed(() => store.getters.getCurrentAccountId);
+const nome = computed(() => store.getters.getCurrentUser?.name);
 
-// "Estou travado" abre o Guia da Plataforma, que é quem sabe responder passo a
-// passo. Só aparece quando o guia está de fato disponível na conta (mesma porta
+// "Preciso de ajuda" abre o Guia da Plataforma, que é quem sabe responder passo
+// a passo. Só aparece quando o guia está de fato disponível na conta (mesma porta
 // do lançador global): sem chave de IA o botão levaria a um painel vazio.
 const { updateUISettings } = useUISettings();
 const contaAtual = useMapGetter('accounts/getAccount');
@@ -47,8 +52,30 @@ const abrirGuia = () => {
 
 onMounted(carregar);
 
-const emFoco = passo =>
-  passo.status === 'pendente' && passo.id === passoAtual.value?.id;
+// Em foco: o passo que a pessoa escolheu na lista ou, sem escolha, o primeiro
+// que falta. Com o essencial pronto, a tela comemora até a pessoa pedir o resto.
+const escolhidoId = ref(null);
+const verResto = ref(false);
+
+const emFoco = computed(() => {
+  const escolhido = numerados.value.find(
+    passo => passo.id === escolhidoId.value && passo.status === 'pendente'
+  );
+  if (escolhido) return escolhido;
+  return numerados.value.find(passo => passo.id === passoAtual.value?.id);
+});
+
+const comemorando = computed(
+  () => essencialConcluido.value && !verResto.value && !escolhidoId.value
+);
+
+const escolher = passo => {
+  escolhidoId.value = passo.id;
+};
+
+const verOQueFalta = () => {
+  verResto.value = true;
+};
 
 const irPara = passo => {
   router.push({
@@ -60,142 +87,208 @@ const irPara = passo => {
 const aoPular = async passo => {
   try {
     await pular(passo.id);
+    escolhidoId.value = null;
   } catch {
     useAlert(t('ONBOARDING_TRAIL.SKIP_ERROR'));
   }
 };
+
+const etapas = computed(() =>
+  porEtapa.value.map(etapa => {
+    const feitos = etapa.passos.filter(
+      passo => passo.status !== 'pendente'
+    ).length;
+    return {
+      ...etapa,
+      feitos,
+      completa: feitos === etapa.passos.length,
+      largura: `${(feitos / etapa.passos.length) * 100}%`,
+    };
+  })
+);
+
+// Anel de progresso: circunferência do círculo de raio 29.
+const CIRCUNFERENCIA = 2 * Math.PI * 29;
+const deslocamento = computed(
+  () => CIRCUNFERENCIA * (1 - percentual.value / 100)
+);
 </script>
 
 <template>
-  <section
-    class="h-full w-full overflow-y-auto max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6"
-  >
-    <header class="flex flex-col gap-3">
-      <h1 class="mb-0 text-2xl font-medium text-n-slate-12">
-        {{
-          essencialConcluido
-            ? t('ONBOARDING_TRAIL.DONE_TITLE')
-            : t('ONBOARDING_TRAIL.TITLE')
-        }}
-      </h1>
-      <p class="mb-0 text-sm text-n-slate-11">
-        {{
-          essencialConcluido
-            ? t('ONBOARDING_TRAIL.DONE_SUBTITLE')
-            : t('ONBOARDING_TRAIL.SUBTITLE')
-        }}
-      </p>
+  <section class="h-full w-full overflow-y-auto">
+    <div class="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+      <header
+        class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+      >
+        <div class="min-w-0 flex-1">
+          <p v-if="nome" class="mb-1 text-sm text-n-slate-11">
+            {{ t('ONBOARDING_TRAIL.GREETING', { nome }) }}
+          </p>
+          <h1 class="mb-1.5 text-2xl font-semibold text-n-slate-12">
+            {{
+              essencialConcluido
+                ? t('ONBOARDING_TRAIL.DONE_TITLE')
+                : t('ONBOARDING_TRAIL.TITLE')
+            }}
+          </h1>
+          <p class="mb-0 text-base text-n-slate-11">
+            {{
+              essencialConcluido
+                ? t('ONBOARDING_TRAIL.DONE_SUBTITLE')
+                : t('ONBOARDING_TRAIL.SUBTITLE')
+            }}
+          </p>
+        </div>
 
-      <div v-if="total" class="flex items-center gap-3">
         <div
-          class="h-2 flex-1 rounded-full bg-n-alpha-2 overflow-hidden"
+          v-if="total"
+          class="flex shrink-0 items-center gap-3"
           role="progressbar"
           :aria-valuenow="percentual"
           aria-valuemin="0"
           aria-valuemax="100"
+          :aria-label="
+            t('ONBOARDING_TRAIL.PROGRESS', { feitos: resolvidos, total })
+          "
         >
-          <div
-            class="h-full rounded-full bg-n-teal-9 transition-[width] duration-300"
-            :style="{ width: `${percentual}%` }"
-          />
-        </div>
-        <span class="text-sm tabular-nums text-n-slate-11">
-          {{ t('ONBOARDING_TRAIL.PROGRESS', { feitos: resolvidos, total }) }}
-        </span>
-      </div>
-    </header>
-
-    <div v-if="carregando" class="flex justify-center py-12">
-      <Spinner />
-    </div>
-
-    <p v-else-if="erro" class="py-12 text-center text-sm text-n-slate-11">
-      {{ t('ONBOARDING_TRAIL.LOAD_ERROR') }}
-    </p>
-
-    <ol v-else class="flex flex-col gap-3 m-0 p-0 list-none">
-      <li
-        v-for="passo in passos"
-        :key="passo.id"
-        class="rounded-xl border bg-n-solid-1 px-5 py-4 flex flex-col gap-2"
-        :class="
-          emFoco(passo)
-            ? 'border-n-brand outline outline-1 outline-n-brand'
-            : 'border-n-weak'
-        "
-      >
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-start gap-3 min-w-0">
-            <span
-              class="mt-0.5 size-5 shrink-0"
-              :class="{
-                'i-lucide-circle-check-big text-n-teal-11':
-                  passo.status === 'feito',
-                'i-lucide-circle-slash text-n-slate-10':
-                  passo.status === 'pulado',
-                'i-lucide-circle text-n-slate-9': passo.status === 'pendente',
-              }"
-            />
-            <div class="min-w-0">
-              <p class="mb-1 font-medium text-n-slate-12">
-                {{ passo.titulo }}
-              </p>
-              <p class="mb-0 text-sm text-n-slate-11">{{ passo.por_que }}</p>
-            </div>
-          </div>
-
-          <span
-            v-if="passo.status !== 'pendente'"
-            class="shrink-0 text-xs font-medium"
-            :class="
-              passo.status === 'feito' ? 'text-n-teal-11' : 'text-n-slate-10'
-            "
+          <svg
+            viewBox="0 0 68 68"
+            class="size-16 -rotate-90"
+            aria-hidden="true"
           >
-            {{
-              passo.status === 'feito'
-                ? t('ONBOARDING_TRAIL.STATUS.DONE')
-                : t('ONBOARDING_TRAIL.STATUS.SKIPPED')
-            }}
-          </span>
+            <circle
+              cx="34"
+              cy="34"
+              r="29"
+              fill="none"
+              stroke-width="6"
+              class="stroke-n-alpha-2"
+            />
+            <circle
+              cx="34"
+              cy="34"
+              r="29"
+              fill="none"
+              stroke-width="6"
+              stroke-linecap="round"
+              class="stroke-n-brand transition-[stroke-dashoffset] duration-500 motion-reduce:transition-none"
+              :stroke-dasharray="CIRCUNFERENCIA"
+              :stroke-dashoffset="deslocamento"
+            />
+          </svg>
+          <div>
+            <b class="block text-xl font-semibold tabular-nums text-n-slate-12">
+              {{
+                t('ONBOARDING_TRAIL.PROGRESS', { feitos: resolvidos, total })
+              }}
+            </b>
+            <span class="text-sm text-n-slate-11">
+              {{
+                minutosRestantes
+                  ? t('ONBOARDING_TRAIL.REMAINING', {
+                      minutos: minutosRestantes,
+                    })
+                  : t('ONBOARDING_TRAIL.ALL_DONE')
+              }}
+            </span>
+          </div>
         </div>
+      </header>
 
-        <ul
-          v-if="emFoco(passo) && passo.pre_requisitos?.length"
-          class="mb-0 ltr:ml-8 rtl:mr-8 list-disc text-sm text-n-slate-11"
-        >
-          <li v-for="item in passo.pre_requisitos" :key="item">{{ item }}</li>
-        </ul>
+      <div v-if="carregando" class="flex justify-center py-12">
+        <Spinner />
+      </div>
+
+      <p v-else-if="erro" class="py-12 text-center text-sm text-n-slate-11">
+        {{ t('ONBOARDING_TRAIL.LOAD_ERROR') }}
+      </p>
+
+      <template v-else>
+        <ol class="m-0 grid list-none gap-3 p-0 sm:grid-cols-3">
+          <li
+            v-for="(etapa, indice) in etapas"
+            :key="etapa.id"
+            class="flex flex-col gap-2"
+          >
+            <span
+              class="h-1.5 overflow-hidden rounded-full bg-n-alpha-2"
+              aria-hidden="true"
+            >
+              <span
+                class="block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                :class="etapa.completa ? 'bg-n-teal-9' : 'bg-n-brand'"
+                :style="{ width: etapa.largura }"
+              />
+            </span>
+            <span class="flex justify-between gap-2 text-sm text-n-slate-11">
+              <span
+                class="font-medium"
+                :class="
+                  emFoco?.etapa === etapa.id
+                    ? 'text-n-blue-11'
+                    : 'text-n-slate-12'
+                "
+              >
+                {{ indice + 1 }}.
+                {{ t(`ONBOARDING_TRAIL.ETAPAS.${etapa.id}`) }}
+              </span>
+              <span class="tabular-nums">
+                {{
+                  t('ONBOARDING_TRAIL.PROGRESS', {
+                    feitos: etapa.feitos,
+                    total: etapa.passos.length,
+                  })
+                }}
+              </span>
+            </span>
+          </li>
+        </ol>
 
         <div
-          v-if="passo.status === 'pendente'"
-          class="flex flex-wrap gap-2 ltr:ml-8 rtl:mr-8"
+          v-if="comemorando"
+          class="flex flex-wrap items-center gap-5 rounded-2xl border border-n-weak bg-n-solid-1 p-6 shadow-sm"
         >
+          <span
+            class="grid size-16 shrink-0 place-items-center rounded-full bg-n-teal-9 text-white"
+          >
+            <span class="i-lucide-check size-8" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <h2 class="mb-1 text-xl font-semibold text-n-slate-12">
+              {{ t('ONBOARDING_TRAIL.ESSENTIAL_READY') }}
+            </h2>
+            <p class="mb-0 text-base text-n-slate-11">
+              {{ t('ONBOARDING_TRAIL.ESSENTIAL_READY_TEXT') }}
+            </p>
+          </div>
           <Button
-            sm
-            :color="emFoco(passo) ? 'blue' : 'slate'"
-            :variant="emFoco(passo) ? 'solid' : 'outline'"
-            :label="t('ONBOARDING_TRAIL.DO_IT')"
-            @click="irPara(passo)"
-          />
-          <Button
-            v-if="emFoco(passo) && guiaDisponivel"
-            sm
+            v-if="emFoco"
+            lg
             color="slate"
-            variant="ghost"
-            icon="i-lucide-life-buoy"
-            :label="t('ONBOARDING_TRAIL.STUCK')"
-            @click="abrirGuia"
-          />
-          <Button
-            v-if="passo.pulavel"
-            sm
-            color="slate"
-            variant="ghost"
-            :label="t('ONBOARDING_TRAIL.SKIP')"
-            @click="aoPular(passo)"
+            variant="outline"
+            :label="t('ONBOARDING_TRAIL.SEE_REST')"
+            @click="verOQueFalta"
           />
         </div>
-      </li>
-    </ol>
+
+        <FirstStepsFocus
+          v-else-if="emFoco"
+          :passo="emFoco"
+          :total="total"
+          :eh-proximo="emFoco.id === passoAtual?.id"
+          :guia-disponivel="guiaDisponivel"
+          :account-id="accountId"
+          @fazer="irPara"
+          @pular="aoPular"
+          @ajuda="abrirGuia"
+        />
+
+        <FirstStepsTrail
+          :etapas="etapas"
+          :em-foco-id="comemorando ? null : emFoco?.id"
+          @escolher="escolher"
+        />
+      </template>
+    </div>
   </section>
 </template>

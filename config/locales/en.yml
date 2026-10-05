@@ -313,6 +313,7 @@ en:
       sla_missed_first_response: 'SLA target first response missed for conversation (#%{display_id})'
       sla_missed_next_response: 'SLA target next response missed for conversation (#%{display_id})'
       sla_missed_resolution: 'SLA target resolution missed for conversation (#%{display_id})'
+      guide_alert: 'The Guide has an urgent warning for you'
     attachment: 'Attachment'
     no_content: 'No content'
   conversations:
@@ -468,6 +469,9 @@ en:
       short_description: 'Sync your contacts and conversations with LeadSquared CRM.'
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
   autonomia:
+    automacoes:
+      ensaio:
+        condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'
     guide:
       done: 'Done.'
       failed: 'I could not do this right now.'
@@ -476,11 +480,23 @@ en:
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'
+      already_done: 'This was already done. I will not do it again.'
+      in_progress: 'This is already being done. Wait a moment.'
       file:
         required: 'Choose a file to attach.'
         invalid_type: 'I can read PDF, Word, Excel, CSV, text, JSON, audio and image files.'
         too_large: 'This file is larger than 25 MB.'
         not_audio: 'I could not hear this recording. Try recording again.'
+      avisos:
+        pergunta: 'Want me to look into it with you?'
+        abrir_no_guia: 'Open the Guide to see it'
+        varios: 'I noticed %{n} things in the account:'
+        varios_mesmo_assunto: 'I noticed %{n} things about the same subject:'
+        linha_acima: '%{nome}: %{valor} now (the limit is %{limite}).'
+        linha_abaixo: '%{nome}: %{valor} now (the minimum is %{limite}).'
+        linha_media: '%{nome}: %{valor} now, more than %{vezes} times the weekly average (%{media}).'
+        resumo: 'Yesterday I held back %{n} warnings so I would not flood you:'
+        pausada: 'I paused the watch "%{nome}": the person who created it is no longer an admin. If you still want it, turn it back on or ask me.'
       needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'
@@ -493,6 +509,22 @@ en:
         email: 'Email'
         phone_number: 'Phone'
         color: 'Color'
+      tarefa:
+        motivo:
+          pessoa: 'You paused it.'
+          canario: 'I stopped after the first ones so you can check.'
+          falhas: 'More than 1 in 5 records failed in the last round.'
+          pendencia: 'Part of the last round cannot be undone, so I stopped.'
+          mensagens: 'A message went out to a customer while I worked, so I stopped.'
+          custo: 'The AI cost passed the limit set for this task.'
+          cota_jev: 'The monthly limit of classifications ran out.'
+          admin: 'You are no longer an admin of this account.'
+          gerar_falhou: 'I could not write the new values right now.'
+          receita_mudou: 'The plan changed after you approved it, so I did not continue.'
+          erro: 'Something went wrong. Try to resume in a few minutes.'
+        nao_da:
+          estado: 'This task cannot do that right now. Reload to see where it is.'
+          desfazer: 'There is nothing left to undo in this task.'
     image_required: 'An image file is required.'
     image_invalid_type: 'Unsupported image type. Use PNG, JPEG, GIF, or WebP.'
     image_too_large: 'Image is too large. The maximum size is 5 MB.'
@@ -953,6 +985,128 @@ en:
     ssl_status:
       custom_domain_not_configured: 'Custom domain is not configured'
   super_admin:
+    instagram_automation:
+      title: 'Instagram — automation'
+      card_description: 'Configure the Meta app and check the health of Instagram tester automation.'
+      open: 'Manage automation'
+      back: 'Back to Settings'
+      description: 'Manage the Meta Developer app used for tester invitations and monitor its managed session.'
+      configuration_title: 'Application identifiers'
+      save_before_manager: 'Save these identifiers before starting the manager, even when the fields are already filled in.'
+      time_format: '%m/%d/%Y at %H:%M'
+      errors_title: 'Review the configuration'
+      save: 'Save'
+      saved: 'Instagram automation configuration saved.'
+      invalid_request: 'This request could not be verified. Refresh the page and try again.'
+      reconnect_queued: 'Reconnection requested. Follow the request status below.'
+      oauth_link_description: 'Manage tester invitations, the dedicated manager and its session in the automation panel. OAuth settings remain below.'
+      health_checked: 'Local status updated. Remote connectivity remains unverified.'
+      invalid_configuration: 'Review the application identifiers. The configuration could not be saved.'
+      operator_channel_unavailable: 'The operator control channel is unavailable. The session was not changed.'
+      health_title: 'Automation health'
+      health_description: 'This reads local configuration and stored evidence. It does not test Meta connectivity.'
+      global_disabled: 'Automation is disabled for this installation.'
+      check_health: 'Check health'
+      checked_at: 'Local snapshot at:'
+      heartbeat_at: 'Manager heartbeat at:'
+      updated_at: 'Last updated:'
+      age: '%{age} ago'
+      elapsed:
+        seconds:
+          one: '%{count} second'
+          other: '%{count} seconds'
+        minutes:
+          one: '%{count} minute'
+          other: '%{count} minutes'
+        hours:
+          one: '%{count} hour'
+          other: '%{count} hours'
+      refresh: 'Refresh status'
+      request_title: 'Reconnection request'
+      requests:
+        queued:
+          label: 'Queued'
+          text: 'The request is waiting for the dedicated manager. The session has not been reconnected.'
+        running:
+          label: 'Running'
+          text: 'The manager is processing this request. Wait for the result before trying again.'
+        operator_required:
+          label: 'Operator required'
+          text: 'An authorized operator must complete the session recovery in the dedicated manager.'
+        succeeded:
+          label: 'Completed'
+          text: 'The manager published the renewed session for this request. This does not confirm current Meta availability.'
+        failed:
+          label: 'Failed'
+          text: 'This request did not complete. Check the manager and its current status before trying again.'
+      unknown_time: 'Unknown time'
+      reconnect_title: 'Managed session'
+      reconnect: 'Reconnect session'
+      reconnect_ready: 'The session requires operator attention and the manager is available to start reconnection.'
+      reconnect_unavailable: 'Reconnection is available only when the session requires operator attention and the manager allows control.'
+      fields:
+        meta_developer_app_id:
+          label: 'Meta Developer App ID'
+          hint: 'Parent app ID in Meta for Developers. This is different from the Instagram App ID used for OAuth.'
+        business_id:
+          label: 'Business ID'
+          hint: 'ID of the Meta business associated with the application.'
+        app_name:
+          label: 'Application name'
+          hint: 'Name displayed to the invited tester. Up to 120 characters, without surrounding whitespace or control characters.'
+        admin_user_id:
+          label: 'Facebook Admin User ID'
+          hint: 'Facebook user ID of the authorized administrator of the managed session.'
+        roles_doc_id:
+          label: 'RolesTable doc_id'
+          hint: 'Identifier of the RolesTable_Query query observed in the authorized Meta interface.'
+      components:
+        configuration: 'Configuration'
+        session: 'Session'
+        manager: 'Manager'
+        proxy: 'Proxy'
+        coordination: 'Coordination'
+        meta: 'Meta'
+      states:
+        heartbeat_present:
+          label: 'Heartbeat received'
+          text: 'The manager reported its status at the time shown below. This is not a Meta connectivity check.'
+        unknown:
+          label: 'Unknown'
+          text: 'No conclusive check is available.'
+        healthy:
+          label: 'Healthy'
+          text: 'The latest check confirmed availability.'
+        configured:
+          label: 'Configured'
+          text: 'The required local configuration is present. Remote connectivity has not been confirmed.'
+        session_present:
+          label: 'Session stored'
+          text: 'A managed session is stored locally. Meta acceptance has not been confirmed.'
+        session_missing:
+          label: 'No session'
+          text: 'No current managed session is stored locally.'
+        unmanaged:
+          label: 'Unmanaged session'
+          text: 'This installation is not using a managed session.'
+        not_configured:
+          label: 'Not configured'
+          text: 'Required configuration is missing.'
+        unavailable:
+          label: 'Unavailable'
+          text: 'The latest check could not confirm availability.'
+        degraded:
+          label: 'Needs attention'
+          text: 'The latest check identified an operational issue.'
+        expired:
+          label: 'Expired'
+          text: 'The session has expired and must be renewed.'
+        operator_required:
+          label: 'Operator required'
+          text: 'An authorized operator must reconnect the session.'
+        disabled:
+          label: 'Disabled'
+          text: 'Automation is disabled for this installation.'
     account_suspension:
       categories:
         spam: 'Spam'

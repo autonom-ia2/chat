@@ -7,7 +7,12 @@
 #   feito quando o estado real da conta muda, nunca por clique.
 # - `pulavel: true` só nos passos que a operação pode dispensar.
 # - `perfis` lista quem enxerga o passo na tela.
-# - `video` é o ID do roteiro no Estúdio HyperFrames; fica vazio até publicar.
+# - `artigo` é o id do artigo da Central de Ajuda (lib/central_de_ajuda/). O
+#   vídeo do passo é o vídeo desse artigo, quando existe.
+# - `etapa` agrupa os passos na tela: ligar, organizar ou crescer.
+# - `minutos` é a estimativa mostrada para o cliente; `acao` é o texto do botão.
+# - `depende_de` aponta um passo anterior que precisa estar pronto. A tela só
+#   avisa; não bloqueia.
 ---
 passos:
   - id: perfil
@@ -21,8 +26,10 @@ passos:
     verificacao: perfil_configurado
     fluxos_guia:
       - Configurar perfil e notificacoes
-    video: C01
-    artigo: primeiros-passos-perfil
+    artigo: "00.02"
+    etapa: ligar
+    minutos: 2
+    acao: Ajustar meu perfil
     pulavel: false
     perfis: [administrator, agent]
     pre_requisitos: []
@@ -40,8 +47,10 @@ passos:
     verificacao: chave_ia_conectada
     fluxos_guia:
       - Configurar a chave de IA da plataforma
-    video: C02
-    artigo: primeiros-passos-chave-openai
+    artigo: "00.03"
+    etapa: ligar
+    minutos: 5
+    acao: Conectar a chave
     pulavel: false
     perfis: [administrator]
     pre_requisitos:
@@ -60,8 +69,10 @@ passos:
       - Conectar WhatsApp Oficial (Cloud API da Meta)
       - Conectar WhatsApp por QR Code (WhatsApp API)
       - Conectar caixa de e-mail
-    video: C03
-    artigo: primeiros-passos-canal
+    artigo: "00.04"
+    etapa: ligar
+    minutos: 10
+    acao: Conectar um canal
     pulavel: false
     perfis: [administrator]
     pre_requisitos:
@@ -78,8 +89,11 @@ passos:
     verificacao: primeira_resposta_enviada
     fluxos_guia:
       - Responder uma conversa
-    video: C08
-    artigo: primeiros-passos-primeira-resposta
+    artigo: "00.05"
+    etapa: ligar
+    minutos: 2
+    acao: Abrir as conversas
+    depende_de: canal
     pulavel: false
     perfis: [administrator, agent]
     pre_requisitos: []
@@ -96,8 +110,11 @@ passos:
     fluxos_guia:
       - Criar funil no CRM Kanban
       - Configurar inboxes do CRM
-    video: C04
-    artigo: primeiros-passos-funil
+    artigo: "00.06"
+    etapa: organizar
+    minutos: 10
+    acao: Montar o funil
+    depende_de: chave_ia
     pulavel: false
     perfis: [administrator]
     pre_requisitos:
@@ -115,8 +132,10 @@ passos:
     fluxos_guia:
       - Convidar agente
       - Criar time
-    video: C10
-    artigo: primeiros-passos-equipe
+    artigo: "00.07"
+    etapa: organizar
+    minutos: 3
+    acao: Convidar pessoas
     pulavel: true
     perfis: [administrator]
     pre_requisitos: []
@@ -133,8 +152,11 @@ passos:
     fluxos_guia:
       - Criar agente Autonom.ia
       - Ligar agente a uma caixa de entrada
-    video: C06
-    artigo: primeiros-passos-agente-ia
+    artigo: "00.08"
+    etapa: organizar
+    minutos: 20
+    acao: Criar o agente
+    depende_de: chave_ia
     pulavel: true
     perfis: [administrator]
     pre_requisitos:
@@ -147,14 +169,17 @@ passos:
     por_que: >-
       É onde mais se erra: disparo fora da janela de 24 horas ou em massa
       derruba o número. Vem por último de propósito.
-    rota: campaigns_index
+    rota: campaigns_whatsapp_index
     alvo_destaque: sidebar-campaigns
     verificacao: campanha_criada
     fluxos_guia:
       - Criar campanha de WhatsApp
       - Criar campanha de e-mail
-    video: C05
-    artigo: primeiros-passos-campanha
+    artigo: "00.09"
+    etapa: crescer
+    minutos: 15
+    acao: Preparar a campanha
+    depende_de: canal
     pulavel: false
     perfis: [administrator]
     pre_requisitos:
@@ -173,8 +198,10 @@ passos:
     fluxos_guia:
       - Criar etiqueta
       - Criar resposta pronta
-    video: C13
-    artigo: primeiros-passos-configuracoes
+    artigo: "00.10"
+    etapa: crescer
+    minutos: 10
+    acao: Ajustar a conta
     pulavel: true
     perfis: [administrator]
     pre_requisitos: []

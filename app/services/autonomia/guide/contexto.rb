@@ -13,19 +13,29 @@
 # cada passo anotado para desfazer, e — só para o que não tem volta — a
 # PROPOSTA que a tela mostra com o botão Confirmar.
 class Autonomia::Guide::Contexto
-  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao
+  attr_reader :account, :user, :account_user, :proposta, :telas, :artigos, :execucao, :registro, :turno_id, :tarefa
 
   # Até 5 telas e 5 artigos por turno (#636). Cinco porque é mais do que uma
   # pergunta com várias partes precisa na prática, e um painel estreito não
   # tem espaço para uma lista maior de botões.
   MAX_ITENS = 5
 
-  def initialize(account:, user:, account_user: nil)
+  # `registro` (#861): o diagnóstico do pedido, quando quem chama quer um. Nulo na bateria e nas specs.
+  # `turno_id` (#933): o turno onde uma anotação nasce, para o painel dizer de que conversa ela veio.
+  def initialize(account:, user:, account_user: nil, registro: nil, turno_id: nil)
     @account = account
+    @registro = registro
+    @turno_id = turno_id
     @user = user
     @account_user = account_user || account&.account_users&.find_by(user_id: user&.id)
     @telas = []
     @artigos = []
+    @lembrancas = {}
+  end
+
+  # O `Answerer` avisa cada ferramenta chamada no turno; vai para o registro do pedido (#861).
+  def registrar_chamada(call, output, milissegundos)
+    @registro&.registrar_chamada(call, output, milissegundos)
   end
 
   def administrador?
@@ -58,6 +68,12 @@ class Autonomia::Guide::Contexto
   # que é a que a resposta dele descreve.
   def propor(nome:, dados:, descricao:)
     @proposta = { nome: nome, dados: dados, descricao: descricao }
+  end
+
+  # #936 — a tarefa longa que o Guia planejou neste turno: a tela mostra o cartão dela (`tarefa:
+  # {id, status}` na resposta) e busca o resto em `GET tarefas/:id`. A última vale.
+  def tarefa_planejada(tarefa)
+    @tarefa = { 'id' => tarefa.id, 'status' => tarefa.status }
   end
 
   # Até 5 telas por turno, na ordem em que o modelo chamou `mostrar_tela`, sem
@@ -98,6 +114,21 @@ class Autonomia::Guide::Contexto
     @artigos.first
   end
 
+  # O que o Guia anotou neste turno (#933), para o chip "Anotei" sob a resposta.
+  # A mesma anotação trocada duas vezes aparece uma vez, com o texto final; a
+  # que ele apagou no mesmo turno some.
+  def anotada(memoria)
+    @lembrancas[memoria.id] = memoria.lembranca
+  end
+
+  def esquecida(id)
+    @lembrancas.delete(id)
+  end
+
+  def lembrancas
+    @lembrancas.values
+  end
+
   # O que as leituras deste turno devolveram. O botão de UM registro só leva a
   # um id que veio daqui: na bateria real de 22/09/2026, "abre a conversa 999"
   # ganhou botão para uma conversa que não existe, com o número que a pessoa
@@ -120,11 +151,31 @@ class Autonomia::Guide::Contexto
   # Instagram" precisa do id que a leitura achou, nunca de um número chutado.
   # `:inboxId`, `:conversation_id`, `:id` apontam registro; `:tab` e `:label`
   # não. É o nome que o roteador dá ao parâmetro, não texto de gente.
-  def nao_lidos(parametros)
-    parametros.to_h.select do |nome, valor|
+  #
+  # #934 — o `corpo` também aponta registro: `ids` e `*_ids` de uma ação em
+  # lote. Sem isso, "move esses" levaria junto um id chutado ao lado dos lidos.
+  def nao_lidos(parametros, corpo = {})
+    do_caminho = parametros.to_h.select do |nome, valor|
       nome = nome.to_s
       (nome == 'id' || nome.end_with?('Id') || nome.end_with?('_id')) && !leu?(valor)
     end
+    do_caminho.merge(ids_nao_lidos_do_corpo(corpo))
+  end
+
+  # As listas de ids do corpo (`ids`, `card_ids`, `labelIds`), com os ids que nenhuma leitura trouxe.
+  def ids_nao_lidos_do_corpo(corpo)
+    return {} unless corpo.is_a?(Hash)
+
+    corpo.each_with_object({}) do |(nome, valor), saida|
+      next unless lista_de_ids?(nome.to_s) && !valor.is_a?(Hash)
+
+      faltam = Array(valor).reject { |id| leu?(id) }
+      saida[nome.to_s] = faltam.join(', ') if faltam.any?
+    end
+  end
+
+  def lista_de_ids?(nome)
+    nome == 'ids' || nome.end_with?('_ids') || nome.end_with?('Ids')
   end
 
   # O Guia leu dados da conta neste turno. É o que ancora "não encontrei o

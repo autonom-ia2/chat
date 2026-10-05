@@ -1,9 +1,12 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { isFixedPanelOpen } from 'dashboard/composables/useFixedPanelState';
 import { useGuiaDescoberta } from './useGuiaDescoberta';
 import GuideDot from './GuideDot.vue';
+import { useAvisosDoGuia } from './useAvisosDoGuia';
 
 // Botão flutuante do "Guia da Plataforma", SÓ NO CELULAR (md:hidden). No computador a
 // entrada fica no pé da barra lateral (GuideSidebarEntry, #697): um botão flutuante no
@@ -15,6 +18,22 @@ import GuideDot from './GuideDot.vue';
 // it cover the footer's buttons.
 const { guiaDisponivel, painelAberto, mostrarPonto, alternarGuia } =
   useGuiaDescoberta();
+
+// #935 — a bolinha conta os avisos novos, e o nome do botão diz quantos.
+const { t } = useI18n();
+const { quantidade: avisosNovos, carregar: carregarAvisos } = useAvisosDoGuia();
+const accountId = useMapGetter('getCurrentAccountId');
+const rotulo = computed(() =>
+  avisosNovos.value > 0
+    ? t(
+        'AUTONOMIA_GUIDE.AVISOS.LAUNCHER_LABEL',
+        { count: avisosNovos.value },
+        avisosNovos.value
+      )
+    : t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')
+);
+onMounted(carregarAvisos);
+watch(accountId, carregarAvisos);
 
 const showLauncher = computed(
   () => guiaDisponivel.value && !painelAberto.value
@@ -45,14 +64,14 @@ watch(showLauncher, async visivel => {
         ref="launcherRef"
         data-guia-abrir
         icon="i-lucide-circle-help"
-        :title="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
-        :aria-label="$t('AUTONOMIA_GUIDE.LAUNCHER_LABEL')"
+        :title="rotulo"
+        :aria-label="rotulo"
         color="blue"
         no-animation
         class="!size-11 !rounded-full shadow-md hover:shadow-lg"
         @click="alternarGuia"
       />
-      <GuideDot v-if="mostrarPonto" />
+      <GuideDot v-if="avisosNovos > 0 || mostrarPonto" :numero="avisosNovos" />
     </div>
   </div>
   <template v-else />

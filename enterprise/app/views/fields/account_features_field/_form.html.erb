@@ -8,7 +8,11 @@
     <% regular_features.each do |key_array, val| %>
       <% feature_key, display_name = key_array %>
       <div class="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm outline outline-1 outline-n-container">
-        <span class="text-sm text-slate-700"><%= display_name %></span>
+        <% if feature_key == 'instagram_assisted_onboarding' %>
+          <%= label 'enabled_features', "feature_#{feature_key}", display_name, class: 'text-sm text-slate-700 flex min-h-11 min-w-11 flex-1 items-center cursor-pointer' %>
+        <% else %>
+          <span class="text-sm text-slate-700"><%= display_name %></span>
+        <% end %>
         <span><%= check_box "enabled_features", "feature_#{feature_key}", { checked: val, class: "h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-600" }, true, false %></span>
       </div>
     <% end %>

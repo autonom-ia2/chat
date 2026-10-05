@@ -34,7 +34,13 @@ module Crm
         'gpt-5.6-luna' => { input: 0.2, cached: 0.02, cache_write: 0.25, output: 1.2 },
         'gpt-5.4' => { input: 2.5, cached: 0.25, output: 15.0 },
         'gpt-5.4-mini' => { input: 0.75, cached: 0.075, output: 4.5 },
-        'gpt-5.4-nano' => { input: 0.2, cached: 0.02, output: 1.25 }
+        'gpt-5.4-nano' => { input: 0.2, cached: 0.02, output: 1.25 },
+        # Jev (Typesafe), usado pelo Decisor (#858). O custo é NOSSO, não do cliente. US$ 0,042 por 1M de
+        # tokens de entrada e saída gratuita (docs.typesafe.ai/models, conferido no aceite da #764 em
+        # 30/09/2026). A resposta do Jev traz `usage` com input_tokens/output_tokens. Sem tarifa de cache:
+        # a leitura cacheada cobra o mesmo da entrada. O modelo vem de TYPESAFE_JEV_MODEL; trocou de versão,
+        # acrescente a linha nova aqui (ou use CRM_AI_PRICE_JEV_<VERSAO>).
+        'jev-1.13.0' => { input: 0.042, cached: 0.042, output: 0.0 }
       }.freeze
 
       def self.rate(model)

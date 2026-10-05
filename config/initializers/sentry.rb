@@ -1,4 +1,6 @@
 if ENV['SENTRY_DSN'].present?
+  require Rails.root.join('lib/sentry_http_auth_scrubber')
+
   Sentry.init do |config|
     config.dsn = ENV['SENTRY_DSN']
     config.enabled_environments = %w[staging production]
@@ -11,5 +13,7 @@ if ENV['SENTRY_DSN'].present?
 
     # to track post data in sentry
     config.send_default_pii = true unless ENV['DISABLE_SENTRY_PII']
+
+    SentryHttpAuthScrubber.install(config)
   end
 end

@@ -4,7 +4,8 @@ import AutonomiaGuideAPI from 'dashboard/api/autonomiaGuide';
 import GuideExecucao from '../GuideExecucao.vue';
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: key => key, locale: ref('pt-BR') }),
+  // O valor real que o Chatwoot guarda, com sublinhado (o Intl não aceita).
+  useI18n: () => ({ t: key => key, locale: ref('pt_BR') }),
 }));
 vi.mock('dashboard/api/autonomiaGuide', () => ({
   default: { desfazer: vi.fn() },

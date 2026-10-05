@@ -57,12 +57,11 @@ class Instagram::RefreshOauthTokenService
 
     response = HTTParty.get(endpoint, query: params, headers: { 'Accept' => 'application/json' })
 
-    unless response.success?
-      Rails.logger.error "Failed to refresh Instagram token: #{response.body}"
-      raise "Failed to refresh Instagram token: #{response.body}"
-    end
+    raise CustomExceptions::InstagramApiError.new('instagram_token_refresh_failed', response.code), cause: nil unless response.success?
 
     JSON.parse(response.body)
+  rescue JSON::ParserError
+    raise CustomExceptions::InstagramApiError.new('instagram_invalid_response', 502), cause: nil
   end
 
   def update_channel_tokens(token_data)
@@ -77,8 +76,8 @@ class Instagram::RefreshOauthTokenService
     refreshed_token_data = refresh_long_lived_token
     update_channel_tokens(refreshed_token_data)
     channel.reload[:access_token]
-  rescue StandardError => e
-    Rails.logger.error("Token refresh failed: #{e.message}")
+  rescue StandardError
+    Rails.logger.error('Instagram token refresh failed')
     channel[:access_token]
   end
 end

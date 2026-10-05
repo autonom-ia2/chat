@@ -300,6 +300,7 @@ pt_BR:
       sla_missed_first_response: 'Meta de SLA de Primeira Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_next_response: 'Meta de SLA de Próxima Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_resolution: 'Meta de SLA de Resolução não alcançada para a conversa (#%{display_id})'
+      guide_alert: 'O Guia tem um aviso urgente para você'
     attachment: 'Anexo'
     no_content: 'Sem conteúdo'
   conversations:
@@ -699,6 +700,128 @@ pt_BR:
     ssl_status:
       custom_domain_not_configured: 'Domínio personalizado não está configurado'
   super_admin:
+    instagram_automation:
+      title: 'Instagram — automação'
+      card_description: 'Configure o aplicativo Meta e verifique a saúde da automação de testers do Instagram.'
+      open: 'Gerenciar automação'
+      back: 'Voltar para Configurações'
+      description: 'Gerencie o aplicativo Meta Developer usado nos convites de testers e acompanhe sua sessão gerenciada.'
+      configuration_title: 'Identificadores do aplicativo'
+      save_before_manager: 'Salve estes identificadores antes de iniciar o gestor, mesmo quando os campos já estiverem preenchidos.'
+      time_format: '%d/%m/%Y às %H:%M'
+      errors_title: 'Revise a configuração'
+      save: 'Salvar'
+      saved: 'Configuração da automação do Instagram salva.'
+      invalid_request: 'Não foi possível verificar esta solicitação. Atualize a página e tente novamente.'
+      reconnect_queued: 'Reconexão solicitada. Acompanhe o andamento abaixo.'
+      oauth_link_description: 'Gerencie os convites de testers, o gestor dedicado e sua sessão no painel de automação. As configurações OAuth continuam abaixo.'
+      health_checked: 'Status local atualizado. A conexão remota continua sem verificação.'
+      invalid_configuration: 'Revise os identificadores do aplicativo. Não foi possível salvar a configuração.'
+      operator_channel_unavailable: 'O canal de controle do operador está indisponível. A sessão não foi alterada.'
+      health_title: 'Saúde da automação'
+      health_description: 'Esta leitura consulta a configuração local e as evidências armazenadas. Ela não testa a conexão com a Meta.'
+      global_disabled: 'A automação está desabilitada nesta instalação.'
+      check_health: 'Verificar saúde'
+      checked_at: 'Leitura local em:'
+      heartbeat_at: 'Último heartbeat do gestor:'
+      updated_at: 'Última atualização:'
+      age: 'há %{age}'
+      elapsed:
+        seconds:
+          one: '%{count} segundo'
+          other: '%{count} segundos'
+        minutes:
+          one: '%{count} minuto'
+          other: '%{count} minutos'
+        hours:
+          one: '%{count} hora'
+          other: '%{count} horas'
+      refresh: 'Atualizar status'
+      request_title: 'Solicitação de reconexão'
+      requests:
+        queued:
+          label: 'Na fila'
+          text: 'A solicitação aguarda o gestor dedicado. A sessão ainda não foi reconectada.'
+        running:
+          label: 'Em andamento'
+          text: 'O gestor está processando esta solicitação. Aguarde o resultado antes de tentar novamente.'
+        operator_required:
+          label: 'Operador necessário'
+          text: 'Um operador autorizado precisa concluir a recuperação da sessão no gestor dedicado.'
+        succeeded:
+          label: 'Concluída'
+          text: 'O gestor publicou a sessão renovada para esta solicitação. Isso não confirma a disponibilidade atual da Meta.'
+        failed:
+          label: 'Falhou'
+          text: 'Esta solicitação não foi concluída. Confira o gestor e seu status atual antes de tentar novamente.'
+      unknown_time: 'Horário desconhecido'
+      reconnect_title: 'Sessão gerenciada'
+      reconnect: 'Reconectar sessão'
+      reconnect_ready: 'A sessão precisa da atenção do operador e o gestor está disponível para iniciar a reconexão.'
+      reconnect_unavailable: 'A reconexão só fica disponível quando a sessão precisa da atenção do operador e o gestor permite o controle.'
+      fields:
+        meta_developer_app_id:
+          label: 'Meta Developer App ID'
+          hint: 'ID do aplicativo pai no Meta for Developers. É diferente do Instagram App ID usado no OAuth.'
+        business_id:
+          label: 'Business ID'
+          hint: 'ID do negócio Meta associado ao aplicativo.'
+        app_name:
+          label: 'Nome do aplicativo'
+          hint: 'Nome exibido ao tester convidado. Até 120 caracteres, sem espaços nas pontas ou caracteres de controle.'
+        admin_user_id:
+          label: 'Facebook Admin User ID'
+          hint: 'ID do usuário Facebook do administrador autorizado da sessão gerenciada.'
+        roles_doc_id:
+          label: 'RolesTable doc_id'
+          hint: 'Identificador da consulta RolesTable_Query observada na interface Meta autorizada.'
+      components:
+        configuration: 'Configuração'
+        session: 'Sessão'
+        manager: 'Gestor'
+        proxy: 'Proxy'
+        coordination: 'Coordenação'
+        meta: 'Meta'
+      states:
+        heartbeat_present:
+          label: 'Heartbeat recebido'
+          text: 'O gestor informou seu status no horário abaixo. Isso não é uma verificação da conexão com a Meta.'
+        unknown:
+          label: 'Desconhecido'
+          text: 'Nenhuma verificação conclusiva disponível.'
+        healthy:
+          label: 'Saudável'
+          text: 'A última verificação confirmou disponibilidade.'
+        configured:
+          label: 'Configurado'
+          text: 'A configuração local necessária está presente. A conexão remota não foi confirmada.'
+        session_present:
+          label: 'Sessão armazenada'
+          text: 'Há uma sessão gerenciada armazenada localmente. O aceite pela Meta não foi confirmado.'
+        session_missing:
+          label: 'Sem sessão'
+          text: 'Nenhuma sessão gerenciada atual está armazenada localmente.'
+        unmanaged:
+          label: 'Sessão não gerenciada'
+          text: 'Esta instalação não está usando uma sessão gerenciada.'
+        not_configured:
+          label: 'Não configurado'
+          text: 'Falta preencher a configuração necessária.'
+        unavailable:
+          label: 'Indisponível'
+          text: 'A última verificação não confirmou disponibilidade.'
+        degraded:
+          label: 'Requer atenção'
+          text: 'A última verificação identificou um problema operacional.'
+        expired:
+          label: 'Expirada'
+          text: 'A sessão expirou e precisa ser renovada.'
+        operator_required:
+          label: 'Operador necessário'
+          text: 'Um operador autorizado precisa reconectar a sessão.'
+        disabled:
+          label: 'Desabilitada'
+          text: 'A automação está desabilitada nesta instalação.'
     account_suspension:
       categories:
         spam: 'Spam'
@@ -756,6 +879,9 @@ pt_BR:
         sent: 'E-mail de confirmação enviado.'
         already_confirmed: 'O usuário já está confirmado.'
   autonomia:
+    automacoes:
+      ensaio:
+        condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
     guide:
       done: 'Pronto, feito.'
       failed: 'Não consegui fazer isso agora.'
@@ -764,11 +890,23 @@ pt_BR:
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
+      already_done: 'Isto já foi feito. Não vou fazer de novo.'
+      in_progress: 'Isto já está sendo feito. Espere um instante.'
       file:
         required: 'Escolha um arquivo para anexar.'
         invalid_type: 'Eu leio PDF, Word, Excel, CSV, texto, JSON, áudio e imagem.'
         too_large: 'Este arquivo passa de 25 MB.'
         not_audio: 'Não consegui ouvir esta gravação. Tente gravar de novo.'
+      avisos:
+        pergunta: 'Quer que eu veja isso com você?'
+        abrir_no_guia: 'Abra o Guia para ver'
+        varios: 'Vi %{n} coisas na conta:'
+        varios_mesmo_assunto: 'Vi %{n} coisas sobre o mesmo assunto:'
+        linha_acima: '%{nome}: %{valor} agora (o limite é %{limite}).'
+        linha_abaixo: '%{nome}: %{valor} agora (o mínimo é %{limite}).'
+        linha_media: '%{nome}: %{valor} agora, mais de %{vezes} vezes a média da semana (%{media}).'
+        resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
+        pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'
@@ -781,6 +919,22 @@ pt_BR:
         email: 'E-mail'
         phone_number: 'Telefone'
         color: 'Cor'
+      tarefa:
+        motivo:
+          pessoa: 'Você pausou.'
+          canario: 'Parei depois dos primeiros para você conferir.'
+          falhas: 'Mais de 1 em cada 5 registros deu erro na última rodada.'
+          pendencia: 'Parte da última rodada não tem como desfazer, então parei.'
+          mensagens: 'Saiu mensagem para cliente enquanto eu trabalhava, então parei.'
+          custo: 'O gasto com IA passou do limite desta tarefa.'
+          cota_jev: 'Acabou o limite de classificações do mês.'
+          admin: 'Você não é mais administrador desta conta.'
+          gerar_falhou: 'Não consegui escrever os valores novos agora.'
+          receita_mudou: 'O plano mudou depois que você aprovou, então não continuei.'
+          erro: 'Algo deu errado. Tente retomar daqui a alguns minutos.'
+        nao_da:
+          estado: 'Esta tarefa não pode fazer isso agora. Recarregue para ver onde ela está.'
+          desfazer: 'Não sobrou nada para desfazer nesta tarefa.'
     faq:
       not_pending: 'Esta sugestão já foi revisada.'
       embedding_failed: 'Não foi possível adicionar esta FAQ à base: a credencial de IA está ausente ou falhou. Tente de novo.'

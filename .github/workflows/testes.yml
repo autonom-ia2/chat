@@ -4,8 +4,18 @@ name: Testes do fork
 # run_foss_spec.yml do upstream, com duas diferencas deliberadas:
 #   - NAO remove a pasta enterprise/: o fork roda em modo Enterprise em producao,
 #     entao spec/enterprise faz parte do gate.
-#   - matriz de 8 nos em vez de 16: a suite tem ~930 arquivos de spec e o repo e
-#     publico (minutos do Actions sem custo), mas 8 nos ja mantem cada job curto.
+#   - matriz de 8 nos em vez de 16: a suite tem ~1.640 arquivos de spec. O limite do
+#     plano gratuito e de 20 jobs ao mesmo tempo, e o deploy de producao disputa os
+#     mesmos runners: mais nos deixariam o deploy na fila. Os arquivos sao divididos
+#     pelo tempo real de cada um (job rspec-plan), nao em ordem alfabetica.
+#   - roda no PR e na fila de merge (merge_group). Nao roda no push da main: com o
+#     ruleset da fila ativo (desde 04/10/2026, #969), a main so recebe o commit que a
+#     fila ja testou, e essa rodada extra tirava runner do deploy de producao.
+#   - a divisao por tempo muda os grupos de specs entre rodadas: spec que vaza estado
+#     para a vizinha pode aparecer como falha intermitente. O plan.json de cada rodada
+#     (artefato rspec-plan) reproduz o grupo exato do no que falhou.
+#   - check obrigatorio estavel: `RSpec` (job agregado), que nao muda de nome quando
+#     o numero de nos muda.
 # Refs #274 (epico upgrade Chatwoot 4.17.1) — este workflow e pre-requisito do
 # PR de merge para termos gate de regressao.
 
@@ -13,19 +23,26 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
+    inputs:
+      shards:
+        description: 'Numero de nos do RSpec (diagnostico: outra divisao expoe spec que depende de ordem)'
+        required: false
+        default: '8'
 
 concurrency:
   group: testes-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Rubocop, Brakeman e ESLint sao informativos (continue-on-error): na fila nao
+  # barram nada e so ocupariam runner.
   lint-backend:
     name: Rubocop
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -41,6 +58,7 @@ jobs:
 
   security-scan:
     name: Brakeman e bundle-audit
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -63,6 +81,7 @@ jobs:
 
   lint-frontend:
     name: ESLint
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -98,15 +117,73 @@ jobs:
       - name: Vitest
         run: pnpm run test
 
+  # Divide as specs pelo tempo real de cada arquivo (artefatos da ultima main verde) e
+  # confere que toda spec entra em exatamente um no. Sem tempos, cai no round-robin.
+  rspec-plan:
+    name: RSpec - plano
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      matrix: ${{ steps.plano.outputs.matrix }}
+      total: ${{ steps.plano.outputs.total }}
+      digest: ${{ steps.plano.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Testar o planejador
+        run: python3 .github/scripts/test_rspec_plan.py
+
+      - name: Baixar os tempos da ultima main verde
+        # Sem tempos o plano so fica menos equilibrado; nunca deixa spec de fora.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          run_id=$(gh api "repos/$REPO/actions/workflows/testes.yml/runs?status=success&event=merge_group&per_page=1" --jq '.workflow_runs[0].id // empty')
+          if [ -z "$run_id" ]; then
+            run_id=$(gh api "repos/$REPO/actions/workflows/testes.yml/runs?status=success&event=push&branch=main&per_page=1" --jq '.workflow_runs[0].id // empty')
+          fi
+          if [ -z "$run_id" ]; then echo "Sem rodada verde da main: plano round-robin."; exit 0; fi
+          echo "Tempos da rodada $run_id"
+          gh run download "$run_id" -R "$REPO" -p 'rspec-results-*' -D "$RUNNER_TEMP/tempos"
+
+      - name: Montar o plano
+        id: plano
+        env:
+          SHARDS: ${{ inputs.shards || '8' }}
+        run: |
+          set -euo pipefail
+          case "$SHARDS" in ''|*[!0-9]*) echo "shards invalido: $SHARDS"; exit 1 ;; esac
+          if [ "$SHARDS" -lt 1 ] || [ "$SHARDS" -gt 12 ]; then echo "shards fora de 1..12: $SHARDS"; exit 1; fi
+          LC_ALL=C find spec -name '*_spec.rb' -type f | LC_ALL=C sort > "$RUNNER_TEMP/specs.txt"
+          python3 .github/scripts/rspec_plan.py --shards "$SHARDS" --specs "$RUNNER_TEMP/specs.txt" \
+            --tempos "$RUNNER_TEMP/tempos" --saida plan.json | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo "total=$SHARDS"
+            echo "matrix=$(jq -cn --argjson n "$SHARDS" '[range(0; $n)]')"
+            echo "digest=$(sha256sum plan.json | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rspec-plan
+          path: plan.json
+          if-no-files-found: error
+
   backend-tests:
-    name: RSpec (${{ matrix.ci_node_index }}/${{ matrix.ci_node_total }})
+    name: RSpec (${{ matrix.ci_node_index }}/${{ needs.rspec-plan.outputs.total }})
+    needs: rspec-plan
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
-        ci_node_total: [8]
-        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
+        ci_node_index: ${{ fromJSON(needs.rspec-plan.outputs.matrix) }}
 
     services:
       postgres:
@@ -161,6 +238,17 @@ jobs:
       - name: Instalar dependencias JS
         run: pnpm install --frozen-lockfile
 
+      # O primeiro spec que renderiza pagina compila os assets do Vite (autoBuild no teste): ~85 s em cada no.
+      # O vite_ruby so reaproveita o build se o digest de app/javascript, configs e lockfiles bater, e a chave
+      # cobre esses arquivos e mais theme/: cache que nao bate e recompilado, nunca servido velho.
+      - name: Cache do build do Vite (teste)
+        uses: actions/cache@v4
+        with:
+          path: |
+            public/vite-test
+            tmp/cache/vite
+          key: vite-test-${{ runner.os }}-${{ hashFiles('app/javascript/**', 'config/vite.json', 'package.json', 'pnpm-lock.yaml', 'postcss.config.js', 'tailwind.config.js', 'theme/**', 'vite.config.*') }}
+
       # Conversores nativos que a imagem de producao (docker/Dockerfile) ja traz.
       # As previas de empresa (Relationships::PreviewRenderer) chamam ffmpeg,
       # pdftoppm e libvips de verdade; sem eles os specs falham com ENOENT/LoadError.
@@ -173,21 +261,27 @@ jobs:
           bundle exec rake db:create
           bundle exec rake db:schema:load
 
-      - name: RSpec (fatiado por no)
+      - name: Baixar o plano do RSpec
+        uses: actions/download-artifact@v4
+        with:
+          name: rspec-plan
+          path: tmp/rspec-plan
+
+      - name: RSpec (fatiado por no, pelo plano)
+        env:
+          IDX: ${{ matrix.ci_node_index }}
+          DIGEST: ${{ needs.rspec-plan.outputs.digest }}
         run: |
-          # Distribui os arquivos em round-robin para equilibrar specs lentos entre os nos.
-          SPEC_FILES=($(find spec -name '*_spec.rb' | sort))
-          TESTS=""
-
-          for i in "${!SPEC_FILES[@]}"; do
-            if [ $(( i % ${{ matrix.ci_node_total }} )) -eq ${{ matrix.ci_node_index }} ]; then
-              TESTS="$TESTS ${SPEC_FILES[$i]}"
-            fi
+          set -euo pipefail
+          # O plano baixado tem de ser o mesmo que o job de plano conferiu.
+          echo "$DIGEST  tmp/rspec-plan/plan.json" | sha256sum -c -
+          mapfile -t TESTS < <(jq -r --argjson i "$IDX" '.shards[$i][]' tmp/rspec-plan/plan.json)
+          if [ "${#TESTS[@]}" -eq 0 ]; then echo "No $IDX sem specs no plano."; exit 1; fi
+          for spec in "${TESTS[@]}"; do
+            test -f "$spec" || { echo "Spec do plano nao existe: $spec"; exit 1; }
           done
-
-          if [ -n "$TESTS" ]; then
-            bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json $TESTS
-          fi
+          echo "No $IDX: ${#TESTS[@]} arquivos de spec"
+          bundle exec rspec --profile=10 --format progress --format json --out tmp/rspec_results.json "${TESTS[@]}"
 
       - name: Publicar resultado do RSpec
         uses: actions/upload-artifact@v4
@@ -203,3 +297,21 @@ jobs:
         with:
           name: rails-log-${{ matrix.ci_node_index }}
           path: log
+
+  # Check obrigatorio da fila de merge. `if: always()` e indispensavel: um check
+  # obrigatorio pulado conta como verde, e sem ele uma parte que falhou faria este job
+  # ser pulado.
+  rspec:
+    name: RSpec
+    needs: [rspec-plan, backend-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Todas as partes do RSpec passaram?
+        env:
+          PLANO: ${{ needs.rspec-plan.result }}
+          PARTES: ${{ needs.backend-tests.result }}
+        run: |
+          echo "plano=$PLANO partes=$PARTES"
+          [ "$PLANO" = success ] && [ "$PARTES" = success ]
