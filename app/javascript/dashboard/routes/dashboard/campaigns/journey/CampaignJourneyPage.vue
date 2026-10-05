@@ -93,9 +93,7 @@ const visibleRows = computed(() =>
   })
 );
 
-const channelChips = computed(() =>
-  filterChannels(rows.value, channels.value)
-);
+const channelChips = computed(() => filterChannels(rows.value, channels.value));
 
 const channelLabel = channel =>
   t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`);

@@ -41,7 +41,10 @@ const replyOptions = computed(() => [
   { value: '', label: t(`${NS}.REPLY_NONE`) },
   ...props.inboxes
     .filter(inbox => inbox.channel_type === 'Channel::Email' && inbox.email)
-    .map(inbox => ({ value: inbox.id, label: `${inbox.name} · ${inbox.email}` })),
+    .map(inbox => ({
+      value: inbox.id,
+      label: `${inbox.name} · ${inbox.email}`,
+    })),
 ]);
 const replyInbox = computed(() =>
   props.inboxes.find(

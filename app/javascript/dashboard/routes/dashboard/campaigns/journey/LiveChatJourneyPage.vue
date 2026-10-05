@@ -91,7 +91,10 @@ const save = async (patch = {}) => {
   const payload = toCampaignPayload({ ...form.value, ...patch });
   try {
     if (isEdit.value) {
-      await store.dispatch('campaigns/update', { id: campaignId.value, ...payload });
+      await store.dispatch('campaigns/update', {
+        id: campaignId.value,
+        ...payload,
+      });
       update(patch);
       useAlert(t(`${NS}.SAVED`));
     } else {
@@ -110,7 +113,10 @@ const save = async (patch = {}) => {
 };
 
 const cancel = () =>
-  router.push({ name: 'campaigns_journey_index', query: { channel: 'live_chat' } });
+  router.push({
+    name: 'campaigns_journey_index',
+    query: { channel: 'live_chat' },
+  });
 
 useOnEnter(async () => {
   step.value = 1;
@@ -162,7 +168,9 @@ useOnEnter(async () => {
           >
             {{ isEdit ? t(`${NS}.EDIT_TITLE`) : t(`${NS}.TITLE`) }}
           </h1>
-          <p class="mb-0 mt-2 text-sm text-n-slate-11">{{ t(`${NS}.SUBTITLE`) }}</p>
+          <p class="mb-0 mt-2 text-sm text-n-slate-11">
+            {{ t(`${NS}.SUBTITLE`) }}
+          </p>
         </div>
         <span
           v-if="isEdit && !notFound"
@@ -204,7 +212,11 @@ useOnEnter(async () => {
                 :aria-current="step === index + 1 ? 'step' : undefined"
                 :disabled="
                   index + 1 > step &&
-                  !(isEdit || (index === 1 && whenReady) || (index === 2 && whenReady && messageReady))
+                  !(
+                    isEdit ||
+                    (index === 1 && whenReady) ||
+                    (index === 2 && whenReady && messageReady)
+                  )
                 "
                 :data-live-step="index + 1"
                 @click="step = index + 1"
@@ -256,7 +268,9 @@ useOnEnter(async () => {
             :label="t(`${NS}.TIME_LABEL`)"
             custom-input-class="!h-11"
             data-test="live-chat-time"
-            @update:model-value="timeOnPage => update({ timeOnPage: Number(timeOnPage) })"
+            @update:model-value="
+              timeOnPage => update({ timeOnPage: Number(timeOnPage) })
+            "
           />
           <div>
             <JourneySwitch
@@ -357,7 +371,9 @@ useOnEnter(async () => {
             <h2 class="m-0 text-sm font-medium text-n-slate-12">
               {{ t(`${NS}.PREVIEW`) }}
             </h2>
-            <div class="flex flex-col items-end gap-2 rounded-2xl bg-n-solid-1 p-4">
+            <div
+              class="flex flex-col items-end gap-2 rounded-2xl bg-n-solid-1 p-4"
+            >
               <p
                 class="m-0 max-w-xs whitespace-pre-wrap rounded-2xl rounded-br-sm bg-n-blue-9 px-3 py-2 text-sm text-white"
               >
@@ -378,7 +394,9 @@ useOnEnter(async () => {
           class="flex flex-col gap-4 rounded-2xl border border-n-weak bg-n-solid-1 p-4 shadow-sm sm:p-5"
           data-test="live-chat-activate"
         >
-          <p class="m-0 text-sm font-semibold text-n-slate-12">{{ form.title }}</p>
+          <p class="m-0 text-sm font-semibold text-n-slate-12">
+            {{ form.title }}
+          </p>
           <p class="m-0 text-sm text-n-slate-11">
             {{
               t(`${NS}.SUMMARY_WHEN`, {

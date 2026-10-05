@@ -465,9 +465,7 @@ onBeforeUnmount(stopPolling);
               />
             </div>
           </section>
-          <template
-            v-else-if="campaignImport.status === 'ready_to_confirm'"
-          >
+          <template v-else-if="campaignImport.status === 'ready_to_confirm'">
             <AudienceChannelSwitches
               :channels="campaignImport.channels"
               :sms-inbox="smsInbox"
@@ -528,7 +526,9 @@ onBeforeUnmount(stopPolling);
         <AudienceChannelBadges :badges="savedBadges" />
         <dl class="m-0 grid w-full max-w-2xl grid-cols-2 gap-3 md:grid-cols-4">
           <div class="flex flex-col-reverse rounded-xl bg-n-teal-2 p-3">
-            <dt class="text-xs text-n-slate-11">{{ t(`${NS}.DONE.PEOPLE`) }}</dt>
+            <dt class="text-xs text-n-slate-11">
+              {{ t(`${NS}.DONE.PEOPLE`) }}
+            </dt>
             <dd class="m-0 text-2xl font-semibold tabular-nums">
               {{ n(Number(campaignImport.valid_rows) || 0) }}
             </dd>

@@ -49,7 +49,9 @@ const peopleOnPage = computed(() =>
 
 const formatDate = value =>
   value
-    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), { dateStyle: 'short' })
+    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), {
+        dateStyle: 'short',
+      })
     : '';
 
 const fetchAudiences = async () => {
@@ -218,38 +220,40 @@ useOnEnter(fetchAudiences);
               {{ formatDate(row.createdAt) }}
             </p>
             <div class="flex flex-wrap items-center gap-1">
-            <Button
-              v-if="canManage && row.isSaved"
-              :label="t(`${NS}.USE_IN_CAMPAIGN`)"
-              :aria-label="t(`${NS}.USE_IN_CAMPAIGN_ARIA`, { name: row.name })"
-              variant="ghost"
-              size="sm"
-              class="!min-h-11"
-              :data-use="row.id"
-              @click="useInCampaign(row)"
-            />
-            <Button
-              v-if="canManage && row.canDelete"
-              icon="i-lucide-trash-2"
-              :aria-label="t(`${NS}.DELETE_ARIA`, { name: row.name })"
-              variant="ghost"
-              color="ruby"
-              size="sm"
-              class="!min-h-11 !min-w-11"
-              :data-delete="row.id"
-              @click="askDelete(row)"
-            />
-            <router-link
-              :to="{
-                name: 'contacts_campaign_imports',
-                query: { [LEGACY_QUERY]: '1' },
-              }"
-              class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-              :aria-label="t(`${NS}.DETAILS_ARIA`, { name: row.name })"
-            >
-              {{ t(`${NS}.DETAILS`) }}
-              <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
-            </router-link>
+              <Button
+                v-if="canManage && row.isSaved"
+                :label="t(`${NS}.USE_IN_CAMPAIGN`)"
+                :aria-label="
+                  t(`${NS}.USE_IN_CAMPAIGN_ARIA`, { name: row.name })
+                "
+                variant="ghost"
+                size="sm"
+                class="!min-h-11"
+                :data-use="row.id"
+                @click="useInCampaign(row)"
+              />
+              <Button
+                v-if="canManage && row.canDelete"
+                icon="i-lucide-trash-2"
+                :aria-label="t(`${NS}.DELETE_ARIA`, { name: row.name })"
+                variant="ghost"
+                color="ruby"
+                size="sm"
+                class="!min-h-11 !min-w-11"
+                :data-delete="row.id"
+                @click="askDelete(row)"
+              />
+              <router-link
+                :to="{
+                  name: 'contacts_campaign_imports',
+                  query: { [LEGACY_QUERY]: '1' },
+                }"
+                class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                :aria-label="t(`${NS}.DETAILS_ARIA`, { name: row.name })"
+              >
+                {{ t(`${NS}.DETAILS`) }}
+                <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
+              </router-link>
             </div>
           </li>
         </ul>

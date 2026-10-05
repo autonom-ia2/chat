@@ -57,7 +57,8 @@ const reasons = computed(() =>
   })).filter(reason => reason.count > 0)
 );
 const isScheduleValid = computed(
-  () => !isLater.value || isFutureSchedule(props.draft.scheduledAt, props.timeZone)
+  () =>
+    !isLater.value || isFutureSchedule(props.draft.scheduledAt, props.timeZone)
 );
 const whenText = computed(() => {
   if (!isLater.value || !isScheduleValid.value) return '';
@@ -183,7 +184,10 @@ const submit = () => {
         <p class="m-0 text-xs font-semibold uppercase opacity-80">
           {{ t(`${NS}.RECEIVE`) }}
         </p>
-        <p class="m-0 text-4xl font-semibold tabular-nums" data-test="receivers">
+        <p
+          class="m-0 text-4xl font-semibold tabular-nums"
+          data-test="receivers"
+        >
           {{ n(receivers) }}
         </p>
         <p class="m-0 text-sm opacity-80">

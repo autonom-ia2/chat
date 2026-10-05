@@ -33,7 +33,9 @@ const COLORS = {
       <span :class="ICONS[badge.channel]" class="size-3.5" aria-hidden="true" />
       {{
         t('CAMPAIGN_JOURNEY.AUDIENCES.BADGE', {
-          channel: t(`CAMPAIGN_JOURNEY.AUDIENCES.BADGES.${LABELS[badge.channel]}`),
+          channel: t(
+            `CAMPAIGN_JOURNEY.AUDIENCES.BADGES.${LABELS[badge.channel]}`
+          ),
           count: n(badge.count),
         })
       }}

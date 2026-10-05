@@ -8,7 +8,11 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { CONTACT_TOKENS, audienceColumnTokens, insertToken } from './audienceTokens';
+import {
+  CONTACT_TOKENS,
+  audienceColumnTokens,
+  insertToken,
+} from './audienceTokens';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -34,10 +38,16 @@ const tokenButtons = computed(() => [
     token: item.token,
     label: t(`${NS}.TOKENS.${item.labelKey}`),
   })),
-  ...columnTokens.value.map(item => ({ token: item.token, label: item.header })),
+  ...columnTokens.value.map(item => ({
+    token: item.token,
+    label: item.header,
+  })),
 ]);
 const templateOptions = computed(() =>
-  props.templates.map(template => ({ value: template.id, label: template.name }))
+  props.templates.map(template => ({
+    value: template.id,
+    label: template.name,
+  }))
 );
 const labelOf = token =>
   tokenButtons.value.find(item => item.token === token)?.label || token;
@@ -181,7 +191,10 @@ const onFile = () => emit('attach', fileInput.value?.files?.[0] || null);
     >
       <p class="m-0 text-sm">
         <strong class="text-n-slate-12">{{ t(`${NS}.ATTACH`) }}</strong>
-        <span class="text-xs text-n-slate-11"> · {{ mediaFile ? mediaFile.name : t(`${NS}.ATTACH_HINT`) }}</span>
+        <span class="text-xs text-n-slate-11">
+          ·
+          {{ mediaFile ? mediaFile.name : t(`${NS}.ATTACH_HINT`) }}
+        </span>
       </p>
       <input
         ref="fileInput"

@@ -34,7 +34,10 @@ const display = key => {
     return t(`${NS}.PART_HEADER`, { variable: placeholder });
   }
   if (variable?.part === 'button') {
-    return t(`${NS}.PART_BUTTON`, { text: variable.label, variable: placeholder });
+    return t(`${NS}.PART_BUTTON`, {
+      text: variable.label,
+      variable: placeholder,
+    });
   }
   return placeholder;
 };
@@ -98,8 +101,12 @@ const defaultKeys = computed(() => [
 
 <template>
   <section class="flex flex-col gap-2" data-test="variable-bindings">
-    <h3 class="m-0 text-sm font-medium text-n-slate-12">{{ t(`${NS}.TITLE`) }}</h3>
-    <ul class="m-0 list-none overflow-hidden rounded-xl border border-n-weak p-0">
+    <h3 class="m-0 text-sm font-medium text-n-slate-12">
+      {{ t(`${NS}.TITLE`) }}
+    </h3>
+    <ul
+      class="m-0 list-none overflow-hidden rounded-xl border border-n-weak p-0"
+    >
       <li
         v-for="variable in variables"
         :key="variable.key"
@@ -125,7 +132,9 @@ const defaultKeys = computed(() => [
           <ChoiceSelect
             :model-value="choiceOf(bindings[variable.key])"
             :groups="groups"
-            :aria-label="t(`${NS}.SOURCE_ARIA`, { variable: display(variable.key) })"
+            :aria-label="
+              t(`${NS}.SOURCE_ARIA`, { variable: display(variable.key) })
+            "
             :placeholder="t(`${NS}.CHOOSE`)"
             @update:model-value="choice => choose(variable.key, choice)"
           />
@@ -133,7 +142,9 @@ const defaultKeys = computed(() => [
             v-if="bindings[variable.key]?.source === 'fixed'"
             :model-value="bindings[variable.key].value"
             :placeholder="t(`${NS}.FIXED_PLACEHOLDER`)"
-            :aria-label="t(`${NS}.FIXED_ARIA`, { variable: display(variable.key) })"
+            :aria-label="
+              t(`${NS}.FIXED_ARIA`, { variable: display(variable.key) })
+            "
             custom-input-class="!h-11"
             data-test="fixed-text"
             @update:model-value="

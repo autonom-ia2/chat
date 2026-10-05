@@ -19,7 +19,10 @@ import StepAudience from 'dashboard/components-next/CampaignJourney/StepAudience
 import StepMessage from 'dashboard/components-next/CampaignJourney/StepMessage.vue';
 import StepReview from 'dashboard/components-next/CampaignJourney/StepReview.vue';
 import EmailCampaignsAPI from 'dashboard/api/emailCampaigns';
-import { audiencesAPI, journeyCampaignsAPI } from 'dashboard/api/campaignJourney';
+import {
+  audiencesAPI,
+  journeyCampaignsAPI,
+} from 'dashboard/api/campaignJourney';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_LABEL_KEYS,
@@ -79,7 +82,6 @@ const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 
 const currentUser = useMapGetter('getCurrentUser');
 
-
 const draft = ref(emptyDraft());
 const listedImports = ref([]);
 const listMeta = ref({ count: 0, page: 1 });
@@ -124,7 +126,8 @@ const hasMoreAudiences = computed(
 );
 const audienceRows = computed(() => savedAudienceRows(allImports.value));
 const audience = computed(
-  () => audienceRows.value.find(row => row.id === draft.value.audienceId) || null
+  () =>
+    audienceRows.value.find(row => row.id === draft.value.audienceId) || null
 );
 const audienceImport = computed(() =>
   allImports.value.find(item => item.id === draft.value.audienceId)
@@ -155,8 +158,7 @@ const templateOptions = computed(() =>
   }))
 );
 const template = computed(
-  () =>
-    templates.value.find(item => item.id === draft.value.templateId) || null
+  () => templates.value.find(item => item.id === draft.value.templateId) || null
 );
 const variables = computed(() =>
   template.value ? templateVariables(template.value) : []
@@ -390,6 +392,20 @@ const setDefault = (key, value) =>
   update({ defaults: { ...draft.value.defaults, [key]: value } });
 
 // One source per value: a getter returning a new array would fire on every draft update.
+const loadAudienceDetail = async () => {
+  const id = draft.value.audienceId;
+  if (!id) {
+    audienceDetail.value = null;
+    return;
+  }
+  try {
+    const { data } = await audiencesAPI.show(id);
+    if (draft.value.audienceId === id) audienceDetail.value = data.payload;
+  } catch {
+    // Unknown or from another account: Passo 1 just shows the list.
+  }
+};
+
 watch(
   [() => template.value?.id, () => draft.value.audienceId],
   applySuggestions
@@ -475,7 +491,9 @@ const SUBMITTERS = {
   [CAMPAIGN_CHANNELS.EMAIL]: () => {
     const id = draft.value.emailCampaignId;
     const at = scheduledAtValue();
-    return at ? EmailCampaignsAPI.schedule(id, at) : EmailCampaignsAPI.sendNow(id);
+    return at
+      ? EmailCampaignsAPI.schedule(id, at)
+      : EmailCampaignsAPI.sendNow(id);
   },
 };
 
@@ -501,7 +519,10 @@ const createEmail = async () => {
   submitError.value = '';
   try {
     const { data } = await journeyCampaignsAPI.create(
-      buildEmailPayload({ audienceId: draft.value.audienceId, draft: draft.value })
+      buildEmailPayload({
+        audienceId: draft.value.audienceId,
+        draft: draft.value,
+      })
     );
     update({ emailCampaignId: data.id });
   } catch (error) {
@@ -589,20 +610,6 @@ const loadMoreAudiences = async () => {
   }
 };
 
-const loadAudienceDetail = async () => {
-  const id = draft.value.audienceId;
-  if (!id) {
-    audienceDetail.value = null;
-    return;
-  }
-  try {
-    const { data } = await audiencesAPI.show(id);
-    if (draft.value.audienceId === id) audienceDetail.value = data.payload;
-  } catch {
-    // Unknown or from another account: Passo 1 just shows the list.
-  }
-};
-
 // Every visit (first mount or back to the kept-alive page) reads the draft and the address.
 useOnEnter(async () => {
   // Back from Novo público (J3) keeps the draft; "Usar em nova campanha" (F3) starts fresh.
@@ -679,12 +686,7 @@ onBeforeUnmount(() => {
         />
       </header>
 
-      <JourneyStepper
-        :current="draft.step"
-        :reachable="reachable"
-        @go="goTo"
-      />
-
+      <JourneyStepper :current="draft.step" :reachable="reachable" @go="goTo" />
 
       <StepAudience
         v-if="draft.step === 1"

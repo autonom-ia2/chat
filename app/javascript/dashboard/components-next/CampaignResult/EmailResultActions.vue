@@ -132,6 +132,12 @@ const confirmAction = async () => {
   confirmDialog.value?.close();
 };
 
+const openTemplate = async () => {
+  templateName.value = props.campaign.name || '';
+  await nextTick();
+  templateDialog.value?.open();
+};
+
 const items = computed(() =>
   [
     isDraft.value && {
@@ -180,12 +186,6 @@ const items = computed(() =>
     .filter(Boolean)
     .map(item => ({ ...item, label: t(`${NS}.${ACTION_LABELS[item.key]}`) }))
 );
-
-const openTemplate = async () => {
-  templateName.value = props.campaign.name || '';
-  await nextTick();
-  templateDialog.value?.open();
-};
 
 const saveTemplate = async () => {
   const name = templateName.value.trim();

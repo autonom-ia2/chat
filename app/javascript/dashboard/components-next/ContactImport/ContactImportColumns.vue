@@ -38,7 +38,8 @@ const options = computed(() => [
   })),
 ]);
 
-const targetLabel = target => t(`${NS}.COLUMNS.TARGETS.${target.toUpperCase()}`);
+const targetLabel = target =>
+  t(`${NS}.COLUMNS.TARGETS.${target.toUpperCase()}`);
 
 const rows = computed(() =>
   visibleTargets(props.contactImport).map(target => {
@@ -115,7 +116,10 @@ const choose = (target, value) => {
           {{ t(`${NS}.ATTRIBUTES.HINT`) }}
         </p>
       </div>
-      <ul v-if="attributes.length" class="m-0 flex list-none flex-wrap gap-2 p-0">
+      <ul
+        v-if="attributes.length"
+        class="m-0 flex list-none flex-wrap gap-2 p-0"
+      >
         <li
           v-for="attribute in attributes"
           :key="attribute.key"
@@ -137,11 +141,7 @@ const choose = (target, value) => {
         data-test="attribute-kept"
       >
         {{
-          t(
-            `${NS}.ATTRIBUTES.KEPT`,
-            { count: n(problems.kept) },
-            problems.kept
-          )
+          t(`${NS}.ATTRIBUTES.KEPT`, { count: n(problems.kept) }, problems.kept)
         }}
       </p>
       <div

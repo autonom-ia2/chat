@@ -31,7 +31,8 @@ const switches = computed(() =>
 );
 const hints = computed(() =>
   switches.value.flatMap(item => {
-    if (!item.hasInbox) return [{ channel: item.channel, key: 'NO_INBOX_HINT' }];
+    if (!item.hasInbox)
+      return [{ channel: item.channel, key: 'NO_INBOX_HINT' }];
     if (!item.hasData) {
       return [{ channel: item.channel, key: NO_DATA_HINTS[item.channel] }];
     }

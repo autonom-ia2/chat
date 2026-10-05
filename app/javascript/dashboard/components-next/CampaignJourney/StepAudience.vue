@@ -43,7 +43,9 @@ const isEmpty = computed(
 
 const formatDate = value =>
   value
-    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), { dateStyle: 'short' })
+    ? new Date(value).toLocaleDateString(toLocaleTag(locale.value), {
+        dateStyle: 'short',
+      })
     : '';
 </script>
 
@@ -104,10 +106,10 @@ const formatDate = value =>
           :value="searchQuery"
           type="search"
           data-test="audience-search"
-          @input="event => emit('search', event.target.value)"
           :aria-label="t(`${NS}.SEARCH`)"
           :placeholder="t(`${NS}.SEARCH`)"
           class="m-0 w-full min-w-0 !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
+          @input="event => emit('search', event.target.value)"
         />
       </label>
       <p v-if="hasLoadError" role="alert" class="m-0 text-sm text-n-ruby-11">
@@ -116,10 +118,7 @@ const formatDate = value =>
       <div v-if="isLoading && !rows.length" class="flex justify-center p-8">
         <Spinner />
       </div>
-      <p
-        v-else-if="!rows.length"
-        class="m-0 text-sm text-n-slate-11"
-      >
+      <p v-else-if="!rows.length" class="m-0 text-sm text-n-slate-11">
         {{ t(`${NS}.NO_MATCH`) }}
       </p>
       <ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
@@ -143,7 +142,8 @@ const formatDate = value =>
               <span class="flex flex-wrap items-center gap-2">
                 <AudienceChannelBadges :badges="row.badges" />
                 <span class="text-xs text-n-slate-11">
-                  · {{ t(`${NS}.PEOPLE`, { count: n(row.people) }, row.people) }}
+                  ·
+                  {{ t(`${NS}.PEOPLE`, { count: n(row.people) }, row.people) }}
                   · {{ formatDate(row.createdAt) }}
                 </span>
               </span>

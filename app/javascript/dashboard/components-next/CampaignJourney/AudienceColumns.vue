@@ -45,7 +45,9 @@ const rows = computed(() => columnRows(resolution.value, mapping.value));
 const options = computed(() =>
   columnOptions(resolution.value, t(`${NS}.NONE`))
 );
-const extras = computed(() => otherColumns(props.campaignImport, mapping.value));
+const extras = computed(() =>
+  otherColumns(props.campaignImport, mapping.value)
+);
 const isChanged = computed(() => !sameMapping(mapping.value, saved.value));
 const hasContact = computed(() => hasContactColumn(mapping.value));
 const showApply = computed(
@@ -141,7 +143,9 @@ const apply = () => {
           <Button
             v-if="canEdit && !isEditing(row.target)"
             :label="t(`${NS}.CHANGE`)"
-            :aria-label="t(`${NS}.CHANGE_ARIA`, { target: targetLabel(row.target) })"
+            :aria-label="
+              t(`${NS}.CHANGE_ARIA`, { target: targetLabel(row.target) })
+            "
             variant="ghost"
             color="slate"
             size="sm"
@@ -161,7 +165,10 @@ const apply = () => {
           </strong>
           <p class="m-0 text-xs text-n-slate-11">{{ t(`${NS}.OTHER_HINT`) }}</p>
         </div>
-        <ul v-if="extras.length" class="m-0 flex list-none flex-wrap gap-1.5 p-0">
+        <ul
+          v-if="extras.length"
+          class="m-0 flex list-none flex-wrap gap-1.5 p-0"
+        >
           <li
             v-for="extra in extras"
             :key="extra"

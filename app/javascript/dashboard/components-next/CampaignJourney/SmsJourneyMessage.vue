@@ -92,7 +92,10 @@ const setDefault = (token, value) =>
         <p class="m-0 text-xs text-n-slate-11">{{ t(`${NS}.INBOX_HINT`) }}</p>
       </div>
       <div class="flex flex-col gap-2">
-        <label for="journey-sms-message" class="text-sm font-medium text-n-slate-12">
+        <label
+          for="journey-sms-message"
+          class="text-sm font-medium text-n-slate-12"
+        >
           {{ t(`${NS}.MESSAGE_LABEL`) }}
         </label>
         <textarea
@@ -107,7 +110,9 @@ const setDefault = (token, value) =>
         />
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-xs text-n-slate-11">{{ t(`${API}.INSERT`) }}</span>
+            <span class="text-xs text-n-slate-11">{{
+              t(`${API}.INSERT`)
+            }}</span>
             <button
               v-for="item in tokenButtons"
               :key="item.token"
@@ -120,7 +125,11 @@ const setDefault = (token, value) =>
               + {{ item.label }}
             </button>
           </div>
-          <p class="m-0 text-xs text-n-slate-11" data-test="sms-counter" aria-live="polite">
+          <p
+            class="m-0 text-xs text-n-slate-11"
+            data-test="sms-counter"
+            aria-live="polite"
+          >
             {{
               t(
                 `${NS}.COUNTER`,
@@ -134,7 +143,12 @@ const setDefault = (token, value) =>
           </p>
         </div>
         <p class="m-0 text-xs text-n-slate-11">
-          {{ t(`${NS}.COUNTER_HINT`, { per: stats.per_segment, encoding: stats.encoding }) }}
+          {{
+            t(`${NS}.COUNTER_HINT`, {
+              per: stats.per_segment,
+              encoding: stats.encoding,
+            })
+          }}
         </p>
       </div>
       <div
@@ -170,7 +184,9 @@ const setDefault = (token, value) =>
       class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-alpha-1 p-4 lg:sticky lg:top-4"
       data-test="sms-preview"
     >
-      <h3 class="m-0 text-sm font-medium text-n-slate-12">{{ t(`${NS}.PREVIEW_TITLE`) }}</h3>
+      <h3 class="m-0 text-sm font-medium text-n-slate-12">
+        {{ t(`${NS}.PREVIEW_TITLE`) }}
+      </h3>
       <div class="rounded-2xl bg-n-solid-1 p-4">
         <p
           v-if="draft.messageBody"
@@ -179,7 +195,9 @@ const setDefault = (token, value) =>
         >
           {{ previewText }}
         </p>
-        <p v-else class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.PREVIEW_EMPTY`) }}</p>
+        <p v-else class="m-0 text-sm text-n-slate-11">
+          {{ t(`${NS}.PREVIEW_EMPTY`) }}
+        </p>
       </div>
       <p class="m-0 text-xs text-n-slate-11">{{ t(`${NS}.PREVIEW_HINT`) }}</p>
     </aside>

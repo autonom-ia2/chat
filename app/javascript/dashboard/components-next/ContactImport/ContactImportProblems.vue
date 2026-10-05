@@ -33,32 +33,56 @@ const contactOf = row => row.phone || row.email || t(`${NS}.EMPTY_CONTACT`);
       data-test="problems-toggle"
       @click="open = !open"
     >
-      <span class="text-2xl font-semibold tabular-nums text-n-slate-12">{{ n(total) }}</span>
+      <span class="text-2xl font-semibold tabular-nums text-n-slate-12">{{
+        n(total)
+      }}</span>
       <strong class="text-sm text-n-slate-12">{{ t(`${NS}.PROBLEMS`) }}</strong>
       <span v-if="total" class="text-xs font-semibold text-n-blue-11">
         {{ open ? t(`${NS}.HIDE_PROBLEMS`) : t(`${NS}.SHOW_PROBLEMS`) }}
       </span>
     </button>
-    <div v-if="open && total" class="overflow-hidden rounded-xl border border-n-amber-6" data-test="problems">
+    <div
+      v-if="open && total"
+      class="overflow-hidden rounded-xl border border-n-amber-6"
+      data-test="problems"
+    >
       <table class="w-full text-start text-xs">
         <thead class="bg-n-slate-2 text-n-slate-11">
           <tr>
-            <th scope="col" class="px-3 py-2 text-start font-medium">{{ t(`${NS}.ROW`) }}</th>
-            <th scope="col" class="px-3 py-2 text-start font-medium">{{ t(`${NS}.CONTACT`) }}</th>
-            <th scope="col" class="px-3 py-2 text-start font-medium">{{ t(`${NS}.PROBLEM`) }}</th>
+            <th scope="col" class="px-3 py-2 text-start font-medium">
+              {{ t(`${NS}.ROW`) }}
+            </th>
+            <th scope="col" class="px-3 py-2 text-start font-medium">
+              {{ t(`${NS}.CONTACT`) }}
+            </th>
+            <th scope="col" class="px-3 py-2 text-start font-medium">
+              {{ t(`${NS}.PROBLEM`) }}
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.row_number" class="border-t border-n-weak text-n-slate-12">
+          <tr
+            v-for="row in rows"
+            :key="row.row_number"
+            class="border-t border-n-weak text-n-slate-12"
+          >
             <td class="px-3 py-2 tabular-nums">{{ row.row_number }}</td>
             <td class="px-3 py-2 break-all">{{ contactOf(row) }}</td>
-            <td class="px-3 py-2">{{ row.errors.map(reasonText).join(' · ') }}</td>
+            <td class="px-3 py-2">
+              {{ row.errors.map(reasonText).join(' · ') }}
+            </td>
           </tr>
         </tbody>
       </table>
-      <div class="flex flex-wrap items-center justify-between gap-2 border-t border-n-weak px-3 py-2">
+      <div
+        class="flex flex-wrap items-center justify-between gap-2 border-t border-n-weak px-3 py-2"
+      >
         <span class="text-xs text-n-slate-11">
-          {{ total > rows.length ? t(`${NS}.MORE`, { shown: n(rows.length), total: n(total) }) : t(`${NS}.LEFT_OUT`) }}
+          {{
+            total > rows.length
+              ? t(`${NS}.MORE`, { shown: n(rows.length), total: n(total) })
+              : t(`${NS}.LEFT_OUT`)
+          }}
         </span>
         <Button
           :label="t(`${NS}.DOWNLOAD`)"

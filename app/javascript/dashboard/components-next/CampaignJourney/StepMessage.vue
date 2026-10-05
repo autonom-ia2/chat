@@ -166,7 +166,11 @@ const chooseChannel = card => {
             </span>
             <span class="flex min-w-0 flex-col gap-0.5">
               <strong class="text-sm text-n-slate-12">
-                {{ t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[card.channel]}`) }}
+                {{
+                  t(
+                    `CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[card.channel]}`
+                  )
+                }}
               </strong>
               <span class="text-xs text-n-slate-11" data-test="card-hint">
                 {{ cardHint(card) }}
@@ -195,7 +199,9 @@ const chooseChannel = card => {
             data-test="campaign-title"
             @update:model-value="title => emit('update', { title })"
           />
-          <p class="m-0 flex flex-wrap items-center gap-2 text-xs text-n-slate-11">
+          <p
+            class="m-0 flex flex-wrap items-center gap-2 text-xs text-n-slate-11"
+          >
             <span
               class="rounded-full bg-n-blue-3 px-2 py-0.5 font-semibold text-n-blue-11"
             >
@@ -237,58 +243,60 @@ const chooseChannel = card => {
           @reload="emit('emailReload')"
         />
         <template v-else>
-        <div class="flex flex-col gap-1">
-          <span class="text-sm font-medium text-n-slate-12">
-            {{ t(`${NS}.INBOX_LABEL`) }}
-          </span>
-          <ChoiceSelect
-            :model-value="draft.inboxId ?? ''"
-            :options="inboxOptions"
-            :aria-label="t(`${NS}.INBOX_LABEL`)"
-            :placeholder="t(`${NS}.INBOX_PLACEHOLDER`)"
-            data-test="inbox-choice"
-            @update:model-value="
-              inboxId => emit('update', { inboxId, templateId: null })
-            "
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ t(`${NS}.INBOX_LABEL`) }}
+            </span>
+            <ChoiceSelect
+              :model-value="draft.inboxId ?? ''"
+              :options="inboxOptions"
+              :aria-label="t(`${NS}.INBOX_LABEL`)"
+              :placeholder="t(`${NS}.INBOX_PLACEHOLDER`)"
+              data-test="inbox-choice"
+              @update:model-value="
+                inboxId => emit('update', { inboxId, templateId: null })
+              "
+            />
+            <p class="m-0 text-xs text-n-slate-11">
+              {{ t(`${NS}.INBOX_HINT`) }}
+            </p>
+          </div>
+          <div v-if="draft.inboxId" class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-n-slate-12">
+              {{ t(`${NS}.TEMPLATE_LABEL`) }}
+            </span>
+            <ChoiceSelect
+              v-if="templateOptions.length"
+              :model-value="draft.templateId ?? ''"
+              :options="templateOptions"
+              :aria-label="t(`${NS}.TEMPLATE_LABEL`)"
+              :placeholder="t(`${NS}.TEMPLATE_PLACEHOLDER`)"
+              data-test="template-choice"
+              @update:model-value="templateId => emit('update', { templateId })"
+            />
+            <p v-else class="m-0 text-sm text-n-slate-11">
+              {{ t(`${NS}.TEMPLATE_EMPTY`) }}
+            </p>
+          </div>
+          <Input
+            v-if="mediaHeader"
+            :model-value="draft.mediaUrl"
+            type="url"
+            :label="t(`${NS}.MEDIA_LABEL`)"
+            :placeholder="t(`${NS}.MEDIA_PLACEHOLDER`)"
+            custom-input-class="!h-11"
+            @update:model-value="mediaUrl => emit('update', { mediaUrl })"
           />
-          <p class="m-0 text-xs text-n-slate-11">{{ t(`${NS}.INBOX_HINT`) }}</p>
-        </div>
-        <div v-if="draft.inboxId" class="flex flex-col gap-1">
-          <span class="text-sm font-medium text-n-slate-12">
-            {{ t(`${NS}.TEMPLATE_LABEL`) }}
-          </span>
-          <ChoiceSelect
-            v-if="templateOptions.length"
-            :model-value="draft.templateId ?? ''"
-            :options="templateOptions"
-            :aria-label="t(`${NS}.TEMPLATE_LABEL`)"
-            :placeholder="t(`${NS}.TEMPLATE_PLACEHOLDER`)"
-            data-test="template-choice"
-            @update:model-value="templateId => emit('update', { templateId })"
+          <TemplateVariableBindings
+            v-if="variables.length"
+            :variables="variables"
+            :bindings="draft.bindings"
+            :defaults="draft.defaults"
+            :columns="columns"
+            :coverage="coverage"
+            @bind="(key, binding) => emit('bind', key, binding)"
+            @default="(key, value) => emit('default', key, value)"
           />
-          <p v-else class="m-0 text-sm text-n-slate-11">
-            {{ t(`${NS}.TEMPLATE_EMPTY`) }}
-          </p>
-        </div>
-        <Input
-          v-if="mediaHeader"
-          :model-value="draft.mediaUrl"
-          type="url"
-          :label="t(`${NS}.MEDIA_LABEL`)"
-          :placeholder="t(`${NS}.MEDIA_PLACEHOLDER`)"
-          custom-input-class="!h-11"
-          @update:model-value="mediaUrl => emit('update', { mediaUrl })"
-        />
-        <TemplateVariableBindings
-          v-if="variables.length"
-          :variables="variables"
-          :bindings="draft.bindings"
-          :defaults="draft.defaults"
-          :columns="columns"
-          :coverage="coverage"
-          @bind="(key, binding) => emit('bind', key, binding)"
-          @default="(key, value) => emit('default', key, value)"
-        />
         </template>
       </section>
       <WhatsAppPreview v-if="!isEmail && !isSms" :text="previewText" />
@@ -303,7 +311,9 @@ const chooseChannel = card => {
         @click="emit('back')"
       />
       <Button
-        v-if="isOfficial || isApi || isSms || (isEmail && draft.emailCampaignId)"
+        v-if="
+          isOfficial || isApi || isSms || (isEmail && draft.emailCampaignId)
+        "
         :label="t(`${NS}.CONTINUE`)"
         :disabled="!canContinue"
         class="!min-h-11 !rounded-xl"

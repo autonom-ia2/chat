@@ -66,7 +66,10 @@ watch(
 
 <template>
   <section class="flex flex-col gap-3" data-test="audience-people">
-    <p class="m-0 text-base font-semibold text-n-slate-12" data-test="people-summary">
+    <p
+      class="m-0 text-base font-semibold text-n-slate-12"
+      data-test="people-summary"
+    >
       {{
         t(`${NS}.SUMMARY`, {
           ready: n(summary.ready),
@@ -79,7 +82,9 @@ watch(
         <p class="m-0 text-3xl font-semibold tabular-nums text-n-teal-11">
           {{ n(summary.ready) }}
         </p>
-        <p class="m-0 text-sm font-medium text-n-slate-12">{{ t(`${NS}.READY`) }}</p>
+        <p class="m-0 text-sm font-medium text-n-slate-12">
+          {{ t(`${NS}.READY`) }}
+        </p>
       </div>
       <button
         v-if="summary.problems"
@@ -131,7 +136,9 @@ watch(
       <table v-else-if="problemRows" class="w-full text-sm">
         <thead class="bg-n-alpha-1 text-start text-xs text-n-slate-11">
           <tr>
-            <th class="px-4 py-2 text-start font-medium">{{ t(`${NS}.ROW`) }}</th>
+            <th class="px-4 py-2 text-start font-medium">
+              {{ t(`${NS}.ROW`) }}
+            </th>
             <th class="px-4 py-2 text-start font-medium">
               {{ t(`${NS}.CONTACT`) }}
             </th>

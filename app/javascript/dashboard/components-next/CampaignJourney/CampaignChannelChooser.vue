@@ -55,7 +55,9 @@ onMounted(() => {
           </span>
           <span class="min-w-0">
             <span class="block text-sm font-medium text-n-slate-12">
-              {{ t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`) }}
+              {{
+                t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`)
+              }}
             </span>
             <span class="block text-xs text-n-slate-11">
               {{
