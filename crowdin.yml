@@ -15,6 +15,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/onboardingTrail.json
       - /app/javascript/dashboard/i18n/locale/en/prospecting.json
       - /app/javascript/dashboard/i18n/locale/en/relationships.json
+      - /app/javascript/dashboard/i18n/locale/en/resultJourney.json
     translation: >-
       /app/javascript/dashboard/i18n/locale/%two_letters_code%/%original_file_name%
   - source: /config/locales/en.yml

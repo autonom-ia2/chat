@@ -3,6 +3,7 @@
 // they send the user back to the old campaign pages, so nothing changes (PRD A5).
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import { campaignResultRoutes } from './campaignResult.routes';
 
 const CampaignJourneyPage = () => import('./CampaignJourneyPage.vue');
 const AudiencesPage = () => import('./AudiencesPage.vue');
@@ -82,4 +83,5 @@ export const campaignJourneyRoutes = [
     beforeEnter: requireAudiences,
     component: NewCampaignPage,
   },
+  ...campaignResultRoutes({ requireJourney }),
 ];

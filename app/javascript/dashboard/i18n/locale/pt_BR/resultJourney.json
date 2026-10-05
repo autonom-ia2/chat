@@ -1,0 +1,138 @@
+{
+  "RESULT_JOURNEY": {
+    "BREADCRUMB": "Caminho",
+    "LOAD_ERROR": "Não foi possível carregar agora. Tente de novo em instantes.",
+    "NOT_FOUND": "Esta campanha não existe nesta conta ou não é deste canal.",
+    "REFRESH": "Atualizar",
+    "DOWNLOAD": "Baixar resultado",
+    "DOWNLOAD_ERROR": "Não foi possível baixar o resultado. Tente de novo.",
+    "PROCESSING": "Enviando. Ainda na fila: {queued}. Os números se atualizam sozinhos a cada 15 segundos.",
+    "PROCESSING_EMAIL": "Enviando. Os números se atualizam sozinhos a cada 15 segundos.",
+    "SMS_PARTIAL": "Esta campanha de SMS ainda não tem registro por pessoa. Os números aparecem aqui assim que o SMS passar a registrar cada envio.",
+    "SUBTITLE": {
+      "TEMPLATE": "modelo {name}",
+      "SENT_ON": "enviada em {date}",
+      "SCHEDULED_FOR": "agendada para {date}",
+      "AUDIENCE": "público {name}"
+    },
+    "KPI": {
+      "LABEL": "Números da campanha",
+      "DETAILS": "Detalhes",
+      "AUDIENCE": "Público",
+      "ELIGIBLE": "Público elegível",
+      "AUDIENCE_NOTE": "pessoas que podiam receber",
+      "SENT": "Enviadas",
+      "DELIVERED": "Entregues",
+      "READ": "Lidas",
+      "REPLIED": "Responderam",
+      "REPLIED_NOTE": "marcados no CRM",
+      "FAILED": "Falharam",
+      "SKIPPED": "Puladas",
+      "RATE": "{rate}% do público"
+    },
+    "BALANCE": {
+      "MESSAGE": "Enviadas {sent} + Falharam {failed} + Puladas {skipped} + Na fila {queued} = Público {total}",
+      "EMAIL": "Entregues {delivered} + Voltaram {bounced} + Não enviados {notSent} = Público elegível {total}"
+    },
+    "CRM": {
+      "PILL": "CRM",
+      "BAND": "Quem respondeu já aparece no CRM com a marca",
+      "MARK": "Campanha: {name}",
+      "OPEN": "Ver no CRM"
+    },
+    "PEOPLE": {
+      "TITLE": "Pessoas",
+      "ALL": "Todos",
+      "FILTER_LABEL": "Filtrar por situação",
+      "FILTER": {
+        "SENT": "Enviadas",
+        "DELIVERED": "Entregues",
+        "READ": "Lidas",
+        "REPLIED": "Responderam",
+        "FAILED": "Falharam",
+        "SKIPPED": "Puladas",
+        "QUEUED": "Na fila"
+      },
+      "CONTACT": "Contato",
+      "STATUS": "Situação",
+      "MESSAGE": "Mensagem enviada",
+      "REASON": "Motivo",
+      "WHEN": "Quando",
+      "OPEN_CONVERSATION": "Abrir conversa",
+      "NO_MESSAGE": "Mensagem não gerada",
+      "EMPTY": "Ninguém nesta situação.",
+      "REPLIED_BADGE": "Respondeu",
+      "CODE": "código {code}",
+      "PAGE_OF": "Página {page} de {total}",
+      "PREV": "Anterior",
+      "NEXT": "Próxima"
+    },
+    "REPLIED": {
+      "TITLE": "Quem respondeu",
+      "EMPTY": "Ninguém respondeu ainda."
+    },
+    "ACTIONS": {
+      "EDIT": "Editar e-mail",
+      "PAUSE": "Pausar",
+      "RESUME": "Retomar",
+      "CANCEL": "Cancelar",
+      "DUPLICATE": "Duplicar",
+      "SAVE_TEMPLATE": "Salvar como modelo",
+      "DELETE_DRAFT": "Excluir rascunho",
+      "CONFIRM_CANCEL": "Cancelar esta campanha? Quem ainda não recebeu não vai receber.",
+      "CONFIRM_DELETE": "Excluir este rascunho?",
+      "TEMPLATE_NAME": "Nome do modelo",
+      "TEMPLATE_SAVE": "Salvar modelo",
+      "PAUSED": "Campanha pausada.",
+      "RESUMED": "Campanha retomada.",
+      "CANCELLED": "Campanha cancelada.",
+      "DUPLICATED": "Campanha duplicada. Abrimos a cópia no editor.",
+      "DELETED": "Rascunho excluído.",
+      "TEMPLATE_SAVED": "Modelo salvo em Meus modelos.",
+      "API_PAUSE": "Campanha pausada.",
+      "API_RESUME": "Campanha retomada.",
+      "API_CANCEL": "Campanha cancelada.",
+      "ERROR": "Não foi possível fazer isso agora. Tente de novo."
+    },
+    "OVERVIEW": {
+      "TITLE": "Gestão de campanhas",
+      "SUBTITLE": "Como vão as campanhas no geral. Para ver o detalhe de uma, clique nela.",
+      "PERIOD": "Período",
+      "PERIOD_DAYS": "Últimos {days} dias",
+      "CHANNEL_FILTER": "Filtrar por canal",
+      "ALL_CHANNELS": "Todos os canais",
+      "TOTALS": {
+        "LABEL": "Resumo do período",
+        "CAMPAIGNS": "Campanhas enviadas",
+        "CAMPAIGNS_NOTE": "nos últimos {days} dias",
+        "REACHED": "Pessoas alcançadas",
+        "REACHED_NOTE": "receberam a mensagem",
+        "REPLIED": "Responderam",
+        "REPLIED_NOTE": "{rate} das alcançadas · todos no CRM",
+        "DEALS": "Viraram negócio no CRM",
+        "DEALS_NOTE": "cards com marca de campanha · {won} ganhos",
+        "EMAIL_HEALTH": "Saúde do e-mail",
+        "EMAIL_HEALTH_NOTE": "bounce permanente · limite 5% · reclamações {complaints} (limite 0,1%)"
+      },
+      "TABLE": {
+        "CAMPAIGN": "Campanha",
+        "DATE": "Data",
+        "SENT": "Enviadas",
+        "DELIVERED": "Entregues",
+        "ENGAGEMENT": "Engajamento",
+        "CLICK_RATE": "Cliques",
+        "BOUNCE_RATE": "Bounce permanente",
+        "UNSUBSCRIBE_RATE": "Descadastros",
+        "REPLIED": "Responderam",
+        "RATE": "Taxa de resposta"
+      },
+      "ENGAGEMENT": {
+        "OPENED": "{rate} abriram",
+        "READ": "{rate} leram"
+      },
+      "EMPTY": "Nenhuma campanha enviada neste período.",
+      "FOOTER": "O detalhe de cada campanha (gráfico, cliques por link, pessoas, saúde do envio) fica no Resultado dela.",
+      "OPEN_ARIA": "Abrir o resultado de {name}"
+    }
+  }
+}

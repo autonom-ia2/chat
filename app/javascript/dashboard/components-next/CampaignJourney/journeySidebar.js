@@ -34,7 +34,8 @@ export const withCampaignJourney = (
       name: 'Campaign Journey',
       label: t('CAMPAIGN_JOURNEY.SIDEBAR.CAMPAIGNS'),
       to: accountScopedRoute('campaigns_journey_index'),
-      activeOn: ['campaigns_journey_index'],
+      // A campaign's Resultado (#1007) belongs to Campanha.
+      activeOn: ['campaigns_journey_index', 'campaigns_journey_result'],
     },
     ...kept,
   ];

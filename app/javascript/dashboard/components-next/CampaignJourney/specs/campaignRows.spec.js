@@ -75,25 +75,21 @@ describe('Campanha list rows (PRD §6.1)', () => {
     ]);
   });
 
-  it('each row opens the page that manages it today, past the A3 redirect', () => {
+  it('each row opens the Resultado of its campaign; Chat ao vivo keeps its page (#1007)', () => {
     const routes = Object.fromEntries(
       buildJourneyRows(data).map(row => [row.channel, row.route])
     );
+    const result = (channel, campaignId) => ({
+      name: 'campaigns_journey_result',
+      params: { channel, campaignId },
+    });
 
-    expect(routes.whatsapp_official).toEqual({
-      name: 'campaigns_whatsapp_analytics',
-      params: { campaignId: 1 },
-    });
-    expect(routes.whatsapp_api).toEqual({
-      name: 'campaigns_whatsapp_api_index',
-      query: { legacy: '1' },
-    });
-    expect(routes.email).toEqual({
-      name: 'campaigns_email_index',
-      query: { legacy: '1' },
-    });
-    expect(routes.sms).toEqual({
-      name: 'campaigns_sms_index',
+    expect(routes.whatsapp_official).toEqual(result('whatsapp_official', 1));
+    expect(routes.sms).toEqual(result('sms', 2));
+    expect(routes.whatsapp_api).toEqual(result('whatsapp_api', 7));
+    expect(routes.email).toEqual(result('email', 9));
+    expect(routes.live_chat).toEqual({
+      name: 'campaigns_livechat_index',
       query: { legacy: '1' },
     });
   });
