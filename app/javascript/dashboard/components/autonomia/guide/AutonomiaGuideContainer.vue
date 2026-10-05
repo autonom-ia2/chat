@@ -68,6 +68,9 @@ const props = defineProps({
   respostasRapidas: { type: Array, default: () => [] },
   // #982 — a pessoa tocou no microfone antes de chegar: a conversa abre gravando.
   comecarPorVoz: { type: Boolean, default: false },
+  // #982 — arquivos (prints, PDFs) que a pessoa juntou antes de chegar: sobem e
+  // vão junto com o pedido inicial.
+  anexosIniciais: { type: Array, default: () => [] },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
 // que o pedido inicial saiu, para a tela gastá-lo (#859).
@@ -956,9 +959,20 @@ watch(accountId, () => {
 let pedidoInicialEnviado = false;
 watch(
   isEnabled,
-  ligado => {
-    if (!ligado || !props.pedidoInicial || pedidoInicialEnviado) return;
+  async ligado => {
+    const temAnexos = props.anexosIniciais.length > 0;
+    if (!ligado || pedidoInicialEnviado) return;
+    if (!props.pedidoInicial && !temAnexos) return;
     pedidoInicialEnviado = true;
+    // Os anexos sobem antes: a pergunta sai com eles prontos, como no campo.
+    if (temAnexos) {
+      await Promise.all(
+        props.anexosIniciais
+          .slice(0, MAX_ANEXOS_POR_CONVERSA)
+          .map(arquivo => anexarArquivo(arquivo))
+      );
+    }
+    if (desmontado) return;
     if (sendMessage(props.pedidoInicial)) emit('pedidoInicialEnviado');
   },
   { immediate: true }

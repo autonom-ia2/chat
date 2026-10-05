@@ -99,7 +99,7 @@ const sugestoes = computed(() =>
 // escolhido (chave conhecida, na URL) ou o texto que ela escreveu (no estado da
 // navegação, que só a própria tela preenche — um link de fora não manda pedido
 // ao Guia em nome de ninguém).
-const MAX_PEDIDO = 2000;
+const MAX_PEDIDO = 5000;
 const pedidoEscrito = ref(
   typeof window.history.state?.pedidoAutomacao === 'string'
     ? window.history.state.pedidoAutomacao.slice(0, MAX_PEDIDO)
@@ -112,6 +112,13 @@ if (comecarPorVoz.value) {
   window.history.replaceState(restoDoEstado, '');
 }
 
+// Os prints e arquivos que a pessoa juntou na lista (só File de verdade).
+const anexosIniciais = ref(
+  Array.isArray(window.history.state?.anexosAutomacao)
+    ? window.history.state.anexosAutomacao.filter(item => item instanceof File)
+    : []
+);
+
 const pedidoInicial = computed(() => {
   if (regraId.value) return '';
   const modelo = String(route.query.modelo || '');
@@ -123,9 +130,11 @@ const pedidoInicial = computed(() => {
 // novo (o Guia mudou a conta e o painel é remontado, ou a pessoa recarregou)
 // não manda o mesmo pedido outra vez.
 const gastarModelo = () => {
-  if (pedidoEscrito.value) {
+  if (pedidoEscrito.value || anexosIniciais.value.length) {
     pedidoEscrito.value = '';
-    const { pedidoAutomacao, ...restoDoEstado } = window.history.state || {};
+    anexosIniciais.value = [];
+    const { pedidoAutomacao, anexosAutomacao, ...restoDoEstado } =
+      window.history.state || {};
     window.history.replaceState(restoDoEstado, '');
   }
   if (!route.query.modelo) return;
@@ -295,6 +304,7 @@ const mudarLigada = async ligar => {
                   :pedido-inicial="pedidoInicial"
                   :respostas-rapidas="respostasRapidas"
                   :comecar-por-voz="comecarPorVoz"
+                  :anexos-iniciais="anexosIniciais"
                   @resposta-rapida="aoResponderRapido"
                   @execucao="aoExecutar"
                   @pedido-inicial-enviado="gastarModelo"

@@ -53,7 +53,7 @@ RSpec.describe Autonomia::Guide::Tela do
     # Pelo `Chat`, como o job chama: o id que ela não vê fica fora do prompt e do diagnóstico do turno.
     it 'deixa o id invisível fora do prompt e do diagnóstico', :aggregate_failures do
       query = nil
-      allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent))
+      allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent, id: 0))
       allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: []))
       allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
         query = kwargs[:query]

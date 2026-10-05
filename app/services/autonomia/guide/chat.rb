@@ -81,6 +81,9 @@ module Autonomia
           # irrelevantes: tela errada no botão e confiança baixa, que o portão transforma em
           # "o guia está indisponível".
           retrieval_query: @message,
+          # Os fluxos da tela em que a pessoa está entram sempre: a busca pelo texto do pedido pode
+          # não trazê-los (pedido longo, cheio de palavras de outro assunto).
+          fixos: ::Autonomia::Guide::FluxosDaTela.para(agent, @route_context),
           # #857 — o Guia pesquisa na internet quando precisa, por decisão dele, e lê os
           # arquivos que a pessoa anexou na conversa. O que vem de fora é dado, nunca ordem.
           allow_web_search: true,

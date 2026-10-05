@@ -2577,7 +2577,10 @@
         "RECLAMACAO": "Notify the team when a complaint comes in",
         "ORCAMENTO": "Tag people asking for a price"
       },
-      "FALAR": "Speak instead of typing"
+      "FALAR": "Speak instead of typing",
+      "ANEXAR": "Attach a screenshot or file",
+      "REMOVER": "Remove {nome}",
+      "DICA_ANEXO": "Tip: paste a screenshot (Ctrl+V) or drop a file to show what you want."
     },
     "SUGESTAO": {
       "ROTULO": "The Guide noticed",

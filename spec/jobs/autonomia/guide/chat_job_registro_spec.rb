@@ -66,7 +66,7 @@ RSpec.describe Autonomia::Guide::ChatJob do
   # O que vai para o modelo (instrução, catálogo, trechos da base) nunca entra
   # no diagnóstico: só metadado.
   it 'não guarda a instrução, o catálogo nem o texto da base no diagnóstico', :aggregate_failures do
-    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent))
+    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent, id: 0))
     allow(Autonomia::Agents::Retriever).to receive(:new)
       .and_return(instance_double(Autonomia::Agents::Retriever, retrieve: []))
     recebido = {}

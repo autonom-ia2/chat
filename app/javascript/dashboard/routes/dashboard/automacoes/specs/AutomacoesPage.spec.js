@@ -139,6 +139,32 @@ describe('AutomacoesPage', () => {
     });
   });
 
+  it('vazio: print colado ou escolhido vai junto, e dá para tirar', async () => {
+    AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = montar();
+    await flushPromises();
+
+    URL.createObjectURL = vi.fn(() => 'blob:miniatura');
+    URL.revokeObjectURL = vi.fn();
+    const print = new File(['x'], 'print.png', { type: 'image/png' });
+    const doc = new File(['y'], 'regras.pdf', { type: 'application/pdf' });
+    const seletor = wrapper.find('[data-seletor]');
+    Object.defineProperty(seletor.element, 'files', { value: [print, doc] });
+    await seletor.trigger('change');
+    expect(wrapper.findAll('[data-anexos] li')).toHaveLength(2);
+
+    await wrapper.findAll('[data-remover-anexo]')[1].trigger('click');
+    expect(wrapper.findAll('[data-anexos] li')).toHaveLength(1);
+
+    expect(
+      wrapper.find('[data-montar]').attributes('disabled')
+    ).toBeUndefined();
+    await wrapper.find('form').trigger('submit');
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({ state: { anexosAutomacao: [print] } })
+    );
+  });
+
   it('vazio: o microfone abre a conversa já para falar', async () => {
     AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
     const wrapper = montar();

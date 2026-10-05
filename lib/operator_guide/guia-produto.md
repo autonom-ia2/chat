@@ -21,6 +21,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Caixas de entrada > Nova caixa
 - rota: `settings_inbox_new` - `/app/accounts/:accountId/settings/inboxes/new`
 - gate: feature flag `inbox_management`; papel `administrator` ou `inbox_manage`
+- cobre: settings_inbox_list, settings_inbox_finish, settings_inboxes_add_agents
 - pre_requisitos: ter credenciais/dados do canal escolhido quando o canal exigir
 - passos: 1. Abra Configuracoes; 2. Entre em Caixas de entrada; 3. Clique em adicionar nova caixa; 4. Escolha o tipo de canal; 5. Preencha os dados e avance para agentes/finalizacao.
 - gotchas: cada canal pede dados diferentes; canais sociais/email podem exigir autorizacao externa; a etapa final pode mostrar webhook, script ou instrucoes de DNS.
@@ -124,6 +125,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Conversas > Todas; tambem na sidebar em Canais, Times e Etiquetas
 - rota: `home` - `/app/accounts/:accountId/dashboard`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- cobre: inbox_view, inbox_view_conversation, inbox_dashboard, conversation_through_inbox, label_conversations, conversations_through_label, team_conversations, conversations_through_team, conversations_through_folders, conversation_participating, conversation_through_participating
 - pre_requisitos: conversas existentes; filtros/canais/times/etiquetas conforme o caso
 - passos: 1. Abra Conversas; 2. Use a sidebar para escolher Todas, Canal, Time ou Etiqueta; 3. Ajuste status e filtros da lista; 4. Abra a conversa desejada; 5. Limpe filtros para voltar a visao geral.
 - gotchas: rotas de canal/time/etiqueta exigem parametros reais; se nada aparecer, confira permissao, status da conversa e acesso a caixa de entrada.
@@ -145,6 +147,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Conversas > Mencoes
 - rota: `conversation_mentions` - `/app/accounts/:accountId/mentions/conversations`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- cobre: conversation_through_mentions
 - pre_requisitos: haver mencoes em conversas acessiveis ao usuario
 - passos: 1. Abra Conversas; 2. Clique em Mencoes na sidebar; 3. Revise a lista; 4. Abra a conversa; 5. Responda ou acompanhe conforme necessario.
 - gotchas: mencoes dependem de acesso a conversa; mencoes antigas podem estar em conversas resolvidas ou filtradas.
@@ -155,6 +158,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Conversas > Nao atendidas
 - rota: `conversation_unattended` - `/app/accounts/:accountId/unattended/conversations`
 - gate: papel `administrator` ou `agent` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage`
+- cobre: conversation_through_unattended
 - pre_requisitos: conversas abertas sem atendimento/atribuicao conforme a regra da plataforma
 - passos: 1. Abra Conversas; 2. Clique em Nao atendidas; 3. Revise a fila; 4. Atribua a um agente/time; 5. Responda ou resolva.
 - gotchas: automacoes e regras de autoatribuicao podem tirar conversas dessa fila rapidamente.
@@ -227,6 +231,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Funcoes Personalizadas
 - rota: `custom_roles_list` - `/app/accounts/:accountId/settings/custom-roles/list`
 - gate: feature flag `custom_roles`; papel `administrator`
+- cobre: custom_roles_new, custom_roles_edit
 - pre_requisitos: Enterprise/Cloud habilitado; saber o que o grupo deve ver e fazer
 - passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Clique em Nova funcao; 3. Escolha o perfil mais parecido (ou Comecar do zero) e clique em Continuar; 4. De um nome e abra so os grupos que quer mudar, escolhendo Sem acesso, Ver ou Editar em cada area; 5. Confira o painel Esta pessoa podera e clique em Criar funcao; 6. Atribua aos agentes na janela seguinte ou depois em Configuracoes > Agentes.
 - gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas.
@@ -249,6 +254,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Times
 - rota: `settings_teams_new` - `/app/accounts/:accountId/settings/teams/new`
 - gate: feature flag `team_management`; papel `administrator`
+- cobre: settings_teams_list, settings_teams_finish, settings_teams_add_agents, settings_teams_edit, settings_teams_edit_members, settings_teams_edit_finish
 - pre_requisitos: agentes ativos para adicionar ao time
 - passos: 1. Abra Configuracoes > Times; 2. Clique em criar time; 3. Defina nome/descricao; 4. Adicione agentes; 5. Finalize e use o time em atribuicoes/filtros.
 - gotchas: times ajudam em atribuicao e filtro, mas agentes ainda precisam ter acesso as caixas de entrada usadas.
@@ -272,6 +278,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu lateral > Automacoes > abra a automacao (o passo aparece no resumo como "Pergunta ao Decisor <nome>: segue se a resposta for ..."; em Editar no modo manual o passo e mantido ao salvar, mas o formulario nao oferece adiciona-lo — quem adiciona e o Guia, conversando nessa tela) e CRM > Editar funil > etapa > Automacoes desta etapa (o mesmo passo); os Decisores da conta ficam em `autonomia/decisores`
 - rota: `automacoes_lista` - `/app/accounts/:accountId/automacoes`
 - gate: feature flag `automations`; papel `administrator` ou `automation_view` ou `automation_manage`
+- cobre: automacoes_nova, automacoes_editar
 - pre_requisitos: ter `automation_manage` (ou ser administrador) para criar, testar e ligar; para gravar campos (nome, telefone, empresa) a conta precisa de chave de IA configurada, e essa extracao gasta a chave da conta; atributo personalizado de contato usado como destino precisa existir antes
 - passos: 1. Proponha o Decisor com nomes reais da conta: a pergunta, de 2 a 8 respostas com chave curta e descricao do que conta como cada uma (ex.: `sim` = pede cotacao ou informacao de seguro; `nao` = newsletter, fornecedor, aviso automatico), instrucoes, certeza minima (padrao 0,80) e `leituras` — o que ele le, da lista fechada: `mensagens_recentes` (as ultimas do cliente, qualquer canal; e o padrao), `mensagens_com_respostas` (cliente e equipe), `ultima_mensagem` (a que disparou; em regra de conversa, a ultima recebida do cliente), `conversa` (canal, caixa, etiquetas, atributos, status), `contato` (nome e atributos), `card` (titulo, etapa, funil, valor, metadados), `empresa` (nome e atributos); 2. Antes de salvar, teste a pergunta em itens reais com `classificar_com_jev` (le os registros com `ler_da_conta` e manda os ids); 3. Crie com `POST autonomia/decisores`; se for gravar dados, inclua `campos` com chave, descricao e destino; 4. TESTE antes de ligar: `POST autonomia/decisores/:id/teste` com `inbox_id` da caixa (ou `conversation_ids`), ate 10 conversas; mostre a pessoa a resposta, a certeza, as duvidas e os campos que seriam gravados — o teste nao grava nada; 5. Para cada acerto ou erro que a pessoa apontar, confirme com `POST autonomia/decisores/:id/exemplos` (`conversation_id`, `resposta`); ajuste instrucoes ou descricoes e teste de novo; 6. Monte a automacao DESLIGADA com o passo antes dos passos que so devem rodar naquele caso — na regra (`POST automation_rules` com `active: false`): `{action_name: "perguntar_ao_decisor", action_params: [decisor_id, "chave_que_segue"]}`; na etapa do funil (`POST crm/stages/:stage_id/stage_automations` com `enabled: false`): `{action_type: "perguntar_ao_decisor", action_config: {decisor_id, chave_que_segue}}`; 7. So ligue (`active: true` / `enabled: true`) depois que a pessoa aprovar o resultado do teste — ligar automacao com Decisor passa por propor_acao e a pessoa confirma na tela.
 - gotchas: o Decisor serve a qualquer gatilho: mensagem criada em qualquer canal (WhatsApp, e-mail, Instagram, site), conversa criada, aberta ou resolvida, e card entrando ou saindo de uma etapa do funil — ele e uma pergunta, a automacao e quem diz quando perguntar; exemplos de composicao: (a) regra "mensagem criada" na caixa do WhatsApp -> Decisor "fala de sinistro?" (le `mensagens_recentes`) -> segue em `sim` -> atribuir a caixa/time de sinistros e etiquetar `sinistro`; (b) etapa Proposta, ao entrar -> Decisor "e empresa grande?" (le `card`, `empresa`, `contato`) -> segue em `sim` -> atribuir responsavel senior e criar retorno; na regra de conversa (criada, aberta ou resolvida) nao ha mensagem que disparou: o Decisor le ate a ultima mensagem RECEBIDA do cliente (`ultima_mensagem` e essa), as respostas da equipe depois dela ficam de fora, e a decisao e guardada por essa mensagem — a conversa resolvida, reaberta e resolvida de novo sem mensagem nova do cliente reaproveita a primeira decisao e NAO roda os passos de novo; por isso nao proponha Decisor em "conversa resolvida" para julgar o encerramento (ex.: "o cliente saiu insatisfeito?"): diga a pessoa que isso ainda nao funciona bem e prefira "mensagem criada"; o que o Decisor le tem de existir no gatilho: na etapa do funil nao ha mensagem que disparou, entao `ultima_mensagem` e recusado ali (use `mensagens_recentes`, que le a conversa em atendimento do card, se houver); o Decisor nunca le e-mail nem telefone do contato, nem quando o nome do contato e o proprio e-mail ou o telefone (em qualquer formato), nem atributo personalizado cujo valor seja um e-mail ou um telefone; o Decisor so responde uma das chaves que ele tem: os passos DEPOIS de "Perguntar ao Decisor" so rodam quando a resposta e a chave combinada com certeza igual ou maior que a minima; outra resposta para a automacao ali; para tratar cada resposta de um jeito, crie uma automacao por resposta com o mesmo Decisor — a decisao e guardada por mensagem (ou por card e entrada na etapa) e a conta paga uma pergunta so; a automacao com Decisor nasce DESLIGADA e so liga depois que a pessoa aprova o teste, nunca antes — criar ligada, ligar ou por o Decisor numa automacao ligada nao tem desfazer e pede confirmacao; o Decisor nao combina com condicao "atributo alterado"; na duvida (certeza abaixo da minima) o Guia decide sozinho so quando o caso deixa claro e o caso vira exemplo "decidido pelo Guia"; se nao estiver claro, o caso fica esperando uma pessoa por 2 dias (`GET autonomia/decisores/:id/decisoes?status=esperando_pessoa`) e vence depois disso sem retomar a automacao, para nao mover card ou mandar mensagem fora de hora; resolver um caso (`POST autonomia/decisoes/:id/resolver` com `resposta`) vira exemplo e, se for a resposta que segue e estiver no prazo, retoma a automacao (todas as que esperavam aquela decisao, cada uma so se ainda vale: as condicoes da regra, ou o card ainda na etapa) e pode mandar mensagem ou mover card — confirme com a pessoa antes; corrigir uma decisao ja tomada conta como correcao e nao refaz a automacao; os campos so PREENCHEM o que esta vazio: nunca trocam nome, e-mail, telefone, empresa ou atributo que o contato ja tem, nem o titulo ou a descricao de card que ja existia (o nome que e so o e-mail ou o telefone conta como vazio); destinos aceitos para os campos: contato.nome, contato.telefone, contato.email, empresa.nome, card.titulo, card.descricao e contato.atributo:<chave> de atributo de contato que ja existe; campo de card so grava quando ha card (se o passo seguinte da regra for criar card, ele grava logo depois); telefone fora do formato internacional e recusado pelo contato e fica de fora sem travar os outros campos; as mensagens lidas sao as ultimas 5 (e o assunto do e-mail); sem nada para ler no que o Decisor declara (conversa so de audio ou imagem, card vazio) ele nao pergunta e nao segue (status `sem_conteudo`); cada conta tem limite mensal de perguntas ao Decisor e, acima dele, os passos seguintes nao rodam (status `sem_cota`); regra em "mensagem criada" sem filtro de caixa pergunta a cada mensagem — filtre pela caixa certa; `classificar_com_jev` so estima (escolha e certeza por item) e nao grava nada: agir em cima do resultado passa pelo desfazer ou pela confirmacao de sempre.
@@ -282,6 +289,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu lateral > Automacoes (cada regra e uma linha da lista)
 - rota: `automacoes_lista` - `/app/accounts/:accountId/automacoes`
 - gate: feature flag `automations`; papel `administrator` ou `automation_view` ou `automation_manage`
+- cobre: automacoes_nova, automacoes_editar
 - pre_requisitos: etiquetas, times e agentes que as regras usam ja criados; recurso de atraso ligado na conta para "se em N minutos ainda"; transcricao por e-mail habilitada na conta para mandar transcricao; a URL do sistema externo para webhook.
 - passos: 1. Quebre o pedido em regras: uma por momento — agora, daqui a N minutos, ao resolver —, e cada uma com o seu evento; 2. Crie antes o que falta (time, etiqueta) e pergunte o que so a pessoa sabe: a URL do webhook, quem recebe o alerta, o texto da mensagem se ela nao deu; 3. Monte cada acao e condicao pelo formato_da_acao de POST automation_rules, pedindo o ramo com `campo` ("actions.send_email_to_team", "conditions.status") — e la que diz o que o motor le; 4. Regra que reage a mensagem: evento message_created com message_type igual a incoming (so mensagem do cliente); 5. Idempotencia por etiqueta: a regra que trata o caso tem a condicao "labels nao contem X" e a acao "adicionar X" — depois da primeira vez ela nao dispara de novo para o mesmo caso, sem mensagem repetida ao cliente nem e-mail duplicado; 6. "Se em N minutos ainda...": outra regra, evento message_created de mensagem do cliente, com execution_delay N e as condicoes que precisam continuar valendo (status open, assignee_id sem ninguem, a etiqueta do caso); na hora de rodar a plataforma reconfere tudo e desiste se alguem da equipe respondeu; 7. "Quando resolver...": regra em conversation_resolved com a condicao da etiqueta do caso; 8. Nao pare para perguntar o que tem padrao sensato (nome, prazo, texto que ela deu, quem entra no time novo): faca e diga o que escolheu; crie direto o que tem volta (time, etiqueta, Decisor) e proponha a primeira regra na mesma resposta; a regra com acao sem volta (mensagem, e-mail, webhook, transcricao) vai por propor_acao mesmo desligada, uma por resposta — a confirmacao e a pessoa vendo a regra; na resposta, liste as regras do plano e o que cada uma faz.
 - gotchas: intencao do cliente (quer cancelar, pediu reembolso, esta insatisfeito) NUNCA vira lista de palavras em content: palavra solta pega "nao quero cancelar" e perde "vou desistir"; quem entende a intencao e o Decisor, como passo da regra (veja usar_decisor_na_automacao) — sem ele, dispare o resto do fluxo pela etiqueta do caso que a equipe poe na conversa (evento conversation_updated, labels contem o caso e nao contem a marca de ja tratado); o que a propria automacao faz (mensagem, etiqueta, atribuicao) nao dispara outra regra, entao uma regra nao encadeia outra por etiqueta — o loop vem de reagir a mensagem da equipe (outgoing) ou de duas regras que se desfazem; regra com atraso so arma quando chega o evento com as condicoes ja valendo, e o atraso de mensagem conta desde a primeira mensagem do cliente ainda sem resposta; o webhook manda o pacote padrao da conversa (contato, numero da conversa, caixa e canal, mensagens, etiquetas, status) com event automation_event.<evento> — nao da para escolher campos nem escrever o texto do aviso; e-mail para o time vai para todos os agentes do time, e time nao tem lider: para alertar UMA pessoa use nota privada mencionando ela ([@Nome](mention://user/ID/Nome)), que notifica so ela, ou atribua a conversa a ela; automacao nao tem condicao de horario — "fora do horario" e o horario de atendimento da caixa (working_hours e out_of_office_message), que responde sozinho fora do expediente; message_created vale para toda caixa: restrinja por inbox_id quando o pedido for de um canal; etiqueta vai pelo titulo exato gravado na conta (Risco de cancelamento -> risco_de_cancelamento).
@@ -302,6 +310,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu lateral > Automacoes > Nova automacao (ou clique numa automacao da lista)
 - rota: `automacoes_nova` - `/app/accounts/:accountId/automacoes/nova`
 - gate: feature flag `automations`; papel `administrator` ou `automation_manage`
+- cobre: automacoes_editar
 - pre_requisitos: administrador para o Guia criar ou mudar; etiquetas, times, agentes, funis e etapas usados ja precisam existir
 - passos: 1. Abra Automacoes > Nova automacao; 2. Conte com suas palavras o que deve acontecer, ou escolha um modelo pronto; 3. O Guia cria a automacao e a tela passa a mostrar o resumo Quando > Se > Entao; 4. Clique em Testar com casos reais para ver o que ela faria nas conversas recentes; 5. Clique em Ligar automacao quando estiver como voce quer.
 - gotchas: nesta tela a automacao nasce DESLIGADA — ao criar, mande active false e diga que ela so comeca a valer quando a pessoa clicar em Ligar; so ligue (PATCH com active true) quando a pessoa pedir com todas as letras; o registro aberto na tela chega no contexto como id=N e e a automacao que a pessoa esta vendo, entao "esta", "ela" e "essa regra" falam dela; ajuste com PATCH automation_rules/:id na mesma automacao em vez de criar outra; o teste com casos reais nao envia nem muda nada e deixa de fora a condicao que depende de um campo mudar; Editar no modo manual abre a mesma automacao no formulario completo. Comece pronto: se a pessoa nao ditou o texto da mensagem, escreva um curto e cordial, ja crie a automacao desligada com ele e mostre o texto na resposta — ela troca conversando; nao pergunte o texto antes de criar.
@@ -323,6 +332,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Macros
 - rota: `macros_new` - `/app/accounts/:accountId/settings/macros/new`
 - gate: feature flag `macros`; papel `agent` ou `administrator` ou `conversation_manage` ou `conversation_unassigned_manage` ou `conversation_participating_manage` ou `macro_manage`
+- cobre: macros_edit
 - pre_requisitos: acoes desejadas disponiveis; etiquetas/times/agentes criados quando usados
 - passos: 1. Abra Configuracoes > Macros; 2. Clique em nova macro; 3. Defina nome/visibilidade; 4. Adicione acoes; 5. Salve e execute pela conversa quando necessario.
 - gotchas: macros publicas podem ser restritas a administradores; macro nao deve ser usada para contornar permissoes de operacao.
@@ -343,6 +353,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Configuracoes > Configuracoes da conta
 - rota: `general_settings_index` - `/app/accounts/:accountId/settings/general`
 - gate: papel `administrator`
+- cobre: settings_home
 - pre_requisitos: nenhum
 - passos: 1. Abra Configuracoes; 2. Entre em Configuracoes da conta; 3. Edite os campos gerais; 4. Ajuste opcoes globais disponiveis; 5. Salve.
 - gotchas: configuracoes da conta sao diferentes de preferencias pessoais; perfil/notificacoes ficam no menu do usuario.
@@ -354,6 +365,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu do usuario/perfil > Configuracoes do perfil
 - rota: `profile_settings_index` - `/app/accounts/:accountId/profile/settings`
 - gate: papel `administrator` ou `agent` ou `custom_role`
+- cobre: profile_settings
 - pre_requisitos: usuario autenticado
 - passos: 1. Abra o menu do usuario; 2. Entre em perfil/configuracoes; 3. Atualize dados pessoais; 4. Ajuste preferencias de notificacao; 5. Salve.
 - gotchas: MFA usa a rota `profile_settings_mfa` e so abre quando MFA esta habilitado globalmente; algumas instalacoes podem bloquear atualizacao de perfil.
@@ -746,6 +758,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Menu lateral > Central de Ajuda (tambem no menu da sua foto > Central de Ajuda)
 - rota: `central_de_ajuda` - `/app/accounts/:accountId/central-de-ajuda`
 - gate: papel `administrator` ou `agent` ou `custom_role`
+- cobre: central_de_ajuda_artigo, central_de_ajuda_assunto
 - pre_requisitos: nenhum
 - passos: 1. Abra Central de Ajuda no menu lateral; 2. Escreva na busca o que voce quer fazer ou o problema que tem, com as suas palavras (quando voce para de digitar, os artigos aparecem, com a Melhor resposta no topo e com destaque; Enter abre a Melhor resposta ou, sem ela, o primeiro da lista), ou escreva a duvida e clique em Perguntar ao Guia, ao lado da busca; 3. Para os pedidos comuns, use um atalho de Mais procurados, logo abaixo da busca; 4. Em Continue de onde parou, veja o proximo passo que falta na configuracao e clique em Assistir ou Ler o passo a passo; 5. Se algo deu errado, procure o caso em Algo nao funcionou?; 6. Em Por assunto, clique no assunto para abrir a pagina dele, com os artigos em ordem, o video de cada um e o que voce ja viu; 7. Na pagina do assunto, clique em Continuar para abrir o primeiro artigo que falta ver (Comecar quando nao viu nenhum, Rever do inicio quando viu todos), ou em Abrir com o nome do assunto para ir direto a tela dele; 8. Clique no artigo e use Me leve ate la para abrir a tela certa com o botao destacado; 9. Use A- e A+ para mudar o tamanho da letra.
 - gotchas: cada pessoa ve so os artigos dos recursos que a conta tem, e artigo de configuracao aparece so para administrador; atalho ou assunto sem artigo visivel para a conta nao aparece; a Melhor resposta e escolhida por IA entre os artigos que a pessoa pode ler e entende o pedido em linguagem natural, enquanto a lista abaixo continua sendo a busca por palavras; a Melhor resposta some quando a busca nao tem certeza do artigo (o mais provavel vai entao para o topo da lista, sem destaque), quando nenhum artigo responde, quando o texto tem menos de tres letras ou quando a busca demora ou falha, e nesses casos a lista por palavras continua valendo; Perguntar ao Guia manda ao Guia o texto da busca, e com a busca vazia so abre o painel; Continue de onde parou mostra o primeiro passo pendente cujo artigo a conta enxerga, e some quando nao falta passo (todos feitos ou pulados), quando o que falta depende de um recurso que a conta nao tem, ou quando a lista de passos nao carrega; o link Ver todos os passos, que abre a tela Primeiros passos, aparece so para administrador; cada assunto mostra quantos artigos tem e, quando ha, quantos videos, e o video fica dentro do artigo; a pagina do assunto marca Visto em cada artigo que a pessoa ja abriu, guardado no usuario dela e valendo em todos os aparelhos; o botao Abrir com o nome do assunto some quando nenhuma tela do assunto existe para a conta; Perguntar ao Guia, no rodape da pagina do assunto, so abre o painel do Guia e aparece so quando o Guia esta disponivel; no topo do artigo, o nome do assunto leva de volta a pagina dele; o botao Me leve ate la some quando a tela nao existe para a conta; a letra escolhida vale em todos os aparelhos; os artigos sao da plataforma e ninguem edita pelo painel; logo depois de uma atualizacao da plataforma, a Central pode levar alguns minutos para mostrar o texto novo.
@@ -1116,6 +1129,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Sidebar > Campanhas > Campanhas SMS
 - rota: `campaigns_sms_index` - `/app/accounts/:accountId/campaigns/sms`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- cobre: campaigns_one_off_index
 - pre_requisitos: caixa de SMS conectada; audiência (rótulos/contatos); mensagem do SMS
 - passos: 1. Abra Campanhas > Campanhas SMS; 2. Clique em Criar campanha; 3. Selecione a caixa de SMS; 4. Escreva a mensagem; 5. Defina audiência e agendamento; 6. Crie a campanha.
 - gotchas: o botão 'Criar campanha' fica no cabeçalho da página (CampaignLayout); a criação abre um diálogo; sem caixa de SMS conectada não há opções de envio; contato marcado como quem não quer receber mensagens ativas é pulado no envio.
@@ -1127,6 +1141,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Sidebar > Campanhas > Campanhas de chat ao vivo
 - rota: `campaigns_livechat_index` - `/app/accounts/:accountId/campaigns/live_chat`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- cobre: campaigns_ongoing_index
 - pre_requisitos: caixa de site/widget de chat ao vivo conectada
 - passos: 1. Abra Campanhas > Campanhas de chat ao vivo; 2. Clique em Criar campanha; 3. Selecione a caixa de site; 4. Defina título, mensagem e regra de URL/tempo; 5. Crie a campanha.
 - gotchas: campanhas de chat ao vivo são contínuas (ongoing) e dependem do widget; o botão 'Criar campanha' fica no cabeçalho e abre um diálogo.
@@ -1323,6 +1338,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Relatórios > Agentes > clicar no nome do agente
 - rota: `agent_reports_show` - `/app/accounts/:accountId/reports/agents/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- cobre: agent_reports
 - pre_requisitos: o agente precisa existir e ter conversas atribuídas no período
 - passos: 1. Abra Relatórios > Agentes; 2. Clique no nome da pessoa na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: o relatório de agente não tem gráfico de mensagens recebidas, porque mensagem do cliente não é atribuída a um agente; o botão de baixar gera o arquivo de todos os agentes do período, não apenas o da pessoa aberta na tela; trocar de agente pelo filtro do topo recarrega a tela inteira; ver as conversas por trás de uma barra é restrito a administrador.
@@ -1333,6 +1349,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Relatórios > Caixa de Entrada > clicar no nome da caixa
 - rota: `inbox_reports_show` - `/app/accounts/:accountId/reports/inboxes/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- cobre: inbox_reports
 - pre_requisitos: a caixa de entrada precisa existir e ter conversas no período
 - passos: 1. Abra Relatórios > Caixa de Entrada; 2. Clique no nome do canal na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: o botão de baixar traz o arquivo de todas as caixas do período, não só a que está na tela; o filtro do topo troca de canal e recarrega tudo; os tempos médios consideram apenas conversas que tiveram primeira resposta ou resolução; abrir as conversas de uma barra é permitido apenas a administrador.
@@ -1343,6 +1360,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Relatórios > Time > clicar no nome do time
 - rota: `team_reports_show` - `/app/accounts/:accountId/reports/teams/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- cobre: team_reports
 - pre_requisitos: o time precisa existir e ter conversas atribuídas a ele no período
 - passos: 1. Abra Relatórios > Time; 2. Clique no nome do time na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: só entram conversas atribuídas ao time, então atendimento feito pela mesma pessoa fora do time não aparece aqui; o botão de baixar gera o arquivo de todos os times do período; trocar de time pelo filtro do topo substitui toda a tela; ver as conversas de uma barra é restrito a administrador.
@@ -1353,6 +1371,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Relatórios > Etiquetas > clicar no nome da etiqueta
 - rota: `label_reports_show` - `/app/accounts/:accountId/reports/labels/:id`
 - gate: feature flag `reports`; papel `administrator` ou `report_manage`
+- cobre: label_reports
 - pre_requisitos: a etiqueta precisa estar criada e aplicada em conversas do período
 - passos: 1. Abra Relatórios > Etiquetas; 2. Clique no nome da etiqueta na tabela; 3. Ajuste o período e, se quiser, ligue Horários de funcionamento; 4. Clique numa barra para ver as conversas daquele dia; 5. Use a seta de voltar para retornar à lista.
 - gotchas: etiqueta criada mas nunca aplicada abre a tela zerada, e isso não é erro; o botão de baixar gera o arquivo de todas as etiquetas do período; trocar de etiqueta pelo filtro do topo recarrega a tela inteira; só administrador abre a lista de conversas por trás de uma barra.
@@ -1535,6 +1554,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Barra lateral > Prospeccao > Configuracoes (ou Barra lateral > Configuracoes > Prospeccao)
 - rota: `settings_prospecting_index` - `/app/accounts/:accountId/settings/prospecting`
 - gate: papel `administrator` ou `prospecting_manage`
+- cobre: autonomia_prospecting_settings
 - perfil: administrador ou funcao com Editar prospeccao. Quem tem so Ver prospeccao nao ve o atalho nem abre a tela; diga que ajustar a Prospeccao pede Editar prospeccao.
 - pre_requisitos: Prospeccao ligada na conta pelo suporte
 - passos: 1. Abra Prospeccao > Configuracoes; 2. Na aba Geral, confira as Chaves do Google, a Pesquisa de empresa e decisor e os avisos; 3. Escolha o Funil CRM padrao e a Etapa CRM padrao; 4. Escolha o Pais da busca; 5. Ajuste a Validade do cache (segundos) e confira o Consumo diario e o Consumo mensal; 6. Clique em Salvar; 7. Na aba Score, escolha a Forma padrao de pesquisa e o Perfil de score e clique em Salvar; 8. Para as jogadas salvas, use a aba Jogadas.
@@ -1716,6 +1736,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - onde_fica: Contatos > clicar no contato
 - rota: `contacts_edit` - `/app/accounts/:accountId/contacts/:contactId`
 - gate: feature flag `crm`; papel `administrator` ou `agent` ou `contact_manage` ou `contact_view`
+- cobre: contacts_edit_segment, contacts_edit_label
 - pre_requisitos: contato já cadastrado
 - passos: 1. Abra Contatos e clique no contato; 2. Ajuste os dados à esquerda e salve; 3. Use as abas de atributos, histórico, notas, mídia e mesclar; 4. Em histórico, veja as conversas anteriores; 5. Em notas, registre o que a equipe precisa saber; 6. Para juntar cadastros repetidos, abra mesclar, escolha o contato principal e confirme.
 - gotchas: ao mesclar, o contato principal é o que sobrevive e o outro é excluído, com os dados do principal prevalecendo em caso de conflito, e não há desfazer; excluir contato é permanente; bloquear não apaga o contato, só impede novo contato; e-mail ou telefone repetido é recusado por já pertencer a outro cadastro; abrindo a ficha a partir de um segmento ou de uma etiqueta, a tela é a mesma e o voltar devolve para aquela lista; em Mensagens ativas, abaixo de Atualizar contato, Marcar que não quer receber tira o contato das campanhas e dos follow-ups automáticos, inclusive de campanha já em andamento, e responder a quem escreve segue normal, o que é diferente de bloquear; Desfazer recusa só aparece na recusa Marcado pela equipe; a recusa de origem Prospecção vem do botão Não quer ser contatado no painel do lead e só sai lá, pelo Desfazer: pode ser contatado; a do descadastro de e-mail não se desfaz pela ficha; ao mesclar dois contatos que recusaram, fica a recusa mais firme: a manual, depois a do descadastro de e-mail, depois a da Prospecção; contato novo ou que troca telefone ou e-mail herda sozinho a recusa de e-mail descadastrado ou de lead marcado com Não quer ser contatado.

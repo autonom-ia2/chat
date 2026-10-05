@@ -2578,7 +2578,10 @@
         "RECLAMACAO": "Avisar o time quando chegar uma reclamação",
         "ORCAMENTO": "Marcar quem pede orçamento"
       },
-      "FALAR": "Falar em vez de escrever"
+      "FALAR": "Falar em vez de escrever",
+      "ANEXAR": "Juntar print ou arquivo",
+      "REMOVER": "Tirar {nome}",
+      "DICA_ANEXO": "Dica: cole um print (Ctrl+V) ou arraste um arquivo para mostrar o que você quer."
     },
     "SUGESTAO": {
       "ROTULO": "O Guia notou",
