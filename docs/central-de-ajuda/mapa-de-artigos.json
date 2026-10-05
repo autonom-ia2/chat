@@ -2213,6 +2213,28 @@
       "Issue #757 — implementação local"
      ],
      "revisar": true
+    },
+    {
+     "id": "09.13",
+     "titulo": "Importar contatos de uma planilha, com colunas, atributos e empresas",
+     "para_que_serve": "Importar uma planilha CSV ou Excel conferindo colunas, atributos novos, linhas com problema e empresas antes de gravar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "contacts_import_journey"
+     ],
+     "me_leve_ate_la": {
+      "rota": "contacts_import_journey",
+      "destaque": null
+     },
+     "requer": "crm",
+     "prints": [],
+     "fontes": [
+      "porques: Importar contatos com colunas, atributos e empresas"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
@@ -3389,6 +3411,141 @@
      "prints": [],
      "fontes": [
       "porques: Criar e compartilhar Links e QR codes"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.14",
+     "titulo": "Ver todas as campanhas em uma lista",
+     "para_que_serve": "Achar, filtrar e abrir qualquer campanha de qualquer canal numa lista só, e ler o resumo do topo.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Ver todas as campanhas em uma lista",
+      "porques: Criar campanha escolhendo o canal"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.15",
+     "titulo": "Ver e organizar os públicos de campanha",
+     "para_que_serve": "Ver os públicos salvos, seus canais e detalhes, usar um público numa campanha e excluir a lista sem perder contatos.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_audiences"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_audiences",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Ver os públicos de campanha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.16",
+     "titulo": "Criar um público com uma planilha",
+     "para_que_serve": "Subir uma planilha, conferir colunas, canais, linhas com problema e empresas, e salvar o público.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_audience_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_audience_new",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar um público com uma planilha"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.17",
+     "titulo": "Criar uma campanha em três passos: público, mensagem e revisão",
+     "para_que_serve": "Escolher o público, montar a mensagem do canal e enviar ou agendar sabendo quem recebe e quem fica de fora.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_new",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar campanha de WhatsApp Oficial em três passos"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.18",
+     "titulo": "Criar, editar ou pausar a mensagem automática do Chat ao vivo",
+     "para_que_serve": "Mostrar uma mensagem automática numa página do site e depois editar, pausar ou ligar de novo.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_live_chat_new",
+      "campaigns_journey_live_chat_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_live_chat_new",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar a mensagem automática do Chat ao vivo",
+      "porques: Editar ou pausar a mensagem do Chat ao vivo"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.19",
+     "titulo": "Ver o resultado de uma campanha",
+     "para_que_serve": "Ler os números de uma campanha, ver quem respondeu ou falhou, baixar o resultado e abrir o CRM filtrado.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_result"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_index",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Ver o resultado de uma campanha"
      ],
      "revisar": false,
      "nota": null
