@@ -104,7 +104,7 @@ module CampaignImports
       invalid_rows = row_results - valid_rows
       ActiveRecord::Base.transaction do
         reset_validation_rows!
-        plan = LabelPlanner.new(campaign_import, total_rows: valid_rows.size).perform
+        plan = plan_labels(valid_rows)
         valid_rows.each_with_index { |row, index| row[:batch_index] = plan.batch_indexes[index] }
         persist_rows(row_results)
         attach_normalized_csv(valid_rows)
@@ -112,6 +112,11 @@ module CampaignImports
         attach_report_csv(valid_rows, plan, status: 'ready_to_confirm')
         campaign_import.update!(ready_attributes(row_results, valid_rows, invalid_rows, plan))
       end
+    end
+
+    # Old campaign base flow: the base label and one label per batch (LabelPlanner).
+    def plan_labels(valid_rows)
+      LabelPlanner.new(campaign_import, total_rows: valid_rows.size).perform
     end
 
     def ready_attributes(row_results, valid_rows, invalid_rows, plan)

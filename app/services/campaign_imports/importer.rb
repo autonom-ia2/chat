@@ -20,7 +20,7 @@ module CampaignImports
       return unless transition_to_importing!
 
       with_suppressed_contact_events do
-        label_records = ActiveRecord::Base.transaction { ensure_labels! }
+        label_records = ActiveRecord::Base.transaction { ensure_labels! } unless campaign_import.audience?
         normalized_rows.each_slice(BLOCK_SIZE) { |block| import_block(block, label_records) }
         finish_import!
       end
@@ -68,7 +68,7 @@ module CampaignImports
           contact = import_one(row, import_row, label_records)
           [contact.id, row_label_titles(row, label_records)] if contact
         end
-        BulkContactLabeler.new(imported).perform
+        BulkContactLabeler.new(imported).perform if label_records
       end
     end
 
@@ -91,8 +91,9 @@ module CampaignImports
       nil
     end
 
+    # Públicos (#1005, N1) create no labels at all: label_records is nil and rows carry none.
     def row_label_titles(row, label_records)
-      [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title]
+      label_records ? [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title] : []
     end
 
     # Públicos rows may carry only an email: the phone (with or without the 9th digit) wins,
