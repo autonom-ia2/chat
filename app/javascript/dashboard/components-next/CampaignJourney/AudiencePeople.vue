@@ -50,7 +50,7 @@ const toggle = () => {
 };
 
 watch(
-  () => [props.campaignImport.id, props.campaignImport.validated_at],
+  [() => props.campaignImport.id, () => props.campaignImport.validated_at],
   () => {
     problemRows.value = null;
     if (isOpen.value) loadProblems();

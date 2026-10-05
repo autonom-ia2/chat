@@ -65,6 +65,14 @@ const savedBadges = computed(() =>
   audienceChannelBadges(campaignImport.value?.channels)
 );
 const refusedReasons = computed(() => reasonTally(campaignImport.value));
+// imported_contacts_count counts every saved row; existing_contacts_count the reused ones.
+const newContacts = computed(() =>
+  Math.max(
+    0,
+    (Number(campaignImport.value?.imported_contacts_count) || 0) -
+      (Number(campaignImport.value?.existing_contacts_count) || 0)
+  )
+);
 const audienceName = computed(
   () => campaignImport.value?.name || name.value.trim()
 );
@@ -278,7 +286,10 @@ onBeforeUnmount(stopPolling);
               : audienceName
           }}
         </h1>
-        <p class="mb-0 mt-2 text-sm leading-6 text-n-slate-11">
+        <p
+          v-if="phase !== PHASES.DONE"
+          class="mb-0 mt-2 text-sm leading-6 text-n-slate-11"
+        >
           {{
             phase === PHASES.REVIEW
               ? t(`${NS}.REVIEW_SUBTITLE`)
@@ -511,7 +522,7 @@ onBeforeUnmount(stopPolling);
               {{ t(`${NS}.DONE.NEW_CONTACTS`) }}
             </dt>
             <dd class="m-0 text-2xl font-semibold tabular-nums">
-              {{ n(Number(campaignImport.imported_contacts_count) || 0) }}
+              {{ n(newContacts) }}
             </dd>
           </div>
           <div class="flex flex-col-reverse rounded-xl bg-n-alpha-1 p-3">

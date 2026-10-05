@@ -286,11 +286,14 @@ describe('Novo público (PRD §6.6)', () => {
   });
 
   it('J3: saving from a campaign goes back to it with the audience selected', async () => {
-    api.show
-      .mockReturnValueOnce(ok(ready))
-      .mockReturnValue(
-        ok({ ...ready, status: 'completed', imported_contacts_count: 57 })
-      );
+    api.show.mockReturnValueOnce(ok(ready)).mockReturnValue(
+      ok({
+        ...ready,
+        status: 'completed',
+        imported_contacts_count: 98,
+        existing_contacts_count: 41,
+      })
+    );
     api.confirm.mockReturnValue(ok({ ...ready, status: 'importing' }));
     const wrapper = mountPage({ import: '42', from: 'campaign' });
     await flushPromises();
@@ -304,9 +307,10 @@ describe('Novo público (PRD §6.6)', () => {
 
     await vi.advanceTimersByTimeAsync(1600);
     await flushPromises();
-    expect(wrapper.find('[data-test="audience-done"]').text()).toContain(
-      'Audience saved'
-    );
+    const done = wrapper.find('[data-test="audience-done"]').text();
+    expect(done).toContain('Audience saved');
+    expect(done).toContain('new contacts57');
+    expect(done).toContain('were already your contacts41');
     await wrapper.find('[data-test="back-to-campaign"]').trigger('click');
 
     expect(push).toHaveBeenCalledWith({
