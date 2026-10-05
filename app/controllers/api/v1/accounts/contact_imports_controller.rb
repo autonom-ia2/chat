@@ -85,7 +85,7 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
   private
 
   def ensure_contact_import_enabled
-    render json: { error: 'contact_import.disabled' }, status: :not_found unless ContactImports::Config.enabled?
+    render_error('contact_import.disabled', status: :not_found) unless ContactImports::Config.enabled?
   end
 
   def fetch_contact_import
@@ -106,6 +106,10 @@ class Api::V1::Accounts::ContactImportsController < Api::V1::Accounts::BaseContr
   end
 
   def render_unprocessable(code)
-    render json: { error: code }, status: :unprocessable_entity
+    render_error(code, status: :unprocessable_entity)
+  end
+
+  def render_error(code, status:)
+    render json: { error: code }, status: status
   end
 end
