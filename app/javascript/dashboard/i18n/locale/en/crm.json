@@ -1913,7 +1913,8 @@
       "TITLE": "Origin and campaigns",
       "AUDIENCES": "Audiences",
       "EMPTY": "No origin or campaign yet.",
-      "CAMPAIGN_MESSAGE": "Campaign: {name}"
+      "CAMPAIGN_MESSAGE": "Campaign: {name}",
+      "CAMPAIGN_MESSAGE_TEMPLATE": "Campaign: {name} · template {template}"
     }
   },
   "crm": {

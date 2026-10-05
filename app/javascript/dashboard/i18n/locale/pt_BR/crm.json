@@ -1914,7 +1914,8 @@
       "TITLE": "Origem e campanhas",
       "AUDIENCES": "Públicos",
       "EMPTY": "Nenhuma origem ou campanha ainda.",
-      "CAMPAIGN_MESSAGE": "Campanha: {name}"
+      "CAMPAIGN_MESSAGE": "Campanha: {name}",
+      "CAMPAIGN_MESSAGE_TEMPLATE": "Campanha: {name} · modelo {template}"
     }
   },
   "crm": {

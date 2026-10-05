@@ -5,6 +5,7 @@ import CampaignJourneyAPI from 'dashboard/api/campaignJourney';
 import OriginSequence from '../OriginSequence.vue';
 import ContactOriginsPanel from '../ContactOriginsPanel.vue';
 import CampaignMessageLabel from '../CampaignMessageLabel.vue';
+import ConversationCampaignMark from '../ConversationCampaignMark.vue';
 import { resetCampaignNamesCache } from '../useCampaignNames';
 
 // #1002 — campaign marks: card "+N" and order (K3), filter option labels (K6), contact panel
@@ -187,6 +188,67 @@ describe('P2 — campaign message label', () => {
 
     expect(
       wrapper.find('[data-test-id="campaign-message-label"]').exists()
+    ).toBe(false);
+  });
+});
+
+describe('P2 — WhatsApp Oficial campaign message', () => {
+  beforeEach(() => resetCampaignNamesCache());
+
+  it('shows the campaign and the template names', async () => {
+    CampaignJourneyAPI.getCampaignNames.mockResolvedValue({
+      data: {
+        payload: {
+          campaigns: { 7: 'Renovação auto — outubro' },
+          whatsapp_api_campaigns: {},
+        },
+      },
+    });
+
+    const wrapper = mount(CampaignMessageLabel, {
+      props: {
+        additionalAttributes: {
+          campaignId: 7,
+          campaignTemplateName: 'renovacao',
+        },
+      },
+    });
+    await new Promise(resolve => {
+      setTimeout(resolve, 0);
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toBe(
+      'CRM_KANBAN.ORIGIN_JOURNEY.CAMPAIGN_MESSAGE_TEMPLATE:{"name":"Renovação auto — outubro","template":"renovacao"}'
+    );
+  });
+});
+
+describe('D20 — campaign mark at the top of the conversation', () => {
+  const markText = attributes =>
+    mount(ConversationCampaignMark, { props: { attributes } })
+      .find('[data-test-id="conversation-campaign-mark"]')
+      .text();
+
+  it('shows the first campaign mark of the conversation', () => {
+    expect(
+      markText({ campaign: LINK, campaign_touches: [LINK, EMAIL, WHATSAPP] })
+    ).toContain(EXPECTED_SEQUENCE[1]);
+  });
+
+  it('shows the origin when the conversation has no campaign mark', () => {
+    expect(markText({ campaign: LINK, campaign_touches: [LINK] })).toContain(
+      EXPECTED_SEQUENCE[0]
+    );
+  });
+
+  it('renders nothing for a conversation without marks', () => {
+    const wrapper = mount(ConversationCampaignMark, {
+      props: { attributes: {} },
+    });
+
+    expect(
+      wrapper.find('[data-test-id="conversation-campaign-mark"]').exists()
     ).toBe(false);
   });
 });

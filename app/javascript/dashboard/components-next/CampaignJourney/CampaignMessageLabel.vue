@@ -13,7 +13,20 @@ const props = defineProps({
 const { t } = useI18n();
 const { request, nameFor } = useCampaignNames();
 const campaignRef = computed(() => campaignRefFor(props.additionalAttributes));
-const name = computed(() => (campaignRef.value ? nameFor(campaignRef.value) : ''));
+const name = computed(() =>
+  campaignRef.value ? nameFor(campaignRef.value) : ''
+);
+const templateName = computed(
+  () => props.additionalAttributes?.campaignTemplateName || ''
+);
+const label = computed(() =>
+  templateName.value
+    ? t('CRM_KANBAN.ORIGIN_JOURNEY.CAMPAIGN_MESSAGE_TEMPLATE', {
+        name: name.value,
+        template: templateName.value,
+      })
+    : t('CRM_KANBAN.ORIGIN_JOURNEY.CAMPAIGN_MESSAGE', { name: name.value })
+);
 
 watch(campaignRef, value => value && request(value), { immediate: true });
 </script>
@@ -25,8 +38,6 @@ watch(campaignRef, value => value && request(value), { immediate: true });
     data-test-id="campaign-message-label"
   >
     <Icon icon="i-lucide-send" class="size-3 shrink-0" />
-    <span class="truncate">
-      {{ t('CRM_KANBAN.ORIGIN_JOURNEY.CAMPAIGN_MESSAGE', { name }) }}
-    </span>
+    <span class="truncate">{{ label }}</span>
   </span>
 </template>
