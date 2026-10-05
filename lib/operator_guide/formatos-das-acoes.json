@@ -11157,13 +11157,14 @@
     },
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:12",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:78",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:84",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:32",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:44",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:14",
-      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13"
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:94",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:100",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:46",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:34",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:59",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:14"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
