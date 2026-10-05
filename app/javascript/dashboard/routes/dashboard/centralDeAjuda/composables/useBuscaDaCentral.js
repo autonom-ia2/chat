@@ -5,7 +5,8 @@ const ESPERA_MS = 300;
 // A busca inteligente custa uma chamada ao modelo: espera a pessoa parar de digitar um pouco mais.
 const ESPERA_INTELIGENTE_MS = 450;
 // Quanto a lista por palavras espera pela Melhor resposta, contado do pedido ao Jev (~0,5 s medidos).
-// Passou disso, a lista aparece sozinha e uma resposta atrasada não mexe mais no que está na tela.
+// Passou disso, a lista aparece sozinha e uma resposta atrasada não mexe mais no que está na tela. Com a
+// alternativa (#985), soma-se a espera dela (TETO_ALTERNATIVA_MS): no caso típico, ~1 s do pedido até a tela.
 const TETO_INTELIGENTE_MS = 1500;
 // Com menos letras não há pergunta para o modelo entender.
 const MINIMO_DE_LETRAS = 3;
@@ -18,6 +19,12 @@ const MAXIMO_DE_OUTROS = 3;
 // A alternativa vem numa segunda chamada (~0,5 s medidos): a tela espera por ela até este teto e mostra tudo
 // junto. Passou disso, abre sem ela e uma resposta atrasada não entra empurrando a lista.
 const TETO_ALTERNATIVA_MS = 900;
+
+// A régua do destaque, a mesma para a Melhor resposta e para a alternativa.
+const destacavel = (artigo, certeza) =>
+  Boolean(artigo) &&
+  typeof certeza === 'number' &&
+  certeza >= LIMIAR_DA_MELHOR_RESPOSTA;
 
 // As duas buscas da Central (#977): por palavras (reserva) e a Melhor resposta do Jev. A tela só mostra
 // resultado quando as duas terminaram (ou o teto passou): nada entra depois empurrando o que a pessoa ia tocar.
@@ -108,9 +115,7 @@ export function useBuscaDaCentral() {
       if (prazoEstourado.value && resultados.value.length) return;
       melhor.value = data?.melhor || null;
       certeza.value = typeof data?.certeza === 'number' ? data.certeza : null;
-      const destaque =
-        melhor.value && (certeza.value ?? 0) >= LIMIAR_DA_MELHOR_RESPOSTA;
-      if (destaque && !semAlternativa.value) {
+      if (destacavel(melhor.value, certeza.value) && !semAlternativa.value) {
         buscarAlternativa(texto, melhor.value.id, pedido);
       }
     } catch {
@@ -178,21 +183,14 @@ export function useBuscaDaCentral() {
         (!prazoEstourado.value || !resultados.value.length))
   );
 
-  const emDestaque = computed(
-    () =>
-      Boolean(melhor.value) &&
-      certeza.value !== null &&
-      certeza.value >= LIMIAR_DA_MELHOR_RESPOSTA
-  );
+  const emDestaque = computed(() => destacavel(melhor.value, certeza.value));
 
   // Só existe ao lado de uma Melhor resposta em destaque, e com a mesma régua de certeza.
   const alternativaEmDestaque = computed(
     () =>
       emDestaque.value &&
-      Boolean(alternativa.value) &&
-      alternativa.value.ref !== melhor.value.ref &&
-      certezaDaAlternativa.value !== null &&
-      certezaDaAlternativa.value >= LIMIAR_DA_MELHOR_RESPOSTA
+      destacavel(alternativa.value, certezaDaAlternativa.value) &&
+      alternativa.value.ref !== melhor.value.ref
   );
 
   // Cada artigo aparece uma vez só: no cartão, ou no topo da lista quando a certeza é baixa. Com a
@@ -221,6 +219,7 @@ export function useBuscaDaCentral() {
     erro,
     melhor,
     buscando,
+    procurandoAlternativa,
     aguardando,
     emDestaque,
     alternativa,

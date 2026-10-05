@@ -23,6 +23,7 @@ const {
   erro,
   melhor,
   buscando,
+  procurandoAlternativa,
   aguardando,
   emDestaque,
   alternativa,
@@ -193,7 +194,7 @@ const limpar = () => {
     >
       <Spinner />
       {{
-        buscando
+        buscando || procurandoAlternativa
           ? t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.BUSCANDO')
           : t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.PROCURANDO_MELHOR')
       }}
