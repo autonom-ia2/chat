@@ -14,6 +14,15 @@ WhatsApp e e-mail). A conversa dessa mensagem ganha a marca pelo mesmo mecanismo
 | WhatsApp API | `whatsapp_api_campaign_recipients` (enviado) | `campaign_whatsapp` | `campaign:whatsapp_api:<id>` |
 | E-mail | `email_campaign_recipients` com o e-mail do contato, de campanha cujas respostas vão para a caixa (caixa de envio no modo direto; caixa de resposta do domínio no modo SES) | `campaign_email` | `campaign:email:<id>` |
 
+- E-mail: destinatário com `contact_id` (público, #999) casa pelo contato; sem `contact_id`, casa
+  pelo endereço sem diferença de caixa **e só se um único contato da conta tiver esse e-mail**
+  (senão não marca e registra log sem dado pessoal). Índice do fork
+  `idx_email_campaign_recipients_lower_email_sent_at` (migration `20261005150000`, concorrente).
+- Custo: contato que nunca recebeu campanha custa no máximo 1 consulta por mensagem recebida (o job
+  pré-carrega a mensagem). WhatsApp usa os índices de `contact_id` que já existem
+  (`campaign_recipients` é tabela do Chatwoot e não ganhou índice).
+- O listener é registrado de forma independente da ordem dos initializers (prepend +
+  `ensure_subscribed!` em `to_prepare`/`after_initialize`, sem duplicar).
 - Nada é gravado no envio. A primeira origem da conversa nunca muda; a campanha entra como toque seguinte.
 - Várias campanhas na janela: marca **só a do envio mais recente** (a que foi respondida).
 - Idempotente por conversa + campanha.
