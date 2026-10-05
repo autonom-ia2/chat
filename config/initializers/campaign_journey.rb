@@ -15,6 +15,13 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::AudienceContacts)
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::WhatsappOneoffRecipients) if ChatwootApp.enterprise?
 
+  # #1004: an SMS campaign linked to an audience sends to the audience's phones with a recipient
+  # per person; delivery callbacks of Twilio and Bandwidth update those recipients.
+  prepend_once.call(Sms::OneoffSmsCampaignService, CampaignJourney::SmsOneoffRecipients)
+  prepend_once.call(Twilio::OneoffSmsCampaignService, CampaignJourney::SmsOneoffRecipients)
+  prepend_once.call(Twilio::DeliveryStatusService, CampaignJourney::SmsDeliveryStatus::TwilioCallback)
+  prepend_once.call(Webhooks::SmsEventsJob, CampaignJourney::SmsDeliveryStatus::BandwidthCallback)
+
   # #1002: a reply to a campaign marks the conversation in the CRM (listener on message_created).
   # Independent of initializer order: the prepend covers a later load_listeners, ensure_subscribed!
   # a dispatcher that already loaded them. Never subscribed twice.
