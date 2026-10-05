@@ -1,0 +1,86 @@
+{
+  "CAMPAIGN_JOURNEY": {
+    "SIDEBAR": {
+      "GROUP": "Campaigns",
+      "CAMPAIGNS": "Campaign",
+      "AUDIENCES": "Audience"
+    },
+    "CHANNELS": {
+      "EMAIL": "Email",
+      "WHATSAPP_OFFICIAL": "WhatsApp Official",
+      "WHATSAPP_API": "WhatsApp API",
+      "SMS": "SMS",
+      "LIVE_CHAT": "Live chat"
+    },
+    "STATUS": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "SENDING": "Sending",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "FAILED": "Failed",
+      "ALWAYS_ON": "Always on"
+    },
+    "CHOOSER": {
+      "TITLE": "Where will this campaign go?",
+      "SUBTITLE": "Only the channels connected to this account show up here.",
+      "EMPTY": "No campaign channel is connected to this account yet.",
+      "CONNECT": "Connect a channel",
+      "HINTS": {
+        "EMAIL": "Rich content, with editor and templates.",
+        "WHATSAPP_OFFICIAL": "Template approved by Meta. For people who have not talked to you yet.",
+        "WHATSAPP_API": "Free text and media, one message at a time, at a safe pace.",
+        "SMS": "Short text that reaches any phone.",
+        "LIVE_CHAT": "Automatic message on your website."
+      }
+    },
+    "LIST": {
+      "TITLE": "Campaign",
+      "SUBTITLE": "Every connected channel in one place. Create, schedule and follow each send.",
+      "BREADCRUMB": "You are here",
+      "NEW_CAMPAIGN": "New campaign",
+      "OVERVIEW": "Campaign summary",
+      "NEXT_SEND": "Next send",
+      "NO_NEXT_SEND": "Nothing scheduled",
+      "IN_PREPARATION": "In preparation",
+      "SENT_30_DAYS": "Sent in the last 30 days",
+      "ALWAYS_ON": "Always on",
+      "CHANNEL_FILTER": "Filter by channel",
+      "ALL_CHANNELS": "All channels",
+      "STATUS_FILTER": "Filter by status",
+      "ALL_STATUSES": "All statuses",
+      "SEARCH": "Search campaign",
+      "LOAD_ERROR": "Some campaigns could not be loaded. Try again in a moment.",
+      "EMPTY_TITLE": "No campaigns yet",
+      "EMPTY_SUBTITLE": "Click New campaign to create the first one.",
+      "EMPTY_FILTER": "No campaign matches these filters.",
+      "WHEN": "When",
+      "ALWAYS": "Always",
+      "NO_DATE": "No date",
+      "SENT_OF": "{sent} of {total} sent",
+      "OPEN": "Open",
+      "OPEN_ARIA": "Open campaign {name}"
+    },
+    "AUDIENCES": {
+      "TITLE": "Audience",
+      "SUBTITLE": "People you imported for campaigns and the channels you can reach each of them on.",
+      "NEW_AUDIENCE": "New audience",
+      "OVERVIEW": "Audience summary",
+      "SAVED": "Saved audiences",
+      "PEOPLE": "People in the audiences listed",
+      "LOAD_ERROR": "The audiences could not be loaded. Try again in a moment.",
+      "EMPTY_TITLE": "You don't have an audience yet",
+      "EMPTY_SUBTITLE": "An audience is a list of people. Upload a spreadsheet to create the first one.",
+      "PEOPLE_COUNT": "{count} person | {count} people",
+      "DETAILS": "Details",
+      "DETAILS_ARIA": "Details of {name}",
+      "BADGE": "{channel} · {count}",
+      "BADGES": {
+        "EMAIL": "Email",
+        "WHATSAPP": "WhatsApp"
+      },
+      "NO_CHANNELS": "Channels not calculated yet"
+    }
+  }
+}

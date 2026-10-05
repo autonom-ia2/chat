@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (180 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (183 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -536,6 +536,36 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: Abra o evento no calendário; use atualizar RSVP para sincronizar com Google/Microsoft; use Entrar, Abrir card, Reagendar ou Cancelar; após o fim da reunião, marque Realizada ou No-show; adicione notas se realizada.
 - gotchas: outcome só aparece depois do horário de término, não durante a reunião; cancelar/reagendar chama o provedor externo e pode falhar por token expirado; resumo por IA depende de `CRM_AI_ENABLED` e credencial configurada.
 - nav_target: `crm_calendar_index`
+
+### Ver todas as campanhas em uma lista
+- intent: Onde vejo todas as minhas campanhas?; Onde ficam as campanhas de WhatsApp, e-mail e SMS juntas?; Como filtro as campanhas por canal ou situação?; Qual é o próximo envio agendado?; Onde está a tela Campanha?
+- onde_fica: Menu lateral > Campanhas > Campanha
+- rota: `campaigns_journey_index` - `/app/accounts/:accountId/campaigns/all`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: nova jornada de campanhas ligada na instalação (CAMPAIGN_JOURNEY_ENABLED); pelo menos um canal de campanha conectado (caixa de e-mail ou domínio verificado, WhatsApp Oficial pela Cloud API, WhatsApp API marcada para campanha, caixa de SMS ou chat do site).
+- passos: 1. Abra Campanhas > Campanha no menu lateral; 2. Veja no topo o próximo envio, quantas estão em preparação, quantas saíram nos últimos 30 dias e quantas ficam sempre ativas; 3. Use os botões de canal para ver só um canal; 4. Use Filtrar por situação e a busca para achar uma campanha; 5. Clique em Abrir para ir à tela que cuida daquela campanha hoje (resultado do WhatsApp Oficial, lista de e-mails, WhatsApp API, SMS ou Chat ao vivo).
+- gotchas: só aparecem canais conectados nesta conta: sem caixa de SMS, o SMS não aparece nem no filtro nem na lista; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; a lista junta as telas antigas, que continuam funcionando pelos endereços de antes; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
+- nav_target: `campaigns_journey_index`
+
+### Criar campanha escolhendo o canal
+- intent: Como crio uma campanha nova?; Onde escolho se a campanha vai por e-mail, WhatsApp ou SMS?; Por que um canal não aparece em Nova campanha?; Como faço uma mensagem automática no site?
+- onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha
+- rota: `campaigns_journey_index` - `/app/accounts/:accountId/campaigns/all`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: permissão para gerenciar campanhas (administrador ou função com campaign_manage); canal conectado.
+- passos: 1. Abra Campanhas > Campanha; 2. Clique em Nova campanha; 3. Escolha o canal na lista (só aparecem os conectados); 4. Preencha o formulário do canal, o mesmo de antes; 5. Salve; a campanha entra na lista.
+- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; os passos Público, Mensagem e Revisar ainda vão chegar, por enquanto cada canal abre o formulário que já existia.
+- nav_target: `campaigns_journey_index`
+
+### Ver os públicos de campanha
+- intent: Onde ficam as planilhas que subi para campanhas?; Onde vejo meus públicos?; Como subo uma lista de pessoas para uma campanha?; Onde foi parar a Base Campanha?; Por onde dá para falar com as pessoas de um público?
+- onde_fica: Menu lateral > Campanhas > Público
+- rota: `campaigns_journey_audiences` - `/app/accounts/:accountId/campaigns/audiences`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: nova jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED) e importação de base ligada (CAMPAIGN_IMPORT_ENABLED); para criar, administrador ou função com campaign_manage.
+- passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Para subir uma planilha nova, clique em Novo público, dê um nome, escolha o arquivo e envie; 4. Clique em Detalhes para acompanhar a validação, confirmar a importação ou baixar os arquivos.
+- gotchas: com a jornada ligada, Base Campanha e Histórico de bases saem do menu de três pontos de Contatos e moram aqui; públicos antigos aparecem com o nome da campanha e sem selos de canal, que só são calculados nas importações novas; a confirmação e o desfazer ainda acontecem na tela de Detalhes (histórico de bases); com CAMPAIGN_IMPORT_ENABLED desligado o item Público some do menu e o endereço leva para Campanha.
+- nav_target: `campaigns_journey_audiences`
 
 ### Criar e verificar identidade de remetente de e-mail
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"

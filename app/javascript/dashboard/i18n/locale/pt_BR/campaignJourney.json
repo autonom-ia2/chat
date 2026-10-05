@@ -1,0 +1,86 @@
+{
+  "CAMPAIGN_JOURNEY": {
+    "SIDEBAR": {
+      "GROUP": "Campanhas",
+      "CAMPAIGNS": "Campanha",
+      "AUDIENCES": "Público"
+    },
+    "CHANNELS": {
+      "EMAIL": "E-mail",
+      "WHATSAPP_OFFICIAL": "WhatsApp Oficial",
+      "WHATSAPP_API": "WhatsApp API",
+      "SMS": "SMS",
+      "LIVE_CHAT": "Chat ao vivo"
+    },
+    "STATUS": {
+      "DRAFT": "Rascunho",
+      "SCHEDULED": "Agendada",
+      "SENDING": "Enviando",
+      "PAUSED": "Pausada",
+      "COMPLETED": "Concluída",
+      "CANCELLED": "Cancelada",
+      "FAILED": "Falhou",
+      "ALWAYS_ON": "Sempre ativa"
+    },
+    "CHOOSER": {
+      "TITLE": "Por onde vai a campanha?",
+      "SUBTITLE": "Aparecem aqui só os canais conectados nesta conta.",
+      "EMPTY": "Esta conta ainda não tem nenhum canal de campanha conectado.",
+      "CONNECT": "Conectar um canal",
+      "HINTS": {
+        "EMAIL": "Conteúdo rico, com editor e modelos.",
+        "WHATSAPP_OFFICIAL": "Modelo aprovado pela Meta. Para quem ainda não falou com você.",
+        "WHATSAPP_API": "Texto livre e mídia, uma mensagem por vez, no ritmo seguro.",
+        "SMS": "Texto curto, chega em qualquer celular.",
+        "LIVE_CHAT": "Mensagem automática no seu site."
+      }
+    },
+    "LIST": {
+      "TITLE": "Campanha",
+      "SUBTITLE": "Todos os canais conectados num lugar só. Crie, agende e acompanhe cada envio.",
+      "BREADCRUMB": "Você está aqui",
+      "NEW_CAMPAIGN": "Nova campanha",
+      "OVERVIEW": "Resumo das campanhas",
+      "NEXT_SEND": "Próximo envio",
+      "NO_NEXT_SEND": "Nada agendado",
+      "IN_PREPARATION": "Em preparação",
+      "SENT_30_DAYS": "Enviadas nos últimos 30 dias",
+      "ALWAYS_ON": "Sempre ativas",
+      "CHANNEL_FILTER": "Filtrar por canal",
+      "ALL_CHANNELS": "Todos os canais",
+      "STATUS_FILTER": "Filtrar por situação",
+      "ALL_STATUSES": "Todas as situações",
+      "SEARCH": "Buscar campanha",
+      "LOAD_ERROR": "Não deu para carregar algumas campanhas. Tente de novo daqui a pouco.",
+      "EMPTY_TITLE": "Nenhuma campanha ainda",
+      "EMPTY_SUBTITLE": "Clique em Nova campanha para criar a primeira.",
+      "EMPTY_FILTER": "Nenhuma campanha com esses filtros.",
+      "WHEN": "Quando",
+      "ALWAYS": "Sempre",
+      "NO_DATE": "Sem data",
+      "SENT_OF": "{sent} de {total} enviadas",
+      "OPEN": "Abrir",
+      "OPEN_ARIA": "Abrir a campanha {name}"
+    },
+    "AUDIENCES": {
+      "TITLE": "Público",
+      "SUBTITLE": "Pessoas que você importou para campanhas e por onde dá para falar com cada uma.",
+      "NEW_AUDIENCE": "Novo público",
+      "OVERVIEW": "Resumo dos públicos",
+      "SAVED": "Públicos salvos",
+      "PEOPLE": "Pessoas nos públicos listados",
+      "LOAD_ERROR": "Não deu para carregar os públicos. Tente de novo daqui a pouco.",
+      "EMPTY_TITLE": "Você ainda não tem um público",
+      "EMPTY_SUBTITLE": "Público é uma lista de pessoas. Suba uma planilha para criar o primeiro.",
+      "PEOPLE_COUNT": "{count} pessoa | {count} pessoas",
+      "DETAILS": "Detalhes",
+      "DETAILS_ARIA": "Detalhes de {name}",
+      "BADGE": "{channel} · {count}",
+      "BADGES": {
+        "EMAIL": "E-mail",
+        "WHATSAPP": "WhatsApp"
+      },
+      "NO_CHANNELS": "Canais ainda não calculados"
+    }
+  }
+}

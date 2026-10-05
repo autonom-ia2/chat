@@ -94,6 +94,7 @@ class DashboardController < ActionController::Base
       WHATSAPP_APP_ID: GlobalConfigService.load('WHATSAPP_APP_ID', ''),
       WHATSAPP_CONFIGURATION_ID: GlobalConfigService.load('WHATSAPP_CONFIGURATION_ID', ''),
       CAMPAIGN_IMPORT_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CAMPAIGN_IMPORT_ENABLED', false)).to_s,
+      CAMPAIGN_JOURNEY_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CAMPAIGN_JOURNEY_ENABLED', false)).to_s,
       WHATSAPP_API_CAMPAIGNS_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('WHATSAPP_API_CAMPAIGNS_ENABLED', false)).to_s,
       CRM_KANBAN_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_KANBAN_ENABLED', false)).to_s,
       CRM_COPILOT_ENABLED: ActiveModel::Type::Boolean.new.cast(ENV.fetch('CRM_COPILOT_ENABLED', false)).to_s,
