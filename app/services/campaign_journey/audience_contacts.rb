@@ -15,9 +15,12 @@ module CampaignJourney::AudienceContacts
   BATCH_SIZE = 1000
   CHANNEL_DISABLED_REASON = 'Canal WhatsApp desligado no público'.freeze
 
+  # SMS (#1004) goes to the same phone the row brought: the WhatsApp rule above.
+  PHONE_CHANNELS = %i[whatsapp sms].freeze
+
   class << self
     def contacts_for(link, channel:)
-      raise ArgumentError, "unsupported channel #{channel}" unless channel == :whatsapp
+      raise ArgumentError, "unsupported channel #{channel}" unless PHONE_CHANNELS.include?(channel)
       return Contact.none if link&.campaign_import.blank?
 
       account = link.campaign.account
