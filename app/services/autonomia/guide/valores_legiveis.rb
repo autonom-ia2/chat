@@ -25,7 +25,7 @@ class Autonomia::Guide::ValoresLegiveis
   end
 
   def texto
-    alvo = (@dados[:caminho] || {}).to_h.transform_keys(&:to_s)
+    alvo = (@dados[:caminho] || {}).to_h.transform_keys(&:to_s).slice(*parametros_da_rota)
     textos = alvo.filter_map { |campo, valor| registro_legivel(campo, valor) } +
              @conferencia.valores.filter_map { |campo, valor| campo_legivel(campo, valor) }
     textos.join(' · ').presence
@@ -36,6 +36,12 @@ class Autonomia::Guide::ValoresLegiveis
   end
 
   private
+
+  # Só o que a rota da ação declara (`:id` em `automation_rules/:id`). O resto do
+  # caminho veio do modelo e nem é usado na chamada — não vira nome de registro.
+  def parametros_da_rota
+    @acao.split.last.to_s.split('/').filter_map { |parte| parte.delete_prefix(':') if parte.start_with?(':') }
+  end
 
   def campo_legivel(campo, valor)
     return if composto?(valor)

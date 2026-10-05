@@ -110,6 +110,14 @@ RSpec.describe Autonomia::Guide::Acoes do
         expect(texto[:ajustes]).to eq(1)
       end
 
+      it 'parâmetro que a rota não declara não vira nome de registro' do
+        texto = para(admin).descrever('PATCH automation_rules/:id',
+                                      { caminho: { id: regra.id, inbox_id: caixa.id }, descricao: 'Mudar.',
+                                        corpo: { description: 'x' } })
+
+        expect(texto[:detalhe]).not_to include(caixa.name)
+      end
+
       it 'registro de outra conta não tem o nome revelado' do
         de_fora = create(:automation_rule, account: create(:account), name: 'Segredo')
 
