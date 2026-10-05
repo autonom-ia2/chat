@@ -58,6 +58,8 @@ class CampaignJourney::WhatsappCampaignCreator
   end
 
   def validate_audience!
+    # #1006: a contact import is not a list for campaigns.
+    raise Error.new('not_an_audience', 'A contact import is not an audience') if @campaign_import.contact_import?
     raise Error.new('audience_not_ready', 'The audience has not finished saving') unless READY_STATUSES.include?(@campaign_import.status)
     return if self.class.whatsapp_available?(@campaign_import)
 

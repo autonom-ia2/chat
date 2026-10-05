@@ -6,7 +6,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   before_action :check_authorization
 
   def create
-    campaign_import = Current.account.campaign_imports.find(params.require(:campaign_import_id))
+    campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
     campaign = ::CampaignJourney::WhatsappCampaignCreator.new(
       account: Current.account, campaign_import: campaign_import, channel: params[:channel], attributes: campaign_params
     ).perform

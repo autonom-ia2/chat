@@ -7,12 +7,12 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   RESULTS_PER_PAGE = 25
 
   def index
-    @campaign_imports = Current.account.campaign_imports
+    @campaign_imports = Current.account.campaign_imports.campaign_flows
                                        .includes(:user, :campaign_import_labels)
                                        .order(created_at: :desc)
                                        .page(@current_page)
                                        .per(RESULTS_PER_PAGE)
-    @campaign_imports_count = Current.account.campaign_imports.count
+    @campaign_imports_count = Current.account.campaign_imports.campaign_flows.count
   end
 
   def create
@@ -127,7 +127,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   end
 
   def fetch_campaign_import
-    @campaign_import = Current.account.campaign_imports
+    @campaign_import = Current.account.campaign_imports.campaign_flows
                                       .includes(:user, :campaign_import_labels)
                                       .find(params[:id])
   end

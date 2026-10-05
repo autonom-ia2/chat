@@ -3,7 +3,7 @@ json.status resource.status
 json.undo_status resource.undo_status
 json.campaign_name resource.campaign_name
 json.name resource.name
-json.flow resource.audience? ? CampaignImport::AUDIENCE_FLOW : 'campaign_base'
+json.flow resource.options.to_h['flow'].presence_in([CampaignImport::AUDIENCE_FLOW, CampaignImport::CONTACTS_FLOW]) || 'campaign_base'
 json.channels resource.channels || {}
 json.extra_columns resource.extra_columns || []
 json.schema_resolution resource.schema_resolution || {}
