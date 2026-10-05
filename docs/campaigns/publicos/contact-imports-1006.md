@@ -44,7 +44,7 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
     { "column": "Vencimento", "key": "vencimento", "label": "Vencimento", "existing": true, "type": "date" },
     { "column": "Plano", "key": "plano", "label": "Plano", "existing": false, "type": "text" }
   ],
-  "attribute_problems": { "count": 1, "by_attribute": { "Vencimento": 1 }, "rows": [{ "row_number": 9, "attribute": "Vencimento" }] },
+  "attribute_problems": { "count": 1, "kept": 2, "by_attribute": { "Vencimento": 1 }, "rows": [{ "row_number": 9, "attribute": "Vencimento" }] },
   "contact_attributes_created": 1
 }
 ```
@@ -66,7 +66,8 @@ Campos só desta importação em `validation_summary` (prontos em `ready_to_conf
     data ISO ou número de dia do Excel, sim/não, opção da lista sem diferença de caixa) e conferido
     pela validação tipada do fork (`Relationships::ValueValidator`). Valor que não serve fica de fora
     só naquela linha; o resto da linha importa. A prévia mostra quantos e em quais linhas, sem o valor
-    (`validation_summary.attribute_problems`). Texto com padrão próprio (legado) é gravado como está.
+    (`validation_summary.attribute_problems`). Valor que o contato já tem conta como `kept` (mantido, não
+    "fora"): o contato fica com o dele. Texto com padrão próprio (legado) é gravado como está.
   - Senão, a chave sai do cabeçalho (`HeaderMapper.normalize_key`: sem acento, minúsculas,
     espaço vira `_`); nunca repete na planilha nem toma um campo padrão do contato (`city`,
     `email`…) — ganha `_2`, `_3`. Cabeçalho sem letra nem número vira `coluna`.
