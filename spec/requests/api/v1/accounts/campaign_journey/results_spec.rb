@@ -77,7 +77,8 @@ RSpec.describe 'Campaign journey results API (#1007)', :aggregate_failures, type
       rows = response.parsed_body.dig('payload', 'rows')
       expect(rows.size).to eq(4)
       ana_row = rows.find { |row| row.dig('contact', 'id') == ana.id }
-      expect(ana_row).to include('status' => 'read', 'message_content' => 'Olá Ana', 'conversation_display_id' => conversation.display_id)
+      expect(ana_row).to include('status' => 'read', 'message_content' => 'Olá Ana', 'replied' => true,
+                                 'conversation_display_id' => conversation.display_id)
       expect(ana_row.dig('contact', 'phone_number')).not_to include('987654321')
       expect(rows.find { |row| row.dig('contact', 'id') == caio.id }).to include('error_code' => '131026', 'conversation_display_id' => nil)
     end

@@ -44,8 +44,11 @@ class CampaignJourney::MessageResult
   def page(filter:, page:, visible_conversations:)
     records = scope(filter).includes(self.class::ROW_INCLUDES).order(:id).page(page).per(PER_PAGE)
     links = replies.conversations_by_contact(records.map(&:contact_id), visible_conversations)
+    replied = replied_contact_ids.to_set
     {
-      rows: records.map { |record| row(record).merge(conversation_display_id: links[record.contact_id]) },
+      rows: records.map do |record|
+        row(record).merge(replied: replied.include?(record.contact_id), conversation_display_id: links[record.contact_id])
+      end,
       meta: { count: records.total_count, current_page: records.current_page, per_page: PER_PAGE, total_pages: records.total_pages }
     }
   end
