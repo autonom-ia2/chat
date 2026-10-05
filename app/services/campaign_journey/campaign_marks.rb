@@ -8,7 +8,8 @@ module CampaignJourney::CampaignMarks
 
   WHATSAPP_SOURCE = 'campaign_whatsapp'.freeze
   EMAIL_SOURCE = 'campaign_email'.freeze
-  SOURCES = [WHATSAPP_SOURCE, EMAIL_SOURCE].freeze
+  SMS_SOURCE = 'campaign_sms'.freeze
+  SOURCES = [WHATSAPP_SOURCE, EMAIL_SOURCE, SMS_SOURCE].freeze
 
   # campaign class => [source_type, <type> of the "campaign:<type>:<id>" source id, name attribute]
   KINDS = {
@@ -16,16 +17,43 @@ module CampaignJourney::CampaignMarks
     'WhatsappApiCampaign' => [WHATSAPP_SOURCE, 'whatsapp_api', :title],
     'EmailCampaign' => [EMAIL_SOURCE, 'email', :name]
   }.freeze
+  # A Chatwoot Campaign on an SMS inbox (#1004).
+  SMS_KIND = [SMS_SOURCE, 'sms', :title].freeze
 
   def mark!(conversation, campaign)
-    source_type, type, name_attribute = KINDS.fetch(campaign.class.name)
-    source_id = "campaign:#{type}:#{campaign.id}"
+    source_type, _type, name_attribute = kind_for(campaign)
+    source_id = source_id_for(campaign)
     return false if marked?(conversation, source_id)
 
     Ctwa::CampaignBuilder.attribute!(
       conversation,
       source_id: source_id, source_type: source_type, headline: campaign.public_send(name_attribute)
     )
+  end
+
+  # "campaign:<type>:<id>", e.g. "campaign:sms:12".
+  def source_id_for(campaign)
+    "campaign:#{kind_for(campaign)[1]}:#{campaign.id}"
+  end
+
+  # "Responderam" of a campaign: conversations of the account marked with it (the mark is written
+  # only on reply, D14). Same probe as the campaign filters (campaign_source_ids, trigram index).
+  def replied_count(campaign)
+    token = "%\"#{Conversation.sanitize_sql_like(source_id_for(campaign))}\"%"
+    Conversation.where(account_id: campaign.account_id)
+                .where("conversations.additional_attributes ->> 'campaign_source_ids' ILIKE ?", token)
+                .count
+  end
+
+  def kind_for(campaign)
+    return SMS_KIND if campaign.is_a?(Campaign) && sms_inbox?(campaign.inbox)
+
+    KINDS.fetch(campaign.class.name)
+  end
+
+  # Bandwidth SMS or Twilio SMS (a Twilio inbox can also be WhatsApp).
+  def sms_inbox?(inbox)
+    inbox.present? && (inbox.sms? || (inbox.twilio? && inbox.channel.sms?))
   end
 
   # Cheap in-memory check so repeated replies never take the row lock of the builder.
