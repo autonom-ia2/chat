@@ -28,6 +28,14 @@ RSpec.describe 'Audience channels and deletion (#1005)', :aggregate_failures, ty
     agent
   end
 
+  def linked_campaign(status:, title: 'Renovação outubro')
+    channel = journey_cloud_channel(account)
+    campaign = create(:campaign, account: account, inbox: channel.inbox, title: title, audience: [], template_params: journey_template_params)
+    campaign.update_columns(campaign_status: Campaign.campaign_statuses[status]) # rubocop:disable Rails/SkipsModelValidations
+    CampaignAudienceLink.create!(account: account, campaign: campaign, campaign_import: audience)
+    campaign
+  end
+
   describe 'PATCH channels' do
     it 'turns a channel off and on again' do
       patch_channels({ whatsapp: false })
@@ -37,6 +45,25 @@ RSpec.describe 'Audience channels and deletion (#1005)', :aggregate_failures, ty
 
       patch_channels({ whatsapp: true })
       expect(audience.reload.channels['whatsapp']).to eq('enabled' => true, 'count' => 2)
+    end
+
+    # Coordinator decision 3: a channel a scheduled or running campaign sends through stays on.
+    it 'refuses to turn off a channel used by a campaign that has not finished, and allows it once it has' do
+      campaign = linked_campaign(status: :active)
+
+      patch_channels({ whatsapp: false })
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'audience_in_use',
+                                              'campaigns' => [{ 'title' => 'Renovação outubro', 'display_id' => campaign.display_id }])
+      expect(audience.reload.channels.dig('whatsapp', 'enabled')).to be(true)
+
+      patch_channels({ email: false })
+      expect(response).to have_http_status(:ok)
+
+      campaign.update_columns(campaign_status: Campaign.campaign_statuses[:completed]) # rubocop:disable Rails/SkipsModelValidations
+      patch_channels({ whatsapp: false })
+      expect(response).to have_http_status(:ok)
+      expect(audience.reload.channels.dig('whatsapp', 'enabled')).to be(false)
     end
 
     # J6: a channel without data cannot be turned on.
@@ -92,6 +119,23 @@ RSpec.describe 'Audience channels and deletion (#1005)', :aggregate_failures, ty
       expect(campaign.reload).to be_completed
       expect(CampaignRecipient.where(campaign: campaign).pluck(:status)).to eq(%w[sent sent])
       expect(link.reload.campaign_import_id).to be_nil
+    end
+
+    # Coordinator decision 2: an audience a scheduled or running campaign still sends to cannot be deleted.
+    it 'refuses to delete an audience used by a campaign that has not finished, listing it' do
+      scheduled = linked_campaign(status: :active, title: 'Agendada')
+      linked_campaign(status: :completed, title: 'Concluída')
+
+      delete "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}", headers: headers_for
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('error' => 'campaign_import.audience_in_use', 'code' => 'audience_in_use')
+      expect(response.parsed_body['campaigns']).to eq([{ 'title' => 'Agendada', 'display_id' => scheduled.display_id }])
+      expect(CampaignImport.exists?(audience.id)).to be(true)
+
+      scheduled.update_columns(campaign_status: Campaign.campaign_statuses[:processing]) # rubocop:disable Rails/SkipsModelValidations
+      delete "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}", headers: headers_for
+      expect(response.parsed_body['code']).to eq('audience_in_use')
     end
 
     it 'keeps refusing to delete an audience while it is being saved, and answers 401 to campaign_view only' do

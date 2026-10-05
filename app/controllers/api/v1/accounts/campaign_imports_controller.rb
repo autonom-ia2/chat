@@ -31,6 +31,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   def destroy
     deleted = false
     error_code = nil
+    in_use = []
 
     @campaign_import.with_lock do
       @campaign_import.reload
@@ -38,11 +39,15 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
         error_code = 'campaign_import.delete_not_available'
         next
       end
+      # #1005: an audience a scheduled or running campaign still sends to cannot go.
+      in_use = CampaignImports::AudienceUsage.new(@campaign_import).pending_campaigns
+      next if in_use.any?
 
       destroy_campaign_import!
       deleted = true
     end
 
+    return render json: CampaignImports::AudienceUsage.error_payload(in_use), status: :unprocessable_entity if in_use.any?
     return render_bad_request(error_code) unless deleted
 
     head :no_content

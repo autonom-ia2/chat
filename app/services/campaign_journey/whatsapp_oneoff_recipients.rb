@@ -10,6 +10,8 @@
 #   Provider errors keep Enterprise's handling (Meta's error_user_msg on the recipient).
 # - B1b: variables bound to the audience are resolved per person; without a value and without
 #   a default the recipient is `skipped` with "falta {{N}}".
+# D2/D4 handling (queued sweep, per-recipient rescue) also applies to old label campaigns —
+# decided with the product owner: their audience is unchanged, only no one is left without status.
 # Uses #audience_link from CampaignJourney::AudienceContacts (prepended alongside).
 module CampaignJourney::WhatsappOneoffRecipients
   NOT_PROCESSED_REASON = 'Recipient was not processed'.freeze
