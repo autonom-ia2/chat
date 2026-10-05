@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 // "Por onde dá para falar com essas pessoas" (#993, PRD §6.6-2, D13, J5, J6). Channels are
 // on by what the spreadsheet has; one can be switched off. A channel without data shows
 // off with "sem dados" and cannot be switched on.
@@ -17,7 +18,8 @@ const props = defineProps({
 const emit = defineEmits(['toggle']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE.CHANNELS';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const LABELS = { email: 'EMAIL', whatsapp: 'WHATSAPP', sms: 'SMS' };
 const NO_DATA_HINTS = {

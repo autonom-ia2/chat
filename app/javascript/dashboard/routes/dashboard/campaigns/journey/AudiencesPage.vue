@@ -10,7 +10,10 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
-import { toLocaleTag } from 'dashboard/components-next/CampaignJourney/localeTag';
+import {
+  toLocaleTag,
+  formatNumber,
+} from 'dashboard/components-next/CampaignJourney/localeTag';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -23,7 +26,8 @@ import { LEGACY_QUERY } from 'dashboard/components-next/CampaignJourney/campaign
 
 const NS = 'CAMPAIGN_JOURNEY.AUDIENCES';
 
-const { t, n, locale } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 const store = useStore();
 const router = useRouter();
 const canManage = useCanManage('campaign_manage');

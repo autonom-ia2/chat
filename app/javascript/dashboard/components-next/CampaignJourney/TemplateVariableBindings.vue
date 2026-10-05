@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 // "De onde vem cada parte da mensagem" (#993, PRD §6.3, B1, B1b). Each template variable
 // comes from a contact field, an audience column or a fixed text. Prefilled choices from
 // variable_suggestions carry the "Sugerido" badge. The coverage line says how many people
@@ -21,7 +22,8 @@ const props = defineProps({
 const emit = defineEmits(['bind', 'default']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.VARIABLES';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const SEPARATOR = ':';
 const FIXED = BINDING_SOURCES.FIXED;

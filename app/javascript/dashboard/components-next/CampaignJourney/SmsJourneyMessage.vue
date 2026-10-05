@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 import { PLUS } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Passo 2 — SMS (#993 front of #1004, PRD §6.3 SMS, M3): SMS inbox, short text with contact and
 // audience fields, characters/parts counter (same rules as the server, smsSegments.js) and the
@@ -27,7 +28,8 @@ const emit = defineEmits(['update']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.SMS';
 const API = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.API';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 const textarea = ref(null);
 
 const tokenButtons = computed(() => [

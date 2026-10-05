@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 import { useI18n } from 'vue-i18n';
 
 defineProps({
@@ -6,7 +7,8 @@ defineProps({
   badges: { type: Array, default: () => [] },
 });
 
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const ICONS = {
   email: 'i-lucide-mail',

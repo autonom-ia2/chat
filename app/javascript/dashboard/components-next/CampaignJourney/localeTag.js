@@ -5,3 +5,8 @@ export const toLocaleTag = locale =>
   String(locale || 'en')
     .split('_')
     .join('-');
+
+// Counts in the journey screens. vue-i18n's n() hands the raw "pt_BR" to Intl.NumberFormat
+// and throws on the Brazilian account, so every count is formatted here.
+export const formatNumber = (value, locale) =>
+  new Intl.NumberFormat(toLocaleTag(locale)).format(Number(value || 0));

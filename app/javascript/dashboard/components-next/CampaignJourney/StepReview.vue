@@ -14,7 +14,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
-import { toLocaleTag } from './localeTag';
+import { toLocaleTag, formatNumber } from './localeTag';
 
 const props = defineProps({
   draft: { type: Object, required: true },
@@ -39,7 +39,8 @@ const props = defineProps({
 const emit = defineEmits(['update', 'go', 'back', 'submit', 'testSend']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW';
-const { t, n, locale } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 const confirmRef = ref(null);
 
 const REASON_ORDER = [

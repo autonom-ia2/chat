@@ -8,7 +8,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import AudienceChannelBadges from './AudienceChannelBadges.vue';
-import { toLocaleTag } from './localeTag';
+import { toLocaleTag, formatNumber } from './localeTag';
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -32,7 +32,8 @@ const emit = defineEmits([
 ]);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.AUDIENCE';
-const { t, n, locale } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const isEmpty = computed(
   () =>

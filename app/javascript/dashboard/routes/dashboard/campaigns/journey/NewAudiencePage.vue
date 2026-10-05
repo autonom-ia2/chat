@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 // Novo público (#993, PRD §6.6, B2, B5, B6, B9, J2, J3, J5, J6, C4–C6). A page, not a modal:
 // name + spreadsheet → reading → columns, channels, people, companies → Salvar público.
 // Nothing enters the contacts before "Salvar público" (confirm): leaving earlier creates
@@ -38,7 +39,8 @@ const POLL_MS = 1500;
 const ACCEPTED_FILES = '.csv,.xlsx';
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE';
 
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 const route = useRoute();
 const router = useRouter();
 const accountId = useMapGetter('getCurrentAccountId');

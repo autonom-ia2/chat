@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Painel lateral do público (#993, PRD §6.6, §7 "37rem", F1–F3, B8): channel badges, people,
 // companies, other columns kept, who does not receive, campaigns that used it, "Usar em nova
@@ -23,7 +24,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'use', 'delete']);
 
 const NS = 'CAMPAIGN_JOURNEY.AUDIENCES.PANEL';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const detail = ref(null);
 const isLoading = ref(true);

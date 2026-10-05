@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 // "Empresas" of Novo público (#993, PRD §6.6-4, D10, C4–C6). Shown only when the backend
 // says companies are available for this audience (api-992.md §9).
 import { computed } from 'vue';
@@ -14,7 +15,8 @@ const props = defineProps({
 const emit = defineEmits(['toggle']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE.COMPANIES';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const numbers = computed(() => {
   const source = props.block.result || props.block.preview;

@@ -1,4 +1,5 @@
 <script setup>
+import { formatNumber } from 'dashboard/components-next/CampaignJourney/localeTag';
 // People and rows with a problem (#993, PRD §6.6-3, B5): "98 prontos · 2 com problema",
 // masked reason per row (problem_rows) or, without that endpoint, reasons with counts,
 // and the download of the rows left out. Saving goes on with the ready ones.
@@ -21,7 +22,8 @@ const props = defineProps({
 const emit = defineEmits(['download']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE.PEOPLE';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatNumber(value, locale.value);
 
 const isOpen = ref(false);
 const isLoading = ref(false);
