@@ -11,6 +11,11 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
   NENHUM = 'nenhum'.freeze
   INSTRUCOES = 'A pessoa escreveu isto na busca da Central de Ajuda de uma plataforma de atendimento e CRM. ' \
                'Qual artigo responde melhor ao que ela quer fazer ou ao problema que ela tem?'.freeze
+  # A alternativa (#985) é uma segunda pergunta, sem o artigo já escolhido entre as opções: na mesma chamada o
+  # Jev repetia a escolha 45 vezes em 79; em duas, o par acerta 77 de 79 (medido em 04/10/2026).
+  INSTRUCOES_DA_ALTERNATIVA = 'A pessoa escreveu isto na busca da Central de Ajuda de uma plataforma de atendimento ' \
+                              'e CRM. Qual artigo da lista também ajuda essa pessoa no que ela quer fazer ou no ' \
+                              'problema que ela tem?'.freeze
   DESCRICAO_NENHUM = 'Nenhum artigo da lista responde ao que a pessoa escreveu.'.freeze
   MENOR_TERMO = 3
   MAIOR_TERMO = 200 # quem cola um texto enorme não multiplica o custo
@@ -35,11 +40,13 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
     @model = model
   end
 
-  # { artigo: resumo, certeza: Float } ou nil quando não há escolha confiável.
-  def melhor(termo)
+  # { artigo: resumo, certeza: Float } ou nil quando não há escolha confiável. Com `exceto` (o id da Melhor
+  # resposta), devolve a alternativa: o artigo que também ajuda, fora o já escolhido.
+  def melhor(termo, exceto: nil)
     texto = termo.to_s.strip.first(MAIOR_TERMO)
     return if texto.length < MENOR_TERMO || @leitura.artigos.empty? || !TypesafeAi::Config.configured?
 
+    @exceto = exceto_valido(exceto)
     escolha = Rails.cache.fetch(chave_do_cache(texto), expires_in: VALIDADE_DO_CACHE) { perguntar(texto) }
     montar(escolha)
   rescue TypesafeAi::Client::Error, RespostaInvalida, LimiteEstourado => e
@@ -71,7 +78,7 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
 
     comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = client.evaluate(model: @model, state: { 'pergunta_da_pessoa' => texto },
-                               questions: { PERGUNTA => { type: 'choice', instructions: INSTRUCOES, criteria: criterios } })
+                               questions: { PERGUNTA => { type: 'choice', instructions: instrucoes, criteria: criterios } })
     registrar_custo(response, comeco)
     validar(response)
   end
@@ -92,10 +99,21 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
 
   def certeza_valida?(certeza) = certeza.is_a?(Numeric) && certeza.finite? && certeza.between?(0, 1)
 
+  # Só vale um artigo que esta pessoa pode ler; qualquer outro valor vira a pergunta normal.
+  def exceto_valido(exceto)
+    id = exceto.to_s
+    id if id != NENHUM && criterios_de_todos.key?(id)
+  end
+
+  def instrucoes = @exceto ? INSTRUCOES_DA_ALTERNATIVA : INSTRUCOES
+
+  # As opções da pergunta: todas, ou todas menos a Melhor resposta quando é a alternativa.
+  def criterios = @exceto ? criterios_de_todos.except(@exceto) : criterios_de_todos
+
   # Um critério por artigo que esta pessoa pode ler (a Leitura já filtrou por conta e papel), mais "nenhum".
-  def criterios
-    @criterios ||= @leitura.artigos.to_h { |artigo| [@leitura.central(artigo)['id'], descricao(artigo)] }
-                           .merge(NENHUM => DESCRICAO_NENHUM)
+  def criterios_de_todos
+    @criterios_de_todos ||= @leitura.artigos.to_h { |artigo| [@leitura.central(artigo)['id'], descricao(artigo)] }
+                                    .merge(NENHUM => DESCRICAO_NENHUM)
   end
 
   def descricao(artigo)
@@ -126,7 +144,7 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
   # Tudo o que muda a resposta entra na chave: modelo, a forma da pergunta e os critérios (conta com outra
   # visibilidade, ou artigo editado, pergunta de novo). Mudar a instrução invalida o cache sozinho.
   def chave_do_cache(texto)
-    digest_pergunta = Digest::SHA256.hexdigest([INSTRUCOES, PERGUNTA, criterios].to_json)
+    digest_pergunta = Digest::SHA256.hexdigest([instrucoes, PERGUNTA, criterios].to_json)
     digest_termo = Digest::SHA256.hexdigest(normalizar(texto))
     "autonomia/central_de_ajuda/busca_inteligente/#{@model}/#{digest_pergunta}/#{digest_termo}"
   end

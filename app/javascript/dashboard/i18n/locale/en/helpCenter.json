@@ -1124,7 +1124,9 @@
         "MELHOR_RESPOSTA": "Best answer",
         "ANUNCIO_MELHOR": "Best answer: {titulo}.",
         "PROCURANDO_MELHOR": "Looking for the best answer…",
-        "COM_VIDEO": "Video"
+        "COM_VIDEO": "Video",
+        "TAMBEM_AJUDA": "This may also help",
+        "OUTROS": "Other results"
       },
       "MAIS_PROCURADOS": {
         "TITULO": "Most searched:",

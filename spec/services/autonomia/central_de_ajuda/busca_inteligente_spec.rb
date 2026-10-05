@@ -249,4 +249,46 @@ RSpec.describe Autonomia::CentralDeAjuda::BuscaInteligente do
       expect(Rails.logger).to have_received(:warn).with(include('code=limite'))
     end
   end
+
+  describe 'alternativa (#985)' do
+    it 'pergunta sem a Melhor resposta entre as opções e com a instrução da alternativa' do
+      responder(choice: '02.05', confidence: 0.6)
+      resultado = busca.melhor('meu whatsapp não manda mensagem', exceto: '02.04')
+
+      pergunta = cliente_falso.chamadas.sole[:questions]['artigo']
+      expect(pergunta[:instructions]).to eq(described_class::INSTRUCOES_DA_ALTERNATIVA)
+      expect(pergunta[:criteria]).not_to have_key('02.04')
+      expect(pergunta[:criteria]).to include('02.05', 'nenhum')
+      expect(resultado[:artigo]).to include(id: '02.05')
+    end
+
+    it 'recusa a alternativa igual à Melhor resposta, que nem está entre as opções' do
+      responder(choice: '02.04')
+
+      expect(busca.melhor('meu whatsapp não manda mensagem', exceto: '02.04')).to be_nil
+    end
+
+    it 'ignora exceto que não é um artigo visível (ou é nenhum) e faz a pergunta normal' do
+      %w[99.99 nenhum 03.01].each do |exceto|
+        cliente_falso.chamadas.clear
+        Rails.cache.clear
+        busca.melhor('meu whatsapp não manda mensagem', exceto: exceto)
+
+        expect(cliente_falso.chamadas.sole[:questions]['artigo'][:instructions]).to eq(described_class::INSTRUCOES)
+      end
+    end
+
+    it 'guarda a alternativa no cache separada da Melhor resposta' do
+      store = ActiveSupport::Cache::MemoryStore.new
+      allow(Rails).to receive(:cache).and_return(store)
+      servico = busca
+      servico.melhor('meu whatsapp não manda mensagem')
+      responder(choice: '02.05', confidence: 0.6)
+      servico.melhor('meu whatsapp não manda mensagem', exceto: '02.04')
+      servico.melhor('meu whatsapp não manda mensagem', exceto: '02.04')
+
+      expect(cliente_falso.chamadas.size).to eq(2)
+      expect(servico.melhor('meu whatsapp não manda mensagem')[:artigo]).to include(id: '02.04')
+    end
+  end
 end

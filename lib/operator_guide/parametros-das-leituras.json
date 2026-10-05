@@ -631,6 +631,7 @@
   "central-de-ajuda/busca_inteligente": {
     "controller": "api/v1/accounts/central_de_ajuda#busca_inteligente",
     "parametros": [
+      "exceto",
       "termo"
     ]
   },
