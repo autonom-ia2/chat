@@ -1021,6 +1021,10 @@
     "controller": "api/v1/accounts/crm/meetings#show",
     "parametros": []
   },
+  "crm/meta_ads_connection": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#show",
+    "parametros": []
+  },
   "crm/meta_conversions": {
     "controller": "api/v1/accounts/crm/meta_conversions#index",
     "parametros": [

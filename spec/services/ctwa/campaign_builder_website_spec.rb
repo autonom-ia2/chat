@@ -61,4 +61,21 @@ RSpec.describe Ctwa::CampaignBuilder do
       expect(described_class::TOUCH_KEYS).to include('utm_id')
     end
   end
+
+  describe 'source_url só http(s)' do
+    # Vem de webhook externo e vira link clicável na tela: outro esquema (javascript:, data:) não entra.
+    let(:script_url) { %w[javascript //instagram.com/p/x%0aalert(1)].join(':') }
+
+    it 'não cria toque quando a única informação é um link com outro esquema' do
+      expect(described_class.build(source_url: script_url)).to be_nil
+      expect(described_class.build(source_url: 'data:text/html,oi')).to be_nil
+    end
+
+    it 'grava o toque sem o link quando há identificador, e mantém http(s)' do
+      expect(described_class.build(source_id: '120252711448880416', source_type: 'ad', source_url: script_url))
+        .to include('source_id' => '120252711448880416').and(satisfy { |touch| !touch.key?('source_url') })
+      expect(described_class.build(source_id: '1', source_url: 'HTTPS://www.instagram.com/p/DafzleSsM3W/')['source_url'])
+        .to eq('HTTPS://www.instagram.com/p/DafzleSsM3W/')
+    end
+  end
 end

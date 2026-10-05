@@ -10,6 +10,7 @@ import CardLabels from 'dashboard/components-next/Conversation/ConversationCard/
 import SLACardLabel from 'dashboard/components-next/Conversation/Sla/SLACardLabel.vue';
 import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
+import CrmOriginMorePopover from './CrmOriginMorePopover.vue';
 import {
   buildCrmCardIdentity,
   crmCardIdentityLabel,
@@ -414,19 +415,20 @@ const canOpenConversation = computed(
       />
 
       <!-- Origem da campanha — linha própria, separada das signal pills -->
-      <div v-if="campaignPill" class="mt-2 flex items-center">
+      <div v-if="campaignPill" class="mt-2 flex min-w-0 items-center gap-1">
         <CrmCardPill
           :icon="campaignPill.icon"
           tone="teal"
           :title="formatOriginTitle(campaignPill)"
         >
           {{ humanizedOriginLabel(campaignPill) }}
-          <template v-if="campaignPill.extraCount > 0" #trail>
-            <span class="shrink-0 font-semibold">
-              {{ `+${campaignPill.extraCount}` }}
-            </span>
-          </template>
         </CrmCardPill>
+        <!-- "+N" opens every touch, first to last, without opening the card. -->
+        <CrmOriginMorePopover
+          v-if="campaignPill.extraCount > 0"
+          :campaigns="card.campaigns"
+          :extra-count="campaignPill.extraCount"
+        />
       </div>
 
       <!-- Primary signal row: value and attention stay together so the first

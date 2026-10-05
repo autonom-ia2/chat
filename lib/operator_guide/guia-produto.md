@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (180 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (182 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -599,6 +599,27 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: link e QR usam a mesma URL rastreável; o cliente pode editar a mensagem antes de enviar; o QR só é gerado depois de criar; a origem de site não tem QR nem mensagem pré-preenchida, quem monta a mensagem é a página, com o código do clique; o tipo de uso não muda depois de criar; só os sites informados em Site onde fica o botão conseguem avisar cliques (trava contra cliques inventados), e sem nenhum site nada é registrado; anúncio sem o texto de parâmetros ainda aparece como Meta pago, mas sem campanha, conjunto e anúncio; se o cliente apagar o código da mensagem, a conversa só é ligada quando houve exatamente um clique nos 10 minutos anteriores naquela caixa; Último aviso cinza ou âmbar indica que a página não está avisando; excluir inutiliza o link, o QR ou o aviso do site já divulgados; não é necessário habilitar campanhas de e-mail; Gestão de campanhas mantém apenas os relatórios de e-mail; para devolver vendas do site à Meta, preencha o Pixel do site na seção Meta Ads da edição do funil; no card, Conversão Meta Ads mostra o que foi enviado e, quando aparece Não enviado, o motivo (por exemplo, o site não mandou os dados do anúncio porque o cliente não aceitou cookies, falta o Pixel no funil ou passou de 7 dias).
 - leitura: campanhas
 - nav_target: `campaigns_tracked_links_index`
+
+### Mostrar os nomes das campanhas da Meta no CRM
+- intent: Por que a origem do lead aparece com um número em vez do nome da campanha?; Como faço o CRM mostrar o nome da campanha, do conjunto e do anúncio da Meta?; Onde colo o token da Meta para ler os anúncios?; O que é o aviso Precisa de atenção em Nomes das campanhas da Meta?; Como removo a conexão com a Meta?
+- onde_fica: Menu lateral > Campanhas > Links e QR codes > bloco Nomes das campanhas da Meta, abaixo da lista de origens
+- rota: `campaigns_tracked_links_index` - `/app/accounts/:accountId/campaigns/links`
+- gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: ser administrador da conta; acesso ao Gerenciador de Negócios da Meta com um usuário do sistema que enxergue a conta de anúncios.
+- passos: 1. Em Links e QR codes, no bloco Nomes das campanhas da Meta, clique em Conectar; 2. No Gerenciador de Negócios, abra Configurações do negócio > Usuários > Usuários do sistema (crie um, se não houver); 3. Em Atribuir ativos, dê ao usuário acesso à conta de anúncios; 4. Clique em Gerar novo token, escolha o app, marque a permissão ads_read e, na validade, escolha Nunca; 5. Copie o token, cole no campo Token de acesso e clique em Testar e salvar; 6. Com o bloco em Conectado, os toques novos e os dos últimos 90 dias passam a mostrar os nomes em alguns minutos.
+- gotchas: só administradores veem e editam o bloco; o token é testado antes de salvar e não aparece de novo; sem ads_read o token é recusado com essa explicação; se o usuário do sistema não tiver a conta de anúncios atribuída (Atribuir ativos), o teste passa e o bloco fica Conectado, mas os números continuam no lugar dos nomes — confira esse passo primeiro; se aparecer o aviso de criptografia do servidor não configurada, o token não pode ser guardado e o caso é do suporte; Precisa de atenção quer dizer que a Meta passou a recusar o token salvo (expirou ou perdeu acesso), e a resposta da Meta aparece no bloco; Trocar token ou Conectar de novo substitui o salvo; Remover apaga o token, mas os nomes já resolvidos continuam; enquanto não houver nome, o CRM mostra ID com o começo e o fim do número, e o número inteiro ao passar o mouse; renomear a campanha na Meta só aparece quando o nome guardado vence (7 dias); o filtro de campanha do CRM continua pelo identificador, não pelo nome.
+- leitura: campanhas
+- nav_target: `campaigns_tracked_links_index`
+
+### Ver todas as origens de um contato no CRM
+- intent: O que é o +2 ao lado da origem no card do CRM?; Como vejo todas as campanhas que trouxeram este contato?; Onde vejo o primeiro e o último anúncio que o cliente clicou?; Por que a origem mostra ID e um número?
+- onde_fica: Menu lateral > CRM > CRM Kanban > botão +N ao lado da origem no card; ou abrir o card > bloco de vínculos > Origens do contato
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- pre_requisitos: card com conversa que veio de anúncio, link rastreado ou landing page; para ver nomes no lugar de números, a conexão em Links e QR codes > Nomes das campanhas da Meta.
+- passos: 1. No Kanban, clique no +N ao lado da origem do card (o card não abre); 2. Leia a lista do primeiro ao último toque, com data, origem, campanha, conjunto, anúncio e o link do post ou da página; 3. Feche com Esc ou clicando fora; 4. No card aberto, a mesma lista aparece em Origens do contato quando houve mais de um toque.
+- gotchas: guarda no máximo 20 toques; com um toque só, o card mostra a origem e a campanha como antes; no clique para WhatsApp sem nome resolvido, o anúncio é o título do anúncio; ID 1202…0416 aparece quando a Meta mandou só o número, e o número inteiro fica ao passar o mouse; o link abre em outra aba.
+- nav_target: `crm_kanban_index`
 
 ### Criar campanha WhatsApp API
 - intent: "Como disparo campanha pelo WhatsApp API?"; "Onde escolho rótulos de audiência?"; "Como pauso ou cancelo?"
