@@ -3,7 +3,11 @@
 # Table name: ctwa_tracked_link_clicks
 #
 #  id              :bigint           not null, primary key
+#  campaign_key    :string
 #  expires_at      :datetime         not null
+#  lead_data       :jsonb            not null
+#  meta_signals    :jsonb            not null
+#  page_url        :string(512)
 #  params          :jsonb            not null
 #  token           :string           not null
 #  user_agent      :string(255)
@@ -17,6 +21,7 @@
 #
 #  idx_ctwa_tracked_link_clicks_account       (account_id)
 #  idx_ctwa_tracked_link_clicks_conversation  (conversation_id)
+#  idx_ctwa_tracked_link_clicks_link_campaign  (tracked_link_id,campaign_key)
 #  idx_ctwa_tracked_link_clicks_link          (tracked_link_id)
 #  idx_ctwa_tracked_link_clicks_link_created  (tracked_link_id,created_at)
 #  idx_ctwa_tracked_link_clicks_token         (token) UNIQUE
@@ -40,7 +45,17 @@ class Ctwa::TrackedLinkClick < ApplicationRecord
     utm_campaign
     utm_term
     utm_content
+    utm_id
   ].freeze
+  NO_CAMPAIGN_KEY = 'none'.freeze
+  CAMPAIGN_DIGEST_LENGTH = 10
+  # Id de campanha da Meta: só dígitos e curto. Fora disso o utm_id vira resumo, porque a chave
+  # entra no source_id do toque e no filtro de campanha do CRM (lista separada por vírgula).
+  MAX_RAW_CAMPAIGN_ID_LENGTH = 32
+  DIGITS = ('0'..'9').to_a.freeze
+  PAGE_URL_MAX_LENGTH = 512
+  # Dado pessoal do clique (formulário e sinais da Meta), apagado quando perde a finalidade.
+  PERSONAL_DATA_RESET = { lead_data: {}, meta_signals: {}, user_agent: nil }.freeze
 
   belongs_to :account
   belongs_to :tracked_link, class_name: 'Ctwa::TrackedLink'
@@ -55,9 +70,34 @@ class Ctwa::TrackedLinkClick < ApplicationRecord
 
   validates :token, presence: true, uniqueness: true, format: { with: TOKEN_FORMAT }
   validates :expires_at, presence: true
+  # Validador próprio: desliga o limite genérico de 255 do ApplicationRecord (a coluna é 512).
+  validates :page_url, length: { maximum: PAGE_URL_MAX_LENGTH }
   validate :params_must_be_hash
 
   scope :active, -> { where(conversation_id: nil).where('expires_at > ?', Time.current) }
+
+  # Chave estável da campanha de um clique de página (#1011): o id da campanha da Meta
+  # (utm_id só com dígitos) quando vem; outro utm_id vira `i:` + resumo; sem utm_id, um
+  # resumo do nome (utm_campaign); `none` sem campanha.
+  def self.campaign_key_for(params)
+    tracking = params.to_h.stringify_keys
+    return campaign_id_key(tracking['utm_id']) if tracking['utm_id'].present?
+    return NO_CAMPAIGN_KEY if tracking['utm_campaign'].blank?
+
+    "c:#{campaign_digest(tracking['utm_campaign'])}"
+  end
+
+  def self.campaign_id_key(utm_id)
+    raw = utm_id.to_s
+    return raw if raw.size <= MAX_RAW_CAMPAIGN_ID_LENGTH && raw.each_char.all? { |char| DIGITS.include?(char) }
+
+    "i:#{campaign_digest(raw)}"
+  end
+
+  def self.campaign_digest(value)
+    Digest::SHA1.hexdigest(value)[0, CAMPAIGN_DIGEST_LENGTH]
+  end
+  private_class_method :campaign_id_key, :campaign_digest
 
   private
 

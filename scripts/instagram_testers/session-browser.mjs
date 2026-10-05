@@ -2,9 +2,11 @@ import { open, unlink } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { configuration, proxyConfiguration } from './session-observer.mjs';
+import { publishBrowserMarker } from './runtime/browser-request-marker.mjs';
 import {
   privateProfile,
   browserEnvironment,
+  chromiumSandbox,
   deadlineScope,
   cancellable,
 } from './session-manager.mjs';
@@ -19,6 +21,7 @@ export async function run(
     files = { privateProfile, open, unlink },
     loadRuntime = path => import(pathToFileURL(path)),
     stdout = process.stdout,
+    marker = publishBrowserMarker,
   } = {}
 ) {
   const initialize = args.length === 1 && args[0] === '--initialize';
@@ -37,6 +40,7 @@ export async function run(
   let lock;
   let lockPath;
   let context;
+  let releaseMarker;
   try {
     const profile = await setup.wait(
       files.privateProfile(env.INSTAGRAM_TESTER_BROWSER_PROFILE)
@@ -53,6 +57,7 @@ export async function run(
         .launchPersistentContext(profile, {
           channel: 'chrome',
           headless: false,
+          chromiumSandbox: chromiumSandbox(env),
           timeout: setup.remaining(),
           env: browserEnvironment(env),
           proxy: { server: `http://${config.host}:${Number(config.port)}` },
@@ -66,6 +71,15 @@ export async function run(
           }
           return value;
         })
+    );
+    releaseMarker = await setup.wait(
+      marker(env).then(release => {
+        if (setup.signal.aborted) {
+          release().catch(() => {});
+          throw new Error('browser_stopped');
+        }
+        return release;
+      })
     );
     const closed = new Promise(done => {
       context.once('close', done);
@@ -89,6 +103,7 @@ export async function run(
     setup.close();
     const cleanup = deadlineScope(undefined, clock, 25000);
     try {
+      if (releaseMarker) await cleanup.wait(releaseMarker()).catch(() => {});
       if (context) await cleanup.wait(context.close()).catch(() => {});
       if (lock) await cleanup.wait(lock.close()).catch(() => {});
       if (lock) await cleanup.wait(files.unlink(lockPath)).catch(() => {});

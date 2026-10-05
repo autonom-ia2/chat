@@ -4,6 +4,14 @@
 # font cors issue with CDN
 # Ref: https://stackoverflow.com/questions/56960709/rails-font-cors-policy
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
+  # Aviso de clique das páginas (#1011). O Rack::Cors responde todo preflight antes do
+  # Rails, então a origem é conferida aqui contra as origens autorizadas do link; o POST
+  # em si é conferido de novo por Public::TrackedLinkSignalsController (403 fora da lista).
+  allow do
+    origins { |source, env| Ctwa::TrackedLink.signal_origin_allowed?(env['PATH_INFO'], source) }
+    resource '/l/*/clicks', headers: ['Content-Type'], methods: [:post, :options], max_age: 600
+  end
+
   allow do
     origins '*'
     resource '/packs/*', headers: :any, methods: [:get, :options]

@@ -4,6 +4,9 @@
 # Flow: reload card -> claim a ledger row atomically by event_id (the unique index is the
 # lock) -> require ctwa_clid + credentials (skip + record when absent) -> resolve the
 # canonical Meta event_name (nil => nothing to send) -> POST -> record the outcome.
+# Without ctwa_clid, a card that came from a website button (#1011) goes to the funnel's
+# Pixel with the browser signals the page captured (see #deliver_website); the CTWA path
+# itself is unchanged.
 #
 # Idempotency: event_id is anchored on the activity id, so Sidekiq retries and duplicate
 # activities reuse the same row. Because Meta does NOT dedup CAPI-BM server-side, the
@@ -18,6 +21,8 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   queue_as :low
 
   class DispatchError < StandardError; end
+
+  WEBSITE_EVENT_MAX_AGE = 7.days
 
   def perform(account_id, card_id, activity_id, event_type, source: 'live')
     card = Crm::Card.find_by(id: card_id, account_id: account_id)
@@ -60,7 +65,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
 
   def deliver(row, card, event_id, event_type, activity)
     ctwa_clid = Crm::MetaCapi::CtwaClidResolver.resolve(card)
-    return skip(row, 'missing_ctwa_clid') if ctwa_clid.blank?
+    return deliver_website(row, card, event_id, event_type, activity) if ctwa_clid.blank?
 
     credentials = resolve_credentials(card)
     return skip(row, 'missing_credentials') if credentials[:access_token].blank? || credentials[:dataset_id].blank?
@@ -68,7 +73,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     event_name = Crm::MetaCapi::PayloadBuilder.canonical_event_name(event_type: event_type, stage_type: row.funnel_stage_type)
     return skip(row, 'no_meta_event') if event_name.blank?
 
-    row.update!(ctwa_clid: ctwa_clid, dataset_id: credentials[:dataset_id])
+    row.update!(ctwa_clid: ctwa_clid, dataset_id: credentials[:dataset_id], attribution_mode: 'ctwa')
     payload = Crm::MetaCapi::PayloadBuilder.build(
       card: card, event_name: event_name, event_type: event_type, event_id: event_id,
       attribution: { ctwa_clid: ctwa_clid, waba_id: credentials[:waba_id] }
@@ -76,6 +81,56 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     apply_transition_time!(payload, event_type, activity)
     response = Meta::ConversionsApiClient.new(access_token: credentials[:access_token], dataset_id: credentials[:dataset_id]).post_events([payload])
     record_result(row, response)
+  end
+
+  # Website mode (#1011, docs/crm/ponte-lp-atribuicao.md section 6): no ctwa_clid, so we
+  # look for the browser signals the landing page sent with the click. A card that came
+  # from a website button but has no signals (no marketing consent, or an inferred click)
+  # skips with 'missing_signals' so the reason is visible (CA-3.4); any other card keeps
+  # today's 'missing_ctwa_clid' skip. The event goes to the funnel's Pixel with the
+  # WhatsApp connection token (the same credential, no new secret).
+  def deliver_website(row, card, event_id, event_type, activity)
+    signals = Crm::MetaCapi::WebsiteSignalResolver.resolve(card)
+    return skip_without_signals(row, card) if signals.empty?
+
+    row.assign_attributes(attribution_mode: 'website', ctwa_clid: nil, dataset_id: website_pixel_id(card))
+    return skip(row, 'missing_pixel') if row.dataset_id.blank?
+
+    access_token = resolve_credentials(card)[:access_token]
+    return skip(row, 'missing_credentials') if access_token.blank?
+
+    event_name = Crm::MetaCapi::WebsitePayloadBuilder.canonical_event_name(event_type: event_type, stage_type: row.funnel_stage_type)
+    return skip(row, 'no_meta_event') if event_name.blank?
+
+    payload = Crm::MetaCapi::WebsitePayloadBuilder.build(card: card, event_name: event_name, event_type: event_type,
+                                                         event_id: event_id, signals: signals)
+    apply_transition_time!(payload, event_type, activity)
+    return skip(row, 'event_too_old') if event_too_old?(payload)
+
+    row.save!
+    response = Meta::ConversionsApiClient.new(access_token: access_token, dataset_id: row.dataset_id).post_events([payload])
+    record_result(row, response)
+  end
+
+  # A card from a website button without signals says so ('missing_signals', CA-3.4);
+  # any other card keeps today's 'missing_ctwa_clid'.
+  def skip_without_signals(row, card)
+    conversation_ids = Crm::MetaCapi::WebsiteSignalResolver.conversation_ids_for(card)
+    website = conversation_ids.any? &&
+              Ctwa::TrackedLinkClick.joins(:tracked_link)
+                                    .exists?(account_id: card.account_id, conversation_id: conversation_ids, ctwa_tracked_links: { usage: 'website' })
+    skip(row, website ? 'missing_signals' : 'missing_ctwa_clid')
+  end
+
+  # Pixel id per funnel, digits only (sanitized on write by the pipelines controller).
+  def website_pixel_id(card)
+    card.pipeline&.metadata&.dig('meta_sync', 'pixel_id').presence
+  end
+
+  # Meta refuses website events older than 7 days, counted from the SEND, not the click.
+  # Retrying would never help, so this is a skip, not an error.
+  def event_too_old?(payload)
+    payload['event_time'].to_i < WEBSITE_EVENT_MAX_AGE.ago.to_i
   end
 
   # 'moved' must report the TRANSITION instant, not the card's state when the job

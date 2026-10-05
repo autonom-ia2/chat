@@ -13,7 +13,6 @@ require 'digest/sha1'
 # Provider payloads differ (WhatsApp Cloud sends string keys, Twilio symbol keys and a
 # `media_content_type` instead of `media_type`), so callers hand us the raw referral hash
 # and this builder normalizes it into one shape.
-# rubocop:disable Metrics/ModuleLength
 module Ctwa::CampaignBuilder
   module_function
 
@@ -25,7 +24,7 @@ module Ctwa::CampaignBuilder
   # Slim per-touch projection: the full campaign shape minus `body` (origin keeps it).
   TOUCH_KEYS = %w[
     source source_id source_type source_url headline media_type ctwa_clid gclid fbclid ttclid utm_source utm_medium utm_campaign
-    utm_term utm_content inferred
+    utm_term utm_content utm_id inferred
   ].freeze
 
   # Builds the unified campaign attribution hash, or nil when the referral carries no
@@ -140,6 +139,7 @@ module Ctwa::CampaignBuilder
       'utm_campaign' => ref[:utm_campaign],
       'utm_term' => ref[:utm_term],
       'utm_content' => ref[:utm_content],
+      'utm_id' => ref[:utm_id],
       'inferred' => ref[:inferred]
     }
   end
@@ -183,10 +183,24 @@ module Ctwa::CampaignBuilder
     return CTWA_SOURCE if ref[:ctwa_clid].present? || ref[:source_type].to_s == 'ad'
     return 'google_ads' if ref[:gclid].present?
     return 'tiktok_ads' if ref[:ttclid].present?
-    return 'meta_paid' if ref[:fbclid].present?
+    return 'meta_paid' if meta_paid?(ref)
     return 'tracked_link' if %w[tracked_link bridge].include?(ref[:source_type].to_s)
 
     ORGANIC_SOURCE
+  end
+
+  META_UTM_SOURCES = %w[meta facebook fb instagram ig].freeze
+  PAID_UTM_MEDIUMS = %w[paid cpc ppc paid_social].freeze
+
+  # Anúncio da Meta: fbclid, ou só as UTMs (#1011) — o iPhone pode remover o fbclid da
+  # URL, mas os parâmetros de URL do anúncio continuam lá.
+  def meta_paid?(ref)
+    ref[:fbclid].present? || meta_paid_utm?(ref)
+  end
+
+  def meta_paid_utm?(ref)
+    META_UTM_SOURCES.include?(ref[:utm_source].to_s.strip.downcase) &&
+      PAID_UTM_MEDIUMS.include?(ref[:utm_medium].to_s.strip.downcase)
   end
 
   def duplicate_touch?(touches, touch)
@@ -203,4 +217,3 @@ module Ctwa::CampaignBuilder
     touch['ctwa_clid'].presence || touch['source_id'].presence
   end
 end
-# rubocop:enable Metrics/ModuleLength

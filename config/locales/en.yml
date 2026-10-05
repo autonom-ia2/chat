@@ -1042,6 +1042,13 @@ en:
       unknown_time: 'Unknown time'
       reconnect_title: 'Managed session'
       reconnect: 'Reconnect session'
+      open_remote_browser: 'Open remote browser'
+      remote_browser_hint: 'Wait for Chrome to open. Complete the Meta login or verification, then close the Chrome window inside the remote browser to finish. Closing only this tab does not finish the process.'
+      remote_browser_continue: 'Continue to remote browser'
+      remote_browser_continue_hint: 'Continue within one minute. If access expires, return to the panel and open the remote browser again.'
+      operator_browser_unavailable: 'Remote browser access is unavailable. Check your reconnection request and try again.'
+      published_at: 'Session published at'
+      captured_at: 'Session captured at'
       reconnect_ready: 'The session requires operator attention and the manager is available to start reconnection.'
       reconnect_unavailable: 'Reconnection is available only when the session requires operator attention and the manager allows control.'
       fields:

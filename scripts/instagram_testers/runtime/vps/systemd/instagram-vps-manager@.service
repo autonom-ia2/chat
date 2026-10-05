@@ -1,0 +1,46 @@
+[Unit]
+Description=Instagram managed Chrome and operator waiter (%i)
+Requires=instagram-vps-display@%i.service instagram-vps-publisher@%i.service
+After=network-online.target instagram-vps-display@%i.service instagram-vps-publisher@%i.service
+Wants=network-online.target
+JoinsNamespaceOf=instagram-vps-display@%i.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=ig-%i
+Group=ig-%i
+SupplementaryGroups=igview-%i
+EnvironmentFile=/etc/instagram-meta/%i/manager.env
+WorkingDirectory=/opt/instagram-meta/current
+ExecStartPre=/usr/bin/python3 /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/env/check.py %i manager
+ExecStart=/bin/sh /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/install/manager.sh %i
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=35
+KillMode=control-group
+UMask=0077
+MemoryHigh=1536M
+MemoryMax=2G
+CPUQuota=150%
+TasksMax=256
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/instagram-%i/profile /run/instagram-%i
+InaccessiblePaths=/var/lib/instagram-gateway-hub2you /var/lib/instagram-gateway-autonomia
+InaccessiblePaths=/var/lib/instagram-publisher-hub2you /var/lib/instagram-publisher-autonomia
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# Chromium's user namespace sandbox must remain available; no RestrictNamespaces.
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

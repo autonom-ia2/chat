@@ -482,6 +482,10 @@ function deferred() {
 
 async function syntheticManager(t, options = {}) {
   const data = await fixture('valid');
+  if (options.vps) {
+    data.env.INSTAGRAM_TESTER_RUNTIME_MODE = 'vps';
+    data.env.INSTAGRAM_TESTER_CHROMIUM_SANDBOX = 'true';
+  }
   if (options.reconnectId)
     data.env.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID = options.reconnectId;
   const clock = new FakeClock();
@@ -1210,3 +1214,19 @@ for (const failure of ['overflow', 'error', 'abort', 'deadline', 'nonzero']) {
     assert.equal(clock.timers.size, 0);
   });
 }
+
+test('VPS cadence leaves room for its full cycle before the backend heartbeat expires', async t => {
+  const data = await syntheticManager(t, { vps: true });
+  await data.clock.advance(780000);
+  await data.clock.advance(780000);
+  const writes = data.entries.filter(
+    entry => entry.payload.operation === 'publish'
+  );
+  assert.deepEqual(
+    writes.map(entry => entry.at),
+    [0, 780000, 1560000]
+  );
+  assert.ok(780000 + 120000 < 960000);
+  data.signals.emit('SIGTERM');
+  assert.equal(await data.settled, null);
+});

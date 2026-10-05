@@ -1,0 +1,45 @@
+[Unit]
+Description=Instagram authenticated operator gateway (%i)
+Requires=instagram-vps-display@%i.service
+After=network-online.target instagram-vps-display@%i.service
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=iggw-%i
+Group=iggw-%i
+SupplementaryGroups=igview-%i
+EnvironmentFile=/etc/instagram-meta/%i/gateway.env
+WorkingDirectory=/opt/instagram-meta/current
+ExecStartPre=/usr/bin/python3 /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/env/check.py %i gateway
+ExecStart=/usr/bin/node /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/gateway.mjs
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=10
+KillMode=control-group
+UMask=0077
+MemoryMax=256M
+CPUQuota=50%
+TasksMax=64
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/instagram-gateway-%i/gateway
+InaccessiblePaths=/var/lib/instagram-%i/profile /var/lib/instagram-%i/.Xauthority
+InaccessiblePaths=/var/lib/instagram-publisher-hub2you /var/lib/instagram-publisher-autonomia
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET
+IPAddressDeny=any
+IPAddressAllow=localhost
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

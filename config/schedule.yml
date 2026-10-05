@@ -112,6 +112,13 @@ crm_ai_handoff_expiry_job:
   class: 'Crm::Ai::HandoffExpiryJob'
   queue: scheduled_jobs
 
+# executed hourly; wipes personal data (form, Meta signals) of website clicks that
+# expired unattributed or were attributed long ago (#1011, LGPD minimization).
+ctwa_tracked_link_clicks_retention_job:
+  cron: '35 * * * *'
+  class: 'Ctwa::TrackedLinkClicksRetentionJob'
+  queue: scheduled_jobs
+
 # executed hourly; prunes idempotency keys past their 24h TTL
 crm_idempotency_keys_cleanup_job:
   cron: '15 * * * *'

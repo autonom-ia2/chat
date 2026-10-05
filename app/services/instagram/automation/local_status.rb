@@ -17,7 +17,8 @@ class Instagram::Automation::LocalStatus
       proxy: { configured: proxy.configured?, valid: valid_proxy?(proxy) },
       coordination: { configured: Instagram::Testers::CoordinationRedis.configured? },
       meta_creation_disabled: ActiveModel::Type::Boolean.new.cast(InstallationConfig.find_by(name: 'DISABLE_META_INBOX_CREATION')&.value) == true,
-      meta_connectivity: 'unknown'
+      meta_connectivity: 'unknown',
+      operator_browser_configured: managed && Instagram::Automation::OperatorBrowserTicket.configured?
     }.merge(operator_status(managed))
   end
 

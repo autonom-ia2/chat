@@ -16,7 +16,8 @@ class Crm::Cards::PayloadBuilder
     inbox: :inbox_payload,
     pipeline: :pipeline_payload,
     stage: :stage_payload,
-    conversation: :conversation_payload
+    conversation: :conversation_payload,
+    lead_form: :lead_form_payload
   }.freeze
 
   # CTWA multi-touch: aggregates campaign_touches from ALL conversations linked to
@@ -46,6 +47,10 @@ class Crm::Cards::PayloadBuilder
         source_type: touch['source_type'],
         headline: touch['headline'],
         source_url: touch['source_url'],
+        utm_campaign: touch['utm_campaign'],
+        utm_term: touch['utm_term'],
+        utm_content: touch['utm_content'],
+        utm_id: touch['utm_id'],
         touched_at: touch['touched_at'],
         conversation_id: conversation.id
       }
@@ -136,6 +141,18 @@ class Crm::Cards::PayloadBuilder
       text: text,
       generated_at: ai_metadata['summary_generated_at']
     }
+  end
+
+  # Formulário da landing page que trouxe o cliente (#1011), gravado na conversa pelo
+  # Ctwa::TrackedLinkAttributor. É dado pessoal digitado pelo cliente: só aparece
+  # para quem vê a conversa principal (mesmo portão do resumo da IA).
+  def lead_form_payload
+    return unless primary_conversation_visible?
+
+    lead_form = primary_conversation.additional_attributes.to_h['lead_form']
+    return unless lead_form.is_a?(Hash) && lead_form['fields'].is_a?(Array)
+
+    lead_form.slice('link_code', 'fields', 'captured_at')
   end
 
   # Provenance of value_cents so the UI can badge "filled by AI" and the Win

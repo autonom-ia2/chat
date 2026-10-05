@@ -42,6 +42,16 @@ RSpec.describe 'CRM meta_conversions API', type: :request do
                                        'status' => 'accepted', 'event_id' => latest.event_id)
     end
 
+    it 'exposes how the event was attributed (website mode, #1011)' do
+      ledger(event_id: 'crm-a-won-3', event_type: 'won', status: :skipped, error_message: 'missing_pixel',
+             attribution_mode: 'website')
+
+      get "/api/v1/accounts/#{account.id}/crm/meta_conversions",
+          params: { card_ids: [card.id] }, headers: auth_headers(user)
+
+      expect(response.parsed_body['payload'].sole).to include('attribution_mode' => 'website', 'error_message' => 'missing_pixel')
+    end
+
     it 'returns an empty payload when no card_ids are given' do
       get "/api/v1/accounts/#{account.id}/crm/meta_conversions", headers: auth_headers(user)
 

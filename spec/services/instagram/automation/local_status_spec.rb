@@ -22,6 +22,9 @@ RSpec.describe Instagram::Automation::LocalStatus do
       'INSTAGRAM_TESTER_PROXY_PORT' => '8080', 'INSTAGRAM_TESTER_PROXY_AUTH_MODE' => 'ip',
       'INSTAGRAM_TESTER_PROXY_IDENTITY' => '192.0.2.10:8080',
       'INSTAGRAM_TESTER_PROXY_USERNAME' => '', 'INSTAGRAM_TESTER_PROXY_PASSWORD' => '',
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+      'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you', 'FRONTEND_URL' => 'https://hub.invalid',
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => 'a' * 64,
       'INSTAGRAM_TESTER_COORDINATION_REDIS_URL' => 'rediss://:synthetic-password@redis.invalid:6379/0',
       'INSTAGRAM_TESTER_COORDINATION_EPOCH' => 'synthetic-status-epoch', 'INSTAGRAM_TESTER_COORDINATION_REDIS_CA_FILE' => ''
     )
@@ -44,9 +47,20 @@ RSpec.describe Instagram::Automation::LocalStatus do
     expect(status.except(:checked_at)).to eq(
       global_gate: true, config_complete: true, managed_session: true,
       session: { state: 'missing', present: false, ttl: nil }, proxy: { configured: true, valid: true },
-      coordination: { configured: true }, meta_creation_disabled: true,
+      coordination: { configured: true }, meta_creation_disabled: true, operator_browser_configured: true,
       manager_connectivity: 'unknown', meta_connectivity: 'unknown', manager: nil, control: nil, operator_required: false, control_available: false
     )
+  end
+
+  it 'reports browser configuration without exposing its URL or signing key' do
+    expect(status[:operator_browser_configured]).to be(true)
+    expect(status.to_json).not_to include('gateway.invalid', 'a' * 64)
+    with_modified_env('INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'http://gateway.invalid/hub2you/') do
+      expect(described_class.new.call[:operator_browser_configured]).to be(false)
+    end
+    with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'env') do
+      expect(described_class.new.call[:operator_browser_configured]).to be(false)
+    end
   end
 
   it 'checks payload existence and TTL without reading or returning its contents or the pointer version' do
