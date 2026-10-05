@@ -77,7 +77,19 @@ module AutomationRuleSchema::Acoes
   def decisor
     itens = [id_da_conta('Autonomia::Decisor', 'O Decisor da conta.', tipos: %w[integer string]), texto('A resposta dele que deixa seguir.')]
     parametro = { 'type' => 'array', 'items' => itens, 'minItems' => 2, 'maxItems' => 2, 'description' => '[decisor_id, chave_que_segue].' }
-    { Autonomia::Decisores::PASSO => [parametro, 'Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada.'] }
+    { Autonomia::Decisores::PASSO => [parametro, descricao_do_decisor] }
+  end
+
+  # O Decisor não só decide: ele lê a mensagem (o corpo do e-mail também) e preenche o que estiver vazio
+  # nos destinos dos `campos` dele. Sem isto, o Guia via só "pergunta" e mandava pedir integração para
+  # extrair dados de e-mail de formulário (conta 16, 05/10/2026). Lido na hora, não ao carregar o
+  # módulo: o schema não pode puxar models no carregamento (#963).
+  def descricao_do_decisor
+    destinos = Autonomia::Decisor::DESTINOS.join(', ')
+    'Pergunta ao Decisor; as ações seguintes só rodam se ele der a resposta combinada. O Decisor também lê a ' \
+      "mensagem (o corpo do e-mail também) e preenche o que estiver vazio em #{destinos} e em " \
+      "#{Autonomia::Decisor::ATRIBUTO_DE_CONTATO}<chave> de atributo de contato. Isso se configura nos campos " \
+      'do próprio Decisor (POST autonomia/decisores); o campo de card grava quando a regra cria o card logo depois.'
   end
 
   def etiqueta

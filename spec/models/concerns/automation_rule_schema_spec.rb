@@ -167,4 +167,15 @@ RSpec.describe AutomationRuleSchema do
 
     expect(described_class::EVENTOS.keys).to match_array(escutados)
   end
+
+  # Conta 16 (05/10/2026): o Guia leu "pergunta ao Decisor" e mandou pedir integração para tirar nome,
+  # telefone e empresa de um e-mail de formulário. O Decisor faz isso pelos campos; a descrição diz.
+  it 'o passo do Decisor diz que ele lê a mensagem e preenche cada destino aceito' do
+    ramo = described_class.actions(nil)['items']['allOf'].find do |item|
+      item.dig('if', 'properties', 'action_name', 'const') == Autonomia::Decisores::PASSO
+    end
+
+    expect(ramo['description']).to include('corpo do e-mail', 'POST autonomia/decisores')
+    expect(ramo['description']).to include(*Autonomia::Decisor::DESTINOS)
+  end
 end

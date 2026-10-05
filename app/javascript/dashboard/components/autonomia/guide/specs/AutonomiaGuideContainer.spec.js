@@ -1408,6 +1408,30 @@ describe('AutonomiaGuideContainer — embutido', () => {
     expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
   });
 
+  // #982 — prints e arquivos juntados na lista de Automações sobem antes e vão
+  // junto com o pedido inicial.
+  it('anexos iniciais sobem antes e saem junto com o pedido', async () => {
+    pedidoAberto();
+    AutonomiaGuideAPI.enviarArquivo.mockResolvedValue({
+      data: { signed_id: 'print-1', nome: 'print.png' },
+    });
+    const arquivo = new File(['x'], 'print.png', { type: 'image/png' });
+    wrapper = montarEmbutido({
+      pedidoInicial: 'Quero isto do print',
+      anexosIniciais: [arquivo],
+    });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.enviarArquivo).toHaveBeenCalledWith(arquivo);
+    expect(AutonomiaGuideAPI.chat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Quero isto do print',
+        arquivos: ['print-1'],
+      })
+    );
+    expect(wrapper.emitted('pedidoInicialEnviado')).toHaveLength(1);
+  });
+
   // #982 — na tela de Automações: balão azul de quem pede, respostas de um
   // toque depois da fala do Guia e nada de "Ir para a tela".
   it('respostas de um toque: com pergunta vão ao Guia, sem pergunta a tela decide', async () => {

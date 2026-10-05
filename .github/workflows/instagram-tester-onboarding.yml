@@ -1,10 +1,69 @@
 name: Instagram tester onboarding
 
+# Roda só quando muda o que estes testes exercitam (#990): sem filtro, os 4 jobs (~8-10 min) rodavam em todo PR e em
+# todo push na main, disputando os 20 jobs simultâneos do plano com a fila de merge e com o deploy. A rodada diária
+# na main pega a regressão rara vinda de um componente compartilhado fora desta lista.
 on:
   pull_request:
+    paths:
+      - 'app/**/instagram/**'
+      - 'app/**/*instagram*'
+      - 'app/**/*Instagram*'
+      - 'spec/**/instagram/**'
+      - 'spec/**/*instagram*'
+      - 'scripts/instagram_testers/**'
+      - 'tests/instagram_testers/**'
+      - 'tests/qa/instagram-testers/**'
+      - 'tests/playwright/**'
+      - 'app/javascript/dashboard/routes/dashboard/settings/inbox/**'
+      - 'app/javascript/dashboard/api/channel/**'
+      - 'app/javascript/dashboard/components/ui/Wizard.vue'
+      - 'app/javascript/dashboard/components/SnackbarContainer.vue'
+      - 'app/javascript/dashboard/composables/useAbortableRequest.js'
+      - 'app/javascript/dashboard/composables/spec/useAbortableRequest.spec.js'
+      - 'app/javascript/dashboard/i18n/locale/*/inboxMgmt.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.nvmrc'
+      - 'vite.config.*'
+      - 'config/vite.json'
+      - 'tailwind.config.js'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.rubocop.yml'
+      - '.github/workflows/instagram-tester-onboarding.yml'
   push:
     branches:
       - main
+    paths:
+      - 'app/**/instagram/**'
+      - 'app/**/*instagram*'
+      - 'app/**/*Instagram*'
+      - 'spec/**/instagram/**'
+      - 'spec/**/*instagram*'
+      - 'scripts/instagram_testers/**'
+      - 'tests/instagram_testers/**'
+      - 'tests/qa/instagram-testers/**'
+      - 'tests/playwright/**'
+      - 'app/javascript/dashboard/routes/dashboard/settings/inbox/**'
+      - 'app/javascript/dashboard/api/channel/**'
+      - 'app/javascript/dashboard/components/ui/Wizard.vue'
+      - 'app/javascript/dashboard/components/SnackbarContainer.vue'
+      - 'app/javascript/dashboard/composables/useAbortableRequest.js'
+      - 'app/javascript/dashboard/composables/spec/useAbortableRequest.spec.js'
+      - 'app/javascript/dashboard/i18n/locale/*/inboxMgmt.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.nvmrc'
+      - 'vite.config.*'
+      - 'config/vite.json'
+      - 'tailwind.config.js'
+      - 'Gemfile'
+      - 'Gemfile.lock'
+      - '.rubocop.yml'
+      - '.github/workflows/instagram-tester-onboarding.yml'
+  schedule:
+    - cron: '17 6 * * *' # 03:17 em Brasília, sem disputa por máquina
   workflow_dispatch:
 
 permissions:

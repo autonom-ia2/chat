@@ -43,7 +43,7 @@ RSpec.describe 'Fuso da conta', type: :request do
 
   it 'o Guia recebe o fuso da conta junto com a tela' do
     account.update!(custom_attributes: { 'timezone' => 'America/Cuiaba' })
-    allow(Autonomia::Guide::Seed).to receive_messages(eligible?: true, ready_agent_for: instance_double(Autonomia::Agents::Agent))
+    allow(Autonomia::Guide::Seed).to receive_messages(eligible?: true, ready_agent_for: instance_double(Autonomia::Agents::Agent, id: 0))
     allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: []))
     query = nil
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
