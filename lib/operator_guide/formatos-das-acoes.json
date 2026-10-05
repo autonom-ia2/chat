@@ -3798,6 +3798,35 @@
     ],
     "sem_corpo": false
   },
+  "PATCH campaign_imports/:id/columns": {
+    "campos": {
+      "company": {},
+      "email": {},
+      "name": {},
+      "phone": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#columns",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:91",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:80"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH campaign_imports/:id/companies": {
+    "campos": {
+      "create_companies": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#companies",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:37",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:38",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:80"
+    ],
+    "sem_corpo": false
+  },
   "PATCH campaigns/:id": {
     "campos": {
       "audience": {
@@ -3849,7 +3878,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],
@@ -11011,9 +11040,13 @@
       "campaign_name": {
         "tipo": "string"
       },
+      "create_companies": {},
       "import_file": {
         "tipo": "arquivo",
         "tipo_pela_leitura": "uso"
+      },
+      "name": {
+        "tipo": "string"
       }
     },
     "completo": true,
@@ -11021,12 +11054,9 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:18",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:143",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:159",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:23",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:136",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:135",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:134",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:143",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:19"
     ],
@@ -11049,6 +11079,15 @@
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:72",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:120"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_imports/:id/variable_coverage": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#variable_coverage",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:64",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:80"
     ],
     "sem_corpo": true
   },
@@ -11103,7 +11142,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:11",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:8",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31"
     ],
     "sem_corpo": false
@@ -19837,7 +19876,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],

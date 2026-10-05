@@ -346,6 +346,12 @@
       "file"
     ]
   },
+  "campaign_imports/:id/variable_suggestions": {
+    "controller": "api/v1/accounts/campaign_import_audiences#variable_suggestions",
+    "parametros": [
+      "variables"
+    ]
+  },
   "campaigns": {
     "controller": "api/v1/accounts/campaigns#index",
     "parametros": []
