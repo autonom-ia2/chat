@@ -11,7 +11,8 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
   before_action :check_authorization
 
   def create
-    campaign_import = Current.account.campaign_imports.find(params.require(:campaign_import_id))
+    # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
+    campaign_import = Current.account.campaign_imports.campaign_flows.find(params.require(:campaign_import_id))
     render json: create_for(params[:channel].to_s, campaign_import)
   rescue ::CampaignJourney::WhatsappCampaignCreator::Error, ::CampaignJourney::CreatorError => e
     render json: { error: e.message, code: e.code, details: e.details }.compact, status: :unprocessable_entity

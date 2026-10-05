@@ -22,6 +22,7 @@ import companies from './companies.json';
 import components from './components.json';
 import contact from './contact.json';
 import contactFilters from './contactFilters.json';
+import contactImportJourney from './contactImportJourney.json';
 import contentTemplates from './contentTemplates.json';
 import conversation from './conversation.json';
 import crm from './crm.json';
@@ -83,6 +84,7 @@ export default {
   ...components,
   ...contact,
   ...contactFilters,
+  ...contactImportJourney,
   ...contentTemplates,
   ...conversation,
   ...crm,

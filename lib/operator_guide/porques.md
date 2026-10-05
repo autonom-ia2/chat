@@ -188,6 +188,15 @@
 - passos: 1. Abra Contatos; 2. Clique em Importar contatos; 3. Baixe o CSV de exemplo se precisar; 4. Escolha o arquivo CSV; 5. Confirme a importacao e aguarde notificacao por email.
 - gotchas: este e o import nativo de contatos por CSV; nao confundir com Importar base de campanha, que e recurso custom controlado por `CAMPAIGN_IMPORT_ENABLED`.
 
+### importar_contatos_com_colunas_e_empresas
+- titulo: Importar contatos com colunas, atributos e empresas
+- rota: contacts_import_journey
+- intent: Como importo uma planilha de contatos com empresa?; As colunas extras da planilha viram atributos do contato?; Por que a importação pediu para escolher as colunas?; Como importo contatos de um Excel?
+- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importar contatos (com a jornada de campanhas ligada)
+- pre_requisitos: administrador ou função com gestão de contatos; planilha CSV ou Excel (.xlsx) até 10 MB com celular ou e-mail em cada linha
+- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importar contatos; 3. Escolha a planilha; 4. Confira as Colunas encontradas e use Trocar se alguma estiver errada (ou Não tem); 5. Veja quais Outras colunas viram atributos do contato e quais são atributos novos; 6. Confira contatos prontos, linhas com problema e o bloco Empresas (Criar e ligar); 7. Clique em Importar e veja o resumo.
+- gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
+
 ### convidar_e_gerenciar_agentes
 - titulo: Convidar e gerenciar agentes
 - rota: agent_list

@@ -134,13 +134,13 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   end
 
   def fetch_campaign_import
-    @campaign_import = Current.account.campaign_imports
+    @campaign_import = Current.account.campaign_imports.campaign_flows
                                       .includes(:user, :campaign_import_labels)
                                       .find(params[:id])
   end
 
   def filtered_campaign_imports
-    scope = Current.account.campaign_imports
+    scope = Current.account.campaign_imports.campaign_flows
     scope = scope.where(status: SAVED_STATUSES) if ActiveModel::Type::Boolean.new.cast(params[:saved])
     query = params[:q].to_s.strip.first(100)
     return scope if query.blank?

@@ -4,7 +4,14 @@ class CampaignImports::ValidateJob < ApplicationJob
   def perform(campaign_import)
     return unless CampaignImports::Config.enabled?
 
-    validator = campaign_import.audience? ? CampaignImports::AudienceValidator : CampaignImports::Validator
-    validator.new(campaign_import).perform
+    validator_for(campaign_import).new(campaign_import).perform
+  end
+
+  private
+
+  def validator_for(campaign_import)
+    return ContactImports::Validator if campaign_import.contact_import?
+
+    campaign_import.audience? ? CampaignImports::AudienceValidator : CampaignImports::Validator
   end
 end

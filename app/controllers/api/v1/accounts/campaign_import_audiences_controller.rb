@@ -1,8 +1,6 @@
 # Públicos (#992): the column choice and the message-variable helpers of an audience import.
 # Contract documented in docs/campaigns/publicos/api-992.md.
 class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::BaseController
-  COLUMN_CHOICE_STATUSES = %w[needs_column_choice ready_to_confirm validation_failed].freeze
-  COMPANIES_CHOICE_STATUSES = %w[uploaded validating needs_column_choice ready_to_confirm validation_failed].freeze
   BOOLEAN_VALUES = %w[true false].freeze
   CHANNELS = %w[email whatsapp sms].freeze
   PROBLEM_ROWS_PER_PAGE = 50
@@ -18,18 +16,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     mapping = column_mapping
     return render_unprocessable('campaign_import.invalid_column_choice') unless mapping
 
-    error_code = nil
-    @campaign_import.with_lock do
-      @campaign_import.reload
-      unless COLUMN_CHOICE_STATUSES.include?(@campaign_import.status)
-        error_code = 'campaign_import.column_choice_not_available'
-        next
-      end
-
-      @campaign_import.update!(
-        status: :validating, schema_resolution: @campaign_import.schema_resolution.to_h.merge('manual_mapping' => mapping)
-      )
-    end
+    error_code = CampaignImports::DraftChanges.new(@campaign_import).choose_columns(mapping)
     return render_unprocessable(error_code) if error_code
 
     CampaignImports::ValidateJob.perform_later(@campaign_import)
@@ -42,16 +29,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     value = params.permit(:create_companies)[:create_companies].to_s
     return render_unprocessable('campaign_import.invalid_companies_choice') unless BOOLEAN_VALUES.include?(value)
 
-    error_code = nil
-    @campaign_import.with_lock do
-      @campaign_import.reload
-      unless COMPANIES_CHOICE_STATUSES.include?(@campaign_import.status)
-        error_code = 'campaign_import.companies_choice_not_available'
-        next
-      end
-
-      @campaign_import.update!(options: @campaign_import.options.to_h.merge('create_companies' => value == 'true'))
-    end
+    error_code = CampaignImports::DraftChanges.new(@campaign_import).choose_companies(value == 'true')
     return render_unprocessable(error_code) if error_code
 
     render 'api/v1/accounts/campaign_imports/show'
@@ -140,7 +118,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   def fetch_campaign_import
-    @campaign_import = Current.account.campaign_imports.includes(:user, :campaign_import_labels).find(params[:id])
+    # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
+    @campaign_import = Current.account.campaign_imports.campaign_flows.includes(:user, :campaign_import_labels).find(params[:id])
     # Old imports (Base Campanha) also list their contacts in the side panel (F1).
     return if @campaign_import.audience? || action_name == 'contacts'
 

@@ -23,6 +23,7 @@ import ContactsHeader from 'dashboard/components-next/Contacts/ContactsHeader/Co
 import CreateNewContactDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateNewContactDialog.vue';
 import ContactExportDialog from 'dashboard/components-next/Contacts/ContactsForm/ContactExportDialog.vue';
 import ContactImportDialog from 'dashboard/components-next/Contacts/ContactsForm/ContactImportDialog.vue';
+import { openContactImport } from 'dashboard/routes/dashboard/contacts/import/contactImport.routes';
 import CampaignImportDialog from 'dashboard/components-next/Contacts/CampaignImport/CampaignImportDialog.vue';
 import CreateSegmentDialog from 'dashboard/components-next/Contacts/ContactsForm/CreateSegmentDialog.vue';
 import DeleteSegmentDialog from 'dashboard/components-next/Contacts/ContactsForm/DeleteSegmentDialog.vue';
@@ -83,7 +84,9 @@ const openCreateNewContactDialog = () => {
   createNewContactDialogRef.value?.dialogRef.open();
 };
 const openContactImportDialog = () =>
-  contactImportDialogRef.value?.dialogRef.open();
+  openContactImport(router, () =>
+    contactImportDialogRef.value?.dialogRef.open()
+  );
 const openCampaignImportDialog = () =>
   campaignImportDialogRef.value?.dialogRef.open();
 const openCampaignImportHistory = () =>

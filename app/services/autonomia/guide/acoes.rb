@@ -73,7 +73,7 @@ class Autonomia::Guide::Acoes
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',
     'POST data_imports/:id/start',
-    'POST campaign_imports/:id/confirm',
+    'POST campaign_imports/:id/confirm', 'POST contact_imports/:id/confirm',
     'POST bulk_actions',
     'POST captain/bulk_actions',
     'POST macros/:id/execute',

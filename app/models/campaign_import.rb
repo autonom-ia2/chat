@@ -62,6 +62,9 @@
 class CampaignImport < ApplicationRecord
   DELETABLE_BEFORE_IMPORT_STATUSES = %w[uploaded validation_failed ready_to_confirm failed cancelled expired needs_column_choice].freeze
   AUDIENCE_FLOW = 'audience'.freeze
+  # Importar contatos (#1006): read and saved like an audience, but it is not a list for
+  # campaigns: it never shows in Públicos, in the campaign base history or in a campaign.
+  CONTACTS_FLOW = 'contacts'.freeze
   # Públicos (#1005, F2/N4): an audience can be deleted after it was saved, but not while it is being worked on.
   AUDIENCE_DELETE_BLOCKED_STATUSES = %w[validating confirmed queued importing undoing_labels].freeze
 
@@ -105,12 +108,25 @@ class CampaignImport < ApplicationRecord
     failed: 3
   }, _prefix: true
 
+  scope :contact_imports, -> { where("options->>'flow' = ?", CONTACTS_FLOW) }
+  scope :campaign_flows, -> { where("COALESCE(options->>'flow', '') <> ?", CONTACTS_FLOW) }
+
   validates :account_id, :user_id, presence: true
   validates :mode, inclusion: { in: %w[single_label batches] }, allow_blank: true
 
   # Públicos (#992) imports carry a name and read phone, email, company and extra columns.
   def audience?
     options.to_h['flow'] == AUDIENCE_FLOW
+  end
+
+  def contact_import?
+    options.to_h['flow'] == CONTACTS_FLOW
+  end
+
+  # Públicos and Importar contatos read name, phone, email, company and extra columns through
+  # SpreadsheetReader and save contacts and companies without any label.
+  def spreadsheet_flow?
+    audience? || contact_import?
   end
 
   # #998 "Criar e ligar" switch of an audience: on unless explicitly turned off.
@@ -128,7 +144,11 @@ class CampaignImport < ApplicationRecord
 
   # Old campaign bases only before contacts exist; audiences also after saving (only the list goes).
   def deletable?
-    audience? ? AUDIENCE_DELETE_BLOCKED_STATUSES.exclude?(status) : deletable_before_import?
+    return AUDIENCE_DELETE_BLOCKED_STATUSES.exclude?(status) if audience?
+    # A contact import is only a draft until it is saved; after that the contacts are the result.
+    return DELETABLE_BEFORE_IMPORT_STATUSES.include?(status) if contact_import?
+
+    deletable_before_import?
   end
 
   def deletable_before_import?

@@ -20,7 +20,8 @@ module CampaignImports
       return unless transition_to_importing!
 
       with_suppressed_contact_events do
-        label_records = ActiveRecord::Base.transaction { ensure_labels! } unless campaign_import.audience?
+        label_records = ActiveRecord::Base.transaction { ensure_labels! } unless campaign_import.spreadsheet_flow?
+        contact_attributes&.prepare!
         normalized_rows.each_slice(BLOCK_SIZE) { |block| import_block(block, label_records) }
         finish_import!
       end
@@ -78,6 +79,7 @@ module CampaignImports
         was_existing = contact.present?
         contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number], email: row[:email])
         ContactBlankFields.new(account).fill!(contact, row)
+        contact_attributes&.merge!(contact, import_row.extra_values)
         import_row.assign_attributes(import_companies.link(contact, row)) if import_companies
         mark_row_imported!(import_row, row, contact, was_existing, label_records)
         contact
@@ -105,8 +107,11 @@ module CampaignImports
 
     def find_existing_contact(phone_number) = (@contact_matcher ||= ContactMatcher.new(account)).find(phone_number)
 
-    # Públicos only (#998): the old campaign base flow never touches companies.
-    def import_companies = @import_companies ||= (ImportCompanies.new(campaign_import) if campaign_import.audience?)
+    # Públicos and Importar contatos (#998, #1006): the old campaign base flow never touches companies.
+    def import_companies = @import_companies ||= (ImportCompanies.new(campaign_import) if campaign_import.spreadsheet_flow?)
+
+    # Importar contatos (#1006): extra columns become contact custom attributes.
+    def contact_attributes = @contact_attributes ||= (ContactImports::CustomAttributes.new(campaign_import) if campaign_import.contact_import?)
 
     def company_counters = import_companies&.counters || {}
 
@@ -129,26 +134,7 @@ module CampaignImports
       label
     end
 
-    def normalized_rows
-      @normalized_rows ||= begin
-        raise Error, 'normalized_csv_missing' unless campaign_import.normalized_csv.attached?
-
-        # The blob comes back as binary; the CSV was written as UTF-8 (accented names and companies).
-        csv_data = campaign_import.normalized_csv.download.force_encoding(Encoding::UTF_8)
-        CSV.parse(csv_data, headers: true).map do |row|
-          normalized = row['phone_number'].present? ? PhoneNormalizer.normalize!(row['phone_number']) : nil
-          {
-            row_number: row['row_number'].to_i,
-            name: row['name'].to_s.strip,
-            phone_number: normalized&.phone_number,
-            phone_hash: normalized&.hash,
-            email: row['email'].presence,
-            company_name: row['company_name'].presence,
-            batch_index: row['batch_index'].to_i
-          }
-        end
-      end
-    end
+    def normalized_rows = @normalized_rows ||= NormalizedRows.new(campaign_import).perform
 
     def mark_row_imported!(import_row, row, contact, was_existing, label_records)
       import_row.update!(
