@@ -2408,7 +2408,7 @@
       "ERRO": "Não consegui carregar suas automações. Confira a internet e tente de novo.",
       "TENTAR_DE_NOVO": "Tentar de novo",
       "VAZIO_TITULO": "Ou comece por uma pronta",
-      "VAZIO_TEXTO": "As mais usadas por corretoras. Toque numa delas e confira antes de ligar.",
+      "VAZIO_TEXTO": "As mais usadas no atendimento. Toque numa delas e confira antes de ligar.",
       "SELO_GUIA": "Montada pelo Guia",
       "LIGADA": "Ligada",
       "DESLIGADA": "Desligada",
@@ -2425,13 +2425,6 @@
     },
     "MODELOS": {
       "TITULO": "Modelos prontos",
-      "SINISTRO": {
-        "TITULO": "Separar avisos de sinistro",
-        "TEXTO": "Sinistro vai direto para quem cuida, já com etiqueta.",
-        "PEDIDO": "Quero uma automação: quando chegar uma mensagem falando de sinistro, colocar a etiqueta sinistro e passar a conversa para o time de sinistros.",
-        "QUANDO": "O cliente fala de sinistro",
-        "FAZ": "Passa para o time de sinistros"
-      },
       "BOAS_VINDAS": {
         "TITULO": "Avisar que já vamos responder",
         "TEXTO": "Quem chama pela primeira vez não fica sem resposta.",
@@ -2449,13 +2442,6 @@
       "USAR": "Usar esta",
       "ROTULO_QUANDO": "Quando",
       "ROTULO_FAZ": "Faz",
-      "COTACAO": {
-        "TITULO": "Marcar quem pede cotação",
-        "TEXTO": "Quem pede cotação ganha etiqueta e não se perde na fila.",
-        "QUANDO": "O cliente pede uma cotação",
-        "FAZ": "Coloca a etiqueta cotação",
-        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo cotação, colocar a etiqueta cotação na conversa."
-      },
       "DIVIDIR_LEADS": {
         "TITULO": "Dividir os clientes entre o time",
         "TEXTO": "Cada conversa nova já chega com alguém responsável.",
@@ -2469,6 +2455,20 @@
         "QUANDO": "Chega mensagem fora do expediente",
         "FAZ": "Avisa o horário de atendimento",
         "PEDIDO": "Quero que quem mandar mensagem fora do nosso horário de atendimento receba um aviso dizendo quando voltamos."
+      },
+      "RECLAMACAO": {
+        "TITULO": "Passar reclamações para quem resolve",
+        "TEXTO": "Reclamação vai direto para o time certo, já com etiqueta.",
+        "QUANDO": "O cliente faz uma reclamação",
+        "FAZ": "Etiqueta e passa para o time certo",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente com uma reclamação, colocar a etiqueta reclamação e passar a conversa para o time que resolve."
+      },
+      "ORCAMENTO": {
+        "TITULO": "Marcar quem pede orçamento",
+        "TEXTO": "Quem pede preço ou orçamento ganha etiqueta e não se perde na fila.",
+        "QUANDO": "O cliente pede preço ou orçamento",
+        "FAZ": "Coloca a etiqueta orçamento",
+        "PEDIDO": "Quero uma automação: quando chegar uma mensagem de cliente pedindo preço ou orçamento, colocar a etiqueta orçamento na conversa."
       }
     },
     "CONVERSA": {
@@ -2570,13 +2570,13 @@
     "HEROI": {
       "TITULO": "O que você quer que aconteça sozinho?",
       "TEXTO": "Escreva como se falasse com um colega. O Guia monta tudo, mostra o que vai acontecer e só liga quando você mandar.",
-      "EXEMPLO": "Ex.: quando alguém falar de sinistro, avisar o time de sinistros",
+      "EXEMPLO": "Ex.: quando um cliente pedir orçamento, avisar o time de vendas",
       "MONTAR": "Montar com o Guia",
       "IDEIAS_ROTULO": "Ideias:",
       "IDEIAS": {
-        "SINISTRO": "Avisar o time quando falarem de sinistro",
         "FORA_DO_HORARIO": "Responder quem chama fora do horário",
-        "COTACAO": "Marcar quem pede cotação"
+        "RECLAMACAO": "Avisar o time quando chegar uma reclamação",
+        "ORCAMENTO": "Marcar quem pede orçamento"
       },
       "FALAR": "Falar em vez de escrever"
     },
