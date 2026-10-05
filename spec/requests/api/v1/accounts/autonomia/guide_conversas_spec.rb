@@ -223,4 +223,42 @@ RSpec.describe 'Guia da Plataforma — conversas guardadas', type: :request do
       Redis::LockManager.new.unlock("autonomia:guide:acao:#{turno.id}")
     end
   end
+
+  # Tela de editar automação: o Guia retoma a conversa em que a automação foi montada ou mexida por
+  # último, em vez de abrir em branco com os modelos de automação nova (conta 16, 05/10/2026).
+  describe 'GET conversas/da_automacao/:automacao_id' do
+    def mexeu_na_automacao(conversa, automacao_id, quando:)
+      execucao = Autonomia::Guide::Execucao.create!(account: account, user: conversa.user, passos: [])
+      Autonomia::Guide::Mudanca.create!(execucao: execucao, operacao: 'create', record_type: 'AutomationRule',
+                                        record_id: automacao_id, tabela: 'automation_rules', antes: {}, depois: {},
+                                        ordem: 1, passo: 1)
+      turno = Autonomia::Guide::Turno.abrir(conversa: conversa, pedido_id: SecureRandom.uuid, pergunta: 'monta', tela: 'automacoes_nova')
+      turno.update!(execution_id: execucao.id, created_at: quando)
+    end
+
+    def da_automacao(user, id)
+      get "#{base}/conversas/da_automacao/#{id}", headers: user.create_new_auth_token, as: :json
+      response.parsed_body
+    end
+
+    it 'devolve a conversa que mexeu por último naquela automação, só da própria pessoa', :aggregate_failures do
+      antiga = conversa_de(admin, 'montar a automação')
+      recente = conversa_de(admin, 'mudar a automação')
+      outra_automacao = conversa_de(admin, 'outra')
+      de_outra_pessoa = conversa_de(agente, 'do agente')
+      mexeu_na_automacao(antiga, 8, quando: 2.hours.ago)
+      mexeu_na_automacao(recente, 8, quando: 1.hour.ago)
+      mexeu_na_automacao(outra_automacao, 9, quando: 1.minute.ago)
+      mexeu_na_automacao(de_outra_pessoa, 8, quando: 1.second.ago)
+
+      expect(da_automacao(admin, 8)['id']).to eq(recente.id)
+      expect(da_automacao(admin, 8)['turnos']).to be_present
+    end
+
+    it 'sem conversa que mexeu na automação, devolve vazio' do
+      conversa_de(admin)
+
+      expect(da_automacao(admin, 8)).to eq({})
+    end
+  end
 end

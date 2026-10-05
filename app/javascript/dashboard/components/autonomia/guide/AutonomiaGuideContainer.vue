@@ -71,6 +71,9 @@ const props = defineProps({
   // #982 — arquivos (prints, PDFs) que a pessoa juntou antes de chegar: sobem e
   // vão junto com o pedido inicial.
   anexosIniciais: { type: Array, default: () => [] },
+  // Tela de uma automação que já existe: a conversa em que ela foi montada ou
+  // mexida por último volta, em vez de começar em branco.
+  automacaoId: { type: Number, default: null },
 });
 // O que o Guia fez no turno (#855), para a tela que o embute reagir; e o aviso de
 // que o pedido inicial saiu, para a tela gastá-lo (#859).
@@ -974,6 +977,29 @@ watch(
     }
     if (desmontado) return;
     if (sendMessage(props.pedidoInicial)) emit('pedidoInicialEnviado');
+  },
+  { immediate: true }
+);
+
+// Tela de uma automação que já existe: retoma a conversa em que ela foi montada
+// ou mexida por último. Não interrompe pergunta em curso, e a conversa que já
+// está na tela (a mesma que acabou de criar a automação) fica como está.
+watch(
+  () => [isEnabled.value, props.automacaoId],
+  ([ligado, id]) => {
+    if (!props.embutido || !ligado || !id) return;
+    if (isSending.value || store.pendente()) return;
+    abrirConversa(
+      async () => {
+        const resposta = await AutonomiaGuideAPI.conversaDaAutomacao(id);
+        const mesma =
+          resposta.data?.id && resposta.data.id === store.conversaAtual();
+        return mesma ? { data: {} } : resposta;
+      },
+      () => {
+        falhouAoAbrir.value = true;
+      }
+    );
   },
   { immediate: true }
 );

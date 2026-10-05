@@ -105,6 +105,11 @@ class AutonomiaGuideAPI extends ApiClient {
     return axios.get(`${this.url}/conversas`, { params: { page } });
   }
 
+  // A conversa em que a automação foi montada ou mexida por último; `{}` se nenhuma.
+  conversaDaAutomacao(id) {
+    return axios.get(`${this.url}/conversas/da_automacao/${id}`);
+  }
+
   conversa(id) {
     return axios.get(`${this.url}/conversas/${id}`);
   }

@@ -24,6 +24,17 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
     render json: conversa ? conversa.para_tela : {}
   end
 
+  # A conversa em que a automação foi montada ou mexida por último, para a tela de
+  # editar retomar dali. Sai do registro do que o Guia fez (#855): a mudança aponta
+  # a automação, a execução e o turno. Sem nenhuma, `{}` e a tela começa limpa.
+  def da_automacao
+    conversa = conversas.joins(turnos: { execucao: :mudancas })
+                        .where(autonomia_guide_changes: { record_type: 'AutomationRule', record_id: params[:automacao_id] })
+                        .reorder('autonomia_guide_turns.created_at DESC, autonomia_guide_turns.id DESC')
+                        .first
+    render json: conversa ? conversa.para_tela : {}
+  end
+
   def show
     render json: @conversa.para_tela
   end

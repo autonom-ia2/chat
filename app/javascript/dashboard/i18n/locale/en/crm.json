@@ -2563,6 +2563,21 @@
       "DESLIGADA_AVISO": "It only starts working once you turn it on. You can turn it off anytime.",
       "SO_LEITURA": "You can view and test this automation. Turning it on and changing it is up to the admins.",
       "INTRO_GUIA": "Tell me what you want to automate, or start from a template.",
+      "INTRO_GUIA_EDITAR": "This automation is already set up. Tell me what you want to change.",
+      "EDITAR": {
+        "QUANDO": {
+          "TITULO": "Change when it runs",
+          "PEDIDO": "I want to change when this automation runs."
+        },
+        "FAZ": {
+          "TITULO": "Change what it does",
+          "PEDIDO": "I want to change what this automation does."
+        },
+        "EXPLICAR": {
+          "TITULO": "Explain what it does",
+          "PEDIDO": "Explain in simple words what this automation does today."
+        }
+      },
       "GUIA_NOME": "Guide",
       "GUIA_SUBTITULO": "Builds it with you. Nothing turns on until you say so.",
       "LIGADA_TITULO": "It is on!"
