@@ -104,7 +104,9 @@ const outrasAcoes = computed(() => props.descricao.entao.length - 1);
     <Button
       data-alterar
       :label="$t('AUTOMACOES.LISTA.ALTERAR')"
-      :aria-label="$t('AUTOMACOES.LISTA.ABRIR', { nome: automacao.name })"
+      :aria-label="
+        $t('AUTOMACOES.LISTA.ALTERAR_ROTULO', { nome: automacao.name })
+      "
       icon="i-lucide-pencil"
       slate
       faded
