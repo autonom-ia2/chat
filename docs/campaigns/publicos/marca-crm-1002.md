@@ -58,15 +58,27 @@ campanha). Não depende do flag da jornada.
 
 ## 4. Mensagem de campanha na conversa (P2)
 
-- **WhatsApp Oficial, campanha ligada a público:** depois que a Meta aceita o modelo,
-  `CampaignJourney::SentMessageRecorder` registra a mensagem na conversa do contato naquela caixa
-  (reaproveita a conversa como o fluxo do WhatsApp faria). Mensagem de saída com o texto que a
-  pessoa recebeu, `source_id` = id da Meta (o webhook de status atualiza entregue/lido) e
-  `additional_attributes.campaign_id` + `campaign_template_name`. Não é reenviada:
-  `Base::SendOnChannelService` ignora mensagem com `source_id`. Não grava marca (D14). Campanha
-  antiga por etiqueta segue o comportamento do Chatwoot.
+- **WhatsApp Oficial, campanha ligada a público** (`CampaignJourney::SentMessageRecorder`). O envio
+  **nunca cria conversa**: uma campanha para milhares de pessoas não pode disparar milhares de
+  `conversation_created` (automações, webhooks, n8n de clientes) nem encher a lista.
+  - **No envio:** se o contato já tem conversa não resolvida naquela caixa (mesma regra de
+    reaproveitamento do WhatsApp; com "uma conversa por contato", a última), a mensagem aceita pela
+    Meta entra nela. Se não tem, nada é gravado.
+  - **Na resposta:** `CampaignJourney::ReplyMarker` acha o destinatário respondido; se a conversa
+    da resposta (criada pelo fluxo normal) ainda não tem a mensagem, ela é inserida com
+    `created_at` = `campaign_recipients.sent_at` e o status do destinatário, **antes** da marca.
+    Por ser registro de mensagem passada, leva `content_attributes.history_import` — a trava do fork
+    que já pula todos os efeitos de mensagem nova (eventos, webhooks, `SendReplyJob`), a mesma do
+    histórico do WhatsApp. Consequência: com a conversa já aberta na tela, ela aparece ao recarregar.
+  - Nos dois casos: mensagem de saída com o texto que a pessoa recebeu, `source_id` = id da Meta (o
+    webhook de status atualiza entregue/lido; `Base::SendOnChannelService` não envia mensagem com
+    `source_id`), `additional_attributes.campaign_id` + `campaign_template_name`. Idempotente por
+    caixa + `source_id` (gravada no envio não duplica na resposta). Não grava marca (D14).
+  - Campanha antiga por etiqueta segue o comportamento do Chatwoot.
+  - `conversation.campaign_id` **não** é preenchido: preencher tiraria essas conversas da origem por
+    clique inferido de link rastreado (decisão aceita).
 - **WhatsApp API:** a mensagem já existia (`whatsapp_api_campaign_id`).
-- **E-mail:** o envio não cria mensagem na conversa; não há rótulo.
+- **E-mail:** o envio não cria mensagem na conversa; não há rótulo (decisão aceita).
 - A bolha mostra "Campanha: <nome> · modelo <modelo>" (`CampaignMessageLabel`).
 
 ## 5. Tela
