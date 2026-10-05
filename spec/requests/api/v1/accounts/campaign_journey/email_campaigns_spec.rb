@@ -63,6 +63,8 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
   describe 'creating the e-mail draft (N2, PRD §8.6)' do
     it 'links the audience and takes as recipients only the contacts whose row brought their current e-mail' do
       prepare_contacts
+      # The audience e-mail count follows the same rule (rows that brought an e-mail; Bia's has none).
+      expect(audience.reload.channels['email']).to eq('enabled' => true, 'count' => 4)
 
       create_email_campaign
 
@@ -139,6 +141,37 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('email_campaign.audience_linked')
       expect(campaign.email_campaign_imports.count).to eq(0)
+    end
+  end
+
+  # Fails closed: a draft whose audience e-mail channel was turned off cannot be sent or scheduled.
+  describe 'audience e-mail channel turned off after the draft' do
+    let(:campaign) do
+      prepare_contacts
+      create_email_campaign
+      make_ready(created_campaign)
+    end
+
+    it 'blocks send_now, schedule and the readiness list; a scheduled campaign keeps the channel on' do
+      expect(campaign.sendable?).to be(true)
+      audience.update!(channels: audience.channels.merge('email' => { 'enabled' => false, 'count' => 4 }))
+
+      expect(campaign.reload.sendable?).to be(false)
+      expect(EmailCampaigns::Presentation::SendReadiness.new(campaign).call).to include(can_send: false)
+      expect(EmailCampaigns::Presentation::SendReadiness.new(campaign).call[:checks]).to include(audience_channel: false)
+      post "/api/v1/accounts/#{account.id}/email_campaigns/campaigns/#{campaign.id}/send_now",
+           headers: { 'api_access_token' => user.access_token.token }, as: :json
+      expect(response.parsed_body['error']).to eq('email_campaign.not_sendable')
+
+      audience.update!(channels: audience.channels.merge('email' => { 'enabled' => true, 'count' => 4 }))
+      expect(campaign.reload.schedule!(scheduled_at: 1.day.from_now)).to be_truthy
+      with_modified_env(CAMPAIGN_IMPORT_ENABLED: 'true') do
+        patch "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}/channels",
+              params: { email: false }, headers: { 'api_access_token' => user.access_token.token }, as: :json
+      end
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to include('code' => 'audience_in_use',
+                                              'campaigns' => [{ 'title' => 'Novidades de outubro', 'display_id' => nil }])
     end
   end
 

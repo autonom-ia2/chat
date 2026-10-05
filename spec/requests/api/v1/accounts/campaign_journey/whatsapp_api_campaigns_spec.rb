@@ -93,6 +93,22 @@ RSpec.describe 'Campaign journey WhatsApp API campaigns (#999)', :aggregate_fail
     expect(outcome(campaign)).to eq([['Ana Souza', 'sent', nil], ['Bia Lima', 'sent', nil]])
   end
 
+  # Consent per row: a contact whose row had only an e-mail never gets WhatsApp, even with a phone on file.
+  it 'leaves out the contact whose row had no mobile, and skips everyone when the channel is turned off' do
+    account.contacts.create!(name: 'Caio Reis', email: 'caio@gama.com.br', phone_number: '+5531987654321')
+    content = "Nome,Celular,Email\nAna Souza,11987654321,\nCaio Reis,,caio@gama.com.br\n"
+    mixed = saved_audience(account: account, user: user, content: content, mapping: { 'name' => 0, 'phone' => 1, 'email' => 2 })
+
+    create_campaign(audience_id: mixed.id, message_body: 'Olá {{contact.first_name}}')
+    expect(response.parsed_body['recipients_count']).to eq(1)
+    campaign = WhatsappApiCampaign.find(response.parsed_body['id'])
+    mixed.update!(channels: mixed.channels.merge('whatsapp' => { 'enabled' => false, 'count' => 1 }))
+    run_campaign(campaign)
+
+    expect(outcome(campaign)).to eq([['Ana Souza', 'cancelled', CampaignJourney::AudienceContacts::CHANNEL_DISABLED_REASON]])
+    expect(Message.where(inbox: inbox).count).to eq(0)
+  end
+
   # J4: the API refuses a channel the audience does not have.
   it 'refuses an audience without WhatsApp, or with WhatsApp off, with channel_not_in_audience' do
     emails_only = saved_audience(account: account, user: user, content: "Nome,Email\nAna,ana@alfa.com.br\n", mapping: { 'name' => 0, 'email' => 1 })

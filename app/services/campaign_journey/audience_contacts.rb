@@ -60,10 +60,8 @@ module CampaignJourney::AudienceContacts
         rows = batch.to_a
         emails = account.contacts.where(id: rows.map(&:contact_id)).pluck(:id, :email).to_h
         rows.each do |row|
-          email = normalized_email(emails[row.contact_id])
-          next unless email && Digest::SHA256.hexdigest(email) == row.normalized_email_hash && seen.add?(email)
-
-          matches << EmailMatch.new(contact_id: row.contact_id, email: email, row: row)
+          email = row_email(row, emails[row.contact_id])
+          matches << EmailMatch.new(contact_id: row.contact_id, email: email, row: row) if email && seen.add?(email)
         end
       end
       matches
@@ -103,6 +101,12 @@ module CampaignJourney::AudienceContacts
 
     def email_rows(campaign_import)
       campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).where.not(normalized_email_hash: nil)
+    end
+
+    # The contact's normalized e-mail when it is the one the row brought, else nil.
+    def row_email(row, address)
+      email = normalized_email(address)
+      email if email && Digest::SHA256.hexdigest(email) == row.normalized_email_hash
     end
 
     def normalized_email(address)

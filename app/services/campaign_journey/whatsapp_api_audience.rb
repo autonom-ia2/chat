@@ -40,7 +40,9 @@ module CampaignJourney::WhatsappApiAudience
       link = CampaignAudienceLink.for_campaign(@campaign)
       return CampaignJourney::AudienceContacts::CHANNEL_DISABLED_REASON if link && !audience_whatsapp_on?(link)
 
-      CampaignJourney::WhatsappApiAudience::MISSING_COMPANY_REASON if company_required? && WhatsappApiCampaigns::TemplateRenderer.company_name(contact).nil?
+      return unless company_required? && WhatsappApiCampaigns::TemplateRenderer.company_name(contact).nil?
+
+      CampaignJourney::WhatsappApiAudience::MISSING_COMPANY_REASON
     end
 
     def audience_whatsapp_on?(link)
