@@ -124,23 +124,39 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     @current_page = params[:page] || 1
   end
 
+  # A `name` makes it a Públicos (#992) audience: one base label, columns read by SpreadsheetReader.
   def build_campaign_import
+    return build_audience_import if campaign_import_params[:name].present?
+
     Current.account.campaign_imports.create!(
       user: Current.user,
       status: :uploaded,
       mode: 'batches',
       campaign_name: campaign_import_params[:campaign_name],
       batch_count: normalized_batch_count,
-      source_filename: params[:import_file].original_filename,
-      source_content_type: params[:import_file].content_type,
-      source_byte_size: params[:import_file].size,
-      source_format: File.extname(params[:import_file].original_filename.to_s).delete('.').downcase,
-      options: campaign_import_options
+      options: campaign_import_options,
+      **source_file_attributes
+    )
+  end
+
+  def source_file_attributes
+    file = params[:import_file]
+    {
+      source_filename: file.original_filename, source_content_type: file.content_type, source_byte_size: file.size,
+      source_format: File.extname(file.original_filename.to_s).delete('.').downcase
+    }
+  end
+
+  def build_audience_import
+    name = campaign_import_params[:name].to_s.strip.first(255)
+    Current.account.campaign_imports.create!(
+      user: Current.user, status: :uploaded, mode: 'single_label', name: name, campaign_name: name, batch_count: 1,
+      options: { default_country: 'BR', flow: CampaignImport::AUDIENCE_FLOW }, **source_file_attributes
     )
   end
 
   def campaign_import_params
-    params.permit(:campaign_name, :batch_count)
+    params.permit(:campaign_name, :batch_count, :name)
   end
 
   def normalized_batch_count

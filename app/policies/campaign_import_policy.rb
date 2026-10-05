@@ -45,6 +45,19 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # Públicos (#992): choosing columns and wiring message variables are part of building a campaign.
+  def columns?
+    permission_granted?('campaign_manage')
+  end
+
+  def variable_suggestions?
+    permission_granted?('campaign_manage')
+  end
+
+  def variable_coverage?
+    permission_granted?('campaign_manage')
+  end
+
   private
 
   def permission_granted?(key)

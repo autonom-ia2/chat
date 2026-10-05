@@ -197,6 +197,9 @@ Rails.application.routes.draw do
               post :confirm
               post :undo_labels
               get :download
+              patch :columns, to: 'campaign_import_audiences#columns'
+              get :variable_suggestions, to: 'campaign_import_audiences#variable_suggestions'
+              post :variable_coverage, to: 'campaign_import_audiences#variable_coverage'
             end
           end
           resources :ai_requests, only: [:show]
