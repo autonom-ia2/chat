@@ -58,7 +58,8 @@ RSpec.describe 'Super Admin Instagram automation UI', type: :request do
       form = page.at_css("form[action='#{path}/browser']")
       expect(form['method']).to eq('post')
       expect(form['target']).to eq('_blank')
-      expect(form['rel']).to include('noopener', 'noreferrer')
+      expect(form['rel']).to include('noopener')
+      expect(form['rel']).not_to include('noreferrer')
       expect(form.at_css('button').text).to eq(I18n.t('super_admin.instagram_automation.open_remote_browser'))
       expect(page.at_css("a[href*='vnc']")).to be_nil
       status[:control]['actor_id'] = super_admin.id + 1
@@ -74,9 +75,12 @@ RSpec.describe 'Super Admin Instagram automation UI', type: :request do
     %i[en pt_BR].each do |locale|
       I18n.with_locale(locale) do
         get path
-        expect(page.at_css('[data-session-time="captured_at"]')['datetime']).to eq(captured.iso8601(3))
-        expect(page.at_css('[data-session-time="published_at"]')['datetime']).to eq(published.iso8601(3))
-        expect(page.text).to include(I18n.t('super_admin.instagram_automation.captured_at'), I18n.t('super_admin.instagram_automation.published_at'))
+        document = Nokogiri::HTML(response.body)
+        expect(document.at_css('[data-session-time="captured_at"]')['datetime']).to eq(captured.iso8601(3))
+        expect(document.at_css('[data-session-time="published_at"]')['datetime']).to eq(published.iso8601(3))
+        expect(document.text).to include(
+          I18n.t('super_admin.instagram_automation.captured_at'), I18n.t('super_admin.instagram_automation.published_at')
+        )
       end
     end
   end
