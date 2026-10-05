@@ -4,7 +4,11 @@
 // that manages it today, so nothing about the old flows changes.
 import { CAMPAIGN_TYPES } from 'shared/constants/campaign';
 import { INBOX_TYPES } from 'dashboard/helper/inbox';
-import { CAMPAIGN_CHANNELS, CHANNEL_ORDER } from './campaignChannels';
+import {
+  CAMPAIGN_CHANNELS,
+  CHANNEL_ORDER,
+  LEGACY_QUERY,
+} from './campaignChannels';
 
 export const JOURNEY_STATUSES = {
   DRAFT: 'draft',
@@ -80,13 +84,18 @@ const chatwootStatus = (campaign, channel) => {
     : JOURNEY_STATUSES.SCHEDULED;
 };
 
+// The old channel pages are still where these campaigns are handled until each campaign
+// gets its own Resultado (#1007). With the journey on, their addresses redirect to this
+// list (PRD A3); `legacy=1` marks the visit as coming from here so it opens the old page.
+const legacyPage = name => ({ name, query: { [LEGACY_QUERY]: '1' } });
+
 const CHATWOOT_ROUTES = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: campaign => ({
     name: 'campaigns_whatsapp_analytics',
     params: { campaignId: campaign.id },
   }),
-  [CAMPAIGN_CHANNELS.SMS]: () => ({ name: 'campaigns_sms_index' }),
-  [CAMPAIGN_CHANNELS.LIVE_CHAT]: () => ({ name: 'campaigns_livechat_index' }),
+  [CAMPAIGN_CHANNELS.SMS]: () => legacyPage('campaigns_sms_index'),
+  [CAMPAIGN_CHANNELS.LIVE_CHAT]: () => legacyPage('campaigns_livechat_index'),
 };
 
 const fromChatwootCampaign = campaign => {
@@ -116,7 +125,7 @@ const fromWhatsappApiCampaign = campaign => ({
   sortTime: toTime(campaign.scheduled_at) || toTime(campaign.created_at),
   sent: campaign.sent_count ?? null,
   total: campaign.recipients_count ?? null,
-  route: { name: 'campaigns_whatsapp_api_index' },
+  route: legacyPage('campaigns_whatsapp_api_index'),
 });
 
 const fromEmailCampaign = campaign => {
@@ -131,7 +140,7 @@ const fromEmailCampaign = campaign => {
     sortTime: when || toTime(campaign.updated_at),
     sent: campaign.sent_count ?? null,
     total: campaign.recipients_count ?? null,
-    route: { name: 'campaigns_email_index' },
+    route: legacyPage('campaigns_email_index'),
   };
 };
 

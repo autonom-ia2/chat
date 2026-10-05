@@ -15,6 +15,7 @@ import { routes as centralDeAjudaRoutes } from './centralDeAjuda/centralDeAjuda.
 import { frontendURL } from '../../helper/URLHelper';
 import helpcenterRoutes from './helpcenter/helpcenter.routes';
 import campaignsRoutes from './campaigns/campaigns.routes';
+import { withCampaignJourneyRedirects } from './campaigns/journey/journeyRedirects';
 import { routes as captainRoutes } from './captain/captain.routes';
 import AppContainer from './Dashboard.vue';
 import Suspended from './suspended/Index.vue';
@@ -34,7 +35,7 @@ export default {
         ...conversation.routes,
         ...settings.routes,
         ...callRoutes,
-        ...contactRoutes,
+        ...withCampaignJourneyRedirects(contactRoutes),
         ...crmRoutes,
         ...financialRoutes,
         ...autonomiaRoutes,
@@ -42,7 +43,7 @@ export default {
         ...companyRoutes,
         ...searchRoutes,
         ...helpcenterRoutes.routes,
-        ...campaignsRoutes.routes,
+        ...withCampaignJourneyRedirects(campaignsRoutes.routes),
         ...firstStepsRoutes,
         ...centralDeAjudaRoutes,
       ],

@@ -4,6 +4,13 @@ import { createStore } from 'vuex';
 import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enImport from 'dashboard/i18n/locale/en/campaignImport.json';
 import AudiencesPage from '../AudiencesPage.vue';
+
+const push = vi.fn();
+vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
+const alert = vi.fn();
+vi.mock('dashboard/composables', () => ({
+  useAlert: (...args) => alert(...args),
+}));
 import { buildAudienceRow } from 'dashboard/components-next/CampaignJourney/audienceRows';
 
 const defaultPlugins = config.global.plugins;
@@ -37,12 +44,22 @@ const NEW_IMPORT = {
   },
 };
 
-const mountPage = records => {
+const DialogStub = {
+  name: 'Dialog',
+  emits: ['confirm'],
+  methods: { open() {}, close() {} },
+  template:
+    '<div data-test="dialog"><button data-test="dialog-confirm" @click="$emit(\'confirm\')" /></div>',
+};
+
+const mountPage = (records, { customRole = null, remove = vi.fn() } = {}) => {
   const get = vi.fn();
   const store = createStore({
     getters: {
-      getCurrentUser: () => ({ accounts: [{ id: 1, permissions: [] }] }),
-      getCurrentCustomRoleId: () => null,
+      getCurrentUser: () => ({
+        accounts: [{ id: 1, permissions: customRole || [] }],
+      }),
+      getCurrentCustomRoleId: () => (customRole ? 7 : null),
       getCurrentAccountId: () => 1,
     },
     modules: {
@@ -54,7 +71,7 @@ const mountPage = records => {
           getUIFlags: () => ({ isFetching: false, isCreating: false }),
           getMeta: state => ({ count: state.records.length }),
         },
-        actions: { get, create: vi.fn() },
+        actions: { get, create: vi.fn(), delete: remove },
       },
     },
   });
@@ -68,7 +85,7 @@ const mountPage = records => {
       plugins: [store, i18n],
       stubs: {
         'router-link': { template: '<a><slot /></a>' },
-        CampaignImportDialog: true,
+        Dialog: DialogStub,
       },
     },
   });
@@ -111,6 +128,61 @@ describe('Público page (PRD §6.6)', () => {
       'Channels not calculated yet'
     );
     expect(row.text()).toContain('98 people');
+  });
+});
+
+describe('Público actions (F2, F3, A4)', () => {
+  const SAVED = { ...NEW_IMPORT, can_delete: true };
+
+  it('"Novo público" opens its page and "Usar em nova campanha" opens Passo 1 with it', async () => {
+    push.mockClear();
+    const { wrapper } = mountPage([SAVED]);
+    await flushPromises();
+
+    await wrapper.find('[data-test="new-audience"]').trigger('click');
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'campaigns_journey_audience_new',
+    });
+    await wrapper.find('[data-use="2"]').trigger('click');
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'campaigns_journey_new',
+      query: { audience: '2' },
+    });
+  });
+
+  it('campaign_view only: no create, use or delete actions', async () => {
+    const { wrapper } = mountPage([SAVED], { customRole: ['campaign_view'] });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="new-audience"]').exists()).toBe(false);
+    expect(wrapper.find('[data-use="2"]').exists()).toBe(false);
+    expect(wrapper.find('[data-delete="2"]').exists()).toBe(false);
+    expect(wrapper.find('[data-audience="2"]').text()).toContain(
+      'Corretoras parceiras'
+    );
+  });
+
+  it('deleting an audience still in use names the campaigns', async () => {
+    alert.mockClear();
+    const remove = vi.fn().mockRejectedValue({
+      response: {
+        data: {
+          code: 'audience_in_use',
+          campaigns: [{ title: 'Renovação auto' }],
+        },
+      },
+    });
+    const { wrapper } = mountPage([SAVED], { remove });
+    await flushPromises();
+
+    await wrapper.find('[data-delete="2"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(remove).toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith(
+      expect.stringContaining('Renovação auto')
+    );
   });
 });
 

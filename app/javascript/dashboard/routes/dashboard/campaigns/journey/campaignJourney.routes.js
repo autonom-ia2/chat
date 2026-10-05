@@ -6,16 +6,24 @@ import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 const CampaignJourneyPage = () => import('./CampaignJourneyPage.vue');
 const AudiencesPage = () => import('./AudiencesPage.vue');
+const NewAudiencePage = () => import('./NewAudiencePage.vue');
+const NewCampaignPage = () => import('./NewCampaignPage.vue');
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
   permissions: ['administrator', ...CAMPAIGN_PERMISSIONS],
 };
 
+// Creating audiences and campaigns needs campaign_manage (PRD A4); campaign_view only reads.
+const manageMeta = {
+  featureFlag: FEATURE_FLAGS.CAMPAIGNS,
+  permissions: ['administrator', 'campaign_manage'],
+};
+
 export const isCampaignJourneyEnabled = () =>
   window.globalConfig?.CAMPAIGN_JOURNEY_ENABLED === 'true';
 
-const isCampaignImportEnabled = () =>
+export const isCampaignImportEnabled = () =>
   window.globalConfig?.CAMPAIGN_IMPORT_ENABLED === 'true';
 
 const backToOldCampaigns = to => ({
@@ -58,5 +66,20 @@ export const campaignJourneyRoutes = [
     meta,
     beforeEnter: requireAudiences,
     component: AudiencesPage,
+  },
+  {
+    path: 'audiences/new',
+    name: 'campaigns_journey_audience_new',
+    meta: manageMeta,
+    beforeEnter: requireAudiences,
+    component: NewAudiencePage,
+  },
+  // The 3-step journey starts from a saved audience (PRD D2), so it needs Públicos on.
+  {
+    path: 'new',
+    name: 'campaigns_journey_new',
+    meta: manageMeta,
+    beforeEnter: requireAudiences,
+    component: NewCampaignPage,
   },
 ];

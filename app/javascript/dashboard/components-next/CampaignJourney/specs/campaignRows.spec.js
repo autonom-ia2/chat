@@ -75,7 +75,7 @@ describe('Campanha list rows (PRD §6.1)', () => {
     ]);
   });
 
-  it('each row opens the page that manages it today', () => {
+  it('each row opens the page that manages it today, past the A3 redirect', () => {
     const routes = Object.fromEntries(
       buildJourneyRows(data).map(row => [row.channel, row.route])
     );
@@ -86,8 +86,16 @@ describe('Campanha list rows (PRD §6.1)', () => {
     });
     expect(routes.whatsapp_api).toEqual({
       name: 'campaigns_whatsapp_api_index',
+      query: { legacy: '1' },
     });
-    expect(routes.email).toEqual({ name: 'campaigns_email_index' });
+    expect(routes.email).toEqual({
+      name: 'campaigns_email_index',
+      query: { legacy: '1' },
+    });
+    expect(routes.sms).toEqual({
+      name: 'campaigns_sms_index',
+      query: { legacy: '1' },
+    });
   });
 
   it('filters by channel, status and search', () => {

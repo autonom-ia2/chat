@@ -24,7 +24,12 @@ vi.mock(
   'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/LiveChatCampaignDialog.vue',
   () => stub('LiveChatCampaignDialog')
 );
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const push = vi.fn();
+const currentRoute = { query: {} };
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push }),
+  useRoute: () => currentRoute,
+}));
 
 const { default: CampaignJourneyPage } = await import(
   '../CampaignJourneyPage.vue'
@@ -44,15 +49,22 @@ const module = (getters, actions = {}) => ({
   actions,
 });
 
-const mountPage = ({ inboxes, campaigns = [] }) => {
+const mountPage = ({
+  inboxes,
+  campaigns = [],
+  audiences = false,
+  customRole = null,
+}) => {
   const dispatched = [];
   const track = name => () => {
     dispatched.push(name);
   };
   const store = createStore({
     getters: {
-      getCurrentUser: () => ({ accounts: [{ id: 1, permissions: [] }] }),
-      getCurrentCustomRoleId: () => null,
+      getCurrentUser: () => ({
+        accounts: [{ id: 1, permissions: customRole || [] }],
+      }),
+      getCurrentCustomRoleId: () => (customRole ? 7 : null),
       getCurrentAccountId: () => 1,
     },
     modules: {
@@ -81,7 +93,7 @@ const mountPage = ({ inboxes, campaigns = [] }) => {
           emailCampaignEnabled: false,
           crmKanbanEnabled: false,
           whatsappApiCampaignsEnabled: false,
-          campaignImportEnabled: true,
+          campaignImportEnabled: audiences,
         }),
       }),
       accounts: module({ isFeatureEnabledonAccount: () => () => true }),
@@ -194,6 +206,47 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
         .findAll('[data-channel]')
         .map(button => button.attributes('data-channel'))
     ).toEqual(['live_chat']);
+    wrapper.unmount();
+  });
+
+  it('with Públicos on, "Nova campanha" opens the 3-step journey (PRD D2)', async () => {
+    push.mockClear();
+    const { wrapper } = mountPage({
+      inboxes: [{ channel_type: 'Channel::Sms' }],
+      audiences: true,
+    });
+    await flushPromises();
+
+    await wrapper.find('[data-test="new-campaign"]').trigger('click');
+
+    expect(push).toHaveBeenCalledWith({ name: 'campaigns_journey_new' });
+    expect(wrapper.findAll('[data-channel]')).toHaveLength(0);
+    wrapper.unmount();
+  });
+
+  it('an old address lands filtered by its channel (PRD A3)', async () => {
+    currentRoute.query = { channel: 'live_chat' };
+    const { wrapper } = mountPage({
+      inboxes: [{ channel_type: 'Channel::WebWidget' }],
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-filter="live_chat"]').attributes('aria-pressed')
+    ).toBe('true');
+    currentRoute.query = {};
+    wrapper.unmount();
+  });
+
+  it('campaign_view only: the list shows, "Nova campanha" does not (PRD A4)', async () => {
+    const { wrapper } = mountPage({
+      inboxes: [{ channel_type: 'Channel::Sms' }],
+      audiences: true,
+      customRole: ['campaign_view'],
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="new-campaign"]').exists()).toBe(false);
     wrapper.unmount();
   });
 });

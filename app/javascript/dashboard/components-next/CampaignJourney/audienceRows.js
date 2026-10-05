@@ -27,4 +27,8 @@ export const buildAudienceRow = campaignImport => ({
   status: campaignImport.status,
   createdAt: campaignImport.created_at,
   badges: audienceChannelBadges(campaignImport.channels),
+  isSaved: ['completed', 'completed_with_failures'].includes(
+    campaignImport.status
+  ),
+  canDelete: campaignImport.can_delete === true,
 });

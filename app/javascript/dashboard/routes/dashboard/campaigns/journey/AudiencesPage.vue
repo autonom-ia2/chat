@@ -1,30 +1,36 @@
 <script setup>
 // "Público" (#993, PRD §6.6): the lists of people imported for campaigns, over the
-// existing campaign_imports API. "Novo público" still opens the existing import dialog;
-// confirming and undoing an import stay on the import history page for now.
+// existing campaign_imports API. "Novo público" opens its own page (NewAudiencePage);
+// "Usar em nova campanha" opens Passo 1 with the audience selected (F3); "Excluir público"
+// deletes only the list (F2) and says which campaigns still use it (audience_in_use).
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
-import CampaignImportDialog from 'dashboard/components-next/Contacts/CampaignImport/CampaignImportDialog.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import AudienceChannelBadges from 'dashboard/components-next/CampaignJourney/AudienceChannelBadges.vue';
 import { buildAudienceRow } from 'dashboard/components-next/CampaignJourney/audienceRows';
+import { campaignsUsingAudience } from 'dashboard/components-next/CampaignJourney/journeyErrors';
+import { LEGACY_QUERY } from 'dashboard/components-next/CampaignJourney/campaignChannels';
 
 const NS = 'CAMPAIGN_JOURNEY.AUDIENCES';
 
 const { t, n, locale } = useI18n();
 const store = useStore();
+const router = useRouter();
 const canManage = useCanManage('campaign_manage');
 
 const campaignImports = useMapGetter('campaignImports/getCampaignImports');
 const uiFlags = useMapGetter('campaignImports/getUIFlags');
 const meta = useMapGetter('campaignImports/getMeta');
 
-const importDialogRef = ref(null);
+const deleteDialogRef = ref(null);
+const deleting = ref(null);
 const hasLoadError = ref(false);
 
 const rows = computed(() =>
@@ -50,17 +56,33 @@ const fetchAudiences = async () => {
   }
 };
 
-const openNewAudience = () => importDialogRef.value?.dialogRef.open();
+const openNewAudience = () =>
+  router.push({ name: 'campaigns_journey_audience_new' });
 
-const onCreate = async payload => {
+const useInCampaign = row =>
+  router.push({
+    name: 'campaigns_journey_new',
+    query: { audience: String(row.id) },
+  });
+
+const askDelete = row => {
+  deleting.value = row;
+  deleteDialogRef.value?.open();
+};
+
+const confirmDelete = async () => {
+  const row = deleting.value;
+  deleteDialogRef.value?.close();
   try {
-    await store.dispatch('campaignImports/create', payload);
-    importDialogRef.value?.dialogRef.close();
-    importDialogRef.value?.reset();
-    useAlert(t('CAMPAIGN_IMPORT.API.CREATE_SUCCESS'));
-    fetchAudiences();
+    await store.dispatch('campaignImports/delete', row.id);
+    useAlert(t(`${NS}.DELETED`));
   } catch (error) {
-    useAlert(error.message ?? t('CAMPAIGN_IMPORT.API.CREATE_ERROR'));
+    const campaigns = campaignsUsingAudience(error);
+    useAlert(
+      campaigns.length
+        ? t(`${NS}.IN_USE`, { campaigns: campaigns.join(', ') })
+        : t(`${NS}.ERROR`)
+    );
   }
 };
 
@@ -164,7 +186,7 @@ onMounted(fetchAudiences);
             v-for="row in rows"
             :key="row.id"
             :data-audience="row.id"
-            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_8rem_8rem_auto] md:items-center xl:px-6"
+            class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_8rem_8rem_auto] md:items-center xl:px-6"
           >
             <div class="min-w-0">
               <p class="mb-0 truncate text-sm font-semibold text-n-slate-12">
@@ -183,18 +205,51 @@ onMounted(fetchAudiences);
             <p class="mb-0 text-sm text-n-slate-11">
               {{ formatDate(row.createdAt) }}
             </p>
+            <div class="flex flex-wrap items-center gap-1">
+            <Button
+              v-if="canManage && row.isSaved"
+              :label="t(`${NS}.USE_IN_CAMPAIGN`)"
+              :aria-label="t(`${NS}.USE_IN_CAMPAIGN_ARIA`, { name: row.name })"
+              variant="ghost"
+              size="sm"
+              class="!min-h-11"
+              :data-use="row.id"
+              @click="useInCampaign(row)"
+            />
+            <Button
+              v-if="canManage && row.canDelete"
+              icon="i-lucide-trash-2"
+              :aria-label="t(`${NS}.DELETE_ARIA`, { name: row.name })"
+              variant="ghost"
+              color="ruby"
+              size="sm"
+              class="!min-h-11 !min-w-11"
+              :data-delete="row.id"
+              @click="askDelete(row)"
+            />
             <router-link
-              :to="{ name: 'contacts_campaign_imports' }"
+              :to="{
+                name: 'contacts_campaign_imports',
+                query: { [LEGACY_QUERY]: '1' },
+              }"
               class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
               :aria-label="t(`${NS}.DETAILS_ARIA`, { name: row.name })"
             >
               {{ t(`${NS}.DETAILS`) }}
               <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
             </router-link>
+            </div>
           </li>
         </ul>
       </section>
     </div>
-    <CampaignImportDialog ref="importDialogRef" @create="onCreate" />
+    <Dialog
+      ref="deleteDialogRef"
+      type="alert"
+      :title="t(`${NS}.CONFIRM_TITLE`, { name: deleting?.name || '' })"
+      :description="t(`${NS}.CONFIRM_TEXT`)"
+      :confirm-button-label="t(`${NS}.CONFIRM`)"
+      @confirm="confirmDelete"
+    />
   </section>
 </template>

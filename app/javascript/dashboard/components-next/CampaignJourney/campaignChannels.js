@@ -15,6 +15,10 @@ export const CAMPAIGN_CHANNELS = {
   LIVE_CHAT: 'live_chat',
 };
 
+// Query flag of a visit to an old channel page coming from the journey itself, which
+// skips the PRD A3 redirect (see routes/dashboard/campaigns/journey/journeyRedirects.js).
+export const LEGACY_QUERY = 'legacy';
+
 // Display order everywhere (chooser, filter chips).
 export const CHANNEL_ORDER = [
   CAMPAIGN_CHANNELS.EMAIL,

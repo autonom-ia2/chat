@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (183 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (185 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -544,7 +544,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: nova jornada de campanhas ligada na instalação (CAMPAIGN_JOURNEY_ENABLED); pelo menos um canal de campanha conectado (domínio de envio verificado ou caixa de webmail aceita no envio direto, WhatsApp Oficial pela Cloud API, WhatsApp API marcada para campanha, caixa de SMS ou chat do site).
 - passos: 1. Abra Campanhas > Campanha no menu lateral; 2. Veja no topo o próximo envio, quantas estão em preparação, quantas saíram nos últimos 30 dias e quantas ficam sempre ativas; 3. Use os botões de canal para ver só um canal; 4. Use Filtrar por situação e a busca para achar uma campanha; 5. Clique em Abrir para ir à tela que cuida daquela campanha hoje (resultado do WhatsApp Oficial, lista de e-mails, WhatsApp API, SMS ou Chat ao vivo).
-- gotchas: a lista mostra todas as campanhas que existem, mesmo de um canal desconectado depois; o filtro mostra os canais conectados e os que ainda têm campanhas; Nova campanha só oferece canais conectados; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; a lista junta as telas antigas, que continuam funcionando pelos endereços de antes; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
+- gotchas: a lista mostra todas as campanhas que existem, mesmo de um canal desconectado depois; o filtro mostra os canais conectados e os que ainda têm campanhas; Nova campanha só oferece canais conectados; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; os endereços antigos das listas de E-mails, WhatsApp Oficial, WhatsApp API, SMS e Chat ao vivo abrem esta lista já filtrada pelo canal, e Abrir em cada linha ainda leva à tela antiga daquela campanha; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
 - nav_target: `campaigns_journey_index`
 
 ### Criar campanha escolhendo o canal
@@ -554,7 +554,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: permissão para gerenciar campanhas (administrador ou função com campaign_manage); canal conectado.
 - passos: 1. Abra Campanhas > Campanha; 2. Clique em Nova campanha; 3. Escolha o canal na lista (só aparecem os conectados); 4. Preencha o formulário do canal, o mesmo de antes; 5. Salve; a campanha entra na lista.
-- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API; para e-mail, é preciso domínio de envio verificado ou caixa de webmail como Gmail ou Outlook, uma caixa de domínio próprio sem domínio verificado não basta); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; os passos Público, Mensagem e Revisar ainda vão chegar, por enquanto cada canal abre o formulário que já existia.
+- gotchas: canal que não aparece não está conectado: conecte a caixa em Configurações > Caixas de entrada (para WhatsApp API, marque a caixa para campanhas; para WhatsApp Oficial, a conta precisa do recurso de campanhas de WhatsApp e da caixa pela Cloud API; para e-mail, é preciso domínio de envio verificado ou caixa de webmail como Gmail ou Outlook, uma caixa de domínio próprio sem domínio verificado não basta); sem nenhum canal conectado, o botão mostra o atalho Conectar um canal; quem só tem campaign_view vê a lista mas não o botão; com a importação de base ligada, Nova campanha abre os três passos (Público, Mensagem, Revisar); sem ela, cada canal abre o formulário que já existia.
 - nav_target: `campaigns_journey_index`
 
 ### Ver os públicos de campanha
@@ -563,9 +563,29 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `campaigns_journey_audiences` - `/app/accounts/:accountId/campaigns/audiences`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: nova jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED) e importação de base ligada (CAMPAIGN_IMPORT_ENABLED); para criar, administrador ou função com campaign_manage.
-- passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Para subir uma planilha nova, clique em Novo público, dê um nome, escolha o arquivo e envie; 4. Clique em Detalhes para acompanhar a validação, confirmar a importação ou baixar os arquivos.
-- gotchas: com a jornada ligada, Base Campanha e Histórico de bases saem do menu de três pontos de Contatos e moram aqui; públicos antigos aparecem com o nome da campanha e sem selos de canal, que só são calculados nas importações novas; a confirmação e o desfazer ainda acontecem na tela de Detalhes (histórico de bases); com CAMPAIGN_IMPORT_ENABLED desligado o item Público some do menu e o endereço leva para Campanha.
+- passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Para subir uma planilha nova, clique em Novo público; 4. Em um público salvo, clique em Usar em nova campanha para abrir a campanha com ele escolhido; 5. Excluir público apaga só a lista; 6. Detalhes abre o histórico da importação com os arquivos.
+- gotchas: com a jornada ligada, Base Campanha e Histórico de bases saem do menu de três pontos de Contatos e moram aqui; públicos antigos aparecem com o nome da campanha e sem selos de canal, que só são calculados nas importações novas; excluir não apaga contatos, empresas, conversas nem resultados; público usado por campanha que ainda não terminou não pode ser excluído e a tela diz quais campanhas o usam; quem só tem campaign_view vê a lista sem os botões de criar, usar e excluir; com CAMPAIGN_IMPORT_ENABLED desligado o item Público some do menu e o endereço leva para Campanha.
 - nav_target: `campaigns_journey_audiences`
+
+### Criar um público com uma planilha
+- intent: Como crio um público?; Como subo a planilha de uma campanha?; Por que preciso escolher as colunas?; O que quer dizer linhas com problema?; Como desligo o e-mail ou o WhatsApp de um público?; O público vai criar empresas?
+- onde_fica: Menu lateral > Campanhas > Público > Novo público (ou, numa campanha nova sem público, Criar público)
+- rota: `campaigns_journey_audience_new` - `/app/accounts/:accountId/campaigns/audiences/new`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: jornada de campanhas e importação de base ligadas (CAMPAIGN_JOURNEY_ENABLED e CAMPAIGN_IMPORT_ENABLED); administrador ou função com campaign_manage.
+- passos: 1. Dê um nome ao público e escolha a planilha (CSV ou Excel); 2. Clique em Ler planilha e espere a leitura; 3. Em Colunas encontradas, confira qual coluna é nome, celular, e-mail e empresa; se a tela pedir, escolha cada uma (ou Não tem) e clique em Usar estas colunas; 4. Veja os canais (E-mail e WhatsApp com a contagem) e desligue o que o público não deve usar; 5. Confira quantos estão prontos e quantos têm problema, veja o motivo de cada linha e baixe as linhas com problema se quiser corrigir; 6. Em Empresas, deixe Criar e ligar ligado para criar e ligar as empresas da planilha, ou desligue; 7. Clique em Salvar público.
+- gotchas: nada entra nos contatos antes de Salvar público; sair antes não cria contato, empresa nem lista; é preciso ter coluna de celular ou de e-mail; canal sem dado aparece desligado com sem dados e não liga; as outras colunas ficam guardadas para usar na mensagem; o bloco Empresas só aparece com Empresas ligada na conta e coluna de empresa; contato que já tem outra empresa continua com a dele (mantida); se veio de uma campanha, o aviso no topo diz qual e, depois de salvar, Voltar para a campanha abre o passo 1 com o público escolhido; não dá para desligar um canal que uma campanha agendada ainda usa.
+- nav_target: `campaigns_journey_audience_new`
+
+### Criar campanha de WhatsApp Oficial em três passos
+- intent: Como crio uma campanha de WhatsApp para uma planilha?; Como escolho o público da campanha?; De onde vem cada parte da mensagem do modelo?; Por que um canal aparece indisponível?; Como agendo o envio?; Por que algumas pessoas ficam de fora?
+- onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha (ou Público > Usar em nova campanha)
+- rota: `campaigns_journey_new` - `/app/accounts/:accountId/campaigns/new`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: jornada de campanhas e importação de base ligadas; administrador ou função com campaign_manage; um público salvo com celular; caixa WhatsApp pela Cloud API com modelo aprovado.
+- passos: 1. Passo Público: escolha um público salvo (os selos mostram e-mail e WhatsApp com a contagem); sem público, clique em Criar público e volte com ele já escolhido; 2. Passo Mensagem: escolha WhatsApp Oficial, dê o nome da campanha, escolha a caixa e o modelo aprovado; 3. Em De onde vem cada parte da mensagem, ligue cada variável a um dado do contato, a uma coluna do público ou a um texto fixo (as sugestões vêm marcadas como Sugerido); 4. Se a tela disser que pessoas ficam de fora, escreva um texto para quando faltar o dado ou aceite; 5. Passo Revisar: confira, escolha Agora ou data e hora (no fuso da conta) e confirme o envio para o número de pessoas mostrado.
+- gotchas: canal que o público não tem aparece indisponível com o motivo (sem celular ou sem e-mail); E-mail, WhatsApp API e SMS ainda abrem o formulário de antes; Chat ao vivo não usa público e tem atalho no passo Público; o rascunho fica salvo neste navegador enquanto você cria o público; quem responder ganha a marca Campanha: nome no card do CRM; a campanha envia para todo o público no horário escolhido, sem etapas.
+- nav_target: `campaigns_journey_new`
 
 ### Criar e verificar identidade de remetente de e-mail
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"

@@ -1,11 +1,11 @@
 <script setup>
 // "Campanha" (#993, PRD §6.1): every existing campaign of every channel in one list.
-// "Nova campanha" only offers connected channels (M1–M2).
-// Creation still opens the existing flow of the chosen channel; the 3-step journey
-// comes in a later slice.
-import { computed, onMounted, ref } from 'vue';
+// With Públicos on, "Nova campanha" opens the 3-step journey (NewCampaignPage); without
+// them it offers the connected channels (M1–M2) and opens their existing forms.
+// `?channel=` (old addresses, PRD A3) preselects the channel filter.
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { vOnClickOutside } from '@vueuse/components';
@@ -38,6 +38,7 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 const { t, locale } = useI18n();
 const store = useStore();
+const route = useRoute();
 const router = useRouter();
 const canManage = useCanManage('campaign_manage');
 const { channels, features } = useAvailableCampaignChannels();
@@ -53,7 +54,9 @@ const audiencesEnabled = computed(
 
 const isLoading = ref(false);
 const hasLoadError = ref(false);
-const channelFilter = ref('');
+const channelFilter = ref(
+  CHANNEL_LABEL_KEYS[route.query.channel] ? route.query.channel : ''
+);
 const statusFilter = ref('');
 const search = ref('');
 const isChooserOpen = ref(false);
@@ -173,7 +176,18 @@ const closeCreation = () => {
   isChooserOpen.value = false;
   creatingChannel.value = '';
 };
+watch(
+  () => route.query.channel,
+  channel => {
+    channelFilter.value = CHANNEL_LABEL_KEYS[channel] ? channel : '';
+  }
+);
+
 const toggleChooser = () => {
+  if (audiencesEnabled.value) {
+    router.push({ name: 'campaigns_journey_new' });
+    return;
+  }
   if (creatingChannel.value || isChooserOpen.value) {
     closeCreation();
     return;
