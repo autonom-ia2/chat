@@ -56,6 +56,29 @@ async function observedAction(name, operation) {
     report(
       `${name}_FAIL_${errorClass}_${Math.round(performance.now() - started)}ms`
     );
+    if (name === 'BROWSER_FORM_NULL_ORIGIN_CLICK') {
+      const message = typeof error?.message === 'string' ? error.message : '';
+      // Emit fixed milestones only; Playwright's full call log can contain page data.
+      [
+        [
+          'waiting for element to be visible, enabled and stable',
+          'WAIT_ACTIONABLE',
+        ],
+        ['element is visible, enabled and stable', 'ACTIONABLE'],
+        ['done scrolling', 'SCROLLED'],
+        ['performing click action', 'POINTER_BEGIN'],
+        ['click action done', 'POINTER_DONE'],
+        ['waiting for scheduled navigations to finish', 'WAIT_NAVIGATION'],
+        ['navigations have finished', 'NAVIGATION_DONE'],
+        ['element is not visible', 'NOT_VISIBLE'],
+        ['element is not enabled', 'NOT_ENABLED'],
+        ['element is not stable', 'NOT_STABLE'],
+        ['element is outside of the viewport', 'OUTSIDE_VIEWPORT'],
+        ['intercepts pointer events', 'POINTER_INTERCEPTED'],
+      ].forEach(([phrase, milestone]) => {
+        if (message.includes(phrase)) report(`${name}_MILESTONE_${milestone}`);
+      });
+    }
     throw error;
   }
 }
@@ -565,9 +588,13 @@ export async function runLinuxSmoke() {
     let renderedConsole = false;
     await page.route('https://console.test/**', async route => {
       const browserRequest = route.request();
-      const headers = await browserRequest.allHeaders();
-      const target = new URL(browserRequest.url()).pathname;
       const method = browserRequest.method();
+      const observeNullPost =
+        method === 'POST' && stage === 'BROWSER_FORM_NULL_ORIGIN_NAVIGATION';
+      if (observeNullPost) report('BROWSER_FORM_NULL_ORIGIN_ROUTE_BEGIN');
+      const headers = await browserRequest.allHeaders();
+      if (observeNullPost) report('BROWSER_FORM_NULL_ORIGIN_ROUTE_HEADERS');
+      const target = new URL(browserRequest.url()).pathname;
       if (method === 'POST') observedPosts.push(headers.origin);
       const response = await request(port, config, target, signal, {
         method,
@@ -575,6 +602,12 @@ export async function runLinuxSmoke() {
         origin: headers.origin,
         ...(method === 'POST' ? { rawBody: browserRequest.postData() } : {}),
       });
+      if (observeNullPost)
+        report(
+          response.status === 403
+            ? 'BROWSER_FORM_NULL_ORIGIN_ROUTE_HTTP_403'
+            : 'BROWSER_FORM_NULL_ORIGIN_ROUTE_HTTP_OTHER'
+        );
       if (target === '/hub2you/console/' && response.status === 200)
         renderedConsole = true;
       const forwarded = { ...response.headers };
@@ -588,6 +621,7 @@ export async function runLinuxSmoke() {
         headers: forwarded,
         body: response.body,
       });
+      if (observeNullPost) report('BROWSER_FORM_NULL_ORIGIN_ROUTE_FULFILLED');
     });
     await page.route('https://issuer.test/**', route => {
       const safe = new URL(route.request().url()).pathname === '/strict';
@@ -600,6 +634,18 @@ export async function runLinuxSmoke() {
           <input name="ticket" value="${browserTicket}"><button>Continue</button></form></body></html>`,
       });
     });
+    const reportNullNavigation = name => {
+      if (stage === 'BROWSER_FORM_NULL_ORIGIN_NAVIGATION')
+        report(
+          `BROWSER_FORM_NULL_ORIGIN_${name}_${page.url() === 'https://console.test/hub2you/grant' ? 'GRANT' : 'OTHER'}`
+        );
+    };
+    page.on('framenavigated', frame => {
+      if (frame === page.mainFrame()) reportNullNavigation('COMMIT');
+    });
+    page.on('domcontentloaded', () => reportNullNavigation('DOM_READY'));
+    page.on('load', () => reportNullNavigation('LOAD'));
+    page.on('download', () => reportNullNavigation('DOWNLOAD'));
     step('BROWSER_FORM_NULL_ORIGIN_NAVIGATION');
     await observedAction('BROWSER_FORM_NULL_ORIGIN_GOTO', () =>
       page.goto('https://issuer.test/no-referrer', {
