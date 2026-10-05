@@ -19,6 +19,18 @@ const CREATE_ERRORS = {
   invalid_variable_bindings: 'INVALID_VARIABLE_BINDINGS',
   invalid_campaign: 'INVALID_CAMPAIGN',
   campaign_journey_disabled: 'JOURNEY_DISABLED',
+  // #999 (api-999.md §2)
+  unsupported_channel: 'UNSUPPORTED_CHANNEL',
+  channel_not_connected: 'CHANNEL_NOT_CONNECTED',
+  whatsapp_api_inbox_required: 'WHATSAPP_API_INBOX_REQUIRED',
+  template_not_found: 'TEMPLATE_NOT_FOUND',
+  unsupported_variables: 'UNSUPPORTED_VARIABLES',
+  unknown_audience_column: 'UNKNOWN_AUDIENCE_COLUMN',
+  invalid_variable_defaults: 'INVALID_VARIABLE_DEFAULTS',
+  media_file_too_large: 'MEDIA_FILE_TOO_LARGE',
+  media_file_type_not_supported: 'MEDIA_FILE_TYPE_NOT_SUPPORTED',
+  invalid_schedule: 'INVALID_SCHEDULE',
+  feature_disabled: 'FEATURE_DISABLED',
 };
 
 export const createErrorKey = error => {

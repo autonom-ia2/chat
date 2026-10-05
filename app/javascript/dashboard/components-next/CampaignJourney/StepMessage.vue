@@ -10,6 +10,8 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import Input from 'dashboard/components-next/input/Input.vue';
 import AudienceChannelBadges from './AudienceChannelBadges.vue';
 import TemplateVariableBindings from './TemplateVariableBindings.vue';
+import WhatsAppApiMessage from './WhatsAppApiMessage.vue';
+import EmailJourneyStep from './EmailJourneyStep.vue';
 import WhatsAppPreview from './WhatsAppPreview.vue';
 import {
   CAMPAIGN_CHANNELS,
@@ -30,6 +32,10 @@ const props = defineProps({
   mediaHeader: { type: Object, default: null },
   previewText: { type: String, default: '' },
   canContinue: { type: Boolean, default: false },
+  // WhatsApp API form: { inboxOptions, templates, extraColumns, mediaFile, preview }
+  apiForm: { type: Object, default: () => ({}) },
+  // E-mail form: { identities, inboxes, emailCampaign, isCreating }
+  emailForm: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits([
@@ -40,6 +46,10 @@ const emit = defineEmits([
   'changeAudience',
   'back',
   'continue',
+  'attach',
+  'emailCreate',
+  'openEditor',
+  'emailReload',
 ]);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE';
@@ -62,6 +72,19 @@ const cards = computed(() =>
     }))
 );
 
+// Channels that run inside the journey (#993); SMS still opens its own form.
+const JOURNEY_CHANNELS = [
+  CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL,
+  CAMPAIGN_CHANNELS.WHATSAPP_API,
+  CAMPAIGN_CHANNELS.EMAIL,
+];
+const isJourneyChannel = computed(() =>
+  JOURNEY_CHANNELS.includes(props.draft.channel)
+);
+const isApi = computed(
+  () => props.draft.channel === CAMPAIGN_CHANNELS.WHATSAPP_API
+);
+const isEmail = computed(() => props.draft.channel === CAMPAIGN_CHANNELS.EMAIL);
 const isOfficial = computed(
   () => props.draft.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
 );
@@ -76,7 +99,7 @@ const cardHint = card =>
 
 const chooseChannel = card => {
   if (!card.available) return;
-  if (card.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL) {
+  if (JOURNEY_CHANNELS.includes(card.channel)) {
     emit('update', { channel: card.channel });
     return;
   }
@@ -156,12 +179,13 @@ const chooseChannel = card => {
     </section>
 
     <div
-      v-if="isOfficial"
-      class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
+      v-if="isJourneyChannel"
+      class="grid gap-4 lg:items-start"
+      :class="isEmail ? '' : 'lg:grid-cols-[minmax(0,1fr)_20rem]'"
     >
       <section
         class="flex min-w-0 flex-col gap-5 rounded-2xl border border-n-weak bg-n-solid-1 p-4 shadow-sm sm:p-5"
-        data-test="official-form"
+        :data-test="isOfficial ? 'official-form' : 'channel-form'"
       >
         <div class="flex flex-col gap-2">
           <Input
@@ -181,6 +205,30 @@ const chooseChannel = card => {
             {{ t(`${NS}.CRM_NOTE`, { tag: crmTag }) }}
           </p>
         </div>
+        <WhatsAppApiMessage
+          v-if="isApi"
+          :draft="draft"
+          :inbox-options="apiForm.inboxOptions"
+          :templates="apiForm.templates"
+          :extra-columns="apiForm.extraColumns"
+          :media-file="apiForm.mediaFile"
+          :preview="apiForm.preview"
+          @update="patch => emit('update', patch)"
+          @attach="file => emit('attach', file)"
+        />
+        <EmailJourneyStep
+          v-else-if="isEmail"
+          :draft="draft"
+          :identities="emailForm.identities"
+          :inboxes="emailForm.inboxes"
+          :email-campaign="emailForm.emailCampaign"
+          :is-creating="emailForm.isCreating"
+          @update="patch => emit('update', patch)"
+          @create="emit('emailCreate')"
+          @open-editor="emit('openEditor')"
+          @reload="emit('emailReload')"
+        />
+        <template v-else>
         <div class="flex flex-col gap-1">
           <span class="text-sm font-medium text-n-slate-12">
             {{ t(`${NS}.INBOX_LABEL`) }}
@@ -233,8 +281,9 @@ const chooseChannel = card => {
           @bind="(key, binding) => emit('bind', key, binding)"
           @default="(key, value) => emit('default', key, value)"
         />
+        </template>
       </section>
-      <WhatsAppPreview :text="previewText" />
+      <WhatsAppPreview v-if="!isEmail" :text="previewText" />
     </div>
 
     <div class="flex flex-wrap justify-between gap-3">
@@ -246,7 +295,7 @@ const chooseChannel = card => {
         @click="emit('back')"
       />
       <Button
-        v-if="isOfficial"
+        v-if="isOfficial || isApi || (isEmail && draft.emailCampaignId)"
         :label="t(`${NS}.CONTINUE`)"
         :disabled="!canContinue"
         class="!min-h-11 !rounded-xl"

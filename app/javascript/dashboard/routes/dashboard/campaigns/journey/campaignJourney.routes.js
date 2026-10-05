@@ -8,6 +8,7 @@ const CampaignJourneyPage = () => import('./CampaignJourneyPage.vue');
 const AudiencesPage = () => import('./AudiencesPage.vue');
 const NewAudiencePage = () => import('./NewAudiencePage.vue');
 const NewCampaignPage = () => import('./NewCampaignPage.vue');
+const LiveChatJourneyPage = () => import('./LiveChatJourneyPage.vue');
 
 const meta = {
   featureFlag: FEATURE_FLAGS.CAMPAIGNS,
@@ -81,5 +82,20 @@ export const campaignJourneyRoutes = [
     meta: manageMeta,
     beforeEnter: requireAudiences,
     component: NewCampaignPage,
+  },
+  // Chat ao vivo has no audience (PRD D16): its own flow, also to edit and pause (#1008).
+  {
+    path: 'live-chat/new',
+    name: 'campaigns_journey_live_chat_new',
+    meta: manageMeta,
+    beforeEnter: requireJourney,
+    component: LiveChatJourneyPage,
+  },
+  {
+    path: 'live-chat/:campaignId',
+    name: 'campaigns_journey_live_chat_edit',
+    meta: manageMeta,
+    beforeEnter: requireJourney,
+    component: LiveChatJourneyPage,
   },
 ];

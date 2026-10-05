@@ -43,6 +43,11 @@ class AudiencesAPI extends ApiClient {
     return axios.get(`${this.url}/${id}/problem_rows`, { params: { page } });
   }
 
+  // Side panel "Ver contatos e empresas" (#993).
+  contacts(id, page = 1) {
+    return axios.get(`${this.url}/${id}/contacts`, { params: { page } });
+  }
+
   sampleContact(id) {
     return axios.get(`${this.url}/${id}/sample_contact`);
   }
@@ -78,7 +83,42 @@ class AudiencesAPI extends ApiClient {
 }
 
 export const audiencesAPI = new AudiencesAPI();
-// POST /campaign_journey/campaigns (api-1005.md §4): only `create` is used.
-export const journeyCampaignsAPI = new ApiClient('campaign_journey/campaigns', {
+// POST /campaign_journey/campaigns (api-1005.md §4, api-999.md §2). `create` sends JSON;
+// `createWithFile` sends multipart with campaign[...] fields (WhatsApp API attachment).
+const campaignsClient = new ApiClient('campaign_journey/campaigns', {
   accountScoped: true,
 });
+const previewsClient = new ApiClient('campaign_journey/recipient_previews', {
+  accountScoped: true,
+});
+
+const appendCampaignField = (formData, key, value) => {
+  if (value === null || value === undefined) return;
+  if (value instanceof File) {
+    formData.append(`campaign[${key}]`, value);
+    return;
+  }
+  if (typeof value === 'object') {
+    Object.entries(value).forEach(([inner, innerValue]) =>
+      formData.append(`campaign[${key}][${inner}]`, innerValue)
+    );
+    return;
+  }
+  formData.append(`campaign[${key}]`, value);
+};
+
+export const journeyCampaignsAPI = {
+  create: payload => campaignsClient.create(payload),
+  createWithFile: ({ campaign, ...rest }) => {
+    const formData = new FormData();
+    Object.entries(rest).forEach(([key, value]) => formData.append(key, value));
+    Object.entries(campaign).forEach(([key, value]) =>
+      appendCampaignField(formData, key, value)
+    );
+    return axios.post(campaignsClient.url, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  // "Vão receber" before creating (exact, each person once).
+  preview: payload => previewsClient.create(payload),
+};

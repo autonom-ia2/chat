@@ -14,6 +14,7 @@ import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import AudienceSidePanel from 'dashboard/components-next/CampaignJourney/AudienceSidePanel.vue';
 import AudienceChannelBadges from 'dashboard/components-next/CampaignJourney/AudienceChannelBadges.vue';
 import { buildAudienceRow } from 'dashboard/components-next/CampaignJourney/audienceRows';
 import { campaignsUsingAudience } from 'dashboard/components-next/CampaignJourney/journeyErrors';
@@ -32,6 +33,8 @@ const meta = useMapGetter('campaignImports/getMeta');
 
 const deleteDialogRef = ref(null);
 const deleting = ref(null);
+// Side panel (PRD §6.6): the audience whose details are open.
+const openAudienceId = ref(null);
 const hasLoadError = ref(false);
 
 const rows = computed(() =>
@@ -76,6 +79,7 @@ const confirmDelete = async () => {
   deleteDialogRef.value?.close();
   try {
     await store.dispatch('campaignImports/delete', row.id);
+    if (openAudienceId.value === row.id) openAudienceId.value = null;
     useAlert(t(`${NS}.DELETED`));
   } catch (error) {
     const campaigns = campaignsUsingAudience(error);
@@ -190,9 +194,15 @@ useOnEnter(fetchAudiences);
             class="grid gap-3 border-b border-n-weak px-4 py-4 last:border-0 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_8rem_8rem_auto] md:items-center xl:px-6"
           >
             <div class="min-w-0">
-              <p class="mb-0 truncate text-sm font-semibold text-n-slate-12">
+              <button
+                type="button"
+                class="m-0 min-h-11 max-w-full truncate rounded-lg p-0 text-start text-sm font-semibold text-n-slate-12 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                :aria-label="t(`${NS}.PANEL.OPEN_ARIA`, { name: row.name })"
+                :data-open-panel="row.id"
+                @click="openAudienceId = row.id"
+              >
                 {{ row.name }}
-              </p>
+              </button>
               <p class="mb-0 truncate text-xs text-n-slate-11">
                 {{ row.sourceFilename }}
               </p>
@@ -244,6 +254,14 @@ useOnEnter(fetchAudiences);
         </ul>
       </section>
     </div>
+    <AudienceSidePanel
+      v-if="openAudienceId"
+      :audience-id="openAudienceId"
+      :can-manage="canManage"
+      @close="openAudienceId = null"
+      @use="useInCampaign"
+      @delete="askDelete"
+    />
     <Dialog
       ref="deleteDialogRef"
       type="alert"

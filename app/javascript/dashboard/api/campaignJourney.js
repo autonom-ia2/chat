@@ -29,7 +29,4 @@ class CampaignJourneyAPI extends ApiClient {
 export default new CampaignJourneyAPI();
 
 // Audiences and journey campaign creation (#993) live in their own file (one class per file).
-export {
-  audiencesAPI,
-  journeyCampaignsAPI,
-} from './campaignJourneyAudiences';
+export { audiencesAPI, journeyCampaignsAPI } from './campaignJourneyAudiences';

@@ -1,7 +1,8 @@
 <script setup>
 // Nova campanha (#993, PRD §6.2–6.4, D2, D9): Público → Mensagem → Revisar e agendar, on a
-// page with steps. WhatsApp Oficial runs inside the journey; the other channels open their
-// existing forms. The draft stays in this browser (campaignDraft.js) so "Criar público" can
+// page with steps. WhatsApp Oficial, WhatsApp API and e-mail run inside the journey (the
+// e-mail content in the existing editor); SMS still opens its own form and Chat ao vivo has
+// its own flow (LiveChatJourneyPage). The draft stays in this browser (campaignDraft.js) so "Criar público" can
 // leave and come back with the new audience selected (J2, J3). `?audience=<id>` opens
 // Passo 1 with it selected (F3).
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
@@ -17,10 +18,8 @@ import JourneyStepper from 'dashboard/components-next/CampaignJourney/JourneySte
 import StepAudience from 'dashboard/components-next/CampaignJourney/StepAudience.vue';
 import StepMessage from 'dashboard/components-next/CampaignJourney/StepMessage.vue';
 import StepReview from 'dashboard/components-next/CampaignJourney/StepReview.vue';
-import EmailCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/EmailCampaignDialog.vue';
-import WhatsAppApiCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppApiCampaign/WhatsAppApiCampaignDialog.vue';
 import SMSCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/SMSCampaign/SMSCampaignDialog.vue';
-import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/LiveChatCampaignDialog.vue';
+import EmailCampaignsAPI from 'dashboard/api/emailCampaigns';
 import { audiencesAPI, journeyCampaignsAPI } from 'dashboard/api/campaignJourney';
 import {
   CAMPAIGN_CHANNELS,
@@ -54,6 +53,12 @@ import {
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journeyErrors';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
+import { useJourneyChannelForms } from 'dashboard/components-next/CampaignJourney/useJourneyChannelForms';
+import {
+  buildEmailPayload,
+  buildWhatsappApiPayload,
+  emailChecks,
+} from 'dashboard/components-next/CampaignJourney/journeyChannelPayloads';
 
 const COVERAGE_DELAY_MS = 400;
 const SEARCH_DELAY_MS = 300;
@@ -70,11 +75,10 @@ const accountId = useMapGetter('getCurrentAccountId');
 const inboxes = useMapGetter('inboxes/getInboxes');
 const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 
+const currentUser = useMapGetter('getCurrentUser');
+
 const LEGACY_DIALOGS = {
-  [CAMPAIGN_CHANNELS.EMAIL]: EmailCampaignDialog,
-  [CAMPAIGN_CHANNELS.WHATSAPP_API]: WhatsAppApiCampaignDialog,
   [CAMPAIGN_CHANNELS.SMS]: SMSCampaignDialog,
-  [CAMPAIGN_CHANNELS.LIVE_CHAT]: LiveChatCampaignDialog,
 };
 
 const draft = ref(emptyDraft());
@@ -91,6 +95,8 @@ const legacyChannel = ref('');
 const isSubmitting = ref(false);
 const submitError = ref('');
 const returned = ref(route.query.returned === '1');
+const isCreatingEmail = ref(false);
+const isTestSending = ref(false);
 let coverageTimer = null;
 
 // A new template (or inbox) starts its variables from scratch.
@@ -179,31 +185,54 @@ const previewText = computed(() =>
     : ''
 );
 
-const isMessageReady = computed(
+// Bindings as the backend reads them (without the "Sugerido" flag).
+const plainBindings = () =>
+  Object.fromEntries(
+    Object.entries(draft.value.bindings).map(([key, { source, value }]) => [
+      key,
+      { source, value },
+    ])
+  );
+const forms = useJourneyChannelForms({ draft, bindings: plainBindings });
+
+const isOfficialReady = computed(
   () =>
-    draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL &&
-    Boolean(draft.value.title.trim()) &&
     Boolean(draft.value.inboxId) &&
     Boolean(template.value) &&
     allBound(variables.value, draft.value.bindings) &&
     (!mediaHeader.value || Boolean(draft.value.mediaUrl.trim()))
 );
+const MESSAGE_READY = {
+  [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () => isOfficialReady.value,
+  [CAMPAIGN_CHANNELS.WHATSAPP_API]: () =>
+    Boolean(draft.value.inboxId) && Boolean(draft.value.messageBody.trim()),
+  [CAMPAIGN_CHANNELS.EMAIL]: () => Boolean(draft.value.emailCampaignId),
+};
+const isMessageReady = computed(
+  () =>
+    Boolean(draft.value.title.trim()) &&
+    Boolean(MESSAGE_READY[draft.value.channel]?.())
+);
 
 // ---- Review (Passo 3) ----
 const timeZone = computed(() => accountTimeZone(currentAccount.value));
-const reach = computed(() =>
-  audience.value
-    ? reachOn(CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL, audience.value.channels)
-    : 0
+const isEmailChannel = computed(
+  () => draft.value.channel === CAMPAIGN_CHANNELS.EMAIL
 );
-const optedOut = computed(
-  () =>
-    Number(audienceImport.value?.reachability?.whatsapp?.opted_out) || 0
+const reach = computed(() =>
+  audience.value && draft.value.channel
+    ? reachOn(draft.value.channel, audience.value.channels)
+    : 0
 );
 const inboxName = computed(
   () =>
-    cloudInboxes.value.find(inbox => inbox.id === draft.value.inboxId)?.name ||
-    ''
+    (forms.inboxes.value || []).find(inbox => inbox.id === draft.value.inboxId)
+      ?.name || ''
+);
+const channelLabel = computed(() =>
+  draft.value.channel
+    ? t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[draft.value.channel]}`)
+    : ''
 );
 const bindingSummary = computed(() =>
   variables.value
@@ -213,6 +242,72 @@ const bindingSummary = computed(() =>
         `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
     )
     .join(' · ')
+);
+
+const emailSenderText = computed(() => {
+  const email = forms.emailCampaign.value;
+  return [email?.from_name, email?.from_email].filter(Boolean).join(' · ');
+});
+const messageDetail = () => {
+  if (draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API) {
+    return t(`${NS}.REVIEW.API_DETAIL`, { inbox: inboxName.value });
+  }
+  if (isEmailChannel.value) {
+    return t(`${NS}.REVIEW.EMAIL_DETAIL`, { sender: emailSenderText.value });
+  }
+  return [
+    t(`${NS}.REVIEW.CHANNEL_DETAIL`, { inbox: inboxName.value }),
+    bindingSummary.value,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+};
+const messageMain = () => {
+  if (draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API) {
+    return draft.value.messageBody;
+  }
+  if (isEmailChannel.value) {
+    return forms.emailCampaign.value?.subject
+      ? t(`${NS}.REVIEW.CONTENT_DETAIL`, {
+          subject: forms.emailCampaign.value.subject,
+        })
+      : t(`${NS}.EMAIL.CONTENT_EMPTY`);
+  }
+  return template.value?.name || '';
+};
+const reviewBlocks = computed(() => [
+  {
+    key: 'audience',
+    step: 1,
+    title: t(`${NS}.REVIEW.AUDIENCE`),
+    main: audience.value?.name || '',
+    detail: '',
+  },
+  {
+    key: 'message',
+    step: 2,
+    title: t(`${NS}.REVIEW.CHANNEL`),
+    main: `${channelLabel.value} · ${draft.value.title.trim()}`,
+    detail: messageDetail(),
+  },
+  {
+    key: 'content',
+    step: 2,
+    title: t(`${NS}.REVIEW.CONTENT`),
+    main: messageMain(),
+    detail: '',
+  },
+]);
+const crmTag = computed(() =>
+  t(`${NS}.MESSAGE.CRM_TAG`, { name: draft.value.title.trim() })
+);
+const onChannelLabel = computed(() =>
+  isEmailChannel.value
+    ? t(`${NS}.REVIEW.ON_CHANNEL_EMAIL`)
+    : t(`${NS}.REVIEW.ON_CHANNEL`)
+);
+const reviewChecks = computed(() =>
+  isEmailChannel.value ? emailChecks(forms.emailCampaign.value) : []
 );
 
 const reachable = computed(() => {
@@ -337,37 +432,109 @@ const cancel = () => {
   router.push({ name: 'campaigns_journey_index' });
 };
 
-const submit = async () => {
-  isSubmitting.value = true;
-  submitError.value = '';
-  try {
-    await journeyCampaignsAPI.create(
+const scheduledAtValue = () =>
+  draft.value.when === 'later'
+    ? scheduleToUtc(draft.value.scheduledAt, timeZone.value)
+    : null;
+
+const SUBMITTERS = {
+  [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: () =>
+    journeyCampaignsAPI.create(
       buildCampaignPayload({
         audienceId: draft.value.audienceId,
         title: draft.value.title,
         inboxId: draft.value.inboxId,
-        scheduledAt:
-          draft.value.when === 'later'
-            ? scheduleToUtc(draft.value.scheduledAt, timeZone.value)
-            : null,
+        scheduledAt: scheduledAtValue(),
         template: template.value,
         bindings: draft.value.bindings,
         defaults: draft.value.defaults,
         mediaUrl: draft.value.mediaUrl,
       })
-    );
-    clearDraft(accountId.value);
-    useAlert(t(`${NS}.REVIEW.SUCCESS`));
-    router.push({
-      name: 'campaigns_journey_index',
-      query: { channel: CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL },
+    ),
+  [CAMPAIGN_CHANNELS.WHATSAPP_API]: () => {
+    const payload = buildWhatsappApiPayload({
+      audienceId: draft.value.audienceId,
+      draft: draft.value,
+      scheduledAt: scheduledAtValue(),
     });
+    const file = forms.mediaFile.value;
+    return file
+      ? journeyCampaignsAPI.createWithFile({
+          ...payload,
+          campaign: { ...payload.campaign, media_file: file },
+        })
+      : journeyCampaignsAPI.create(payload);
+  },
+  // The e-mail draft exists since Passo 2: schedule it or send it now (engine endpoints).
+  [CAMPAIGN_CHANNELS.EMAIL]: () => {
+    const id = draft.value.emailCampaignId;
+    const at = scheduledAtValue();
+    return at ? EmailCampaignsAPI.schedule(id, at) : EmailCampaignsAPI.sendNow(id);
+  },
+};
+
+const submit = async () => {
+  isSubmitting.value = true;
+  submitError.value = '';
+  try {
+    const channel = draft.value.channel;
+    await SUBMITTERS[channel]();
+    clearDraft(accountId.value);
+    forms.mediaFile.value = null;
+    useAlert(t(`${NS}.REVIEW.SUCCESS`));
+    router.push({ name: 'campaigns_journey_index', query: { channel } });
   } catch (error) {
     submitError.value = t(`${NS}.REVIEW.ERRORS.${createErrorKey(error)}`);
   } finally {
     isSubmitting.value = false;
   }
 };
+
+const createEmail = async () => {
+  isCreatingEmail.value = true;
+  submitError.value = '';
+  try {
+    const { data } = await journeyCampaignsAPI.create(
+      buildEmailPayload({ audienceId: draft.value.audienceId, draft: draft.value })
+    );
+    update({ emailCampaignId: data.id });
+  } catch (error) {
+    const key = createErrorKey(error);
+    useAlert(
+      key === 'GENERIC'
+        ? t(`${NS}.EMAIL.ERROR`)
+        : t(`${NS}.REVIEW.ERRORS.${key}`)
+    );
+  } finally {
+    isCreatingEmail.value = false;
+  }
+};
+
+// The existing editor, unchanged; the draft brings the person back to Passo 2.
+const openEmailEditor = () => {
+  saveDraft(accountId.value, draft.value);
+  router.push({
+    name: 'campaigns_email_builder',
+    params: { campaignId: draft.value.emailCampaignId },
+  });
+};
+
+// "Enviar teste para mim" (D8): only the logged-in user's address (api-999.md §4).
+const sendTestToMe = async () => {
+  isTestSending.value = true;
+  try {
+    const email = currentUser.value?.email;
+    await EmailCampaignsAPI.sendTest(draft.value.emailCampaignId, email);
+    useAlert(t(`${NS}.REVIEW.TEST_SENT`, { email }));
+  } catch {
+    useAlert(t(`${NS}.REVIEW.TEST_ERROR`));
+  } finally {
+    isTestSending.value = false;
+  }
+};
+
+const openLiveChat = () =>
+  router.push({ name: 'campaigns_journey_live_chat_new' });
 
 const loadAudiences = async ({ append = false } = {}) => {
   const page = append ? Number(listMeta.value.page || 1) + 1 : 1;
@@ -439,6 +606,9 @@ useOnEnter(async () => {
   const results = await Promise.allSettled(requests);
   hasLoadError.value = results[0].status === 'rejected';
   await loadAudienceDetail();
+  forms.loadEmailCampaign();
+  forms.loadApiTemplates(draft.value.inboxId);
+  forms.refreshPreview();
   isLoading.value = false;
   if (draft.value.step > reachable.value) update({ step: reachable.value });
   loadSample();
@@ -446,6 +616,7 @@ useOnEnter(async () => {
 });
 
 onBeforeUnmount(() => {
+  forms.stop();
   window.clearTimeout(coverageTimer);
   window.clearTimeout(searchTimer);
 });
@@ -518,7 +689,7 @@ onBeforeUnmount(() => {
         @load-more="loadMoreAudiences"
         @select="selectAudience"
         @create="createAudience"
-        @live-chat="openLegacy(CAMPAIGN_CHANNELS.LIVE_CHAT)"
+        @live-chat="openLiveChat"
         @continue="goTo(2)"
       />
 
@@ -535,6 +706,23 @@ onBeforeUnmount(() => {
         :media-header="mediaHeader"
         :preview-text="previewText"
         :can-continue="isMessageReady"
+        :api-form="{
+          inboxOptions: forms.apiInboxOptions.value,
+          templates: forms.apiTemplates.value,
+          extraColumns: columns,
+          mediaFile: forms.mediaFile.value,
+          preview: forms.preview.value,
+        }"
+        :email-form="{
+          identities: forms.identities.value || [],
+          inboxes: forms.inboxes.value || [],
+          emailCampaign: forms.emailCampaign.value,
+          isCreating: isCreatingEmail,
+        }"
+        @attach="file => (forms.mediaFile.value = file)"
+        @email-create="createEmail"
+        @open-editor="openEmailEditor"
+        @email-reload="forms.loadEmailCampaign"
         @update="update"
         @bind="bind"
         @default="setDefault"
@@ -545,20 +733,17 @@ onBeforeUnmount(() => {
       />
 
       <StepReview
-        v-else-if="draft.step === 3 && audience && template"
-        :audience="audience"
+        v-else-if="draft.step === 3 && audience && isMessageReady"
         :draft="draft"
-        :channel-label="
-          t(
-            `CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]}`
-          )
-        "
-        :inbox-name="inboxName"
-        :template-name="template.name"
-        :binding-summary="bindingSummary"
+        :blocks="reviewBlocks"
+        :channel-label="channelLabel"
+        :on-channel-label="onChannelLabel"
+        :crm-tag="crmTag"
         :reach="reach"
-        :opted-out="optedOut"
-        :excluded="coverage ? Number(coverage.excluded_count) || 0 : null"
+        :preview="forms.preview.value"
+        :checks="reviewChecks"
+        :show-test-send="isEmailChannel"
+        :is-test-sending="isTestSending"
         :time-zone="timeZone"
         :is-submitting="isSubmitting"
         :error-message="submitError"
@@ -566,6 +751,7 @@ onBeforeUnmount(() => {
         @go="goTo"
         @back="goTo(2)"
         @submit="submit"
+        @test-send="sendTestToMe"
       />
     </div>
   </section>

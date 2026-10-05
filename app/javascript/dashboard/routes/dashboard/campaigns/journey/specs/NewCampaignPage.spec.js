@@ -16,9 +16,10 @@ const api = vi.hoisted(() => ({
   sampleContact: vi.fn(),
 }));
 const create = vi.hoisted(() => vi.fn());
+const preview = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/api/campaignJourney', () => ({
   audiencesAPI: api,
-  journeyCampaignsAPI: { create },
+  journeyCampaignsAPI: { create, preview },
 }));
 
 const stub = name => ({ default: { name, render: () => null } });
@@ -191,6 +192,8 @@ beforeEach(() => {
   api.variableSuggestions.mockResolvedValue({ data: { payload: [] } });
   api.variableCoverage.mockResolvedValue({ data: { payload: null } });
   create.mockReset();
+  preview.mockReset();
+  preview.mockResolvedValue({ data: { payload: null } });
   push.mockClear();
   alert.mockClear();
   window.localStorage.clear();
@@ -304,6 +307,16 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
       },
     });
     create.mockResolvedValue({ data: { id: 31, recipients_count: 96 } });
+    preview.mockResolvedValue({
+      data: {
+        payload: {
+          total: 98,
+          receive: 96,
+          reasons: { missing_variables: 2 },
+          missing_by_variable: { 2: 2 },
+        },
+      },
+    });
     const wrapper = mountPage();
     await flushPromises();
 
@@ -367,7 +380,20 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(wrapper.find('[data-step="3"]').attributes('aria-current')).toBe(
       'step'
     );
+    // Decision of 05/10: the exact number of the server, each person once.
+    expect(preview).toHaveBeenLastCalledWith({
+      campaign_import_id: 5,
+      channel: 'whatsapp_cloud',
+      variable_bindings: {
+        1: { source: 'contact', value: 'first_name' },
+        2: { source: 'column', value: 'Vencimento' },
+      },
+      variable_defaults: {},
+    });
     expect(wrapper.find('[data-test="receivers"]').text()).toBe('96');
+    expect(wrapper.find('[data-reason="missing_variables"]').text()).toContain(
+      '−2'
+    );
     expect(wrapper.find('[data-test="review-crm"]').text()).toContain(
       'Campaign: Renovação auto — outubro'
     );
@@ -491,7 +517,10 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     wrapper.unmount();
   });
 
-  it('B8: who refused messages is out of "vão receber"', async () => {
+  it('B8: who refused messages is out of "vão receber" (server preview)', async () => {
+    preview.mockResolvedValue({
+      data: { payload: { total: 98, receive: 95, reasons: { opted_out: 3 } } },
+    });
     saveDraft(1, {
       title: 'Renovação',
       audienceId: 5,
@@ -504,17 +533,12 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
       },
       step: 3,
     });
-    const wrapper = mountPage({
-      imports: [
-        {
-          ...PHONE_AUDIENCE,
-          reachability: { whatsapp: { total: 98, receive: 95, opted_out: 3 } },
-        },
-      ],
-    });
+    const wrapper = mountPage();
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(500);
     await flushPromises();
 
-    expect(wrapper.find('[data-test="opted-out"]').text()).toBe('−3');
+    expect(wrapper.find('[data-reason="opted_out"]').text()).toContain('−3');
     expect(wrapper.find('[data-test="receivers"]').text()).toBe('95');
     wrapper.unmount();
   });

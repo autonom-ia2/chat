@@ -16,6 +16,15 @@ export const emptyDraft = () => ({
   mediaUrl: '',
   bindings: {},
   defaults: {},
+  // WhatsApp API (#999)
+  messageBody: '',
+  apiTemplateId: null,
+  // E-mail (#999): "identity:<id>" or "inbox:<id>", and the draft created on the server
+  emailSender: '',
+  fromName: '',
+  fromEmail: '',
+  replyInboxId: null,
+  emailCampaignId: null,
   when: 'now',
   scheduledAt: '',
   step: 1,

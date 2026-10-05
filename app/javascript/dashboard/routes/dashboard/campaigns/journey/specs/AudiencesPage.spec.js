@@ -5,6 +5,8 @@ import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enImport from 'dashboard/i18n/locale/en/campaignImport.json';
 import AudiencesPage from '../AudiencesPage.vue';
 
+const panelApi = vi.hoisted(() => ({ show: vi.fn(), contacts: vi.fn() }));
+vi.mock('dashboard/api/campaignJourney', () => ({ audiencesAPI: panelApi }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 const alert = vi.fn();
@@ -203,5 +205,90 @@ describe('buildAudienceRow', () => {
     expect(buildAudienceRow({ ...NEW_IMPORT, channels: {} }).badges).toEqual(
       []
     );
+  });
+});
+
+describe('Painel lateral do público (PRD §6.6, F1, B8)', () => {
+  it('shows people, columns, who does not receive, campaigns and contacts', async () => {
+    panelApi.show.mockResolvedValue({
+      data: {
+        payload: {
+          ...NEW_IMPORT,
+          can_delete: true,
+          extra_columns: ['Vencimento'],
+          companies: { created: 2, reused: 1, contacts_linked: 9, kept: 0 },
+          reachability: {
+            whatsapp: { total: 980, receive: 977, opted_out: 3 },
+            email: {
+              total: 1240,
+              receive: 1238,
+              unsubscribed: 2,
+              bounced: 0,
+              suppressed: 0,
+            },
+          },
+          linked_campaigns: [
+            {
+              type: 'Campaign',
+              id: 7,
+              title: 'Renovação',
+              channel: 'whatsapp_official',
+              status: 'completed',
+            },
+          ],
+        },
+      },
+    });
+    panelApi.contacts.mockResolvedValue({
+      data: {
+        payload: [
+          {
+            id: 3,
+            name: 'Ana Souza',
+            company_name: 'Alfa',
+            email: 'ana@alfa.com.br',
+          },
+        ],
+        meta: { count: 30 },
+      },
+    });
+    const { wrapper } = mountPage([{ ...NEW_IMPORT, can_delete: true }]);
+    await flushPromises();
+
+    await wrapper.find('[data-open-panel="2"]').trigger('click');
+    await flushPromises();
+
+    const panel = wrapper.find('[data-test="audience-panel"]');
+    expect(panelApi.show).toHaveBeenCalledWith(2);
+    expect(panel.text()).toContain('1,248 people');
+    expect(panel.find('[data-test="panel-columns"]').text()).toContain(
+      'Vencimento'
+    );
+    expect(panel.find('[data-test="panel-not-receiving"]').text()).toContain(
+      'WhatsApp: refused messages · 3'
+    );
+    expect(panel.find('[data-test="panel-not-receiving"]').text()).toContain(
+      'Email: unsubscribed · 2'
+    );
+    expect(panel.find('[data-test="panel-campaigns"]').text()).toContain(
+      'Renovação'
+    );
+    expect(panel.find('[data-test="panel-companies"]').text()).toContain(
+      '9 contacts linked'
+    );
+
+    await panel.find('[data-test="panel-contacts-toggle"]').trigger('click');
+    await flushPromises();
+    expect(panelApi.contacts).toHaveBeenCalledWith(2, 1);
+    expect(wrapper.find('[data-contact="3"]').text()).toContain('Ana Souza');
+
+    push.mockClear();
+    await wrapper.find('[data-test="panel-use"]').trigger('click');
+    expect(push).toHaveBeenCalledWith({
+      name: 'campaigns_journey_new',
+      query: { audience: '2' },
+    });
+    await wrapper.find('[data-test="panel-close"]').trigger('click');
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
   });
 });

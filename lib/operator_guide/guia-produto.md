@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (185 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (187 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -563,7 +563,7 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `campaigns_journey_audiences` - `/app/accounts/:accountId/campaigns/audiences`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: nova jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED) e importação de base ligada (CAMPAIGN_IMPORT_ENABLED); para criar, administrador ou função com campaign_manage.
-- passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Para subir uma planilha nova, clique em Novo público; 4. Em um público salvo, clique em Usar em nova campanha para abrir a campanha com ele escolhido; 5. Excluir público apaga só a lista; 6. Detalhes abre o histórico da importação com os arquivos.
+- passos: 1. Abra Campanhas > Público; 2. Veja cada público com nome, selos de canal (E-mail e WhatsApp com a contagem), pessoas e data; 3. Clique no nome para abrir o painel com pessoas, empresas, outras colunas guardadas, quem não recebe, campanhas que usaram e Ver contatos e empresas; 4. Para subir uma planilha nova, clique em Novo público; 5. Em um público salvo, clique em Usar em nova campanha para abrir a campanha com ele escolhido; 6. Excluir público apaga só a lista; 7. Detalhes abre o histórico da importação com os arquivos.
 - gotchas: com a jornada ligada, Base Campanha e Histórico de bases saem do menu de três pontos de Contatos e moram aqui; públicos antigos aparecem com o nome da campanha e sem selos de canal, que só são calculados nas importações novas; excluir não apaga contatos, empresas, conversas nem resultados; público usado por campanha que ainda não terminou não pode ser excluído e a tela diz quais campanhas o usam; quem só tem campaign_view vê a lista sem os botões de criar, usar e excluir; com CAMPAIGN_IMPORT_ENABLED desligado o item Público some do menu e o endereço leva para Campanha.
 - nav_target: `campaigns_journey_audiences`
 
@@ -584,8 +584,28 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
 - pre_requisitos: jornada de campanhas e importação de base ligadas; administrador ou função com campaign_manage; um público salvo com celular; caixa WhatsApp pela Cloud API com modelo aprovado.
 - passos: 1. Passo Público: escolha um público salvo (os selos mostram e-mail e WhatsApp com a contagem); sem público, clique em Criar público e volte com ele já escolhido; 2. Passo Mensagem: escolha WhatsApp Oficial, dê o nome da campanha, escolha a caixa e o modelo aprovado; 3. Em De onde vem cada parte da mensagem, ligue cada variável (do texto, do cabeçalho e do link do botão) a um dado do contato, a uma coluna do público ou a um texto fixo (as sugestões vêm marcadas como Sugerido); 4. Se a tela disser que pessoas ficam de fora, escreva um texto para quando faltar o dado ou aceite; 5. Passo Revisar: confira, escolha Agora ou data e hora (no fuso da conta) e confirme o envio para o número de pessoas mostrado.
-- gotchas: canal que o público não tem aparece indisponível com o motivo (sem celular ou sem e-mail); E-mail, WhatsApp API e SMS ainda abrem o formulário de antes; Chat ao vivo não usa público e tem atalho no passo Público; o rascunho fica salvo neste navegador enquanto você cria o público; quem recusou mensagens fica fora de Vão receber; quem responder ganha a marca Campanha: nome no card do CRM; a campanha envia para todo o público no horário escolhido, sem etapas.
+- gotchas: canal que o público não tem aparece indisponível com o motivo (sem celular ou sem e-mail); WhatsApp API (texto com fichas do contato e do público, modelo salvo e anexo) e E-mail (remetente e caixa das respostas, depois o editor de sempre; volte à Nova campanha para revisar, enviar teste para você e agendar) também correm aqui; SMS ainda abre o formulário de antes; Chat ao vivo não usa público e tem atalho no passo Público; o rascunho fica salvo neste navegador enquanto você cria o público; quem recusou mensagens fica fora de Vão receber; quem responder ganha a marca Campanha: nome no card do CRM; a campanha envia para todo o público no horário escolhido, sem etapas.
 - nav_target: `campaigns_journey_new`
+
+### Criar a mensagem automática do Chat ao vivo
+- intent: Como faço uma mensagem automática no meu site?; Como mostro uma mensagem para quem visita uma página?; Onde crio campanha do chat ao vivo?; Como faço a mensagem aparecer só em horário de atendimento?
+- onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha > atalho "Quer uma mensagem automática no seu site, sem lista?"
+- rota: `campaigns_journey_live_chat_new` - `/app/accounts/:accountId/campaigns/live-chat/new`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED); chat do site conectado; administrador ou função com campaign_manage.
+- passos: 1. Em Quando aparece, escolha o site, escreva o endereço completo da página (começando com https://), os segundos na página e, se quiser, ligue Só em horário de atendimento; 2. Em Mensagem, dê o nome, escolha quem fala (um agente ou o robô) e escreva o texto, conferindo a prévia; 3. Em Ativar, confira o resumo e clique em Ativar.
+- gotchas: não usa público nem lista de pessoas: aparece para quem visita a página; fica na lista Campanha com o selo Sempre ativa; quem conversar por ela ganha a marca Campanha chat ao vivo com o nome no card do CRM; o endereço precisa ser completo.
+- nav_target: `campaigns_journey_live_chat_new`
+
+### Editar ou pausar a mensagem do Chat ao vivo
+- intent: Como pauso a mensagem automática do site?; Como mudo o texto da mensagem do chat ao vivo?; Como ligo de novo uma mensagem pausada?
+- onde_fica: Menu lateral > Campanhas > Campanha > filtro Chat ao vivo > Abrir
+- rota: `campaigns_journey_live_chat_edit` - `/app/accounts/:accountId/campaigns/live-chat/:campaignId`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_manage`
+- pre_requisitos: jornada de campanhas ligada; administrador ou função com campaign_manage.
+- passos: 1. Na lista Campanha, filtre por Chat ao vivo e clique em Abrir na mensagem; 2. Mude o que precisar em Quando aparece e Mensagem; 3. Em Ativar, clique em Salvar alterações, ou em Pausar (ou Ligar de novo).
+- gotchas: o selo no topo mostra Sempre ativa ou Pausada; pausar não apaga a mensagem nem as marcas já dadas.
+- nav_target: `campaigns_journey_live_chat_edit`
 
 ### Criar e verificar identidade de remetente de e-mail
 - intent: "Como libero um domínio para disparo?"; "Onde vejo DKIM/SPF/DMARC?"; "Por que não consigo escolher remetente?"

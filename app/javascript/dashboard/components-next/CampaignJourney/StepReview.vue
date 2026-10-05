@@ -1,7 +1,9 @@
 <script setup>
-// Passo 3 — Revisar e agendar (#993, PRD §6.4, D3). Blocks with "Alterar", the CRM line,
-// when (now, or date and time in the account time zone), how many will receive it and
-// a final confirmation with that number. No batches: everyone at the chosen time.
+// Passo 3 — Revisar e agendar (#993, PRD §6.4, D3, D8, B8). Blocks with "Alterar" (built by
+// the page for each channel), the CRM line, when (now, or date and time in the account time
+// zone), the exact "vão receber" from POST campaign_journey/recipient_previews with the
+// reasons of who is left out (each person once), "Enviar teste para mim" for e-mail and a
+// final confirmation with the number. No batches: everyone at the chosen time.
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -10,30 +12,48 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import { formatInZone, isFutureSchedule, scheduleToUtc } from './scheduleTime';
 
 const props = defineProps({
-  audience: { type: Object, required: true },
   draft: { type: Object, required: true },
+  // [{ key, step, title, main, detail }]
+  blocks: { type: Array, required: true },
   channelLabel: { type: String, required: true },
-  inboxName: { type: String, default: '' },
-  templateName: { type: String, default: '' },
-  bindingSummary: { type: String, default: '' },
+  onChannelLabel: { type: String, required: true },
+  crmTag: { type: String, required: true },
+  // Audience count on the channel while the server preview is not there.
   reach: { type: Number, default: 0 },
-  // Refused messages before the send (PRD B8), out of the total.
-  optedOut: { type: Number, default: 0 },
-  excluded: { type: Number, default: null },
+  // { total, receive, reasons: { opted_out: 2, ... } } from recipient_previews, or null.
+  preview: { type: Object, default: null },
+  // E-mail readiness checks [{ key, ok }] (send_readiness of the e-mail engine).
+  checks: { type: Array, default: () => [] },
+  showTestSend: { type: Boolean, default: false },
+  isTestSending: { type: Boolean, default: false },
   timeZone: { type: String, required: true },
   isSubmitting: { type: Boolean, default: false },
   errorMessage: { type: String, default: '' },
 });
 
-const emit = defineEmits(['update', 'go', 'back', 'submit']);
+const emit = defineEmits(['update', 'go', 'back', 'submit', 'testSend']);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.REVIEW';
 const { t, n, locale } = useI18n();
 const confirmRef = ref(null);
 
+const REASON_ORDER = [
+  'channel_disabled',
+  'opted_out',
+  'unsubscribed',
+  'bounced',
+  'suppressed',
+  'missing_variables',
+];
+
 const isLater = computed(() => props.draft.when === 'later');
-const receivers = computed(() =>
-  Math.max(0, props.reach - props.optedOut - (props.excluded || 0))
+const total = computed(() => props.preview?.total ?? props.reach);
+const receivers = computed(() => props.preview?.receive ?? props.reach);
+const reasons = computed(() =>
+  REASON_ORDER.map(key => ({
+    key,
+    count: Number(props.preview?.reasons?.[key]) || 0,
+  })).filter(reason => reason.count > 0)
 );
 const isScheduleValid = computed(
   () => !isLater.value || isFutureSchedule(props.draft.scheduledAt, props.timeZone)
@@ -46,11 +66,6 @@ const whenText = computed(() => {
     locale.value
   );
 });
-const crmTag = computed(() =>
-  t('CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE.CRM_TAG', {
-    name: props.draft.title.trim(),
-  })
-);
 const actionLabel = computed(() =>
   isLater.value ? t(`${NS}.SCHEDULE`) : t(`${NS}.SEND_NOW`)
 );
@@ -66,31 +81,10 @@ const confirmText = computed(() =>
     ? t(`${NS}.CONFIRM_LATER_TEXT`, { when: whenText.value })
     : t(`${NS}.CONFIRM_NOW_TEXT`)
 );
-
-const blocks = computed(() => [
-  {
-    key: 'audience',
-    step: 1,
-    title: t(`${NS}.AUDIENCE`),
-    main: props.audience.name,
-    detail: t(`${NS}.AUDIENCE_DETAIL`, { count: n(props.reach) }),
-  },
-  {
-    key: 'message',
-    step: 2,
-    title: t(`${NS}.CHANNEL`),
-    main: `${props.channelLabel} · ${props.templateName}`,
-    detail: [
-      t(`${NS}.CHANNEL_DETAIL`, { inbox: props.inboxName }),
-      props.bindingSummary,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  },
-]);
+const isBlocked = computed(() => props.checks.some(check => !check.ok));
 
 const openConfirmation = () => {
-  if (!isScheduleValid.value) return;
+  if (!isScheduleValid.value || isBlocked.value) return;
   confirmRef.value?.open();
 };
 
@@ -191,28 +185,58 @@ const submit = () => {
           {{ channelLabel }} · {{ isLater ? whenText : t(`${NS}.NOW`) }}
         </p>
       </div>
-      <dl class="m-0 flex flex-col gap-1 text-sm">
+      <dl class="m-0 flex flex-col gap-1 text-sm" data-test="review-counts">
         <div class="flex justify-between gap-3">
-          <dt class="text-n-slate-11">{{ t(`${NS}.ON_CHANNEL`) }}</dt>
-          <dd class="m-0 font-semibold tabular-nums">{{ n(reach) }}</dd>
+          <dt class="text-n-slate-11">{{ onChannelLabel }}</dt>
+          <dd class="m-0 font-semibold tabular-nums">{{ n(total) }}</dd>
         </div>
-        <div v-if="optedOut" class="flex justify-between gap-3">
-          <dt class="text-n-slate-11">{{ t(`${NS}.OPTED_OUT`) }}</dt>
-          <dd class="m-0 tabular-nums" data-test="opted-out">
-            −{{ n(optedOut) }}
-          </dd>
-        </div>
-        <div v-if="excluded" class="flex justify-between gap-3">
-          <dt class="text-n-slate-11">{{ t(`${NS}.LEFT_OUT`) }}</dt>
-          <dd class="m-0 tabular-nums">−{{ n(excluded) }}</dd>
+        <div
+          v-for="reason in reasons"
+          :key="reason.key"
+          class="flex justify-between gap-3"
+          :data-reason="reason.key"
+        >
+          <dt class="text-n-slate-11">
+            {{ t(`${NS}.REASONS.${reason.key.toUpperCase()}`) }}
+          </dt>
+          <dd class="m-0 tabular-nums">−{{ n(reason.count) }}</dd>
         </div>
       </dl>
+      <ul
+        v-if="checks.length"
+        class="m-0 flex list-none flex-col gap-1 p-0 text-xs"
+        data-test="review-checks"
+      >
+        <li
+          v-for="check in checks"
+          :key="check.key"
+          class="flex items-center gap-2"
+          :class="check.ok ? 'text-n-teal-11' : 'text-n-ruby-11'"
+        >
+          <span
+            :class="check.ok ? 'i-lucide-check' : 'i-lucide-x'"
+            class="size-3.5 shrink-0"
+            aria-hidden="true"
+          />
+          {{ t(`${NS}.CHECKS.${check.key.toUpperCase()}`) }}
+        </li>
+      </ul>
+      <Button
+        v-if="showTestSend"
+        :label="t(`${NS}.TEST_SEND`)"
+        :is-loading="isTestSending"
+        variant="outline"
+        color="slate"
+        class="!min-h-11 w-full justify-center !rounded-xl"
+        data-test="test-send"
+        @click="emit('testSend')"
+      />
       <p v-if="errorMessage" role="alert" class="m-0 text-sm text-n-ruby-11">
         {{ errorMessage }}
       </p>
       <Button
         :label="actionLabel"
-        :disabled="!isScheduleValid || !receivers || isSubmitting"
+        :disabled="!isScheduleValid || !receivers || isBlocked || isSubmitting"
         :is-loading="isSubmitting"
         class="!min-h-11 w-full justify-center !rounded-xl"
         data-test="open-confirmation"

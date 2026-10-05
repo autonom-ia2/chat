@@ -95,7 +95,11 @@ const CHATWOOT_ROUTES = {
     params: { campaignId: campaign.id },
   }),
   [CAMPAIGN_CHANNELS.SMS]: () => legacyPage('campaigns_sms_index'),
-  [CAMPAIGN_CHANNELS.LIVE_CHAT]: () => legacyPage('campaigns_livechat_index'),
+  // #1008: live chat messages are edited and paused in their own journey page.
+  [CAMPAIGN_CHANNELS.LIVE_CHAT]: campaign => ({
+    name: 'campaigns_journey_live_chat_edit',
+    params: { campaignId: campaign.id },
+  }),
 };
 
 const fromChatwootCampaign = campaign => {

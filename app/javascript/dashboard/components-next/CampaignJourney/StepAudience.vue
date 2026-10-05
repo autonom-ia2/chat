@@ -191,6 +191,7 @@ const formatDate = value =>
           variant="ghost"
           size="sm"
           class="!min-h-11"
+          data-test="live-chat-shortcut"
           @click="emit('liveChat')"
         />
       </div>
