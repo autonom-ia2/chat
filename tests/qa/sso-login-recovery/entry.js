@@ -32,7 +32,12 @@ window.chatwootConfig = {
 window.qa = { locale, missing: [], vueErrors: [], vueWarnings: [] };
 document.documentElement.lang = locale.replace('_', '-');
 document.documentElement.dir = 'ltr';
-window.history.replaceState(null, '', `/app/login?${params.toString()}`);
+const search = params.toString();
+window.history.replaceState(
+  null,
+  '',
+  `/app/login${search ? `?${search}` : ''}`
+);
 
 const Login = (await import('v3/views/login/Index.vue')).default;
 const router = createRouter({
