@@ -42,12 +42,18 @@ class ContactImports::CustomAttributes
     @columns_by_header ||= columns.index_by(&:column)
   end
 
+  # Another import or a person may create the same key between the lookup and the insert: the
+  # unique index wins, the existing attribute is used and the import goes on.
   def create_definition(column)
-    definition = @account.custom_attribute_definitions.find_or_initialize_by(attribute_model: :contact_attribute, attribute_key: column.key)
-    return false if definition.persisted?
+    scope = @account.custom_attribute_definitions.where(attribute_model: :contact_attribute)
+    return false if scope.exists?(attribute_key: column.key)
 
-    definition.assign_attributes(attribute_display_name: column.label, attribute_display_type: :text)
-    definition.save!
+    scope.create!(attribute_key: column.key, attribute_display_name: column.label, attribute_display_type: :text)
     true
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+    raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:attribute_key, :taken)
+
+    scope.find_by!(attribute_key: column.key)
+    false
   end
 end
