@@ -89,9 +89,9 @@ export function startSessionArguments(config, localPort) {
     '--target',
     config.instanceId,
     '--document-name',
-    'AWS-StartPortForwardingSessionToRemoteHost',
+    'AWS-StartPortForwardingSession',
     '--parameters',
-    `host=["127.0.0.1"],portNumber=["22"],localPortNumber=["${localPort}"]`,
+    `portNumber=["22"],localPortNumber=["${localPort}"]`,
   ]);
 }
 

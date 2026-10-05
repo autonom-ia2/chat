@@ -1,5 +1,35 @@
 # Release operacional Instagram — #960
 
+## Bootstrap bloqueado depois da preparação local — correção #960
+
+A PR #962 já foi publicada nas duas stacks e os cinco metadados foram salvos.
+Os estados históricos abaixo não são instrução para repetir deploy/Redis/SSM.
+No teste humano de 04/10/2026 às 23:49 UTC, a preparação local terminou, mas
+nenhum gestor foi carregado. O log SSM da própria tentativa registrou:
+`Forwarding to IP address 127.0.0.1 is forbidden.`
+
+O publisher encaminha SSH da **própria instância gerenciada**, portanto deve usar
+`AWS-StartPortForwardingSession` com `portNumber=22` e porta local, sem `host`.
+`AWS-StartPortForwardingSessionToRemoteHost` é destinado a outro host. Não
+desabilitar a proteção de loopback, trocar IP para contornar a regra nem ampliar
+permissões. Validar autorização do documento correto nas duas contas.
+Referência: https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html
+
+O comando forçado usa `bundle exec ruby scripts/instagram_testers/session_publisher.rb`.
+A entrada reserva stdout/stderr do protocolo e silencia logs **antes** de carregar
+o Rails; somente JSON validado ou erro fixo saem pelos canais reservados.
+Não chamar essa entrada por `rails runner`, pois logs anteriores ao script
+contaminariam a resposta. Não mudar o logger global do web/worker.
+
+Publicar CLI e wrapper compatíveis antes da retomada pessoal. Na preparação
+parcial, preservar perfil/cookies/locks e os arquivos existentes. `STARTING`
+sozinho não certifica prontidão: conferir fontes, wrapper, os dois plists, ausência
+de gestores/atividade e as três leituras tipadas em **ambas** as stacks antes do
+primeiro carregamento. `LOADED` ausente não prova que nada chegou a iniciar.
+Global OFF continua obrigatório até homologação; não enviar novos convites.
+
+Diagnóstico e limites: `docs/audit/960-bootstrap-local-ssm-20261004.md`.
+
 ## Estado confirmado — 04/10/2026, 20:53 UTC
 
 **Transporte PASS encerrado; ativação funcional pendente.** O confronto AWS das

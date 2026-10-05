@@ -362,9 +362,10 @@ test('forced publisher emits only canonical bounded typed replies including boot
   const synthetic = source
     .replace('/usr/bin/id -u 2>/dev/null', 'printf 0')
     .replace(
-      '/usr/bin/docker exec -i chatwoot-web bundle exec rails runner scripts/instagram_testers/session_publisher.rb 2>/dev/null',
+      '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null',
       '/bin/cat'
     );
+  assert.equal(synthetic.includes('/usr/bin/docker'), false);
   for (const [reply, code] of [
     [JSON.stringify(envelope(request)), 0],
     [JSON.stringify({ type: 'session', version: id }), 0],
