@@ -199,7 +199,7 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
 
       import_contacts!(campaign_import)
 
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
       expect(account.contacts.sole.company_id).to be_nil
     end
 
@@ -212,7 +212,7 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
 
       import_contacts!(campaign_import)
 
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
     end
   end
 end

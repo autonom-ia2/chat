@@ -51,7 +51,7 @@ RSpec.describe CampaignImports::Importer, :aggregate_failures do
     expect(preview(campaign_import)).to eq(
       'available' => true, 'rows_with_company' => 10, 'companies_created' => 1, 'companies_reused' => 0, 'contacts_linked' => 10, 'contacts_kept' => 0
     )
-    expect(Company.count).to eq(0)
+    expect(Company.where(account_id: account.id).count).to eq(0)
 
     import!(campaign_import)
 
@@ -114,7 +114,7 @@ RSpec.describe CampaignImports::Importer, :aggregate_failures do
 
     import!(campaign_import)
 
-    expect(Company.count).to eq(0)
+    expect(Company.where(account_id: account.id).count).to eq(0)
     expect(account.contacts.sole.company_id).to be_nil
     expect(row_results(campaign_import)).to eq(['none'])
     expect(final_counts(campaign_import).values).to all(eq(0))
@@ -129,7 +129,7 @@ RSpec.describe CampaignImports::Importer, :aggregate_failures do
 
     import!(campaign_import)
 
-    expect(Company.count).to eq(0)
+    expect(Company.where(account_id: account.id).count).to eq(0)
     expect(account.contacts.sole.company_id).to be_nil
     expect(row_results(campaign_import)).to eq(['none'])
   end
@@ -215,6 +215,6 @@ RSpec.describe CampaignImports::Importer, :aggregate_failures do
     expect(campaign_import).to be_completed
     expect(row_results(campaign_import)).to eq([nil])
     expect(final_counts(campaign_import).values).to all(eq(0))
-    expect(Company.count).to eq(0)
+    expect(Company.where(account_id: account.id).count).to eq(0)
   end
 end

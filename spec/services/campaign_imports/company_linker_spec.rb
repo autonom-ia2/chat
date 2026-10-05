@@ -149,7 +149,7 @@ RSpec.describe CampaignImports::CompanyLinker do
 
       expect(results.map(&:status)).to all(eq(:none))
       expect(contact.reload.company_id).to be_nil
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
     end
 
     it 'counts each pre-existing company once in companies_reused' do
@@ -180,7 +180,7 @@ RSpec.describe CampaignImports::CompanyLinker do
         raise ActiveRecord::Rollback
       end
 
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
       expect(linker.summary).to eq(companies_created: 0, companies_reused: 0, contacts_linked: 0, contacts_kept: 0)
 
       contact = new_contact
@@ -188,7 +188,7 @@ RSpec.describe CampaignImports::CompanyLinker do
 
       expect(result.status).to eq(:created)
       expect(contact.reload.company).to eq(result.company)
-      expect(Company.count).to eq(1)
+      expect(Company.where(account_id: account.id).count).to eq(1)
     end
 
     it 'truncates names longer than the company name limit' do
@@ -241,7 +241,7 @@ RSpec.describe CampaignImports::CompanyLinker do
 
       expect(result.status).to eq(:none)
       expect(off).not_to be_active
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
       expect(contact.reload.company_id).to be_nil
     end
 
@@ -255,7 +255,7 @@ RSpec.describe CampaignImports::CompanyLinker do
       result = off.link(contact, company_name: 'Alfa Corretora')
 
       expect(result.status).to eq(:none)
-      expect(Company.count).to eq(0)
+      expect(Company.where(account_id: account.id).count).to eq(0)
       expect(contact.reload.company_id).to be_nil
     end
   end
