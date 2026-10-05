@@ -3,7 +3,7 @@
 // companies, other columns kept, who does not receive, campaigns that used it, "Usar em nova
 // campanha", "Ver contatos e empresas" (contacts of the audience, paged — Contacts has no list
 // filter) and "Excluir público". Reads GET campaign_imports/:id (show).
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -12,6 +12,7 @@ import AudienceChannelBadges from './AudienceChannelBadges.vue';
 import { audienceChannelBadges } from './audienceRows';
 import { notReceiving } from './audienceReview';
 import { CHANNEL_LABEL_KEYS } from './campaignChannels';
+import { useModalFocus } from './useModalFocus';
 
 const props = defineProps({
   audienceId: { type: Number, required: true },
@@ -31,6 +32,7 @@ const contactsMeta = ref({ count: 0, page: 0 });
 const contactsOpen = ref(false);
 const contactsError = ref(false);
 const closeButton = ref(null);
+const panelRef = ref(null);
 
 const name = computed(
   () => detail.value?.name || detail.value?.campaign_name || ''
@@ -85,23 +87,30 @@ const channelLabel = channel =>
     ? t(`CAMPAIGN_JOURNEY.CHANNELS.${CHANNEL_LABEL_KEYS[channel]}`)
     : '';
 
-const onKeydown = event => {
-  if (event.key === 'Escape') emit('close');
-};
+useModalFocus({
+  container: panelRef,
+  initial: computed(() => closeButton.value?.$el || null),
+  onClose: () => emit('close'),
+});
 
 watch(() => props.audienceId, load);
-onMounted(() => {
-  load();
-  closeButton.value?.$el?.focus?.();
-  document.addEventListener('keydown', onKeydown);
-});
-onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
+onMounted(load);
 </script>
 
 <template>
+  <div
+    class="fixed inset-0 z-40 bg-n-alpha-black1"
+    role="presentation"
+    data-test="panel-backdrop"
+    @click="emit('close')"
+  />
   <aside
-    class="fixed inset-y-0 z-40 flex w-full max-w-full flex-col overflow-y-auto border-n-weak bg-n-solid-1 shadow-xl ltr:right-0 ltr:border-l rtl:left-0 rtl:border-r sm:w-[37rem]"
-    :aria-label="name"
+    ref="panelRef"
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+    class="fixed inset-y-0 z-40 flex w-full max-w-full flex-col overflow-y-auto border-n-weak bg-n-solid-1 shadow-xl outline-none ltr:right-0 ltr:border-l rtl:left-0 rtl:border-r sm:w-[37rem]"
+    :aria-label="name || t(`${NS}.TITLE`)"
     data-test="audience-panel"
   >
     <header
@@ -154,7 +163,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <h3 class="m-0 text-xs font-semibold uppercase text-n-slate-11">
           {{ t(`${NS}.OTHER_COLUMNS`) }}
         </h3>
-        <ul v-if="extras.length" class="m-0 mt-2 flex list-none flex-wrap gap-1.5 p-0">
+        <ul
+          v-if="extras.length"
+          class="m-0 mt-2 flex list-none flex-wrap gap-1.5 p-0"
+        >
           <li
             v-for="extra in extras"
             :key="extra"
@@ -193,7 +205,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <h3 class="m-0 text-xs font-semibold uppercase text-n-slate-11">
           {{ t(`${NS}.CAMPAIGNS`) }}
         </h3>
-        <ul v-if="campaigns.length" class="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+        <ul
+          v-if="campaigns.length"
+          class="m-0 mt-2 flex list-none flex-col gap-2 p-0"
+        >
           <li
             v-for="campaign in campaigns"
             :key="`${campaign.type}-${campaign.id}`"
@@ -227,7 +242,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
           @click="toggleContacts"
         />
         <template v-if="contactsOpen">
-          <p v-if="contactsError" role="alert" class="m-0 mt-2 text-sm text-n-ruby-11">
+          <p
+            v-if="contactsError"
+            role="alert"
+            class="m-0 mt-2 text-sm text-n-ruby-11"
+          >
             {{ t(`${NS}.LOAD_ERROR`) }}
           </p>
           <p
@@ -254,7 +273,11 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
                   {{ contact.name }}
                 </span>
                 <span class="text-xs text-n-slate-11">
-                  {{ [contact.company_name, contact.email, contact.phone_number].filter(Boolean).join(' · ') }}
+                  {{
+                    [contact.company_name, contact.email, contact.phone_number]
+                      .filter(Boolean)
+                      .join(' · ')
+                  }}
                 </span>
               </router-link>
             </li>
@@ -287,7 +310,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
         <Button
           :label="t('CAMPAIGN_JOURNEY.AUDIENCES.USE_IN_CAMPAIGN')"
           class="!min-h-11 !rounded-xl"
-          :disabled="!['completed', 'completed_with_failures'].includes(detail?.status)"
+          :disabled="
+            !['completed', 'completed_with_failures'].includes(detail?.status)
+          "
           data-test="panel-use"
           @click="emit('use', { id: audienceId })"
         />

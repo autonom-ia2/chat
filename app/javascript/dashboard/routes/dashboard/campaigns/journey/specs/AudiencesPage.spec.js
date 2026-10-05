@@ -54,7 +54,10 @@ const DialogStub = {
     '<div data-test="dialog"><button data-test="dialog-confirm" @click="$emit(\'confirm\')" /></div>',
 };
 
-const mountPage = (records, { customRole = null, remove = vi.fn() } = {}) => {
+const mountPage = (
+  records,
+  { customRole = null, remove = vi.fn(), attachTo } = {}
+) => {
   const get = vi.fn();
   const store = createStore({
     getters: {
@@ -83,6 +86,7 @@ const mountPage = (records, { customRole = null, remove = vi.fn() } = {}) => {
     messages: { en: { ...enJourney, ...enImport } },
   });
   const wrapper = mount(AudiencesPage, {
+    attachTo,
     global: {
       plugins: [store, i18n],
       stubs: {
@@ -290,5 +294,103 @@ describe('Painel lateral do público (PRD §6.6, F1, B8)', () => {
     });
     await wrapper.find('[data-test="panel-close"]').trigger('click');
     expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
+  });
+});
+
+describe('Painel lateral do público é modal (G4)', () => {
+  const press = (key, shiftKey = false) =>
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key, shiftKey, bubbles: true })
+    );
+
+  beforeEach(() => {
+    panelApi.show.mockResolvedValue({
+      data: { payload: { ...NEW_IMPORT, can_delete: true } },
+    });
+  });
+
+  it('dims the page, keeps Tab inside, and returns focus to the trigger on Escape', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const { wrapper } = mountPage([{ ...NEW_IMPORT, can_delete: true }], {
+      attachTo: host,
+    });
+    await flushPromises();
+
+    const trigger = wrapper.find('[data-open-panel="2"]').element;
+    trigger.focus();
+    await wrapper.find('[data-open-panel="2"]').trigger('click');
+    await flushPromises();
+
+    const panel = wrapper.find('[data-test="audience-panel"]');
+    expect(panel.attributes('role')).toBe('dialog');
+    expect(panel.attributes('aria-modal')).toBe('true');
+    expect(wrapper.find('[data-test="panel-backdrop"]').exists()).toBe(true);
+    const close = wrapper.find('[data-test="panel-close"]').element;
+    expect(document.activeElement).toBe(close);
+
+    const use = wrapper.find('[data-test="panel-use"]').element;
+    press('Tab', true);
+    expect(document.activeElement).toBe(use);
+    press('Tab');
+    expect(document.activeElement).toBe(close);
+
+    trigger.focus();
+    press('Tab');
+    expect(document.activeElement).toBe(close);
+
+    press('Escape');
+    await flushPromises();
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger);
+    wrapper.unmount();
+    host.remove();
+  });
+
+  it('closes on the X and on the backdrop, giving focus back each time', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const { wrapper } = mountPage([{ ...NEW_IMPORT, can_delete: true }], {
+      attachTo: host,
+    });
+    await flushPromises();
+    const trigger = wrapper.find('[data-open-panel="2"]');
+
+    trigger.element.focus();
+    await trigger.trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-test="panel-close"]').trigger('click');
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+
+    await trigger.trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-test="panel-backdrop"]').trigger('click');
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
+    expect(document.activeElement).toBe(trigger.element);
+    wrapper.unmount();
+    host.remove();
+  });
+
+  it('leaves the keys to a confirmation dialog opened on top', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const { wrapper } = mountPage([{ ...NEW_IMPORT, can_delete: true }], {
+      attachTo: host,
+    });
+    await flushPromises();
+    await wrapper.find('[data-open-panel="2"]').trigger('click');
+    await flushPromises();
+
+    const confirm = document.createElement('dialog');
+    confirm.setAttribute('open', '');
+    document.body.appendChild(confirm);
+    press('Escape');
+    await flushPromises();
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(true);
+
+    confirm.remove();
+    wrapper.unmount();
+    host.remove();
   });
 });

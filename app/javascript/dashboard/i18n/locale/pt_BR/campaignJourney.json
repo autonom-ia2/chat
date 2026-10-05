@@ -93,6 +93,7 @@
       "IN_USE": "Este público é usado por campanhas que ainda não terminaram: {campaigns}. Espere terminar ou cancele antes.",
       "ERROR": "Não foi possível excluir o público agora.",
       "PANEL": {
+        "TITLE": "Detalhes do público",
         "CLOSE": "Fechar",
         "OPEN_ARIA": "Abrir detalhes de {name}",
         "PEOPLE": "{count} pessoa | {count} pessoas",

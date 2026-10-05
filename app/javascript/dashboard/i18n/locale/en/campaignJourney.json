@@ -93,6 +93,7 @@
       "IN_USE": "This audience is used by campaigns that have not finished: {campaigns}. Wait for them to finish or cancel them first.",
       "ERROR": "Could not delete the audience now.",
       "PANEL": {
+        "TITLE": "Audience details",
         "CLOSE": "Close",
         "OPEN_ARIA": "Open details of {name}",
         "PEOPLE": "{count} person | {count} people",
