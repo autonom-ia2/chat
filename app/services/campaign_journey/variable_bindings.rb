@@ -1,15 +1,27 @@
 # Message variables of a journey campaign (#1005, PRD §6.3 and B1b). Each template variable is
 # bound to a contact field, an audience column (campaign_import_rows.extra_values) or a fixed
-# text, and may have a default used when the person has no value:
+# text, and/or has a default used when the person has no value:
 #
 #   bindings: { '1' => { 'source' => 'contact', 'value' => 'first_name' },
 #               '2' => { 'source' => 'column',  'value' => 'Vencimento' },
 #               '3' => { 'source' => 'fixed',   'value' => 'Equipe Hub2You' } }
-#   defaults: { '2' => 'em breve' }
+#   defaults: { '2' => 'em breve' }   # a default alone works as a fixed text
 #
-# A person without a value and without a default stays out with the reason "falta {{2}}".
+# Keys are the template body variables, positional ('1') or named ('nome'). Every variable of the
+# approved template needs a binding or a default; keys the template does not have are refused.
+# Values are squished (line breaks, tabs and repeated spaces become one space): Meta refuses
+# template parameters with them. A person without a value and without a default stays out with
+# the reason "falta {{2}}".
 class CampaignJourney::VariableBindings
-  Error = Class.new(StandardError)
+  class Error < StandardError
+    attr_reader :details
+
+    def initialize(code, details = {})
+      @details = details
+      super(code)
+    end
+  end
+
   SOURCES = %w[contact column fixed].freeze
   CONTACT_FIELDS = %w[name first_name company].freeze
   MAX_VARIABLES = 20
@@ -20,27 +32,37 @@ class CampaignJourney::VariableBindings
 
   def initialize(bindings, defaults = {})
     @bindings = bindings.to_h.to_h { |key, bound| [key.to_s, bound.to_h.stringify_keys.slice('source', 'value')] }
-    @defaults = defaults.to_h.to_h { |key, text| [key.to_s, text.to_s.strip] }.compact_blank
+    @defaults = defaults.to_h.to_h { |key, text| [key.to_s, text.to_s.squish] }.compact_blank
   end
 
   def any?
-    bindings.any?
+    keys.any?
   end
 
-  # Checked when the campaign is created: known sources and contact fields, non-blank fixed text,
-  # and columns that exist in the audience (CampaignImports::VariableCoverage, #992).
-  def validate!(campaign_import)
+  def keys
+    (bindings.keys + defaults.keys).uniq
+  end
+
+  # Checked when the campaign is created: the template variables, known sources and contact
+  # fields, non-blank fixed text, and columns that exist in the audience
+  # (CampaignImports::VariableCoverage, #992).
+  def validate!(campaign_import, template_keys:)
     raise Error, 'invalid_variable_bindings' unless valid_shape?
+
+    unknown = keys - template_keys
+    missing = template_keys - keys
+    raise Error.new('invalid_variable_bindings', unknown: unknown, missing: missing) if unknown.any? || missing.any?
 
     CampaignImports::VariableCoverage.new(campaign_import, mapping: coverage_mapping, defaults: defaults).perform
   rescue CampaignImports::VariableCoverage::Error
-    raise Error, 'invalid_variable_bindings'
+    raise Error.new('invalid_variable_bindings', unknown_columns: unknown_columns(campaign_import))
   end
 
   # => [{ '1' => 'Ana', '2' => '10/2026' }, []] or [{ ... }, ['2']] when a value is missing.
   def resolve(contact, extra_values)
-    values = bindings.to_h do |key, bound|
-      [key, value_for(bound, contact, extra_values.to_h).to_s.strip.presence || defaults[key]]
+    values = keys.to_h do |key|
+      bound = bindings[key]
+      [key, (bound && value_for(bound, contact, extra_values.to_h)).to_s.squish.presence || defaults[key]]
     end
     [values.compact, values.select { |_key, value| value.nil? }.keys]
   end
@@ -52,13 +74,13 @@ class CampaignJourney::VariableBindings
   private
 
   def valid_shape?
-    return false if bindings.size > MAX_VARIABLES || !valid_defaults?
+    return false if keys.size > MAX_VARIABLES || defaults.values.any? { |text| text.size > MAX_TEXT_LENGTH }
 
-    bindings.all? { |key, bound| key.present? && key.size <= MAX_KEY_LENGTH && valid_binding?(bound) }
+    valid_keys? && bindings.values.all? { |bound| valid_binding?(bound) }
   end
 
-  def valid_defaults?
-    defaults.all? { |key, text| bindings.key?(key) && text.size <= MAX_TEXT_LENGTH }
+  def valid_keys?
+    keys.all? { |key| key.present? && key.size <= MAX_KEY_LENGTH }
   end
 
   def valid_binding?(bound)
@@ -78,6 +100,11 @@ class CampaignJourney::VariableBindings
       when 'contact' then mapping[key] = { 'source' => bound['value'] == 'company' ? 'company' : 'name' }
       end
     end
+  end
+
+  def unknown_columns(campaign_import)
+    columns = bindings.values.select { |bound| bound['source'] == 'column' }.pluck('value')
+    columns - Array(campaign_import.extra_columns)
   end
 
   def value_for(bound, contact, extra_values)
