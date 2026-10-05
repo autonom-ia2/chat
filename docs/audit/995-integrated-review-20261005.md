@@ -55,3 +55,15 @@ Antes da migração, reconciliar confiança SSH e confirmar assistido OFF nas du
 stacks, retirar gestores Mac sem concorrência e validar a VPS sob rollback.
 Não declarar sessão Meta, renovação, heartbeat ou mensagens homologados com CI.
 Evidências locais/revisões: `tmp/resume-995-20261005/`; Project #3 relido em sete campos.
+
+## Ajuste do teste de navegador após primeiro CI
+
+O primeiro smoke Linux iniciou TigerVNC e Chrome com sandbox e passou o gateway
+HTTP; falhou na asserção do cookie após o formulário. Íris identificou filtro
+incorreto no teste: consulta de cookies em `/` não inclui cookie Path=/hub2you/.
+O coordenador reproduziu o fluxo com Chrome local novo, conteúdo sintético,
+rotas interceptadas e gateway loopback: grant 200, navegação para console 200,
+mas a consulta por `/` retornava vazio. Consulta por `config.base.href` passou.
+As duas verificações (negativa e positiva) agora usam o path correto; adicionadas
+subetapas públicas sem payload. Nenhuma proteção/CSP/gateway foi afrouxada.
+O componente real no Mac passou; isso não substitui a repetição do smoke Linux.

@@ -577,6 +577,7 @@ export async function runLinuxSmoke() {
           <input name="ticket" value="${browserTicket}"><button>Continue</button></form></body></html>`,
       });
     });
+    step('BROWSER_FORM_NULL_ORIGIN_NAVIGATION');
     await page.goto('https://issuer.test/no-referrer', {
       timeout: budget(5000),
     });
@@ -586,8 +587,10 @@ export async function runLinuxSmoke() {
       }),
       page.getByRole('button', { name: 'Continue' }).click(),
     ]);
+    step('BROWSER_FORM_NULL_ORIGIN_ASSERTIONS');
     assert.equal(observedPosts.at(-1), 'null');
-    assert.equal((await context.cookies('https://console.test')).length, 0);
+    assert.equal((await context.cookies(config.base.href)).length, 0);
+    step('BROWSER_FORM_STRICT_ORIGIN_NAVIGATION');
     await page.goto('https://issuer.test/strict', { timeout: budget(5000) });
     await Promise.all([
       page.waitForURL('https://console.test/hub2you/console/', {
@@ -595,9 +598,10 @@ export async function runLinuxSmoke() {
       }),
       page.getByRole('button', { name: 'Continue' }).click(),
     ]);
+    step('BROWSER_FORM_STRICT_COOKIE_ASSERTIONS');
     assert.equal(observedPosts.at(-1), config.issuer);
     assert.equal(renderedConsole, true);
-    const grantedCookie = (await context.cookies('https://console.test')).find(
+    const grantedCookie = (await context.cookies(config.base.href)).find(
       value => value.name.startsWith('__Secure-ig-')
     );
     assert.ok(
