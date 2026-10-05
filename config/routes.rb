@@ -210,6 +210,7 @@ Rails.application.routes.draw do
             resources :campaigns, only: [:create]
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
+            resources :recipient_previews, only: [:create]
           end
           resources :ai_requests, only: [:show]
           # Opções de campanha CTWA (filtros de Conversas e Kanban) — fora do
