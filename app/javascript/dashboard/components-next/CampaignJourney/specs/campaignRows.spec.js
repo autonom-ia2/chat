@@ -75,7 +75,7 @@ describe('Campanha list rows (PRD §6.1)', () => {
     ]);
   });
 
-  it('each row opens the Resultado of its campaign; Chat ao vivo keeps its page (#1007)', () => {
+  it('each row opens the Resultado of its campaign; Chat ao vivo opens its journey page (#1007, #1008)', () => {
     const routes = Object.fromEntries(
       buildJourneyRows(data).map(row => [row.channel, row.route])
     );
@@ -89,8 +89,8 @@ describe('Campanha list rows (PRD §6.1)', () => {
     expect(routes.whatsapp_api).toEqual(result('whatsapp_api', 7));
     expect(routes.email).toEqual(result('email', 9));
     expect(routes.live_chat).toEqual({
-      name: 'campaigns_livechat_index',
-      query: { legacy: '1' },
+      name: 'campaigns_journey_live_chat_edit',
+      params: { campaignId: 4 },
     });
   });
 
