@@ -8,6 +8,8 @@
 #   the inbox (sender inbox in direct mode, reply-to inbox of the verified domain in SES mode).
 #
 # When several campaigns were sent in the window, the most recent send is the one answered.
+# WhatsApp Oficial audience campaigns also get their campaign message in the reply's conversation
+# first (CampaignJourney::SentMessageRecorder#record_at_reply), since the send creates none.
 class CampaignJourney::ReplyMarker
   REPLY_WINDOW = 72.hours
   WHATSAPP_RECIPIENT_STATUSES = %w[sent delivered read].freeze
@@ -21,13 +23,24 @@ class CampaignJourney::ReplyMarker
   def perform
     return false unless markable?
 
-    recipient = answered_recipient
-    return false if recipient.blank?
+    answered = answered_recipient
+    return false if answered.blank?
 
-    CampaignJourney::CampaignMarks.mark!(@conversation, recipient[:campaign])
+    record_campaign_message(answered)
+    CampaignJourney::CampaignMarks.mark!(@conversation, answered[:campaign])
   end
 
   private
+
+  # WhatsApp Oficial audience campaigns: the campaign message goes into the reply's conversation
+  # before the mark, when the send did not find a conversation to record it in (P2).
+  def record_campaign_message(answered)
+    recipient = answered[:recipient]
+    # Only the WhatsApp Oficial candidate carries its recipient.
+    return unless recipient && CampaignAudienceLink.for_campaign(answered[:campaign])
+
+    CampaignJourney::SentMessageRecorder.new(campaign: answered[:campaign], recipient: recipient).record_at_reply(@conversation)
+  end
 
   def markable?
     @message.incoming? && !@message.private? && @contact.present?
@@ -57,7 +70,7 @@ class CampaignJourney::ReplyMarker
                                  .where(account_id: @message.account_id, inbox_id: @message.inbox_id, contact_id: @contact.id)
                                  .where(status: WHATSAPP_RECIPIENT_STATUSES, sent_at: window)
                                  .order(sent_at: :desc).first
-    recipient && { campaign: recipient.campaign, sent_at: recipient.sent_at }
+    recipient && { campaign: recipient.campaign, sent_at: recipient.sent_at, recipient: recipient }
   end
 
   def whatsapp_api_candidate

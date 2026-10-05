@@ -13,8 +13,9 @@
 #   error_user_msg on the recipient).
 # - B1b: variables bound to the audience are resolved per person; without a value and without
 #   a default the recipient is `skipped` with "falta {{N}}".
-# - P2 (#1002): an audience campaign records each accepted message in the contact's conversation
-#   (CampaignJourney::SentMessageRecorder); no campaign mark is written at send time (D14).
+# - P2 (#1002): an audience campaign records each accepted message in the contact's existing
+#   conversation (CampaignJourney::SentMessageRecorder); no conversation is created and no
+#   campaign mark is written at send time (D14).
 #
 # Which campaigns: linked campaigns always (otherwise they would send to no one). Unlinked
 # (label) campaigns get the D2/D4 handling only while CAMPAIGN_JOURNEY_ENABLED is on — decided
@@ -83,8 +84,8 @@ module CampaignJourney::WhatsappOneoffRecipients
     end
   end
 
-  # P2 (#1002): the message Meta accepted goes into the contact's conversation (audience
-  # campaigns only; label campaigns keep Chatwoot's behaviour).
+  # P2 (#1002): the message Meta accepted goes into the contact's existing conversation (audience
+  # campaigns only; label campaigns keep Chatwoot's behaviour). No conversation is created.
   def send_whatsapp_template_message(recipient:, to:, template_params:)
     result = super
     record_sent_message(recipient, to)
@@ -94,7 +95,7 @@ module CampaignJourney::WhatsappOneoffRecipients
   def record_sent_message(recipient, destination)
     return unless audience_link.present? && accepted_by_provider.include?(recipient.id)
 
-    CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient, destination: destination).perform
+    CampaignJourney::SentMessageRecorder.new(campaign: campaign, recipient: recipient).record_at_send(destination)
   end
 
   def keep_as_sent(recipient, source_id, error)
