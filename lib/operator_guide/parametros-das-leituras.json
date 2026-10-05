@@ -364,6 +364,17 @@
       "variables"
     ]
   },
+  "campaign_journey/campaign_names": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_names#index",
+    "parametros": [
+      "campaign_ids",
+      "whatsapp_api_campaign_ids"
+    ]
+  },
+  "campaign_journey/contact_origins/:id": {
+    "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
+    "parametros": []
+  },
   "campaigns": {
     "controller": "api/v1/accounts/campaigns#index",
     "parametros": []

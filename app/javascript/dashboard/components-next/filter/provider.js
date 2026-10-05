@@ -4,6 +4,7 @@ import { useOperators } from './operators';
 import { useMapGetter } from 'dashboard/composables/store.js';
 import { useChannelIcon } from 'next/icon/provider';
 import CtwaCampaignsAPI from 'dashboard/api/ctwaCampaigns';
+import { useCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
 import { createContactSearcher } from 'dashboard/components-next/NewConversation/helpers/composeConversationHelper';
 import EmojiIcon from 'dashboard/components-next/emoji-icon-picker/EmojiIcon.vue';
 import {
@@ -83,6 +84,7 @@ export function useConversationFilterContext() {
 
   /** @type {import('vue').Ref<FilterOption[]>} */
   const ctwaCampaignOptions = ref([]);
+  const { campaignOptionLabel } = useCrmOrigin();
 
   const loadCtwaCampaignOptions = async () => {
     try {
@@ -91,7 +93,7 @@ export function useConversationFilterContext() {
         // The id keeps the embedded double quotes so the backend ILIKE matches
         // the exact token inside the jsonb array text (campaign_source_ids)
         id: `"${campaign.source_id}"`,
-        name: campaign.headline || campaign.source_id,
+        name: campaignOptionLabel(campaign),
       }));
     } catch {
       ctwaCampaignOptions.value = [];

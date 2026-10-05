@@ -78,8 +78,33 @@ class AudiencesAPI extends ApiClient {
   }
 }
 
+// Campaign journey reads (#1002):
+// GET .../campaign_journey/contact_origins/:contactId
+//   → { payload: { marks: [{ source, source_id, headline, touched_at, ... }], audiences: [{ id, name }] } }
+// GET .../campaign_journey/campaign_names?campaign_ids=1,2&whatsapp_api_campaign_ids=3
+//   → { payload: { campaigns: { id: title }, whatsapp_api_campaigns: { id: title } } }
+class CampaignJourneyAPI extends ApiClient {
+  constructor() {
+    super('campaign_journey', { accountScoped: true });
+  }
+
+  getContactOrigins(contactId) {
+    return axios.get(`${this.url}/contact_origins/${contactId}`);
+  }
+
+  getCampaignNames({ campaignIds = [], whatsappApiCampaignIds = [] }) {
+    return axios.get(`${this.url}/campaign_names`, {
+      params: {
+        campaign_ids: campaignIds.join(','),
+        whatsapp_api_campaign_ids: whatsappApiCampaignIds.join(','),
+      },
+    });
+  }
+}
+
 export const audiencesAPI = new AudiencesAPI();
 // POST /campaign_journey/campaigns (api-1005.md §4): only `create` is used.
 export const journeyCampaignsAPI = new ApiClient('campaign_journey/campaigns', {
   accountScoped: true,
 });
+export default new CampaignJourneyAPI();

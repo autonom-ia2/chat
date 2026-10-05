@@ -1,14 +1,28 @@
 module WhatsappApiCampaigns
+  # Fills {{contact.name}}, {{contact.first_name}} and {{contact.company}} in a WhatsApp API message.
+  # Read and filled in one left-to-right pass by CampaignJourney::TemplatePlaceholders (no regular
+  # expressions, #999): inserted values are never scanned again.
   class TemplateRenderer
-    SUPPORTED_VARIABLES = %w[contact.name contact.first_name].freeze
-    VARIABLE_PATTERN = /\{\{\s*([^}]+?)\s*\}\}/.freeze
+    # contact.company (#999, PRD §8.3 and D7): the name of the contact's company. A recipient
+    # without one is skipped with "falta empresa" unless the campaign has a default text
+    # (CampaignJourney::WhatsappApiAudience).
+    COMPANY_VARIABLE = 'contact.company'.freeze
+    SUPPORTED_VARIABLES = (%w[contact.name contact.first_name] + [COMPANY_VARIABLE]).freeze
 
     def self.variables_in(template)
-      template.to_s.scan(VARIABLE_PATTERN).flatten.map(&:strip).uniq
+      CampaignJourney::TemplatePlaceholders.keys(template)
     end
 
-    def self.unsupported_variables_in(template)
-      variables_in(template) - SUPPORTED_VARIABLES
+    # audience_keys: extra column keys of the campaign's audience, allowed as {{publico.<key>}}
+    # (CampaignJourney::AudienceColumns, #999). Without an audience no publico token is supported.
+    def self.unsupported_variables_in(template, audience_keys: [])
+      allowed = SUPPORTED_VARIABLES + Array(audience_keys).map { |key| CampaignJourney::AudienceColumns.token(key) }
+      variables_in(template) - allowed
+    end
+
+    # Same source as the journey's WhatsApp Oficial variables (CampaignJourney::VariableBindings).
+    def self.company_name(contact)
+      (contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name']).to_s.squish.presence
     end
 
     def initialize(template:, contact:, variables: {})
@@ -18,9 +32,8 @@ module WhatsappApiCampaigns
     end
 
     def render
-      @template.gsub(VARIABLE_PATTERN) do
-        value_for(Regexp.last_match(1).strip)
-      end
+      keys = CampaignJourney::TemplatePlaceholders.keys(@template)
+      CampaignJourney::TemplatePlaceholders.render(@template, keys.index_with { |key| value_for(key) })
     end
 
     private
@@ -30,7 +43,9 @@ module WhatsappApiCampaigns
       when 'contact.name'
         @contact.name.to_s
       when 'contact.first_name'
-        @contact.name.to_s.split(/\s+/).first.to_s
+        @contact.name.to_s.split.first.to_s
+      when COMPANY_VARIABLE
+        self.class.company_name(@contact) || @variables.fetch(COMPANY_VARIABLE, '')
       else
         # Supplemental named variables (e.g. AI-composed values keyed by slot).
         # Positional {{1}}/{{2}} placeholders remain unsupported in pre-approved

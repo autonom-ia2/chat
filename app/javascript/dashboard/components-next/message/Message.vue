@@ -43,6 +43,8 @@ import FormBubble from './bubbles/Form.vue';
 import VoiceCallBubble from './bubbles/VoiceCall.vue';
 import WhatsappFlowResponseBubble from './bubbles/WhatsappFlowResponse.vue';
 import WhatsappReferral from './bubbles/Text/WhatsappReferral.vue';
+import CampaignMessageLabel from 'dashboard/components-next/CampaignJourney/CampaignMessageLabel.vue';
+import { campaignRefFor } from 'dashboard/components-next/CampaignJourney/useCampaignNames';
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';
@@ -379,6 +381,11 @@ const isMessageDeleted = computed(() => {
   return props.contentAttributes?.deleted;
 });
 
+// Campaign label (#1002, P2): messages sent by a campaign keep its id.
+const isCampaignMessage = computed(
+  () => !!campaignRefFor(props.additionalAttributes)
+);
+
 const shouldShowWhatsappReferral = computed(
   () =>
     variant.value === MESSAGE_VARIANTS.USER &&
@@ -598,9 +605,15 @@ provideMessageContext({
           'ltr:ml-8 rtl:mr-8 justify-end': orientation === ORIENTATION.RIGHT,
           'ltr:mr-8 rtl:ml-8': orientation === ORIENTATION.LEFT,
           'flex-col items-start gap-2': shouldShowWhatsappReferral,
+          'flex-col gap-1': isCampaignMessage,
+          'items-end': isCampaignMessage && orientation === ORIENTATION.RIGHT,
         }"
         @contextmenu="openContextMenu($event)"
       >
+        <CampaignMessageLabel
+          v-if="isCampaignMessage"
+          :additional-attributes="additionalAttributes"
+        />
         <WhatsappReferral
           v-if="shouldShowWhatsappReferral"
           :referral="contentAttributes.referral"
