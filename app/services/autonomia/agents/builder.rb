@@ -1398,12 +1398,21 @@ module Autonomia
           # que aqui lê o state porque @thread.agent ainda é nil) para o draft já nascer correto.
           agent = Autonomia::Agents::Agent.create!(
             account: @thread.account, created_by: @thread.created_by,
-            name: 'Novo agente', agent_type: 'custom', mode: :guided, status: :draft, enabled: false,
+            name: 'Novo agente', agent_type: draft_agent_type, mode: :guided, status: :draft, enabled: false,
             actuation: builder_actuation, config: { 'with_knowledge' => with_knowledge? }
           )
           @thread.update!(agent: agent)
           agent
         end
+      end
+
+      # #1035 — o rascunho nasce com o tipo escolhido na abertura. Nascer 'custom' fazia o
+      # builder_agent_type (que lê o rascunho antes do state) trocar o esqueleto do modelo escolhido
+      # pela exploração de "Começar do zero" assim que o rascunho existia. insurance_quote não nasce
+      # pelo Construtor (e, persistido, o tipo dele é imutável): vira 'custom'.
+      def draft_agent_type
+        type = self.class.agent_type_for(@thread.state.to_h['agent_type'])
+        type == 'insurance_quote' ? 'custom' : type
       end
 
       # Aceita qualquer objeto JSON. GATE/P2: o nome em branco NÃO aborta mais o fechamento — o
