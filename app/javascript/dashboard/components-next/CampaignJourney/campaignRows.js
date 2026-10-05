@@ -141,6 +141,8 @@ const fromEmailCampaign = campaign => {
     sent: campaign.sent_count ?? null,
     total: campaign.recipients_count ?? null,
     route: resultRoute(CAMPAIGN_CHANNELS.EMAIL, campaign.id),
+    // The e-mail actions of the row (L8, #1007) read the campaign itself.
+    source: campaign,
   };
 };
 

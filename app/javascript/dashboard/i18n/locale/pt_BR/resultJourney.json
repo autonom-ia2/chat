@@ -79,6 +79,7 @@
       "DUPLICATE": "Duplicar",
       "SAVE_TEMPLATE": "Salvar como modelo",
       "DELETE_DRAFT": "Excluir rascunho",
+      "MORE": "Mais ações de {name}",
       "CONFIRM_CANCEL": "Cancelar esta campanha? Quem ainda não recebeu não vai receber.",
       "CONFIRM_DELETE": "Excluir este rascunho?",
       "TEMPLATE_NAME": "Nome do modelo",

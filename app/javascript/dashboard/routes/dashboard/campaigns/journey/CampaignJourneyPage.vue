@@ -20,6 +20,7 @@ import WhatsAppCampaignDialog from 'dashboard/components-next/Campaigns/Pages/Ca
 import WhatsAppApiCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/WhatsAppApiCampaign/WhatsAppApiCampaignDialog.vue';
 import SMSCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/SMSCampaign/SMSCampaignDialog.vue';
 import LiveChatCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/LiveChatCampaign/LiveChatCampaignDialog.vue';
+import EmailResultActions from 'dashboard/components-next/CampaignResult/EmailResultActions.vue';
 import {
   CAMPAIGN_CHANNELS,
   CHANNEL_ICONS,
@@ -448,14 +449,24 @@ useOnEnter(fetchAll);
                 {{ statusLabel(row.status) }}
               </span>
             </p>
-            <router-link
-              :to="row.route"
-              class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-              :aria-label="t(`${NS}.OPEN_ARIA`, { name: row.name })"
-            >
-              {{ t(`${NS}.OPEN`) }}
-              <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
-            </router-link>
+            <div class="flex items-center gap-1">
+              <router-link
+                :to="row.route"
+                class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                :aria-label="t(`${NS}.OPEN_ARIA`, { name: row.name })"
+              >
+                {{ t(`${NS}.OPEN`) }}
+                <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
+              </router-link>
+              <!-- L8 (#1007): e-mail actions also from the list. -->
+              <EmailResultActions
+                v-if="row.channel === CAMPAIGN_CHANNELS.EMAIL && row.source"
+                :campaign="row.source"
+                compact
+                @updated="fetchAll"
+                @deleted="fetchAll"
+              />
+            </div>
           </li>
         </ul>
       </section>

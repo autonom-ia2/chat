@@ -79,6 +79,7 @@
       "DUPLICATE": "Duplicate",
       "SAVE_TEMPLATE": "Save as template",
       "DELETE_DRAFT": "Delete draft",
+      "MORE": "More actions for {name}",
       "CONFIRM_CANCEL": "Cancel this campaign? Whoever has not received it yet will not.",
       "CONFIRM_DELETE": "Delete this draft?",
       "TEMPLATE_NAME": "Template name",
