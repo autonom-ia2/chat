@@ -30,7 +30,7 @@ class Api::V1::Accounts::Autonomia::GuideConversasController < Api::V1::Accounts
   def da_automacao
     conversa = conversas.joins(turnos: { execucao: :mudancas })
                         .where(autonomia_guide_changes: { record_type: 'AutomationRule', record_id: params[:automacao_id] })
-                        .reorder('autonomia_guide_turns.created_at DESC')
+                        .reorder('autonomia_guide_turns.created_at DESC, autonomia_guide_turns.id DESC')
                         .first
     render json: conversa ? conversa.para_tela : {}
   end
