@@ -31,6 +31,16 @@ RSpec.describe Autonomia::Guide::FluxosDaTela do
     expect(described_class.para(nil, 'automacoes_nova')).to eq([])
   end
 
+  # Conta 16 (05/10/2026): na tela de editar automação o modelo respondeu a partir de um fluxo fixo, e a
+  # confiança leu `neighbor_distance` dele — que só existe no que veio da busca por vetor. NoMethodError,
+  # e o Guia ficou sem resposta.
+  it 'o fluxo fixo usado na resposta conta como casamento forte, como o achado por palavra' do
+    answerer = Autonomia::Agents::Answerer.new(agent: agent, query: 'quero alterar a automação', fixos: [criar])
+    fixos = described_class.para(agent, 'automacoes_editar')
+
+    expect(answerer.send(:retrieval_strong?, fixos, [{ id: criar.id }])).to be(true)
+  end
+
   it 'o Answerer põe os fixos antes dos achados, sem repetir e dentro do teto' do
     achados = Array.new(Autonomia::Agents::Config::ANSWER_TOP_K) { |i| instance_double(Autonomia::Agents::KnowledgeEntry, id: 100 + i) }
     achados[3] = decisor

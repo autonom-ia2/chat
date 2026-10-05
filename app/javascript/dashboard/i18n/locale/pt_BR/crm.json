@@ -2487,6 +2487,8 @@
       "DESLIGOU": "Automação desligada. Nada mais acontece até você ligar de novo.",
       "FALHA_TROCA": "Não consegui mudar agora. Tente de novo.",
       "ABRIR": "Abrir a automação {nome}",
+      "ALTERAR": "Alterar",
+      "ALTERAR_ROTULO": "Alterar a automação {nome}",
       "MAIS_ACOES": "e mais {n}",
       "INTERRUPTOR": "Ligar ou desligar {nome}",
       "CONTAGEM_LIGADAS": "Nenhuma ligada | {n} ligada | {n} ligadas",

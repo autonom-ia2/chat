@@ -23,10 +23,17 @@ module Autonomia::Guide::FluxosDaTela
     trecho = "%#{::ActiveRecord::Base.sanitize_sql_like(nome)}%"
     ::Autonomia::Agents::KnowledgeEntry.where(autonomia_agent_id: agent.id, status: :ready)
                                        .where('content LIKE ?', trecho)
-                                       .select(:id, :content, :source_id, :chunk_index)
+                                       .select(:id, :content, :source_id, :chunk_index, distancia)
                                        .order(:chunk_index)
                                        .select { |entrada| atende?(entrada.content, nome) }
                                        .first(MAX)
+  end
+
+  # A confiança da resposta lê `neighbor_distance` de cada trecho usado, e só a busca por vetor traz
+  # essa coluna. O fluxo da tela é sinal forte (a pessoa está nela), como o achado por palavra do
+  # Retriever: mesmo patamar. Sem a coluna, o Guia quebrava ao responder a partir do fixo.
+  def distancia
+    ::Arel.sql("#{::Autonomia::Agents::Config::RETRIEVAL_STRONG_MATCH.to_f} AS neighbor_distance")
   end
 
   def atende?(conteudo, rota)
