@@ -133,7 +133,7 @@ paginação) e ganha Responderam, "Abrir conversa" e exportação (O2).
 | `crm/crm.routes.js` (fork) | +2/−1 | Gestão abre o seletor (visão geral × página antiga) |
 | `crm/pages/CrmKanbanPage.vue` (fork) | +7 | `?campaign_source_ids=` aplica o filtro de campanha ("Ver no CRM") |
 | `CampaignJourney/campaignRows.js` (fork, #993) | rotas de "Abrir" + `source` da linha de e-mail | Abrir → Resultado |
-| `journey/CampaignJourneyPage.vue` (fork, #993) | +12 | botão de ações do e-mail na linha |
+| `journey/CampaignJourneyPage.vue` (fork, #993) | +19/−8 (célula re-indentada) | botão de ações do e-mail na linha |
 | `journey/campaignJourney.routes.js` (fork) | +2 | registrar a rota do Resultado |
 | `CampaignJourney/journeySidebar.js` (fork) | +2/−1 | Resultado acende "Campanha" no menu |
 | `campaign_journey/campaign_marks.rb` (fork, #1002) | `source_id_for` | id da marca num lugar só |
