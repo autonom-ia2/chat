@@ -46,6 +46,17 @@ class CampaignJourney::EmailAudienceRecipients
     { added: added, removed: removed }
   end
 
+  # What sync! would do now, without writing (the readiness list shows it). => { to_add:, to_remove: }
+  def preview
+    return { to_add: 0, to_remove: 0 } unless syncable?
+
+    candidates = self.class.candidates(@link.campaign_import)
+    eligible = candidates.to_set(&:email)
+    existing = existing_emails
+    { to_add: candidates.count { |candidate| existing.exclude?(candidate.email) },
+      to_remove: stale_recipients(eligible).size }
+  end
+
   private
 
   def syncable?
@@ -53,18 +64,28 @@ class CampaignJourney::EmailAudienceRecipients
   end
 
   def remove_stale(eligible)
-    stale = @campaign.email_campaign_recipients.pending.where(sent_at: nil)
-                     .where.not(id: EmailEvent.select(:recipient_id))
-                     .reject { |recipient| eligible.include?(recipient.email.downcase) }
-    EmailCampaignRecipient.where(id: stale.map(&:id)).delete_all
+    EmailCampaignRecipient.where(id: stale_recipients(eligible).map(&:id)).delete_all
+  end
+
+  # Pending, never sent, without events (the events subquery is limited to this campaign).
+  def stale_recipients(eligible)
+    recipients = @campaign.email_campaign_recipients
+    with_events = EmailEvent.where(recipient_id: recipients.select(:id)).select(:recipient_id)
+    recipients.pending.where(sent_at: nil).where.not(id: with_events).reject { |recipient| eligible.include?(recipient.email.downcase) }
+  end
+
+  def existing_emails
+    @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
   end
 
   def add_missing(candidates)
     suppressed = EmailSuppression.suppressed_set_for(@campaign.account)
-    existing = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
+    existing = existing_emails
     rows = candidates.reject { |candidate| existing.include?(candidate.email) }.map { |candidate| recipient_attributes(candidate, suppressed) }
-    rows.each_slice(BATCH_SIZE) { |batch| EmailCampaignRecipient.insert_all!(batch) } # rubocop:disable Rails/SkipsModelValidations
-    rows.size
+    # A concurrent writer may have added the same address: skip it (unique index), never raise.
+    rows.each_slice(BATCH_SIZE).sum do |batch|
+      EmailCampaignRecipient.insert_all(batch, unique_by: :idx_email_campaign_recipients_campaign_email).rows.size # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 
   def recipient_attributes(candidate, suppressed)

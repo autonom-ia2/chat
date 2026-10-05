@@ -177,8 +177,9 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
       other = create_email_campaign && make_ready(created_campaign)
       other.update!(status: :scheduled, scheduled_at: 1.minute.ago)
       account.contacts.find_by(name: 'Eva Rocha').update_columns(opted_out_at: nil) # rubocop:disable Rails/SkipsModelValidations
-      other.mark_sending!
+      EmailCampaigns::Scheduler.new.perform
       expect(emails(other).map(&:first)).to include('eva@out.com.br')
+      expect(other.reload).to be_scheduled # the list grew: the send waits for the hygiene check
 
       campaign.email_campaign_recipients.find_by!(email: 'ana@alfa.com.br').update!(status: :sent, sent_at: Time.current)
       campaign.update_columns(status: EmailCampaign.statuses[:scheduled]) # rubocop:disable Rails/SkipsModelValidations

@@ -24,4 +24,6 @@ Rails.application.config.to_prepare do
   # #999: an e-mail campaign linked to an audience is sendable only while the audience e-mail channel is on.
   prepend_once.call(EmailCampaign, CampaignJourney::EmailAudienceGate::Campaign)
   prepend_once.call(EmailCampaigns::Presentation::SendReadiness, CampaignJourney::EmailAudienceGate::Readiness)
+  # #999 review M2: a due linked e-mail campaign syncs its list before the hygiene/admission checks.
+  prepend_once.call(EmailCampaigns::Scheduler, CampaignJourney::EmailAudienceGate::Scheduler)
 end
