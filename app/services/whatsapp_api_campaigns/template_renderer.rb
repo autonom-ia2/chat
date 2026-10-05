@@ -13,8 +13,11 @@ module WhatsappApiCampaigns
       CampaignJourney::TemplatePlaceholders.keys(template)
     end
 
-    def self.unsupported_variables_in(template)
-      variables_in(template) - SUPPORTED_VARIABLES
+    # audience_keys: extra column keys of the campaign's audience, allowed as {{publico.<key>}}
+    # (CampaignJourney::AudienceColumns, #999). Without an audience no publico token is supported.
+    def self.unsupported_variables_in(template, audience_keys: [])
+      allowed = SUPPORTED_VARIABLES + Array(audience_keys).map { |key| CampaignJourney::AudienceColumns.token(key) }
+      variables_in(template) - allowed
     end
 
     # Same source as the journey's WhatsApp Oficial variables (CampaignJourney::VariableBindings).

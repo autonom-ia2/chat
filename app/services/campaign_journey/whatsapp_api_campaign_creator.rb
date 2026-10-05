@@ -6,6 +6,11 @@
 # `audience` gets a marker entry ({ type: 'CampaignAudience', id: <campaign_import_id> }) only to
 # satisfy the model's presence check; who receives comes from the link
 # (CampaignJourney::WhatsappApiAudience::Resolver).
+#
+# Tokens: {{contact.name}}, {{contact.first_name}}, {{contact.company}} and the audience's extra
+# columns as {{publico.<key>}} (CampaignJourney::AudienceColumns). variable_defaults gives a text
+# per token used when the person has no value (company_default is kept as an alias of
+# variable_defaults['contact.company']).
 class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creator
   CHANNEL = 'whatsapp_api'.freeze
   MAX_DEFAULT_LENGTH = 1024
@@ -23,14 +28,13 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
 
   def perform
     validate_audience!
-    defaults = company_default
     ActiveRecord::Base.transaction do
       # Locked and checked again so a concurrent delete or channel switch cannot slip in (#1005).
       @campaign_import.lock!
       validate_audience!
       campaign = super
       CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import,
-                                   variable_defaults: defaults)
+                                   variable_defaults: variable_defaults(campaign.message_body))
       campaign
     end
   rescue Pundit::NotAuthorizedError
@@ -56,16 +60,46 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
 
   def error_code(message)
     return 'unsupported_variables' if message.start_with?('unsupported_variables')
+    return 'unknown_audience_column' if message.start_with?('unknown_audience_column')
 
     ERROR_CODES.fetch(message, 'invalid_campaign')
   end
 
-  def company_default
-    text = permitted[:company_default].to_s.squish
-    return {} if text.blank?
-    raise CampaignJourney::CreatorError.new('invalid_campaign', 'The default company text is too long') if text.size > MAX_DEFAULT_LENGTH
+  def column_keys
+    @column_keys ||= CampaignJourney::AudienceColumns.key_map(@campaign_import).keys
+  end
 
-    { WhatsappApiCampaigns::TemplateRenderer::COMPANY_VARIABLE => text }
+  # Same check as the engine, plus: a {{publico.<key>}} that is not a column of the audience is
+  # refused with unknown_audience_column.
+  def selected_body(template)
+    body = template&.body.presence || permitted[:message_body].to_s
+    unknown_columns = WhatsappApiCampaigns::TemplateRenderer.variables_in(body)
+                                                            .filter_map { |token| CampaignJourney::AudienceColumns.column_key(token) } - column_keys
+    raise ArgumentError, "unknown_audience_column: #{unknown_columns.join(', ')}" if unknown_columns.any?
+
+    unsupported = WhatsappApiCampaigns::TemplateRenderer.unsupported_variables_in(body, audience_keys: column_keys)
+    raise ArgumentError, "unsupported_variables: #{unsupported.join(', ')}" if unsupported.present?
+
+    body
+  end
+
+  def campaign_attributes
+    super.merge(audience_column_keys: column_keys)
+  end
+
+  # Defaults only for tokens the message uses; text squished, up to MAX_DEFAULT_LENGTH.
+  def variable_defaults(body)
+    texts = permitted[:variable_defaults].to_h.transform_keys(&:to_s)
+    texts[WhatsappApiCampaigns::TemplateRenderer::COMPANY_VARIABLE] ||= permitted[:company_default]
+    texts = texts.transform_values { |text| text.to_s.squish }.compact_blank
+    used = WhatsappApiCampaigns::TemplateRenderer.variables_in(body)
+    invalid = texts.keys - used
+    if invalid.any? || texts.values.any? { |text| text.size > MAX_DEFAULT_LENGTH }
+      raise CampaignJourney::CreatorError.new('invalid_variable_defaults', 'Defaults must be short texts for tokens the message uses',
+                                              { unknown: invalid })
+    end
+
+    texts
   end
 
   def normalized_audience
@@ -95,6 +129,6 @@ class CampaignJourney::WhatsappApiCampaignCreator < WhatsappApiCampaigns::Creato
   end
 
   def permitted
-    @permitted ||= @params.permit(:title, :inbox_id, :template_id, :message_body, :scheduled_at, :company_default)
+    @permitted ||= @params.permit(:title, :inbox_id, :template_id, :message_body, :scheduled_at, :company_default, variable_defaults: {})
   end
 end

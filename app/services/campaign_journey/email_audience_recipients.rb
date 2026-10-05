@@ -56,16 +56,17 @@ class CampaignJourney::EmailAudienceRecipients
   end
 
   # Personalization of the journey (PRD §6.3): first name, company and the audience's extra
-  # columns, under the same keys the spreadsheet import uses (CampaignImports::HeaderMapper).
+  # columns, under the keys of CampaignJourney::AudienceColumns (same as the spreadsheet import).
   def custom_data(candidate)
-    extras = candidate.row.extra_values.to_h.each_with_object({}) do |(header, value), data|
-      key = CampaignImports::HeaderMapper.normalize_key(header)
-      next if key.empty? || RESERVED_KEYS.include?(key)
-
-      key = "#{key}_2" while data.key?(key)
-      data[key] = value.to_s
+    values = candidate.row.extra_values.to_h
+    extras = column_map.each_with_object({}) do |(key, header), data|
+      data[key] = values[header].to_s unless RESERVED_KEYS.include?(key)
     end
     { 'primeiro_nome' => candidate.contact.name.to_s.split.first.to_s, 'empresa' => company_name(candidate) }.merge(extras)
+  end
+
+  def column_map
+    @column_map ||= CampaignJourney::AudienceColumns.key_map(@link.campaign_import)
   end
 
   def company_name(candidate)

@@ -109,6 +109,56 @@ RSpec.describe 'Campaign journey WhatsApp API campaigns (#999)', :aggregate_fail
     expect(Message.where(inbox: inbox).count).to eq(0)
   end
 
+  # PRD §6.3: the audience's extra columns are tokens {{publico.<key>}} (normalized header).
+  describe 'audience columns as tokens' do
+    let(:audience) do
+      content = "Nome,Celular,Data de Vencimento,Plano\nAna Souza,11987654321,10/2026,Ouro\nBia Lima,21987654321,,Prata\n"
+      saved_audience(account: account, user: user, content: content)
+    end
+    let(:body) { 'Oi {{contact.first_name}}, plano {{publico.plano}} vence {{ publico.data_de_vencimento }}' }
+
+    it 'fills each person from their row and skips who has no value with "falta <key>"' do
+      create_campaign(message_body: body)
+
+      expect(response).to have_http_status(:ok)
+      campaign = WhatsappApiCampaign.find(response.parsed_body['id'])
+      run_campaign(campaign)
+
+      expect(outcome(campaign)).to eq([['Ana Souza', 'sent', nil], ['Bia Lima', 'cancelled', 'falta data_de_vencimento']])
+      expect(Message.where(inbox: inbox).outgoing.pluck(:content)).to eq(['Oi Ana, plano Ouro vence 10/2026'])
+    end
+
+    # One-pass filling (an inserted value is never read again) is proven in template_renderer_spec.
+    it 'uses the default text of the column, squished' do
+      create_campaign(message_body: body, variable_defaults: { 'publico.data_de_vencimento' => "em\nbreve" })
+      campaign = WhatsappApiCampaign.find(response.parsed_body['id'])
+      expect(CampaignAudienceLink.for_campaign(campaign).variable_defaults).to eq('publico.data_de_vencimento' => 'em breve')
+      run_campaign(campaign)
+
+      expect(outcome(campaign).map(&:second)).to eq(%w[sent sent])
+      expect(Message.where(inbox: inbox).outgoing.order(:id).pluck(:content)).to eq(
+        ['Oi Ana, plano Ouro vence 10/2026', 'Oi Bia, plano Prata vence em breve']
+      )
+    end
+
+    it 'refuses a column the audience does not have, and defaults for tokens the message does not use' do
+      create_campaign(message_body: 'Oi {{publico.cpf}}')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('unknown_audience_column')
+
+      create_campaign(message_body: body, variable_defaults: { 'publico.cpf' => 'x' })
+      expect(response.parsed_body['code']).to eq('invalid_variable_defaults')
+      expect(WhatsappApiCampaign.count).to eq(0)
+    end
+
+    it 'does not accept audience tokens outside the journey' do
+      campaign = WhatsappApiCampaign.new(account: account, inbox: inbox, created_by: user, title: 'x', audience: [{ type: 'Label', id: 1 }],
+                                         scheduled_at: Time.current, message_body: 'Oi {{publico.plano}}')
+      expect(campaign).not_to be_valid
+      expect(campaign.errors[:message_body].join).to include('publico.plano')
+    end
+  end
+
   # J4: the API refuses a channel the audience does not have.
   it 'refuses an audience without WhatsApp, or with WhatsApp off, with channel_not_in_audience' do
     emails_only = saved_audience(account: account, user: user, content: "Nome,Email\nAna,ana@alfa.com.br\n", mapping: { 'name' => 0, 'email' => 1 })
