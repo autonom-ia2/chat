@@ -1,6 +1,7 @@
 import { open, unlink } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isMainModule } from './runtime/entrypoint.mjs';
 import { configuration, proxyConfiguration } from './session-observer.mjs';
 import { publishBrowserMarker } from './runtime/browser-request-marker.mjs';
 import {
@@ -115,10 +116,7 @@ export async function run(
   }
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (isMainModule(import.meta.url)) {
   run().catch(() => {
     process.stderr.write(
       'Dedicated Instagram browser stopped; operator required\n'

@@ -351,6 +351,9 @@ jobs:
                 allowed["INSTAGRAM_TESTER_ROLES_DOC_ID"] = 1
                 allowed["INSTAGRAM_TESTER_SESSION_SOURCE"] = 1
                 allowed["INSTAGRAM_TESTER_SESSION_NAMESPACE"] = 1
+                allowed["INSTAGRAM_TESTER_RUNTIME_STACK"] = 1
+                allowed["INSTAGRAM_TESTER_OPERATOR_BROWSER_URL"] = 1
+                allowed["INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY"] = 1
                 allowed["INSTAGRAM_TESTER_ADMIN_USER_ID"] = 1
                 allowed["INSTAGRAM_TESTER_PROXY_AUTH_MODE"] = 1
                 allowed["INSTAGRAM_TESTER_PROXY_HOST"] = 1

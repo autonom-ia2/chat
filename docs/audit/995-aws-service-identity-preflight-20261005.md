@@ -1,5 +1,10 @@
 # #995 / PR #1003 — identidade AWS de serviço: preflight e plano
 
+> Registro histórico da etapa de preparação. A execução posteriormente autorizada,
+> seus recibos e os gates ainda pendentes estão na
+> [auditoria operacional de 05/10](995-vps-runtime-operations-20261005.md).
+> Os resultados abaixo preservam o contexto e o horário da observação original.
+
 Data: 05/10/2026. Escopo desta frente: leitura de código, documentação oficial e metadados AWS; somente este relatório foi escrito. Nenhuma role, policy, trust anchor, profile, certificado, chave, documento ou parâmetro foi criado/alterado. Não houve StartSession, SendCommand, execução do publisher ou acesso à Meta nesta frente.
 
 ## Conclusão operacional
@@ -137,7 +142,7 @@ Autonom.ia usa `[profile financial]`, conta140023375763 e os paths/ARNs/nome de 
 6. Gerar duas chaves SSH distintas na VPS. Registrar somente fingerprints. Depois da parada coordenada dos publishers Mac e do fim do blue/green, atualizar somente o parâmetro String `/chatwoot/prod/instagram-tester-publisher-public-key` de cada conta com a respectiva pública; associar a mesma pública ao forced publisher do CURRENT usando o installer revisado. Reconsultar CURRENT antes e depois para detectar troca durante a operação.
 7. Comprovar forced command, sudoers e fingerprint do CURRENT; preservar a pública/versionamento anteriores para rollback. Após a aceitação de identidade/transporte e os demais gates do runbook, o coordenador pode seguir com a ativação integral aprovada. Este relatório não inicia unidades nem altera OFF.
 
-Comandos AWS previstos, todos futuros: `ssm create-document --document-type Command --document-format JSON --name ChatwootInstagramPublisherHostKey --content file://DOCUMENTO_REVISADO`; `rolesanywhere create-trust-anchor --cli-input-json file://TRUST_ANCHOR_REVISADO`; `iam create-role --role-name NOME_DA_STACK --max-session-duration 3600 --assume-role-policy-document file://TRUST_RENDERIZADA`; `iam put-role-policy --role-name NOME_DA_STACK --policy-name InstagramPublisherRuntime --policy-document file://POLICY_RENDERIZADA`; `rolesanywhere create-profile --name NOME_DA_STACK --role-arns ARN_ROLE_DA_STACK --duration-seconds 900 --accept-role-session-name --no-enabled`; `rolesanywhere put-attribute-mapping --profile-id ID_REAL --certificate-field x509Subject --mapping-rules '[{"specifier":"CN"},{"specifier":"OU"}]'`; `rolesanywhere import-crl --name NOME_CRL_DA_STACK --trust-anchor-arn ARN_REAL --crl-data fileb://CRL_DER_REVISADA --enabled`. Cada chamada usa explicitamente o perfil administrativo correto e `--region us-east-1`. As formas dos comandos Roles Anywhere foram verificadas com `--generate-cli-skeleton input`, sem chamadas de criação.
+Comandos AWS previstos, todos futuros: `ssm create-document --document-type Command --document-format JSON --name ChatwootInstagramPublisherHostKey --content file://DOCUMENTO_REVISADO`; `rolesanywhere create-trust-anchor --cli-input-json file://TRUST_ANCHOR_REVISADO`; `iam create-role --role-name NOME_DA_STACK --max-session-duration 3600 --assume-role-policy-document file://TRUST_RENDERIZADA`; `iam put-role-policy --role-name NOME_DA_STACK --policy-name InstagramPublisherRuntime --policy-document file://POLICY_RENDERIZADA`; `rolesanywhere create-profile --name NOME_DA_STACK --role-arns ARN_ROLE_DA_STACK --duration-seconds 900 --accept-role-session-name --no-enabled`; `rolesanywhere put-attribute-mapping --profile-id ID_REAL --certificate-field x509Subject --mapping-rules '[{"specifier":"CN"},{"specifier":"OU"}]'`; `rolesanywhere import-crl --name NOME_CRL_DA_STACK --trust-anchor-arn ARN_REAL --crl-data fileb://CRL_PEM_REVISADA --enabled`. Cada chamada usa explicitamente o perfil administrativo correto e `--region us-east-1`. As formas dos comandos Roles Anywhere foram verificadas com `--generate-cli-skeleton input`, sem chamadas de criação.
 
 ## Forced SSH e sobrevivência ao blue/green
 
@@ -170,3 +175,15 @@ O plano não cria EC2, NAT, AWS Private CA ou serviço de CA hospedado. IAM Role
 - Escopo de sessões próprias e tag de proprietário: https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html
 
 Referências do repositório: `docs/runbooks/instagram-vps-runtime-995.md`; `scripts/instagram_testers/runtime/vps/iam/README.md`; `iam/publisher-policy.template.json`; `iam/ssm-publisher-host-key-document.json`; `env/hub2you.publisher.env.example`; `env/autonomia.publisher.env.example`; `env/hub2you.aws-config.example`; `env/autonomia.aws-config.example`; `env/check.py`; `runtime/publisher-tunnel.mjs`; `runtime/install-remote-publisher.sh`; `runtime/forced-publisher.sh`. Alguns caminhos curtos nesta lista são relativos a `scripts/instagram_testers/runtime/vps` ou `scripts/instagram_testers`, conforme o prefixo.
+
+## Correção operacional posterior do contrato CRL
+
+A execução autorizada confirmou que ImportCrl recebe CRL em PEM; o exemplo acima
+foi corrigido de DER para PEM. A API também rejeitou a CRL inaugural vazia.
+O procedimento revisado emite um certificado inaugural real pela CSR, emite o
+definitivo com serial distinto e revoga o inaugural como superseded antes de
+importar a CRL não vazia. O inaugural nunca vira certificado ativo. Fixture real
+OpenSSL: 19/19. Emissão, respostas AWS e readbacks estão na auditoria operacional;
+isso não transforma as simulações anteriores em provas de execução.
+
+Fonte do formato: [API ImportCrl](https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_ImportCrl.html).

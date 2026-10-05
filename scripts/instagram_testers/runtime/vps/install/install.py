@@ -22,7 +22,7 @@ BINS = ('/usr/bin/node', '/usr/bin/python3', '/usr/bin/Xtigervnc', '/usr/bin/xau
 DEPS = {'@novnc/novnc': '1.7.0', 'jose': '6.2.12', 'playwright': '1.59.1', 'ws': '8.22.0'}
 SCRIPTS = ('session-manager.mjs', 'session-browser.mjs', 'session-observer.mjs',
            'runtime/publisher-tunnel.mjs', 'runtime/operator-waiter.mjs', 'runtime/operator-protocol.mjs',
-           'runtime/browser-request-marker.mjs')
+           'runtime/browser-request-marker.mjs', 'runtime/entrypoint.mjs')
 
 
 def require(condition):

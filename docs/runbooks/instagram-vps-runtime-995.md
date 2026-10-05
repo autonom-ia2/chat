@@ -1,4 +1,4 @@
-# Runtime Instagram na VPS — #995 (preparação para review)
+# Runtime Instagram na VPS — #995
 
 A instalação do runtime e a publicação HTTPS privada foram aprovadas por Rodrigo
 no escopo da [issue #995](https://github.com/autonom-ia2/chat/issues/995).
@@ -6,6 +6,14 @@ A aprovação não comprova execução ou homologação: registrar cada etapa co
 e os bloqueios reais antes de avançar. O onboarding assistido permanece OFF até
 a aceitação operacional. IAM/SSM, credenciais e login Meta seguem o escopo de
 aprovação correspondente, sem ampliar permissões para contornar bloqueios.
+
+## Estado da execução
+
+A [auditoria operacional de 05/10](../audit/995-vps-runtime-operations-20261005.md)
+registra o que foi instalado, publicado e verificado de fato, com os gates ainda
+pendentes. Os comandos deste runbook são procedimentos; não são recibos de aceite.
+As auditorias de preparação mantêm sua fotografia histórica e apontam para esse
+registro de continuidade.
 
 ## Pacote e requisitos
 
@@ -25,7 +33,7 @@ Unix e gateway Node autenticado. Nenhum Mac participa do
 caminho operacional planejado. n8n, Traefik, Redis e demais serviços não são
 instalados, alterados nem reiniciados pelo instalador.
 
-## Antes de pedir aprovação operacional
+## Preparação e gates operacionais
 
 1. Review de INFRA e integração com os donos de Rails/gateway/browser/waiter.
    Confirmar opt-in do documento SSM, marker/deadline e encerramento real do Chrome.
@@ -64,7 +72,7 @@ instalados, alterados nem reiniciados pelo instalador.
    existe release anterior: o rollback é parar somente as unidades novas e
    remover somente os dois mounts Serve, preservando perfil, chaves e nonces.
 
-## Instalação futura, depois de aprovação
+## Instalação autorizada
 
 As variáveis abaixo são caminhos/SHA aprovados, nunca segredos. Não executar
 este bloco como parte dos testes. O instalador só aceita Linux/root e serviços
@@ -100,21 +108,23 @@ O responsável autorizado deve provisionar por stack:
   deve continuar preservado. A policy entregue não permite o documento legado.
 - Chaves de assinatura diferentes por bytes entre stacks, hex >=64 caracteres
   e tamanho par. Cada Rails recebe a sua chave correspondente, stack e URL HTTPS;
-  gateway recebe somente sua chave e issuer. Esta entrega não gera secrets.
+  gateway recebe somente sua chave e issuer. O instalador `install.py` não gera
+  chaves; elas são criadas pelo provisionamento autorizado e privado.
 
 ### Persistência da configuração Rails
 
-Usar o `SecureString` principal existente `/chatwoot/prod/env`, referenciado por
-`ENV_PARAMETER` nos dois workflows blue/green. Os caminhos são iguais, mas ficam
-em contas AWS diferentes, ambas na região `us-east-1`:
+Usar o `SecureString` específico existente `/chatwoot/prod/instagram-tester-env`
+de cada conta, na região `us-east-1`. Antes de gravar as três chaves, publicar as
+allowlists atualizadas dos dois workflows blue/green e confirmar que nenhum
+deploy/bootstrap com allowlist antiga continua em execução.
 
-| Stack | Conta AWS | Parâmetro principal |
+| Stack | Conta AWS | Parâmetro específico |
 | --- | --- | --- |
-| hub2you | `354307071110` | `/chatwoot/prod/env` |
-| autonomia | `140023375763` | `/chatwoot/prod/env` |
+| hub2you | `354307071110` | `/chatwoot/prod/instagram-tester-env` |
+| autonomia | `140023375763` | `/chatwoot/prod/instagram-tester-env` |
 
-Registrar somente estas três chaves adicionais no parâmetro principal de cada
-stack, em provisionamento autorizado que preserve as demais entradas:
+Registrar estas três entradas adicionais, preservando literalmente todas as
+entradas existentes e os metadados do parâmetro:
 
 | Variável Rails | Valor por stack |
 | --- | --- |
@@ -122,33 +132,39 @@ stack, em provisionamento autorizado que preserve as demais entradas:
 | `INSTAGRAM_TESTER_OPERATOR_BROWSER_URL` | `https://srv707880-claudete.tail0c0b18.ts.net/STACK/`, substituindo `STACK` pelo nome exato e preservando a barra final |
 | `INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY` | A chave exclusiva da mesma stack provisionada em `gateway.env`; nunca registrar o valor |
 
-Esse caminho já é consumido pelo deploy: o bootstrap da nova instância lê o
-parâmetro para `/opt/chatwoot/.env` com modo 0600; web e worker usam esse arquivo
-via `--env-file`. As etapas de ajuste de flags dos workflows preservam as linhas
-que não pertencem ao seu conjunto `required`, incluindo as três chaves acima.
-Não é necessário criar outro parâmetro, alterar units ou ampliar a allowlist de
-`/chatwoot/prod/instagram-tester-env`. Essa allowlist não aceita essas três chaves:
-adicioná-las ao parâmetro específico causaria `instagram_tester_env_keys_invalid`
-no próximo deploy. Não duplicar a configuração entre os dois parâmetros.
+O bootstrap já lê esse overlay, valida seus nomes e instala o arquivo local
+`/opt/chatwoot/instagram-tester.env` com modo 0600; web, worker e preflight o
+carregam. A mudança na allowlist acrescenta somente esses três nomes, sem prefixo
+genérico ou aceite de outras chaves. O overlay antigo continua válido depois
+da atualização do código. Um leitor antigo recusa as três entradas com
+`instagram_tester_env_keys_invalid`, por isso a ordem da publicação é obrigatória.
 
-O Rails deriva `iss` da origem de `FRONTEND_URL`; não lê
-`INSTAGRAM_TESTER_OPERATOR_ISSUER`. Preencher essa variável apenas no
-`gateway.env`, com a origem HTTPS exata do `FRONTEND_URL` efetivo do Rails da
-mesma stack, sem caminho nem barra final. Conferir esse valor explicitamente:
-o workflow Autonomia declara `DOMAIN_NAME=agents.autonomia.site`, portanto não
-inferir issuer de um nome lembrado, de outro ambiente ou da URL da VPS.
+A escolha substitui o plano inicial de usar `/chatwoot/prod/env`: a medição real
+do Hub em 05/10 encontrou 4.060 bytes no principal Standard, insuficientes para
+mais 242 bytes. Os overlays existentes tinham 699 e 522 bytes e comportam a
+adição. Não duplicar as três entradas no principal, remover variáveis antigas
+ou promover o Tier para contornar o tamanho.
 
-Serializar o provisionamento com o workflow, que também lê e regrava o parâmetro
-principal. Concluir a atualização antes da leitura do env pela nova green e
-usar o próximo blue/green autorizado para carregar as três chaves. Atualizar SSM
-não altera o ambiente de containers que já estão rodando; executar `deploy.sh`
-na instância existente também não refaz a leitura inicial do parâmetro principal.
-Não reiniciar Rails/worker durante a instalação da VPS somente para antecipar
-esse carregamento. Validar na green os nomes/valores não secretos e a presença
-válida da chave, sem imprimir env, hash da chave, JWT ou cookies. Comparar a chave
-com a do gateway em memória no provisionamento autorizado e emitir apenas o
-resultado booleano. Manter `INSTAGRAM_TESTER_AUTOMATION_ENABLED=false` e não
-colocar `INSTAGRAM_TESTER_RUNTIME_MODE=vps` no Rails.
+O Rails deriva `iss` da origem de `FRONTEND_URL`, que continua sendo lida no
+parâmetro principal; não lê `INSTAGRAM_TESTER_OPERATOR_ISSUER`. Preencher essa
+variável apenas no `gateway.env`, com a origem HTTPS exata do FRONTEND_URL
+efetivo da mesma stack, sem caminho nem barra final. Conferir a origem real;
+Autonomia usa `https://agents.autonomia.site` e Hub `https://chat.hub2you.ai`
+na operação registrada, mas o executor deve revalidá-las.
+
+Os workflows consultados apenas leem o overlay no SSM. A gravação deve ainda
+validar versão, conteúdo integral e metadados imediatamente antes e depois,
+com backup privado 0600; SSM não tem compare-and-swap. O rollback restaura
+somente se a versão e o digest aplicados continuam iguais, sem depender de
+acesso à VPS. Qualquer alteração concorrente exige reconciliação.
+
+Usar uma publicação blue/green autorizada da versão atual para carregar as
+chaves nos containers; mudar SSM não altera processos já em execução. Validar
+na green os nomes/valores não secretos e a presença válida da chave, sem
+imprimir env, hash da chave, JWT ou cookies. Comparar a chave com a do gateway
+em memória e emitir apenas o resultado booleano.
+Manter `INSTAGRAM_TESTER_AUTOMATION_ENABLED=false` e não colocar
+`INSTAGRAM_TESTER_RUNTIME_MODE=vps` no Rails.
 
 Home e subdiretório do publisher: `/var/lib/instagram-publisher-STACK` e
 `publisher`, 0700, dono `igpub-STACK`, grupo primário `igpub-STACK`.
@@ -194,7 +210,7 @@ sudo /usr/bin/python3 /opt/instagram-meta/current/scripts/instagram_testers/runt
 Saída de sucesso: `instagram_vps_env_pair_ok`. Erro: `instagram_vps_env_pair_failed`.
 Não registrar conteúdo da env/config, ticket, JWT, perfil ou chave na auditoria.
 
-## Ativação futura autorizada e aceitação Linux
+## Ativação autorizada e aceitação Linux
 
 Ativar primeiro display e gateway de uma stack, validar sem ticket, depois
 publisher e manager. A unit manager exige o publisher da mesma stack.
@@ -205,6 +221,15 @@ sudo systemctl start instagram-vps-display@hub2you.service instagram-vps-gateway
 sudo systemctl show --property=ActiveState --value instagram-vps-display@hub2you.service
 sudo systemctl show --property=ActiveState --value instagram-vps-gateway@hub2you.service
 ```
+
+O estado `active` de uma unit `Type=simple` pode anteceder a abertura do listener.
+Antes de aceitar a partida, aguardar em prazo finito a resposta HTTP real: GET no
+prefixo da stack, Host da URL privada e X-Forwarded-Proto=https devem retornar
+401 sem Set-Cookie. Depois conferir Unix VNC, Xauthority regular 0600 do UID
+browser, permissões, identidades e listener exclusivamente loopback. Recusa de
+conexão durante a partida não é sucesso; timeout é falha. Não repetir `start`
+em loop. Em falha, preservar evidência e parar somente o par novo conforme o
+rollback, mantendo publisher/manager inativos.
 
 Publicação privada HTTPS proposta para revisão do Serve da versão instalada:
 
@@ -299,7 +324,7 @@ runtime não equivale à autorização/saúde Meta ou ao recebimento da publica�
 5. Registrar SHA/path antes/depois, estados das quatro unidades por stack, HTTPS,
    recebimento do publisher e impacto observado. Nenhum secret/dado de cliente.
 
-## Verificação desta entrega (sem operação real)
+## Testes offline do pacote
 
 ```sh
 python3 -B tests/instagram_testers/vps-infra_test.py -v
@@ -310,7 +335,8 @@ não são executados; o código real do publisher/gateway/browser não é import
 executado. Inclui sintaxe do wrapper e falha fechada da CLI sem argumentos.
 Isso não verifica instalação no Linux, systemd/Xvnc/Chrome reais, federação AWS,
 SSM, Tailscale/HTTPS, proxy, Redis ou Meta. Resultados reais e bloqueios estão na
-[auditoria Nexo](../audit/995-nexo-infra-20261005.md).
+[auditoria operacional](../audit/995-vps-runtime-operations-20261005.md).
+A [auditoria Nexo](../audit/995-nexo-infra-20261005.md) preserva o histórico de preparação.
 
 ## Integração final e verificações ainda obrigatórias
 

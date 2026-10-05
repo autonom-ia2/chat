@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop, no-continue -- Explicit operator requests are processed sequentially. */
 import { spawn } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { isMainModule } from './entrypoint.mjs';
 import {
   publisher,
   deadlineScope,
@@ -277,10 +277,7 @@ export async function runWaiter(
   }
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
-) {
+if (isMainModule(import.meta.url)) {
   runWaiter().catch(() => {
     process.stderr.write('instagram_operator_waiter_failed\n');
     process.exitCode = 1;

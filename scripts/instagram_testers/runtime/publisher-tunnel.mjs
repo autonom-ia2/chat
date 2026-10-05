@@ -6,7 +6,7 @@ import { createServer, createConnection } from 'node:net';
 import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from './entrypoint.mjs';
 
 const INSTANCE_ID = /^i-[0-9a-f]{8,17}$/;
 const PRIVATE_PATH = /^(\/[^\0\r\n]+)$/;
@@ -650,10 +650,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
   );
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => {
     process.stderr.write('instagram_session_publication_failed\n');
     process.exitCode = 2;

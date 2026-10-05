@@ -342,6 +342,21 @@ class InstallTests(unittest.TestCase):
         for name in installer.PUBLISHER_MODULES:
             self.assertTrue((self.install.release / 'scripts/instagram_testers/runtime/vps' / name).is_file())
 
+    def test_shared_entrypoint_required_and_packaged(self):
+        helper = self.scripts / 'runtime/entrypoint.mjs'
+        content = helper.read_text()
+        helper.unlink()
+        with self.assertRaises(ValueError):
+            self.install.install()
+        self.assertFalse(self.accounts)
+        self.assertFalse(self.install.release.exists())
+        self.chown.assert_not_called()
+        helper.write_text(content)
+        self.install.install()
+        installed = self.install.release / 'scripts/instagram_testers/runtime/entrypoint.mjs'
+        self.assertEqual(installed.read_text(), content)
+        self.assertEqual(stat.S_IMODE(installed.stat().st_mode), 0o644)
+
     def test_active_publisher_rejected_before_writes(self):
         previous_run = self.install.run
         def publisher_active(args, **kwargs):
