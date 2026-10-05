@@ -43,6 +43,11 @@ const replyOptions = computed(() => [
     .filter(inbox => inbox.channel_type === 'Channel::Email' && inbox.email)
     .map(inbox => ({ value: inbox.id, label: `${inbox.name} · ${inbox.email}` })),
 ]);
+const replyInbox = computed(() =>
+  props.inboxes.find(
+    inbox => inbox.id === props.emailCampaign?.reply_to_inbox_id
+  )
+);
 const isDomain = computed(() =>
   String(props.draft.emailSender || '').startsWith('identity:')
 );
@@ -131,6 +136,30 @@ const chooseSender = value => {
         {{ t(`${NS}.CONTENT_TITLE`) }}
       </h3>
       <p class="m-0 text-sm text-n-slate-11">{{ t(`${NS}.CONTENT_HINT`) }}</p>
+      <dl
+        v-if="emailCampaign"
+        class="m-0 grid gap-1 text-sm sm:grid-cols-[10rem_minmax(0,1fr)]"
+        data-test="email-details"
+      >
+        <dt class="text-n-slate-11">{{ t(`${NS}.SENDER_LABEL`) }}</dt>
+        <dd class="m-0 truncate text-n-slate-12">
+          {{
+            [emailCampaign.from_name, emailCampaign.from_email]
+              .filter(Boolean)
+              .join(' · ')
+          }}
+        </dd>
+        <dt class="text-n-slate-11">{{ t(`${NS}.REPLY_LABEL`) }}</dt>
+        <dd class="m-0 truncate text-n-slate-12">
+          {{ replyInbox ? replyInbox.name : t(`${NS}.REPLY_NONE`) }}
+        </dd>
+        <dt v-if="emailCampaign.preheader" class="text-n-slate-11">
+          {{ t(`${NS}.PREHEADER_LABEL`) }}
+        </dt>
+        <dd v-if="emailCampaign.preheader" class="m-0 text-n-slate-12">
+          {{ emailCampaign.preheader }}
+        </dd>
+      </dl>
       <p class="m-0 text-sm text-n-slate-12" data-test="email-subject">
         {{
           emailCampaign?.subject

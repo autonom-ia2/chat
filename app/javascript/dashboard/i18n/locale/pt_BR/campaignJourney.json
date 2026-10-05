@@ -461,13 +461,14 @@
         "REPLY_LABEL": "Respostas vão para a caixa",
         "REPLY_NONE": "A mesma do remetente",
         "CREATE": "Continuar para o conteúdo",
-        "CONTENT_TITLE": "Conteúdo do e-mail",
+        "CONTENT_TITLE": "Conteúdo e detalhes do envio",
         "CONTENT_HINT": "O conteúdo é feito no editor: crie com ajuda, escolha um modelo ou comece do zero. Depois volte aqui para revisar e agendar.",
         "OPEN_EDITOR": "Abrir o editor",
         "CONTENT_READY": "Assunto: {subject}",
         "CONTENT_EMPTY": "Ainda sem conteúdo.",
         "RELOAD": "Voltei do editor",
-        "ERROR": "Não foi possível criar o e-mail agora. Tente de novo."
+        "ERROR": "Não foi possível criar o e-mail agora. Tente de novo.",
+        "PREHEADER_LABEL": "Texto de prévia"
       },
       "SMS": {
         "INBOX_LABEL": "Caixa de SMS",

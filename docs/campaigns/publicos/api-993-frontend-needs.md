@@ -84,6 +84,18 @@ salvo). Só esse público, da conta da requisição.
   `CampaignJourney::SmsSegments` (spec de paridade em `smsSegments.spec.js`); `recipient_previews`
   e `reachability` incluem SMS.
 
+## 4c. Editor de e-mail aberto pela jornada (D12)
+
+- O passo 2 de e-mail cria o rascunho e abre o editor existente (`campaigns_email_builder`) com
+  `?journey=1`. O `EmailBuilderPage` **não foi alterado**.
+- A saída do editor (voltar, ou "concluir" da revisão interna) vai para a lista de e-mails; um
+  guard do fork (`journeyRedirects.js`, no mesmo `withCampaignJourneyRedirects`) troca esse destino
+  por `Nova campanha?email=<id>` quando o rascunho da jornada desta conta é desse e-mail — passo 2
+  com o conteúdo e os detalhes do envio (remetente, caixa das respostas, prévia) já salvos.
+- O envio ou agendamento **pelo próprio editor** continua possível e passa pelas mesmas travas do
+  backend (prontidão, higiene, reputação, canal do público). Se o e-mail já não está em rascunho
+  ao voltar, a jornada apaga o rascunho e abre a lista de e-mails.
+
 ## 5. Criar a campanha (WhatsApp Oficial)
 
 `POST /api/v1/accounts/:account_id/campaign_journey/campaigns` (JSON)

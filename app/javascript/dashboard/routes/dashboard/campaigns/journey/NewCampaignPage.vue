@@ -52,6 +52,7 @@ import {
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journeyErrors';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
+import { JOURNEY_EDITOR_QUERY } from './journeyRedirects';
 import { smsStats } from 'dashboard/components-next/CampaignJourney/smsSegments';
 import { useJourneyChannelForms } from 'dashboard/components-next/CampaignJourney/useJourneyChannelForms';
 import {
@@ -521,6 +522,7 @@ const openEmailEditor = () => {
   router.push({
     name: 'campaigns_email_builder',
     params: { campaignId: draft.value.emailCampaignId },
+    query: { [JOURNEY_EDITOR_QUERY]: '1' },
   });
 };
 
@@ -537,6 +539,19 @@ const sendTestToMe = async () => {
     isTestSending.value = false;
   }
 };
+
+// Sent or scheduled from the editor itself (same backend checks): the journey draft is done.
+watch(
+  () => forms.emailCampaign.value?.status,
+  status => {
+    if (!status || status === 'draft') return;
+    clearDraft(accountId.value);
+    router.replace({
+      name: 'campaigns_journey_index',
+      query: { channel: CAMPAIGN_CHANNELS.EMAIL },
+    });
+  }
+);
 
 const openLiveChat = () =>
   router.push({ name: 'campaigns_journey_live_chat_new' });

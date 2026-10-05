@@ -7,10 +7,29 @@ import {
   CAMPAIGN_CHANNELS,
   LEGACY_QUERY,
 } from 'dashboard/components-next/CampaignJourney/campaignChannels';
+import { loadDraft } from 'dashboard/components-next/CampaignJourney/campaignDraft';
 import {
   isCampaignImportEnabled,
   isCampaignJourneyEnabled,
 } from './campaignJourney.routes';
+
+// D12: the e-mail editor (EmailBuilderPage, not edited) leaves to the e-mail list. When it was
+// opened from Nova campanha (`?journey=1` and the journey draft of this account holds that
+// e-mail), that exit goes back to Passo 2 of the journey instead, with the content saved.
+export const JOURNEY_EDITOR_QUERY = 'journey';
+
+const journeyEditorReturn = (to, from) => {
+  if (from?.name !== 'campaigns_email_builder') return null;
+  if (from.query?.[JOURNEY_EDITOR_QUERY] !== '1') return null;
+  const campaignId = Number(from.params?.campaignId);
+  const draft = loadDraft(to.params.accountId);
+  if (!campaignId || draft?.emailCampaignId !== campaignId) return null;
+  return {
+    name: 'campaigns_journey_new',
+    params: { accountId: to.params.accountId },
+    query: { email: String(campaignId) },
+  };
+};
 
 export const LEGACY_LIST_CHANNELS = {
   campaigns_livechat_index: CAMPAIGN_CHANNELS.LIVE_CHAT,
@@ -24,8 +43,11 @@ export const LEGACY_LIST_CHANNELS = {
 // where those campaigns are handled until each one gets its Resultado (#1007).
 const isLegacyVisit = to => to.query?.[LEGACY_QUERY] === '1';
 
-const channelListGuard = channel => to => {
-  if (!isCampaignJourneyEnabled() || isLegacyVisit(to)) return true;
+const channelListGuard = channel => (to, from) => {
+  if (!isCampaignJourneyEnabled()) return true;
+  const back = journeyEditorReturn(to, from);
+  if (back) return back;
+  if (isLegacyVisit(to)) return true;
   return {
     name: 'campaigns_journey_index',
     params: { accountId: to.params.accountId },

@@ -358,6 +358,8 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
     expect(push).toHaveBeenCalledWith({
       name: 'campaigns_email_builder',
       params: { campaignId: 31 },
+      // D12: marks the visit so the editor's exit comes back to the journey.
+      query: { journey: '1' },
     });
     wrapper.unmount();
   });

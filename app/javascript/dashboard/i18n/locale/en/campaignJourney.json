@@ -461,13 +461,14 @@
         "REPLY_LABEL": "Replies go to the inbox",
         "REPLY_NONE": "Same as the sender",
         "CREATE": "Continue to the content",
-        "CONTENT_TITLE": "Email content",
+        "CONTENT_TITLE": "Email content and sending details",
         "CONTENT_HINT": "The content is made in the editor: create it with help, pick a template or start from scratch. Then come back here to review and schedule.",
         "OPEN_EDITOR": "Open the editor",
         "CONTENT_READY": "Subject: {subject}",
         "CONTENT_EMPTY": "No content yet.",
         "RELOAD": "I came back from the editor",
-        "ERROR": "Could not create the email now. Try again."
+        "ERROR": "Could not create the email now. Try again.",
+        "PREHEADER_LABEL": "Preview text"
       },
       "SMS": {
         "INBOX_LABEL": "SMS inbox",
