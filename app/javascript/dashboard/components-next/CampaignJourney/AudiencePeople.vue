@@ -7,7 +7,12 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { audiencesAPI } from 'dashboard/api/campaignJourney';
-import { peopleSummary, reasonKey, reasonTally } from './audienceReview';
+import {
+  notReceiving,
+  peopleSummary,
+  reasonKey,
+  reasonTally,
+} from './audienceReview';
 
 const props = defineProps({
   campaignImport: { type: Object, required: true },
@@ -24,6 +29,7 @@ const problemRows = ref(null);
 
 const summary = computed(() => peopleSummary(props.campaignImport));
 const tally = computed(() => reasonTally(props.campaignImport));
+const blocked = computed(() => notReceiving(props.campaignImport.reachability));
 const canDownload = computed(
   () => props.campaignImport.downloads?.error_csv === true
 );
@@ -68,7 +74,7 @@ watch(
         })
       }}
     </p>
-    <div class="grid gap-3 sm:grid-cols-2">
+    <div class="grid gap-3 sm:grid-cols-3">
       <div class="rounded-2xl bg-n-teal-2 p-4">
         <p class="m-0 text-3xl font-semibold tabular-nums text-n-teal-11">
           {{ n(summary.ready) }}
@@ -93,6 +99,28 @@ watch(
           {{ isOpen ? t(`${NS}.HIDE`) : t(`${NS}.SHOW`) }}
         </span>
       </button>
+      <div
+        v-if="blocked"
+        class="flex flex-col rounded-2xl bg-n-alpha-2 p-4"
+        data-test="not-receiving"
+      >
+        <span class="text-3xl font-semibold tabular-nums text-n-slate-12">
+          {{ n(blocked.total) }}
+        </span>
+        <span class="text-sm font-medium text-n-slate-12">
+          {{ t(`${NS}.NOT_RECEIVING`) }}
+        </span>
+        <span
+          v-for="item in blocked.items"
+          :key="item.key"
+          class="text-xs text-n-slate-11"
+        >
+          {{ t(`${NS}.${item.key}`, { count: n(item.count) }) }}
+        </span>
+        <span v-if="!blocked.items.length" class="text-xs text-n-slate-11">
+          {{ t(`${NS}.NOT_RECEIVING_HINT`) }}
+        </span>
+      </div>
     </div>
     <div
       v-if="isOpen"
@@ -104,7 +132,6 @@ watch(
         <thead class="bg-n-alpha-1 text-start text-xs text-n-slate-11">
           <tr>
             <th class="px-4 py-2 text-start font-medium">{{ t(`${NS}.ROW`) }}</th>
-            <th class="px-4 py-2 text-start font-medium">{{ t(`${NS}.NAME`) }}</th>
             <th class="px-4 py-2 text-start font-medium">
               {{ t(`${NS}.CONTACT`) }}
             </th>
@@ -121,7 +148,6 @@ watch(
             :data-problem-row="row.row_number"
           >
             <td class="px-4 py-2 tabular-nums">{{ row.row_number }}</td>
-            <td class="px-4 py-2">{{ row.name_masked }}</td>
             <td class="px-4 py-2">
               {{ row.contact_masked || t(`${NS}.EMPTY_CONTACT`) }}
             </td>

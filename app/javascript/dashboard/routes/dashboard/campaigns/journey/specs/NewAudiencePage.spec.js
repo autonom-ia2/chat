@@ -239,6 +239,32 @@ describe('Novo público (PRD §6.6)', () => {
     wrapper.unmount();
   });
 
+  it('B8: shows who stays in the audience but does not receive', async () => {
+    api.show.mockReturnValue(
+      ok({
+        ...ready,
+        reachability: {
+          whatsapp: { total: 98, receive: 95, opted_out: 3 },
+          email: {
+            total: 0,
+            receive: 0,
+            unsubscribed: 0,
+            bounced: 0,
+            suppressed: 0,
+          },
+        },
+      })
+    );
+    const wrapper = mountPage({ import: '42' });
+    await flushPromises();
+
+    const tile = wrapper.find('[data-test="not-receiving"]');
+    expect(tile.text()).toContain('3');
+    expect(tile.text()).toContain('do not receive');
+    expect(tile.text()).toContain('WhatsApp: refused messages · 3');
+    wrapper.unmount();
+  });
+
   it('B5: lists masked reasons per row when the backend sends them', async () => {
     api.show.mockReturnValue(ok(ready));
     api.problemRows.mockReturnValue(
@@ -247,7 +273,6 @@ describe('Novo público (PRD §6.6)', () => {
           payload: [
             {
               row_number: 14,
-              name_masked: 'Carlos S.',
               contact_masked: '+55 41 3XXX-XX21',
               errors: ['invalid_brazilian_mobile_number'],
             },
@@ -262,7 +287,7 @@ describe('Novo público (PRD §6.6)', () => {
     await flushPromises();
 
     const row = wrapper.find('[data-problem-row="14"]');
-    expect(row.text()).toContain('Carlos S.');
+    expect(row.findAll('td')).toHaveLength(3);
     expect(row.text()).toContain('+55 41 3XXX-XX21');
     expect(row.text()).toContain('Not a valid mobile number');
     wrapper.unmount();

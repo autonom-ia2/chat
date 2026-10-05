@@ -9,6 +9,7 @@ import {
 } from 'dashboard/components-next/CampaignJourney/campaignDraft';
 
 const api = vi.hoisted(() => ({
+  list: vi.fn(),
   show: vi.fn(),
   variableSuggestions: vi.fn(),
   variableCoverage: vi.fn(),
@@ -124,15 +125,26 @@ const module = (getters, actions = {}) => ({
   actions,
 });
 
+// The page asks the server for saved audiences (saved=true, q); NOT_SAVED never comes back.
 const mountPage = ({ imports = [PHONE_AUDIENCE], query = {} } = {}) => {
   route.value = { query, params: { accountId: 1 } };
+  const saved = imports.filter(item => item.status === 'completed');
+  api.list.mockImplementation(({ q }) => {
+    const found = saved.filter(item =>
+      item.name.toLowerCase().includes(q.toLowerCase())
+    );
+    return Promise.resolve({
+      data: { payload: found, meta: { count: found.length } },
+    });
+  });
+  api.show.mockImplementation(id =>
+    Promise.resolve({
+      data: { payload: imports.find(item => item.id === Number(id)) },
+    })
+  );
   const store = createStore({
     getters: { getCurrentAccountId: () => 1 },
     modules: {
-      campaignImports: module(
-        { getCampaignImports: () => imports },
-        { get: vi.fn() }
-      ),
       inboxes: module(
         {
           getInboxes: () => INBOXES,
@@ -192,6 +204,7 @@ describe('Nova campanha — Passo 1 (PRD §6.2)', () => {
     const wrapper = mountPage({ imports: [PHONE_AUDIENCE, NOT_SAVED] });
     await flushPromises();
 
+    expect(api.list).toHaveBeenCalledWith({ saved: true, q: '', page: 1 });
     const options = wrapper.findAll('[data-audience-option]');
     expect(
       options.map(option => option.attributes('data-audience-option'))
@@ -454,6 +467,55 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     await wrapper.find('[data-test="continue-review"]').trigger('click');
     expect(wrapper.find('select').exists()).toBe(false);
     expect(wrapper.text().toLowerCase()).not.toContain('batch');
+    wrapper.unmount();
+  });
+
+  it('J1: searches saved audiences on the server', async () => {
+    const wrapper = mountPage({ imports: [PHONE_AUDIENCE, EMAIL_AUDIENCE] });
+    await flushPromises();
+
+    await wrapper.find('[data-test="audience-search"]').setValue('corretoras');
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
+
+    expect(api.list).toHaveBeenLastCalledWith({
+      saved: true,
+      q: 'corretoras',
+      page: 1,
+    });
+    expect(
+      wrapper
+        .findAll('[data-audience-option]')
+        .map(option => option.attributes('data-audience-option'))
+    ).toEqual(['6']);
+    wrapper.unmount();
+  });
+
+  it('B8: who refused messages is out of "vão receber"', async () => {
+    saveDraft(1, {
+      title: 'Renovação',
+      audienceId: 5,
+      channel: 'whatsapp_official',
+      inboxId: 7,
+      templateId: 9,
+      bindings: {
+        1: { source: 'fixed', value: 'cliente' },
+        2: { source: 'fixed', value: 'outubro' },
+      },
+      step: 3,
+    });
+    const wrapper = mountPage({
+      imports: [
+        {
+          ...PHONE_AUDIENCE,
+          reachability: { whatsapp: { total: 98, receive: 95, opted_out: 3 } },
+        },
+      ],
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-test="opted-out"]').text()).toBe('−3');
+    expect(wrapper.find('[data-test="receivers"]').text()).toBe('95');
     wrapper.unmount();
   });
 });

@@ -138,3 +138,24 @@ export const companiesBlock = campaignImport => {
 /** True when every row was refused: the file cannot be saved (B6). */
 export const isRefused = campaignImport =>
   campaignImport?.status === 'validation_failed';
+
+// B8 reasons in `reachability` (show of an audience) → i18n suffix under NEW_AUDIENCE.PEOPLE.
+const NOT_RECEIVING = [
+  ['whatsapp', 'opted_out', 'OPTED_OUT'],
+  ['email', 'unsubscribed', 'UNSUBSCRIBED'],
+  ['email', 'bounced', 'BOUNCED'],
+  ['email', 'suppressed', 'SUPPRESSED'],
+];
+
+/**
+ * Who stays in the audience but does not receive (PRD B8): reasons with people, and the
+ * total. null while the backend has not computed it.
+ */
+export const notReceiving = reachability => {
+  if (!reachability || typeof reachability !== 'object') return null;
+  const items = NOT_RECEIVING.map(([channel, reason, key]) => ({
+    key,
+    count: Number(reachability[channel]?.[reason]) || 0,
+  })).filter(item => item.count > 0);
+  return { items, total: items.reduce((sum, item) => sum + item.count, 0) };
+};

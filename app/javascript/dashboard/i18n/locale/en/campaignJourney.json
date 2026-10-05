@@ -161,13 +161,18 @@
         "SHOW": "See problems",
         "HIDE": "Hide problems",
         "ROW": "Row",
-        "NAME": "Name",
         "CONTACT": "Contact",
         "PROBLEM": "Problem",
         "EMPTY_CONTACT": "(empty)",
         "LEFT_OUT": "These rows are left out. Fix them and upload again when you want.",
         "DOWNLOAD": "Download rows with a problem",
-        "REASON_COUNT": "{reason}: {count}"
+        "REASON_COUNT": "{reason}: {count}",
+        "NOT_RECEIVING": "do not receive",
+        "NOT_RECEIVING_HINT": "They stay in the audience but are left out of sends.",
+        "OPTED_OUT": "WhatsApp: refused messages · {count}",
+        "UNSUBSCRIBED": "Email: unsubscribed · {count}",
+        "BOUNCED": "Email: address bounced · {count}",
+        "SUPPRESSED": "Email: blocked by the provider · {count}"
       },
       "REASONS": {
         "MISSING_CONTACT": "No mobile or email",
@@ -249,7 +254,8 @@
         "LIVE_CHAT": "Want an automatic message on your website, without a list of people?",
         "LIVE_CHAT_ACTION": "Create live chat message",
         "CONTINUE": "Continue to the message",
-        "LOAD_ERROR": "The audiences could not be loaded. Try again in a moment."
+        "LOAD_ERROR": "The audiences could not be loaded. Try again in a moment.",
+        "LOAD_MORE": "Show more audiences"
       },
       "MESSAGE": {
         "TO": "To",
@@ -303,7 +309,9 @@
         "DEFAULT_LABEL": "Text when {variable} is missing",
         "DEFAULT_PLACEHOLDER": "e.g. soon",
         "DEFAULT_HINT": "With this text, nobody is left out because of it.",
-        "CHOOSE": "Choose where it comes from"
+        "CHOOSE": "Choose where it comes from",
+        "PART_HEADER": "Header {variable}",
+        "PART_BUTTON": "Button “{text}” {variable}"
       },
       "REVIEW": {
         "AUDIENCE": "Audience",
@@ -339,7 +347,8 @@
           "INVALID_CAMPAIGN": "The campaign could not be saved. Check the name and the template.",
           "JOURNEY_DISABLED": "The new campaign journey is off in this installation.",
           "NOT_ALLOWED": "You do not have permission to create campaigns."
-        }
+        },
+        "OPTED_OUT": "Refused messages"
       }
     }
   }

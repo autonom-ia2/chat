@@ -1,72 +1,62 @@
-# Públicos e Nova campanha — o que a tela do #993 chama e ainda não existe
+# Públicos e Nova campanha — contrato que a tela do #993 usa
 
-Refs #990. O que a tela do #993 (Novo público, Nova campanha em 3 passos para WhatsApp
-Oficial) chama. Itens 2 e 3 **ainda não existem** no backend: respondem `404` e a tela se
-comporta como descrito em **"Sem o endpoint"** — nada quebra, só some a parte que depende dele.
-Tudo continua atrás de `CAMPAIGN_IMPORT_ENABLED` (Públicos) e `CAMPAIGN_JOURNEY_ENABLED`
-(jornada). Permissões: leitura com `campaign_view`; escrita com `campaign_manage`.
-
-Base dos itens 1–5 (exceto a criação de campanha): `/api/v1/accounts/:account_id/campaign_imports`. Cliente:
+Refs #990. Tudo o que a tela do #993 (Novo público, Nova campanha em 3 passos para WhatsApp
+Oficial) chama já existe no backend desta branch (#992, #998, #1005 e os itens do #993 abaixo).
+Atrás de `CAMPAIGN_IMPORT_ENABLED` (Públicos) e `CAMPAIGN_JOURNEY_ENABLED` (jornada). Leitura com
+`campaign_view`; escrita e prévia com dado real com `campaign_manage`. Cliente:
 `app/javascript/dashboard/api/campaignJourney.js`.
 
-## 1. Já existe no backend (#998, #1005) — a tela usa
+Base: `/api/v1/accounts/:account_id/campaign_imports`.
 
-- Canais: `PATCH /campaign_imports/:id/channels` `{ "email": false }` (api-1005.md §5).
-  `422 channel_without_data` volta o interruptor; `422 audience_in_use` mostra as campanhas.
-- Empresas: `PATCH /campaign_imports/:id/companies` `{ "create_companies": false }`; prévia em
+## 1. Endpoints de #998 e #1005 que a tela usa
+
+- Canais: `PATCH /:id/channels` `{ "email": false }` (api-1005.md §5). `422 channel_without_data`
+  volta o interruptor; `422 audience_in_use` mostra as campanhas.
+- Empresas: `PATCH /:id/companies` `{ "create_companies": false }`; prévia em
   `validation_summary.companies` (`available`, `companies_created`, `companies_reused`,
   `contacts_linked`, `contacts_kept`), números finais em `companies` (api-992.md §9).
   `available: false` ou sem coluna de empresa → o bloco não aparece (C6).
-- Excluir público: `DELETE /campaign_imports/:id`; `422 audience_in_use` com `campaigns[]`.
-- Criar campanha: item 5 abaixo (api-1005.md §4).
+- Excluir público: `DELETE /:id`; `422 audience_in_use` com `campaigns[]`.
 
-## 2. Linhas com problema (B5)
+## 2. Linhas com problema (B5) — #993
 
-`GET /campaign_imports/:id/problem_rows?page=1` → `200`
-
-```json
-{
-  "payload": [
-    { "row_number": 14, "name_masked": "Carlos S.", "contact_masked": "+55 41 3XXX-XX21",
-      "errors": ["invalid_brazilian_mobile_number"] }
-  ],
-  "meta": { "count": 2, "page": 1, "per_page": 50 }
-}
-```
-
-- Só linhas `invalid` da validação atual, ordem de `row_number`.
-- `name_masked`: primeiro nome + inicial do último (nunca o nome inteiro).
-- `contact_masked`: `raw_phone_masked` ou, sem celular, `email_masked`; `null` quando vazio.
-- `errors`: os códigos já gravados em `error_messages` (`missing_contact`, `invalid_email`,
-  `blank_email`, `duplicate_email_in_file`, `duplicate_phone_in_file`,
-  `invalid_brazilian_mobile_number`, `blank_phone_number`, `formula_phone_number`,
-  `formula_detected`). A tela traduz cada código; código desconhecido vira "Outro problema".
-
-Sem o endpoint: a tela mostra os motivos agregados de `validation_summary.errors` (motivo ×
-quantidade) e o botão "Baixar linhas com problema" (`download?file=error_csv`, já existe).
-
-## 3. Primeiro contato para a prévia
-
-`GET /campaign_imports/:id/sample_contact` → `200`
+`GET /:id/problem_rows?page=1` (`campaign_view`) → `200`
 
 ```json
-{ "payload": { "name": "Mariana Costa", "company_name": "Alfa Corretora",
-  "extra_values": { "Vencimento": "10/2026" } } }
+{ "payload": [ { "row_number": 3, "contact_masked": "***", "errors": ["invalid_brazilian_mobile_number"] } ],
+  "meta": { "count": 1, "page": 1, "per_page": 50 } }
 ```
 
-Primeira linha válida (ou importada) do público. Usada só na prévia "Como o cliente vê" do
-passo Mensagem (PRD §6.3). Dado da própria conta, para quem tem `campaign_manage`.
+Linhas `invalid` da validação atual, por `row_number`, 50 por página. `contact_masked` =
+`raw_phone_masked` ou, sem celular, `email_masked` (mascaramento que já existia); **sem nome**.
+`errors` são os códigos de `error_messages`; a tela traduz e código desconhecido vira "Outro
+problema". Spec: `spec/requests/api/v1/accounts/campaign_import_audience_preview_spec.rb`.
 
-Sem o endpoint (ou `payload: null`): a prévia mostra o rótulo do dado no lugar do valor
-(`[Nome]`, `[Vencimento]`).
+## 3. Primeiro contato para a prévia — #993
 
-## 4. Opcionais (a tela usa se vierem)
+`GET /:id/sample_contact` (`campaign_manage`) →
+`{ "payload": { "name", "first_name", "company_name", "extra_values" } }` ou `payload: null`.
+Primeira linha `valid` ou `imported` do próprio público (nome e empresa do contato quando já
+salvo). Só esse público, da conta da requisição.
 
-- `schema_resolution.columns[].example_masked`: exemplo mascarado da coluna (`Mariana C.`,
-  `+55 11 9XXXX-XX12`, `m**@alfa.com.br`) para "Colunas encontradas" (PRD §6.6-1). Sem ele, a
-  linha mostra só a contagem.
-- `GET /campaign_imports?saved=true` (públicos concluídos) e `q=` (busca): hoje o passo
-  Público lê a primeira página (25) e filtra na tela.
+## 4. Também no JSON — #993
+
+- `schema_resolution.columns[].example_masked`: o primeiro exemplo no formato mascarado que vai
+  ao Jev (`Aaa Aaaaa`, `00000000000`, `[email address]`), nunca o valor.
+- `GET /campaign_imports?saved=true&q=…&page=…`: públicos salvos (`completed`,
+  `completed_with_failures`) e busca no nome (curingas de LIKE escapados); `meta.count` é o
+  total filtrado. O passo 1 usa isso, com "Ver mais públicos".
+- `reachability` no `show` (B8), a partir de `ready_to_confirm`:
+
+```json
+{ "whatsapp": { "total": 98, "receive": 95, "opted_out": 3 },
+  "email": { "total": 40, "receive": 35, "unsubscribed": 2, "bounced": 2, "suppressed": 1 } }
+```
+
+  Compara os hashes das linhas com contatos que recusaram mensagens (#737, com ou sem o 9) e
+  com as supressões de e-mail da conta (descadastro, bounce permanente, demais). Canal
+  desligado → `receive: 0`. A tela mostra "não recebem" em Novo público e desconta em "vão
+  receber" (passo 3). Spec: `spec/services/campaign_imports/audience_reachability_spec.rb`.
 
 ## 5. Criar a campanha (WhatsApp Oficial)
 
@@ -104,7 +94,11 @@ Sem o endpoint (ou `payload: null`): a prévia mostra o rótulo do dado no lugar
   `processed_params.body`, variável `fixed` já vem com o texto; `contact`/`column` vêm vazias e
   o backend resolve por pessoa com `variable_bindings`. Cabeçalho de mídia vem como no
   diálogo antigo (`header.media_url`, `media_type`, `media_name`).
-- `variable_bindings` (chave = variável do corpo do modelo):
+- `variable_bindings` — chave = variável do corpo (`"1"`, `"nome"`), do cabeçalho de texto
+  (`"header.1"`) ou do botão de URL (`"button.<índice do botão>"`, uma variável por botão)
+  (`CampaignJourney::TemplateVariableKeys`, #993). Todas as variáveis do modelo aprovado
+  precisam de ligação ou texto padrão; no envio cada valor vai para o seu componente. Spec:
+  `spec/services/campaign_journey/template_variable_keys_spec.rb`.
   - `contact` → `value` ∈ `name`, `first_name`, `company` (nome, primeiro nome, empresa ligada
     ao contato);
   - `column` → `value` = cabeçalho exato de `extra_columns` do público;

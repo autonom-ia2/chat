@@ -57,14 +57,56 @@ export const variableLabel = (bodyText, key) => {
   return trimLeadingPunctuation(whole).trim() || fallback;
 };
 
-/** Body variables of a template, in template order, with their labels. */
+export const HEADER_PREFIX = 'header.';
+export const BUTTON_PREFIX = 'button.';
+
+const componentOf = (template, type) =>
+  (template?.components || []).find(component => component.type === type);
+
+export const templateHeaderText = template => {
+  const header = componentOf(template, COMPONENT_TYPES.HEADER);
+  return header?.format === 'TEXT' ? header.text || '' : '';
+};
+
+/**
+ * Variables of a template in template order, with their labels (#993): body ('1'), TEXT
+ * header ('header.1') and URL buttons ('button.<index>'), the keys the backend expects
+ * (CampaignJourney::TemplateVariableKeys).
+ */
 export const templateVariables = template => {
-  const body = buildTemplateParameters(template)?.body || {};
-  const text = templateBodyText(template);
-  return Object.keys(body).map(key => ({
+  const processed = buildTemplateParameters(template) || {};
+  const bodyText = templateBodyText(template);
+  const body = Object.keys(processed.body || {}).map(key => ({
     key,
-    label: variableLabel(text, key),
+    part: 'body',
+    variable: key,
+    label: variableLabel(bodyText, key),
   }));
+  const headerText = templateHeaderText(template);
+  const header = headerText
+    ? Object.keys(processed.header || {}).map(key => ({
+        key: `${HEADER_PREFIX}${key}`,
+        part: 'header',
+        variable: key,
+        label: variableLabel(headerText, key),
+      }))
+    : [];
+  const buttonTexts = (componentOf(template, 'BUTTONS')?.buttons || []).map(
+    button => button.text || ''
+  );
+  const buttons = (processed.buttons || []).flatMap((button, index) =>
+    button?.type === 'url'
+      ? [
+          {
+            key: `${BUTTON_PREFIX}${index}`,
+            part: 'button',
+            variable: (button.variables || ['1'])[0],
+            label: buttonTexts[index] || '',
+          },
+        ]
+      : []
+  );
+  return [...body, ...header, ...buttons];
 };
 
 /** Media header (image, video, document) the campaign needs a link for. */
@@ -138,7 +180,8 @@ const firstName = name =>
 
 const contactValue = (field, sample) => {
   if (!sample) return '';
-  if (field === 'first_name') return firstName(sample.name);
+  if (field === 'first_name')
+    return sample.first_name || firstName(sample.name);
   if (field === 'company') return sample.company_name || '';
   return sample.name || '';
 };
@@ -154,21 +197,32 @@ export const previewMessage = ({
   sample = null,
   placeholder,
 }) => {
-  const values = Object.fromEntries(
-    templateVariables(template).map(({ key }) => {
-      const binding = bindings[key];
-      if (!isBindingComplete(binding)) return [key, ''];
-      if (binding.source === BINDING_SOURCES.FIXED) {
-        return [key, binding.value];
-      }
-      const value =
-        binding.source === BINDING_SOURCES.COLUMN
-          ? sample?.extra_values?.[binding.value] || ''
-          : contactValue(binding.value, sample);
-      return [key, value || defaults[key] || placeholder(binding)];
-    })
+  const valueOf = key => {
+    const binding = bindings[key];
+    if (!isBindingComplete(binding)) return '';
+    if (binding.source === BINDING_SOURCES.FIXED) return binding.value;
+    const value =
+      binding.source === BINDING_SOURCES.COLUMN
+        ? sample?.extra_values?.[binding.value] || ''
+        : contactValue(binding.value, sample);
+    return value || defaults[key] || placeholder(binding);
+  };
+  const variables = templateVariables(template);
+  const valuesOf = part =>
+    Object.fromEntries(
+      variables
+        .filter(variable => variable.part === part)
+        .map(variable => [variable.variable, valueOf(variable.key)])
+    );
+  const header = renderTemplatePreview(
+    templateHeaderText(template),
+    valuesOf('header')
   );
-  return renderTemplatePreview(templateBodyText(template), values);
+  const body = renderTemplatePreview(
+    templateBodyText(template),
+    valuesOf('body')
+  );
+  return header ? `${header}\n\n${body}` : body;
 };
 
 /** `template_params` in the shape the old WhatsApp dialog sends (api-993 §6). */

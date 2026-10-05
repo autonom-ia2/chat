@@ -2,12 +2,11 @@
 // Passo 1 — Quem vai receber (#993, PRD §6.2, J1, J2, F3). Only saved audiences, with
 // channel badges and counts. No audience at all: one sentence and one button. Creating an
 // audience from here keeps the draft and comes back with it selected (J3).
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import AudienceChannelBadges from './AudienceChannelBadges.vue';
-import { searchAudiences } from './audienceChannels';
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -16,17 +15,29 @@ const props = defineProps({
   hasLoadError: { type: Boolean, default: false },
   returnedName: { type: String, default: '' },
   showLiveChat: { type: Boolean, default: false },
+  // The server searches (saved=true&q=); rows already come filtered.
+  searchQuery: { type: String, default: '' },
+  hasMore: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['select', 'create', 'continue', 'liveChat']);
+const emit = defineEmits([
+  'select',
+  'create',
+  'continue',
+  'liveChat',
+  'search',
+  'loadMore',
+]);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.AUDIENCE';
 const { t, n, locale } = useI18n();
 
-const search = ref('');
-const visibleRows = computed(() => searchAudiences(props.rows, search.value));
 const isEmpty = computed(
-  () => !props.isLoading && !props.hasLoadError && !props.rows.length
+  () =>
+    !props.isLoading &&
+    !props.hasLoadError &&
+    !props.rows.length &&
+    !props.searchQuery.trim()
 );
 
 const formatDate = value =>
@@ -89,8 +100,10 @@ const formatDate = value =>
           aria-hidden="true"
         />
         <input
-          v-model="search"
+          :value="searchQuery"
           type="search"
+          data-test="audience-search"
+          @input="event => emit('search', event.target.value)"
           :aria-label="t(`${NS}.SEARCH`)"
           :placeholder="t(`${NS}.SEARCH`)"
           class="m-0 w-full min-w-0 !border-0 !bg-transparent !p-0 text-sm !shadow-none !outline-none focus:!ring-0"
@@ -103,13 +116,13 @@ const formatDate = value =>
         <Spinner />
       </div>
       <p
-        v-else-if="!visibleRows.length && rows.length"
+        v-else-if="!rows.length"
         class="m-0 text-sm text-n-slate-11"
       >
         {{ t(`${NS}.NO_MATCH`) }}
       </p>
       <ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
-        <li v-for="row in visibleRows" :key="row.id">
+        <li v-for="row in rows" :key="row.id">
           <button
             type="button"
             class="flex min-h-[4.5rem] w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
@@ -142,6 +155,15 @@ const formatDate = value =>
           </button>
         </li>
       </ul>
+      <Button
+        v-if="hasMore"
+        :label="t(`${NS}.LOAD_MORE`)"
+        variant="ghost"
+        size="sm"
+        class="!min-h-11 self-start"
+        data-test="load-more-audiences"
+        @click="emit('loadMore')"
+      />
       <div
         class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-n-slate-7 px-4 py-3"
       >

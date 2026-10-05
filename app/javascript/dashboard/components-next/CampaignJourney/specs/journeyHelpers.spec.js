@@ -263,7 +263,9 @@ describe('audienceChannels (J1, J4, J5)', () => {
 
 describe('templateVariables (B1, B1b)', () => {
   it('lists body variables with a label taken from the template text', () => {
-    expect(templateVariables(TEMPLATE)).toEqual([
+    expect(
+      templateVariables(TEMPLATE).map(({ key, label }) => ({ key, label }))
+    ).toEqual([
       { key: '1', label: 'Olá,' },
       { key: '2', label: 'O seguro do seu carro vence em' },
       { key: '3', label: 'Equipe' },
@@ -271,6 +273,39 @@ describe('templateVariables (B1, B1b)', () => {
     expect(variableLabel('Oi {{customer_name}}', 'customer_name')).toBe(
       'customer name'
     );
+  });
+
+  it('adds TEXT header and URL button variables with the keys the backend expects', () => {
+    const withExtras = {
+      ...TEMPLATE,
+      components: [
+        { type: 'HEADER', format: 'TEXT', text: 'Renovação {{1}}' },
+        { type: 'BODY', text: 'Olá, {{1}}!' },
+        {
+          type: 'BUTTONS',
+          buttons: [
+            { type: 'QUICK_REPLY', text: 'Agora não' },
+            { type: 'URL', text: 'Renovar', url: 'https://x.com.br/r/{{1}}' },
+          ],
+        },
+      ],
+    };
+    expect(templateVariables(withExtras)).toEqual([
+      { key: '1', part: 'body', variable: '1', label: 'Olá,' },
+      { key: 'header.1', part: 'header', variable: '1', label: 'Renovação' },
+      { key: 'button.1', part: 'button', variable: '1', label: 'Renovar' },
+    ]);
+    expect(
+      previewMessage({
+        template: withExtras,
+        bindings: {
+          1: { source: 'fixed', value: 'Ana' },
+          'header.1': { source: 'fixed', value: 'auto' },
+          'button.1': { source: 'fixed', value: 'abc' },
+        },
+        placeholder: () => '?',
+      })
+    ).toBe('Renovação auto\n\nOlá, Ana!');
   });
 
   it('turns suggestions into "Sugerido" bindings', () => {

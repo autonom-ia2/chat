@@ -26,7 +26,18 @@ const { t, n } = useI18n();
 const SEPARATOR = ':';
 const FIXED = BINDING_SOURCES.FIXED;
 
-const display = key => `{{${key}}}`;
+// "{{1}}" for the body, "Header {{1}}" and "Button “Renovar” {{1}}" for the other parts.
+const display = key => {
+  const variable = props.variables.find(item => item.key === key);
+  const placeholder = `{{${variable?.variable ?? key}}}`;
+  if (variable?.part === 'header') {
+    return t(`${NS}.PART_HEADER`, { variable: placeholder });
+  }
+  if (variable?.part === 'button') {
+    return t(`${NS}.PART_BUTTON`, { text: variable.label, variable: placeholder });
+  }
+  return placeholder;
+};
 
 const groups = computed(() => [
   {

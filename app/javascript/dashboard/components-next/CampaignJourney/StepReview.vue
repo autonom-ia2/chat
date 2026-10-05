@@ -17,6 +17,8 @@ const props = defineProps({
   templateName: { type: String, default: '' },
   bindingSummary: { type: String, default: '' },
   reach: { type: Number, default: 0 },
+  // Refused messages before the send (PRD B8), out of the total.
+  optedOut: { type: Number, default: 0 },
   excluded: { type: Number, default: null },
   timeZone: { type: String, required: true },
   isSubmitting: { type: Boolean, default: false },
@@ -31,7 +33,7 @@ const confirmRef = ref(null);
 
 const isLater = computed(() => props.draft.when === 'later');
 const receivers = computed(() =>
-  Math.max(0, props.reach - (props.excluded || 0))
+  Math.max(0, props.reach - props.optedOut - (props.excluded || 0))
 );
 const isScheduleValid = computed(
   () => !isLater.value || isFutureSchedule(props.draft.scheduledAt, props.timeZone)
@@ -193,6 +195,12 @@ const submit = () => {
         <div class="flex justify-between gap-3">
           <dt class="text-n-slate-11">{{ t(`${NS}.ON_CHANNEL`) }}</dt>
           <dd class="m-0 font-semibold tabular-nums">{{ n(reach) }}</dd>
+        </div>
+        <div v-if="optedOut" class="flex justify-between gap-3">
+          <dt class="text-n-slate-11">{{ t(`${NS}.OPTED_OUT`) }}</dt>
+          <dd class="m-0 tabular-nums" data-test="opted-out">
+            −{{ n(optedOut) }}
+          </dd>
         </div>
         <div v-if="excluded" class="flex justify-between gap-3">
           <dt class="text-n-slate-11">{{ t(`${NS}.LEFT_OUT`) }}</dt>

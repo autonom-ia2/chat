@@ -56,6 +56,7 @@ import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journe
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 
 const COVERAGE_DELAY_MS = 400;
+const SEARCH_DELAY_MS = 300;
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN';
 
 const { t } = useI18n();
@@ -66,7 +67,6 @@ const { currentAccount } = useAccount();
 const { channels, features } = useAvailableCampaignChannels();
 
 const accountId = useMapGetter('getCurrentAccountId');
-const campaignImports = useMapGetter('campaignImports/getCampaignImports');
 const inboxes = useMapGetter('inboxes/getInboxes');
 const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 
@@ -78,7 +78,11 @@ const LEGACY_DIALOGS = {
 };
 
 const draft = ref(emptyDraft());
-const extraImports = ref([]);
+const listedImports = ref([]);
+const listMeta = ref({ count: 0, page: 1 });
+const searchQuery = ref('');
+const audienceDetail = ref(null);
+let searchTimer = null;
 const isLoading = ref(true);
 const hasLoadError = ref(false);
 const coverage = ref(null);
@@ -101,13 +105,19 @@ const update = patch => {
 };
 
 // ---- Audience (Passo 1) ----
+// Saved audiences come from the server (saved=true, q, page); the chosen one is read with
+// `show`, which also brings who does not receive (reachability, PRD B8).
 const allImports = computed(() => {
-  const loaded = campaignImports.value || [];
-  const missing = extraImports.value.filter(
-    extra => !loaded.some(item => item.id === extra.id)
+  const detail = audienceDetail.value;
+  const listed = listedImports.value.map(item =>
+    detail && item.id === detail.id ? detail : item
   );
-  return [...missing, ...loaded];
+  const missing = detail && !listed.some(item => item.id === detail.id);
+  return missing ? [detail, ...listed] : listed;
 });
+const hasMoreAudiences = computed(
+  () => listedImports.value.length < Number(listMeta.value.count || 0)
+);
 const audienceRows = computed(() => savedAudienceRows(allImports.value));
 const audience = computed(
   () => audienceRows.value.find(row => row.id === draft.value.audienceId) || null
@@ -186,6 +196,10 @@ const reach = computed(() =>
     ? reachOn(CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL, audience.value.channels)
     : 0
 );
+const optedOut = computed(
+  () =>
+    Number(audienceImport.value?.reachability?.whatsapp?.opted_out) || 0
+);
 const inboxName = computed(
   () =>
     cloudInboxes.value.find(inbox => inbox.id === draft.value.inboxId)?.name ||
@@ -194,7 +208,10 @@ const inboxName = computed(
 const bindingSummary = computed(() =>
   variables.value
     .filter(({ key }) => draft.value.bindings[key])
-    .map(({ key }) => `{{${key}}} ${sourceLabel(draft.value.bindings[key])}`)
+    .map(
+      ({ key, variable }) =>
+        `{{${variable}}} ${sourceLabel(draft.value.bindings[key])}`
+    )
     .join(' · ')
 );
 
@@ -216,7 +233,7 @@ const applySuggestions = async () => {
   try {
     const { data } = await audiencesAPI.variableSuggestions(
       draft.value.audienceId,
-      variables.value
+      variables.value.map(({ key, label }) => ({ key, label }))
     );
     const bindings = { ...draft.value.bindings };
     (data?.payload || []).forEach(suggestion => {
@@ -280,7 +297,13 @@ watch(
   ],
   refreshCoverage
 );
-watch(() => draft.value.audienceId, loadSample);
+watch(
+  () => draft.value.audienceId,
+  () => {
+    loadSample();
+    loadAudienceDetail();
+  }
+);
 watch(draft, value => saveDraft(accountId.value, value), { deep: true });
 
 // ---- Actions ----
@@ -346,11 +369,48 @@ const submit = async () => {
   }
 };
 
-const loadAudienceFromQuery = async id => {
-  if (allImports.value.some(item => item.id === id)) return;
+const loadAudiences = async ({ append = false } = {}) => {
+  const page = append ? Number(listMeta.value.page || 1) + 1 : 1;
+  const { data } = await audiencesAPI.list({
+    saved: true,
+    q: searchQuery.value.trim(),
+    page,
+  });
+  const payload = data?.payload || [];
+  listedImports.value = append ? [...listedImports.value, ...payload] : payload;
+  listMeta.value = { count: data?.meta?.count || 0, page };
+};
+
+const searchAudiences = query => {
+  searchQuery.value = query;
+  window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(async () => {
+    try {
+      hasLoadError.value = false;
+      await loadAudiences();
+    } catch {
+      hasLoadError.value = true;
+    }
+  }, SEARCH_DELAY_MS);
+};
+
+const loadMoreAudiences = async () => {
+  try {
+    await loadAudiences({ append: true });
+  } catch {
+    hasLoadError.value = true;
+  }
+};
+
+const loadAudienceDetail = async () => {
+  const id = draft.value.audienceId;
+  if (!id) {
+    audienceDetail.value = null;
+    return;
+  }
   try {
     const { data } = await audiencesAPI.show(id);
-    extraImports.value = [data.payload];
+    if (draft.value.audienceId === id) audienceDetail.value = data.payload;
   } catch {
     // Unknown or from another account: Passo 1 just shows the list.
   }
@@ -370,23 +430,25 @@ useOnEnter(async () => {
     ? { ...base, audienceId: queryAudience, step: 1 }
     : stored;
 
-  const requests = [
-    store.dispatch('campaignImports/get'),
-    store.dispatch('inboxes/get'),
-  ];
+  searchQuery.value = '';
+  audienceDetail.value = null;
+  const requests = [loadAudiences(), store.dispatch('inboxes/get')];
   if (features.value.emailCampaigns) {
     requests.push(store.dispatch('emailSenderIdentities/get'));
   }
   const results = await Promise.allSettled(requests);
   hasLoadError.value = results[0].status === 'rejected';
-  if (queryAudience) await loadAudienceFromQuery(queryAudience);
+  await loadAudienceDetail();
   isLoading.value = false;
   if (draft.value.step > reachable.value) update({ step: reachable.value });
   loadSample();
   refreshCoverage();
 });
 
-onBeforeUnmount(() => window.clearTimeout(coverageTimer));
+onBeforeUnmount(() => {
+  window.clearTimeout(coverageTimer);
+  window.clearTimeout(searchTimer);
+});
 </script>
 
 <template>
@@ -450,6 +512,10 @@ onBeforeUnmount(() => window.clearTimeout(coverageTimer));
         :has-load-error="hasLoadError"
         :returned-name="returned && audience ? audience.name : ''"
         :show-live-chat="showLiveChat"
+        :search-query="searchQuery"
+        :has-more="hasMoreAudiences"
+        @search="searchAudiences"
+        @load-more="loadMoreAudiences"
         @select="selectAudience"
         @create="createAudience"
         @live-chat="openLegacy(CAMPAIGN_CHANNELS.LIVE_CHAT)"
@@ -491,6 +557,7 @@ onBeforeUnmount(() => window.clearTimeout(coverageTimer));
         :template-name="template.name"
         :binding-summary="bindingSummary"
         :reach="reach"
+        :opted-out="optedOut"
         :excluded="coverage ? Number(coverage.excluded_count) || 0 : null"
         :time-zone="timeZone"
         :is-submitting="isSubmitting"

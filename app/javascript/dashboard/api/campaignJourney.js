@@ -10,6 +10,11 @@ class AudiencesAPI extends ApiClient {
     super('campaign_imports', { accountScoped: true });
   }
 
+  // Saved audiences with search on the server (Passo 1 of Nova campanha).
+  list({ saved = true, q = '', page = 1 } = {}) {
+    return axios.get(this.url, { params: { saved, q, page } });
+  }
+
   createAudience({ name, file }) {
     const formData = new FormData();
     formData.append('name', name);
