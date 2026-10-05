@@ -153,6 +153,30 @@ describe('AutomacoesPage', () => {
     });
   });
 
+  it('vazio: Enter manda o pedido; Shift+Enter só quebra a linha', async () => {
+    AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });
+    const wrapper = montar();
+    await flushPromises();
+
+    const campo = wrapper.find('[data-pedido]');
+    expect(campo.element.tagName).toBe('TEXTAREA');
+    await campo.setValue(
+      'quando chegar o e-mail do formulário,\ncriar o contato'
+    );
+    await campo.trigger('keydown', { key: 'Enter', shiftKey: true });
+    expect(routerPush).not.toHaveBeenCalled();
+
+    await campo.trigger('keydown', { key: 'Enter' });
+    expect(routerPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: {
+          pedidoAutomacao:
+            'quando chegar o e-mail do formulário,\ncriar o contato',
+        },
+      })
+    );
+  });
+
   it('vazio: quem só pode ver não monta', async () => {
     podeMudar.value = false;
     AutomationAPI.get.mockResolvedValue({ data: { payload: [] } });

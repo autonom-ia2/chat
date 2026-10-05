@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useTextareaAutosize } from '@vueuse/core';
 
 // #982 — a porta de entrada da tela vazia: uma pergunta, um campo e um botão.
 // O texto vai para a tela de nova automação, onde o Guia monta. As ideias
@@ -12,15 +13,24 @@ defineProps({
 const emit = defineEmits(['pedir', 'falar']);
 
 const { t } = useI18n();
-const pedido = ref('');
+// O pedido costuma ser longo ("quando chegar o e-mail X, criar contato, card…"): o campo cresce
+// com o texto até um teto e depois rola, para a pessoa ler o que escreveu.
+const { textarea, input: pedido } = useTextareaAutosize();
 const IDEIAS = ['RECLAMACAO', 'FORA_DO_HORARIO', 'ORCAMENTO'];
 const ideias = computed(() =>
   IDEIAS.map(chave => t(`AUTOMACOES.HEROI.IDEIAS.${chave}`))
 );
 
 const enviar = () => {
-  const texto = pedido.value.trim();
+  const texto = (pedido.value || '').trim();
   if (texto) emit('pedir', texto);
+};
+
+// Enter manda, como no chat; Shift+Enter quebra a linha.
+const aoTeclar = evento => {
+  if (evento.key !== 'Enter' || evento.shiftKey || evento.isComposing) return;
+  evento.preventDefault();
+  enviar();
 };
 </script>
 
@@ -53,21 +63,23 @@ const enviar = () => {
         {{ $t('AUTOMACOES.HEROI.TEXTO') }}
       </p>
       <form
-        class="flex flex-col gap-2 p-2 bg-white shadow-2xl sm:flex-row sm:items-center rounded-2xl"
+        class="flex flex-col gap-2 p-2 bg-white shadow-2xl sm:flex-row sm:items-end rounded-2xl"
         @submit.prevent="enviar"
       >
         <label for="automacao-pedido" class="sr-only">
           {{ $t('AUTOMACOES.HEROI.TITULO') }}
         </label>
-        <input
+        <textarea
           id="automacao-pedido"
+          ref="textarea"
           v-model="pedido"
           data-pedido
-          type="text"
-          maxlength="500"
+          rows="1"
+          maxlength="2000"
           :disabled="desabilitado"
           :placeholder="$t('AUTOMACOES.HEROI.EXEMPLO')"
-          class="flex-1 min-w-0 px-4 text-base bg-transparent border-0 outline-none min-h-[3.25rem] text-n-slate-12 placeholder:text-n-slate-10 disabled:cursor-not-allowed !mb-0"
+          class="flex-1 min-w-0 px-4 py-3.5 text-base leading-relaxed bg-transparent border-0 outline-none resize-none min-h-[3.25rem] max-h-44 overflow-y-auto text-n-slate-12 placeholder:text-n-slate-10 disabled:cursor-not-allowed !mb-0"
+          @keydown="aoTeclar"
         />
         <button
           type="button"
@@ -83,7 +95,7 @@ const enviar = () => {
         <button
           type="submit"
           data-montar
-          :disabled="desabilitado || !pedido.trim()"
+          :disabled="desabilitado || !(pedido || '').trim()"
           class="inline-flex items-center justify-center gap-2 px-6 text-base font-semibold text-white transition min-h-[3.25rem] rounded-xl bg-n-brand hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-brand disabled:cursor-not-allowed disabled:opacity-50"
         >
           {{ $t('AUTOMACOES.HEROI.MONTAR') }}

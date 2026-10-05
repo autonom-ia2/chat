@@ -99,7 +99,7 @@ const sugestoes = computed(() =>
 // escolhido (chave conhecida, na URL) ou o texto que ela escreveu (no estado da
 // navegação, que só a própria tela preenche — um link de fora não manda pedido
 // ao Guia em nome de ninguém).
-const MAX_PEDIDO = 500;
+const MAX_PEDIDO = 2000;
 const pedidoEscrito = ref(
   typeof window.history.state?.pedidoAutomacao === 'string'
     ? window.history.state.pedidoAutomacao.slice(0, MAX_PEDIDO)
