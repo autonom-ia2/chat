@@ -190,8 +190,8 @@
       },
       "PEOPLE": {
         "SUMMARY": "{ready} prontos · {problems} com problema",
-        "READY": "pessoas prontas",
-        "PROBLEMS": "linhas com problema",
+        "READY": "pessoa pronta | pessoas prontas",
+        "PROBLEMS": "linha com problema | linhas com problema",
         "SHOW": "Ver problemas",
         "HIDE": "Esconder problemas",
         "ROW": "Linha",

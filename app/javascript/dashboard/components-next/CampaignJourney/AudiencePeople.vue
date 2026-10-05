@@ -85,7 +85,7 @@ watch(
           {{ n(summary.ready) }}
         </p>
         <p class="m-0 text-sm font-medium text-n-slate-12">
-          {{ t(`${NS}.READY`) }}
+          {{ t(`${NS}.READY`, summary.ready) }}
         </p>
       </div>
       <button
@@ -100,7 +100,7 @@ watch(
           {{ n(summary.problems) }}
         </span>
         <span class="text-sm font-medium text-n-slate-12">
-          {{ t(`${NS}.PROBLEMS`) }}
+          {{ t(`${NS}.PROBLEMS`, summary.problems) }}
         </span>
         <span class="text-sm font-medium text-n-blue-11">
           {{ isOpen ? t(`${NS}.HIDE`) : t(`${NS}.SHOW`) }}

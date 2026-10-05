@@ -36,7 +36,9 @@ const contactOf = row => row.phone || row.email || t(`${NS}.EMPTY_CONTACT`);
       <span class="text-2xl font-semibold tabular-nums text-n-slate-12">{{
         n(total)
       }}</span>
-      <strong class="text-sm text-n-slate-12">{{ t(`${NS}.PROBLEMS`) }}</strong>
+      <strong class="text-sm text-n-slate-12">{{
+        t(`${NS}.PROBLEMS`, total)
+      }}</strong>
       <span v-if="total" class="text-xs font-semibold text-n-blue-11">
         {{ open ? t(`${NS}.HIDE_PROBLEMS`) : t(`${NS}.SHOW_PROBLEMS`) }}
       </span>

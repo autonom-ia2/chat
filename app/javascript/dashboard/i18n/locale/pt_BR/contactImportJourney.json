@@ -50,7 +50,7 @@
     "PEOPLE": {
       "READY": "contatos prontos",
       "SPLIT": "{existing} já eram seus contatos · {new} novos",
-      "PROBLEMS": "linhas com problema",
+      "PROBLEMS": "linha com problema | linhas com problema",
       "SHOW_PROBLEMS": "Ver problemas",
       "HIDE_PROBLEMS": "Esconder",
       "ROW": "Linha",

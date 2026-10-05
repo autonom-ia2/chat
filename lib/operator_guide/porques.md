@@ -555,7 +555,7 @@
 - onde_fica: Menu lateral > Campanhas > Campanha > Nova campanha > atalho "Quer uma mensagem automática no seu site, sem lista?"
 - pre_requisitos: jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED); chat do site conectado; administrador ou função com campaign_manage.
 - passos: 1. Em Quando aparece, escolha o site, escreva o endereço completo da página (começando com https://), os segundos na página e, se quiser, ligue Só em horário de atendimento; 2. Em Mensagem, dê o nome, escolha quem fala (um agente ou o robô) e escreva o texto, conferindo a prévia; 3. Em Ativar, confira o resumo e clique em Ativar.
-- gotchas: não usa público nem lista de pessoas: aparece para quem visita a página; fica na lista Campanha com o selo Sempre ativa; quem conversar por ela ganha a marca Campanha chat ao vivo com o nome no card do CRM; o endereço precisa ser completo.
+- gotchas: não usa público nem lista de pessoas: aparece para quem visita a página; fica na lista Campanha com o selo Sempre ativa; quem conversar por ela ganha a marca "Campanha: <nome da campanha>" no card do CRM; o endereço precisa ser completo.
 
 ### editar_ou_pausar_mensagem_do_chat_ao_vivo
 - titulo: Editar ou pausar a mensagem do Chat ao vivo

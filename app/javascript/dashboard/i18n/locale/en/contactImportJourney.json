@@ -50,7 +50,7 @@
     "PEOPLE": {
       "READY": "contacts ready",
       "SPLIT": "{existing} already were your contacts · {new} new",
-      "PROBLEMS": "rows with problems",
+      "PROBLEMS": "row with problems | rows with problems",
       "SHOW_PROBLEMS": "See problems",
       "HIDE_PROBLEMS": "Hide",
       "ROW": "Row",

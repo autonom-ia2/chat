@@ -190,8 +190,8 @@
       },
       "PEOPLE": {
         "SUMMARY": "{ready} ready · {problems} with a problem",
-        "READY": "people ready",
-        "PROBLEMS": "rows with a problem",
+        "READY": "person ready | people ready",
+        "PROBLEMS": "row with a problem | rows with a problem",
         "SHOW": "See problems",
         "HIDE": "Hide problems",
         "ROW": "Row",
