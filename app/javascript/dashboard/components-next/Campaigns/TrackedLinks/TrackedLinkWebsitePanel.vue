@@ -5,7 +5,12 @@ import { useAlert } from 'dashboard/composables';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
-import { parseAllowedOrigins, signalStatus } from './trackedLinkWebsite';
+import {
+  originHost,
+  parseAllowedOrigins,
+  signalStatus,
+} from './trackedLinkWebsite';
+import AllowedOriginsField from './AllowedOriginsField.vue';
 
 const props = defineProps({
   link: { type: Object, required: true },
@@ -35,15 +40,6 @@ const signalLabel = computed(() =>
 );
 const allowedOrigins = computed(() => props.link.allowed_origins || []);
 const parsedDraft = computed(() => parseAllowedOrigins(draft.value));
-const draftError = computed(() => {
-  const parsed = parsedDraft.value;
-  if (parsed.invalid.length) {
-    return t(`${NS}.ORIGINS_INVALID`, { list: parsed.invalid.join(', ') });
-  }
-  if (parsed.isTooMany) return t(`${NS}.ORIGINS_TOO_MANY`);
-  if (parsed.isEmpty) return t(`${NS}.ORIGINS_REQUIRED`);
-  return '';
-});
 
 watch(
   () => props.link.id,
@@ -142,29 +138,13 @@ const saveOrigins = async () => {
         />
       </div>
       <form v-if="isEditing" class="mt-3" @submit.prevent="saveOrigins">
-        <label for="tracked-link-origins-edit" class="sr-only">
-          {{ t(`${NS}.ORIGINS_LABEL`) }}
-        </label>
-        <textarea
+        <AllowedOriginsField
           id="tracked-link-origins-edit"
           v-model="draft"
-          rows="3"
-          spellcheck="false"
-          autocapitalize="off"
-          :placeholder="t(`${NS}.ORIGINS_PLACEHOLDER`)"
+          hide-label
+          touched
           :disabled="isSaving"
-          :aria-invalid="!!draftError"
-          aria-describedby="tracked-link-origins-edit-hint"
-          class="w-full rounded-lg border bg-n-solid-2 px-3 py-3 font-mono text-xs text-n-slate-12 focus:ring-2 focus:ring-n-brand focus:outline-none"
-          :class="draftError ? 'border-n-ruby-8' : 'border-n-weak'"
         />
-        <p
-          id="tracked-link-origins-edit-hint"
-          class="m-0 mt-2 text-xs"
-          :class="draftError ? 'text-n-ruby-11' : 'text-n-slate-11'"
-        >
-          {{ draftError || t(`${NS}.ORIGINS_HINT`) }}
-        </p>
         <p
           v-if="saveError"
           role="alert"
@@ -198,7 +178,7 @@ const saveOrigins = async () => {
           class="flex min-w-0 list-none items-center gap-2 text-sm"
         >
           <span class="i-lucide-globe size-4 shrink-0 text-n-slate-10" />
-          <span class="truncate" :title="origin">{{ origin }}</span>
+          <span class="truncate" :title="origin">{{ originHost(origin) }}</span>
         </li>
       </ul>
       <p v-else class="m-0 mt-3 text-sm text-n-amber-11">

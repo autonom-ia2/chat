@@ -133,7 +133,7 @@ describe('TrackedLinkWebsitePanel', () => {
     const wrapper = mountPanel();
     await buttonWith(wrapper, 'EDIT').trigger('click');
 
-    await wrapper.get('textarea').setValue('http://placement.com.br');
+    await wrapper.get('textarea').setValue('minha página');
     await wrapper.get('form').trigger('submit');
     expect(CtwaTrackedLinksAPI.update).not.toHaveBeenCalled();
 
@@ -163,6 +163,8 @@ describe('TrackedLinkWebsitePanel', () => {
     const wrapper = mountPanel({ canManage: false });
 
     expect(buttonWith(wrapper, 'EDIT')).toBeUndefined();
-    expect(wrapper.text()).toContain('https://placement.com.br');
+    // Shows the site people recognize; the exact origin stays in the tooltip.
+    const site = wrapper.get('[title="https://placement.com.br"]');
+    expect(site.text()).toBe('placement.com.br');
   });
 });

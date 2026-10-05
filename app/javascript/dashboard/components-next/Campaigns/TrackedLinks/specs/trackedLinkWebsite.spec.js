@@ -1,6 +1,7 @@
 import {
   formatValueByCurrency,
   normalizeOrigin,
+  originHost,
   parseAllowedOrigins,
   signalStatus,
   websiteReadiness,
@@ -16,12 +17,16 @@ describe('normalizeOrigin', () => {
       'https://www.placement.com.br:8443',
     ],
     ['http://localhost:3000', 'http://localhost:3000'],
+    // People type or copy http:// out of habit; the live site answers on https.
+    ['http://placement.com.br/seguro-viagem', 'https://placement.com.br'],
+    // Default ports never survive the http -> https switch (the server compares exact origins).
+    ['http://placement.com.br:443', 'https://placement.com.br'],
+    ['http://placement.com.br:80/lp', 'https://placement.com.br'],
   ])('turns %s into %s', (input, expected) => {
     expect(normalizeOrigin(input)).toBe(expected);
   });
 
   it.each([
-    'http://placement.com.br',
     'ftp://placement.com.br',
     'https://placement',
     'https://user:pass@placement.com.br',
@@ -29,6 +34,16 @@ describe('normalizeOrigin', () => {
     '',
   ])('refuses %s', input => {
     expect(normalizeOrigin(input)).toBeNull();
+  });
+});
+
+describe('originHost', () => {
+  it('shows the site people recognize and falls back to the raw text', () => {
+    expect(originHost('https://placement.com.br')).toBe('placement.com.br');
+    expect(originHost('https://placement.com.br:8443')).toBe(
+      'placement.com.br:8443'
+    );
+    expect(originHost('not a url')).toBe('not a url');
   });
 });
 
@@ -46,8 +61,8 @@ describe('parseAllowedOrigins', () => {
   });
 
   it('flags invalid lines, too many origins and an empty list', () => {
-    expect(parseAllowedOrigins('http://site.com.br').invalid).toEqual([
-      'http://site.com.br',
+    expect(parseAllowedOrigins('minha página').invalid).toEqual([
+      'minha página',
     ]);
     const six = Array.from({ length: 6 }, (_, i) => `https://s${i}.com`);
     expect(parseAllowedOrigins(six.join('\n'))).toMatchObject({
