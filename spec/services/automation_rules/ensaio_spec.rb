@@ -119,6 +119,35 @@ RSpec.describe AutomationRules::Ensaio do
     expect(resultado['resultados'].pluck('conversation_id')).to eq([visivel.id])
   end
 
+  # #1009: a regra presa a uma caixa testava as conversas recentes da conta inteira — 9 de 10 eram de
+  # outra caixa, e o ensaio dizia "0 de 10" sem ter olhado a caixa da regra.
+  describe 'regra presa a uma caixa' do
+    let(:condicao_da_caixa) do
+      { 'attribute_key' => 'inbox_id', 'filter_operator' => 'equal_to', 'values' => [inbox.id], 'query_operator' => 'AND' }
+    end
+
+    it 'testa só as conversas recentes daquela caixa', :aggregate_failures do
+      rule.update!(conditions: [condicao_da_caixa, condicao_sinistro])
+      da_caixa = conversa_com('sinistro')
+      3.times { conversa_com('sinistro', caixa: outra_caixa) }
+
+      resultado = described_class.new(rule: rule, user: admin, quantidade: 1).perform
+
+      expect(resultado['resultados'].pluck('conversation_id')).to eq([da_caixa.id])
+      expect(resultado_de(da_caixa, resultado)['casou']).to be(true)
+    end
+
+    it 'com OU entre as condições, a caixa não restringe a busca' do
+      rule.update!(conditions: [condicao_da_caixa.merge('query_operator' => 'OR'), condicao_sinistro])
+      conversa_com('oi')
+      de_fora = conversa_com('sinistro', caixa: outra_caixa)
+
+      resultado = described_class.new(rule: rule, user: admin).perform
+
+      expect(resultado_de(de_fora, resultado)['casou']).to be(true)
+    end
+  end
+
   it 'recusa a regra com condição inválida sem marcar a regra de verdade', :aggregate_failures do
     # A validação recusaria a condição; é justamente a regra quebrada que se quer ensaiar.
     quebrada = [{ 'attribute_key' => 'campo_que_nao_existe', 'filter_operator' => 'equal_to', 'values' => ['x'],
