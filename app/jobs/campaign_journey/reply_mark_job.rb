@@ -4,7 +4,7 @@ class CampaignJourney::ReplyMarkJob < ApplicationJob
   queue_as :low
 
   def perform(message_id)
-    message = Message.find_by(id: message_id)
+    message = Message.includes(:inbox, conversation: :contact).find_by(id: message_id)
     return if message.blank?
 
     CampaignJourney::ReplyMarker.new(message).perform

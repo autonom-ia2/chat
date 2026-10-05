@@ -81,16 +81,41 @@ class CampaignJourney::ReplyMarker
     recipient && { campaign: recipient.whatsapp_api_campaign, sent_at: recipient.sent_at }
   end
 
+  # The recipient is the contact itself when it carries contact_id (audience recipients, #999).
+  # Without contact_id it is matched by e-mail (case-insensitive) and only when exactly one contact
+  # of the account has that address — otherwise the reply could be someone else's.
   def email_candidate
-    email = @contact.email.to_s.strip.downcase
-    return if email.blank?
+    recipient = email_recipients.order(sent_at: :desc).first
+    return if recipient.blank? || !same_person?(recipient)
 
-    recipient = EmailCampaignRecipient.joins(:email_campaign).includes(:email_campaign)
-                                      .merge(email_campaigns_replying_to_inbox)
-                                      .where('LOWER(email_campaign_recipients.email) = ?', email)
-                                      .where(sent_at: window)
-                                      .order(sent_at: :desc).first
-    recipient && { campaign: recipient.email_campaign, sent_at: recipient.sent_at }
+    { campaign: recipient.email_campaign, sent_at: recipient.sent_at }
+  end
+
+  def email_recipients
+    scope = EmailCampaignRecipient.joins(:email_campaign).includes(:email_campaign)
+                                  .merge(email_campaigns_replying_to_inbox).where(sent_at: window)
+    by_email = contact_email.present? ? scope.where('LOWER(email_campaign_recipients.email) = ?', contact_email) : scope.none
+    return by_email unless recipient_contact_column?
+
+    by_contact = scope.where(contact_id: @contact.id)
+    contact_email.present? ? by_contact.or(by_email.where(contact_id: nil)) : by_contact
+  end
+
+  def same_person?(recipient)
+    return true if recipient_contact_column? && recipient.contact_id.present?
+    return true if Contact.where(account_id: @message.account_id).where('LOWER(email) = ?', contact_email).limit(2).count == 1
+
+    Rails.logger.info "[CampaignJourney] reply not marked: e-mail shared by several contacts (recipient=#{recipient.id})"
+    false
+  end
+
+  def contact_email
+    @contact_email ||= @contact.email.to_s.strip.downcase
+  end
+
+  # email_campaign_recipients.contact_id arrives with #999; until then recipients match by e-mail.
+  def recipient_contact_column?
+    EmailCampaignRecipient.column_names.include?('contact_id')
   end
 
   def email_campaigns_replying_to_inbox

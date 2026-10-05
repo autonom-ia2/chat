@@ -163,6 +163,21 @@ RSpec.describe CampaignJourney::ReplyMarker do
       expect(campaign_touches(message.conversation).pluck('source_id')).to eq(["campaign:email:#{email_campaign.id}"])
     end
 
+    it 'does not mark when two contacts of the account share the e-mail of the recipient' do
+      # Chatwoot validates e-mail uniqueness per account without case; the DB index is
+      # case-sensitive, so legacy rows can still differ only by case.
+      contact
+      create(:contact, account: account, email: 'outra@example.org', name: 'Outra Ana').update_column(:email, 'ANA@example.org') # rubocop:disable Rails/SkipsModelValidations
+      identity = create(:email_sender_identity, account: account, reply_to_inbox_id: email_inbox.id)
+      email_campaign = create(:email_campaign, account: account, sender_identity: identity)
+      create(:email_campaign_recipient, email_campaign: email_campaign, email: 'ana@example.org', status: :sent, sent_at: 1.hour.ago)
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      expect(described_class.new(incoming_message(email_inbox)).perform).to be(false)
+      expect(Conversation.where(account: account).where("additional_attributes ? 'campaign'")).to be_empty
+      expect(Rails.logger).to have_received(:info).with(/e-mail shared by several contacts \(recipient=\d+\)\z/)
+    end
+
     it 'ignores a campaign whose replies go to another inbox' do
       other_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account))
       identity = create(:email_sender_identity, account: account, reply_to_inbox_id: other_inbox.id)
@@ -170,6 +185,34 @@ RSpec.describe CampaignJourney::ReplyMarker do
       create(:email_campaign_recipient, email_campaign: email_campaign, email: 'ana@example.org', status: :sent, sent_at: 1.hour.ago)
 
       expect(described_class.new(incoming_message(email_inbox)).perform).to be(false)
+    end
+  end
+
+  # A contact who never received a campaign costs one cheap query (the job preloads the message).
+  describe 'cost for a contact who never received a campaign' do
+    def queries_during(&)
+      count = 0
+      counter = lambda do |*, payload|
+        count += 1 unless %w[SCHEMA TRANSACTION].include?(payload[:name]) || payload[:cached]
+      end
+      ActiveSupport::Notifications.subscribed(counter, 'sql.active_record', &)
+      count
+    end
+
+    def preloaded(message)
+      Message.includes(:inbox, conversation: :contact).find(message.id)
+    end
+
+    it 'runs at most one query per channel' do
+      whatsapp = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox
+      email_inbox = create(:inbox, account: account, channel: create(:channel_email, account: account))
+      api_inbox = create_whatsapp_api_inbox(account: account)
+      EmailCampaignRecipient.column_names
+
+      [whatsapp, email_inbox, api_inbox].each do |inbox|
+        message = preloaded(incoming_message(inbox))
+        expect(queries_during { described_class.new(message).perform }).to be <= 1
+      end
     end
   end
 end

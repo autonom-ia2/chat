@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_140000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_150000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2535,6 +2535,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_140000) do
     t.datetime "preflight_checked_at"
     t.datetime "preflight_valid_until"
     t.index "email_campaign_id, lower((email)::text)", name: "idx_email_campaign_recipients_campaign_email", unique: true
+    t.index "lower((email)::text), sent_at", name: "idx_email_campaign_recipients_lower_email_sent_at"
     t.index ["email_campaign_id", "id"], name: "idx_recipients_preflight_unchecked", where: "((status = 0) AND ((preflight_status)::text = 'unchecked'::text))"
     t.index ["email_campaign_id", "preflight_valid_until"], name: "idx_recipients_preflight_due"
     t.index ["email_campaign_id", "sent_at"], name: "idx_email_reputation_sent_cohort", where: "(sent_at IS NOT NULL)"
