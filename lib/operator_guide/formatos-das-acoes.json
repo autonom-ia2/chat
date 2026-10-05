@@ -3801,12 +3801,13 @@
   "PATCH campaign_imports/:id/channels": {
     "campos": {
       "email": {},
+      "sms": {},
       "whatsapp": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#channels",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:60",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:61",
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:124",
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:108"
     ],
