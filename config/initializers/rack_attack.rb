@@ -358,8 +358,9 @@ class Rack::Attack
 
   # Quem entra por token de API é identificado pelo token: nesse caminho o `uid` não é conferido, e um `uid`
   # inventado a cada pedido abriria uma chave nova. Sem token, o `uid` é conferido pelo login da sessão.
+  # Cada busca são até dois pedidos (Melhor resposta e alternativa, #985): os tetos são o dobro das buscas.
   throttle('/api/v1/accounts/:account_id/central-de-ajuda/busca_inteligente/user',
-           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE', '30').to_i, period: 1.minute) do |req|
+           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE', '60').to_i, period: 1.minute) do |req|
     account_id = central_busca_inteligente_account(req)
     next unless account_id
 
@@ -371,7 +372,7 @@ class Rack::Attack
 
   # Teto da conta inteira: muitos agentes (ou tokens) na mesma conta não multiplicam o gasto sem limite.
   throttle('/api/v1/accounts/:account_id/central-de-ajuda/busca_inteligente/account',
-           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE_ACCOUNT', '120').to_i, period: 1.minute) do |req|
+           limit: ENV.fetch('RATE_LIMIT_CENTRAL_BUSCA_INTELIGENTE_ACCOUNT', '240').to_i, period: 1.minute) do |req|
     central_busca_inteligente_account(req)
   end
 

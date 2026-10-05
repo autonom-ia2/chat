@@ -40,14 +40,17 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
     @model = model
   end
 
-  # { artigo: resumo, certeza: Float } ou nil quando não há escolha confiável. Com `exceto` (o id da Melhor
-  # resposta), devolve a alternativa: o artigo que também ajuda, fora o já escolhido.
+  # { artigo: resumo, certeza: Float } ou nil quando não há escolha confiável. Com `exceto` (o id ou a ref da
+  # Melhor resposta), devolve a alternativa: o artigo que também ajuda, fora o já escolhido. Um `exceto` que não é
+  # artigo desta pessoa devolve nil: cair na pergunta normal devolveria a própria Melhor como "alternativa".
   def melhor(termo, exceto: nil)
     texto = termo.to_s.strip.first(MAIOR_TERMO)
-    return if texto.length < MENOR_TERMO || @leitura.artigos.empty? || !TypesafeAi::Config.configured?
+    return unless pergunta_possivel?(texto)
 
-    @exceto = exceto_valido(exceto)
-    escolha = Rails.cache.fetch(chave_do_cache(texto), expires_in: VALIDADE_DO_CACHE) { perguntar(texto) }
+    excluido = exceto.presence && exceto_valido(exceto)
+    return if exceto.present? && excluido.nil?
+
+    escolha = Rails.cache.fetch(chave_do_cache(texto, excluido), expires_in: VALIDADE_DO_CACHE) { perguntar(texto, excluido) }
     montar(escolha)
   rescue TypesafeAi::Client::Error, RespostaInvalida, LimiteEstourado => e
     # Erro não entra no cache (o bloco não terminou): a próxima busca tenta de novo.
@@ -56,6 +59,10 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
   end
 
   private
+
+  def pergunta_possivel?(texto)
+    texto.length >= MENOR_TERMO && @leitura.artigos.any? && TypesafeAi::Config.configured?
+  end
 
   def codigo_do_erro(erro)
     case erro
@@ -73,23 +80,24 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
   end
 
   # O teto só conta aqui, dentro do bloco do cache: resposta guardada não gasta nada.
-  def perguntar(texto)
+  def perguntar(texto, excluido)
     raise LimiteEstourado if @limite && !@limite.permitir?
 
     comeco = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = client.evaluate(model: @model, state: { 'pergunta_da_pessoa' => texto },
-                               questions: { PERGUNTA => { type: 'choice', instructions: instrucoes, criteria: criterios } })
+                               questions: { PERGUNTA => { type: 'choice', instructions: instrucoes(excluido),
+                                                          criteria: criterios(excluido) } })
     registrar_custo(response, comeco)
-    validar(response)
+    validar(response, excluido)
   end
 
   # Mesma conferência do `TypesafeAi::Decisor#resultado`: modelo, tipo, certeza entre 0 e 1 e escolha entre as chaves.
-  def validar(response)
+  def validar(response, excluido)
     resposta = response.fetch('answers').fetch(PERGUNTA)
     certeza = resposta.fetch('confidence')
     escolha = resposta.fetch('choice')
     valido = response.fetch('model') == @model && resposta.fetch('type') == 'choice' && certeza_valida?(certeza) &&
-             criterios.key?(escolha)
+             criterios(excluido).key?(escolha)
     raise RespostaInvalida unless valido
 
     { 'choice' => escolha, 'confidence' => certeza.to_f }
@@ -99,16 +107,16 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
 
   def certeza_valida?(certeza) = certeza.is_a?(Numeric) && certeza.finite? && certeza.between?(0, 1)
 
-  # Só vale um artigo que esta pessoa pode ler; qualquer outro valor vira a pergunta normal.
+  # Só vale um artigo que esta pessoa pode ler, pelo id ("02.04") ou pela ref ("02-04"), como a Leitura aceita.
   def exceto_valido(exceto)
-    id = exceto.to_s
+    id = exceto.to_s.strip.tr('-', '.')
     id if id != NENHUM && criterios_de_todos.key?(id)
   end
 
-  def instrucoes = @exceto ? INSTRUCOES_DA_ALTERNATIVA : INSTRUCOES
+  def instrucoes(excluido) = excluido ? INSTRUCOES_DA_ALTERNATIVA : INSTRUCOES
 
   # As opções da pergunta: todas, ou todas menos a Melhor resposta quando é a alternativa.
-  def criterios = @exceto ? criterios_de_todos.except(@exceto) : criterios_de_todos
+  def criterios(excluido) = excluido ? criterios_de_todos.except(excluido) : criterios_de_todos
 
   # Um critério por artigo que esta pessoa pode ler (a Leitura já filtrou por conta e papel), mais "nenhum".
   def criterios_de_todos
@@ -143,8 +151,8 @@ class Autonomia::CentralDeAjuda::BuscaInteligente
 
   # Tudo o que muda a resposta entra na chave: modelo, a forma da pergunta e os critérios (conta com outra
   # visibilidade, ou artigo editado, pergunta de novo). Mudar a instrução invalida o cache sozinho.
-  def chave_do_cache(texto)
-    digest_pergunta = Digest::SHA256.hexdigest([instrucoes, PERGUNTA, criterios].to_json)
+  def chave_do_cache(texto, excluido)
+    digest_pergunta = Digest::SHA256.hexdigest([instrucoes(excluido), PERGUNTA, criterios(excluido)].to_json)
     digest_termo = Digest::SHA256.hexdigest(normalizar(texto))
     "autonomia/central_de_ajuda/busca_inteligente/#{@model}/#{digest_pergunta}/#{digest_termo}"
   end

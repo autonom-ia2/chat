@@ -15,6 +15,9 @@ const LIMIAR_DA_MELHOR_RESPOSTA = 0.35;
 // Com a Melhor resposta em destaque, a busca por palavras vira "Outros resultados" (#985): poucos, para não
 // competir com a resposta.
 const MAXIMO_DE_OUTROS = 3;
+// A alternativa vem numa segunda chamada (~0,5 s medidos): a tela espera por ela até este teto e mostra tudo
+// junto. Passou disso, abre sem ela e uma resposta atrasada não entra empurrando a lista.
+const TETO_ALTERNATIVA_MS = 900;
 
 // As duas buscas da Central (#977): por palavras (reserva) e a Melhor resposta do Jev. A tela só mostra
 // resultado quando as duas terminaram (ou o teto passou): nada entra depois empurrando o que a pessoa ia tocar.
@@ -28,22 +31,29 @@ export function useBuscaDaCentral() {
   const certezaDaAlternativa = ref(null);
   const buscando = ref(false);
   const procurandoMelhor = ref(false);
+  const procurandoAlternativa = ref(false);
+  // O Enter abre o artigo assim que a Melhor resposta chega: a alternativa seria uma chamada paga perdida.
+  const semAlternativa = ref(false);
   const prazoEstourado = ref(false);
   let ultimaBusca = 0;
   let ultimaInteligente = 0;
   let timerPalavras = null;
   let timerInteligente = null;
   let timerTeto = null;
+  let timerAlternativa = null;
 
   // Espaço a mais não muda a pergunta: só o texto aparado conta.
   const termoLimpo = computed(() => termo.value.trim());
   const temTermo = computed(() => termoLimpo.value.length > 0);
 
   const cancelarTimers = () => {
-    [timerPalavras, timerInteligente, timerTeto].forEach(clearTimeout);
+    [timerPalavras, timerInteligente, timerTeto, timerAlternativa].forEach(
+      clearTimeout
+    );
     timerPalavras = null;
     timerInteligente = null;
     timerTeto = null;
+    timerAlternativa = null;
   };
 
   const buscar = async texto => {
@@ -60,17 +70,27 @@ export function useBuscaDaCentral() {
     }
   };
 
-  // A alternativa (#985) vem depois da Melhor resposta, sem segurar a tela: entra logo abaixo dela quando
-  // chega. Mesma guarda do termo: resposta de uma busca antiga não aparece.
+  // A alternativa (#985) só é pedida com a Melhor resposta em destaque (sem ela, nunca apareceria). A tela
+  // espera por ela até o teto; mesma guarda do termo: resposta de uma busca antiga não aparece.
   async function buscarAlternativa(texto, exceto, pedido) {
+    procurandoAlternativa.value = true;
+    timerAlternativa = setTimeout(() => {
+      if (pedido === ultimaInteligente) procurandoAlternativa.value = false;
+    }, TETO_ALTERNATIVA_MS);
     try {
       const { data } = await CentralDeAjudaAPI.buscarInteligente(texto, exceto);
-      if (pedido !== ultimaInteligente) return;
+      // Atrasada (a tela já abriu sem ela) ou de outra busca: não mexe no que a pessoa está vendo.
+      if (pedido !== ultimaInteligente || !procurandoAlternativa.value) return;
       alternativa.value = data?.melhor || null;
       certezaDaAlternativa.value =
         typeof data?.certeza === 'number' ? data.certeza : null;
     } catch {
       // sem alerta: a Melhor resposta e a lista continuam valendo
+    } finally {
+      if (pedido === ultimaInteligente) {
+        clearTimeout(timerAlternativa);
+        procurandoAlternativa.value = false;
+      }
     }
   }
 
@@ -88,7 +108,11 @@ export function useBuscaDaCentral() {
       if (prazoEstourado.value && resultados.value.length) return;
       melhor.value = data?.melhor || null;
       certeza.value = typeof data?.certeza === 'number' ? data.certeza : null;
-      if (melhor.value) buscarAlternativa(texto, melhor.value.id, pedido);
+      const destaque =
+        melhor.value && (certeza.value ?? 0) >= LIMIAR_DA_MELHOR_RESPOSTA;
+      if (destaque && !semAlternativa.value) {
+        buscarAlternativa(texto, melhor.value.id, pedido);
+      }
     } catch {
       // sem alerta: a lista por palavras continua valendo
     } finally {
@@ -110,6 +134,8 @@ export function useBuscaDaCentral() {
     certeza.value = null;
     alternativa.value = null;
     certezaDaAlternativa.value = null;
+    procurandoAlternativa.value = false;
+    semAlternativa.value = false;
     prazoEstourado.value = false;
     buscando.value = Boolean(texto);
     procurandoMelhor.value = texto.length >= MINIMO_DE_LETRAS;
@@ -135,12 +161,19 @@ export function useBuscaDaCentral() {
     }
   };
 
+  // Enter: não pede a alternativa e, se ela já estava a caminho, não espera por ela.
+  const dispensarAlternativa = () => {
+    semAlternativa.value = true;
+    procurandoAlternativa.value = false;
+  };
+
   onBeforeUnmount(cancelarTimers);
 
   // Sem lista para mostrar, a espera pela Melhor resposta vai até ela voltar: é quando ela mais ajuda.
   const aguardando = computed(
     () =>
       buscando.value ||
+      procurandoAlternativa.value ||
       (procurandoMelhor.value &&
         (!prazoEstourado.value || !resultados.value.length))
   );
@@ -195,5 +228,6 @@ export function useBuscaDaCentral() {
     lista,
     total,
     adiantar,
+    dispensarAlternativa,
   };
 }

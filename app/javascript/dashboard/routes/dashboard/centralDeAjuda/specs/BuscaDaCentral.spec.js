@@ -480,6 +480,101 @@ describe('BuscaDaCentral', () => {
       expect(buscarInteligente).toHaveBeenCalledTimes(1);
     });
 
+    it('não pede a alternativa quando a Melhor resposta não fica em destaque', async () => {
+      buscar.mockResolvedValue({ data: { resultados: [SENHA] } });
+      responder({ melhor: WHATSAPP, alternativa: FUNIL, certeza: 0.2 });
+      const tela = montar();
+      await digitar(tela, 'como conecto meu zap');
+
+      expect(buscarInteligente).toHaveBeenCalledTimes(1);
+      expect(cartaoDaAlternativa(tela)).toBeUndefined();
+    });
+
+    it('com Enter, abre a Melhor resposta e não pede a alternativa', async () => {
+      buscar.mockResolvedValue({ data: { resultados: [SENHA] } });
+      responder({ melhor: WHATSAPP, alternativa: FUNIL });
+      const tela = montar();
+      await tela.find('input').setValue('como conecto meu zap');
+      await tela.find('input').trigger('keydown.enter');
+      await flushPromises();
+
+      expect(push).toHaveBeenCalledWith({
+        name: 'central_de_ajuda_artigo',
+        params: { ref: WHATSAPP.ref },
+      });
+      expect(buscarInteligente).toHaveBeenCalledTimes(1);
+    });
+
+    it('a tela espera a alternativa e mostra tudo junto: a lista não muda depois de aparecer', async () => {
+      buscar.mockResolvedValue({
+        data: { resultados: [WHATSAPP, SENHA, FUNIL, CONTATOS, RELATORIO] },
+      });
+      const alt = adiada();
+      buscarInteligente.mockImplementation((termo, exceto) =>
+        exceto
+          ? alt.promessa
+          : Promise.resolve({ data: { melhor: WHATSAPP, certeza: 0.9 } })
+      );
+      const tela = montar();
+      await digitar(tela, 'como conecto meu zap');
+
+      expect(cartao(tela)).toBeUndefined();
+      expect(itensDaLista(tela)).toHaveLength(0);
+
+      alt.resolver({ data: { melhor: FUNIL, certeza: 0.6 } });
+      await flushPromises();
+
+      expect(cartaoDaAlternativa(tela).text()).toContain(FUNIL.titulo);
+      expect(itensDaLista(tela).join(' ')).not.toContain(FUNIL.titulo);
+      expect(anuncio(tela)).toContain(
+        'HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_ALTERNATIVA'
+      );
+    });
+
+    it('passou o teto da alternativa, a tela abre sem ela e a resposta atrasada não entra', async () => {
+      buscar.mockResolvedValue({
+        data: { resultados: [SENHA, FUNIL, CONTATOS] },
+      });
+      const alt = adiada();
+      buscarInteligente.mockImplementation((termo, exceto) =>
+        exceto
+          ? alt.promessa
+          : Promise.resolve({ data: { melhor: WHATSAPP, certeza: 0.9 } })
+      );
+      const tela = montar();
+      await digitar(tela, 'como conecto meu zap');
+      await vi.advanceTimersByTimeAsync(1000);
+      await flushPromises();
+
+      expect(cartao(tela)).toBeDefined();
+      const antes = itensDaLista(tela);
+      expect(antes).toHaveLength(3);
+
+      alt.resolver({ data: { melhor: FUNIL, certeza: 0.9 } });
+      await flushPromises();
+
+      expect(cartaoDaAlternativa(tela)).toBeUndefined();
+      expect(itensDaLista(tela)).toEqual(antes);
+    });
+
+    it('apagar o texto com a alternativa a caminho não deixa nada na tela', async () => {
+      buscar.mockResolvedValue({ data: { resultados: [SENHA] } });
+      const alt = adiada();
+      buscarInteligente.mockImplementation((termo, exceto) =>
+        exceto
+          ? alt.promessa
+          : Promise.resolve({ data: { melhor: WHATSAPP, certeza: 0.9 } })
+      );
+      const tela = montar();
+      await digitar(tela, 'como conecto meu zap');
+      await tela.find('input').setValue('');
+      alt.resolver({ data: { melhor: FUNIL, certeza: 0.9 } });
+      await flushPromises();
+
+      expect(cartaoDaAlternativa(tela)).toBeUndefined();
+      expect(cartao(tela)).toBeUndefined();
+    });
+
     it('alternativa de um termo antigo não aparece no novo', async () => {
       buscar.mockResolvedValue({ data: { resultados: [SENHA] } });
       const atrasada = adiada();

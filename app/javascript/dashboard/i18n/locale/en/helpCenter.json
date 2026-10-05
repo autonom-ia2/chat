@@ -1126,7 +1126,8 @@
         "PROCURANDO_MELHOR": "Looking for the best answer…",
         "COM_VIDEO": "Video",
         "TAMBEM_AJUDA": "This may also help",
-        "OUTROS": "Other results"
+        "OUTROS": "Other results",
+        "ANUNCIO_ALTERNATIVA": "This may also help: {titulo}."
       },
       "MAIS_PROCURADOS": {
         "TITULO": "Most searched:",

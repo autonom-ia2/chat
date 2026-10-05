@@ -30,6 +30,7 @@ const {
   lista,
   total,
   adiantar,
+  dispensarAlternativa,
 } = useBuscaDaCentral();
 
 const campo = ref(null);
@@ -58,7 +59,11 @@ const anuncio = computed(() => {
   const destaque = t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_MELHOR', {
     titulo: melhor.value.titulo,
   });
-  return `${destaque} ${contagem}`;
+  if (!alternativaEmDestaque.value) return `${destaque} ${contagem}`;
+  const tambem = t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.ANUNCIO_ALTERNATIVA', {
+    titulo: alternativa.value.titulo,
+  });
+  return `${destaque} ${tambem} ${contagem}`;
 });
 
 const abrir = artigo =>
@@ -77,6 +82,7 @@ const abrirPrimeiro = () => {
     return;
   }
   abrirAoChegar.value = true;
+  dispensarAlternativa();
   adiantar();
 };
 
@@ -168,7 +174,7 @@ const limpar = () => {
       />
     </Transition>
 
-    <!-- A alternativa chega meio segundo depois (#985) e entra logo abaixo da resposta, com fade. -->
+    <!-- A alternativa (#985) entra junto com a resposta: a tela espera por ela até um teto curto. -->
     <Transition
       enter-active-class="transition-opacity duration-200"
       enter-from-class="opacity-0"
@@ -196,17 +202,16 @@ const limpar = () => {
     <section
       v-else-if="temTermo && lista.length"
       class="flex flex-col gap-2"
-      :aria-label="
-        emDestaque ? t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.OUTROS') : undefined
-      "
+      :aria-labelledby="emDestaque ? 'busca-central-outros' : undefined"
     >
       <!-- Com a Melhor resposta na tela, a busca por palavras é só complemento (#985). -->
-      <h3
+      <h2
         v-if="emDestaque"
+        id="busca-central-outros"
         class="mb-0 mt-2 px-1 text-sm font-semibold text-n-slate-11"
       >
         {{ t('HELP_CENTER.CENTRAL_DE_AJUDA.BUSCA.OUTROS') }}
-      </h3>
+      </h2>
       <ul class="m-0 p-0 list-none flex flex-col gap-2">
         <li v-for="artigo in lista" :key="artigo.ref">
           <router-link

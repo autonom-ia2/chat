@@ -268,14 +268,25 @@ RSpec.describe Autonomia::CentralDeAjuda::BuscaInteligente do
       expect(busca.melhor('meu whatsapp não manda mensagem', exceto: '02.04')).to be_nil
     end
 
-    it 'ignora exceto que não é um artigo visível (ou é nenhum) e faz a pergunta normal' do
+    it 'devolve nil sem chamar o Jev quando exceto não é um artigo que esta pessoa lê (ou é nenhum)' do
+      # 03.01 é de administrador: para o agente, não existe.
       %w[99.99 nenhum 03.01].each do |exceto|
-        cliente_falso.chamadas.clear
-        Rails.cache.clear
-        busca.melhor('meu whatsapp não manda mensagem', exceto: exceto)
-
-        expect(cliente_falso.chamadas.sole[:questions]['artigo'][:instructions]).to eq(described_class::INSTRUCOES)
+        expect(busca.melhor('meu whatsapp não manda mensagem', exceto: exceto)).to be_nil
       end
+      expect(cliente_falso.chamadas).to be_empty
+    end
+
+    it 'aceita a ref do artigo (02-04) como a Leitura aceita' do
+      responder(choice: '02.05', confidence: 0.6)
+      busca.melhor('meu whatsapp não manda mensagem', exceto: '02-04')
+
+      expect(cliente_falso.chamadas.sole[:questions]['artigo'][:criteria]).not_to have_key('02.04')
+    end
+
+    it 'exceto em branco é a pergunta normal' do
+      busca.melhor('meu whatsapp não manda mensagem', exceto: '')
+
+      expect(cliente_falso.chamadas.sole[:questions]['artigo'][:instructions]).to eq(described_class::INSTRUCOES)
     end
 
     it 'guarda a alternativa no cache separada da Melhor resposta' do

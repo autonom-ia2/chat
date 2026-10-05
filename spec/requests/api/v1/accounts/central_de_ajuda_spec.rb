@@ -182,6 +182,27 @@ RSpec.describe 'Central de Ajuda (leitura)', type: :request do
       expect(Crm::AiUsageEvent.where(account: conta, feature: 'central_busca').count).to eq(1)
     end
 
+    it 'com exceto, pede a alternativa sem a Melhor resposta entre as opções (#985)' do
+      responder_jev('02.04', 0.55)
+
+      corpo = get_json('/busca_inteligente', agente, termo: 'o cliente não responde mais', exceto: '18-01')
+
+      expect(corpo['melhor']).to include('ref' => '02-04')
+      expect(a_request(:post, jev_url).with do |http|
+        pergunta = JSON.parse(http.body).dig('questions', 'artigo')
+        pergunta['criteria'].keys == %w[02.01 02.02 02.04 nenhum] &&
+          pergunta['instructions'] == Autonomia::CentralDeAjuda::BuscaInteligente::INSTRUCOES_DA_ALTERNATIVA
+      end).to have_been_made.once
+    end
+
+    it 'com exceto que a pessoa não pode ler, devolve vazio sem chamar o Jev' do
+      responder_jev('02.04', 0.55)
+
+      expect(get_json('/busca_inteligente', agente, termo: 'o cliente não responde mais', exceto: '99.99'))
+        .to eq('melhor' => nil, 'certeza' => nil)
+      expect(a_request(:post, jev_url)).not_to have_been_made
+    end
+
     it 'devolve vazio quando nenhum artigo responde' do
       responder_jev('nenhum', 0.9)
 
