@@ -140,6 +140,17 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(Crm::MetaAdsConnection.count).to eq(0)
     end
 
+    it 'devolve 422 meta_unavailable quando a falha passageira vem na consulta das contas de anúncios' do
+      stub_permissions({ data: [{ permission: 'ads_read', status: 'granted' }] })
+      stub_ad_accounts({}, status: 503)
+
+      put path, params: { access_token: token }, headers: auth_headers(admin), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('meta_unavailable')
+      expect(Crm::MetaAdsConnection.count).to eq(0)
+    end
+
     it 'devolve 422 access_token_too_long sem chamar a Meta' do
       put path, params: { access_token: 'E' * 2049 }, headers: auth_headers(admin), as: :json
 

@@ -69,6 +69,10 @@ RSpec.describe Ctwa::CampaignBuilder do
     it 'não cria toque quando a única informação é um link com outro esquema' do
       expect(described_class.build(source_url: script_url)).to be_nil
       expect(described_class.build(source_url: 'data:text/html,oi')).to be_nil
+      [' javascript:alert(1)', 'JAVASCRIPT:alert(1)', 'http:evil.com'].each do |url|
+        expect(described_class.build(source_url: url)).to be_nil, url
+      end
+      expect(described_class.build(source_id: '1', source_url: ' http://x.com/p')['source_url']).to eq(' http://x.com/p')
     end
 
     it 'grava o toque sem o link quando há identificador, e mantém http(s)' do

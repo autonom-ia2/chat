@@ -116,24 +116,89 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
   end
 
   # #1034: the token that can reach the Pixel is the Meta Ads one (generated after the system
-  # user got the Pixel); the WhatsApp token stays only as a fallback.
+  # user got the Pixel); the WhatsApp token stays as a fallback.
   describe 'which token reaches the Pixel' do
-    it 'uses the active Meta Ads connection token when there is one' do
-      create_meta_ads_connection(account, token: 'EAAGanunciostoken1234567890abcdefPIXEL')
+    let(:clients) { {} }
 
-      perform
+    def ads_token = 'EAAGanunciostoken1234567890abcdefPIXEL'
+    def whatsapp_token = channel.provider_config['api_key']
+    def ok = Meta::ConversionsApiClient::Result.new(ok: true, http_code: 200, body: 'ok', error: nil, error_code: nil)
 
-      expect(Meta::ConversionsApiClient).to have_received(:new)
-        .with(access_token: 'EAAGanunciostoken1234567890abcdefPIXEL', dataset_id: '2164882667623689')
+    def refuse(code, http: 400)
+      Meta::ConversionsApiClient::Result.new(ok: false, http_code: http, body: 'no', error: "Meta error #{code}", error_code: code)
     end
 
-    it 'falls back to the WhatsApp connection token when the Meta Ads connection is invalid or missing' do
-      create_meta_ads_connection(account, status: 'invalid', token: 'EAAGanunciostoken1234567890abcdefPIXEL')
+    def answer(token, result)
+      clients[token] = instance_double(Meta::ConversionsApiClient, post_events: result)
+    end
+
+    before do
+      allow(Meta::ConversionsApiClient).to receive(:new) { |access_token:, **| clients.fetch(access_token) }
+    end
+
+    it 'uses the active Meta Ads connection token when there is one' do
+      create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, ok)
 
       perform
 
-      expect(Meta::ConversionsApiClient).to have_received(:new)
-        .with(access_token: channel.provider_config['api_key'], dataset_id: '2164882667623689')
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: ads_token, dataset_id: '2164882667623689').once
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'uses the WhatsApp token when the account has no Meta Ads connection, or only an invalid one' do
+      answer(whatsapp_token, ok)
+      perform
+      expect(row.status).to eq('accepted')
+
+      create_meta_ads_connection(account, status: 'invalid', token: ads_token)
+      perform('won', activity: 78)
+      expect(row('won', activity: 78).status).to eq('accepted')
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: ads_token, dataset_id: anything)
+    end
+
+    it 'never uses another account active connection' do
+      create_meta_ads_connection(create(:account), token: ads_token)
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: ads_token, dataset_id: anything)
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'marks an expired Meta Ads token invalid (190) and retries once with the WhatsApp token' do
+      connection = create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, refuse(190))
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(connection.reload).to have_attributes(status: 'invalid')
+      expect(connection.last_error).to be_present
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'falls back to the WhatsApp token when the Meta Ads token cannot reach the Pixel, keeping it active' do
+      connection = create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, refuse(200, http: 403))
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(connection.reload.status).to eq('active')
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'does not switch tokens on a passing Meta failure (5xx) and lets Sidekiq retry' do
+      connection = create_meta_ads_connection(account, token: ads_token)
+      answer(ads_token, refuse(nil, http: 503))
+
+      expect { perform }.to raise_error(described_class::DispatchError)
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
+      expect(connection.reload.status).to eq('active')
+      expect(row.status).to eq('error')
     end
   end
 

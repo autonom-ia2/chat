@@ -88,7 +88,7 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # from a website button but has no signals (no marketing consent, or an inferred click)
   # skips with 'missing_signals' so the reason is visible (CA-3.4); any other card keeps
   # today's 'missing_ctwa_clid' skip. The event goes to the funnel's Pixel with the account's
-  # Meta Ads token when connected (see website_access_token), else the WhatsApp token.
+  # Meta Ads token when connected (see post_website_event), else the WhatsApp token.
   def deliver_website(row, card, event_id, event_type, activity)
     signals = Crm::MetaCapi::WebsiteSignalResolver.resolve(card)
     return skip_without_signals(row, card) if signals.empty?
@@ -96,8 +96,8 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     row.assign_attributes(attribution_mode: 'website', ctwa_clid: nil, dataset_id: website_pixel_id(card))
     return skip(row, 'missing_pixel') if row.dataset_id.blank?
 
-    access_token = website_access_token(card)
-    return skip(row, 'missing_credentials') if access_token.blank?
+    ads_connection, whatsapp_token = website_credentials(card)
+    return skip(row, 'missing_credentials') if ads_connection.blank? && whatsapp_token.blank?
 
     event_name = Crm::MetaCapi::WebsitePayloadBuilder.canonical_event_name(event_type: event_type, stage_type: row.funnel_stage_type)
     return skip(row, 'no_meta_event') if event_name.blank?
@@ -108,8 +108,35 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
     return skip(row, 'event_too_old') if event_too_old?(payload)
 
     row.save!
-    response = Meta::ConversionsApiClient.new(access_token: access_token, dataset_id: row.dataset_id).post_events([payload])
-    record_result(row, response)
+    record_result(row, post_website_event(row, payload, ads_connection, whatsapp_token))
+  end
+
+  # Meta only lets a token reach a Pixel when it was generated after the Pixel was assigned to
+  # its system user; the WhatsApp token predates that and carries WhatsApp scopes only. So the
+  # account's Meta Ads token (#1034) goes first. If Meta refuses it as dead (190) the connection
+  # is marked invalid; dead or without access to this Pixel, the WhatsApp token gets one try.
+  # A passing outage (5xx, rate limit, network) never switches tokens: Sidekiq retries.
+  def post_website_event(row, payload, ads_connection, whatsapp_token)
+    return post_events(whatsapp_token, row, payload) if ads_connection.blank?
+
+    response = post_events(ads_connection.access_token, row, payload)
+    return response if response.ok || !ads_token_refused?(response)
+
+    ads_connection.mark_invalid!(response.error) if response.error_code == Meta::AdsGraphClient::TOKEN_INVALID_CODE
+    whatsapp_token.present? ? post_events(whatsapp_token, row, payload) : response
+  end
+
+  def website_credentials(card)
+    [::Crm::MetaAdsConnection.active_for(card.account_id), resolve_credentials(card)[:access_token]]
+  end
+
+  def post_events(token, row, payload)
+    Meta::ConversionsApiClient.new(access_token: token, dataset_id: row.dataset_id).post_events([payload])
+  end
+
+  def ads_token_refused?(response)
+    code = response.error_code
+    code == Meta::AdsGraphClient::TOKEN_INVALID_CODE || Meta::AdsGraphClient::SCOPE_ERROR_CODES.include?(code)
   end
 
   # A card from a website button without signals says so ('missing_signals', CA-3.4);
@@ -120,15 +147,6 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
               Ctwa::TrackedLinkClick.joins(:tracked_link)
                                     .exists?(account_id: card.account_id, conversation_id: conversation_ids, ctwa_tracked_links: { usage: 'website' })
     skip(row, website ? 'missing_signals' : 'missing_ctwa_clid')
-  end
-
-  # Meta only lets a token reach a Pixel when it was generated after the Pixel was assigned to
-  # its system user; the WhatsApp token predates that and carries WhatsApp scopes only. The
-  # account's Meta Ads token (#1034) is the one marketing generates with the Pixel and the ad
-  # account assigned, so it goes first; the WhatsApp token stays as a fallback.
-  def website_access_token(card)
-    connection = ::Crm::MetaAdsConnection.find_by(account_id: card.account_id, status: 'active')
-    connection&.access_token.presence || resolve_credentials(card)[:access_token]
   end
 
   # Pixel id per funnel, digits only (sanitized on write by the pipelines controller).
