@@ -52,7 +52,8 @@ Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê q
 | D2 | O caminho principal é **subir a planilha dentro de "Nova campanha"**. Públicos é para reaproveitar, consultar e desfazer. | Uso real 1:1. |
 | D3 | **Lotes saem da importação** e viram **"Enviar em etapas"** no disparo. | Lote nunca foi usado; aquecimento manual foi. |
 | D4 | **Importa as linhas válidas**; as inválidas ficam listadas com motivo e baixáveis. | Recusar 100 por 1 é atrito sem ganho. |
-| D5 | **Jev identifica as colunas** (nome, celular) quando o cabeçalho não é reconhecido. O modelo recebe só cabeçalhos e formato mascarado, nunca nome ou número. | Mesmo contrato de privacidade já aprovado no e-mail (#764). |
+| D5 | **O sistema acha as colunas sozinho** (nome, celular e cada variável do modelo) usando o Jev por baixo. **A interface nunca cita o Jev**: diz só "colunas encontradas". O modelo recebe cabeçalhos, formato mascarado e a lista do que o modelo de mensagem precisa; nunca nome ou número. | Mesmo contrato de privacidade do e-mail (#764). O usuário quer o resultado, não o nome da ferramenta. |
+| D8 | **O modelo de mensagem é escolhido antes do público.** As variáveis dele (`{{1}}` nome, `{{2}}` mês de vencimento…) viram a lista do que procurar na planilha. | Com o alvo conhecido, achar a coluna é mais certeiro (ex.: `{{2}} mês de vencimento` → coluna *Vencimento*), e o usuário vê de onde sai cada pedaço da mensagem antes de enviar. |
 | D6 | O nome técnico da etiqueta some da interface. O usuário vê o **nome do público**. A etiqueta continua existindo por baixo. | Ninguém deve decorar `campanha_7_envio_100_annt_nova_11`. |
 | D7 | Criação em **página com etapas**, no layout das campanhas de e-mail (#800), não no formulário flutuante. | Padrão visual atual do produto. |
 
@@ -66,7 +67,7 @@ Quem cria uma campanha de WhatsApp sobe a planilha **dentro da campanha**, vê q
 - Nome da campanha.
 - Caixa de envio: só caixas WhatsApp Cloud aparecem. Se a conta não tiver nenhuma, o passo explica e leva para criar.
 - Modelo aprovado: escolha com busca. Mostra categoria (Marketing, Utilidade) e idioma.
-- Variáveis do modelo: cada `{{n}}` tem um campo; dá para usar dado do contato (nome, primeiro nome) ou texto fixo.
+- Variáveis do modelo: cada `{{n}}` tem um campo; a fonte é um dado do contato (nome, primeiro nome), **uma coluna da planilha** (achada no Passo 2) ou texto fixo. O passo explica que escolher o modelo antes ajuda a achar as colunas certas.
 - Prévia como o cliente vê, com o primeiro contato do público quando ele já existir.
 
 **Passo 2 — Público**
@@ -76,7 +77,7 @@ Duas opções, lado a lado:
 - **Enviar planilha** (padrão)
   1. Arrastar ou escolher CSV/XLSX (até 10 MB, 20 mil linhas XLSX / 50 mil CSV).
   2. Lendo… (barra de progresso, a tela não trava).
-  3. Resultado: "Encontramos **Nome** na coluna *Cliente* e **Celular** na coluna *Fone 1*" com selo "identificado pelo Jev" quando for o caso, e um link "trocar coluna" que abre a escolha manual.
+  3. Resultado em "O que a mensagem precisa e de onde vem": uma linha por necessidade — Nome (`{{1}}`), Celular, e cada variável do modelo que vem da planilha (ex.: `{{2}}` Mês de vencimento) —, com a coluna encontrada, um exemplo (número mascarado), quantas linhas estão preenchidas e "Trocar". Nenhuma menção ao Jev ou a IA.
   4. Contagem: **98 prontos para receber · 2 com problema · 3 já recusaram mensagens**. "Ver problemas" mostra motivo por linha (número mascarado) e "Baixar planilha de correção".
   5. Quem já existe na base é reconhecido (inclusive com/sem o 9) e não é duplicado; a tela diz "41 já eram seus contatos".
 - **Usar público salvo**
@@ -139,7 +140,7 @@ Seguir o padrão do workspace de e-mail (#800, `EmailCampaignsPage.vue`) e as re
 
 ### 8.2 Importação
 
-- `CampaignImports::SchemaResolver` ganha modo telefone: candidato com evidência de celular válido (`PhoneNormalizer`), Jev resolve `phone_index`/`name_index`, fallback determinístico com os aliases de hoje. `TypesafeAi::ImportSchemaResolver` recebe o alvo (`email` | `phone`) e as instruções correspondentes. Perfil enviado ao modelo: cabeçalho, contagem, formato mascarado (`0` dígito, `x` outro), nunca valor.
+- `CampaignImports::SchemaResolver` ganha modo telefone: candidato com evidência de celular válido (`PhoneNormalizer`), Jev resolve `phone_index`/`name_index`, fallback determinístico com os aliases de hoje. `TypesafeAi::ImportSchemaResolver` recebe o alvo (`email` | `phone`) e as instruções correspondentes. Recebe também as **variáveis do modelo escolhido** (rótulo e posição, sem valores) para mapear cada uma a uma coluna ou declarar "não há coluna"; o resultado guarda `variable_columns` em `schema_resolution`. Perfil enviado ao modelo: cabeçalho, contagem, formato mascarado (`0` dígito, `x` outro), nunca valor.
 - Jev desligado ou sem chave: segue determinístico; cabeçalho não reconhecido mostra a escolha manual de colunas (não um erro).
 - Validação marca linha a linha; arquivo só é recusado se **nenhuma** linha for válida ou por erro global (formato, tamanho, limite de linhas, fórmula).
 - Busca de contato existente pelas variantes brasileiras (`Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer#contact_candidates`), não por igualdade exata.
@@ -181,10 +182,12 @@ Formato: **Dado** · **Quando** · **Então**. Um item só passa com evidência 
 - **A3** Dado o endereço antigo `/contacts/campaign-imports`, quando acessado, então redireciona para Públicos sem erro.
 - **A4** Dado um usuário só com `campaign_view`, quando abre Públicos ou uma campanha, então não vê botões de importar, remover do público, agendar ou disparar, e a API devolve 401/403 para essas ações.
 
-### B. Planilha e Jev
+### B. Planilha e colunas
 
-- **B1** Dado um XLSX com colunas `Cliente` e `Fone 1`, com Jev ligado, quando enviado no Passo 2, então nome e celular são identificados, a tela mostra as colunas escolhidas e o selo do Jev, e `schema_resolution.method = "jev"`.
-- **B2** Dado o mesmo arquivo com Jev desligado, quando enviado, então a tela pede a escolha manual das duas colunas (não mostra erro) e a importação conclui depois da escolha.
+- **B1** Dado um XLSX com colunas `Segurado`, `Fone 1` e `Vencimento` e o modelo com `{{1}}` nome e `{{2}}` mês de vencimento, com Jev ligado, quando enviado no Passo 2, então nome, celular e `{{2}}` são ligados às três colunas, a tela mostra cada ligação com exemplo e contagem de preenchidos, e `schema_resolution.method = "jev"`.
+- **B1a** Em nenhuma tela, texto, dica ou selo da jornada aparece "Jev", "IA" ou nome de modelo — spec de interface verifica os textos i18n das telas novas.
+- **B1b** Dado uma linha com celular válido mas sem valor na coluna de uma variável do modelo, quando validada, então fica de fora com motivo "falta <variável>" (a mensagem não sai com lacuna), salvo se o usuário escolher um texto padrão para a variável.
+- **B2** Dado o mesmo arquivo com Jev desligado, quando enviado, então a tela pede a escolha manual das colunas que faltarem (não mostra erro) e a importação conclui depois da escolha.
 - **B3** Dado um arquivo com cabeçalho na linha 3 (linhas informativas acima), quando enviado, então o cabeçalho é achado sem intervenção.
 - **B4** Dado qualquer arquivo, quando o Jev é chamado, então o corpo da requisição contém só cabeçalhos, contagens e formato mascarado — teste automatizado prova que nenhum nome e nenhum número do arquivo aparece no payload.
 - **B5** Dado um arquivo com 100 linhas e 2 celulares inválidos, quando validado, então a tela mostra "98 prontos · 2 com problema", com motivo por linha e número mascarado, e permite seguir com os 98.
