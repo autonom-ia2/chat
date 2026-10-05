@@ -6,10 +6,6 @@ import { useI18n } from 'vue-i18n';
 // GET crm/meta_conversions (latest per card); null hides the block.
 const props = defineProps({
   conversion: { type: Object, default: null },
-  // The card came from a landing page click (#1011). Without browser signals
-  // the dispatcher skips with 'missing_ctwa_clid'; on these cards that skip
-  // has a reason the operator must see (CA-3.4).
-  fromWebsite: { type: Boolean, default: false },
 });
 const { t } = useI18n();
 const NS = 'CRM_KANBAN.META_SYNC_STATUS';
@@ -19,8 +15,9 @@ const PILLS = {
   error: { tone: 'bg-n-ruby-3 text-n-ruby-11', label: 'LABEL_ERROR' },
   skipped: { tone: 'bg-n-alpha-2 text-n-slate-11', label: 'LABEL_SKIPPED' },
 };
-// Skip reasons the operator can act on. 'missing_ctwa_clid' on a card that did
-// not come from an ad nor a landing page keeps the drawer quiet, as before.
+// Skip reasons the operator can act on. 'missing_ctwa_clid' (card that came
+// from neither an ad nor a landing page) keeps the drawer quiet, as before; a
+// landing page card without browser signals comes as 'missing_signals' (CA-3.4).
 const SKIP_REASONS = {
   missing_pixel: 'SKIP_MISSING_PIXEL',
   event_too_old: 'SKIP_EVENT_TOO_OLD',
@@ -34,19 +31,12 @@ const EVENT_LABELS = {
   moved: 'EVENT_MOVED',
 };
 
-const skipReasonKey = reason => {
-  if (reason === 'missing_ctwa_clid' && props.fromWebsite) {
-    return SKIP_REASONS.missing_signals;
-  }
-  return SKIP_REASONS[reason];
-};
-
 const state = computed(() => {
   const { status, error_message: message } = props.conversion || {};
   const pill = PILLS[status];
   if (!pill) return null;
   if (status === 'skipped') {
-    const reason = skipReasonKey(message);
+    const reason = SKIP_REASONS[message];
     return reason ? { ...pill, detail: t(`${NS}.${reason}`) } : null;
   }
   if (status === 'error') {

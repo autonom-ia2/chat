@@ -50,6 +50,36 @@ describe('TrackedLinkCampaignTable', () => {
     expect(cell(items[2], 'value')).toContain('—');
   });
 
+  it('hides won deals and value when the API leaves them out (no revenue permission)', () => {
+    const withoutRevenue = campaigns.map(
+      // eslint-disable-next-line camelcase, no-unused-vars
+      ({ won_cards, won_value_by_currency, ...rest }) => rest
+    );
+    const wrapper = mount(TrackedLinkCampaignTable, {
+      props: { campaigns: withoutRevenue },
+    });
+    const items = wrapper.findAll('[data-testid="tracked-link-campaign"]');
+
+    expect(items).toHaveLength(3);
+    items.forEach(item => {
+      expect(
+        item.find('[data-testid="tracked-link-campaign-won"]').exists()
+      ).toBe(false);
+      expect(
+        item.find('[data-testid="tracked-link-campaign-value"]').exists()
+      ).toBe(false);
+      expect(item.text()).not.toContain('—');
+      expect(item.text()).not.toContain('CRM_KANBAN.TRACKED_LINKS.PAGE.WON');
+      expect(item.text()).not.toContain('CRM_KANBAN.TRACKED_LINKS.PAGE.VALUE');
+    });
+    expect(
+      items[0].get('[data-testid="tracked-link-campaign-clicks"]').text()
+    ).toContain('40');
+    expect(
+      items[0].get('[data-testid="tracked-link-campaign-conversations"]').text()
+    ).toContain('31');
+  });
+
   it('keeps every number visible without a wide, scrolling table', () => {
     const wrapper = mount(TrackedLinkCampaignTable, {
       props: { campaigns },

@@ -48,6 +48,12 @@ limite e troca o content-type do POST para `text/plain`: o Rails nunca interpret
 sinais da Meta são dado pessoal), mesmo quando a página manda `application/json`. Por garantia, `lead`, `fbc`,
 `fbp` e `page_url` também estão em `filter_parameters`.
 
+O guard vale para todo POST sob `/l/`, lido como o roteador lê (`ActionDispatch::Journey::Router::Utils.normalize_path`:
+`//l/X/clicks`, `/l//X/clicks` e `/l/X/clicks/` chegam ao mesmo controller; `%41` no código vira `A`). A rota é
+`format: false`: `/l/X/clicks.json` não chega ao endpoint (404), e mesmo assim o corpo não é interpretado, porque a
+página de erro do Rails leria o corpo para descobrir o formato. Os limites do Rack::Attack usam a mesma leitura do
+caminho (`Ctwa::TrackedLink.signal_code_from_path`), então nenhuma grafia abre conta nova.
+
 Corpo:
 
 ```json
@@ -83,7 +89,9 @@ Regras, na ordem:
    são descartados.
 8. `page_url`: só `scheme://host/path`, sem query/fragment, até 512 caracteres; precisa ter a mesma origem do
    header `Origin`, senão é descartado.
-9. Teto diário por link: com `TRACKED_LINK_SIGNALS_DAILY_LIMIT_PER_LINK` (padrão 5000) cliques nas últimas 24h → 429.
+9. Teto diário por link: com `TRACKED_LINK_SIGNALS_DAILY_LIMIT_PER_LINK` (padrão 5000) cliques nas últimas 24h → 429,
+   com aviso no log (`[TrackedLinkSignals] daily limit reached`, link e conta) e `signals_blocked: true` no payload
+   da tela (seção 5).
 10. Grava `Ctwa::TrackedLinkClick` (expira em 72h, como hoje), incrementa `clicks_count` do link e atualiza
    `last_signal_at`. Resposta 204. Em seguida enfileira `Ctwa::LateClickReconcileJob` (ver seção 3).
 
@@ -92,11 +100,21 @@ Campo longo não derruba o clique: `page_url` aceita até 512 (validador própri
 CORS: quando a origem é autorizada, responder `Access-Control-Allow-Origin: <origin>`, `Vary: Origin`,
 `Access-Control-Allow-Methods: POST, OPTIONS`, `Access-Control-Allow-Headers: Content-Type`, max-age 600.
 
-Rack::Attack: `public_tracked_link_signals/ip`, 30 por minuto, POST em `/l/`; e `public_tracked_link_signals/code`,
-`TRACKED_LINK_SIGNALS_PER_LINK_LIMIT` (padrão 120) por minuto por link.
+Rack::Attack, todos só em POST `/l/:code/clicks` (em qualquer grafia): `public_tracked_link_signals/ip`, 30 por
+minuto por IP; `public_tracked_link_signals/code`, `TRACKED_LINK_SIGNALS_PER_LINK_LIMIT` (padrão 120) por minuto por
+link; e `public_tracked_link_signals/code_ip`, `TRACKED_LINK_SIGNALS_PER_LINK_IP_DAILY_LIMIT` (padrão 100) por dia por
+link e IP.
 
 **O header `Origin` não autentica.** O navegador não deixa a página mentir, mas fora dele (curl, script) qualquer
 um manda o header que quiser. A defesa real contra volume anormal (CA-1.11) é o limite por link, por minuto e por dia.
+
+**Risco aceito (pendente de OK do Rodrigo): o teto diário é alavanca de negação de serviço.** O código do link é
+público (está no JS da página). Quem quiser pode gastar o teto do dia com avisos falsos; daí em diante, até a janela
+de 24h andar, todo aviso legítimo recebe 429 e a atribuição daquele período se perde (o cliente chega ao WhatsApp do
+mesmo jeito, só sem origem). O limite por link e IP por dia faz esgotar o teto exigir pelo menos
+5000 ÷ 100 = 50 IPs. O bloqueio não é silencioso: log com o link e `signals_blocked` na tela. Os cliques falsos também
+entram na tabela de campanhas e podem impedir a inferência do CA-1.5 (que exige exatamente um clique em 10 minutos).
+Defesa mais forte exigiria autenticar a página (ex.: desafio no navegador), fora do escopo desta entrega.
 
 ## 3. Atribuição
 
@@ -114,8 +132,9 @@ um manda o header que quiser. A defesa real contra volume anormal (CA-1.11) é o
   `user_agent`. Quem clicou pode não ser quem escreveu: o card não mostra dado de outra pessoa e o CAPI não manda
   sinal dela. Só o `#TOKEN` explícito leva formulário e sinais.
 - **Aviso atrasado:** se a mensagem com `#TOKEN` chegou antes do aviso, o `Ctwa::LateClickReconcileJob` procura,
-  na caixa do link, uma mensagem recebida com `#TOKEN` a partir de 10 minutos antes do clique e liga a conversa
-  como se o token tivesse sido achado na hora (com formulário).
+  na caixa do link, uma mensagem recebida com `#TOKEN` entre 10 minutos antes e 10 minutos depois do clique e liga
+  a conversa como se o token tivesse sido achado na hora (com formulário). A busca por texto roda só nessa janela,
+  com `LIMIT 1` (faixa do índice de `created_at`); havendo mais de uma mensagem com o token, vale a primeira.
 
 `Ctwa::CampaignBuilder.source_for` ganha uma regra depois de `fbclid`: `utm_source` em
 `%w[meta facebook fb instagram ig]` **e** `utm_medium` em `%w[paid cpc ppc paid_social]` (comparação de string,
@@ -128,6 +147,12 @@ minúsculas) → `meta_paid`. Cobre o iPhone, que pode remover o `fbclid`.
 `Crm::Cards::PayloadBuilder.campaign_touches_for` passa a expor `utm_campaign`, `utm_term`, `utm_content`, `utm_id`.
 O payload do card ganha `lead_form` (da conversa principal, só quando visível ao usuário).
 
+**Fora desta entrega (pendente de OK do Rodrigo):** o PRD (Fase 2) pede os campos do formulário também "filtráveis no
+CRM e disponíveis para o agente de IA". Esta entrega cobre só a exibição no card (CA-2.1) e a fonte da verdade
+(CA-2.2). Não há filtro do CRM por campo do formulário nem exposição de `lead_form` ao agente de IA: o dado fica em
+`conversation.additional_attributes['lead_form']`, pronto para as duas coisas numa entrega seguinte. Expor ao agente
+mexe no contexto dos agentes compartilhados entre contas e pede decisão própria (quais campos, para qual agente).
+
 ## 5. API da tela Links e QR codes
 
 `GET/POST/PATCH/DELETE /api/v1/accounts/:id/ctwa_tracked_links`. POST e PATCH aceitam `name`, `usage` (só na
@@ -136,6 +161,7 @@ produção), `prefilled_text` (só `direct`). Payload ganha:
 
 ```json
 { "usage": "website", "allowed_origins": ["https://placement.com.br"], "last_signal_at": "...",
+  "signals_blocked": false,
   "signal_url": "https://chat.hub2you.ai/l/AB3CDE/clicks",
   "ad_url_params": "utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&utm_id={{campaign.id}}",
   "campaigns": [ { "campaign_key": "120211", "name": "Viagem EUA", "clicks": 40, "conversations": 31,
@@ -146,6 +172,9 @@ produção), `prefilled_text` (só `direct`). Payload ganha:
 conversa principal está entre as conversas atribuídas aos cliques daquela campanha. `won_cards` e
 `won_value_by_currency` são financeiros: só saem para administrador (a listagem pede só `campaign_view`, que pode
 vir de função personalizada, e financeiro nunca se delega por função). Os outros recebem só `clicks` e `conversations`.
+
+`signals_blocked` (só `website`): `true` quando o link atingiu o teto diário de avisos (seção 2, regra 9) e a página
+está sendo recusada agora. A tela deve mostrar o bloqueio junto do "último aviso recebido".
 
 ## 6. Funil de volta à Meta (modo site)
 
@@ -177,16 +206,35 @@ card.
 tabela de campanhas); somem `lead_data`, `meta_signals` e `user_agent`:
 
 - clique expirado (72h) sem conversa: na primeira execução depois de expirar;
-- clique atribuído: 28 dias depois do clique. O formulário já está na conversa; os sinais servem ao envio à Meta, e a
-  venda pode fechar semanas depois do clique (o limite de 7 dias da Meta conta do evento, não do clique).
+- clique atribuído, `lead_data` e `user_agent`: 28 dias depois do clique (o formulário já está na conversa);
+- clique atribuído, `meta_signals`: o prazo segue o **card**, não o clique. Os sinais só servem ao envio do funil à
+  Meta, que acontece quando o card muda de etapa ou fecha, e a venda pode fechar bem depois do clique (CA-3.5: venda
+  30 dias depois do clique é enviada). Ficam enquanto algum card da conversa (principal ou vinculado em
+  `crm_card_conversations`) estiver aberto, ou tiver sido ganho/perdido há menos de 8 dias (os 7 dias da Meta, contados
+  do envio, mais 1 de folga para a fila). Sem card nessa situação, somem 28 dias depois do clique. Card arquivado não
+  envia evento e não segura os sinais.
+
+Card aberto segura os sinais sem prazo máximo. **Pendente de decisão do Rodrigo:** um teto absoluto (ex.: 180 dias
+depois do clique), trocando a venda muito tardia pela minimização. Card criado para a conversa só depois dos 28 dias
+já encontra os sinais apagados e cai em `missing_signals`.
 
 ## 8. Rollout
 
 1. Deploy do Chat2You (aditivo; endpoint novo sem uso).
 2. Criar a origem "LP Seguro Viagem" (modo site, `https://placement.com.br`) na caixa 38.
 3. Deploy da página com `CHAT2YOU_ATTRIBUTION_ENABLED=false`, depois ligar com o código da origem.
-4. Marketing cola `ad_url_params` nos anúncios.
-5. Fase 3: preencher `pixel_id` no funil Viagem depois da permissão concedida.
+4. Na mesma hora, checagem manual em celular real (iPhone e Android) nos navegadores internos do Instagram e do
+   Facebook, com data, aparelho e resultado registrados no PR ou na issue #19 do site-placement
+   (`docs/analytics/chat2you-ponte-19.md`, seção "Validação manual"). Sem esse registro o CA-1.7 está só parcialmente
+   provado; qualquer falha leva ao rollback abaixo.
+5. Marketing cola `ad_url_params` nos anúncios, só depois do registro do passo 4.
+6. Fase 3: preencher `pixel_id` no funil Viagem depois da permissão concedida.
 
-Rollback: desligar `CHAT2YOU_ATTRIBUTION_ENABLED` na página (troca de variável + reinício do serviço, sem build).
+Rollback: desligar a ponte na página, sem build. Reiniciar o serviço ou rodar `docker service update --force` **não**
+desliga: no Swarm a variável só entra no `docker stack deploy`, e a ponte continuaria ligada. No VPS da página, editar
+`CHAT2YOU_ATTRIBUTION_ENABLED=false` em `shared/placement-production.env` e rodar
+`docker stack deploy -c current/stack.rendered.yml placement-production` (mesma imagem da release atual). Backup,
+validação e atalho de emergência: `docs/analytics/chat2you-ponte-19.md#rollback-desligar-a-ponte-sem-build` no
+site-placement.
+
 No Chat2You, colunas novas são aditivas; voltar a imagem anterior não quebra nada.

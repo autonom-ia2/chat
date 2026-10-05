@@ -251,14 +251,58 @@ RSpec.describe 'Public tracked link signals', type: :request do
       expect(log).not_to include('Maria Secreta', 'IwAR123', '123456789', 'seguro-viagem')
     end
 
+    # Grafias que o roteador aceitaria não podem pular a porta (Middleware::TrackedLinkSignalGuard).
+    # `//l/` não cabe numa URL de teste (vira host), então entra cru no PATH_INFO, como do servidor.
+    def signal_at(path, payload)
+      post '/l/ABC234/clicks', params: payload.to_json, env: { 'PATH_INFO' => path },
+                               headers: { 'CONTENT_TYPE' => 'application/json', 'Origin' => origin }
+    end
+
+    it 'variantes do caminho que chegam ao endpoint também passam pela porta: 413 sem ler nem logar o corpo' do
+      big = body.merge('lead' => { 'fields' => [{ 'key' => 'nome', 'label' => 'Nome', 'value' => 'Maria Secreta' }] },
+                       'padding' => 'x' * 5000)
+
+      ['//l/ABC234/clicks', '/l//ABC234/clicks', '/l/ABC234/clicks/', '/l/%41BC234/clicks'].each do |path|
+        log, decoded = capture_log { signal_at(path, big) }
+
+        expect(response).to have_http_status(:content_too_large), path
+        expect(decoded).to(be_none { |json| json.include?('Maria Secreta') }, path)
+        expect(log).not_to include('Maria Secreta')
+      end
+      expect(Ctwa::TrackedLinkClick.count).to eq(0)
+    end
+
+    it 'variante do caminho com corpo pequeno é gravada sem levar o formulário ao log' do
+      payload = body.merge('lead' => { 'fields' => [{ 'key' => 'nome', 'label' => 'Nome', 'value' => 'Maria Secreta' }] })
+
+      log, decoded = capture_log { signal_at('//l/ABC234/clicks', payload) }
+
+      expect(response).to have_http_status(:no_content)
+      expect(decoded).to(be_none { |json| json.include?('K7P2M9QX') })
+      expect(log).not_to include('Maria Secreta', 'IwAR123')
+    end
+
+    it 'com extensão (.json) não chega ao endpoint: 404, sem gravar nem logar o corpo' do
+      payload = body.merge('lead' => { 'fields' => [{ 'key' => 'nome', 'label' => 'Nome', 'value' => 'Maria Secreta' }] })
+
+      log, decoded = capture_log { signal_at('/l/ABC234/clicks.json', payload) }
+
+      expect(response).to have_http_status(:not_found)
+      expect(Ctwa::TrackedLinkClick.count).to eq(0)
+      expect(decoded).to(be_none { |json| json.include?('Maria Secreta') })
+      expect(log).not_to include('Maria Secreta')
+    end
+
     it 'recusa com 429 quando o link já recebeu o teto diário de avisos' do
-      stub_const('Public::TrackedLinkSignalsController::DAILY_LIMIT_PER_LINK', 2)
+      stub_const('Ctwa::TrackedLink::SIGNALS_DAILY_LIMIT', 2)
+      allow(Rails.logger).to receive(:warn).and_call_original
       2.times { |index| create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, token: "AAAA222#{index + 2}") }
 
       expect { signal }.not_to change(Ctwa::TrackedLinkClick, :count)
 
       expect(response).to have_http_status(:too_many_requests)
       expect(tracked_link.reload.clicks_count).to eq(0)
+      expect(Rails.logger).to have_received(:warn).with(include('daily limit reached', "tracked_link_id=#{tracked_link.id}"))
     end
   end
 
@@ -423,6 +467,29 @@ RSpec.describe 'Public tracked link signals', type: :request do
       expect(key.call('GET', '/l/ABC234/clicks')).to be_nil
       expect(key.call('POST', '/l/ABC234')).to be_nil
       expect(key.call('POST', '/l/ABC234/clicks/x')).to be_nil
+      expect(key.call('POST', '/l/ABC234/clicks.json')).to be_nil
+    end
+
+    # As grafias que o roteador entrega ao mesmo endpoint caem na mesma conta, por link e por IP.
+    it 'conta as variantes do caminho no mesmo link e no mesmo IP' do
+      raw = lambda do |name, path|
+        env = Rack::MockRequest.env_for('/', method: 'POST').merge('PATH_INFO' => path, 'REMOTE_ADDR' => '10.0.0.9')
+        Rack::Attack.throttles.fetch(name).block.call(Rack::Attack::Request.new(env))
+      end
+
+      ['//l/ABC234/clicks', '/l//abc234/clicks', '/l/ABC234/clicks/', '/l/%41BC234/clicks', '/l/%61bc234/clicks//'].each do |path|
+        expect(raw.call('public_tracked_link_signals/code', path)).to eq('ABC234'), path
+        expect(raw.call('public_tracked_link_signals/ip', path)).to eq('10.0.0.9'), path
+        expect(raw.call('public_tracked_link_signals/code_ip', path)).to eq('ABC234:10.0.0.9'), path
+      end
+      expect(raw.call('public_tracked_link_signals/code', '/l/%FF/clicks')).to be_present
+    end
+
+    it 'limita avisos por link e IP por dia, para o teto diário do link não cair com poucos IPs' do
+      throttle = Rack::Attack.throttles.fetch('public_tracked_link_signals/code_ip')
+
+      expect(throttle.limit).to eq(100)
+      expect(throttle.period).to eq(1.day.to_i)
     end
   end
 end

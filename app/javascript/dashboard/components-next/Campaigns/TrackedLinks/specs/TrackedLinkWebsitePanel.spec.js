@@ -147,6 +147,18 @@ describe('TrackedLinkWebsitePanel', () => {
     expect(wrapper.emitted('updated')).toBeUndefined();
   });
 
+  it('warns when the site went over the daily signal limit', () => {
+    const blocked = mountPanel({ link: link({ signals_blocked: true }) });
+    const open = mountPanel({ link: link({ signals_blocked: false }) });
+
+    expect(
+      blocked.get('[data-testid="tracked-link-signals-blocked"]').text()
+    ).toContain('CRM_KANBAN.TRACKED_LINKS.PAGE.SIGNALS_BLOCKED');
+    expect(
+      open.find('[data-testid="tracked-link-signals-blocked"]').exists()
+    ).toBe(false);
+  });
+
   it('hides editing for people who cannot manage campaigns', () => {
     const wrapper = mountPanel({ canManage: false });
 

@@ -1000,18 +1000,17 @@ describe('CrmCardDrawer landing page origin (#1011)', () => {
     ]);
   });
 
-  it('tells the Meta conversion block the card came from a landing page', async () => {
+  it('names the campaign once: on its own line, not again in the pill', async () => {
     const wrapper = mountDrawer({ card: siteCard });
     await flushPromises();
+    const hierarchy = wrapper.find('[data-testid="crm-origin-ad-hierarchy"]');
+    const pillText = hierarchy.element.previousElementSibling.textContent;
 
-    expect(
-      wrapper
-        .getComponent({ name: 'CrmCardMetaConversion' })
-        .props('fromWebsite')
-    ).toBe(true);
+    expect(pillText).toContain('LP Seguro Viagem');
+    expect(pillText).not.toContain('Viagem EUA');
   });
 
-  it('keeps CTWA cards out of the website reason', async () => {
+  it('keeps the ad hierarchy off CTWA cards without UTMs', async () => {
     const wrapper = mountDrawer({
       card: {
         ...siteCard,
@@ -1020,11 +1019,6 @@ describe('CrmCardDrawer landing page origin (#1011)', () => {
     });
     await flushPromises();
 
-    expect(
-      wrapper
-        .getComponent({ name: 'CrmCardMetaConversion' })
-        .props('fromWebsite')
-    ).toBe(false);
     expect(
       wrapper.find('[data-testid="crm-origin-ad-hierarchy"]').exists()
     ).toBe(false);

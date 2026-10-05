@@ -90,11 +90,15 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
   end
 
   def website_payload(tracked_link)
-    return { allowed_origins: [], last_signal_at: nil, signal_url: nil, ad_url_params: nil, campaigns: [] } unless tracked_link.website?
+    unless tracked_link.website?
+      return { allowed_origins: [], last_signal_at: nil, signals_blocked: false, signal_url: nil, ad_url_params: nil, campaigns: [] }
+    end
 
     {
       allowed_origins: tracked_link.allowed_origins,
       last_signal_at: tracked_link.last_signal_at&.iso8601,
+      # Teto diário de avisos atingido: a página está sendo recusada (429) agora.
+      signals_blocked: tracked_link.signals_daily_limit_reached?,
       signal_url: "#{short_url_for(tracked_link)}/clicks",
       ad_url_params: AD_URL_PARAMS,
       campaigns: (@campaigns || {}).fetch(tracked_link.id, [])

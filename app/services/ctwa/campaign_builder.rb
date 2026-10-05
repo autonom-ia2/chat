@@ -13,7 +13,6 @@ require 'digest/sha1'
 # Provider payloads differ (WhatsApp Cloud sends string keys, Twilio symbol keys and a
 # `media_content_type` instead of `media_type`), so callers hand us the raw referral hash
 # and this builder normalizes it into one shape.
-# rubocop:disable Metrics/ModuleLength
 module Ctwa::CampaignBuilder
   module_function
 
@@ -218,4 +217,3 @@ module Ctwa::CampaignBuilder
     touch['ctwa_clid'].presence || touch['source_id'].presence
   end
 end
-# rubocop:enable Metrics/ModuleLength

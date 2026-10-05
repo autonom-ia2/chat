@@ -12,7 +12,6 @@
 class Public::TrackedLinkSignalsController < ActionController::Base
   MAX_BODY_BYTES = Middleware::TrackedLinkSignalGuard::MAX_BODY_BYTES
   CORS_MAX_AGE = '600'.freeze
-  DAILY_LIMIT_PER_LINK = ENV.fetch('TRACKED_LINK_SIGNALS_DAILY_LIMIT_PER_LINK', '5000').to_i
 
   skip_forgery_protection
   # O corpo nunca vira params: o Middleware::TrackedLinkSignalGuard troca o content-type para
@@ -87,7 +86,7 @@ class Public::TrackedLinkSignalsController < ActionController::Base
   end
 
   def new_click_status(signal)
-    return :too_many_requests if daily_limit_reached?
+    return daily_limit_reached if @tracked_link.signals_daily_limit_reached?
 
     record_click!(signal)
     :no_content
@@ -106,9 +105,13 @@ class Public::TrackedLinkSignalsController < ActionController::Base
     error.is_a?(ActiveRecord::RecordNotUnique) || error.record.errors.of_kind?(:token, :taken)
   end
 
-  # Volume anormal (CA-1.11): uma página real não passa disto num dia; acima, é abuso.
-  def daily_limit_reached?
-    Ctwa::TrackedLinkClick.where(tracked_link_id: @tracked_link.id).where('created_at > ?', 24.hours.ago).count >= DAILY_LIMIT_PER_LINK
+  # Volume anormal (CA-1.11): uma página real não passa do teto num dia; acima, é abuso ou
+  # ataque ao teto. O aviso legítimo também é recusado, então o bloqueio não pode ser
+  # silencioso: vai ao log com o link, e a tela mostra (signals_blocked no payload).
+  def daily_limit_reached
+    Rails.logger.warn("[TrackedLinkSignals] daily limit reached: tracked_link_id=#{@tracked_link.id} " \
+                      "account_id=#{@tracked_link.account_id} limit=#{Ctwa::TrackedLink::SIGNALS_DAILY_LIMIT}")
+    :too_many_requests
   end
 
   def record_click!(signal)

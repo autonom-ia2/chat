@@ -55,8 +55,8 @@ Rails.application.routes.draw do
   end
 
   # Aviso de clique de uma página (modo site do link, #1011): sendBeacon + preflight.
-  post '/l/:code/clicks', to: 'public/tracked_link_signals#create', as: :public_tracked_link_signals
-  match '/l/:code/clicks', to: 'public/tracked_link_signals#preflight', via: :options
+  post '/l/:code/clicks', to: 'public/tracked_link_signals#create', as: :public_tracked_link_signals, format: false
+  match '/l/:code/clicks', to: 'public/tracked_link_signals#preflight', via: :options, format: false
   get '/google_conversions/:token.csv', to: 'public/google_conversions#show', as: :public_google_conversions
   get '/health', to: 'health#show'
   get '/robots.txt', to: 'robots#show', format: false

@@ -3,6 +3,7 @@ import {
   normalizeOrigin,
   parseAllowedOrigins,
   signalStatus,
+  websiteReadiness,
 } from '../trackedLinkWebsite';
 
 describe('normalizeOrigin', () => {
@@ -68,6 +69,39 @@ describe('signalStatus', () => {
     expect(signalStatus('2026-10-04T11:59:00Z', now)).toBe('stale');
     expect(signalStatus(null, now)).toBe('never');
     expect(signalStatus('garbage', now)).toBe('never');
+  });
+});
+
+describe('websiteReadiness', () => {
+  const now = new Date('2026-10-05T12:00:00Z').getTime();
+  const origins = ['https://placement.com.br'];
+
+  it('needs origins before anything else', () => {
+    expect(
+      websiteReadiness(
+        { allowed_origins: [], last_signal_at: '2026-10-05T11:55:00Z' },
+        now
+      )
+    ).toBe('needs_origins');
+    expect(websiteReadiness({}, now)).toBe('needs_origins');
+  });
+
+  it('waits without a signal and is ready once one arrived', () => {
+    expect(
+      websiteReadiness({ allowed_origins: origins, last_signal_at: null }, now)
+    ).toBe('waiting');
+    expect(
+      websiteReadiness(
+        { allowed_origins: origins, last_signal_at: '2026-10-05T11:55:00Z' },
+        now
+      )
+    ).toBe('ready');
+    expect(
+      websiteReadiness(
+        { allowed_origins: origins, last_signal_at: '2026-09-01T00:00:00Z' },
+        now
+      )
+    ).toBe('ready');
   });
 });
 

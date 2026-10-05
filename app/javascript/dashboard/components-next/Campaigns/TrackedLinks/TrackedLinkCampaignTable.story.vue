@@ -27,6 +27,11 @@ const campaigns = [
     won_value_by_currency: {},
   },
 ];
+// Seats without revenue permission get no financial fields from the API.
+const withoutRevenue = campaigns.map(
+  // eslint-disable-next-line camelcase, no-unused-vars
+  ({ won_cards, won_value_by_currency, ...rest }) => rest
+);
 </script>
 
 <!-- eslint-disable vue/no-undef-components -->
@@ -39,6 +44,14 @@ const campaigns = [
       <div class="bg-n-background p-4">
         <TrackedLinkCampaignTable
           :campaigns="campaigns"
+          origin-name="LP Seguro Viagem"
+        />
+      </div>
+    </Variant>
+    <Variant title="Without revenue permission">
+      <div class="bg-n-background p-4">
+        <TrackedLinkCampaignTable
+          :campaigns="withoutRevenue"
           origin-name="LP Seguro Viagem"
         />
       </div>

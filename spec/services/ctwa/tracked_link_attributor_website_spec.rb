@@ -225,6 +225,42 @@ RSpec.describe Ctwa::TrackedLinkAttributor do
       expect(click.reload.conversation_id).to be_nil
     end
 
+    it 'não faz nada quando a mensagem é posterior à janela depois do clique' do
+      click = website_click(token: 'K7P2M9QX')
+      travel_to(click.created_at + 11.minutes) { incoming(quote_message('K7P2M9QX')) }
+
+      Ctwa::LateClickReconcileJob.perform_now(click.id)
+
+      expect(click.reload.conversation_id).to be_nil
+    end
+
+    it 'com duas conversas trazendo o token, liga a da primeira mensagem (a de quem clicou)' do
+      forwarded = create(:conversation, account: account, inbox: inbox)
+      travel_to(2.minutes.ago) { incoming(quote_message('K7P2M9QX')) }
+      travel_to(1.minute.ago) { incoming(quote_message('K7P2M9QX'), forwarded) }
+      click = website_click(token: 'K7P2M9QX')
+
+      Ctwa::LateClickReconcileJob.perform_now(click.id)
+
+      expect(click.reload.conversation_id).to eq(conversation.id)
+    end
+
+    # A busca por texto (LIKE) só pode rodar dentro da caixa, da janela e com LIMIT 1.
+    it 'busca a mensagem só na caixa, só recebidas, numa janela fechada e com LIMIT 1' do
+      click = website_click(token: 'K7P2M9QX')
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('LIKE') }
+
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') do
+        Ctwa::LateClickReconcileJob.perform_now(click.id)
+      end
+
+      sql = queries.sole
+      expect(sql).to include('FROM "messages"', '"messages"."inbox_id" = $', '"messages"."message_type" = $',
+                             '"messages"."account_id" = $', '"messages"."created_at" BETWEEN $', 'LIMIT $')
+      expect(sql).to end_with('ORDER BY "messages"."created_at" ASC LIMIT $7')
+    end
+
     it 'não mexe em clique já atribuído' do
       click = website_click(token: 'K7P2M9QX')
       described_class.attribute!(conversation, quote_message('K7P2M9QX'))

@@ -1,8 +1,4 @@
-import {
-  buildCrmOriginFromCampaigns,
-  hasWebsiteOrigin,
-  useCrmOrigin,
-} from './useCrmOrigin';
+import { buildCrmOriginFromCampaigns, useCrmOrigin } from './useCrmOrigin';
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -26,6 +22,7 @@ describe('useCrmOrigin', () => {
     formatOriginTitle,
     humanizedOriginLabel,
     adHierarchyLines,
+    originLabelOverHierarchy,
   } = useCrmOrigin();
 
   it('carries campaign, ad set and ad from the UTMs', () => {
@@ -94,6 +91,35 @@ describe('useCrmOrigin', () => {
     expect(formatOriginTitle(origin).split('\n')).toHaveLength(2);
   });
 
+  it('leaves the campaign out of the label that sits over its own line', () => {
+    const origin = originFromCampaign(landingPageTouch);
+
+    expect(humanizedOriginLabel(origin)).toBe(
+      'CRM_KANBAN.ORIGIN.META_PAID: LP Seguro Viagem · Viagem EUA Outubro'
+    );
+    expect(originLabelOverHierarchy(origin)).toBe(
+      'CRM_KANBAN.ORIGIN.META_PAID: LP Seguro Viagem'
+    );
+  });
+
+  it('keeps the label whole when there is no campaign line to repeat it', () => {
+    const withoutUtm = originFromCampaign({
+      ...landingPageTouch,
+      utm_campaign: '',
+    });
+    const otherHeadline = originFromCampaign({
+      ...landingPageTouch,
+      headline: 'Seguro Viagem Europa',
+    });
+
+    expect(originLabelOverHierarchy(withoutUtm)).toBe(
+      'CRM_KANBAN.ORIGIN.META_PAID: LP Seguro Viagem · Viagem EUA Outubro'
+    );
+    expect(originLabelOverHierarchy(otherHeadline)).toBe(
+      'CRM_KANBAN.ORIGIN.META_PAID: Seguro Viagem Europa'
+    );
+  });
+
   it('lists campaign, ad set and ad as separate visible lines', () => {
     expect(adHierarchyLines(originFromCampaign(landingPageTouch))).toEqual([
       'CRM_KANBAN.ORIGIN.CAMPAIGN_PART(Viagem EUA Outubro)',
@@ -103,19 +129,5 @@ describe('useCrmOrigin', () => {
     expect(
       adHierarchyLines(originFromCampaign({ source: 'meta_ctwa' }))
     ).toEqual([]);
-  });
-
-  it('flags landing page touches by their site: source id', () => {
-    const site = buildCrmOriginFromCampaigns([
-      { source: 'meta_ctwa', source_id: 'ad-1' },
-      landingPageTouch,
-    ]);
-    const qr = buildCrmOriginFromCampaigns([
-      { source: 'tracked_link', source_id: 'click:K7P2M9QX' },
-    ]);
-
-    expect(hasWebsiteOrigin(site)).toBe(true);
-    expect(hasWebsiteOrigin(qr)).toBe(false);
-    expect(hasWebsiteOrigin(null)).toBe(false);
   });
 });

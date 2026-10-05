@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-# Porta de entrada do aviso de clique das páginas (POST /l/:code/clicks, #1011).
+# Porta de entrada do aviso de clique das páginas (POST /l/:code/clicks, #1011). Vale para
+# todo POST sob /l/, em qualquer grafia que o roteador aceite (`//l/`, `/l//`, `.json`).
 #
 # O Rails lê e interpreta o corpo de um POST `application/json` antes de qualquer
 # before_action: a instrumentação do controller grava os parâmetros no log e o
@@ -36,7 +37,7 @@ module Middleware # rubocop:disable Style/ClassAndModuleChildren
     private
 
     def signal_post?(env)
-      env['REQUEST_METHOD'] == 'POST' && Ctwa::TrackedLink.signal_code_from_path(env['PATH_INFO']).present?
+      env['REQUEST_METHOD'] == 'POST' && Ctwa::TrackedLink.public_path?(env['PATH_INFO'])
     end
   end
 end

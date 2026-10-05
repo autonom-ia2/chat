@@ -95,6 +95,15 @@ const saveOrigins = async () => {
       <span class="size-2 shrink-0 rounded-full" :class="tone.dot" />
       {{ signalLabel }}
     </div>
+    <p
+      v-if="link.signals_blocked"
+      role="alert"
+      data-testid="tracked-link-signals-blocked"
+      class="m-0 -mt-3 flex items-start gap-2 rounded-lg bg-n-ruby-2 px-3 py-2.5 text-xs leading-relaxed text-n-ruby-11"
+    >
+      <span class="i-lucide-octagon-alert mt-0.5 size-4 shrink-0" />
+      {{ t(`${NS}.SIGNALS_BLOCKED`) }}
+    </p>
 
     <section>
       <h3 class="m-0 text-sm font-semibold">

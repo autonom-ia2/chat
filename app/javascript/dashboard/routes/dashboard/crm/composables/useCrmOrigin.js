@@ -33,9 +33,6 @@ const UNKNOWN_SOURCE_META = {
   labelKey: 'CRM_KANBAN.ORIGIN.UNKNOWN',
 };
 
-// Landing page touches (#1011) carry `site:<link>:<campaign>` as source_id.
-const WEBSITE_SOURCE_ID_PREFIX = 'site:';
-
 const normalizeSource = source => String(source || FALLBACK_SOURCE).trim();
 
 const sourceMetaFor = source =>
@@ -69,14 +66,8 @@ export const buildCrmOrigin = campaign => {
     campaign: String(campaign.utm_campaign || '').trim(),
     adset: String(campaign.utm_term || '').trim(),
     ad: String(campaign.utm_content || '').trim(),
-    fromWebsite: String(campaign.source_id || '').startsWith(
-      WEBSITE_SOURCE_ID_PREFIX
-    ),
   };
 };
-
-export const hasWebsiteOrigin = origin =>
-  (origin?.origins || (origin ? [origin] : [])).some(item => item.fromWebsite);
 
 export const buildCrmOriginFromCampaigns = campaigns => {
   const origins = Array.isArray(campaigns)
@@ -164,6 +155,18 @@ export function useCrmOrigin() {
 
   const adHierarchyLabel = origin => adHierarchyLines(origin).join(' · ');
 
+  // The server writes a landing page headline as "<origin name> · <campaign>"
+  // (docs/crm/ponte-lp-atribuicao.md §3). Where the campaign already has its
+  // own line under the label, drop that suffix so the name is not repeated.
+  const originLabelOverHierarchy = origin => {
+    if (!origin?.campaign) return humanizedOriginLabel(origin);
+    const suffix = ` · ${origin.campaign}`;
+    const headline = origin.headline.endsWith(suffix)
+      ? origin.headline.slice(0, -suffix.length)
+      : origin.headline;
+    return humanizedOriginLabel({ ...origin, headline });
+  };
+
   const formatOriginTitle = origin => {
     if (!origin) return '';
     const origins = origin.origins || [origin];
@@ -181,5 +184,6 @@ export function useCrmOrigin() {
     humanizedOriginLabel,
     formatOriginTitle,
     adHierarchyLines,
+    originLabelOverHierarchy,
   };
 }

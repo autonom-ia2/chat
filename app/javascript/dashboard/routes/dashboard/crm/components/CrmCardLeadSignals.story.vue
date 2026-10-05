@@ -24,8 +24,7 @@ const conversions = [
   },
   {
     title: 'Not sent · site sent no ad data',
-    row: { status: 'skipped', error_message: 'missing_ctwa_clid' },
-    fromWebsite: true,
+    row: { status: 'skipped', error_message: 'missing_signals' },
   },
   {
     title: 'Failed · Meta message',
@@ -55,10 +54,7 @@ const conversions = [
       :title="`Meta conversion · ${conversion.title}`"
     >
       <div class="bg-n-background p-4">
-        <CrmCardMetaConversion
-          :conversion="conversion.row"
-          :from-website="conversion.fromWebsite"
-        />
+        <CrmCardMetaConversion :conversion="conversion.row" />
       </div>
     </Variant>
   </Story>

@@ -14,7 +14,7 @@ const mountDialog = () =>
           props: ['modelValue'],
           emits: ['update:modelValue'],
           template:
-            '<button type="button" class="choice" @click="$emit(\'update:modelValue\', 38)" />',
+            '<button type="button" role="combobox" class="choice" @click="$emit(\'update:modelValue\', 38)" />',
         },
       },
     },
@@ -123,6 +123,69 @@ describe('CreateTrackedLinkDialog', () => {
       usage: 'website',
       allowed_origins: ['https://placement.com.br'],
     });
+    wrapper.unmount();
+  });
+
+  it('tells what is missing next to the disabled Create button', async () => {
+    const wrapper = mountDialog();
+    await wrapper.vm.open();
+    await wrapper.get('input[value="website"]').setValue(true);
+    const hint = () =>
+      wrapper.find('[data-testid="tracked-link-create-missing"]');
+    const submit = () => wrapper.get('button[type="submit"]');
+
+    expect(submit().attributes('disabled')).toBeDefined();
+    expect(hint().text()).toContain(
+      'CRM_KANBAN.TRACKED_LINKS.PAGE.CREATE_MISSING'
+    );
+    expect(submit().attributes('aria-describedby')).toBe(
+      'tracked-link-create-missing'
+    );
+
+    await fillCommon(wrapper);
+    expect(hint().exists()).toBe(true);
+
+    await wrapper.get('#tracked-link-origins').setValue('placement.com.br');
+    expect(hint().exists()).toBe(false);
+    expect(submit().attributes('disabled')).toBeUndefined();
+    expect(submit().attributes('aria-describedby')).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it('marks the chosen usage with a check and keeps focus as a separate ring', async () => {
+    const wrapper = mountDialog();
+    await wrapper.vm.open();
+    const card = id => wrapper.get(`[data-testid="tracked-link-usage-${id}"]`);
+    const hasCheck = id =>
+      card(id)
+        .find('[data-testid="tracked-link-usage-check"] .i-lucide-check')
+        .exists();
+
+    expect(hasCheck('direct')).toBe(true);
+    expect(hasCheck('website')).toBe(false);
+    expect(card('direct').classes()).toEqual(
+      expect.arrayContaining(['outline-2', 'outline-n-blue-9', 'bg-n-blue-2'])
+    );
+    expect(card('website').classes()).toEqual(
+      expect.arrayContaining([
+        'ring-offset-2',
+        'has-[:focus-visible]:ring-2',
+        'outline-1',
+      ])
+    );
+
+    await wrapper.get('input[value="website"]').setValue(true);
+    expect(hasCheck('website')).toBe(true);
+    expect(hasCheck('direct')).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('moves focus to the WhatsApp choice when its label is clicked', async () => {
+    const wrapper = mountDialog();
+    await wrapper.vm.open();
+    await wrapper.get('#tracked-link-inbox-label').trigger('click');
+
+    expect(document.activeElement).toBe(wrapper.get('.choice').element);
     wrapper.unmount();
   });
 

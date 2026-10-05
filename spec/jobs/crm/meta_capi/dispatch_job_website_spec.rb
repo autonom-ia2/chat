@@ -155,6 +155,33 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
     end
   end
 
+  # CA-3.5: a venda que fecha 30 dias depois do clique é enviada normalmente. A retenção
+  # (Ctwa::TrackedLinkClicksRetentionJob) roda de hora em hora nesse meio tempo e não pode
+  # apagar os sinais de um card aberto nem de um que acabou de fechar.
+  context 'when the sale closes 30 days after the click' do
+    let(:closed_at) { Time.current.change(usec: 0) }
+    let!(:card) do
+      travel_to(30.days.ago) do
+        account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Card', currency: 'BRL', value_cents: 37_780,
+                                  status: :open, primary_conversation: conversation)
+      end
+    end
+
+    it 'keeps the signals through retention runs and sends the Purchase (accepted)' do
+      Ctwa::TrackedLinkClick.where(conversation_id: conversation.id).update_all(created_at: 30.days.ago) # rubocop:disable Rails/SkipsModelValidations
+      Ctwa::TrackedLinkClicksRetentionJob.perform_now
+      travel_to(closed_at) { card.update!(status: :won) }
+      Ctwa::TrackedLinkClicksRetentionJob.perform_now
+
+      perform
+
+      expect(client).to have_received(:post_events) do |events|
+        expect(events.sole).to include('event_name' => 'Purchase', 'event_time' => closed_at.to_i, 'user_data' => signals)
+      end
+      expect(row).to have_attributes(status: 'accepted', attribution_mode: 'website')
+    end
+  end
+
   it 'records the Meta error message on the ledger row and re-raises for retry' do
     allow(client).to receive(:post_events)
       .and_return(Meta::ConversionsApiClient::Result.new(ok: false, http_code: 400, body: 'x', error: '(#100) Missing Permission'))

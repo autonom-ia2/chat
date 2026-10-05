@@ -49,11 +49,16 @@ class Ctwa::TrackedLinkAttributor
     link = click.tracked_link
     return if link.blank?
 
+    # Janela fechada nas duas pontas (mensagem posterior ao clique já passa pelo atribuidor
+    # normal; a folga cobre a corrida entre os dois) e LIMIT 1: o LIKE só filtra as mensagens
+    # da janela, lidas por faixa do índice de created_at, nunca a caixa inteira.
+    # reorder: Message tem default_scope por created_at ASC, que venceria um `order` somado.
+    # A primeira mensagem com o token é a de quem clicou (cópia encaminhada vem depois).
     Message.incoming
            .where(account_id: click.account_id, inbox_id: link.inbox_id)
-           .where('messages.created_at >= ?', click.created_at - LATE_CLICK_WINDOW)
+           .where(created_at: (click.created_at - LATE_CLICK_WINDOW)..(click.created_at + LATE_CLICK_WINDOW))
            .where('messages.content LIKE ?', "%##{Message.sanitize_sql_like(click.token)}%")
-           .order(created_at: :desc)
+           .reorder(created_at: :asc)
            .first
   end
 

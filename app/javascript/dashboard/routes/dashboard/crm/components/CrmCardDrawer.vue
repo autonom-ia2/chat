@@ -30,7 +30,7 @@ import CrmCardSummaryPanel from './CrmCardSummaryPanel.vue';
 import CrmCardAutoFollowupStatus from './CrmCardAutoFollowupStatus.vue';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
-import { useCrmOrigin, hasWebsiteOrigin } from '../composables/useCrmOrigin';
+import { useCrmOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 import CrmCardLeadForm from './CrmCardLeadForm.vue';
@@ -90,7 +90,7 @@ const scheduleMeeting = () => {
 const { t, locale } = useI18n();
 const {
   originFromCampaigns,
-  humanizedOriginLabel,
+  originLabelOverHierarchy,
   formatOriginTitle,
   adHierarchyLines,
 } = useCrmOrigin();
@@ -295,7 +295,6 @@ const originPill = computed(() => originFromCampaigns(props.card?.campaigns));
 const originAdLines = computed(() =>
   originPill.value ? adHierarchyLines(originPill.value) : []
 );
-const isWebsiteOrigin = computed(() => hasWebsiteOrigin(originPill.value));
 const hasLinkedContext = computed(
   () =>
     isEditing.value &&
@@ -1625,11 +1624,7 @@ useFixedPanelPresence(computed(() => props.show));
             />
           </div>
         </div>
-        <CrmCardMetaConversion
-          :conversion="metaConversion"
-          :from-website="isWebsiteOrigin"
-          class="mb-5"
-        />
+        <CrmCardMetaConversion :conversion="metaConversion" class="mb-5" />
         <div v-if="isEditing" class="mb-5 grid gap-3">
           <div
             role="tablist"
@@ -1768,7 +1763,7 @@ useFixedPanelPresence(computed(() => props.show));
                 tone="teal"
                 :title="formatOriginTitle(originPill)"
               >
-                {{ humanizedOriginLabel(originPill) }}
+                {{ originLabelOverHierarchy(originPill) }}
                 <template v-if="originPill.extraCount > 0" #trail>
                   <span class="shrink-0 font-semibold">
                     {{ `+${originPill.extraCount}` }}
@@ -1778,7 +1773,7 @@ useFixedPanelPresence(computed(() => props.show));
               <ul
                 v-if="originAdLines.length"
                 data-testid="crm-origin-ad-hierarchy"
-                class="grid min-w-0 gap-0.5 text-xs text-n-slate-11"
+                class="m-0 grid min-w-0 list-none gap-0.5 p-0 text-xs text-n-slate-11"
               >
                 <li
                   v-for="line in originAdLines"

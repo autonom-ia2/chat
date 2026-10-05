@@ -3,8 +3,8 @@ import { createI18n } from 'vue-i18n';
 import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
 
 const NS = 'CRM_KANBAN.META_SYNC_STATUS';
-const render = (conversion, props = {}) =>
-  mount(CrmCardMetaConversion, { props: { conversion, ...props } });
+const render = conversion =>
+  mount(CrmCardMetaConversion, { props: { conversion } });
 
 describe('CrmCardMetaConversion', () => {
   it('stays hidden without a row', () => {
@@ -80,17 +80,6 @@ describe('CrmCardMetaConversion', () => {
     });
 
     expect(wrapper.text()).toBe('');
-  });
-
-  it('explains a landing page card without ad signals (CA-3.4)', () => {
-    const wrapper = render(
-      { status: 'skipped', error_message: 'missing_ctwa_clid' },
-      { fromWebsite: true }
-    );
-
-    expect(wrapper.text()).toContain(`${NS}.LABEL_SKIPPED`);
-    expect(wrapper.text()).toContain(`${NS}.SKIP_MISSING_SIGNALS`);
-    expect(wrapper.text()).not.toContain('missing_ctwa_clid');
   });
 
   it('leads the error with an actionable sentence and keeps the Meta text in details', () => {

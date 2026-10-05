@@ -14,6 +14,7 @@ import TrackedLinkQr from 'dashboard/components-next/Campaigns/TrackedLinks/Trac
 import CreateTrackedLinkDialog from 'dashboard/components-next/Campaigns/TrackedLinks/CreateTrackedLinkDialog.vue';
 import TrackedLinkWebsitePanel from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkWebsitePanel.vue';
 import TrackedLinkCampaignTable from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkCampaignTable.vue';
+import TrackedLinkReadyBadge from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkReadyBadge.vue';
 
 const { t, locale } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
@@ -348,14 +349,7 @@ onMounted(fetchLinks);
             :aria-label="t(`${NS}.DETAILS`)"
             class="self-start overflow-hidden rounded-xl border border-n-weak bg-n-solid-1"
           >
-            <div
-              class="flex items-center gap-2 px-6 pt-5 text-xs font-medium text-n-slate-11"
-            >
-              <span class="size-4" :class="usageIcon(selected)" />
-              {{
-                t(isWebsite(selected) ? `${NS}.READY_WEBSITE` : `${NS}.READY`)
-              }}
-            </div>
+            <TrackedLinkReadyBadge :link="selected" class="px-6 pt-5" />
             <h2
               class="m-0 mt-3 break-words px-6 text-xl font-semibold tracking-tight"
             >

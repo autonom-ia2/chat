@@ -14,13 +14,14 @@ const props = defineProps({
   error: { type: String, default: '' },
 });
 const emit = defineEmits(['create', 'open']);
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
 const USAGES = [
   { id: 'direct', icon: 'i-lucide-qr-code' },
   { id: 'website', icon: 'i-lucide-globe' },
 ];
 const dialog = ref(null);
+const inboxField = ref(null);
 const usage = ref('direct');
 const name = ref('');
 const inboxId = ref('');
@@ -54,6 +55,27 @@ const canCreate = computed(
     !props.isSaving &&
     (!isWebsite.value || origins.value.isValid)
 );
+// A disabled button says nothing on its own: list what is still missing next to
+// it, in the order of the form.
+const missingFields = computed(() => {
+  if (props.isSaving) return [];
+  return [
+    !name.value.trim() && 'MISSING_NAME',
+    !inboxId.value && 'MISSING_INBOX',
+    isWebsite.value && !origins.value.isValid && 'MISSING_ORIGINS',
+  ].filter(Boolean);
+});
+const missingHint = computed(() => {
+  if (!missingFields.value.length) return '';
+  const list = new Intl.ListFormat(locale.value.replace('_', '-'), {
+    type: 'conjunction',
+  }).format(missingFields.value.map(key => t(`${NS}.${key}`)));
+  return t(`${NS}.CREATE_MISSING`, { list });
+});
+// ChoiceSelect names its combobox with aria-label (same text as this label);
+// clicking the visible label moves focus to it, as a native <label for> would.
+const focusInbox = () =>
+  inboxField.value?.querySelector('[role="combobox"]')?.focus();
 const close = () => dialog.value.close();
 const open = async () => {
   usage.value = 'direct';
@@ -127,11 +149,12 @@ defineExpose({ open, close });
                 <label
                   v-for="option in USAGES"
                   :key="option.id"
-                  class="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl p-4 outline outline-1 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+                  :data-testid="`tracked-link-usage-${option.id}`"
+                  class="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl p-4 outline -outline-offset-1 transition-colors ring-offset-2 ring-offset-n-solid-1 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
                   :class="
                     usage === option.id
-                      ? 'bg-n-blue-2 outline-n-blue-9'
-                      : 'bg-n-solid-1 outline-n-weak hover:outline-n-strong'
+                      ? 'bg-n-blue-2 outline-2 outline-n-blue-9'
+                      : 'bg-n-solid-1 outline-1 outline-n-weak hover:outline-n-strong'
                   "
                 >
                   <input
@@ -162,16 +185,17 @@ defineExpose({ open, close });
                   </span>
                   <span
                     aria-hidden="true"
-                    class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border"
+                    data-testid="tracked-link-usage-check"
+                    class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border"
                     :class="
                       usage === option.id
-                        ? 'border-n-blue-9 bg-n-blue-9'
+                        ? 'border-n-blue-9 bg-n-blue-9 text-white'
                         : 'border-n-slate-7'
                     "
                   >
                     <span
                       v-if="usage === option.id"
-                      class="size-1.5 rounded-full bg-white"
+                      class="i-lucide-check size-3.5"
                     />
                   </span>
                 </label>
@@ -190,10 +214,11 @@ defineExpose({ open, close });
               required
               :disabled="isSaving"
             />
-            <div>
+            <div ref="inboxField">
               <label
                 id="tracked-link-inbox-label"
                 class="block mb-2 text-sm font-medium"
+                @click="focusInbox"
               >
                 {{ t(`${NS}.DESTINATION`) }}
               </label>
@@ -332,7 +357,19 @@ defineExpose({ open, close });
               )
             }}
           </p>
-          <div class="flex gap-3">
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <p
+              v-if="missingHint"
+              id="tracked-link-create-missing"
+              data-testid="tracked-link-create-missing"
+              class="m-0 flex basis-full items-center justify-end gap-1.5 text-xs text-n-slate-11"
+            >
+              <span
+                class="i-lucide-info size-3.5 shrink-0"
+                aria-hidden="true"
+              />
+              {{ missingHint }}
+            </p>
             <Button
               :label="t(`${NS}.CANCEL`)"
               slate
@@ -345,6 +382,9 @@ defineExpose({ open, close });
               :label="t(isWebsite ? `${NS}.CREATE_WEBSITE` : `${NS}.CREATE`)"
               type="submit"
               :disabled="!canCreate"
+              :aria-describedby="
+                missingHint ? 'tracked-link-create-missing' : undefined
+              "
               :is-loading="isSaving"
             />
           </div>

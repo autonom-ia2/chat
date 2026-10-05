@@ -7,6 +7,9 @@ import { formatValueByCurrency } from './trackedLinkWebsite';
 // in the narrow detail aside, so it is a list, not a wide table: the name and
 // the won value on top, clicks · conversations · won deals underneath. Every
 // number stays visible at any width (no horizontal scroll on phones).
+// won_cards and won_value_by_currency are financial: the API only sends them to
+// administrators. When they are absent the columns are left out, never shown
+// as zero or as a dash (that would read as "no sales").
 const props = defineProps({
   campaigns: { type: Array, default: () => [] },
   originName: { type: String, default: '' },
@@ -27,6 +30,9 @@ const campaignName = campaign =>
   campaign.campaign_key === 'none' || !campaign.name
     ? t(`${NS}.NO_CAMPAIGN`)
     : campaign.name;
+const hasField = (campaign, field) => Object.hasOwn(campaign, field);
+const hasWonCards = campaign => hasField(campaign, 'won_cards');
+const hasValue = campaign => hasField(campaign, 'won_value_by_currency');
 const value = campaign =>
   formatValueByCurrency(campaign.won_value_by_currency, locale.value) || '—';
 const stats = campaign => [
@@ -41,7 +47,9 @@ const stats = campaign => [
     value: format(campaign.conversations),
     strong: true,
   },
-  { key: 'won', label: t(`${NS}.WON`), value: format(campaign.won_cards) },
+  ...(hasWonCards(campaign)
+    ? [{ key: 'won', label: t(`${NS}.WON`), value: format(campaign.won_cards) }]
+    : []),
 ];
 </script>
 
@@ -71,6 +79,7 @@ const stats = campaign => [
             {{ campaignName(campaign) }}
           </span>
           <span
+            v-if="hasValue(campaign)"
             data-testid="tracked-link-campaign-value"
             class="shrink-0 text-sm font-medium tabular-nums"
           >
@@ -78,7 +87,10 @@ const stats = campaign => [
             {{ value(campaign) }}
           </span>
         </div>
-        <dl class="m-0 grid grid-cols-3 gap-2">
+        <dl
+          class="m-0 grid gap-2"
+          :class="hasWonCards(campaign) ? 'grid-cols-3' : 'grid-cols-2'"
+        >
           <div
             v-for="stat in stats(campaign)"
             :key="stat.key"

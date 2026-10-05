@@ -76,7 +76,7 @@ class Rack::Attack
 
   # Avisos de clique das páginas (#1011): uma pessoa clica poucas vezes; volume acima disso é abuso.
   throttle('public_tracked_link_signals/ip', limit: 30, period: 1.minute) do |req|
-    req.ip if req.post? && req.path.start_with?('/l/')
+    req.ip if req.post? && Ctwa::TrackedLink.signal_code_from_path(req.path).present?
   end
 
   # O header Origin não autentica (fora do navegador é forjável): com poucos IPs daria para
@@ -85,6 +85,15 @@ class Rack::Attack
   throttle('public_tracked_link_signals/code',
            limit: ENV.fetch('TRACKED_LINK_SIGNALS_PER_LINK_LIMIT', '120').to_i, period: 1.minute) do |req|
     Ctwa::TrackedLink.signal_code_from_path(req.path) if req.post?
+  end
+
+  # O teto diário do link vira alavanca de negação de serviço: quem tem o código (público no
+  # JS da página) esgota o teto e derruba a atribuição do dia. Com o limite por (link, IP)
+  # por dia, esgotar o teto exige muitos IPs. Uma pessoa real clica poucas vezes por dia.
+  throttle('public_tracked_link_signals/code_ip',
+           limit: ENV.fetch('TRACKED_LINK_SIGNALS_PER_LINK_IP_DAILY_LIMIT', '100').to_i, period: 1.day) do |req|
+    code = Ctwa::TrackedLink.signal_code_from_path(req.path) if req.post?
+    "#{code}:#{req.ip}" if code
   end
 
   throttle('public_google_conversions/ip', limit: 60, period: 1.minute) do |req|

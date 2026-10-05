@@ -58,6 +58,16 @@ export const signalStatus = (lastSignalAt, now = Date.now()) => {
   return now - time < DAY_MS ? 'recent' : 'stale';
 };
 
+// What the header of a website origin can honestly promise:
+// 'needs_origins' (no site allowed, clicks are refused), 'waiting' (allowed,
+// but no signal has arrived yet) or 'ready' (the site is already sending).
+export const websiteReadiness = (link, now = Date.now()) => {
+  if (!link?.allowed_origins?.length) return 'needs_origins';
+  return signalStatus(link.last_signal_at, now) === 'never'
+    ? 'waiting'
+    : 'ready';
+};
+
 // { BRL: 151120, USD: 5000 } (cents) -> "R$ 1.511,20 · US$ 50,00".
 export const formatValueByCurrency = (valueByCurrency, locale) => {
   const language = String(locale || 'en').replace('_', '-');

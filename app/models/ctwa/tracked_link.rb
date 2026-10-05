@@ -40,6 +40,7 @@ class Ctwa::TrackedLink < ApplicationRecord
   USAGES = %w[direct website].freeze
   MAX_ALLOWED_ORIGINS = 5
   LOCALHOST = 'localhost'.freeze
+  SIGNALS_DAILY_LIMIT = ENV.fetch('TRACKED_LINK_SIGNALS_DAILY_LIMIT_PER_LINK', '5000').to_i
 
   belongs_to :account
   belongs_to :inbox
@@ -93,16 +94,38 @@ class Ctwa::TrackedLink < ApplicationRecord
   end
 
   # Código do link em `/l/:code/clicks` (em maiúsculas), ou nil para qualquer outro caminho.
-  # Sem consulta: também roda no Rack::Attack e no Middleware::TrackedLinkSignalGuard.
+  # Sem consulta: roda no Rack::Attack, antes do Rails.
+  # O caminho é lido como o roteador lê (`//l//X/clicks/` chega no mesmo controller, e
+  # `%41` no código vira `A`): toda grafia que o Rails entrega ao endpoint cai na mesma
+  # conta do limite.
   def self.signal_code_from_path(path)
-    parts = path.to_s.split('/')
-    return unless parts.size == 4 && parts[0].empty? && parts[1] == 'l' && parts[3] == 'clicks' && parts[2].present?
+    parts = public_path_parts(path)
+    return unless parts.size == 4 && parts[1] == 'l' && parts[3] == 'clicks'
 
-    parts[2].upcase
+    code = ActionDispatch::Journey::Router::Utils.unescape_uri(parts[2]).scrub
+    code.upcase unless code.empty?
   end
+
+  # Qualquer caminho sob `/l/`, lido como o roteador lê. Usado pelo
+  # Middleware::TrackedLinkSignalGuard: nenhum POST ali tem corpo que o Rails deva interpretar,
+  # nem quando a grafia não chega ao endpoint (`.json` vira 404, e a página de erro lê o corpo).
+  def self.public_path?(path)
+    public_path_parts(path)[1] == 'l'
+  end
+
+  def self.public_path_parts(path)
+    ActionDispatch::Journey::Router::Utils.normalize_path(path.to_s).split('/')
+  end
+  private_class_method :public_path_parts
 
   def website?
     usage == 'website'
+  end
+
+  # Teto de avisos aceitos por link em 24h (CA-1.11). Acima dele o endpoint responde 429 e a
+  # tela mostra o bloqueio (signals_blocked), para não perder atribuição em silêncio.
+  def signals_daily_limit_reached?
+    Ctwa::TrackedLinkClick.where(tracked_link_id: id).where('created_at > ?', 24.hours.ago).count >= SIGNALS_DAILY_LIMIT
   end
 
   def origin_allowed?(origin)

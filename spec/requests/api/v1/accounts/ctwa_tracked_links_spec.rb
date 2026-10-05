@@ -103,6 +103,7 @@ RSpec.describe 'CTWA tracked links API', type: :request do
         'usage' => 'website',
         'allowed_origins' => ['https://placement.com.br', 'http://localhost:4321'],
         'last_signal_at' => nil,
+        'signals_blocked' => false,
         'signal_url' => "https://chat.hub2you.ai/l/#{tracked_link.code}/clicks",
         'ad_url_params' => ad_url_params,
         'campaigns' => []
@@ -115,7 +116,7 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       payload = response.parsed_body['payload']
       expect(response).to have_http_status(:created)
       expect(payload).to include('usage' => 'direct', 'prefilled_text' => 'Oi', 'allowed_origins' => [], 'signal_url' => nil,
-                                 'ad_url_params' => nil, 'campaigns' => [])
+                                 'signals_blocked' => false, 'ad_url_params' => nil, 'campaigns' => [])
     end
 
     it 'recusa uso desconhecido e origens inválidas com 422, sem criar' do
@@ -272,6 +273,21 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       payload = response.parsed_body['payload']
       expect(payload.find { |link| link['id'] == tracked_link.id }['campaigns']).to eq([])
       expect(payload.find { |link| link['id'] == other_link.id }['campaigns'].sole).to include('campaign_key' => '120211', 'clicks' => 1)
+    end
+
+    # O teto diário recusa também o aviso legítimo: a tela precisa mostrar o bloqueio.
+    it 'avisa na tela quando o link atingiu o teto diário de avisos (página recusada agora)' do
+      tracked_link = create_website_link
+      stub_const('Ctwa::TrackedLink::SIGNALS_DAILY_LIMIT', 2)
+      create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, token: 'AAAA2222')
+      create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, token: 'BBBB3333', created_at: 25.hours.ago)
+
+      get base_url, headers: auth_headers(admin)
+      expect(response.parsed_body['payload'].sole['signals_blocked']).to be(false)
+
+      create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, token: 'CCCC4444')
+      get base_url, headers: auth_headers(admin)
+      expect(response.parsed_body['payload'].sole['signals_blocked']).to be(true)
     end
   end
 end
