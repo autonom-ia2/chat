@@ -76,6 +76,19 @@
           <div class="sm:col-span-2">
             <p class="m-0 text-sm font-medium text-n-slate-12"><%= t("super_admin.instagram_automation.states.#{state}.label") %></p>
             <p class="mt-1 mb-0 text-sm text-n-slate-11"><%= t("super_admin.instagram_automation.states.#{state}.text") %></p>
+            <% if component == :session %>
+              <% %i[published_at captured_at].each do |field| %>
+                <p class="mt-2 mb-0 text-sm text-n-slate-11">
+                  <%= t("super_admin.instagram_automation.#{field}") %>
+                  <% timestamp = instagram_automation_time(@status.dig(:session, field)) %>
+                  <% if timestamp %>
+                    <time data-session-time="<%= field %>" datetime="<%= timestamp.iso8601(3) %>"><%= l(timestamp, format: t('super_admin.instagram_automation.time_format')) %></time>
+                  <% else %>
+                    <%= t('super_admin.instagram_automation.unknown_time') %>
+                  <% end %>
+                </p>
+              <% end %>
+            <% end %>
             <% if component == :manager %>
               <p class="mt-2 mb-0 text-sm text-n-slate-11">
                 <%= t('super_admin.instagram_automation.heartbeat_at') %>
@@ -117,6 +130,12 @@
                   method: :post, disabled: !reconnect_available, aria: { describedby: 'instagram-reconnect-hint' },
                   form_class: 'w-full sm:w-auto',
                   class: '!min-h-11 w-full sm:w-auto rounded-md border border-n-weak !bg-[rgb(var(--blue-11,8_109_224))] dark:!bg-[rgb(var(--blue-8,48_106_186))] px-4 py-2 text-sm font-medium !text-white hover:!bg-[rgb(var(--blue-12,11_50_101))] dark:hover:!bg-[rgb(var(--blue-7,40_89_156))] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+    <% if instagram_automation_browser_available?(@status) %>
+      <%= button_to t('super_admin.instagram_automation.open_remote_browser'), browser_super_admin_instagram_automation_path,
+                  method: :post, form: { target: '_blank', rel: 'noopener' },
+                  class: 'mt-3 me-4 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-n-blue-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+      <p class="mt-1 mb-0 text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.remote_browser_hint') %></p>
+    <% end %>
     <%= link_to t('super_admin.instagram_automation.refresh'), super_admin_instagram_automation_path,
                 class: 'mt-3 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-n-blue-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
   </section>

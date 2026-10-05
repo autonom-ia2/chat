@@ -757,6 +757,13 @@ pt_BR:
       unknown_time: 'Horário desconhecido'
       reconnect_title: 'Sessão gerenciada'
       reconnect: 'Reconectar sessão'
+      open_remote_browser: 'Abrir navegador remoto'
+      remote_browser_hint: 'Aguarde o Chrome abrir. Conclua o login ou a verificação da Meta e feche a janela do Chrome dentro do navegador remoto para finalizar. Fechar somente esta aba não finaliza o processo.'
+      remote_browser_continue: 'Continuar para o navegador remoto'
+      remote_browser_continue_hint: 'Continue em até um minuto. Se o acesso expirar, volte ao painel e abra o navegador remoto novamente.'
+      operator_browser_unavailable: 'O acesso ao navegador remoto está indisponível. Confira sua solicitação de reconexão e tente novamente.'
+      published_at: 'Sessão publicada em'
+      captured_at: 'Sessão capturada em'
       reconnect_ready: 'A sessão precisa da atenção do operador e o gestor está disponível para iniciar a reconexão.'
       reconnect_unavailable: 'A reconexão só fica disponível quando a sessão precisa da atenção do operador e o gestor permite o controle.'
       fields:

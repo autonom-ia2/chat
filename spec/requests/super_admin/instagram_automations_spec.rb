@@ -9,7 +9,7 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
   it 'requires Super Admin authentication on every action' do
     get path, as: :json
     expect(response).to have_http_status(:unauthorized)
-    [path, "#{path}/health", "#{path}/reconnect"].each do |endpoint|
+    [path, "#{path}/health", "#{path}/reconnect", "#{path}/browser"].each do |endpoint|
       post endpoint, params: {}, as: :json
       expect(response).to have_http_status(:unauthorized)
     end
@@ -19,7 +19,7 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
     sign_in(create(:account_user, role: 'administrator').user, scope: :user)
     get path, as: :json
     expect(response).to have_http_status(:unauthorized)
-    [path, "#{path}/health", "#{path}/reconnect"].each do |endpoint|
+    [path, "#{path}/health", "#{path}/reconnect", "#{path}/browser"].each do |endpoint|
       post endpoint, params: {}, as: :json
       expect(response).to have_http_status(:unauthorized)
     end
@@ -137,7 +137,7 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
 
     it 'rejects unknown top-level params on every POST without enqueueing or echoing input' do
       expect(Instagram::Automation::OperatorControl).not_to receive(:new)
-      [path, "#{path}/health", "#{path}/reconnect"].each do |endpoint|
+      [path, "#{path}/health", "#{path}/reconnect", "#{path}/browser"].each do |endpoint|
         expect do
           post endpoint, params: { actor_id: 'synthetic-secret-do-not-echo', instagram_automation: { INSTAGRAM_TESTER_APP_NAME: 'App' } }, as: :json
         end.not_to change(InstallationConfig, :count)
@@ -147,7 +147,7 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
     end
 
     it 'rejects configuration params on health/reconnect in HTML without a false success message' do
-      ["#{path}/health", "#{path}/reconnect"].each do |endpoint|
+      ["#{path}/health", "#{path}/reconnect", "#{path}/browser"].each do |endpoint|
         post endpoint, params: { instagram_automation: { INSTAGRAM_TESTER_SESSION_JSON: 'synthetic-secret-do-not-echo' } }
         expect(response).to have_http_status(:unprocessable_entity)
         expect(response.body).not_to include('synthetic-secret-do-not-echo')
@@ -198,7 +198,7 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
         expect(session.response).to have_http_status(:ok)
         expect(Instagram::Automation::OperatorControl).not_to receive(:new)
         tokens = [nil, 'invalid-synthetic-csrf']
-        [path, "#{path}/health", "#{path}/reconnect"].each do |endpoint|
+        [path, "#{path}/health", "#{path}/reconnect", "#{path}/browser"].each do |endpoint|
           tokens.each do |token|
             expect do
               session.post(endpoint, params: { instagram_automation: { INSTAGRAM_TESTER_APP_NAME: 'Unsaved' } },
@@ -239,6 +239,29 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
         expect(session.response.body).not_to include('synthetic-secret-do-not-echo')
         expect(Nokogiri::HTML(session.response.body).at_css('#instagram-automation [role="alert"]').text)
           .to include(I18n.t('super_admin.instagram_automation.invalid_request'))
+      end
+
+      it 'accepts session CSRF for browser access and binds the grant to the authenticated actor and current request' do
+        session = ActionDispatch::Integration::Session.new(Rails.application)
+        session.get(path)
+        token = Nokogiri::HTML(session.response.body).at_css('meta[name="csrf-token"]')['content']
+        id = SecureRandom.uuid
+        control = instance_double(Instagram::Automation::OperatorControl)
+        allow(Instagram::Automation::OperatorControl).to receive(:new).and_return(control)
+        expect(control).to receive(:status).and_return(
+          control: { 'id' => id, 'actor_id' => super_admin.id, 'state' => 'running', 'created_at' => Time.current.utc.iso8601(3) }
+        )
+        with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you',
+                          'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+                          'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => 'ab' * 32, 'FRONTEND_URL' => 'https://hub.invalid') do
+          session.post("#{path}/browser", headers: { 'ACCEPT' => 'text/html', 'X-CSRF-Token' => token })
+        end
+        expect(session.response).to have_http_status(:ok)
+        form = Nokogiri::HTML(session.response.body).at_css('form')
+        expect(form['method']).to eq('post')
+        expect(form['action']).to eq('https://gateway.invalid/hub2you/grant')
+        claims = JWT.decode(form.at_css('input[name="ticket"]')['value'], ['ab' * 32].pack('H*'), true, algorithm: 'HS256').first
+        expect(claims).to include('sub' => super_admin.id.to_s, 'request_id' => id)
       end
     end
   end

@@ -1,5 +1,10 @@
 # Runbook: onboarding Instagram Tester (#910 / PR #913; recuperação #931)
 
+> #995: o novo runtime permanente está em desenvolvimento para a VPS n8n.
+> Ver [migração VPS](instagram-vps-runtime-995.md). As referências aos Macs abaixo
+> descrevem o runtime anterior; não são dependência da arquitetura nova nem prova
+> de migração já executada. Assistido permanece OFF até homologação aprovada.
+
 > **Atualização — 04/10/2026, 20:53 UTC:** transporte PASS encerrado nas duas stacks
 > pelo confronto AWS/recibos das 20:48 UTC (TLS/auth/epoch, proxy e egress).
 > Aplicação nova, runtime ativo e homologação Meta não estão comprovados.

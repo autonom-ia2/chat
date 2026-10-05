@@ -33,6 +33,11 @@ module SuperAdmin::InstagramAutomationHelper
     value.is_a?(String) ? Time.iso8601(value).in_time_zone : value
   end
 
+  def instagram_automation_browser_available?(status)
+    status[:managed_session] == true && status[:operator_browser_configured] == true &&
+      Instagram::Automation::OperatorBrowserTicket.eligible?(control: status[:control], actor_id: current_super_admin.id)
+  end
+
   def instagram_automation_age(time)
     elapsed = [(Time.current - time).to_i, 0].max
     unit, count = if elapsed < 1.minute

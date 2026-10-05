@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale.to_s.tr('_', '-') %>">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin">
+    <title><%= t('super_admin.instagram_automation.open_remote_browser') %></title>
+    <% stylesheets = ViteRuby.instance.manifest.resolve_entries('superadmin', type: :javascript).fetch(:stylesheets) %>
+    <%= stylesheet_link_tag(*stylesheets, extname: false) %>
+  </head>
+  <body class="bg-n-solid-1 text-n-slate-12">
+    <main class="mx-auto max-w-2xl p-6 space-y-4">
+      <h1 class="text-xl font-semibold"><%= t('super_admin.instagram_automation.open_remote_browser') %></h1>
+      <p class="text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.remote_browser_hint') %></p>
+      <p class="text-sm text-n-slate-11"><%= t('super_admin.instagram_automation.remote_browser_continue_hint') %></p>
+      <%= form_with url: @grant.fetch(:grant_url), method: :post, local: true,
+                    authenticity_token: false, skip_enforcing_utf8: true do |form| %>
+        <%= hidden_field_tag :ticket, @grant.fetch(:ticket), autocomplete: 'off' %>
+        <%= form.submit t('super_admin.instagram_automation.remote_browser_continue'), name: nil,
+                        class: 'min-h-11 rounded-md bg-woot-500 px-4 py-2 text-sm font-medium text-white cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-woot-500' %>
+      <% end %>
+    </main>
+  </body>
+</html>

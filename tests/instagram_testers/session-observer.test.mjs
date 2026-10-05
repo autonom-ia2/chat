@@ -15,6 +15,7 @@ import {
 } from '../../scripts/instagram_testers/session-observer.mjs';
 import {
   browserEnvironment,
+  chromiumSandbox,
   isAllowedBrowserRequest,
   privateProfile,
   publisher,
@@ -54,18 +55,35 @@ test('manual browser initialization validates the proxy without inventing Meta b
   );
 });
 
+test('Chromium sandbox is opt-in for the VPS runtime and off by default', () => {
+  assert.equal(chromiumSandbox({}), false);
+  assert.equal(
+    chromiumSandbox({ INSTAGRAM_TESTER_CHROMIUM_SANDBOX: 'true' }),
+    true
+  );
+  assert.equal(
+    chromiumSandbox({ INSTAGRAM_TESTER_CHROMIUM_SANDBOX: 'false' }),
+    false
+  );
+});
+
 test('browser child environment excludes backend secrets and protocol tracing', () => {
   assert.deepEqual(
     browserEnvironment({
       PATH: '/synthetic/bin',
       LANG: 'en_US.UTF-8',
+      XAUTHORITY: '/synthetic/.Xauthority',
       DATABASE_URL: 'synthetic',
       AWS_SECRET_ACCESS_KEY: 'synthetic',
       INSTAGRAM_TESTER_PROXY_PASSWORD: 'synthetic',
       DEBUG: 'pw:protocol',
       PWDEBUG: '1',
     }),
-    { PATH: '/synthetic/bin', LANG: 'en_US.UTF-8' }
+    {
+      PATH: '/synthetic/bin',
+      LANG: 'en_US.UTF-8',
+      XAUTHORITY: '/synthetic/.Xauthority',
+    }
   );
 });
 const fields = {

@@ -1,0 +1,46 @@
+[Unit]
+Description=Instagram isolated Unix publisher (%i)
+After=network-online.target
+Requires=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=igpub-%i
+# The browser group can traverse the runtime directory and connect to its socket only.
+Group=ig-%i
+EnvironmentFile=/etc/instagram-meta/%i/publisher.env
+WorkingDirectory=/opt/instagram-meta/current
+ExecStartPre=/usr/bin/python3 /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/env/check.py %i publisher
+ExecStart=/usr/bin/node /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/publisher-broker.mjs
+RuntimeDirectory=instagram-publisher-%i
+RuntimeDirectoryMode=0710
+UMask=0007
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=35
+KillMode=control-group
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=64
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/instagram-publisher-%i
+InaccessiblePaths=/var/lib/instagram-hub2you /var/lib/instagram-autonomia
+InaccessiblePaths=-/run/instagram-hub2you -/run/instagram-autonomia
+InaccessiblePaths=/var/lib/instagram-gateway-hub2you /var/lib/instagram-gateway-autonomia
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+LockPersonality=true
+# AF_INET/AF_INET6 are needed for outbound AWS/SSM/SSH; the broker listens only on AF_UNIX.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

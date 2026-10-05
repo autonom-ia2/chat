@@ -229,6 +229,12 @@ export async function runWaiter(
         });
         const browserEnv = { ...env, ...bootstrap.metadata };
         delete browserEnv.INSTAGRAM_TESTER_RECONNECT_REQUEST_ID;
+        if (env.INSTAGRAM_TESTER_OPERATOR_REQUEST_FILE) {
+          browserEnv.INSTAGRAM_TESTER_OPERATOR_REQUEST_ID = activeId;
+          browserEnv.INSTAGRAM_TESTER_OPERATOR_REQUEST_DEADLINE = String(
+            Math.floor(Date.parse(request.created_at) / 1000) + 3600
+          );
+        }
         let code = await trackedChild(BROWSER, browserEnv, request);
         if (shutdown.signal.aborted) break;
         if (code === 0)

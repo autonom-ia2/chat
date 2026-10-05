@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnlyCurrentInstance",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:us-east-1:REQUIRED_ACCOUNT_ID:parameter/chatwoot/prod/blue-green/current-instance-id"
+    },
+    {
+      "Sid": "TaggedChatwootBlueGreenInstances",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand",
+        "ssm:StartSession"
+      ],
+      "Resource": "arn:aws:ec2:us-east-1:REQUIRED_ACCOUNT_ID:instance/*",
+      "Condition": {
+        "StringEquals": {
+          "ssm:resourceTag/Project": "chatwoot-autonomia",
+          "ssm:resourceTag/Environment": "prod",
+          "ssm:resourceTag/ManagedBy": "github-actions"
+        },
+        "StringLike": {
+          "ssm:resourceTag/Name": "REQUIRED_STACK_INSTANCE_NAME_PATTERN"
+        }
+      }
+    },
+    {
+      "Sid": "FixedHostPublicKeyOnly",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": "arn:aws:ssm:us-east-1:REQUIRED_ACCOUNT_ID:document/ChatwootInstagramPublisherHostKey"
+    },
+    {
+      "Sid": "ExistingPublisherPortForwarding",
+      "Effect": "Allow",
+      "Action": "ssm:StartSession",
+      "Resource": "arn:aws:ssm:us-east-1::document/AWS-StartPortForwardingSession",
+      "Condition": {
+        "BoolIfExists": {
+          "ssm:SessionDocumentAccessCheck": "true"
+        }
+      }
+    },
+    {
+      "Sid": "ReadHostKeyCommandResult",
+      "Effect": "Allow",
+      "Action": "ssm:ListCommandInvocations",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "CloseOnlyOwnApprovedSessionPattern",
+      "Effect": "Allow",
+      "Action": "ssm:TerminateSession",
+      "Resource": "REQUIRED_APPROVED_PRINCIPAL_SESSION_ARN_PATTERN"
+    },
+    {
+      "Sid": "OwnSessionDataChannel",
+      "Effect": "Allow",
+      "Action": "ssmmessages:OpenDataChannel",
+      "Resource": "REQUIRED_APPROVED_PRINCIPAL_SESSION_ARN_PATTERN"
+    }
+  ]
+}

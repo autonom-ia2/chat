@@ -215,7 +215,11 @@ test('account verification is exact and does not expose AWS output', async () =>
 });
 
 test('host key retrieval uses only fixed SSM commands and no SSH-side probing', async () => {
-  const config = runtimeConfig('hub2you', baseEnv);
+  const config = runtimeConfig('hub2you', {
+    ...baseEnv,
+    INSTAGRAM_TESTER_PUBLISHER_HOST_KEY_DOCUMENT:
+      'ChatwootInstagramPublisherHostKey',
+  });
   const calls = [];
   let elapsed = 0;
   const output = await hostKeyViaSsm(config, {
@@ -262,11 +266,11 @@ test('host key retrieval uses only fixed SSM commands and no SSH-side probing', 
   assert.match(output, /^ssh-ed25519 /);
   assert.equal(calls.length, 3);
   assert.equal(
-    calls[0].some(value =>
-      value.includes('/usr/bin/cat /etc/ssh/ssh_host_ed25519_key.pub')
-    ),
-    true
+    calls[0][calls[0].indexOf('--document-name') + 1],
+    'ChatwootInstagramPublisherHostKey'
   );
+  assert.equal(calls[0].includes('--parameters'), false);
+  assert.equal(calls[0].includes('AWS-RunShellScript'), false);
   assert.equal(calls[0].includes(canary), false);
   assert.equal(calls[1].includes('list-command-invocations'), true);
   assert.equal(calls[1].includes('--details'), true);
@@ -834,3 +838,34 @@ for (const stack of ['hub2you', 'autonomia']) {
     );
   });
 }
+
+test('restricted document is opt-in and existing installations retain their hostkey protocol', async () => {
+  const config = runtimeConfig('hub2you', baseEnv);
+  assert.equal(config.hostKeyDocument, 'AWS-RunShellScript');
+  const calls = [];
+  await hostKeyViaSsm(config, {
+    run: async (_command, args) => {
+      calls.push(args);
+      return args.includes('send-command')
+        ? 'command-12345678'
+        : JSON.stringify({
+            Status: 'Success',
+            Output: 'synthetic public host key',
+          });
+    },
+  });
+  assert.equal(
+    calls[0][calls[0].indexOf('--document-name') + 1],
+    'AWS-RunShellScript'
+  );
+  assert.equal(
+    calls[0][calls[0].indexOf('--parameters') + 1],
+    'commands=["/usr/bin/cat /etc/ssh/ssh_host_ed25519_key.pub"]'
+  );
+  assert.throws(() =>
+    runtimeConfig('hub2you', {
+      ...baseEnv,
+      INSTAGRAM_TESTER_PUBLISHER_HOST_KEY_DOCUMENT: 'ArbitraryCommandDocument',
+    })
+  );
+});

@@ -1144,6 +1144,7 @@ Rails.application.routes.draw do
       resource :instagram_automation, only: [:show, :create] do
         post :health, on: :collection
         post :reconnect, on: :collection
+        post :browser, on: :collection
       end
       resource :app_config, only: [:show, :create]
       post 'app_config/test_typesafe', to: 'app_configs#test_typesafe', as: :test_typesafe_app_config
