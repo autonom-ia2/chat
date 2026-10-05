@@ -1,4 +1,6 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
+  PIXEL_ID_MAX_LENGTH = 20
+
   before_action :fetch_pipeline, only: [:show, :update, :destroy]
 
   def index
@@ -77,8 +79,18 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
         'moved' => bool.cast(meta_sync.dig(:events, :moved)) || false
       },
       'dataset_id' => meta_sync[:dataset_id].presence
-    }
+    }.merge({ 'pixel_id' => sanitized_pixel_id(meta_sync[:pixel_id]) }.compact)
     @pipeline.update!(metadata: metadata)
+  end
+
+  # Pixel of the website mode (#1011): digits only, up to 20. Anything else clears it
+  # (nil, key left out) instead of failing the whole funnel save. Checked per character, no regex.
+  def sanitized_pixel_id(value)
+    pixel_id = value.to_s.strip
+    return if pixel_id.empty? || pixel_id.size > PIXEL_ID_MAX_LENGTH
+    return unless pixel_id.each_char.all? { |char| char.between?('0', '9') }
+
+    pixel_id
   end
 
   # Google offline conversions config lives in metadata['google_sync'] and is merged

@@ -73,6 +73,7 @@ class Api::V1::Accounts::Crm::MetaConversionsController < Api::V1::Accounts::Crm
       event_type: event.event_type,
       http_code: event.http_code,
       error_message: event.error_message,
+      attribution_mode: event.attribution_mode,
       sent_at: event.sent_at,
       event_id: event.event_id
     }

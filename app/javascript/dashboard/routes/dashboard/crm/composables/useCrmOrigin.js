@@ -61,6 +61,11 @@ export const buildCrmOrigin = campaign => {
     sourceId: campaign.source_id,
     sourceType: campaign.source_type,
     sourceUrl: String(campaign.source_url || '').trim(),
+    // Landing page clicks (#1011) carry the Meta names through the UTMs pasted
+    // in the ad: utm_campaign = campaign, utm_term = ad set, utm_content = ad.
+    campaign: String(campaign.utm_campaign || '').trim(),
+    adset: String(campaign.utm_term || '').trim(),
+    ad: String(campaign.utm_content || '').trim(),
   };
 };
 
@@ -138,12 +143,39 @@ export function useCrmOrigin() {
     return sourceUrlLabel(origin) || label;
   };
 
+  // One translated line per Meta level the ad sent: campaign, ad set, ad.
+  const adHierarchyLines = origin =>
+    [
+      ['campaign', 'CRM_KANBAN.ORIGIN.CAMPAIGN_PART'],
+      ['adset', 'CRM_KANBAN.ORIGIN.ADSET_PART'],
+      ['ad', 'CRM_KANBAN.ORIGIN.AD_PART'],
+    ]
+      .filter(([field]) => origin?.[field])
+      .map(([field, key]) => t(key, { name: origin[field] }));
+
+  const adHierarchyLabel = origin => adHierarchyLines(origin).join(' · ');
+
+  // The server writes a landing page headline as "<origin name> · <campaign>"
+  // (docs/crm/ponte-lp-atribuicao.md §3). Where the campaign already has its
+  // own line under the label, drop that suffix so the name is not repeated.
+  const originLabelOverHierarchy = origin => {
+    if (!origin?.campaign) return humanizedOriginLabel(origin);
+    const suffix = ` · ${origin.campaign}`;
+    const headline = origin.headline.endsWith(suffix)
+      ? origin.headline.slice(0, -suffix.length)
+      : origin.headline;
+    return humanizedOriginLabel({ ...origin, headline });
+  };
+
   const formatOriginTitle = origin => {
     if (!origin) return '';
     const origins = origin.origins || [origin];
     return origins
-      .map(item => item.sourceUrl || humanizedOriginLabel(item))
-      .join(' · ');
+      .map(
+        item =>
+          adHierarchyLabel(item) || item.sourceUrl || humanizedOriginLabel(item)
+      )
+      .join(origins.some(adHierarchyLabel) ? '\n' : ' · ');
   };
 
   return {
@@ -151,5 +183,7 @@ export function useCrmOrigin() {
     originFromCampaigns: buildCrmOriginFromCampaigns,
     humanizedOriginLabel,
     formatOriginTitle,
+    adHierarchyLines,
+    originLabelOverHierarchy,
   };
 }

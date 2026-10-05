@@ -112,6 +112,14 @@ const metaProgressChoices = computed(() =>
   }))
 );
 
+// Meta Pixel ids are digits only (contract #1011: up to 20). Filtering on input
+// keeps pasted spaces or letters out instead of failing on save.
+const PIXEL_ID_MAX_LENGTH = 20;
+const onlyDigits = value =>
+  [...String(value || '')]
+    .filter(char => char >= '0' && char <= '9')
+    .join('')
+    .slice(0, PIXEL_ID_MAX_LENGTH);
 const form = reactive({
   name: '',
   description: '',
@@ -120,6 +128,7 @@ const form = reactive({
   metaSync: {
     enabled: false,
     datasetId: '',
+    pixelId: '',
     events: { won: true, lost: false, moved: false },
   },
   googleSync: {
@@ -135,6 +144,12 @@ const newPipelineInbox = reactive({
 });
 const expandedAutomationStages = ref({});
 const aiPanel = ref(null);
+const onPixelInput = event => {
+  const digits = onlyDigits(event.target.value);
+  form.metaSync.pixelId = digits;
+  event.target.value = digits;
+};
+
 const view = ref('home');
 const drawerContent = ref(null);
 const selectedStage = ref(null);
@@ -327,6 +342,7 @@ const resetForm = () => {
   form.metaSync = {
     enabled: Boolean(metaSync.enabled),
     datasetId: metaSync.dataset_id || '',
+    pixelId: metaSync.pixel_id || '',
     events: {
       won: metaSync.events?.won ?? true,
       lost: metaSync.events?.lost ?? false,
@@ -480,6 +496,7 @@ const onSubmit = async () => {
         enabled: form.metaSync.enabled,
         events: { ...form.metaSync.events },
         dataset_id: form.metaSync.datasetId.trim() || null,
+        pixel_id: form.metaSync.pixelId || null,
       },
       // Always emitted so toggling Google sync off persists enabled:false.
       google_sync: {
@@ -1510,6 +1527,30 @@ useFixedPanelPresence(computed(() => props.show));
                 />
                 <span class="text-xs text-n-slate-11">
                   {{ t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_DATASET_HELP') }}
+                </span>
+              </label>
+
+              <label class="grid gap-1">
+                <span class="text-xs font-medium text-n-slate-11">
+                  {{ t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_PIXEL') }}
+                </span>
+                <input
+                  :value="form.metaSync.pixelId"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  aria-describedby="crm-pipeline-pixel-help"
+                  class="reset-base !mb-0 w-full rounded-lg border-0 bg-n-alpha-black2 px-3 py-2.5 font-mono text-sm text-n-slate-12 outline outline-1 outline-n-weak transition-all placeholder:font-sans placeholder:text-n-slate-10 focus:outline-n-brand"
+                  :placeholder="
+                    t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_PIXEL_PLACEHOLDER')
+                  "
+                  @input="onPixelInput"
+                />
+                <span
+                  id="crm-pipeline-pixel-help"
+                  class="text-xs text-n-slate-11"
+                >
+                  {{ t('CRM_KANBAN.PIPELINE_DRAWER.META_SYNC_PIXEL_HELP') }}
                 </span>
               </label>
             </div>

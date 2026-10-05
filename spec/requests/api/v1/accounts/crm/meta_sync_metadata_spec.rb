@@ -57,6 +57,32 @@ RSpec.describe 'CRM meta_sync metadata API', type: :request do
       expect(metadata['ai']).to eq(original_ai)
       expect(metadata).not_to have_key('meta_sync')
     end
+
+    context 'with the website-mode pixel_id (#1011)' do
+      def patch_pixel(pixel_id)
+        account, user = create_account_and_user
+        pipeline = account.crm_pipelines.create!(name: 'Funil', created_by: user, status: :active,
+                                                 metadata: { 'meta_sync' => { 'pixel_id' => '111' } })
+        patch "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}",
+              params: { pipeline: { meta_sync: { enabled: true, events: { won: true }, dataset_id: 'DS9', pixel_id: pixel_id } } },
+              headers: auth_headers(user)
+        expect(response).to have_http_status(:ok)
+        pipeline.reload.metadata['meta_sync']
+      end
+
+      it 'stores a digits-only pixel id next to the dataset' do
+        expect(patch_pixel(' 2164882667623689 ')).to include('dataset_id' => 'DS9', 'pixel_id' => '2164882667623689')
+      end
+
+      it 'clears the pixel id when it is blank' do
+        expect(patch_pixel('')['pixel_id']).to be_nil
+      end
+
+      it 'drops a pixel id with non-digits or longer than 20 characters' do
+        expect(patch_pixel('21648826abc')['pixel_id']).to be_nil
+        expect(patch_pixel('1' * 21)['pixel_id']).to be_nil
+      end
+    end
   end
 
   describe 'PATCH /api/v1/accounts/:account_id/crm/stages/:id (funnel_stage_type)' do

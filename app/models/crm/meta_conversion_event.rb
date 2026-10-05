@@ -3,6 +3,7 @@
 # Table name: crm_meta_conversion_events
 #
 #  id                :bigint           not null, primary key
+#  attribution_mode  :string
 #  ctwa_clid         :string
 #  currency          :string
 #  dataset_id        :string

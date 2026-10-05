@@ -967,3 +967,60 @@ describe('CrmCardDrawer unsaved drafts when leaving', () => {
     wrapper.unmount();
   });
 });
+
+describe('CrmCardDrawer landing page origin (#1011)', () => {
+  const siteCard = {
+    id: 7,
+    title: 'Card LP',
+    stage_id: 10,
+    inbox: { id: 38, name: 'WhatsApp Vendas' },
+    campaigns: [
+      {
+        source: 'meta_paid',
+        source_id: 'site:AB3CDE:120211',
+        headline: 'LP Seguro Viagem · Viagem EUA',
+        utm_campaign: 'Viagem EUA',
+        utm_term: 'Conjunto 60+',
+        utm_content: 'Video 2',
+      },
+    ],
+  };
+
+  it('shows campaign, ad set and ad as visible text under the origin pill', async () => {
+    const wrapper = mountDrawer({ card: siteCard });
+    await flushPromises();
+    const lines = wrapper
+      .findAll('[data-testid="crm-origin-ad-hierarchy"] li')
+      .map(line => line.text());
+
+    expect(lines).toEqual([
+      'CRM_KANBAN.ORIGIN.CAMPAIGN_PART',
+      'CRM_KANBAN.ORIGIN.ADSET_PART',
+      'CRM_KANBAN.ORIGIN.AD_PART',
+    ]);
+  });
+
+  it('names the campaign once: on its own line, not again in the pill', async () => {
+    const wrapper = mountDrawer({ card: siteCard });
+    await flushPromises();
+    const hierarchy = wrapper.find('[data-testid="crm-origin-ad-hierarchy"]');
+    const pillText = hierarchy.element.previousElementSibling.textContent;
+
+    expect(pillText).toContain('LP Seguro Viagem');
+    expect(pillText).not.toContain('Viagem EUA');
+  });
+
+  it('keeps the ad hierarchy off CTWA cards without UTMs', async () => {
+    const wrapper = mountDrawer({
+      card: {
+        ...siteCard,
+        campaigns: [{ source: 'meta_ctwa', source_id: '1' }],
+      },
+    });
+    await flushPromises();
+
+    expect(
+      wrapper.find('[data-testid="crm-origin-ad-hierarchy"]').exists()
+    ).toBe(false);
+  });
+});
