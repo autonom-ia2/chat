@@ -100,6 +100,14 @@ describe('K6 — campaign filter options', () => {
     expect(campaignOptionLabel(WHATSAPP)).toBe(EXPECTED_SEQUENCE[2]);
     expect(campaignOptionLabel(EMAIL)).toBe(EXPECTED_SEQUENCE[1]);
     expect(campaignOptionLabel(LINK)).toBe('Feira 2026');
+    // #993: live chat campaign of the website.
+    expect(
+      campaignOptionLabel({
+        source: 'campaign_live_chat',
+        source_id: 'campaign:live_chat:4',
+        headline: 'Boas-vindas',
+      })
+    ).toBe('CRM_KANBAN.ORIGIN.CAMPAIGN_LIVE_CHAT: Boas-vindas');
     expect(campaignOptionLabel({ source: 'meta_ctwa', source_id: '123' })).toBe(
       '123'
     );

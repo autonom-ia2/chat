@@ -149,6 +149,7 @@
         "TRACKED_LINK": "Link rastreado",
         "CAMPAIGN_WHATSAPP": "Campanha WhatsApp",
         "CAMPAIGN_EMAIL": "Campanha e-mail",
+        "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
         "UNKNOWN": "Desconhecida"
       }
     }
@@ -205,6 +206,7 @@
       "TRACKED_LINK": "Link rastreado",
       "CAMPAIGN_WHATSAPP": "Campanha WhatsApp",
       "CAMPAIGN_EMAIL": "Campanha e-mail",
+      "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
       "INSTAGRAM_POST": "Post do Instagram",
       "FACEBOOK_POST": "Post do Facebook",
       "UNKNOWN": "Origem desconhecida"

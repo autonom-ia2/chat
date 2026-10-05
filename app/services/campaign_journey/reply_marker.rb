@@ -7,6 +7,9 @@
 # - E-mail: email_campaign_recipients with the contact's e-mail, of a campaign whose replies go to
 #   the inbox (sender inbox in direct mode, reply-to inbox of the verified domain in SES mode).
 #
+# - Chat ao vivo (#993, PRD §6.8, M5): a conversation the website's live chat campaign started
+#   (conversation.campaign_id, an ongoing campaign) is marked when the visitor writes in it.
+#
 # When several campaigns were sent in the window, the most recent send is the one answered.
 # WhatsApp Oficial audience campaigns also get their campaign message in the reply's conversation
 # first (CampaignJourney::SentMessageRecorder#record_at_reply), since the send creates none.
@@ -52,6 +55,7 @@ class CampaignJourney::ReplyMarker
 
   def candidates
     inbox = @message.inbox
+    return [live_chat_candidate] if inbox.web_widget?
     return [email_candidate] if inbox.email?
     return [whatsapp_api_candidate] if inbox.api?
     return [whatsapp_candidate] if inbox.whatsapp?
@@ -71,6 +75,13 @@ class CampaignJourney::ReplyMarker
                                  .where(status: WHATSAPP_RECIPIENT_STATUSES, sent_at: window)
                                  .order(sent_at: :desc).first
     recipient && { campaign: recipient.campaign, sent_at: recipient.sent_at, recipient: recipient }
+  end
+
+  def live_chat_candidate
+    campaign = @conversation.campaign
+    return unless campaign&.ongoing? && campaign.account_id == @message.account_id
+
+    { campaign: campaign, sent_at: @conversation.created_at }
   end
 
   def whatsapp_api_candidate
