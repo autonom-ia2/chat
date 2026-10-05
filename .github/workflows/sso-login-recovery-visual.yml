@@ -1,6 +1,6 @@
 name: SSO login recovery - isolated visual gate
 
-# Deliberately independent of the manually disabled testes.yml. The PR trigger
+# Targeted visual gate, independent of the full testes.yml suite. The PR trigger
 # covers feature pushes without a duplicate push run.
 on:
   pull_request:

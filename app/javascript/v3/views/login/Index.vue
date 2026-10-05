@@ -32,6 +32,7 @@ const IMPERSONATION_URL_SEARCH_KEY = 'impersonation';
 const USER_NOT_CONFIRMED_ERROR_CODE = 'user_not_confirmed';
 const AUTH_ERROR_TOAST_DURATION = 6000;
 const AUTONOMIA_SSO_PATH = '/auth/autonomia';
+const AUTONOMIA_SSO_SOURCE = 'autonomia';
 const TERMINAL_SSO_STATUS_CODES = new Set([400, 401, 403, 410, 422]);
 
 const isSafeAppRedirect = value =>
@@ -50,6 +51,7 @@ export default {
   },
   props: {
     ssoAuthToken: { type: String, default: '' },
+    ssoSource: { type: String, default: '' },
     ssoAccountId: { type: String, default: '' },
     ssoConversationId: { type: String, default: '' },
     redirectTo: { type: String, default: '' },
@@ -284,7 +286,7 @@ export default {
             return;
           }
 
-          if (this.ssoAuthToken) {
+          if (this.ssoSource === AUTONOMIA_SSO_SOURCE) {
             this.handleSsoLoginFailure(response);
             return;
           }

@@ -24,28 +24,28 @@ async function buildUtilities() {
   return '/tmp/sso-login-recovery/visual/current-utilities.css';
 }
 
-const syntheticPage = ({ eyebrow, title, message, testId }) => `<!doctype html>
+const syntheticPage = ({
+  css,
+  utilities,
+  eyebrow,
+  title,
+  message,
+  testId,
+}) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>${title}</title>
-    <style>
-      :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f2f4ff; color: #1f2937; }
-      main { box-sizing: border-box; width: min(34rem, calc(100% - 2rem)); padding: 2.5rem; border: 1px solid #d9ddff; border-radius: 1rem; background: white; box-shadow: 0 20px 50px rgb(49 46 129 / 12%); }
-      p { margin: .75rem 0 0; line-height: 1.6; color: #596174; }
-      .eyebrow { margin: 0 0 .75rem; color: #5b5bd6; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-      h1 { margin: 0; font-size: clamp(1.65rem, 6vw, 2.25rem); line-height: 1.15; }
-      code { display: block; margin-top: 1.5rem; overflow-wrap: anywhere; border-radius: .5rem; background: #f6f7fb; padding: .75rem; color: #3f4657; }
-    </style>
+    <link rel="stylesheet" href="${css}">
+    <link rel="stylesheet" href="${utilities}">
   </head>
-  <body>
-    <main data-testid="${testId}">
-      <p class="eyebrow">${eyebrow}</p>
-      <h1>${title}</h1>
-      <p>${message}</p>
-      <code id="qa-location"></code>
+  <body class="m-0 grid min-h-screen place-items-center bg-n-brand/5 p-4 text-n-slate-12">
+    <main class="box-border w-full max-w-lg rounded-2xl bg-white p-10 shadow-xl ring-1 ring-inset ring-n-container" data-testid="${testId}">
+      <p class="m-0 mb-3 text-xs font-bold uppercase tracking-widest text-n-brand">${eyebrow}</p>
+      <h1 class="m-0 text-3xl font-bold leading-tight">${title}</h1>
+      <p class="mt-3 leading-6 text-n-slate-11">${message}</p>
+      <code class="mt-6 block break-all rounded-lg bg-n-alpha-2 p-3 text-n-slate-11" id="qa-location"></code>
     </main>
     <script>document.querySelector('#qa-location').textContent = location.pathname + location.search;</script>
   </body>
@@ -120,6 +120,8 @@ export async function startServer() {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(
         syntheticPage({
+          css,
+          utilities,
           eyebrow: 'Synthetic QA target · not real Auth',
           title: 'Returned to Auth login',
           message:
@@ -135,6 +137,8 @@ export async function startServer() {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(
         syntheticPage({
+          css,
+          utilities,
           eyebrow: 'Synthetic QA target · not a backend session',
           title: 'Chatwoot login succeeded',
           message:

@@ -37,7 +37,7 @@ class Autonomia::AuthController < ApplicationController
     redirect_to login_page_url(
       email: user.email,
       sso_auth_token: user.generate_sso_auth_token,
-      redirect_to: provisioner.post_login_redirect_path
+      redirect_to: provisioner.post_login_redirect_path.presence || state[:return_to]
     )
   rescue StandardError => e
     Rails.logger.error("[Autonomia SSO] #{e.class}: #{e.message}")
@@ -104,10 +104,7 @@ class Autonomia::AuthController < ApplicationController
   end
 
   def permitted_return_to
-    return nil if params[:return_to].blank?
-
-    value = params[:return_to].to_s
-    value.start_with?('/app') ? value : nil
+    permitted_app_path(params[:return_to])
   end
 
   def permitted_prompt
@@ -118,6 +115,7 @@ class Autonomia::AuthController < ApplicationController
     query = {
       email: email,
       sso_auth_token: sso_auth_token,
+      sso_source: sso_auth_token.present? ? 'autonomia' : nil,
       redirect_to: permitted_login_redirect(redirect_to)
     }.compact
     query[:error] = error if error.present?
@@ -125,9 +123,14 @@ class Autonomia::AuthController < ApplicationController
   end
 
   def permitted_login_redirect(value)
+    permitted_app_path(value)
+  end
+
+  def permitted_app_path(value)
     return if value.blank?
 
-    value.to_s.start_with?('/app/') ? value : nil
+    value = value.to_s
+    value if value == '/app' || value.start_with?('/app/')
   end
 
   def frontend_url

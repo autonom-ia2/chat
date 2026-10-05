@@ -44,6 +44,7 @@ RSpec.describe 'Autonomia::RegistrationCallbacksController', type: :request do
       # addresses containing '+' or other reserved characters.
       expect(params['email']).to eq(user.email)
       expect(params['sso_auth_token']).to be_present
+      expect(params['sso_source']).to eq('autonomia')
     end
 
     it 'redirects to login with an invalid registration error when callback is rejected' do

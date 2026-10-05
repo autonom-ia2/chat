@@ -62,7 +62,9 @@ const i18n = createI18n({
   missing: (language, key) => window.qa.missing.push({ language, key }),
 });
 const app = createApp(Login, {
-  ssoAuthToken: 'synthetic-one-time-token',
+  email: params.get('email') || '',
+  ssoAuthToken: params.get('sso_token') || '',
+  ssoSource: params.get('sso_source') || '',
   redirectTo: params.get('redirect_to') || '',
 });
 app.config.errorHandler = (error, instance, info) => {

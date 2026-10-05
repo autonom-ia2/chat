@@ -10,6 +10,7 @@ const buildContext = () => {
   const context = {
     email: 'agent@example.com',
     ssoAuthToken: 'one-time-sso-token',
+    ssoSource: 'autonomia',
     ssoAccountId: '',
     ssoConversationId: '',
     redirectTo: '',
@@ -122,6 +123,23 @@ describe('Autonomia SSO login failure recovery', () => {
     expect(context.ssoLoginFailure).toBeNull();
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it.each(['', 'google', 'saml', 'impersonation'])(
+    'does not send a %s token failure to Autonomia',
+    async ssoSource => {
+      login.mockRejectedValue(
+        Object.assign(new Error('Invalid login credentials'), { status: 401 })
+      );
+      const context = buildContext();
+      context.ssoSource = ssoSource;
+
+      context.submitLogin();
+      await vi.waitFor(() => expect(window.location).toBe('/app/login'));
+
+      expect(context.ssoLoginFailure).toBeNull();
+      expect(assign).not.toHaveBeenCalled();
+    }
+  );
 
   it('preserves only an internal app target in the Auth retry URL', () => {
     const context = buildContext();

@@ -14,10 +14,12 @@ Correção restrita ao handoff do Auth Autonomia para o login local do Chatwoot.
 
 ## Comportamento corrigido
 
+- O retorno especial ao Auth só é aplicado quando o handoff declara `sso_source=autonomia`; falhas de Google, SAML e impersonação mantêm o fallback neutro de login.
 - Respostas terminais `400`, `401`, `403`, `410` e `422` encerram o loading e reiniciam o Auth por `/auth/autonomia?prompt=login`.
 - Falha de rede e respostas `5xx` encerram o loading, exibem estado de erro e permitem repetir a mesma tentativa ou reiniciar no Auth.
 - Uma nova tentativa limpa o estado de erro; o login bem-sucedido mantém o redirecionamento existente.
 - A tela de erro recebida pelo callback não volta automaticamente ao SSO; o link manual força um login novo.
+- O callback restaura o `return_to` interno guardado no estado OAuth quando o provisionamento não fornece um destino mais específico.
 
 ## Revisão de segurança do redirect
 
@@ -31,6 +33,21 @@ Controles aplicados:
 - E-mail e `sso_auth_token` não são copiados para a URL de recuperação, mensagens ou logs.
 - Mensagens exibidas são traduções fixas; detalhes retornados pela API não são renderizados no estado de recuperação SSO.
 - Não houve mudança na validação do token, autorização ou criação de sessão.
+
+## Correções após revisão
+
+- A origem do token passou a integrar explicitamente o handoff (`sso_source=autonomia`), impedindo que tokens emitidos por Google, SAML ou impersonação acionem a recuperação do Auth Autonomia.
+- O `return_to` validado e assinado no estado OAuth agora é consumido no callback; um redirecionamento específico do provisionador continua tendo prioridade.
+- A validação de destino aceita `/app` e `/app/...`, mas rejeita prefixos parecidos como `/application`.
+- As páginas sintéticas do gate visual passaram a usar exclusivamente os assets e utilitários Tailwind compilados do projeto, sem bloco `<style>`.
+- O comentário do workflow foi atualizado para refletir que a suíte principal está ativa.
+
+Validação local da rodada pós-revisão:
+
+- Vitest direcionado: 2 arquivos e 19 testes aprovados, incluindo quatro origens não Autonomia.
+- ESLint direcionado: nenhum erro; somente os 24 avisos preexistentes de chaves i18n dinâmicas no componente de login.
+- Prettier, `git diff --check`, sintaxe Ruby dos dois controllers e sintaxe Node do gate visual: aprovados.
+- As specs Rails adicionadas ficaram para o CI: o host continua sem Ruby 3.4.4 e Bundler 2.5.16.
 
 ## Validação executada
 

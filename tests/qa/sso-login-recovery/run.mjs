@@ -128,6 +128,9 @@ async function runScenario(name, options, action) {
     const query = new URLSearchParams({
       locale: options.locale || 'pt_BR',
       scenario: name,
+      email: 'synthetic@example.test',
+      sso_token: 'synthetic-one-time-token',
+      sso_source: options.ssoSource || 'autonomia',
     });
     if (options.redirectTo) query.set('redirect_to', options.redirectTo);
     if (options.configuredAuthUrl) {
@@ -249,6 +252,51 @@ try {
         }
       )
     )
+  );
+
+  await check(
+    'non-Autonomia SSO failure returns to neutral login without Auth redirect',
+    async () => {
+      const record = await runScenario(
+        'other-provider-401-neutral-login',
+        { api: jsonError(401), ssoSource: 'google' },
+        async ({ page, record: scenario }) => {
+          await page.locator('form').waitFor();
+          await page.waitForTimeout(500);
+          const url = new URL(page.url());
+          assert(
+            url.href === `${origin}/app/login`,
+            `Unexpected URL: ${url.href}`
+          );
+          assert(
+            scenario.apiAttempts === 1,
+            `Expected one API attempt, got ${scenario.apiAttempts}`
+          );
+          assert(
+            scenario.authNavigations === 0,
+            'Non-Autonomia failure redirected to Autonomia Auth'
+          );
+          assert(
+            (await page.getByTestId('autonomia_sso_error').count()) === 0,
+            'Autonomia recovery state rendered for another SSO provider'
+          );
+          assert(!url.searchParams.has('email'), 'Email remained in login URL');
+          assert(
+            !url.searchParams.has('sso_token'),
+            'SSO token remained in login URL'
+          );
+          assert(
+            !url.searchParams.has('sso_source'),
+            'SSO source remained in login URL'
+          );
+          await screenshot(page, 'other-provider-401-neutral-login');
+        }
+      );
+      return {
+        apiAttempts: record.apiAttempts,
+        authNavigations: record.authNavigations,
+      };
+    }
   );
 
   await check(
