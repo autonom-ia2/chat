@@ -266,11 +266,18 @@ const bind = (key, binding) =>
 const setDefault = (key, value) =>
   update({ defaults: { ...draft.value.defaults, [key]: value } });
 
-watch(() => [template.value?.id, draft.value.audienceId], applySuggestions);
+// One source per value: a getter returning a new array would fire on every draft update.
 watch(
-  () => [draft.value.audienceId, draft.value.bindings, draft.value.defaults],
-  refreshCoverage,
-  { deep: true }
+  [() => template.value?.id, () => draft.value.audienceId],
+  applySuggestions
+);
+watch(
+  [
+    () => draft.value.audienceId,
+    () => JSON.stringify(draft.value.bindings),
+    () => JSON.stringify(draft.value.defaults),
+  ],
+  refreshCoverage
 );
 watch(() => draft.value.audienceId, loadSample);
 watch(draft, value => saveDraft(accountId.value, value), { deep: true });
