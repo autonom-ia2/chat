@@ -19,8 +19,10 @@ class CampaignImports::AudienceReachability
     @account = campaign_import.account
   end
 
+  # SMS (#1004) reaches the same mobiles as WhatsApp, with its own switch (absent = off).
   def perform
-    { 'whatsapp' => whatsapp, 'email' => email }
+    whatsapp_result = whatsapp
+    { 'whatsapp' => whatsapp_result, 'sms' => sms(whatsapp_result['opted_out']), 'email' => email }
   end
 
   private
@@ -44,6 +46,13 @@ class CampaignImports::AudienceReachability
     hashes = opted_out_phone_hashes
     opted_out = hashes.empty? ? 0 : rows.where(normalized_phone_hash: hashes).count
     summary('whatsapp', 'opted_out' => opted_out)
+  end
+
+  def sms(opted_out)
+    channels = CampaignJourney::AudienceContacts.with_sms_channel(@campaign_import.channels.to_h)
+    total = channels.dig('sms', 'count').to_i
+    receive = channels.dig('sms', 'enabled') == true ? [total - opted_out, 0].max : 0
+    { 'total' => total, 'receive' => receive, 'opted_out' => opted_out }
   end
 
   def opted_out_phone_hashes

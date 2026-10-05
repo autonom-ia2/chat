@@ -5,9 +5,10 @@
 #   → missing_variables (a variable without value and without default, "falta {{N}}").
 # Eligibility is CampaignJourney::AudienceContacts (row consent: the row had that mobile/e-mail
 # and the contact still has it). Variables: CampaignJourney::VariableBindings (WhatsApp Oficial)
-# and CampaignJourney::WhatsappApiAudience (WhatsApp API tokens). Nothing is written.
+# CampaignJourney::WhatsappApiAudience (WhatsApp API tokens) and CampaignJourney::SmsMessage (SMS
+# tokens, #1004: same phone rule as WhatsApp, its own channel switch). Nothing is written.
 class CampaignJourney::RecipientPreview
-  CHANNELS = %w[whatsapp_cloud whatsapp_api email].freeze
+  CHANNELS = %w[whatsapp_cloud whatsapp_api sms email].freeze
   UNSUBSCRIBE_REASONS = %w[unsubscribe].freeze
   BOUNCE_REASONS = %w[hard_bounce].freeze
 
@@ -42,7 +43,7 @@ class CampaignJourney::RecipientPreview
 
   def whatsapp_preview
     ids = CampaignJourney::AudienceContacts.whatsapp_contact_ids(@campaign_import, account: @account)
-    return result(ids.size, 'channel_disabled' => ids.size) unless CampaignJourney::AudienceContacts.whatsapp_enabled?(@campaign_import)
+    return result(ids.size, 'channel_disabled' => ids.size) unless phone_channel_enabled?
 
     contacts = @account.contacts.where(id: ids)
     opted_out = contacts.where.not(opted_out_at: nil).count
@@ -63,7 +64,17 @@ class CampaignJourney::RecipientPreview
     [missing, by_variable]
   end
 
+  def phone_channel_enabled?
+    return CampaignJourney::AudienceContacts.sms_enabled?(@campaign_import) if @channel == 'sms'
+
+    CampaignJourney::AudienceContacts.whatsapp_enabled?(@campaign_import)
+  end
+
   def missing_keys(contact)
+    if @channel == 'sms'
+      _text, missing = sms_message.render_for(contact)
+      return missing
+    end
     if @channel == 'whatsapp_api'
       _values, missing = CampaignJourney::WhatsappApiAudience.resolve(api_campaign, api_link, contact)
       return missing
@@ -76,6 +87,10 @@ class CampaignJourney::RecipientPreview
 
   def bindings
     @bindings ||= CampaignJourney::VariableBindings.new(@variable_bindings, @variable_defaults)
+  end
+
+  def sms_message
+    @sms_message ||= CampaignJourney::SmsMessage.new(@message_body, campaign_import: @campaign_import, defaults: @variable_defaults)
   end
 
   def api_campaign

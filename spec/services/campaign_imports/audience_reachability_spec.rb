@@ -33,6 +33,8 @@ RSpec.describe CampaignImports::AudienceReachability, :aggregate_failures do
 
     expect(campaign_import).to be_ready_to_confirm
     expect(result['whatsapp']).to eq('total' => 4, 'receive' => 3, 'opted_out' => 1)
+    # SMS (#1004): same mobiles, off until switched on.
+    expect(result['sms']).to eq('total' => 4, 'receive' => 0, 'opted_out' => 1)
     expect(result['email']).to eq('total' => 4, 'receive' => 1, 'unsubscribed' => 1, 'bounced' => 1, 'suppressed' => 1)
   end
 

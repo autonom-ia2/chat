@@ -61,6 +61,16 @@ RSpec.describe 'Journey recipient preview (#993)', :aggregate_failures, type: :r
                                'missing_by_variable' => { 'vencimento' => 1 })
   end
 
+  it 'SMS (#1004): same phone rule, its own switch and the message tokens' do
+    payload = preview(channel: 'sms', message_body: 'Oi {{contact.first_name}}, vence {{publico.vencimento}}')
+    expect(payload).to include('total' => 3, 'receive' => 0, 'reasons' => { 'channel_disabled' => 3 })
+
+    audience.update!(channels: audience.channels.merge('sms' => { 'enabled' => true, 'count' => 3 }))
+    payload = preview(channel: 'sms', message_body: 'Oi {{contact.first_name}}, vence {{publico.vencimento}}')
+    expect(payload).to include('total' => 3, 'receive' => 1, 'reasons' => { 'opted_out' => 1, 'missing_variables' => 1 },
+                               'missing_by_variable' => { 'vencimento' => 1 })
+  end
+
   it 'e-mail: refused and unsubscribed are out' do
     EmailSuppression.create!(account: account, email: 'caio@gama.com.br', reason: 'unsubscribe', source: 'manual')
 
@@ -78,7 +88,7 @@ RSpec.describe 'Journey recipient preview (#993)', :aggregate_failures, type: :r
   end
 
   it 'refuses an unknown channel and needs campaign_manage' do
-    preview(channel: 'sms')
+    preview(channel: 'telegram')
     expect(response).to have_http_status(:unprocessable_entity)
 
     agent = User.create!(name: 'Agente', email: "agente-#{SecureRandom.hex(4)}@example.com", password: 'Passw0rd!23', confirmed_at: Time.current)
