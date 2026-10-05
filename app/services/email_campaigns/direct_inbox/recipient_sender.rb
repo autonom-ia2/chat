@@ -76,7 +76,7 @@ module EmailCampaigns
 
       def render(recipient)
         renderer = ::EmailCampaigns::TemplateRenderer.new(recipient)
-        { subject: renderer.render(@campaign.subject), body_html: renderer.render(@campaign.body_html) }
+        { subject: renderer.render(@campaign.subject), body_html: renderer.render(@campaign.body_html, html: true) }
       end
 
       def unsubscribe_headers(recipient)

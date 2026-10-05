@@ -34,7 +34,8 @@ class EmailCampaigns::ReplyTo
   def inbox_address(inbox)
     return unless inbox&.account_id == @campaign.account_id && inbox.channel.is_a?(Channel::Email)
 
-    inbox.channel.email.to_s.strip.downcase.presence
+    address = inbox.channel.email.to_s.strip.downcase
+    address if address.match?(EmailCampaign::EMAIL_REGEX)
   end
 
   def sender_address

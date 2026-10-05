@@ -117,7 +117,7 @@ module EmailCampaigns
     def render(recipient)
       renderer = EmailCampaigns::TemplateRenderer.new(recipient)
       { subject: renderer.render(@campaign.subject),
-        body_html: inject_preheader(renderer.render(@campaign.body_html), renderer.render(@campaign.preheader)) }
+        body_html: inject_preheader(renderer.render(@campaign.body_html, html: true), renderer.render(@campaign.preheader, html: true)) }
     end
 
     # Inject a hidden preheader snippet right after <body> (or at the top of the html) so inbox

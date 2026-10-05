@@ -81,6 +81,22 @@ RSpec.describe 'E-mail campaign test send (#999, D8/L6)', :aggregate_failures, t
     expect(response.parsed_body).to eq('error' => 'email_campaign.test_send_failed')
   end
 
+  # #999 review B7: 10 test sends per user and campaign in an hour.
+  it 'limits test sends per user and campaign' do
+    capturing(EmailCampaigns::Ses::Sender)
+    Redis::Alfred.delete("email_campaign_test_send:#{admin.id}:#{campaign.id}")
+
+    10.times { send_test }
+    expect(response).to have_http_status(:ok)
+    send_test
+
+    expect(response).to have_http_status(:too_many_requests)
+    expect(response.parsed_body).to eq('error' => 'email_campaign.test_send_rate_limited')
+    expect(delivered.size).to eq(10)
+  ensure
+    Redis::Alfred.delete("email_campaign_test_send:#{admin.id}:#{campaign.id}")
+  end
+
   it 'refuses any address other than the logged-in user, and a campaign without a ready sender' do
     capturing(EmailCampaigns::Ses::Sender)
     send_test(to_email: 'outra@empresa.com.br')
