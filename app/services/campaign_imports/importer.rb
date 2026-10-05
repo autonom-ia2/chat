@@ -63,12 +63,14 @@ module CampaignImports
     def import_block(block, label_records)
       import_rows = campaign_import.campaign_import_rows.where(row_number: block.pluck(:row_number)).index_by(&:row_number)
       ActiveRecord::Base.transaction do
-        block.each do |row|
+        imported = block.filter_map do |row|
           import_row = import_rows.fetch(row[:row_number])
           next if import_row.status_imported?
 
-          import_one(row, import_row, label_records)
+          contact = import_one(row, import_row, label_records)
+          [contact.id, row_label_titles(row, label_records)] if contact
         end
+        BulkContactLabeler.new(imported).perform
       end
     end
 
@@ -78,32 +80,24 @@ module CampaignImports
         was_existing = contact.present?
         contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number])
         contact.update!(name: row[:name]) if contact.name.blank? && row[:name].present?
-        apply_labels!(contact, label_records[:base], label_records[:batches].fetch(row[:batch_index]))
         mark_row_imported!(import_row, row, contact, was_existing, label_records)
+        contact
       end
     rescue StandardError => e
       import_row.update!(
         status: :import_failed,
         error_messages: Array(import_row.error_messages) + ["import_failed:#{e.class.name}"]
       )
-    end
-
-    # Brazilian mobiles may be stored with or without the ninth digit. The exact number
-    # wins; otherwise the first stored variant is reused instead of creating a duplicate.
-    def find_existing_contact(phone_number)
-      candidates = phone_candidates(phone_number)
-      contacts = account.contacts.where(phone_number: candidates).to_a
-      candidates.each do |candidate|
-        match = contacts.find { |contact| contact.phone_number == candidate }
-        return match if match
-      end
       nil
     end
 
-    def phone_candidates(phone_number)
-      digits = phone_number.delete_prefix('+')
-      variants = Whatsapp::PhoneNormalizers::BrazilPhoneNormalizer.new.contact_candidates(digits)
-      ([phone_number] + variants.map { |variant| "+#{variant}" }).uniq
+    def row_label_titles(row, label_records)
+      [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title]
+    end
+
+    def find_existing_contact(phone_number)
+      @contact_matcher ||= ContactMatcher.new(account)
+      @contact_matcher.find(phone_number)
     end
 
     def ensure_labels!
@@ -143,17 +137,11 @@ module CampaignImports
       end
     end
 
-    def apply_labels!(contact, base_label, batch_label)
-      contact.label_list.add(base_label.title)
-      contact.label_list.add(batch_label.title)
-      contact.save!
-    end
-
     def mark_row_imported!(import_row, row, contact, was_existing, label_records)
       import_row.update!(
         contact_id: contact.id,
         was_existing_contact: was_existing,
-        labels_applied: [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title],
+        labels_applied: row_label_titles(row, label_records),
         batch_index: row[:batch_index],
         status: :imported
       )
