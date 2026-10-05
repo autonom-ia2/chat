@@ -149,6 +149,7 @@
         "TRACKED_LINK": "Tracked link",
         "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
         "CAMPAIGN_EMAIL": "Email campaign",
+        "CAMPAIGN_SMS": "SMS campaign",
         "UNKNOWN": "Unknown"
       }
     }
@@ -206,6 +207,7 @@
       "TRACKED_LINK": "Tracked link",
       "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
       "CAMPAIGN_EMAIL": "Email campaign",
+      "CAMPAIGN_SMS": "SMS campaign",
       "INSTAGRAM_POST": "Instagram post",
       "FACEBOOK_POST": "Facebook post",
       "UNKNOWN": "Unknown origin"
