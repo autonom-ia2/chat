@@ -74,6 +74,19 @@ class Rack::Attack
     req.ip if req.get? && req.path_without_extensions.start_with?('/l/')
   end
 
+  # Avisos de clique das páginas (#1011): uma pessoa clica poucas vezes; volume acima disso é abuso.
+  throttle('public_tracked_link_signals/ip', limit: 30, period: 1.minute) do |req|
+    req.ip if req.post? && req.path.start_with?('/l/')
+  end
+
+  # O header Origin não autentica (fora do navegador é forjável): com poucos IPs daria para
+  # inflar os cliques de um link e travar a inferência do CA-1.5. Limite por LINK, somado ao
+  # teto diário do Public::TrackedLinkSignalsController.
+  throttle('public_tracked_link_signals/code',
+           limit: ENV.fetch('TRACKED_LINK_SIGNALS_PER_LINK_LIMIT', '120').to_i, period: 1.minute) do |req|
+    Ctwa::TrackedLink.signal_code_from_path(req.path) if req.post?
+  end
+
   throttle('public_google_conversions/ip', limit: 60, period: 1.minute) do |req|
     req.ip if req.get? && req.path.start_with?('/google_conversions/')
   end

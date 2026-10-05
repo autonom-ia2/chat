@@ -5,6 +5,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
+import TrackedLinkWebsitePreview from './TrackedLinkWebsitePreview.vue';
+import { parseAllowedOrigins } from './trackedLinkWebsite';
 
 const props = defineProps({
   inboxes: { type: Array, required: true },
@@ -14,10 +16,18 @@ const props = defineProps({
 const emit = defineEmits(['create', 'open']);
 const { t } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
+const USAGES = [
+  { id: 'direct', icon: 'i-lucide-qr-code' },
+  { id: 'website', icon: 'i-lucide-globe' },
+];
 const dialog = ref(null);
+const usage = ref('direct');
 const name = ref('');
 const inboxId = ref('');
 const message = ref('');
+const originsText = ref('');
+const originsTouched = ref(false);
+const isWebsite = computed(() => usage.value === 'website');
 const options = computed(() =>
   props.inboxes.map(inbox => ({
     value: inbox.id,
@@ -27,26 +37,46 @@ const options = computed(() =>
 const inboxName = computed(
   () => props.inboxes.find(inbox => inbox.id === inboxId.value)?.name
 );
+const origins = computed(() => parseAllowedOrigins(originsText.value));
+const originsError = computed(() => {
+  const parsed = origins.value;
+  if (parsed.invalid.length) {
+    return t(`${NS}.ORIGINS_INVALID`, { list: parsed.invalid.join(', ') });
+  }
+  if (parsed.isTooMany) return t(`${NS}.ORIGINS_TOO_MANY`);
+  if (parsed.isEmpty) return t(`${NS}.ORIGINS_REQUIRED`);
+  return '';
+});
 const canCreate = computed(
-  () => name.value.trim() && inboxId.value && !props.isSaving
+  () =>
+    name.value.trim() &&
+    inboxId.value &&
+    !props.isSaving &&
+    (!isWebsite.value || origins.value.isValid)
 );
 const close = () => dialog.value.close();
 const open = async () => {
+  usage.value = 'direct';
   name.value = '';
   inboxId.value = '';
   message.value = '';
+  originsText.value = '';
+  originsTouched.value = false;
   emit('open');
   dialog.value.showModal();
   await nextTick();
-  dialog.value.querySelector('input').focus();
+  dialog.value.querySelector('input:checked').focus();
 };
 const create = () => {
+  originsTouched.value = true;
   if (!canCreate.value) return;
-  emit('create', {
-    name: name.value.trim(),
-    inbox_id: inboxId.value,
-    prefilled_text: message.value.trim(),
-  });
+  const base = { name: name.value.trim(), inbox_id: inboxId.value };
+  emit(
+    'create',
+    isWebsite.value
+      ? { ...base, usage: 'website', allowed_origins: origins.value.origins }
+      : { ...base, usage: 'direct', prefilled_text: message.value.trim() }
+  );
 };
 const cancel = event => {
   if (props.isSaving) event.preventDefault();
@@ -89,18 +119,74 @@ defineExpose({ open, close });
         </header>
         <div class="grid md:grid-cols-[minmax(0,1fr)_22rem]">
           <div class="flex flex-col gap-6 p-7 min-w-0">
-            <div>
-              <h3 class="m-0 text-base font-semibold">
-                {{ t(`${NS}.CREATE_HEADING`) }}
-              </h3>
-              <p class="m-0 mt-1 text-sm text-n-slate-11">
-                {{ t(`${NS}.CREATE_HINT`) }}
-              </p>
-            </div>
+            <fieldset class="m-0 min-w-0 border-0 p-0">
+              <legend class="mb-3 p-0 text-base font-semibold">
+                {{ t(`${NS}.USAGE_LEGEND`) }}
+              </legend>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label
+                  v-for="option in USAGES"
+                  :key="option.id"
+                  class="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl p-4 outline outline-1 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
+                  :class="
+                    usage === option.id
+                      ? 'bg-n-blue-2 outline-n-blue-9'
+                      : 'bg-n-solid-1 outline-n-weak hover:outline-n-strong'
+                  "
+                >
+                  <input
+                    v-model="usage"
+                    type="radio"
+                    name="tracked-link-usage"
+                    :value="option.id"
+                    :disabled="isSaving"
+                    class="sr-only"
+                  />
+                  <span
+                    class="flex size-9 shrink-0 items-center justify-center rounded-lg"
+                    :class="
+                      usage === option.id
+                        ? 'bg-n-solid-1 text-n-blue-11'
+                        : 'bg-n-alpha-2 text-n-slate-11'
+                    "
+                  >
+                    <span class="size-5" :class="option.icon" />
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-semibold">
+                      {{ t(`${NS}.USAGE_${option.id.toUpperCase()}`) }}
+                    </span>
+                    <span class="mt-1 block text-xs text-n-slate-11">
+                      {{ t(`${NS}.USAGE_${option.id.toUpperCase()}_HINT`) }}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border"
+                    :class="
+                      usage === option.id
+                        ? 'border-n-blue-9 bg-n-blue-9'
+                        : 'border-n-slate-7'
+                    "
+                  >
+                    <span
+                      v-if="usage === option.id"
+                      class="size-1.5 rounded-full bg-white"
+                    />
+                  </span>
+                </label>
+              </div>
+            </fieldset>
             <Input
               v-model="name"
               :label="t(`${NS}.NAME`)"
-              :placeholder="t(`${NS}.NAME_PLACEHOLDER`)"
+              :placeholder="
+                t(
+                  isWebsite
+                    ? `${NS}.WEBSITE_NAME_PLACEHOLDER`
+                    : `${NS}.NAME_PLACEHOLDER`
+                )
+              "
               required
               :disabled="isSaving"
             />
@@ -123,7 +209,48 @@ defineExpose({ open, close });
                 {{ t(`${NS}.DESTINATION_HINT`) }}
               </p>
             </div>
-            <div>
+            <div v-if="isWebsite">
+              <label
+                for="tracked-link-origins"
+                class="block mb-2 text-sm font-medium"
+              >
+                {{ t(`${NS}.ORIGINS_LABEL`) }}
+              </label>
+              <textarea
+                id="tracked-link-origins"
+                v-model="originsText"
+                rows="3"
+                spellcheck="false"
+                autocapitalize="off"
+                :placeholder="t(`${NS}.ORIGINS_PLACEHOLDER`)"
+                :disabled="isSaving"
+                :aria-invalid="originsTouched && !!originsError"
+                aria-describedby="tracked-link-origins-hint"
+                class="w-full rounded-lg border bg-n-solid-2 px-3 py-3 font-mono text-sm text-n-slate-12 focus:ring-2 focus:ring-n-brand focus:outline-none"
+                :class="
+                  originsTouched && originsError
+                    ? 'border-n-ruby-8'
+                    : 'border-n-weak'
+                "
+                @blur="originsTouched = true"
+              />
+              <p
+                id="tracked-link-origins-hint"
+                class="m-0 mt-2 text-xs"
+                :class="
+                  originsTouched && originsError
+                    ? 'text-n-ruby-11'
+                    : 'text-n-slate-11'
+                "
+              >
+                {{
+                  originsTouched && originsError
+                    ? originsError
+                    : t(`${NS}.ORIGINS_HINT`)
+                }}
+              </p>
+            </div>
+            <div v-else>
               <label
                 for="tracked-link-message"
                 class="block mb-2 text-sm font-medium"
@@ -146,45 +273,64 @@ defineExpose({ open, close });
               {{ error }}
             </p>
           </div>
-          <aside class="p-7 bg-n-slate-2 md:border-s border-n-weak">
+          <!-- The website preview is illustrative and tall: below md it would push
+               the Create button off screen, so phones skip it. QR stays as before. -->
+          <aside
+            class="p-7 bg-n-slate-2 md:border-s border-n-weak"
+            :class="{ 'hidden md:block': isWebsite }"
+          >
             <p class="m-0 text-xs font-medium tracking-wide text-n-slate-11">
               {{ t(`${NS}.PREVIEW`) }}
             </p>
-            <div
-              class="mt-5 p-5 text-center rounded-xl border border-n-weak bg-n-solid-1"
-            >
+            <TrackedLinkWebsitePreview
+              v-if="isWebsite"
+              :origin="origins.origins[0]"
+              :inbox-name="inboxName"
+              class="mt-5"
+            />
+            <template v-else>
               <div
-                class="mx-auto flex items-center justify-center size-36 rounded-xl bg-white text-slate-800"
+                class="mt-5 p-5 text-center rounded-xl border border-n-weak bg-n-solid-1"
               >
-                <span class="i-lucide-qr-code size-24" />
+                <div
+                  class="mx-auto flex items-center justify-center size-36 rounded-xl bg-white text-slate-800"
+                >
+                  <span class="i-lucide-qr-code size-24" />
+                </div>
+                <h3 class="m-0 mt-4 text-base font-semibold break-words">
+                  {{ name || t(`${NS}.YOUR_CAMPAIGN`) }}
+                </h3>
+                <p class="m-0 mt-1 text-xs text-n-slate-11">
+                  {{ t(`${NS}.QR_AFTER_CREATE`) }}
+                </p>
               </div>
-              <h3 class="m-0 mt-4 text-base font-semibold break-words">
-                {{ name || t(`${NS}.YOUR_CAMPAIGN`) }}
-              </h3>
-              <p class="m-0 mt-1 text-xs text-n-slate-11">
-                {{ t(`${NS}.QR_AFTER_CREATE`) }}
-              </p>
-            </div>
-            <div class="mt-6 rounded-xl bg-n-teal-3 p-4">
-              <p class="m-0 mb-3 text-xs font-medium text-n-teal-11">
-                {{ inboxName || t(`${NS}.DESTINATION`) }}
-              </p>
-              <p
-                class="m-0 p-3 rounded-lg rounded-ss-none bg-n-solid-1 text-sm text-n-slate-12 whitespace-pre-wrap break-words"
-              >
-                {{ message || t(`${NS}.MESSAGE_PLACEHOLDER`) }}
-              </p>
-              <p class="m-0 mt-3 text-xs text-n-slate-11">
-                {{ t(`${NS}.MESSAGE_PREVIEW`) }}
-              </p>
-            </div>
+              <div class="mt-6 rounded-xl bg-n-teal-3 p-4">
+                <p class="m-0 mb-3 text-xs font-medium text-n-teal-11">
+                  {{ inboxName || t(`${NS}.DESTINATION`) }}
+                </p>
+                <p
+                  class="m-0 p-3 rounded-lg rounded-ss-none bg-n-solid-1 text-sm text-n-slate-12 whitespace-pre-wrap break-words"
+                >
+                  {{ message || t(`${NS}.MESSAGE_PLACEHOLDER`) }}
+                </p>
+                <p class="m-0 mt-3 text-xs text-n-slate-11">
+                  {{ t(`${NS}.MESSAGE_PREVIEW`) }}
+                </p>
+              </div>
+            </template>
           </aside>
         </div>
         <footer
           class="flex flex-wrap items-center justify-between gap-3 px-7 py-5 border-t border-n-weak"
         >
           <p class="m-0 text-xs text-n-slate-11">
-            {{ t(`${NS}.CREATED_TOGETHER`) }}
+            {{
+              t(
+                isWebsite
+                  ? `${NS}.WEBSITE_CREATED_NOTE`
+                  : `${NS}.CREATED_TOGETHER`
+              )
+            }}
           </p>
           <div class="flex gap-3">
             <Button
@@ -196,7 +342,7 @@ defineExpose({ open, close });
               @click="close"
             />
             <Button
-              :label="t(`${NS}.CREATE`)"
+              :label="t(isWebsite ? `${NS}.CREATE_WEBSITE` : `${NS}.CREATE`)"
               type="submit"
               :disabled="!canCreate"
               :is-loading="isSaving"

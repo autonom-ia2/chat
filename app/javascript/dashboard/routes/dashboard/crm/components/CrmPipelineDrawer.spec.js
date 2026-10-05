@@ -133,3 +133,53 @@ describe('CrmPipelineDrawer form reset vs realtime churn', () => {
     wrapper.unmount();
   });
 });
+
+describe('CrmPipelineDrawer website Pixel', () => {
+  const metaPipeline = {
+    id: 1,
+    name: 'Viagem',
+    metadata: {
+      meta_sync: {
+        enabled: true,
+        dataset_id: '999',
+        pixel_id: '2164882667623689',
+      },
+    },
+  };
+
+  it('loads the Pixel id and sends it in meta_sync', async () => {
+    const wrapper = mountDrawer({ pipeline: metaPipeline });
+    expect(wrapper.vm.form.metaSync.pixelId).toBe('2164882667623689');
+
+    await wrapper.vm.onSubmit();
+
+    const [[payload]] = wrapper.emitted('save');
+    expect(payload.pipeline.meta_sync).toMatchObject({
+      dataset_id: '999',
+      pixel_id: '2164882667623689',
+    });
+  });
+
+  it('keeps only digits, up to 20, when the Pixel id is typed or pasted', async () => {
+    const wrapper = mountDrawer({ pipeline: metaPipeline });
+    wrapper.vm.view = 'adjustments';
+    await wrapper.vm.$nextTick();
+
+    const input = wrapper.get('input[inputmode="numeric"]');
+    await input.setValue(' 2164 8826-6762 3689abc 12345678 ');
+
+    expect(wrapper.vm.form.metaSync.pixelId).toBe('21648826676236891234');
+    expect(input.element.value).toBe('21648826676236891234');
+  });
+
+  it('sends null when the Pixel id is empty', async () => {
+    const wrapper = mountDrawer({
+      pipeline: { id: 1, name: 'Funil', metadata: { meta_sync: {} } },
+    });
+
+    await wrapper.vm.onSubmit();
+
+    const [[payload]] = wrapper.emitted('save');
+    expect(payload.pipeline.meta_sync.pixel_id).toBeNull();
+  });
+});

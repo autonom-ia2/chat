@@ -54,6 +54,9 @@ Rails.application.routes.draw do
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
   end
 
+  # Aviso de clique de uma página (modo site do link, #1011): sendBeacon + preflight.
+  post '/l/:code/clicks', to: 'public/tracked_link_signals#create', as: :public_tracked_link_signals
+  match '/l/:code/clicks', to: 'public/tracked_link_signals#preflight', via: :options
   get '/google_conversions/:token.csv', to: 'public/google_conversions#show', as: :public_google_conversions
   get '/health', to: 'health#show'
   get '/robots.txt', to: 'robots#show', format: false
@@ -203,7 +206,7 @@ Rails.application.routes.draw do
           # Opções de campanha CTWA (filtros de Conversas e Kanban) — fora do
           # namespace :crm de propósito: não depende do gate ensure_crm_enabled.
           resources :ctwa_campaigns, only: [:index]
-          resources :ctwa_tracked_links, only: [:index, :create, :destroy]
+          resources :ctwa_tracked_links, only: [:index, :create, :update, :destroy]
           namespace :crm do
             get 'contacts/:contact_id/opportunities', to: 'contact_opportunities#index'
             get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?

@@ -30,8 +30,10 @@ import CrmCardSummaryPanel from './CrmCardSummaryPanel.vue';
 import CrmCardAutoFollowupStatus from './CrmCardAutoFollowupStatus.vue';
 import WhatsappApiMessageTemplatesAPI from 'dashboard/api/whatsappApiMessageTemplates';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
-import { useCrmOrigin } from '../composables/useCrmOrigin';
+import { useCrmOrigin, hasWebsiteOrigin } from '../composables/useCrmOrigin';
 import CrmCardPill from './CrmCardPill.vue';
+import CrmCardMetaConversion from './CrmCardMetaConversion.vue';
+import CrmCardLeadForm from './CrmCardLeadForm.vue';
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -86,8 +88,12 @@ const scheduleMeeting = () => {
 };
 
 const { t, locale } = useI18n();
-const { originFromCampaigns, humanizedOriginLabel, formatOriginTitle } =
-  useCrmOrigin();
+const {
+  originFromCampaigns,
+  humanizedOriginLabel,
+  formatOriginTitle,
+  adHierarchyLines,
+} = useCrmOrigin();
 
 const store = useStore();
 const { canManageRelationshipRecords } = useRelationshipPermissions();
@@ -286,6 +292,10 @@ const linkedConversationDisplayId = computed(
   () => props.card?.conversation?.display_id || ''
 );
 const originPill = computed(() => originFromCampaigns(props.card?.campaigns));
+const originAdLines = computed(() =>
+  originPill.value ? adHierarchyLines(originPill.value) : []
+);
+const isWebsiteOrigin = computed(() => hasWebsiteOrigin(originPill.value));
 const hasLinkedContext = computed(
   () =>
     isEditing.value &&
@@ -418,24 +428,6 @@ const aiFilledValue = computed(() => props.card?.ai_value?.source === 'ai');
 // fetched when the drawer opens, reset on close/card change so no stale badge shows.
 const cardId = computed(() => props.card?.id || '');
 const metaConversion = ref(null);
-const metaConversionPill = computed(() => {
-  const pills = {
-    accepted: {
-      class: 'bg-n-teal-3 text-n-teal-11',
-      label: 'CRM_KANBAN.META_SYNC_STATUS.CARD_SENT',
-    },
-    pending: {
-      class: 'bg-n-amber-3 text-n-amber-11',
-      label: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_PENDING',
-    },
-    error: {
-      class: 'bg-n-ruby-3 text-n-ruby-11',
-      label: 'CRM_KANBAN.META_SYNC_STATUS.LABEL_ERROR',
-    },
-  };
-  // 'skipped' or no row → no badge, keep the drawer uncluttered.
-  return pills[metaConversion.value?.status] || null;
-});
 
 const showWinDialog = ref(false);
 const showLoseDialog = ref(false);
@@ -1633,30 +1625,11 @@ useFixedPanelPresence(computed(() => props.show));
             />
           </div>
         </div>
-        <div
-          v-if="metaConversionPill"
-          class="flex flex-wrap items-center gap-2 mb-5"
-        >
-          <span class="text-xs font-medium text-n-slate-11">
-            {{ t('CRM_KANBAN.META_SYNC_STATUS.CARD_TITLE') }}
-          </span>
-          <span
-            class="px-2 py-1 text-xs font-medium rounded-md"
-            :class="metaConversionPill.class"
-          >
-            {{ t(metaConversionPill.label) }}
-          </span>
-          <span
-            v-if="metaConversion?.event_type"
-            class="w-full text-xs text-n-slate-10"
-          >
-            {{
-              t('CRM_KANBAN.META_SYNC_STATUS.CARD_EVENT', {
-                event: metaConversion.event_type,
-              })
-            }}
-          </span>
-        </div>
+        <CrmCardMetaConversion
+          :conversion="metaConversion"
+          :from-website="isWebsiteOrigin"
+          class="mb-5"
+        />
         <div v-if="isEditing" class="mb-5 grid gap-3">
           <div
             role="tablist"
@@ -1786,7 +1759,10 @@ useFixedPanelPresence(computed(() => props.show));
               />
             </div>
 
-            <div v-if="originPill" class="flex min-w-0 items-center">
+            <div
+              v-if="originPill"
+              class="grid min-w-0 justify-items-start gap-1"
+            >
               <CrmCardPill
                 :icon="originPill.icon"
                 tone="teal"
@@ -1799,7 +1775,25 @@ useFixedPanelPresence(computed(() => props.show));
                   </span>
                 </template>
               </CrmCardPill>
+              <ul
+                v-if="originAdLines.length"
+                data-testid="crm-origin-ad-hierarchy"
+                class="grid min-w-0 gap-0.5 text-xs text-n-slate-11"
+              >
+                <li
+                  v-for="line in originAdLines"
+                  :key="line"
+                  class="break-words"
+                >
+                  {{ line }}
+                </li>
+              </ul>
             </div>
+
+            <CrmCardLeadForm
+              v-if="card?.lead_form"
+              :lead-form="card.lead_form"
+            />
 
             <div class="grid divide-y divide-n-weak text-sm">
               <div

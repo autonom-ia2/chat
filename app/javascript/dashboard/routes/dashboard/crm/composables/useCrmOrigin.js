@@ -33,6 +33,9 @@ const UNKNOWN_SOURCE_META = {
   labelKey: 'CRM_KANBAN.ORIGIN.UNKNOWN',
 };
 
+// Landing page touches (#1011) carry `site:<link>:<campaign>` as source_id.
+const WEBSITE_SOURCE_ID_PREFIX = 'site:';
+
 const normalizeSource = source => String(source || FALLBACK_SOURCE).trim();
 
 const sourceMetaFor = source =>
@@ -61,8 +64,19 @@ export const buildCrmOrigin = campaign => {
     sourceId: campaign.source_id,
     sourceType: campaign.source_type,
     sourceUrl: String(campaign.source_url || '').trim(),
+    // Landing page clicks (#1011) carry the Meta names through the UTMs pasted
+    // in the ad: utm_campaign = campaign, utm_term = ad set, utm_content = ad.
+    campaign: String(campaign.utm_campaign || '').trim(),
+    adset: String(campaign.utm_term || '').trim(),
+    ad: String(campaign.utm_content || '').trim(),
+    fromWebsite: String(campaign.source_id || '').startsWith(
+      WEBSITE_SOURCE_ID_PREFIX
+    ),
   };
 };
+
+export const hasWebsiteOrigin = origin =>
+  (origin?.origins || (origin ? [origin] : [])).some(item => item.fromWebsite);
 
 export const buildCrmOriginFromCampaigns = campaigns => {
   const origins = Array.isArray(campaigns)
@@ -138,12 +152,27 @@ export function useCrmOrigin() {
     return sourceUrlLabel(origin) || label;
   };
 
+  // One translated line per Meta level the ad sent: campaign, ad set, ad.
+  const adHierarchyLines = origin =>
+    [
+      ['campaign', 'CRM_KANBAN.ORIGIN.CAMPAIGN_PART'],
+      ['adset', 'CRM_KANBAN.ORIGIN.ADSET_PART'],
+      ['ad', 'CRM_KANBAN.ORIGIN.AD_PART'],
+    ]
+      .filter(([field]) => origin?.[field])
+      .map(([field, key]) => t(key, { name: origin[field] }));
+
+  const adHierarchyLabel = origin => adHierarchyLines(origin).join(' · ');
+
   const formatOriginTitle = origin => {
     if (!origin) return '';
     const origins = origin.origins || [origin];
     return origins
-      .map(item => item.sourceUrl || humanizedOriginLabel(item))
-      .join(' · ');
+      .map(
+        item =>
+          adHierarchyLabel(item) || item.sourceUrl || humanizedOriginLabel(item)
+      )
+      .join(origins.some(adHierarchyLabel) ? '\n' : ' · ');
   };
 
   return {
@@ -151,5 +180,6 @@ export function useCrmOrigin() {
     originFromCampaigns: buildCrmOriginFromCampaigns,
     humanizedOriginLabel,
     formatOriginTitle,
+    adHierarchyLines,
   };
 }

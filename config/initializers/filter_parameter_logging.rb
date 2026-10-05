@@ -7,7 +7,11 @@ Rails.application.config.filter_parameters += [
   :phone, :phone_number, :raw_phone, :normalized_phone,
   :code, :state, :signed_request, :error_description, :fb_dtsg, :lsd, :cookie, :session_json,
   # O que a pessoa digita na busca da Central (#977) pode trazer dado de cliente: não vai para o log.
-  :termo
+  :termo,
+  # Aviso de clique das páginas (#1011): formulário do cliente (lead, lead_form, lead_data) e
+  # sinais da Meta. O Middleware::TrackedLinkSignalGuard já impede o corpo de virar params;
+  # isto cobre qualquer outro caminho que traga essas chaves.
+  :lead, :fbc, :fbp, :page_url
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

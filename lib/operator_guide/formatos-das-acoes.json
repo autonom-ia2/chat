@@ -525,8 +525,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/pipelines#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:29",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:31",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
     ],
     "sem_corpo": true
   },
@@ -598,8 +598,8 @@
     "controller": "api/v1/accounts/ctwa_tracked_links#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:24",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:38"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:34",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
     ],
     "sem_corpo": true
   },
@@ -4722,12 +4722,12 @@
       "leitura crua sem tipo: goal, google_sync, meta_sync"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:21",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:69",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -5419,6 +5419,23 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/csat_survey_responses_controller.rb:2",
       "enterprise/app/controllers/enterprise/api/v1/accounts/csat_survey_responses_controller.rb:7",
       "enterprise/app/controllers/enterprise/api/v1/accounts/csat_survey_responses_controller.rb:3"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH ctwa_tracked_links/:id": {
+    "campos": {
+      "ctwa_tracked_link": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/ctwa_tracked_links#update",
+    "modelo": "Campaign",
+    "motivos": [
+      "leitura crua sem tipo: ctwa_tracked_link"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
     ],
     "sem_corpo": false
   },
@@ -13311,9 +13328,9 @@
       "leitura crua sem tipo: goal"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:12",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:48"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:14",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -13992,8 +14009,8 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:10",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:42"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:17",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52"
     ],
     "sem_corpo": false
   },
@@ -20673,12 +20690,12 @@
       "leitura crua sem tipo: goal, google_sync, meta_sync"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:21",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:42",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:48",
-      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:37"
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:23",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:69",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:50",
+      "app/controllers/api/v1/accounts/crm/pipelines_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -21354,6 +21371,23 @@
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:90",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:59"
+    ],
+    "sem_corpo": false
+  },
+  "PUT ctwa_tracked_links/:id": {
+    "campos": {
+      "ctwa_tracked_link": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/ctwa_tracked_links#update",
+    "modelo": "Campaign",
+    "motivos": [
+      "leitura crua sem tipo: ctwa_tracked_link"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
     ],
     "sem_corpo": false
   },

@@ -4,6 +4,8 @@
 # This is NOT the classic Pixel /{pixel_id}/events endpoint; the attribution key is
 # the ctwa_clid carried inside each event's user_data (see PayloadBuilder), not an
 # event_id (Meta does not dedup CAPI-BM events server-side).
+# The website mode (#1011) reuses this client with the funnel's Pixel id as dataset_id:
+# same POST /{id}/events shape, events built by Crm::MetaCapi::WebsitePayloadBuilder.
 #
 # The access token is a Meta secret: it travels only in the Authorization header (never
 # the query string, which leaks through access logs/proxies/referrers) and is NEVER

@@ -12,6 +12,8 @@ import Input from 'dashboard/components-next/input/Input.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import TrackedLinkQr from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkQr.vue';
 import CreateTrackedLinkDialog from 'dashboard/components-next/Campaigns/TrackedLinks/CreateTrackedLinkDialog.vue';
+import TrackedLinkWebsitePanel from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkWebsitePanel.vue';
+import TrackedLinkCampaignTable from 'dashboard/components-next/Campaigns/TrackedLinks/TrackedLinkCampaignTable.vue';
 
 const { t, locale } = useI18n();
 const NS = 'CRM_KANBAN.TRACKED_LINKS.PAGE';
@@ -33,6 +35,9 @@ const deleteDialog = ref(null);
 const selected = computed(() =>
   links.value.find(link => link.id === selectedId.value)
 );
+const isWebsite = link => link?.usage === 'website';
+const usageIcon = link =>
+  isWebsite(link) ? 'i-lucide-globe' : 'i-lucide-qr-code';
 const filteredLinks = computed(() => {
   const language = locale.value.replace('_', '-');
   const query = search.value.trim().toLocaleLowerCase(language);
@@ -55,6 +60,11 @@ const totals = computed(() => [
 ]);
 const inboxName = id =>
   inboxes.value.find(inbox => inbox.id === id)?.name || t(`${NS}.DESTINATION`);
+const replaceLink = updated => {
+  links.value = links.value.map(link =>
+    link.id === updated.id ? updated : link
+  );
+};
 
 const fetchLinks = async () => {
   error.value = '';
@@ -253,14 +263,18 @@ onMounted(fetchLinks);
                   <span
                     class="hidden size-10 shrink-0 items-center justify-center rounded-lg bg-n-alpha-2 text-n-blue-11 md:flex"
                   >
-                    <span class="i-lucide-qr-code size-5" />
+                    <span class="size-5" :class="usageIcon(link)" />
                   </span>
                   <span class="min-w-0">
                     <span class="block truncate text-sm font-semibold">
                       {{ link.name }}
                     </span>
                     <span class="mt-1 block truncate text-xs text-n-slate-11">
-                      {{ inboxName(link.inbox_id) }}
+                      {{
+                        isWebsite(link)
+                          ? `${t(`${NS}.USAGE_WEBSITE_SHORT`)} · ${inboxName(link.inbox_id)}`
+                          : inboxName(link.inbox_id)
+                      }}
                     </span>
                   </span>
                 </span>
@@ -337,8 +351,10 @@ onMounted(fetchLinks);
             <div
               class="flex items-center gap-2 px-6 pt-5 text-xs font-medium text-n-slate-11"
             >
-              <span class="i-lucide-qr-code size-4" />
-              {{ t(`${NS}.READY`) }}
+              <span class="size-4" :class="usageIcon(selected)" />
+              {{
+                t(isWebsite(selected) ? `${NS}.READY_WEBSITE` : `${NS}.READY`)
+              }}
             </div>
             <h2
               class="m-0 mt-3 break-words px-6 text-xl font-semibold tracking-tight"
@@ -348,7 +364,22 @@ onMounted(fetchLinks);
             <p class="m-0 mt-1 px-6 text-xs text-n-slate-11">
               {{ inboxName(selected.inbox_id) }}
             </p>
-            <div class="mx-6 mt-5 rounded-xl bg-n-slate-2 p-5 text-center">
+            <TrackedLinkWebsitePanel
+              v-if="isWebsite(selected)"
+              :link="selected"
+              :can-manage="canManage"
+              @updated="replaceLink"
+            />
+            <TrackedLinkCampaignTable
+              v-if="isWebsite(selected)"
+              :campaigns="selected.campaigns || []"
+              :origin-name="selected.name"
+              class="px-6 pb-5"
+            />
+            <div
+              v-else
+              class="mx-6 mt-5 rounded-xl bg-n-slate-2 p-5 text-center"
+            >
               <TrackedLinkQr
                 :url="selected.short_url"
                 class="mx-auto size-40 border border-n-weak"
@@ -357,7 +388,7 @@ onMounted(fetchLinks);
                 {{ t(`${NS}.SCAN`) }}
               </p>
             </div>
-            <div class="px-6 py-5">
+            <div v-if="!isWebsite(selected)" class="px-6 py-5">
               <p class="mb-2 mt-0 text-xs font-medium text-n-slate-11">
                 {{ t(`${NS}.LINK`) }}
               </p>
@@ -400,13 +431,14 @@ onMounted(fetchLinks);
                 class="mt-6 h-11 w-full"
                 @click="material.open()"
               />
+            </div>
+            <div v-if="canManage" class="px-6 pb-5">
               <Button
-                v-if="canManage"
                 :label="t('CRM_KANBAN.TRACKED_LINKS.DELETE')"
                 icon="i-lucide-trash-2"
                 ruby
                 ghost
-                class="mt-3 w-full"
+                class="h-11 w-full"
                 @click="deleteDialog.open()"
               />
             </div>
@@ -454,7 +486,16 @@ onMounted(fetchLinks);
       ref="deleteDialog"
       type="alert"
       :title="t(`${NS}.DELETE_TITLE`)"
-      :description="t(`${NS}.DELETE_HINT`, { name: selected?.name })"
+      :description="
+        t(
+          isWebsite(selected)
+            ? `${NS}.DELETE_HINT_WEBSITE`
+            : `${NS}.DELETE_HINT`,
+          {
+            name: selected?.name,
+          }
+        )
+      "
       :confirm-button-label="t('CRM_KANBAN.TRACKED_LINKS.DELETE')"
       :is-loading="isDeleting"
       @confirm="deleteLink"

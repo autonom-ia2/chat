@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_04_220000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2119,6 +2119,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_04_220000) do
     t.datetime "sent_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "attribution_mode"
     t.index ["account_id", "created_at"], name: "idx_crm_meta_conv_account_created"
     t.index ["card_id"], name: "idx_crm_meta_conv_card"
     t.index ["event_id"], name: "idx_crm_meta_conv_event_id", unique: true
@@ -2296,9 +2297,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_04_220000) do
     t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "campaign_key"
+    t.string "page_url", limit: 512
+    t.jsonb "lead_data", default: {}, null: false
+    t.jsonb "meta_signals", default: {}, null: false
     t.index ["account_id"], name: "idx_ctwa_tracked_link_clicks_account"
     t.index ["conversation_id"], name: "idx_ctwa_tracked_link_clicks_conversation"
     t.index ["token"], name: "idx_ctwa_tracked_link_clicks_token", unique: true
+    t.index ["tracked_link_id", "campaign_key"], name: "idx_ctwa_tracked_link_clicks_link_campaign"
     t.index ["tracked_link_id", "created_at"], name: "idx_ctwa_tracked_link_clicks_link_created"
     t.index ["tracked_link_id"], name: "idx_ctwa_tracked_link_clicks_link"
   end
@@ -2314,6 +2320,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_04_220000) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "usage", default: "direct", null: false
+    t.jsonb "allowed_origins", default: [], null: false
+    t.datetime "last_signal_at"
     t.index ["account_id"], name: "idx_ctwa_tracked_links_account"
     t.index ["code"], name: "idx_ctwa_tracked_links_code", unique: true
     t.index ["inbox_id"], name: "idx_ctwa_tracked_links_inbox"
