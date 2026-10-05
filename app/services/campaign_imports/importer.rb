@@ -103,10 +103,7 @@ module CampaignImports
       contact || (row[:email] && ContactBlankFields.new(account).contact_with_email(row[:email]))
     end
 
-    def find_existing_contact(phone_number)
-      @contact_matcher ||= ContactMatcher.new(account)
-      @contact_matcher.find(phone_number)
-    end
+    def find_existing_contact(phone_number) = (@contact_matcher ||= ContactMatcher.new(account)).find(phone_number)
 
     # Públicos only (#998): the old campaign base flow never touches companies.
     def import_companies = @import_companies ||= (ImportCompanies.new(campaign_import) if campaign_import.audience?)
@@ -178,10 +175,13 @@ module CampaignImports
           existing_contacts_count: existing_count,
           failed_contacts_count: failed_count,
           import_finished_at: Time.current,
-          **company_counters
+          **company_counters, **channel_counts
         )
       end
     end
+
+    # #1005 A1: after saving, the WhatsApp count is who the send can reach (same rule as AudienceContacts).
+    def channel_counts = campaign_import.audience? ? { channels: CampaignJourney::AudienceContacts.recounted_channels(campaign_import) } : {}
 
     def update_label_counts!
       campaign_import.campaign_import_labels.find_each do |import_label|

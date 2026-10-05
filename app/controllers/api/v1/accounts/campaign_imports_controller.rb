@@ -47,7 +47,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
       deleted = true
     end
 
-    return render json: CampaignImports::AudienceUsage.error_payload(in_use), status: :unprocessable_entity if in_use.any?
+    return render_audience_in_use(in_use) if in_use.any?
     return render_bad_request(error_code) unless deleted
 
     head :no_content
@@ -78,6 +78,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     should_enqueue = false
     already_done = false
     error_code = nil
+    in_use = []
     @campaign_import.with_lock do
       @campaign_import.reload
       if @campaign_import.undoing_labels? || @campaign_import.labels_undone?
@@ -89,11 +90,15 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
         error_code = 'campaign_import.undo_not_available'
         next
       end
+      # #1005 B3: an unfinished campaign still uses this import.
+      in_use = CampaignImports::AudienceUsage.new(@campaign_import).pending_campaigns
+      next if in_use.any?
 
       @campaign_import.update!(status: :undoing_labels, undo_status: :processing, undo_started_at: Time.current)
       should_enqueue = true
     end
 
+    return render_audience_in_use(in_use) if in_use.any?
     return render_bad_request(error_code) if error_code
     return render :show if already_done
 
@@ -195,6 +200,10 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
       'error_csv' => @campaign_import.error_csv,
       'report_csv' => @campaign_import.report_csv
     }[kind.to_s]
+  end
+
+  def render_audience_in_use(campaigns)
+    render json: CampaignImports::AudienceUsage.error_payload(campaigns), status: :unprocessable_entity
   end
 
   def render_bad_request(code)

@@ -149,6 +149,27 @@ RSpec.describe 'Audience channels and deletion (#1005)', :aggregate_failures, ty
       expect(CampaignImport.exists?(audience.id)).to be(true)
     end
 
+    # AudienceUsage: a campaign scheduled more than 3 days ago is no longer picked by the scheduler.
+    it 'does not count as in use a campaign the scheduler no longer picks' do
+      campaign = linked_campaign(status: :active)
+      campaign.update_columns(scheduled_at: 4.days.ago) # rubocop:disable Rails/SkipsModelValidations
+
+      delete "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}", headers: headers_for
+
+      expect(response).to have_http_status(:no_content)
+    end
+
+    # B3: undoing labels of an import an unfinished campaign uses is blocked the same way.
+    it 'refuses undo_labels while an unfinished campaign uses the import' do
+      linked_campaign(status: :active)
+
+      post "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}/undo_labels", headers: headers_for
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['code']).to eq('audience_in_use')
+      expect(audience.reload).to be_completed
+    end
+
     it 'keeps the old rule for campaign bases: no deletion after contacts were imported' do
       old = create_campaign_import(account: account, user: user, content: "nome,telefone\nAna,11987654321\n", batch_count: 1)
       CampaignImports::Validator.new(old).perform

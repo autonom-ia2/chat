@@ -12,7 +12,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     ).perform
     render json: campaign_payload(campaign)
   rescue ::CampaignJourney::WhatsappCampaignCreator::Error => e
-    render json: { error: e.message, code: e.code }, status: :unprocessable_entity
+    render json: { error: e.message, code: e.code, details: e.details }.compact, status: :unprocessable_entity
   end
 
   private

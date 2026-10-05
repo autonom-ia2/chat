@@ -233,7 +233,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:132"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -11068,9 +11068,9 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:18",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:171",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:176",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:23",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:155",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:160",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:19"
     ],
@@ -11082,7 +11082,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:56",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:132"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },
@@ -11092,7 +11092,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:77",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:132"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137"
     ],
     "sem_corpo": true
   },

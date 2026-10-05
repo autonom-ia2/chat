@@ -32,8 +32,17 @@ class CampaignAudienceLink < ApplicationRecord
   belongs_to :campaign_import, optional: true
 
   validates :campaign_id, uniqueness: { scope: :campaign_type }
+  validate :same_account
 
   def self.for_campaign(campaign)
     find_by(campaign_type: campaign.class.name, campaign_id: campaign.id)
+  end
+
+  private
+
+  # #1005 B5: a link never crosses accounts.
+  def same_account
+    errors.add(:campaign, 'must belong to the same account') if campaign && campaign.account_id != account_id
+    errors.add(:campaign_import, 'must belong to the same account') if campaign_import && campaign_import.account_id != account_id
   end
 end
