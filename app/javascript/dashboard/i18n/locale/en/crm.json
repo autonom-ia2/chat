@@ -150,6 +150,7 @@
         "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
         "CAMPAIGN_EMAIL": "Email campaign",
         "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+        "CAMPAIGN_SMS": "SMS campaign",
         "UNKNOWN": "Unknown"
       }
     }
@@ -208,6 +209,7 @@
       "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
       "CAMPAIGN_EMAIL": "Email campaign",
       "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+      "CAMPAIGN_SMS": "SMS campaign",
       "INSTAGRAM_POST": "Instagram post",
       "FACEBOOK_POST": "Facebook post",
       "UNKNOWN": "Unknown origin"

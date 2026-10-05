@@ -4,7 +4,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   COLUMN_CHOICE_STATUSES = %w[needs_column_choice ready_to_confirm validation_failed].freeze
   COMPANIES_CHOICE_STATUSES = %w[uploaded validating needs_column_choice ready_to_confirm validation_failed].freeze
   BOOLEAN_VALUES = %w[true false].freeze
-  CHANNELS = %w[email whatsapp].freeze
+  CHANNELS = %w[email whatsapp sms].freeze
   PROBLEM_ROWS_PER_PAGE = 50
   CONTACTS_PER_PAGE = 25
   SAMPLE_ROW_STATUSES = %i[valid imported].freeze
@@ -57,7 +57,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     render 'api/v1/accounts/campaign_imports/show'
   end
 
-  # PATCH /campaign_imports/:id/channels  { email: true | false, whatsapp: true | false } (#1005, J5/J6)
+  # PATCH /campaign_imports/:id/channels  { email: true | false, whatsapp: true | false, sms: true | false } (#1005, J5/J6)
+  # sms (#1004) can only be turned on while the account has an SMS inbox.
   # Turning a channel off takes the audience out of that channel; a channel without data cannot be turned on,
   # and a channel cannot be turned off while a scheduled or running campaign sends to the audience through it.
   def channels
@@ -68,11 +69,10 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     in_use = []
     @campaign_import.with_lock do
       @campaign_import.reload
-      current = @campaign_import.channels.to_h
-      if turning_on_without_data?(current, choice)
-        error_code = 'campaign_import.channel_without_data'
-        next
-      end
+      current = CampaignJourney::AudienceContacts.with_sms_channel(@campaign_import.channels.to_h)
+      error_code = channel_choice_error(current, choice)
+      next if error_code
+
       in_use = campaigns_using_channels_turned_off(choice)
       next if in_use.any?
 
@@ -163,6 +163,13 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     return if choice.empty? || choice.values.any? { |value| BOOLEAN_VALUES.exclude?(value.to_s) }
 
     choice.transform_values { |value| value.to_s == 'true' }
+  end
+
+  def channel_choice_error(current, choice)
+    return 'campaign_import.channel_without_data' if turning_on_without_data?(current, choice)
+    return unless choice['sms'] == true && !CampaignJourney::AudienceContacts.sms_inbox_connected?(Current.account)
+
+    'campaign_import.channel_without_inbox'
   end
 
   def turning_on_without_data?(current, choice)

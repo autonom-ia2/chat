@@ -17,9 +17,12 @@ require 'digest'
 # e-mail, even if the contact has an e-mail on file. One recipient per address (first row wins).
 module CampaignJourney::AudienceContacts
   BATCH_SIZE = 1000
-  CHANNELS = %i[whatsapp email].freeze
+  CHANNELS = %i[whatsapp email sms].freeze
   EmailMatch = Struct.new(:contact_id, :email, :row, keyword_init: true)
   CHANNEL_DISABLED_REASON = 'Canal WhatsApp desligado no público'.freeze
+
+  # SMS (#1004) goes to the same phone the row brought: the WhatsApp rule above.
+  PHONE_CHANNELS = %i[whatsapp sms].freeze
 
   class << self
     def contacts_for(link, channel:)
@@ -27,7 +30,7 @@ module CampaignJourney::AudienceContacts
       return Contact.none if link&.campaign_import.blank?
 
       account = link.campaign.account
-      ids = if channel == :whatsapp
+      ids = if PHONE_CHANNELS.include?(channel)
               whatsapp_contact_ids(link.campaign_import, account: account)
             else
               email_matches(link.campaign_import, account: account).map(&:contact_id)
@@ -67,13 +70,14 @@ module CampaignJourney::AudienceContacts
       matches
     end
 
-    # channels of a saved audience with the WhatsApp and e-mail counts recomputed by the rules
-    # above; a channel left without contacts is turned off (it cannot be turned on again, J6).
+    # channels of a saved audience with the WhatsApp, SMS and e-mail counts recomputed by the rules
+    # above (SMS = the WhatsApp phone count); a channel left without contacts is turned off (it
+    # cannot be turned on again, J6).
     def recounted_channels(campaign_import)
       account = campaign_import.account
-      counts = { 'whatsapp' => whatsapp_contact_ids(campaign_import, account: account).size,
-                 'email' => email_matches(campaign_import, account: account).size }
-      channels = campaign_import.channels.to_h
+      phones = whatsapp_contact_ids(campaign_import, account: account).size
+      counts = { 'whatsapp' => phones, 'sms' => phones, 'email' => email_matches(campaign_import, account: account).size }
+      channels = with_sms_channel(campaign_import.channels.to_h)
       counts.reduce(channels) do |result, (name, count)|
         channel = channels[name].to_h
         result.merge(name => channel.merge('count' => count, 'enabled' => channel['enabled'] == true && count.positive?))
@@ -86,6 +90,28 @@ module CampaignJourney::AudienceContacts
       return true unless campaign_import.audience?
 
       campaign_import.channels.to_h.dig('whatsapp', 'enabled') == true
+    end
+
+    # SMS (#1004) has its own badge on audiences; old imports (Base Campanha) have no switch.
+    def sms_enabled?(campaign_import)
+      return false if campaign_import.blank?
+      return true unless campaign_import.audience?
+
+      campaign_import.channels.to_h.dig('sms', 'enabled') == true
+    end
+
+    # Audiences saved before #1004 have no sms badge: it shows off, with the phone count, so it can
+    # be turned on.
+    def with_sms_channel(channels)
+      return channels if channels.key?('sms')
+
+      channels.merge('sms' => { 'enabled' => false, 'count' => channels.dig('whatsapp', 'count').to_i })
+    end
+
+    # An SMS inbox (Bandwidth, or Twilio with the sms medium) is connected to the account.
+    def sms_inbox_connected?(account)
+      account.inboxes.exists?(channel_type: 'Channel::Sms') ||
+        Channel::TwilioSms.where(account_id: account.id, medium: :sms).joins(:inbox).exists?
     end
 
     # E-mail only exists for audiences, and needs the channel on (fails closed).

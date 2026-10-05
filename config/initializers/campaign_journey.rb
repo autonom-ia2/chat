@@ -15,6 +15,13 @@ Rails.application.config.to_prepare do
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::AudienceContacts)
   prepend_once.call(Whatsapp::OneoffCampaignService, CampaignJourney::WhatsappOneoffRecipients) if ChatwootApp.enterprise?
 
+  # #1004: an SMS campaign linked to an audience sends to the audience's phones with a recipient
+  # per person; delivery callbacks of Twilio and Bandwidth update those recipients.
+  prepend_once.call(Sms::OneoffSmsCampaignService, CampaignJourney::SmsOneoffRecipients)
+  prepend_once.call(Twilio::OneoffSmsCampaignService, CampaignJourney::SmsOneoffRecipients)
+  prepend_once.call(Twilio::DeliveryStatusService, CampaignJourney::SmsDeliveryStatus::TwilioCallback)
+  prepend_once.call(Webhooks::SmsEventsJob, CampaignJourney::SmsDeliveryStatus::BandwidthCallback)
+
   # #999: WhatsApp API campaigns linked to an audience resolve its contacts; {{contact.company}}
   # without a company skips the person ("falta empresa") unless the campaign has a default text.
   prepend_once.call(WhatsappApiCampaigns::AudienceResolver, CampaignJourney::WhatsappApiAudience::Resolver)

@@ -69,7 +69,7 @@ RSpec.describe 'Campaign journey campaigns API (#1005)', :aggregate_failures, ty
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['code']).to eq('whatsapp_cloud_required')
 
-    create_campaign(channel_name: 'sms')
+    create_campaign(channel_name: 'fax')
     expect(response.parsed_body['code']).to eq('unsupported_channel')
     expect(account.campaigns.count).to eq(0)
   end

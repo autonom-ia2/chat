@@ -165,10 +165,14 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
     }
   end
 
+  # sms (#1004): same count as the mobile badge; it is born on only when the account has an SMS
+  # inbox, otherwise off ("sem caixa") and it can be turned on once an SMS inbox exists.
   def channels_for(valid_rows)
+    phones = valid_rows.count { |row| row[:normalized_phone].present? }
     {
       'email' => channel(valid_rows.count { |row| row[:email].present? }),
-      'whatsapp' => channel(valid_rows.count { |row| row[:normalized_phone].present? })
+      'whatsapp' => channel(phones),
+      'sms' => { 'enabled' => phones.positive? && CampaignJourney::AudienceContacts.sms_inbox_connected?(campaign_import.account), 'count' => phones }
     }
   end
 

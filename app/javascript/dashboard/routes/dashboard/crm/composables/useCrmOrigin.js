@@ -39,12 +39,18 @@ export const CRM_ORIGIN_SOURCE_META = {
     icon: 'i-lucide-app-window',
     labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_LIVE_CHAT',
   },
+  // #1004: reply to an SMS campaign.
+  campaign_sms: {
+    icon: 'i-lucide-message-square-text',
+    labelKey: 'CRM_KANBAN.ORIGIN.CAMPAIGN_SMS',
+  },
 };
 
 export const CAMPAIGN_MARK_SOURCES = [
   'campaign_whatsapp',
   'campaign_email',
   'campaign_live_chat',
+  'campaign_sms',
 ];
 
 const FALLBACK_SOURCE = 'meta_ctwa';
@@ -121,6 +127,8 @@ export function useCrmOrigin() {
         return t('CRM_KANBAN.ORIGIN.CAMPAIGN_EMAIL');
       case 'campaign_live_chat':
         return t('CRM_KANBAN.ORIGIN.CAMPAIGN_LIVE_CHAT');
+      case 'campaign_sms':
+        return t('CRM_KANBAN.ORIGIN.CAMPAIGN_SMS');
       default:
         return t('CRM_KANBAN.ORIGIN.UNKNOWN');
     }

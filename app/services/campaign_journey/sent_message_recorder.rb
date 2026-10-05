@@ -1,9 +1,9 @@
-# The WhatsApp Oficial campaign message in the conversation (#1002, PRD D20, §6.11, P2), for
-# campaigns linked to an audience. No conversation is ever created for it: a campaign to
-# thousands of people must not fire thousands of conversation_created events (automations,
-# webhooks, customers' n8n) nor fill the conversation list.
+# The WhatsApp Oficial and SMS (#1004) campaign message in the conversation (#1002, PRD D20,
+# §6.11, P2), for campaigns linked to an audience. No conversation is ever created for it: a
+# campaign to thousands of people must not fire thousands of conversation_created events
+# (automations, webhooks, customers' n8n) nor fill the conversation list.
 #
-# - At send (#record_at_send): after Meta accepted the template, the message goes into the
+# - At send (#record_at_send): after the provider accepted the message, it goes into the
 #   contact's unresolved conversation of the inbox (same reuse rule as the WhatsApp flow) when
 #   there is one; otherwise nothing is written.
 # - At reply (#record_at_reply, from CampaignJourney::ReplyMarker): the reply's conversation was
@@ -12,10 +12,11 @@
 #   past message, so it carries content_attributes.history_import — the fork's existing guard that
 #   skips every new-message side effect (events, webhooks, SendReplyJob), as for WhatsApp history.
 #
-# Both: outgoing, the text the person received, source_id = Meta's id (the status webhook updates
-# it; Base::SendOnChannelService never sends a message with a source_id), additional_attributes
-# campaign_id + campaign_template_name. Idempotent by inbox + source_id. No campaign mark here
-# (D14). Best effort: a failure is logged and never changes the recipient.
+# Both: outgoing, the text the person received, source_id = the provider id (Meta, Twilio or
+# Bandwidth; the status callback updates it; Base::SendOnChannelService never sends a message
+# with a source_id), additional_attributes campaign_id (+ campaign_template_name on WhatsApp).
+# Idempotent by inbox + source_id. No campaign mark here (D14). Best effort: a failure is logged
+# and never changes the recipient.
 class CampaignJourney::SentMessageRecorder
   MESSAGE_STATUSES = %w[sent delivered read].freeze
 
@@ -57,7 +58,7 @@ class CampaignJourney::SentMessageRecorder
       account_id: @campaign.account_id, inbox_id: @inbox.id, message_type: :outgoing, content_type: :text,
       content: @recipient.message_content.presence || @campaign.message, source_id: @recipient.source_id, status: :sent,
       sender: @campaign.sender,
-      additional_attributes: { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }
+      additional_attributes: { campaign_id: @campaign.id, campaign_template_name: @campaign.template_params.to_h['name'] }.compact
     }
   end
 
@@ -69,11 +70,16 @@ class CampaignJourney::SentMessageRecorder
   # conversation Whatsapp::IncomingMessageBaseService#set_conversation would reuse. Never creates.
   def existing_conversation(destination)
     identities = ContactInbox.where(inbox_id: @inbox.id, contact_id: @recipient.contact_id)
-    contact_inbox = identities.find_by(source_id: destination.to_s.delete('+')) || identities.order(:id).last
+    contact_inbox = identities.find_by(source_id: source_ids_for(destination)) || identities.order(:id).last
     return if contact_inbox.blank?
 
     conversations = contact_inbox.conversations
     @inbox.lock_to_single_conversation ? conversations.last : conversations.where.not(status: :resolved).last
+  end
+
+  # WhatsApp identities are stored without "+", SMS ones (Twilio, Bandwidth) with it (#1004).
+  def source_ids_for(destination)
+    [destination.to_s, destination.to_s.delete('+')].uniq
   end
 
   def log_failure(error)

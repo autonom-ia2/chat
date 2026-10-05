@@ -1,10 +1,11 @@
 # Campaign journey: creates a campaign that sends to a saved audience. Channels:
 #   whatsapp_cloud — WhatsApp Oficial (#1005, docs/campaigns/publicos/api-1005.md);
 #   whatsapp_api   — WhatsApp API (#999, docs/campaigns/publicos/api-999.md);
-#   email          — e-mail draft for the existing builder flow (#999, api-999.md).
+#   email          — e-mail draft for the existing builder flow (#999, api-999.md);
+#   sms            — SMS, Twilio SMS or Bandwidth (#1004, docs/campaigns/publicos/api-1004.md).
 # CAMPAIGN_JOURNEY_ENABLED off → 404; campaign_manage required (CampaignPolicy#create?), otherwise 401.
 class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Accounts::BaseController
-  CHANNELS = %w[whatsapp_cloud whatsapp_api email].freeze
+  CHANNELS = %w[whatsapp_cloud whatsapp_api email sms].freeze
 
   before_action :ensure_campaign_journey_enabled
   before_action :check_authorization
@@ -23,6 +24,7 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     when ::CampaignJourney::WhatsappApiCampaignCreator::CHANNEL then create_whatsapp_api(campaign_import)
     when ::CampaignJourney::EmailCampaignCreator::CHANNEL then create_email(campaign_import)
     when ::CampaignJourney::WhatsappCampaignCreator::CHANNEL then create_whatsapp_cloud(campaign_import)
+    when ::CampaignJourney::SmsCampaignCreator::CHANNEL then create_sms(campaign_import)
     else raise ::CampaignJourney::CreatorError.new('unsupported_channel', "Channel must be one of: #{CHANNELS.join(', ')}")
     end
   end
@@ -36,6 +38,19 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
       id: campaign.id, display_id: campaign.display_id, title: campaign.title,
       channel: ::CampaignJourney::WhatsappCampaignCreator::CHANNEL, scheduled_at: campaign.scheduled_at,
       recipients_count: ::CampaignJourney::AudienceContacts.contacts_for(link, channel: :whatsapp).count
+    }
+  end
+
+  def create_sms(campaign_import)
+    campaign = ::CampaignJourney::SmsCampaignCreator.new(
+      account: Current.account, campaign_import: campaign_import, channel: params[:channel], attributes: whatsapp_cloud_params
+    ).perform
+    link = CampaignAudienceLink.for_campaign(campaign)
+    {
+      id: campaign.id, display_id: campaign.display_id, title: campaign.title, channel: ::CampaignJourney::SmsCampaignCreator::CHANNEL,
+      scheduled_at: campaign.scheduled_at, inbox_id: campaign.inbox_id,
+      recipients_count: ::CampaignJourney::AudienceContacts.contacts_for(link, channel: :sms).count,
+      message_stats: ::CampaignJourney::SmsSegments.count(campaign.message)
     }
   end
 
@@ -73,7 +88,8 @@ class Api::V1::Accounts::CampaignJourney::CampaignsController < Api::V1::Account
     render json: { error: 'campaign_journey.disabled', code: 'campaign_journey_disabled' }, status: :not_found
   end
 
-  # template_params: same shape Api::V1::Accounts::CampaignsController accepts.
+  # template_params: same shape Api::V1::Accounts::CampaignsController accepts. SMS uses title,
+  # inbox_id, scheduled_at, message and variable_defaults.
   def whatsapp_cloud_params
     params.require(:campaign).permit(
       :title, :inbox_id, :scheduled_at, :message, template_params: {}, variable_bindings: {}, variable_defaults: {}

@@ -2,7 +2,7 @@
 # after the send. The reply marks its conversation with the campaign that was answered
 # (CampaignJourney::CampaignMarks); nothing is written at send time (K2).
 #
-# - WhatsApp Oficial: campaign_recipients (Enterprise) of the contact in the inbox.
+# - WhatsApp Oficial and SMS (#1004): campaign_recipients (Enterprise) of the contact in the inbox.
 # - WhatsApp API: whatsapp_api_campaign_recipients of the contact in the inbox.
 # - E-mail: email_campaign_recipients with the contact's e-mail, of a campaign whose replies go to
 #   the inbox (sender inbox in direct mode, reply-to inbox of the verified domain in SES mode).
@@ -11,7 +11,7 @@
 #   (conversation.campaign_id, an ongoing campaign) is marked when the visitor writes in it.
 #
 # When several campaigns were sent in the window, the most recent send is the one answered.
-# WhatsApp Oficial audience campaigns also get their campaign message in the reply's conversation
+# WhatsApp Oficial and SMS audience campaigns also get their campaign message in the reply's conversation
 # first (CampaignJourney::SentMessageRecorder#record_at_reply), since the send creates none.
 class CampaignJourney::ReplyMarker
   REPLY_WINDOW = 72.hours
@@ -35,11 +35,11 @@ class CampaignJourney::ReplyMarker
 
   private
 
-  # WhatsApp Oficial audience campaigns: the campaign message goes into the reply's conversation
+  # WhatsApp Oficial and SMS audience campaigns: the campaign message goes into the reply's conversation
   # before the mark, when the send did not find a conversation to record it in (P2).
   def record_campaign_message(answered)
     recipient = answered[:recipient]
-    # Only the WhatsApp Oficial candidate carries its recipient.
+    # Only the campaign_recipients candidate (WhatsApp Oficial, SMS) carries its recipient.
     return unless recipient && CampaignAudienceLink.for_campaign(answered[:campaign])
 
     CampaignJourney::SentMessageRecorder.new(campaign: answered[:campaign], recipient: recipient).record_at_reply(@conversation)
@@ -58,7 +58,7 @@ class CampaignJourney::ReplyMarker
     return [live_chat_candidate] if inbox.web_widget?
     return [email_candidate] if inbox.email?
     return [whatsapp_api_candidate] if inbox.api?
-    return [whatsapp_candidate] if inbox.whatsapp?
+    return [whatsapp_candidate] if inbox.whatsapp? || CampaignJourney::CampaignMarks.sms_inbox?(inbox)
 
     []
   end

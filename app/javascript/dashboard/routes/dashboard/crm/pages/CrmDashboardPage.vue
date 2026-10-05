@@ -71,6 +71,12 @@ const ORIGIN_SOURCES = [
     icon: 'i-lucide-mail',
     barClass: 'bg-n-brand',
   },
+  {
+    key: 'campaign_sms',
+    labelKey: 'CRM_DASHBOARD.ORIGIN.SOURCES.CAMPAIGN_SMS',
+    icon: 'i-lucide-message-square-text',
+    barClass: 'bg-n-teal-9',
+  },
 ];
 
 const ORIGIN_FALLBACK = {
