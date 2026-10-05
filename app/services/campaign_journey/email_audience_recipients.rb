@@ -1,0 +1,74 @@
+# E-mail recipients of a journey campaign come from its audience (#999, PRD §8.6 and N2): one
+# email_campaign_recipients row per eligible audience contact, with contact_id, written while the
+# campaign is a draft. Everything after that is the email engine of today (§6.9): suppression and
+# opt-out at send time, hygiene preflight, reputation, readiness, direct inbox limits.
+#
+# Who is eligible is CampaignJourney::AudienceContacts (the row brought the contact's current
+# e-mail; the audience e-mail channel is on — fails closed). Suppressed addresses (unsubscribe,
+# bounce, complaint) are written as `suppressed`, like the spreadsheet import; contacts that
+# refused active messages (#737) stay out of the list.
+class CampaignJourney::EmailAudienceRecipients
+  BATCH_SIZE = 500
+  # Placeholders the renderer already provides (EmailCampaigns::TemplateValidator::DEFAULT_KEYS).
+  RESERVED_KEYS = %w[nome email contact unsubscribe_url].freeze
+
+  Candidate = Struct.new(:contact, :email, :row, keyword_init: true)
+
+  def self.candidates(campaign_import)
+    return [] unless CampaignJourney::AudienceContacts.email_enabled?(campaign_import)
+
+    matches = CampaignJourney::AudienceContacts.email_matches(campaign_import, account: campaign_import.account)
+    contacts = campaign_import.account.contacts.not_opted_out.where(id: matches.map(&:contact_id)).index_by(&:id)
+    matches.filter_map do |match|
+      contact = contacts[match.contact_id]
+      contact && Candidate.new(contact: contact, email: match.email, row: match.row)
+    end
+  end
+
+  def initialize(campaign)
+    @campaign = campaign
+    @link = CampaignAudienceLink.for_campaign(campaign)
+  end
+
+  # Idempotent: addresses already on the campaign are left alone. Draft only.
+  def materialize!
+    return 0 unless @campaign.draft? && @link
+
+    suppressed = EmailSuppression.suppressed_set_for(@campaign.account)
+    existing = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
+    candidates = self.class.candidates(@link.campaign_import).reject { |candidate| existing.include?(candidate.email) }
+    rows = candidates.map { |candidate| recipient_attributes(candidate, suppressed) }
+    rows.each_slice(BATCH_SIZE) { |batch| EmailCampaignRecipient.insert_all!(batch) } # rubocop:disable Rails/SkipsModelValidations
+    @campaign.refresh_counters!
+    rows.size
+  end
+
+  private
+
+  def recipient_attributes(candidate, suppressed)
+    now = Time.current
+    {
+      email_campaign_id: @campaign.id, contact_id: candidate.contact.id, email: candidate.email,
+      name: candidate.contact.name.presence, custom_data: custom_data(candidate),
+      status: EmailCampaignRecipient.statuses[suppressed.include?(candidate.email) ? :suppressed : :pending],
+      created_at: now, updated_at: now
+    }
+  end
+
+  # Personalization of the journey (PRD §6.3): first name, company and the audience's extra
+  # columns, under the same keys the spreadsheet import uses (CampaignImports::HeaderMapper).
+  def custom_data(candidate)
+    extras = candidate.row.extra_values.to_h.each_with_object({}) do |(header, value), data|
+      key = CampaignImports::HeaderMapper.normalize_key(header)
+      next if key.empty? || RESERVED_KEYS.include?(key)
+
+      key = "#{key}_2" while data.key?(key)
+      data[key] = value.to_s
+    end
+    { 'primeiro_nome' => candidate.contact.name.to_s.split.first.to_s, 'empresa' => company_name(candidate) }.merge(extras)
+  end
+
+  def company_name(candidate)
+    candidate.contact.try(:company)&.name.presence || candidate.row.company_name.to_s
+  end
+end

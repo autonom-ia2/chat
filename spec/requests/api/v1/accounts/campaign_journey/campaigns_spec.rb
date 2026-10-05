@@ -62,15 +62,15 @@ RSpec.describe 'Campaign journey campaigns API (#1005)', :aggregate_failures, ty
     expect(CampaignAudienceLink.for_campaign(campaign).variable_defaults).to eq('2' => 'em breve')
   end
 
-  it 'refuses a non-Cloud WhatsApp inbox and other channels with whatsapp_cloud_required' do
+  it 'refuses a non-Cloud WhatsApp inbox with whatsapp_cloud_required and an unknown channel with unsupported_channel' do
     other = create(:channel_whatsapp, account: account, provider: 'default', validate_provider_config: false, sync_templates: false)
 
     create_campaign(inbox_id: other.inbox.id)
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['code']).to eq('whatsapp_cloud_required')
 
-    create_campaign(channel_name: 'email')
-    expect(response.parsed_body['code']).to eq('whatsapp_cloud_required')
+    create_campaign(channel_name: 'sms')
+    expect(response.parsed_body['code']).to eq('unsupported_channel')
     expect(account.campaigns.count).to eq(0)
   end
 
