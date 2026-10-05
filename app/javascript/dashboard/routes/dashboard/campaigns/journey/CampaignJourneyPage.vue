@@ -3,11 +3,12 @@
 // With Públicos on, "Nova campanha" opens the 3-step journey (NewCampaignPage); without
 // them it offers the connected channels (M1–M2) and opens their existing forms.
 // `?channel=` (old addresses, PRD A3) preselects the channel filter.
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 import { vOnClickOutside } from '@vueuse/components';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -203,7 +204,7 @@ const onCreated = () => {
   fetchAll();
 };
 
-onMounted(fetchAll);
+useOnEnter(fetchAll);
 </script>
 
 <template>

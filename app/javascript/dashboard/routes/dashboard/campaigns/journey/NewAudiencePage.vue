@@ -4,7 +4,7 @@
 // Nothing enters the contacts before "Salvar público" (confirm): leaving earlier creates
 // nothing (B9). Opened from a campaign draft (`?from=campaign`) it says so and, once
 // saved, goes back to the campaign with the new audience selected (J3).
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onDeactivated, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -29,6 +29,7 @@ import {
 } from 'dashboard/components-next/CampaignJourney/audienceReview';
 import { audienceChannelBadges } from 'dashboard/components-next/CampaignJourney/audienceRows';
 import { loadDraft } from 'dashboard/components-next/CampaignJourney/campaignDraft';
+import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 import { campaignsUsingAudience } from 'dashboard/components-next/CampaignJourney/journeyErrors';
 
 const POLL_MS = 1500;
@@ -224,7 +225,12 @@ const useInCampaign = () =>
 
 const reasonText = code => t(`${NS}.REASONS.${reasonKey(code)}`);
 
-onMounted(async () => {
+// Every visit starts from the address: a new upload, or the audience in `?import=`.
+useOnEnter(async () => {
+  stopPolling();
+  campaignImport.value = null;
+  name.value = '';
+  file.value = null;
   const importId = route.query.import;
   if (!importId) return;
   try {
@@ -236,6 +242,7 @@ onMounted(async () => {
   }
 });
 
+onDeactivated(stopPolling);
 onBeforeUnmount(stopPolling);
 </script>
 

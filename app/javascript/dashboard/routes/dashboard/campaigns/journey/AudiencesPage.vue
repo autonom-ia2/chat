@@ -3,12 +3,13 @@
 // existing campaign_imports API. "Novo público" opens its own page (NewAudiencePage);
 // "Usar em nova campanha" opens Passo 1 with the audience selected (F3); "Excluir público"
 // deletes only the list (F2) and says which campaigns still use it (audience_in_use).
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
@@ -86,7 +87,7 @@ const confirmDelete = async () => {
   }
 };
 
-onMounted(fetchAudiences);
+useOnEnter(fetchAudiences);
 </script>
 
 <template>

@@ -4,7 +4,7 @@
 // existing forms. The draft stays in this browser (campaignDraft.js) so "Criar público" can
 // leave and come back with the new audience selected (J2, J3). `?audience=<id>` opens
 // Passo 1 with it selected (F3).
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -53,6 +53,7 @@ import {
   scheduleToUtc,
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journeyErrors';
+import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 
 const COVERAGE_DELAY_MS = 400;
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN';
@@ -355,8 +356,13 @@ const loadAudienceFromQuery = async id => {
   }
 };
 
-onMounted(async () => {
+// Every visit (first mount or back to the kept-alive page) reads the draft and the address.
+useOnEnter(async () => {
   // Back from Novo público (J3) keeps the draft; "Usar em nova campanha" (F3) starts fresh.
+  isLoading.value = true;
+  legacyChannel.value = '';
+  submitError.value = '';
+  returned.value = route.query.returned === '1';
   const stored = loadDraft(accountId.value) || emptyDraft();
   const queryAudience = Number(route.query.audience) || null;
   const base = route.query.returned === '1' ? stored : emptyDraft();
