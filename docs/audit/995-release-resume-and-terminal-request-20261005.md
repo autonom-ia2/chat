@@ -1,5 +1,10 @@
 # #995 — retomada da publicação e pedido terminal — 05/10/2026
 
+> Registro histórico da etapa de preparação. A execução posteriormente autorizada,
+> seus recibos e os gates ainda pendentes estão na
+> [auditoria operacional de 05/10](995-vps-runtime-operations-20261005.md).
+> Os resultados abaixo preservam o contexto e o horário da observação original.
+
 ## Escopo e autorização recuperados
 
 Rodrigo pediu continuar o chat “Diferença entre testadores” e ampliar o uso de subagentes.

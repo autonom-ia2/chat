@@ -4,6 +4,7 @@ import { mkdir, lstat, open, unlink } from 'node:fs/promises';
 import { resolve, dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
+import { isMainModule } from './runtime/entrypoint.mjs';
 import {
   parseEnvelope,
   validateRequest,
@@ -531,10 +532,7 @@ export function managerExitCode(error) {
   return error.message === 'operator_required' ? 2 : 1;
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(resolve(process.argv[1])).href
-) {
+if (isMainModule(import.meta.url)) {
   run().catch(error => {
     process.exitCode = managerExitCode(error);
     process.stderr.write(

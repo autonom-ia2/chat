@@ -1,5 +1,5 @@
 import { createConnection } from 'node:net';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../entrypoint.mjs';
 import { parseEnvelope, validateRequest } from '../operator-protocol.mjs';
 import {
   abortable,
@@ -140,10 +140,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
   process.stdout.write(JSON.stringify(result));
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => {
     process.stderr.write('instagram_session_publication_failed\n');
     process.exitCode = 2;

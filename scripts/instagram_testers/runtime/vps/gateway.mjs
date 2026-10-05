@@ -4,6 +4,7 @@ import { constants } from 'node:fs';
 import filesystem, { lstat, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../entrypoint.mjs';
 import { WebSocket, WebSocketServer } from 'ws';
 import {
   configFromEnv,
@@ -356,10 +357,7 @@ export async function createGateway(
   };
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === new URL(`file://${path.resolve(process.argv[1])}`).href
-) {
+if (isMainModule(import.meta.url)) {
   try {
     const config = await configFromEnv();
     const gateway = await createGateway(config);

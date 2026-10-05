@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { chmod, lstat } from 'node:fs/promises';
 import { createServer } from 'node:net';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../entrypoint.mjs';
 import { parseEnvelope, validateRequest } from '../operator-protocol.mjs';
 import { runPublisher } from '../publisher-tunnel.mjs';
 import {
@@ -162,10 +162,7 @@ export async function main(env = process.env) {
   });
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => {
     process.stderr.write('instagram_session_publication_failed\n');
     process.exitCode = 2;

@@ -32,6 +32,8 @@ on:
       - 'Gemfile.lock'
       - '.rubocop.yml'
       - '.github/workflows/instagram-tester-onboarding.yml'
+      - '.github/workflows/deploy-hub2you-blue-green.yml'
+      - '.github/workflows/deploy-autonomia-blue-green.yml'
   push:
     branches:
       - main
@@ -62,6 +64,8 @@ on:
       - 'Gemfile.lock'
       - '.rubocop.yml'
       - '.github/workflows/instagram-tester-onboarding.yml'
+      - '.github/workflows/deploy-hub2you-blue-green.yml'
+      - '.github/workflows/deploy-autonomia-blue-green.yml'
   schedule:
     - cron: '17 6 * * *' # 03:17 em Brasília, sem disputa por máquina
   workflow_dispatch:
@@ -119,6 +123,7 @@ jobs:
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
             tests/instagram_testers/runtime-publisher.test.mjs \
+            tests/instagram_testers/runtime-entrypoint.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
             tests/instagram_testers/operator-control.test.mjs \
             tests/instagram_testers/vps-browser-marker.test.mjs \
@@ -127,6 +132,8 @@ jobs:
             tests/instagram_testers/vps-publisher.test.mjs
       - name: Validate VPS installer and environment contracts with synthetic infrastructure
         run: python -B tests/instagram_testers/vps-infra_test.py -v
+      - name: Validate the Instagram operator environment allowlist for both deploy stacks
+        run: python -B tests/instagram_testers/operator-env-allowlist_test.py -v
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Validate isolated coordinator provisioning and runtime with fake infrastructure
@@ -148,6 +155,7 @@ jobs:
           node --check scripts/instagram_testers/session-manager.mjs
           node --check scripts/instagram_testers/session-browser.mjs
           node --check scripts/instagram_testers/runtime/publisher-tunnel.mjs
+          node --check scripts/instagram_testers/runtime/entrypoint.mjs
           for script in scripts/instagram_testers/runtime/*.sh; do sh -n "$script"; done
           bash -n scripts/deploy/blue-green-recovery.sh
           python -c 'import plistlib; plistlib.load(open("scripts/instagram_testers/runtime/com.autonomia.instagram-tester-manager.plist", "rb"))'
@@ -161,6 +169,7 @@ jobs:
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs
+          tests/instagram_testers/runtime-entrypoint.test.mjs
           tests/instagram_testers/session-publisher-stdio.test.mjs
           tests/instagram_testers/operator-control.test.mjs
           tests/instagram_testers/vps-browser-marker.test.mjs
@@ -168,6 +177,7 @@ jobs:
           tests/instagram_testers/vps-jwt-interoperability.test.mjs
           tests/instagram_testers/vps-publisher.test.mjs
           scripts/instagram_testers/runtime/browser-request-marker.mjs
+          scripts/instagram_testers/runtime/entrypoint.mjs
           scripts/instagram_testers/runtime/vps/gateway.mjs
           scripts/instagram_testers/runtime/vps/gateway-auth.mjs
           scripts/instagram_testers/runtime/vps/publisher-broker.mjs

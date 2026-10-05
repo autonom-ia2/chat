@@ -8,6 +8,12 @@ RSpec.describe Conversations::UnreadCounts::Store do
   let(:conversation_id) { 5 }
   let(:team_id) { 6 }
 
+  before do
+    allow(Redis::Alfred).to receive(:scan_each).and_wrap_original do |scan, **options, &block|
+      scan.call(**options).to_a.each(&block)
+    end
+  end
+
   after do
     described_class.clear_account!(account_id)
   end

@@ -1,5 +1,10 @@
 # #995 — bloqueio de preparação da VPS — 05/10/2026
 
+> Registro histórico da etapa de preparação. A execução posteriormente autorizada,
+> seus recibos e os gates ainda pendentes estão na
+> [auditoria operacional de 05/10](995-vps-runtime-operations-20261005.md).
+> Os resultados abaixo preservam o contexto e o horário da observação original.
+
 Status: dependências e runtime VPS não instalados. Esta rodada fez somente
 consultas locais/remotas e escreveu este relatório; nenhum download, extração,
 pacote, usuário/grupo, unidade, configuração, segredo ou serviço foi provisionado.
