@@ -2560,6 +2560,21 @@
       "DESLIGADA_AVISO": "Ela só começa a valer quando você ligar. Dá para desligar quando quiser.",
       "SO_LEITURA": "Você pode ver e testar esta automação. Ligar e mudar fica com quem administra.",
       "INTRO_GUIA": "Me conte o que você quer automatizar, ou comece por um modelo.",
+      "INTRO_GUIA_EDITAR": "Esta automação já está montada. Me conte o que você quer mudar nela.",
+      "EDITAR": {
+        "QUANDO": {
+          "TITULO": "Mudar quando ela funciona",
+          "PEDIDO": "Quero mudar quando esta automação funciona."
+        },
+        "FAZ": {
+          "TITULO": "Mudar o que ela faz",
+          "PEDIDO": "Quero mudar o que esta automação faz."
+        },
+        "EXPLICAR": {
+          "TITULO": "Me explica o que ela faz",
+          "PEDIDO": "Me explica, em palavras simples, o que esta automação faz hoje."
+        }
+      },
       "GUIA_NOME": "Guia",
       "GUIA_SUBTITULO": "Monta com você. Nada liga sem você mandar.",
       "LIGADA_TITULO": "Ligada!"

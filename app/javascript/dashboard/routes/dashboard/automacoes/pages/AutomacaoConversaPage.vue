@@ -88,11 +88,27 @@ const titulo = computed(() => {
   return regra.value?.name || t('AUTOMACOES.CONVERSA.TITULO_EDITAR');
 });
 
-const sugestoes = computed(() =>
-  MODELOS.map(modelo => ({
+// Automação nova começa pelos modelos; a que já existe, pelo que se costuma
+// mudar nela — modelo de automação nova ali só confundia.
+const EDITAR = ['QUANDO', 'FAZ', 'EXPLICAR'];
+const sugestoes = computed(() => {
+  if (regraId.value) {
+    return EDITAR.map(chave => ({
+      rotulo: t(`AUTOMACOES.CONVERSA.EDITAR.${chave}.TITULO`),
+      pergunta: t(`AUTOMACOES.CONVERSA.EDITAR.${chave}.PEDIDO`),
+    }));
+  }
+  return MODELOS.map(modelo => ({
     rotulo: t(`AUTOMACOES.MODELOS.${modelo.chave}.TITULO`),
     pergunta: t(`AUTOMACOES.MODELOS.${modelo.chave}.PEDIDO`),
-  }))
+  }));
+});
+const introducaoDoGuia = computed(() =>
+  t(
+    regraId.value
+      ? 'AUTOMACOES.CONVERSA.INTRO_GUIA_EDITAR'
+      : 'AUTOMACOES.CONVERSA.INTRO_GUIA'
+  )
 );
 
 // O que a pessoa pediu na lista vira a primeira pergunta ao Guia: o modelo
@@ -300,7 +316,8 @@ const mudarLigada = async ligar => {
                   embutido
                   sem-telas
                   :sugestoes="sugestoes"
-                  :introducao="$t('AUTOMACOES.CONVERSA.INTRO_GUIA')"
+                  :introducao="introducaoDoGuia"
+                  :automacao-id="regraId"
                   :pedido-inicial="pedidoInicial"
                   :respostas-rapidas="respostasRapidas"
                   :comecar-por-voz="comecarPorVoz"

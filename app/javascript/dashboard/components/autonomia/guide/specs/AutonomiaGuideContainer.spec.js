@@ -82,6 +82,7 @@ vi.mock('dashboard/api/autonomiaGuide', () => ({
     // #861 — sem conversa guardada, a não ser no teste que diz o contrário.
     conversaAtual: vi.fn(() => Promise.resolve({ data: {} })),
     conversa: vi.fn(),
+    conversaDaAutomacao: vi.fn(() => Promise.resolve({ data: {} })),
     conversas: vi.fn(() => Promise.resolve({ data: { conversas: [] } })),
     apagarConversa: vi.fn(),
     // #933 — o que o Guia lembra.
@@ -1344,6 +1345,47 @@ describe('AutonomiaGuideContainer — embutido', () => {
 
     expect(AutonomiaGuideAPI.conversaAtual).not.toHaveBeenCalled();
     expect(useAutonomiaGuideStore().messages).toHaveLength(0);
+  });
+
+  // Conta 16 (05/10/2026): ao editar a automação, o Guia abria em branco, sem a
+  // conversa em que ela foi montada.
+  const turnoDaAutomacao = {
+    pedido_id: 'p9',
+    pergunta: 'monte a automação de lead',
+    anexos: [],
+    status: 'done',
+    resposta: 'Montei a automação.',
+    navegacoes: [],
+    artigos: [],
+    acao: null,
+  };
+
+  it('na tela de uma automação, retoma a conversa em que ela foi montada', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    AutonomiaGuideAPI.conversaDaAutomacao.mockResolvedValueOnce({
+      data: { id: 5, titulo: 'lead', turnos: [turnoDaAutomacao] },
+    });
+    wrapper = montarEmbutido({ automacaoId: 8 });
+    await flushPromises();
+
+    expect(AutonomiaGuideAPI.conversaDaAutomacao).toHaveBeenCalledWith(8);
+    expect(useAutonomiaGuideStore().conversaAtual()).toBe(5);
+    expect(
+      useAutonomiaGuideStore().messages.map(m => m.message.content)
+    ).toEqual(['monte a automação de lead', 'Montei a automação.']);
+  });
+
+  it('a conversa que já está na tela (a que criou a automação) fica como está', async () => {
+    rotaAtual.meta = { guiaEmbutido: true };
+    const store = useAutonomiaGuideStore();
+    store.hidratar({ id: 5, titulo: 'lead', turnos: [turnoDaAutomacao] }, {});
+    AutonomiaGuideAPI.conversaDaAutomacao.mockResolvedValueOnce({
+      data: { id: 5, titulo: 'lead', turnos: [] },
+    });
+    wrapper = montarEmbutido({ automacaoId: 8 });
+    await flushPromises();
+
+    expect(store.messages).toHaveLength(2);
   });
 
   it('embutido: sem cabeçalho, com as sugestões e a introdução da tela', async () => {
