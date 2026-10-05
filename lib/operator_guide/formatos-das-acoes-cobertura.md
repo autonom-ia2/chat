@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 512 |
-| Sem corpo | 139 |
-| Com corpo | 373 |
-| Com corpo e formato completo | 302 (81,0%) |
-| Com corpo e formato incompleto | 71 |
+| No catálogo | 519 |
+| Sem corpo | 141 |
+| Com corpo | 378 |
+| Com corpo e formato completo | 305 (80,7%) |
+| Com corpo e formato incompleto | 73 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 150 |
-| Leituras cruas tipadas | 102 de 173 |
+| Leituras cruas tipadas | 104 de 176 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 56 |
+| leitura crua sem tipo | 58 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -38,6 +38,7 @@ Uma ação pode ter mais de um motivo.
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
+- `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
 - `PATCH relationships/configuration` — leitura crua sem tipo: configuration
@@ -102,6 +103,7 @@ Uma ação pode ter mais de um motivo.
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PUT crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
+- `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
 
@@ -159,6 +161,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
+- `api/v1/accounts/ctwa_tracked_links#update` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/reputations#override` duration_seconds — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` message_budget — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` reason — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
@@ -185,8 +188,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 307 |
-| Com parâmetros conhecidos | 256 |
+| No catálogo | 313 |
+| Com parâmetros conhecidos | 262 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

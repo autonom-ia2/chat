@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (187 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (189 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -204,6 +204,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Contatos; 2. Clique em Importar contatos; 3. Baixe o CSV de exemplo se precisar; 4. Escolha o arquivo CSV; 5. Confirme a importacao e aguarde notificacao por email.
 - gotchas: este e o import nativo de contatos por CSV; nao confundir com Importar base de campanha, que e recurso custom controlado por `CAMPAIGN_IMPORT_ENABLED`.
 - nav_target: `contacts_dashboard_index`
+
+### Importar contatos com colunas, atributos e empresas
+- intent: Como importo uma planilha de contatos com empresa?; As colunas extras da planilha viram atributos do contato?; Por que a importação pediu para escolher as colunas?; Como importo contatos de um Excel?
+- onde_fica: Contatos > Todos os contatos > menu de ações (três pontos) > Importar contatos (com a jornada de campanhas ligada)
+- rota: `contacts_import_journey` - `/app/accounts/:accountId/contacts/import`
+- gate: feature flag `crm`; papel `administrator` ou `contact_manage`
+- pre_requisitos: administrador ou função com gestão de contatos; planilha CSV ou Excel (.xlsx) até 10 MB com celular ou e-mail em cada linha
+- passos: 1. Abra Contatos; 2. No menu de três pontos, clique em Importar contatos; 3. Escolha a planilha; 4. Confira as Colunas encontradas e use Trocar se alguma estiver errada (ou Não tem); 5. Veja quais Outras colunas viram atributos do contato e quais são atributos novos; 6. Confira contatos prontos, linhas com problema e o bloco Empresas (Criar e ligar); 7. Clique em Importar e veja o resumo.
+- gotchas: com a jornada de campanhas desligada o menu abre a importação nativa do Chatwoot; quando o sistema não tem certeza das colunas, pede a escolha antes de seguir; contato que já existe (celular com ou sem o 9, ou e-mail) só ganha o que falta e não perde valores de atributos; contato que já tem outra empresa mantém a dele; atributos novos são criados como texto com o nome da coluna; nada entra na base antes de clicar em Importar; essa importação não vira público nem aparece em Campanhas.
+- nav_target: `contacts_import_journey`
 
 ### Convidar e gerenciar agentes
 - intent: Como convido um agente?; Onde vejo usuarios da conta?; Como desativo ou edito um agente?
@@ -543,8 +553,8 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - rota: `campaigns_journey_index` - `/app/accounts/:accountId/campaigns/all`
 - gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
 - pre_requisitos: nova jornada de campanhas ligada na instalação (CAMPAIGN_JOURNEY_ENABLED); pelo menos um canal de campanha conectado (domínio de envio verificado ou caixa de webmail aceita no envio direto, WhatsApp Oficial pela Cloud API, WhatsApp API marcada para campanha, caixa de SMS ou chat do site).
-- passos: 1. Abra Campanhas > Campanha no menu lateral; 2. Veja no topo o próximo envio, quantas estão em preparação, quantas saíram nos últimos 30 dias e quantas ficam sempre ativas; 3. Use os botões de canal para ver só um canal; 4. Use Filtrar por situação e a busca para achar uma campanha; 5. Clique em Abrir para ir à tela que cuida daquela campanha hoje (resultado do WhatsApp Oficial, lista de e-mails, WhatsApp API, SMS ou Chat ao vivo).
-- gotchas: a lista mostra todas as campanhas que existem, mesmo de um canal desconectado depois; o filtro mostra os canais conectados e os que ainda têm campanhas; Nova campanha só oferece canais conectados; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; os endereços antigos das listas de E-mails, WhatsApp Oficial, WhatsApp API, SMS e Chat ao vivo abrem esta lista já filtrada pelo canal, e Abrir em cada linha ainda leva à tela antiga daquela campanha; com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
+- passos: 1. Abra Campanhas > Campanha no menu lateral; 2. Veja no topo o próximo envio, quantas estão em preparação, quantas saíram nos últimos 30 dias e quantas ficam sempre ativas; 3. Use os botões de canal para ver só um canal; 4. Use Filtrar por situação e a busca para achar uma campanha; 5. Clique em Abrir para ver o Resultado da campanha (E-mail, WhatsApp Oficial, WhatsApp API ou SMS); Chat ao vivo abre a tela dele; 6. Nas linhas de e-mail, o botão de três pontos tem as ações da campanha (editar rascunho, pausar, retomar, duplicar, salvar como modelo, cancelar e excluir rascunho).
+- gotchas: a lista mostra todas as campanhas que existem, mesmo de um canal desconectado depois; o filtro mostra os canais conectados e os que ainda têm campanhas; Nova campanha só oferece canais conectados; campanhas de WhatsApp enviadas pelo Twilio não entram como SMS; Chat ao vivo é a mensagem automática do site e aparece como Sempre ativa, sem data; os endereços antigos das listas de E-mails, WhatsApp Oficial, WhatsApp API, SMS e Chat ao vivo abrem esta lista já filtrada pelo canal, e Abrir em cada linha leva ao Resultado da campanha (Chat ao vivo abre a tela dele, onde se edita e pausa); com a jornada desligada o menu volta a mostrar E-mails, WhatsApp Oficial, WhatsApp API, Chat ao vivo e SMS e este endereço leva para as telas antigas.
 - nav_target: `campaigns_journey_index`
 
 ### Criar campanha escolhendo o canal
@@ -649,15 +659,25 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: Enviar aparece nos rascunhos de quem pode gerenciar, inclusive quando falta conteúdo, e abre a revisão sem enviar; o botão final só libera quando os requisitos atuais do servidor estiverem atendidos; falha permanente, spam e descadastro continuam excluídos; validação alerta campos de personalização ausentes ou vazios; a lista faz polling enquanto há campanha `sending`, `scheduled` ou IA processando; destinatário cujo e-mail é de um contato que não quer receber mensagens ativas não recebe e aparece como Descadastrado; o descadastro de e-mail, pelo link ou pelo provedor, marca a recusa nos contatos com aquele e-mail.
 - nav_target: `campaigns_email_index`
 
-### Ver gestão e relatório de campanhas de e-mail
-- intent: "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
+### Ver a gestão de campanhas
+- intent: Como vão as campanhas no geral?; Quantas campanhas enviei no mês?; Quantas pessoas responderam às campanhas?; Quantas campanhas viraram negócio no CRM?; Como comparo campanhas de canais diferentes?; "Onde vejo a taxa de abertura e de clique das campanhas de e-mail?"; "Onde fica o relatório / métricas das campanhas de e-mail (open rate, click rate)?"; "Como exporto o relatório (CSV) de uma campanha de e-mail?"; "Como comparo o desempenho de campanhas de e-mail?"
 - onde_fica: Sidebar > Campanhas > Gestão de campanhas (último item do grupo, depois de SMS)
 - rota: `crm_campaign_management_index` - `/app/accounts/:accountId/campaigns/management`
 - gate: papel `administrator` ou `campaign_view` ou `campaign_manage`
-- pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega.
-- passos: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
-- gotchas: abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
+- pre_requisitos: campanhas de e-mail já enviadas ou com eventos de entrega. Com a nova jornada ligada (CAMPAIGN_JOURNEY_ENABLED), vale para campanhas de E-mail, WhatsApp Oficial, WhatsApp API e SMS.
+- passos: Com a nova jornada ligada: 1. Abra Gestão de campanhas; 2. Escolha o período (7, 30 ou 90 dias) e o canal (só os conectados); 3. Leia os totais: campanhas enviadas, pessoas alcançadas, responderam, viraram negócio no CRM e saúde do e-mail; 4. Compare as campanhas na tabela (data, enviadas, entregues, engajamento, responderam e taxa; no filtro E-mail também cliques, bounce permanente e descadastros); 5. Clique numa campanha para abrir o Resultado dela. Com a jornada desligada: Abra Gestão de campanhas; filtre por todas ou por uma campanha; revise KPIs de enviado, entregue, abertura aproximada, clique, descadastro, bounce e complaint; ajuste intervalo da linha do tempo; exporte CSV quando uma campanha estiver selecionada.
+- gotchas: com a jornada ligada, o detalhe de uma campanha (gráfico, cliques por link, tabela por pessoa, exportação, saúde) fica no Resultado dela, e links antigos com uma campanha de e-mail escolhida abrem esse Resultado; viraram negócio conta os cards do CRM ligados a uma conversa marcada pela campanha, e ganhos é a parte já ganha; pessoas alcançadas soma as entregues, e no WhatsApp API, que não confirma entrega, as enviadas; abertura é aproximada por limitação de tracking; exportar CSV só aparece com campanha específica; esta tela é relatório, não o lugar de editar campanha.
 - nav_target: `crm_campaign_management_index`
+
+### Ver o resultado de uma campanha
+- intent: Como foi esta campanha?; Quantas pessoas receberam, leram e responderam?; Quem respondeu a campanha?; Por que uma mensagem falhou?; Onde vejo a taxa de abertura e de clique de um e-mail?; Como baixo o resultado por pessoa?; Como pauso, retomo, cancelo ou duplico uma campanha de e-mail?; Onde vejo no CRM quem veio da campanha?
+- onde_fica: Menu lateral > Campanhas > Campanha > Abrir (ou Gestão de campanhas > clicar na campanha)
+- rota: `campaigns_journey_result` - `/app/accounts/:accountId/campaigns/results/:channel/:campaignId`
+- gate: feature flag `campaigns`; papel `administrator` ou `campaign_view` ou `campaign_manage`
+- pre_requisitos: nova jornada de campanhas ligada (CAMPAIGN_JOURNEY_ENABLED); campanha de E-mail, WhatsApp Oficial, WhatsApp API ou SMS; permissão de ver campanhas (campaign_view); para baixar o resultado e usar as ações, gerenciar campanhas (campaign_manage); no e-mail, relatórios de e-mail ligados.
+- passos: 1. Abra Campanhas > Campanha e clique em Abrir na campanha; 2. Leia os números do topo (WhatsApp e SMS: Público, Enviadas, Entregues, Lidas no WhatsApp Oficial, Responderam, Falharam e Puladas; E-mail: Público elegível, Enviados, Entregues, Abriram, Clicaram, Responderam, Descadastros, Bounce permanente, Temporários, Reclamações e Desconhecidos); 3. A linha abaixo dos números mostra a conta que fecha com o público; 4. Em Pessoas, use as abas de situação para filtrar e Abrir conversa em quem respondeu; 5. Clique em Baixar resultado para o arquivo da aba escolhida; 6. Em Ver no CRM, abra o CRM filtrado por esta campanha; 7. No e-mail, use o gráfico, os cliques por link, a saúde do envio (reavaliar, retomar, problemas), a tabela de destinatários com filtros e exportação e as ações do topo.
+- gotchas: enquanto a campanha envia, a faixa amarela aparece e os números se atualizam sozinhos a cada 15 segundos; Enviadas já inclui as entregues e lidas, e Entregues já inclui as lidas; Responderam conta quem mandou mensagem até 72 horas depois do envio e ganhou a marca Campanha: nome no CRM; Abrir conversa só aparece para conversa que você pode ver; o arquivo baixado mostra o nome com a inicial do sobrenome e o telefone ou e-mail mascarado; WhatsApp API não recebe confirmação de entrega nem de leitura, por isso não tem Entregues nem Lidas; SMS só mostra números quando o SMS passa a registrar cada envio por pessoa, antes disso a tela avisa; Chat ao vivo não tem resultado por pessoa; quem só tem campaign_view vê tudo, mas não baixa nem usa as ações.
+- nav_target: `campaigns_journey_result`
 
 ### Criar e compartilhar Links e QR codes
 - intent: Como crio um QR code para o WhatsApp da loja?; Onde crio um link rastreável de vendedor?; Como identifico as conversas que vêm da bio?; Onde baixo o QR code de uma origem?; Como ligo o botão de WhatsApp da minha landing page ao CRM?; O que colo nos Parâmetros de URL do anúncio da Meta?; Como vejo quais campanhas da Meta trouxeram conversas e vendas pelo site?; Por que o lead da landing page chegou sem origem?
