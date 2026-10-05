@@ -142,7 +142,7 @@ const chooseSender = value => {
         data-test="email-details"
       >
         <dt class="text-n-slate-11">{{ t(`${NS}.SENDER_LABEL`) }}</dt>
-        <dd class="m-0 truncate text-n-slate-12">
+        <dd class="m-0 break-words text-n-slate-12">
           {{
             [emailCampaign.from_name, emailCampaign.from_email]
               .filter(Boolean)

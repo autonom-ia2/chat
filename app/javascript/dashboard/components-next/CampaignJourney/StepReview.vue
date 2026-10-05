@@ -111,15 +111,19 @@ const submit = () => {
           <p class="m-0 text-xs font-semibold uppercase text-n-slate-11">
             {{ block.title }}
           </p>
-          <p class="m-0 text-sm font-semibold text-n-slate-12">{{ block.main }}</p>
-          <p class="m-0 text-xs text-n-slate-11">{{ block.detail }}</p>
+          <p class="m-0 break-words text-sm font-semibold text-n-slate-12">
+            {{ block.main }}
+          </p>
+          <p class="m-0 break-words text-xs text-n-slate-11">
+            {{ block.detail }}
+          </p>
         </div>
         <Button
           :label="t(`${NS}.CHANGE`)"
           :aria-label="t(`${NS}.CHANGE_ARIA`, { block: block.title })"
           variant="ghost"
           size="sm"
-          class="!min-h-11"
+          class="!min-h-11 shrink-0"
           @click="emit('go', block.step)"
         />
       </div>
