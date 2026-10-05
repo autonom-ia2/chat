@@ -89,7 +89,7 @@ RSpec.describe 'Guia da Plataforma — contexto da tela', type: :request do
   # AC-CT2 — o front antigo (só `route_context` e `route_params`) continua igual, até o bloco "Registro aberto".
   it 'aceita o formato antigo e o Guia recebe o mesmo bloco de antes', :aggregate_failures do
     query = nil
-    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent))
+    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent, id: 0))
     allow(Autonomia::Agents::Retriever).to receive(:new).and_return(instance_double(Autonomia::Agents::Retriever, retrieve: []))
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       query = kwargs[:query]

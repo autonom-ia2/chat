@@ -54,6 +54,7 @@ const GuiaFalso = {
     semTelas: Boolean,
     respostasRapidas: { type: Array, default: () => [] },
     comecarPorVoz: Boolean,
+    anexosIniciais: { type: Array, default: () => [] },
   },
   emits: ['execucao', 'pedidoInicialEnviado', 'respostaRapida'],
   template: '<div data-guia-falso />',
@@ -287,6 +288,23 @@ describe('AutomacaoConversaPage', () => {
     guia.vm.$emit('respostaRapida', 'OTIMA');
     await flushPromises();
     expect(wrapper.find('[data-ligar]').element).toBe(document.activeElement);
+  });
+
+  it('nova: os prints juntados na lista vão ao Guia uma vez só', async () => {
+    const print = new File(['x'], 'print.png', { type: 'image/png' });
+    window.history.replaceState(
+      { pedidoAutomacao: 'como no print', anexosAutomacao: [print] },
+      ''
+    );
+    const wrapper = montar();
+    await flushPromises();
+
+    const guia = wrapper.findComponent(GuiaFalso);
+    expect(guia.props('anexosIniciais')).toEqual([print]);
+    guia.vm.$emit('pedidoInicialEnviado');
+    await flushPromises();
+    expect(window.history.state?.anexosAutomacao).toBeUndefined();
+    expect(guia.props('anexosIniciais')).toEqual([]);
   });
 
   it('nova: tocou no microfone na lista → a conversa abre gravando, uma vez', async () => {

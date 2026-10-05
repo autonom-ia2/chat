@@ -179,6 +179,9 @@ const montarFluxo = (chave, humano, rota) => {
     linhas.push(`- rota: \`${rota.nome}\` - \`${rota.caminho}\``);
     linhas.push(`- gate: ${descreverPorta(rota)}`);
   }
+  // As outras telas que este fluxo também atende. O Guia recebe sempre os
+  // fluxos da tela em que a pessoa está, e esta linha é como ele os acha.
+  campo('cobre', humano.cobre);
   campo('perfil', humano.perfil);
   campo('pre_requisitos', humano.pre_requisitos);
   campo('passos', humano.passos);

@@ -15,7 +15,7 @@ RSpec.describe Autonomia::Guide::Chat do
   end
 
   before do
-    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent))
+    allow(Autonomia::Guide::Seed).to receive(:ready_agent_for).and_return(instance_double(Autonomia::Agents::Agent, id: 0))
     allow(Autonomia::Agents::Retriever).to receive(:new)
       .and_return(instance_double(Autonomia::Agents::Retriever, retrieve: []))
   end

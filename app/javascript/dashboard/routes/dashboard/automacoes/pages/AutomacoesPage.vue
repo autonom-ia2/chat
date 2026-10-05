@@ -69,9 +69,14 @@ const abrir = automacao =>
 // O modelo vai na URL (só chaves conhecidas); o texto livre vai no estado da
 // navegação, que um link de fora não consegue preencher: o pedido sai sozinho
 // para o Guia, então só a própria tela pode escrevê-lo.
-const nova = ({ modelo, pedido, porVoz } = {}) => {
+const nova = ({ modelo, pedido, anexos, porVoz } = {}) => {
   let estadoDaNavegacao = {};
   if (pedido) estadoDaNavegacao = { pedidoAutomacao: pedido };
+  // Os prints e arquivos vão como arquivo (o navegador copia File no estado da
+  // navegação); sobem só na tela do Guia.
+  if (anexos?.length) {
+    estadoDaNavegacao = { ...estadoDaNavegacao, anexosAutomacao: anexos };
+  }
   if (porVoz) estadoDaNavegacao = { pedidoPorVoz: true };
   return router.push({
     name: 'automacoes_nova',
@@ -156,7 +161,7 @@ const alternar = async automacao => {
           <div data-vazio class="contents">
             <AutomacaoHeroi
               :desabilitado="!podeMudar"
-              @pedir="pedido => nova({ pedido })"
+              @pedir="({ texto, anexos }) => nova({ pedido: texto, anexos })"
               @falar="nova({ porVoz: true })"
             />
             <section class="flex flex-col gap-5">

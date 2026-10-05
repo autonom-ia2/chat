@@ -71,13 +71,17 @@ module Autonomia
 
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
-                     operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta')
+                     operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
+                     fixos: [])
         @agent = agent
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
         # do embedding. O caller passa aqui só a pergunta, usada exclusivamente no retrieval.
         @retrieval_query = retrieval_query.to_s.presence || @query
+        # Trechos que entram sempre, antes dos que a busca achar (o Guia: os fluxos da tela em que a
+        # pessoa está). Vazio para os demais agentes: nada muda para eles.
+        @fixos = Array(fixos)
         @history = history
         @images = Array(images)
         # Texto dos PDFs que o cliente anexou NESTE turno (#319). Na renovação é a apólice.
@@ -260,7 +264,7 @@ module Autonomia
         # Default histórico preservado: chave ausente = COM base (retrieval roda normalmente).
         return [] if @agent.knowledge_disabled?
 
-        Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K)
+        com_fixos(Retriever.new(agent: @agent).retrieve(@retrieval_query, top_k: Config::ANSWER_TOP_K))
       rescue Autonomia::Agents::Retriever::RetrievalError
         # #14 — falha de INFRA. Operate (instrução-dirigido): NÃO silencia o bot — degrada p/ [] e
         # segue pela instrução. Fluxo GATEADO (Guia/copiloto): re-levanta → `answer` faz handoff seguro.
@@ -269,6 +273,15 @@ module Autonomia
       rescue StandardError => e
         Rails.logger.warn("[autonomia][answerer] retrieve degraded agent=#{@agent.id} #{e.class}")
         []
+      end
+
+      # Os fixos vêm primeiro e não se repetem; o total segue o teto da resposta, então quem sai é o
+      # trecho de menor nota da busca.
+      def com_fixos(achados)
+        return achados if @fixos.empty?
+
+        ids = @fixos.map(&:id)
+        (@fixos + achados.reject { |trecho| ids.include?(trecho.id) }).first(Config::ANSWER_TOP_K)
       end
 
       # Roda o LLM (síncrono, schema, gpt-6.1-sol) e devolve o hash parseado, ou nil em qualquer

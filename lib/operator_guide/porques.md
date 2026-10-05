@@ -253,6 +253,7 @@
 ### usar_decisor_na_automacao
 - titulo: Usar um Decisor na automacao
 - rota: automacoes_lista
+- cobre: automacoes_nova, automacoes_editar
 - intent: Como faco a automacao so seguir quando o e-mail for lead?; Quero que a automacao entenda o que o cliente escreveu antes de agir.; Como separo formulario do site de newsletter?; Como ensino a automacao a decidir se e lead?; Tem caso esperando eu decidir?; Como corrijo o que o Decisor decidiu?; Quando o card entrar em Proposta, so seguir se for empresa grande?; Quando a conversa for resolvida, avisar se o cliente saiu insatisfeito?; O WhatsApp que fala de sinistro vai direto para a caixa de sinistros?
 - onde_fica: Menu lateral > Automacoes > abra a automacao (o passo aparece no resumo como "Pergunta ao Decisor <nome>: segue se a resposta for ..."; em Editar no modo manual o passo e mantido ao salvar, mas o formulario nao oferece adiciona-lo — quem adiciona e o Guia, conversando nessa tela) e CRM > Editar funil > etapa > Automacoes desta etapa (o mesmo passo); os Decisores da conta ficam em `autonomia/decisores`
 - pre_requisitos: ter `automation_manage` (ou ser administrador) para criar, testar e ligar; para gravar campos (nome, telefone, empresa) a conta precisa de chave de IA configurada, e essa extracao gasta a chave da conta; atributo personalizado de contato usado como destino precisa existir antes
@@ -262,6 +263,7 @@
 ### montar_automacoes_compostas
 - titulo: Montar automacoes compostas (um pedido, varias regras)
 - rota: automacoes_lista
+- cobre: automacoes_nova, automacoes_editar
 - intent: Quero uma automacao que faca varias coisas; Se em 15 minutos ninguem atender, avisa alguem; Como evito que a automacao entre em loop ou mande mensagem repetida?; Como identifico cliente querendo cancelar ou pedindo reembolso?; Como mando alerta para o responsavel da equipe?; Quando a conversa for resolvida, manda a transcricao por e-mail
 - onde_fica: Menu lateral > Automacoes (cada regra e uma linha da lista)
 - pre_requisitos: etiquetas, times e agentes que as regras usam ja criados; recurso de atraso ligado na conta para "se em N minutos ainda"; transcricao por e-mail habilitada na conta para mandar transcricao; a URL do sistema externo para webhook.
