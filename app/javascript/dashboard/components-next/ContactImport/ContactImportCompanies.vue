@@ -2,7 +2,7 @@
 // Importar contatos (#1006): the "Empresas" block (C1–C6) with the "Criar e ligar" switch.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { companyPreview } from './contactImportView';
+import { companyPreview, formatCount } from './contactImportView';
 
 const props = defineProps({
   contactImport: { type: Object, required: true },
@@ -13,7 +13,8 @@ const props = defineProps({
 const enabled = defineModel({ type: Boolean, default: true });
 
 const NS = 'CONTACT_IMPORT_JOURNEY.COMPANIES';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatCount(locale.value, value);
 
 const tiles = computed(() => {
   const preview = companyPreview(props.contactImport);

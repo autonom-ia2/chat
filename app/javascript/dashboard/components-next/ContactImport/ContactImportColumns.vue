@@ -12,6 +12,7 @@ import {
   visibleTargets,
   attributeColumns,
   attributeProblems,
+  formatCount,
 } from './contactImportView';
 
 const props = defineProps({
@@ -23,7 +24,8 @@ const props = defineProps({
 const mapping = defineModel({ type: Object, required: true });
 
 const NS = 'CONTACT_IMPORT_JOURNEY';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatCount(locale.value, value);
 
 const columns = computed(() => columnsOf(props.contactImport));
 const fallback = number => t(`${NS}.COLUMNS.COLUMN_FALLBACK`, { number });

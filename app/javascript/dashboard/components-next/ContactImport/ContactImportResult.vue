@@ -3,7 +3,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { resultCounts } from './contactImportView';
+import { resultCounts, formatCount } from './contactImportView';
 
 const props = defineProps({
   contactImport: { type: Object, required: true },
@@ -12,7 +12,8 @@ const props = defineProps({
 const emit = defineEmits(['seeContacts', 'newImport', 'download']);
 
 const NS = 'CONTACT_IMPORT_JOURNEY';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatCount(locale.value, value);
 
 const counts = computed(() => resultCounts(props.contactImport));
 const partial = computed(() => props.contactImport.status === 'completed_with_failures');

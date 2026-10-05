@@ -25,13 +25,15 @@ import {
   companiesAvailable,
   peopleCounts,
   globalErrors,
+  formatCount,
 } from 'dashboard/components-next/ContactImport/contactImportView';
 
 const POLL_MS = 2000;
 const MAX_FILE_MB = 10;
 const NS = 'CONTACT_IMPORT_JOURNEY';
 
-const { t, te, n } = useI18n();
+const { t, te, locale } = useI18n();
+const n = value => formatCount(locale.value, value);
 const router = useRouter();
 
 const contactImport = ref(null);

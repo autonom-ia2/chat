@@ -4,6 +4,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { formatCount } from './contactImportView';
 
 const props = defineProps({
   contactImport: { type: Object, required: true },
@@ -13,7 +14,8 @@ const props = defineProps({
 const emit = defineEmits(['download']);
 
 const NS = 'CONTACT_IMPORT_JOURNEY.PEOPLE';
-const { t, n } = useI18n();
+const { t, locale } = useI18n();
+const n = value => formatCount(locale.value, value);
 const open = ref(false);
 
 const total = computed(() => props.contactImport.invalid_rows || 0);

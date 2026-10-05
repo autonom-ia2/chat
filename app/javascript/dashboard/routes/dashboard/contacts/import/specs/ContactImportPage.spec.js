@@ -124,11 +124,13 @@ const ready = {
   ],
 };
 
-const mountPage = () =>
+const mountPage = (locale = 'en') =>
   mount(ContactImportPage, {
     attachTo: document.body,
     global: {
-      plugins: [createI18n({ legacy: false, locale: 'en', messages: { en } })],
+      plugins: [
+        createI18n({ legacy: false, locale, messages: { en, pt_BR: ptBR } }),
+      ],
       stubs: { Spinner: true },
     },
   });
@@ -260,6 +262,18 @@ describe('ContactImportPage (#1006)', () => {
     const problems = wrapper.get('[data-test="attribute-problems"]').text();
     expect(problems).toContain('1 values stay out');
     expect(problems).toContain('Row 9: value does not fit Aniversário');
+    wrapper.unmount();
+  });
+
+  // The dashboard locale code is "pt_BR"; Intl only takes "pt-BR" (found on the local app).
+  it('renders counts with the dashboard pt_BR locale', async () => {
+    const wrapper = mountPage('pt_BR');
+    await uploadWith(wrapper, { ...ready, valid_rows: 1248 });
+
+    expect(wrapper.get('[data-test="people-ready"]').text()).toContain('1.248');
+    expect(wrapper.get('[data-test="people-split"]').text()).toContain(
+      'já eram seus contatos'
+    );
     wrapper.unmount();
   });
 

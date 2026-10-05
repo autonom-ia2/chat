@@ -134,3 +134,7 @@ export const attributeProblems = contactImport => {
   const problems = contactImport?.validation_summary?.attribute_problems || {};
   return { count: problems.count || 0, rows: problems.rows || [] };
 };
+
+// vue-i18n's n() throws for the dashboard locale codes ("pt_BR" is not a BCP 47 tag).
+export const formatCount = (locale, value) =>
+  Number(value || 0).toLocaleString(String(locale || 'en').replace('_', '-'));
