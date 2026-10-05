@@ -6,7 +6,8 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
   let(:user) { account_and_user.last }
-  let(:inbox) { journey_twilio_sms_inbox(account) }
+  # Created before the audience: the sms badge is born on only with an SMS inbox connected.
+  let!(:inbox) { journey_twilio_sms_inbox(account) }
   let(:twilio) { inbox.channel }
   let!(:audience) do
     saved_audience(account: account, user: user, content: "Nome,Celular\nAna Souza,11987654321\nCaio Reis,31987654321\n")
@@ -149,6 +150,26 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
         expect(recipient_of(campaign, 'Ana Souza')).to be_delivered
         caio = recipient_of(campaign, 'Caio Reis')
         expect([caio.status, caio.error_code, caio.error_message]).to eq(['failed', '4720', '4720 - Carrier rejected'])
+      end
+
+      # Chatwoot's job looked the channel up by `to` (the customer) and built the service with
+      # `channel:`; the fork module finds the inbox by the owner, so the conversation message moves.
+      it 'updates the status of the SMS in the conversation' do
+        stub_bandwidth_sms
+        conversations = ['Ana Souza', 'Caio Reis'].to_h do |name|
+          contact = contact_named(name)
+          contact_inbox = ContactInbox.create!(contact: contact, inbox: inbox, source_id: contact.phone_number)
+          [name, create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox)]
+        end
+        campaign = sms_campaign
+        Sms::OneoffSmsCampaignService.new(campaign: campaign).perform
+
+        bandwidth_event('message-delivered', recipient_of(campaign, 'Ana Souza'))
+        bandwidth_event('message-failed', recipient_of(campaign, 'Caio Reis'), error_code: 4720, description: 'Carrier rejected')
+
+        expect(conversations['Ana Souza'].messages.outgoing.sole.status).to eq('delivered')
+        failed = conversations['Caio Reis'].messages.outgoing.sole
+        expect([failed.status, failed.external_error]).to eq(['failed', '4720 - Carrier rejected'])
       end
     end
   end
