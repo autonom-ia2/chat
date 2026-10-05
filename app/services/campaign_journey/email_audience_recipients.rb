@@ -1,6 +1,7 @@
 # E-mail recipients of a journey campaign come from its audience (#999, PRD §8.6 and N2): one
-# email_campaign_recipients row per eligible audience contact, with contact_id, written while the
-# campaign is a draft. Everything after that is the email engine of today (§6.9): suppression and
+# email_campaign_recipients row per eligible audience contact, with contact_id. Written when the
+# draft is created and synced again when it is scheduled or sent, up to the first send
+# (CampaignJourney::EmailAudienceGate). Everything after that is the email engine of today (§6.9): suppression and
 # opt-out at send time, hygiene preflight, reputation, readiness, direct inbox limits.
 #
 # Who is eligible is CampaignJourney::AudienceContacts (the row brought the contact's current
@@ -30,20 +31,41 @@ class CampaignJourney::EmailAudienceRecipients
     @link = CampaignAudienceLink.for_campaign(campaign)
   end
 
-  # Idempotent: addresses already on the campaign are left alone. Draft only.
-  def materialize!
-    return 0 unless @campaign.draft? && @link
+  # Before the first send (draft or scheduled, nobody sent yet): adds who became eligible and
+  # removes pending recipients that are no longer eligible. Never touches a recipient that was
+  # sent or has events. Idempotent. New recipients get the hygiene preflight after commit.
+  # => { added: 2, removed: 1 }
+  def sync!
+    return { added: 0, removed: 0 } unless syncable?
 
-    suppressed = EmailSuppression.suppressed_set_for(@campaign.account)
-    existing = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
-    candidates = self.class.candidates(@link.campaign_import).reject { |candidate| existing.include?(candidate.email) }
-    rows = candidates.map { |candidate| recipient_attributes(candidate, suppressed) }
-    rows.each_slice(BATCH_SIZE) { |batch| EmailCampaignRecipient.insert_all!(batch) } # rubocop:disable Rails/SkipsModelValidations
-    @campaign.refresh_counters!
-    rows.size
+    candidates = self.class.candidates(@link.campaign_import)
+    removed = remove_stale(candidates.to_set(&:email))
+    added = add_missing(candidates)
+    @campaign.refresh_counters! if (added + removed).positive?
+    ActiveRecord.after_all_transactions_commit { EmailCampaigns::RecipientPreflightJob.enqueue(@campaign.id) } if added.positive?
+    { added: added, removed: removed }
   end
 
   private
+
+  def syncable?
+    @link.present? && (@campaign.draft? || @campaign.scheduled?) && !@campaign.email_campaign_recipients.where.not(sent_at: nil).exists?
+  end
+
+  def remove_stale(eligible)
+    stale = @campaign.email_campaign_recipients.pending.where(sent_at: nil)
+                     .where.not(id: EmailEvent.select(:recipient_id))
+                     .reject { |recipient| eligible.include?(recipient.email.downcase) }
+    EmailCampaignRecipient.where(id: stale.map(&:id)).delete_all
+  end
+
+  def add_missing(candidates)
+    suppressed = EmailSuppression.suppressed_set_for(@campaign.account)
+    existing = @campaign.email_campaign_recipients.pluck(:email).to_set(&:downcase)
+    rows = candidates.reject { |candidate| existing.include?(candidate.email) }.map { |candidate| recipient_attributes(candidate, suppressed) }
+    rows.each_slice(BATCH_SIZE) { |batch| EmailCampaignRecipient.insert_all!(batch) } # rubocop:disable Rails/SkipsModelValidations
+    rows.size
+  end
 
   def recipient_attributes(candidate, suppressed)
     now = Time.current

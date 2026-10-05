@@ -10,8 +10,25 @@ module CampaignJourney::EmailAudienceGate
     link.nil? || CampaignJourney::AudienceContacts.email_enabled?(link.campaign_import)
   end
 
-  # EmailCampaign: send_now, schedule! and the scheduler all go through sendable?.
+  # EmailCampaign: send_now, schedule! and the scheduler all go through sendable?. Before each
+  # of them (and before a scheduled campaign starts) the audience recipients are synced, up to
+  # the first send (CampaignJourney::EmailAudienceRecipients#sync!).
   module Campaign
+    def claim_for_sending!
+      CampaignJourney::EmailAudienceRecipients.new(self).sync!
+      super
+    end
+
+    def schedule!(scheduled_at:)
+      CampaignJourney::EmailAudienceRecipients.new(self).sync!
+      super
+    end
+
+    def mark_sending!
+      CampaignJourney::EmailAudienceRecipients.new(self).sync! if scheduled?
+      super
+    end
+
     def sendable_recipients?
       super && CampaignJourney::EmailAudienceGate.channel_on?(self)
     end

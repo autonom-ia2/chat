@@ -88,7 +88,7 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
     it 'materializes nothing when the audience e-mail channel is off (fails closed) and is idempotent' do
       create_email_campaign
       campaign = created_campaign
-      expect(CampaignJourney::EmailAudienceRecipients.new(campaign).materialize!).to eq(0)
+      expect(CampaignJourney::EmailAudienceRecipients.new(campaign).sync!).to eq(added: 0, removed: 0)
 
       audience.update!(channels: audience.channels.merge('email' => { 'enabled' => false, 'count' => 5 }))
       expect(CampaignJourney::EmailAudienceRecipients.candidates(audience)).to eq([])
@@ -141,6 +141,50 @@ RSpec.describe 'Campaign journey e-mail campaigns (#999)', :aggregate_failures, 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('email_campaign.audience_linked')
       expect(campaign.email_campaign_imports.count).to eq(0)
+    end
+  end
+
+  # The list follows the audience until the first send: synced when scheduled or sent.
+  describe 'syncing the recipients before the first send' do
+    let(:campaign) do
+      prepare_contacts
+      create_email_campaign
+      make_ready(created_campaign)
+    end
+
+    def emails(target = campaign)
+      target.reload.email_campaign_recipients.order(:email).pluck(:email, :status)
+    end
+
+    it 'adds who became eligible and removes pending ones who stopped being, idempotently, on schedule' do
+      expect(emails).to eq([%w[ana@alfa.com.br pending], %w[dani@sup.com.br suppressed]])
+      account.contacts.find_by(name: 'Caio Reis').update!(email: 'caio@gama.com.br')
+      account.contacts.find_by(name: 'Ana Souza').update!(email: 'ana@nova.com.br')
+
+      expect(campaign.schedule!(scheduled_at: 1.day.from_now)).to be_truthy
+
+      expect(emails).to eq([%w[caio@gama.com.br pending], %w[dani@sup.com.br suppressed]])
+      expect(campaign.email_campaign_recipients.find { |r| r.email == 'caio@gama.com.br' }.contact.name).to eq('Caio Reis')
+      expect(CampaignJourney::EmailAudienceRecipients.new(campaign).sync!).to eq(added: 0, removed: 0)
+    end
+
+    it 'syncs on send_now and when a scheduled campaign starts, and never after the first send' do
+      campaign
+      account.contacts.find_by(name: 'Caio Reis').update!(email: 'caio@gama.com.br')
+      expect(campaign.claim_for_sending!).to be(true)
+      expect(emails.map(&:first)).to include('caio@gama.com.br')
+
+      other = create_email_campaign && make_ready(created_campaign)
+      other.update!(status: :scheduled, scheduled_at: 1.minute.ago)
+      account.contacts.find_by(name: 'Eva Rocha').update_columns(opted_out_at: nil) # rubocop:disable Rails/SkipsModelValidations
+      other.mark_sending!
+      expect(emails(other).map(&:first)).to include('eva@out.com.br')
+
+      campaign.email_campaign_recipients.find_by!(email: 'ana@alfa.com.br').update!(status: :sent, sent_at: Time.current)
+      campaign.update_columns(status: EmailCampaign.statuses[:scheduled]) # rubocop:disable Rails/SkipsModelValidations
+      account.contacts.find_by(name: 'Caio Reis').update!(email: 'caio@outro.com.br')
+      expect(CampaignJourney::EmailAudienceRecipients.new(campaign.reload).sync!).to eq(added: 0, removed: 0)
+      expect(emails.map(&:first)).to include('caio@gama.com.br')
     end
   end
 

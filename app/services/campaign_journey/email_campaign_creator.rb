@@ -21,11 +21,9 @@ class CampaignJourney::EmailCampaignCreator
       validate_audience!
       campaign = EmailCampaign.create!(campaign_attributes.merge(account: @account))
       CampaignAudienceLink.create!(account: @account, campaign: campaign, campaign_import: @campaign_import)
-      CampaignJourney::EmailAudienceRecipients.new(campaign).materialize!
+      CampaignJourney::EmailAudienceRecipients.new(campaign).sync!
       campaign
     end
-    EmailCampaigns::RecipientPreflightJob.enqueue(campaign.id)
-    campaign
   rescue ActiveRecord::RecordInvalid => e
     raise CampaignJourney::CreatorError.new('invalid_campaign', e.record.errors.full_messages.to_sentence)
   rescue ActiveRecord::InvalidForeignKey, ActiveRecord::RecordNotFound
