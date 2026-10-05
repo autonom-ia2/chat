@@ -73,7 +73,7 @@ no longer exists, nor a counter that is too high.
 Company lookup (domain, then normalized name) lives in `CampaignImports::CompanyResolver`
 (read-only), shared by the linker and by the preview, so both apply the same rules.
 
-## Data (migration `20261005120000_add_company_columns_to_campaign_imports`)
+## Data (migration `20261005110000_add_company_columns_to_campaign_imports`)
 
 | Table | Column | |
 |---|---|---|
