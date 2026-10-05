@@ -1024,3 +1024,47 @@ describe('CrmCardDrawer landing page origin (#1011)', () => {
     ).toBe(false);
   });
 });
+
+describe('CrmCardDrawer contact origins (#1034)', () => {
+  const card = {
+    id: 8,
+    title: 'Card origens',
+    stage_id: 10,
+    inbox: { id: 38, name: 'WhatsApp Vendas' },
+    campaigns: [
+      { source: 'meta_ctwa', source_id: '1', headline: 'Cotação Rápida' },
+      {
+        source: 'meta_paid',
+        source_id: 'site:AB3CDE:120211',
+        headline: 'LP Seguro Viagem · Viagem EUA',
+        utm_campaign: 'Viagem EUA',
+      },
+    ],
+  };
+
+  it('lists every touch under "Contact origins" when there is more than one', async () => {
+    const wrapper = mountDrawer({ card });
+    await flushPromises();
+    const section = wrapper.find('[data-testid="crm-origin-touches"]');
+
+    expect(section.text()).toContain('CRM_KANBAN.ORIGIN.LIST.TITLE');
+    expect(section.findAll('[data-crm-origin-touch]')).toHaveLength(2);
+    expect(
+      wrapper.find('[data-testid="crm-origin-ad-hierarchy"]').exists()
+    ).toBe(false);
+  });
+
+  it('keeps the single origin as it was when there is only one touch', async () => {
+    const wrapper = mountDrawer({
+      card: { ...card, campaigns: [card.campaigns[1]] },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="crm-origin-touches"]').exists()).toBe(
+      false
+    );
+    expect(
+      wrapper.find('[data-testid="crm-origin-ad-hierarchy"]').exists()
+    ).toBe(true);
+  });
+});

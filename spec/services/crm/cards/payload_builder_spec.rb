@@ -60,10 +60,12 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     expect(payload[:campaigns]).to eq(
       [
         { source: 'meta_ctwa', source_id: '222', source_type: nil, headline: 'Anúncio Antigo', source_url: nil,
-          utm_campaign: nil, utm_term: nil, utm_content: nil, utm_id: nil, touched_at: '2026-06-30T09:00:00Z',
+          utm_campaign: nil, utm_term: nil, utm_content: nil, utm_id: nil,
+          campaign_name: nil, adset_name: nil, ad_name: nil, touched_at: '2026-06-30T09:00:00Z',
           conversation_id: linked.id },
         { source: 'meta_ctwa', source_id: '111', source_type: nil, headline: 'Promo Julho', source_url: 'https://fb.me/ad1',
-          utm_campaign: nil, utm_term: nil, utm_content: nil, utm_id: nil, touched_at: '2026-07-01T10:00:00Z',
+          utm_campaign: nil, utm_term: nil, utm_content: nil, utm_id: nil,
+          campaign_name: nil, adset_name: nil, ad_name: nil, touched_at: '2026-07-01T10:00:00Z',
           conversation_id: primary.id }
       ]
     )

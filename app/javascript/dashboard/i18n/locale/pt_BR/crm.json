@@ -206,7 +206,21 @@
       "UNKNOWN": "Origem desconhecida",
       "CAMPAIGN_PART": "Campanha: {name}",
       "ADSET_PART": "Conjunto: {name}",
-      "AD_PART": "Anúncio: {name}"
+      "AD_PART": "Anúncio: {name}",
+      "META_ID": "ID {id}",
+      "LEVEL": {
+        "CAMPAIGN": "Campanha",
+        "ADSET": "Conjunto",
+        "AD": "Anúncio"
+      },
+      "LIST": {
+        "TITLE": "Origens do contato",
+        "COUNT": "{count} toque | {count} toques",
+        "FIRST": "Primeiro toque",
+        "LAST": "Último toque",
+        "NEW_TAB": "(abre em nova aba)",
+        "MORE_ARIA": "Ver todas as origens (mais {count})"
+      }
     },
     "SUBTITLE": "Funis operacionais com cards próprios, independentes de conversa, contato ou caixa de entrada.",
     "META_SYNC_STATUS": {
@@ -366,6 +380,51 @@
         "NO_CAMPAIGN": "Sem campanha",
         "CAMPAIGNS_EMPTY_TITLE": "Nenhuma campanha ainda",
         "CAMPAIGNS_EMPTY_HINT": "Cole o texto nos seus anúncios da Meta. Cada campanha aparece aqui no primeiro clique."
+      },
+      "META_ADS": {
+        "TITLE": "Nomes das campanhas da Meta",
+        "DESCRIPTION": "Os parâmetros automáticos da Meta mandam números. Conecte a conta de anúncios para o CRM mostrar o nome da campanha, do conjunto e do anúncio.",
+        "DESCRIPTION_CONNECTED": "O CRM mostra o nome da campanha, do conjunto e do anúncio no lugar dos números que a Meta manda.",
+        "STATUS": {
+          "NOT_CONNECTED": "Não conectado",
+          "CONNECTED": "Conectado",
+          "ATTENTION": "Precisa de atenção"
+        },
+        "CHECKED": "Verificado {time}",
+        "ATTENTION_HINT": "A Meta recusou o token salvo. Conecte de novo com um token novo.",
+        "LAST_ERROR": "Resposta da Meta: {error}",
+        "CONNECT": "Conectar",
+        "RECONNECT": "Conectar de novo",
+        "REPLACE": "Trocar token",
+        "REMOVE": "Remover",
+        "REMOVE_TITLE": "Remover a conexão com a Meta?",
+        "REMOVE_HINT": "Os nomes que já aparecem no CRM continuam. Os próximos toques voltam a mostrar os números.",
+        "REMOVE_SUCCESS": "Conexão com a Meta removida.",
+        "REMOVE_ERROR": "Não deu para remover a conexão. Tente de novo.",
+        "LOADING": "Verificando a conexão…",
+        "LOAD_ERROR": "Não deu para verificar a conexão com a Meta.",
+        "RETRY": "Tentar de novo",
+        "DIALOG": {
+          "TITLE": "Conectar à Meta",
+          "DESCRIPTION": "Cole um token de anúncios. Ele lê os nomes das campanhas e envia ao Pixel as vendas que vieram do site; nada muda nos seus anúncios.",
+          "STEPS_TITLE": "No Gerenciador de Negócios:",
+          "STEP_1": "Abra Configurações do negócio → Usuários → Usuários do sistema. Se não houver nenhum, crie um.",
+          "STEP_2": "Clique em Atribuir ativos e dê ao usuário acesso à sua conta de anúncios e ao Pixel do site (em Conjuntos de dados). Sem a conta, os nomes não aparecem; sem o Pixel, as vendas não chegam à Meta.",
+          "STEP_3": "Só depois disso, clique em Gerar novo token, escolha o app, marque ads_read e, na validade, escolha Nunca.",
+          "STEP_4": "Copie o token e cole aqui.",
+          "TOKEN_LABEL": "Token de acesso",
+          "TOKEN_PLACEHOLDER": "Cole o token aqui",
+          "TOKEN_PRIVACY": "O token fica guardado criptografado e não aparece de novo.",
+          "SAVE": "Testar e salvar",
+          "SAVED": "Conectado. Os nomes começam a aparecer em alguns minutos.",
+          "ERROR_MISSING_ADS_READ": "Esse token não tem a permissão ads_read. Gere outro no Gerenciador de Negócios marcando ads_read.",
+          "ERROR_INVALID_TOKEN": "A Meta recusou esse token. Confira se copiou ele inteiro e se não expirou.",
+          "ERROR_NO_AD_ACCOUNT": "O token tem ads_read, mas não enxerga nenhuma conta de anúncios. No Gerenciador de Negócios, abra o usuário do sistema, clique em Atribuir ativos e escolha a conta de anúncios. Depois teste de novo.",
+          "ERROR_TOKEN_REQUIRED": "Cole o token antes de testar.",
+          "ERROR_ENCRYPTION": "A criptografia do servidor não está configurada, então não dá para guardar o token. Fale com o suporte.",
+          "ERROR_FORBIDDEN": "Só um administrador da conta pode conectar a Meta.",
+          "ERROR_GENERIC": "Não deu para testar o token agora. Tente de novo em instantes."
+        }
       }
     },
     "DASHBOARD": {
@@ -1369,7 +1428,7 @@
       "CREATE": "Criar funil",
       "META_SYNC_PIXEL": "Pixel do site (ID)",
       "META_SYNC_PIXEL_PLACEHOLDER": "Ex.: 1234567890123456",
-      "META_SYNC_PIXEL_HELP": "Vale para leads que chegam por landing page. A conexão do WhatsApp precisa ter permissão nesse Pixel no Gerenciador de Negócios."
+      "META_SYNC_PIXEL_HELP": "Vale para leads que chegam por landing page. As vendas vão pelo token de \"Nomes das campanhas da Meta\" (Campanhas → Links e QR codes), gerado depois de atribuir este Pixel ao usuário do sistema."
     },
     "GOOGLE_SYNC": {
       "TITLE": "Google Ads",
