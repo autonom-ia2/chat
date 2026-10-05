@@ -1,0 +1,111 @@
+{
+  "CONTACT_IMPORT_JOURNEY": {
+    "BREADCRUMB": "Caminho",
+    "CONTACTS": "Contatos",
+    "TITLE": "Importar contatos",
+    "SUBTITLE": "Suba a planilha. A gente acha as colunas, as empresas e as outras informações de cada contato.",
+    "REVIEW_SUBTITLE": "Confira antes de importar. Nada entra nos seus contatos até você importar.",
+    "BACK": "Voltar para contatos",
+    "UPLOAD": {
+      "LABEL": "Arraste a planilha aqui ou clique para escolher",
+      "HINT": "CSV ou Excel · até {size} MB · nome e celular ou e-mail; empresa e outras colunas são bem-vindas",
+      "SENDING": "Enviando a planilha…",
+      "ERROR": "Não deu para enviar a planilha. Tente de novo.",
+      "TOO_LARGE": "O arquivo tem mais de {size} MB."
+    },
+    "READING": "Lendo a planilha…",
+    "FILE": {
+      "ROWS": "{count} linhas",
+      "OTHER_FILE": "Escolher outra planilha"
+    },
+    "COLUMNS": {
+      "TITLE": "Colunas encontradas",
+      "HINT": "Confira e troque se precisar",
+      "CHOOSE_TITLE": "Diga qual coluna tem cada informação",
+      "CHOOSE_HINT": "Não deu para ter certeza de todas as colunas. Escolha abaixo; celular ou e-mail é obrigatório.",
+      "NONE": "Não tem",
+      "COLUMN": "coluna {name}",
+      "COLUMN_FALLBACK": "Coluna {number}",
+      "CHANGE": "Trocar {target}",
+      "FILLED": "{count} preenchidos",
+      "VALID": "{count} válidos",
+      "APPLY": "Conferir com estas colunas",
+      "NEED_CONTACT": "Escolha a coluna de celular ou de e-mail.",
+      "TARGETS": {
+        "NAME": "Nome",
+        "PHONE": "Celular",
+        "EMAIL": "E-mail",
+        "COMPANY": "Empresa"
+      }
+    },
+    "ATTRIBUTES": {
+      "TITLE": "Outras colunas",
+      "HINT": "Viram atributos do contato",
+      "NEW": "atributo novo",
+      "NONE": "A planilha não tem outras colunas."
+    },
+    "PEOPLE": {
+      "READY": "contatos prontos",
+      "SPLIT": "{existing} já eram seus contatos · {new} novos",
+      "PROBLEMS": "linhas com problema",
+      "SHOW_PROBLEMS": "Ver problemas",
+      "HIDE_PROBLEMS": "Esconder",
+      "ROW": "Linha",
+      "CONTACT": "Contato",
+      "PROBLEM": "Problema",
+      "EMPTY_CONTACT": "(vazio)",
+      "LEFT_OUT": "Essas linhas ficam de fora. Corrija e suba de novo quando quiser.",
+      "DOWNLOAD": "Baixar linhas com problema",
+      "MORE": "Mostrando as {shown} primeiras de {total}. Baixe o arquivo para ver todas."
+    },
+    "COMPANIES": {
+      "TITLE": "Empresas",
+      "HINT": "A coluna {column} tem a empresa de cada contato.",
+      "ON": "Criar e ligar",
+      "OFF": "Não criar",
+      "SWITCH_LABEL": "Criar empresas e ligar os contatos",
+      "NEW": "empresas novas",
+      "REUSED": "já existiam na base",
+      "LINKED": "contatos ligados",
+      "KEPT": "já tinham outra empresa — mantida",
+      "DISABLED": "Nenhuma empresa será criada ou ligada."
+    },
+    "ACTIONS": {
+      "CANCEL": "Cancelar",
+      "IMPORT": "Importar",
+      "IMPORTING": "Importando…",
+      "SEE_CONTACTS": "Ver contatos",
+      "NEW_IMPORT": "Importar outra planilha"
+    },
+    "RESULT": {
+      "TITLE": "Contatos importados",
+      "PARTIAL_TITLE": "Contatos importados, algumas linhas falharam",
+      "IMPORTED": "contatos importados",
+      "CREATED": "contatos novos",
+      "COMPANIES": "empresas novas",
+      "ATTRIBUTES": "atributos novos",
+      "FAILED": "ficaram de fora"
+    },
+    "ERRORS": {
+      "GENERIC": "Algo deu errado. Tente de novo.",
+      "IMPORT_FAILED": "A importação parou antes do fim. Os contatos já gravados continuam gravados.",
+      "FILE_REFUSED": "Não deu para usar esta planilha.",
+      "REASONS": {
+        "invalid_brazilian_mobile_number": "Não é celular brasileiro",
+        "missing_contact": "Sem celular nem e-mail",
+        "invalid_email": "E-mail inválido",
+        "blank_email": "E-mail vazio",
+        "duplicate_phone_in_file": "Celular repetido na planilha",
+        "duplicate_email_in_file": "E-mail repetido na planilha",
+        "formula_detected": "Célula parece fórmula",
+        "no_valid_rows": "Nenhuma linha tem celular ou e-mail válido",
+        "row_limit_exceeded": "A planilha tem mais linhas que o permitido",
+        "empty_file": "A planilha está vazia",
+        "unsupported_file_format": "Use um arquivo CSV ou Excel (.xlsx)",
+        "file_could_not_be_processed": "Não deu para ler o arquivo",
+        "missing_contact_column": "Escolha a coluna de celular ou de e-mail",
+        "invalid_column_choice": "Essa escolha de colunas não vale"
+      }
+    }
+  }
+}
