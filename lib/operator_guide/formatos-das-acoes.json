@@ -363,6 +363,15 @@
     ],
     "sem_corpo": true
   },
+  "DELETE contact_imports/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:69",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:91"
+    ],
+    "sem_corpo": true
+  },
   "DELETE contacts/:contact_id/notes/:id": {
     "completo": true,
     "controller": "api/v1/accounts/contacts/notes#destroy",
@@ -3806,9 +3815,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#channels",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:60",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:124",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:108"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:38",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:102",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:86"
     ],
     "sem_corpo": false
   },
@@ -3822,9 +3831,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#columns",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:14",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:119",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:108"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:12",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:97",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:86"
     ],
     "sem_corpo": false
   },
@@ -3835,9 +3844,9 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#companies",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:38",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:39",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:108"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:25",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:26",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:86"
     ],
     "sem_corpo": false
   },
@@ -4279,6 +4288,35 @@
       "app/controllers/api/v1/accounts_controller.rb:117",
       "app/controllers/api/v1/accounts_controller.rb:113",
       "app/controllers/api/v1/accounts_controller.rb:102"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH contact_imports/:id/columns": {
+    "campos": {
+      "company": {},
+      "email": {},
+      "name": {},
+      "phone": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#columns",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:29",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:31",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:91"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH contact_imports/:id/companies": {
+    "campos": {
+      "create_companies": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#companies",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:42",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:43",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:91"
     ],
     "sem_corpo": false
   },
@@ -11100,8 +11138,8 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#variable_coverage",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:92",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:108"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:70",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:86"
     ],
     "sem_corpo": true
   },
@@ -11971,6 +12009,36 @@
     "origem": [
       "app/controllers/api/v1/accounts_controller.rb:67",
       "app/controllers/api/v1/accounts_controller.rb:102"
+    ],
+    "sem_corpo": true
+  },
+  "POST contact_imports": {
+    "campos": {
+      "create_companies": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "import_file": {
+        "tipo": "arquivo",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#create",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:17",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:97",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:18"
+    ],
+    "sem_corpo": false
+  },
+  "POST contact_imports/:id/confirm": {
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#confirm",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:53",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:91"
     ],
     "sem_corpo": true
   },

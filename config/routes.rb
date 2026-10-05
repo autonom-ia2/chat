@@ -207,6 +207,15 @@ Rails.application.routes.draw do
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
           end
+          # Importar contatos (#1006): the journey's contact import (fork controller).
+          resources :contact_imports, only: [:create, :show, :destroy] do
+            member do
+              patch :columns
+              patch :companies
+              post :confirm
+              get :download
+            end
+          end
           resources :ai_requests, only: [:show]
           # Opções de campanha CTWA (filtros de Conversas e Kanban) — fora do
           # namespace :crm de propósito: não depende do gate ensure_crm_enabled.

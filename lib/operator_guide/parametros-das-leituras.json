@@ -710,6 +710,14 @@
     "controller": "api/v1/accounts#cache_keys",
     "parametros": []
   },
+  "contact_imports/:id": {
+    "controller": "api/v1/accounts/contact_imports#show",
+    "parametros": []
+  },
+  "contact_imports/:id/download": {
+    "controller": "api/v1/accounts/contact_imports#download",
+    "parametros": []
+  },
   "contacts": {
     "controller": "api/v1/accounts/contacts#index",
     "motivos": [
