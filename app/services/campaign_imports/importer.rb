@@ -3,6 +3,8 @@ require 'stringio'
 
 module CampaignImports
   class Importer
+    include SuppressedContactEvents
+
     Error = Class.new(StandardError)
     BLOCK_SIZE = 500
 
@@ -18,7 +20,7 @@ module CampaignImports
       return unless transition_to_importing!
 
       with_suppressed_contact_events do
-        label_records = ActiveRecord::Base.transaction { ensure_labels! }
+        label_records = ActiveRecord::Base.transaction { ensure_labels! } unless campaign_import.audience?
         normalized_rows.each_slice(BLOCK_SIZE) { |block| import_block(block, label_records) }
         finish_import!
       end
@@ -32,7 +34,8 @@ module CampaignImports
         imported_contacts_count: imported_count,
         failed_contacts_count: campaign_import.valid_rows.to_i - imported_count,
         import_finished_at: Time.current,
-        validation_summary: campaign_import.validation_summary.to_h.merge(import_error: e.class.name)
+        validation_summary: campaign_import.validation_summary.to_h.merge(import_error: e.class.name),
+        **company_counters
       )
     end
 
@@ -54,16 +57,9 @@ module CampaignImports
       should_import
     end
 
-    def with_suppressed_contact_events
-      previous = Current.suppress_contact_events
-      Current.suppress_contact_events = true
-      yield
-    ensure
-      Current.suppress_contact_events = previous
-    end
-
     def import_block(block, label_records)
       import_rows = campaign_import.campaign_import_rows.where(row_number: block.pluck(:row_number)).index_by(&:row_number)
+      import_companies&.prepare(block)
       ActiveRecord::Base.transaction do
         imported = block.filter_map do |row|
           import_row = import_rows.fetch(row[:row_number])
@@ -72,7 +68,7 @@ module CampaignImports
           contact = import_one(row, import_row, label_records)
           [contact.id, row_label_titles(row, label_records)] if contact
         end
-        BulkContactLabeler.new(imported).perform
+        BulkContactLabeler.new(imported).perform if label_records
       end
     end
 
@@ -82,10 +78,12 @@ module CampaignImports
         was_existing = contact.present?
         contact ||= account.contacts.create!(name: row[:name], phone_number: row[:phone_number], email: row[:email])
         ContactBlankFields.new(account).fill!(contact, row)
+        import_row.assign_attributes(import_companies.link(contact, row)) if import_companies
         mark_row_imported!(import_row, row, contact, was_existing, label_records)
         contact
       end
     rescue StandardError => e
+      import_row.restore_attributes(%i[company_id company_result]) # the company rolled back with the row
       import_row.update!(
         status: :import_failed,
         error_messages: Array(import_row.error_messages) + ["import_failed:#{e.class.name}"]
@@ -93,8 +91,9 @@ module CampaignImports
       nil
     end
 
+    # Públicos (#1005, N1) create no labels at all: label_records is nil and rows carry none.
     def row_label_titles(row, label_records)
-      [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title]
+      label_records ? [label_records[:base].title, label_records[:batches].fetch(row[:batch_index]).title] : []
     end
 
     # Públicos rows may carry only an email: the phone (with or without the 9th digit) wins,
@@ -104,10 +103,12 @@ module CampaignImports
       contact || (row[:email] && ContactBlankFields.new(account).contact_with_email(row[:email]))
     end
 
-    def find_existing_contact(phone_number)
-      @contact_matcher ||= ContactMatcher.new(account)
-      @contact_matcher.find(phone_number)
-    end
+    def find_existing_contact(phone_number) = (@contact_matcher ||= ContactMatcher.new(account)).find(phone_number)
+
+    # Públicos only (#998): the old campaign base flow never touches companies.
+    def import_companies = @import_companies ||= (ImportCompanies.new(campaign_import) if campaign_import.audience?)
+
+    def company_counters = import_companies&.counters || {}
 
     def ensure_labels!
       base_import_label = campaign_import.campaign_import_labels.kind_base.first!
@@ -132,7 +133,8 @@ module CampaignImports
       @normalized_rows ||= begin
         raise Error, 'normalized_csv_missing' unless campaign_import.normalized_csv.attached?
 
-        csv_data = campaign_import.normalized_csv.download
+        # The blob comes back as binary; the CSV was written as UTF-8 (accented names and companies).
+        csv_data = campaign_import.normalized_csv.download.force_encoding(Encoding::UTF_8)
         CSV.parse(csv_data, headers: true).map do |row|
           normalized = row['phone_number'].present? ? PhoneNormalizer.normalize!(row['phone_number']) : nil
           {
@@ -141,6 +143,7 @@ module CampaignImports
             phone_number: normalized&.phone_number,
             phone_hash: normalized&.hash,
             email: row['email'].presence,
+            company_name: row['company_name'].presence,
             batch_index: row['batch_index'].to_i
           }
         end
@@ -171,10 +174,14 @@ module CampaignImports
           imported_contacts_count: imported_count,
           existing_contacts_count: existing_count,
           failed_contacts_count: failed_count,
-          import_finished_at: Time.current
+          import_finished_at: Time.current,
+          **company_counters, **channel_counts
         )
       end
     end
+
+    # #1005 A1: after saving, the WhatsApp count is who the send can reach (same rule as AudienceContacts).
+    def channel_counts = campaign_import.audience? ? { channels: CampaignJourney::AudienceContacts.recounted_channels(campaign_import) } : {}
 
     def update_label_counts!
       campaign_import.campaign_import_labels.find_each do |import_label|

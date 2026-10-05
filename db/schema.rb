@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_130000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1075,6 +1075,20 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
     t.index ["provider", "provider_call_id"], name: "index_calls_on_provider_and_provider_call_id", unique: true
   end
 
+  create_table "campaign_audience_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "campaign_type", null: false
+    t.bigint "campaign_id", null: false
+    t.bigint "campaign_import_id"
+    t.jsonb "variable_bindings", default: {}, null: false
+    t.jsonb "variable_defaults", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_campaign_audience_links_on_account_id"
+    t.index ["campaign_import_id"], name: "index_campaign_audience_links_on_campaign_import_id"
+    t.index ["campaign_type", "campaign_id"], name: "index_campaign_audience_links_on_campaign_type_and_campaign_id", unique: true
+  end
+
   create_table "campaign_import_labels", force: :cascade do |t|
     t.bigint "campaign_import_id", null: false
     t.bigint "label_id"
@@ -1109,9 +1123,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
     t.string "normalized_email_hash"
     t.string "company_name"
     t.jsonb "extra_values", default: {}, null: false
+    t.bigint "company_id"
+    t.string "company_result"
     t.index ["campaign_import_id", "row_number"], name: "idx_campaign_import_rows_on_import_and_row_number", unique: true
     t.index ["campaign_import_id", "status"], name: "index_campaign_import_rows_on_campaign_import_id_and_status"
     t.index ["campaign_import_id"], name: "index_campaign_import_rows_on_campaign_import_id"
+    t.index ["company_id"], name: "index_campaign_import_rows_on_company_id"
     t.index ["contact_id"], name: "index_campaign_import_rows_on_contact_id"
     t.index ["normalized_email_hash"], name: "index_campaign_import_rows_on_normalized_email_hash"
     t.index ["normalized_phone_hash"], name: "index_campaign_import_rows_on_normalized_phone_hash"
@@ -1164,6 +1181,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
     t.jsonb "channels", default: {}, null: false
     t.jsonb "extra_columns", default: [], null: false
     t.jsonb "schema_resolution", default: {}, null: false
+    t.integer "companies_created_count", default: 0, null: false
+    t.integer "companies_reused_count", default: 0, null: false
+    t.integer "companies_kept_count", default: 0, null: false
+    t.integer "company_contacts_linked_count", default: 0, null: false
     t.index ["account_id", "campaign_slug"], name: "index_campaign_imports_on_account_id_and_campaign_slug"
     t.index ["account_id", "created_at"], name: "index_campaign_imports_on_account_id_and_created_at"
     t.index ["account_id", "status"], name: "index_campaign_imports_on_account_id_and_status"
@@ -3431,6 +3452,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_100000) do
   add_foreign_key "autonomia_prospecting_settings", "crm_pipeline_stages", column: "default_crm_stage_id", on_delete: :nullify
   add_foreign_key "autonomia_prospecting_settings", "crm_pipelines", column: "default_crm_pipeline_id", on_delete: :nullify
   add_foreign_key "autonomia_user_links", "users", on_delete: :cascade
+  add_foreign_key "campaign_audience_links", "accounts", on_delete: :cascade
+  add_foreign_key "campaign_audience_links", "campaign_imports", on_delete: :nullify
   add_foreign_key "campaign_recipients", "accounts", on_delete: :cascade
   add_foreign_key "campaign_recipients", "campaigns", on_delete: :cascade
   add_foreign_key "campaign_recipients", "contacts", on_delete: :cascade

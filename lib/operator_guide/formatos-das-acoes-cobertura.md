@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 506 |
-| Sem corpo | 137 |
-| Com corpo | 369 |
-| Com corpo e formato completo | 299 (81,0%) |
-| Com corpo e formato incompleto | 70 |
+| No catálogo | 511 |
+| Sem corpo | 138 |
+| Com corpo | 373 |
+| Com corpo e formato completo | 302 (81,0%) |
+| Com corpo e formato incompleto | 71 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 147 |
-| Leituras cruas tipadas | 101 de 170 |
+| Campos aninhados com vocabulário | 17 de 150 |
+| Leituras cruas tipadas | 101 de 171 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 55 |
+| leitura crua sem tipo | 56 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -56,6 +56,7 @@ Uma ação pode ter mais de um motivo.
 - `POST callbacks/facebook_pages` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/reauthorize_page` — leitura crua sem tipo: omniauth_token
 - `POST callbacks/register_facebook_page` — leitura crua sem tipo: inbox_name
+- `POST campaign_journey/campaigns` — leitura crua sem tipo: channel (repassada a ::CampaignJourney::WhatsappCampaignCreator.new)
 - `POST captain/assistants/:id/playground` — leitura crua sem tipo: playground_config
 - `POST captain/bulk_actions` — leitura crua sem tipo: type (repassada a MODEL_TYPE.include?)
 - `POST captain/tasks/follow_up` — leitura crua sem tipo: follow_up_context, message (repassada a Captain::FollowUpService.new)
@@ -130,6 +131,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/callbacks#facebook_pages` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#reauthorize_page` omniauth_token — o código não converte nem compara o valor
 - `api/v1/accounts/callbacks#register_facebook_page` inbox_name — o código não converte nem compara o valor
+- `api/v1/accounts/campaign_journey/campaigns#create` channel — repassada a ::CampaignJourney::WhatsappCampaignCreator.new
 - `api/v1/accounts/captain/assistants#playground` playground_config — o código não converte nem compara o valor
 - `api/v1/accounts/captain/bulk_actions#create` type — repassada a MODEL_TYPE.include?
 - `api/v1/accounts/captain/tasks#follow_up` follow_up_context — o código não converte nem compara o valor
@@ -182,8 +184,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 301 |
-| Com parâmetros conhecidos | 250 |
+| No catálogo | 302 |
+| Com parâmetros conhecidos | 251 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

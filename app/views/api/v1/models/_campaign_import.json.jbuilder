@@ -7,6 +7,13 @@ json.flow resource.audience? ? CampaignImport::AUDIENCE_FLOW : 'campaign_base'
 json.channels resource.channels || {}
 json.extra_columns resource.extra_columns || []
 json.schema_resolution resource.schema_resolution || {}
+json.create_companies resource.create_companies?
+json.companies do
+  json.created resource.companies_created_count
+  json.reused resource.companies_reused_count
+  json.contacts_linked resource.company_contacts_linked_count
+  json.kept resource.companies_kept_count
+end
 json.campaign_slug resource.campaign_slug
 json.base_label resource.base_label
 json.mode resource.mode
@@ -22,7 +29,7 @@ json.existing_contacts_count resource.existing_contacts_count
 json.failed_contacts_count resource.failed_contacts_count
 json.validation_summary resource.validation_summary || {}
 json.labels_payload resource.labels_payload || {}
-json.can_delete resource.deletable_before_import?
+json.can_delete resource.deletable?
 json.created_at resource.created_at
 json.updated_at resource.updated_at
 json.validated_at resource.validated_at

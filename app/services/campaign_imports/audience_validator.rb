@@ -134,8 +134,19 @@ class CampaignImports::AudienceValidator < CampaignImports::Validator
     end
   end
 
+  # #1005 (N1, D3): an audience creates no label at all and sends as a single list.
+  def plan_labels(valid_rows)
+    campaign_import.update!(batch_count: 1)
+    CampaignImports::LabelPlanner::Plan.new(
+      base_label: nil, batch_labels: [], batch_sizes: [valid_rows.size], batch_indexes: Array.new(valid_rows.size, 0)
+    )
+  end
+
+  # #998: what saving will do with companies, shown before the user confirms (read-only).
   def ready_attributes(row_results, valid_rows, invalid_rows, plan)
-    super.merge(audience_attributes(valid_rows))
+    attributes = super.merge(audience_attributes(valid_rows))
+    companies = CampaignImports::CompanyPreview.new(campaign_import.account, valid_rows).perform
+    attributes.merge(validation_summary: attributes[:validation_summary].merge(companies: companies))
   end
 
   def mark_validation_failed(global_errors, row_results, exception: nil)

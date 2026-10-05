@@ -31,18 +31,23 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   def destroy
     deleted = false
     error_code = nil
+    in_use = []
 
     @campaign_import.with_lock do
       @campaign_import.reload
-      unless @campaign_import.deletable_before_import?
+      unless @campaign_import.deletable?
         error_code = 'campaign_import.delete_not_available'
         next
       end
+      # #1005: an audience a scheduled or running campaign still sends to cannot go.
+      in_use = CampaignImports::AudienceUsage.new(@campaign_import).pending_campaigns
+      next if in_use.any?
 
-      @campaign_import.destroy!
+      destroy_campaign_import!
       deleted = true
     end
 
+    return render_audience_in_use(in_use) if in_use.any?
     return render_bad_request(error_code) unless deleted
 
     head :no_content
@@ -73,6 +78,7 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     should_enqueue = false
     already_done = false
     error_code = nil
+    in_use = []
     @campaign_import.with_lock do
       @campaign_import.reload
       if @campaign_import.undoing_labels? || @campaign_import.labels_undone?
@@ -84,11 +90,15 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
         error_code = 'campaign_import.undo_not_available'
         next
       end
+      # #1005 B3: an unfinished campaign still uses this import.
+      in_use = CampaignImports::AudienceUsage.new(@campaign_import).pending_campaigns
+      next if in_use.any?
 
       @campaign_import.update!(status: :undoing_labels, undo_status: :processing, undo_started_at: Time.current)
       should_enqueue = true
     end
 
+    return render_audience_in_use(in_use) if in_use.any?
     return render_bad_request(error_code) if error_code
     return render :show if already_done
 
@@ -109,6 +119,13 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
   end
 
   private
+
+  # Públicos (#1005, F2/N4): deleting an audience removes only the list.
+  def destroy_campaign_import!
+    return CampaignImports::AudienceDeletion.new(@campaign_import).perform if @campaign_import.audience?
+
+    @campaign_import.destroy!
+  end
 
   def ensure_campaign_import_enabled
     render json: { error: 'campaign_import.disabled' }, status: :not_found unless CampaignImports::Config.enabled?
@@ -151,12 +168,17 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     name = campaign_import_params[:name].to_s.strip.first(255)
     Current.account.campaign_imports.create!(
       user: Current.user, status: :uploaded, mode: 'single_label', name: name, campaign_name: name, batch_count: 1,
-      options: { default_country: 'BR', flow: CampaignImport::AUDIENCE_FLOW }, **source_file_attributes
+      options: { default_country: 'BR', flow: CampaignImport::AUDIENCE_FLOW, create_companies: create_companies_param }, **source_file_attributes
     )
   end
 
   def campaign_import_params
-    params.permit(:campaign_name, :batch_count, :name)
+    params.permit(:campaign_name, :batch_count, :name, :create_companies)
+  end
+
+  # #998 "Criar e ligar": on by default; only an explicit "false" turns it off.
+  def create_companies_param
+    campaign_import_params[:create_companies].to_s != 'false'
   end
 
   def normalized_batch_count
@@ -178,6 +200,10 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
       'error_csv' => @campaign_import.error_csv,
       'report_csv' => @campaign_import.report_csv
     }[kind.to_s]
+  end
+
+  def render_audience_in_use(campaigns)
+    render json: CampaignImports::AudienceUsage.error_payload(campaigns), status: :unprocessable_entity
   end
 
   def render_bad_request(code)

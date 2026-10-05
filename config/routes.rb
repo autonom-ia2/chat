@@ -198,9 +198,14 @@ Rails.application.routes.draw do
               post :undo_labels
               get :download
               patch :columns, to: 'campaign_import_audiences#columns'
+              patch :companies, to: 'campaign_import_audiences#companies'
               get :variable_suggestions, to: 'campaign_import_audiences#variable_suggestions'
               post :variable_coverage, to: 'campaign_import_audiences#variable_coverage'
+              patch :channels, to: 'campaign_import_audiences#channels'
             end
+          end
+          namespace :campaign_journey do
+            resources :campaigns, only: [:create]
           end
           resources :ai_requests, only: [:show]
           # Opções de campanha CTWA (filtros de Conversas e Kanban) — fora do
