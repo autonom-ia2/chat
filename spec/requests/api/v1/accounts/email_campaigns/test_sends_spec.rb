@@ -81,10 +81,16 @@ RSpec.describe 'E-mail campaign test send (#999, D8/L6)', :aggregate_failures, t
     expect(response.parsed_body).to eq('error' => 'email_campaign.test_send_failed')
   end
 
-  it 'keeps the editor address when given, and refuses a campaign without a ready sender' do
+  it 'refuses any address other than the logged-in user, and a campaign without a ready sender' do
     capturing(EmailCampaigns::Ses::Sender)
     send_test(to_email: 'outra@empresa.com.br')
-    expect(delivered.first[:to]).to eq('outra@empresa.com.br')
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'email_campaign.test_send_only_self')
+    expect(delivered).to be_empty
+
+    send_test(to_email: 'Gestora@Empresa.com.br')
+    expect(response).to have_http_status(:ok)
+    expect(delivered.first[:to]).to eq('gestora@empresa.com.br')
 
     campaign.sender_identity.update!(status: :pending)
     send_test

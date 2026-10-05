@@ -3,14 +3,16 @@
 # and goes out the same way the real send does: the verified domain (SES) or the campaign's inbox
 # (direct_inbox), with the same Reply-To.
 #
-# Without `to_email` the test goes to the logged-in user's own email ("Enviar teste para mim");
-# the editor may still pass `to_email`.
+# The test goes only to the logged-in user's own email ("Enviar teste para mim", D8): without
+# `to_email`, or with `to_email` equal to it (case-insensitive). Any other address → 422
+# email_campaign.test_send_only_self.
 class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts::EmailCampaigns::BaseController
   def create
     campaign = EmailCampaign.where(account: Current.account).find(params[:id])
     authorize campaign, :update?
 
-    to_email = (params[:to_email].presence || Current.user.email).to_s.strip
+    to_email = Current.user.email.to_s.strip
+    return render_unprocessable('email_campaign.test_send_only_self') unless own_address?(to_email)
     return render_unprocessable('email_campaign.invalid_email') unless Devise.email_regexp.match?(to_email)
     return render_unprocessable(missing_sender_code(campaign)) unless campaign.sender_ready?
 
@@ -47,6 +49,11 @@ class Api::V1::Accounts::EmailCampaigns::TestSendsController < Api::V1::Accounts
   rescue StandardError => e
     Rails.logger.error("[EmailCampaigns::TestSendsController] direct test send failed campaign=#{campaign.id} #{e.class.name}")
     raise DirectSendFailed
+  end
+
+  def own_address?(user_email)
+    requested = params[:to_email].to_s.strip
+    requested.blank? || requested.casecmp?(user_email)
   end
 
   def missing_sender_code(campaign)
