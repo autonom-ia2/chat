@@ -18,14 +18,20 @@ module CampaignJourney::CampaignMarks
   }.freeze
 
   def mark!(conversation, campaign)
-    source_type, type, name_attribute = KINDS.fetch(campaign.class.name)
-    source_id = "campaign:#{type}:#{campaign.id}"
+    source_type, _type, name_attribute = KINDS.fetch(campaign.class.name)
+    source_id = source_id_for(campaign)
     return false if marked?(conversation, source_id)
 
     Ctwa::CampaignBuilder.attribute!(
       conversation,
       source_id: source_id, source_type: source_type, headline: campaign.public_send(name_attribute)
     )
+  end
+
+  # "campaign:<type>:<id>" — the mark of this campaign on conversations and in the Kanban filter
+  # (also read by the campaign result, #1007).
+  def source_id_for(campaign)
+    "campaign:#{KINDS.fetch(campaign.class.name)[1]}:#{campaign.id}"
   end
 
   # Cheap in-memory check so repeated replies never take the row lock of the builder.
