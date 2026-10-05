@@ -56,6 +56,7 @@ jobs:
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
             tests/instagram_testers/runtime-publisher.test.mjs \
+            tests/instagram_testers/session-publisher-stdio.test.mjs \
             tests/instagram_testers/operator-control.test.mjs
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
@@ -91,6 +92,7 @@ jobs:
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
           tests/instagram_testers/runtime-publisher.test.mjs
+          tests/instagram_testers/session-publisher-stdio.test.mjs
           tests/instagram_testers/operator-control.test.mjs
           scripts/instagram_testers/runtime/operator-protocol.mjs
           scripts/instagram_testers/runtime/operator-waiter.mjs

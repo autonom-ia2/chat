@@ -151,13 +151,14 @@ consulta/proxy acima e:
 - `INSTAGRAM_TESTER_PLAYWRIGHT_MODULE`: caminho absoluto do `index.mjs` de Playwright.
 - `INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON`: lista de argumentos para executar o
   publisher no runtime Rails aprovado da instalação. Sem shell ou credenciais nos
-  argumentos. Exemplo estrutural: `['bundle','exec','rails','runner',
+  argumentos. Exemplo estrutural: `['bundle','exec','ruby',
   'scripts/instagram_testers/session_publisher.rb']` em JSON válido (aspas duplas).
   Num host separado, usar o transporte de execução operacional já autorizado,
   com stdin preservado; não criar endpoint público para publicação.
 
 O transporte fornecido em `scripts/instagram_testers/runtime/publisher-tunnel.mjs`
-usa SSH com comando forçado por túnel SSM, valida conta AWS e consulta o ponteiro
+usa SSH com comando forçado por túnel SSM (`AWS-StartPortForwardingSession`,
+porta 22 da própria instância; sem parâmetro `host`), valida conta AWS e consulta o ponteiro
 blue-green atual a cada publicação. Não abre porta SSH pública. A chave privada
 dedicada fica fora de Git no gestor; somente sua chave pública é entregue pelo
 parâmetro String `/chatwoot/prod/instagram-tester-publisher-public-key`.

@@ -12,7 +12,7 @@ fail() {
 [ "$(/usr/bin/id -u 2>/dev/null)" = "0" ] || fail
 [ "${SUDO_USER-}" = "chatwoot_publisher" ] || fail
 
-result=$(/usr/bin/docker exec -i chatwoot-web bundle exec rails runner scripts/instagram_testers/session_publisher.rb 2>/dev/null) || fail
+result=$(/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb 2>/dev/null) || fail
 
 line_count=$(printf '%s\n' "$result" | /usr/bin/wc -l | /usr/bin/tr -d ' ')
 [ "$line_count" = "1" ] || fail

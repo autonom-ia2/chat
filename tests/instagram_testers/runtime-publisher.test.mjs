@@ -142,10 +142,7 @@ test('SSM forwarding and SSH argv never contain the JSON payload', () => {
   assert.equal(sshArgs.includes(canary), false);
   assert.equal(sshArgs.at(-1), 'chatwoot_publisher@127.0.0.1');
   assert.equal(sshArgs.includes('bundle'), false);
-  assert.equal(
-    startArgs.includes('AWS-StartPortForwardingSessionToRemoteHost'),
-    true
-  );
+  assert.equal(startArgs.includes('AWS-StartPortForwardingSession'), true);
   assert.equal(startArgs.includes(config.instanceId), true);
 });
 
@@ -401,9 +398,10 @@ test('runPublisher converts SSH stdin EPIPE to a static failure and cleans both 
 
 test('forced remote command is root-only, narrow, and emits only the publisher result', async () => {
   const source = await readFile(`${runtimeDir}/forced-publisher.sh`, 'utf8');
-  assert.match(
-    source,
-    /\/usr\/bin\/docker exec -i chatwoot-web bundle exec rails runner scripts\/instagram_testers\/session_publisher\.rb/
+  assert.ok(
+    source.includes(
+      '/usr/bin/docker exec -i chatwoot-web bundle exec ruby scripts/instagram_testers/session_publisher.rb'
+    )
   );
   assert.match(source, /SSH_ORIGINAL_COMMAND/);
   assert.match(source, /id -u/);
@@ -816,5 +814,23 @@ for (const failure of ['overflow', 'error', 'stdin-error', 'nonzero']) {
     await assert.rejects(result, /instagram_session_publication_failed/);
     if (failure === 'overflow' || failure === 'stdin-error')
       assert.equal(ssh.killed, true);
+  });
+}
+
+for (const stack of ['hub2you', 'autonomia']) {
+  test(`publisher forwards SSH on the managed node without a remote host: ${stack}`, () => {
+    const args = startSessionArguments(runtimeConfig(stack, baseEnv), 49152);
+    assert.equal(
+      args[args.indexOf('--document-name') + 1],
+      'AWS-StartPortForwardingSession'
+    );
+    assert.equal(
+      args[args.indexOf('--parameters') + 1],
+      'portNumber=["22"],localPortNumber=["49152"]'
+    );
+    assert.equal(
+      args.includes('AWS-StartPortForwardingSessionToRemoteHost'),
+      false
+    );
   });
 }
