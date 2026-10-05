@@ -2,7 +2,8 @@ class SuperAdmin::InstagramAutomationsController < SuperAdmin::ApplicationContro
   helper SuperAdmin::InstagramAutomationHelper
   wrap_parameters false
   protect_from_forgery with: :exception
-  before_action :validate_action_parameters!, only: [:create, :health, :reconnect]
+  before_action :protect_browser_response, only: :browser
+  before_action :validate_action_parameters!, only: [:create, :health, :reconnect, :browser]
   rescue_from ActionController::InvalidAuthenticityToken, with: :render_invalid_request
   rescue_from Instagram::Automation::Metadata::InvalidConfiguration, with: :render_invalid_configuration
 
@@ -51,7 +52,20 @@ class SuperAdmin::InstagramAutomationsController < SuperAdmin::ApplicationContro
     end
   end
 
+  def browser
+    control = Instagram::Automation::OperatorControl.new.status.fetch(:control)
+    @grant = Instagram::Automation::OperatorBrowserTicket.new.call(control: control, actor_id: current_super_admin.id)
+    render 'super_admin/instagram_automation/browser', layout: false
+  rescue Instagram::Automation::OperatorBrowserTicket::Unavailable
+    render plain: t('super_admin.instagram_automation.operator_browser_unavailable'), status: :service_unavailable
+  end
+
   private
+
+  def protect_browser_response
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['Referrer-Policy'] = 'strict-origin'
+  end
 
   def validate_action_parameters!
     allowed = %w[controller action format authenticity_token utf8 commit]

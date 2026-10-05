@@ -49,6 +49,42 @@ RSpec.describe 'Super Admin Instagram automation UI', type: :request do
     expect(content.at_css("a[href='#{path}']").text).to eq(I18n.t('super_admin.instagram_automation.refresh'))
   end
 
+  it 'posts browser access only for the actor who owns an active request' do
+    status.merge!(operator_browser_configured: true,
+                  control: { 'state' => 'running', 'actor_id' => super_admin.id,
+                             'created_at' => Time.current.iso8601, 'updated_at' => Time.current.iso8601 })
+    with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed') do
+      get path
+      form = page.at_css("form[action='#{path}/browser']")
+      expect(form['method']).to eq('post')
+      expect(form['target']).to eq('_blank')
+      expect(form['rel']).to include('noopener')
+      expect(form['rel']).not_to include('noreferrer')
+      expect(form.at_css('button').text).to eq(I18n.t('super_admin.instagram_automation.open_remote_browser'))
+      expect(page.at_css("a[href*='vnc']")).to be_nil
+      status[:control]['actor_id'] = super_admin.id + 1
+      get path
+      expect(Nokogiri::HTML(response.body).at_css("form[action='#{path}/browser']")).to be_nil
+    end
+  end
+
+  it 'shows capture and publication times from the sanitized session status in both languages' do
+    captured = 2.minutes.ago
+    published = 1.minute.ago
+    status[:session] = { state: 'active', captured_at: captured.iso8601(6), published_at: published.iso8601(6) }
+    %i[en pt_BR].each do |locale|
+      I18n.with_locale(locale) do
+        get path
+        document = Nokogiri::HTML(response.body)
+        expect(document.at_css('[data-session-time="captured_at"]')['datetime']).to eq(captured.iso8601(3))
+        expect(document.at_css('[data-session-time="published_at"]')['datetime']).to eq(published.iso8601(3))
+        expect(document.text).to include(
+          I18n.t('super_admin.instagram_automation.captured_at'), I18n.t('super_admin.instagram_automation.published_at')
+        )
+      end
+    end
+  end
+
   it 'disables reconnection for an unmanaged source or an active request even when manager allows control' do
     status.merge!(operator_required: true, control_available: true, managed_session: false)
     get path

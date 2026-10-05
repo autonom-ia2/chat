@@ -87,6 +87,23 @@ export function observerConfiguration(env, bootstrap) {
   return configuration({ ...env, ...value.metadata });
 }
 
+export function chromiumSandbox(env) {
+  const value = env.INSTAGRAM_TESTER_CHROMIUM_SANDBOX;
+  if (value !== undefined && !['true', 'false'].includes(value))
+    throw new Error('browser_runtime_required');
+  if (env.INSTAGRAM_TESTER_RUNTIME_MODE === 'vps' && value !== 'true')
+    throw new Error('browser_runtime_required');
+  return value === 'true';
+}
+
+export function managerCycleBudget(env) {
+  const mode = env.INSTAGRAM_TESTER_RUNTIME_MODE;
+  if (mode === 'vps') return 120000;
+  if (mode !== undefined && mode !== '')
+    throw new Error('browser_runtime_required');
+  return CYCLE_BUDGET_MS;
+}
+
 export function browserEnvironment(env) {
   // Browser children do not need Rails/AWS/proxy secrets or protocol tracing.
   const keys = [
@@ -96,6 +113,7 @@ export function browserEnvironment(env) {
     'TEMP',
     'TMP',
     'DISPLAY',
+    'XAUTHORITY',
     'WAYLAND_DISPLAY',
     'XDG_RUNTIME_DIR',
     'LANG',
@@ -267,6 +285,11 @@ export async function run(
 ) {
   let config;
   const proxy = proxyConfiguration(env);
+  const cycleBudget = managerCycleBudget(env);
+  // 13 minutes asleep + a bounded 2-minute cycle fits the backend's 16-minute heartbeat TTL.
+  // Legacy runtimes retain the original 15-minute pause and 30-second cycle.
+  const refreshInterval =
+    env.INSTAGRAM_TESTER_RUNTIME_MODE === 'vps' ? 780000 : REFRESH_INTERVAL_MS;
   const command = JSON.parse(
     env.INSTAGRAM_TESTER_PUBLISHER_COMMAND_JSON || 'null'
   );
@@ -302,6 +325,7 @@ export async function run(
         .launchPersistentContext(profile, {
           channel: 'chrome',
           headless: true,
+          chromiumSandbox: chromiumSandbox(env),
           timeout: setup.remaining(),
           env: browserEnvironment(env),
           proxy: {
@@ -344,7 +368,7 @@ export async function run(
     );
     setup.close();
     while (!shutdown.signal.aborted) {
-      const cycle = deadlineScope(shutdown.signal, clock);
+      const cycle = deadlineScope(shutdown.signal, clock, cycleBudget);
       const wait = cycle.wait;
       const send = payload => {
         cycle.signal.throwIfAborted();
@@ -484,7 +508,7 @@ export async function run(
         cycle.close();
       }
       // A transport failure waits for the normal refresh, with no captured replay.
-      await pause(REFRESH_INTERVAL_MS, shutdown.signal, clock).catch(() => {});
+      await pause(refreshInterval, shutdown.signal, clock).catch(() => {});
     }
     if (operatorState.required) throw new Error('operator_required');
   } finally {

@@ -1,5 +1,10 @@
 # Release operacional Instagram — #960
 
+> #995: o novo runtime permanente está em desenvolvimento para a VPS n8n.
+> Ver [migração VPS](instagram-vps-runtime-995.md). As referências aos Macs abaixo
+> descrevem o runtime anterior; não são dependência da arquitetura nova nem prova
+> de migração já executada. Assistido permanece OFF até homologação aprovada.
+
 ## Bootstrap bloqueado depois da preparação local — correção #960
 
 A PR #962 já foi publicada nas duas stacks e os cinco metadados foram salvos.

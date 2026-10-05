@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Return only the SSH host public key used by the Instagram publisher transport.",
+  "parameters": {},
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "publisherHostKey",
+      "inputs": {
+        "timeoutSeconds": "5",
+        "runCommand": ["/usr/bin/cat /etc/ssh/ssh_host_ed25519_key.pub"]
+      }
+    }
+  ]
+}

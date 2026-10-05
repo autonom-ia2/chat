@@ -14,6 +14,7 @@ const PUBLIC_KEY_TYPE =
   /^(ssh-ed25519|ecdsa-sha2-nistp256|rsa-sha2-512|rsa-sha2-256)$/;
 const PUBLIC_KEY_DATA = /^[A-Za-z0-9+/]+={0,2}$/;
 const MAX_OUTPUT_BYTES = 2048;
+const HOST_KEY_DOCUMENT = 'ChatwootInstagramPublisherHostKey';
 export const PUBLISH_BUDGET_MS = 25_000;
 
 function delay(milliseconds) {
@@ -75,7 +76,18 @@ export function runtimeConfig(stack, env = process.env) {
   const sshKey = env.INSTAGRAM_TESTER_PUBLISHER_SSH_KEY;
   requireSafe(instanceId === undefined || INSTANCE_ID.test(instanceId));
   requireSafe(sshKey, PRIVATE_PATH.test(sshKey));
-  return Object.freeze({ ...profile, stack, instanceId, sshKey });
+  const hostKeyDocument =
+    env.INSTAGRAM_TESTER_PUBLISHER_HOST_KEY_DOCUMENT || 'AWS-RunShellScript';
+  requireSafe(
+    ['AWS-RunShellScript', HOST_KEY_DOCUMENT].includes(hostKeyDocument)
+  );
+  return Object.freeze({
+    ...profile,
+    stack,
+    instanceId,
+    sshKey,
+    hostKeyDocument,
+  });
 }
 
 export function startSessionArguments(config, localPort) {
@@ -280,9 +292,13 @@ export async function hostKeyViaSsm(
         '--instance-ids',
         config.instanceId,
         '--document-name',
-        'AWS-RunShellScript',
-        '--parameters',
-        'commands=["/usr/bin/cat /etc/ssh/ssh_host_ed25519_key.pub"]',
+        config.hostKeyDocument || 'AWS-RunShellScript',
+        ...(config.hostKeyDocument === HOST_KEY_DOCUMENT
+          ? []
+          : [
+              '--parameters',
+              'commands=["/usr/bin/cat /etc/ssh/ssh_host_ed25519_key.pub"]',
+            ]),
         '--query',
         'Command.CommandId',
         '--output',

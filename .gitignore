@@ -110,3 +110,6 @@ local/
 Procfile.worktree
 credential.env
 .nodeterm/project.json
+
+# The isolated VPS runtime uses npm with its own pinned production dependencies.
+!/scripts/instagram_testers/runtime/vps/package-lock.json

@@ -1,0 +1,41 @@
+[Unit]
+Description=Instagram private TigerVNC display (%i)
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=ig-%i
+Group=igview-%i
+EnvironmentFile=/etc/instagram-meta/%i/display.env
+ExecStartPre=/usr/bin/python3 /opt/instagram-meta/current/scripts/instagram_testers/runtime/vps/env/check.py %i display
+ExecStart=/usr/bin/Xtigervnc ${DISPLAY} -geometry 1440x900 -depth 24 -nolisten tcp -noreset -auth ${XAUTHORITY} -rfbport -1 -rfbunixpath /run/instagram-%i/vnc.sock -rfbunixmode 0660 -SecurityTypes None -NeverShared -DisconnectClients=0 -AcceptCutText=0 -SendCutText=0 -AllowOverride=
+RuntimeDirectory=instagram-%i
+RuntimeDirectoryMode=0710
+RuntimeDirectoryPreserve=restart
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=35
+KillMode=control-group
+UMask=0077
+MemoryMax=512M
+CPUQuota=50%
+TasksMax=64
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/instagram-%i
+InaccessiblePaths=/var/lib/instagram-publisher-hub2you /var/lib/instagram-publisher-autonomia
+InaccessiblePaths=/var/lib/instagram-gateway-hub2you /var/lib/instagram-gateway-autonomia
+NoNewPrivileges=true
+CapabilityBoundingSet=
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

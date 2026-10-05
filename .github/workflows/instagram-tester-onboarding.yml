@@ -105,6 +105,10 @@ jobs:
           cache: pnpm
       - name: Install locked frontend dependencies
         run: pnpm install --frozen-lockfile --prod=false
+      - name: Install isolated Ruby JWT for cross-language wire contract
+        run: gem install jwt --version 2.10.3 --no-document
+      - name: Install pinned isolated VPS dependencies without browser downloads
+        run: npm ci --prefix scripts/instagram_testers/runtime/vps --ignore-scripts --no-fund --no-audit
       - name: Run fixture and visual helper tests
         run: |
           node --test \
@@ -116,7 +120,13 @@ jobs:
             tests/instagram_testers/session-manager.test.mjs \
             tests/instagram_testers/runtime-publisher.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
-            tests/instagram_testers/operator-control.test.mjs
+            tests/instagram_testers/operator-control.test.mjs \
+            tests/instagram_testers/vps-browser-marker.test.mjs \
+            tests/instagram_testers/vps-gateway.test.mjs \
+            tests/instagram_testers/vps-jwt-interoperability.test.mjs \
+            tests/instagram_testers/vps-publisher.test.mjs
+      - name: Validate VPS installer and environment contracts with synthetic infrastructure
+        run: python -B tests/instagram_testers/vps-infra_test.py -v
       - name: Run offline deploy recovery tests with fake infrastructure commands
         run: python -B tests/instagram_testers/deploy-recovery_test.py -v
       - name: Validate isolated coordinator provisioning and runtime with fake infrastructure
@@ -153,6 +163,18 @@ jobs:
           tests/instagram_testers/runtime-publisher.test.mjs
           tests/instagram_testers/session-publisher-stdio.test.mjs
           tests/instagram_testers/operator-control.test.mjs
+          tests/instagram_testers/vps-browser-marker.test.mjs
+          tests/instagram_testers/vps-gateway.test.mjs
+          tests/instagram_testers/vps-jwt-interoperability.test.mjs
+          tests/instagram_testers/vps-publisher.test.mjs
+          scripts/instagram_testers/runtime/browser-request-marker.mjs
+          scripts/instagram_testers/runtime/vps/gateway.mjs
+          scripts/instagram_testers/runtime/vps/gateway-auth.mjs
+          scripts/instagram_testers/runtime/vps/publisher-broker.mjs
+          scripts/instagram_testers/runtime/vps/publisher-client.mjs
+          scripts/instagram_testers/runtime/vps/publisher-socket.mjs
+          scripts/instagram_testers/runtime/vps/web/console.js
+          scripts/instagram_testers/runtime/vps/web/enter.js
           scripts/instagram_testers/runtime/operator-protocol.mjs
           scripts/instagram_testers/runtime/operator-waiter.mjs
           tests/qa/instagram-testers/wizard.mjs
@@ -297,3 +319,25 @@ jobs:
             tmp/instagram-931/qa-evidence/wizard/*.png
             tmp/instagram-931/qa-evidence/server.json
             tmp/instagram-931/qa-evidence/current-utilities.css
+
+  vps-linux-smoke:
+    name: VPS Linux Chrome and private VNC
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install pinned VPS dependencies
+        run: npm ci --prefix scripts/instagram_testers/runtime/vps --ignore-scripts --no-fund --no-audit
+      - name: Prepare disposable Linux browser and private display
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tigervnc-standalone-server xauth
+          cd scripts/instagram_testers/runtime/vps
+          npx --no-install playwright install --with-deps chrome
+      - name: Exercise Linux Chrome, authenticated gateway and AF_UNIX VNC without Meta
+        env:
+          IG_VPS_LINUX_SMOKE: '1'
+        run: node tests/instagram_testers/vps-linux-smoke.mjs
