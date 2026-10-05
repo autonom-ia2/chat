@@ -253,6 +253,7 @@ describe('ContactImportPage (#1006)', () => {
         ...ready.validation_summary,
         attribute_problems: {
           count: 1,
+          kept: 3,
           by_attribute: { Aniversário: 1 },
           rows: [{ row_number: 9, attribute: 'Aniversário' }],
         },
@@ -262,6 +263,10 @@ describe('ContactImportPage (#1006)', () => {
     const problems = wrapper.get('[data-test="attribute-problems"]').text();
     expect(problems).toContain('1 value stays out');
     expect(problems).toContain('Row 9: value does not fit Aniversário');
+    expect(problems).not.toContain('kept');
+    expect(wrapper.get('[data-test="attribute-kept"]').text()).toBe(
+      '3 values kept: the contacts already had them'
+    );
     wrapper.unmount();
   });
 

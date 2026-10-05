@@ -131,6 +131,19 @@ const choose = (target, value) => {
       <p v-else class="mb-0 text-xs text-n-slate-11">
         {{ t(`${NS}.ATTRIBUTES.NONE`) }}
       </p>
+      <p
+        v-if="problems.kept"
+        class="mb-0 w-full text-xs text-n-slate-11"
+        data-test="attribute-kept"
+      >
+        {{
+          t(
+            `${NS}.ATTRIBUTES.KEPT`,
+            { count: n(problems.kept) },
+            problems.kept
+          )
+        }}
+      </p>
       <div
         v-if="problems.count"
         class="w-full rounded-lg bg-n-amber-2 px-3 py-2 text-xs text-n-slate-12"

@@ -132,7 +132,11 @@ export const resultCounts = contactImport => {
 // Cells that do not fit the type of the attribute they would fill (left out of that row only).
 export const attributeProblems = contactImport => {
   const problems = contactImport?.validation_summary?.attribute_problems || {};
-  return { count: problems.count || 0, rows: problems.rows || [] };
+  return {
+    count: problems.count || 0,
+    kept: problems.kept || 0,
+    rows: problems.rows || [],
+  };
 };
 
 // vue-i18n's n() throws for the dashboard locale codes ("pt_BR" is not a BCP 47 tag).

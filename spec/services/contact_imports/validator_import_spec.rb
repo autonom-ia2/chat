@@ -134,7 +134,7 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       campaign_import = contact_import(["Ana,#{phone(1)},,,15/03/2026,ouro", "Bia,#{phone(2)},,,amanhã,Bronze"])
 
       expect(campaign_import.validation_summary['attribute_problems']).to eq(
-        'count' => 2, 'by_attribute' => { 'Vencimento' => 1, 'Plano' => 1 },
+        'count' => 2, 'kept' => 0, 'by_attribute' => { 'Vencimento' => 1, 'Plano' => 1 },
         'rows' => [{ 'row_number' => 3, 'attribute' => 'Vencimento' }, { 'row_number' => 3, 'attribute' => 'Plano' }]
       )
       expect(campaign_import.validation_summary['contact_attributes'].pluck('type')).to eq(%w[date list])
@@ -145,6 +145,19 @@ RSpec.describe ContactImports::Validator, :aggregate_failures do
       expect(campaign_import).to be_completed
       expect(account.contacts.order(:name).pluck(:name, :custom_attributes)).to eq(
         [['Ana', { 'vencimento' => '2026-03-15', 'plano' => 'Ouro' }], ['Bia', {}]]
+      )
+    end
+  end
+
+  describe 'Q2: values a contact already has' do
+    it 'counts them as kept, not as left out' do
+      account.custom_attribute_definitions.create!(attribute_model: :contact_attribute, attribute_key: 'vencimento',
+                                                   attribute_display_name: 'Vencimento', attribute_display_type: :date)
+      account.contacts.create!(name: 'Ana', phone_number: "+55#{phone(1)}", custom_attributes: { 'vencimento' => '2025-01-01', 'plano' => 'Ouro' })
+      campaign_import = contact_import(["Ana,#{phone(1)},,,amanhã,Prata", "Bia,#{phone(2)},,,amanhã,Prata"])
+
+      expect(campaign_import.validation_summary['attribute_problems']).to include(
+        'count' => 1, 'kept' => 2, 'rows' => [{ 'row_number' => 3, 'attribute' => 'Vencimento' }]
       )
     end
   end
