@@ -10,6 +10,7 @@ import { CAMPAIGN_CHANNELS } from './campaignChannels';
 import {
   BACKEND_CHANNEL,
   buildPreviewPayload,
+  isSmsInbox,
   isWhatsappApiCampaignInbox,
 } from './journeyChannelPayloads';
 
@@ -28,6 +29,12 @@ export function useJourneyChannelForms({ draft, bindings }) {
   const apiInboxOptions = computed(() =>
     (inboxes.value || [])
       .filter(isWhatsappApiCampaignInbox)
+      .map(inbox => ({ value: inbox.id, label: inbox.name }))
+  );
+
+  const smsInboxOptions = computed(() =>
+    (inboxes.value || [])
+      .filter(isSmsInbox)
       .map(inbox => ({ value: inbox.id, label: inbox.name }))
   );
 
@@ -103,6 +110,7 @@ export function useJourneyChannelForms({ draft, bindings }) {
 
   return {
     apiInboxOptions,
+    smsInboxOptions,
     apiTemplates,
     mediaFile,
     identities,

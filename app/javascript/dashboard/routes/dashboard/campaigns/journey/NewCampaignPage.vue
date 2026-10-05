@@ -1,8 +1,8 @@
 <script setup>
 // Nova campanha (#993, PRD §6.2–6.4, D2, D9): Público → Mensagem → Revisar e agendar, on a
-// page with steps. WhatsApp Oficial, WhatsApp API and e-mail run inside the journey (the
-// e-mail content in the existing editor); SMS still opens its own form and Chat ao vivo has
-// its own flow (LiveChatJourneyPage). The draft stays in this browser (campaignDraft.js) so "Criar público" can
+// page with steps. WhatsApp Oficial, WhatsApp API, SMS (#1004) and e-mail run inside the
+// journey (the e-mail content in the existing editor); Chat ao vivo has its own flow
+// (LiveChatJourneyPage). The draft stays in this browser (campaignDraft.js) so "Criar público" can
 // leave and come back with the new audience selected (J2, J3). `?audience=<id>` opens
 // Passo 1 with it selected (F3).
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
@@ -18,7 +18,6 @@ import JourneyStepper from 'dashboard/components-next/CampaignJourney/JourneySte
 import StepAudience from 'dashboard/components-next/CampaignJourney/StepAudience.vue';
 import StepMessage from 'dashboard/components-next/CampaignJourney/StepMessage.vue';
 import StepReview from 'dashboard/components-next/CampaignJourney/StepReview.vue';
-import SMSCampaignDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/SMSCampaign/SMSCampaignDialog.vue';
 import EmailCampaignsAPI from 'dashboard/api/emailCampaigns';
 import { audiencesAPI, journeyCampaignsAPI } from 'dashboard/api/campaignJourney';
 import {
@@ -53,9 +52,11 @@ import {
 } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { createErrorKey } from 'dashboard/components-next/CampaignJourney/journeyErrors';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
+import { smsStats } from 'dashboard/components-next/CampaignJourney/smsSegments';
 import { useJourneyChannelForms } from 'dashboard/components-next/CampaignJourney/useJourneyChannelForms';
 import {
   buildEmailPayload,
+  buildSmsPayload,
   buildWhatsappApiPayload,
   emailChecks,
 } from 'dashboard/components-next/CampaignJourney/journeyChannelPayloads';
@@ -77,9 +78,6 @@ const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 
 const currentUser = useMapGetter('getCurrentUser');
 
-const LEGACY_DIALOGS = {
-  [CAMPAIGN_CHANNELS.SMS]: SMSCampaignDialog,
-};
 
 const draft = ref(emptyDraft());
 const listedImports = ref([]);
@@ -91,7 +89,6 @@ const isLoading = ref(true);
 const hasLoadError = ref(false);
 const coverage = ref(null);
 const sample = ref(null);
-const legacyChannel = ref('');
 const isSubmitting = ref(false);
 const submitError = ref('');
 const returned = ref(route.query.returned === '1');
@@ -207,6 +204,8 @@ const MESSAGE_READY = {
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: () =>
     Boolean(draft.value.inboxId) && Boolean(draft.value.messageBody.trim()),
   [CAMPAIGN_CHANNELS.EMAIL]: () => Boolean(draft.value.emailCampaignId),
+  [CAMPAIGN_CHANNELS.SMS]: () =>
+    Boolean(draft.value.inboxId) && Boolean(draft.value.messageBody.trim()),
 };
 const isMessageReady = computed(
   () =>
@@ -249,6 +248,12 @@ const emailSenderText = computed(() => {
   return [email?.from_name, email?.from_email].filter(Boolean).join(' · ');
 });
 const messageDetail = () => {
+  if (draft.value.channel === CAMPAIGN_CHANNELS.SMS) {
+    return t(`${NS}.SMS.DETAIL`, {
+      inbox: inboxName.value,
+      segments: smsStats(draft.value.messageBody).segments,
+    });
+  }
   if (draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API) {
     return t(`${NS}.REVIEW.API_DETAIL`, { inbox: inboxName.value });
   }
@@ -263,7 +268,11 @@ const messageDetail = () => {
     .join(' · ');
 };
 const messageMain = () => {
-  if (draft.value.channel === CAMPAIGN_CHANNELS.WHATSAPP_API) {
+  if (
+    [CAMPAIGN_CHANNELS.WHATSAPP_API, CAMPAIGN_CHANNELS.SMS].includes(
+      draft.value.channel
+    )
+  ) {
     return draft.value.messageBody;
   }
   if (isEmailChannel.value) {
@@ -415,18 +424,6 @@ const createAudience = () => {
   });
 };
 
-const openLegacy = channel => {
-  legacyChannel.value = channel;
-};
-const closeLegacy = () => {
-  legacyChannel.value = '';
-};
-const onLegacyCreated = () => {
-  closeLegacy();
-  clearDraft(accountId.value);
-  router.push({ name: 'campaigns_journey_index' });
-};
-
 const cancel = () => {
   clearDraft(accountId.value);
   router.push({ name: 'campaigns_journey_index' });
@@ -465,6 +462,14 @@ const SUBMITTERS = {
         })
       : journeyCampaignsAPI.create(payload);
   },
+  [CAMPAIGN_CHANNELS.SMS]: () =>
+    journeyCampaignsAPI.create(
+      buildSmsPayload({
+        audienceId: draft.value.audienceId,
+        draft: draft.value,
+        scheduledAt: scheduledAtValue(),
+      })
+    ),
   // The e-mail draft exists since Passo 2: schedule it or send it now (engine endpoints).
   [CAMPAIGN_CHANNELS.EMAIL]: () => {
     const id = draft.value.emailCampaignId;
@@ -587,7 +592,6 @@ const loadAudienceDetail = async () => {
 useOnEnter(async () => {
   // Back from Novo público (J3) keeps the draft; "Usar em nova campanha" (F3) starts fresh.
   isLoading.value = true;
-  legacyChannel.value = '';
   submitError.value = '';
   returned.value = route.query.returned === '1';
   const stored = loadDraft(accountId.value) || emptyDraft();
@@ -666,14 +670,6 @@ onBeforeUnmount(() => {
         @go="goTo"
       />
 
-      <div v-if="legacyChannel" class="relative mb-4 flex justify-end">
-        <component
-          :is="LEGACY_DIALOGS[legacyChannel]"
-          @saved="onLegacyCreated"
-          @created="onLegacyCreated"
-          @close="closeLegacy"
-        />
-      </div>
 
       <StepAudience
         v-if="draft.step === 1"
@@ -719,6 +715,12 @@ onBeforeUnmount(() => {
           emailCampaign: forms.emailCampaign.value,
           isCreating: isCreatingEmail,
         }"
+        :sms-form="{
+          inboxOptions: forms.smsInboxOptions.value,
+          extraColumns: columns,
+          sample,
+          preview: forms.preview.value,
+        }"
         @attach="file => (forms.mediaFile.value = file)"
         @email-create="createEmail"
         @open-editor="openEmailEditor"
@@ -726,7 +728,6 @@ onBeforeUnmount(() => {
         @update="update"
         @bind="bind"
         @default="setDefault"
-        @legacy="openLegacy"
         @change-audience="goTo(1)"
         @back="goTo(1)"
         @continue="goTo(3)"

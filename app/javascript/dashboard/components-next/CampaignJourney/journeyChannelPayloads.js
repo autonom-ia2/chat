@@ -9,7 +9,13 @@ export const BACKEND_CHANNEL = {
   [CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL]: 'whatsapp_cloud',
   [CAMPAIGN_CHANNELS.WHATSAPP_API]: 'whatsapp_api',
   [CAMPAIGN_CHANNELS.EMAIL]: 'email',
+  [CAMPAIGN_CHANNELS.SMS]: 'sms',
 };
+
+// #1004: Bandwidth SMS, or Twilio with the sms medium (Twilio WhatsApp does not count).
+export const isSmsInbox = inbox =>
+  inbox.channel_type === INBOX_TYPES.SMS ||
+  (inbox.channel_type === INBOX_TYPES.TWILIO && inbox.medium === 'sms');
 
 export const isWhatsappApiCampaignInbox = inbox =>
   inbox.channel_type === INBOX_TYPES.API &&
@@ -36,6 +42,19 @@ export const buildWhatsappApiPayload = ({
     scheduled_at: scheduledAt,
     message_body: draft.messageBody,
     ...(draft.apiTemplateId ? { template_id: draft.apiTemplateId } : {}),
+    variable_defaults: usedDefaults(draft.messageBody, draft.defaults),
+  },
+});
+
+/** SMS (api-1004.md §4): message with fields and the defaults it uses. */
+export const buildSmsPayload = ({ audienceId, draft, scheduledAt }) => ({
+  campaign_import_id: audienceId,
+  channel: 'sms',
+  campaign: {
+    title: draft.title.trim(),
+    inbox_id: draft.inboxId,
+    scheduled_at: scheduledAt,
+    message: draft.messageBody,
     variable_defaults: usedDefaults(draft.messageBody, draft.defaults),
   },
 });
@@ -69,7 +88,7 @@ export const buildPreviewPayload = ({ audienceId, draft, bindings }) => {
       variable_defaults: cleanDefaults(draft.defaults),
     };
   }
-  if (channel === 'whatsapp_api') {
+  if (channel === 'whatsapp_api' || channel === 'sms') {
     return {
       ...base,
       message_body: draft.messageBody || '',

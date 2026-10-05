@@ -12,6 +12,7 @@ import AudienceChannelBadges from './AudienceChannelBadges.vue';
 import TemplateVariableBindings from './TemplateVariableBindings.vue';
 import WhatsAppApiMessage from './WhatsAppApiMessage.vue';
 import EmailJourneyStep from './EmailJourneyStep.vue';
+import SmsJourneyMessage from './SmsJourneyMessage.vue';
 import WhatsAppPreview from './WhatsAppPreview.vue';
 import {
   CAMPAIGN_CHANNELS,
@@ -36,13 +37,14 @@ const props = defineProps({
   apiForm: { type: Object, default: () => ({}) },
   // E-mail form: { identities, inboxes, emailCampaign, isCreating }
   emailForm: { type: Object, default: () => ({}) },
+  // SMS form: { inboxOptions, extraColumns, sample, preview }
+  smsForm: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits([
   'update',
   'bind',
   'default',
-  'legacy',
   'changeAudience',
   'back',
   'continue',
@@ -72,11 +74,12 @@ const cards = computed(() =>
     }))
 );
 
-// Channels that run inside the journey (#993); SMS still opens its own form.
+// Channels that run inside the journey (#993; SMS since #1004).
 const JOURNEY_CHANNELS = [
   CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL,
   CAMPAIGN_CHANNELS.WHATSAPP_API,
   CAMPAIGN_CHANNELS.EMAIL,
+  CAMPAIGN_CHANNELS.SMS,
 ];
 const isJourneyChannel = computed(() =>
   JOURNEY_CHANNELS.includes(props.draft.channel)
@@ -85,6 +88,7 @@ const isApi = computed(
   () => props.draft.channel === CAMPAIGN_CHANNELS.WHATSAPP_API
 );
 const isEmail = computed(() => props.draft.channel === CAMPAIGN_CHANNELS.EMAIL);
+const isSms = computed(() => props.draft.channel === CAMPAIGN_CHANNELS.SMS);
 const isOfficial = computed(
   () => props.draft.channel === CAMPAIGN_CHANNELS.WHATSAPP_OFFICIAL
 );
@@ -98,12 +102,8 @@ const cardHint = card =>
     : t(`${NS}.UNAVAILABLE.${card.reason}`);
 
 const chooseChannel = card => {
-  if (!card.available) return;
-  if (JOURNEY_CHANNELS.includes(card.channel)) {
-    emit('update', { channel: card.channel });
-    return;
-  }
-  emit('legacy', card.channel);
+  if (!card.available || !JOURNEY_CHANNELS.includes(card.channel)) return;
+  emit('update', { channel: card.channel });
 };
 </script>
 
@@ -175,13 +175,12 @@ const chooseChannel = card => {
           </button>
         </li>
       </ul>
-      <slot name="legacy" />
     </section>
 
     <div
       v-if="isJourneyChannel"
       class="grid gap-4 lg:items-start"
-      :class="isEmail ? '' : 'lg:grid-cols-[minmax(0,1fr)_20rem]'"
+      :class="isEmail || isSms ? '' : 'lg:grid-cols-[minmax(0,1fr)_20rem]'"
     >
       <section
         class="flex min-w-0 flex-col gap-5 rounded-2xl border border-n-weak bg-n-solid-1 p-4 shadow-sm sm:p-5"
@@ -215,6 +214,15 @@ const chooseChannel = card => {
           :preview="apiForm.preview"
           @update="patch => emit('update', patch)"
           @attach="file => emit('attach', file)"
+        />
+        <SmsJourneyMessage
+          v-else-if="isSms"
+          :draft="draft"
+          :inbox-options="smsForm.inboxOptions"
+          :extra-columns="smsForm.extraColumns"
+          :sample="smsForm.sample"
+          :preview="smsForm.preview"
+          @update="patch => emit('update', patch)"
         />
         <EmailJourneyStep
           v-else-if="isEmail"
@@ -283,7 +291,7 @@ const chooseChannel = card => {
         />
         </template>
       </section>
-      <WhatsAppPreview v-if="!isEmail" :text="previewText" />
+      <WhatsAppPreview v-if="!isEmail && !isSms" :text="previewText" />
     </div>
 
     <div class="flex flex-wrap justify-between gap-3">
@@ -295,7 +303,7 @@ const chooseChannel = card => {
         @click="emit('back')"
       />
       <Button
-        v-if="isOfficial || isApi || (isEmail && draft.emailCampaignId)"
+        v-if="isOfficial || isApi || isSms || (isEmail && draft.emailCampaignId)"
         :label="t(`${NS}.CONTINUE`)"
         :disabled="!canContinue"
         class="!min-h-11 !rounded-xl"

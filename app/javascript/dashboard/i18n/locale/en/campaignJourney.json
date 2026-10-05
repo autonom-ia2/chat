@@ -78,7 +78,8 @@
       "BADGE": "{channel} · {count}",
       "BADGES": {
         "EMAIL": "Email",
-        "WHATSAPP": "WhatsApp"
+        "WHATSAPP": "WhatsApp",
+        "SMS": "SMS"
       },
       "NO_CHANNELS": "Channels not calculated yet",
       "USE_IN_CAMPAIGN": "Use in a new campaign",
@@ -181,7 +182,10 @@
         "NO_EMAIL_HINT": "The spreadsheet has no valid email.",
         "NO_PHONE_HINT": "The spreadsheet has no valid mobile.",
         "ERROR": "Could not change it now. Try again.",
-        "IN_USE": "Campaigns still send to this audience on this channel: {campaigns}. Wait for them to finish or cancel them first."
+        "IN_USE": "Campaigns still send to this audience on this channel: {campaigns}. Wait for them to finish or cancel them first.",
+        "SMS": "SMS",
+        "NO_INBOX": "{channel} · no inbox",
+        "NO_INBOX_HINT": "The account has no SMS inbox connected."
       },
       "PEOPLE": {
         "SUMMARY": "{ready} ready · {problems} with a problem",
@@ -293,7 +297,8 @@
         "CHANNELS_HINT": "Only the channels connected to this account show up. The ones this audience lacks are unavailable.",
         "UNAVAILABLE": {
           "NO_EMAIL": "This audience has no email.",
-          "NO_PHONE": "This audience has no mobile."
+          "NO_PHONE": "This audience has no mobile.",
+          "NO_SMS": "This audience has no SMS on."
         },
         "OLD_FLOW": "Opens the form of this channel.",
         "NAME_LABEL": "Campaign name",
@@ -386,7 +391,9 @@
           "MEDIA_FILE_TOO_LARGE": "The attached file is too large.",
           "MEDIA_FILE_TYPE_NOT_SUPPORTED": "This file type cannot be attached.",
           "INVALID_SCHEDULE": "Choose a future date and time.",
-          "FEATURE_DISABLED": "WhatsApp campaigns are not enabled in this account."
+          "FEATURE_DISABLED": "WhatsApp campaigns are not enabled in this account.",
+          "SMS_INBOX_REQUIRED": "Choose a connected SMS inbox.",
+          "MESSAGE_TOO_LONG": "The message is too long for SMS (1,600 characters at most)."
         },
         "OPTED_OUT": "Refused messages",
         "REASONS": {
@@ -461,6 +468,19 @@
         "CONTENT_EMPTY": "No content yet.",
         "RELOAD": "I came back from the editor",
         "ERROR": "Could not create the email now. Try again."
+      },
+      "SMS": {
+        "INBOX_LABEL": "SMS inbox",
+        "INBOX_HINT": "Only connected SMS inboxes show up.",
+        "INBOX_PLACEHOLDER": "Choose the SMS inbox",
+        "MESSAGE_LABEL": "Message",
+        "MESSAGE_PLACEHOLDER": "Short text, e.g. your installment is due tomorrow.",
+        "COUNTER": "{characters} characters · {segments} SMS | {characters} characters · {segments} SMS",
+        "COUNTER_HINT": "Up to {per} per SMS ({encoding}). Accents switch to 70 per SMS.",
+        "PREVIEW_TITLE": "How the customer sees it",
+        "PREVIEW_HINT": "Preview with the first contact of the audience.",
+        "PREVIEW_EMPTY": "Write the message to see it.",
+        "DETAIL": "Inbox {inbox} · {segments} SMS per person"
       }
     },
     "LIVE_CHAT": {

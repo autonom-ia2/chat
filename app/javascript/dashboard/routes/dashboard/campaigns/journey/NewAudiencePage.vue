@@ -31,6 +31,8 @@ import { audienceChannelBadges } from 'dashboard/components-next/CampaignJourney
 import { loadDraft } from 'dashboard/components-next/CampaignJourney/campaignDraft';
 import { useOnEnter } from 'dashboard/components-next/CampaignJourney/useOnEnter';
 import { campaignsUsingAudience } from 'dashboard/components-next/CampaignJourney/journeyErrors';
+import { useAvailableCampaignChannels } from 'dashboard/components-next/CampaignJourney/useAvailableCampaignChannels';
+import { CAMPAIGN_CHANNELS } from 'dashboard/components-next/CampaignJourney/campaignChannels';
 
 const POLL_MS = 1500;
 const ACCEPTED_FILES = '.csv,.xlsx';
@@ -49,6 +51,14 @@ const isSending = ref(false);
 const isApplying = ref(false);
 const isSaving = ref(false);
 const isChangingSettings = ref(false);
+// #1004: SMS badge needs an SMS inbox; a 422 channel_without_inbox also locks it.
+const { channels: connectedChannels } = useAvailableCampaignChannels();
+const smsInboxRefused = ref(false);
+const smsInbox = computed(
+  () =>
+    !smsInboxRefused.value &&
+    connectedChannels.value.includes(CAMPAIGN_CHANNELS.SMS)
+);
 let pollTimer = null;
 
 const fromCampaign = computed(() => route.query.from === 'campaign');
@@ -147,6 +157,11 @@ const changeSettings = async (request, errorKey) => {
     const { data } = await request();
     campaignImport.value = data.payload;
   } catch (error) {
+    if (
+      error?.response?.data?.error === 'campaign_import.channel_without_inbox'
+    ) {
+      smsInboxRefused.value = true;
+    }
     const campaigns = campaignsUsingAudience(error);
     useAlert(
       campaigns.length
@@ -455,6 +470,7 @@ onBeforeUnmount(stopPolling);
           >
             <AudienceChannelSwitches
               :channels="campaignImport.channels"
+              :sms-inbox="smsInbox"
               :disabled="isChangingSettings"
               @toggle="toggleChannel"
             />

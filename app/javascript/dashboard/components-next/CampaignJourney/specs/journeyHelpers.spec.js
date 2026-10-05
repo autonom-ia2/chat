@@ -156,9 +156,47 @@ describe('audienceReview (B5, J5, J6, C1–C6)', () => {
         whatsapp: { enabled: true, count: 4 },
       })
     ).toEqual([
-      { channel: 'email', count: 0, hasData: false, enabled: false },
-      { channel: 'whatsapp', count: 4, hasData: true, enabled: true },
+      {
+        channel: 'email',
+        count: 0,
+        hasData: false,
+        hasInbox: true,
+        enabled: false,
+      },
+      {
+        channel: 'whatsapp',
+        count: 4,
+        hasData: true,
+        hasInbox: true,
+        enabled: true,
+      },
+      // #1004: no `sms` key = off with the WhatsApp count.
+      {
+        channel: 'sms',
+        count: 4,
+        hasData: true,
+        hasInbox: true,
+        enabled: false,
+      },
     ]);
+  });
+
+  it('#1004: the SMS badge is locked without an SMS inbox ("sem caixa")', () => {
+    const [, , sms] = channelSwitches(
+      {
+        email: { enabled: true, count: 1 },
+        whatsapp: { enabled: true, count: 4 },
+        sms: { enabled: true, count: 4 },
+      },
+      { smsInbox: false }
+    );
+    expect(sms).toEqual({
+      channel: 'sms',
+      count: 4,
+      hasData: true,
+      hasInbox: false,
+      enabled: false,
+    });
   });
 
   it('companies: hidden without the feature, preview before saving, finals after', () => {

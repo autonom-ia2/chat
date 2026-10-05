@@ -283,8 +283,9 @@ describe('Nova campanha — Passo 2 and 3 (PRD §6.3, §6.4)', () => {
     expect(official.find('[data-test="card-hint"]').text()).toBe(
       'This audience has no mobile.'
     );
+    // #1004: SMS has its own badge.
     const sms = wrapper.find('[data-channel-card="sms"]');
-    expect(sms.text()).toContain('This audience has no mobile.');
+    expect(sms.text()).toContain('This audience has no SMS on.');
     wrapper.unmount();
   });
 

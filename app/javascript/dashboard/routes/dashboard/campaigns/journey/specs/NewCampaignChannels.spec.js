@@ -71,10 +71,12 @@ const AUDIENCE = {
   channels: {
     email: { enabled: true, count: 4 },
     whatsapp: { enabled: true, count: 3 },
+    sms: { enabled: true, count: 3 },
   },
 };
 const INBOXES = [
   { id: 1, name: 'Site', channel_type: 'Channel::WebWidget' },
+  { id: 11, name: 'SMS Hub2You', channel_type: 'Channel::Sms' },
   {
     id: 9,
     name: 'Atendimento API',
@@ -257,6 +259,64 @@ describe('Nova campanha — WhatsApp API (D7)', () => {
     expect(push).toHaveBeenCalledWith({
       name: 'campaigns_journey_index',
       query: { channel: 'whatsapp_api' },
+    });
+    wrapper.unmount();
+  });
+});
+
+describe('Nova campanha — SMS (#1004, M3)', () => {
+  it('SMS inbox, fields, parts counter, preview as SMS and the contract call', async () => {
+    journey.create.mockResolvedValue({ data: { id: 18 } });
+    api.sampleContact.mockResolvedValue({
+      data: {
+        payload: {
+          name: 'Ana Souza',
+          extra_values: { 'Data de Vencimento': '10/2026' },
+        },
+      },
+    });
+    const wrapper = mountPage();
+    await flushPromises();
+    await toMessageStep(wrapper, 'sms');
+
+    const inbox = choice(wrapper, 'SMS inbox');
+    expect(inbox.props('options')).toEqual([
+      { value: 11, label: 'SMS Hub2You' },
+    ]);
+    inbox.vm.$emit('update:modelValue', 11);
+    await wrapper.find('[data-test="sms-message"]').setValue('Oi ');
+    await wrapper
+      .find('[data-sms-token="contact.first_name"]')
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-test="sms-counter"]').text()).toBe(
+      '25 characters · 1 SMS'
+    );
+    await wrapper
+      .find('[data-test="sms-message"]')
+      .setValue('Olá {{contact.first_name}}');
+    expect(wrapper.text()).toContain('Up to 70 per SMS (UCS-2)');
+    expect(wrapper.find('[data-test="sms-preview-text"]').text()).toBe(
+      'Olá Ana'
+    );
+
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    await wrapper.find('[data-test="continue-review"]').trigger('click');
+    await wrapper.find('[data-test="open-confirmation"]').trigger('click');
+    await wrapper.find('[data-test="dialog-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(journey.create).toHaveBeenCalledWith({
+      campaign_import_id: 5,
+      channel: 'sms',
+      campaign: {
+        title: 'Renovação — outubro',
+        inbox_id: 11,
+        scheduled_at: null,
+        message: 'Olá {{contact.first_name}}',
+        variable_defaults: {},
+      },
     });
     wrapper.unmount();
   });

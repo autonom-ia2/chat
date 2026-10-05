@@ -8,8 +8,17 @@ defineProps({
 
 const { t, n } = useI18n();
 
-const ICONS = { email: 'i-lucide-mail', whatsapp: 'i-lucide-message-circle' };
-const LABELS = { email: 'EMAIL', whatsapp: 'WHATSAPP' };
+const ICONS = {
+  email: 'i-lucide-mail',
+  whatsapp: 'i-lucide-message-circle',
+  sms: 'i-lucide-message-square-text',
+};
+const LABELS = { email: 'EMAIL', whatsapp: 'WHATSAPP', sms: 'SMS' };
+const COLORS = {
+  email: 'bg-n-blue-3 text-n-blue-11',
+  whatsapp: 'bg-n-teal-3 text-n-teal-11',
+  sms: 'bg-n-amber-3 text-n-amber-11',
+};
 </script>
 
 <template>
@@ -19,11 +28,7 @@ const LABELS = { email: 'EMAIL', whatsapp: 'WHATSAPP' };
       :key="badge.channel"
       :data-badge="badge.channel"
       class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-      :class="
-        badge.channel === 'email'
-          ? 'bg-n-blue-3 text-n-blue-11'
-          : 'bg-n-teal-3 text-n-teal-11'
-      "
+      :class="COLORS[badge.channel]"
     >
       <span :class="ICONS[badge.channel]" class="size-3.5" aria-hidden="true" />
       {{

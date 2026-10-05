@@ -58,6 +58,32 @@ salvo). Só esse público, da conta da requisição.
   desligado → `receive: 0`. A tela mostra "não recebem" em Novo público e desconta em "vão
   receber" (passo 3). Spec: `spec/services/campaign_imports/audience_reachability_spec.rb`.
 
+## 4b. Painel lateral, "vão receber", máscara, Chat ao vivo e SMS — #993
+
+- **Contatos do público** (painel "Ver contatos e empresas"): `GET /:id/contacts?page=` →
+  `{ payload: [{ id, name, email, phone_number, company_name }], meta: { count, page, per_page: 25 } }`,
+  `campaign_view`; vale também para importações antigas (F1). Contatos não tem filtro por lista.
+- **Campanhas que usaram**: `show` traz `linked_campaigns: [{ type, id, title, channel, status }]`
+  (vínculos de `campaign_audience_links`, inclusive os do backfill de campanhas antigas).
+- **"Vão receber" exato** (decisão de 05/10): `POST /api/v1/accounts/:id/campaign_journey/recipient_previews`
+  `{ campaign_import_id, channel: whatsapp_cloud|whatsapp_api|sms|email, variable_bindings,
+  variable_defaults, message_body }` → `{ payload: { channel, total, receive, reasons, missing_by_variable } }`.
+  Mesma regra do envio (consentimento por linha, recusa #737, supressão de e-mail, variáveis sem
+  valor), **cada pessoa num motivo só**, nesta ordem: `channel_disabled`, `opted_out`,
+  `unsubscribed`/`bounced`/`suppressed`, `missing_variables`. Nada é gravado. `campaign_manage`.
+  Spec: `spec/requests/api/v1/accounts/campaign_journey/recipient_previews_spec.rb`.
+- **Máscara de celular única** (decisão de 05/10): `CampaignImports::PhoneMask` — só o código do
+  país e os 4 últimos dígitos (`+55 •• •••••-7890`), usada pelas linhas do público, CSV de erros,
+  `problem_rows` e destinatários do WhatsApp API.
+- **Chat ao vivo** (#1008): fluxo próprio na tela sobre a API de campanhas `ongoing` de sempre;
+  quem conversa por uma campanha do site ganha a marca `campaign_live_chat` (ReplyMarker do #1002,
+  `conversation.campaign_id`).
+- **SMS** (#1004, api-1004.md §5a): selo `channels.sms` (ausente = desligado com a contagem do
+  WhatsApp), "sem caixa" sem caixa SMS ou com `422 channel_without_inbox`, cartão SMS no passo 2
+  com `POST campaign_journey/campaigns channel: "sms"`; o contador de partes da tela segue
+  `CampaignJourney::SmsSegments` (spec de paridade em `smsSegments.spec.js`); `recipient_previews`
+  e `reachability` incluem SMS.
+
 ## 5. Criar a campanha (WhatsApp Oficial)
 
 `POST /api/v1/accounts/:account_id/campaign_journey/campaigns` (JSON)

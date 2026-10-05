@@ -1,6 +1,6 @@
 // What Novo público shows about an audience before and after "Salvar público" (#993, PRD
 // §6.6, B5, B6, J5, J6, C1–C6). Pure functions over the campaign_import object.
-import { AUDIENCE_CHANNELS } from './audienceRows';
+import { AUDIENCE_CHANNELS, withSmsChannel } from './audienceRows';
 
 // Still working in the background: the page keeps polling.
 export const CHECKING_STATUSES = ['uploaded', 'validating'];
@@ -73,16 +73,27 @@ export const reasonTally = campaignImport => {
  * Channel switches (J5, J6): both channels always listed. A channel with no valid value
  * shows off with "sem dados" and cannot be switched on.
  */
-export const channelSwitches = channels =>
-  AUDIENCE_CHANNELS.map(channel => {
-    const count = Number(channels?.[channel]?.count) || 0;
+export const channelSwitches = (rawChannels, { smsInbox = true } = {}) => {
+  const channels = withSmsChannel(rawChannels || {}) || {};
+  return AUDIENCE_CHANNELS.filter(
+    channel => channel !== 'sms' || channels.sms
+  ).map(channel => {
+    const count = Number(channels[channel]?.count) || 0;
+    // #1004: the SMS badge also needs an SMS inbox in the account ("sem caixa").
+    const hasInbox = channel !== 'sms' || smsInbox;
+    const isOn =
+      channel === 'sms'
+        ? channels.sms?.enabled === true
+        : channels[channel]?.enabled !== false;
     return {
       channel,
       count,
       hasData: count > 0,
-      enabled: count > 0 && channels?.[channel]?.enabled !== false,
+      hasInbox,
+      enabled: count > 0 && hasInbox && isOn,
     };
   });
+};
 
 const companyColumnHeader = campaignImport => {
   const resolution = campaignImport?.schema_resolution || {};

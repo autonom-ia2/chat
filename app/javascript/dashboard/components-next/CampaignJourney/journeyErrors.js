@@ -31,6 +31,9 @@ const CREATE_ERRORS = {
   media_file_type_not_supported: 'MEDIA_FILE_TYPE_NOT_SUPPORTED',
   invalid_schedule: 'INVALID_SCHEDULE',
   feature_disabled: 'FEATURE_DISABLED',
+  // #1004 (api-1004.md §4)
+  sms_inbox_required: 'SMS_INBOX_REQUIRED',
+  message_too_long: 'MESSAGE_TOO_LONG',
 };
 
 export const createErrorKey = error => {

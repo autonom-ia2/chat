@@ -58,3 +58,44 @@ export const insertToken = (text, token, position = text.length) => {
   const at = Math.min(Math.max(position, 0), text.length);
   return `${text.slice(0, at)}{{${token}}}${text.slice(at)}`;
 };
+
+const contactValue = (token, sample) => {
+  const name = String(sample?.name || '').trim();
+  if (token === 'contact.first_name')
+    return sample?.first_name || name.split(' ')[0] || '';
+  if (token === 'contact.name') return name;
+  if (token === 'contact.company') return sample?.company_name || '';
+  return '';
+};
+
+/**
+ * Text as the first person gets it ("Como o cliente vê"), filled in one left-to-right pass
+ * (indexOf, no regular expressions); a field without value shows `placeholder(token)`.
+ */
+export const renderTokens = (
+  text,
+  { sample, extraColumns = [], defaults = {}, placeholder }
+) => {
+  const headerOf = Object.fromEntries(
+    audienceColumnTokens(extraColumns).map(item => [item.token, item.header])
+  );
+  const source = String(text || '');
+  let output = '';
+  let position = 0;
+  while (position < source.length) {
+    const start = source.indexOf('{{', position);
+    const finish = start === -1 ? -1 : source.indexOf('}}', start + 2);
+    if (start === -1 || finish === -1) {
+      output += source.slice(position);
+      break;
+    }
+    output += source.slice(position, start);
+    const token = source.slice(start + 2, finish).trim();
+    const value = headerOf[token]
+      ? sample?.extra_values?.[headerOf[token]]
+      : contactValue(token, sample);
+    output += value || defaults[token] || placeholder(token);
+    position = finish + 2;
+  }
+  return output;
+};

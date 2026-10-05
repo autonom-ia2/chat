@@ -78,7 +78,8 @@
       "BADGE": "{channel} · {count}",
       "BADGES": {
         "EMAIL": "E-mail",
-        "WHATSAPP": "WhatsApp"
+        "WHATSAPP": "WhatsApp",
+        "SMS": "SMS"
       },
       "NO_CHANNELS": "Canais ainda não calculados",
       "USE_IN_CAMPAIGN": "Usar em nova campanha",
@@ -181,7 +182,10 @@
         "NO_EMAIL_HINT": "A planilha não tem e-mail válido.",
         "NO_PHONE_HINT": "A planilha não tem celular válido.",
         "ERROR": "Não foi possível mudar agora. Tente de novo.",
-        "IN_USE": "Ainda há campanhas enviando para este público por este canal: {campaigns}. Espere terminar ou cancele antes."
+        "IN_USE": "Ainda há campanhas enviando para este público por este canal: {campaigns}. Espere terminar ou cancele antes.",
+        "SMS": "SMS",
+        "NO_INBOX": "{channel} · sem caixa",
+        "NO_INBOX_HINT": "A conta não tem caixa de SMS conectada."
       },
       "PEOPLE": {
         "SUMMARY": "{ready} prontos · {problems} com problema",
@@ -293,7 +297,8 @@
         "CHANNELS_HINT": "Aparecem só os canais conectados nesta conta. Os que o público não tem ficam indisponíveis.",
         "UNAVAILABLE": {
           "NO_EMAIL": "Este público não tem e-mail.",
-          "NO_PHONE": "Este público não tem celular."
+          "NO_PHONE": "Este público não tem celular.",
+          "NO_SMS": "Este público não tem SMS ligado."
         },
         "OLD_FLOW": "Abre o formulário deste canal.",
         "NAME_LABEL": "Nome da campanha",
@@ -386,7 +391,9 @@
           "MEDIA_FILE_TOO_LARGE": "O arquivo anexado é grande demais.",
           "MEDIA_FILE_TYPE_NOT_SUPPORTED": "Este tipo de arquivo não pode ser anexado.",
           "INVALID_SCHEDULE": "Escolha uma data e hora no futuro.",
-          "FEATURE_DISABLED": "Campanhas de WhatsApp não estão ligadas nesta conta."
+          "FEATURE_DISABLED": "Campanhas de WhatsApp não estão ligadas nesta conta.",
+          "SMS_INBOX_REQUIRED": "Escolha uma caixa de SMS conectada.",
+          "MESSAGE_TOO_LONG": "A mensagem é longa demais para SMS (no máximo 1.600 caracteres)."
         },
         "OPTED_OUT": "Recusaram mensagens",
         "REASONS": {
@@ -461,6 +468,19 @@
         "CONTENT_EMPTY": "Ainda sem conteúdo.",
         "RELOAD": "Voltei do editor",
         "ERROR": "Não foi possível criar o e-mail agora. Tente de novo."
+      },
+      "SMS": {
+        "INBOX_LABEL": "Caixa de SMS",
+        "INBOX_HINT": "Só aparecem caixas de SMS conectadas.",
+        "INBOX_PLACEHOLDER": "Escolha a caixa de SMS",
+        "MESSAGE_LABEL": "Mensagem",
+        "MESSAGE_PLACEHOLDER": "Texto curto, ex.: sua parcela vence amanhã.",
+        "COUNTER": "{characters} caracteres · {segments} SMS | {characters} caracteres · {segments} SMS",
+        "COUNTER_HINT": "Até {per} por SMS ({encoding}). Acento muda para 70 por SMS.",
+        "PREVIEW_TITLE": "Como o cliente vê",
+        "PREVIEW_HINT": "Prévia com o primeiro contato do público.",
+        "PREVIEW_EMPTY": "Escreva a mensagem para ver.",
+        "DETAIL": "Caixa {inbox} · {segments} SMS por pessoa"
       }
     },
     "LIVE_CHAT": {

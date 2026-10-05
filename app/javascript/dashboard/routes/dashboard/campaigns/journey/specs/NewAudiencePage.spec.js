@@ -19,6 +19,7 @@ const api = vi.hoisted(() => ({
 vi.mock('dashboard/api/campaignJourney', () => ({ audiencesAPI: api }));
 
 const route = vi.hoisted(() => ({ value: null }));
+const smsInboxes = vi.hoisted(() => ({ value: [] }));
 const push = vi.fn();
 const replace = vi.fn();
 vi.mock('vue-router', () => ({
@@ -95,7 +96,16 @@ const ok = payload => Promise.resolve({ data: { payload } });
 
 const mountPage = (query = {}) => {
   route.value = reactive({ query });
-  const store = createStore({ getters: { getCurrentAccountId: () => 1 } });
+  const module = getters => ({ namespaced: true, getters });
+  const store = createStore({
+    getters: { getCurrentAccountId: () => 1 },
+    modules: {
+      inboxes: module({ getInboxes: () => smsInboxes.value }),
+      emailSenderIdentities: module({ getIdentities: () => [] }),
+      globalConfig: module({ get: () => ({}) }),
+      accounts: module({ isFeatureEnabledonAccount: () => () => true }),
+    },
+  });
   const i18n = createI18n({
     legacy: false,
     locale: 'en',
@@ -376,6 +386,35 @@ describe('Novo público (PRD §6.6)', () => {
     expect(refused.text()).toContain('No row can be used');
     expect(refused.text()).toContain('No mobile or email: 3');
     expect(wrapper.find('[data-test="save-audience"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('#1004: SMS badge locked "sem caixa" without an SMS inbox, free with one', async () => {
+    api.show.mockReturnValue(ok(ready));
+    api.setChannels.mockRejectedValue({
+      response: { data: { error: 'campaign_import.channel_without_inbox' } },
+    });
+    let wrapper = mountPage({ import: '42' });
+    await flushPromises();
+
+    const locked = wrapper.find('[data-channel="sms"]');
+    expect(locked.text()).toBe('SMS · no inbox');
+    expect(locked.attributes('disabled')).toBeDefined();
+    expect(wrapper.text()).toContain('The account has no SMS inbox connected.');
+    wrapper.unmount();
+
+    smsInboxes.value = [{ id: 3, channel_type: 'Channel::Sms' }];
+    wrapper = mountPage({ import: '42' });
+    await flushPromises();
+    const free = wrapper.find('[data-channel="sms"]');
+    expect(free.text()).toBe('SMS · 98');
+    expect(free.attributes('aria-checked')).toBe('false');
+    await free.trigger('click');
+    await flushPromises();
+    expect(api.setChannels).toHaveBeenCalledWith(42, { sms: true });
+    // The server says there is no SMS inbox: the badge locks as "sem caixa".
+    expect(wrapper.find('[data-channel="sms"]').text()).toBe('SMS · no inbox');
+    smsInboxes.value = [];
     wrapper.unmount();
   });
 });
