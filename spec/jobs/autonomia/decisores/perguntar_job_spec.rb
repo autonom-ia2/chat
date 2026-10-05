@@ -200,6 +200,18 @@ RSpec.describe Autonomia::Decisores::PerguntarJob do
       expect(contact.reload.name).to eq('site@corretora.com')
     end
 
+    # #1000 — o campo que não grava fica na decisão com o motivo, não só no log.
+    it 'guarda na decisão o motivo do campo que não gravou' do
+      allow(cliente).to receive(:create).and_return(text: { nome: 'Joana Lima', telefone: 'ligar à tarde' }.to_json)
+      jev_responde('sim', 0.9)
+
+      rodar
+
+      decisao = Autonomia::DecisorDecisao.last
+      expect(decisao.campos_extraidos).to eq('nome' => 'Joana Lima')
+      expect(decisao.motivo).to include('telefone', 'fora do formato')
+    end
+
     it 'segue mesmo quando a extração falha, guardando o motivo' do
       allow(cliente).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error, 'network_timeout: read_timeout')
       jev_responde('sim', 0.9)

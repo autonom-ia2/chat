@@ -73,6 +73,17 @@ RSpec.describe Autonomia::Decisor do
       expect(invalido.errors[:campos].join).to include('contato.atributo:produto')
     end
 
+    # #1000 — `trocar` é escolha de quem monta: sem ele, o campo só preenche o vazio.
+    it 'aceita trocar verdadeiro ou falso e recusa outro valor' do
+      campo = { chave: 'nome', descricao: 'Nome', destino: 'contato.nome' }
+
+      expect(decisor(campos: [campo.merge(trocar: true)])).to be_valid
+      expect(decisor(campos: [campo.merge(trocar: 'false')])).to be_valid
+      invalido = decisor(campos: [campo.merge(trocar: 'sempre')])
+      expect(invalido).not_to be_valid
+      expect(invalido.errors[:campos].join).to include('trocar')
+    end
+
     it 'recusa destino fora da lista, mostrando os aceitos' do
       invalido = decisor(campos: [{ chave: 'cpf', descricao: 'x', destino: 'contato.cpf' }])
 

@@ -43,6 +43,15 @@ class Autonomia::Decisores::Seguimento
     resultado = Autonomia::Decisores::Aplicador.new(decisor: @decisor, conversation: @estado.conversation&.reload,
                                                     card: @decisao.card&.reload).aplicar(valores, card_novo: card_novo)
     @decisao.update!(campos_extraidos: @decisao.campos_extraidos.to_h.merge(resultado.aplicados)) if resultado.aplicados.present?
+    anotar_recusados(resultado.recusados)
     resultado.sem_card
+  end
+
+  # #1000 — o campo que não gravou fica na decisão com o motivo; antes sumia só no log.
+  def anotar_recusados(recusados)
+    return if recusados.blank?
+
+    linhas = recusados.map { |chave, motivo| "#{chave}: #{motivo}" }
+    @decisao.update!(motivo: [@decisao.motivo.presence, "campos não gravados — #{linhas.join('; ')}"].compact.join("\n"))
   end
 end
