@@ -1,4 +1,5 @@
 <script setup>
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Chat ao vivo (#993 / #1008, PRD §6.8, D16, M5): an automatic message on the website, without a
 // list of people. Its own flow: Quando aparece → Mensagem → Ativar, on Chatwoot's ongoing
 // campaigns (campaigns API, same fields as LiveChatCampaignForm). Edit (`:campaignId`) changes
@@ -405,7 +406,7 @@ useOnEnter(async () => {
               })
             }}
             <template v-if="form.businessHours">
-              · {{ t(`${NS}.SUMMARY_HOURS`) }}
+              {{ DOT }} {{ t(`${NS}.SUMMARY_HOURS`) }}
             </template>
           </p>
           <p class="m-0 whitespace-pre-wrap text-sm text-n-slate-12">

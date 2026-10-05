@@ -1,4 +1,5 @@
 <script setup>
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // "Cliques por link" of an e-mail campaign: the same table the old Gestão de campanhas showed for a
 // selected campaign (O1), moved into the e-mail result (#1007).
 import { useI18n } from 'vue-i18n';
@@ -45,7 +46,7 @@ const number = value => formatNumber(value, locale.value);
         </bdi>
         <span class="text-xs text-n-slate-11">
           {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.UNIQUE') }}
-          {{ number(click.unique_clicks) }} ·
+          {{ number(click.unique_clicks) }} {{ DOT }}
           {{ t('CAMPAIGN_MANAGEMENT.CLICKS_BY_LINK.TOTAL') }}
           {{ number(click.total_clicks) }}
         </span>

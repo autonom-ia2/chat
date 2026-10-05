@@ -7,6 +7,7 @@ import { useOnEnter } from '../useOnEnter';
 describe('useOnEnter', () => {
   it('runs on the first mount and on every return to a kept-alive page', async () => {
     const calls = [];
+    // eslint-disable-next-line vue/one-component-per-file
     const Page = defineComponent({
       name: 'Page',
       setup() {
@@ -14,6 +15,7 @@ describe('useOnEnter', () => {
         return () => h('p', 'page');
       },
     });
+    // eslint-disable-next-line vue/one-component-per-file
     const Other = defineComponent({
       name: 'Other',
       render: () => h('p', 'other'),

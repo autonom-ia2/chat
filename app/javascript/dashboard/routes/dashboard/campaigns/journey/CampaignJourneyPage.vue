@@ -1,4 +1,8 @@
 <script setup>
+import {
+  DOT,
+  COLON,
+} from 'dashboard/components-next/CampaignJourney/textMarks';
 // "Campanha" (#993, PRD §6.1): every existing campaign of every channel in one list.
 // With Públicos on, "Nova campanha" opens the 3-step journey (NewCampaignPage); without
 // them it offers the connected channels (M1–M2) and opens their existing forms.
@@ -291,7 +295,7 @@ useOnEnter(fetchAll);
             v-if="nextScheduled"
             class="mb-0 mt-2 text-sm text-white opacity-80"
           >
-            {{ channelLabel(nextScheduled.channel) }} ·
+            {{ channelLabel(nextScheduled.channel) }} {{ DOT }}
             {{ formatWhen(nextScheduled) }}
           </p>
         </div>
@@ -423,13 +427,15 @@ useOnEnter(fetchAll);
                 </p>
                 <p class="mb-0 truncate text-xs text-n-slate-11">
                   {{ channelLabel(row.channel) }}
-                  <template v-if="row.detail">· {{ row.detail }}</template>
+                  <template v-if="row.detail">
+                    {{ DOT }} {{ row.detail }}
+                  </template>
                 </p>
               </div>
             </div>
             <p class="mb-0 text-sm text-n-slate-12">
               <span class="text-xs text-n-slate-11 md:hidden">
-                {{ t(`${NS}.WHEN`) }}:
+                {{ t(`${NS}.WHEN`) }}{{ COLON }}
               </span>
               {{ formatWhen(row) }}
             </p>

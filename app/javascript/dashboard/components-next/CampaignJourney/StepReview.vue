@@ -1,4 +1,8 @@
 <script setup>
+import {
+  DOT,
+  MINUS,
+} from 'dashboard/components-next/CampaignJourney/textMarks';
 // Passo 3 — Revisar e agendar (#993, PRD §6.4, D3, D8, B8). Blocks with "Alterar" (built by
 // the page for each channel), the CRM line, when (now, or date and time in the account time
 // zone), the exact "vão receber" from POST campaign_journey/recipient_previews with the
@@ -191,7 +195,8 @@ const submit = () => {
           {{ n(receivers) }}
         </p>
         <p class="m-0 text-sm opacity-80">
-          {{ channelLabel }} · {{ isLater ? whenText : t(`${NS}.NOW`) }}
+          {{ channelLabel }} {{ DOT }}
+          {{ isLater ? whenText : t(`${NS}.NOW`) }}
         </p>
       </div>
       <dl class="m-0 flex flex-col gap-1 text-sm" data-test="review-counts">
@@ -208,7 +213,7 @@ const submit = () => {
           <dt class="text-n-slate-11">
             {{ t(`${NS}.REASONS.${reason.key.toUpperCase()}`) }}
           </dt>
-          <dd class="m-0 tabular-nums">−{{ n(reason.count) }}</dd>
+          <dd class="m-0 tabular-nums">{{ MINUS }}{{ n(reason.count) }}</dd>
         </div>
       </dl>
       <ul

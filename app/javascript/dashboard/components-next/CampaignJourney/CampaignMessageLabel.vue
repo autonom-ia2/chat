@@ -31,6 +31,7 @@ const label = computed(() =>
 watch(campaignRef, value => value && request(value), { immediate: true });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <span
     v-if="name"

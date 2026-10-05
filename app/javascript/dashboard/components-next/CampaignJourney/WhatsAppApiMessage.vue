@@ -1,4 +1,5 @@
 <script setup>
+import { DOT, PLUS } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Passo 2 — WhatsApp API (#993 front of #999, PRD §6.3, D7; api-999.md §2.2). Inbox marked for
 // campaigns, free text with contact and audience fields ({{contact.first_name}},
 // {{publico.<key>}}), "Usar modelo salvo", optional attachment and the automatic pace notice.
@@ -153,7 +154,7 @@ const onFile = () => emit('attach', fileInput.value?.files?.[0] || null);
           :data-token="item.token"
           @click="insert(item.token)"
         >
-          + {{ item.label }}
+          {{ PLUS }} {{ item.label }}
         </button>
       </div>
     </div>
@@ -192,7 +193,7 @@ const onFile = () => emit('attach', fileInput.value?.files?.[0] || null);
       <p class="m-0 text-sm">
         <strong class="text-n-slate-12">{{ t(`${NS}.ATTACH`) }}</strong>
         <span class="text-xs text-n-slate-11">
-          ·
+          {{ DOT }}
           {{ mediaFile ? mediaFile.name : t(`${NS}.ATTACH_HINT`) }}
         </span>
       </p>

@@ -1,4 +1,8 @@
 <script setup>
+import {
+  DOT,
+  COLON,
+} from 'dashboard/components-next/CampaignJourney/textMarks';
 // Gestão de campanhas as the multichannel overview (#1007, PRD D18, §6.10, O3): period, channel
 // (connected ones), totals and the comparison per campaign. A row opens the campaign's Resultado,
 // where the detail lives. Old links with ?email_campaign=<id> open that e-mail's Resultado.
@@ -291,7 +295,7 @@ useOnEnter(enter);
                         {{ row.name }}
                       </span>
                       <span class="block text-xs text-n-slate-11">
-                        {{ channelLabel(row.channel) }} ·
+                        {{ channelLabel(row.channel) }} {{ DOT }}
                         {{ date(row.sent_at) }}
                       </span>
                     </span>
@@ -300,22 +304,22 @@ useOnEnter(enter);
                     class="grid grid-cols-2 gap-2 text-xs text-n-slate-11 sm:grid-cols-4"
                   >
                     <span>
-                      {{ t(`${NS}.TABLE.SENT`) }}:
+                      {{ t(`${NS}.TABLE.SENT`) }}{{ COLON }}
                       <strong class="text-n-slate-12">{{
                         number(row.sent)
                       }}</strong>
                     </span>
                     <span>
-                      {{ t(`${NS}.TABLE.DELIVERED`) }}:
+                      {{ t(`${NS}.TABLE.DELIVERED`) }}{{ COLON }}
                       <strong class="text-n-slate-12">
                         {{ number(row.delivered) }}
                       </strong>
                     </span>
                     <span>{{ engagement(row) }}</span>
                     <span>
-                      {{ t(`${NS}.TABLE.REPLIED`) }}:
+                      {{ t(`${NS}.TABLE.REPLIED`) }}{{ COLON }}
                       <strong class="text-n-slate-12">
-                        {{ number(row.replied) }} ·
+                        {{ number(row.replied) }} {{ DOT }}
                         {{ rateText(row.reply_rate) }}
                       </strong>
                     </span>

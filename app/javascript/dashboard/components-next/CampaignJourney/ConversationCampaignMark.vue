@@ -1,4 +1,5 @@
 <script setup>
+import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Top of the conversation (#1002, PRD D20, §6.11): the mark of the campaign that opened the
 // conversation — its first campaign mark, or the origin when it has no campaign mark.
 import { computed } from 'vue';
@@ -26,13 +27,14 @@ const mark = computed(() => {
 });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <span
     v-if="mark"
     class="inline-flex min-w-0 items-center gap-1 text-n-teal-11"
     data-test-id="conversation-campaign-mark"
   >
-    <span class="text-n-slate-11">•</span>
+    <span class="text-n-slate-11">{{ BULLET }}</span>
     <Icon :icon="mark.icon" class="size-3 shrink-0" />
     <span class="truncate">{{ humanizedOriginLabel(mark) }}</span>
   </span>

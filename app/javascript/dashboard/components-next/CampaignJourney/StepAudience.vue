@@ -1,4 +1,5 @@
 <script setup>
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Passo 1 — Quem vai receber (#993, PRD §6.2, J1, J2, F3). Only saved audiences, with
 // channel badges and counts. No audience at all: one sentence and one button. Creating an
 // audience from here keeps the draft and comes back with it selected (J3).
@@ -142,9 +143,9 @@ const formatDate = value =>
               <span class="flex flex-wrap items-center gap-2">
                 <AudienceChannelBadges :badges="row.badges" />
                 <span class="text-xs text-n-slate-11">
-                  ·
+                  {{ DOT }}
                   {{ t(`${NS}.PEOPLE`, { count: n(row.people) }, row.people) }}
-                  · {{ formatDate(row.createdAt) }}
+                  {{ DOT }} {{ formatDate(row.createdAt) }}
                 </span>
               </span>
             </span>

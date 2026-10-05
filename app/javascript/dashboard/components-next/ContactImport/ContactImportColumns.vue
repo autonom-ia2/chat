@@ -1,4 +1,5 @@
 <script setup>
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Importar contatos (#1006): "Colunas encontradas" with "Trocar" (ChoiceSelect, never a
 // native select) and "Outras colunas", which become contact attributes.
 import { computed } from 'vue';
@@ -128,7 +129,7 @@ const choose = (target, value) => {
         >
           {{ attribute.column }}
           <span v-if="!attribute.existing" class="ms-1 text-n-blue-11">
-            · {{ t(`${NS}.ATTRIBUTES.NEW`) }}
+            {{ DOT }} {{ t(`${NS}.ATTRIBUTES.NEW`) }}
           </span>
         </li>
       </ul>

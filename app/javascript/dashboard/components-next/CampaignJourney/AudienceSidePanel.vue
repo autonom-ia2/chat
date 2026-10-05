@@ -1,4 +1,5 @@
 <script setup>
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Painel lateral do público (#993, PRD §6.6, §7 "37rem", F1–F3, B8): channel badges, people,
 // companies, other columns kept, who does not receive, campaigns that used it, "Usar em nova
 // campanha", "Ver contatos e empresas" (contacts of the audience, paged — Contacts has no list
@@ -217,7 +218,7 @@ onMounted(load);
             <span class="min-w-0 text-sm text-n-slate-12">
               <strong>{{ campaign.title }}</strong>
               <span class="text-xs text-n-slate-11">
-                · {{ channelLabel(campaign.channel) }}
+                {{ DOT }} {{ channelLabel(campaign.channel) }}
               </span>
             </span>
             <span class="text-xs text-n-slate-11">

@@ -49,6 +49,7 @@ const load = async contactId => {
 watch(() => props.contactId, load, { immediate: true });
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <section
     v-if="origins.length || audiences.length"

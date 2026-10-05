@@ -1,4 +1,5 @@
 <script setup>
+import { DOT, DASH } from 'dashboard/components-next/CampaignJourney/textMarks';
 // People of a message campaign (#1007, PRD §6.5, E3, E4): situation tabs, generated message,
 // reason with code, when, "Abrir conversa" for who replied, and "Baixar resultado" of the tab.
 import { computed, ref, watch } from 'vue';
@@ -235,7 +236,7 @@ defineExpose({ fetchRows, choose });
           <p v-if="reason(row)" class="mb-0 text-xs text-n-ruby-11">
             {{ reason(row) }}
             <template v-if="code(row)">
-              · {{ t(`${NS}.CODE`, { code: code(row) }) }}
+              {{ DOT }} {{ t(`${NS}.CODE`, { code: code(row) }) }}
             </template>
           </p>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -320,7 +321,7 @@ defineExpose({ fetchRows, choose });
                 <span v-if="reason(row)" class="line-clamp-2 text-n-slate-11">
                   {{ reason(row) }}
                 </span>
-                <span v-else class="text-n-slate-10">—</span>
+                <span v-else class="text-n-slate-10">{{ DASH }}</span>
                 <span
                   v-if="code(row)"
                   class="block text-xs tabular-nums text-n-slate-10"
