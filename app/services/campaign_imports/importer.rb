@@ -26,9 +26,11 @@ module CampaignImports
       Rails.logger.error(
         "[CampaignImports::Importer] import_id=#{campaign_import.id} #{e.class}: #{SafeLogMessage.call(e.message)}"
       )
+      imported_count = campaign_import.campaign_import_rows.status_imported.count
       campaign_import.update!(
         status: :failed,
-        failed_contacts_count: campaign_import.valid_rows,
+        imported_contacts_count: imported_count,
+        failed_contacts_count: campaign_import.valid_rows.to_i - imported_count,
         import_finished_at: Time.current,
         validation_summary: campaign_import.validation_summary.to_h.merge(import_error: e.class.name)
       )

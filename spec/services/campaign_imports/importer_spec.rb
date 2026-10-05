@@ -88,5 +88,24 @@ RSpec.describe CampaignImports::Importer do
       expect(campaign_import.campaign_import_rows.status_import_failed.pick(:row_number)).to eq(3)
       expect(account.contacts.count).to eq(2)
     end
+
+    it 'keeps the committed blocks and counts only the rest as failed when a block breaks' do
+      stub_const('CampaignImports::Importer::BLOCK_SIZE', 2)
+      _account, campaign_import = validated_import("nome,telefone\nAna,11987654321\nBia,21987654321\nCaio,31987654321\n")
+      calls = 0
+      allow(CampaignImports::BulkContactLabeler).to receive(:new).and_wrap_original do |method, *args|
+        calls += 1
+        raise ActiveRecord::StatementInvalid, 'boom' if calls == 2
+
+        method.call(*args)
+      end
+
+      described_class.new(campaign_import).perform
+
+      campaign_import.reload
+      expect(campaign_import).to be_failed
+      expect(campaign_import.imported_contacts_count).to eq(2)
+      expect(campaign_import.failed_contacts_count).to eq(1)
+    end
   end
 end
