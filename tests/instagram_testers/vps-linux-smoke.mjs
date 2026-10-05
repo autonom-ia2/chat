@@ -37,6 +37,29 @@ function report(stage) {
   process.stdout.write(`IG_VPS_LINUX_SMOKE ${stage}\n`);
 }
 
+async function observedAction(name, operation) {
+  const started = performance.now();
+  report(`${name}_BEGIN`);
+  try {
+    const result = await operation();
+    report(`${name}_PASS_${Math.round(performance.now() - started)}ms`);
+    return result;
+  } catch (error) {
+    const errorClass =
+      [
+        'TimeoutError',
+        'AbortError',
+        'AssertionError',
+        'TypeError',
+        'Error',
+      ].find(value => value === error?.name) ?? 'UnknownError';
+    report(
+      `${name}_FAIL_${errorClass}_${Math.round(performance.now() - started)}ms`
+    );
+    throw error;
+  }
+}
+
 async function bounded(operation, ms) {
   let timer;
   try {
@@ -578,14 +601,20 @@ export async function runLinuxSmoke() {
       });
     });
     step('BROWSER_FORM_NULL_ORIGIN_NAVIGATION');
-    await page.goto('https://issuer.test/no-referrer', {
-      timeout: budget(5000),
-    });
-    await Promise.all([
-      page.waitForURL('https://console.test/hub2you/grant', {
+    await observedAction('BROWSER_FORM_NULL_ORIGIN_GOTO', () =>
+      page.goto('https://issuer.test/no-referrer', {
         timeout: budget(5000),
-      }),
-      page.getByRole('button', { name: 'Continue' }).click(),
+      })
+    );
+    await Promise.all([
+      observedAction('BROWSER_FORM_NULL_ORIGIN_WAIT_URL', () =>
+        page.waitForURL('https://console.test/hub2you/grant', {
+          timeout: budget(5000),
+        })
+      ),
+      observedAction('BROWSER_FORM_NULL_ORIGIN_CLICK', () =>
+        page.getByRole('button', { name: 'Continue' }).click()
+      ),
     ]);
     step('BROWSER_FORM_NULL_ORIGIN_ASSERTIONS');
     assert.equal(observedPosts.at(-1), 'null');
