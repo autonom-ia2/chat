@@ -1802,6 +1802,9 @@ Rails.application.routes.draw do
             get '/', action: :new
           end
         end
+        namespace :profile do
+          resources :oauth_applications, only: [:index, :destroy]
+        end
       end
     end
   end
