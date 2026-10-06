@@ -274,6 +274,12 @@ class EmailCampaign < ApplicationRecord
                              ai_error: message.to_s.truncate(500), ai_completed_at: Time.current)
   end
 
+  # When the first e-mail of the campaign went out. `sent_at` only records the end of the send
+  # (#finalize!), so a campaign sent now and paused or still sending has no date of its own (#990).
+  def first_sent_at
+    email_campaign_recipients.where.not(sent_at: nil).minimum(:sent_at)
+  end
+
   # Persisted `sent_at` is the durable evidence that a transport was accepted.
   # Recipient status can later move to delivered/bounced/complained/unsubscribed or
   # even provider-suppressed; those transitions must never make "Enviados" decrease.

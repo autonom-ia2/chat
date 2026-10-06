@@ -249,6 +249,17 @@ RSpec.describe 'Campaign journey results API (#1007)', :aggregate_failures, type
       expect(response.parsed_body.dig('payload', 'crm', 'source_id')).to eq("campaign:email:#{email_campaign.id}")
     end
 
+    it 'dates a paused send by its first e-mail, since sent_at only marks the end (#990)' do
+      email_campaign.update!(status: :paused, sent_at: nil)
+      first = email_campaign.email_campaign_recipients.minimum(:sent_at)
+
+      get result_path('email', email_campaign.id), headers: headers, as: :json
+
+      campaign = response.parsed_body.dig('payload', 'campaign')
+      expect(campaign['sent_at']).to be_nil
+      expect(Time.zone.parse(campaign['started_at'])).to be_within(1.second).of(first)
+    end
+
     it 'lists who replied with the conversation to open' do
       conversation = replied!(ana, email_campaign)
 

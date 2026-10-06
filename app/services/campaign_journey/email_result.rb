@@ -31,7 +31,8 @@ class CampaignJourney::EmailResult
     {
       id: campaign.id, channel: CampaignJourney::ResultFinder::EMAIL, name: campaign.name, status: campaign.status,
       processing: processing?, delivery_mode: campaign.delivery_mode, from_email: campaign.from_email,
-      sent_at: campaign.sent_at, scheduled_at: campaign.scheduled_at, audience: CampaignJourney::ResultFinder.audience_of(campaign)
+      sent_at: campaign.sent_at, started_at: campaign.first_sent_at, scheduled_at: campaign.scheduled_at,
+      audience: CampaignJourney::ResultFinder.audience_of(campaign)
     }
   end
 

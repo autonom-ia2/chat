@@ -1,19 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import EmailStatusBadge from './EmailStatusBadge.vue';
-import {
-  NS,
-  canResumeCampaign,
-  protectionBlockReason,
-  reasonKey,
-  formatNumber,
-  formatDate,
-  displayStatusLabel,
-} from './presentation';
+import { NS, formatDate } from './presentation';
+import { useProtectionState } from './useProtectionState';
 
 const props = defineProps({
   campaign: { type: Object, default: () => ({}) },
@@ -25,127 +18,27 @@ const emit = defineEmits(['reevaluate', 'resume', 'problems']);
 const { t, locale } = useI18n();
 const canManage = useCanManage('campaign_manage');
 const showDetails = ref(false);
-const health = computed(() => props.protection || props.campaign.protection);
-const blockReason = computed(() => protectionBlockReason(health.value));
-const isPaused = computed(
-  () => Boolean(blockReason.value) || props.campaign.status === 'paused'
+const {
+  health,
+  blockReason,
+  isPaused,
+  state,
+  reason,
+  canResume,
+  title,
+  current,
+  summaryCards,
+  metricRows,
+  detailSections,
+  hasDetails,
+  number,
+  rate,
+} = useProtectionState(
+  { campaign: () => props.campaign, protection: () => props.protection },
+  { t, locale }
 );
-const state = computed(() => {
-  if (blockReason.value) return 'paused';
-  return health.value?.state === 'healthy' &&
-    !health.value?.current?.evaluated_at
-    ? 'unknown'
-    : health.value?.state || 'unknown';
-});
-const reason = computed(() => {
-  if (blockReason.value && blockReason.value !== 'unknown')
-    return blockReason.value;
-  if (props.campaign.pause_reason === 'hygiene_validation_required')
-    return 'review';
-  return (
-    blockReason.value ||
-    reasonKey(health.value?.reason_code || props.campaign.pause_reason)
-  );
-});
-const canResume = computed(() =>
-  canResumeCampaign({ ...props.campaign, protection: health.value })
-);
-const manualPause = computed(
-  () =>
-    props.campaign.status === 'paused' &&
-    !blockReason.value &&
-    reasonKey(props.campaign.pause_reason) === 'manual'
-);
-const title = computed(() => {
-  if (manualPause.value) return t(`${NS}.STATUS.manual`);
-  if (isPaused.value) return t(`${NS}.STATUS.paused_unknown`);
-  return t(`${NS}.HEALTH`);
-});
 
-const number = value => formatNumber(value, locale.value);
 const date = value => formatDate(value, locale.value);
-const rate = value =>
-  typeof value === 'number' ? t(`${NS}.RATE`, { value: number(value) }) : '';
-
-const current = computed(() => health.value?.current || {});
-const summaryCards = computed(() =>
-  [
-    {
-      key: 'permanent',
-      label: displayStatusLabel(t, 'permanent'),
-      icon: 'i-lucide-circle-x',
-      className: 'bg-n-ruby-3 text-n-ruby-11',
-      count: current.value.permanent_bounces,
-      rate: current.value.hard_bounce_rate,
-    },
-    {
-      key: 'temporary',
-      label: t(`${NS}.STATUS.temporary`),
-      icon: 'i-lucide-refresh-cw',
-      className: 'bg-n-amber-3 text-n-amber-11',
-      count: current.value.temporary_bounces,
-    },
-    {
-      key: 'complained',
-      label: t(`${NS}.STATUS.complained`),
-      icon: 'i-lucide-shield-alert',
-      className: 'bg-n-ruby-3 text-n-ruby-11',
-      count: current.value.complaints,
-      rate: current.value.complaint_rate,
-    },
-  ].filter(card => typeof card.count === 'number')
-);
-
-const metricRows = metrics => {
-  if (!metrics) return [];
-  return [
-    ['sent', 'sent'],
-    ['permanent', 'permanent_bounces', 'hard_bounce_rate'],
-    ['temporary', 'temporary_bounces'],
-    ['bounce_unknown', 'unknown_bounces'],
-    ['complained', 'complaints', 'complaint_rate'],
-  ]
-    .filter(([, countKey, rateKey]) =>
-      [metrics[countKey], metrics[rateKey]].some(
-        value => typeof value === 'number'
-      )
-    )
-    .map(([key, countKey, rateKey]) => ({
-      key,
-      label: displayStatusLabel(t, key),
-      count:
-        typeof metrics[countKey] === 'number' ? number(metrics[countKey]) : '',
-      rate: typeof metrics[rateKey] === 'number' ? rate(metrics[rateKey]) : '',
-    }));
-};
-
-const detailSections = computed(() =>
-  [
-    {
-      key: 'CURRENT',
-      metrics: current.value,
-      at: current.value.evaluated_at,
-      reason: null,
-    },
-    health.value?.trigger
-      ? {
-          key: 'TRIGGER',
-          metrics: health.value.trigger.metrics,
-          at: health.value.trigger.at,
-          reason: reasonKey(health.value.trigger.reason_code),
-        }
-      : null,
-  ].filter(
-    section => section && (section.at || metricRows(section.metrics).length)
-  )
-);
-
-const hasDetails = computed(
-  () =>
-    detailSections.value.length > 0 ||
-    health.value?.provider?.observed_at ||
-    (health.value?.domains || []).length > 0
-);
 </script>
 
 <template>

@@ -1,7 +1,8 @@
 <script setup>
 // Result of an e-mail campaign (#1007, PRD §6.5, D18, O1). Everything the old Gestão de campanhas
 // showed for a selected e-mail campaign lives here, reading the same e-mail reports API and reusing
-// its components (checklist in docs/campaigns/publicos/resultado-1007.md): indicators with rates
+// its data and actions (checklist in docs/campaigns/publicos/resultado-1007.md; health and people
+// redrawn in the result layout by #990): indicators with rates
 // and delivery evidence, import status, health (re-evaluate, resume, problems), chart over time,
 // clicks per link and the per-person table with its filters and filtered export. New: Responderam
 // (CRM mark of #1002), the E1 sum, "Quem respondeu" with "Abrir conversa", masked "Baixar
@@ -17,8 +18,6 @@ import EmailCampaignReportsAPI from 'dashboard/api/emailCampaignReports';
 import EmailCampaignsAPI from 'dashboard/api/emailCampaigns';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
-import EmailRecipients from 'dashboard/components-next/Campaigns/EmailProtection/EmailRecipients.vue';
-import EmailCampaignHealth from 'dashboard/components-next/Campaigns/EmailProtection/EmailCampaignHealth.vue';
 import CampaignTimelineChart from 'dashboard/components-next/Campaigns/EmailProtection/CampaignTimelineChart.vue';
 import RecipientImportStatus from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/RecipientImportStatus.vue';
 import {
@@ -37,6 +36,8 @@ import ResultCrmBand from './ResultCrmBand.vue';
 import ResultLinkClicks from './ResultLinkClicks.vue';
 import ResultRepliedList from './ResultRepliedList.vue';
 import EmailResultActions from './EmailResultActions.vue';
+import ResultEmailHealth from './ResultEmailHealth.vue';
+import ResultEmailRecipients from './ResultEmailRecipients.vue';
 import { useResultPolling } from './useResultPolling';
 import { journeyStatus, resultBalance } from './resultMetrics';
 
@@ -194,16 +195,23 @@ const date = value =>
       })
     : '';
 
+// `sent_at` only exists once the whole list went out; a paused or running send is dated by its
+// first e-mail (`started_at`, #990).
+const sendDate = info => {
+  if (info.sent_at) return { key: 'SENT_ON', value: info.sent_at };
+  if (info.started_at) return { key: 'STARTED_ON', value: info.started_at };
+  if (info.scheduled_at)
+    return { key: 'SCHEDULED_FOR', value: info.scheduled_at };
+  return null;
+};
+
 const subtitle = computed(() => {
   const info = result.value?.campaign || {};
-  const when = info.sent_at || info.scheduled_at;
+  const when = sendDate(info);
   return [
     t('CAMPAIGN_JOURNEY.CHANNELS.EMAIL'),
     info.from_email,
-    when &&
-      t(`${NS}.SUBTITLE.${info.sent_at ? 'SENT_ON' : 'SCHEDULED_FOR'}`, {
-        date: date(when),
-      }),
+    when && t(`${NS}.SUBTITLE.${when.key}`, { date: date(when.value) }),
     info.audience && t(`${NS}.SUBTITLE.AUDIENCE`, { name: info.audience.name }),
   ]
     .filter(Boolean)
@@ -433,7 +441,7 @@ watch(
       </div>
 
       <RecipientImportStatus :campaign="health" :can-recover="canManage" />
-      <EmailCampaignHealth
+      <ResultEmailHealth
         :campaign="health"
         @updated="refresh"
         @problems="recipientsPanel?.showProblems()"
@@ -463,7 +471,7 @@ watch(
         :campaign-id="campaignId"
         :refresh-key="refreshKey"
       />
-      <EmailRecipients
+      <ResultEmailRecipients
         ref="recipientsPanel"
         :campaign-id="campaignId"
         :refresh-key="refreshKey"

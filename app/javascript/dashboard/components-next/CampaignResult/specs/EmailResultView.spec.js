@@ -26,7 +26,7 @@ vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
-// The e-mail report pieces are reused as they are (O1); here they only need to be there.
+// The e-mail report pieces keep their data and actions (O1); here they only need to be there.
 const stub = name => ({
   default: {
     name,
@@ -34,14 +34,8 @@ const stub = name => ({
     render: () => null,
   },
 });
-vi.mock(
-  'dashboard/components-next/Campaigns/EmailProtection/EmailRecipients.vue',
-  () => stub('EmailRecipients')
-);
-vi.mock(
-  'dashboard/components-next/Campaigns/EmailProtection/EmailCampaignHealth.vue',
-  () => stub('EmailCampaignHealth')
-);
+vi.mock('../ResultEmailRecipients.vue', () => stub('ResultEmailRecipients'));
+vi.mock('../ResultEmailHealth.vue', () => stub('ResultEmailHealth'));
 vi.mock(
   'dashboard/components-next/Campaigns/EmailProtection/CampaignTimelineChart.vue',
   () => stub('CampaignTimelineChart')
@@ -80,7 +74,12 @@ const summary = {
   delivery_evidence: { provider_confirmed: 1206, direct_acceptance_only: 0 },
 };
 
-const mountView = ({ status = 'sent', customRole, reportsOn = true } = {}) => {
+const mountView = ({
+  status = 'sent',
+  customRole,
+  reportsOn = true,
+  campaign = {},
+} = {}) => {
   api.results.getResult.mockResolvedValue({
     data: {
       payload: {
@@ -93,6 +92,7 @@ const mountView = ({ status = 'sent', customRole, reportsOn = true } = {}) => {
           from_email: 'novidades@hub2you.ai',
           sent_at: '2026-10-09T11:00:00Z',
           audience: { id: 2, name: 'Corretoras parceiras' },
+          ...campaign,
         },
         totals: {
           eligible: 1250,
@@ -226,7 +226,7 @@ describe('e-mail campaign result (#1007, O1, L8)', () => {
     );
     expect(wrapper.find('[data-kpi-details-toggle]').exists()).toBe(true);
     expect(wrapper.find('[data-link-clicks]').text()).toContain(
-      'https://hub2you.ai/live'
+      'hub2you.ai/live'
     );
   });
 
@@ -238,7 +238,7 @@ describe('e-mail campaign result (#1007, O1, L8)', () => {
       wrapper.findComponent({ name: 'CampaignTimelineChart' }).exists()
     ).toBe(true);
     expect(
-      wrapper.findComponent({ name: 'EmailCampaignHealth' }).props('campaign')
+      wrapper.findComponent({ name: 'ResultEmailHealth' }).props('campaign')
     ).toMatchObject({
       id: 9,
       protection: { state: 'healthy' },
@@ -247,12 +247,25 @@ describe('e-mail campaign result (#1007, O1, L8)', () => {
       wrapper.findComponent({ name: 'RecipientImportStatus' }).exists()
     ).toBe(true);
     expect(
-      wrapper.findComponent({ name: 'EmailRecipients' }).props('campaignId')
+      wrapper
+        .findComponent({ name: 'ResultEmailRecipients' })
+        .props('campaignId')
     ).toBe('9');
     expect(wrapper.findComponent({ name: 'ResultRepliedList' }).exists()).toBe(
       true
     );
     expect(api.reports.getReports).toHaveBeenCalledWith('9');
+  });
+
+  it('dates a paused send by its first e-mail when it has no end date (#990)', async () => {
+    const { wrapper } = mountView({
+      status: 'paused',
+      campaign: { sent_at: null, started_at: '2026-09-15T13:30:00Z' },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('started on');
+    expect(wrapper.text()).not.toContain('sent on');
   });
 
   it('E1: Entregues + Voltaram + Não enviados = Público elegível', async () => {

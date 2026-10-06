@@ -123,12 +123,19 @@ const statusOptions = computed(() => [
   })),
 ]);
 
+const formatDate = time =>
+  new Date(time).toLocaleString(toLocaleTag(locale.value), {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+
+// "Agendada para", "Começou em", "Enviada em" or "Criada em" (#990): the date alone does not say
+// whether the send already happened.
 const formatWhen = row => {
   if (row.status === JOURNEY_STATUSES.ALWAYS_ON) return t(`${NS}.ALWAYS`);
   if (!row.when) return t(`${NS}.NO_DATE`);
-  return new Date(row.when).toLocaleString(toLocaleTag(locale.value), {
-    dateStyle: 'short',
-    timeStyle: 'short',
+  return t(`${NS}.WHEN_AT.${row.whenKind.toUpperCase()}`, {
+    date: formatDate(row.when),
   });
 };
 
@@ -296,7 +303,7 @@ useOnEnter(fetchAll);
             class="mb-0 mt-2 text-sm text-white opacity-80"
           >
             {{ channelLabel(nextScheduled.channel) }} {{ DOT }}
-            {{ formatWhen(nextScheduled) }}
+            {{ formatDate(nextScheduled.when) }}
           </p>
         </div>
         <dl
