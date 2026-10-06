@@ -149,8 +149,8 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       expect(agent_inbox.reload.deleted_at).to eq(agent.deleted_at)
       expect(Autonomia::Agents::Agent.kept.find_by(id: agent.id)).to be_nil
       expect(Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox.id)).to be_nil
-      expect(AgentBotInbox.find_by(inbox_id: inbox.id)).to be_nil
-      expect(AgentBot.exists?(mirror_bot_id)).to be(true)
+      historical_bot = AgentBot.find(mirror_bot_id)
+      expect(historical_bot.agent_bot_inboxes.where(inbox_id: inbox.id)).to be_empty
       expect(Audited.audit_class.where(auditable: agent, action: 'destroy').sole.user_id).to eq(administrator.id)
     end
 
