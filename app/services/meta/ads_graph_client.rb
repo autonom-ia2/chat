@@ -1,5 +1,6 @@
 # Cliente enxuto da Graph API para LER anúncios (#1034): conferir as permissões do token e buscar o
-# nome de anúncios, conjuntos e campanhas em lote (`?ids=`).
+# nome de anúncios, conjuntos e campanhas, um objeto por chamada. O lote `?ids=` foi descontinuado
+# na Graph v26.0 e responde com o código 100, que aqui quer dizer "objeto inexistente" (#1043).
 #
 # Mesmas regras do Meta::ConversionsApiClient: o token vai só no header Authorization (nunca na
 # query string), a versão da Graph é a mesma do resto da superfície Meta e todo texto que sai daqui
@@ -13,7 +14,7 @@ class Meta::AdsGraphClient
   #   conta de anúncios a que o token não tem acesso; quem chama confere /me/permissions antes de
   #   condenar a credencial.
   # - 100 e 803: o objeto não existe ou não pode ser lido (anúncio apagado, ID de outra plataforma,
-  #   alias inexistente no `?ids=`). Erro daquele ID, não da conta.
+  #   ID que não é de anúncio). Erro daquele ID, não da conta.
   # Qualquer outro (limite de taxa 4/17/32/613/80000+, 5xx, falha de rede) é indisponibilidade
   # passageira: não diz nada sobre o token nem sobre o objeto.
   TOKEN_INVALID_CODE = 190
@@ -72,9 +73,9 @@ class Meta::AdsGraphClient
     get('me/adaccounts', limit: 1, fields: 'id')
   end
 
-  # GET /?ids=a,b&fields=... → { "<id>" => { "id", "name", ... } }
-  def objects(ids, fields:)
-    get('', ids: Array(ids).join(','), fields: fields)
+  # GET /<id>?fields=... → { "id", "name", ... }
+  def object(id, fields:)
+    get(id.to_s, fields: fields)
   end
 
   private

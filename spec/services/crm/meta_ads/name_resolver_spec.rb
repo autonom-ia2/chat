@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# Nomes das campanhas da Meta (#1034): cache de 7 dias, lote ?ids= de até 50, erros da Graph.
+# Nomes das campanhas da Meta (#1034): cache de 7 dias, um objeto por chamada (#1043), erros da Graph.
 RSpec.describe Crm::MetaAds::NameResolver do
   let(:account) { create(:account) }
   let(:resolver) { described_class.new(account) }
@@ -32,7 +32,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     let!(:connection) { create_meta_ads_connection(account) }
 
     it 'resolve um anúncio com conjunto e campanha numa chamada só e guarda os três no cache' do
-      graph = stub_meta_objects(ids: [ad_id], fields: ad_fields, body: { ad_id => ad_body(ad_id) })
+      graph = stub_meta_object(id: ad_id, fields: ad_fields, body: ad_body(ad_id))
 
       result = resolver.resolve([ad_id], type: 'ad')
 
@@ -43,6 +43,14 @@ RSpec.describe Crm::MetaAds::NameResolver do
       expect(connection.reload.last_checked_at).to be_present
     end
 
+    it 'não usa o parâmetro ids, descontinuado na Graph v26.0' do
+      stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
+
+      resolver.resolve([campaign_id], type: 'campaign')
+
+      expect(a_request(:get, ->(uri) { uri.query.to_s.include?('ids=') })).not_to have_been_made
+    end
+
     it 'usa o cache válido sem chamar a Graph' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Viagem EUA',
                                 fetched_at: 6.days.ago)
@@ -50,42 +58,50 @@ RSpec.describe Crm::MetaAds::NameResolver do
       result = resolver.resolve([campaign_id], type: 'campaign')
 
       expect(result[campaign_id]).to include(name: 'Viagem EUA', type: 'campaign')
-      expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+      expect(meta_object_requests).not_to have_been_made
     end
 
     it 'busca de novo o que passou de 7 dias e atualiza o nome' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Nome antigo',
                                 fetched_at: 8.days.ago)
-      graph = stub_meta_objects(ids: [campaign_id], fields: 'name', body: { campaign_id => { id: campaign_id, name: 'Nome novo' } })
+      graph = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Nome novo' })
 
       expect(resolver.resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Nome novo')
       expect(graph).to have_been_requested.once
     end
 
-    it 'manda só os IDs que faltam, em lotes de até 50' do
+    it 'busca só os IDs que faltam, um por chamada' do
       cached = '900000000000000001'
       Crm::MetaAdObject.create!(account: account, meta_object_id: cached, object_type: 'campaign', name: 'Em cache', fetched_at: 1.day.ago)
-      ids = (1..60).map { |n| (800_000_000_000_000_000 + n).to_s }
-      first = stub_meta_objects(ids: ids.first(50), fields: 'name', body: ids.first(50).index_with { |id| { id: id, name: "C#{id}" } })
-      second = stub_meta_objects(ids: ids.last(10), fields: 'name', body: ids.last(10).index_with { |id| { id: id, name: "C#{id}" } })
+      ids = (1..3).map { |n| (800_000_000_000_000_000 + n).to_s }
+      ids.each { |id| stub_meta_object(id: id, fields: 'name', body: { id: id, name: "C#{id}" }) }
 
       result = resolver.resolve(ids + [cached], type: 'campaign')
 
-      expect(result.size).to eq(61)
-      expect(first).to have_been_requested.once
-      expect(second).to have_been_requested.once
+      expect(result.size).to eq(4)
+      expect(meta_object_requests).to have_been_made.times(3)
+      expect(a_request(:get, meta_graph_url(cached)).with(query: hash_including({}))).not_to have_been_made
+    end
+
+    it 'não busca de novo o conjunto e a campanha que vieram embutidos no anúncio' do
+      stub_meta_object(id: ad_id, fields: ad_fields, body: ad_body(ad_id))
+
+      result = resolver.resolve([ad_id, adset_id, campaign_id], type: 'ad')
+
+      expect(result.keys).to contain_exactly(ad_id, adset_id, campaign_id)
+      expect(meta_object_requests).to have_been_made.once
     end
 
     it 'ignora valores que não são ID sem chamar a Graph' do
       expect(resolver.resolve(['Viagem EUA', '{{ad.id}}', '', nil, '12345'], type: 'ad')).to eq({})
-      expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+      expect(meta_object_requests).not_to have_been_made
     end
 
     it 'marca a credencial invalid em erro de permissão, sem lançar e sem resolver nada' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Viagem EUA',
                                 fetched_at: 1.day.ago)
-      stub_meta_objects(ids: [ad_id], fields: ad_fields, status: 400,
-                        body: meta_graph_error(190, "Error validating access token: #{MetaAdsHelpers::TEST_TOKEN}"))
+      stub_meta_object(id: ad_id, fields: ad_fields, status: 400,
+                       body: meta_graph_error(190, "Error validating access token: #{MetaAdsHelpers::TEST_TOKEN}"))
 
       result = nil
       expect { result = resolver.resolve([ad_id, campaign_id], type: 'ad') }.not_to raise_error
@@ -99,7 +115,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
 
     [10, 200, 294].each do |code|
       it "código #{code} com ads_read revogada: confere /me/permissions e marca invalid" do
-        stub_meta_objects(ids: [ad_id], fields: ad_fields, status: 403, body: meta_graph_error(code))
+        stub_meta_object(id: ad_id, fields: ad_fields, status: 403, body: meta_graph_error(code))
         check = stub_permissions({ data: [{ permission: 'ads_read', status: 'declined' }] })
 
         expect(resolver.resolve([ad_id], type: 'ad')).to eq({})
@@ -110,35 +126,34 @@ RSpec.describe Crm::MetaAds::NameResolver do
 
     it 'código 10 num objeto de outra conta de anúncios, com ads_read concedida: erro só daquele ID' do
       foreign = '120254710067062222'
-      batch = stub_meta_objects(ids: [ad_id, foreign], fields: ad_fields, status: 403, body: meta_graph_error(10))
+      other_foreign = '120254710067063333'
+      stub_meta_object(id: ad_id, fields: ad_fields, body: ad_body(ad_id))
+      single = stub_meta_object(id: foreign, fields: ad_fields, status: 403, body: meta_graph_error(10))
+      stub_meta_object(id: other_foreign, fields: ad_fields, status: 403, body: meta_graph_error(10))
       check = stub_permissions({ data: [{ permission: 'ads_read', status: 'granted' }] })
-      stub_meta_objects(ids: [ad_id], fields: ad_fields, body: { ad_id => ad_body(ad_id) })
-      single = stub_meta_objects(ids: [foreign], fields: ad_fields, status: 403, body: meta_graph_error(10))
 
-      result = resolver.resolve([ad_id, foreign], type: 'ad')
+      result = resolver.resolve([foreign, ad_id, other_foreign], type: 'ad')
       described_class.new(account).resolve([foreign], type: 'ad')
 
       expect(result.keys).to eq([ad_id])
       expect(connection.reload.status).to eq('active')
-      expect(batch).to have_been_requested.once
       expect(check).to have_been_requested.once
       expect(single).to have_been_requested.once
     end
 
-    it 'erro de um objeto derruba só aquele ID: refaz o lote um a um e ignora o que falhar' do
+    it 'erro de um objeto derruba só aquele ID e os outros seguem' do
       missing = '120254710067061111'
-      stub_meta_objects(ids: [ad_id, missing], fields: ad_fields, status: 400, body: meta_graph_error(100, 'Some aliases do not exist'))
-      stub_meta_objects(ids: [ad_id], fields: ad_fields, body: { ad_id => ad_body(ad_id) })
-      stub_meta_objects(ids: [missing], fields: ad_fields, status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      stub_meta_object(id: missing, fields: ad_fields, status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      stub_meta_object(id: ad_id, fields: ad_fields, body: ad_body(ad_id))
 
-      result = resolver.resolve([ad_id, missing], type: 'ad')
+      result = resolver.resolve([missing, ad_id], type: 'ad')
 
       expect(result.keys).to eq([ad_id])
       expect(connection.reload.status).to eq('active')
     end
 
     it 'cache negativo: o ID que a Meta não resolve não é buscado de novo por 7 dias' do
-      graph = stub_meta_objects(ids: [campaign_id], fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      graph = stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
       3.times { expect(described_class.new(account).resolve([campaign_id], type: 'campaign')).to eq({}) }
 
@@ -150,7 +165,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     it 'cache negativo mantém o nome já conhecido quando o anúncio deixa de existir' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Viagem EUA',
                                 fetched_at: 8.days.ago)
-      graph = stub_meta_objects(ids: [campaign_id], fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      graph = stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
       expect(resolver.resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Viagem EUA')
       expect(described_class.new(account).resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Viagem EUA')
@@ -158,46 +173,47 @@ RSpec.describe Crm::MetaAds::NameResolver do
     end
 
     [4, 17, 32, 613, 80_004].each do |code|
-      it "limite de taxa (#{code}) num lote de 50: uma chamada só, credencial intacta, devolve o que está em cache" do
+      it "limite de taxa (#{code}): para na primeira chamada, credencial intacta, devolve o que está em cache" do
         cached = '900000000000000001'
         Crm::MetaAdObject.create!(account: account, meta_object_id: cached, object_type: 'campaign', name: 'Em cache', fetched_at: 1.day.ago)
-        ids = (1..50).map { |n| (800_000_000_000_000_000 + n).to_s }
-        stub_meta_objects(ids: ids, fields: 'name', status: 400, body: meta_graph_error(code, 'User request limit reached'))
+        ids = (1..5).map { |n| (800_000_000_000_000_000 + n).to_s }
+        ids.each { |id| stub_meta_object(id: id, fields: 'name', status: 400, body: meta_graph_error(code, 'User request limit reached')) }
 
         result = resolver.resolve(ids + [cached], type: 'campaign')
         resolver.resolve(ids.first(3), type: 'campaign')
 
         expect(result.keys).to eq([cached])
-        expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).to have_been_made.once
+        expect(meta_object_requests).to have_been_made.once
         expect(connection.reload).to have_attributes(status: 'active', last_error: nil)
         expect(Crm::MetaAdObject.where(account_id: account.id, meta_object_id: ids)).to be_empty
       end
     end
 
-    it 'erro 5xx da Meta: uma chamada só, sem refazer ID a ID' do
+    it 'erro 5xx da Meta: para na primeira chamada' do
       ids = [ad_id, '120254710067061111']
-      stub_meta_objects(ids: ids, fields: ad_fields, status: 500, body: { error: { message: 'Service temporarily unavailable', code: 2 } })
+      ids.each do |id|
+        stub_meta_object(id: id, fields: ad_fields, status: 500, body: { error: { message: 'Service temporarily unavailable', code: 2 } })
+      end
 
       expect(resolver.resolve(ids, type: 'ad')).to eq({})
-      expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).to have_been_made.once
+      expect(meta_object_requests).to have_been_made.once
       expect(connection.reload.status).to eq('active')
     end
 
     it 'falha de rede não muda a credencial nem lança' do
-      stub_request(:get, meta_graph_url).with(query: { ids: ad_id, fields: ad_fields }).to_timeout
+      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: ad_fields }).to_timeout
 
       expect(resolver.resolve([ad_id], type: 'ad')).to eq({})
       expect(connection.reload.status).to eq('active')
     end
 
     it 'token só no header Authorization, nunca na URL' do
-      stub_meta_objects(ids: [campaign_id], fields: 'name', body: { campaign_id => { id: campaign_id, name: 'Viagem EUA' } })
+      stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
 
       resolver.resolve([campaign_id], type: 'campaign')
 
-      leaked = a_request(:get, meta_graph_url).with(query: hash_including({})) { |request| request.uri.to_s.include?(MetaAdsHelpers::TEST_TOKEN) }
-      expect(leaked).not_to have_been_made
-      expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).to have_been_made.once
+      expect(a_request(:get, ->(uri) { uri.to_s.include?(MetaAdsHelpers::TEST_TOKEN) })).not_to have_been_made
+      expect(meta_object_requests).to have_been_made.once
     end
   end
 
@@ -205,11 +221,11 @@ RSpec.describe Crm::MetaAds::NameResolver do
     create_meta_ads_connection(account, status: 'invalid')
 
     expect(resolver.resolve(['120254710067060416'], type: 'campaign')).to eq({})
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+    expect(meta_object_requests).not_to have_been_made
   end
 
   it 'sem credencial nenhuma não chama a Graph' do
     expect(resolver.resolve(['120254710067060416'], type: 'campaign')).to eq({})
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+    expect(meta_object_requests).not_to have_been_made
   end
 end

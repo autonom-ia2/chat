@@ -28,11 +28,12 @@ RSpec.describe Crm::MetaAds::BackfillJob do
     old_touch_recent_conversation = conversation_with([site_touch(other_campaign_id, touched_at: 100.days.ago)])
     named = conversation_with([site_touch(other_campaign_id, touched_at: 5.days.ago, extra: { 'campaign_name' => 'Já tem' })])
     no_id = conversation_with([site_touch('viagem-eua', touched_at: 5.days.ago)])
-    graph = stub_meta_objects(ids: [campaign_id], fields: 'name', body: { campaign_id => { id: campaign_id, name: 'Viagem EUA' } })
+    graph = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
 
     described_class.perform_now(account.id)
 
     expect(graph).to have_been_requested.once
+    expect(meta_object_requests).to have_been_made.once
     expect(recent.reload.additional_attributes['campaign_touches'].sole).to include('campaign_name' => 'Viagem EUA',
                                                                                     'headline' => 'LP · Viagem EUA')
     [old, old_touch_recent_conversation, no_id].each do |conversation|
@@ -41,18 +42,18 @@ RSpec.describe Crm::MetaAds::BackfillJob do
     expect(named.reload.additional_attributes['campaign_touches'].sole['campaign_name']).to eq('Já tem')
   end
 
-  it 'junta os IDs de várias conversas numa chamada só' do
+  it 'busca cada ID uma vez só, mesmo repetido em várias conversas' do
     create_meta_ads_connection(account)
     first = conversation_with([site_touch(campaign_id, touched_at: 1.day.ago)])
     second = conversation_with([site_touch(other_campaign_id, touched_at: 2.days.ago)])
-    graph = stub_request(:get, meta_graph_url)
-            .with(query: hash_including(fields: 'name'))
-            .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
-                       body: { campaign_id => { id: campaign_id, name: 'A' }, other_campaign_id => { id: other_campaign_id, name: 'B' } }.to_json)
+    conversation_with([site_touch(campaign_id, touched_at: 3.days.ago)])
+    graph_a = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'A' })
+    graph_b = stub_meta_object(id: other_campaign_id, fields: 'name', body: { id: other_campaign_id, name: 'B' })
 
     described_class.perform_now(account.id)
 
-    expect(graph).to have_been_requested.once
+    expect(graph_a).to have_been_requested.once
+    expect(graph_b).to have_been_requested.once
     expect(first.reload.additional_attributes['campaign_touches'].sole['campaign_name']).to eq('A')
     expect(second.reload.additional_attributes['campaign_touches'].sole['campaign_name']).to eq('B')
   end
@@ -60,11 +61,11 @@ RSpec.describe Crm::MetaAds::BackfillJob do
   it 'ID que a Meta não resolve (erro 100) em N conversas: exatamente uma chamada, agora e na próxima passada' do
     create_meta_ads_connection(account)
     conversations = Array.new(5) { conversation_with([site_touch('999999999', touched_at: 1.day.ago)]) }
-    graph = stub_meta_objects(ids: ['999999999'], fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+    graph = stub_meta_object(id: '999999999', fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
     2.times { described_class.perform_now(account.id) }
 
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).to have_been_made.once
+    expect(meta_object_requests).to have_been_made.once
     expect(graph).to have_been_requested.once
     conversations.each { |conversation| expect(conversation.reload.additional_attributes['campaign_touches'].sole).not_to have_key('campaign_name') }
   end
@@ -72,11 +73,11 @@ RSpec.describe Crm::MetaAds::BackfillJob do
   it 'limite de taxa: uma chamada só, sem tentar conversa a conversa' do
     create_meta_ads_connection(account)
     3.times { conversation_with([site_touch(campaign_id, touched_at: 1.day.ago)]) }
-    stub_meta_objects(ids: [campaign_id], fields: 'name', status: 400, body: meta_graph_error(17, 'User request limit reached'))
+    stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(17, 'User request limit reached'))
 
     described_class.perform_now(account.id)
 
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).to have_been_made.once
+    expect(meta_object_requests).to have_been_made.once
     expect(Crm::MetaAdsConnection.find_by(account_id: account.id).status).to eq('active')
   end
 
@@ -90,7 +91,7 @@ RSpec.describe Crm::MetaAds::BackfillJob do
 
     described_class.perform_now(account.id)
 
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+    expect(meta_object_requests).not_to have_been_made
   end
 
   it 'sem credencial ativa não faz nada' do
@@ -99,6 +100,6 @@ RSpec.describe Crm::MetaAds::BackfillJob do
 
     described_class.perform_now(account.id)
 
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+    expect(meta_object_requests).not_to have_been_made
   end
 end

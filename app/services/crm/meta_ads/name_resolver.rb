@@ -1,21 +1,20 @@
 # Troca IDs de anúncio, conjunto e campanha da Meta pelos nomes (#1034).
 #
-# Primeiro o cache (crm_meta_ad_objects, válido por 7 dias); os IDs que faltam vão à Graph API
-# num lote `?ids=` de até 50. Para anúncio, a mesma chamada traz o conjunto e a campanha, que
-# também entram no cache.
+# Primeiro o cache (crm_meta_ad_objects, válido por 7 dias); os IDs que faltam vão à Graph API,
+# um por chamada (o lote `?ids=` saiu na v26.0, #1043). Para anúncio, a mesma chamada traz o
+# conjunto e a campanha, que também entram no cache.
 #
 # Erros da Graph (classes em Meta::AdsGraphClient):
 # - token inválido (190) → credencial `invalid`, nada é resolvido;
 # - falta de permissão (10, 2xx) → confere /me/permissions uma vez: sem `ads_read` concedida, é a
 #   credencial (`invalid`); com ela, é um objeto fora do alcance do token e vale como erro de objeto;
-# - erro de objeto (100, 803) → o lote é refeito ID a ID; o ID que falha sozinho entra no cache sem
-#   nome (cache negativo) e não é buscado de novo por CACHE_TTL;
+# - erro de objeto (100, 803) → aquele ID entra no cache sem nome (cache negativo) e não é buscado
+#   de novo por CACHE_TTL; os outros seguem;
 # - qualquer outro (limite de taxa, 5xx, rede) → para a busca nesta instância e devolve só o que já
-#   está no cache, sem refazer ID a ID e sem mexer na credencial.
+#   está no cache, sem mexer na credencial.
 #
 # Devolve { id => { name:, type:, campaign_name:, adset_name: } }.
 class Crm::MetaAds::NameResolver
-  BATCH_SIZE = 50
   MIN_ID_LENGTH = 6
   MAX_ID_LENGTH = 30
   FIELDS = {
@@ -68,19 +67,20 @@ class Crm::MetaAds::NameResolver
     return if missing.empty?
 
     client = Meta::AdsGraphClient.new(access_token: connection.access_token)
-    fetched = missing.each_slice(BATCH_SIZE).map { |batch| fetch_batch(client, connection, batch, type) }
+    fetched = missing.map { |id| fetch_one(client, connection, id, type) }
     connection.update!(last_checked_at: Time.current) if fetched.any?
   end
 
-  # true quando a Graph respondeu algo útil para o lote.
-  def fetch_batch(client, connection, batch, type)
-    result = client.objects(batch, fields: FIELDS.fetch(type, UNKNOWN_TYPE_FIELDS))
-    return store(result.data, batch, type) if result.ok
+  # true quando a Graph trouxe o nome. O conjunto e a campanha que vieram embutidos num anúncio
+  # anterior já estão no cache e não são buscados de novo.
+  def fetch_one(client, connection, id, type)
+    return false if fresh_ids([id]).any?
+
+    result = client.object(id, fields: FIELDS.fetch(type, UNKNOWN_TYPE_FIELDS))
+    return store({ id => result.data }, [id], type) if result.ok
 
     deny!(connection, result) unless object_level_error?(client, result)
-    return remember_missing(batch, type) if batch.one?
-
-    batch.map { |id| fetch_batch(client, connection, [id], type) }.any?
+    remember_missing([id], type)
   end
 
   # true quando o erro é do(s) objeto(s) e false quando é da credencial. Indisponibilidade lança.
