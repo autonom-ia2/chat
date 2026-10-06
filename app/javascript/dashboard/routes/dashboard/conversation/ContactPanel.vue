@@ -24,8 +24,7 @@ import ShopifyOrdersList from 'dashboard/components/widgets/conversation/Shopify
 import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
 import LinearIssuesList from 'dashboard/components/widgets/conversation/linear/IssuesList.vue';
 import LinearSetupCTA from 'dashboard/components/widgets/conversation/linear/LinearSetupCTA.vue';
-import CrmCardPill from 'dashboard/routes/dashboard/crm/components/CrmCardPill.vue';
-import { useCrmOrigin } from 'dashboard/routes/dashboard/crm/composables/useCrmOrigin';
+import ContactOriginsPanel from 'dashboard/components-next/CampaignJourney/ContactOriginsPanel.vue';
 
 const props = defineProps({
   conversationId: {
@@ -89,11 +88,6 @@ const currentConversationMetaData = computed(() =>
 const conversationAdditionalAttributes = computed(
   () => currentConversationMetaData.value.additional_attributes || {}
 );
-const { originFromCampaign, humanizedOriginLabel, formatOriginTitle } =
-  useCrmOrigin();
-const conversationOriginPill = computed(() =>
-  originFromCampaign(conversationAdditionalAttributes.value.campaign)
-);
 
 const channelType = computed(() => currentChat.value.meta?.channel);
 
@@ -154,15 +148,10 @@ onMounted(() => {
       @close="closeContactPanel"
     />
     <ContactInfo :contact="contact" :channel-type="channelType" />
-    <div v-if="conversationOriginPill" class="px-2 pb-3">
-      <CrmCardPill
-        :icon="conversationOriginPill.icon"
-        tone="teal"
-        :title="formatOriginTitle(conversationOriginPill)"
-      >
-        {{ humanizedOriginLabel(conversationOriginPill) }}
-      </CrmCardPill>
-    </div>
+    <ContactOriginsPanel
+      :contact-id="contactId"
+      :conversation-attributes="conversationAdditionalAttributes"
+    />
     <div class="px-2 pb-8 list-group">
       <Draggable
         :list="conversationSidebarItems"

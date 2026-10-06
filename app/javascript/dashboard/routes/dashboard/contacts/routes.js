@@ -1,6 +1,7 @@
 import { frontendURL } from '../../../helper/URLHelper';
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { CAMPAIGN_PERMISSIONS } from 'dashboard/constants/permissions.js';
+import { contactImportRoutes } from './import/contactImport.routes';
 
 const ContactsIndex = () => import('./pages/ContactsIndex.vue');
 const ContactManageView = () => import('./pages/ContactManageView.vue');
@@ -17,6 +18,7 @@ const campaignImportMeta = {
 };
 
 export const routes = [
+  ...contactImportRoutes,
   {
     path: frontendURL('accounts/:accountId/contacts/campaign-imports'),
     name: 'contacts_campaign_imports',

@@ -45,6 +45,44 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # Públicos (#992): choosing columns and wiring message variables are part of building a campaign.
+  def columns?
+    permission_granted?('campaign_manage')
+  end
+
+  # #998: the "Criar e ligar" switch follows the import permission (PRD §4).
+  def companies?
+    permission_granted?('campaign_manage')
+  end
+
+  def variable_suggestions?
+    permission_granted?('campaign_manage')
+  end
+
+  def variable_coverage?
+    permission_granted?('campaign_manage')
+  end
+
+  # #1005 (J5): turning an audience channel on or off changes who a campaign can reach.
+  def channels?
+    permission_granted?('campaign_manage')
+  end
+
+  # #993 (B5): masked contact and reason only, like the error report a viewer already sees.
+  def problem_rows?
+    permission_granted?('campaign_view')
+  end
+
+  # #993 side panel: who is in the audience, for whoever can see the audience.
+  def contacts?
+    permission_granted?('campaign_view')
+  end
+
+  # #993: a real name and values for the message preview, part of building a campaign.
+  def sample_contact?
+    permission_granted?('campaign_manage')
+  end
+
   private
 
   def permission_granted?(key)

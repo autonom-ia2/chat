@@ -19,6 +19,7 @@ import EmailRecipientStep from 'dashboard/components-next/Campaigns/Pages/Campai
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Input from 'dashboard/components-next/input/Input.vue';
+import { testSendAddress, testSendErrorKey } from './emailTestSend';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import GrapesEditor from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/GrapesEditor.vue';
 import AiComposerDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiComposerDialog.vue';
@@ -45,6 +46,7 @@ const canManage = useCanManage('campaign_manage');
 
 const campaigns = useMapGetter('emailCampaigns/getCampaigns');
 const uiFlags = useMapGetter('emailCampaigns/getUIFlags');
+const currentUser = useMapGetter('getCurrentUser');
 
 const campaignId = computed(() => Number(route.params.campaignId));
 const campaign = computed(() =>
@@ -80,7 +82,8 @@ const showGeneratingDialog = ref(false);
 // from scratch. Empty when there's no design yet.
 const aiBaseMjml = ref('');
 const showTestPopover = ref(false);
-const testEmail = ref('');
+// D8 (#999): the test goes only to the logged-in user — the field shows that address, locked.
+const testEmail = computed(() => testSendAddress(currentUser.value));
 const isSendingTest = ref(false);
 const showSaveTemplatePopover = ref(false);
 const templateName = ref('');
@@ -225,7 +228,7 @@ const sendTest = async () => {
     useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_SUCCESS'));
     showTestPopover.value = false;
   } catch (error) {
-    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_ERROR'));
+    useAlert(t(testSendErrorKey(error)));
   } finally {
     isSendingTest.value = false;
   }
@@ -809,8 +812,9 @@ const insertPlaceholder = key => {
                 class="absolute end-0 z-50 flex flex-col w-[min(20rem,calc(100vw-3rem))] gap-3 p-4 border rounded-lg shadow-lg top-12 border-n-weak bg-n-solid-1"
               >
                 <Input
-                  v-model="testEmail"
+                  :model-value="testEmail"
                   type="email"
+                  disabled
                   :label="
                     t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SEND_TEST_EMAIL_LABEL')
                   "

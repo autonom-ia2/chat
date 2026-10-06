@@ -2,12 +2,9 @@ module WhatsappApiCampaigns
   module PhonePrivacy
     module_function
 
+    # Same mask as audience rows and error CSVs (CampaignImports::PhoneMask, #993).
     def mask(phone_number)
-      digits = phone_number.to_s.gsub(/\D/, '')
-      return '' if digits.blank?
-
-      suffix = digits.last(4)
-      "+#{digits.first(2)}*****#{suffix}"
+      CampaignImports::PhoneMask.mask(phone_number)
     end
 
     def hash(phone_number)

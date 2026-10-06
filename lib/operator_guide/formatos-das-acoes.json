@@ -232,8 +232,8 @@
     "controller": "api/v1/accounts/campaign_imports#destroy",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:31",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:120"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:33",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
     ],
     "sem_corpo": true
   },
@@ -360,6 +360,15 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:62",
       "enterprise/app/controllers/api/v1/accounts/companies_controller.rb:89"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE contact_imports/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:70",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
     ],
     "sem_corpo": true
   },
@@ -3807,6 +3816,50 @@
     ],
     "sem_corpo": false
   },
+  "PATCH campaign_imports/:id/channels": {
+    "campos": {
+      "email": {},
+      "sms": {},
+      "whatsapp": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#channels",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:42",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:141",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH campaign_imports/:id/columns": {
+    "campos": {
+      "company": {},
+      "email": {},
+      "name": {},
+      "phone": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#columns",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:15",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:136",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH campaign_imports/:id/companies": {
+    "campos": {
+      "create_companies": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#companies",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:28",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:29",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
   "PATCH campaigns/:id": {
     "campos": {
       "audience": {
@@ -3858,7 +3911,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],
@@ -4245,6 +4298,35 @@
       "app/controllers/api/v1/accounts_controller.rb:117",
       "app/controllers/api/v1/accounts_controller.rb:113",
       "app/controllers/api/v1/accounts_controller.rb:102"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH contact_imports/:id/columns": {
+    "campos": {
+      "company": {},
+      "email": {},
+      "name": {},
+      "phone": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#columns",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:30",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:32",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH contact_imports/:id/companies": {
+    "campos": {
+      "create_companies": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#companies",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:43",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:44",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
     ],
     "sem_corpo": false
   },
@@ -5635,6 +5717,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}
@@ -11055,24 +11138,25 @@
       "campaign_name": {
         "tipo": "string"
       },
+      "create_companies": {},
       "import_file": {
         "tipo": "arquivo",
         "tipo_pela_leitura": "uso"
+      },
+      "name": {
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/campaign_imports#create",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:18",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:143",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:23",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:137",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:136",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:135",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:134",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:19"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:188",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:25",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:172",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:22",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:21"
     ],
     "sem_corpo": false
   },
@@ -11081,8 +11165,8 @@
     "controller": "api/v1/accounts/campaign_imports#confirm",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:51",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:120"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:58",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
     ],
     "sem_corpo": true
   },
@@ -11091,10 +11175,117 @@
     "controller": "api/v1/accounts/campaign_imports#undo_labels",
     "modelo": "CampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:72",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:120"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:79",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
     ],
     "sem_corpo": true
+  },
+  "POST campaign_imports/:id/variable_coverage": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_import_audiences#variable_coverage",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:105",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_journey/campaigns": {
+    "campos": {
+      "delivery_mode": {},
+      "from_email": {},
+      "from_name": {},
+      "inbox_id": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "inteiro"
+      },
+      "message": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      },
+      "preheader": {},
+      "reply_to_inbox_id": {},
+      "scheduled_at": {
+        "tipo": "data_hora"
+      },
+      "sender_identity_id": {},
+      "sender_inbox_id": {},
+      "subject": {},
+      "template_params": {
+        "tipo": "objeto_livre"
+      },
+      "title": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      },
+      "variable_bindings": {
+        "tipo": "objeto_livre"
+      },
+      "variable_defaults": {
+        "tipo": "objeto_livre"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/campaigns#create",
+    "corpo_plano": false,
+    "envelope": "campaign",
+    "fora_do_envelope": {
+      "campaign_import_id": {
+        "obrigatorio": true,
+        "tipo": "inteiro"
+      },
+      "channel": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "modelo": "Campaign",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:95",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:101",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:47",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:35",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:60",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:16",
+      "app/controllers/api/v1/accounts/campaign_journey/campaigns_controller.rb:15"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "delivery_mode",
+      "from_email",
+      "from_name",
+      "preheader",
+      "reply_to_inbox_id",
+      "sender_identity_id",
+      "sender_inbox_id",
+      "subject",
+      "variable_bindings",
+      "variable_defaults"
+    ]
+  },
+  "POST campaign_journey/recipient_previews": {
+    "campos": {
+      "campaign_import_id": {
+        "obrigatorio": true,
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "channel": {},
+      "message_body": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/campaign_journey/recipient_previews#create",
+    "modelo": "CampaignImport",
+    "motivos": [
+      "leitura crua sem tipo: channel (repassada a ::CampaignJourney::RecipientPreview.new), message_body (repassada a ::CampaignJourney::RecipientPreview.new)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:9",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:14",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:13",
+      "app/controllers/api/v1/accounts/campaign_journey/recipient_previews_controller.rb:11"
+    ],
+    "sem_corpo": false
   },
   "POST campaigns": {
     "campos": {
@@ -11147,7 +11338,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:11",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:8",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31"
     ],
     "sem_corpo": false
@@ -11908,6 +12099,36 @@
     "origem": [
       "app/controllers/api/v1/accounts_controller.rb:67",
       "app/controllers/api/v1/accounts_controller.rb:102"
+    ],
+    "sem_corpo": true
+  },
+  "POST contact_imports": {
+    "campos": {
+      "create_companies": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "import_file": {
+        "tipo": "arquivo",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#create",
+    "modelo": "CampaignImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:18",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:98",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:19"
+    ],
+    "sem_corpo": false
+  },
+  "POST contact_imports/:id/confirm": {
+    "completo": true,
+    "controller": "api/v1/accounts/contact_imports#confirm",
+    "origem": [
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:54",
+      "app/controllers/api/v1/accounts/contact_imports_controller.rb:92"
     ],
     "sem_corpo": true
   },
@@ -14407,6 +14628,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}
@@ -14423,28 +14645,17 @@
     "sem_corpo": false
   },
   "POST email_campaigns/campaigns/:campaign_id/recipients": {
-    "campos": {
-      "import_file": {
-        "tipo": "arquivo",
-        "tipo_pela_leitura": "uso"
-      }
-    },
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#create",
-    "modelo": "EmailCampaignImport",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:15",
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:93",
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:16",
       "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
     ],
-    "sem_corpo": false
+    "sem_corpo": true
   },
   "POST email_campaigns/campaigns/:campaign_id/recipients/retry_import": {
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/recipients#retry_import",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:29",
       "app/controllers/api/v1/accounts/email_campaigns/recipients_controller.rb:84"
     ],
     "sem_corpo": true
@@ -14596,9 +14807,9 @@
     "controller": "api/v1/accounts/email_campaigns/test_sends#create",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:2",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:6",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:3"
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:66",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:11"
     ],
     "sem_corpo": false
   },
@@ -19881,7 +20092,7 @@
     "envelope": "campaign",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/campaigns_controller.rb:15",
+      "app/controllers/concerns/campaign_journey/whatsapp_cloud_guard.rb:14",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:31",
       "app/controllers/api/v1/accounts/campaigns_controller.rb:27"
     ],
@@ -21605,6 +21816,7 @@
       "name": {},
       "preheader": {},
       "reply_to": {},
+      "reply_to_inbox_id": {},
       "sender_identity_id": {},
       "sender_inbox_id": {},
       "subject": {}

@@ -58,8 +58,8 @@ RSpec.describe Webhooks::SmsEventsJob do
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)
-      expect(Sms::DeliveryStatusService).to receive(:new).with(channel: sms_channel,
-                                                               params: params[:message].with_indifferent_access)
+      # #1004 (fork): the delivery event reaches the service with the inbox and the whole event.
+      expect(Sms::DeliveryStatusService).to receive(:new).with(inbox: sms_channel.inbox, params: params.with_indifferent_access)
       expect(process_service).to receive(:perform)
       described_class.perform_now(params)
     end
@@ -69,8 +69,8 @@ RSpec.describe Webhooks::SmsEventsJob do
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)
-      expect(Sms::DeliveryStatusService).to receive(:new).with(channel: sms_channel,
-                                                               params: params[:message].with_indifferent_access)
+      # #1004 (fork): the delivery event reaches the service with the inbox and the whole event.
+      expect(Sms::DeliveryStatusService).to receive(:new).with(inbox: sms_channel.inbox, params: params.with_indifferent_access)
       expect(process_service).to receive(:perform)
       described_class.perform_now(params)
     end

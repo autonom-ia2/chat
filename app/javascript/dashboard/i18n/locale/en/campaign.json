@@ -663,6 +663,8 @@
         "SEND_TEST_SUBMIT": "Send",
         "SEND_TEST_SUCCESS": "Test email sent",
         "SEND_TEST_ERROR": "Could not send the test email",
+        "SEND_TEST_ONLY_SELF": "The test email goes only to your own address",
+        "SEND_TEST_RATE_LIMITED": "Too many test emails for this campaign. Try again in an hour",
         "SAVE_TEMPLATE": "Save as template",
         "SAVE_TEMPLATE_NAME_LABEL": "Template name",
         "SAVE_TEMPLATE_NAME_PLACEHOLDER": "e.g. Live invite",

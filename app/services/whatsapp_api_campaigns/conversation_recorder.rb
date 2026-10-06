@@ -64,6 +64,9 @@ module WhatsappApiCampaigns
         message_type: :outgoing,
         content: @rendered_body.presence,
         content_type: :text,
+        # Already filled by TemplateRenderer: contact and audience values stay literal (chat#1021).
+        # Virtual mark, must be set before save (Autonomia::LiteralMessageContent).
+        literal_content: true,
         sender: @campaign.created_by,
         source_id: source_id,
         additional_attributes: {

@@ -75,12 +75,11 @@ module CampaignImports
       )
     end
 
+    # Spreads rows as evenly as possible: every batch gets the base size and the
+    # first `remainder` batches get one extra row, so no batch is ever empty.
     def batch_sizes
-      return [total_rows] if requested_batch_count == 1
-
-      regular_size = (total_rows.to_f / requested_batch_count).ceil
-      first_size = total_rows - (regular_size * (requested_batch_count - 1))
-      [first_size] + Array.new(requested_batch_count - 1, regular_size)
+      base_size, remainder = total_rows.divmod(requested_batch_count)
+      Array.new(requested_batch_count) { |index| base_size + (index < remainder ? 1 : 0) }
     end
 
     def batch_indexes(sizes)

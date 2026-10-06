@@ -205,6 +205,8 @@ const statusLabel = campaignImport => {
       return t('CAMPAIGN_IMPORT.STATUS.LABELS_UNDONE');
     case 'undo_failed':
       return t('CAMPAIGN_IMPORT.STATUS.UNDO_FAILED');
+    case 'needs_column_choice':
+      return t('CAMPAIGN_IMPORT.STATUS.NEEDS_COLUMN_CHOICE');
     case 'failed':
     default:
       return t('CAMPAIGN_IMPORT.STATUS.FAILED');

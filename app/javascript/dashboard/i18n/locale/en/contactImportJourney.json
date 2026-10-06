@@ -1,0 +1,114 @@
+{
+  "CONTACT_IMPORT_JOURNEY": {
+    "BREADCRUMB": "Breadcrumb",
+    "CONTACTS": "Contacts",
+    "TITLE": "Import contacts",
+    "SUBTITLE": "Upload the spreadsheet. We find the columns, the companies and the extra information of each contact.",
+    "REVIEW_SUBTITLE": "Check before importing. Nothing goes into your contacts until you import.",
+    "BACK": "Back to contacts",
+    "UPLOAD": {
+      "LABEL": "Drop the spreadsheet here or click to choose",
+      "HINT": "CSV or Excel · up to {size} MB · name and mobile or e-mail; company and other columns are welcome",
+      "SENDING": "Sending the spreadsheet…",
+      "ERROR": "Could not send the spreadsheet. Try again.",
+      "TOO_LARGE": "The file is larger than {size} MB."
+    },
+    "READING": "Reading the spreadsheet…",
+    "FILE": {
+      "ROWS": "{count} rows",
+      "OTHER_FILE": "Choose another spreadsheet"
+    },
+    "COLUMNS": {
+      "TITLE": "Columns found",
+      "HINT": "Check and change if needed",
+      "CHOOSE_TITLE": "Tell us which column has each piece of information",
+      "CHOOSE_HINT": "We could not be sure about every column. Pick them below; mobile or e-mail is required.",
+      "NONE": "There is none",
+      "COLUMN": "column {name}",
+      "COLUMN_FALLBACK": "Column {number}",
+      "CHANGE": "Change {target}",
+      "FILLED": "{count} filled",
+      "VALID": "{count} valid",
+      "APPLY": "Check again with these columns",
+      "NEED_CONTACT": "Choose the mobile or the e-mail column.",
+      "TARGETS": {
+        "NAME": "Name",
+        "PHONE": "Mobile",
+        "EMAIL": "E-mail",
+        "COMPANY": "Company"
+      }
+    },
+    "ATTRIBUTES": {
+      "TITLE": "Other columns",
+      "HINT": "They become contact attributes",
+      "NEW": "new attribute",
+      "PROBLEMS": "{count} value stays out because it does not fit the attribute; the rest of the row is imported | {count} values stay out because they do not fit the attribute; the rest of each row is imported",
+      "PROBLEM_ROW": "Row {row}: value does not fit {attribute}",
+      "KEPT": "{count} value kept: the contact already had it | {count} values kept: the contacts already had them",
+      "NONE": "The spreadsheet has no other columns."
+    },
+    "PEOPLE": {
+      "READY": "contacts ready",
+      "SPLIT": "{existing} already were your contacts · {new} new",
+      "PROBLEMS": "row with problems | rows with problems",
+      "SHOW_PROBLEMS": "See problems",
+      "HIDE_PROBLEMS": "Hide",
+      "ROW": "Row",
+      "CONTACT": "Contact",
+      "PROBLEM": "Problem",
+      "EMPTY_CONTACT": "(empty)",
+      "LEFT_OUT": "These rows stay out. Fix them and upload again whenever you want.",
+      "DOWNLOAD": "Download rows with problems",
+      "MORE": "Showing the first {shown} of {total}. Download the file to see all of them."
+    },
+    "COMPANIES": {
+      "TITLE": "Companies",
+      "HINT": "The {column} column has each contact's company.",
+      "ON": "Create and link",
+      "OFF": "Do not create",
+      "SWITCH_LABEL": "Create companies and link contacts",
+      "NEW": "new companies",
+      "REUSED": "already existed",
+      "LINKED": "contacts linked",
+      "KEPT": "already had another company — kept",
+      "DISABLED": "No company will be created or linked."
+    },
+    "ACTIONS": {
+      "CANCEL": "Cancel",
+      "IMPORT": "Import",
+      "IMPORTING": "Importing…",
+      "SEE_CONTACTS": "See contacts",
+      "NEW_IMPORT": "Import another spreadsheet"
+    },
+    "RESULT": {
+      "TITLE": "Contacts imported",
+      "PARTIAL_TITLE": "Contacts imported, some rows failed",
+      "IMPORTED": "contacts imported",
+      "CREATED": "new contacts",
+      "COMPANIES": "new companies",
+      "ATTRIBUTES": "new attributes",
+      "FAILED": "stayed out"
+    },
+    "ERRORS": {
+      "GENERIC": "Something went wrong. Try again.",
+      "IMPORT_FAILED": "The import stopped before the end. Contacts already saved stay saved.",
+      "FILE_REFUSED": "This spreadsheet could not be used.",
+      "REASONS": {
+        "invalid_brazilian_mobile_number": "Not a Brazilian mobile number",
+        "missing_contact": "No mobile or e-mail",
+        "invalid_email": "Invalid e-mail",
+        "blank_email": "E-mail is empty",
+        "duplicate_phone_in_file": "Mobile repeated in the spreadsheet",
+        "duplicate_email_in_file": "E-mail repeated in the spreadsheet",
+        "formula_detected": "Cell looks like a formula",
+        "no_valid_rows": "No row has a valid mobile or e-mail",
+        "row_limit_exceeded": "The spreadsheet has more rows than allowed",
+        "empty_file": "The spreadsheet is empty",
+        "unsupported_file_format": "Use a CSV or Excel (.xlsx) file",
+        "file_could_not_be_processed": "The file could not be read",
+        "missing_contact_column": "Choose the mobile or the e-mail column",
+        "invalid_column_choice": "That column choice is not valid"
+      }
+    }
+  }
+}
