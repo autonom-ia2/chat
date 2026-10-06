@@ -1093,6 +1093,19 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#show",
     "parametros": []
   },
+  "crm/meta_ads_connection/ad_accounts": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#ad_accounts",
+    "parametros": [
+      "mode"
+    ]
+  },
+  "crm/meta_ads_connection/pixels": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#pixels",
+    "parametros": [
+      "ad_account_id",
+      "mode"
+    ]
+  },
   "crm/meta_conversions": {
     "controller": "api/v1/accounts/crm/meta_conversions#index",
     "parametros": [

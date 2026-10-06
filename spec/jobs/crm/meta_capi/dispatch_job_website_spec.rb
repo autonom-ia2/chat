@@ -157,6 +157,57 @@ RSpec.describe Crm::MetaCapi::DispatchJob do
       expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: ads_token, dataset_id: anything)
     end
 
+    def partner_connection(pixel_id: '2164882667623689', platform_token: true)
+      enable_test_encryption!
+      AiProviderCredential.create!(provider: 'meta_ads', api_key: 'EAAGplataformatoken1234567890PIXEL') if platform_token
+      channel.update_columns(phone_number_health: { 'business_portfolio_id' => '1013433763956648' }) # rubocop:disable Rails/SkipsModelValidations
+      Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: '2196424464528988',
+                                     ad_account_business_id: '1013433763956648', pixel_id: pixel_id)
+    end
+
+    it 'in partner mode sends to the connected Pixel with the platform token and stays connected on 190 (#1047)' do
+      connection = partner_connection
+      answer('EAAGplataformatoken1234567890PIXEL', refuse(190))
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: 'EAAGplataformatoken1234567890PIXEL', dataset_id: anything).once
+      expect(row.status).to eq('accepted')
+      expect(connection.reload).to have_attributes(status: 'active', last_error: 'platform_token_rejected')
+    end
+
+    it 'in partner mode never sends the platform token to a Pixel other than the connected one' do
+      partner_connection(pixel_id: '999999999999')
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).not_to have_received(:new).with(access_token: 'EAAGplataformatoken1234567890PIXEL', dataset_id: anything)
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'in partner mode without a platform token goes straight to the WhatsApp token' do
+      partner_connection(platform_token: false)
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).once
+      expect(row.status).to eq('accepted')
+    end
+
+    it 'in partner mode stops reading when the WhatsApp portfolio no longer owns the ad account' do
+      partner_connection
+      channel.update_columns(phone_number_health: {}) # rubocop:disable Rails/SkipsModelValidations
+      answer(whatsapp_token, ok)
+
+      perform
+
+      expect(Meta::ConversionsApiClient).to have_received(:new).once
+      expect(Meta::ConversionsApiClient).to have_received(:new).with(access_token: whatsapp_token, dataset_id: anything)
+    end
+
     it 'never uses another account active connection' do
       create_meta_ads_connection(create(:account), token: ads_token)
       answer(whatsapp_token, ok)

@@ -18,11 +18,11 @@ class Crm::MetaAds::NameResolver
   MIN_ID_LENGTH = 6
   MAX_ID_LENGTH = 30
   FIELDS = {
-    'ad' => 'name,adset{id,name},campaign{id,name}',
-    'adset' => 'name,campaign{id,name}',
-    'campaign' => 'name'
+    'ad' => 'name,account_id,adset{id,name},campaign{id,name},preview_shareable_link,creative{thumbnail_url}',
+    'adset' => 'name,account_id,campaign{id,name}',
+    'campaign' => 'name,account_id'
   }.freeze
-  UNKNOWN_TYPE_FIELDS = 'name'.freeze
+  UNKNOWN_TYPE_FIELDS = 'name,account_id'.freeze
 
   class PermissionDenied < StandardError; end
   class GraphUnavailable < StandardError; end
@@ -45,7 +45,7 @@ class Crm::MetaAds::NameResolver
     ids = Array(ids).select { |id| self.class.meta_id?(id) }.map(&:to_s).uniq
     return {} if ids.empty?
 
-    connection = Crm::MetaAdsConnection.active_for(@account.id)
+    connection = readable_connection
     return {} if connection.blank?
 
     fetch_missing(connection, ids - fresh_ids(ids), type) unless @unavailable
@@ -59,6 +59,16 @@ class Crm::MetaAds::NameResolver
 
   private
 
+  # Conexão ativa e com token para ler: no modo `partner` o token é o da plataforma, que pode faltar.
+  def readable_connection
+    connection = Crm::MetaAdsConnection.active_for(@account.id)
+    return unless connection&.readable?
+
+    # No modo `partner` o token enxerga contas de outros clientes: só vale objeto da conta conectada.
+    @only_ad_account = connection.ad_account_id.to_s if connection.partner_mode?
+    connection
+  end
+
   def fresh_ids(ids)
     Crm::MetaAdObject.fresh.where(account_id: @account.id, meta_object_id: ids).pluck(:meta_object_id)
   end
@@ -66,7 +76,7 @@ class Crm::MetaAds::NameResolver
   def fetch_missing(connection, missing, type)
     return if missing.empty?
 
-    client = Meta::AdsGraphClient.new(access_token: connection.access_token)
+    client = Meta::AdsGraphClient.new(access_token: connection.read_token)
     fetched = missing.map { |id| fetch_one(client, connection, id, type) }
     connection.update!(last_checked_at: Time.current) if fetched.any?
   end
@@ -129,10 +139,14 @@ class Crm::MetaAds::NameResolver
   # O próprio objeto vem antes do conjunto e da campanha embutidos: o `uniq` fica com ele quando
   # o mesmo ID aparece nos dois papéis (o upsert não aceita a mesma chave duas vezes).
   def cache_rows(data, type)
-    objects = data.to_h.values.select { |object| object.is_a?(Hash) && self.class.meta_id?(object['id']) }
+    objects = data.to_h.values.select { |object| object.is_a?(Hash) && self.class.meta_id?(object['id']) && allowed_account?(object) }
     own = objects.map { |object| row(object, type, object.dig('campaign', 'id'), object.dig('adset', 'id')) }
     parents = objects.flat_map { |object| parent_rows(object) }
     (own + parents).uniq { |item| item[:meta_object_id] }
+  end
+
+  def allowed_account?(object)
+    @only_ad_account.nil? || object['account_id'].to_s == @only_ad_account
   end
 
   def parent_rows(object)
@@ -154,6 +168,7 @@ class Crm::MetaAds::NameResolver
       account_id: @account.id, meta_object_id: object['id'].to_s, object_type: type,
       name: object['name'].to_s.first(Crm::MetaAdObject::NAME_LIMIT).presence,
       campaign_id: campaign_id&.to_s, adset_id: adset_id&.to_s,
+      preview_url: http_url(object['preview_shareable_link']), thumbnail_url: http_url(object.dig('creative', 'thumbnail_url')),
       fetched_at: now, created_at: now, updated_at: now
     }
   end
@@ -165,7 +180,7 @@ class Crm::MetaAds::NameResolver
     parents = parent_names(objects)
     objects.to_h do |object|
       [object.meta_object_id, {
-        name: object.name, type: object.object_type,
+        name: object.name, type: object.object_type, preview_url: object.preview_url, thumbnail_url: object.thumbnail_url,
         campaign_name: parents[object.campaign_id], adset_name: parents[object.adset_id]
       }]
     end
@@ -176,5 +191,11 @@ class Crm::MetaAds::NameResolver
     return {} if parent_ids.empty?
 
     Crm::MetaAdObject.where(account_id: @account.id, meta_object_id: parent_ids).where.not(name: nil).pluck(:meta_object_id, :name).to_h
+  end
+
+  # Só https: o link vai para um botão e a miniatura para um <img> no card (#1047, CA-1.11).
+  def http_url(value)
+    url = value.to_s.strip
+    url.start_with?('https://') ? url.first(Crm::MetaAdObject::URL_LIMIT) : nil
   end
 end

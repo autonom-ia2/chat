@@ -28,7 +28,7 @@ RSpec.describe Crm::MetaAds::BackfillJob do
     old_touch_recent_conversation = conversation_with([site_touch(other_campaign_id, touched_at: 100.days.ago)])
     named = conversation_with([site_touch(other_campaign_id, touched_at: 5.days.ago, extra: { 'campaign_name' => 'Já tem' })])
     no_id = conversation_with([site_touch('viagem-eua', touched_at: 5.days.ago)])
-    graph = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
+    graph = stub_meta_object(id: campaign_id, fields: 'name,account_id', body: { id: campaign_id, name: 'Viagem EUA' })
 
     described_class.perform_now(account.id)
 
@@ -47,8 +47,8 @@ RSpec.describe Crm::MetaAds::BackfillJob do
     first = conversation_with([site_touch(campaign_id, touched_at: 1.day.ago)])
     second = conversation_with([site_touch(other_campaign_id, touched_at: 2.days.ago)])
     conversation_with([site_touch(campaign_id, touched_at: 3.days.ago)])
-    graph_a = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'A' })
-    graph_b = stub_meta_object(id: other_campaign_id, fields: 'name', body: { id: other_campaign_id, name: 'B' })
+    graph_a = stub_meta_object(id: campaign_id, fields: 'name,account_id', body: { id: campaign_id, name: 'A' })
+    graph_b = stub_meta_object(id: other_campaign_id, fields: 'name,account_id', body: { id: other_campaign_id, name: 'B' })
 
     described_class.perform_now(account.id)
 
@@ -61,7 +61,7 @@ RSpec.describe Crm::MetaAds::BackfillJob do
   it 'ID que a Meta não resolve (erro 100) em N conversas: exatamente uma chamada, agora e na próxima passada' do
     create_meta_ads_connection(account)
     conversations = Array.new(5) { conversation_with([site_touch('999999999', touched_at: 1.day.ago)]) }
-    graph = stub_meta_object(id: '999999999', fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+    graph = stub_meta_object(id: '999999999', fields: 'name,account_id', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
     2.times { described_class.perform_now(account.id) }
 
@@ -73,7 +73,7 @@ RSpec.describe Crm::MetaAds::BackfillJob do
   it 'limite de taxa: uma chamada só, sem tentar conversa a conversa' do
     create_meta_ads_connection(account)
     3.times { conversation_with([site_touch(campaign_id, touched_at: 1.day.ago)]) }
-    stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(17, 'User request limit reached'))
+    stub_meta_object(id: campaign_id, fields: 'name,account_id', status: 400, body: meta_graph_error(17, 'User request limit reached'))
 
     described_class.perform_now(account.id)
 

@@ -88,7 +88,11 @@ class Autonomia::Guide::Acoes
     # #936 — começar e seguir uma tarefa longa soltam lotes em centenas de registros: só a pessoa autoriza.
     'DELETE labels/:id', 'POST autonomia/decisoes/:id/resolver', 'POST autonomia/tarefas/:id/comecar', 'POST autonomia/tarefas/:id/seguir',
     # #1034 — trocar o token de anúncios da Meta troca credencial em uso e solta a resolução retroativa num job.
-    'PUT crm/meta_ads_connection', 'PATCH crm/meta_ads_connection'
+    'PUT crm/meta_ads_connection', 'PATCH crm/meta_ads_connection',
+    # #1047 — escolher a conta troca de onde a plataforma lê e atribui o usuário do sistema na Meta; avisar a
+    # Meta liga envio de vendas para fora; destinos mudam a configuração da conexão.
+    'POST crm/meta_ads_connection/selection', 'POST crm/meta_ads_connection/sales_signal',
+    'PATCH crm/meta_ads_connection/destinations'
   ].freeze
 
   # `mensagem` é para a pessoa (a tela do clique mostra); `dica` e `aviso` são

@@ -1173,6 +1173,11 @@ en:
       connection_ok: 'TypeSafe AI connection is working.'
       connection_failed: 'TypeSafe AI connection failed: %{code}'
       unsupported_model: 'Unsupported TypeSafe model'
+    meta_ads:
+      keep_token: 'Configured — leave blank to keep the current token'
+      paste_token: 'Paste the system user token'
+      token_configured: 'Token configured. The saved token is never returned to this page.'
+      token_missing: 'No token configured yet.'
     push_diagnostics:
       user_not_found: 'User not found.'
       no_subscriptions_to_test: 'Select at least one subscription to test.'

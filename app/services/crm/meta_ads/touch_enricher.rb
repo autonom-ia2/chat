@@ -29,9 +29,12 @@ class Crm::MetaAds::TouchEnricher
     ids_by_type(touch).any?
   end
 
-  # Toque com ID e ainda sem nenhum nome: é o que a resolução retroativa procura.
+  # Toque com ID e ainda sem nenhum nome, ou anúncio ainda sem a prévia (#1047): é o que a resolução
+  # retroativa procura.
   def self.unnamed?(touch)
-    meta_ids?(touch) && NAME_KEYS.none? { |key| touch[key].present? }
+    return false unless meta_ids?(touch)
+
+    NAME_KEYS.none? { |key| touch[key].present? } || (ids_by_type(touch).key?('ad') && touch['ad_preview_url'].blank?)
   end
 
   # `resolved`: nomes já resolvidos ({ id => { name:, ... } }), como a resolução retroativa faz uma
@@ -114,7 +117,9 @@ class Crm::MetaAds::TouchEnricher
     {
       'ad_name' => ad&.dig(:name),
       'adset_name' => adset&.dig(:name) || ad&.dig(:adset_name),
-      'campaign_name' => campaign&.dig(:name) || adset&.dig(:campaign_name) || ad&.dig(:campaign_name)
+      'campaign_name' => campaign&.dig(:name) || adset&.dig(:campaign_name) || ad&.dig(:campaign_name),
+      'ad_preview_url' => ad&.dig(:preview_url),
+      'ad_thumbnail_url' => ad&.dig(:thumbnail_url)
     }.compact_blank
   end
 
