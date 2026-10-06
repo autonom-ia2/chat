@@ -10,6 +10,8 @@ import registerAutonomiaBlocks from '../blocks';
 // Every MJML handed to setComponents goes through prepareMjmlForEditor and every export through
 // restoreHeldHead (#1074): see editorMjml.js and mjmlCanonical.js.
 import { prepareMjmlForEditor, restoreHeldHead } from '../editorMjml';
+// grapesjs-mjml options and the plugin that keep canvas paddings = sent e-mail (#1081).
+import { mjmlEditorPlugins, mjmlEditorPluginsOpts } from '../grapesMjmlSetup';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -88,10 +90,8 @@ async function init(el, opts = {}) {
     // assetManager.custom => o modal feio/ingles do GrapesJS NUNCA renderiza.
     // Nosso PropImage.vue cuida do upload/troca de imagem.
     assetManager: { custom: true },
-    plugins: [mjmlPlugin],
-    pluginsOpts: {
-      [mjmlPlugin]: { useCustomTheme: false, blocks: [] },
-    },
+    plugins: mjmlEditorPlugins(mjmlPlugin),
+    pluginsOpts: mjmlEditorPluginsOpts(mjmlPlugin),
   });
 
   if (generation !== editorGeneration || !el.isConnected) {

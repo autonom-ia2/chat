@@ -14,7 +14,9 @@ RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
       expect(source.extname).to eq('.mjml')
       compiled = source.sub_ext('.html')
       expect(compiled).to exist
-      expect(compiled.read).to include('footer-locked', '{{ unsubscribe_url }}')
+      expect(compiled.read).to include('footer-locked')
+      # Never two unsubscribe links: a design with its own footer gets it locked, not a second one (#1081).
+      expect(compiled.read.scan('{{ unsubscribe_url }}').size).to eq(1)
     end
   end
 
@@ -24,7 +26,8 @@ RSpec.describe EmailCampaigns::TemplateCatalog, :aggregate_failures do
       second = described_class.body(entry)
 
       expect(first).to eq(second)
-      expect(first).to include('footer-locked', '{{ unsubscribe_url }}')
+      expect(first).to include('footer-locked')
+      expect(first.scan('{{ unsubscribe_url }}').size).to eq(1)
       expect(first).not_to include('<!--')
     end
   end

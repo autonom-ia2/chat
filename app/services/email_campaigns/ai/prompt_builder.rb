@@ -32,10 +32,10 @@ module EmailCampaigns
         <mj-section background-color="SURFACE" padding="32px 24px"><mj-column><mj-text font-weight="700" color="INK">Pergunta 1?</mj-text><mj-text font-size="14px" color="MUTED" line-height="1.6" padding="2px 0 14px">Resposta curta.</mj-text><mj-text font-weight="700" color="INK">Pergunta 2?</mj-text><mj-text font-size="14px" color="MUTED" line-height="1.6" padding="2px 0 0">Resposta curta.</mj-text></mj-column></mj-section>
         K. Divisor/respiro entre blocos:
         <mj-section padding="0 24px"><mj-column><mj-divider border-color="#e5e7eb" border-width="1px" padding="0"></mj-divider><mj-spacer height="8px"></mj-spacer></mj-column></mj-section>
-        L. Rodapé legal (OBRIGATÓRIO, ÚLTIMO bloco; troque MARCA pelo nome da marca):
-        <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px"><mj-column><mj-text font-size="12px" color="#6b7280" align="center" line-height="1.6">MARCA<br/>Você recebeu este e-mail porque está em nossa lista de contatos.<br/><a href="{{ unsubscribe_url }}" style="color:#6b7280;">Cancelar inscrição</a></mj-text></mj-column></mj-section>
+        L. Rodapé legal (OBRIGATÓRIO, ÚLTIMO bloco; copie como está, só troque MARCA pelo nome da marca):
+        #{EmailCampaigns::LockedFooter.with_first_line('MARCA')}
         Redes sociais no rodapé (mj-social SOMENTE quando o briefing ou os assets trouxerem os perfis da marca; use exatamente essas URLs, nunca invente perfis), dentro da mj-column do rodapé, antes do mj-text:
-        <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px"><mj-social-element name="instagram" href="URL_DO_PERFIL"></mj-social-element></mj-social>
+        <mj-social font-family="Arial, Helvetica, sans-serif" font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px"><mj-social-element name="instagram" href="URL_DO_PERFIL"></mj-social-element></mj-social>
         M. Vídeo (pôster clicável — SOMENTE com regra "EMBUTIR video"; nunca <video>/<iframe>):
         <mj-section background-color="#000000" padding="0" css-class="video-block"><mj-column><mj-image src="POSTER_URL" href="VIDEO_WATCH_URL" alt="Assistir: DESCRICAO" padding="0"></mj-image></mj-column></mj-section>
       CATALOG
