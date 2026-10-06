@@ -69,6 +69,18 @@ RSpec.describe 'WhatsApp Híbrido connections API', type: :request do
     expect(response.parsed_body).to eq('code' => 'AB12-CD34')
   end
 
+  it 'recreates the session on reconnect when the engine lost it' do
+    WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846', status: 'disconnected')
+    allow(client).to receive(:get_session).and_return({}, {}, { 'status' => 'SCAN_QR_CODE' })
+    allow(client).to receive(:create_session)
+
+    post "#{base}/reconnect", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:success)
+    expect(client).to have_received(:create_session)
+    expect(WhatsappHybrid::Connection.last.status).to eq('awaiting_scan')
+  end
+
   it 'disconnects and removes the connection' do
     WhatsappHybrid::Connection.create!(account: account, inbox: inbox, session_name: 'hybrid-5511999993846')
     allow(client).to receive(:logout_session)

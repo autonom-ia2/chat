@@ -7,6 +7,7 @@ import WhatsappHybridAPI from 'dashboard/api/whatsappHybrid';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
+import { qrSecondsLeft, formatSeconds } from 'dashboard/helper/wahaQrWindow';
 
 // Aba "WhatsApp API" da caixa WhatsApp Oficial (chat#1067): a mesma caixa ganha um segundo
 // caminho de envio, usado quando a janela oficial de 24 horas está fechada.
@@ -17,6 +18,9 @@ const props = defineProps({
 const { t } = useI18n();
 // eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
 const tk = (key, params) => t(`INBOX_MGMT.WHATSAPP_HYBRID.${key}`, params);
+// Mesmos textos de QR expirado/desconectado da caixa WhatsApp API.
+// eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
+const tw = (key, params) => t(`INBOX_MGMT.WAHA_CONNECTION.${key}`, params);
 
 const ORIGINS = ['human', 'bot', 'automation', 'campaign'];
 
@@ -25,14 +29,36 @@ const qrDataUrl = ref('');
 const pairingCode = ref('');
 const isBusy = ref(false);
 const rateLimit = ref(20);
+// Posição do QR atual na rodada de pareamento (1..6) e quando ele apareceu.
+const qrValue = ref('');
+const qrIndex = ref(0);
+const qrShownAt = ref(0);
+const now = ref(Date.now());
 let timer = null;
+let clock = null;
+let ticks = 0;
 
 const notConnected = computed(() => state.value.status === 'not_connected');
 const connected = computed(() => Boolean(state.value.connected));
+// FAILED (rodada de QR esgotada) e STOPPED: nenhum QR novo chega sem reiniciar.
+const isExpired = computed(() =>
+  ['failed', 'disconnected'].includes(state.value.status)
+);
+const stoppedKey = computed(() =>
+  state.value.status === 'disconnected' ? 'DISCONNECTED' : 'EXPIRED'
+);
 const pairing = computed(
   () =>
-    !notConnected.value && !connected.value && state.value.status !== 'loading'
+    !notConnected.value &&
+    !connected.value &&
+    !isExpired.value &&
+    !['loading', 'unavailable'].includes(state.value.status)
 );
+const timeLeft = computed(() => {
+  if (!qrIndex.value || !qrDataUrl.value) return '';
+  const elapsed = Math.max(now.value - qrShownAt.value, 0) / 1000;
+  return formatSeconds(qrSecondsLeft(qrIndex.value, elapsed));
+});
 const wrongNumber = computed(() => connected.value && !state.value.same_number);
 const disabledOrigins = computed(() => state.value.disabled_origins || []);
 
@@ -52,6 +78,12 @@ const statusLabel = computed(() => {
   return tk('STATUS.AWAITING');
 });
 
+const resetQr = () => {
+  qrValue.value = '';
+  qrIndex.value = 0;
+  qrDataUrl.value = '';
+};
+
 const renderQr = async value => {
   qrDataUrl.value = value
     ? await QRCode.toDataURL(value, { width: 240, margin: 1 }).catch(() => '')
@@ -61,8 +93,18 @@ const renderQr = async value => {
 const apply = async data => {
   state.value = data;
   rateLimit.value = data.rate_limit_per_minute || 20;
-  await renderQr(data.qr);
-  if (data.connected) pairingCode.value = '';
+  if (data.connected || isExpired.value || notConnected.value) {
+    resetQr();
+    if (data.connected) pairingCode.value = '';
+    return;
+  }
+  // QR nulo com a sessão aguardando leitura é passageiro: mantém a contagem.
+  if (data.qr && data.qr !== qrValue.value) {
+    qrValue.value = data.qr;
+    qrIndex.value += 1;
+    qrShownAt.value = Date.now();
+    await renderQr(data.qr);
+  }
 };
 
 const load = async () => {
@@ -96,7 +138,12 @@ const requestCode = () =>
   }, 'ERRORS.CODE');
 
 const reconnect = () =>
-  run(() => WhatsappHybridAPI.reconnect(props.inbox.id), 'ERRORS.CONNECT');
+  run(async () => {
+    resetQr();
+    pairingCode.value = '';
+    await WhatsappHybridAPI.reconnect(props.inbox.id);
+    await load();
+  }, 'ERRORS.CONNECT');
 
 const save = settings =>
   run(
@@ -121,15 +168,22 @@ const disconnect = () =>
     await load();
   }, 'ERRORS.DISCONNECT');
 
+// Pareando: consulta a cada 3 s. Conectado: a cada 30 s, para a tela mostrar na hora
+// se o celular desconectar (o servidor também revalida antes de cada envio).
 onMounted(() => {
   load();
   timer = setInterval(() => {
-    if (pairing.value) load();
+    ticks += 1;
+    if (pairing.value || (connected.value && ticks % 10 === 0)) load();
   }, 3000);
+  clock = setInterval(() => {
+    now.value = Date.now();
+  }, 1000);
 });
 
 onBeforeUnmount(() => {
   if (timer) clearInterval(timer);
+  if (clock) clearInterval(clock);
 });
 </script>
 
@@ -164,6 +218,32 @@ onBeforeUnmount(() => {
       </div>
 
       <div
+        v-else-if="isExpired"
+        class="flex flex-col items-center gap-3 px-4 py-8 text-center border rounded-lg border-n-weak"
+      >
+        <span
+          class="size-8 text-n-slate-10"
+          :class="
+            stoppedKey === 'DISCONNECTED'
+              ? 'i-lucide-unplug'
+              : 'i-lucide-timer-off'
+          "
+        />
+        <p class="mb-0 text-base font-medium text-n-slate-12">
+          {{ tw(`${stoppedKey}_TITLE`) }}
+        </p>
+        <p class="max-w-md mb-0 text-sm text-n-slate-11">
+          {{ tk(`${stoppedKey}_HELP`) }}
+        </p>
+        <NextButton
+          :is-loading="isBusy"
+          icon="i-lucide-refresh-cw"
+          :label="tw('RECONNECT')"
+          @click="reconnect"
+        />
+      </div>
+
+      <div
         v-else-if="pairing"
         class="flex flex-col items-center gap-3 px-4 py-6 text-center border rounded-lg border-n-weak"
       >
@@ -184,6 +264,15 @@ onBeforeUnmount(() => {
             class="i-lucide-loader-circle animate-spin size-6 text-n-slate-10"
           />
         </div>
+        <p
+          v-if="timeLeft"
+          class="mb-0 text-xs font-medium tabular-nums text-n-amber-11"
+        >
+          {{ tw('TIME_LEFT', { time: timeLeft }) }}
+        </p>
+        <p v-else class="mb-0 text-xs text-n-slate-11">
+          {{ tw('PREPARING') }}
+        </p>
         <ol
           class="mb-0 text-xs leading-5 text-left list-decimal list-inside text-n-slate-11"
         >
@@ -220,6 +309,7 @@ onBeforeUnmount(() => {
             @click="reconnect"
           />
         </div>
+        <p class="mb-0 text-xs text-n-slate-11">{{ tw('HINT') }}</p>
       </div>
 
       <div

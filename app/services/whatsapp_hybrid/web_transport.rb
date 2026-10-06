@@ -5,6 +5,10 @@ class WhatsappHybrid::WebTransport
   RATE_WINDOW = 60
   THROTTLE_RETRY = 15.seconds
   CHAT_ID_TTL = 1.day.to_i
+  # Estado da sessão mais velho que isto é revalidado no motor antes de enviar.
+  STATUS_MAX_AGE = 60.seconds
+  DISCONNECTED_ERROR = 'O WhatsApp API deste número está desconectado. Reconecte na aba WhatsApp API da caixa ' \
+                       'ou use um modelo aprovado.'.freeze
   MEDIA_ENDPOINTS = { 'image' => 'sendImage', 'audio' => 'sendVoice', 'video' => 'sendVideo' }.freeze
 
   def initialize(message:, connection:, origin:, client: Waha::Client.new)
@@ -15,6 +19,7 @@ class WhatsappHybrid::WebTransport
   end
 
   def perform
+    return fail!(DISCONNECTED_ERROR, 'disconnected') unless session_working?
     return throttle! if over_rate_limit?
 
     chat_id = resolve_chat_id
@@ -29,6 +34,8 @@ class WhatsappHybrid::WebTransport
     fail!('O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.', 'uncertain')
   rescue Waha::Client::Error => e
     Rails.logger.error("[whatsapp_hybrid] send failed message=#{@message.id}: #{e.message.to_s[0, 200]}")
+    # O erro pode ser a sessão caída: atualiza o estado para o roteador parar de escolher o Web.
+    session_manager.refresh!
     fail!('Não foi possível enviar pelo WhatsApp API. Verifique a conexão na aba WhatsApp API da caixa.')
   end
 
@@ -36,6 +43,16 @@ class WhatsappHybrid::WebTransport
 
   def session
     @connection.session_name
+  end
+
+  def session_manager
+    @session_manager ||= WhatsappHybrid::SessionManager.new(@connection, client: @client)
+  end
+
+  # Revalida no motor quando o estado gravado é velho; celular desconectado deixa de ser escolhido na hora.
+  def session_working?
+    session_manager.refresh! if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
+    @connection.status == 'connected' && @connection.same_number?
   end
 
   def deliver(chat_id, physical_id)

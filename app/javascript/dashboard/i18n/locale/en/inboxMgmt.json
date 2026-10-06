@@ -873,6 +873,8 @@
       "USE_CODE": "Use a code instead",
       "CODE_HELP": "On the phone, tap Link with phone number instead and type this code.",
       "NEW_QR": "New QR code",
+      "EXPIRED_HELP": "WhatsApp ends pairing when no code is read for about two and a half minutes. Create a new one with the phone in hand. The official inbox keeps working normally.",
+      "DISCONNECTED_HELP": "The WhatsApp API connection of this number was closed. Until you reconnect, replies after 24 hours need an approved template, as before. The official inbox keeps working normally.",
       "CONNECTED_HELP": "Connected to {phone}. Same number as the official inbox.",
       "WRONG_NUMBER": "The connected phone ({phone}) is not this inbox's number. Disconnect and connect the right phone.",
       "DISCONNECT": "Disconnect WhatsApp API",

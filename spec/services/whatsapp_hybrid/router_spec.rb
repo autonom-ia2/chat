@@ -11,7 +11,8 @@ describe WhatsappHybrid::Router do
   let!(:connection) do
     WhatsappHybrid::Connection.create!(
       account: inbox.account, inbox: inbox, session_name: 'hybrid-test', status: 'connected',
-      connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current
+      connected_phone: channel.phone_number.delete('^0-9'), risk_accepted_at: Time.current,
+      status_checked_at: Time.current
     )
   end
 
@@ -56,6 +57,30 @@ describe WhatsappHybrid::Router do
       expect(message.reload.status).to eq('failed')
       expect(message.external_error).to include('não confirmou')
       expect(client).to have_received(:send_text).once
+    end
+
+    it 'rechecks a stale session and refuses to send when the phone was disconnected' do
+      connection.update!(status_checked_at: 5.minutes.ago)
+      allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
+      allow(client).to receive(:send_text)
+      message = outgoing
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(client).not_to have_received(:send_text)
+      expect(message.reload.status).to eq('failed')
+      expect(message.external_error).to include('desconectado')
+      expect(connection.reload.status).to eq('disconnected')
+      expect(conversation.reload.can_reply?).to be(false)
+    end
+
+    it 'refreshes the session state when WhatsApp API rejects a send' do
+      allow(client).to receive(:send_text).and_raise(Waha::Client::Error, '422')
+      allow(client).to receive(:get_session).and_return({ 'status' => 'FAILED' })
+
+      Whatsapp::SendOnWhatsappService.new(message: outgoing).perform
+
+      expect(connection.reload.status).to eq('failed')
     end
 
     it 'falls back to the official failure when the risk was not accepted' do

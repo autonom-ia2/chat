@@ -59,6 +59,9 @@ class WhatsappHybrid::SessionManager
   end
 
   def reconnect!
+    # Sessão apagada no motor (reinício, limpeza): recria em vez de falhar.
+    return ensure_session! if fetch_remote.blank?
+
     begin
       @client.logout_session(connection.session_name)
     rescue Waha::Client::Error

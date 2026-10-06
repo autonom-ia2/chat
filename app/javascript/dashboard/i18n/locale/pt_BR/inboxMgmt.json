@@ -874,6 +874,8 @@
       "USE_CODE": "Prefiro usar um código",
       "CODE_HELP": "No celular, toque em Conectar com número de telefone e digite este código.",
       "NEW_QR": "Novo QR Code",
+      "EXPIRED_HELP": "O WhatsApp encerra o pareamento quando nenhum código é lido em cerca de dois minutos e meio. Gere um novo com o celular na mão. A caixa oficial continua funcionando normalmente.",
+      "DISCONNECTED_HELP": "A conexão do WhatsApp API deste número foi encerrada. Até reconectar, respostas depois de 24 horas precisam de modelo aprovado, como antes. A caixa oficial continua funcionando normalmente.",
       "CONNECTED_HELP": "Conectado ao {phone}. É o mesmo número da caixa oficial.",
       "WRONG_NUMBER": "O celular conectado ({phone}) não é o número desta caixa. Desconecte e conecte o celular certo.",
       "DISCONNECT": "Desconectar WhatsApp API",
