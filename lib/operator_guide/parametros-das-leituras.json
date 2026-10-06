@@ -305,6 +305,18 @@
     "controller": "api/v1/accounts/autonomia/vigias#show",
     "parametros": []
   },
+  "brand_kit_imports/:id": {
+    "controller": "api/v1/accounts/brand_kit_imports#show",
+    "parametros": []
+  },
+  "brand_kits": {
+    "controller": "api/v1/accounts/brand_kits#index",
+    "parametros": []
+  },
+  "brand_kits/:id": {
+    "controller": "api/v1/accounts/brand_kits#show",
+    "parametros": []
+  },
   "branded_email_layout": {
     "controller": "api/v1/accounts/branded_email_layouts#show",
     "parametros": []

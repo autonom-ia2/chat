@@ -227,6 +227,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE brand_kits/:id": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#destroy",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+    ],
+    "sem_corpo": true
+  },
   "DELETE campaign_imports/:id": {
     "completo": true,
     "controller": "api/v1/accounts/campaign_imports#destroy",
@@ -3798,6 +3808,86 @@
       "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:51"
     ],
     "sem_corpo": false
+  },
+  "PATCH brand_kits/:id": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#update",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:22",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
   },
   "PATCH branded_email_layout": {
     "campos": {
@@ -11061,6 +11151,112 @@
       "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:56"
     ],
     "sem_corpo": false
+  },
+  "POST brand_kit_imports": {
+    "campos": {
+      "url": {
+        "max_caracteres": 2048,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kit_imports#create",
+    "modelo": "BrandImportJob",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:10",
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:12"
+    ],
+    "sem_corpo": false
+  },
+  "POST brand_kits": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#create",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:14",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
+  },
+  "POST brand_kits/:id/set_default": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#set_default",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:33",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+    ],
+    "sem_corpo": true
   },
   "POST bulk_actions": {
     "campos": {
@@ -20106,6 +20302,86 @@
       "app/controllers/api/v1/accounts/autonomia/vigias_controller.rb:51"
     ],
     "sem_corpo": false
+  },
+  "PUT brand_kits/:id": {
+    "campos": {
+      "appearance": {
+        "campos": {
+          "footer": {
+            "campos": {
+              "address": {},
+              "company_name": {},
+              "phone": {},
+              "website": {}
+            },
+            "tipo": "objeto"
+          },
+          "logo_url": {},
+          "palette": {
+            "campos": {
+              "accent": {},
+              "background": {},
+              "ink": {},
+              "muted": {},
+              "primary": {},
+              "surface": {},
+              "tint": {}
+            },
+            "tipo": "objeto"
+          },
+          "social_links": {
+            "campos": {
+              "network": {},
+              "url": {}
+            },
+            "tipo": "objeto"
+          },
+          "typography": {
+            "campos": {
+              "body_font": {},
+              "google_font_url": {},
+              "heading_font": {}
+            },
+            "tipo": "objeto"
+          }
+        },
+        "tipo": "objeto"
+      },
+      "is_default": {
+        "padrao": false,
+        "tipo": "booleano"
+      },
+      "logo": {},
+      "logo_source_url": {},
+      "name": {
+        "max_caracteres": 80,
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string",
+        "unico": true
+      },
+      "remove_logo": {},
+      "source_url": {
+        "max_caracteres": 2048,
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#update",
+    "corpo_plano": false,
+    "envelope": "brand_kit",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:22",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+    ],
+    "sem_corpo": false,
+    "so_no_envelope": [
+      "logo",
+      "logo_source_url",
+      "remove_logo"
+    ]
   },
   "PUT branded_email_layout": {
     "campos": {
