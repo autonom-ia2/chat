@@ -11,7 +11,7 @@ class Crm::Ai::InteractiveOperation
     @context = { account: @account, account_user: @account_user, user: @user }
   end
 
-  def authorize!
+  def authorize! # rubocop:disable Metrics/CyclomaticComplexity
     authorize_requester!
     case @data.fetch('operation')
     when 'meeting_times', 'meeting_invite', 'meeting_summary' then authorize_meeting!
@@ -20,6 +20,7 @@ class Crm::Ai::InteractiveOperation
     when 'agent_test', 'agent_suggest' then authorize_agent!
     when 'email_rewrite' then authorize_email!
     when 'stage_criteria' then authorize_pipeline!
+    when 'meta_funnel_stages' then authorize_meta_funnel!
     else raise ArgumentError, 'unknown_interactive_operation'
     end
   end
@@ -35,6 +36,7 @@ class Crm::Ai::InteractiveOperation
     when 'agent_test', 'agent_suggest' then playground_result
     when 'email_rewrite' then EmailCampaigns::Ai::Rewriter.new(account: @account, **@inputs).perform
     when 'stage_criteria' then Crm::Ai::StageCriteriaImprover.new(pipeline: pipeline, **@inputs.except(:pipeline_id)).perform
+    when 'meta_funnel_stages' then Crm::MetaAds::StageTypeSuggester.new(pipeline: meta_funnel, language: @inputs.fetch(:language)).perform
     end
   end
 
@@ -77,6 +79,21 @@ class Crm::Ai::InteractiveOperation
     raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
 
     Pundit.authorize(@context, pipeline, :manage_ai?)
+  end
+
+  # Anúncios da Meta (#1047): só administrador, e só funil ligado ao WhatsApp oficial da conta.
+  def authorize_meta_funnel!
+    raise Pundit::NotAuthorizedError unless Crm::Config.enabled? && Crm::Ai::Config.enabled?
+
+    Pundit.authorize(@context, ::Crm::MetaAdsConnection, :update?)
+    meta_funnel
+  end
+
+  def meta_funnel
+    connection = ::Crm::MetaAdsConnection.find_by(account_id: @account.id)
+    @meta_funnel ||= Crm::MetaAds::Funnels.new(@account, connection).find!(@inputs.fetch(:pipeline_id))
+  rescue Crm::MetaAds::Funnels::Error
+    raise ActiveRecord::RecordNotFound
   end
 
   def authorize_email!
@@ -135,7 +152,7 @@ class Crm::Ai::InteractiveOperation
   end
 
   def agent
-    @agent ||= Autonomia::Agents::Agent.where(account: @account).where("config->>'system_key' IS NULL").find(@inputs.fetch(:agent_id))
+    @agent ||= Autonomia::Agents::Agent.kept.where(account: @account).where("config->>'system_key' IS NULL").find(@inputs.fetch(:agent_id))
   end
 
   def playground_result

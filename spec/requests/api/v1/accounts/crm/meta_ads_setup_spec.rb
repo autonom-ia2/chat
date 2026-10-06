@@ -232,9 +232,8 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
     end
   end
 
-  describe 'destinos e avisar a Meta quando vender' do
+  describe 'destinos' do
     let!(:connection) { Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: ad_account, pixel_id: pixel) }
-    let!(:pipeline) { create_crm_pipeline(account: account, user: admin).first }
 
     it 'grava WhatsApp e site como booleanos' do
       patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: 'false', outro: true } }, headers: auth_headers(admin), as: :json
@@ -242,30 +241,113 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(response.parsed_body['destinations']).to eq('whatsapp' => true, 'site' => false)
       expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
     end
+  end
 
-    it 'liga o envio de venda com o Pixel da conexão e mantém o resto do funil' do
-      pipeline.update!(metadata: { 'ai' => { 'x' => 1 }, 'meta_sync' => { 'events' => { 'moved' => true }, 'dataset_id' => '42' } })
+  describe 'avisar a Meta sobre o funil (passo 4)' do
+    let(:whatsapp_inbox) { create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false).inbox }
+    let!(:pipeline) { create_crm_pipeline(account: account, user: admin, name: 'Viagem').first }
+    let!(:proposal) { create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta') }
 
-      post "#{base}/sales_signal", params: { enabled: true }, headers: auth_headers(admin), as: :json
+    before do
+      Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: ad_account, pixel_id: pixel)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: whatsapp_inbox)
+      create_crm_pipeline(account: account, user: admin, name: 'Sem WhatsApp')
+    end
 
+    def new_stage
+      pipeline.stages.find_by!(position: 0)
+    end
+
+    def save_funnel(params, user = admin)
+      patch "#{base}/funnel", params: params, headers: auth_headers(user), as: :json
+    end
+
+    it 'lista só funis ligados ao WhatsApp oficial e o que falta em cada um' do
+      get "#{base}/funnels", headers: auth_headers(admin), as: :json
+
+      funnels = response.parsed_body['funnels']
+      expect(funnels.pluck('name')).to eq(['Viagem'])
+      expect(funnels.first['missing']).to eq(%w[sending_off sales_off moves_off stages])
+      expect(funnels.first['numbers'].pluck('inbox_id')).to eq([whatsapp_inbox.id])
+      expect(response.parsed_body['unlinked_numbers']).to eq([])
+    end
+
+    it 'grava os tipos das etapas e liga venda e mudança de etapa, sem trocar perda, dataset nem outro Pixel' do
+      meta_sync = { 'events' => { 'lost' => true }, 'dataset_id' => '42', 'pixel_id' => '99' }
+      pipeline.update!(metadata: { 'ai' => { 'x' => 1 }, 'meta_sync' => meta_sync })
+      new_stage.update!(metadata: { 'funnel_stage_type' => 'qualified', 'ai_criteria' => 'x' })
+
+      stages = [{ id: new_stage.id, funnel_stage_type: 'lead' }, { id: proposal.id, funnel_stage_type: 'opportunity' }]
+      save_funnel({ pipeline_id: pipeline.id, stages: stages })
+
+      expect(response).to have_http_status(:ok)
       meta_sync = pipeline.reload.metadata['meta_sync']
-      expect(meta_sync).to include('enabled' => true, 'pixel_id' => pixel, 'dataset_id' => '42')
-      expect(meta_sync['events']).to include('won' => true, 'moved' => true)
+      expect(meta_sync).to include('enabled' => true, 'dataset_id' => '42', 'pixel_id' => '99')
+      expect(meta_sync['events']).to eq('lost' => true, 'won' => true, 'moved' => true)
       expect(pipeline.metadata['ai']).to eq('x' => 1)
-      expect(response.parsed_body['sales_signal']).to eq('enabled' => true, 'pipelines' => 1)
+      expect(new_stage.reload.metadata).to eq('funnel_stage_type' => 'lead', 'ai_criteria' => 'x')
+      expect(proposal.reload.metadata['funnel_stage_type']).to eq('opportunity')
+      expect(response.parsed_body['funnels'].first['missing']).to eq([])
     end
 
-    it 'desliga o envio em todos os funis ativos' do
-      pipeline.update!(metadata: { 'meta_sync' => { 'enabled' => true } })
+    it 'usa o Pixel da conexão só no funil que não tem um, e "none" limpa o tipo da etapa' do
+      proposal.update!(metadata: { 'funnel_stage_type' => 'negotiation' })
 
-      post "#{base}/sales_signal", params: { enabled: false }, headers: auth_headers(admin), as: :json
+      save_funnel({ pipeline_id: pipeline.id, stages: [{ id: proposal.id, funnel_stage_type: 'none' }] })
 
-      expect(pipeline.reload.metadata.dig('meta_sync', 'enabled')).to be(false)
+      expect(pipeline.reload.metadata.dig('meta_sync', 'pixel_id')).to eq(pixel)
+      expect(proposal.reload.metadata).not_to have_key('funnel_stage_type')
     end
 
-    it 'agente não muda nada (403)' do
-      post "#{base}/sales_signal", params: { enabled: true }, headers: auth_headers(agent), as: :json
+    it 'para de avisar só este funil e guarda as escolhas' do
+      pipeline.update!(metadata: { 'meta_sync' => { 'enabled' => true, 'events' => { 'won' => true, 'moved' => true } } })
 
+      save_funnel({ pipeline_id: pipeline.id, enabled: false })
+
+      expect(pipeline.reload.metadata['meta_sync']).to eq('enabled' => false, 'events' => { 'won' => true, 'moved' => true })
+    end
+
+    it 'recusa funil sem WhatsApp oficial, etapa de outro funil e tipo desconhecido' do
+      other_pipeline = account.crm_pipelines.find_by!(name: 'Sem WhatsApp')
+      foreign = create_crm_stage(account: account, pipeline: other_pipeline, name: 'Outra')
+
+      save_funnel({ pipeline_id: other_pipeline.id, stages: [] })
+      expect(response.parsed_body['error']).to eq('funnel_not_found')
+
+      save_funnel({ pipeline_id: pipeline.id, stages: [{ id: foreign.id, funnel_stage_type: 'lead' }] })
+      expect(response.parsed_body['error']).to eq('invalid_stage')
+
+      save_funnel({ pipeline_id: pipeline.id, stages: [{ id: proposal.id, funnel_stage_type: 'Purchase' }] })
+      expect(response.parsed_body['error']).to eq('invalid_stage_type')
+      expect(pipeline.reload.metadata['meta_sync']).to be_nil
+      expect(foreign.reload.metadata).to eq({})
+    end
+
+    it 'mostra o número que não está em nenhum funil' do
+      account.crm_pipeline_inboxes.where(pipeline: pipeline).destroy_all
+
+      get "#{base}/funnels", headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['funnels']).to eq([])
+      expect(response.parsed_body['unlinked_numbers'].pluck('inbox_id')).to eq([whatsapp_inbox.id])
+    end
+
+    it 'sugestão por IA: pede em segundo plano e devolve o endereço para acompanhar' do
+      with_modified_env CRM_AI_ENABLED: 'true' do
+        expect do
+          post "#{base}/suggest_stages", params: { pipeline_id: pipeline.id }, headers: auth_headers(admin), as: :json
+        end.to have_enqueued_job(Crm::Ai::InteractiveJob)
+
+        expect(response).to have_http_status(:accepted)
+        expect(response.parsed_body['poll_url']).to include('/ai_requests/')
+      end
+    end
+
+    it 'agente não lê nem grava (403)' do
+      get "#{base}/funnels", headers: auth_headers(agent), as: :json
+      expect(response).to have_http_status(:forbidden)
+
+      save_funnel({ pipeline_id: pipeline.id, stages: [] }, agent)
       expect(response).to have_http_status(:forbidden)
       expect(pipeline.reload.metadata['meta_sync']).to be_nil
     end

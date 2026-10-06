@@ -21,7 +21,9 @@ RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
 
     described_class.new.perform
 
-    expect(Autonomia::Agents::Agent.exists?(orphan.id)).to be(false)
+    expect(orphan.reload).to be_deleted
+    expect(orphan.deleted_by_id).to be_nil
+    expect(Audited.audit_class.where(auditable: orphan).sole.audited_changes).to include('reason' => 'stale_draft')
   end
 
   # #1035 — o Construtor não muda o status ao terminar: rascunho com instrução é agente PRONTO
@@ -53,7 +55,7 @@ RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
 
     described_class.new.perform
 
-    expect(Autonomia::Agents::Agent.exists?(orphan.id)).to be(false)
+    expect(orphan.reload).to be_deleted
   end
 
   it 'spares a draft whose build thread was active within the window' do
@@ -94,7 +96,7 @@ RSpec.describe Autonomia::Agents::ReapStaleDraftsJob, type: :job do
 
     described_class.new.perform
 
-    expect(Autonomia::Agents::Agent.exists?(orphan.id)).to be(false)
+    expect(orphan.reload).to be_deleted
   end
 
   it 'never reaps an active agent even when stale' do

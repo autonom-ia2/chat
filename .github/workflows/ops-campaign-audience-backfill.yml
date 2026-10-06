@@ -1,0 +1,100 @@
+name: Ops - Campaign Audience Backfill
+
+# One-purpose ops tool (#1005 F1 / #990): runs the existing rake
+# campaign_journey:backfill_audience_links in the web container of the active
+# instance of each selected prod stack via SSM (.github/scripts/ops_ssm_rake.sh).
+# DRY-RUN by default (only counts). mode=apply adds APPLY=1 and needs
+# confirm_production=true. Aborts unless the running image is expected_sha.
+# Only completed campaigns, only the base label, ambiguous campaigns and
+# campaigns with labels beyond the base are skipped; idempotent.
+# Runs only from main, in the production environment, never during a
+# blue-green deploy of the same stack. Run outside business hours.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Which stack(s) to run on.
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - autonomia
+          - hub2you
+      mode:
+        description: dry_run only counts; apply writes the links.
+        required: true
+        default: dry_run
+        type: choice
+        options:
+          - dry_run
+          - apply
+      expected_sha:
+        description: Exact deployed application commit (40 chars), not a branch name.
+        required: true
+        type: string
+      confirm_production:
+        description: Required (true) for mode=apply.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  backfill:
+    name: Backfill ${{ matrix.name }}
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: deploy-${{ matrix.name }}-blue-green
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: autonomia
+            role_arn: arn:aws:iam::140023375763:role/chatwoot-autonomia-prod-github-actions-deploy
+          - name: hub2you
+            role_arn: arn:aws:iam::354307071110:role/chatwoot-autonomia-prod-github-actions-deploy
+    env:
+      AWS_REGION: us-east-1
+      AWS_PAGER: ''
+      CURRENT_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/current-instance-id
+      STACK_INPUT: ${{ inputs.stack }}
+    steps:
+      - name: Skip when stack not selected
+        id: gate
+        run: |
+          if [ "$STACK_INPUT" = "both" ] || [ "$STACK_INPUT" = "${{ matrix.name }}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Stack ${{ matrix.name }} not selected; skipping."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        if: steps.gate.outputs.run == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ matrix.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run audience backfill on active instance
+        if: steps.gate.outputs.run == 'true'
+        env:
+          OPS_TASK: campaign_journey:backfill_audience_links
+          OPS_MODE: ${{ inputs.mode }}
+          OPS_CONFIRM: ${{ inputs.confirm_production }}
+          OPS_EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: .github/scripts/ops_ssm_rake.sh

@@ -37,7 +37,7 @@ class Api::V1::Accounts::Autonomia::Agents::ChannelsController < Api::V1::Accoun
 
   # Inboxes da conta que ainda não têm nenhum bot (nem webhook/Gabriela, nem agente nativo).
   def eligible_inboxes
-    connected_ids = ::Autonomia::Agents::AgentInbox.where(account: Current.account).pluck(:inbox_id)
+    connected_ids = ::Autonomia::Agents::AgentInbox.kept.where(account: Current.account).pluck(:inbox_id)
     Current.account.inboxes
            .where.missing(:agent_bot_inbox)
            .where.not(id: connected_ids)

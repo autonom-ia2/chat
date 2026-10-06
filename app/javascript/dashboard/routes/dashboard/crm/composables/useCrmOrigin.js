@@ -135,6 +135,9 @@ export const buildCrmOrigin = campaign => {
     sourceId: campaign.source_id,
     sourceType: campaign.source_type,
     sourceUrl: safeSourceUrl(campaign.source_url),
+    // Prévia do anúncio na Meta e a miniatura do criativo (#1047, CA-1.11).
+    adPreviewUrl: safeSourceUrl(campaign.ad_preview_url),
+    adThumbnailUrl: safeSourceUrl(campaign.ad_thumbnail_url),
     touchedAt: campaign.touched_at || null,
     // Names resolved from the Meta API (#1034) win; otherwise the UTMs pasted in
     // the ad (#1011): utm_campaign = campaign, utm_term = ad set, utm_content = ad.

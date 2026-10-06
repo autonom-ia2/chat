@@ -126,14 +126,14 @@ module Autonomia
         findings << 'Nenhuma chave de IA configurada/resolvível (chave do Kanban AI da conta ou de sistema) — sem ela o agente não gera respostas.' unless ::Crm::Ai::CredentialResolver.new(account: @account).configured?
 
         agent = ::Autonomia::Agents::Agent
-        active = agent.where(account_id: @account.id, enabled: true, status: agent.statuses[:active])
+        active = agent.kept.where(account_id: @account.id, enabled: true, status: agent.statuses[:active])
         operable = active.where(actuation: [agent.actuations[:external], agent.actuations[:both]])
                          .where("COALESCE(config->>'system_key','') = ''")
         if !active.exists?
           findings << 'Nenhum agente habilitado E ativo nesta conta — agentes em rascunho/pausados não respondem.'
         elsif !operable.exists?
           findings << 'Há agente ativo, mas nenhum apto a atender o cliente: todos são internos (copiloto) ou de sistema. Mude a atuação para Externo/Ambos.'
-        elsif !::Autonomia::Agents::AgentInbox.where(account_id: @account.id, autonomia_agent_id: operable.select(:id)).exists?
+        elsif !::Autonomia::Agents::AgentInbox.kept.where(account_id: @account.id, autonomia_agent_id: operable.select(:id)).exists?
           findings << 'Existe agente apto, mas ele não está conectado a nenhuma caixa de entrada — conecte-o a uma caixa (aba Canais do agente).'
         end
         findings

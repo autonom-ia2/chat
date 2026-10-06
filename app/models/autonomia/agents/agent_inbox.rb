@@ -32,6 +32,8 @@ module Autonomia
     class AgentInbox < ApplicationRecord
       self.table_name = 'autonomia_agent_inboxes'
 
+      scope :kept, -> { where(deleted_at: nil) }
+
       belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id
       belongs_to :inbox
       belongs_to :account
@@ -39,7 +41,7 @@ module Autonomia
       # Sem ele a Message perde a identidade de AgentBot-sender (garantia anti-loop).
       belongs_to :agent_bot
 
-      validates :inbox_id, uniqueness: true
+      validates :inbox_id, uniqueness: { conditions: -> { kept } }, if: -> { deleted_at.nil? }
       # Tenancy (defesa em profundidade): o runtime resolve o vínculo só por inbox_id
       # (Operate.eligible_agent_inbox), então um registro inconsistente cruzaria contas.
       validate :linked_records_must_belong_to_account
@@ -67,6 +69,8 @@ module Autonomia
       # `open` que têm o espelho como ai_assignee (na caixa do espelho elas nascem open — ver
       # Conversation#set_active_bot_conversation). Mesmo caminho do disconnect manual.
       def release_bot_conversations!
+        return if inbox.nil?
+
         pending = inbox.conversations.where(status: :pending)
         held_by_mirror = inbox.conversations.where(status: :open, assignee_agent_bot_id: agent_bot_id)
         pending.or(held_by_mirror).find_each(&:bot_handoff!)
@@ -90,6 +94,8 @@ module Autonomia
       end
 
       def cleanup_mirror_bot
+        return if deleted_at.present?
+
         mirror_bot_inboxes.destroy_all
         # Guarda dura: só remove o AgentBot se for o espelho (outgoing_url NULL). Um bot webhook
         # (Gabriela) jamais é apagado por este caminho, mesmo que algum dado fique inconsistente.

@@ -1,0 +1,93 @@
+name: Ops - Merge Ninth Digit Duplicate Contacts
+
+# One-purpose ops tool (#990): runs the rake contacts:merge_ninth_digit_duplicates
+# for ONE account in the web container of the active instance of ONE prod stack
+# via SSM (.github/scripts/ops_ssm_rake.sh).
+# DRY-RUN by default (prints pairs, writes nothing). mode=apply adds APPLY=1 and
+# needs confirm_production=true. Aborts unless the running image is expected_sha.
+# Keeps the contact WITH the ninth digit; skips ambiguous groups and e-mail,
+# identifier, company, blocked, name and shared-campaign conflicts; idempotent.
+# Output has ids, counts and flags only.
+# Runs only from main, in the production environment, never during a
+# blue-green deploy of the same stack. Run outside business hours and take an
+# RDS snapshot first: docs/runbooks/ops-contacts-merge-ninth-digit.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Which stack to run on (one at a time; account ids differ per stack).
+        required: true
+        type: choice
+        options:
+          - hub2you
+          - autonomia
+      account_id:
+        description: Account id (digits only) inside that stack.
+        required: true
+        type: string
+      mode:
+        description: dry_run only reports; apply merges.
+        required: true
+        default: dry_run
+        type: choice
+        options:
+          - dry_run
+          - apply
+      expected_sha:
+        description: Exact deployed application commit (40 chars), not a branch name.
+        required: true
+        type: string
+      confirm_production:
+        description: Required (true) for mode=apply.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  merge:
+    name: Merge on ${{ inputs.stack }}
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: deploy-${{ inputs.stack }}-blue-green
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AWS_REGION: us-east-1
+      AWS_PAGER: ''
+      CURRENT_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/current-instance-id
+      STACK_INPUT: ${{ inputs.stack }}
+    steps:
+      - name: Select role for stack
+        id: stack
+        run: |
+          case "$STACK_INPUT" in
+            autonomia) echo "role_arn=arn:aws:iam::140023375763:role/chatwoot-autonomia-prod-github-actions-deploy" >> "$GITHUB_OUTPUT" ;;
+            hub2you) echo "role_arn=arn:aws:iam::354307071110:role/chatwoot-autonomia-prod-github-actions-deploy" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::stack must be hub2you or autonomia"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.stack.outputs.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run ninth digit merge on active instance
+        env:
+          OPS_TASK: contacts:merge_ninth_digit_duplicates
+          OPS_MODE: ${{ inputs.mode }}
+          OPS_CONFIRM: ${{ inputs.confirm_production }}
+          OPS_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          OPS_ACCOUNT_ID: ${{ inputs.account_id }}
+        run: .github/scripts/ops_ssm_rake.sh

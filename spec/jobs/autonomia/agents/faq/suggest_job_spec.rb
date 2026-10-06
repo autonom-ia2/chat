@@ -44,6 +44,15 @@ RSpec.describe Autonomia::Agents::Faq::SuggestJob, type: :job do
     described_class.new.perform(conversation.id)
   end
 
+  it 'does not extract from an archived agent referenced by a historical event' do
+    agent = create_agent('faq_suggestions' => true)
+    Autonomia::Agents::AgentEvent.create!(agent: agent, account: account, conversation_id: conversation.id, event_type: :replied)
+    Autonomia::Agents::SoftDelete.new(agent: agent, actor: nil).perform
+    expect(Autonomia::Agents::Faq::Extractor).not_to receive(:new)
+
+    described_class.new.perform(conversation.id)
+  end
+
   it 'never raises when the extraction blows up' do
     create_agent('faq_suggestions' => true)
     allow(Autonomia::Agents::Faq::Extractor).to receive(:new).and_raise(StandardError, 'boom')

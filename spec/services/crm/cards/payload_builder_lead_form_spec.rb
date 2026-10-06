@@ -44,7 +44,7 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     expect(payload[:campaigns]).to eq(
       [{ source: 'meta_paid', source_id: 'site:ABC234:120211', source_type: 'bridge', headline: 'LP · Viagem EUA',
          source_url: 'https://placement.com.br/seguro-viagem', utm_campaign: 'Viagem EUA', utm_term: 'Conjunto 60+',
-         utm_content: 'Video 2', utm_id: '120211', campaign_name: nil, adset_name: nil, ad_name: nil,
+         utm_content: 'Video 2', utm_id: '120211', campaign_name: nil, adset_name: nil, ad_name: nil, ad_preview_url: nil, ad_thumbnail_url: nil,
          touched_at: '2026-10-05T12:01:00Z', conversation_id: conversation.id }]
     )
     expect(payload[:lead_form]).to eq(lead_form)

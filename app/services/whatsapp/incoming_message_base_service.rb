@@ -78,7 +78,7 @@ class Whatsapp::IncomingMessageBaseService
   def autonomia_capture_reaction?
     return false if outgoing_echo || message_type != 'reaction'
 
-    agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(inbox_id: inbox.id)
+    agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: inbox.id)
     return false if agent_inbox.nil?
 
     ::Autonomia::Agents::Config.operate_reactions_enabled?(agent_inbox.agent)

@@ -24,7 +24,7 @@ module Autonomia
           return if conversation.blank?
           return unless ::Autonomia::Agents::Config.enabled?(conversation.account)
 
-          agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(id: agent_inbox_id)
+          agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox_id)
           return if agent_inbox.blank? || agent_inbox.agent.blank?
 
           deliver(conversation, agent_inbox, reply_to_message_id, Array(chunks), index.to_i, meta || {})

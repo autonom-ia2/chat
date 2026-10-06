@@ -7,6 +7,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useAbortableRequest } from 'dashboard/composables/useAbortableRequest';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useAdmin } from 'dashboard/composables/useAdmin';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -24,6 +25,14 @@ const store = useStore();
 const inboxes = useMapGetter('inboxes/getWhatsAppInboxes');
 const canManage = useCanManage('campaign_manage');
 const { isAdmin } = useAdmin();
+// Anúncios da Meta (#1047): com a página nova ligada, a conexão com a Meta sai daqui e vira um atalho.
+const accountId = useMapGetter('getCurrentAccountId');
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const metaAdsHubEnabled = computed(() =>
+  isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
+);
 const request = useAbortableRequest();
 const isLoading = request.isPending;
 const links = ref([]);
@@ -345,7 +354,25 @@ onMounted(fetchLinks);
                 </p>
               </div>
             </div>
-            <MetaAdsNamesCard v-if="isAdmin" class="mt-4" />
+            <router-link
+              v-if="isAdmin && metaAdsHubEnabled"
+              data-meta-ads-moved
+              :to="{ name: 'campaigns_meta_ads_index' }"
+              class="flex items-center gap-3 p-4 mt-4 border rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7"
+            >
+              <span
+                class="i-lucide-megaphone size-5 text-n-blue-11"
+                aria-hidden="true"
+              />
+              <span class="flex-1 text-sm text-n-slate-12">
+                {{ $t('CRM_KANBAN.META_ADS_HUB.MOVED') }}
+              </span>
+              <span
+                class="i-lucide-arrow-right size-4 text-n-slate-11"
+                aria-hidden="true"
+              />
+            </router-link>
+            <MetaAdsNamesCard v-else-if="isAdmin" class="mt-4" />
           </section>
 
           <aside

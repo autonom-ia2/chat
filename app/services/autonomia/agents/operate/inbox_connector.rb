@@ -29,6 +29,10 @@ module Autonomia
         private
 
         def connect!
+          @agent.with_lock { connect_locked! }
+        end
+
+        def connect_locked!
           # V2.1 — agente INTERNO (copiloto da equipe) NUNCA atende cliente: bloqueia o vínculo de caixa
           # (não cria AgentBot/AgentBotInbox/AgentInbox). Autoridade no backend; a UI esconde como 2ª defesa.
           return Result.new(status: :error, error: :agent_internal_not_connectable) if @agent.actuation_internal?
@@ -49,7 +53,7 @@ module Autonomia
         end
 
         def disconnect!
-          agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(agent: @agent, inbox: @inbox)
+          agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(agent: @agent, inbox: @inbox)
           return Result.new(status: :error, error: :not_connected) if agent_inbox.nil?
 
           ActiveRecord::Base.transaction do
@@ -65,7 +69,7 @@ module Autonomia
         end
 
         def agent_operable?
-          @agent.enabled? && @agent.active?
+          @agent.operating?
         end
 
         # Há um AgentBot webhook real (Gabriela) ocupando o inbox? Consulta direta por
@@ -79,7 +83,7 @@ module Autonomia
         end
 
         def already_connected?
-          ::Autonomia::Agents::AgentInbox.exists?(inbox_id: @inbox.id)
+          ::Autonomia::Agents::AgentInbox.kept.exists?(inbox_id: @inbox.id)
         end
       end
     end

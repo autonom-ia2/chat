@@ -42,7 +42,7 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body).to include('configured' => false, 'status' => nil, 'mode' => nil, 'last_checked_at' => nil, 'last_error' => nil)
       expect(response.parsed_body['partner']).to include('available' => false)
-      expect(response.parsed_body['sales_signal']).to eq('enabled' => false, 'pipelines' => 0)
+      expect(response.parsed_body['sales_signal']).to eq('enabled' => false)
     end
 
     it 'devolve o estado sem o token nem parte dele' do
