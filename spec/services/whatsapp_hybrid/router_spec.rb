@@ -95,6 +95,16 @@ describe WhatsappHybrid::Router do
       expect(conversation.reload.can_reply?).to be(false)
     end
 
+    it 'never sends interactive Meta messages through WhatsApp API' do
+      allow(client).to receive(:send_text)
+      message = outgoing(content_type: :input_select, content_attributes: { items: [{ title: 'Sim', value: 'sim' }] })
+
+      Whatsapp::SendOnWhatsappService.new(message: message).perform
+
+      expect(client).not_to have_received(:send_text)
+      expect(message.reload.status).to eq('failed')
+    end
+
     it 'respects a disabled origin' do
       connection.update!(disabled_origins: ['human'])
       allow(client).to receive(:send_text)

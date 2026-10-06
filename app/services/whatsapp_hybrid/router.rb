@@ -14,6 +14,9 @@ class WhatsappHybrid::Router
 
   def route_for(message)
     return :cloud if cloud_window_open?
+    # Botões, listas, carrossel, formulário e pesquisa são recursos Meta: pelo WhatsApp Web viram
+    # texto solto (e chamam atenção de bloqueio). Só texto e anexos passam pelo Web.
+    return :cloud unless message.content_type == 'text'
     return :cloud unless web_reply_available?
     return :cloud unless connection.origin_enabled?(origin_of(message))
 
