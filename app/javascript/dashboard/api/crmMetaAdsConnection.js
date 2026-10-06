@@ -82,6 +82,12 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/insights`);
   }
 
+  // Daily panel (#1088): { panel: { days, from, to, currency, totals, ads, action,
+  // confidence, synced_at, refreshing } }. Also asks Meta for today's numbers.
+  panel(days) {
+    return axios.get(`${this.url}/panel`, { params: { days } });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(

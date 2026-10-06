@@ -1,23 +1,20 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { useEmitter } from 'dashboard/composables/emitter';
-import { BUS_EVENTS } from 'shared/constants/busEvents';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
+import { useMetaAdsLive } from '../useMetaAdsLive';
+import MetaAdsConfidence from './MetaAdsConfidence.vue';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
 // atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo.
 //
-// Gasto (#1073): pedido ao abrir, a cada REFRESH_MS enquanto a aba está visível e ao voltar para ela; o
-// servidor só chama a Meta se o número tiver mais de 2 minutos. O fim da leitura chega pelo canal de tempo
-// real; se ele não chegar (conexão caída), a tela confere de novo em CHECK_MS, para o "atualizando…" nunca
-// ficar preso.
+// Gasto (#1073): mantido vivo por useMetaAdsLive enquanto a tela está aberta.
 const props = defineProps({
   connection: { type: Object, required: true },
 });
@@ -30,11 +27,6 @@ const removing = ref(false);
 const sitePages = ref([]);
 const funnels = ref(null);
 const insights = ref(null);
-const REFRESH_MS = 2 * 60 * 1000;
-const CHECK_MS = 20 * 1000;
-let refreshTimer = null;
-// Fora da tela não agenda nada: uma resposta que chega depois de sair não pode deixar timer órfão.
-let unmounted = false;
 
 const attention = computed(() => props.connection.status !== 'active');
 const attentionHint = computed(() =>
@@ -159,56 +151,17 @@ const spendUpdated = computed(() => {
 
 const NEXT = ['NEXT_NAMES', 'NEXT_SALES', 'NEXT_PANEL'];
 
-// "Quanto confiar" (#1073, F2b): conversas que vieram de anúncio nos últimos 30 dias, pelo melhor que sabemos
-// de cada uma. Do mais forte ao mais fraco.
-const CONFIDENCE_LEVELS = [
-  { key: 'ad', label: 'AD', dot: 'bg-n-teal-9' },
-  { key: 'ad_name', label: 'AD_NAME', dot: 'bg-n-teal-7' },
-  { key: 'campaign', label: 'CAMPAIGN', dot: 'bg-n-amber-9' },
-  { key: 'unknown', label: 'UNKNOWN', dot: 'bg-n-slate-8' },
-];
 const confidence = computed(() => insights.value?.confidence || null);
-const confidentShare = computed(() => {
-  const data = confidence.value;
-  if (!data?.conversations) return null;
-  return Math.round(((data.ad + data.ad_name) / data.conversations) * 100);
-});
-const confidenceGap = computed(
-  () => (confidence.value?.campaign || 0) + (confidence.value?.unknown || 0)
-);
 
-const pageVisible = () => document.visibilityState !== 'hidden';
-
-// Próxima conferência: rápida enquanto há leitura ou carga em andamento; com a aba escondida, só reagenda.
-const scheduleRefresh = reload => {
-  clearTimeout(refreshTimer);
-  if (unmounted) return;
-  const waiting = insights.value?.refreshing || insights.value?.backfilling;
-  refreshTimer = setTimeout(
-    () => (pageVisible() ? reload() : scheduleRefresh(reload)),
-    waiting ? CHECK_MS : REFRESH_MS
-  );
-};
-
-// Falha de rede mantém o último número na tela; a próxima rodada tenta de novo.
-const loadInsights = async () => {
-  try {
+const live = useMetaAdsLive({
+  load: async () => {
     const { data } = await CrmMetaAdsConnectionAPI.insights();
     insights.value = data.insights;
-  } catch {
-    // mantém o que já estava na tela
-  } finally {
-    scheduleRefresh(loadInsights);
-  }
-};
-
-const onVisibility = () => {
-  if (pageVisible() && !attention.value) loadInsights();
-};
-
-useEmitter(BUS_EVENTS.CRM_META_ADS_INSIGHTS_UPDATED, data => {
-  insights.value = { ...data, refreshing: false };
-  scheduleRefresh(loadInsights);
+  },
+  waiting: () => insights.value?.refreshing || insights.value?.backfilling,
+  onEvent: data => {
+    insights.value = { ...insights.value, ...data, refreshing: false };
+  },
 });
 
 const load = async () => {
@@ -240,16 +193,7 @@ const remove = async () => {
 
 onMounted(() => {
   load();
-  if (attention.value) return;
-
-  loadInsights();
-  document.addEventListener('visibilitychange', onVisibility);
-});
-
-onBeforeUnmount(() => {
-  unmounted = true;
-  clearTimeout(refreshTimer);
-  document.removeEventListener('visibilitychange', onVisibility);
+  if (!attention.value) live.start();
 });
 </script>
 
@@ -295,7 +239,7 @@ onBeforeUnmount(() => {
         <p
           v-if="!attention && insights"
           data-summary-spend
-          class="flex flex-wrap items-baseline m-0 text-sm text-n-blue-4 gap-x-3 gap-y-1"
+          class="flex flex-wrap items-baseline m-0 text-sm text-white/75 gap-x-3 gap-y-1"
           aria-live="polite"
         >
           <template v-if="spendLabel">
@@ -310,9 +254,11 @@ onBeforeUnmount(() => {
             </span>
             <span>
               {{
-                $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_CONVERSATIONS', {
-                  count: insights.ad_conversations_today ?? 0,
-                })
+                $t(
+                  'CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_CONVERSATIONS',
+                  { count: insights.ad_conversations_today ?? 0 },
+                  insights.ad_conversations_today ?? 0
+                )
               }}
             </span>
           </template>
@@ -343,7 +289,7 @@ onBeforeUnmount(() => {
             {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_REFRESHING') }}
           </span>
         </p>
-        <p class="flex flex-wrap m-0 text-sm text-n-blue-4 gap-x-3 gap-y-1">
+        <p class="flex flex-wrap m-0 text-sm text-white/75 gap-x-3 gap-y-1">
           <span>{{ via }}</span>
           <span>
             {{
@@ -412,72 +358,11 @@ onBeforeUnmount(() => {
       </li>
     </ul>
 
-    <div
+    <MetaAdsConfidence
       v-if="!attention && confidence"
-      data-summary-confidence
-      class="flex flex-col gap-3 p-4 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 sm:p-5"
-    >
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <h4 class="m-0 text-base font-semibold text-n-slate-12">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.TITLE') }}
-        </h4>
-        <span
-          v-if="confidentShare !== null"
-          data-summary-confidence-share
-          class="text-2xl font-semibold text-n-slate-12"
-        >
-          {{
-            $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.SHARE', {
-              share: confidentShare,
-            })
-          }}
-        </span>
-      </div>
-      <p class="m-0 text-sm text-n-slate-11">
-        {{
-          confidence.conversations
-            ? $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.TOTAL', {
-                days: confidence.window_days,
-                count: confidence.conversations,
-              })
-            : $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.EMPTY')
-        }}
-      </p>
-      <ul
-        v-if="confidence.conversations"
-        class="grid gap-2 p-0 m-0 list-none sm:grid-cols-2"
-      >
-        <li
-          v-for="level in CONFIDENCE_LEVELS"
-          :key="level.key"
-          :data-confidence-level="level.key"
-          class="flex items-center gap-2 text-sm text-n-slate-12"
-        >
-          <span
-            class="flex-none rounded-full size-2.5"
-            :class="level.dot"
-            aria-hidden="true"
-          />
-          <span class="flex-1 min-w-0">
-            {{
-              $t(`CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.${level.label}`)
-            }}
-          </span>
-          <span class="font-semibold tabular-nums">
-            {{ confidence[level.key] }}
-          </span>
-        </li>
-      </ul>
-      <button
-        v-if="confidenceGap"
-        type="button"
-        data-summary-confidence-fix
-        class="self-start p-0 text-sm font-medium text-left bg-transparent border-0 min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-        @click="emit('open', 3)"
-      >
-        {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.FIX') }}
-      </button>
-    </div>
+      :confidence="confidence"
+      @fix="emit('open', 3)"
+    />
 
     <div
       v-if="!attention"

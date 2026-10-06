@@ -34,7 +34,7 @@ const BENEFITS = [
       >
         {{ $t('CRM_KANBAN.META_ADS_HUB.EMPTY.TITLE') }}
       </h2>
-      <p class="max-w-2xl text-base text-n-blue-4">
+      <p class="max-w-2xl text-base text-white/75">
         {{ $t('CRM_KANBAN.META_ADS_HUB.EMPTY.DESCRIPTION') }}
       </p>
       <ul class="grid gap-3 p-0 m-0 list-none sm:grid-cols-3">
@@ -51,7 +51,7 @@ const BENEFITS = [
           <span class="text-sm font-semibold">
             {{ $t(`CRM_KANBAN.META_ADS_HUB.EMPTY.BENEFIT_${benefit.key}`) }}
           </span>
-          <span class="text-sm text-n-blue-4">
+          <span class="text-sm text-white/75">
             {{
               $t(`CRM_KANBAN.META_ADS_HUB.EMPTY.BENEFIT_${benefit.key}_HINT`)
             }}

@@ -11,6 +11,7 @@ import MetaAdsAccountStep from './components/MetaAdsAccountStep.vue';
 import MetaAdsDestinationsStep from './components/MetaAdsDestinationsStep.vue';
 import MetaAdsFunnelStep from './components/MetaAdsFunnelStep.vue';
 import MetaAdsSummary from './components/MetaAdsSummary.vue';
+import MetaAdsPanel from './components/MetaAdsPanel.vue';
 import { currentStep } from './metaAdsHelpers';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
@@ -39,6 +40,16 @@ const rememberMode = value => {
   if (value) query.modo = value;
   else delete query.modo;
   router.replace({ query });
+};
+// Conectado (#1088): "Resultado" (o painel do dia a dia) ou "Conexão" (o resumo da conexão), lembrado no
+// endereço (?aba=). Conexão que precisa de atenção abre direto na conexão.
+const VIEWS = ['resultado', 'conexao'];
+const view = ref(
+  VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
+);
+const chooseView = value => {
+  view.value = value;
+  router.replace({ query: { ...route.query, aba: value } });
 };
 // "Agora não" no passo 4: segue para o resumo, com o passo marcado "Desligado".
 const salesLater = ref(false);
@@ -72,6 +83,15 @@ const partnerName = computed(
 // Compartilhar escolhido e conexão ainda não gravada: o passo 1 já conta como feito.
 const checklistCurrent = computed(() =>
   activeStep.value === 2 && !connection.value?.configured ? 2 : step.value
+);
+// O painel só existe com a conexão ativa e uma conta de anúncios; sem ele, nem as abas aparecem.
+const panelAvailable = computed(
+  () =>
+    connection.value?.status === 'active' &&
+    Boolean(connection.value?.ad_account)
+);
+const showPanel = computed(
+  () => view.value === 'resultado' && panelAvailable.value
 );
 const showHero = computed(
   () => !connection.value?.configured && !started.value
@@ -194,13 +214,43 @@ onMounted(load);
         class="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
       >
         <div class="flex flex-col min-w-0 gap-5">
-          <MetaAdsSummary
-            v-if="step === 5 && !openStep"
-            :connection="connection"
-            @removed="removed"
-            @reconnect="reconnect"
-            @open="openStep = $event"
-          />
+          <template v-if="step === 5 && !openStep">
+            <div
+              v-if="panelAvailable"
+              role="group"
+              :aria-label="$t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.LABEL')"
+              class="flex gap-1 p-1 rounded-xl bg-n-alpha-1 w-fit"
+            >
+              <button
+                v-for="name in VIEWS"
+                :key="name"
+                type="button"
+                :data-view-tab="name"
+                :aria-pressed="(showPanel ? 'resultado' : 'conexao') === name"
+                class="px-4 text-sm font-semibold border-0 rounded-lg min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                :class="
+                  (showPanel ? 'resultado' : 'conexao') === name
+                    ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
+                    : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
+                "
+                @click="chooseView(name)"
+              >
+                {{
+                  name === 'resultado'
+                    ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.RESULT')
+                    : $t('CRM_KANBAN.META_ADS_HUB.PANEL.TABS.CONNECTION')
+                }}
+              </button>
+            </div>
+            <MetaAdsPanel v-if="showPanel" @open="openStep = $event" />
+            <MetaAdsSummary
+              v-else
+              :connection="connection"
+              @removed="removed"
+              @reconnect="reconnect"
+              @open="openStep = $event"
+            />
+          </template>
 
           <section
             v-if="activeStep <= 4"

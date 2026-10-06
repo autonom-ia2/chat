@@ -222,6 +222,42 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
     end
   end
 
+  describe 'GET panel (#1088)' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
+    after do
+      Crm::MetaAds::Insights::Refresh.release(connection.id, 'today')
+      Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
+    end
+
+    it 'devolve o painel do período e pede a leitura de hoje' do
+      connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+
+      expect do
+        get "#{path}/panel", params: { days: 7 }, headers: auth_headers(admin)
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'today')
+
+      panel = response.parsed_body['panel']
+      expect(panel).to include('days' => 7, 'currency' => 'BRL', 'refreshing' => true)
+      expect(panel['totals']).to include('spend' => 0.0, 'conversations' => 0, 'sales' => 0)
+      expect(panel['action']).to eq('kind' => 'no_data')
+      expect(panel['confidence']).to include('conversations' => 0)
+    end
+
+    it 'sem conta de anúncios devolve vazio' do
+      get "#{path}/panel", headers: auth_headers(admin)
+
+      expect(response.parsed_body).to eq('panel' => nil)
+    end
+
+    it 'agente recebe 403' do
+      get "#{path}/panel", headers: auth_headers(agent)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
   describe 'POST insights (#1073)' do
     let(:connection) { create_meta_ads_insights_connection(account) }
 
