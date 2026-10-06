@@ -72,9 +72,9 @@ const isSelfClosing = tag => tag.slice(0, -1).trimEnd().endsWith('/');
 
 const slotToken = (nonce, index) => `MJSLOT${nonce}N${index}E`;
 
-// Replaces the inner content of every ending tag (and every comment) with a token. Ending
-// tags inside mj-attributes are left alone: there they are defaults (and, in corrupted heads,
-// hold nested defaults).
+// Replaces the inner content of every ending tag (and every comment) with a token; each slot keeps
+// its tag name (null for a comment). Ending tags inside mj-attributes are left alone: there they
+// are defaults (and, in corrupted heads, hold nested defaults).
 const cutEndingContent = (src, nonce) => {
   const slots = [];
   let out = '';
@@ -88,7 +88,7 @@ const cutEndingContent = (src, nonce) => {
       // Comments are cut out whole: XML would read entities and '--' inside them.
       const close = src.indexOf('-->', lt);
       const end = close === -1 ? src.length : close + 3;
-      slots.push(src.slice(lt, end));
+      slots.push({ tag: null, content: src.slice(lt, end) });
       out += slotToken(nonce, slots.length - 1);
       pos = end;
     } else {
@@ -109,7 +109,7 @@ const cutEndingContent = (src, nonce) => {
       ) {
         const closeAt = src.indexOf(`</${name}`, pos);
         if (closeAt !== -1) {
-          slots.push(src.slice(pos, closeAt));
+          slots.push({ tag: name, content: src.slice(pos, closeAt) });
           out += slotToken(nonce, slots.length - 1);
           pos = closeAt;
         }
@@ -121,9 +121,20 @@ const cutEndingContent = (src, nonce) => {
 
 const restoreEndingContent = (xml, slots, nonce) =>
   slots.reduce(
-    (acc, slot, index) => acc.split(slotToken(nonce, index)).join(slot),
+    (acc, slot, index) => acc.split(slotToken(nonce, index)).join(slot.content),
     xml
   );
+
+// Rewrites the inner content of the given ending tags with fn and leaves the rest of the MJML as
+// written, well-formed or not. Mirrors EmailCampaigns::MjmlEndingContent.map.
+export const mapEndingContent = (mjml, tags, fn) => {
+  const nonce = Math.random().toString(36).slice(2);
+  const { skeleton, slots } = cutEndingContent(mjml, nonce);
+  const mapped = slots.map(slot =>
+    tags.includes(slot.tag) ? { ...slot, content: fn(slot.content) } : slot
+  );
+  return restoreEndingContent(skeleton, mapped, nonce);
+};
 
 // ---- entities: XML knows only five; HTML names become numeric, bare & becomes &amp; ----
 
