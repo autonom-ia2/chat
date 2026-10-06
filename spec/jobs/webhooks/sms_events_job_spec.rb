@@ -55,6 +55,7 @@ RSpec.describe Webhooks::SmsEventsJob do
 
     it 'calls Sms::DeliveryStatusService if the message type is message-delivered' do
       params[:type] = 'message-delivered'
+      create(:message, account: sms_channel.account, inbox: sms_channel.inbox, source_id: params[:message][:id]) # #1004: the inbox holds the id
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)
@@ -66,6 +67,7 @@ RSpec.describe Webhooks::SmsEventsJob do
 
     it 'calls Sms::DeliveryStatusService if the message type is message-failed' do
       params[:type] = 'message-failed'
+      create(:message, account: sms_channel.account, inbox: sms_channel.inbox, source_id: params[:message][:id]) # #1004: the inbox holds the id
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)

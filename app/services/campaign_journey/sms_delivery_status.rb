@@ -27,14 +27,21 @@ module CampaignJourney::SmsDeliveryStatus
   module_function
 
   def apply(inbox:, source_id:, status:, code: nil, reason: nil)
-    return unless defined?(CampaignRecipient) && inbox && source_id.present?
-
-    recipient = CampaignRecipient.find_by(inbox_id: inbox.id, source_id: source_id)
+    recipient = recipient_for(inbox, source_id)
     return if recipient.blank?
 
     recipient.update_from_whatsapp_status!(status: status, errors: [{ code: code&.to_s, error_user_msg: safe_reason(reason) }])
   rescue StandardError => e
     Rails.logger.error "[CampaignJourney] sms delivery status not applied: #{e.class}"
+  end
+
+  # Only by the provider id we stored, and with the same account on every side: the inbox of the
+  # callback, the recipient and its campaign.
+  def recipient_for(inbox, source_id)
+    return unless defined?(CampaignRecipient) && inbox && source_id.present?
+
+    recipient = CampaignRecipient.includes(:campaign).find_by(account_id: inbox.account_id, inbox_id: inbox.id, source_id: source_id)
+    recipient if recipient&.campaign&.account_id == inbox.account_id
   end
 
   def safe_reason(reason)
@@ -89,10 +96,30 @@ module CampaignJourney::SmsDeliveryStatus
 
     private
 
+    # The inbox of our number (owner, then `to`) that holds this provider id — a message or a
+    # campaign recipient of its own account. No provider id, no inbox holding it, or more than one
+    # (same number in two accounts) → nothing is updated.
     def bandwidth_inbox(event)
-      channel = Channel::Sms.find_by(phone_number: event.dig(:message, :owner)) if event.dig(:message, :owner).present?
-      channel ||= Channel::Sms.find_by(phone_number: event[:to]) if event[:to].present?
-      channel&.inbox
+      source_id = event.dig(:message, :id)
+      return if source_id.blank?
+
+      numbers = [event.dig(:message, :owner), event[:to]].compact_blank.uniq
+      owners = numbers.lazy.map { |number| inboxes_holding(number, source_id) }.find(&:any?) || []
+      return owners.first if owners.one?
+
+      Rails.logger.warn "[CampaignJourney] bandwidth delivery event ignored: #{owners.size} inboxes hold the message id" if owners.many?
+      nil
+    end
+
+    def inboxes_holding(number, source_id)
+      Inbox.where(channel_type: 'Channel::Sms', channel_id: Channel::Sms.where(phone_number: number).select(:id)).select do |inbox|
+        held_by?(inbox, source_id)
+      end
+    end
+
+    def held_by?(inbox, source_id)
+      scope = { account_id: inbox.account_id, inbox_id: inbox.id, source_id: source_id }
+      Message.exists?(scope) || (defined?(CampaignRecipient) && CampaignRecipient.exists?(scope))
     end
 
     def apply_to_campaign_recipient(inbox, event, status)
