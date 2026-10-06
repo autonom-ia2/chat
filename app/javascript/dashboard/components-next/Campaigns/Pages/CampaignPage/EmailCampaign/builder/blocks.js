@@ -2,6 +2,8 @@
 // Labels em pt-BR direto: o painel de blocos do GrapesJS fica fora do escopo
 // do vue-i18n (decisão E12 do manifesto — MVP com labels estáticos).
 
+import { canonicalizeMjml } from './mjmlCanonical';
+
 const BRAND_COLOR = '#2563eb';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
@@ -34,25 +36,27 @@ const CAT_ESTRUTURA = 'Estrutura';
 
 // URL de assistir do vídeo (placeholder editável) e poster com play já composto
 // (variante simples §2.2 das amendments — email-safe, sem <video>/iframe).
-const VIDEO_WATCH_URL = 'https://autonomia.site';
+// Link de exemplo neutro: a pessoa troca pelo do próprio site no painel de propriedades.
+const EXAMPLE_URL = 'https://seusite.com.br';
+const VIDEO_WATCH_URL = EXAMPLE_URL;
 
 // Rodapé legal — mj-section travada pelo F1 via css-class="footer-locked"
 // (E11). `{{ unsubscribe_url }}` é literal Liquid resolvido no envio.
-// O endereço da empresa é texto editável no canvas.
+// Nome e endereço da empresa são texto editável no canvas — nenhuma marca fixa (#1074).
 // Ícones de redes sociais: mj-social com ícones PNG HOSPEDADOS (renderizam no Gmail —
-// data:/SVG não). Os href são placeholders dos perfis — o usuário edita cada um pelo
-// painel (seção Link aparece ao selecionar o ícone). Cada <mj-social-element> é um par
+// data:/SVG não). Os href apontam para a raiz de cada rede: o usuário troca pelo perfil
+// da empresa no painel (seção Link aparece ao selecionar o ícone). Cada <mj-social-element> é um par
 // explícito (não é tag void).
 export const FOOTER_MJML = `<mj-section css-class="footer-locked" background-color="${BG_SOFT}" padding="16px">
   <mj-column>
     <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px">
-      <mj-social-element name="facebook" href="https://facebook.com/hub2you"></mj-social-element>
-      <mj-social-element name="instagram" href="https://instagram.com/hub2you"></mj-social-element>
-      <mj-social-element name="linkedin" href="https://linkedin.com/company/hub2you"></mj-social-element>
-      <mj-social-element name="youtube" href="https://youtube.com/@hub2you"></mj-social-element>
+      <mj-social-element name="facebook" href="https://facebook.com/"></mj-social-element>
+      <mj-social-element name="instagram" href="https://instagram.com/"></mj-social-element>
+      <mj-social-element name="linkedin" href="https://linkedin.com/"></mj-social-element>
+      <mj-social-element name="youtube" href="https://youtube.com/"></mj-social-element>
     </mj-social>
     <mj-text font-size="12px" color="#6b7280" align="center" line-height="1.6">
-      Autonomia · Av. Exemplo, 123 — São Paulo/SP<br/>
+      Nome da sua empresa · Endereço da empresa<br/>
       Você recebeu este e-mail porque está em nossa lista de contatos.<br/>
       <a href="{{ unsubscribe_url }}" style="color:#6b7280;">Cancelar inscrição</a>
     </mj-text>
@@ -95,7 +99,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="16px 24px">
   <mj-column>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="https://autonomia.site">Ver detalhes</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}">Ver detalhes</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -124,7 +128,7 @@ const BLOCKS = [
     <mj-image src="${placeholderImage(600, 240, 'Imagem hero 600x240')}" alt="Imagem de destaque" padding="0"/>
     <mj-text font-size="28px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="24px 24px 8px">Título principal da campanha</mj-text>
     <mj-text font-size="16px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 32px 16px">Uma frase curta de apoio explicando a proposta de valor.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="https://autonomia.site" padding="8px 0 32px">Quero saber mais</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}" padding="8px 0 32px">Quero saber mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -140,7 +144,7 @@ const BLOCKS = [
     <mj-text font-size="14px" color="#dbeafe" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
     <mj-text font-size="32px" font-weight="bold" color="#ffffff" align="center" padding="0 0 8px">A partir de R$ 99/mês</mj-text>
     <mj-text font-size="15px" color="#dbeafe" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
-    <mj-button background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="https://autonomia.site">Garantir oferta</mj-button>
+    <mj-button background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="${EXAMPLE_URL}">Garantir oferta</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -178,7 +182,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="${BG_SOFT}" border-radius="8px" padding="32px 24px">
   <mj-column>
-    <mj-text font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“A Autonomia transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
+    <mj-text font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“Transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
     <mj-text font-size="14px" font-weight="bold" color="${MUTED_COLOR}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
   </mj-column>
 </mj-section>`,
@@ -229,7 +233,7 @@ const BLOCKS = [
   <mj-column width="60%" vertical-align="middle">
     <mj-text font-size="18px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 8px">Título da seção</mj-text>
     <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Texto de apoio ao lado da imagem. Explique um detalhe do produto ou serviço em poucas linhas.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="https://autonomia.site" align="left" padding="0">Saiba mais</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="${EXAMPLE_URL}" align="left" padding="0">Saiba mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -259,7 +263,7 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="32px 24px">
   <mj-column>
     <mj-text font-size="22px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 0 16px">Pronto para dar o próximo passo?</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="https://autonomia.site">Falar com a Autonomia</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="${EXAMPLE_URL}">Fale com a gente</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -308,28 +312,16 @@ const BLOCKS = [
   },
 ];
 
-// grapesjs-mjml registra mj-spacer/mj-divider/mj-image como void:false, então um
-// self-closed `<mj-spacer/>` é lido como tag de abertura e "engole" os irmãos no
-// drag/drop (mesmo bug do spacer corrompendo o e-mail). Normalizamos o conteúdo
-// dos blocos para pares explícitos na origem — robusto independente do caminho de
-// inserção (espelha normalizeVoidMjml do useEmailEditor para a entrada via setComponents).
-const VOID_MJML_TAGS = ['mj-spacer', 'mj-divider', 'mj-image'];
-const normalizeVoidMjml = html =>
-  VOID_MJML_TAGS.reduce((out, tag) => {
-    const re = new RegExp(
-      `<${tag}(?=[\\s/>])((?:[^>"']|"[^"]*"|'[^']*')*?)\\s*/>`,
-      'gi'
-    );
-    return out.replace(re, `<${tag}$1></${tag}>`);
-  }, html);
-
+// grapesjs-mjml lê o conteúdo do bloco com o parser HTML: um self-closed `<mj-image/>` vira tag
+// de abertura e "engole" os irmãos no drag/drop. canonicalizeMjml (#1074) fecha cada tag de forma
+// explícita, o mesmo tratamento que o useEmailEditor aplica ao MJML carregado no editor.
 export default function registerAutonomiaBlocks(editor) {
   BLOCKS.forEach(({ id, label, category, media, content }) => {
     editor.Blocks.add(id, {
       label,
       category,
       media,
-      content: normalizeVoidMjml(content),
+      content: canonicalizeMjml(content),
       select: true,
     });
   });

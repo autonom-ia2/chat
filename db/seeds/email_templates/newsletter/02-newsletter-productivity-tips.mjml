@@ -25,19 +25,17 @@ Design Notes:
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Hero/Header Section -->
     <mj-section background-color="#F5EEFD" padding="20px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" font-size="26px" font-weight="bold" color="#543c87" padding="20px 15px">
+        <mj-text align="center" font-size="26px" font-weight="bold" color="#543c87" padding="20px 15px" font-family="Arial, sans-serif">
           🚀 Productivity Pulse – Quarterly Edition
         </mj-text>
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-flat-lay-arrangement-of-various-productivity-tools-showcas.jpg" alt="Productivity Tools" width="500px" align="center" padding="10px 0" border-radius="7px"/>
-        <mj-text align="center" color="#543c87" font-size="17px" padding="10px 10px">
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-flat-lay-arrangement-of-various-productivity-tools-showcas.jpg" alt="Productivity Tools" width="500px" align="center" padding="10px 0" border-radius="7px"></mj-image>
+        <mj-text align="center" color="#543c87" font-size="17px" padding="10px 10px" font-family="Arial, sans-serif">
           Welcome back! This quarter, discover proven tips, inspiring stories, and the best resources to supercharge your personal productivity.
         </mj-text>
       </mj-column>
@@ -46,14 +44,14 @@ Design Notes:
     <!-- Productivity Tip/Strategy Section -->
     <mj-section background-color="#FFFFFF" padding="25px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text color="#513484" font-size="22px" font-weight="bold" align="center" padding="10px 0">
+        <mj-text color="#513484" font-size="22px" font-weight="bold" align="center" padding="10px 0" font-family="Arial, sans-serif">
           🔎 Focus Better with This Proven Technique
         </mj-text>
-        <mj-text color="#23213c" font-size="16px" padding="0 10px" align="center">
+        <mj-text color="#23213c" font-size="16px" padding="0 10px" align="center" font-family="Arial, sans-serif">
           The “90-Minute Block” method pairs deep work sessions with targeted breaks. Here’s how to apply it:
         </mj-text>
-        <mj-divider border-width="2px" border-color="#D6C2F7" padding="10px 0"/>
-        <mj-text color="#513484" font-size="15px" line-height="1.7" align="left" padding="0 15px">
+        <mj-divider border-width="2px" border-color="#D6C2F7" padding="10px 0"></mj-divider>
+        <mj-text color="#513484" font-size="15px" line-height="1.7" align="left" padding="0 15px" font-family="Arial, sans-serif">
           <ul style="padding-left:20px; margin:0;">
             <li><b>Choose one priority task</b> and block off 90 minutes (no multitasking!).</li>
             <li>Set your phone to “Do Not Disturb.”</li>
@@ -61,7 +59,7 @@ Design Notes:
             <li>Repeat up to 3x per day—results compound quickly.</li>
           </ul>
         </mj-text>
-        <mj-text color="#23213c" font-size="15px" align="left" padding="16px 15px 0 15px">
+        <mj-text color="#23213c" font-size="15px" align="left" padding="16px 15px 0 15px" font-family="Arial, sans-serif">
           Give it a try this week, and notice how your focus and creative output evolve. Many readers report double the results within days!
         </mj-text>
       </mj-column>
@@ -70,13 +68,13 @@ Design Notes:
     <!-- Success Story / Testimonial Section -->
     <mj-section background-color="#EDEEF7" padding="25px 0">
       <mj-column width="35%" background-color="transparent" padding="20px 15px">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-joyful-person-engaged-in-reviewing-their-daily-planner-sur.jpg" alt="Happy user testimonial" width="180px" align="center" padding="10px 0 10px 0"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-joyful-person-engaged-in-reviewing-their-daily-planner-sur.jpg" alt="Happy user testimonial" width="180px" align="center" padding="10px 0 10px 0"></mj-image>
       </mj-column>
       <mj-column width="65%" background-color="transparent" padding="20px 15px">
-        <mj-text color="#513484" font-size="20px" font-weight="bold" padding="10px 0">
+        <mj-text color="#513484" font-size="20px" font-weight="bold" padding="10px 0" font-family="Arial, sans-serif">
           Real Results: Amanda’s Journey
         </mj-text>
-        <mj-text color="#23213c" font-size="15px" padding="0">
+        <mj-text color="#23213c" font-size="15px" padding="0" font-family="Arial, sans-serif">
           "Adopting the 90-Minute Block and trying digital planning tools changed my workflow. Instead of reacting to every ping, I finally had space to think deeply and prioritize. I wrapped up a passion project I’d neglected for months. If I can do it, anyone can!"
           <br /><br />
           — Amanda, Community Member
@@ -87,20 +85,20 @@ Design Notes:
     <!-- Tools & Resources Section -->
     <mj-section background-color="#F5EEFD" padding="30px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text color="#513484" font-size="20px" font-weight="bold" align="center" padding="0px 0 10px 0">
+        <mj-text color="#513484" font-size="20px" font-weight="bold" align="center" padding="0px 0 10px 0" font-family="Arial, sans-serif">
           ✨ Recommended Tools This Quarter
         </mj-text>
-        <mj-text color="#513484" font-size="15px" align="center" padding="0 15px 15px 15px">
+        <mj-text color="#513484" font-size="15px" align="center" padding="0 15px 15px 15px" font-family="Arial, sans-serif">
           Boost your productivity with our top picks (all personally tested!):
         </mj-text>
-        <mj-text color="#23213c" font-size="15px" align="left" padding="0 15px">
+        <mj-text color="#23213c" font-size="15px" align="left" padding="0 15px" font-family="Arial, sans-serif">
           <ul style="padding-left:20px; margin:0;">
             <li><b>Notion</b> – all-in-one digital workspace for notes, tasks, and project tracking.</li>
             <li><b>Focus Booster</b> – track your focused work sprints and breaks automatically.</li>
             <li><b>Forest</b> – grow a digital “forest” by putting your phone down and getting to work.</li>
           </ul>
         </mj-text>
-        <mj-button background-color="#513484" color="#ffffff" font-size="16px" border-radius="8px" align="center" href="https://productivityhub.example/tools" padding="15px">
+        <mj-button background-color="#513484" color="#ffffff" font-size="16px" border-radius="8px" align="center" href="https://productivityhub.example/tools" padding="15px" font-family="Arial, sans-serif">
           See More Tools
         </mj-button>
       </mj-column>
@@ -109,10 +107,10 @@ Design Notes:
     <!-- CTA & Share Section -->
     <mj-section background-color="#FFFFFF" padding="30px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text color="#543c87" font-size="18px" font-weight="bold" align="center" padding="0 0 10px 0">
+        <mj-text color="#543c87" font-size="18px" font-weight="bold" align="center" padding="0 0 10px 0" font-family="Arial, sans-serif">
           🚀 Upgrade Your Focus Today
         </mj-text>
-        <mj-text color="#23213c" font-size="15px" align="center" padding="0 0 20px 0">
+        <mj-text color="#23213c" font-size="15px" align="center" padding="0 0 20px 0" font-family="Arial, sans-serif">
           Missed previous issues? <a href="https://productivityhub.example/archive" style="color: #543c87;text-decoration:underline;">Browse the archive here</a>.<br>
           Found these tips useful? Forward to a friend or colleague and help others take control of their time!
         </mj-text>
@@ -122,19 +120,19 @@ Design Notes:
     <!-- Footer & Social Media -->
     <mj-section background-color="#513484" padding="20px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#ffffff" font-size="15px" padding="0 0 10px 0">
+        <mj-text align="center" color="#ffffff" font-size="15px" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Stay in the loop and join our growing productivity community:
         </mj-text>
-        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal">
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://tiktok.com/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://pinterest.com/"></mj-social-element>
+        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal" font-family="Arial, sans-serif">
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://tiktok.com/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://pinterest.com/" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
-        <mj-text align="center" color="#ffffff" font-size="13px" padding="15px 0 0 0">
+        <mj-text align="center" color="#ffffff" font-size="13px" padding="15px 0 0 0" font-family="Arial, sans-serif">
           Productivity Pulse Newsletter • contact@productivityhub.example<br />
           <a href="{{ unsubscribe_url }}" style="color:#f5eefd;text-decoration:underline;">Unsubscribe here</a>
         </mj-text>

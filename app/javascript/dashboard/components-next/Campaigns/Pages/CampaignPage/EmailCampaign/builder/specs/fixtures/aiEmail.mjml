@@ -1,0 +1,88 @@
+<mjml>
+<mj-head>
+<mj-attributes>
+<mj-all font-family="Arial, Helvetica, sans-serif" />
+<mj-text color="#252432" font-size="16px" line-height="1.6" padding="0" />
+<mj-section padding="40px 24px" />
+<mj-button background-color="#4B479B" color="#FFFFFF" font-size="16px" font-weight="700" border-radius="8px" inner-padding="14px 36px" padding="24px 0 0" />
+<mj-image padding="0" />
+<mj-divider border-color="#4B479B" border-width="1px" padding="0" />
+</mj-attributes>
+</mj-head>
+<mj-body background-color="#F1F1FA">
+<mj-section background-color="#FFFFFF" padding="32px 24px">
+<mj-column>
+<mj-image src="https://example.com/logo.png" alt="Hub2you Insurtech" width="240px" align="center" />
+</mj-column>
+</mj-section>
+<mj-section background-color="#F1F1FA" padding="40px 24px 48px">
+<mj-column>
+<mj-text color="#666574">Olá {{ nome }},</mj-text>
+<mj-spacer height="24px" />
+<mj-text color="#4B479B" font-weight="700" letter-spacing="1px">LIVE DE MENTORIA · IA E SEGUROS</mj-text>
+<mj-text font-size="32px" font-weight="800" line-height="1.2" padding="16px 0 0">IA no seguro.<br/>Onde está o<br/>próximo negócio?</mj-text>
+<mj-text color="#666574" padding="24px 0 0">A Hub2you convida você para uma live de mentoria sobre inteligência artificial no mercado de seguros. Demonstrações de uso e uma conversa sobre possibilidades de negócio.</mj-text>
+<mj-button align="left" href="https://wa.me/5511999999999?text=Ol%C3%A1%21%20Quero%20informa%C3%A7%C3%B5es%20sobre%20a%20live%20de%20mentoria%20de%20IA%20no%20mercado%20de%20seguros." padding="32px 0 0">Quero saber sobre a live</mj-button>
+<mj-text color="#666574" padding="16px 0 0">Consulte data, horário e acesso com nosso time pelo WhatsApp.</mj-text>
+</mj-column>
+</mj-section>
+<mj-section background-color="#FFFFFF" padding="40px 24px">
+<mj-column>
+<mj-text font-size="22px" font-weight="700" line-height="1.3">Menos abstração.<br/>Mais aplicação no seguro.</mj-text>
+<mj-text color="#666574" padding="16px 0 24px">Três perspectivas para olhar a IA além de uma ferramenta de conversa:</mj-text>
+<mj-text><strong style="color:#4B479B;">01 · Atendimento com propósito</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 24px">Como usar a IA para entender a necessidade do cliente e apoiar a jornada até a proposta.</mj-text>
+<mj-divider border-color="#F1F1FA" />
+<mj-text padding="24px 0 0"><strong style="color:#4B479B;">02 · Operação com menos tarefas manuais</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 24px">O que considerar ao automatizar o comercial — e onde a experiência do corretor continua essencial.</mj-text>
+<mj-divider border-color="#F1F1FA" />
+<mj-text padding="24px 0 0"><strong style="color:#4B479B;">03 · Possibilidades de negócio</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 0">Onde procurar oportunidades na carteira, na distribuição e no relacionamento com o cliente.</mj-text>
+</mj-column>
+</mj-section>
+<mj-section background-color="#F1F1FA" padding="40px 24px">
+<mj-column>
+<mj-text font-size="22px" font-weight="700" line-height="1.3">O assunto já saiu da teoria.</mj-text>
+<mj-text color="#666574" padding="16px 0 24px">Conheça aplicações apresentadas pela Hub2you que ajudam a tornar essa conversa concreta.</mj-text>
+<mj-text><strong style="color:#4B479B;">Seguro Viagem</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 24px">Um agente que coleta datas e dados dos viajantes, apresenta propostas e gera um comparativo de planos no WhatsApp. ([viagem.hub2you.ai](https://viagem.hub2you.ai/?utm_source=openai))</mj-text>
+<mj-divider border-color="#FFFFFF" />
+<mj-text padding="24px 0 0"><strong style="color:#4B479B;">RC Médico</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 24px">Qualificação do perfil, coleta de dados de risco e comparação de condições para apoiar a preparação da proposta. ([hub2you.ai](https://hub2you.ai/))</mj-text>
+<mj-divider border-color="#FFFFFF" />
+<mj-text padding="24px 0 0"><strong style="color:#4B479B;">Chat2You</strong></mj-text>
+<mj-text color="#666574" padding="8px 0 0">Atendimento, CRM e IA em uma plataforma, com os canais reunidos e o histórico disponível para o corretor acompanhar a conversa. ([hub2you.ai](https://hub2you.ai/))</mj-text>
+</mj-column>
+</mj-section>
+<mj-section background-color="#FFFFFF" padding="40px 24px">
+<mj-column>
+<mj-divider width="48px" align="left" border-width="3px" />
+<mj-text font-size="22px" font-weight="700" line-height="1.3" padding="24px 0 0">Tecnologia com o seguro<br/>no centro da conversa.</mj-text>
+<mj-text color="#666574" padding="16px 0 0">A Hub2you é o braço de tecnologia da HubSegs e desenvolve agentes, plataforma e projetos para corretoras e seguradoras. ([hub2you.ai](https://hub2you.ai/))</mj-text>
+<mj-text color="#666574" padding="16px 0 0">A atuação também aparece no mercado: a GTA apresentou uma assistente virtual criada pela equipe da Hub2you. ([segurogta.com.br](https://segurogta.com.br/2020/noticia/?cit=502&def=gta-inova-com-lan-amento-de-assistente-virtual))</mj-text>
+<mj-text padding="24px 0 0"><strong>Traga uma pergunta da sua operação:</strong><br/>qual etapa você gostaria de melhorar primeiro?</mj-text>
+</mj-column>
+</mj-section>
+<mj-section background-color="#4B479B" padding="40px 24px">
+<mj-column>
+<mj-text font-size="22px" font-weight="700" color="#FFFFFF" align="center" line-height="1.3">Olhe para a IA.<br/>Pense no seu próximo negócio.</mj-text>
+<mj-text color="#FFFFFF" align="center" padding="16px 0 0">O que pode fazer sentido para {{ empresa }}? Comece essa conversa na live de mentoria da Hub2you.</mj-text>
+<mj-button background-color="#FFFFFF" color="#4B479B" align="center" padding="24px 0 0" href="https://wa.me/5511999999999?text=Ol%C3%A1%21%20Quero%20informa%C3%A7%C3%B5es%20sobre%20a%20live%20de%20mentoria%20de%20IA%20no%20mercado%20de%20seguros.">Quero saber sobre a live</mj-button>
+</mj-column>
+</mj-section>
+<mj-section css-class="footer-locked" background-color="#F1F1FA" padding="32px 24px">
+<mj-column>
+<mj-social font-size="13px" icon-size="24px" mode="horizontal" align="center" padding="0 0 24px">
+<mj-social-element name="facebook" background-color="#4B479B" href="https://facebook.com/hub2you" alt="Facebook da Hub2you"></mj-social-element>
+<mj-social-element name="instagram" background-color="#4B479B" href="https://instagram.com/hub2you" alt="Instagram da Hub2you"></mj-social-element>
+<mj-social-element name="linkedin" background-color="#4B479B" href="https://www.linkedin.com/company/hub2you-insurtech" alt="LinkedIn da Hub2you"></mj-social-element>
+<mj-social-element name="youtube" background-color="#4B479B" href="https://youtube.com/@hub2you" alt="YouTube da Hub2you"></mj-social-element>
+</mj-social>
+<mj-text font-size="14px" font-weight="700" align="center">Hub2you · Autonomia</mj-text>
+<mj-text font-size="13px" color="#666574" align="center" padding="8px 0 0">Enviado para {{ email }}.<br/>Você recebeu este e-mail porque está em nossa lista de contatos.</mj-text>
+<mj-text font-size="13px" color="#666574" align="center" padding="16px 0 0"><a href="{{ unsubscribe_url }}" style="color:#4B479B;text-decoration:underline;">Cancelar inscrição</a></mj-text>
+</mj-column>
+</mj-section>
+</mj-body>
+</mjml>
+

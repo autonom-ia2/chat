@@ -40,19 +40,17 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Header/Thank You Section -->
     <mj-section background-color="#ffe6a7" padding="20px 15px">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#3e2723" font-size="26px" font-weight="bold" padding="10px 0">
+        <mj-text align="center" color="#3e2723" font-size="26px" font-weight="bold" padding="10px 0" font-family="Arial, sans-serif">
           Thank You for Your Purchase!
         </mj-text>
         <mj-image align="center" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1747161894/uploaded-by-ai/an-aesthetically-pleasing-flatlay-of-skincare-products-arran.jpg" alt="Skincare Product Flatlay" width="500px" padding="10px 0 20px 0" border-radius="7px"></mj-image>
-        <mj-text align="center" color="#6d4c41" font-size="16px" padding="0">
+        <mj-text align="center" color="#6d4c41" font-size="16px" padding="0" font-family="Arial, sans-serif">
           We hope your new skincare products have arrived safely and are brightening your daily routine. Your trust means everything to us, and we’d love to hear about your experience!
         </mj-text>
       </mj-column>
@@ -61,13 +59,13 @@
     <!-- Main Feedback CTA Section -->
     <mj-section background-color="#fdfcdc" padding="20px 20px">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#4d342e" font-size="20px" font-weight="bold" padding="10px 0">
+        <mj-text align="center" color="#4d342e" font-size="20px" font-weight="bold" padding="10px 0" font-family="Arial, sans-serif">
           How Was Your Experience?
         </mj-text>
-        <mj-text align="center" color="#4d342e" font-size="16px">
+        <mj-text align="center" color="#4d342e" font-size="16px" font-family="Arial, sans-serif">
           Your feedback helps us grow and inspires us to keep delivering self-care solutions you’ll truly love. If you have a moment, please leave us a review about your shopping and delivery experience!
         </mj-text>
-        <mj-button align="center" background-color="#ffe6a7" color="#3e2723" font-size="16px" border-radius="12px" font-weight="bold" href="https://yourreviewlink.com" padding="20px 0">
+        <mj-button align="center" background-color="#ffe6a7" color="#3e2723" font-size="16px" border-radius="12px" font-weight="bold" href="https://yourreviewlink.com" padding="20px 0" font-family="Arial, sans-serif">
           Share Your Feedback
         </mj-button>
       </mj-column>
@@ -76,10 +74,10 @@
     <!-- Benefits/Social Proof Section -->
     <mj-section background-color="#ffffff" padding="15px 15px">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#4d342e" font-size="18px" font-weight="bold" padding="10px 0">
+        <mj-text align="center" color="#4d342e" font-size="18px" font-weight="bold" padding="10px 0" font-family="Arial, sans-serif">
           Why Your Voice Matters
         </mj-text>
-        <mj-text align="left" color="#333333" font-size="15px" line-height="1.6">
+        <mj-text align="left" color="#333333" font-size="15px" line-height="1.6" font-family="Arial, sans-serif">
           <ul style="padding-left:15px;">
             <li>⭐ Guide new customers to make informed choices.</li>
             <li>⭐ Help us improve our products and customer service.</li>
@@ -96,7 +94,7 @@
         <mj-image align="center" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1747161894/uploaded-by-ai/a-beautifully-composed-image-showcasing-natural-ingredients-.jpg" width="200px" alt="Natural Ingredients" border-radius="7px"></mj-image>
       </mj-column>
       <mj-column background-color="transparent" padding="20px 15px" width="50%" vertical-align="middle">
-        <mj-text align="center" color="#4d342e" font-size="14px">
+        <mj-text align="center" color="#4d342e" font-size="14px" font-family="Arial, sans-serif">
           If you have any questions or need tips for your skincare routine, our friendly team is always here to help. We love being part of your daily self-care!<br/><br/>
           Your choice means the world to us—every review and message helps us grow and create what matters most to you. Thank you for supporting our skincare community!
         </mj-text>
@@ -106,17 +104,17 @@
     <!-- Social Section -->
     <mj-section background-color="#fdfcdc" padding="10px 0px">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#6d4c41" font-size="14px">
+        <mj-text align="center" color="#6d4c41" font-size="14px" font-family="Arial, sans-serif">
           Join our skin-positive community for tips, sneak peeks, and exclusive offers:
         </mj-text>
-        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal">
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://tiktok.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://pinterest.com"></mj-social-element>
+        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal" font-family="Arial, sans-serif">
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://tiktok.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://pinterest.com" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
       </mj-column>
     </mj-section>
@@ -124,11 +122,11 @@
     <!-- Footer -->
     <mj-section background-color="#ffe6a7" padding="10px 15px">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#4d342e" font-size="12px">
+        <mj-text align="center" color="#4d342e" font-size="12px" font-family="Arial, sans-serif">
           You are receiving this email because you recently shopped with us.<br>
           Need help? Reach us at <a href="mailto:support@yourskincare.com" style="color:#4d342e;text-decoration:underline;">support@yourskincare.com</a>
         </mj-text>
-        <mj-text align="center" color="#bfa278" font-size="11px" padding="5px 0 0 0">
+        <mj-text align="center" color="#bfa278" font-size="11px" padding="5px 0 0 0" font-family="Arial, sans-serif">
           &copy; 2024 Your Skincare Brand. All rights reserved.
         </mj-text>
       </mj-column>

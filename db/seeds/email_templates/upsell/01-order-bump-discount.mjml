@@ -37,9 +37,7 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Nunito Sans, Arial, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Header with Logo -->
@@ -127,11 +125,11 @@
     <!-- Footer -->
     <mj-section background-color="#d7e8dd" padding="25px 15px">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
-        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal" padding="0">
-          <mj-social-element href="https://instagram.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://facebook.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://twitter.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://youtube.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/youtube-round-outlined.png"></mj-social-element>
+        <mj-social align="center" font-size="15px" icon-size="30px" mode="horizontal" padding="0" font-family="Nunito Sans, Arial, sans-serif">
+          <mj-social-element href="https://instagram.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" font-family="Nunito Sans, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://facebook.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" font-family="Nunito Sans, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://twitter.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" font-family="Nunito Sans, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://youtube.com/" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/youtube-round-outlined.png" font-family="Nunito Sans, Arial, sans-serif"></mj-social-element>
         </mj-social>
         <mj-text align="center" color="#1B4332" font-family="Nunito Sans, Arial, sans-serif" font-size="12px" padding="12px 0 0 0">
           © 2024 Your Brand. All rights reserved.<br />

@@ -37,9 +37,7 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Quicksand, Arial, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Header : logo centré -->
@@ -51,9 +49,7 @@
     <!-- Bloc visuel principal avec illustration vectorielle sur mesure -->
     <mj-section background-color="#FDF4EF" padding="0 0 0 0">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
-        <mj-image align="center" alt="Minimal Outline Megaphone Flat Vector — Announcement" padding="0 0 10px 0"
-          src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761163016/uploaded-by-ai/a-visually-striking-and-modern-flat-vector-illu_ai_generated.jpg"
-          width="320px"></mj-image>
+        <mj-image align="center" alt="Minimal Outline Megaphone Flat Vector — Announcement" padding="0 0 10px 0" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761163016/uploaded-by-ai/a-visually-striking-and-modern-flat-vector-illu_ai_generated.jpg" width="320px"></mj-image>
       </mj-column>
     </mj-section>
     <!-- Message principal -->
@@ -91,11 +87,11 @@
           ou
           <a href="mailto:support@havenly.com" style="color:#FDC500; text-decoration:underline;">écrire à notre équipe</a>
         </mj-text>
-        <mj-social align="center" font-size="15px" icon-size="28px" mode="horizontal" padding="0 0 12px 0">
-          <mj-social-element href="https://facebook.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://twitter.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://instagram.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://pinterest.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png"></mj-social-element>
+        <mj-social align="center" font-size="15px" icon-size="28px" mode="horizontal" padding="0 0 12px 0" font-family="Quicksand, Arial, sans-serif">
+          <mj-social-element href="https://facebook.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" font-family="Quicksand, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://twitter.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" font-family="Quicksand, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://instagram.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" font-family="Quicksand, Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://pinterest.com/havenly" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" font-family="Quicksand, Arial, sans-serif"></mj-social-element>
         </mj-social>
         <mj-text align="center" color="#B2927A" font-family="Arial, sans-serif" font-size="12px" line-height="1.8" padding="2px 0 0 0">
           © 2024 Havenly, Inc. All rights reserved.<br>

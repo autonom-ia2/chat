@@ -52,28 +52,26 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- HEADER: Logo + Product Hero -->
     <mj-section background-color="#b22234" padding="24px 0 0 0">
       <mj-column width="100%" background-color="transparent" padding="0px 0px 0px 0px">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761312132/uploaded-by-ai/image-1761312132471-bs1pc4o_user_uploaded.png" alt="Cherry Cacao Logo" width="70px" align="center" padding="0px 0px 12px 0px"/>
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761311971/uploaded-by-ai/a-beautiful-glass-bottle-of-cherry-cacao-drink-_ai_generated.jpg" alt="Cherry Cacao Bottle" width="180px" border-radius="24px" align="center" padding="0px 0px 12px 0px"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761312132/uploaded-by-ai/image-1761312132471-bs1pc4o_user_uploaded.png" alt="Cherry Cacao Logo" width="70px" align="center" padding="0px 0px 12px 0px"></mj-image>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761311971/uploaded-by-ai/a-beautiful-glass-bottle-of-cherry-cacao-drink-_ai_generated.jpg" alt="Cherry Cacao Bottle" width="180px" border-radius="24px" align="center" padding="0px 0px 12px 0px"></mj-image>
       </mj-column>
     </mj-section>
     <!-- MAIN CONTENT BLOCK -->
     <mj-section background-color="#b22234" padding="0px 0px 0px 0px">
       <mj-column width="100%" background-color="transparent" padding="0px 32px 0px 32px">
-        <mj-text align="center" font-size="30px" font-weight="bold" color="#fff5ec" padding="10px 0 12px 0" line-height="1.15" letter-spacing="1px">
+        <mj-text align="center" font-size="30px" font-weight="bold" color="#fff5ec" padding="10px 0 12px 0" line-height="1.15" letter-spacing="1px" font-family="Arial, sans-serif">
           Meet the newest member<br/>of our family,<br/>Cherry Cacao.
         </mj-text>
         <mj-text align="center" font-size="18px" color="#ffe3d9" font-family="Georgia,serif" line-height="1.55" padding="0 0 7px 0"> 
           A nostalgic summer taste, using perfectly brewed Fair Trade green tea. Bright notes of cherry and hibiscus on the front, with a lingering finish of cacao.
         </mj-text>
-        <mj-text align="center" font-size="16px" color="#ffc3bb" line-height="1.6" font-style="italic" padding="0 0 18px 0">
+        <mj-text align="center" font-size="16px" color="#ffc3bb" line-height="1.6" font-style="italic" padding="0 0 18px 0" font-family="Arial, sans-serif">
           No sugars or added sweeteners.
         </mj-text>
       </mj-column>
@@ -89,23 +87,23 @@
     <!-- BLACK FOOTER WITH WHITE ICONS -->
     <mj-section background-color="#111111" padding="30px 0px 16px 0px">
       <mj-column width="100%" background-color="transparent" padding="0 28px 0 28px">
-        <mj-text align="center" font-size="13px" color="#fff5ec" padding="0 0 4px 0">
+        <mj-text align="center" font-size="13px" color="#fff5ec" padding="0 0 4px 0" font-family="Arial, sans-serif">
           &copy; 2024 Summer Brew Co.<br/>123 Summer Street, Your City, XX 12345
         </mj-text>
-        <mj-text align="center" font-size="13px" color="#fff5ec" padding="4px 0">
+        <mj-text align="center" font-size="13px" color="#fff5ec" padding="4px 0" font-family="Arial, sans-serif">
           Prefer fewer updates? <a href="#" style="color:#d54c4c; text-decoration: underline;">Snooze our emails for 2 weeks</a>
         </mj-text>
-        <mj-text align="center" font-size="13px" color="#fff5ec" padding="4px 0 14px 0">
+        <mj-text align="center" font-size="13px" color="#fff5ec" padding="4px 0 14px 0" font-family="Arial, sans-serif">
           Don’t want to hear from us anymore? <a href="{{ unsubscribe_url }}" style="color:#fff5ec; text-decoration: underline;">Unsubscribe</a>
         </mj-text>
-        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center" padding="8px 0 0 0">
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" background-color="#111111" href="https://youtube.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" background-color="#111111" href="https://twitter.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" background-color="#111111" href="https://linkedin.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" background-color="#111111" href="https://instagram.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" background-color="#111111" href="https://facebook.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" background-color="#111111" href="https://tiktok.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" background-color="#111111" href="https://pinterest.com"></mj-social-element>
+        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center" padding="8px 0 0 0" font-family="Arial, sans-serif">
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" background-color="#111111" href="https://youtube.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" background-color="#111111" href="https://twitter.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" background-color="#111111" href="https://linkedin.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" background-color="#111111" href="https://instagram.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" background-color="#111111" href="https://facebook.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" background-color="#111111" href="https://tiktok.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" background-color="#111111" href="https://pinterest.com" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
       </mj-column>
     </mj-section>

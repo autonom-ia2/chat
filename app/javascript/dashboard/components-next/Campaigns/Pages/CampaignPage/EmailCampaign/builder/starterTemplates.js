@@ -56,7 +56,7 @@ export const starterTemplates = [
   <mj-body background-color="#f4f4f4">
     <mj-section background-color="#ffffff" padding="24px">
       <mj-column>
-        <mj-image src="${placeholderImage(180, 48, 'Logo')}" alt="Autonomia" width="180px" padding="0 0 16px"/>
+        <mj-image src="${placeholderImage(180, 48, 'Logo')}" alt="Logo da empresa" width="180px" padding="0 0 16px"/>
         <mj-text font-size="22px" font-weight="bold" color="#1f2937" padding="0 0 8px">Olá {{ nome }},</mj-text>
         <mj-text font-size="15px" color="#6b7280" line-height="1.6" padding="0">Estas são as novidades do mês. Boa leitura!</mj-text>
       </mj-column>

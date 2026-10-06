@@ -46,7 +46,8 @@ module EmailCampaigns
         videos = resolve_video_assets
         enrich_image_src!
         {
-          instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos, base_mjml: @base_mjml),
+          instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos,
+                                               base_mjml: @base_mjml, brand: @account.name),
           input: build_input(videos)
         }
       end
