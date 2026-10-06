@@ -280,4 +280,32 @@ describe('Campanha page (PRD §6.1, M1–M2)', () => {
     expect(wrapper.text()).toContain('Nova campanha');
     wrapper.unmount();
   });
+
+  it('pt_BR: the date says what it is — "Começou em" for a send under way (#990)', async () => {
+    const started = 1_790_000_000;
+    const { wrapper } = mountPage({
+      locale: 'pt_BR',
+      inboxes: [{ channel_type: 'Channel::Sms' }],
+      campaigns: [
+        {
+          id: 9,
+          title: 'Parcela',
+          campaign_type: 'one_off',
+          scheduled_at: 0,
+          started_at: started,
+          inbox: { name: 'SMS', channel_type: 'Channel::Sms' },
+        },
+      ],
+    });
+    await flushPromises();
+
+    const row = wrapper.find('[data-row="sms-9"]');
+    const date = new Date(started * 1000).toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+    expect(row.text()).toContain(`Começou em ${date}`);
+    expect(row.text()).not.toContain('Sem data');
+    wrapper.unmount();
+  });
 });

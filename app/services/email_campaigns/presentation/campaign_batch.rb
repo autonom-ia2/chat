@@ -25,8 +25,12 @@ class EmailCampaigns::Presentation::CampaignBatch
   end
 
   def historical_sent(campaign)
-    @historical_sent ||= email_campaign_recipients.where.not(sent_at: nil).group(:email_campaign_id).count
-    @historical_sent.fetch(campaign.id, 0)
+    sent_history.dig(campaign.id, :count) || 0
+  end
+
+  # When the first e-mail went out (#990); read with the sent count, in the same query.
+  def first_sent_at(campaign)
+    sent_history.dig(campaign.id, :first_sent_at)
   end
 
   def issues_count(campaign)
@@ -52,5 +56,13 @@ class EmailCampaigns::Presentation::CampaignBatch
     @unresolved_ids ||= EmailCampaigns::PreflightDecision.new(config: config).unresolved(self)
                                                          .where.not(id: @state.protected_ids).distinct.pluck(:email_campaign_id).to_set
     @unresolved_ids.include?(campaign.id)
+  end
+
+  private
+
+  def sent_history
+    @sent_history ||= email_campaign_recipients.where.not(sent_at: nil).group(:email_campaign_id)
+                                               .pluck(:email_campaign_id, Arel.sql('COUNT(*)'), Arel.sql('MIN(sent_at)'))
+                                               .to_h { |id, count, first| [id, { count: count, first_sent_at: first }] }
   end
 end

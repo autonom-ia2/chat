@@ -8,6 +8,7 @@ class EmailCampaigns::Presentation::Campaign
 
   def call(campaign)
     preflight = EmailCampaigns::Presentation::Hygiene.new(campaign, actor: @actor, batch: @batch).call
-    { preflight: preflight, protection: @protection.call(campaign: campaign, preflight: preflight) }
+    { preflight: preflight, protection: @protection.call(campaign: campaign, preflight: preflight),
+      started_at: @batch ? @batch.first_sent_at(campaign) : campaign.first_sent_at }
   end
 end

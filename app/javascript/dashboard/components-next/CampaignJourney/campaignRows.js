@@ -41,12 +41,50 @@ const WHATSAPP_API_STATUS = {
   failed: JOURNEY_STATUSES.FAILED,
 };
 
+// What the date of a row means (#990). The list shows it as "Agendada para", "Começou em",
+// "Enviada em" or "Criada em".
+export const WHEN_KINDS = {
+  SCHEDULED: 'scheduled',
+  STARTED: 'started',
+  SENT: 'sent',
+  CREATED: 'created',
+};
+
 const toTime = value => {
   if (!value) return null;
   // Chatwoot campaigns send unix seconds; the fork modules send ISO strings.
   if (typeof value === 'number') return value * 1000;
   const time = new Date(value).getTime();
   return Number.isNaN(time) ? null : time;
+};
+
+// The most meaningful date for the status (#990). A campaign sent right away has no scheduled
+// date, and the end date only exists once every message went out, so a paused or running send
+// is dated by its first message. A draft shows when it was created; a scheduled one, when it
+// will go (and nothing else, so "Próximo envio" never shows a creation date).
+const rowDate = (status, { scheduled, started, finished, created }) => {
+  const at = (time, kind) => (time ? { when: time, whenKind: kind } : null);
+  const none = { when: null, whenKind: null };
+  if (status === JOURNEY_STATUSES.DRAFT)
+    return at(created, WHEN_KINDS.CREATED) || none;
+  if (status === JOURNEY_STATUSES.SCHEDULED)
+    return at(scheduled, WHEN_KINDS.SCHEDULED) || none;
+  if (status === JOURNEY_STATUSES.COMPLETED) {
+    const sent = at(started || finished, WHEN_KINDS.SENT);
+    if (sent) return sent;
+  }
+  return (
+    at(started, WHEN_KINDS.STARTED) ||
+    at(finished, WHEN_KINDS.SENT) ||
+    at(scheduled, WHEN_KINDS.SCHEDULED) ||
+    at(created, WHEN_KINDS.CREATED) ||
+    none
+  );
+};
+
+const datedRow = (row, dates) => {
+  const date = rowDate(row.status, dates);
+  return { ...row, ...date, sortTime: date.when || dates.created };
 };
 
 const chatwootChannel = campaign => {
@@ -97,50 +135,68 @@ const CHATWOOT_ROUTES = {
 const fromChatwootCampaign = campaign => {
   const channel = chatwootChannel(campaign);
   if (!channel) return null;
-  return {
-    key: `${channel}-${campaign.id}`,
-    channel,
-    name: campaign.title,
-    detail: campaign.inbox?.name || '',
-    status: chatwootStatus(campaign, channel),
-    when: toTime(campaign.scheduled_at),
-    sortTime: toTime(campaign.scheduled_at) || toTime(campaign.created_at),
-    sent: null,
-    total: null,
-    route: CHATWOOT_ROUTES[channel](campaign),
-  };
+  return datedRow(
+    {
+      key: `${channel}-${campaign.id}`,
+      channel,
+      name: campaign.title,
+      detail: campaign.inbox?.name || '',
+      status: chatwootStatus(campaign, channel),
+      sent: null,
+      total: null,
+      route: CHATWOOT_ROUTES[channel](campaign),
+    },
+    {
+      scheduled: toTime(campaign.scheduled_at),
+      started: toTime(campaign.started_at),
+      finished: toTime(campaign.completed_at),
+      created: toTime(campaign.created_at),
+    }
+  );
 };
 
-const fromWhatsappApiCampaign = campaign => ({
-  key: `${CAMPAIGN_CHANNELS.WHATSAPP_API}-${campaign.id}`,
-  channel: CAMPAIGN_CHANNELS.WHATSAPP_API,
-  name: campaign.title,
-  detail: campaign.inbox?.name || '',
-  status: WHATSAPP_API_STATUS[campaign.status] || JOURNEY_STATUSES.FAILED,
-  when: toTime(campaign.scheduled_at),
-  sortTime: toTime(campaign.scheduled_at) || toTime(campaign.created_at),
-  sent: campaign.sent_count ?? null,
-  total: campaign.recipients_count ?? null,
-  route: resultRoute(CAMPAIGN_CHANNELS.WHATSAPP_API, campaign.id),
-});
+const fromWhatsappApiCampaign = campaign =>
+  datedRow(
+    {
+      key: `${CAMPAIGN_CHANNELS.WHATSAPP_API}-${campaign.id}`,
+      channel: CAMPAIGN_CHANNELS.WHATSAPP_API,
+      name: campaign.title,
+      detail: campaign.inbox?.name || '',
+      status: WHATSAPP_API_STATUS[campaign.status] || JOURNEY_STATUSES.FAILED,
+      sent: campaign.sent_count ?? null,
+      total: campaign.recipients_count ?? null,
+      route: resultRoute(CAMPAIGN_CHANNELS.WHATSAPP_API, campaign.id),
+    },
+    {
+      scheduled: toTime(campaign.scheduled_at),
+      started: toTime(campaign.started_at),
+      finished: toTime(campaign.completed_at),
+      created: toTime(campaign.created_at),
+    }
+  );
 
-const fromEmailCampaign = campaign => {
-  const when = toTime(campaign.sent_at) || toTime(campaign.scheduled_at);
-  return {
-    key: `${CAMPAIGN_CHANNELS.EMAIL}-${campaign.id}`,
-    channel: CAMPAIGN_CHANNELS.EMAIL,
-    name: campaign.name,
-    detail: campaign.from_email || campaign.sender_domain || '',
-    status: EMAIL_STATUS[campaign.status] || JOURNEY_STATUSES.FAILED,
-    when,
-    sortTime: when || toTime(campaign.updated_at),
-    sent: campaign.sent_count ?? null,
-    total: campaign.recipients_count ?? null,
-    route: resultRoute(CAMPAIGN_CHANNELS.EMAIL, campaign.id),
-    // The e-mail actions of the row (L8, #1007) read the campaign itself.
-    source: campaign,
-  };
-};
+// `sent_at` of an e-mail campaign marks the END of the send; `started_at` is its first e-mail.
+const fromEmailCampaign = campaign =>
+  datedRow(
+    {
+      key: `${CAMPAIGN_CHANNELS.EMAIL}-${campaign.id}`,
+      channel: CAMPAIGN_CHANNELS.EMAIL,
+      name: campaign.name,
+      detail: campaign.from_email || campaign.sender_domain || '',
+      status: EMAIL_STATUS[campaign.status] || JOURNEY_STATUSES.FAILED,
+      sent: campaign.sent_count ?? null,
+      total: campaign.recipients_count ?? null,
+      route: resultRoute(CAMPAIGN_CHANNELS.EMAIL, campaign.id),
+      // The e-mail actions of the row (L8, #1007) read the campaign itself.
+      source: campaign,
+    },
+    {
+      scheduled: toTime(campaign.scheduled_at),
+      started: toTime(campaign.started_at),
+      finished: toTime(campaign.sent_at),
+      created: toTime(campaign.created_at),
+    }
+  );
 
 /**
  * Rows of the "Campanha" list, newest first (drafts without date go last).

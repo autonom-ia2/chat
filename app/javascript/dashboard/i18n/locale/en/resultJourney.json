@@ -13,7 +13,8 @@
       "TEMPLATE": "template {name}",
       "SENT_ON": "sent on {date}",
       "SCHEDULED_FOR": "scheduled for {date}",
-      "AUDIENCE": "audience {name}"
+      "AUDIENCE": "audience {name}",
+      "STARTED_ON": "started on {date}"
     },
     "KPI": {
       "LABEL": "Campaign numbers",
@@ -134,6 +135,71 @@
       "EMPTY": "No campaign sent in this period.",
       "FOOTER": "The detail of each campaign (chart, clicks per link, people, sending health) is in its Result.",
       "OPEN_ARIA": "Open the result of {name}"
+    },
+    "CLICKS": {
+      "OPEN_ARIA": "Open {url} in a new tab"
+    },
+    "EMAIL_HEALTH": {
+      "NEXT": {
+        "RESUME": "If the numbers look right, click Resume sending.",
+        "REEVALUATE": "Click Re-evaluate to check again.",
+        "RECHECK": "Check the addresses again in the block below.",
+        "PROBLEMS": "Open the problem list to see who failed."
+      },
+      "REEVALUATE": "Re-evaluate",
+      "SHOW_DETAILS": "See details",
+      "HIDE_DETAILS": "Hide details",
+      "HYGIENE_TITLE": "People not sent yet",
+      "HYGIENE_TEXT": "We check each address before sending."
+    },
+    "EMAIL_PEOPLE": {
+      "TITLE": "Recipients",
+      "EXPORT": "Export list",
+      "STATUS_FILTER": "Status",
+      "PROBLEM_FILTER": "Kind of problem",
+      "ALL": "All statuses",
+      "ALL_PROBLEMS": "All problems",
+      "PERSON": "Person",
+      "STATUS": "Status",
+      "OPENS": "Opens",
+      "CLICKS": "Clicks",
+      "OPENS_CLICKS": "Opens {opens} · Clicks {clicks}",
+      "SENT_AT": "Sent on",
+      "NOT_SENT": "Not sent yet",
+      "LAST_ACTIVITY": "Last activity",
+      "NO_ACTIVITY": "None yet",
+      "ADDRESS_CHECK": "Address check",
+      "ADDRESS": {
+        "VALID": "Valid address",
+        "INVALID": "Invalid address",
+        "REVIEW": "Needs a review",
+        "UNKNOWN": "Could not check",
+        "UNCHECKED": "Not checked yet"
+      },
+      "RETRIES": "New tries",
+      "RETRIES_NONE": "None",
+      "RETRIES_COUNT": "{count} time | {count} times",
+      "REASON": "Reason",
+      "FULL_STATUS": "Full status",
+      "DETAILS_ARIA": "Details of {email}",
+      "PILL": {
+        "PENDING": "In line",
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "OPENED": "Opened",
+        "CLICKED": "Clicked",
+        "TEMPORARY": "Temporary failure",
+        "NOT_DELIVERED": "Not delivered",
+        "NONEXISTENT": "Address does not exist",
+        "FAILED": "Failed",
+        "COMPLAINED": "Marked as spam",
+        "INVALID": "Invalid address",
+        "REVIEW": "Review address",
+        "BLOCKED": "Blocked",
+        "UNSUBSCRIBED": "Left the list",
+        "PROBLEM": "With a problem",
+        "UNKNOWN": "No information"
+      }
     }
   }
 }

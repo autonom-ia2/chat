@@ -13,7 +13,8 @@
       "TEMPLATE": "modelo {name}",
       "SENT_ON": "enviada em {date}",
       "SCHEDULED_FOR": "agendada para {date}",
-      "AUDIENCE": "público {name}"
+      "AUDIENCE": "público {name}",
+      "STARTED_ON": "começou em {date}"
     },
     "KPI": {
       "LABEL": "Números da campanha",
@@ -134,6 +135,71 @@
       "EMPTY": "Nenhuma campanha enviada neste período.",
       "FOOTER": "O detalhe de cada campanha (gráfico, cliques por link, pessoas, saúde do envio) fica no Resultado dela.",
       "OPEN_ARIA": "Abrir o resultado de {name}"
+    },
+    "CLICKS": {
+      "OPEN_ARIA": "Abrir {url} em nova aba"
+    },
+    "EMAIL_HEALTH": {
+      "NEXT": {
+        "RESUME": "Se os números estiverem bons, clique em Retomar envio.",
+        "REEVALUATE": "Clique em Reavaliar para conferir de novo.",
+        "RECHECK": "Verifique os endereços de novo no bloco abaixo.",
+        "PROBLEMS": "Abra a lista de problemas para ver quem falhou."
+      },
+      "REEVALUATE": "Reavaliar",
+      "SHOW_DETAILS": "Ver detalhes",
+      "HIDE_DETAILS": "Esconder detalhes",
+      "HYGIENE_TITLE": "Quem ainda não recebeu",
+      "HYGIENE_TEXT": "Conferimos cada endereço antes de enviar."
+    },
+    "EMAIL_PEOPLE": {
+      "TITLE": "Destinatários",
+      "EXPORT": "Exportar lista",
+      "STATUS_FILTER": "Situação",
+      "PROBLEM_FILTER": "Tipo de problema",
+      "ALL": "Todas as situações",
+      "ALL_PROBLEMS": "Todos os problemas",
+      "PERSON": "Pessoa",
+      "STATUS": "Situação",
+      "OPENS": "Aberturas",
+      "CLICKS": "Cliques",
+      "OPENS_CLICKS": "Aberturas {opens} · Cliques {clicks}",
+      "SENT_AT": "Enviado em",
+      "NOT_SENT": "Ainda não enviado",
+      "LAST_ACTIVITY": "Última atividade",
+      "NO_ACTIVITY": "Nenhuma ainda",
+      "ADDRESS_CHECK": "Verificação do endereço",
+      "ADDRESS": {
+        "VALID": "Endereço válido",
+        "INVALID": "Endereço inválido",
+        "REVIEW": "Precisa de revisão",
+        "UNKNOWN": "Não deu para verificar",
+        "UNCHECKED": "Ainda não verificado"
+      },
+      "RETRIES": "Novas tentativas",
+      "RETRIES_NONE": "Nenhuma",
+      "RETRIES_COUNT": "{count} vez | {count} vezes",
+      "REASON": "Motivo",
+      "FULL_STATUS": "Situação completa",
+      "DETAILS_ARIA": "Detalhes de {email}",
+      "PILL": {
+        "PENDING": "Na fila",
+        "SENT": "Enviado",
+        "DELIVERED": "Entregue",
+        "OPENED": "Abriu",
+        "CLICKED": "Clicou",
+        "TEMPORARY": "Falha temporária",
+        "NOT_DELIVERED": "Não entregue",
+        "NONEXISTENT": "Endereço não existe",
+        "FAILED": "Falhou",
+        "COMPLAINED": "Marcou como spam",
+        "INVALID": "Endereço inválido",
+        "REVIEW": "Revisar endereço",
+        "BLOCKED": "Bloqueado",
+        "UNSUBSCRIBED": "Saiu da lista",
+        "PROBLEM": "Com problema",
+        "UNKNOWN": "Sem informação"
+      }
     }
   }
 }

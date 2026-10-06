@@ -58,6 +58,12 @@
       "WHEN": "Quando",
       "ALWAYS": "Sempre",
       "NO_DATE": "Sem data",
+      "WHEN_AT": {
+        "SCHEDULED": "Agendada para {date}",
+        "STARTED": "Começou em {date}",
+        "SENT": "Enviada em {date}",
+        "CREATED": "Criada em {date}"
+      },
       "SENT_OF": "{sent} de {total} enviadas",
       "OPEN": "Abrir",
       "OPEN_ARIA": "Abrir a campanha {name}"
