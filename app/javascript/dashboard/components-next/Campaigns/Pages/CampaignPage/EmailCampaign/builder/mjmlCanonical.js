@@ -245,10 +245,11 @@ const parseXml = skeleton => {
       `<${ROOT}>${skeleton}</${ROOT}>`,
       'application/xml'
     );
-    if (doc.getElementsByTagName('parsererror').length) return null;
-    return doc.documentElement;
-  } catch {
-    return null;
+    const errors = doc.getElementsByTagName('parsererror');
+    if (errors.length) return { error: errors[0].textContent.trim() };
+    return { root: doc.documentElement };
+  } catch (e) {
+    return { error: e.message };
   }
 };
 
@@ -256,11 +257,11 @@ export const canonicalizeMjml = (mjml = '') => {
   if (!mjml) return mjml || '';
   const nonce = Math.random().toString(36).slice(2);
   const { skeleton, slots } = cutEndingContent(mjml, nonce);
-  const root = parseXml(normalizeEntities(skeleton));
+  const { root, error } = parseXml(normalizeEntities(skeleton));
   if (!root) {
     // eslint-disable-next-line no-console
     console.warn(
-      '[mjmlCanonical] MJML is not well-formed; loading it unchanged'
+      `[mjmlCanonical] MJML is not well-formed; loading it unchanged: ${error}`
     );
     return mjml;
   }

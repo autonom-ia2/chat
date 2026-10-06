@@ -42,6 +42,13 @@ export const restoreHeldHead = (mjml, held) => {
   const inHead = afterOpenTag(mjml, 'mj-head');
   if (inHead > 0) return mjml.slice(0, inHead) + held + mjml.slice(inHead);
   const inRoot = afterOpenTag(mjml, 'mjml');
-  if (inRoot <= 0) return mjml;
-  return `${mjml.slice(0, inRoot)}<mj-head>${held}</mj-head>${mjml.slice(inRoot)}`;
+  if (inRoot > 0) {
+    return `${mjml.slice(0, inRoot)}<mj-head>${held}</mj-head>${mjml.slice(inRoot)}`;
+  }
+  // No <mjml> root (empty or partial export): never drop the title/preview silently.
+  // eslint-disable-next-line no-console
+  console.error(
+    '[editorMjml] export has no <mjml> root; wrapping it to keep <mj-title>/<mj-preview>'
+  );
+  return `<mjml><mj-head>${held}</mj-head>${mjml}</mjml>`;
 };

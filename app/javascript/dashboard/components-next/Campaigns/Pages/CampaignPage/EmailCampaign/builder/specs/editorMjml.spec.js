@@ -75,4 +75,17 @@ describe('editorMjml', () => {
     expect(html).toContain('<title>Titulo</title>');
     expect(html).toContain('Previa da caixa');
   }, 30000);
+  it('keeps the held title and preview when the export has no <mjml> root', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = restoreHeldHead(
+      '<mj-body></mj-body>',
+      '<mj-title>Titulo</mj-title>'
+    );
+
+    expect(out).toBe(
+      '<mjml><mj-head><mj-title>Titulo</mj-title></mj-head><mj-body></mj-body></mjml>'
+    );
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });
