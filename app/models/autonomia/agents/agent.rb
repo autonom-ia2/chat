@@ -41,6 +41,13 @@ module Autonomia
     class Agent < ApplicationRecord
       self.table_name = 'autonomia_agents'
 
+      scope :kept, -> { where(deleted_at: nil) }
+      belongs_to :deleted_by, class_name: 'User', optional: true
+
+      def deleted?
+        deleted_at.present?
+      end
+
       include Avatarable
 
       belongs_to :account
@@ -232,10 +239,14 @@ module Autonomia
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
           # cada "Ajustar com IA".
-          merged = attrs.dup
-          merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
-          update!(merged)
-          true
+          with_lock do
+            next false if deleted?
+
+            merged = attrs.dup
+            merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
+            update!(merged)
+            true
+          end
         end
       end
 
@@ -250,7 +261,7 @@ module Autonomia
       # Agent não tem callbacks → update_all é seguro. Retorna true se ganhou a escrita.
       def refresh_instruction!(new_instruction, expected_instruction:)
         recusar_se_instrucao_mantida!
-        rows = self.class.where(id: id, mode: self.class.modes[:guided], instruction: expected_instruction)
+        rows = self.class.kept.where(id: id, mode: self.class.modes[:guided], instruction: expected_instruction)
                    .update_all(instruction: new_instruction, updated_at: Time.current)
         reload if rows.positive?
         rows.positive?
@@ -263,7 +274,7 @@ module Autonomia
       # PanelTune que ocorra entre o reload e o write). Agent não tem callbacks → update_all é seguro.
       def bump_knowledge_refresh_token!
         token = SecureRandom.hex(8)
-        self.class.where(id: id).update_all(
+        self.class.kept.where(id: id).update_all(
           ['config = jsonb_set(COALESCE(config, \'{}\'::jsonb), \'{knowledge_refresh_token}\', ?::jsonb, true), updated_at = ?',
            token.to_json, Time.current]
         )
@@ -309,7 +320,7 @@ module Autonomia
 
       # Mesmo predicado de Operate.authorized_agent_inbox e do InboxConnector#connect!.
       def operating?
-        enabled? && active?
+        !deleted? && enabled? && active?
       end
 
       private
@@ -323,11 +334,11 @@ module Autonomia
       end
 
       def sync_mirror_bots
-        agent_inboxes.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
+        agent_inboxes.kept.find_each { |agent_inbox| agent_inbox.sync_mirror!(operating: operating?) }
       end
 
       def release_bot_conversations
-        agent_inboxes.find_each(&:release_bot_conversations!)
+        agent_inboxes.kept.find_each(&:release_bot_conversations!)
       end
 
       # O modo manual é o que expõe a coluna no jbuilder e a aceita pela API; um agente de instrução

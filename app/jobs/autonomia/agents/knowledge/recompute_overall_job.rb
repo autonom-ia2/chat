@@ -9,7 +9,7 @@ module Autonomia
         queue_as :low
 
         def perform(agent_id)
-          agent = Autonomia::Agents::Agent.find_by(id: agent_id)
+          agent = Autonomia::Agents::Agent.kept.find_by(id: agent_id)
           return if agent.blank?
 
           Reviewer.recompute_overall!(agent)

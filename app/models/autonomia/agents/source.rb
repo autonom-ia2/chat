@@ -42,6 +42,8 @@ module Autonomia
     class Source < ApplicationRecord
       self.table_name = 'autonomia_agent_sources'
 
+      scope :for_kept_agents, -> { joins(:agent).merge(Autonomia::Agents::Agent.kept) }
+
       # Arquivo enviado (pdf/xlsx/docx/json/txt/md). Em fontes do tipo `link` não há anexo.
       # O controller faz file.attach(...) e os Processors leem via @source.file.
       has_one_attached :file

@@ -28,6 +28,6 @@ class Autonomia::Agents::Faq::SuggestJob < ApplicationJob
                                          .order(created_at: :desc).first
     return event.agent if event&.agent
 
-    Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)&.agent
+    Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)&.agent
   end
 end

@@ -9,7 +9,7 @@ module Autonomia
         queue_as :medium
 
         def perform(source_id, token)
-          source = Autonomia::Agents::Source.find_by(id: source_id)
+          source = Autonomia::Agents::Source.for_kept_agents.find_by(id: source_id)
           return if source.blank? || !active?(source, token)
 
           count = Ingestor.new(source: source, token: token).perform

@@ -87,7 +87,7 @@ module Autonomia
         # TENANCY FAIL-CLOSED na LEITURA: escopa o vínculo pela conta da conversa e exige agente da
         # MESMA conta. Vínculo legado/corrompido cross-tenant nunca fundamenta rascunho com KB alheia —
         # mismatch cai no draft genérico (como "sem agente").
-        agent = Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id,
+        agent = Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: conversation.inbox_id,
                                                       account_id: conversation.account_id)&.agent
         usable_copilot_agent?(agent) ? agent : nil
       end

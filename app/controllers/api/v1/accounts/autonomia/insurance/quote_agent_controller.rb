@@ -40,7 +40,7 @@ class Api::V1::Accounts::Autonomia::Insurance::QuoteAgentController <
   private
 
   def agente_existente
-    ::Autonomia::Agents::Agent.find_by(account: Current.account, agent_type: 'insurance_quote')
+    ::Autonomia::Agents::Agent.kept.find_by(account: Current.account, agent_type: 'insurance_quote')
   end
 
   def builder

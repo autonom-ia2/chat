@@ -680,6 +680,10 @@ module Autonomia
         # instruction alheia (adjust_context) e ESCREVER config alheia (apply_builder_config!). Aborta
         # ANTES de qualquer chamada de IA/escrita, marcando failed com telemetria — nunca cross-tenant.
         return abort_cross_account_agent!(token) unless thread_agent_same_account?
+        if @thread.agent&.deleted?
+          @thread.mark_failed!(token, 'agent_deleted')
+          return nil
+        end
 
         result = client.create(
           model: Autonomia::Agents::Config::BUILDER_MODEL,
@@ -1392,6 +1396,7 @@ module Autonomia
       def ensure_agent(token)
         @thread.with_lock do
           return nil unless @thread.processing? && @thread.build_token == token
+          return nil if @thread.agent&.deleted?
           return @thread.agent if @thread.agent.present?
 
           # V2.1 — semeia atuação + base no rascunho já na criação (state-first via builder_actuation,

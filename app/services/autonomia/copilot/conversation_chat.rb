@@ -83,7 +83,7 @@ module Autonomia
       def resolve_agent
         return nil if @agent_id.blank?
 
-        Autonomia::Agents::Agent
+        Autonomia::Agents::Agent.kept
           .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
           .where.not(instruction: [nil, ''])
           .where("config->>'system_key' IS NULL") # nunca rodar um agente de sistema (Guia) pelo copiloto

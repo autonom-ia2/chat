@@ -145,8 +145,8 @@ class Onboarding::Progress
   def agente_ia_publicado?
     return false unless defined?(Autonomia::Agents::Agent)
 
-    agentes = Autonomia::Agents::Agent.where(account_id: @account.id, status: :active).select(:id)
-    Autonomia::Agents::AgentInbox.where(account_id: @account.id, autonomia_agent_id: agentes).where.not(inbox_id: nil).exists?
+    agentes = Autonomia::Agents::Agent.kept.where(account_id: @account.id, status: :active).select(:id)
+    Autonomia::Agents::AgentInbox.kept.where(account_id: @account.id, autonomia_agent_id: agentes).where.not(inbox_id: nil).exists?
   end
 
   # Passo 7: campanha de WhatsApp ou de e-mail criada.

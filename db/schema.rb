@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -417,10 +417,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
     t.bigint "agent_bot_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
     t.index ["account_id"], name: "index_autonomia_agent_inboxes_on_account_id"
     t.index ["agent_bot_id"], name: "index_autonomia_agent_inboxes_on_agent_bot_id"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_inboxes_on_autonomia_agent_id"
-    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_inbox_uniq", unique: true
+    t.index ["inbox_id"], name: "idx_autonomia_agent_inboxes_on_live_inbox_uniq", unique: true, where: "(deleted_at IS NULL)"
   end
 
   create_table "autonomia_agent_instruction_versions", force: :cascade do |t|
@@ -573,11 +574,15 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "actuation", default: 0, null: false
+    t.datetime "deleted_at"
+    t.bigint "deleted_by_id"
     t.index ["account_id", "actuation"], name: "idx_autonomia_agents_account_actuation"
     t.index ["account_id", "agent_type"], name: "index_autonomia_agents_on_account_id_and_agent_type"
+    t.index ["account_id", "deleted_at"], name: "index_autonomia_agents_on_account_id_and_deleted_at"
     t.index ["account_id", "status"], name: "index_autonomia_agents_on_account_id_and_status"
     t.index ["account_id"], name: "index_autonomia_agents_on_account_id"
     t.index ["created_by_id"], name: "index_autonomia_agents_on_created_by_id"
+    t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
   end
 
   create_table "autonomia_decisor_decisoes", force: :cascade do |t|
@@ -3448,6 +3453,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_160000) do
   add_foreign_key "autonomia_agent_tools", "autonomia_agents", on_delete: :cascade
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
+  add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "automation_rules", on_delete: :nullify
   add_foreign_key "autonomia_decisor_decisoes", "autonomia_decisores", column: "decisor_id", on_delete: :cascade

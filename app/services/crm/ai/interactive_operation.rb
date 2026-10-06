@@ -135,7 +135,7 @@ class Crm::Ai::InteractiveOperation
   end
 
   def agent
-    @agent ||= Autonomia::Agents::Agent.where(account: @account).where("config->>'system_key' IS NULL").find(@inputs.fetch(:agent_id))
+    @agent ||= Autonomia::Agents::Agent.kept.where(account: @account).where("config->>'system_key' IS NULL").find(@inputs.fetch(:agent_id))
   end
 
   def playground_result

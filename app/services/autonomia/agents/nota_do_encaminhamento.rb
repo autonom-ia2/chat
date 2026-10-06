@@ -47,7 +47,7 @@ class Autonomia::Agents::NotaDoEncaminhamento
   end
 
   def self.criar(conversation, texto)
-    agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)
+    agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)
     Messages::MessageBuilder.new(
       nil, conversation,
       ActionController::Parameters.new(
