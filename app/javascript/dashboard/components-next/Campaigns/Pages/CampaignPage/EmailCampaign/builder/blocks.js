@@ -36,7 +36,9 @@ const CAT_ESTRUTURA = 'Estrutura';
 
 // URL de assistir do vídeo (placeholder editável) e poster com play já composto
 // (variante simples §2.2 das amendments — email-safe, sem <video>/iframe).
-const VIDEO_WATCH_URL = 'https://autonomia.site';
+// Link de exemplo neutro: a pessoa troca pelo do próprio site no painel de propriedades.
+const EXAMPLE_URL = 'https://seusite.com.br';
+const VIDEO_WATCH_URL = EXAMPLE_URL;
 
 // Rodapé legal — mj-section travada pelo F1 via css-class="footer-locked"
 // (E11). `{{ unsubscribe_url }}` é literal Liquid resolvido no envio.
@@ -97,7 +99,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="16px 24px">
   <mj-column>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="https://autonomia.site">Ver detalhes</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}">Ver detalhes</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -126,7 +128,7 @@ const BLOCKS = [
     <mj-image src="${placeholderImage(600, 240, 'Imagem hero 600x240')}" alt="Imagem de destaque" padding="0"/>
     <mj-text font-size="28px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="24px 24px 8px">Título principal da campanha</mj-text>
     <mj-text font-size="16px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 32px 16px">Uma frase curta de apoio explicando a proposta de valor.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="https://autonomia.site" padding="8px 0 32px">Quero saber mais</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}" padding="8px 0 32px">Quero saber mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -142,7 +144,7 @@ const BLOCKS = [
     <mj-text font-size="14px" color="#dbeafe" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
     <mj-text font-size="32px" font-weight="bold" color="#ffffff" align="center" padding="0 0 8px">A partir de R$ 99/mês</mj-text>
     <mj-text font-size="15px" color="#dbeafe" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
-    <mj-button background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="https://autonomia.site">Garantir oferta</mj-button>
+    <mj-button background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="${EXAMPLE_URL}">Garantir oferta</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -231,7 +233,7 @@ const BLOCKS = [
   <mj-column width="60%" vertical-align="middle">
     <mj-text font-size="18px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 8px">Título da seção</mj-text>
     <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Texto de apoio ao lado da imagem. Explique um detalhe do produto ou serviço em poucas linhas.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="https://autonomia.site" align="left" padding="0">Saiba mais</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="${EXAMPLE_URL}" align="left" padding="0">Saiba mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -261,7 +263,7 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="32px 24px">
   <mj-column>
     <mj-text font-size="22px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 0 16px">Pronto para dar o próximo passo?</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="https://autonomia.site">Fale com a gente</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="${EXAMPLE_URL}">Fale com a gente</mj-button>
   </mj-column>
 </mj-section>`,
   },
