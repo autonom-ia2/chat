@@ -34,6 +34,9 @@ class BrandKit < ApplicationRecord
     raise ArchivedError if archived?
 
     transaction do
+      # Serializa trocas de padrão da mesma conta: sem a trava, duas chamadas simultâneas
+      # desmarcam o padrão atual e a segunda bate no índice único (500 em vez de vencer a última).
+      Account.where(id: account_id).lock.pick(:id)
       self.class.where(account_id: account_id, is_default: true).where.not(id: id).find_each { |kit| kit.update!(is_default: false) }
       update!(is_default: true)
     end
