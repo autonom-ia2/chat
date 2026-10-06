@@ -156,6 +156,7 @@
     }
   },
   "CRM_KANBAN": {
+    "STAGE_CHIP_OPEN": "Abrir no CRM: {etapa}",
     "ZOOM": {
       "PERCENT": "{value}%",
       "TITLE": "Zoom do Kanban",

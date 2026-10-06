@@ -777,4 +777,18 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(stages.first['cards'].pluck('id')).to eq([older_first_stage_card.id])
     expect(stages.flat_map { |stage_payload| stage_payload['cards'] }.pluck('id')).not_to include(other_stage_card.id)
   end
+
+  # Conta 16 (06/10/2026): o selo "Email Comercial · Novo" na lista de conversas passa a abrir o card no
+  # CRM; para isso ele precisa do id do card, além de funil e etapa.
+  it 'devolve o id do card no selo de etapa das conversas' do
+    account, user = create_account_and_user
+    pipeline, stage = create_crm_pipeline(account: account, user: user)
+    conversation = create(:conversation, account: account)
+    card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', conversation_id: conversation.id)
+
+    get "/api/v1/accounts/#{account.id}/crm/conversations/card_stages",
+        params: { conversation_ids: [conversation.display_id] }, headers: auth_headers(user)
+
+    expect(response.parsed_body.dig('payload', conversation.display_id.to_s)).to include('card_id' => card.id)
+  end
 end
