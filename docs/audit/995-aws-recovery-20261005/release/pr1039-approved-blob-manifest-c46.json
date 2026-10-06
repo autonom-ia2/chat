@@ -1,0 +1,140 @@
+{
+  "utc": "2026-10-05T23:17:13.028Z",
+  "approved_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+  "matching_local_review_gate": "pr1039-reviewed-source-gate-c46.json and pr1039-approved-source-manifest-c46.json (22 paths; local GitHub blob correspondence verified at22:47:56)",
+  "files": [
+    {
+      "path": ".github/workflows/deploy-autonomia-blue-green.yml",
+      "status": "modified",
+      "source_git_blob_sha": "f9bc172b10b1c0a174c6fa6aa8386977bb3facdb",
+      "previous_filename": null
+    },
+    {
+      "path": ".github/workflows/deploy-hub2you-blue-green.yml",
+      "status": "modified",
+      "source_git_blob_sha": "a7df453a79e230ab689d8dd2ee66af19912f48d7",
+      "previous_filename": null
+    },
+    {
+      "path": ".github/workflows/instagram-tester-onboarding.yml",
+      "status": "modified",
+      "source_git_blob_sha": "b05ef6a7072c5bd7aac9c2c7bdcbd7d0235a878b",
+      "previous_filename": null
+    },
+    {
+      "path": "docs/audit/995-aws-service-identity-preflight-20261005.md",
+      "status": "modified",
+      "source_git_blob_sha": "865dfbb68050f5e8412aa4b8ef9d7931a5a2b4ad",
+      "previous_filename": null
+    },
+    {
+      "path": "docs/audit/995-release-resume-and-terminal-request-20261005.md",
+      "status": "modified",
+      "source_git_blob_sha": "154d2c240b1b08fbb74d27fc5034b0ea78f13f21",
+      "previous_filename": null
+    },
+    {
+      "path": "docs/audit/995-vps-dependency-block-20261005.md",
+      "status": "modified",
+      "source_git_blob_sha": "cb5b893456203844c8aa7e82b144bd8563caf1c4",
+      "previous_filename": null
+    },
+    {
+      "path": "docs/audit/995-vps-runtime-operations-20261005.md",
+      "status": "added",
+      "source_git_blob_sha": "863c657dcd8626e90c6ed64b655fc237d989ca74",
+      "previous_filename": null
+    },
+    {
+      "path": "docs/runbooks/instagram-vps-runtime-995.md",
+      "status": "modified",
+      "source_git_blob_sha": "8b5a1e122450eaf790ca0722efdc1b50bc7b2c17",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/entrypoint.mjs",
+      "status": "added",
+      "source_git_blob_sha": "965fb1d639fb8d4206ee534d18d598acca864054",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/operator-waiter.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "bf27a941d74ebae2469cc7c75e3f09c8fc774002",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/publisher-tunnel.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "d153a2b03e5dd49c4c307144f7ecc6a7b5d10582",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/gateway.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "1549f6682f76aef5d1245605cda015e31297f745",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/install/install.py",
+      "status": "modified",
+      "source_git_blob_sha": "59dbc46a8428989fdad6406acab346ea11069f04",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/publisher-broker.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "719d0285fb99685d72488782becd6c9826065aca",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/publisher-client.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "275acaf33bad212d0a7523debc06bcaaab5b2d44",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/session-browser.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "4ad0d0d3c297b9004c4a0e4040bf0477801149de",
+      "previous_filename": null
+    },
+    {
+      "path": "scripts/instagram_testers/session-manager.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "d94345870e64761dac727a64dc4b86fa67b4e7a2",
+      "previous_filename": null
+    },
+    {
+      "path": "spec/services/conversations/unread_counts/store_spec.rb",
+      "status": "modified",
+      "source_git_blob_sha": "3914b1a03522dbecd8bae807900fe7f940fc5247",
+      "previous_filename": null
+    },
+    {
+      "path": "tests/instagram_testers/operator-env-allowlist_test.py",
+      "status": "added",
+      "source_git_blob_sha": "879784d3876606d944bc13854df120ffd6f17ab1",
+      "previous_filename": null
+    },
+    {
+      "path": "tests/instagram_testers/runtime-entrypoint.test.mjs",
+      "status": "added",
+      "source_git_blob_sha": "8308a98ce25913ca48c0552358cf3095693efae7",
+      "previous_filename": null
+    },
+    {
+      "path": "tests/instagram_testers/vps-infra_test.py",
+      "status": "modified",
+      "source_git_blob_sha": "ae122c2ba52ad8b1c164dc789ca8a659be695ed5",
+      "previous_filename": null
+    },
+    {
+      "path": "tests/instagram_testers/vps-linux-smoke.mjs",
+      "status": "modified",
+      "source_git_blob_sha": "78f3b716fb5b5e37dff1e1b07ed0f9b5d7700dc0",
+      "previous_filename": null
+    }
+  ],
+  "source_branch_frozen_by_root": true
+}

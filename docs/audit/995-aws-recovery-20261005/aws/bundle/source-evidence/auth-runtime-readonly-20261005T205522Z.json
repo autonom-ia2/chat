@@ -1,0 +1,107 @@
+{
+  "schema": "auth-runtime-readonly-v1",
+  "utc": "2026-10-05T20:55:22.448066+00:00",
+  "read_only": true,
+  "AWS_calls": 0,
+  "sessions_created": 0,
+  "results": {
+    "hub2you": {
+      "websocket": {
+        "path": "/usr/lib/python3/dist-packages/websocket/__init__.py",
+        "sha256": "4b7e3c9f4d60403941ba139cde63fa7c68043cf1f6655955a07961c38684f05d",
+        "bytes": 801,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket_version": "1.7.0",
+      "websocket._abnf": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_abnf.py",
+        "sha256": "e8a0a70adfd252ed56bface1e0126a36ca308e5a9e780ac41f7a60b81401248a",
+        "bytes": 14333,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._core": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_core.py",
+        "sha256": "79334775fff7339752d79be5aa2cdec8f40956a68037e6fb00a3926a14f94773",
+        "bytes": 20819,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._handshake": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_handshake.py",
+        "sha256": "f4378e7bc4ebf46ea274c72f35f118e25e3a86e4f37a883313eeab21596e8541",
+        "bytes": 6508,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._socket": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_socket.py",
+        "sha256": "93027d7438e5ce22ff0a97e02112bd72bb1bd1c9112153db9750e48074f00677",
+        "bytes": 5043,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "plugin": {
+        "path": "/usr/local/bin/session-manager-plugin",
+        "resolved": "/usr/local/sessionmanagerplugin/bin/session-manager-plugin",
+        "sha256": "f6002be08e5c57dc97eb9a0ef819d54f4c9a4a724c5818cec7d4baeaadfe4cbd",
+        "version": "1.2.835.0",
+        "bytes": 10536704,
+        "owner": 0,
+        "mode": "0o755"
+      },
+      "uid": 995,
+      "python": "/usr/bin/python3"
+    },
+    "autonomia": {
+      "websocket": {
+        "path": "/usr/lib/python3/dist-packages/websocket/__init__.py",
+        "sha256": "4b7e3c9f4d60403941ba139cde63fa7c68043cf1f6655955a07961c38684f05d",
+        "bytes": 801,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket_version": "1.7.0",
+      "websocket._abnf": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_abnf.py",
+        "sha256": "e8a0a70adfd252ed56bface1e0126a36ca308e5a9e780ac41f7a60b81401248a",
+        "bytes": 14333,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._core": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_core.py",
+        "sha256": "79334775fff7339752d79be5aa2cdec8f40956a68037e6fb00a3926a14f94773",
+        "bytes": 20819,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._handshake": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_handshake.py",
+        "sha256": "f4378e7bc4ebf46ea274c72f35f118e25e3a86e4f37a883313eeab21596e8541",
+        "bytes": 6508,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "websocket._socket": {
+        "path": "/usr/lib/python3/dist-packages/websocket/_socket.py",
+        "sha256": "93027d7438e5ce22ff0a97e02112bd72bb1bd1c9112153db9750e48074f00677",
+        "bytes": 5043,
+        "owner": 0,
+        "mode": "0o644"
+      },
+      "plugin": {
+        "path": "/usr/local/bin/session-manager-plugin",
+        "resolved": "/usr/local/sessionmanagerplugin/bin/session-manager-plugin",
+        "sha256": "f6002be08e5c57dc97eb9a0ef819d54f4c9a4a724c5818cec7d4baeaadfe4cbd",
+        "version": "1.2.835.0",
+        "bytes": 10536704,
+        "owner": 0,
+        "mode": "0o755"
+      },
+      "uid": 992,
+      "python": "/usr/bin/python3"
+    }
+  }
+}

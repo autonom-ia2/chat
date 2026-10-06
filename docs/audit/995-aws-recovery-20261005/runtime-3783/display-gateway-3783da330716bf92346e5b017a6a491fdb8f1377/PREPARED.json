@@ -1,0 +1,31 @@
+{
+  "status": "PREPARED_CLOUD_ONLY_NOT_EXECUTED",
+  "prepared_utc": "2026-10-05T23:22:31.655542+00:00",
+  "source_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "merge_evidence_reported_by_coordinator": {
+    "pr": 1039,
+    "merged_at": "2026-10-05T23:18:33Z",
+    "approved_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+    "queue_test_run": 37386874571,
+    "queue_tests_finished_at": "2026-10-05T23:18:15Z"
+  },
+  "original_hashes": {
+    "display-gateway.py": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+    "display-gateway-remote.py": "4a1f436b3aff0fb5cf08232f03913c1b8c3a97709f7c8d762576e103f60361d8"
+  },
+  "candidate_hashes": {
+    "display-gateway.py": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+    "display-gateway-remote.py": "22cc71edbeaa5c689177c541f91bd2163fa8799f3a3f8c1fe473140f346a4de1"
+  },
+  "patch_sha256": "08308c908fc3cfb197a6261d8e0701e641cbf42b96667e204abf257820a567e0",
+  "wrapper_byte_identical": true,
+  "only_remote_sha_constant_changed": true,
+  "functions_and_classes_unchanged": true,
+  "original_directory_preserved": true,
+  "mac_readback_completed": false,
+  "package_created": false,
+  "vps_phase_executed": false,
+  "tests_repeated": false,
+  "future_mac_directory": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/runtime/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377",
+  "blocker": "Mac Terminal/Filesystem Session terminated 32600; coordinator suspended probes. Package and Mac reconciliation remain pending."
+}

@@ -1,0 +1,41 @@
+{
+  "reviewed_at": "2026-10-05T22:44:00Z",
+  "reviewer": "independent_audit",
+  "decision": "APPROVED_EXPANDED_PUBLIC_SNAPSHOT_PLAN_SCOPE_NO_BLOCKERS",
+  "documents": {
+    "https/recovery-source-plan-v2.md": "5184877dc3e3117ea6eba1f3bd3f4d0898377fd62c52ea5d97572e3d6f644c38",
+    "https/recovery-source-allowlist-v2.json": "18326e1844d21b6f86b755134128b64724d2bf9c95dc44cd8daeb36620a1cd0c"
+  },
+  "scope": "Read plan and explicit complete mapping; correlate included approved source hashes with prior reviews. No source snapshot, Git edit, broad file scan, private-state read, rerun or operational execution.",
+  "counts": {
+    "required": 51,
+    "optional": 3,
+    "total": 54
+  },
+  "prior_V1_entries_retained_same_hashes": true,
+  "path_mapping_verified": {
+    "relative_paths_only": true,
+    "no_parent_traversal": true,
+    "unique_entries": true,
+    "restore_exact_original_base": true,
+    "snapshot_prefix_only": true,
+    "permission_modes_explicit": true
+  },
+  "rationale": [
+    "Minimum closure is a cold public source copy plus hash/size/mode manifest and restoration map. It does not require refactoring parameters/imports/state or new runtime fixtures.",
+    "Old fe0 remains the pinned B0/discovery reader in release/cutover; 8e9 Mac reader and its contract/helpers remain in sibling cutover-mac-argv. Both depths and consumers' pins are preserved.",
+    "Producer9337, observerbdd3, remote helpers, B0e130 and DG4a1f reader dependency correlate with independently reviewed final adoption. Historical DG reader is explicitly not the future activation executor.",
+    "Upgrade retains the old manifest in its required parent. Raw-file and canonical-JSON hashes are distinguished.",
+    "Overlay includes the approved32ec writer and ../vps-env helper/public env-plan, not the obsolete principal-target writer. The public plan does not prove current SSM values or readiness.",
+    "Operational journals, intents, private backups, keys, tokens and CA state remain excluded and protected in their existing locations. No automatic restoration overwrite or execution is implied.",
+    "Two offline result JSONs are explicitly evidence only; the optional Mac patch is not an execution recipe. Existing final test sources are preserved without rerunning them.",
+    "AWS and future DG are explicit pending additions; no invented final hashes or new dependency gate."
+  ],
+  "limits": [
+    "Individual54-file hashes/modes are inventory evidence from the owner; this focal review did not reread all54 files. Recheck the named bytes when taking the actual snapshot.",
+    "Plans preserve historical wording with explicit current interpretation; that history does not create a new nominal Tailnet-group or physical power-off requirement.",
+    "Restoring cold source bytes requires later state reconciliation; this plan approval makes no runtime, HTTPS, acceptance, merge or deployment claim."
+  ],
+  "prior_review": "https-recovery-source-plan-review.json",
+  "findings": []
+}

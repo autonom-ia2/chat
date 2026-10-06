@@ -1,0 +1,290 @@
+{
+  "utc": "2026-10-05T23:08:49.247Z",
+  "source_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+  "state": "all_source_head_checks_success",
+  "ci": {
+    "count": 26,
+    "expected_unique_names": 26,
+    "required": [
+      "RSpec",
+      "Vitest",
+      "trava",
+      "central",
+      "fork-i18n"
+    ],
+    "checks": [
+      {
+        "id": 112020560298,
+        "name": "RSpec",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112020560298",
+        "completed_at": "2026-10-05T23:04:46Z"
+      },
+      {
+        "id": 112014228053,
+        "name": "Email UI, locales, build and isolated browser",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384435118/job/112014228053",
+        "completed_at": "2026-10-05T22:55:17Z"
+      },
+      {
+        "id": 112014227938,
+        "name": "Email backend and bounded regression",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384435118/job/112014227938",
+        "completed_at": "2026-10-05T22:51:12Z"
+      },
+      {
+        "id": 112014216020,
+        "name": "RSpec (0/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014216020",
+        "completed_at": "2026-10-05T22:58:59Z"
+      },
+      {
+        "id": 112014215991,
+        "name": "RSpec (3/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215991",
+        "completed_at": "2026-10-05T22:52:12Z"
+      },
+      {
+        "id": 112014215958,
+        "name": "RSpec (2/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215958",
+        "completed_at": "2026-10-05T23:04:41Z"
+      },
+      {
+        "id": 112014215952,
+        "name": "RSpec (1/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215952",
+        "completed_at": "2026-10-05T22:53:32Z"
+      },
+      {
+        "id": 112014215937,
+        "name": "RSpec (7/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215937",
+        "completed_at": "2026-10-05T22:51:24Z"
+      },
+      {
+        "id": 112014215901,
+        "name": "RSpec (6/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215901",
+        "completed_at": "2026-10-05T22:52:51Z"
+      },
+      {
+        "id": 112014215892,
+        "name": "RSpec (5/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215892",
+        "completed_at": "2026-10-05T22:53:02Z"
+      },
+      {
+        "id": 112014215860,
+        "name": "RSpec (4/8)",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014215860",
+        "completed_at": "2026-10-05T22:52:09Z"
+      },
+      {
+        "id": 112014131557,
+        "name": "trava",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434019/job/112014131557",
+        "completed_at": "2026-10-05T22:45:51Z"
+      },
+      {
+        "id": 112014131251,
+        "name": "central",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434019/job/112014131251",
+        "completed_at": "2026-10-05T22:45:51Z"
+      },
+      {
+        "id": 112014099284,
+        "name": "Detect feature scope",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384435118/job/112014099284",
+        "completed_at": "2026-10-05T22:45:24Z"
+      },
+      {
+        "id": 112014097160,
+        "name": "Rubocop",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014097160",
+        "completed_at": "2026-10-05T22:46:57Z"
+      },
+      {
+        "id": 112014097079,
+        "name": "Vitest",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014097079",
+        "completed_at": "2026-10-05T22:50:47Z"
+      },
+      {
+        "id": 112014096976,
+        "name": "Brakeman e bundle-audit",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014096976",
+        "completed_at": "2026-10-05T22:45:48Z"
+      },
+      {
+        "id": 112014096921,
+        "name": "RSpec - plano",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014096921",
+        "completed_at": "2026-10-05T22:45:22Z"
+      },
+      {
+        "id": 112014096606,
+        "name": "ESLint",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384434040/job/112014096606",
+        "completed_at": "2026-10-05T22:46:34Z"
+      },
+      {
+        "id": 112014096083,
+        "name": "Python session preparer",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433893/job/112014096083",
+        "completed_at": "2026-10-05T22:45:17Z"
+      },
+      {
+        "id": 112014096077,
+        "name": "Vitest Instagram onboarding",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433893/job/112014096077",
+        "completed_at": "2026-10-05T22:45:48Z"
+      },
+      {
+        "id": 112014096063,
+        "name": "VPS Linux Chrome and private VNC",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433893/job/112014096063",
+        "completed_at": "2026-10-05T22:45:56Z"
+      },
+      {
+        "id": 112014096061,
+        "name": "Component browser QA",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433893/job/112014096061",
+        "completed_at": "2026-10-05T22:53:33Z"
+      },
+      {
+        "id": 112014095801,
+        "name": "Node synthetic contracts",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433893/job/112014095801",
+        "completed_at": "2026-10-05T22:49:36Z"
+      },
+      {
+        "id": 112014095521,
+        "name": "fork-i18n",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433966/job/112014095521",
+        "completed_at": "2026-10-05T22:45:36Z"
+      },
+      {
+        "id": 112014095418,
+        "name": "Instagram real Redis and PostgreSQL isolation",
+        "head_sha": "c46cf166438b64626d45125450ec2ed4826915aa",
+        "status": "completed",
+        "conclusion": "success",
+        "app_id": 15368,
+        "details_url": "https://github.com/autonom-ia2/chat/actions/runs/37384433702/job/112014095418",
+        "completed_at": "2026-10-05T22:46:15Z"
+      }
+    ]
+  },
+  "pr": {
+    "number": 1039,
+    "head": "c46cf166438b64626d45125450ec2ed4826915aa",
+    "state": "open",
+    "merged": false,
+    "merged_at": null,
+    "auto_merge": null,
+    "mergeable": true,
+    "mergeable_state": "clean"
+  },
+  "independent_source_gate": "pr1039-reviewed-source-gate-c46.json; 19 pinned sources, five independent reviews, root reconfirmed",
+  "merge_group_pass_not_yet_claimed": true
+}

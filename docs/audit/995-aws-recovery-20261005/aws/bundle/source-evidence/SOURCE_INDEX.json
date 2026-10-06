@@ -1,0 +1,79 @@
+{
+  "utc": "2026-10-05T20:56:42.801683+00:00",
+  "public_sources_only": true,
+  "executed_sources": false,
+  "results": [
+    {
+      "repo": "websocket-client/websocket-client",
+      "ref": "v1.7.0",
+      "source_path": "websocket/_abnf.py",
+      "status": "fetched",
+      "blob_sha1": "416ebc8ffc28d419d954d64074742b7986b46f8a",
+      "sha256": "e8a0a70adfd252ed56bface1e0126a36ca308e5a9e780ac41f7a60b81401248a",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/_abnf.py"
+    },
+    {
+      "repo": "websocket-client/websocket-client",
+      "ref": "v1.7.0",
+      "source_path": "websocket/_core.py",
+      "status": "fetched",
+      "blob_sha1": "f28ca4b917d6acab7ca0a151de281190e21fd0b3",
+      "sha256": "79334775fff7339752d79be5aa2cdec8f40956a68037e6fb00a3926a14f94773",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/_core.py"
+    },
+    {
+      "repo": "websocket-client/websocket-client",
+      "ref": "v1.7.0",
+      "source_path": "websocket/_handshake.py",
+      "status": "fetched",
+      "blob_sha1": "e63dc979314ee08d7ad95add85ce7f77db41a56e",
+      "sha256": "f4378e7bc4ebf46ea274c72f35f118e25e3a86e4f37a883313eeab21596e8541",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/_handshake.py"
+    },
+    {
+      "repo": "websocket-client/websocket-client",
+      "ref": "v1.7.0",
+      "source_path": "websocket/_socket.py",
+      "status": "fetched",
+      "blob_sha1": "f0ad27a5d47e4db80f96581b1ef8c853e9011da6",
+      "sha256": "93027d7438e5ce22ff0a97e02112bd72bb1bd1c9112153db9750e48074f00677",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/_socket.py"
+    },
+    {
+      "repo": "aws/session-manager-plugin",
+      "ref": "1.2.835.0",
+      "source_path": "VERSION",
+      "status": "fetched",
+      "blob_sha1": "fd76c7326625ef82d39024de8f952e6936047d45",
+      "sha256": "0e846841e3bd6835a4e49b391ed49886796ceb7e17f181d889afcae63c4eed4c",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/plugin-VERSION"
+    },
+    {
+      "repo": "aws/session-manager-plugin",
+      "ref": "1.2.835.0",
+      "source_path": "src/sessionmanagerplugin/session/sessionhandler.go",
+      "status": "fetched",
+      "blob_sha1": "7095f7d124c7cca45a8c4176053d60611fe5c3e7",
+      "sha256": "9986cc4a3615086ffe4b0086b19e3cf183840ad30a1f0efe6db52b192e31d378",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/plugin-sessionhandler.go"
+    },
+    {
+      "repo": "aws/session-manager-plugin",
+      "ref": "1.2.835.0",
+      "source_path": "src/sessionmanagerplugin/session/session.go",
+      "status": "fetched",
+      "blob_sha1": "e5a9e7f6f8975d5c9f89ca55eb5ac39253e8c370",
+      "sha256": "d59e0875ab1b63ac2601cbea8bc589205be00ba7f0507c2a858449cd099dee95",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/plugin-session.go"
+    },
+    {
+      "repo": "aws/session-manager-plugin",
+      "ref": "1.2.835.0",
+      "source_path": "src/communicator/websocketchannel.go",
+      "status": "fetched",
+      "blob_sha1": "dfac53edbdf04ecae2a3b16ff2615b3822bb284c",
+      "sha256": "153f4133007f7b4db7302638e182341fa01d2112256e915c3b27c8a1b829e289",
+      "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-source-evidence/plugin-websocket.go"
+    }
+  ]
+}

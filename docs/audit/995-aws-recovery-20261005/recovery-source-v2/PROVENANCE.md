@@ -1,0 +1,7 @@
+# Preparação do snapshot frio V2
+
+Este conjunto preserva a preparação já revisada de uma cópia fria dos **54 caminhos públicos nomeados** na allowlist V2: **51 obrigatórios e 3 opcionais**. Os três documentos governantes foram espelhados de leituras completas anteriores do Mac pelo coordenador e seus hashes exatos foram conferidos. O copiador foi preparado no cloud, teve a sintaxe conferida por AST e recebeu parecer independente sem bloqueadores; não foi executado.
+
+**Nesta execução houve zero cópias e zero escritas no Mac. O snapshot e seu manifesto real não foram criados por esta frente.** PREPARED.json registra os erros observados e distingue preparação de execução. Não se afirma ausência atual de um destino criado por outro processo. A autorização para a cópia permanece preservada; a execução aguarda a reconexão normal do Mac, a reconciliação do destino exato e a revalidação das fontes nomeadas. Um destino parcial não deve ser sobrescrito nem retomado automaticamente.
+
+Nenhuma fonte operacional foi importada ou executada, nenhuma suíte foi repetida e não houve sondagem adicional do Mac para produzir esta exportação. Fontes AWS finais e DG para o merge efetivo continuam conjuntos pendentes ou separados, com seus próprios mapas e limites. A preparação não contém backup de PKI, credenciais, perfis, journals ou estado operacional e não os reconstrói. Restaurar fontes não autoriza executar serviços ou operações reais.

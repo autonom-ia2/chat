@@ -54,11 +54,12 @@ RSpec.describe 'Campaign journey campaigns API (#1005)', :aggregate_failures, ty
   end
 
   it 'stores the scheduled time and the variable defaults' do
-    create_campaign(scheduled_at: '2026-10-06T12:00:00.000Z', variable_defaults: { '2' => 'em breve' })
+    scheduled_at = 1.day.from_now.change(usec: 0)
+    create_campaign(scheduled_at: scheduled_at.iso8601, variable_defaults: { '2' => 'em breve' })
 
     expect(response).to have_http_status(:ok)
     campaign = account.campaigns.find(response.parsed_body['id'])
-    expect(campaign.scheduled_at).to eq(Time.zone.parse('2026-10-06T12:00:00Z'))
+    expect(campaign.scheduled_at).to eq(scheduled_at)
     expect(CampaignAudienceLink.for_campaign(campaign).variable_defaults).to eq('2' => 'em breve')
   end
 

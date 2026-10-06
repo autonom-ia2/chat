@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "record_type": "independent_focal_public_AWS_A5_A6_bundle_review",
+  "reviewed_at": "2026-10-05 23:16:55 UTC",
+  "decision": "APPROVED_FOCAL_DOCUMENTARY_BUNDLE_NO_BLOCKERS",
+  "scope": "Revisão local de inventário, proveniência, limites documentais e ausência de material privado nos itens explícitos. Nenhuma suíte/importação de fonte, chamada Mac/AWS/SSH ou mutação Git.",
+  "archive": {
+    "path": "/workspace/scratch/810b2f03b507/aws-auth-a6-public-recovery-20261005.zip",
+    "sha256": "b427817751c5d5aa0d0bb653a541ab46fdacc2da4fda20955c2ed1b0040d78c4",
+    "bytes": 135473,
+    "expanded_path": "/workspace/scratch/810b2f03b507/aws-auth-a6-public-recovery-20261005",
+    "manifest_sha256": "8f2127f3fabbf8b96f5e1b33a368ef85675b254303bd3bb11c398d682f2ddc4e",
+    "manifest_entries": 44,
+    "files_including_manifest": 45,
+    "all_manifest_sizes_and_hashes_match": true,
+    "ZIP_members_match_expanded_bytes": true,
+    "no_unlisted_or_duplicate_members": true,
+    "all_members_regular": true
+  },
+  "findings": [],
+  "documentary_boundary": {
+    "kind": "Pacote documental AWS de fontes e evidências públicas selecionadas; separado do snapshot frio de fontes V2.",
+    "V2_allowlist_incorporated_or_modified": false,
+    "real_operational_receipts_in_AWS_bundle": 3,
+    "receipts_category": "live-a5/: promoção A5, C0 Hub e A Hub originais completos, classificados no manifesto como original_public_live_receipt.",
+    "V2_policy": "A allowlist V2 continua excluindo journals e recibos operacionais. A inclusão explícita em live-a5 deste pacote documental separado não altera essa fronteira.",
+    "full_infrastructure_or_PKI_backup": false,
+    "standalone_operational_restore": false,
+    "missing_dependency_explicit": "provision-identity.py 5280a18bc67ee5c2be881591415e1971fd0cc458d057ab06f01dfa49bedf7273 permanece no Mac e não está incluído.",
+    "custody_state_excluded": "Privada CA/Keychain, índices e seriais de emissão, estado PKI, chaves de clientes/SSH, envs, tokens, caches e binários não pertencem à seleção.",
+    "current_Git_consolidation_or_snapshot_V2_completed_not_claimed": true
+  },
+  "provenance": [
+    "MANIFEST.json registra caminho de origem cloud, categoria, tamanho e SHA de cada membro. Os 44 itens foram comparados aos bytes expandidos e aos membros ZIP, sem execução de código.",
+    "Hashes das seis fontes A5 e dos quatro módulos comuns A6 coincidem com as versões já revisadas. A6 altera helper para f8e3da74 e preflight para d78ce810; promotor 3e56e68d coincide com o parecer focal anterior.",
+    "Mac fixtures ficam em a6/mac-fixture e são descritos como leitura anterior recuperada, sem fingir coleta nova. O resultado JSON pode ser igual ao cloud por desenho; os logs são distintos. O parecer independente da projeção registra leitura Mac anterior, 8/8 e PID63047/exit0 informado pelo autor.",
+    "O HANDOFF foi preservado byte a byte como histórico. README, RESUME-CHECKPOINT e RECOVERY explicitam que sua antiga pendência de autorização foi superada pela decisão posterior do root, sem reescrever evidência antiga.",
+    "ACCESS-INCIDENT registra chamadas de leitura sem conteúdo/PID e a observação posterior do root de Session terminated às23:01:40. Não afirma ausência de arquivos ou saúde atual da VPS a partir do timeout.",
+    "SOURCE_INDEX e inventário público distinguem código recuperado da tag do plugin e binário instalado. A divergência de VERSION e o limite do endpoint guard permanecem explícitos; não se alega equivalência binária ou exclusão observada de renovação de token."
+  ],
+  "result_boundary": {
+    "last_proven_promoted_version": "A5",
+    "A5_receipt_sha256": "a3a38330dec414347954136b3e5f4bc058f1d8dca9685dc18e420decf08dad80",
+    "A5_C0_sha256": "f0e6fe67161dc0f23162ce110d2b30fbe6b8ceff58bce8d8c63769589c476f6d",
+    "A5_promotion_receipt_sha256": "97bf7e8ddf3b2b5d411399b5d2551e00340e22a9d3c2b6176670843f3c61ccb8",
+    "A5_interpretation": "Diagnóstico real concluído e cleanup histórico confirmado; recusa estrangeira inconclusiva. Close175/code1003/IDs textuais não viram PASS.",
+    "A5_last_proven_cleanup": "2026-10-05T22:34:33.466124+00:00",
+    "A6_state": "Revisada e autorizada condicionalmente pelo root; ainda não promovida e sem C0/A real.",
+    "A6_next_operation": "Apenas após retomada coordenada do controle normal e reconciliação, preservando a autorização já dada. Preflight, fontes/contexto e C0 novo compatível permanecem necessários.",
+    "no_implicit_Aut_retry_IAM_composer_or_cutover": true
+  },
+  "privacy_review": {
+    "explicit_selection_only": true,
+    "private_material_found": false,
+    "basis": [
+      "Inventário completo sem arquivos de chaves, env, estado CA, caches ou binários.",
+      "Fontes operacionais identificadas pelos hashes já revisados; novos documentos e evidências têm conteúdo público delimitado.",
+      "Varredura local dos 45 membros sem ocorrência dos padrões de PEM privado, access key AWS ou JWT completo; essa varredura complementa a leitura e a proveniência, não é prova universal isolada.",
+      "JSONs sem campos de valor secreto como TokenValue, StreamUrl, SecretAccessKey, sessão/token de credencial, cookie ou payload bruto. As seis ocorrências de payload_bytes no recibo C0 são somente inteiros de contagem limitada.",
+      "Recibos A5 completos conservam os hashes dos originais previamente revisados e a projeção sanitizada. Nenhum motivo bruto perdido da A5 foi reconstruído."
+    ],
+    "public_correlation_fields_retained": "Contas, ARNs, IDs públicos de sessões, fingerprints, hashes e caminhos permanecem para correlação; o pacote não é anonimizado."
+  },
+  "verification_performed": {
+    "source_or_test_execution": false,
+    "tests_rerun": 0,
+    "local_inventory_and_hash_reads": true,
+    "archive_extraction_or_modification": false,
+    "Mac_calls": 0,
+    "live_AWS_SSH_calls": 0,
+    "Git_mutations": false,
+    "review_persisted_in_cloud_only": true
+  },
+  "limitations": [
+    "Este parecer não revalida a infraestrutura durante a indisponibilidade do Mac nem autoriza contornar a pausa.",
+    "Abrir/restaurar o pacote não executa nem promove suas fontes. Não recupera a custódia privada da CA, o estado de emissão ou todas as dependências operacionais.",
+    "A comparação ZIP/manifesto comprova os bytes deste pacote; os relatos históricos Mac mantêm a proveniência declarada e não se tornam observações novas.",
+    "A aprovação documental não altera a classificação inconclusiva da A5 nem substitui o gate da futura execução A6."
+  ]
+}

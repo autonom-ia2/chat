@@ -1,0 +1,38 @@
+{
+  "utc": "2026-10-05T22:32:08.206701+00:00",
+  "state": "promoted_readback_exact",
+  "scope": "local A5 diagnostic source promotion only",
+  "auth_binding_released": false,
+  "module_sha256": {
+    "service-proof.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+    "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+    "provision-identity.py": "5280a18bc67ee5c2be881591415e1971fd0cc458d057ab06f01dfa49bedf7273"
+  },
+  "created": [
+    {
+      "target": "ssm_close_diagnostic.py",
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1"
+    }
+  ],
+  "promoted": [
+    {
+      "target": "auth_diagnostic.py",
+      "backup": "auth_diagnostic-reviewed-a4.py",
+      "previous_sha256": "f74f4678d82743b4a66c2f9b0bb7f0a610fc219911e29fd623f7abf597d580eb",
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f"
+    },
+    {
+      "target": "probe-client-from-mac.py",
+      "backup": "probe-client-from-mac-reviewed-a4.py",
+      "previous_sha256": "53f21eda95d3ddd44dfc13f34f0783dbcc8fc278270cc4c7aa3c489556a7a63b",
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8"
+    },
+    {
+      "target": "preflight-live-proofs.py",
+      "backup": "preflight-live-proofs-reviewed-a4.py",
+      "previous_sha256": "af4a3947cb5bb3b50975eba960d0c868d14cd6f70835c0f6693d9eea643cc259",
+      "sha256": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae"
+    }
+  ],
+  "finished_utc": "2026-10-05T22:32:08.209230+00:00"
+}

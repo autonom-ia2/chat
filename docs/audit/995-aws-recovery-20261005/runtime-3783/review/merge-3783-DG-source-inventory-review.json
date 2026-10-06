@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "record_type": "independent_focal_DG_repin_and_source_inventory_review",
+  "reviewed_at": "2026-10-05 23:34:20 UTC",
+  "decision": "APPROVED_CLOUD_REPIN_AND_NON_OPERATIONAL_INVENTORY_NO_BLOCKERS",
+  "source_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "source_tree": "4959339843ca4428f730415debeee9d95769984d",
+  "approved_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+  "findings": [],
+  "DG": {
+    "original_remote_sha256": "4a1f436b3aff0fb5cf08232f03913c1b8c3a97709f7c8d762576e103f60361d8",
+    "candidate_remote_sha256": "22cc71edbeaa5c689177c541f91bd2163fa8799f3a3f8c1fe473140f346a4de1",
+    "wrapper_sha256": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+    "patch_sha256": "08308c908fc3cfb197a6261d8e0701e641cbf42b96667e204abf257820a567e0",
+    "prepared_sha256": "717980aca43f274dd3865adb3951ef8aa0b54fc29987013e184abf3b8e79961d",
+    "wrapper_byte_identical": true,
+    "exact_delta": "Uma substituição da constante SHA: 4998091221c2a60ab8e7e6ee3316a6ceb0c0a0bc → 3783da330716bf92346e5b017a6a491fdb8f1377. Todos os demais bytes do remoto são idênticos.",
+    "originals_preserved_and_hashes_read": true,
+    "Mac_reconciled": false,
+    "executed": false
+  },
+  "inventory": {
+    "path": "runtime-1023-review/merge-3783-source-inventory/source-inventory.json",
+    "sha256": "25ee03c819e6289b8b197111f04992d337de00afc76dfe3ccd05f6ca02411ac5",
+    "files_canonical_sha256": "c5df697fbfdb884f6e728118efb75b32ac1cb3ea164d6c8a8941ec2560dafc8d",
+    "previous_manifest_canonical_sha256": "42b5f482bf1d15bb1ee6a300921f01ff7be39399be6a6827eb441df0fe7e2d38",
+    "frozen_packager_sha256": "8d619986a8f9f297da87b5c5ee3a9b3b945bb1306656901bacfa3a5ddf08a6b8",
+    "files": 41,
+    "unchanged": 32,
+    "modified": 8,
+    "added": 1,
+    "removed": 0,
+    "checked": [
+      "Seletor obtido por AST do packager de hash fixo; o conjunto de 41 paths corresponde às árvores recebidas, sem symlink ou modo inesperado.",
+      "Cadeia raiz/scripts/instagram_testers/runtime/vps correlacionada por SHA; todas as cinco respostas registram truncated=false.",
+      "Os 32 inalterados mantêm exatamente blob Git, modo, tamanho e SHA256 do manifesto anterior de digest fixo.",
+      "Os nove novos/modificados tiveram bytes UTF-8 relidos e hashes SHA1 do objeto Git completo, SHA256 e tamanho recomputados, todos exatos.",
+      "A lista de mudanças coincide com o compare anterior e com o inventário. O installer declara os mesmos oito scripts do packager, incluindo runtime/entrypoint.mjs.",
+      "O head aprovado c46 é parent direto nos metadados. O compare c46→3783 contém 72 paths e nenhum membro selecionado do pacote.",
+      "O digest canônico files foi recomputado e coincide com c5df697f."
+    ],
+    "provenance": "Metadados e blobs públicos previamente obtidos pelo autor na API GitHub, lidos localmente; nenhuma busca de rede nova por este revisor.",
+    "merge_time": "2026-10-05T23:18:33Z, informado pela frente release/coordenação",
+    "internal_commit_date": "2026-10-05T23:09:25Z, mantido distinto da hora de merge",
+    "operational_manifest": false,
+    "archive_created": false,
+    "archive_sha256": null,
+    "archive_bytes": null,
+    "Mac_reconciled": false,
+    "VPS_phase_executed": false
+  },
+  "evidence_sha256": {
+    "github_metadata": "92b80416404cc25031565091ba47c5c2597a509096e7556a714ce7e9feb474d7",
+    "changed_blobs_utf8": "6f215c73f7ba90ccaea8fb45e7613f3b05e425040b3fe23d5928e9ae2097f3a0",
+    "approved_head_comparison": "3b4fb58d3b476b136f4898781083468ed9ddaaffb79ef5531be8107f59c54f96",
+    "builder_source": "7894b487da4ab6ea5f0e783198f8db44cdc022c129bd866e24117b45e9d1ab66",
+    "handoff": "b2fb55a973b1f16d1abe18b15f1ab6aef7e7e1745c4f0c8c89cc3719d691b5e9"
+  },
+  "limits": [
+    "O builder foi lido, não executado; somente leitura estrutural e cálculo de hashes foram usados. Nenhuma fonte operacional ou suíte foi executada.",
+    "Este inventário não substitui o tar/manifesto produzido pelo packager Mac original. O resultado real deve ser reconciliado antes das fases de stage/install/verify-inactive e da ativação coordenada.",
+    "A aprovação documental não afirma runtime atualizado, display/gateway ativo, HTTPS validado ou produtores iniciados. Intents/recibos antigos permanecem preservados.",
+    "O export documental pode incluir candidatos, inventário, planos e parecer, sem incorporar os bytes de produto/árvores brutas ao novo conjunto. O limite de lote UTF-8 de 40 KiB não muda os bytes aprovados.",
+    "Nenhuma sondagem Mac, chamada SSH/AWS ou mutação Git foi feita por esta frente. A persistência Git cabe ao root."
+  ]
+}
