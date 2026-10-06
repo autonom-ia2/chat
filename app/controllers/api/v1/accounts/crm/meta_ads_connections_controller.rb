@@ -165,6 +165,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     ::Crm::MetaAdsConnection.public_payload_for(connection).merge(
       partner: ::Crm::MetaAds::Platform.public_payload,
       whatsapp_portfolio: setup.portfolio_ids.any?,
+      # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
+      client_portfolio_id: setup.portfolio_ids.first,
       sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? }
     )
   end

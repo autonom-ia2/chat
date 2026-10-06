@@ -51,7 +51,7 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
 
   def stub_partner_listing(rows, assigned: [])
     stub_graph("#{partner_business}/client_ad_accounts", { data: rows })
-    stub_graph(system_user, { assigned_ad_accounts: { data: assigned } })
+    stub_graph('me/adaccounts', { data: assigned })
   end
 
   def stub_reads(id = ad_account, owner: portfolio, token: platform_token, spend: '1720.40')
@@ -65,6 +65,20 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
     before do
       configure_platform
       with_whatsapp_portfolio
+    end
+
+    it 'recusa da Meta ao conferir o acesso vira erro na tela, nunca conta "ainda liberando", e vai para o log sem token' do
+      stub_graph("#{partner_business}/client_ad_accounts", { data: [account_row(ad_account, owner: portfolio)] })
+      stub_graph('me/adaccounts', { error: { code: 200, message: 'Permissions error' } }, status: 403)
+      logged = []
+      allow(Rails.logger).to receive(:warn) { |line| logged << line }
+
+      get "#{base}/ad_accounts", params: { mode: 'partner' }, headers: auth_headers(admin)
+
+      expect(response.parsed_body['error']).to eq('no_access')
+      line = logged.find { |text| text.start_with?('[MetaAdsGraph]') }
+      expect(line).to include('GET me/adaccounts', 'code=200', 'Permissions error')
+      expect(line).not_to include(platform_token)
     end
 
     it 'lista só contas do portfólio do WhatsApp desta conta, a com mais gasto recomendada' do

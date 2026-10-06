@@ -2143,7 +2143,10 @@
         "SAVED": "Conta conectada. Lemos o nome, o gasto e o Pixel.",
         "PIXEL_SUMMARY": "Vendas do site: {pixel}",
         "PIXEL_SUMMARY_NONE": "Vendas do site: sem código do site",
-        "PIXEL_CHANGE": "Alterar"
+        "PIXEL_CHANGE": "Alterar",
+        "VIA_PARTNER": "Lendo pela {partner}",
+        "VIA_TOKEN": "Lendo pela sua chave de acesso",
+        "SWITCH": "Trocar"
       },
       "DESTINATIONS": {
         "TITLE": "Para onde seus anúncios levam o cliente?",
@@ -2165,25 +2168,46 @@
         "SAVED": "Destinos salvos.",
         "PICK_ONE": "Marque pelo menos um destino.",
         "WHERE": "Onde colar na Meta?",
-        "WHERE_TEXT": "No Gerenciador de Anúncios, abra o anúncio › Rastreamento › Parâmetros de URL › cole o texto › Publicar."
+        "WHERE_TEXT": "No Gerenciador de Anúncios, abra o anúncio › Rastreamento › Parâmetros de URL › cole o texto › Publicar.",
+        "WHATSAPP_WHEN": "O botão do anúncio abre a conversa. Já funciona, não precisa configurar.",
+        "SITE_WHEN": "O anúncio abre uma página do seu site, e o botão dela abre o WhatsApp.",
+        "ART": {
+          "SPONSORED": "Patrocinado",
+          "SEND_MESSAGE": "Enviar mensagem",
+          "LEARN_MORE": "Saiba mais",
+          "SITE_BUTTON": "WhatsApp",
+          "CHAT_IN": "Oi! Vi o anúncio.",
+          "CHAT_OUT": "Oi! Como posso ajudar?"
+        }
       },
       "SUMMARY": {
-        "CONNECTED_TO": "Conectado a {account}",
         "PIXEL": "Código do site: {pixel}",
         "NO_PIXEL": "Sem código do site",
         "MODE_PARTNER": "Compartilhado com a {partner}",
         "MODE_TOKEN": "Por chave de acesso",
         "VERIFIED": "Verificado {time}",
-        "NEXT": "Os nomes dos anúncios já aparecem nos cards. O painel com o custo de cada venda chega na próxima etapa.",
         "REMOVE": "Desconectar",
         "REMOVE_TITLE": "Desconectar a Meta?",
         "REMOVE_HINT": "Os nomes que já aparecem no CRM continuam. As vendas param de ir para a Meta pela conexão.",
         "REMOVED": "Meta desconectada.",
         "ATTENTION": "Precisa de atenção",
         "ATTENTION_HINT": "A Meta parou de deixar a gente ver seus anúncios. Conecte de novo.",
-        "SALES_ON": "Vendas para a Meta: ligado",
-        "SALES_OFF": "Vendas para a Meta: desligado",
-        "RECONNECT": "Conectar de novo"
+        "RECONNECT": "Conectar de novo",
+        "EYEBROW": "Conectado",
+        "HEADLINE": "A Meta está ligada à {account}.",
+        "OPEN_CRM": "Ver no CRM",
+        "TILE_ON": "Ligado",
+        "TILE_OFF": "Desligado",
+        "SITE_WAITING": "Esperando o primeiro clique",
+        "FUNNELS_VALUE": "{ready} de {total} prontos",
+        "TILE_WHATSAPP": "Anúncios para o WhatsApp",
+        "TILE_SITE": "Último clique no site",
+        "TILE_CAMPAIGNS": "Campanhas chegando com nome",
+        "TILE_FUNNELS": "Funis avisando a Meta",
+        "NEXT_TITLE": "O que acontece agora",
+        "NEXT_NAMES": "Cada conversa que veio de anúncio mostra o nome da campanha e o Ver anúncio no card do CRM.",
+        "NEXT_SALES": "Quando um card avança ou é ganho, a Meta fica sabendo e aprende quem compra.",
+        "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio."
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",
@@ -2209,7 +2233,14 @@
         "TEST_TIMEOUT": "O clique ainda não chegou. Confira se o código está na página e tente de novo.",
         "CAMPAIGNS_TITLE": "Campanhas chegando com nome",
         "CAMPAIGNS_MORE": "+ {count} campanhas",
-        "UNNAMED": "1 clique chegou sem nome de campanha. Cole o texto nesse anúncio. | {count} cliques chegaram sem nome de campanha. Cole o texto nesses anúncios."
+        "UNNAMED": "1 clique chegou sem nome de campanha. Cole o texto nesse anúncio. | {count} cliques chegaram sem nome de campanha. Cole o texto nesses anúncios.",
+        "UNNAMED_WHEN": "1 clique chegou sem nome de campanha, {time}. Cole o texto nos anúncios que levam a esta página. | {count} cliques chegaram sem nome de campanha, o último {time}. Cole o texto nos anúncios que levam a esta página.",
+        "KIT_TITLE": "Instruções para quem cuida do site",
+        "KIT_HINT": "Uma página com o código pronto e o passo a passo. Leva uns 10 minutos.",
+        "KIT_SEND": "Enviar por WhatsApp",
+        "KIT_COPY": "Copiar link",
+        "KIT_COPIED": "Link copiado.",
+        "KIT_MESSAGE": "Oi! Este é o passo a passo para ligar o botão do WhatsApp da página {page}: {url}"
       },
       "FUNNEL": {
         "TITLE": "Avisar a Meta sobre o seu funil",
@@ -2243,7 +2274,8 @@
         "STOP": "Parar de avisar",
         "STOPPED": "{name} não avisa mais a Meta.",
         "FINISH": "Terminar",
-        "LATER": "Agora não"
+        "LATER": "Agora não",
+        "BEFORE": "Antes: {value}"
       }
     }
   },

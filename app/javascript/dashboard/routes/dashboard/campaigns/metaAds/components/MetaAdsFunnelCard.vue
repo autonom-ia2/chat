@@ -57,6 +57,15 @@ const options = CHOICES.map(choice => ({
   value: choice.value,
   label: t(`CRM_KANBAN.PIPELINE_EDITOR.META_PROGRESS.${choice.key}.TITLE`),
 }));
+
+// O que estava gravado antes da sugestão: a IA nunca troca uma escolha sem mostrar o "antes" (#1068).
+const savedType = stage => stage.funnel_stage_type || NO_TYPE;
+const changedBySuggestion = stage =>
+  Boolean(stage.funnel_stage_type) &&
+  Boolean(reasons.value[stage.id]) &&
+  types.value[stage.id] !== savedType(stage);
+const labelFor = value =>
+  options.find(option => option.value === value)?.label || '';
 const numbers = computed(() =>
   props.funnel.numbers.map(number => number.name).join(', ')
 );
@@ -262,11 +271,22 @@ onMounted(() => {
                 />
                 {{ reasons[stage.id] }}
               </span>
+              <span
+                v-if="changedBySuggestion(stage)"
+                data-funnel-before
+                class="self-start px-2 py-0.5 text-xs rounded-full bg-n-amber-3 text-n-amber-11"
+              >
+                {{
+                  $t('CRM_KANBAN.META_ADS_HUB.FUNNEL.BEFORE', {
+                    value: labelFor(savedType(stage)),
+                  })
+                }}
+              </span>
             </span>
           </span>
           <ChoiceSelect
             v-model="types[stage.id]"
-            class="sm:w-60"
+            class="w-full sm:w-64 sm:flex-none"
             :options="options"
             :disabled="suggesting"
             :aria-label="

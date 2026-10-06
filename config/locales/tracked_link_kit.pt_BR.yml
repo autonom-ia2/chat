@@ -1,0 +1,16 @@
+pt_BR:
+  tracked_link_kit:
+    title: "Ligar o botão do WhatsApp da página %{name}"
+    lead: "Este é o passo a passo para quem cuida do site. Leva uns 10 minutos."
+    origins_title: "1. Confira o endereço do site"
+    origins_hint: "O aviso de clique só é aceito destes endereços. Se o site estiver em outro, peça para incluir em Campanhas › Links e QR codes."
+    origins_none: "Nenhum endereço autorizado ainda. Peça para incluir o do site em Campanhas › Links e QR codes."
+    code_title: "2. Cole este código antes de </body>"
+    code_hint: "Ele gera um código de 8 letras por clique, avisa o clique e abre o WhatsApp com o código na mensagem."
+    copy: "Copiar código"
+    copied: "Copiado"
+    button_title: "3. Marque o botão do WhatsApp"
+    button_hint: "Acrescente o atributo abaixo ao botão ou link que leva ao WhatsApp. O resto o código faz."
+    test_title: "4. Teste"
+    test_hint: "Abra a página, clique no botão e envie a mensagem que aparece no WhatsApp. Ela termina com #CÓDIGO. Avise quem pediu: na tela Anúncios da Meta, o botão Testar agora confirma o clique."
+    button_label: "Falar no WhatsApp"

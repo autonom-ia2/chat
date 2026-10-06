@@ -84,14 +84,10 @@ class Meta::AdsGraphClient
   LIST_LIMIT = 100
   MAX_PAGES = 10
 
-  # Contas que o próprio token enxerga (modo `token`).
+  # Contas que o próprio token enxerga: as do cliente (modo `token`) ou as já atribuídas ao usuário do sistema
+  # da plataforma, cujo token é este (modo `partner`).
   def ad_accounts
     paged('me/adaccounts', fields: AD_ACCOUNT_FIELDS)
-  end
-
-  # Contas atribuídas ao usuário do sistema da plataforma (modo `partner`).
-  def assigned_ad_accounts(system_user_id)
-    get(system_user_id.to_s, fields: "assigned_ad_accounts.limit(#{LIST_LIMIT}){#{AD_ACCOUNT_FIELDS}}")
   end
 
   # Contas que clientes compartilharam com o portfólio da plataforma como parceira.
@@ -150,9 +146,19 @@ class Meta::AdsGraphClient
       timeout: TIMEOUT_SECONDS,
       **
     )
-    build_result(response)
+    log_failure(verb, path, build_result(response))
   rescue StandardError => e
-    Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message))
+    log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message)))
+  end
+
+  # Toda recusa da Meta fica no log com o caminho, o código e a mensagem já limpa: sem isso, um erro que
+  # quem chama trata como "ainda não" vira silêncio em produção (#1068). O token nunca entra no caminho.
+  def log_failure(verb, path, result)
+    return result if result.ok
+
+    Rails.logger.warn("[MetaAdsGraph] #{verb.to_s.upcase} #{path} http=#{result.http_code.inspect} " \
+                      "code=#{result.error_code.inspect} message=#{result.error_message}")
+    result
   end
 
   def build_result(response)

@@ -15,7 +15,8 @@ const props = defineProps({
 
 const emit = defineEmits(['partner', 'token']);
 
-// Tela de Parceiros do Gerenciador de Negócios: a pessoa cola o código e marca os ativos.
+// Tela de Parceiros do Gerenciador de Negócios: a pessoa cola o código e marca os ativos. Sem o
+// portfólio no endereço a Meta abre "conteúdo não disponível" (#1068); o do WhatsApp da conta é o certo.
 const META_PARTNERS_URL =
   'https://business.facebook.com/latest/settings/partners';
 const STEPS = ['PARTNER_STEP_1', 'PARTNER_STEP_2', 'PARTNER_STEP_3'];
@@ -28,6 +29,12 @@ const partnerName = computed(() => partner.value.business_name || 'Hub2You');
 const canShare = computed(
   () => partner.value.available && props.connection.whatsapp_portfolio
 );
+const partnersUrl = computed(() => {
+  const portfolio = props.connection.client_portfolio_id;
+  return portfolio
+    ? `${META_PARTNERS_URL}?business_id=${encodeURIComponent(portfolio)}`
+    : META_PARTNERS_URL;
+});
 const shareBlockedHint = computed(() =>
   partner.value.available
     ? t('CRM_KANBAN.META_ADS_HUB.CONNECT.NO_PORTFOLIO')
@@ -107,7 +114,7 @@ const copyId = async () => {
           />
           <a
             data-open-meta
-            :href="META_PARTNERS_URL"
+            :href="partnersUrl"
             target="_blank"
             rel="noopener noreferrer"
             class="inline-flex items-center gap-1.5 px-3 text-sm font-semibold rounded-lg min-h-11 text-n-blue-11 hover:bg-n-alpha-2"

@@ -52,6 +52,8 @@ Rails.application.routes.draw do
     get '/book/:slug', to: 'public_booking/pages#show', as: :public_booking_page
     get '/book/:slug/confirm', to: 'public_booking/pages#show', as: :public_booking_confirm_page
     get '/l/:code', to: 'public/tracked_links#show', as: :public_tracked_link
+    # Kit do desenvolvedor do link de site (CA-1.6, #1068).
+    get '/l/:code/kit', to: 'public/tracked_link_kits#show', as: :public_tracked_link_kit
   end
 
   # Aviso de clique de uma página (modo site do link, #1011): sendBeacon + preflight.

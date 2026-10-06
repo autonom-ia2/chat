@@ -1,0 +1,16 @@
+en:
+  tracked_link_kit:
+    title: "Connect the WhatsApp button on the %{name} page"
+    lead: "Step by step for whoever runs the website. It takes about 10 minutes."
+    origins_title: "1. Check the website address"
+    origins_hint: "Click signals are only accepted from these addresses. If the site is on another one, ask to add it in Campaigns › Links and QR codes."
+    origins_none: "No address authorized yet. Ask to add the site in Campaigns › Links and QR codes."
+    code_title: "2. Paste this code before </body>"
+    code_hint: "It creates an 8-character code per click, reports the click and opens WhatsApp with the code in the message."
+    copy: "Copy code"
+    copied: "Copied"
+    button_title: "3. Mark the WhatsApp button"
+    button_hint: "Add the attribute below to the button or link that leads to WhatsApp. The code does the rest."
+    test_title: "4. Test"
+    test_hint: "Open the page, click the button and send the message that shows up in WhatsApp. It ends with #CODE. Tell whoever asked: on the Meta ads screen, Test now confirms the click."
+    button_label: "Talk on WhatsApp"

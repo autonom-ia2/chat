@@ -88,4 +88,25 @@ describe('Anúncios da Meta · página do site (#1047)', () => {
 
     expect(wrapper.find('[data-site-test]').exists()).toBe(false);
   });
+
+  it('says when the last click without a name came and sends the website kit (#1068)', () => {
+    const wrapper = mountPage({
+      ...PAGE,
+      kit_url: 'https://chat.hub2you.ai/l/GB7DDH/kit',
+      campaigns: [
+        {
+          campaign_key: 'none',
+          name: null,
+          clicks: 4,
+          last_clicked_at: '2026-10-06T10:00:00Z',
+        },
+      ],
+    });
+
+    expect(wrapper.get('[data-site-unnamed]').text()).toContain(
+      'CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED_WHEN'
+    );
+    const href = wrapper.get('[data-site-kit-whatsapp]').attributes('href');
+    expect(href.startsWith('https://wa.me/?text=')).toBe(true);
+  });
 });

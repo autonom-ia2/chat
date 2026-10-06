@@ -21,7 +21,7 @@ class Ctwa::TrackedLinkCampaigns
     @include_revenue = include_revenue
   end
 
-  # { link_id => [{ campaign_key:, name:, clicks:, conversations:, won_cards:, won_value_by_currency: }] }
+  # { link_id => [{ campaign_key:, name:, clicks:, last_clicked_at:, conversations:, won_cards:, won_value_by_currency: }] }
   # (as duas últimas só com include_revenue)
   def perform
     return {} if @link_ids.empty?
@@ -30,9 +30,11 @@ class Ctwa::TrackedLinkCampaigns
     won = @include_revenue ? won_cards_by_conversation(conversations.values.flatten.uniq) : nil
     names = names_by_campaign
 
-    click_counts.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(link_id, key, clicks), result|
+    click_counts.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(link_id, key, clicks, last_clicked_at), result|
       conversation_ids = conversations.fetch([link_id, key], [])
-      result[link_id] << campaign_row(key, names[[link_id, key]], clicks, conversation_ids, won)
+      row = campaign_row(key, names[[link_id, key]], clicks, conversation_ids, won)
+      # Quando chegou o último clique da campanha: com isso a tela diz qual anúncio ficou sem o texto (#1068).
+      result[link_id] << row.merge(last_clicked_at: last_clicked_at&.iso8601)
     end
   end
 
@@ -59,7 +61,7 @@ class Ctwa::TrackedLinkCampaigns
   def click_counts
     clicks.group(:tracked_link_id, Arel.sql(KEY_SQL))
           .order(Arel.sql('COUNT(*) DESC'), Arel.sql(KEY_SQL))
-          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'))
+          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'), Arel.sql('MAX(ctwa_tracked_link_clicks.created_at)'))
   end
 
   # Nome = utm_campaign mais recente da chave.

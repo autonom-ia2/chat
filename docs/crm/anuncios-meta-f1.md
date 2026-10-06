@@ -53,6 +53,18 @@ O passo grava no funil o mesmo que Editar funil grava. Não existe configuraçã
 - **Campanhas chegando com nome** vem de `campaigns` do mesmo endpoint: cada campanha com `utm_campaign` aparece confirmada; cliques sem nome aparecem somados, com o pedido de colar o texto no anúncio.
 - A página pública com instruções para quem cuida do site fica para depois: hoje elas estão em Links e QR codes › Para o desenvolvedor.
 
+## F1c: correções do teste real (#1068)
+
+Teste com a Placement em 06/10, depois do deploy de #1053 e #1064:
+
+- **Conta que nunca ficava pronta (modo parceiro).** `Setup#assigned_ids` perguntava `/{usuário do sistema}?fields=assigned_ad_accounts` e, se a Meta recusasse, devolvia lista vazia em silêncio. Agora usa `me/adaccounts` com o próprio token da plataforma (que é o do usuário do sistema) e qualquer recusa vira erro na tela.
+- **Log das recusas da Meta.** `Meta::AdsGraphClient` registra `[MetaAdsGraph] VERBO caminho http= code= message=` em toda falha. O token nunca entra no caminho e a mensagem passa pela limpeza de segredos.
+- **Abrir a Meta** leva `business_id` (`client_portfolio_id` no payload); sem ele a Meta abria "conteúdo não disponível".
+- **Modo de conexão visível e fixo.** O passo 2 diz por onde lê; o modo escolhido fica em `?modo=` e não volta em silêncio para a chave antiga.
+- **Kit do desenvolvedor (CA-1.6).** `GET /l/:code/kit` (público, `noindex`, só para link de site): código pronto do botão, com os valores como JSON escapado (`json_escape`), gerado a partir da ponte do site da Placement.
+- **Último clique sem nome.** `Ctwa::TrackedLinkCampaigns` devolve `last_clicked_at` por campanha.
+- Menu: "Anúncios da Meta" entra na jornada nova de Campanhas (`journeySidebar.js`).
+
 ## O que a F1 não faz
 
 - Coleta diária de insights (F2).

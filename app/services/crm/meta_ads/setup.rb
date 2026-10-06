@@ -109,11 +109,15 @@ class Crm::MetaAds::Setup
     end
   end
 
+  # Contas que o usuário do sistema da plataforma já enxerga. O token da plataforma é o dele, então é o
+  # `me/adaccounts`. Recusa da Meta vira erro na tela, nunca lista vazia: lista vazia aqui quer dizer "ainda
+  # não atribuída" e travava a escolha em silêncio (#1068).
   def assigned_ids(client)
     @assigned_ids ||= begin
-      system_user_id = Crm::MetaAds::Platform.system_user_id
-      result = system_user_id.present? ? client.assigned_ad_accounts(system_user_id) : nil
-      result&.ok ? Array(result.data.to_h.dig('assigned_ad_accounts', 'data')).map { |row| row_id(row) } : []
+      result = client.ad_accounts
+      raise_graph!(result) unless result.ok
+
+      Array(result.data.to_h['data']).map { |row| row_id(row) }
     end
   end
 
