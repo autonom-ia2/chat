@@ -220,6 +220,7 @@ Rails.application.routes.draw do
               get '/', action: :show, as: :result
               get :recipients, as: :result_recipients
               get :export, as: :result_export
+              get :period, as: :result_period
             end
           end
           # Importar contatos (#1006): the journey's contact import (fork controller).

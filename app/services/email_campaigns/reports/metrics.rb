@@ -4,9 +4,12 @@ class EmailCampaigns::Reports::Metrics
   EVENTS = { 'delivered' => :delivered, 'open' => :opened, 'click' => :clicked, 'bounce' => :bounced,
              'complaint' => :complained, 'unsubscribe' => :unsubscribed }.freeze
 
-  def initialize(campaigns)
+  # sent_since narrows the cohort to recipients accepted from that time on (period filter of the
+  # Resultado, #990); without it every recipient counts, as the reports always did.
+  def initialize(campaigns, sent_since: nil)
     @campaigns = campaigns
     @recipients = EmailCampaignRecipient.where(email_campaign_id: campaigns.map(&:id))
+    @recipients = @recipients.where(sent_at: sent_since..) if sent_since
     @ses_ids = campaigns.select(&:ses?).to_set(&:id)
   end
 

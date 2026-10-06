@@ -4,6 +4,7 @@
 #   GET …/campaign_journey/results/:channel/:id             campaign, totals and the CRM mark
 #   GET …/campaign_journey/results/:channel/:id/recipients  people, 25 per page, ?status=
 #   GET …/campaign_journey/results/:channel/:id/export      masked CSV, ?status=
+#   GET …/campaign_journey/results/email/:id/period         numbers of this campaign, ?period=7|14|30|all (#990)
 #
 # channel: email | whatsapp_official | whatsapp_api | sms. campaign_view reads; the export needs
 # campaign_manage, like the e-mail reports export. CAMPAIGN_JOURNEY_ENABLED off → 404.
@@ -12,6 +13,7 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
   before_action :authorize_result
   before_action :fetch_result
   before_action :validate_status_filter, only: [:recipients, :export]
+  before_action :validate_period, only: :period
 
   def show
     render json: {
@@ -37,6 +39,10 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
     self.response_body = export.csv.each
   end
 
+  def period
+    render json: { payload: @result.period_metrics(period_param) }
+  end
+
   private
 
   def authorize_result
@@ -55,6 +61,18 @@ class Api::V1::Accounts::CampaignJourney::ResultsController < Api::V1::Accounts:
     return if status_filter.nil? || @result.filters.include?(status_filter)
 
     render json: { error: 'campaign_journey.invalid_filter', parameter: 'status' }, status: :unprocessable_entity
+  end
+
+  def period_param
+    params[:period].presence&.to_s || ::CampaignJourney::EmailPeriodMetrics::DEFAULT_PERIOD
+  end
+
+  # Only e-mail has the period block; the other channels have no such numbers (404).
+  def validate_period
+    raise ActiveRecord::RecordNotFound unless @result.respond_to?(:period_metrics)
+    return if ::CampaignJourney::EmailPeriodMetrics::PERIODS.key?(period_param)
+
+    render json: { error: 'campaign_journey.invalid_filter', parameter: 'period' }, status: :unprocessable_entity
   end
 
   def page_param

@@ -40,6 +40,11 @@ class CampaignJourney::EmailResult
     CampaignJourney::EmailResultTotals.new(campaign).call.merge(replied: replies.contact_ids.size)
   end
 
+  # "Como foi esta campanha" (#990): numbers of this campaign for one period (7, 14, 30 or all).
+  def period_metrics(period)
+    CampaignJourney::EmailPeriodMetrics.new(campaign, period: period).call
+  end
+
   # Only "Responderam" lives here; every other person filter is the e-mail reports table.
   def page(page:, visible_conversations:, **)
     conversations = replies.latest_conversations.includes(:contact).page(page).per(PER_PAGE)

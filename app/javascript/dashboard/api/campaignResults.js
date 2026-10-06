@@ -3,6 +3,7 @@
 //   GET campaign_journey/results/:channel/:id            → { payload: { campaign, totals, filters, crm } }
 //   GET campaign_journey/results/:channel/:id/recipients → { payload: { rows, meta } }
 //   GET campaign_journey/results/:channel/:id/export     → masked CSV (campaign_manage)
+//   GET campaign_journey/results/email/:id/period?period= → { payload: { period, since, until, sent, … } } (#990)
 //   GET campaign_journey/overview?days=&channel=&page=   → { payload: { period, totals, campaigns, meta } }
 import ApiClient from './ApiClient';
 
@@ -30,6 +31,13 @@ class CampaignResultsAPI extends ApiClient {
     return axios.get(`${this.resultUrl(channel, id)}/export`, {
       params: { status: status || undefined },
       responseType: 'blob',
+    });
+  }
+
+  getPeriodMetrics(channel, id, period, { signal } = {}) {
+    return axios.get(`${this.resultUrl(channel, id)}/period`, {
+      params: { period },
+      signal,
     });
   }
 
