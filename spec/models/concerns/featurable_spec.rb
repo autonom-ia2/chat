@@ -4,11 +4,12 @@ require 'rails_helper'
 
 RSpec.describe Featurable do
   it 'appends assisted Instagram onboarding enabled by default without changing previous bit positions' do
-    feature = described_class::FEATURE_LIST.last
+    index = described_class::FEATURE_LIST.index { |item| item['name'] == 'instagram_assisted_onboarding' }
+    feature = described_class::FEATURE_LIST[index]
     expect(feature).to include('name' => 'instagram_assisted_onboarding', 'enabled' => true, 'column' => 'feature_flags_ext_1')
-    previous = described_class.feature_flag_mappings_for(described_class::FEATURE_LIST[0...-1])
+    previous = described_class.feature_flag_mappings_for(described_class::FEATURE_LIST[0...index])
     expect(described_class::FEATURES_BY_COLUMN['feature_flags']).to eq(previous['feature_flags'])
-    expect(described_class::FEATURES_BY_COLUMN['feature_flags_ext_1'].except(previous['feature_flags_ext_1'].size + 1))
+    expect(described_class::FEATURES_BY_COLUMN['feature_flags_ext_1'].slice(*previous['feature_flags_ext_1'].keys))
       .to eq(previous['feature_flags_ext_1'])
   end
 

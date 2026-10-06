@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   buildCrmOrigin,
@@ -19,6 +19,9 @@ const props = defineProps({
 const { t } = useI18n();
 const { originLabelOverHierarchy, hierarchyItems, touchDate, sourceUrlLabel } =
   useCrmOrigin();
+
+// Miniaturas da Meta expiram; a que não carrega vira o ícone.
+const brokenThumbs = ref(new Set());
 
 const rows = computed(() => {
   const origins = props.campaigns
@@ -111,7 +114,36 @@ const rows = computed(() => {
         </dl>
 
         <a
-          v-if="row.origin.sourceUrl && row.linkLabel"
+          v-if="row.origin.adPreviewUrl"
+          data-crm-origin-ad-preview
+          :href="row.origin.adPreviewUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-1.5 flex min-h-11 max-w-full items-center gap-2.5 rounded-lg border border-n-weak p-1.5 pe-3 text-xs font-medium text-n-blue-11 hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        >
+          <img
+            v-if="row.origin.adThumbnailUrl && !brokenThumbs.has(row.key)"
+            :src="row.origin.adThumbnailUrl"
+            alt=""
+            class="size-8 shrink-0 rounded-md object-cover"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            @error="brokenThumbs = new Set([...brokenThumbs, row.key])"
+          />
+          <span
+            v-else
+            class="i-lucide-image size-4 shrink-0 text-n-slate-10"
+            aria-hidden="true"
+          />
+          <span class="truncate">{{ t('CRM_KANBAN.ORIGIN.LIST.SEE_AD') }}</span>
+          <span
+            class="i-lucide-arrow-up-right size-3 shrink-0"
+            aria-hidden="true"
+          />
+          <span class="sr-only">{{ t('CRM_KANBAN.ORIGIN.LIST.NEW_TAB') }}</span>
+        </a>
+        <a
+          v-else-if="row.origin.sourceUrl && row.linkLabel"
           :href="row.origin.sourceUrl"
           target="_blank"
           rel="noopener noreferrer"

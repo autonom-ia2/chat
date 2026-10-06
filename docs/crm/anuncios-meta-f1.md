@@ -7,7 +7,7 @@ PRD: https://claude.ai/artifact/L1bQBEwmUCNKdubNkEeMKx. Este arquivo registra as
 | PR | Conteúdo | Migration |
 |---|---|---|
 | F1a | Backend: credencial da plataforma, conexão por parceiro ou token, lista de contas e Pixels, verificação real, destinos, "avisar a Meta quando vender". | Sim, vai sozinho na fila |
-| F1b | Tela Campanhas › Anúncios da Meta (4 passos), flag `meta_ads_hub`, Guia, i18n e correções do diagnóstico de 06/10 (CA-1.10). | Não |
+| F1b | Tela Campanhas › Anúncios da Meta (4 passos), flag `meta_ads_hub`, passo 4 por funil com sugestão da IA (troca o `sales_signal` da F1a), teste do site e confirmação por campanha, Guia, i18n e correções do diagnóstico de 06/10 (CA-1.10). | Não |
 
 ## Dois modos de conexão
 
@@ -37,6 +37,21 @@ Travas que valem depois da escolha (revisão de segurança de 06/10):
 ## "Conectada" só depois de ler de verdade (CA-1.2)
 
 Ao escolher a conta, o servidor lê o nome, o gasto dos últimos 30 dias e o Pixel. Só então grava `verified_at`. Se qualquer leitura falhar, a conexão não muda e a resposta diz o que falta.
+
+## Passo 4: avisar a Meta sobre o funil (CA-1.8)
+
+O passo grava no funil o mesmo que Editar funil grava. Não existe configuração paralela.
+
+- `GET crm/meta_ads_connection/funnels`: funis ativos ligados (`crm_pipeline_inboxes`) a um `Channel::Whatsapp` da conta, com `missing` (`sending_off`, `sales_off`, `moves_off`, `stages`). Também os números oficiais fora de qualquer funil e se a IA está disponível.
+- `PATCH crm/meta_ads_connection/funnel`: grava `metadata.funnel_stage_type` de cada etapa (`none` limpa) e liga `meta_sync` com venda e mudança de etapa. A perda e o `dataset_id` ficam como estavam; o Pixel da conexão só entra no funil sem Pixel. Com `enabled: false`, desliga só aquele funil e guarda as escolhas.
+- `POST crm/meta_ads_connection/suggest_stages`: a IA (`Crm::MetaAds::StageTypeSuggester`, `gpt-6-luna`) lê nome e critério de cada etapa e sugere o tipo, ou `none`. Roda como as outras ações de IA do CRM (`InteractiveRequest`, 202 + `poll_url`). Quem decide o tipo é o modelo, não uma lista de palavras; a pessoa revisa antes de gravar. Etapas de ganho e perda ficam de fora, porque viram `Purchase`/`OrderCanceled` pelo fechamento do card.
+- Funil sem WhatsApp oficial, etapa de outro funil ou tipo fora da lista são recusados (`funnel_not_found`, `invalid_stage`, `invalid_stage_type`).
+
+## Passo 3: site (CA-1.6 e CA-1.7)
+
+- **Testar agora** abre a página autorizada do link e consulta `ctwa_tracked_links` a cada 5 s, por até 3 min, até `last_signal_at` mudar. Compara com o aviso anterior, não com o relógio do navegador.
+- **Campanhas chegando com nome** vem de `campaigns` do mesmo endpoint: cada campanha com `utm_campaign` aparece confirmada; cliques sem nome aparecem somados, com o pedido de colar o texto no anúncio.
+- A página pública com instruções para quem cuida do site fica para depois: hoje elas estão em Links e QR codes › Para o desenvolvedor.
 
 ## O que a F1 não faz
 

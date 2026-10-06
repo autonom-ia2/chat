@@ -1,7 +1,7 @@
 # Conexão da conta com os anúncios da Meta (#1034, #1047). Só administrador.
 #
-# GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e o estado de
-#          "avisar a Meta quando vender".
+# GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e se algum funil
+#          ligado ao WhatsApp oficial já avisa a Meta das vendas.
 # PUT    → modo `token`: testa o token colado (ads_read concedido e ao menos uma conta de anúncios) e grava.
 # DELETE → apaga a conexão. Os nomes já resolvidos ficam nos toques e no cache.
 #
@@ -10,13 +10,17 @@
 # GET   pixels?mode=&ad_account_id= → Pixels da conta de anúncios
 # POST  selection    → lê a conta e o Pixel de verdade e só então grava (CA-1.2)
 # PATCH destinations → para onde os anúncios levam: WhatsApp, site ou os dois
-# POST  sales_signal → liga ou desliga o envio das vendas à Meta nos funis ativos
+# GET   funnels        → funis ligados ao WhatsApp oficial, com o que falta para avisar a Meta (passo 4)
+# PATCH funnel         → grava o tipo de cada etapa e liga o aviso no funil; enabled=false para de avisar
+# POST  suggest_stages → a IA sugere o tipo de cada etapa (assíncrono, como as outras ações de IA do CRM)
 #
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
+  include DeferInteractiveAi
+
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels].freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -75,12 +79,31 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     render json: payload
   end
 
-  def sales_signal
-    connection = current_connection
-    return render_unprocessable('not_connected') if connection.blank?
+  def funnels
+    render json: funnels_service.payload
+  end
 
-    ::Crm::MetaAds::SalesSignal.new(Current.account, connection).update!(ActiveModel::Type::Boolean.new.cast(params[:enabled]) == true)
-    render json: payload
+  def funnel
+    return render_unprocessable('not_connected') if current_connection.blank?
+
+    pipeline = funnels_service.find!(params[:pipeline_id])
+    if ActiveModel::Type::Boolean.new.cast(params[:enabled]) == false
+      funnels_service.disable!(pipeline)
+    else
+      funnels_service.apply!(pipeline, stage_types_param)
+    end
+    render json: ::Crm::MetaAds::Funnels.new(Current.account, current_connection).payload
+  rescue ::Crm::MetaAds::Funnels::Error => e
+    render_unprocessable(e.code)
+  end
+
+  def suggest_stages
+    return render_unprocessable('ai_unavailable') unless ::Crm::Ai::Config.enabled?
+
+    funnels_service.find!(params[:pipeline_id])
+    defer_interactive_ai('meta_funnel_stages', { pipeline_id: params[:pipeline_id].to_i, language: I18n.locale.to_s })
+  rescue ::Crm::MetaAds::Funnels::Error => e
+    render_unprocessable(e.code)
   end
 
   private
@@ -142,8 +165,17 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     ::Crm::MetaAdsConnection.public_payload_for(connection).merge(
       partner: ::Crm::MetaAds::Platform.public_payload,
       whatsapp_portfolio: setup.portfolio_ids.any?,
-      sales_signal: ::Crm::MetaAds::SalesSignal.new(Current.account, connection).payload
+      sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? }
     )
+  end
+
+  def funnels_service
+    @funnels_service ||= ::Crm::MetaAds::Funnels.new(Current.account, current_connection)
+  end
+
+  # { stage_id => tipo }: 'lead', 'qualified', 'opportunity', 'negotiation' ou 'none'.
+  def stage_types_param
+    params.permit(stages: [:id, :funnel_stage_type]).fetch(:stages, []).to_h { |row| [row[:id], row[:funnel_stage_type].to_s] }
   end
 
   def connection_params

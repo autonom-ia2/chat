@@ -1,3 +1,4 @@
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import {
   CRM_VIEW_PERMISSION,
@@ -62,6 +63,18 @@ export const routes = [
     meta: campaignsMeta,
     beforeEnter: ensureCrmEnabled,
     component: () => import('../campaigns/pages/TrackedLinksPage.vue'),
+  },
+  {
+    // Anúncios da Meta (#1047): conexão guiada. A conexão é só de administrador
+    // (a API responde 403 aos demais), atrás da flag por conta meta_ads_hub.
+    path: frontendURL('accounts/:accountId/campaigns/meta-ads'),
+    name: 'campaigns_meta_ads_index',
+    meta: {
+      permissions: ['administrator'],
+      featureFlag: FEATURE_FLAGS.META_ADS_HUB,
+    },
+    beforeEnter: ensureCrmEnabled,
+    component: () => import('../campaigns/metaAds/MetaAdsPage.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/crm'),

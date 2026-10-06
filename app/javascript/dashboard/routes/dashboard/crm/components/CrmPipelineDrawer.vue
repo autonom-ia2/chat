@@ -1701,21 +1701,32 @@ useFixedPanelPresence(computed(() => props.show));
           >
             {{ t('CRM_KANBAN.PIPELINE_EDITOR.INBOX_SAVE_FIRST') }}
           </p>
+          <div
+            v-if="isEditing && view === 'adjustments'"
+            data-pipeline-archive
+            class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-n-ruby-4 p-4"
+          >
+            <p class="mb-0 text-sm text-n-slate-11">
+              {{ t('CRM_KANBAN.PIPELINE_DRAWER.ARCHIVE_HINT') }}
+            </p>
+            <Button
+              :label="t('CRM_KANBAN.PIPELINE_DRAWER.ARCHIVE')"
+              icon="i-lucide-archive"
+              ruby
+              faded
+              :is-loading="isArchiving"
+              @click="$emit('archive')"
+            />
+          </div>
         </div>
       </div>
 
       <div
         class="flex flex-wrap items-center justify-between gap-3 border-t border-n-weak px-6 py-4"
       >
-        <Button
-          v-if="isEditing && view === 'adjustments'"
-          :label="t('CRM_KANBAN.PIPELINE_DRAWER.ARCHIVE')"
-          icon="i-lucide-archive"
-          ruby
-          ghost
-          :is-loading="isArchiving"
-          @click="$emit('archive')"
-        />
+        <!-- #1047: arquivar não fica no lugar onde, um passo antes, estava "Mais ajustes" — o mesmo
+             clique arquivava o funil. Ele mora no fim de Mais ajustes, longe do rodapé. -->
+        <span v-if="view === 'adjustments'" />
         <Button
           v-else
           :label="t('CRM_KANBAN.PIPELINE_EDITOR.MORE')"
