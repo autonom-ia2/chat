@@ -11,7 +11,7 @@ class Autonomia::Agents::Faq::SuggestJob < ApplicationJob
     return unless Autonomia::Agents::Config.enabled?(conversation.account)
 
     agent = agent_for(conversation)
-    return if agent.blank? || !agent.faq_suggestions_enabled?
+    return if agent.blank? || agent.deleted? || !agent.faq_suggestions_enabled?
 
     Autonomia::Agents::Faq::Extractor.new(agent: agent, conversation: conversation).call
   rescue StandardError => e

@@ -44,6 +44,8 @@ cannot be tested, edited or reconnected through the ordinary API.
   reconnecting a replacement agent.
 - Updated the reaper tests to require archival, not physical deletion.
 - `git diff --check`: passed.
+- Worktree Husky hooks cannot run because `.husky/_/husky.sh` is absent;
+  commit/push use a per-command empty hooks path, without changing Git settings.
 - Ruby 2.6 syntax check passes for changed/new Ruby files except the existing
   endless-method syntax in the insurance builder, which requires modern Ruby.
 - Full RSpec, RuboCop and a database-generated schema dump cannot run locally:
