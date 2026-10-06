@@ -1,5 +1,15 @@
 # #995 — SuperAdmin real e aplicação do overlay, 06/10/2026
 
+## Atualização — configuração reconhecida pelo SuperAdmin real
+
+Às12:14:45UTC, o Chrome do M2 abriu o hostname privado normalmente, com `isSecureContext=true` e o corpo de recusa esperado. Dois GETs same-origin para os caminhos Hub/Autonomia retornaram401, sem redirecionamento. Não houve IP forçado, credencial extraída ou grant. Recibo local `superadmin-20261006T1117/m2-browser-private-https.json`.
+
+Às12:15:30UTC, novos GETs autenticados dos dois painéis retornaram200 com **`operator_browser_configured=true`**, configuração completa/gerenciada e gatefalse. Isso comprova que a configuração já foi carregada pelos processos web que responderam. Sessão continua missing e gestor unknown; Reconnect ainda não deve ser solicitado. Recibo `superadmin-env-propagation-first.json`, com purpose de observação, não B0.
+
+A publicação normal da equipe ainda estava em andamento/na sequência. Essa observação não identifica por si só o SHA dos containers nem confirma término dos workflows; a conferência CURRENT/web/worker será feita após a release final. Nenhum corte ou produtor foi iniciado por esse teste.
+
+---
+
 Checkpoint após a aplicação das três variáveis do navegador administrativo. A autorização de Rodrigo para continuar permanece válida. Este registro não conclui o corte, o login Meta ou as renovações. DNS e consentimento Tailscale já foram concluídos nos dois Macs; não devem ser refeitos.
 
 ## Estado deste checkpoint
