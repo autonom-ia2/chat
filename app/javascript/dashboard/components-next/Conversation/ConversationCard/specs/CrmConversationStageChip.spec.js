@@ -3,11 +3,15 @@ import { ref } from 'vue';
 import CrmConversationStageChip from '../CrmConversationStageChip.vue';
 
 const push = vi.fn();
+const podeVerCrm = ref(true);
 const etapa = ref(null);
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 16 } }),
   useRouter: () => ({ push }),
+}));
+vi.mock('dashboard/routes/dashboard/crm/composables/useCrmPermissions', () => ({
+  useCrmPermissions: () => ({ canViewCrm: podeVerCrm }),
 }));
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmConversationStages',
@@ -24,6 +28,7 @@ describe('CrmConversationStageChip', () => {
   afterEach(() => {
     push.mockClear();
     etapa.value = null;
+    podeVerCrm.value = true;
   });
 
   // Conta 16 (06/10/2026): clicar em "Email Comercial · Novo" na conversa leva
@@ -63,6 +68,15 @@ describe('CrmConversationStageChip', () => {
 
   it('sem o id do card, o selo continua só informando a etapa', () => {
     etapa.value = { pipeline_name: 'Email Comercial', stage_name: 'Novo' };
+    const wrapper = montar();
+
+    expect(wrapper.find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-crm-stage-chip]').text()).toBe('Novo');
+  });
+
+  it('quem não pode abrir o CRM vê o selo, mas ele não é clicável', () => {
+    podeVerCrm.value = false;
+    etapa.value = { card_id: 1840, stage_name: 'Novo' };
     const wrapper = montar();
 
     expect(wrapper.find('button').exists()).toBe(false);

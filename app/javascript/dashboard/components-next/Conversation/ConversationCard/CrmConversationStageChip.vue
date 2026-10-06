@@ -2,6 +2,7 @@
 import { computed, toRef } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 
 const props = defineProps({
   conversationId: {
@@ -15,6 +16,12 @@ const STAGE_FALLBACK_COLOR = '#64748b';
 const route = useRoute();
 const router = useRouter();
 const stage = useCrmConversationStage(toRef(props, 'conversationId'));
+// Função personalizada sem acesso ao CRM vê o selo, mas o clique levaria a uma
+// tela barrada: para ela, o selo segue só informando.
+const { canViewCrm } = useCrmPermissions();
+const abreNoCrm = computed(() =>
+  Boolean(stage.value?.card_id && canViewCrm.value)
+);
 
 const dotStyle = computed(() => ({
   backgroundColor: stage.value?.stage_color || STAGE_FALLBACK_COLOR,
@@ -40,7 +47,7 @@ const abrirNoCrm = () => {
 
 <template>
   <button
-    v-if="label && stage.card_id"
+    v-if="label && abreNoCrm"
     type="button"
     data-crm-stage-chip
     :title="$t('CRM_KANBAN.STAGE_CHIP_OPEN', { etapa: label })"
