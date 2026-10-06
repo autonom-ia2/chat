@@ -150,7 +150,29 @@
       "SHOW_DETAILS": "Ver detalhes",
       "HIDE_DETAILS": "Esconder detalhes",
       "HYGIENE_TITLE": "Quem ainda não recebeu",
-      "HYGIENE_TEXT": "Conferimos cada endereço antes de enviar."
+      "HYGIENE_TEXT": "Conferimos cada endereço antes de enviar.",
+      "ACCOUNT_WINDOW": "Avaliação da conta — todas as campanhas do seu remetente, últimos 7 dias",
+      "WHY": {
+        "LABEL": "Por que pausou:",
+        "SCOPE": "A proteção olha os envios dos últimos 7 dias do seu remetente (todas as campanhas).",
+        "hard_bounce_rate": "muitos e-mails falharam de forma permanente (endereços que não recebem mensagens).",
+        "complaint_rate": "muitas pessoas marcaram o e-mail como spam.",
+        "preflight_review": "alguns endereços da lista precisam ser conferidos antes de o envio continuar."
+      },
+      "PERIOD": {
+        "TITLE": "Como foi esta campanha",
+        "FILTER": "Período",
+        "OPTIONS": {
+          "7": "Últimos 7 dias",
+          "14": "Últimos 14 dias",
+          "30": "Últimos 30 dias",
+          "ALL": "Desde o início"
+        },
+        "RATE_OF_SENT": "{rate} dos enviados",
+        "EMPTY": "Nenhum envio desta campanha neste período.",
+        "LOADING": "Carregando os números…",
+        "ERROR": "Não conseguimos carregar os números deste período. Tente de novo."
+      }
     },
     "EMAIL_PEOPLE": {
       "TITLE": "Destinatários",

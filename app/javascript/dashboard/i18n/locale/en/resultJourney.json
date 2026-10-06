@@ -150,7 +150,29 @@
       "SHOW_DETAILS": "See details",
       "HIDE_DETAILS": "Hide details",
       "HYGIENE_TITLE": "People not sent yet",
-      "HYGIENE_TEXT": "We check each address before sending."
+      "HYGIENE_TEXT": "We check each address before sending.",
+      "ACCOUNT_WINDOW": "Account assessment — every campaign of your sender, last 7 days",
+      "WHY": {
+        "LABEL": "Why it paused:",
+        "SCOPE": "The protection looks at the sends of the last 7 days of your sender (every campaign).",
+        "hard_bounce_rate": "too many e-mails failed permanently (addresses that do not receive mail).",
+        "complaint_rate": "too many people marked the e-mail as spam.",
+        "preflight_review": "some addresses on the list need to be checked before sending continues."
+      },
+      "PERIOD": {
+        "TITLE": "How this campaign went",
+        "FILTER": "Period",
+        "OPTIONS": {
+          "7": "Last 7 days",
+          "14": "Last 14 days",
+          "30": "Last 30 days",
+          "ALL": "Since the start"
+        },
+        "RATE_OF_SENT": "{rate} of sent",
+        "EMPTY": "No sends of this campaign in this period.",
+        "LOADING": "Loading the numbers…",
+        "ERROR": "We couldn't load the numbers of this period. Try again."
+      }
     },
     "EMAIL_PEOPLE": {
       "TITLE": "Recipients",

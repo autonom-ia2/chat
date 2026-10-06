@@ -10,9 +10,11 @@ import enCrm from 'dashboard/i18n/locale/en/crm.json';
 const api = vi.hoisted(() => ({
   reports: { getRecipients: vi.fn(), export: vi.fn() },
   campaigns: { reevaluate: vi.fn(), resume: vi.fn(), recheck: vi.fn() },
+  results: { getPeriodMetrics: vi.fn() },
 }));
 vi.mock('dashboard/api/emailCampaignReports', () => ({ default: api.reports }));
 vi.mock('dashboard/api/emailCampaigns', () => ({ default: api.campaigns }));
+vi.mock('dashboard/api/campaignResults', () => ({ default: api.results }));
 vi.mock(
   'dashboard/components-next/Campaigns/EmailProtection/EmailImportIssues.vue',
   () => ({ default: { name: 'EmailImportIssues', render: () => null } })
@@ -135,6 +137,12 @@ const pausedCampaign = {
 };
 
 describe('"Envio pausado" in the result layout (#990)', () => {
+  beforeEach(() => {
+    api.results.getPeriodMetrics.mockResolvedValue({
+      data: { payload: { period: 'all', sent: 0 } },
+    });
+  });
+
   it('says why it paused, what to do, and orders Retomar, Reavaliar, Ver lista de problemas', async () => {
     const wrapper = mountWith(ResultProtectionCard, {
       campaign: pausedCampaign,
@@ -144,7 +152,9 @@ describe('"Envio pausado" in the result layout (#990)', () => {
     expect(wrapper.find('[data-protection-pill]').text()).toBe(
       PROTECTION.STATUS.paused
     );
-    expect(wrapper.find('[data-protection-reason]').text()).toBe(
+    // The reason is said once, in "Por que pausou", not again in the header.
+    expect(wrapper.find('[data-protection-reason]').exists()).toBe(false);
+    expect(wrapper.find('[data-protection-why]').text()).toContain(
       PROTECTION.REASON.reputation
     );
     expect(wrapper.find('[data-protection-next]').text()).toBe(
@@ -155,11 +165,9 @@ describe('"Envio pausado" in the result layout (#990)', () => {
         .findAll('[data-protection-action]')
         .map(button => button.attributes('data-protection-action'))
     ).toEqual(['resume', 'reevaluate', 'problems']);
-    expect(
-      wrapper.findAll('[data-strip]').map(item => item.attributes('data-strip'))
-    ).toEqual(['sent', 'permanent', 'temporary', 'complained']);
-    expect(wrapper.find('[data-strip="sent"]').text()).toContain('1,804');
-    expect(wrapper.find('[data-protection-checked]').exists()).toBe(true);
+    // The account window no longer sits under the campaign as if it were its numbers (#990).
+    expect(wrapper.find('[data-strip]').exists()).toBe(false);
+    expect(wrapper.find('[data-campaign-period]').exists()).toBe(true);
 
     await wrapper.find('[data-protection-action="resume"]').trigger('click');
     await wrapper

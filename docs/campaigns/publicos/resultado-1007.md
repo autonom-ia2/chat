@@ -46,6 +46,14 @@ E-mail: `name email status replied sent_at last_event_at reason`. Nome = primeir
 último; telefone e e-mail mascarados; motivo por `EmailCampaigns::SafeErrorMessage` (sem e-mail nem
 sequência longa de dígitos).
 
+`GET …/results/email/:id/period?period=7|14|30|all` (#990, "Como foi esta campanha") →
+`{ period, since, until, sent, permanent_bounces, temporary_bounces, complaints, hard_bounce_rate,
+complaint_rate }` desta campanha. O período é a coorte por data de envio (quem a campanha enviou nos
+últimos N dias e o que aconteceu com essas pessoas), a mesma régua da janela da proteção; as contagens
+saem de `EmailCampaigns::Reports::Metrics` com `sent_since`, então `all` (padrão) bate com os totais do
+topo. Taxas em %, `null` sem envio. `period` fora da lista → 422 `campaign_journey.invalid_filter`;
+canal que não é e-mail → 404. A avaliação de 7 dias da conta (todas as campanhas) fica em "Ver detalhes".
+
 `GET …/campaign_journey/overview?days=7|30|90&channel=&page=` →
 `{ period, channel, totals: { campaigns, reached, replied, deals: { cards, won } | null,
 email_health: { hard_bounce_rate, complaint_rate, sent, bounce_limit, complaint_limit } | null },

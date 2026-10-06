@@ -1,7 +1,9 @@
 <script setup>
-// "Envio pausado" / "Saúde do envio" of the Resultado (#990): one line on why, one on what to
-// do, the numbers in a strip and the actions in order of importance (Retomar, Reavaliar, Ver
-// lista de problemas). The rules are the old Gestão panel's (useProtectionState, O1).
+// "Envio pausado" / "Saúde do envio" of the Resultado (#990): why it paused (the reason recorded
+// on the campaign, plus what the protection looks at), what to do, the numbers of THIS campaign by
+// period ("Como foi esta campanha") and the actions in order of importance (Retomar, Reavaliar, Ver
+// lista de problemas). The account's 7-day evaluation only shows under "Ver detalhes", with its
+// dates. The rules are the old Gestão panel's (useProtectionState, O1).
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -11,8 +13,10 @@ import {
   formatDate,
   statusKey,
   displayStatusLabel,
+  reasonKey,
 } from 'dashboard/components-next/Campaigns/EmailProtection/presentation';
 import { useProtectionState } from 'dashboard/components-next/Campaigns/EmailProtection/useProtectionState';
+import ResultCampaignPeriod from './ResultCampaignPeriod.vue';
 
 const props = defineProps({
   campaign: { type: Object, default: () => ({}) },
@@ -26,6 +30,7 @@ const canManage = useCanManage('campaign_manage');
 const showDetails = ref(false);
 const {
   health,
+  blockReason,
   isPaused,
   reason,
   hasReason,
@@ -34,13 +39,9 @@ const {
   title,
   badgeRecord,
   analysisOnly,
-  current,
-  summaryCards,
   metricRows,
   detailSections,
   hasDetails,
-  number,
-  rate,
 } = useProtectionState(
   { campaign: () => props.campaign, protection: () => null },
   { t, locale }
@@ -76,25 +77,29 @@ const nextStep = computed(() => {
   return t(`${NS}.NEXT.PROBLEMS`);
 });
 
-const strip = computed(() => [
-  ...(typeof current.value.sent === 'number'
-    ? [
-        {
-          key: 'sent',
-          label: t(`${EMAIL_NS}.STATUS.sent`),
-          count: current.value.sent,
-        },
-      ]
-    : []),
-  ...summaryCards.value,
-]);
-// No empty cell at any width: 4 numbers make 2×2 on a phone, 3 make one column.
-const STRIP_COLUMNS = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-1 sm:grid-cols-3',
-  4: 'grid-cols-2 sm:grid-cols-4',
-};
+// "Por que pausou": the reason recorded on the campaign when it paused (pause_reason, already
+// presented by the API), falling back to what the protection says now. The two rate reasons get
+// their own sentence; the others reuse the protection texts.
+const WHY_DETAILED = ['hard_bounce_rate', 'complaint_rate', 'preflight_review'];
+const reasonText = computed(() => t(`${EMAIL_NS}.REASON.${reason.value}`));
+const why = computed(() => {
+  const recorded = props.campaign.pause_reason;
+  if (WHY_DETAILED.includes(recorded)) return t(`${NS}.WHY.${recorded}`);
+  return recorded
+    ? t(`${EMAIL_NS}.REASON.${reasonKey(recorded)}`)
+    : reasonText.value;
+});
+const isManual = computed(() => reasonKey(props.campaign.pause_reason) === 'manual');
+// While paused the reason is said once, in "Por que pausou". The header only adds what blocks the
+// send now when that is something else (e.g. the sending service went down after a manual pause).
+const showHeaderReason = computed(() => {
+  if (!hasReason.value) return false;
+  if (!isPaused.value) return true;
+  return Boolean(blockReason.value) && reasonText.value !== why.value;
+});
+const periodVersion = computed(
+  () => `${props.campaign.status || ''}|${props.campaign.updated_at || ''}`
+);
 </script>
 
 <template>
@@ -132,11 +137,11 @@ const STRIP_COLUMNS = {
           </span>
         </div>
         <p
-          v-if="hasReason"
+          v-if="showHeaderReason"
           class="mb-0 max-w-2xl text-sm text-n-slate-11"
           data-protection-reason
         >
-          {{ t(`${EMAIL_NS}.REASON.${reason}`) }}
+          {{ reasonText }}
         </p>
         <p
           v-if="nextStep"
@@ -151,37 +156,29 @@ const STRIP_COLUMNS = {
       </div>
     </header>
 
-    <dl
-      v-if="strip.length"
-      class="m-0 grid gap-px overflow-hidden rounded-xl border border-n-weak bg-n-weak"
-      :class="STRIP_COLUMNS[strip.length]"
-      data-protection-strip
+    <div
+      v-if="isPaused"
+      class="flex flex-col gap-1 rounded-xl bg-n-alpha-1 px-4 py-3"
+      data-protection-why
     >
-      <div
-        v-for="item in strip"
-        :key="item.key"
-        class="min-w-0 bg-n-solid-1 px-4 py-3"
-        :data-strip="item.key"
+      <p class="m-0 text-sm text-n-slate-12">
+        <span class="font-semibold">{{ t(`${NS}.WHY.LABEL`) }}</span>
+        {{ why }}
+      </p>
+      <p
+        v-if="!isManual"
+        class="m-0 text-xs text-n-slate-11"
+        data-protection-why-scope
       >
-        <dt class="text-xs text-n-slate-11">{{ item.label }}</dt>
-        <dd class="m-0 mt-1 text-xl font-semibold tabular-nums text-n-slate-12">
-          {{ number(item.count) }}
-        </dd>
-        <dd
-          v-if="typeof item.rate === 'number'"
-          class="m-0 text-xs text-n-slate-11"
-        >
-          {{ rate(item.rate) }}
-        </dd>
-      </div>
-    </dl>
-    <p
-      v-if="current.evaluated_at"
-      class="-mt-3 mb-0 text-xs text-n-slate-11"
-      data-protection-checked
-    >
-      {{ t(`${EMAIL_NS}.CHECKED`, { date: date(current.evaluated_at) }) }}
-    </p>
+        {{ t(`${NS}.WHY.SCOPE`) }}
+      </p>
+    </div>
+
+    <ResultCampaignPeriod
+      v-if="campaign.id"
+      :campaign-id="campaign.id"
+      :version="periodVersion"
+    />
 
     <div
       class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
@@ -253,7 +250,11 @@ const STRIP_COLUMNS = {
         :data-section="section.key"
       >
         <h3 class="m-0 text-sm font-medium text-n-slate-12">
-          {{ t(`${EMAIL_NS}.${section.key}`) }}
+          {{
+            section.key === 'CURRENT'
+              ? t(`${NS}.ACCOUNT_WINDOW`)
+              : t(`${EMAIL_NS}.${section.key}`)
+          }}
         </h3>
         <p v-if="section.at" class="m-0 text-xs text-n-slate-11">
           {{
