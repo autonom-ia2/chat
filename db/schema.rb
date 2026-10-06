@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2148,6 +2148,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
     t.index ["reminder_id"], name: "index_crm_meetings_on_reminder_id"
   end
 
+  create_table "crm_meta_ad_insights_daily", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "ad_account_id", null: false
+    t.string "ad_id", null: false
+    t.string "adset_id"
+    t.string "campaign_id"
+    t.date "date", null: false
+    t.string "currency", limit: 3
+    t.decimal "spend", precision: 14, scale: 2, default: "0.0", null: false
+    t.bigint "impressions", default: 0, null: false
+    t.bigint "reach", default: 0, null: false
+    t.bigint "link_clicks", default: 0, null: false
+    t.decimal "frequency", precision: 10, scale: 4
+    t.integer "conversations_started", default: 0, null: false
+    t.jsonb "actions", default: [], null: false
+    t.string "attribution_window", null: false
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_account_id", "ad_id", "date"], name: "idx_crm_meta_ad_insights_daily_unique", unique: true
+    t.index ["account_id", "date"], name: "idx_crm_meta_ad_insights_daily_account_date"
+  end
+
   create_table "crm_meta_ad_objects", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "meta_object_id", null: false
@@ -2161,6 +2184,23 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
     t.text "preview_url"
     t.text "thumbnail_url"
     t.index ["account_id", "meta_object_id"], name: "idx_crm_meta_ad_objects_account_object", unique: true
+  end
+
+  create_table "crm_meta_ad_placements_daily", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "ad_account_id", null: false
+    t.string "ad_id", null: false
+    t.date "date", null: false
+    t.string "publisher_platform", null: false
+    t.string "platform_position", null: false
+    t.decimal "spend", precision: 14, scale: 2, default: "0.0", null: false
+    t.bigint "impressions", default: 0, null: false
+    t.bigint "link_clicks", default: 0, null: false
+    t.integer "conversations_started", default: 0, null: false
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_account_id", "ad_id", "date", "publisher_platform", "platform_position"], name: "idx_crm_meta_ad_placements_daily_unique", unique: true
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|
@@ -2179,6 +2219,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
     t.string "pixel_name", limit: 255
     t.jsonb "destinations", default: {}, null: false
     t.datetime "verified_at"
+    t.datetime "insights_synced_at"
+    t.datetime "insights_backfilled_at"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end
@@ -3579,7 +3621,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
+  add_foreign_key "crm_meta_ad_insights_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"

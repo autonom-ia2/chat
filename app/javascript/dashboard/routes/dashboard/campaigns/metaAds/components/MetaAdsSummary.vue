@@ -2,15 +2,18 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
+import { useEmitter } from 'dashboard/composables/emitter';
+import { BUS_EVENTS } from 'shared/constants/busEvents';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
-import { errorMessageKey, relativeTime } from '../metaAdsHelpers';
+import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
-// atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo.
+// atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo. O gasto do último dia
+// lido (#1073) é pedido ao abrir e trocado quando a leitura termina, pelo canal de tempo real.
 const props = defineProps({
   connection: { type: Object, required: true },
 });
@@ -22,8 +25,14 @@ const removeDialog = ref(null);
 const removing = ref(false);
 const sitePages = ref([]);
 const funnels = ref(null);
+const insights = ref(null);
 
 const attention = computed(() => props.connection.status !== 'active');
+const attentionHint = computed(() =>
+  props.connection.last_error === 'ad_account_access_lost'
+    ? t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ACCESS_LOST_HINT')
+    : t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ATTENTION_HINT')
+);
 const partnerName = computed(
   () => props.connection.partner?.business_name || 'Hub2You'
 );
@@ -104,7 +113,54 @@ const tiles = computed(() => [
   },
 ]);
 
+// "2026-10-06" é o dia da conta de anúncios, sem hora: compara com a data local de quem vê.
+const localDay = () => {
+  const now = new Date();
+  const pad = value => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+};
+
+const spendMoney = computed(() => {
+  const data = insights.value;
+  if (!data?.date) return null;
+  return new Intl.NumberFormat(intlLocale(locale.value), {
+    style: 'currency',
+    currency: data.currency || 'BRL',
+  }).format(Number(data.spend));
+});
+const spendLabel = computed(() => {
+  const data = insights.value;
+  if (!spendMoney.value) return null;
+  if (data.date === localDay()) {
+    return t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_TODAY');
+  }
+  const date = new Date(`${data.date}T12:00:00`).toLocaleDateString(
+    intlLocale(locale.value),
+    { day: '2-digit', month: '2-digit' }
+  );
+  return t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_ON', { date });
+});
+const spendUpdated = computed(() => {
+  const time = relativeTime(insights.value?.synced_at, locale.value);
+  return time
+    ? t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_UPDATED', { time })
+    : null;
+});
+
 const NEXT = ['NEXT_NAMES', 'NEXT_SALES', 'NEXT_PANEL'];
+
+const loadInsights = async () => {
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.insights();
+    insights.value = data.insights;
+  } catch {
+    insights.value = null;
+  }
+};
+
+useEmitter(BUS_EVENTS.CRM_META_ADS_INSIGHTS_UPDATED, data => {
+  insights.value = { ...data, refreshing: false };
+});
 
 const load = async () => {
   const [links, funnelData] = await Promise.allSettled([
@@ -133,7 +189,10 @@ const remove = async () => {
   }
 };
 
-onMounted(load);
+onMounted(() => {
+  load();
+  if (!attention.value) loadInsights();
+});
 </script>
 
 <template>
@@ -169,12 +228,52 @@ onMounted(load);
         >
           {{
             attention
-              ? $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.ATTENTION_HINT')
+              ? attentionHint
               : $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.HEADLINE', {
                   account: connection.ad_account?.name || '',
                 })
           }}
         </h3>
+        <p
+          v-if="!attention && insights"
+          data-summary-spend
+          class="flex flex-wrap items-baseline m-0 text-sm text-n-blue-4 gap-x-3 gap-y-1"
+          aria-live="polite"
+        >
+          <template v-if="spendLabel">
+            <span>
+              {{ spendLabel }}
+              <strong
+                data-summary-spend-value
+                class="text-lg font-semibold text-white"
+              >
+                {{ spendMoney }}
+              </strong>
+            </span>
+            <span>
+              {{
+                $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_CONVERSATIONS', {
+                  count: insights.conversations,
+                })
+              }}
+            </span>
+          </template>
+          <span v-else>
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_EMPTY') }}
+          </span>
+          <span v-if="spendUpdated">{{ spendUpdated }}</span>
+          <span
+            v-if="insights.refreshing"
+            data-summary-spend-refreshing
+            class="inline-flex items-center gap-1"
+          >
+            <span
+              class="i-lucide-refresh-cw size-3.5 animate-spin"
+              aria-hidden="true"
+            />
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_REFRESHING') }}
+          </span>
+        </p>
         <p class="flex flex-wrap m-0 text-sm text-n-blue-4 gap-x-3 gap-y-1">
           <span>{{ via }}</span>
           <span>

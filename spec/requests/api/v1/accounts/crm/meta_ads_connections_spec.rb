@@ -221,4 +221,55 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(Crm::MetaAdsConnection.where(account_id: account.id).count).to eq(1)
     end
   end
+
+  describe 'POST insights (#1073)' do
+    let(:connection) { create_meta_ads_insights_connection(account) }
+
+    after { Crm::MetaAds::Insights::Refresh.release(connection.id, 'today') }
+
+    it 'devolve o último dia lido e pede a leitura de hoje quando está velha' do
+      [['1', 30, 2], ['2', 12.5, 1]].each do |ad_id, spend, conversations|
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: Date.new(2026, 10, 5),
+                                        currency: 'BRL', spend: spend, conversations_started: conversations, attribution_window: '7d_click',
+                                        fetched_at: Time.current)
+      end
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).with(connection.id, 'today')
+
+      expect(response.parsed_body['insights']).to include('date' => '2026-10-05', 'spend' => '42.5', 'currency' => 'BRL',
+                                                          'conversations' => 3, 'refreshing' => true)
+    end
+
+    it 'várias aberturas ao mesmo tempo geram uma leitura só' do
+      connection
+
+      expect do
+        2.times { post "#{path}/insights", headers: auth_headers(admin), as: :json }
+      end.to have_enqueued_job(Crm::MetaAds::InsightsSyncJob).exactly(:once)
+      expect(response.parsed_body['insights']).to include('refreshing' => true, 'date' => nil)
+    end
+
+    it 'lido há menos de 5 minutos não chama a Meta de novo' do
+      connection.update!(insights_synced_at: 2.minutes.ago)
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.not_to have_enqueued_job(Crm::MetaAds::InsightsSyncJob)
+      expect(response.parsed_body['insights']['refreshing']).to be(false)
+    end
+
+    it 'sem conexão devolve vazio' do
+      post "#{path}/insights", headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to eq('insights' => nil)
+    end
+
+    it 'agente recebe 403' do
+      post "#{path}/insights", headers: auth_headers(agent), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
 end

@@ -192,9 +192,18 @@ class Crm::MetaAds::Setup
       status: 'active', verified_at: Time.current, last_checked_at: Time.current, last_error: nil
     )
     connection.access_token = nil if mode == 'partner'
+    reset_insights_on_new_ad_account
     connection.save!
     Crm::MetaAds::BackfillJob.perform_later(@account.id)
+    Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
     connection
+  end
+
+  # Outra conta de anúncios: a coleta começa do zero, com a carga de 90 dias (#1073).
+  def reset_insights_on_new_ad_account
+    return unless connection.ad_account_id_changed?
+
+    connection.assign_attributes(insights_synced_at: nil, insights_backfilled_at: nil)
   end
 
   def limited(text)

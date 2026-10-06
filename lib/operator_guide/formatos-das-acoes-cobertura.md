@@ -5,8 +5,8 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 526 |
-| Sem corpo | 143 |
+| No catálogo | 527 |
+| Sem corpo | 144 |
 | Com corpo | 383 |
 | Com corpo e formato completo | 310 (80,9%) |
 | Com corpo e formato incompleto | 73 |

@@ -317,6 +317,7 @@ Rails.application.routes.draw do
               get :funnels
               patch :funnel
               post :suggest_stages
+              post :insights
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'

@@ -212,6 +212,20 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(connection.read_token).to eq(platform_token)
     end
 
+    it 'trocar de conta de anúncios zera a coleta e começa a carga de 90 dias (#1073)' do
+      stub_reads
+      old = Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: '111', insights_synced_at: 1.hour.ago,
+                                           insights_backfilled_at: 1.day.ago)
+
+      expect do
+        post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel }, headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(old.id)
+
+      expect(old.reload).to have_attributes(ad_account_id: ad_account, insights_synced_at: nil, insights_backfilled_at: nil)
+    ensure
+      Crm::MetaAds::Insights::Backfill.release(old.id) if old
+    end
+
     it 'recusa conta de anúncios de outro portfólio' do
       stub_reads(owner: '777')
 

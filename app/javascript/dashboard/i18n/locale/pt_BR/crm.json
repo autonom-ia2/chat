@@ -2207,7 +2207,14 @@
         "NEXT_TITLE": "O que acontece agora",
         "NEXT_NAMES": "Cada conversa que veio de anúncio mostra o nome da campanha e o Ver anúncio no card do CRM.",
         "NEXT_SALES": "Quando um card avança ou é ganho, a Meta fica sabendo e aprende quem compra.",
-        "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio."
+        "NEXT_PANEL": "Próxima etapa: um painel com quanto custou cada venda, anúncio por anúncio.",
+        "SPEND_TODAY": "Gasto hoje",
+        "SPEND_ON": "Gasto em {date}",
+        "SPEND_CONVERSATIONS": "{count} conversas iniciadas",
+        "SPEND_UPDATED": "atualizado {time}",
+        "SPEND_REFRESHING": "atualizando…",
+        "SPEND_EMPTY": "O gasto dos anúncios aparece aqui depois da primeira leitura da Meta.",
+        "ACCESS_LOST_HINT": "A Meta não deixa mais a gente ler esta conta de anúncios. Compartilhe de novo ou conecte outra conta."
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",
