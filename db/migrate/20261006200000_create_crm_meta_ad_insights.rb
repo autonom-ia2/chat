@@ -10,10 +10,12 @@ class CreateCrmMetaAdInsights < ActiveRecord::Migration[7.1]
     create_insights_daily
     create_placements_daily
 
-    # Última leitura do dia de hoje e fim da primeira carga de 90 dias.
+    # Última leitura do dia de hoje, fim da primeira carga de 90 dias e fuso da conta de anúncios (o "hoje" da
+    # Meta é o dela, não o de quem abre a tela).
     change_table :crm_meta_ads_connections, bulk: true do |t|
       t.datetime :insights_synced_at
       t.datetime :insights_backfilled_at
+      t.string :ad_account_timezone
     end
   end
 

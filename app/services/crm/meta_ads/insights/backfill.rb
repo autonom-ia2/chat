@@ -14,6 +14,10 @@ class Crm::MetaAds::Insights::Backfill
     Redis::Alfred.set("#{RUNNING_KEY}:#{connection_id}", 1, nx: true, ex: RUNNING_TTL.to_i) ? true : false
   end
 
+  def self.running?(connection_id)
+    Redis::Alfred.exists?("#{RUNNING_KEY}:#{connection_id}")
+  end
+
   def self.release(connection_id)
     Redis::Alfred.delete("#{RUNNING_KEY}:#{connection_id}")
   end

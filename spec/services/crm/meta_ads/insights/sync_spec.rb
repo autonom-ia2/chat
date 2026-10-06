@@ -21,6 +21,21 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
     expect(connection.reload.insights_synced_at).to be_present
   end
 
+  it 'conexão feita antes da F2a aprende o fuso da conta de anúncios uma vez' do
+    connection.update!(ad_account_timezone: nil)
+    account_read = stub_request(:get, meta_graph_url("act_#{ad_account_id}"))
+                   .with(query: hash_including('fields' => Meta::AdsGraphClient::AD_ACCOUNT_FIELDS))
+                   .to_return(status: 200, body: { id: "act_#{ad_account_id}", timezone_name: 'America/Sao_Paulo' }.to_json,
+                              headers: { 'Content-Type' => 'application/json' })
+    stub_meta_insights(ad_account_id, date_preset: 'today', rows: [])
+
+    sync.perform('today')
+    described_class.new(connection.reload).perform('today')
+
+    expect(connection.ad_account_timezone).to eq('America/Sao_Paulo')
+    expect(account_read).to have_been_requested.once
+  end
+
   it 'segue as páginas da Meta pelo cursor' do
     first = { data: [meta_insights_row], paging: { cursors: { after: 'CUR1' }, next: 'https://graph.facebook.com/next' } }
     stub_request(:get, meta_graph_url("act_#{ad_account_id}/insights"))

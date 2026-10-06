@@ -26,8 +26,10 @@ const today = () => {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 };
 
+let mounted = null;
+
 const mountSummary = async (connection = CONNECTION) => {
-  const wrapper = mount(MetaAdsSummary, {
+  mounted = mount(MetaAdsSummary, {
     props: { connection },
     global: {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
@@ -39,7 +41,7 @@ const mountSummary = async (connection = CONNECTION) => {
     },
   });
   await flushPromises();
-  return wrapper;
+  return mounted;
 };
 
 const replyInsights = insights =>
@@ -52,6 +54,12 @@ describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
       data: { funnels: [] },
     });
     CtwaTrackedLinksAPI.get.mockResolvedValue({ data: { payload: [] } });
+  });
+
+  afterEach(() => {
+    mounted?.unmount();
+    mounted = null;
+    vi.useRealTimers();
   });
 
   it('asks for the numbers on open and shows today spend while refreshing', async () => {
@@ -99,6 +107,95 @@ describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
     expect(wrapper.find('[data-summary-spend-refreshing]').exists()).toBe(
       false
     );
+  });
+
+  it('uses the ad account day from the server to say today', async () => {
+    replyInsights({
+      date: '2026-01-02',
+      today: '2026-01-02',
+      spend: '0',
+      currency: 'BRL',
+      conversations: 0,
+      refreshing: false,
+    });
+
+    const wrapper = await mountSummary();
+
+    expect(wrapper.find('[data-summary-spend]').text()).toContain(
+      'SPEND_TODAY'
+    );
+  });
+
+  it('asks again every 2 minutes while the page is open', async () => {
+    vi.useFakeTimers();
+    replyInsights({ date: today(), spend: '1', refreshing: false });
+    await mountSummary();
+    expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+
+    expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(2);
+  });
+
+  it('checks again in 20 seconds while a read is running, in case the realtime event is lost', async () => {
+    vi.useFakeTimers();
+    replyInsights({ date: null, refreshing: true });
+    await mountSummary();
+
+    await vi.advanceTimersByTimeAsync(20 * 1000);
+
+    expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(2);
+  });
+
+  it('refreshes when the tab becomes visible again', async () => {
+    replyInsights({ date: today(), spend: '1', refreshing: false });
+    await mountSummary();
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the 90-day load while it runs', async () => {
+    replyInsights({ date: null, refreshing: true, backfilling: true });
+
+    const wrapper = await mountSummary();
+
+    expect(wrapper.find('[data-summary-spend-backfilling]').exists()).toBe(
+      true
+    );
+    expect(wrapper.text()).not.toContain('SPEND_EMPTY');
+  });
+
+  it('keeps the last numbers when a refresh fails', async () => {
+    vi.useFakeTimers();
+    replyInsights({ date: today(), spend: '7', currency: 'BRL' });
+    const wrapper = await mountSummary();
+    CrmMetaAdsConnectionAPI.insights.mockRejectedValue(new Error('offline'));
+
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+
+    expect(wrapper.find('[data-summary-spend-value]').text()).toContain('7.00');
+  });
+
+  it('schedules nothing after leaving the page, even with a request in flight', async () => {
+    vi.useFakeTimers();
+    let answer;
+    CrmMetaAdsConnectionAPI.insights.mockReturnValue(
+      new Promise(resolve => {
+        answer = resolve;
+      })
+    );
+    const wrapper = await mountSummary();
+    wrapper.unmount();
+    mounted = null;
+
+    answer({ data: { insights: { date: null, refreshing: true } } });
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+    expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(1);
   });
 
   it('labels an older day with its date instead of today', async () => {

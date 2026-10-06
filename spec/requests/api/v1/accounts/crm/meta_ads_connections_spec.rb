@@ -251,13 +251,24 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response.parsed_body['insights']).to include('refreshing' => true, 'date' => nil)
     end
 
-    it 'lido há menos de 5 minutos não chama a Meta de novo' do
-      connection.update!(insights_synced_at: 2.minutes.ago)
+    it 'lido há menos de 2 minutos não chama a Meta de novo' do
+      connection.update!(insights_synced_at: 1.minute.ago, insights_backfilled_at: 1.day.ago)
 
       expect do
         post "#{path}/insights", headers: auth_headers(admin), as: :json
       end.not_to have_enqueued_job(Crm::MetaAds::InsightsSyncJob)
       expect(response.parsed_body['insights']['refreshing']).to be(false)
+    end
+
+    it 'sem a carga de 90 dias, abrir a tela começa a carga na hora e avisa que está buscando' do
+      connection.update!(insights_synced_at: 1.minute.ago)
+
+      expect do
+        post "#{path}/insights", headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(connection.id)
+      expect(response.parsed_body['insights']).to include('backfilling' => true)
+    ensure
+      Crm::MetaAds::Insights::Backfill.release(connection.id)
     end
 
     it 'sem conexão devolve vazio' do

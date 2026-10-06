@@ -187,8 +187,7 @@ class Crm::MetaAds::Setup
 
   def save!(mode, details, pixel)
     connection.assign_attributes(
-      mode: mode, ad_account_id: row_id(details), ad_account_name: limited(details['name']),
-      ad_account_business_id: details.dig('business', 'id')&.to_s, pixel_id: pixel&.dig(:id), pixel_name: limited(pixel&.dig(:name)),
+      mode: mode, **ad_account_attributes(details), pixel_id: pixel&.dig(:id), pixel_name: limited(pixel&.dig(:name)),
       status: 'active', verified_at: Time.current, last_checked_at: Time.current, last_error: nil
     )
     connection.access_token = nil if mode == 'partner'
@@ -197,6 +196,13 @@ class Crm::MetaAds::Setup
     Crm::MetaAds::BackfillJob.perform_later(@account.id)
     Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
     connection
+  end
+
+  def ad_account_attributes(details)
+    {
+      ad_account_id: row_id(details), ad_account_name: limited(details['name']),
+      ad_account_business_id: details.dig('business', 'id')&.to_s, ad_account_timezone: details['timezone_name'].presence
+    }
   end
 
   # Outra conta de anúncios: a coleta começa do zero, com a carga de 90 dias (#1073).

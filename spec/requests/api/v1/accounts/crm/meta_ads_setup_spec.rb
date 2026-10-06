@@ -28,7 +28,8 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
   end
 
   def account_row(id, owner:, name: 'CA - Placement Seguros')
-    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', business: { id: owner, name: 'Dono' } }
+    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', timezone_name: 'America/Sao_Paulo',
+      business: { id: owner, name: 'Dono' } }
   end
 
   def with_whatsapp_portfolio(target = account, id = portfolio)
@@ -221,7 +222,8 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
         post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel }, headers: auth_headers(admin), as: :json
       end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(old.id)
 
-      expect(old.reload).to have_attributes(ad_account_id: ad_account, insights_synced_at: nil, insights_backfilled_at: nil)
+      expect(old.reload).to have_attributes(ad_account_id: ad_account, insights_synced_at: nil, insights_backfilled_at: nil,
+                                            ad_account_timezone: 'America/Sao_Paulo')
     ensure
       Crm::MetaAds::Insights::Backfill.release(old.id) if old
     end

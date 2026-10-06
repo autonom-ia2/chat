@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useEmitter } from 'dashboard/composables/emitter';
@@ -12,8 +12,12 @@ import { errorMessageKey, intlLocale, relativeTime } from '../metaAdsHelpers';
 
 // Anúncios da Meta (#1068): a conexão pronta. Herói com a frase da conta, quatro quadros com o que está
 // ligado de verdade (WhatsApp, site, campanhas com nome, funis avisando a Meta), o que acontece agora e um
-// atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo. O gasto do último dia
-// lido (#1073) é pedido ao abrir e trocado quando a leitura termina, pelo canal de tempo real.
+// atalho para cada passo. "Precisa de atenção" quando a Meta recusou o acesso salvo.
+//
+// Gasto (#1073): pedido ao abrir, a cada REFRESH_MS enquanto a aba está visível e ao voltar para ela; o
+// servidor só chama a Meta se o número tiver mais de 2 minutos. O fim da leitura chega pelo canal de tempo
+// real; se ele não chegar (conexão caída), a tela confere de novo em CHECK_MS, para o "atualizando…" nunca
+// ficar preso.
 const props = defineProps({
   connection: { type: Object, required: true },
 });
@@ -26,6 +30,11 @@ const removing = ref(false);
 const sitePages = ref([]);
 const funnels = ref(null);
 const insights = ref(null);
+const REFRESH_MS = 2 * 60 * 1000;
+const CHECK_MS = 20 * 1000;
+let refreshTimer = null;
+// Fora da tela não agenda nada: uma resposta que chega depois de sair não pode deixar timer órfão.
+let unmounted = false;
 
 const attention = computed(() => props.connection.status !== 'active');
 const attentionHint = computed(() =>
@@ -113,7 +122,8 @@ const tiles = computed(() => [
   },
 ]);
 
-// "2026-10-06" é o dia da conta de anúncios, sem hora: compara com a data local de quem vê.
+// "2026-10-06" é o dia da conta de anúncios, sem hora. O servidor diz qual é hoje no fuso da conta (`today`);
+// sem fuso conhecido, vale a data de quem vê.
 const localDay = () => {
   const now = new Date();
   const pad = value => String(value).padStart(2, '0');
@@ -131,7 +141,7 @@ const spendMoney = computed(() => {
 const spendLabel = computed(() => {
   const data = insights.value;
   if (!spendMoney.value) return null;
-  if (data.date === localDay()) {
+  if (data.date === (data.today || localDay())) {
     return t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_TODAY');
   }
   const date = new Date(`${data.date}T12:00:00`).toLocaleDateString(
@@ -149,17 +159,38 @@ const spendUpdated = computed(() => {
 
 const NEXT = ['NEXT_NAMES', 'NEXT_SALES', 'NEXT_PANEL'];
 
+const pageVisible = () => document.visibilityState !== 'hidden';
+
+// Próxima conferência: rápida enquanto há leitura ou carga em andamento; com a aba escondida, só reagenda.
+const scheduleRefresh = reload => {
+  clearTimeout(refreshTimer);
+  if (unmounted) return;
+  const waiting = insights.value?.refreshing || insights.value?.backfilling;
+  refreshTimer = setTimeout(
+    () => (pageVisible() ? reload() : scheduleRefresh(reload)),
+    waiting ? CHECK_MS : REFRESH_MS
+  );
+};
+
+// Falha de rede mantém o último número na tela; a próxima rodada tenta de novo.
 const loadInsights = async () => {
   try {
     const { data } = await CrmMetaAdsConnectionAPI.insights();
     insights.value = data.insights;
   } catch {
-    insights.value = null;
+    // mantém o que já estava na tela
+  } finally {
+    scheduleRefresh(loadInsights);
   }
+};
+
+const onVisibility = () => {
+  if (pageVisible() && !attention.value) loadInsights();
 };
 
 useEmitter(BUS_EVENTS.CRM_META_ADS_INSIGHTS_UPDATED, data => {
   insights.value = { ...data, refreshing: false };
+  scheduleRefresh(loadInsights);
 });
 
 const load = async () => {
@@ -191,7 +222,16 @@ const remove = async () => {
 
 onMounted(() => {
   load();
-  if (!attention.value) loadInsights();
+  if (attention.value) return;
+
+  loadInsights();
+  document.addEventListener('visibilitychange', onVisibility);
+});
+
+onBeforeUnmount(() => {
+  unmounted = true;
+  clearTimeout(refreshTimer);
+  document.removeEventListener('visibilitychange', onVisibility);
 });
 </script>
 
@@ -258,8 +298,19 @@ onMounted(() => {
               }}
             </span>
           </template>
-          <span v-else>
+          <span v-else-if="!insights.backfilling">
             {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_EMPTY') }}
+          </span>
+          <span
+            v-if="insights.backfilling"
+            data-summary-spend-backfilling
+            class="inline-flex items-center gap-1"
+          >
+            <span
+              class="i-lucide-loader-circle size-3.5 animate-spin"
+              aria-hidden="true"
+            />
+            {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_BACKFILLING') }}
           </span>
           <span v-if="spendUpdated">{{ spendUpdated }}</span>
           <span

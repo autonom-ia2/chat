@@ -13,8 +13,9 @@ anúncio é a F2b.
 | `crm_meta_ad_insights_daily` | conta · conta de anúncios · anúncio · dia | gasto, impressões, alcance, frequência, cliques no link, conversas iniciadas, `actions` cru, `attribution_window` |
 | `crm_meta_ad_placements_daily` | … · dia · plataforma · posição | lida só na carga diária e na de 90 dias |
 
-`crm_meta_ads_connections` ganhou `insights_synced_at` (última leitura de hoje) e `insights_backfilled_at` (fim
-da carga de 90 dias). Gravação sempre por upsert no índice único: reler um dia sobrescreve, nunca duplica.
+`crm_meta_ads_connections` ganhou `insights_synced_at` (última leitura de hoje), `insights_backfilled_at` (fim
+da carga de 90 dias) e `ad_account_timezone` (fuso da conta de anúncios, lido da Meta ao escolher a conta ou na
+primeira leitura; é nele que a Meta conta os dias e o resumo diz "hoje"). Gravação sempre por upsert no índice único: reler um dia sobrescreve, nunca duplica.
 
 Valores na moeda e no fuso da conta de anúncios, sem conversão. Janela de atribuição fixa em `7d_click`: as janelas
 por visualização (7 e 28 dias) saíram da API em 12/01/2026 e voltariam vazias sem erro.
@@ -23,15 +24,19 @@ por visualização (7 e 28 dias) saíram da API em 12/01/2026 e voltariam vazias
 
 | O quê | Quando | Escopo |
 |---|---|---|
-| Carga de 90 dias | ao escolher a conta de anúncios; se faltar, na rodada das 4h | relatório assíncrono (`POST act_<id>/insights`, `date_preset=last_90d`), por anúncio e depois por posicionamento |
+| Carga de 90 dias | ao escolher a conta de anúncios; se faltar, ao abrir a tela ou na rodada das 4h | relatório assíncrono (`POST act_<id>/insights`, `date_preset=last_90d`), por anúncio e depois por posicionamento |
 | Hoje | a cada 30 min (`crm_meta_ads_insights_today_job`) | `date_preset=today`, por anúncio |
 | 3 dias anteriores | 07:00 UTC = 4h de Brasília (`crm_meta_ads_insights_recent_job`) | `date_preset=last_3d`, por anúncio e por posicionamento |
-| Ao abrir a tela | `POST crm/meta_ads_connection/insights`, se o número de hoje tiver mais de 5 min | hoje |
+| Tela aberta | `POST crm/meta_ads_connection/insights` ao abrir, a cada 2 min com a aba visível e ao voltar para a aba; só chama a Meta se o número de hoje tiver mais de 2 min | hoje |
 
 Uma chamada por conta de anúncios por rodada (`level=ad`, `time_increment=1`, sem `ids`). Só contas com
 `meta_ads_hub` ligado e conta de anúncios escolhida. Cada escopo tem uma trava por conexão no Redis
 (`crm:meta_ads:insights:lock:<id>:<escopo>`, 10 min): várias aberturas da tela geram uma leitura só. O fim da leitura
-de hoje chega à tela pelo evento `crm.meta_ads.insights_updated`, só para administradores.
+de hoje (e o fim da carga de 90 dias) chega à tela pelo evento `crm.meta_ads.insights_updated`, só para
+administradores. Se o evento não chegar, a tela confere de novo em 20 s enquanto há leitura ou carga em andamento.
+
+O resumo mostra o dia de hoje da conta de anúncios. Se a leitura de hoje já rodou e não trouxe linha, mostra
+R$ 0,00 de hoje, nunca o número de ontem como se fosse de hoje. Falha de rede na tela mantém o último número.
 
 Os nomes de anúncio, conjunto e campanha que vêm junto renovam o cache `crm_meta_ad_objects` (sem tocar na prévia
 nem na miniatura).

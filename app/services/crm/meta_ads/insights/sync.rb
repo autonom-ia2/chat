@@ -18,12 +18,22 @@ class Crm::MetaAds::Insights::Sync
     return :skipped unless @connection.insights_readable?
     return :paused if Crm::MetaAds::Insights::Usage.paused?(@connection.ad_account_id)
 
+    learn_timezone
     outcome = scope == 'today' ? read_today : read_recent
     @connection.update!(insights_synced_at: Time.current) if outcome == :ok && scope == 'today'
     outcome
   end
 
   private
+
+  # Conexão feita antes da F2a não sabe o fuso da conta de anúncios: uma leitura da conta resolve, uma vez.
+  def learn_timezone
+    return if @connection.ad_account_timezone.present?
+
+    result = client.ad_account(@connection.ad_account_id)
+    timezone = result.ok ? result.data.to_h['timezone_name'].presence : nil
+    @connection.update!(ad_account_timezone: timezone) if timezone
+  end
 
   def read_today
     read(Crm::MetaAds::Insights::Query.ads(Crm::MetaAds::Insights::Query::TODAY)) { |rows| writer.ads!(rows) }

@@ -48,12 +48,14 @@ RSpec.describe Crm::MetaAds::InsightsBackfillJob do
     expect(Crm::MetaAds::Insights::Backfill.claim(connection.id)).to be(true)
   end
 
-  it 'relatório pronto: grava os 90 dias, marca a carga e segue para o posicionamento' do
+  it 'relatório pronto: grava os 90 dias, marca a carga, avisa a tela e segue para o posicionamento' do
+    create(:user, account: account, role: :administrator)
     stub_report_status('Job Completed')
     stub_report_rows([meta_insights_row(date: '2026-08-01'), meta_insights_row(date: '2026-08-02')])
 
     expect { described_class.perform_now(connection.id, 'ads', report_id, 1) }
       .to have_enqueued_job(described_class).with(connection.id, 'placements')
+      .and have_enqueued_job(ActionCableBroadcastJob)
     expect(Crm::MetaAdInsightDaily.count).to eq(2)
     expect(connection.reload.insights_backfilled_at).to be_present
   end

@@ -4,9 +4,10 @@
 # solta no fim. Assim várias pessoas abrindo a tela ao mesmo tempo, ou a tela e o agendador, geram uma
 # leitura só. A trava expira sozinha em LOCK_TTL se o job morrer no meio.
 #
-# Ao abrir a tela, só lê de novo se o gasto de hoje tiver mais de MIN_AGE.
+# A tela pede ao abrir, a cada MIN_AGE enquanto está aberta e ao voltar para a aba; só lê de novo se o gasto de
+# hoje tiver mais de MIN_AGE. Conexão sem a carga de 90 dias começa a carga ali mesmo, sem esperar as 4h.
 class Crm::MetaAds::Insights::Refresh
-  MIN_AGE = 5.minutes
+  MIN_AGE = 2.minutes
   LOCK_TTL = 10.minutes
   KEY_PREFIX = 'crm:meta_ads:insights:lock'.freeze
   TODAY = 'today'.freeze
@@ -15,6 +16,8 @@ class Crm::MetaAds::Insights::Refresh
     # Pedido da tela: enfileira a leitura de hoje se estiver velha. true quando há leitura em andamento.
     def request!(connection)
       return false unless connection.active? && connection.ad_account_id.present?
+
+      Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
       return running?(connection.id) unless stale?(connection)
       return false if Crm::MetaAds::Insights::Usage.paused?(connection.ad_account_id)
       return true unless claim(connection.id, TODAY)

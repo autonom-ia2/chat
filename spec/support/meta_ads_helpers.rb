@@ -31,9 +31,10 @@ module MetaAdsHelpers
   end
 
   # Insights (#1073): conexão com conta de anúncios escolhida, linha como a Meta devolve e stub do GET.
-  def create_meta_ads_insights_connection(account, ad_account_id: '2196424464528988')
+  def create_meta_ads_insights_connection(account, ad_account_id: '2196424464528988', timezone: 'America/Sao_Paulo')
     connection = create_meta_ads_connection(account)
-    connection.update!(ad_account_id: ad_account_id, ad_account_name: 'CA - Placement Seguros', verified_at: Time.current)
+    connection.update!(ad_account_id: ad_account_id, ad_account_name: 'CA - Placement Seguros', verified_at: Time.current,
+                       ad_account_timezone: timezone)
     connection
   end
 

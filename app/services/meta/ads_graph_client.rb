@@ -82,7 +82,7 @@ class Meta::AdsGraphClient
   end
 
   # Conexão guiada (#1047). IDs de conta de anúncios entram sem o prefixo `act_`.
-  AD_ACCOUNT_FIELDS = 'id,account_id,name,account_status,currency,business{id,name}'.freeze
+  AD_ACCOUNT_FIELDS = 'id,account_id,name,account_status,currency,timezone_name,business{id,name}'.freeze
   PIXEL_FIELDS = 'id,name,last_fired_time'.freeze
   LIST_LIMIT = 100
   MAX_PAGES = 10

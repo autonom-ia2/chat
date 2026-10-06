@@ -16,6 +16,7 @@
 #  ad_account_business_id :string
 #  ad_account_id          :string
 #  ad_account_name        :string(255)
+#  ad_account_timezone    :string
 #  pixel_id               :string
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
@@ -110,6 +111,12 @@ class Crm::MetaAdsConnection < ApplicationRecord
 
     Crm::MetaAds::Platform.token.present? && ad_account_id.present? &&
       Crm::MetaAds::Portfolios.for(account).include?(ad_account_business_id.to_s)
+  end
+
+  # Data de hoje no fuso da conta de anúncios, o mesmo em que a Meta conta os dias (#1073). nil sem fuso conhecido.
+  def ad_account_today
+    zone = ad_account_timezone.present? && ActiveSupport::TimeZone[ad_account_timezone]
+    zone ? Time.current.in_time_zone(zone).to_date : nil
   end
 
   # Pode ler os insights da conta de anúncios escolhida agora (#1073)?

@@ -2214,7 +2214,8 @@
         "SPEND_UPDATED": "atualizado {time}",
         "SPEND_REFRESHING": "atualizando…",
         "SPEND_EMPTY": "O gasto dos anúncios aparece aqui depois da primeira leitura da Meta.",
-        "ACCESS_LOST_HINT": "A Meta não deixa mais a gente ler esta conta de anúncios. Compartilhe de novo ou conecte outra conta."
+        "ACCESS_LOST_HINT": "A Meta não deixa mais a gente ler esta conta de anúncios. Compartilhe de novo ou conecte outra conta.",
+        "SPEND_BACKFILLING": "Buscando os últimos 90 dias na Meta…"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Compartilhar ainda não está disponível. Por enquanto, use uma chave de acesso.",

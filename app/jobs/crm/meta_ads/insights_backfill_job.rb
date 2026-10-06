@@ -51,6 +51,7 @@ class Crm::MetaAds::InsightsBackfillJob < ApplicationJob
     return finish(connection.id) unless kind == 'ads'
 
     connection.update!(insights_backfilled_at: Time.current)
+    Crm::MetaAds::Insights::Broadcaster.broadcast(connection)
     self.class.perform_later(connection.id, 'placements')
   end
 
