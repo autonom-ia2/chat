@@ -90,8 +90,8 @@ class Autonomia::Guide::Acoes
     # #1034 — trocar o token de anúncios da Meta troca credencial em uso e solta a resolução retroativa num job.
     'PUT crm/meta_ads_connection', 'PATCH crm/meta_ads_connection',
     # #1047 — escolher a conta troca de onde a plataforma lê e atribui o usuário do sistema na Meta; avisar a
-    # Meta liga envio de vendas para fora; destinos mudam a configuração da conexão.
-    'POST crm/meta_ads_connection/selection', 'POST crm/meta_ads_connection/sales_signal',
+    # Meta grava etapas do funil e liga envio de eventos para fora; destinos mudam a configuração da conexão.
+    'POST crm/meta_ads_connection/selection', 'PATCH crm/meta_ads_connection/funnel',
     'PATCH crm/meta_ads_connection/destinations'
   ].freeze
 

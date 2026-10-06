@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (191 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (192 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -700,6 +700,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: só administradores veem e editam o bloco; o token é testado antes de salvar e não aparece de novo; sem ads_read o token é recusado com essa explicação; se o usuário do sistema não tiver a conta de anúncios atribuída (Atribuir ativos), o teste passa e o bloco fica Conectado, mas os números continuam no lugar dos nomes — confira esse passo primeiro; se aparecer o aviso de criptografia do servidor não configurada, o token não pode ser guardado e o caso é do suporte; Precisa de atenção quer dizer que a Meta passou a recusar o token salvo (expirou ou perdeu acesso), e a resposta da Meta aparece no bloco; Trocar token ou Conectar de novo substitui o salvo; Remover apaga o token, mas os nomes já resolvidos continuam; enquanto não houver nome, o CRM mostra ID com o começo e o fim do número, e o número inteiro ao passar o mouse; renomear a campanha na Meta só aparece quando o nome guardado vence (7 dias); o filtro de campanha do CRM continua pelo identificador, não pelo nome.
 - leitura: campanhas
 - nav_target: `campaigns_tracked_links_index`
+
+### Conectar os anúncios da Meta em Anúncios da Meta
+- intent: Como conecto meus anúncios da Meta ao Chat2You?; Como compartilho a conta de anúncios com a Hub2You?; Qual conta de anúncios e qual Pixel escolher?; Como faço a Meta receber as minhas vendas?; Como a Meta entende as etapas do meu funil?; Meus anúncios levam para o WhatsApp e para o site, o que marco?; O que quer dizer A Meta ainda está liberando?
+- onde_fica: Menu lateral > Campanhas > Anúncios da Meta
+- rota: `campaigns_meta_ads_index` - `/app/accounts/:accountId/campaigns/meta-ads`
+- gate: feature flag `meta_ads_hub`; papel `administrator`
+- pre_requisitos: ser administrador da conta; a página aparece quando Anúncios da Meta está ligado para a conta; para compartilhar sem token, a conta precisa de um WhatsApp oficial conectado à Meta.
+- passos: 1. Em Anúncios da Meta, clique em Conectar a Meta; 2. Em Compartilhar com a Hub2You, siga os três passos no Gerenciador de Negócios (Parceiros > Adicionar > Conceder a um parceiro acesso aos seus ativos, cole o código mostrado e marque a conta de anúncios com Ver desempenho e o Pixel) e clique em Já compartilhei — ou use Colar token; 3. Escolha a conta de anúncios (a mais usada vem marcada) e o Pixel do site, e clique em Usar esta conta; 4. Marque para onde os anúncios levam: Direto para o WhatsApp, Para uma página do site, ou os dois, e clique em Continuar; 5. Em Avisar a Meta sobre o seu funil, confira cada funil ligado ao WhatsApp, revise o que cada etapa significa para a Meta (a IA sugere quando nenhuma etapa tem) e clique em Gravar no funil.
+- gotchas: a conexão só fica pronta depois que o Chat2You lê a conta de anúncios de verdade (nome, gasto dos últimos 30 dias e Pixel); A Meta ainda está liberando aparece logo depois de compartilhar e some em alguns minutos — clique em Usar esta conta de novo; a conta de anúncios precisa ser do mesmo portfólio da Meta do WhatsApp da conta: de outro portfólio, ou com um número de WhatsApp registrado no portfólio de um revendedor, use Colar token; uma conta de anúncios fica ligada a uma conta do Chat2You só; o passo 4 mostra só os funis ligados a um WhatsApp oficial e grava no próprio funil o mesmo que Editar funil (Como a Meta entende esta etapa e o envio de venda e mudança de etapa); a perda e o dataset continuam como estavam, e o Pixel escolhido só entra no funil que não tem um; Parar de avisar desliga só aquele funil e guarda as escolhas; número de WhatsApp fora de qualquer funil aparece em aviso, porque os clientes dele não chegam à Meta; para anúncios que levam ao site, as páginas são ligadas em Links e QR codes e o texto de Parâmetros de URL é copiado aqui; com Anúncios da Meta ligado, o bloco antigo Nomes das campanhas da Meta sai de Links e QR codes e vira um atalho para esta página; o card do CRM mostra Ver anúncio com a miniatura quando a Meta entrega a prévia do anúncio.
+- leitura: campanhas
+- nav_target: `campaigns_meta_ads_index`
 
 ### Ver todas as origens de um contato no CRM
 - intent: O que é o +2 ao lado da origem no card do CRM?; Como vejo todas as campanhas que trouxeram este contato?; Onde vejo o primeiro e o último anúncio que o cliente clicou?; Por que a origem mostra ID e um número?

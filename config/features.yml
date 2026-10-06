@@ -299,3 +299,8 @@
   display_name: Instagram Assisted Onboarding
   enabled: true
   column: feature_flags_ext_1
+
+- name: meta_ads_hub
+  display_name: Meta Ads hub (Anúncios da Meta)
+  enabled: false
+  column: feature_flags_ext_1

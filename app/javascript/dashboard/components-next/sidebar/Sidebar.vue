@@ -120,6 +120,11 @@ const slaFeatureEnabled = computed(() =>
 const whatsappApiCampaignsEnabled = computed(
   () => globalConfig.value?.whatsappApiCampaignsEnabled === true
 );
+// Anúncios da Meta (#1047): por conta, só administrador (a conexão é dele).
+const metaAdsHubEnabled = computed(() =>
+  isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
+);
+
 const crmKanbanEnabled = computed(
   () => globalConfig.value?.crmKanbanEnabled === true
 );
@@ -1080,6 +1085,18 @@ const menuItems = computed(() => {
                 label: t('CRM_KANBAN.TRACKED_LINKS.PAGE.TITLE'),
                 to: accountScopedRoute('campaigns_tracked_links_index'),
                 activeOn: ['campaigns_tracked_links_index'],
+              },
+            ]
+          : []),
+        ...(crmKanbanEnabled.value &&
+        metaAdsHubEnabled.value &&
+        isAdministrator.value
+          ? [
+              {
+                name: 'Campaign Meta Ads',
+                label: t('CRM_KANBAN.META_ADS_HUB.PAGE.TITLE'),
+                to: accountScopedRoute('campaigns_meta_ads_index'),
+                activeOn: ['campaigns_meta_ads_index'],
               },
             ]
           : []),
