@@ -12,7 +12,10 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     SHOPIFY_PARTNER_ACCESS_TOKEN
     SHOPIFY_PARTNER_API_VERSION
   ].freeze
-  TYPESAFE_CONFIGS = %w[TYPESAFE_JEV_ENABLED TYPESAFE_JEV_MODEL TYPESAFE_API_KEY].freeze
+  TYPESAFE_CONFIGS = %w[TYPESAFE_JEV_ENABLED CAMPAIGN_JOURNEY_JEV_ENABLED TYPESAFE_JEV_MODEL TYPESAFE_API_KEY].freeze
+  # Jev switches shown as checkboxes on the TypeSafe page: e-mail import and the campaign journey (#1045).
+  TYPESAFE_SWITCHES = %w[TYPESAFE_JEV_ENABLED CAMPAIGN_JOURNEY_JEV_ENABLED].freeze
+  SWITCH_VALUES = %w[true false].freeze
 
   before_action :set_config
   before_action :allowed_configs
@@ -133,7 +136,11 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
     return false unless submitted.is_a?(ActionController::Parameters) || submitted.is_a?(Hash)
     return false unless TYPESAFE_CONFIGS.all? { |key| !submitted.key?(key) || submitted[key].is_a?(String) }
 
-    !submitted.key?('TYPESAFE_JEV_ENABLED') || %w[true false].include?(submitted['TYPESAFE_JEV_ENABLED'])
+    valid_typesafe_switches?(submitted)
+  end
+
+  def valid_typesafe_switches?(submitted)
+    TYPESAFE_SWITCHES.all? { |key| !submitted.key?(key) || SWITCH_VALUES.include?(submitted[key]) }
   end
 
   def typesafe_credential_errors(submitted, existing)
@@ -153,7 +160,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   end
 
   def typesafe_enablement_errors(submitted, existing)
-    return [] unless ActiveModel::Type::Boolean.new.cast(submitted['TYPESAFE_JEV_ENABLED'])
+    return [] unless TYPESAFE_SWITCHES.any? { |key| ActiveModel::Type::Boolean.new.cast(submitted[key]) }
 
     errors = []
     errors << I18n.t('super_admin.typesafe.encryption_unavailable') unless Chatwoot.encryption_configured?
