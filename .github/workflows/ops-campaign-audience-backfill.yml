@@ -1,12 +1,14 @@
 name: Ops - Campaign Audience Backfill
 
 # One-purpose ops tool (#1005 F1 / #990): runs the existing rake
-# campaign_journey:backfill_audience_links inside the running web container on
-# the active (current) instance of each prod stack via SSM.
-# DRY-RUN by default (only counts). mode=apply adds APPLY=1 and writes.
-# Only completed campaigns, only the base label, ambiguous campaigns skipped,
-# idempotent (already linked campaigns are not touched).
-# The command is hardcoded — the only inputs are two fixed choices.
+# campaign_journey:backfill_audience_links in the web container of the active
+# instance of each selected prod stack via SSM (.github/scripts/ops_ssm_rake.sh).
+# DRY-RUN by default (only counts). mode=apply adds APPLY=1 and needs
+# confirm_production=true. Aborts unless the running image is expected_sha.
+# Only completed campaigns, only the base label, ambiguous campaigns and
+# campaigns with labels beyond the base are skipped; idempotent.
+# Runs only from main, in the production environment, never during a
+# blue-green deploy of the same stack. Run outside business hours.
 
 on:
   workflow_dispatch:
@@ -28,6 +30,15 @@ on:
         options:
           - dry_run
           - apply
+      expected_sha:
+        description: Exact deployed application commit (40 chars), not a branch name.
+        required: true
+        type: string
+      confirm_production:
+        description: Required (true) for mode=apply.
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -36,7 +47,13 @@ permissions:
 jobs:
   backfill:
     name: Backfill ${{ matrix.name }}
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    concurrency:
+      group: deploy-${{ matrix.name }}-blue-green
+      cancel-in-progress: false
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -47,9 +64,9 @@ jobs:
             role_arn: arn:aws:iam::354307071110:role/chatwoot-autonomia-prod-github-actions-deploy
     env:
       AWS_REGION: us-east-1
+      AWS_PAGER: ''
       CURRENT_INSTANCE_PARAMETER: /chatwoot/prod/blue-green/current-instance-id
-      STACK_INPUT: ${{ github.event.inputs.stack }}
-      MODE_INPUT: ${{ github.event.inputs.mode }}
+      STACK_INPUT: ${{ inputs.stack }}
     steps:
       - name: Skip when stack not selected
         id: gate
@@ -61,6 +78,11 @@ jobs:
             echo "Stack ${{ matrix.name }} not selected; skipping."
           fi
 
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          persist-credentials: false
+
       - name: Configure AWS credentials
         if: steps.gate.outputs.run == 'true'
         uses: aws-actions/configure-aws-credentials@v4
@@ -70,51 +92,9 @@ jobs:
 
       - name: Run audience backfill on active instance
         if: steps.gate.outputs.run == 'true'
-        run: |
-          set -euo pipefail
-
-          case "$MODE_INPUT" in
-            dry_run) CMD='docker exec chatwoot-web bundle exec rails campaign_journey:backfill_audience_links' ;;
-            apply) CMD='docker exec -e APPLY=1 chatwoot-web bundle exec rails campaign_journey:backfill_audience_links' ;;
-            *) echo "::error::mode must be dry_run or apply"; exit 1 ;;
-          esac
-          echo "Mode: $MODE_INPUT"
-
-          INSTANCE_ID="$(aws ssm get-parameter \
-            --name "$CURRENT_INSTANCE_PARAMETER" \
-            --query 'Parameter.Value' --output text)"
-          echo "Active instance: $INSTANCE_ID"
-
-          COMMAND_ID="$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name 'AWS-RunShellScript' \
-            --comment "Campaign audience backfill ($MODE_INPUT)" \
-            --parameters "commands=[$(printf '%s' "$CMD" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')]" \
-            --query 'Command.CommandId' --output text)"
-          echo "SSM command: $COMMAND_ID"
-
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" || true
-
-          STATUS="$(aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query 'Status' --output text)"
-          echo "Status: $STATUS"
-
-          echo "----- stdout -----"
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query 'StandardOutputContent' --output text
-          echo "----- stderr -----"
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --query 'StandardErrorContent' --output text
-
-          if [ "$STATUS" != "Success" ]; then
-            echo "::error::SSM command did not succeed (status=$STATUS)"
-            exit 1
-          fi
+        env:
+          OPS_TASK: campaign_journey:backfill_audience_links
+          OPS_MODE: ${{ inputs.mode }}
+          OPS_CONFIRM: ${{ inputs.confirm_production }}
+          OPS_EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: .github/scripts/ops_ssm_rake.sh
