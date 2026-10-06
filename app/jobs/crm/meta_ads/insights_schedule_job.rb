@@ -22,14 +22,16 @@ class Crm::MetaAds::InsightsScheduleJob < ApplicationJob
       if scope == 'recent' && connection.insights_backfilled_at.nil?
         Crm::MetaAds::InsightsBackfillJob.start(connection)
       else
-        enqueue(connection, scope)
+        enqueue_sync(connection, scope)
       end
     end
   end
 
   private
 
-  def enqueue(connection, scope)
+  # Não chamar de `enqueue`: o nome sobrescreve ActiveJob::Base#enqueue, que o perform_later do sidekiq-cron
+  # usa, e todo agendamento falha (#1073).
+  def enqueue_sync(connection, scope)
     return unless Crm::MetaAds::Insights::Refresh.claim(connection.id, scope)
 
     Crm::MetaAds::InsightsSyncJob.perform_later(connection.id, scope)
