@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_06_230000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3461,6 +3461,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
     t.index ["created_by_id"], name: "index_whatsapp_api_message_templates_on_created_by_id"
     t.index ["inbox_id"], name: "index_whatsapp_api_message_templates_on_inbox_id"
     t.index ["updated_by_id"], name: "index_whatsapp_api_message_templates_on_updated_by_id"
+  end
+
+  create_table "whatsapp_hybrid_connections", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "inbox_id", null: false
+    t.string "session_name", null: false
+    t.string "status", default: "pending", null: false
+    t.string "connected_phone"
+    t.datetime "risk_accepted_at"
+    t.bigint "risk_accepted_by_id"
+    t.string "risk_accepted_ip"
+    t.boolean "routing_enabled", default: true, null: false
+    t.jsonb "disabled_origins", default: [], null: false
+    t.integer "rate_limit_per_minute", default: 20, null: false
+    t.datetime "status_checked_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_whatsapp_hybrid_connections_on_account_id"
+    t.index ["inbox_id"], name: "index_whatsapp_hybrid_connections_on_inbox_id", unique: true
+    t.index ["session_name"], name: "index_whatsapp_hybrid_connections_on_session_name", unique: true
   end
 
   create_table "working_hours", force: :cascade do |t|

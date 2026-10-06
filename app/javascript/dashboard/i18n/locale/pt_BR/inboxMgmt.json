@@ -862,6 +862,56 @@
         "CHECKING": "Verificando"
       }
     },
+    "WHATSAPP_HYBRID": {
+      "TITLE": "WhatsApp API neste número",
+      "DESCRIPTION": "Um segundo caminho de envio na mesma caixa. Quando a janela oficial de 24 horas estiver fechada, a resposta sai pelo WhatsApp API.",
+      "CONNECT": "Conectar WhatsApp API",
+      "SCAN_TITLE": "Leia o QR Code com o WhatsApp Business desta caixa",
+      "QR_ALT": "QR Code para conectar o WhatsApp API",
+      "STEP_1": "Abra o WhatsApp Business no celular deste número",
+      "STEP_2": "Vá em Configurações e depois em Dispositivos conectados",
+      "STEP_3": "Toque em Conectar dispositivo e aponte o celular para este código",
+      "USE_CODE": "Prefiro usar um código",
+      "CODE_HELP": "No celular, toque em Conectar com número de telefone e digite este código.",
+      "NEW_QR": "Novo QR Code",
+      "CONNECTED_HELP": "Conectado ao {phone}. É o mesmo número da caixa oficial.",
+      "WRONG_NUMBER": "O celular conectado ({phone}) não é o número desta caixa. Desconecte e conecte o celular certo.",
+      "DISCONNECT": "Desconectar WhatsApp API",
+      "OFFICIAL": "Oficial",
+      "WEB": "WhatsApp API",
+      "RATE_LIMIT": "Mensagens por minuto pelo WhatsApp API",
+      "STATUS": {
+        "NOT_CONNECTED": "Não conectado",
+        "AWAITING": "Aguardando o celular",
+        "CONNECTED": "Conectado",
+        "FAILED": "Falha na conexão",
+        "DISCONNECTED": "Desconectado"
+      },
+      "RISK": {
+        "TITLE": "Antes de ligar",
+        "TEXT": "Entendo que o WhatsApp API não é um canal oficial da Meta e que o número oficial pode sofrer restrição ou banimento pela Meta."
+      },
+      "ROUTING": {
+        "TITLE": "Envio automático",
+        "DESCRIPTION": "A caixa escolhe o caminho de cada mensagem. Você não precisa fazer nada.",
+        "INSIDE": "Dentro de 24 horas",
+        "OUTSIDE": "Depois de 24 horas",
+        "TEMPLATES": "Modelos aprovados"
+      },
+      "ORIGINS": {
+        "TITLE": "Quem pode enviar depois de 24 horas",
+        "HUMAN": "Atendentes",
+        "BOT": "Robôs",
+        "AUTOMATION": "Automações",
+        "CAMPAIGN": "Campanhas"
+      },
+      "ERRORS": {
+        "CONNECT": "Não foi possível conectar o WhatsApp API. Tente de novo.",
+        "CODE": "Não foi possível gerar o código. Tente de novo.",
+        "SAVE": "Não foi possível salvar. Tente de novo.",
+        "DISCONNECT": "Não foi possível desconectar. Tente de novo."
+      }
+    },
     "TABS": {
       "SETTINGS": "Configurações",
       "COLLABORATORS": "Agentes",
@@ -875,7 +925,8 @@
       "ACCOUNT_HEALTH": "Saúde da conta",
       "CSAT": "CSAT",
       "VOICE": "Voz",
-      "CALLS": "Chamadas"
+      "CALLS": "Chamadas",
+      "WHATSAPP_API": "WhatsApp API"
     },
     "VOICE_CONFIGURATION": {
       "ENABLE_VOICE": {
