@@ -1807,6 +1807,11 @@ Rails.application.routes.draw do
         end
       end
     end
+
+    if ChatwootApp.enterprise?
+      match 'mcp', to: 'mcp#handle', via: [:get, :post, :delete]
+      get '.well-known/oauth-protected-resource(/mcp)', to: 'mcp/metadata#show'
+    end
   end
 
   # ----------------------------------------------------------------------
