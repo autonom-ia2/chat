@@ -122,7 +122,7 @@ jobs:
             tests/qa/instagram-testers/toast-helpers.test.mjs \
             tests/instagram_testers/session-observer.test.mjs \
             tests/instagram_testers/session-manager.test.mjs \
-            tests/instagram_testers/runtime-publisher.test.mjs \
+            tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs \
             tests/instagram_testers/runtime-entrypoint.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
             tests/instagram_testers/operator-control.test.mjs \
@@ -168,7 +168,7 @@ jobs:
           scripts/instagram_testers/runtime/publisher-tunnel.mjs
           tests/instagram_testers/session-observer.test.mjs
           tests/instagram_testers/session-manager.test.mjs
-          tests/instagram_testers/runtime-publisher.test.mjs
+          tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs
           tests/instagram_testers/runtime-entrypoint.test.mjs
           tests/instagram_testers/session-publisher-stdio.test.mjs
           tests/instagram_testers/operator-control.test.mjs

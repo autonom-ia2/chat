@@ -366,3 +366,11 @@ A [auditoria Nexo](../audit/995-nexo-infra-20261005.md) preserva o histórico de
   isolamento real. configFromEnv de produção continua exigindo UIDs separados;
   o teste não permite UID único no código operacional. Somente homologação após aprovação
   comprova HTTPS, autenticação AWS de serviço, login humano e duas renovações reais.
+
+## Orçamento do publicador e consultas concorrentes
+
+O transporte mantém um único orçamento de 25 segundos. STS e CURRENT são lidos em paralelo pelo mesmo perfil/região; os dois resultados precisam validar antes de qualquer túnel. Em seguida, listener e host key são aguardados em paralelo; os dois precisam aprovar antes do SSH. Falha ou cancelamento aborta a operação, sem reiniciar o prazo, ampliar IAM, usar chave não verificada ou tentar outro transporte.
+
+Um diagnóstico aprovado com fontes candidatas não atualiza o runtime instalado. Publicar uma release imutável com o commit aprovado e conferir os hashes instalados antes da partida. Não editar a release atual em lugar, não substituir um B0 por diagnóstico e não usar versões de CURRENT anteriores a um deploy concorrente.
+
+A cobertura dessa ordem fica em `tests/instagram_testers/publisher-concurrency.test.mjs`, executada e verificada pelo ESLint no workflow Instagram. Para o aceite funcional, continuam obrigatórios login Meta, publicação recebida e renovações naturais pelo runtime VPS.

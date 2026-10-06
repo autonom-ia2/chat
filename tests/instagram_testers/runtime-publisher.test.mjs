@@ -321,6 +321,7 @@ test('runPublisher targets the current pointer when no override is configured', 
         run: syntheticRun(),
         freePortFn: async () => 49152,
         waitForPortFn: () => new Promise(() => {}),
+        hostKeyFn: () => new Promise(() => {}),
         spawnImpl: (command, args) => {
           if (command === 'aws') startArgs = args;
           return tunnel;
@@ -330,6 +331,7 @@ test('runPublisher targets the current pointer when no override is configured', 
     /instagram_session_publication_failed/
   );
   await flushPublisher();
+  assert.equal(tunnel.killed, false);
   await clock.advance(100);
   await rejected;
   assert.equal(startArgs.includes('i-0a588ad747022bb9c'), true);
@@ -352,6 +354,7 @@ test('runPublisher enforces a sub-30s deadline and kills a detached SSM tunnel',
         run: syntheticRun(),
         freePortFn: async () => 49152,
         waitForPortFn: () => new Promise(() => {}),
+        hostKeyFn: () => new Promise(() => {}),
         spawnImpl: command => {
           spawned.push(command);
           return tunnel;
@@ -361,6 +364,7 @@ test('runPublisher enforces a sub-30s deadline and kills a detached SSM tunnel',
     /instagram_session_publication_failed/
   );
   await flushPublisher();
+  assert.equal(tunnel.killed, false);
   await clock.advance(100);
   await rejected;
   assert.equal(PUBLISH_BUDGET_MS < 30000, true);
