@@ -460,23 +460,41 @@ export async function runPublisher(
   signals.once('SIGTERM', onSignal);
   signals.once('SIGINT', onSignal);
   try {
-    await abortable(
-      verifyAwsAccount(config, {
-        run,
-        signal: controller.signal,
-        timeoutMs: remaining(),
-      }),
-      controller.signal
-    );
-    const currentInstanceId = await abortable(
-      currentInstanceViaSsm(config, {
-        run,
-        signal: controller.signal,
-        timeoutMs: remaining(),
-      }),
-      controller.signal
-    );
-    if (config.instanceId) requireSafe(currentInstanceId === config.instanceId);
+    // Only the two metadata reads overlap; both must validate before operations.
+    const metadata = [
+      abortable(
+        Promise.resolve().then(() =>
+          verifyAwsAccount(config, {
+            run,
+            signal: controller.signal,
+            timeoutMs: remaining(),
+          })
+        ),
+        controller.signal
+      ),
+      abortable(
+        Promise.resolve().then(async () => {
+          const currentInstanceId = await currentInstanceViaSsm(config, {
+            run,
+            signal: controller.signal,
+            timeoutMs: remaining(),
+          });
+          if (config.instanceId)
+            requireSafe(currentInstanceId === config.instanceId);
+          return currentInstanceId;
+        }),
+        controller.signal
+      ),
+    ];
+    let currentInstanceId;
+    try {
+      [, currentInstanceId] = await Promise.all(metadata);
+    } catch {
+      stopChildren();
+      await Promise.allSettled(metadata);
+      throw staticFailure();
+    }
+    remaining();
     const targetConfig = Object.freeze({
       ...config,
       instanceId: currentInstanceId,
@@ -492,26 +510,40 @@ export async function runPublisher(
     activeTunnel.once('error', () => {});
     activeTunnel.stdout?.resume();
     activeTunnel.stderr?.resume();
-    await abortable(
-      waitForPortFn(port, {
-        timeoutMs: remaining(),
-        deadline,
-        sleep,
-        signal: controller.signal,
-        now,
-      }),
-      controller.signal
-    );
-    const rawKey = await abortable(
-      hostKeyFn(targetConfig, {
-        run,
-        sleep,
-        signal: controller.signal,
-        deadline,
-        now,
-      }),
-      controller.signal
-    );
+    const readiness = [
+      abortable(
+        Promise.resolve().then(() =>
+          waitForPortFn(port, {
+            timeoutMs: remaining(),
+            deadline,
+            sleep,
+            signal: controller.signal,
+            now,
+          })
+        ),
+        controller.signal
+      ),
+      abortable(
+        Promise.resolve().then(() =>
+          hostKeyFn(targetConfig, {
+            run,
+            sleep,
+            signal: controller.signal,
+            deadline,
+            now,
+          })
+        ),
+        controller.signal
+      ),
+    ];
+    let rawKey;
+    try {
+      [, rawKey] = await Promise.all(readiness);
+    } catch {
+      stopChildren();
+      await Promise.allSettled(readiness);
+      throw staticFailure();
+    }
     const scratch = await abortable(
       files.mkdtemp(join(tmpdir(), 'instagram-publisher-')),
       controller.signal

@@ -1,0 +1,17 @@
+--- a/runtime/producers/producers.py
++++ b/runtime/producers-final-20261006/producers.py
+@@ -16,12 +16,12 @@
+ 
+ BASE = Path(__file__).resolve().parent
+ APPROVED = BASE.parents[1]
+-CUTOVER = APPROVED / 'release/cutover-mac-argv'
++CUTOVER = APPROVED / 'release/cutover-mac-statewords'
+ B0_CHECKER = APPROVED / 'https/b0/v2/b0_check.py'
+ # Reviewed V2 distinguishes real Rails/SSM provenance from preparation and HTTP.
+ B0_CHECKER_SHA256 = 'e130e5fddb9235d19cfb80486c0b7efdd543018bad482650c877b5f4345a5208'
+ PINS = {
+-    'publisher_cutover.py': '8e9d82a33c0468ba8cab418cfc8e07f68f799980fe40769622e5918efaaa6725',
++    'publisher_cutover.py': '4157f1b1844e65b4bbe7282fa44ae3f6f71c00e93f7d48a20ecfe4eaea98b1d9',
+     'remote_current.py': '5b44223ae62118a01849abae66871fff5985adb00b8e9dd45358125e6c855212',
+     'vps_read_proof.py': '9ba3f3df784dd8b8c04e71986c3bd3fef3cd779e2d923df621a7f557c9bbd64a',
+ }
