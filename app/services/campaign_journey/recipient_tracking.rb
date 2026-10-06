@@ -31,7 +31,9 @@ module CampaignJourney::RecipientTracking
   def insert_recipients(contacts, status:, error_message: nil)
     contacts.in_batches(of: INSERT_BATCH_SIZE) do |batch|
       now = Time.current
-      rows = batch.pluck(:id).map do |contact_id|
+      # Ordered so recipients (and therefore sends) follow contact id order; an unordered
+      # pluck let the database return ids in any order and made the send order vary.
+      rows = batch.order(:id).pluck(:id).map do |contact_id|
         { account_id: campaign.account_id, campaign_id: campaign.id, contact_id: contact_id, inbox_id: campaign.inbox_id,
           status: CampaignRecipient.statuses[status], error_message: error_message, created_at: now, updated_at: now }
       end
