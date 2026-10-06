@@ -1,7 +1,8 @@
 # Agendador da coleta de insights (#1073), chamado pelo sidekiq-cron (config/schedule.yml):
 # - `today` a cada 30 minutos: o gasto de hoje de cada conexão;
 # - `recent` todo dia às 4h de Brasília: os 3 dias anteriores, com posicionamento. Conexão que ainda não
-#   terminou a primeira carga de 90 dias recebe a carga no lugar.
+#   terminou a primeira carga de 90 dias recebe a carga no lugar; sem as ligações conversa → anúncio dos 90 dias
+#   (F2b), recebe também essa carga, que só lê o banco.
 #
 # Só lê contas com Anúncios da Meta ligado (`meta_ads_hub`) e conta de anúncios escolhida. Cada conexão vira
 # um job próprio, com a trava do escopo: uma leitura por conta de anúncios por rodada (CA-2.1).
@@ -15,6 +16,8 @@ class Crm::MetaAds::InsightsScheduleJob < ApplicationJob
 
     connections.find_each do |connection|
       next unless connection.account.feature_enabled?(FEATURE)
+
+      Crm::MetaAds::LinksBackfillJob.start(connection) if scope == 'recent' && connection.links_backfilled_at.nil?
 
       if scope == 'recent' && connection.insights_backfilled_at.nil?
         Crm::MetaAds::InsightsBackfillJob.start(connection)

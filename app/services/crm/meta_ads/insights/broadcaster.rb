@@ -3,6 +3,17 @@
 class Crm::MetaAds::Insights::Broadcaster
   include Events::Types
 
+  THROTTLE = 30.seconds
+  THROTTLE_PREFIX = 'crm:meta_ads:insights:broadcast'.freeze
+
+  # Para avisos que podem vir em rajada (uma ligação conversa → anúncio por conversa nova): no máximo um por
+  # conexão a cada THROTTLE. O que cair dentro da janela chega na próxima conferência da tela (a cada 2 min).
+  def self.broadcast_throttled(connection)
+    return unless Redis::Alfred.set("#{THROTTLE_PREFIX}:#{connection.id}", 1, nx: true, ex: THROTTLE.to_i)
+
+    broadcast(connection)
+  end
+
   def self.broadcast(connection)
     tokens = connection.account.administrators.filter_map(&:pubsub_token)
     return if tokens.empty?
