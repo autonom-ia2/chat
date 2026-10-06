@@ -1,10 +1,11 @@
 // Campanhas menu of the new journey (#993, PRD D17). Sidebar.vue only hands its current
 // children here: with the flag off they come back untouched; with it on the group shows
-// Público, Campanha, Modelos, Links e QR codes and Gestão de campanhas, in this order,
-// reusing the existing entries for the last three.
+// Público, Campanha, Modelos, Links e QR codes, Anúncios da Meta (#1068, when its flag is on)
+// and Gestão de campanhas, in this order, reusing the existing entries for the last four.
 const KEPT_ENTRIES = [
   'Campaign WhatsApp Templates',
   'Campaign Links and QR codes',
+  'Campaign Meta Ads',
   'Campaign Management',
 ];
 

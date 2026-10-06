@@ -7,6 +7,7 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import { errorMessageKey } from '../metaAdsHelpers';
 import MetaAdsSitePage from './MetaAdsSitePage.vue';
+import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
 
 // Anúncios da Meta (#1047), passo 3: para onde os anúncios levam. WhatsApp direto já funciona
 // sozinho; site usa as páginas ligadas em Links e QR codes (#1011) e o texto dos parâmetros de URL.
@@ -86,14 +87,14 @@ onMounted(loadPages);
       </p>
     </header>
 
-    <div class="grid gap-2 md:grid-cols-2">
+    <div class="grid gap-3 md:grid-cols-2">
       <button
         v-for="option in OPTIONS"
         :key="option.key"
         type="button"
         :data-destination="option.key"
         :aria-pressed="choice[option.key]"
-        class="flex items-center w-full gap-3 px-4 py-3 text-left border border-solid min-h-[4.5rem] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        class="flex flex-col w-full min-w-0 gap-3 p-3 text-left border border-solid rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
         :class="
           choice[option.key]
             ? 'border-n-blue-8 bg-n-blue-2'
@@ -101,33 +102,42 @@ onMounted(loadPages);
         "
         @click="choice = { ...choice, [option.key]: !choice[option.key] }"
       >
-        <span
-          class="grid flex-none rounded-xl size-9 place-items-center bg-n-blue-3 text-n-blue-11"
-          aria-hidden="true"
-        >
-          <span :class="option.icon" class="size-5" />
-        </span>
-        <span class="flex flex-col flex-1 min-w-0 gap-0.5">
-          <span class="text-sm font-semibold text-n-slate-12">
-            {{
-              $t(
-                `CRM_KANBAN.META_ADS_HUB.DESTINATIONS.${option.key.toUpperCase()}`
-              )
-            }}
+        <MetaAdsDestinationArt :kind="option.key" />
+        <span class="flex items-start w-full gap-3 px-1">
+          <span
+            class="grid flex-none rounded-xl size-9 place-items-center bg-n-blue-3 text-n-blue-11"
+            aria-hidden="true"
+          >
+            <span :class="option.icon" class="size-5" />
           </span>
-          <span class="text-xs text-n-slate-11">
-            {{
-              $t(
-                `CRM_KANBAN.META_ADS_HUB.DESTINATIONS.${option.key.toUpperCase()}_HINT`
-              )
-            }}
+          <span class="flex flex-col flex-1 min-w-0 gap-0.5">
+            <span class="text-sm font-semibold text-n-slate-12">
+              {{
+                $t(
+                  `CRM_KANBAN.META_ADS_HUB.DESTINATIONS.${option.key.toUpperCase()}`
+                )
+              }}
+            </span>
+            <span class="text-xs leading-5 text-n-slate-11">
+              {{
+                $t(
+                  `CRM_KANBAN.META_ADS_HUB.DESTINATIONS.${option.key.toUpperCase()}_WHEN`
+                )
+              }}
+            </span>
+          </span>
+          <span
+            class="grid flex-none border-2 rounded-md size-6 place-items-center"
+            :class="
+              choice[option.key]
+                ? 'bg-n-blue-9 border-n-blue-9 text-white'
+                : 'border-n-slate-7'
+            "
+            aria-hidden="true"
+          >
+            <span v-if="choice[option.key]" class="i-lucide-check size-4" />
           </span>
         </span>
-        <span
-          class="flex-none size-5"
-          :class="choice[option.key] ? 'i-lucide-check text-n-blue-11' : ''"
-          aria-hidden="true"
-        />
       </button>
     </div>
 

@@ -105,4 +105,31 @@ describe('Anúncios da Meta · funil no passo 4 (#1047)', () => {
 
     expect(CrmMetaAdsConnectionAPI.stopFunnel).toHaveBeenCalledWith(3);
   });
+
+  it('shows what was there before only where the AI changed a saved choice (#1068)', async () => {
+    const mixed = funnel({
+      stages: [
+        { id: 10, name: 'Novo', funnel_stage_type: null, result: false },
+        {
+          id: 11,
+          name: 'Proposta',
+          funnel_stage_type: 'qualified',
+          result: false,
+        },
+      ],
+    });
+    const wrapper = mountCard({ funnel: mixed });
+
+    await wrapper.find('[data-funnel-suggest]').trigger('click');
+    await flushPromises();
+
+    const before = wrapper.findAll('[data-funnel-before]');
+    expect(before).toHaveLength(1);
+    expect(
+      wrapper
+        .get('[data-funnel-stage="11"]')
+        .find('[data-funnel-before]')
+        .exists()
+    ).toBe(true);
+  });
 });

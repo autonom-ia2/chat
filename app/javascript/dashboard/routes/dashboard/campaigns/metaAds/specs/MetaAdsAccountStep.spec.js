@@ -122,4 +122,22 @@ describe('Anúncios da Meta · escolher a conta (#1047)', () => {
     expect(wrapper.find('[data-pixels]').exists()).toBe(true);
     expect(wrapper.emitted('saved')).toBeUndefined();
   });
+
+  it('keeps the save error on screen and says which way the account is read (#1068)', async () => {
+    CrmMetaAdsConnectionAPI.select.mockRejectedValue({
+      response: { data: { error: 'platform_access_pending' } },
+    });
+    const wrapper = await mountStep();
+
+    expect(wrapper.get('[data-account-mode]').text()).toContain(
+      'CRM_KANBAN.META_ADS_HUB.ACCOUNT.VIA_PARTNER'
+    );
+    await wrapper.get('[data-use-account]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-account-error]').text()).toContain(
+      'PLATFORM_ACCESS_PENDING'
+    );
+    expect(wrapper.emitted('saved')).toBeUndefined();
+  });
 });
