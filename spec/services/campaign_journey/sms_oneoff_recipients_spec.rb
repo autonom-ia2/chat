@@ -163,7 +163,7 @@ RSpec.describe CampaignJourney::SmsOneoffRecipients, :aggregate_failures do
 
       expect(sent.pluck('to')).to contain_exactly('+5511987654321', '+5531987654321')
       by_name = recipients(campaign)
-      expect([by_name['Ana Souza'].status, by_name['Ana Souza'].source_id]).to eq(%w[sent bw-1])
+      expect([by_name['Ana Souza'].status, by_name['Ana Souza'].source_id]).to eq(%w[sent bw-5511987654321])
       expect([by_name['Caio Reis'].status, by_name['Caio Reis'].error_message]).to eq(['failed', "'to' +<DIGITS> is not a mobile number"])
     end
   end
