@@ -9,6 +9,11 @@ import AnalyticsHelper from '../helper/AnalyticsHelper';
 import AcceptInvitation from 'v3/views/auth/accept-invitation/Index.vue';
 
 const ONBOARDING_STEPS = ['account_details', 'enrichment', 'inbox_setup'];
+// Links that cannot know the account; the guard moves them into the current one
+const ACCOUNT_SCOPED_LINK_ROUTES = {
+  oauth_authorize_link: 'oauth_authorize',
+};
+
 const publicRoutes = [
   {
     path: '/accept-invitation',
@@ -105,6 +110,15 @@ export const validateAuthenticateRoutePermission = async (to, next) => {
     ONBOARDING_STEPS.includes(userAccount?.onboarding_step) &&
     isAdmin &&
     isActive;
+
+  const accountScopedRoute = ACCOUNT_SCOPED_LINK_ROUTES[to.name];
+  if (accountScopedRoute) {
+    return next({
+      name: accountScopedRoute,
+      params: { accountId: routeAccountId },
+      query: to.query,
+    });
+  }
 
   if (to.name === 'no_accounts' || !to.name) {
     const target = needsOnboarding
