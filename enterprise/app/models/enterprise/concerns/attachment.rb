@@ -14,6 +14,7 @@ module Enterprise::Concerns::Attachment
 
   def enqueue_audio_transcription
     return unless file_type.to_sym == :audio
+    return if message&.content_attributes&.[]('history_import')
 
     # No file.attached? guard: the social-media ingest path saves the
     # Attachment before attaching the blob. AudioTranscriptionJob retries
@@ -24,6 +25,7 @@ module Enterprise::Concerns::Attachment
   def broadcast_message_update_for_audio
     return unless file_type.to_sym == :audio
     return unless message
+    return if message.content_attributes['history_import']
     # Without an attached file, the message serializer's audio_metadata path
     # dereferences `file.metadata[:width]` on nil and raises. The pre-attach
     # broadcast wouldn't carry useful audio info anyway — skip until upload completes.

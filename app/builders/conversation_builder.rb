@@ -2,6 +2,12 @@ class ConversationBuilder
   pattr_initialize [:params!, :contact_inbox!]
 
   def perform
+    inbox = @contact_inbox.inbox
+    if inbox.channel_type == 'Channel::Api' && inbox.channel.additional_attributes['provider'] == 'waha' &&
+       inbox.channel.additional_attributes.dig('waha_history_import', 'status').in?(%w[waiting_connection running])
+      return @contact_inbox.with_lock { look_up_exising_conversation || create_new_conversation }
+    end
+
     look_up_exising_conversation || create_new_conversation
   end
 

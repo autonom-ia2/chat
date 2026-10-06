@@ -266,6 +266,29 @@ RSpec.describe Attachment do
     end
   end
 
+  describe 'audio side effects for historical messages' do
+    it 'não agenda transcrição nem atualização quando a mensagem é histórica' do
+      historical_message = create(:message, content_attributes: { 'history_import' => true })
+      attachment = historical_message.attachments.new(account_id: historical_message.account_id, file_type: :audio)
+      attachment.file.attach(io: StringIO.new('fake audio'), filename: 'voice.ogg', content_type: 'audio/ogg')
+
+      expect(Messages::AudioTranscriptionJob).not_to receive(:perform_later)
+      expect(historical_message).not_to receive(:send_update_event)
+
+      attachment.save!
+    end
+
+    it 'mantém transcrição e atualização para mensagem live' do
+      attachment = message.attachments.new(account_id: message.account_id, file_type: :audio)
+      attachment.file.attach(io: StringIO.new('fake audio'), filename: 'voice.ogg', content_type: 'audio/ogg')
+
+      expect(Messages::AudioTranscriptionJob).to receive(:perform_later).with(an_instance_of(Integer))
+      expect(message).to receive(:send_update_event)
+
+      attachment.save!
+    end
+  end
+
   describe 'push_event_data for embed attachments' do
     it 'returns external url as data_url' do
       attachment = message.attachments.create!(account_id: message.account_id, file_type: :embed, external_url: 'https://example.com/embed')

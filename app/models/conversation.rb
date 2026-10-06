@@ -91,6 +91,7 @@ class Conversation < ApplicationRecord
   enum priority: { low: 0, medium: 1, high: 2, urgent: 3 }
 
   scope :unassigned, -> { where(assignee_id: nil, assignee_agent_bot_id: nil) }
+  scope :for_reporting, -> { where("conversations.additional_attributes->>'waha_history_only' IS DISTINCT FROM 'true'") }
   scope :assigned, -> { where.not(assignee_id: nil).or(where.not(assignee_agent_bot_id: nil)) }
   scope :assigned_to, ->(agent) { where(assignee_id: agent.id) }
   scope :sort_on_unread, lambda { |_direction|
@@ -208,11 +209,13 @@ class Conversation < ApplicationRecord
   end
 
   def unread_messages
-    agent_last_seen_at.present? ? messages.created_since(agent_last_seen_at) : messages
+    scope = messages.without_waha_history
+    agent_last_seen_at.present? ? scope.created_since(agent_last_seen_at) : scope
   end
 
   def assignee_unread_messages
-    assignee_last_seen_at.present? ? messages.created_since(assignee_last_seen_at) : messages
+    scope = messages.without_waha_history
+    assignee_last_seen_at.present? ? scope.created_since(assignee_last_seen_at) : scope
   end
 
   def unread_incoming_messages
@@ -261,6 +264,7 @@ class Conversation < ApplicationRecord
     messages[:conversation_id].eq(conversations[:id])
                               .and(messages[:account_id].eq(conversations[:account_id]))
                               .and(messages[:message_type].eq(Message.message_types[:incoming]))
+                              .and(Arel.sql(Message::WAHA_HISTORY_EXCLUSION_SQL))
                               .and(
                                 conversations[:agent_last_seen_at].eq(nil)
                                   .or(messages[:created_at].gt(conversations[:agent_last_seen_at]))
@@ -325,6 +329,11 @@ class Conversation < ApplicationRecord
   end
 
   def ensure_waiting_since
+    if Current.waha_history_import
+      self.waiting_since = nil
+      return
+    end
+
     self.waiting_since = created_at
   end
 
@@ -339,6 +348,8 @@ class Conversation < ApplicationRecord
   end
 
   def determine_conversation_status
+    return if Current.waha_history_import
+
     self.status = :resolved and return if contact.blocked?
 
     return handle_campaign_status if campaign.present?

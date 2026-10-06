@@ -234,4 +234,33 @@ class Messages::MessageBuilder
   end
 end
 
+module Messages::MessageBuilder::WahaHistoryIdempotency
+  def perform
+    return super unless waha_history_connection?
+
+    @conversation.contact_inbox.with_lock do
+      @message = nil
+      @message = @conversation.inbox.messages.with_waha_source_id(@params[:source_id]).first if @params[:source_id].present?
+      next @message if @message
+
+      raise Waha::MessageSourceIds::IdentityConflict, 'waha_outbound_identity_pending' if waha_outbound_identity_pending?
+
+      @message = super
+    end
+  end
+
+  private
+
+  def waha_outbound_identity_pending?
+    @params[:source_id].present? && @params[:message_type] == 'outgoing' && content_attributes['external_echo'] &&
+      @conversation.messages.pending_waha_outbound.exists?
+  end
+
+  def waha_history_connection?
+    inbox = @conversation.inbox
+    inbox.api? && inbox.channel.waha_provider? && inbox.channel.additional_attributes['waha_history_import'].present?
+  end
+end
+
+Messages::MessageBuilder.prepend(Messages::MessageBuilder::WahaHistoryIdempotency)
 Messages::MessageBuilder.prepend_mod_with('Messages::MessageBuilder')

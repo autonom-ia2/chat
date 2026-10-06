@@ -5,6 +5,7 @@ module Current
   thread_mattr_accessor :executed_by
   thread_mattr_accessor :contact
   thread_mattr_accessor :suppress_contact_events
+  thread_mattr_accessor :waha_history_import
   thread_mattr_accessor :inbox
 
   def self.reset
@@ -14,6 +15,7 @@ module Current
     Current.executed_by = nil
     Current.contact = nil
     Current.suppress_contact_events = nil
+    Current.waha_history_import = nil
     Current.inbox = nil
   end
 end

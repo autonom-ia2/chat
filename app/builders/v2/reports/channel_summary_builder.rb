@@ -10,7 +10,7 @@ class V2::Reports::ChannelSummaryBuilder
   private
 
   def conversations_by_channel_and_status
-    account.conversations
+    account.conversations.for_reporting
            .joins(:inbox)
            .where(created_at: range)
            .group('inboxes.channel_type', 'conversations.status')
