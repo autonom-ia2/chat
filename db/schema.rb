@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_07_100000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2171,6 +2171,25 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
     t.index ["account_id", "date"], name: "idx_crm_meta_ad_insights_daily_account_date"
   end
 
+  create_table "crm_meta_ad_links", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "conversation_id", null: false
+    t.string "touch_key", null: false
+    t.string "ad_account_id"
+    t.string "ad_id"
+    t.string "adset_id"
+    t.string "campaign_id"
+    t.string "origin", null: false
+    t.string "certainty", null: false
+    t.boolean "first_touch", default: false, null: false
+    t.datetime "touched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_id"], name: "idx_crm_meta_ad_links_account_ad"
+    t.index ["account_id", "touched_at"], name: "idx_crm_meta_ad_links_account_touched"
+    t.index ["conversation_id", "touch_key"], name: "idx_crm_meta_ad_links_unique", unique: true
+  end
+
   create_table "crm_meta_ad_objects", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "meta_object_id", null: false
@@ -2222,6 +2241,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
     t.datetime "insights_synced_at"
     t.datetime "insights_backfilled_at"
     t.string "ad_account_timezone"
+    t.datetime "links_backfilled_at"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end
@@ -3623,6 +3643,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_200000) do
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
   add_foreign_key "crm_meta_ad_insights_daily", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ad_links", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ad_links", "conversations", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade

@@ -9,6 +9,7 @@
 #  insights_synced_at     :datetime
 #  last_checked_at        :datetime
 #  last_error             :string(255)
+#  links_backfilled_at    :datetime
 #  mode                   :string           default("token"), not null
 #  pixel_name             :string(255)
 #  status                 :string           default("active"), not null

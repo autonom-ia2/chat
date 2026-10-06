@@ -69,9 +69,38 @@ select sum(spend) from crm_meta_ad_insights_daily where account_id = 18 and date
 
 Logs: `[MetaAdsInsights]` (pausa, carga) e `[MetaAdsGraph]` (recusa da Meta, já sem token).
 
+## F2b: ligação conversa → anúncio
+
+Tabela `crm_meta_ad_links` (do fork, aditiva): uma linha por toque de anúncio da Meta numa conversa
+(`touch_key` = clique da Meta ou origem do toque), com anúncio, conjunto, campanha, origem (`whatsapp` ou `site`),
+`first_touch` e `certainty`. O card sai da conversa por `crm_card_conversations`, sem cópia.
+`crm_meta_ads_connections.links_backfilled_at` marca a carga dos 90 dias.
+
+| `certainty` | Quando |
+|---|---|
+| `ad` | ID do anúncio no toque: clique para o WhatsApp, ou ID em `utm_content` |
+| `ad_name` | campanha (ou conjunto) por ID e o nome do anúncio em `utm_content` achado uma única vez no cache dentro dela |
+| `campaign` | só campanha ou conjunto por ID |
+| `unknown` | veio da Meta (`fbclid` ou `utm_source=meta`) sem dizer o anúncio |
+
+O texto do passo 3 manda `{{ad.name}}` no `utm_content`, então anúncio de site cai em `ad_name` quando o nome é
+único na campanha. Nome repetido não chuta: fica `campaign`.
+
+Quando liga: no `Crm::MetaAds::EnrichTouchesJob`, logo depois de resolver os nomes (o anúncio do clique para o
+WhatsApp só sabe a campanha depois disso), e na carga dos 90 dias (`Crm::MetaAds::LinksBackfillJob`, só banco),
+que começa ao abrir a tela ou na rodada das 4h. Cada ligação nova avisa a tela aberta.
+
+Na tela: "N conversas vieram de anúncios hoje" (contadas do nosso lado, inclusive as do site, que a Meta não conta)
+e o quadro **Quanto confiar nos números** (últimos 30 dias, cada conversa pelo melhor que sabemos dela).
+
+```sql
+select certainty, origin, count(distinct conversation_id) from crm_meta_ad_links
+where account_id = 18 and touched_at >= now() - interval '30 days' group by 1, 2 order by 1, 2;
+```
+
 ## Rollback
 
 1. Reverter o PR (o código novo para de ler; as tabelas ficam sem uso).
-2. Se for preciso tirar o esquema: `bin/rails db:migrate:down VERSION=20261006200000` — apaga as duas tabelas e as
-   duas colunas. Os dados são reconstruíveis pela carga de 90 dias; nada de outra tabela é tocado.
+2. Se for preciso tirar o esquema: `bin/rails db:migrate:down VERSION=20261007100000` (F2b: tabela de ligações e
+   `links_backfilled_at`) e `VERSION=20261006200000` (F2a: as duas tabelas de insights e as colunas da conexão). Os dados são reconstruíveis pela carga de 90 dias; nada de outra tabela é tocado.
 3. Snapshot RDS das duas stacks é tirado antes do deploy com migration (protocolo da fila).

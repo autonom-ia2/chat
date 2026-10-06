@@ -266,9 +266,12 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect do
         post "#{path}/insights", headers: auth_headers(admin), as: :json
       end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(connection.id)
-      expect(response.parsed_body['insights']).to include('backfilling' => true)
+                                                                 .and have_enqueued_job(Crm::MetaAds::LinksBackfillJob).with(connection.id)
+      expect(response.parsed_body['insights']).to include('backfilling' => true, 'ad_conversations_today' => 0)
+      expect(response.parsed_body['insights']['confidence']).to include('conversations' => 0, 'window_days' => 30)
     ensure
       Crm::MetaAds::Insights::Backfill.release(connection.id)
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}")
     end
 
     it 'sem conexão devolve vazio' do

@@ -198,6 +198,70 @@ describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
     expect(CrmMetaAdsConnectionAPI.insights).toHaveBeenCalledTimes(1);
   });
 
+  it('counts conversations from ads on our side, not the Meta count', async () => {
+    replyInsights({
+      date: today(),
+      spend: '74.65',
+      currency: 'BRL',
+      conversations: 0,
+      ad_conversations_today: 3,
+    });
+
+    const wrapper = await mountSummary();
+
+    expect(wrapper.find('[data-summary-spend]').text()).toContain('"count":3');
+  });
+
+  it('shows how much to trust the numbers and points to step 3 when ads are unknown', async () => {
+    replyInsights({
+      date: today(),
+      spend: '1',
+      confidence: {
+        window_days: 30,
+        conversations: 10,
+        ad: 6,
+        ad_name: 2,
+        campaign: 1,
+        unknown: 1,
+      },
+    });
+
+    const wrapper = await mountSummary();
+
+    expect(wrapper.find('[data-summary-confidence-share]').text()).toContain(
+      '"share":80'
+    );
+    expect(wrapper.find('[data-confidence-level="ad_name"]').text()).toContain(
+      '2'
+    );
+    await wrapper.find('[data-summary-confidence-fix]').trigger('click');
+    expect(wrapper.emitted('open')).toEqual([[3]]);
+  });
+
+  it('explains the empty confidence state without a share or a fix link', async () => {
+    replyInsights({
+      date: null,
+      confidence: {
+        window_days: 30,
+        conversations: 0,
+        ad: 0,
+        ad_name: 0,
+        campaign: 0,
+        unknown: 0,
+      },
+    });
+
+    const wrapper = await mountSummary();
+
+    expect(wrapper.find('[data-summary-confidence]').text()).toContain(
+      'CONFIDENCE.EMPTY'
+    );
+    expect(wrapper.find('[data-summary-confidence-share]').exists()).toBe(
+      false
+    );
+    expect(wrapper.find('[data-summary-confidence-fix]').exists()).toBe(false);
+  });
+
   it('labels an older day with its date instead of today', async () => {
     replyInsights({
       date: '2026-01-02',
