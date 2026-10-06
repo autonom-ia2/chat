@@ -42,6 +42,26 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
 
       expect(params['prompt']).to eq('login')
     end
+
+    it 'passes an internal app return target to Autonomia Identity' do
+      with_modified_env sso_env do
+        get '/auth/autonomia', params: { return_to: '/app' }
+      end
+
+      params = Rack::Utils.parse_query(URI.parse(response.location).query)
+
+      expect(params['return_to']).to eq('/app')
+    end
+
+    it 'rejects a path that only shares the app prefix' do
+      with_modified_env sso_env do
+        get '/auth/autonomia', params: { return_to: '/application/settings' }
+      end
+
+      params = Rack::Utils.parse_query(URI.parse(response.location).query)
+
+      expect(params).not_to have_key('return_to')
+    end
   end
 
   describe 'GET /auth/autonomia/callback' do
@@ -92,12 +112,33 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       # addresses containing '+' or other reserved characters.
       expect(params['email']).to eq(user.email)
       expect(params['sso_auth_token']).to be_present
+      expect(params['sso_source']).to eq('autonomia')
       expect(params).not_to have_key('redirect_to')
+    end
+
+    it 'restores the return target stored in the consumed state' do
+      with_modified_env sso_env do
+        get '/auth/autonomia', params: { return_to: '/app/accounts/1/conversations/42' }
+      end
+
+      state = Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')
+
+      allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
+      allow(client).to receive(:exchange_code!).and_return(token)
+      allow(client).to receive(:fetch_context!).with('identity-id-token', organization_id: 'product-owner-org').and_return({})
+      allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
+
+      with_modified_env sso_env do
+        get '/auth/autonomia/callback', params: { code: code, state: state }
+      end
+
+      params = Rack::Utils.parse_query(URI.parse(response.location).query)
+      expect(params['redirect_to']).to eq('/app/accounts/1/conversations/42')
     end
 
     it 'forwards the provisioner post-login redirect path to the login page' do
       with_modified_env sso_env do
-        get '/auth/autonomia'
+        get '/auth/autonomia', params: { return_to: '/app/accounts/1/conversations/42' }
       end
 
       state = Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')

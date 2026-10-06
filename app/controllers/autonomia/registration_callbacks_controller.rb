@@ -48,7 +48,11 @@ class Autonomia::RegistrationCallbacksController < ApplicationController
   end
 
   def login_page_url(error: nil, email: nil, sso_auth_token: nil)
-    query = { email: email, sso_auth_token: sso_auth_token }.compact
+    query = {
+      email: email,
+      sso_auth_token: sso_auth_token,
+      sso_source: sso_auth_token.present? ? 'autonomia' : nil
+    }.compact
     query[:error] = error if error.present?
     "#{frontend_url}/app/login?#{query.to_query}"
   end

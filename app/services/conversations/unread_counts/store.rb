@@ -178,8 +178,15 @@ class Conversations::UnreadCounts::Store
     end
 
     def delete_matching(pattern)
-      Redis::Alfred.scan_each(match: pattern, count: 1000) do |key|
-        Redis::Alfred.delete(key)
+      keys = []
+      Redis::Alfred.scan_each(match: pattern, count: 1000) { |key| keys << key }
+
+      # Complete the cursor walk before mutating the keyspace. Deleting keys as
+      # SCAN yields them can leave later matches behind in a populated Redis.
+      keys.each_slice(1000) do |batch|
+        Redis::Alfred.pipelined do |pipeline|
+          batch.each { |key| pipeline.del(key) }
+        end
       end
     end
 
