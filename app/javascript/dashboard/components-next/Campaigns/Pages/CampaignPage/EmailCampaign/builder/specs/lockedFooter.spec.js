@@ -2,23 +2,7 @@ import footerSource from '../lockedFooter.json';
 import { LOCKED_FOOTER_MJML, editableFooterMjml } from '../lockedFooter';
 import { FOOTER_MJML } from '../blocks';
 import STARTER_MJML from '../starterMjml';
-
-// WCAG 2.x relative luminance and contrast ratio.
-const channel = hex => {
-  const value = parseInt(hex, 16) / 255;
-  return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-};
-const luminance = color => {
-  const hex = color.slice(1);
-  const [r, g, b] = [0, 2, 4].map(start =>
-    channel(hex.slice(start, start + 2))
-  );
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-const contrast = (a, b) => {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (light + 0.05) / (dark + 0.05);
-};
+import { contrast } from './helpers/contrast';
 
 const parse = mjml =>
   new DOMParser().parseFromString(`<root>${mjml}</root>`, 'text/xml');

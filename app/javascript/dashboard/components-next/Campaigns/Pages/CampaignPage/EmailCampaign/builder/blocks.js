@@ -8,6 +8,10 @@ import { editableFooterMjml } from './lockedFooter';
 const BRAND_COLOR = '#2563eb';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
+// Contraste AA (>= 4,5:1, #1081): #6b7280 só passa sobre branco. Sobre BG_SOFT usa o cinza mais
+// escuro; sobre BRAND_COLOR, o azul quase branco (#dbeafe dava 4,24).
+const MUTED_ON_SOFT = '#4b5563';
+const TINT_ON_BRAND = '#eff6ff';
 const BG_SOFT = '#f4f4f4';
 // Fonte email-safe explícita em todo texto/botão: sem ela o MJML usa Ubuntu e importa a web font (#1081).
 const FONT_FAMILY = 'Arial, Helvetica, sans-serif';
@@ -127,9 +131,9 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="${BRAND_COLOR}" border-radius="8px" padding="32px 24px">
   <mj-column>
-    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="#dbeafe" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${TINT_ON_BRAND}" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
     <mj-text font-family="${FONT_FAMILY}" font-size="32px" font-weight="bold" color="#ffffff" align="center" padding="0 0 8px">A partir de R$ 99/mês</mj-text>
-    <mj-text font-family="${FONT_FAMILY}" font-size="15px" color="#dbeafe" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" color="${TINT_ON_BRAND}" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
     <mj-button font-family="${FONT_FAMILY}" background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="${EXAMPLE_URL}">Garantir oferta</mj-button>
   </mj-column>
 </mj-section>`,
@@ -169,7 +173,7 @@ const BLOCKS = [
     content: `<mj-section background-color="${BG_SOFT}" border-radius="8px" padding="32px 24px">
   <mj-column>
     <mj-text font-family="${FONT_FAMILY}" font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“Transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
-    <mj-text font-family="${FONT_FAMILY}" font-size="14px" font-weight="bold" color="${MUTED_COLOR}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" font-weight="bold" color="${MUTED_ON_SOFT}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
   </mj-column>
 </mj-section>`,
   },
