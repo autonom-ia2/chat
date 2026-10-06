@@ -245,7 +245,6 @@ test('waiter has no session prerequisite, claims before opening browser, shares 
     'operator_claim',
     'manager_heartbeat',
     'bootstrap',
-    'manager_heartbeat',
     'browser',
     'manager',
     'operator_read',
@@ -274,17 +273,26 @@ test('operator required returns to polling without automatically opening another
   assert.equal(h.events.filter(value => value === 'browser').length, 1);
 });
 
-for (const option of ['childFailure', 'claimLost']) {
-  test(`${option} fails the claimed request even when transport response is uncertain`, async () => {
-    const h = waiterHarness({ [option]: true });
-    await assert.rejects(
-      runWaiter(env, h.dependencies),
-      /operator_runtime_failed/
-    );
-    assert.equal(h.current().state, 'failed');
-    assert.equal(h.events.includes('manager'), false);
-  });
-}
+test('child failure fails the claimed request without launching the manager', async () => {
+  const h = waiterHarness({ childFailure: true });
+  await assert.rejects(
+    runWaiter(env, h.dependencies),
+    /operator_runtime_failed/
+  );
+  assert.equal(h.current().state, 'failed');
+  assert.equal(h.events.includes('manager'), false);
+});
+
+test('lost claim reply reconciles the same running request without claiming twice', async () => {
+  const h = waiterHarness({ claimLost: true });
+  await runWaiter(env, h.dependencies);
+  assert.equal(h.current().state, 'succeeded');
+  assert.equal(
+    h.events.filter(value => value.operation === 'operator_claim').length,
+    1
+  );
+  assert.equal(h.events.filter(value => value === 'manager').length, 1);
+});
 
 test('SIGTERM uses independent bounded cleanup to fail a live claim', async () => {
   const h = waiterHarness({ shutdown: true });
@@ -314,7 +322,7 @@ test('malformed reply never starts a browser', async () => {
   assert.equal(h.events.includes('browser'), false);
 });
 
-test('stubborn runtime child escalates cancellation and settles within 30 seconds', async () => {
+test('stubborn runtime child escalates cancellation at 28s and waits for its exit', async () => {
   const child = new EventEmitter();
   const killed = [];
   child.kill = signal => killed.push(signal);
@@ -331,10 +339,18 @@ test('stubborn runtime child escalates cancellation and settles within 30 second
     spawnImpl: () => child,
     clock,
   });
+  let drained = false;
+  running.then(() => {
+    drained = true;
+  });
   shutdown.abort();
   assert.deepEqual(killed, ['SIGTERM']);
   assert.equal(timers.get(1).delay, 28000);
   timers.get(1).fn();
+  await Promise.resolve();
+  assert.equal(drained, false);
+  assert.deepEqual(killed, ['SIGTERM', 'SIGKILL']);
+  child.emit('exit', null);
   assert.equal(await running, 143);
   assert.deepEqual(killed, ['SIGTERM', 'SIGKILL']);
   assert.equal(timers.size, 0);
