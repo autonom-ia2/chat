@@ -3,11 +3,18 @@
 // do vue-i18n (decisão E12 do manifesto — MVP com labels estáticos).
 
 import { canonicalizeMjml } from './mjmlCanonical';
+import { editableFooterMjml } from './lockedFooter';
 
 const BRAND_COLOR = '#2563eb';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
+// Contraste AA (>= 4,5:1, #1081): #6b7280 só passa sobre branco. Sobre BG_SOFT usa o cinza mais
+// escuro; sobre BRAND_COLOR, o azul quase branco (#dbeafe dava 4,24).
+const MUTED_ON_SOFT = '#4b5563';
+const TINT_ON_BRAND = '#eff6ff';
 const BG_SOFT = '#f4f4f4';
+// Fonte email-safe explícita em todo texto/botão: sem ela o MJML usa Ubuntu e importa a web font (#1081).
+const FONT_FAMILY = 'Arial, Helvetica, sans-serif';
 
 // Placeholder de imagem HOSPEDADO (PNG via placehold.co). data:image/svg+xml NÃO
 // renderiza no Gmail (bloqueado), então o placeholder precisa ser uma URL https
@@ -40,28 +47,11 @@ const CAT_ESTRUTURA = 'Estrutura';
 const EXAMPLE_URL = 'https://seusite.com.br';
 const VIDEO_WATCH_URL = EXAMPLE_URL;
 
-// Rodapé legal — mj-section travada pelo F1 via css-class="footer-locked"
-// (E11). `{{ unsubscribe_url }}` é literal Liquid resolvido no envio.
-// Nome e endereço da empresa são texto editável no canvas — nenhuma marca fixa (#1074).
-// Ícones de redes sociais: mj-social com ícones PNG HOSPEDADOS (renderizam no Gmail —
-// data:/SVG não). Os href apontam para a raiz de cada rede: o usuário troca pelo perfil
-// da empresa no painel (seção Link aparece ao selecionar o ícone). Cada <mj-social-element> é um par
-// explícito (não é tag void).
-export const FOOTER_MJML = `<mj-section css-class="footer-locked" background-color="${BG_SOFT}" padding="16px">
-  <mj-column>
-    <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px">
-      <mj-social-element name="facebook" href="https://facebook.com/"></mj-social-element>
-      <mj-social-element name="instagram" href="https://instagram.com/"></mj-social-element>
-      <mj-social-element name="linkedin" href="https://linkedin.com/"></mj-social-element>
-      <mj-social-element name="youtube" href="https://youtube.com/"></mj-social-element>
-    </mj-social>
-    <mj-text font-size="12px" color="#6b7280" align="center" line-height="1.6">
-      Nome da sua empresa · Endereço da empresa<br/>
-      Você recebeu este e-mail porque está em nossa lista de contatos.<br/>
-      <a href="{{ unsubscribe_url }}" style="color:#6b7280;">Cancelar inscrição</a>
-    </mj-text>
-  </mj-column>
-</mj-section>`;
+// Rodapé legal — mj-section travada pelo F1 via css-class="footer-locked" (E11). Vem da fonte única
+// lockedFooter.json (#1081), a mesma do servidor; aqui com os placeholders editáveis: linha da empresa
+// e ícones de redes sociais (PNG hospedados, renderizam no Gmail) apontando para a raiz de cada rede —
+// o usuário troca pelo perfil da empresa no painel (seção Link ao selecionar o ícone).
+export const FOOTER_MJML = editableFooterMjml({ social: true });
 
 const BLOCKS = [
   {
@@ -73,7 +63,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="16px 24px">
   <mj-column>
-    <mj-text font-size="15px" color="${TEXT_COLOR}" line-height="1.6">Escreva seu texto aqui. Clique para editar.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" color="${TEXT_COLOR}" line-height="1.6">Escreva seu texto aqui. Clique para editar.</mj-text>
   </mj-column>
 </mj-section>`,
   },
@@ -86,7 +76,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="16px 24px">
   <mj-column>
-    <mj-text font-size="24px" font-weight="bold" color="${TEXT_COLOR}" line-height="1.3">Título da seção</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="24px" font-weight="bold" color="${TEXT_COLOR}" line-height="1.3">Título da seção</mj-text>
   </mj-column>
 </mj-section>`,
   },
@@ -99,7 +89,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="16px 24px">
   <mj-column>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}">Ver detalhes</mj-button>
+    <mj-button font-family="${FONT_FAMILY}" background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}">Ver detalhes</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -126,9 +116,9 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="0">
   <mj-column>
     <mj-image src="${placeholderImage(600, 240, 'Imagem hero 600x240')}" alt="Imagem de destaque" padding="0"/>
-    <mj-text font-size="28px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="24px 24px 8px">Título principal da campanha</mj-text>
-    <mj-text font-size="16px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 32px 16px">Uma frase curta de apoio explicando a proposta de valor.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}" padding="8px 0 32px">Quero saber mais</mj-button>
+    <mj-text font-family="${FONT_FAMILY}" font-size="28px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="24px 24px 8px">Título principal da campanha</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="16px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 32px 16px">Uma frase curta de apoio explicando a proposta de valor.</mj-text>
+    <mj-button font-family="${FONT_FAMILY}" background-color="${BRAND_COLOR}" color="#ffffff" font-size="16px" border-radius="6px" href="${EXAMPLE_URL}" padding="8px 0 32px">Quero saber mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -141,10 +131,10 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="${BRAND_COLOR}" border-radius="8px" padding="32px 24px">
   <mj-column>
-    <mj-text font-size="14px" color="#dbeafe" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
-    <mj-text font-size="32px" font-weight="bold" color="#ffffff" align="center" padding="0 0 8px">A partir de R$ 99/mês</mj-text>
-    <mj-text font-size="15px" color="#dbeafe" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
-    <mj-button background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="${EXAMPLE_URL}">Garantir oferta</mj-button>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${TINT_ON_BRAND}" align="center" text-transform="uppercase" letter-spacing="2px" padding="0 0 8px">Oferta especial</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="32px" font-weight="bold" color="#ffffff" align="center" padding="0 0 8px">A partir de R$ 99/mês</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" color="${TINT_ON_BRAND}" align="center" line-height="1.5" padding="0 0 16px">Condição válida por tempo limitado. Aproveite agora.</mj-text>
+    <mj-button font-family="${FONT_FAMILY}" background-color="#ffffff" color="${BRAND_COLOR}" font-size="16px" font-weight="bold" border-radius="6px" href="${EXAMPLE_URL}">Garantir oferta</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -158,18 +148,18 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="24px 12px">
   <mj-column>
     <mj-image src="${placeholderImage(96, 96, 'Ícone')}" alt="Benefício 1" width="64px" padding="0 0 8px"/>
-    <mj-text font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 1</mj-text>
-    <mj-text font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do primeiro benefício.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 1</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do primeiro benefício.</mj-text>
   </mj-column>
   <mj-column>
     <mj-image src="${placeholderImage(96, 96, 'Ícone')}" alt="Benefício 2" width="64px" padding="0 0 8px"/>
-    <mj-text font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 2</mj-text>
-    <mj-text font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do segundo benefício.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 2</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do segundo benefício.</mj-text>
   </mj-column>
   <mj-column>
     <mj-image src="${placeholderImage(96, 96, 'Ícone')}" alt="Benefício 3" width="64px" padding="0 0 8px"/>
-    <mj-text font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 3</mj-text>
-    <mj-text font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do terceiro benefício.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="16px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 4px">Benefício 3</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="13px" color="${MUTED_COLOR}" align="center" line-height="1.5" padding="0 8px">Descrição curta do terceiro benefício.</mj-text>
   </mj-column>
 </mj-section>`,
   },
@@ -182,8 +172,8 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="${BG_SOFT}" border-radius="8px" padding="32px 24px">
   <mj-column>
-    <mj-text font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“Transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
-    <mj-text font-size="14px" font-weight="bold" color="${MUTED_COLOR}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“Transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" font-weight="bold" color="${MUTED_ON_SOFT}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
   </mj-column>
 </mj-section>`,
   },
@@ -197,25 +187,25 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="24px 12px 0">
   <mj-column>
     <mj-image src="${placeholderImage(280, 180, 'Produto 1')}" alt="Produto 1" border-radius="6px" padding="0 8px 8px"/>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 1</mj-text>
-    <mj-text font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 199,00</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 1</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 199,00</mj-text>
   </mj-column>
   <mj-column>
     <mj-image src="${placeholderImage(280, 180, 'Produto 2')}" alt="Produto 2" border-radius="6px" padding="0 8px 8px"/>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 2</mj-text>
-    <mj-text font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 249,00</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 2</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 249,00</mj-text>
   </mj-column>
 </mj-section>
 <mj-section background-color="#ffffff" padding="0 12px 24px">
   <mj-column>
     <mj-image src="${placeholderImage(280, 180, 'Produto 3')}" alt="Produto 3" border-radius="6px" padding="0 8px 8px"/>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 3</mj-text>
-    <mj-text font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 299,00</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 3</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 299,00</mj-text>
   </mj-column>
   <mj-column>
     <mj-image src="${placeholderImage(280, 180, 'Produto 4')}" alt="Produto 4" border-radius="6px" padding="0 8px 8px"/>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 4</mj-text>
-    <mj-text font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 349,00</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 8px 2px">Produto 4</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${BRAND_COLOR}" align="center" padding="0 8px 16px">R$ 349,00</mj-text>
   </mj-column>
 </mj-section>`,
   },
@@ -231,9 +221,9 @@ const BLOCKS = [
     <mj-image src="${placeholderImage(220, 180, 'Imagem')}" alt="Imagem ilustrativa" border-radius="6px" padding="0"/>
   </mj-column>
   <mj-column width="60%" vertical-align="middle">
-    <mj-text font-size="18px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 8px">Título da seção</mj-text>
-    <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Texto de apoio ao lado da imagem. Explique um detalhe do produto ou serviço em poucas linhas.</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="${EXAMPLE_URL}" align="left" padding="0">Saiba mais</mj-button>
+    <mj-text font-family="${FONT_FAMILY}" font-size="18px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 8px">Título da seção</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Texto de apoio ao lado da imagem. Explique um detalhe do produto ou serviço em poucas linhas.</mj-text>
+    <mj-button font-family="${FONT_FAMILY}" background-color="${BRAND_COLOR}" color="#ffffff" font-size="14px" border-radius="6px" href="${EXAMPLE_URL}" align="left" padding="0">Saiba mais</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -262,8 +252,8 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="32px 24px">
   <mj-column>
-    <mj-text font-size="22px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 0 16px">Pronto para dar o próximo passo?</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="${EXAMPLE_URL}">Fale com a gente</mj-button>
+    <mj-text font-family="${FONT_FAMILY}" font-size="22px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 0 16px">Pronto para dar o próximo passo?</mj-text>
+    <mj-button font-family="${FONT_FAMILY}" background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="${EXAMPLE_URL}">Fale com a gente</mj-button>
   </mj-column>
 </mj-section>`,
   },
@@ -276,13 +266,13 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="#ffffff" padding="24px">
   <mj-column>
-    <mj-text font-size="20px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 16px">Perguntas frequentes</mj-text>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Como funciona?</mj-text>
-    <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Resposta curta e direta para a primeira pergunta.</mj-text>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Quanto custa?</mj-text>
-    <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Resposta curta e direta para a segunda pergunta.</mj-text>
-    <mj-text font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Posso cancelar quando quiser?</mj-text>
-    <mj-text font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0">Resposta curta e direta para a terceira pergunta.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="20px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 16px">Perguntas frequentes</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Como funciona?</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Resposta curta e direta para a primeira pergunta.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Quanto custa?</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0 0 12px">Resposta curta e direta para a segunda pergunta.</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="15px" font-weight="bold" color="${TEXT_COLOR}" padding="0 0 4px">Posso cancelar quando quiser?</mj-text>
+    <mj-text font-family="${FONT_FAMILY}" font-size="14px" color="${MUTED_COLOR}" line-height="1.6" padding="0">Resposta curta e direta para a terceira pergunta.</mj-text>
   </mj-column>
 </mj-section>`,
   },
