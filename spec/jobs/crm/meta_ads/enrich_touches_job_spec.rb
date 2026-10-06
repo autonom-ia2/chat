@@ -28,9 +28,9 @@ RSpec.describe Crm::MetaAds::EnrichTouchesJob do
   end
 
   def stub_ad
-    stub_meta_objects(ids: [ad_id], fields: Crm::MetaAds::NameResolver::FIELDS.fetch('ad'),
-                      body: { ad_id => { id: ad_id, name: 'Video 2', adset: { id: adset_id, name: 'Conjunto 60+' },
-                                         campaign: { id: campaign_id, name: 'Viagem EUA' } } })
+    stub_meta_object(id: ad_id, fields: Crm::MetaAds::NameResolver::FIELDS.fetch('ad'),
+                     body: { id: ad_id, name: 'Video 2', adset: { id: adset_id, name: 'Conjunto 60+' },
+                             campaign: { id: campaign_id, name: 'Viagem EUA' } })
   end
 
   def touches_after
@@ -135,7 +135,7 @@ RSpec.describe Crm::MetaAds::EnrichTouchesJob do
 
       described_class.perform_now(conversation.id)
 
-      expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+      expect(meta_object_requests).not_to have_been_made
       expect(conversation.reload.updated_at).to eq(updated_at)
     end
   end
@@ -146,7 +146,7 @@ RSpec.describe Crm::MetaAds::EnrichTouchesJob do
 
     described_class.perform_now(conversation.id)
 
-    expect(a_request(:get, meta_graph_url).with(query: hash_including({}))).not_to have_been_made
+    expect(meta_object_requests).not_to have_been_made
     expect(touches_after.sole).to eq(ctwa_touch)
   end
 

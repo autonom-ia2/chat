@@ -120,4 +120,45 @@ RSpec.describe 'Super Admin TypeSafe AI configuration', type: :request do
       expect(response.parsed_body).to eq('error' => 'Invalid TypeSafe configuration.')
     end
   end
+
+  describe 'campaign journey Jev switch (#1045)' do
+    it 'shows the switch on the TypeSafe page' do
+      get '/super_admin/app_config?config=typesafe'
+
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('app_config[CAMPAIGN_JOURNEY_JEV_ENABLED]')
+      expect(response.body).to include('Use Jev to find audience columns')
+    end
+
+    it 'turns the journey switch on when a key is already saved, overriding the stored default' do
+      enable_test_encryption!
+      AiProviderCredential.create!(provider: 'typesafe', api_key: 'ts_existing')
+      InstallationConfig.create!(name: 'CAMPAIGN_JOURNEY_JEV_ENABLED', value: false, locked: false)
+
+      post '/super_admin/app_config?config=typesafe', params: {
+        app_config: { TYPESAFE_JEV_ENABLED: 'true', CAMPAIGN_JOURNEY_JEV_ENABLED: 'true', TYPESAFE_JEV_MODEL: 'jev-1.13.0', TYPESAFE_API_KEY: '' }
+      }
+
+      expect(response).to redirect_to(super_admin_settings_path)
+      expect(CampaignImports::JevConfig.enabled?).to be(true)
+    end
+
+    it 'refuses a value that is not true or false' do
+      post '/super_admin/app_config?config=typesafe', params: { app_config: { CAMPAIGN_JOURNEY_JEV_ENABLED: 'yes' } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(InstallationConfig.find_by(name: 'CAMPAIGN_JOURNEY_JEV_ENABLED')).to be_nil
+    end
+
+    it 'refuses to turn the journey switch on without a saved key' do
+      enable_test_encryption!
+
+      post '/super_admin/app_config?config=typesafe', params: {
+        app_config: { TYPESAFE_JEV_ENABLED: 'false', CAMPAIGN_JOURNEY_JEV_ENABLED: 'true', TYPESAFE_JEV_MODEL: 'jev-1.13.0', TYPESAFE_API_KEY: '' }
+      }
+
+      expect(response).to redirect_to(super_admin_app_config_path(config: 'typesafe'))
+      expect(CampaignImports::JevConfig.enabled?).to be(false)
+    end
+  end
 end

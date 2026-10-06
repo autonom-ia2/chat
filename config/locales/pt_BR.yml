@@ -918,6 +918,8 @@ pt_BR:
       undo:
         already_undone: 'Isto já foi desfeito.'
         expired: 'Os 5 dias para desfazer isto já passaram.'
+      records:
+        automation_rule: 'Automação'
       fields:
         id: 'Registro'
         name: 'Nome'

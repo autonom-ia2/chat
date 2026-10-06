@@ -10,6 +10,8 @@ import Avatar from 'next/avatar/Avatar.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ConversationCallButton from './ConversationCallButton.vue';
 import CrmConversationCardButton from './CrmConversationCardButton.vue';
+import ConversationCampaignMark from 'dashboard/components-next/CampaignJourney/ConversationCampaignMark.vue';
+import { BULLET } from 'dashboard/components-next/CampaignJourney/textMarks';
 import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
@@ -154,12 +156,13 @@ const copyConversationId = async () => {
           >
             {{ `#${chat.id}` }}
           </button>
-          <span v-if="hasMultipleInboxes">•</span>
+          <span v-if="hasMultipleInboxes">{{ BULLET }}</span>
           <InboxName v-if="hasMultipleInboxes" :inbox="inbox" class="!mx-0" />
-          <span v-if="isSnoozed">•</span>
+          <span v-if="isSnoozed">{{ BULLET }}</span>
           <span v-if="isSnoozed" class="font-medium text-n-amber-10">
             {{ snoozedDisplayText }}
           </span>
+          <ConversationCampaignMark :attributes="chat.additional_attributes" />
         </div>
       </div>
     </div>

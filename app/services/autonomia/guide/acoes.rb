@@ -73,7 +73,7 @@ class Autonomia::Guide::Acoes
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',
     'POST data_imports/:id/start',
-    'POST campaign_imports/:id/confirm',
+    'POST campaign_imports/:id/confirm', 'POST contact_imports/:id/confirm',
     'POST bulk_actions',
     'POST captain/bulk_actions',
     'POST macros/:id/execute',
@@ -160,7 +160,7 @@ class Autonomia::Guide::Acoes
     raise Recusada, traduzir('no_description') if dados[:descricao].blank?
 
     { frase: dados[:descricao],
-      detalhe: valores_legiveis(dados, conferencia),
+      **::Autonomia::Guide::ValoresLegiveis.new(account: @account, acao: acao, dados: dados, conferencia: conferencia).para_tela,
       aviso: (verbo_de(acao) == DESTRUTIVO ? traduzir('irreversible') : nil) }
   end
 
@@ -238,37 +238,6 @@ class Autonomia::Guide::Acoes
 
   def corpo_de(dados)
     (dados[:corpo] || {}).to_h
-  end
-
-  # Os valores que vão mudar, em linguagem de gente: "Nome: Comercial". Sem isso
-  # a confirmação seria só a frase do modelo, que pode suavizar ou errar um valor
-  # — e a pessoa confirmaria sem ver o que de fato vai ser gravado.
-  #
-  # O identificador da rota entra junto, e isso importa mais do que parece: num
-  # DELETE o corpo é sempre vazio, então a tela mostrava a frase e o aviso de que
-  # não tem volta — e NADA sobre qual registro ia sumir. Se o modelo errasse o
-  # id, a pessoa não tinha como perceber antes de clicar.
-  def valores_legiveis(dados, conferencia)
-    alvo = (dados[:caminho] || {}).to_h.transform_keys(&:to_s)
-    campos = alvo.merge(conferencia.valores)
-    return nil if campos.blank?
-
-    campos.filter_map do |campo, valor|
-      texto = valor.is_a?(Array) ? valor.join(', ') : valor.to_s
-      next if texto.blank?
-
-      "#{rotulo(campo)}: #{texto}"
-    end.join(' · ').presence
-  end
-
-  # Nome de campo da API vira etiqueta legível, no idioma de quem está olhando.
-  # Campo sem tradução aparece com o próprio nome, sem underline: melhor mostrar
-  # um nome feio do que esconder o valor que vai ser gravado.
-  def rotulo(campo)
-    chave = "autonomia.guide.fields.#{campo}"
-    return I18n.t(chave) if I18n.exists?(chave)
-
-    campo.to_s.tr('_', ' ').capitalize
   end
 
   def traduzir(chave, **valores)

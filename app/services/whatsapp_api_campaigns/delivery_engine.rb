@@ -72,13 +72,20 @@ module WhatsappApiCampaigns
       # chat#737: o público foi resolvido no início; quem recusou depois não recebe. Lê do banco a cada mensagem.
       return recipient.mark_opted_out! if Contact.opted_out.exists?(id: recipient.contact_id)
 
-      rendered_body = TemplateRenderer.new(template: @campaign.message_body, contact: recipient.contact).render
+      rendered_body = TemplateRenderer.new(template: @campaign.message_body, contact: recipient.contact,
+                                           variables: recipient_variables(recipient)).render
       message = ConversationRecorder.new(recipient: recipient, rendered_body: rendered_body).perform
       mark_recipient_sent!(recipient, message)
     rescue StandardError => e
       handle_recipient_failure(recipient, e)
     ensure
       @campaign.refresh_counters!
+    end
+
+    # Extension point: extra template values for this recipient (CampaignJourney::WhatsappApiAudience
+    # gives the audience's default company text, #999).
+    def recipient_variables(_recipient)
+      {}
     end
 
     def handle_recipient_failure(recipient, error)

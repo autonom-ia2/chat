@@ -37,6 +37,8 @@ RSpec.describe 'Email campaign list query budget #436', :aggregate_failures, typ
             rows = response.parsed_body.dig('payload', 'campaigns')
             expect(rows.size).to eq(size == 'one' ? 1 : 20)
             expect(rows).to all(include('preflight' => include('historical_sent' => 1, 'issues_count' => 1, 'recipients_total' => 2)))
+            # Paused or sending campaigns have no sent_at; the list dates them by the first e-mail (#990).
+            expect(rows).to all(include('started_at' => be_present))
             expect(rows.find { |row| row['id'] == campaigns.first.id }.dig('protection', 'capabilities', 'resume')).to eq(status == 'paused')
             expect(rows.find { |row| row['id'] == campaigns.second.id }.dig('preflight', 'can_recheck')).to be(false) if size == 'all'
             expect(sql.grep(/email_campaign|email_suppression|email_reputation/i).grep(/FOR (?:UPDATE|SHARE)/i)).to be_empty

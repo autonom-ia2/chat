@@ -55,22 +55,24 @@ RSpec.describe Webhooks::SmsEventsJob do
 
     it 'calls Sms::DeliveryStatusService if the message type is message-delivered' do
       params[:type] = 'message-delivered'
+      create(:message, account: sms_channel.account, inbox: sms_channel.inbox, source_id: params[:message][:id]) # #1004: the inbox holds the id
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)
-      expect(Sms::DeliveryStatusService).to receive(:new).with(channel: sms_channel,
-                                                               params: params[:message].with_indifferent_access)
+      # #1004 (fork): the delivery event reaches the service with the inbox and the whole event.
+      expect(Sms::DeliveryStatusService).to receive(:new).with(inbox: sms_channel.inbox, params: params.with_indifferent_access)
       expect(process_service).to receive(:perform)
       described_class.perform_now(params)
     end
 
     it 'calls Sms::DeliveryStatusService if the message type is message-failed' do
       params[:type] = 'message-failed'
+      create(:message, account: sms_channel.account, inbox: sms_channel.inbox, source_id: params[:message][:id]) # #1004: the inbox holds the id
       process_service = double
       allow(Sms::DeliveryStatusService).to receive(:new).and_return(process_service)
       allow(process_service).to receive(:perform)
-      expect(Sms::DeliveryStatusService).to receive(:new).with(channel: sms_channel,
-                                                               params: params[:message].with_indifferent_access)
+      # #1004 (fork): the delivery event reaches the service with the inbox and the whole event.
+      expect(Sms::DeliveryStatusService).to receive(:new).with(inbox: sms_channel.inbox, params: params.with_indifferent_access)
       expect(process_service).to receive(:perform)
       described_class.perform_now(params)
     end

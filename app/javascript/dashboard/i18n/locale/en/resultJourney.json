@@ -1,0 +1,205 @@
+{
+  "RESULT_JOURNEY": {
+    "BREADCRUMB": "Path",
+    "LOAD_ERROR": "Could not load right now. Try again in a moment.",
+    "NOT_FOUND": "This campaign does not exist in this account or is not from this channel.",
+    "REFRESH": "Refresh",
+    "DOWNLOAD": "Download result",
+    "DOWNLOAD_ERROR": "Could not download the result. Try again.",
+    "PROCESSING": "Sending. Still queued: {queued}. The numbers refresh by themselves every 15 seconds.",
+    "PROCESSING_EMAIL": "Sending. The numbers refresh by themselves every 15 seconds.",
+    "SMS_PARTIAL": "This SMS campaign has no record per person yet. The numbers show up here once SMS records each send.",
+    "SUBTITLE": {
+      "TEMPLATE": "template {name}",
+      "SENT_ON": "sent on {date}",
+      "SCHEDULED_FOR": "scheduled for {date}",
+      "AUDIENCE": "audience {name}",
+      "STARTED_ON": "started on {date}"
+    },
+    "KPI": {
+      "LABEL": "Campaign numbers",
+      "DETAILS": "Details",
+      "AUDIENCE": "Audience",
+      "ELIGIBLE": "Eligible audience",
+      "AUDIENCE_NOTE": "people who could receive it",
+      "SENT": "Sent",
+      "DELIVERED": "Delivered",
+      "READ": "Read",
+      "REPLIED": "Replied",
+      "REPLIED_NOTE": "marked in the CRM",
+      "FAILED": "Failed",
+      "SKIPPED": "Skipped",
+      "RATE": "{rate}% of the audience"
+    },
+    "BALANCE": {
+      "MESSAGE": "Sent {sent} + Failed {failed} + Skipped {skipped} + Queued {queued} = Audience {total}",
+      "EMAIL": "Delivered {delivered} + Bounced {bounced} + Not sent {notSent} = Eligible audience {total}"
+    },
+    "CRM": {
+      "PILL": "CRM",
+      "BAND": "Whoever replied already shows in the CRM with the mark",
+      "MARK": "Campaign: {name}",
+      "OPEN": "See in the CRM"
+    },
+    "PEOPLE": {
+      "TITLE": "People",
+      "ALL": "All",
+      "FILTER_LABEL": "Filter by situation",
+      "FILTER": {
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "READ": "Read",
+        "REPLIED": "Replied",
+        "FAILED": "Failed",
+        "SKIPPED": "Skipped",
+        "QUEUED": "Queued"
+      },
+      "CONTACT": "Contact",
+      "STATUS": "Situation",
+      "MESSAGE": "Message sent",
+      "REASON": "Reason",
+      "WHEN": "When",
+      "OPEN_CONVERSATION": "Open conversation",
+      "NO_MESSAGE": "Message not generated",
+      "EMPTY": "Nobody in this situation.",
+      "REPLIED_BADGE": "Replied",
+      "CODE": "code {code}",
+      "PAGE_OF": "Page {page} of {total}",
+      "PREV": "Previous",
+      "NEXT": "Next"
+    },
+    "REPLIED": {
+      "TITLE": "Who replied",
+      "EMPTY": "Nobody replied yet."
+    },
+    "ACTIONS": {
+      "EDIT": "Edit e-mail",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "CANCEL": "Cancel",
+      "DUPLICATE": "Duplicate",
+      "SAVE_TEMPLATE": "Save as template",
+      "DELETE_DRAFT": "Delete draft",
+      "MORE": "More actions for {name}",
+      "CONFIRM_CANCEL": "Cancel this campaign? Whoever has not received it yet will not.",
+      "CONFIRM_DELETE": "Delete this draft?",
+      "TEMPLATE_NAME": "Template name",
+      "TEMPLATE_SAVE": "Save template",
+      "PAUSED": "Campaign paused.",
+      "RESUMED": "Campaign resumed.",
+      "CANCELLED": "Campaign cancelled.",
+      "DUPLICATED": "Campaign duplicated. The copy is open in the editor.",
+      "DELETED": "Draft deleted.",
+      "TEMPLATE_SAVED": "Template saved in My templates.",
+      "API_PAUSE": "Campaign paused.",
+      "API_RESUME": "Campaign resumed.",
+      "API_CANCEL": "Campaign cancelled.",
+      "ERROR": "Could not do that right now. Try again."
+    },
+    "OVERVIEW": {
+      "TITLE": "Campaign management",
+      "SUBTITLE": "How campaigns are doing overall. Click one to see its detail.",
+      "PERIOD": "Period",
+      "PERIOD_DAYS": "Last {days} days",
+      "CHANNEL_FILTER": "Filter by channel",
+      "ALL_CHANNELS": "All channels",
+      "TOTALS": {
+        "LABEL": "Period summary",
+        "CAMPAIGNS": "Campaigns sent",
+        "CAMPAIGNS_NOTE": "in the last {days} days",
+        "REACHED": "People reached",
+        "REACHED_NOTE": "received the message",
+        "REPLIED": "Replied",
+        "REPLIED_NOTE": "{rate} of those reached · all in the CRM",
+        "DEALS": "Became CRM deals",
+        "DEALS_NOTE": "cards with a campaign mark · {won} won",
+        "EMAIL_HEALTH": "E-mail health",
+        "EMAIL_HEALTH_NOTE": "permanent bounce · limit 5% · complaints {complaints} (limit 0.1%)"
+      },
+      "TABLE": {
+        "CAMPAIGN": "Campaign",
+        "DATE": "Date",
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "ENGAGEMENT": "Engagement",
+        "CLICK_RATE": "Clicks",
+        "BOUNCE_RATE": "Permanent bounce",
+        "UNSUBSCRIBE_RATE": "Unsubscribes",
+        "REPLIED": "Replied",
+        "RATE": "Reply rate"
+      },
+      "ENGAGEMENT": {
+        "OPENED": "{rate} opened",
+        "READ": "{rate} read"
+      },
+      "EMPTY": "No campaign sent in this period.",
+      "FOOTER": "The detail of each campaign (chart, clicks per link, people, sending health) is in its Result.",
+      "OPEN_ARIA": "Open the result of {name}"
+    },
+    "CLICKS": {
+      "OPEN_ARIA": "Open {url} in a new tab"
+    },
+    "EMAIL_HEALTH": {
+      "NEXT": {
+        "RESUME": "If the numbers look right, click Resume sending.",
+        "REEVALUATE": "Click Re-evaluate to check again.",
+        "RECHECK": "Check the addresses again in the block below.",
+        "PROBLEMS": "Open the problem list to see who failed."
+      },
+      "REEVALUATE": "Re-evaluate",
+      "SHOW_DETAILS": "See details",
+      "HIDE_DETAILS": "Hide details",
+      "HYGIENE_TITLE": "People not sent yet",
+      "HYGIENE_TEXT": "We check each address before sending."
+    },
+    "EMAIL_PEOPLE": {
+      "TITLE": "Recipients",
+      "EXPORT": "Export list",
+      "STATUS_FILTER": "Status",
+      "PROBLEM_FILTER": "Kind of problem",
+      "ALL": "All statuses",
+      "ALL_PROBLEMS": "All problems",
+      "PERSON": "Person",
+      "STATUS": "Status",
+      "OPENS": "Opens",
+      "CLICKS": "Clicks",
+      "OPENS_CLICKS": "Opens {opens} · Clicks {clicks}",
+      "SENT_AT": "Sent on",
+      "NOT_SENT": "Not sent yet",
+      "LAST_ACTIVITY": "Last activity",
+      "NO_ACTIVITY": "None yet",
+      "ADDRESS_CHECK": "Address check",
+      "ADDRESS": {
+        "VALID": "Valid address",
+        "INVALID": "Invalid address",
+        "REVIEW": "Needs a review",
+        "UNKNOWN": "Could not check",
+        "UNCHECKED": "Not checked yet"
+      },
+      "RETRIES": "New tries",
+      "RETRIES_NONE": "None",
+      "RETRIES_COUNT": "{count} time | {count} times",
+      "REASON": "Reason",
+      "FULL_STATUS": "Full status",
+      "DETAILS_ARIA": "Details of {email}",
+      "PILL": {
+        "PENDING": "In line",
+        "SENT": "Sent",
+        "DELIVERED": "Delivered",
+        "OPENED": "Opened",
+        "CLICKED": "Clicked",
+        "TEMPORARY": "Temporary failure",
+        "NOT_DELIVERED": "Not delivered",
+        "NONEXISTENT": "Address does not exist",
+        "FAILED": "Failed",
+        "COMPLAINED": "Marked as spam",
+        "INVALID": "Invalid address",
+        "REVIEW": "Review address",
+        "BLOCKED": "Blocked",
+        "UNSUBSCRIBED": "Left the list",
+        "PROBLEM": "With a problem",
+        "UNKNOWN": "No information"
+      }
+    }
+  }
+}

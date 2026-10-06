@@ -9,6 +9,12 @@
       "file": "campaignImport.json"
     },
     {
+      "file": "campaignJourney.json"
+    },
+    {
+      "file": "resultJourney.json"
+    },
+    {
       "file": "crm.json"
     },
     {
@@ -19,6 +25,9 @@
     },
     {
       "file": "financial.json"
+    },
+    {
+      "file": "contactImportJourney.json"
     },
     {
       "file": "insurance.json"

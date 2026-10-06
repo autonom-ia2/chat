@@ -112,7 +112,8 @@
       "EXPIRED": "Expired",
       "UNDOING_LABELS": "Undoing labels",
       "LABELS_UNDONE": "Labels undone",
-      "UNDO_FAILED": "Undo failed"
+      "UNDO_FAILED": "Undo failed",
+      "NEEDS_COLUMN_CHOICE": "Choose the columns"
     }
   }
 }

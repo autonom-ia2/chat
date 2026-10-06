@@ -23,19 +23,13 @@ module CampaignImports
         )
       end
 
+      # Country code and last 4 digits only (CampaignImports::PhoneMask, #993).
       def mask(phone_number)
-        digits = phone_number.to_s.gsub(/\D/, '')
-        return '' if digits.empty?
-        return "#{'*' * [digits.length - 4, 0].max}#{digits[-4, 4]}" if digits.length < 8
-
-        "+#{digits[0, 4]}#{digits[4, 1]}****#{digits[-4, 4]}"
+        CampaignImports::PhoneMask.mask(phone_number)
       end
 
       def mask_raw(raw_phone)
-        digits = raw_phone.to_s.gsub(/\D/, '')
-        return '' if digits.empty?
-
-        mask("+#{digits}")
+        CampaignImports::PhoneMask.mask(raw_phone)
       end
 
       private

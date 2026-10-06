@@ -1,5 +1,7 @@
 module CampaignImports
   class UndoLabels
+    include SuppressedContactEvents
+
     def initialize(campaign_import)
       @campaign_import = campaign_import
       @account = campaign_import.account
@@ -48,14 +50,6 @@ module CampaignImports
         should_undo = true
       end
       should_undo
-    end
-
-    def with_suppressed_contact_events
-      previous = Current.suppress_contact_events
-      Current.suppress_contact_events = true
-      yield
-    ensure
-      Current.suppress_contact_events = previous
     end
   end
 end

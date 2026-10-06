@@ -50,19 +50,22 @@ Tabela nova `crm_meta_ad_objects` (cache):
 `Crm::MetaAds::NameResolver.new(account).resolve(ids)`:
 
 - **ID** = string só de dígitos, entre 6 e 30 caracteres, conferida sem regex (`str.each_char.all? { _1 >= '0' && _1 <= '9' }`).
-- Primeiro o cache, válido por 7 dias. Os IDs que faltam vão num lote:
-  `GET /v22.0/?ids=a,b,c&fields=name,adset{id,name},campaign{id,name}` para anúncios, ou `fields=name` quando o tipo
-  for desconhecido. No máximo 50 por chamada, timeout de 8 s.
+- Primeiro o cache, válido por 7 dias. Os IDs que faltam vão **um por chamada**:
+  `GET /<versão>/<id>?fields=name,adset{id,name},campaign{id,name}` para anúncios, ou `fields=name` quando o tipo
+  for desconhecido. Timeout de 8 s. O conjunto e a campanha que vieram embutidos num anúncio já entram no cache e não
+  são buscados de novo.
+- **Não usar o lote `?ids=`** (#1043): a Graph v26.0 o descontinuou e responde com o código 100, que o resolver lê
+  como "objeto inexistente". Em produção (`WHATSAPP_API_VERSION=v26.0`) todos os IDs iam para o cache negativo.
 - **Token inválido** (código 190) → `status: invalid`, `last_error` sanitizado, e nada é resolvido.
 - **Falta de permissão** (código 10 ou 200–299) → confere `GET /me/permissions` uma vez por execução. Sem `ads_read`
   `granted` (ou com o próprio `/me/permissions` recusado) → `invalid`, como acima. Com `ads_read` concedida, é um
   objeto fora do alcance do token (por exemplo, de outra conta de anúncios) e vale como erro de objeto. Assim, um ID
   de uma conta sem acesso não derruba a credencial inteira.
-- **Erro por objeto** (código 100 ou 803) → o lote é refeito ID a ID; o ID que falha sozinho entra no cache sem nome
+- **Erro por objeto** (código 100 ou 803) → aquele ID entra no cache sem nome
   (**cache negativo**, `name: nil`, `fetched_at: agora`) e fica 7 dias sem nova busca. Um nome já conhecido do mesmo
   ID é mantido (só `fetched_at` muda).
 - **Indisponibilidade** (limite de taxa 4, 17, 32, 613, 80000+; HTTP 5xx; rede) → para a busca naquela execução,
-  devolve só o que está no cache, não refaz ID a ID e não mexe na credencial.
+  devolve só o que está no cache e não mexe na credencial.
 - Devolve `{ id => { name:, type:, campaign_name:, adset_name: } }`.
 
 `Crm::MetaAds::EnrichTouchesJob(conversation_id)`:

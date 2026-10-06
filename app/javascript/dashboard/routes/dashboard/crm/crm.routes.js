@@ -11,8 +11,9 @@ const CrmAiUsagePage = () => import('./pages/CrmAiUsagePage.vue');
 const CrmSlaPage = () => import('./pages/CrmSlaPage.vue');
 const CrmIntegrationTokensPage = () =>
   import('./pages/CrmIntegrationTokensPage.vue');
+// Journey on: multichannel overview (#1007); off: the old e-mail report page, unchanged.
 const CrmCampaignManagementPage = () =>
-  import('./pages/CrmCampaignManagementPage.vue');
+  import('../campaigns/journey/CampaignManagementSwitch.vue');
 
 // 'agent' keeps plain (non-custom-role) agents in per the locked decision;
 // custom-role seats are gated by the granular crm_view permission key.

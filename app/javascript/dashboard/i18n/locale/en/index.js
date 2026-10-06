@@ -11,6 +11,8 @@ import bulkActions from './bulkActions.json';
 import calls from './calls.json';
 import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
+import campaignJourney from './campaignJourney.json';
+import resultJourney from './resultJourney.json';
 import emailCampaignProtection from './emailCampaignProtection.json';
 import emailCampaignImportRecovery from './emailCampaignImportRecovery.json';
 import cannedMgmt from './cannedMgmt.json';
@@ -19,6 +21,7 @@ import companies from './companies.json';
 import components from './components.json';
 import contact from './contact.json';
 import contactFilters from './contactFilters.json';
+import contactImportJourney from './contactImportJourney.json';
 import conversation from './conversation.json';
 import crm from './crm.json';
 import csatMgmt from './csatMgmt.json';
@@ -69,6 +72,8 @@ export default {
   ...calls,
   ...campaign,
   ...campaignImport,
+  ...campaignJourney,
+  ...resultJourney,
   ...emailCampaignProtection,
   ...emailCampaignImportRecovery,
   ...cannedMgmt,
@@ -77,6 +82,7 @@ export default {
   ...components,
   ...contact,
   ...contactFilters,
+  ...contactImportJourney,
   ...conversation,
   ...crm,
   ...csatMgmt,

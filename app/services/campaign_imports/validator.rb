@@ -14,6 +14,7 @@ module CampaignImports
       parsed_file = Parser.new(campaign_import.original_file, filename: campaign_import.source_filename).perform
       validate_parsed_file(parsed_file)
     rescue StandardError => e
+      log_unexpected_failure(e)
       mark_validation_failed(['file_could_not_be_processed'], [], exception: e)
     end
 
@@ -21,6 +22,9 @@ module CampaignImports
 
     attr_reader :campaign_import
 
+    # Rows with problems no longer block the file: they stay listed (with reasons and in
+    # the error CSV) and only the valid rows move on. The file is refused only when a
+    # global problem exists or no row at all is valid.
     def validate_parsed_file(parsed_file)
       unsupported_format = !CampaignImports::Config.supported_formats.include?(parsed_file.format)
       return mark_validation_failed(['unsupported_file_format'], []) if unsupported_format
@@ -33,12 +37,20 @@ module CampaignImports
 
       row_results = build_row_results(data_rows, header_result.mapping)
       add_duplicate_errors(row_results)
-      global_errors << 'batch_count_exceeds_rows' if campaign_import.batch_count.to_i > data_rows.size && data_rows.present?
+      valid_count = row_results.count { |row| row[:errors].blank? }
+      global_errors << 'no_valid_rows' if data_rows.present? && valid_count.zero? && header_result.errors.empty?
+      global_errors << 'batch_count_exceeds_rows' if valid_count.positive? && campaign_import.batch_count.to_i > valid_count
       global_errors << 'too_many_batches' if campaign_import.batch_count.to_i > CampaignImports::Config.max_batches
 
-      return mark_validation_failed(global_errors, row_results) if global_errors.present? || row_results.any? { |row| row[:errors].present? }
+      return mark_validation_failed(global_errors, row_results) if global_errors.present?
 
       mark_ready(row_results)
+    end
+
+    def log_unexpected_failure(exception)
+      Rails.logger.error(
+        "[CampaignImports::Validator] import_id=#{campaign_import.id} #{exception.class}: #{SafeLogMessage.call(exception.message)}"
+      )
     end
 
     def build_row_results(rows, mapping)
@@ -78,36 +90,47 @@ module CampaignImports
       nil
     end
 
+    # The first occurrence of a phone stays valid; repeated rows are skipped with a reason.
     def add_duplicate_errors(row_results)
-      grouped = row_results.select { |row| row[:normalized_phone_hash].present? }
+      grouped = row_results.select { |row| row[:normalized_phone_hash].present? && row[:errors].blank? }
                            .group_by { |row| row[:normalized_phone_hash] }
       grouped.each_value do |rows|
-        next if rows.one?
-
-        rows.each { |row| row[:errors] << 'duplicate_phone_in_file' }
+        rows.drop(1).each { |row| row[:errors] << 'duplicate_phone_in_file' }
       end
     end
 
     def mark_ready(row_results)
-      plan = nil
+      valid_rows = row_results.select { |row| row[:errors].blank? }
+      invalid_rows = row_results - valid_rows
       ActiveRecord::Base.transaction do
         reset_validation_rows!
+        plan = plan_labels(valid_rows)
+        valid_rows.each_with_index { |row, index| row[:batch_index] = plan.batch_indexes[index] }
         persist_rows(row_results)
-        plan = LabelPlanner.new(campaign_import, total_rows: row_results.size).perform
-        attach_normalized_csv(row_results, plan)
-        attach_report_csv(row_results, plan, status: 'ready_to_confirm')
-        campaign_import.update!(
-          status: :ready_to_confirm,
-          total_rows: row_results.size,
-          valid_rows: row_results.size,
-          invalid_rows: 0,
-          validated_at: Time.current,
-          validation_summary: {
-            errors: {},
-            warnings: validation_warnings(plan)
-          }
-        )
+        attach_normalized_csv(valid_rows)
+        attach_error_csv([], invalid_rows) if invalid_rows.any?
+        attach_report_csv(valid_rows, plan, status: 'ready_to_confirm')
+        campaign_import.update!(ready_attributes(row_results, valid_rows, invalid_rows, plan))
       end
+    end
+
+    # Old campaign base flow: the base label and one label per batch (LabelPlanner).
+    def plan_labels(valid_rows)
+      LabelPlanner.new(campaign_import, total_rows: valid_rows.size).perform
+    end
+
+    def ready_attributes(row_results, valid_rows, invalid_rows, plan)
+      {
+        status: :ready_to_confirm,
+        total_rows: row_results.size,
+        valid_rows: valid_rows.size,
+        invalid_rows: invalid_rows.size,
+        validated_at: Time.current,
+        validation_summary: {
+          errors: invalid_rows.flat_map { |row| row[:errors] }.tally,
+          warnings: validation_warnings(plan, invalid_rows)
+        }
+      }
     end
 
     def mark_validation_failed(global_errors, row_results, exception: nil)
@@ -149,9 +172,8 @@ module CampaignImports
       end
     end
 
-    def attach_normalized_csv(row_results, plan)
-      rows = row_results.map.with_index do |row, index|
-        row[:batch_index] = plan.batch_indexes[index]
+    def attach_normalized_csv(valid_rows)
+      rows = valid_rows.map do |row|
         {
           'row_number' => row[:row_number],
           'name' => row[:normalized_name],
@@ -166,10 +188,6 @@ module CampaignImports
         filename: normalized_filename('normalized'),
         content_type: 'text/csv'
       )
-      campaign_import.campaign_import_rows.each do |import_row|
-        source = row_results.find { |row| row[:row_number] == import_row.row_number }
-        import_row.update!(batch_index: source[:batch_index])
-      end
     end
 
     def attach_error_csv(global_errors, row_results)
@@ -213,8 +231,9 @@ module CampaignImports
       }.compact
     end
 
-    def validation_warnings(plan)
+    def validation_warnings(plan, invalid_rows = [])
       warnings = []
+      warnings << 'invalid_rows_skipped' if invalid_rows.any?
       warnings << 'large_batch_count' if plan.batch_sizes.size > CampaignImports::Config.warn_batches_above
       warnings
     end

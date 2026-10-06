@@ -333,17 +333,77 @@
   "campaign_imports": {
     "controller": "api/v1/accounts/campaign_imports#index",
     "parametros": [
-      "page"
+      "page",
+      "q",
+      "saved"
     ]
   },
   "campaign_imports/:id": {
     "controller": "api/v1/accounts/campaign_imports#show",
     "parametros": []
   },
+  "campaign_imports/:id/contacts": {
+    "controller": "api/v1/accounts/campaign_import_audiences#contacts",
+    "parametros": [
+      "page"
+    ]
+  },
   "campaign_imports/:id/download": {
     "controller": "api/v1/accounts/campaign_imports#download",
     "parametros": [
       "file"
+    ]
+  },
+  "campaign_imports/:id/problem_rows": {
+    "controller": "api/v1/accounts/campaign_import_audiences#problem_rows",
+    "parametros": [
+      "page"
+    ]
+  },
+  "campaign_imports/:id/sample_contact": {
+    "controller": "api/v1/accounts/campaign_import_audiences#sample_contact",
+    "parametros": []
+  },
+  "campaign_imports/:id/variable_suggestions": {
+    "controller": "api/v1/accounts/campaign_import_audiences#variable_suggestions",
+    "parametros": [
+      "variables"
+    ]
+  },
+  "campaign_journey/campaign_names": {
+    "controller": "api/v1/accounts/campaign_journey/campaign_names#index",
+    "parametros": [
+      "campaign_ids",
+      "whatsapp_api_campaign_ids"
+    ]
+  },
+  "campaign_journey/contact_origins/:id": {
+    "controller": "api/v1/accounts/campaign_journey/contact_origins#show",
+    "parametros": []
+  },
+  "campaign_journey/overview": {
+    "controller": "api/v1/accounts/campaign_journey/overviews#show",
+    "parametros": [
+      "channel",
+      "days",
+      "page"
+    ]
+  },
+  "campaign_journey/results/:channel/:id": {
+    "controller": "api/v1/accounts/campaign_journey/results#show",
+    "parametros": []
+  },
+  "campaign_journey/results/:channel/:id/export": {
+    "controller": "api/v1/accounts/campaign_journey/results#export",
+    "parametros": [
+      "status"
+    ]
+  },
+  "campaign_journey/results/:channel/:id/recipients": {
+    "controller": "api/v1/accounts/campaign_journey/results#recipients",
+    "parametros": [
+      "page",
+      "status"
     ]
   },
   "campaigns": {
@@ -702,6 +762,14 @@
   },
   "conta/cache_keys": {
     "controller": "api/v1/accounts#cache_keys",
+    "parametros": []
+  },
+  "contact_imports/:id": {
+    "controller": "api/v1/accounts/contact_imports#show",
+    "parametros": []
+  },
+  "contact_imports/:id/download": {
+    "controller": "api/v1/accounts/contact_imports#download",
     "parametros": []
   },
   "contacts": {

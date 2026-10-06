@@ -5,6 +5,11 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import EmailStatusBadge from './EmailStatusBadge.vue';
 import { NS, formatNumber } from './presentation';
+import {
+  hygieneState,
+  isReconciled,
+  visibleClassifications as visibleOf,
+} from './hygieneCounts';
 const props = defineProps({
   preflight: { type: Object, default: null },
   busy: Boolean,
@@ -12,52 +17,9 @@ const props = defineProps({
 const emit = defineEmits(['recheck', 'issues']);
 const { t, locale } = useI18n();
 const canManage = useCanManage('campaign_manage');
-const classifications = [
-  'ready',
-  'protected',
-  'invalid',
-  'review',
-  'unknown',
-  'unchecked',
-  'duplicate',
-];
-// Counts are mutually exclusive server classifications. Never infer zeros or
-// subtract overlapping legacy import counters to manufacture readiness.
-const suppliedClassifications = computed(() =>
-  classifications.filter(key =>
-    Object.hasOwn(props.preflight?.counts || {}, key)
-  )
-);
-const visibleClassifications = computed(() =>
-  suppliedClassifications.value.filter(
-    key => (props.preflight?.counts?.[key] || 0) > 0
-  )
-);
-const reconciled = computed(() => {
-  const counts = props.preflight?.counts;
-  return (
-    counts &&
-    Number.isInteger(counts.total) &&
-    counts.total >= 0 &&
-    suppliedClassifications.value.every(
-      key => Number.isInteger(counts[key]) && counts[key] >= 0
-    ) &&
-    suppliedClassifications.value.reduce((sum, key) => sum + counts[key], 0) ===
-      counts.total
-  );
-});
-const state = computed(
-  () =>
-    ({
-      processing: 'analysing',
-      queued: 'analysing',
-      analysing: 'analysing',
-      completed: 'completed',
-      ready: 'ready',
-      blocked: 'protected',
-      review: 'review',
-    })[props.preflight?.status] || 'unknown'
-);
+const visibleClassifications = computed(() => visibleOf(props.preflight));
+const reconciled = computed(() => isReconciled(props.preflight));
+const state = computed(() => hygieneState(props.preflight));
 </script>
 
 <template>

@@ -85,6 +85,46 @@ RSpec.describe Autonomia::Guide::Acoes do
       expect(para(admin).descrever('POST labels', { corpo: { title: 'vip' }, descricao: 'Criar a etiqueta VIP.' })[:aviso]).to be_nil
     end
 
+    # Conta 16 (05/10/2026): ao mudar o assunto de uma automação, o cartão mostrou
+    # "Registro: 8 · Conditions: {"values" => [3], ...}" — o id e a estrutura crua.
+    describe 'ação com registro e dados compostos' do
+      let(:regra) { create(:automation_rule, account: conta, name: 'Novo lead Chat2You') }
+      let(:caixa) { create(:inbox, account: conta) }
+      let(:condicoes) do
+        [{ attribute_key: 'inbox_id', filter_operator: 'equal_to', values: [caixa.id], query_operator: 'AND' },
+         { attribute_key: 'mail_subject', filter_operator: 'contains', values: ['Chat2You'], query_operator: nil }]
+      end
+
+      def descrever_mudanca(id)
+        para(admin).descrever('PATCH automation_rules/:id',
+                              { caminho: { id: id }, descricao: 'Mudar o assunto.',
+                                corpo: { conditions: condicoes, description: 'Leads do formulário' } })
+      end
+
+      it 'mostra o registro pelo nome e nunca a estrutura crua', :aggregate_failures do
+        texto = descrever_mudanca(regra.id)
+
+        expect(texto[:detalhe]).to eq("#{I18n.t('autonomia.guide.records.automation_rule')}: Novo lead Chat2You · " \
+                                      "#{I18n.t('autonomia.guide.fields.description')}: Leads do formulário")
+        expect(texto[:detalhe]).not_to include('{', '=>', 'attribute_key')
+        expect(texto[:ajustes]).to eq(1)
+      end
+
+      it 'parâmetro que a rota não declara não vira nome de registro' do
+        texto = para(admin).descrever('PATCH automation_rules/:id',
+                                      { caminho: { id: regra.id, inbox_id: caixa.id }, descricao: 'Mudar.',
+                                        corpo: { description: 'x' } })
+
+        expect(texto[:detalhe]).not_to include(caixa.name)
+      end
+
+      it 'registro de outra conta não tem o nome revelado' do
+        de_fora = create(:automation_rule, account: create(:account), name: 'Segredo')
+
+        expect(descrever_mudanca(de_fora.id)[:detalhe]).not_to include('Segredo')
+      end
+    end
+
     it 'descrever não chama a plataforma' do
       expect(Net::HTTP).not_to receive(:start)
 

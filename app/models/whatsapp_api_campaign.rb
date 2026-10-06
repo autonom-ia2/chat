@@ -45,6 +45,8 @@
 #
 class WhatsappApiCampaign < ApplicationRecord
   attr_accessor :media_file_pending
+  # Extra column keys of the audience the journey links (#999): allows {{publico.<key>}} tokens.
+  attr_accessor :audience_column_keys
 
   belongs_to :account
   belongs_to :inbox
@@ -71,7 +73,8 @@ class WhatsappApiCampaign < ApplicationRecord
   validate :created_by_must_belong_to_account
   validate :inbox_must_be_whatsapp_api_campaign_channel
   validate :message_or_media_required
-  validate :message_variables_must_be_supported
+  # Checked when the text is written: a journey campaign allows its audience columns only then (#999).
+  validate :message_variables_must_be_supported, if: :message_body_changed?
 
   def terminal?
     completed? || completed_with_failures? || cancelled? || failed?
@@ -165,7 +168,7 @@ class WhatsappApiCampaign < ApplicationRecord
   end
 
   def message_variables_must_be_supported
-    unsupported = WhatsappApiCampaigns::TemplateRenderer.unsupported_variables_in(message_body)
+    unsupported = WhatsappApiCampaigns::TemplateRenderer.unsupported_variables_in(message_body, audience_keys: audience_column_keys)
     return if unsupported.blank?
 
     errors.add(:message_body, "has unsupported variables: #{unsupported.join(', ')}")

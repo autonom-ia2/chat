@@ -245,3 +245,12 @@ export const descreverAutomacao = (regra, { t, nomes = {} }) => {
 
   return { quando, se, entao, frase };
 };
+
+// As ações do Guia que criam ou mudam uma automação: o cartão de confirmação
+// mostra a prévia dela em vez dos dados crus.
+const ACOES_DE_AUTOMACAO = [
+  'POST automation_rules',
+  'PATCH automation_rules/:id',
+  'PUT automation_rules/:id',
+];
+export const ehAcaoDeAutomacao = nome => ACOES_DE_AUTOMACAO.includes(nome);

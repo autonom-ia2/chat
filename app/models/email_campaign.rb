@@ -58,6 +58,8 @@ class EmailCampaign < ApplicationRecord
   # Modo SES: domínio verificado. Modo direct_inbox: envio direto pela caixa webmail conectada.
   belongs_to :sender_identity, class_name: 'EmailSenderIdentity', optional: true
   belongs_to :sender_inbox, class_name: 'Inbox', optional: true
+  # "Respostas vão para a caixa X" (#999, PRD §8.9): the send uses this inbox's address as Reply-To.
+  belongs_to :reply_to_inbox, class_name: 'Inbox', optional: true
 
   has_many :email_campaign_import_issues, dependent: :destroy
   has_many :email_campaign_imports, dependent: :destroy
@@ -101,6 +103,7 @@ class EmailCampaign < ApplicationRecord
   validate  :sender_identity_must_belong_to_account
   validate  :sender_inbox_must_belong_to_account
   validate  :sender_present_for_mode
+  validate  :reply_to_inbox_must_be_account_email_inbox, if: -> { reply_to_inbox_id.present? }
   validate  :reply_to_format, if: -> { reply_to.present? }
   # A checagem de domínio só vale no modo SES; no modo direto o "De:" é a própria caixa.
   validate  :from_email_matches_sender_domain, if: -> { from_email.present? && ses? }
@@ -271,6 +274,12 @@ class EmailCampaign < ApplicationRecord
                              ai_error: message.to_s.truncate(500), ai_completed_at: Time.current)
   end
 
+  # When the first e-mail of the campaign went out. `sent_at` only records the end of the send
+  # (#finalize!), so a campaign sent now and paused or still sending has no date of its own (#990).
+  def first_sent_at
+    email_campaign_recipients.where.not(sent_at: nil).minimum(:sent_at)
+  end
+
   # Persisted `sent_at` is the durable evidence that a transport was accepted.
   # Recipient status can later move to delivered/bounced/complained/unsubscribed or
   # even provider-suppressed; those transitions must never make "Enviados" decrease.
@@ -383,6 +392,12 @@ class EmailCampaign < ApplicationRecord
     elsif sender_identity.nil?
       errors.add(:sender_identity_id, 'is required')
     end
+  end
+
+  def reply_to_inbox_must_be_account_email_inbox
+    return if reply_to_inbox&.account_id == account_id && reply_to_inbox.channel.is_a?(Channel::Email)
+
+    errors.add(:reply_to_inbox_id, 'must be an email inbox of the same account')
   end
 
   def reply_to_format

@@ -301,6 +301,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return if card.blank? || card.stage.blank?
 
     {
+      card_id: card.id,
       pipeline_name: card.pipeline&.name,
       stage_name: card.stage.name,
       stage_color: card.stage.color,

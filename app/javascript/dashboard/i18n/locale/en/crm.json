@@ -147,11 +147,16 @@
         "TIKTOK_ADS": "TikTok Ads",
         "META_PAID": "Meta paid",
         "TRACKED_LINK": "Tracked link",
+        "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
+        "CAMPAIGN_EMAIL": "Email campaign",
+        "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+        "CAMPAIGN_SMS": "SMS campaign",
         "UNKNOWN": "Unknown"
       }
     }
   },
   "CRM_KANBAN": {
+    "STAGE_CHIP_OPEN": "Open in CRM: {etapa}",
     "ZOOM": {
       "PERCENT": "{value}%",
       "TITLE": "Kanban zoom",
@@ -202,6 +207,10 @@
       "TIKTOK_ADS": "TikTok Ads",
       "META_PAID": "Meta paid",
       "TRACKED_LINK": "Tracked link",
+      "CAMPAIGN_WHATSAPP": "WhatsApp campaign",
+      "CAMPAIGN_EMAIL": "Email campaign",
+      "CAMPAIGN_LIVE_CHAT": "Live chat campaign",
+      "CAMPAIGN_SMS": "SMS campaign",
       "INSTAGRAM_POST": "Instagram post",
       "FACEBOOK_POST": "Facebook post",
       "UNKNOWN": "Unknown origin",
@@ -2038,6 +2047,13 @@
       "REORDER_HELP": "Drag the dots or use the arrows in the stage options.",
       "REORDER_STAGE": "Reorder {name}. Drag or use the up and down arrow keys.",
       "ORDER_CHANGED": "{name} is now stage {position} of {total}."
+    },
+    "ORIGIN_JOURNEY": {
+      "TITLE": "Origin and campaigns",
+      "AUDIENCES": "Audiences",
+      "EMPTY": "No origin or campaign yet.",
+      "CAMPAIGN_MESSAGE": "Campaign: {name}",
+      "CAMPAIGN_MESSAGE_TEMPLATE": "Campaign: {name} · template {template}"
     }
   },
   "crm": {
@@ -2337,7 +2353,11 @@
       "RUNNING": "Doing it now…",
       "FAILED": "I couldn't do that. You can do it from the screen.",
       "FAILED_GENERIC": "I couldn't do that, and I can't tell why. You can do it from the screen.",
-      "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again."
+      "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again.",
+      "PREVIEW_TITLE": "How it will look",
+      "PREVIEW_LOADING": "Building the preview…",
+      "PREVIEW_CHANGES": "changes",
+      "MORE_ADJUSTMENTS": "and {n} more change | and {n} more changes"
     },
     "DONE": {
       "TITLE": "What I did",

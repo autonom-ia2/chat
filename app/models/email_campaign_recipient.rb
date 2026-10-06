@@ -29,6 +29,8 @@
 #
 class EmailCampaignRecipient < ApplicationRecord
   belongs_to :email_campaign
+  # The audience contact this recipient came from (#999); nil for spreadsheet recipients.
+  belongs_to :contact, optional: true
 
   has_many :email_events, foreign_key: :recipient_id, dependent: :destroy, inverse_of: :recipient
 

@@ -147,11 +147,16 @@
         "TIKTOK_ADS": "TikTok Ads",
         "META_PAID": "Meta pago",
         "TRACKED_LINK": "Link rastreado",
+        "CAMPAIGN_WHATSAPP": "Campanha WhatsApp",
+        "CAMPAIGN_EMAIL": "Campanha e-mail",
+        "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
+        "CAMPAIGN_SMS": "Campanha SMS",
         "UNKNOWN": "Desconhecida"
       }
     }
   },
   "CRM_KANBAN": {
+    "STAGE_CHIP_OPEN": "Abrir no CRM: {etapa}",
     "ZOOM": {
       "PERCENT": "{value}%",
       "TITLE": "Zoom do Kanban",
@@ -201,6 +206,10 @@
       "TIKTOK_ADS": "TikTok Ads",
       "META_PAID": "Meta pago",
       "TRACKED_LINK": "Link rastreado",
+      "CAMPAIGN_WHATSAPP": "Campanha WhatsApp",
+      "CAMPAIGN_EMAIL": "Campanha e-mail",
+      "CAMPAIGN_LIVE_CHAT": "Campanha chat ao vivo",
+      "CAMPAIGN_SMS": "Campanha SMS",
       "INSTAGRAM_POST": "Post do Instagram",
       "FACEBOOK_POST": "Post do Facebook",
       "UNKNOWN": "Origem desconhecida",
@@ -2039,6 +2048,13 @@
       "REORDER_HELP": "Arraste pelos pontinhos ou use as setas nas opções da etapa.",
       "REORDER_STAGE": "Mudar ordem de {name}. Arraste ou use as setas para cima e para baixo.",
       "ORDER_CHANGED": "{name} agora é a etapa {position} de {total}."
+    },
+    "ORIGIN_JOURNEY": {
+      "TITLE": "Origem e campanhas",
+      "AUDIENCES": "Públicos",
+      "EMPTY": "Nenhuma origem ou campanha ainda.",
+      "CAMPAIGN_MESSAGE": "Campanha: {name}",
+      "CAMPAIGN_MESSAGE_TEMPLATE": "Campanha: {name} · modelo {template}"
     }
   },
   "crm": {
@@ -2338,7 +2354,11 @@
       "RUNNING": "Fazendo agora…",
       "FAILED": "Não consegui fazer isso. Você pode fazer direto na tela.",
       "FAILED_GENERIC": "Não consegui fazer isso e não sei dizer o motivo. Você pode fazer direto na tela.",
-      "LOST": "Esta ação foi executada, mas não consegui mostrar o resultado aqui. Confira na tela antes de pedir de novo."
+      "LOST": "Esta ação foi executada, mas não consegui mostrar o resultado aqui. Confira na tela antes de pedir de novo.",
+      "PREVIEW_TITLE": "Como vai ficar",
+      "PREVIEW_LOADING": "Montando a prévia…",
+      "PREVIEW_CHANGES": "muda",
+      "MORE_ADJUSTMENTS": "e mais {n} ajuste | e mais {n} ajustes"
     },
     "DONE": {
       "TITLE": "O que eu fiz",
