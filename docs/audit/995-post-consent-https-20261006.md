@@ -1,5 +1,21 @@
 # #995 — HTTPS privado após consentimento, 06/10/2026
 
+## Atualização — DNS normal validado nos dois Macs (06/10/2026)
+
+Rodrigo executou o instalador no M4 via SSH a partir do M2 e retornou `installed`. A instalação do M2 já estava confirmada. Este adendo substitui **somente** a pendência de instalação/resolução DNS dos Macs descrita no registro histórico abaixo; não conclui UI ou aceite Meta.
+
+A verificação direta do M4, PID 24589, em 06/10 às 11:10:59 UTC (08:10:59 em São Paulo), confirmou hostname `MacBook-Air-de-Rodrigo.local`, usuário `rodrigosilva`, resolver root:wheel/0644 e SHA256 `18a545f27f03e6b5fc7ad0ab9ae6a8ca321a1740cee35253fdb238ec916219be`. O `dscacheutil` resolveu normalmente o nome privado da VPS para 100.78.34.82. Os endpoints `/hub2you/status` e `/autonomia/status` retornaram HTTP401, corpo `instagram_gateway_denied`, sem Set-Cookie, `ssl_verify_result=0`.
+
+A reconferência do M2 pelo caminho normal M4→M2, PID 24915, confirmou o mesmo conteúdo/permissões do resolver, resolução pelo sistema e HTTP401/TLS=0 nos dois endpoints. As quatro requisições usaram hostname normal, sem `--resolve`, `--connect-to`, proxy, certificado ignorado ou IP forçado.
+
+Resultado: **DNS do sistema e HTTPS normal estão validados no M2 e no M4**. A recusa 401 é esperada para a chamada sem sessão autorizada; não indica falha de DNS/TLS. `Connection to 100.105.38.87 closed` no retorno do usuário é o encerramento da sessão SSH após o comando remoto, não prova queda da rede. Nenhuma instalação deve ser repetida por esse motivo.
+
+Esta rodada executou somente verificações dos Macs e atualização do acompanhamento. Não alterou Tailscale, DNS global, SSH, serviços, Redis, overlay, flags ou deploy. O retorno do instalador do usuário informa cache flush exit0 e nenhuma mudança de DNS global/preferência Tailscale/restart.
+
+**Sem novo comando manual de DNS ou consentimento pendente.** A próxima etapa é validar o fluxo real SuperAdmin/console/Meta e os demais gates registrados na #995. O teste HTTP do sistema não substitui a verificação visual/SameSite do navegador, corte controlado, publicação ou renovações naturais. Não marcar a migração inteira como concluída.
+
+---
+
 Este checkpoint sucede `995-serve-consent-and-autonomia-20261006.md`. Registra execução real e os limites dos resultados; não encerra a migração nem substitui os recibos originais. Rodrigo informou o consentimento concluído e enviou o print Success. As autorizações anteriores permanecem válidas.
 
 ## Estado confirmado às 10:13:34 UTC
