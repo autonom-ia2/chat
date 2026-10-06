@@ -81,7 +81,7 @@ module CampaignJourneySmsHelpers
       if failing.include?(body['to'])
         { status: 400, headers: { 'Content-Type' => 'application/json' }, body: { description: "'to' #{body['to']} is not a mobile number" }.to_json }
       else
-        { status: 202, headers: { 'Content-Type' => 'application/json' }, body: { id: "bw-#{body['to'].to_s.delete_prefix('+')}" }.to_json }
+        { status: 202, headers: { 'Content-Type' => 'application/json' }, body: { id: "bw-#{sent.size}" }.to_json }
       end
     end
     sent
