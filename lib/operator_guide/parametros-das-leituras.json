@@ -1105,6 +1105,10 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/funnels": {
+    "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
+    "parametros": []
+  },
   "crm/meta_ads_connection/pixels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#pixels",
     "parametros": [

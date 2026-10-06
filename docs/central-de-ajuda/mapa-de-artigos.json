@@ -3549,6 +3549,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.20",
+     "titulo": "Conectar seus anúncios da Meta e avisar a Meta sobre o funil",
+     "para_que_serve": "Ligar a conta de anúncios, dizer para onde o anúncio leva, testar o site e gravar no funil o que cada etapa significa para a Meta.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_meta_ads_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_meta_ads_index",
+      "destaque": null
+     },
+     "requer": "meta_ads_hub",
+     "prints": [],
+     "fontes": [
+      "porques: conectar_anuncios_da_meta"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

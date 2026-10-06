@@ -192,7 +192,8 @@ RSpec.describe Account do
         feature_relationships_attributes: 1 << 7,
         feature_relationships_company_media: 1 << 8,
         feature_relationships_navigation: 1 << 9,
-        feature_instagram_assisted_onboarding: 1 << 10
+        feature_instagram_assisted_onboarding: 1 << 10,
+        feature_meta_ads_hub: 1 << 11
       )
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_manual_transfer]).to eq(1)
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_data_import]).to eq(2)

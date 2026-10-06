@@ -21,9 +21,10 @@ class Crm::Cards::PayloadBuilder
   }.freeze
 
   # Nomes da Meta (#1034): campaign_name/adset_name/ad_name, gravados por Crm::MetaAds::TouchEnricher.
+  # Prévia e miniatura do anúncio (#1047, CA-1.11): ad_preview_url/ad_thumbnail_url, só https.
   CAMPAIGN_TOUCH_FIELDS = %w[
     source source_id source_type headline source_url utm_campaign utm_term utm_content utm_id
-    campaign_name adset_name ad_name touched_at
+    campaign_name adset_name ad_name ad_preview_url ad_thumbnail_url touched_at
   ].freeze
 
   # CTWA multi-touch: aggregates campaign_touches from ALL conversations linked to

@@ -535,7 +535,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:42"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:46"
     ],
     "sem_corpo": true
   },
@@ -4785,8 +4785,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:28",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:150"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182"
     ],
     "sem_corpo": false
   },
@@ -4795,9 +4795,38 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:68"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:72"
     ],
     "sem_corpo": true
+  },
+  "PATCH crm/meta_ads_connection/funnel": {
+    "campos": {
+      "enabled": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "pipeline_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "stages": {
+        "campos": {
+          "funnel_stage_type": {},
+          "id": {}
+        },
+        "tipo": "objeto"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:90",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:89"
+    ],
+    "sem_corpo": false
   },
   "PATCH crm/pipelines/:id": {
     "campos": {
@@ -13546,22 +13575,6 @@
     ],
     "sem_corpo": false
   },
-  "POST crm/meta_ads_connection/sales_signal": {
-    "campos": {
-      "enabled": {
-        "tipo": "booleano",
-        "tipo_pela_leitura": "uso"
-      }
-    },
-    "completo": true,
-    "controller": "api/v1/accounts/crm/meta_ads_connections#sales_signal",
-    "modelo": "Crm::MetaAdsConnection",
-    "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:78",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:82"
-    ],
-    "sem_corpo": false
-  },
   "POST crm/meta_ads_connection/selection": {
     "campos": {
       "ad_account_id": {
@@ -13584,9 +13597,26 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:102"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:125"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/suggest_stages": {
+    "campos": {
+      "pipeline_id": {
+        "tipo": "inteiro",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:100",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:103"
     ],
     "sem_corpo": false
   },
@@ -20953,8 +20983,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:28",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:150"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:32",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182"
     ],
     "sem_corpo": false
   },
