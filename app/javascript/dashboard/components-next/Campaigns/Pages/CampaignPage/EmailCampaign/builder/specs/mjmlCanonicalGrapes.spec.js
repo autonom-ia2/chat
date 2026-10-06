@@ -4,12 +4,20 @@ import { canonicalizeMjml } from '../mjmlCanonical';
 import aiEmail from './fixtures/aiEmail.mjml?raw';
 
 // Loads the MJML exactly like useEmailEditor (setComponents on a grapesjs-mjml editor) and reads
-// back what the editor saves (mjml-code) and sends (mjml-code-to-html).
-// Component#find hangs on this tree under jsdom, so the body is walked by hand.
+// back the component tree (what the canvas renders), what it saves (mjml-code) and what it sends
+// (mjml-code-to-html). Component#find hangs on this tree under jsdom, so it is walked by hand.
 const typesIn = (component, acc = []) => {
   acc.push(component.get('type'));
   component.components().forEach(child => typesIn(child, acc));
   return acc;
+};
+
+const firstOfType = (component, type) => {
+  if (component.get('type') === type) return component;
+  return component
+    .components()
+    .map(child => firstOfType(child, type))
+    .find(Boolean);
 };
 
 const loadInEditor = mjml => {
@@ -25,14 +33,18 @@ const loadInEditor = mjml => {
   });
   editor.setComponents(mjml);
   const root = editor.getWrapper().components().at(0);
-  const body = root.components().find(c => c.get('type') === 'mj-body');
+  const part = type => root.components().find(c => c.get('type') === type);
+  const body = part('mj-body');
   const bodyTypes = typesIn(body);
-  const saved = editor.runCommand('mjml-code');
   const result = {
+    headTypes: typesIn(part('mj-head'))
+      .slice(1)
+      .filter(type => type !== 'textnode'),
     bodyImages: bodyTypes.filter(type => type === 'mj-image').length,
     bodyDividers: bodyTypes.filter(type => type === 'mj-divider').length,
-    head: saved.slice(saved.indexOf('<mj-head>'), saved.indexOf('</mj-head>')),
-    mjml: saved,
+    button: firstOfType(body, 'mj-button').getAttributes(),
+    text: firstOfType(body, 'mj-text').getAttributes(),
+    mjml: editor.runCommand('mjml-code'),
     html: String(editor.runCommand('mjml-code-to-html').html),
   };
   editor.destroy();
@@ -41,43 +53,40 @@ const loadInEditor = mjml => {
 };
 
 const count = (text, needle) => text.split(needle).length - 1;
-const FLAT_HEAD =
-  '<mj-head><mj-attributes><mj-all font-family="Arial, Helvetica, sans-serif"></mj-all>' +
-  '<mj-text color="#252432" font-size="16px" line-height="1.6" padding="0"></mj-text>' +
-  '<mj-section padding="40px 24px"></mj-section>' +
-  '<mj-button background-color="#4B479B" color="#FFFFFF" font-size="16px" font-weight="700" ' +
-  'border-radius="8px" inner-padding="14px 36px" padding="24px 0 0"></mj-button>' +
-  '<mj-image padding="0"></mj-image>' +
-  '<mj-divider border-color="#4B479B" border-width="1px" padding="0"></mj-divider>' +
-  '</mj-attributes>';
 
 describe('canonical MJML inside GrapesJS + grapesjs-mjml', () => {
-  it('reproduces the bug without canonicalization: nested head, defaults lost', () => {
+  it('reproduces the bug without canonicalization: defaults become head blocks and are lost', () => {
     const raw = loadInEditor(aiEmail);
 
-    expect(raw.head).not.toBe(FLAT_HEAD);
-    expect(raw.head).toContain('line-height="1.6" padding="0"><mj-section');
+    expect(raw.headTypes).toContain('mj-button');
+    // grapesjs-mjml falls back to its own dark gray (#414141)
+    expect(raw.button['background-color']).not.toBe('#4B479B');
     expect(raw.html).not.toContain('line-height:1.6');
   }, 30000);
 
-  it('keeps the head flat, the body blocks as in the source and the defaults applied', () => {
+  it('has no blocks in the head and carries the defaults on each body block', () => {
     const result = loadInEditor(canonicalizeMjml(aiEmail));
     const bodySource = aiEmail.slice(aiEmail.indexOf('<mj-body'));
 
-    expect(result.head).toBe(FLAT_HEAD);
+    expect(result.headTypes).toEqual([]);
+    expect(result.button['background-color']).toBe('#4B479B');
+    expect(result.text['line-height']).toBe('1.6');
     expect(result.bodyImages).toBe(count(bodySource, '<mj-image'));
     expect(result.bodyDividers).toBe(count(bodySource, '<mj-divider'));
     // 1 logo + 4 social icons: no ghost image from the defaults.
     expect(count(result.html, '<img')).toBe(5);
     expect(result.html).toContain('line-height:1.6');
+    expect(result.html).toContain('background:#4B479B');
+    expect(result.mjml).not.toContain('mj-attributes');
     expect(canonicalizeMjml(result.mjml)).toBe(result.mjml);
   }, 30000);
 
-  it('repairs a corrupted head saved by the old editor', () => {
+  it('recovers the defaults of a corrupted head saved by the old editor', () => {
     const corrupted = loadInEditor(aiEmail).mjml;
     const repaired = loadInEditor(canonicalizeMjml(corrupted));
 
-    expect(repaired.head).toBe(FLAT_HEAD);
+    expect(repaired.headTypes).toEqual([]);
+    expect(repaired.button['background-color']).toBe('#4B479B');
     expect(repaired.html).toContain('line-height:1.6');
   }, 30000);
 });

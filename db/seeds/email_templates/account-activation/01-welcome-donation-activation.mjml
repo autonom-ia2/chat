@@ -73,19 +73,17 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif"></mj-all>
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Header Visual & Welcome -->
     <mj-section background-color="#d5f5e3" padding="25px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#257a3e" font-size="24px" font-weight="bold" padding="10px 0 10px 0">
+        <mj-text align="center" color="#257a3e" font-size="24px" font-weight="bold" padding="10px 0 10px 0" font-family="Arial, sans-serif">
           Thank You for Nurturing the Heart of Our Planet, {{firstName}}!
         </mj-text>
         <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748808457/uploaded-by-ai/a-stunning-artistic-representation-of-a-heart-made-from-lush.jpg" alt="Green heart made of leaves for environmental charity" width="480px" padding="0 0 25px 0" align="center"></mj-image>
-        <mj-text align="center" color="#2e2e2e" font-size="16px" padding="0 0 10px 0">
+        <mj-text align="center" color="#2e2e2e" font-size="16px" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Your generous action is a vital gesture for nature. Thanks to your support, we can plant, protect, educate, and take real action for the Earth and its biodiversity.
         </mj-text>
       </mj-column>
@@ -94,16 +92,16 @@
     <!-- Account Activation Section -->
     <mj-section background-color="#edfafa" padding="20px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#257a3e" font-size="18px" font-weight="bold" padding="0 0 10px 0">
+        <mj-text align="center" color="#257a3e" font-size="18px" font-weight="bold" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Activate Your Eco-Donor Space 🌿
         </mj-text>
-        <mj-text align="center" color="#2e2e2e" font-size="16px" padding="0 0 20px 0">
+        <mj-text align="center" color="#2e2e2e" font-size="16px" padding="0 0 20px 0" font-family="Arial, sans-serif">
           By activating your account, you can manage your donations, download receipts, check real impact reports, receive the latest updates, and get tips for eco-friendly living every day.
         </mj-text>
-        <mj-button href="{{activationLink}}" align="center" background-color="#34c759" color="#ffffff" font-size="16px" font-weight="bold" border-radius="8px" padding="15px 30px">
+        <mj-button href="{{activationLink}}" align="center" background-color="#34c759" color="#ffffff" font-size="16px" font-weight="bold" border-radius="8px" padding="15px 30px" font-family="Arial, sans-serif">
           Activate My Donor Account
         </mj-button>
-        <mj-text align="center" color="#789262" font-size="12px" padding="15px 0 0 0">
+        <mj-text align="center" color="#789262" font-size="12px" padding="15px 0 0 0" font-family="Arial, sans-serif">
           If the button doesn’t work, copy and paste this link into your browser:<br />
           <span style="word-break:break-all;">{{activationLink}}</span>
         </mj-text>
@@ -113,13 +111,13 @@
     <!-- Values, Engagement & Contact -->
     <mj-section background-color="#257a3e" padding="20px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#ffffff" font-size="16px" font-weight="bold" padding="0 0 10px 0">
+        <mj-text align="center" color="#ffffff" font-size="16px" font-weight="bold" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Together, Let’s Grow the Forests of Tomorrow
         </mj-text>
-        <mj-text align="center" color="#ecf9f1" font-size="15px" padding="0 0 10px 0">
+        <mj-text align="center" color="#ecf9f1" font-size="15px" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Every donation supports bold, local projects: tree planting, restoring ecosystems, educational campaigns, and green innovation. Your generosity directly shapes a brighter, healthier world for future generations!
         </mj-text>
-        <mj-text align="center" color="#b1e1c3" font-size="14px" padding="0 0 10px 0">
+        <mj-text align="center" color="#b1e1c3" font-size="14px" padding="0 0 10px 0" font-family="Arial, sans-serif">
           Our team is here for you. Feel free to reach out anytime if you have any questions or need inspiration!
         </mj-text>
       </mj-column>
@@ -128,19 +126,19 @@
     <!-- Social Media & Footer -->
     <mj-section background-color="#d5f5e3" padding="20px 0">
       <mj-column width="100%" background-color="transparent" padding="20px 15px">
-        <mj-text align="center" color="#2e2e2e" font-size="15px" font-weight="bold" padding="0 0 10px 0">
+        <mj-text align="center" color="#2e2e2e" font-size="15px" font-weight="bold" padding="0 0 10px 0" font-family="Arial, sans-serif">
           See our projects and green adventures live:
         </mj-text>
-        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center">
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://mjml.io/"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://mjml.io/"></mj-social-element>
+        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center" font-family="Arial, sans-serif">
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740062001/tiktok-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061496/pinterest-round-outlined.png" href="https://mjml.io/" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
-        <mj-text align="center" color="#82ae77" font-size="12px" padding="10px 0 0 0">
+        <mj-text align="center" color="#82ae77" font-size="12px" padding="10px 0 0 0" font-family="Arial, sans-serif">
           © 2024 Green Cause Charity — All rights reserved<br/>
           Questions? Contact us at contact@greencharity.org
         </mj-text>

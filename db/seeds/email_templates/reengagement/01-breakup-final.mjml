@@ -33,9 +33,7 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif"></mj-all>
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#FFF6ED">
     <mj-raw>
@@ -51,10 +49,10 @@
     </mj-raw>
     <mj-section background-color="#FFF6ED" padding="0 0 15px 0">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
-        <mj-text align="center" color="#232323" font-size="32px" font-weight="bold" padding="0">
+        <mj-text align="center" color="#232323" font-size="32px" font-weight="bold" padding="0" font-family="Arial, sans-serif">
           Is This The End? <span style="color:#F95700;">💔</span>
         </mj-text>
-        <mj-text align="center" color="#232323" font-size="18px" font-weight="400" line-height="1.7" padding="10px 0 0 0">
+        <mj-text align="center" color="#232323" font-size="18px" font-weight="400" line-height="1.7" padding="10px 0 0 0" font-family="Arial, sans-serif">
           Are you still interested in continuing our discussion? If not, I’ll stop reaching out and give you the needed space. This will be my last message unless I hear from you.
         </mj-text>
         <mj-image alt="Envelope with Broken Heart 16:9 Hero" padding="28px 0 8px 0" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761315369/uploaded-by-ai/uploaded-image_user_uploaded.png" width="500px"></mj-image>
@@ -65,7 +63,7 @@
     </mj-raw>
     <mj-section background-color="#FFF6ED" padding="0 0 0 0">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
-        <mj-text align="left" color="#232323" font-size="22px" font-weight="bold" line-height="1.6" padding="0 0 20px 0">
+        <mj-text align="left" color="#232323" font-size="22px" font-weight="bold" line-height="1.6" padding="0 0 20px 0" font-family="Arial, sans-serif">
           Where do we go from here?
         </mj-text>
       </mj-column>
@@ -79,25 +77,25 @@
           <mj-raw>
             <!-- Option 1: Fewer emails -->
           </mj-raw>
-          <mj-text align="left" color="#232323" font-size="17px" font-weight="bold" padding="0">
+          <mj-text align="left" color="#232323" font-size="17px" font-weight="bold" padding="0" font-family="Arial, sans-serif">
             <span style="font-size:22px;vertical-align: middle;">❤️</span> Want to receive fewer emails?
           </mj-text>
-          <mj-text align="left" color="#232323" font-size="16px" line-height="1.7" padding="8px 0 0 0">
+          <mj-text align="left" color="#232323" font-size="16px" line-height="1.7" padding="8px 0 0 0" font-family="Arial, sans-serif">
             Update your preferences, and we can slow things down (we totally get it).
           </mj-text>
-          <mj-button align="left" background-color="transparent" border-radius="0px" color="#F95700" font-size="16px" font-weight="bold" href="https://burgerbust.com/update-preferences" inner-padding="10px 0 8px 0" padding="8px 0 21px 0">
+          <mj-button align="left" background-color="transparent" border-radius="0px" color="#F95700" font-size="16px" font-weight="bold" href="https://burgerbust.com/update-preferences" inner-padding="10px 0 8px 0" padding="8px 0 21px 0" font-family="Arial, sans-serif">
             Update your email →
           </mj-button>
           <mj-raw>
             <!-- Option 2: Stay Subscribed -->
           </mj-raw>
-          <mj-text align="left" color="#232323" font-size="17px" font-weight="bold" padding="0">
+          <mj-text align="left" color="#232323" font-size="17px" font-weight="bold" padding="0" font-family="Arial, sans-serif">
             <span style="font-size:22px;vertical-align: middle;">🤍</span> Want to keep hearing from us?
           </mj-text>
-          <mj-text align="left" color="#232323" font-size="16px" line-height="1.7" padding="8px 0 0 0">
+          <mj-text align="left" color="#232323" font-size="16px" line-height="1.7" padding="8px 0 0 0" font-family="Arial, sans-serif">
             Click below to keep receiving our emails. We promise it’ll be worth it.
           </mj-text>
-          <mj-button align="left" background-color="transparent" border-radius="0px" color="#F95700" font-size="16px" font-weight="bold" href="https://burgerbust.com/stay-subscribed" inner-padding="10px 0 8px 0" padding="8px 0 10px 0">
+          <mj-button align="left" background-color="transparent" border-radius="0px" color="#F95700" font-size="16px" font-weight="bold" href="https://burgerbust.com/stay-subscribed" inner-padding="10px 0 8px 0" padding="8px 0 10px 0" font-family="Arial, sans-serif">
             Wait, keep me on the list →
           </mj-button>
         </mj-column>
@@ -109,19 +107,19 @@
     <mj-section background-color="#F95700" padding="24px 0 0 0">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
         <mj-image alt="BurgerBust Footer Logo" padding="0 0 15px 0" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761315023/uploaded-by-ai/image-1761315023340-wwfo3xk_user_uploaded.png" width="60px"></mj-image>
-        <mj-social align="center" font-size="16px" icon-size="32px" mode="horizontal" padding="0px 0 10px 0">
-          <mj-social-element href="https://facebook.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://instagram.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://x.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png"></mj-social-element>
-          <mj-social-element href="https://linkedin.com/company/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png"></mj-social-element>
+        <mj-social align="center" font-size="16px" icon-size="32px" mode="horizontal" padding="0px 0 10px 0" font-family="Arial, sans-serif">
+          <mj-social-element href="https://facebook.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://instagram.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://x.com/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element href="https://linkedin.com/company/burgerbust" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
-        <mj-text align="center" color="#fff" font-size="14px" line-height="1.4" padding="8px 0 4px 0">
+        <mj-text align="center" color="#fff" font-size="14px" line-height="1.4" padding="8px 0 4px 0" font-family="Arial, sans-serif">
           © 2024 BurgerBust<br>
           No.11, 80 Feet Road, 4th Block, S.T Bed,<br>
           Gladstone Region, Australia<br>
           <a href="{{ unsubscribe_url }}" style="color:#fff; text-decoration:underline;">Unsubscribe</a>
         </mj-text>
-        <mj-text align="center" color="#fff" font-size="12px" padding="4px 0 0 0">
+        <mj-text align="center" color="#fff" font-size="12px" padding="4px 0 0 0" font-family="Arial, sans-serif">
           powered by Mailteorite ☄️
         </mj-text>
       </mj-column>

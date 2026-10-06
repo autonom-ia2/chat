@@ -7,7 +7,7 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
       '</mj-body></mjml>'
   end
 
-  it 'stores canonical MJML: explicit close tags and a flat mj-attributes' do
+  it 'stores canonical MJML: explicit close tags and head defaults resolved into the body' do
     mjml = '<mjml><mj-head><mj-attributes><mj-all font-family="Arial" /><mj-text line-height="1.6" />' \
            '<mj-image padding="0" /></mj-attributes></mj-head>' \
            "<mj-body><mj-section><mj-column><mj-image src=\"https://x.test/a.png\" /><mj-spacer height=\"8px\" />\n" \
@@ -15,14 +15,13 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
 
     out = described_class.new(mjml).perform
 
-    expect(out).to include('<mj-attributes><mj-all font-family="Arial"></mj-all><mj-text line-height="1.6"></mj-text>' \
-                           '<mj-image padding="0"></mj-image></mj-attributes>')
-    expect(out).to include('<mj-image src="https://x.test/a.png"></mj-image><mj-spacer height="8px"></mj-spacer>')
-    expect(out).to include('<mj-text>Oi<br/>tudo bem?</mj-text>')
+    expect(out).not_to include('mj-attributes')
+    expect(out).to include('<mj-image src="https://x.test/a.png" padding="0"></mj-image><mj-spacer height="8px"></mj-spacer>')
+    expect(out).to include('<mj-text font-family="Arial" line-height="1.6">Oi<br/>tudo bem?</mj-text>')
     expect(described_class.new(out).perform).to eq(out)
   end
 
-  it 'repairs a head corrupted by the old editor' do
+  it 'brings back the defaults of a head corrupted by the old editor' do
     mjml = '<mjml><mj-head><mj-attributes><mj-all font-family="Arial"><mj-text color="#111" line-height="1.6">' \
            '<mj-button font-family="Arial"></mj-button></mj-text></mj-all></mj-attributes></mj-head>' \
            '<mj-body><mj-section css-class="footer-locked"><mj-column><mj-text><a href="{{ unsubscribe_url }}">Sair</a></mj-text>' \
@@ -30,8 +29,14 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
 
     out = described_class.new(mjml).perform
 
-    expect(out).to include('<mj-attributes><mj-all font-family="Arial"></mj-all><mj-text color="#111" line-height="1.6"></mj-text>' \
-                           '<mj-button font-family="Arial"></mj-button></mj-attributes>')
+    expect(out).not_to include('mj-attributes')
+    expect(out).to include('<mj-text font-family="Arial" color="#111" line-height="1.6"><a href="{{ unsubscribe_url }}">Sair</a></mj-text>')
+  end
+
+  it 'strips a script that reassembles after the first pass' do
+    out = described_class.new(wrap('<mj-text>a<scr<script>x</script>ipt>alert(1)</script>b</mj-text>')).perform
+
+    expect(out.downcase).not_to include('<script')
   end
 
   it 'turns web-search citations into links without the openai utm' do

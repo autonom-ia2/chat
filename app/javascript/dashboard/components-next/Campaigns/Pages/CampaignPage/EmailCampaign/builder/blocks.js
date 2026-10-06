@@ -40,21 +40,21 @@ const VIDEO_WATCH_URL = 'https://autonomia.site';
 
 // Rodapé legal — mj-section travada pelo F1 via css-class="footer-locked"
 // (E11). `{{ unsubscribe_url }}` é literal Liquid resolvido no envio.
-// O endereço da empresa é texto editável no canvas.
+// Nome e endereço da empresa são texto editável no canvas — nenhuma marca fixa (#1074).
 // Ícones de redes sociais: mj-social com ícones PNG HOSPEDADOS (renderizam no Gmail —
-// data:/SVG não). Os href são placeholders dos perfis — o usuário edita cada um pelo
-// painel (seção Link aparece ao selecionar o ícone). Cada <mj-social-element> é um par
+// data:/SVG não). Os href apontam para a raiz de cada rede: o usuário troca pelo perfil
+// da empresa no painel (seção Link aparece ao selecionar o ícone). Cada <mj-social-element> é um par
 // explícito (não é tag void).
 export const FOOTER_MJML = `<mj-section css-class="footer-locked" background-color="${BG_SOFT}" padding="16px">
   <mj-column>
     <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px">
-      <mj-social-element name="facebook" href="https://facebook.com/hub2you"></mj-social-element>
-      <mj-social-element name="instagram" href="https://instagram.com/hub2you"></mj-social-element>
-      <mj-social-element name="linkedin" href="https://linkedin.com/company/hub2you"></mj-social-element>
-      <mj-social-element name="youtube" href="https://youtube.com/@hub2you"></mj-social-element>
+      <mj-social-element name="facebook" href="https://facebook.com/"></mj-social-element>
+      <mj-social-element name="instagram" href="https://instagram.com/"></mj-social-element>
+      <mj-social-element name="linkedin" href="https://linkedin.com/"></mj-social-element>
+      <mj-social-element name="youtube" href="https://youtube.com/"></mj-social-element>
     </mj-social>
     <mj-text font-size="12px" color="#6b7280" align="center" line-height="1.6">
-      Autonomia · Av. Exemplo, 123 — São Paulo/SP<br/>
+      Nome da sua empresa · Endereço da empresa<br/>
       Você recebeu este e-mail porque está em nossa lista de contatos.<br/>
       <a href="{{ unsubscribe_url }}" style="color:#6b7280;">Cancelar inscrição</a>
     </mj-text>
@@ -180,7 +180,7 @@ const BLOCKS = [
     ),
     content: `<mj-section background-color="${BG_SOFT}" border-radius="8px" padding="32px 24px">
   <mj-column>
-    <mj-text font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“A Autonomia transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
+    <mj-text font-size="18px" font-style="italic" color="${TEXT_COLOR}" align="center" line-height="1.6" padding="0 16px 12px">“Transformou a forma como cuidamos dos nossos clientes. Recomendo de olhos fechados.”</mj-text>
     <mj-text font-size="14px" font-weight="bold" color="${MUTED_COLOR}" align="center" padding="0">Maria Silva — Cliente desde 2024</mj-text>
   </mj-column>
 </mj-section>`,
@@ -261,7 +261,7 @@ const BLOCKS = [
     content: `<mj-section background-color="#ffffff" padding="32px 24px">
   <mj-column>
     <mj-text font-size="22px" font-weight="bold" color="${TEXT_COLOR}" align="center" padding="0 0 16px">Pronto para dar o próximo passo?</mj-text>
-    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="https://autonomia.site">Falar com a Autonomia</mj-button>
+    <mj-button background-color="${BRAND_COLOR}" color="#ffffff" font-size="18px" font-weight="bold" border-radius="8px" inner-padding="16px 40px" href="https://autonomia.site">Fale com a gente</mj-button>
   </mj-column>
 </mj-section>`,
   },

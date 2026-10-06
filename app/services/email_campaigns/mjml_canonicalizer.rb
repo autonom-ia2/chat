@@ -1,4 +1,4 @@
-# Canonical MJML (#1074): every element written with an explicit close tag and mj-attributes flat.
+# Canonical MJML (#1074): explicit close tags and head defaults resolved into the body.
 #
 # The e-mail editor (GrapesJS + grapesjs-mjml) reads MJML with the browser HTML parser, where a
 # self-closed `<mj-text />` or `<mj-image />` is an OPEN tag that swallows its siblings: defaults in
@@ -7,8 +7,10 @@
 # applies the same rules in mjmlCanonical.js, and both produce the same output for the same input.
 #
 # The MJML is parsed as XML (where `/>` means what MJML means). The inner HTML of ending tags and
-# comments are cut out before parsing and put back verbatim (MjmlEndingContent). Malformed MJML is
-# returned unchanged (and logged) — never mangled.
+# comments are cut out before parsing and put back verbatim (MjmlEndingContent). The <mj-attributes>
+# defaults are then written on each body element and <mj-attributes> is dropped (MjmlHeadDefaults);
+# corrupted heads saved by the old editor are read flat, so their defaults come back too. Malformed
+# MJML is returned unchanged (and logged) — never mangled.
 class EmailCampaigns::MjmlCanonicalizer
   XML_ENTITIES = %w[amp lt gt quot apos].freeze
   MAX_ENTITY_LENGTH = 40
@@ -30,7 +32,8 @@ class EmailCampaigns::MjmlCanonicalizer
     root = parse(normalize_entities(cut.skeleton))
     return malformed if root.nil?
 
-    cut.restore(root.children.map { |node| serialize(node) }.join)
+    ctx = root_context(root)
+    cut.restore(root.children.map { |node| serialize(node, ctx) }.join)
   end
 
   private
@@ -96,10 +99,17 @@ class EmailCampaigns::MjmlCanonicalizer
     ascii_digit?(char) || char.between?('a', 'z') || char.between?('A', 'Z')
   end
 
-  # ---- serialization: explicit close tags, flat mj-attributes ----
+  # ---- serialization: explicit close tags, head defaults resolved into the body ----
 
-  def serialize(node)
-    return serialize_element(node) if node.element?
+  Context = Struct.new(:defaults, :in_head, :inherited_classes)
+
+  def root_context(root)
+    blocks = root.css('mj-attributes').to_a
+    Context.new(blocks.any? ? EmailCampaigns::MjmlHeadDefaults.collect(blocks) : nil, false, nil)
+  end
+
+  def serialize(node, ctx)
+    return serialize_element(node, ctx) if node.element?
     return "<![CDATA[#{node.content}]]>" if node.cdata?
     return escape_text(node.content) if node.text?
     return "<!--#{node.content}-->" if node.comment?
@@ -107,27 +117,28 @@ class EmailCampaigns::MjmlCanonicalizer
     ''
   end
 
-  def serialize_element(element)
-    # Corrupted head: every default, in document order, as a direct child of mj-attributes.
-    inner = if nested_attributes?(element)
-              element.css('*').map { |child| open_tag(child) + close_tag(child) }
-            else
-              element.children.map { |child| serialize(child) }
-            end
-    open_tag(element) + inner.join + close_tag(element)
+  def serialize_element(element, ctx)
+    tag = element.name
+    # Resolved into the body, and grapesjs-mjml would render its children as blocks.
+    return '' if ctx.defaults && tag == 'mj-attributes'
+
+    child_ctx = Context.new(ctx.defaults, ctx.in_head || tag == 'mj-head', element['mj-class'] || ctx.inherited_classes)
+    inner = element.children.map { |child| serialize(child, child_ctx) }.join
+    "#{open_tag(tag, attributes_for(element, ctx))}#{inner}</#{tag}>"
   end
 
-  def nested_attributes?(element)
-    element.name == 'mj-attributes' && element.element_children.any? { |child| child.element_children.any? }
+  def attributes_for(element, ctx)
+    return plain_attributes(element) if ctx.defaults.nil? || ctx.in_head
+
+    ctx.defaults.resolve(element, ctx.inherited_classes)
   end
 
-  def open_tag(element)
-    attributes = element.attribute_nodes.map { |attr| %( #{attr.name}="#{escape_attribute(attr.value)}") }
-    "<#{element.name}#{attributes.join}>"
+  def plain_attributes(element)
+    element.attribute_nodes.to_h { |attr| [attr.name, attr.value] }
   end
 
-  def close_tag(element)
-    "</#{element.name}>"
+  def open_tag(tag, attrs)
+    "<#{tag}#{attrs.map { |name, value| %( #{name}="#{escape_attribute(value)}") }.join}>"
   end
 
   def escape_attribute(value)

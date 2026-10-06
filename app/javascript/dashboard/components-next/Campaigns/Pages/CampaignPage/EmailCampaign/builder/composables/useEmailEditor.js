@@ -7,8 +7,9 @@ import { ref, shallowRef, computed, markRaw } from 'vue';
 import 'grapesjs/dist/css/grapes.min.css';
 
 import registerAutonomiaBlocks from '../blocks';
-// Every MJML handed to setComponents goes through canonicalizeMjml (#1074): see mjmlCanonical.js.
-import { canonicalizeMjml } from '../mjmlCanonical';
+// Every MJML handed to setComponents goes through prepareMjmlForEditor and every export through
+// restoreHeldHead (#1074): see editorMjml.js and mjmlCanonical.js.
+import { prepareMjmlForEditor, restoreHeldHead } from '../editorMjml';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -20,6 +21,8 @@ const sectors = shallowRef([]);
 const styleVersion = ref(0);
 const device = ref('desktop');
 const footerLocked = ref(false);
+// <mj-title>/<mj-preview> of the loaded MJML: kept out of the canvas, given back on export.
+let heldHead = '';
 
 const DEVICE_MAP = { desktop: 'Desktop', mobile: 'Mobile portrait' };
 let editorGeneration = 0;
@@ -138,7 +141,9 @@ async function init(el, opts = {}) {
 
   const initialMjml = opts.mjml || '';
   if (initialMjml) {
-    ed.setComponents(canonicalizeMjml(initialMjml));
+    const prepared = prepareMjmlForEditor(initialMjml);
+    heldHead = prepared.held;
+    ed.setComponents(prepared.mjml);
   }
 
   // onReady dispara imediatamente se o editor ja estiver pronto, ou agenda.
@@ -163,6 +168,7 @@ function destroy() {
   device.value = 'desktop';
   footerLocked.value = false;
   savedCanvasView = null;
+  heldHead = '';
 }
 
 // ---- BLOCKS ----
@@ -394,10 +400,14 @@ const adjustCanvasScroll = delta =>
   editor.value?.Canvas.getWindow().scrollBy(0, delta);
 
 // ---- I/O MJML/HTML ----
-const getMjml = () => editor.value?.runCommand('mjml-code') || '';
+const getMjml = () =>
+  restoreHeldHead(editor.value?.runCommand('mjml-code') || '', heldHead);
 
+// Compiles the exported MJML (with the held head) so the sent HTML keeps title and preview.
 const getHtml = () => {
-  const out = editor.value?.runCommand('mjml-code-to-html') || {};
+  const mjml = getMjml();
+  const out =
+    (mjml && editor.value?.runCommand('mjml-code-to-html', { mjml })) || {};
   if (out.errors?.length) {
     // eslint-disable-next-line no-console
     console.warn('[useEmailEditor] mjml-code-to-html errors', out.errors);
@@ -406,7 +416,10 @@ const getHtml = () => {
 };
 
 const setMjml = mjml => {
-  editor.value?.setComponents(canonicalizeMjml(mjml));
+  if (!editor.value) return;
+  const prepared = prepareMjmlForEditor(mjml);
+  heldHead = prepared.held;
+  editor.value.setComponents(prepared.mjml);
   lockFooter();
 };
 

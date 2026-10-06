@@ -33,18 +33,16 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Arial, sans-serif"></mj-all>
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- Header / Intro -->
     <mj-section background-color="#000000" padding="0px 0px 0px 0px">
       <mj-column width="100%" padding="20px 15px" background-color="transparent">
-        <mj-text align="center" color="#2a9d8f" font-size="26px" font-weight="bold" padding="20px 15px">
+        <mj-text align="center" color="#2a9d8f" font-size="26px" font-weight="bold" padding="20px 15px" font-family="Arial, sans-serif">
           🌎 Transatlantic Economy Pulse
         </mj-text>
-        <mj-text align="center" color="#e0f7f4" font-size="17px" padding="0px 15px">
+        <mj-text align="center" color="#e0f7f4" font-size="17px" padding="0px 15px" font-family="Arial, sans-serif">
           Your Weekly Brief on U.S.–E.U. Economic Relations, Key Data & Worldwide Impact
         </mj-text>
       </mj-column>
@@ -52,13 +50,13 @@
     <!-- Section 1 : Analysis with background image -->
     <mj-section background-url="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022901/uploaded-by-ai/a-vibrant-and-dynamic-urban-landscape-showcasing-the-bustlin.jpg" background-size="cover" background-repeat="no-repeat" background-position="center" padding="50px 0">
       <mj-column width="100%" padding="20px 15px" background-color="rgba(42,157,143,0.90)">
-         <mj-text align="left" color="#ffffff" font-size="22px" font-weight="bold" padding="0px 0px 10px 0px">
+         <mj-text align="left" color="#ffffff" font-size="22px" font-weight="bold" padding="0px 0px 10px 0px" font-family="Arial, sans-serif">
             🇺🇸🤝🇪🇺 U.S.–E.U. Economic Relations: 2024 Insights
          </mj-text>
-         <mj-text align="left" color="#e0f7f4" font-size="16px" padding="0px 0px 12px 0px">
+         <mj-text align="left" color="#e0f7f4" font-size="16px" padding="0px 0px 12px 0px" font-family="Arial, sans-serif">
            Recent months have seen renewed tension and cooperation between the USA and the European Union. Major focus areas include trade tariffs, digital services taxation, and joint efforts to stabilize supply chains. Strong dollar vs. euro fluctuations are influencing exports, while inflation and tech investments remain pivotal topics.
          </mj-text>
-         <mj-text align="left" color="#e0f7f4" font-size="16px" padding="0px 0px 0px 0px">
+         <mj-text align="left" color="#e0f7f4" font-size="16px" padding="0px 0px 0px 0px" font-family="Arial, sans-serif">
            Here are some numbers to put things in perspective:
          </mj-text>
       </mj-column>
@@ -66,7 +64,7 @@
     <!-- Section 2 : Data Table -->
     <mj-section background-color="#000000" padding="0px 0px 0px 0px">
       <mj-column width="100%" padding="20px 15px" background-color="transparent">
-         <mj-table align="center" color="#2a9d8f" font-size="15px" cellpadding="8" cellspacing="0" container-background-color="#131313">
+         <mj-table align="center" color="#2a9d8f" font-size="15px" cellpadding="8" cellspacing="0" container-background-color="#131313" font-family="Arial, sans-serif">
           <tr style="background-color:#204e45;">
             <th style="padding:8px 18px; border-radius:8px 0 0 0; text-align:left; color:#e0f7f4;">Key Indicator</th>
             <th style="padding:8px 18px; text-align:center; color:#e0f7f4;">USA</th>
@@ -98,28 +96,28 @@
     <!-- Section 3 : Data/Trends Tabs (Accordion Style) -->
     <mj-section background-color="#2a9d8f" padding="40px 20px 30px 20px">
       <mj-column width="100%" padding="20px 15px" background-color="transparent">
-        <mj-accordion>
-          <mj-accordion-element>
-            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold">
+        <mj-accordion font-family="Arial, sans-serif">
+          <mj-accordion-element font-family="Arial, sans-serif">
+            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold" font-family="Arial, sans-serif">
               📈 Growth & Investment Trends
             </mj-accordion-title>
-            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px">
+            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px" font-family="Arial, sans-serif">
               The U.S. economy remains robust, driven by tech, consumer spending, and low unemployment, while European growth is slowed by energy prices and weak domestic demand. Both regions are pushing for green investment—watch for new cross-Atlantic startup hubs!
             </mj-accordion-text>
           </mj-accordion-element>
-          <mj-accordion-element>
-            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold">
+          <mj-accordion-element font-family="Arial, sans-serif">
+            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold" font-family="Arial, sans-serif">
               🌐 Key Trade Developments
             </mj-accordion-title>
-            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px">
+            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px" font-family="Arial, sans-serif">
               In 2024, digital services and AI regulations are at center stage. The U.S. is pressuring for transatlantic data deals, while the EU tightens privacy and antitrust controls. Tariff disputes over steel, agriculture, and green tech continue—but negotiation channels are open.
             </mj-accordion-text>
           </mj-accordion-element>
-          <mj-accordion-element>
-            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold">
+          <mj-accordion-element font-family="Arial, sans-serif">
+            <mj-accordion-title background-color="#000000" color="#2a9d8f" font-size="16px" font-weight="bold" font-family="Arial, sans-serif">
               💶 Currency Moves & Consumer Impact
             </mj-accordion-title>
-            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px">
+            <mj-accordion-text background-color="#1a3732" color="#ffffff" font-size="15px" font-family="Arial, sans-serif">
               A modestly stronger dollar means EU imports cost more for Europeans, but travel to the U.S. is less expensive for Americans. Monitoring inflation on both sides is crucial for financial planning—especially for young expats, entrepreneurs, and remote professionals.
             </mj-accordion-text>
           </mj-accordion-element>
@@ -129,14 +127,14 @@
     <!-- Call to Action -->
     <mj-section background-color="#000000" padding="30px 20px">
       <mj-column width="100%" padding="20px 15px" background-color="transparent">
-        <mj-text align="center" color="#ffffff" font-size="17px" font-weight="bold" padding="0px 0px 14px 0px">
+        <mj-text align="center" color="#ffffff" font-size="17px" font-weight="bold" padding="0px 0px 14px 0px" font-family="Arial, sans-serif">
           Stay Ahead with Data-Driven Opinions
         </mj-text>
-        <mj-text align="center" color="#e0f7f4" font-size="15px" padding="0px 0px 16px 0px">
+        <mj-text align="center" color="#e0f7f4" font-size="15px" padding="0px 0px 16px 0px" font-family="Arial, sans-serif">
           Want actionable insights for your career, studies, or business?<br>
           Subscribe to receive fresh global economics analysis every week.
         </mj-text>
-        <mj-button background-color="#2a9d8f" color="#000000" border-radius="10px" font-size="16px" href="#" padding="12px 30px">
+        <mj-button background-color="#2a9d8f" color="#000000" border-radius="10px" font-size="16px" href="#" padding="12px 30px" font-family="Arial, sans-serif">
           📧 Join Our Newsletter
         </mj-button>
       </mj-column>
@@ -144,14 +142,14 @@
     <!-- Social & Footer -->
     <mj-section background-color="#2a9d8f" padding="15px 15px">
       <mj-column width="100%" padding="20px 15px" background-color="transparent">
-        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center" padding="0px 0px 10px 0px">
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com"></mj-social-element>
-          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com"></mj-social-element>
+        <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="center" padding="0px 0px 10px 0px" font-family="Arial, sans-serif">
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="https://youtube.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="https://twitter.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="https://linkedin.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="https://instagram.com" font-family="Arial, sans-serif"></mj-social-element>
+          <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="https://facebook.com" font-family="Arial, sans-serif"></mj-social-element>
         </mj-social>
-        <mj-text align="center" color="#000000" font-size="12px" padding="10px 0px 0px 0px">
+        <mj-text align="center" color="#000000" font-size="12px" padding="10px 0px 0px 0px" font-family="Arial, sans-serif">
           © 2024 Transatlantic Economy Pulse. To unsubscribe, click <a href="{{ unsubscribe_url }}" style="color:#ffffff;text-decoration:underline;">here</a>.
         </mj-text>
       </mj-column>

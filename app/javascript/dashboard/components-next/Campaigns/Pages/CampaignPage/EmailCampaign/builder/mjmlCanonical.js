@@ -9,8 +9,14 @@
 // canonicalizeMjml parses the MJML as XML (where `/>` means what MJML means) and writes every
 // element with an explicit close tag, so the HTML parser can no longer nest anything. Inner HTML
 // of ending tags (mj-text, mj-button...) is cut out before parsing and put back verbatim, so text,
-// <br>, entities and Liquid survive byte for byte. Corrupted heads saved by the old editor
-// (defaults nested inside each other) are flattened back into mj-attributes.
+// <br>, entities and Liquid survive byte for byte.
+//
+// The <mj-attributes> defaults are then written on each body element and <mj-attributes> is
+// dropped (mjmlHeadDefaults.js): grapesjs-mjml renders its children as visible blocks and never
+// applies them to the canvas. Corrupted heads saved by the old editor (defaults nested inside each
+// other) are read flat first, so their defaults come back too.
+
+import { collectHeadDefaults, resolveAttributes } from './mjmlHeadDefaults';
 
 // Tags whose content is HTML/text for MJML, never MJML children.
 const ENDING_TAGS = new Set([
@@ -162,7 +168,7 @@ const normalizeEntities = src => {
   }
 };
 
-// ---- serialization: explicit close tags, flat mj-attributes ----
+// ---- serialization: explicit close tags, head defaults resolved into the body ----
 
 const escapeAttribute = value =>
   value
@@ -173,34 +179,42 @@ const escapeAttribute = value =>
 const escapeText = value =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;');
 
-const openTag = el =>
-  `<${el.tagName}${Array.from(
-    el.attributes,
-    attr => ` ${attr.name}="${escapeAttribute(attr.value)}"`
-  ).join('')}>`;
-const closeTag = el => `</${el.tagName}>`;
+const plainAttributes = el =>
+  Object.fromEntries(
+    Array.from(el.attributes, attr => [attr.name, attr.value])
+  );
 
-const isNestedAttributes = el =>
-  el.tagName === 'mj-attributes' &&
-  Array.from(el.children).some(child => child.children.length > 0);
+const openTag = (tag, attrs) =>
+  `<${tag}${Object.entries(attrs)
+    .map(([name, value]) => ` ${name}="${escapeAttribute(value)}"`)
+    .join('')}>`;
 
 let serializeNode;
 
-const serializeElement = el => {
-  // Corrupted head: every default, in document order, as a direct child of mj-attributes.
-  const inner = isNestedAttributes(el)
-    ? Array.from(
-        el.getElementsByTagName('*'),
-        child => openTag(child) + closeTag(child)
-      )
-    : Array.from(el.childNodes, serializeNode);
-  return openTag(el) + inner.join('') + closeTag(el);
+// ctx: { defaults (null when the MJML has no <mj-attributes>), inHead, inheritedClasses }
+const serializeElement = (el, ctx) => {
+  const tag = el.tagName;
+  // Resolved into the body below, and grapesjs-mjml would render its children as blocks.
+  if (ctx.defaults && tag === 'mj-attributes') return '';
+  const resolve = ctx.defaults && !ctx.inHead;
+  const attrs = resolve
+    ? resolveAttributes(ctx.defaults, el, ctx.inheritedClasses)
+    : plainAttributes(el);
+  const childCtx = {
+    ...ctx,
+    inHead: ctx.inHead || tag === 'mj-head',
+    inheritedClasses: el.getAttribute('mj-class') ?? ctx.inheritedClasses,
+  };
+  const inner = Array.from(el.childNodes, node =>
+    serializeNode(node, childCtx)
+  );
+  return openTag(tag, attrs) + inner.join('') + `</${tag}>`;
 };
 
-serializeNode = node => {
+serializeNode = (node, ctx) => {
   switch (node.nodeType) {
     case Node.ELEMENT_NODE:
-      return serializeElement(node);
+      return serializeElement(node, ctx);
     case Node.TEXT_NODE:
       return escapeText(node.data);
     case Node.CDATA_SECTION_NODE:
@@ -210,6 +224,15 @@ serializeNode = node => {
     default:
       return '';
   }
+};
+
+const rootContext = root => {
+  const attributesEls = Array.from(root.getElementsByTagName('mj-attributes'));
+  return {
+    defaults: attributesEls.length ? collectHeadDefaults(attributesEls) : null,
+    inHead: false,
+    inheritedClasses: null,
+  };
 };
 
 // Wrapped in a synthetic root so block fragments (several sibling sections) and the text around
@@ -241,7 +264,10 @@ export const canonicalizeMjml = (mjml = '') => {
     );
     return mjml;
   }
-  const xml = Array.from(root.childNodes, serializeNode).join('');
+  const ctx = rootContext(root);
+  const xml = Array.from(root.childNodes, node =>
+    serializeNode(node, ctx)
+  ).join('');
   return restoreEndingContent(xml, slots, nonce);
 };
 
