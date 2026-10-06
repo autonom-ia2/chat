@@ -336,7 +336,7 @@ class Autonomia::Insurance::QuoteAgent::Builder
 
   # O agente de cotação desta conta, se já houver.
   def existente
-    ::Autonomia::Agents::Agent.find_by(account: @account, agent_type: 'insurance_quote')
+    ::Autonomia::Agents::Agent.kept.find_by(account: @account, agent_type: 'insurance_quote')
   end
 
   # SLUG QUE NÃO EXISTE É DESCARTADO EM SILÊNCIO por quem monta o turno: `Registry.for_agent` faz

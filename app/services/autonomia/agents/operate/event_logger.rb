@@ -52,8 +52,9 @@ module Autonomia
         def self.handed_off_by_inbox(conversation:, reason:)
           return if conversation.blank?
 
-          agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id,
-                                                                account_id: conversation.account_id)
+          agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(
+            inbox_id: conversation.inbox_id, account_id: conversation.account_id
+          )
           return if agent_inbox&.agent.blank?
 
           handed_off(agent: agent_inbox.agent, conversation: conversation, result: nil, reason: reason)

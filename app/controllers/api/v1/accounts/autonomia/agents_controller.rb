@@ -56,7 +56,7 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   end
 
   def destroy
-    @agent.destroy!
+    ::Autonomia::Agents::SoftDelete.new(agent: @agent, actor: Current.user, request_id: request.request_id).perform
     head :no_content
   end
 

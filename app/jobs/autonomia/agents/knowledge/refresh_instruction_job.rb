@@ -30,7 +30,7 @@ module Autonomia
         # Grava um token novo no agente (coalescência) e enfileira o job com debounce. Cada chamada
         # invalida os jobs já agendados para o mesmo agente (token vencido → no-op). Best-effort.
         def self.enqueue(agent, reason:)
-          return if agent.blank? || agent.instruction.blank? # só agentes FECHADOS; ignora rascunhos
+          return if agent.blank? || agent.deleted? || agent.instruction.blank? # só agentes FECHADOS; ignora rascunhos
 
           token = agent.bump_knowledge_refresh_token!
           set(wait: DEBOUNCE).perform_later(agent.id, token, reason.to_s)
@@ -40,7 +40,7 @@ module Autonomia
         end
 
         def perform(agent_id, token, reason)
-          agent = Autonomia::Agents::Agent.find_by(id: agent_id)
+          agent = Autonomia::Agents::Agent.kept.find_by(id: agent_id)
           return if agent.blank?
 
           # Coalescência: só o ÚLTIMO refresh enfileirado para este agente roda; os anteriores da

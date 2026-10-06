@@ -35,13 +35,14 @@ module Autonomia
         # Um vínculo legado/corrompido (criado antes da validação ou por write que burla o Rails)
         # jamais pode fazer a conversa da conta A responder com agente/KB da conta B. Mismatch =>
         # comporta como "sem agente" (nil), nunca 500.
-        agent_inbox = ::Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id,
-                                                              account_id: conversation.account_id)
+        agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(
+          inbox_id: conversation.inbox_id, account_id: conversation.account_id
+        )
         return if agent_inbox.nil?
 
         agent = agent_inbox.agent
         return unless agent && agent.account_id == conversation.account_id
-        return unless agent.enabled? && agent.active?
+        return unless agent.operating?
         return if agent.actuation_internal?
         return if agent.config&.dig('system_key').present?
         return unless test_allowlist_permits?(conversation, agent)

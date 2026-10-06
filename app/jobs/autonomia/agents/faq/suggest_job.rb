@@ -26,8 +26,9 @@ class Autonomia::Agents::Faq::SuggestJob < ApplicationJob
   def agent_for(conversation)
     event = Autonomia::Agents::AgentEvent.where(conversation_id: conversation.id, account_id: conversation.account_id)
                                          .order(created_at: :desc).first
-    return event.agent if event&.agent
+    agent = event&.agent || Autonomia::Agents::AgentInbox.kept.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)&.agent
+    return if agent&.deleted?
 
-    Autonomia::Agents::AgentInbox.find_by(inbox_id: conversation.inbox_id, account_id: conversation.account_id)&.agent
+    agent
   end
 end

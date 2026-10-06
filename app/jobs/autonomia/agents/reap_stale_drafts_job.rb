@@ -5,7 +5,7 @@
 #
 # Varre agentes GUIADOS ainda em `draft` + `enabled:false`, SEM instrução e SEM fonte (#1035), cuja
 # última atividade — do próprio agente e de qualquer build thread — é mais velha que a janela, e os
-# destrói (threads viram nil por dependent: :nullify).
+# arquiva sem apagar o agente nem desvincular as threads.
 # Escopo estreito (guided + draft + disabled + vazio) nunca toca agente ativo/pausado, manual, pronto
 # para publicar ou com materiais.
 #
@@ -36,8 +36,7 @@ class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
     agent.with_lock do
       next false unless stale_drafts(cutoff).exists?(agent.id)
 
-      agent.destroy!
-      true
+      Autonomia::Agents::SoftDelete.new(agent: agent, actor: nil, reason: 'stale_draft').perform
     end
   end
 
@@ -48,7 +47,7 @@ class Autonomia::Agents::ReapStaleDraftsJob < ApplicationJob
   # `where.missing(:sources)` a antiga proteção de "fonte recente" ficou contida nesta.)
   def stale_drafts(cutoff)
     Autonomia::Agents::Agent
-      .guided.draft.where(enabled: false)
+      .kept.guided.draft.where(enabled: false)
       .where(instruction: [nil, ''])
       .where.missing(:sources)
       .where('autonomia_agents.updated_at < ?', cutoff)
