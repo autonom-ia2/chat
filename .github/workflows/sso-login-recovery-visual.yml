@@ -1,0 +1,117 @@
+name: SSO login recovery - isolated visual gate
+
+# Targeted visual gate, independent of the full testes.yml suite. The PR trigger
+# covers feature pushes without a duplicate push run.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/javascript/v3/views/login/**'
+      - 'app/javascript/v3/api/auth.js'
+      - 'app/javascript/v3/api/specs/auth.spec.js'
+      - 'app/javascript/dashboard/i18n/locale/en/login.json'
+      - 'app/javascript/dashboard/i18n/locale/pt_BR/login.json'
+      - 'tests/qa/sso-login-recovery/**'
+      - '.github/workflows/sso-login-recovery-visual.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sso-login-recovery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  TZ: UTC
+  NODE_ENV: production
+  RAILS_ENV: test
+  VITE_RUBY_SKIP_ASSETS_PRECOMPILE_INSTALL: 'true'
+  AWS_EC2_METADATA_DISABLED: 'true'
+  AWS_SHARED_CREDENTIALS_FILE: /dev/null
+  AWS_CONFIG_FILE: /dev/null
+  AWS_SDK_LOAD_CONFIG: 'false'
+  HUSKY: '0'
+  BUNDLE_FROZEN: 'true'
+
+jobs:
+  visual:
+    name: Real build and loopback-only Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked root dependencies including test/build tools
+        run: pnpm install --frozen-lockfile --prod=false
+      - name: Targeted component and auth client regression
+        env:
+          NODE_ENV: test
+        run: >-
+          pnpm exec vitest run
+          app/javascript/v3/views/login/specs/Index.spec.js
+          app/javascript/v3/api/specs/auth.spec.js
+          --maxWorkers=2 --minWorkers=1 --no-cache --no-coverage
+      - name: Lint the recovery code and visual gate
+        run: |
+          pnpm exec eslint \
+            app/javascript/v3/views/login/Index.vue \
+            app/javascript/v3/views/login/specs/Index.spec.js \
+            app/javascript/v3/api/auth.js \
+            app/javascript/v3/api/specs/auth.spec.js \
+            tests/qa/sso-login-recovery/entry.js \
+            tests/qa/sso-login-recovery/server.mjs \
+            tests/qa/sso-login-recovery/run.mjs
+          pnpm exec prettier --check \
+            .github/workflows/sso-login-recovery-visual.yml \
+            tests/qa/sso-login-recovery/entry.js \
+            tests/qa/sso-login-recovery/server.mjs \
+            tests/qa/sso-login-recovery/run.mjs
+      - name: Build actual Vite assets for this SHA
+        run: |
+          bundle exec vite build --mode test
+          compgen -G 'public/vite-test/assets/dashboard-*.css' > /dev/null
+      - name: Select one isolated Chromium directory
+        run: printf 'PLAYWRIGHT_BROWSERS_PATH=%s/sso-login-browsers\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Install Chromium from the existing Playwright lock
+        working-directory: tests/playwright
+        run: |
+          git ls-files --error-unmatch pnpm-lock.yaml > /dev/null
+          pnpm install --frozen-lockfile --prod=false --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+          node --input-type=module -e "import { chromium } from './node_modules/playwright/index.mjs'; import { existsSync } from 'node:fs'; if (!existsSync(chromium.executablePath())) throw new Error('Installed Chromium executable missing');"
+      - name: Run synthetic responses in loopback-only Chromium
+        run: node tests/qa/sso-login-recovery/run.mjs
+      - name: Publish evidence summary
+        if: always()
+        run: |
+          if [[ -f tmp/sso-login-recovery/visual/results.json ]]; then
+            node -e 'const r=require("./tmp/sso-login-recovery/visual/results.json"); console.log(`Scope: ${r.scope}\nStatus: ${r.status}\nChecks: ${r.counts.passed} passed, ${r.counts.failed} failed\nScreenshots: ${r.counts.screenshots}\nTraces: ${r.counts.traces}`)' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Visual runner did not produce results.json.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Verify dependency locks were not rewritten
+        run: git diff --exit-code -- Gemfile.lock pnpm-lock.yaml tests/playwright/pnpm-lock.yaml
+      - name: Upload screenshots, traces and structured results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sso-login-recovery-visual
+          retention-days: 7
+          if-no-files-found: error
+          path: tmp/sso-login-recovery/visual/**

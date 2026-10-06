@@ -1,0 +1,64 @@
+{
+  "schema": "a6-mac-access-incident-v1",
+  "stage": "before_promotion",
+  "root_authorization_persists": true,
+  "attempts": [
+    {
+      "operation": "normal_terminal_readonly_readiness",
+      "tool": "rodrigo_local_terminal_start_process",
+      "command": "/usr/bin/python3 -c 'import hashlib,json,os,pathlib,platform\nbase=pathlib.Path(\"/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws\")\nassert platform.system()==\"Darwin\",\"unexpected_host\"\nfiles={\"ssm_close_diagnostic.py\":\"b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1\",\"preflight-live-proofs.py\":\"0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae\",\"promote-auth-a6.py\":\"3e56e68df186e26fd03c0ed80251ea217251608e0c309208f2fcfdccb1872643\",\"auth-a6/ssm_close_diagnostic.py\":\"f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0\",\"auth-a6/preflight-live-proofs-auth-candidate.py\":\"d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8\"}\nfor name,digest in files.items(): assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest,\"source_hash_mismatch\"\nassert not os.path.lexists(base/\"auth-a6-promotion-20261005.json\"),\"promotion_receipt_exists\"\nrecord=json.loads((base/\"hub2you/proof-auth-binding-66ae220f67e74d299f76130466bbff2b.json\").read_text())\nassert record[\"state\"]==\"diagnostic_complete\" and record[\"operation_completion_conclusive\"] and record[\"cleanup\"][\"all_proof_sessions_inactive\"] and record[\"evidence\"][\"plugin_stopped\"],\"previous_proof_not_conclusive\"\nprint(json.dumps({\"status\":\"readonly_ready\",\"host\":\"Darwin\",\"A5_sources_exact\":True,\"A6_candidates_and_promoter_exact\":True,\"A6_promotion_receipt_absent\":True,\"previous_A5_cleanup\":record[\"cleanup\"][\"utc\"],\"previous_plugin_stopped\":True,\"mutations\":[]}))'",
+      "result": "McpServerError: Connection timed out.",
+      "error_code": "UNAVAILABLE",
+      "classification": "mcp_network_error",
+      "observed_wall_seconds": 20.4,
+      "pid_returned": false,
+      "contained_mutating_operation": false
+    },
+    {
+      "operation": "normal_filesystem_readonly_reconciliation",
+      "tool": "rodrigo_local_filesystem_read_multiple_files",
+      "result": "McpServerError: Connection timed out.",
+      "error_code": "UNAVAILABLE",
+      "classification": "mcp_network_error",
+      "observed_wall_seconds": 20.1,
+      "files_returned": false,
+      "contained_mutating_operation": false
+    },
+    {
+      "operation": "normal_terminal_readonly_readiness_after_interval_before_root_pause",
+      "tool": "rodrigo_local_terminal_start_process",
+      "command_same_as_attempt": 1,
+      "result": "McpServerError: Session terminated",
+      "error_code": "INVALID_ARGUMENT",
+      "json_rpc_error_code": 32600,
+      "observed_wall_seconds": 1.8,
+      "pid_returned": false,
+      "contained_mutating_operation": false,
+      "exact_start_utc_not_recorded": true,
+      "observed_order": "after previous attempts and before receipt of root probe suspension"
+    }
+  ],
+  "A6_promotion_invoked": false,
+  "AWS_or_SSH_invoked": false,
+  "A6_session_created_by_this_sequence": false,
+  "current_host_state_not_freshly_observable": true,
+  "last_proven_live_sources": "A5",
+  "last_proven_cleanup": "2026-10-05T22:34:33.466124+00:00",
+  "blind_retry_performed": false,
+  "route_or_guard_changed": false,
+  "next_step": "Respect the current probe suspension. When coordinated normal control resumes, inspect source/journal state read-only and reconcile; persistent authorization then covers the exact A6 promotion and gated Hub C0/A sequence. No alternate route or guard changes.",
+  "recorded_utc": "2026-10-05T23:01:11.982058+00:00",
+  "root_observation": {
+    "reported_utc": "2026-10-05T23:01:40Z",
+    "operation": "single short HANDOFF read",
+    "result": "McpServerError: Session terminated",
+    "error_code": "INVALID_ARGUMENT",
+    "json_rpc_error_code": 32600,
+    "content_received": false,
+    "provenance": "root message; not an independent VPS observation"
+  },
+  "connector_probes_suspended_by_root": true,
+  "new_mac_probes_after_suspension": 0,
+  "previous_incident_sha256": "54a872c5de7c202a78195b494cd5972cf7b6f177244009a4b98b86ecbc985e2f",
+  "updated_utc": "2026-10-05T23:07:35.036519+00:00"
+}
