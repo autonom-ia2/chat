@@ -2,6 +2,8 @@
 // Labels em pt-BR direto: o painel de blocos do GrapesJS fica fora do escopo
 // do vue-i18n (decisão E12 do manifesto — MVP com labels estáticos).
 
+import { canonicalizeMjml } from './mjmlCanonical';
+
 const BRAND_COLOR = '#2563eb';
 const TEXT_COLOR = '#1f2937';
 const MUTED_COLOR = '#6b7280';
@@ -308,28 +310,16 @@ const BLOCKS = [
   },
 ];
 
-// grapesjs-mjml registra mj-spacer/mj-divider/mj-image como void:false, então um
-// self-closed `<mj-spacer/>` é lido como tag de abertura e "engole" os irmãos no
-// drag/drop (mesmo bug do spacer corrompendo o e-mail). Normalizamos o conteúdo
-// dos blocos para pares explícitos na origem — robusto independente do caminho de
-// inserção (espelha normalizeVoidMjml do useEmailEditor para a entrada via setComponents).
-const VOID_MJML_TAGS = ['mj-spacer', 'mj-divider', 'mj-image'];
-const normalizeVoidMjml = html =>
-  VOID_MJML_TAGS.reduce((out, tag) => {
-    const re = new RegExp(
-      `<${tag}(?=[\\s/>])((?:[^>"']|"[^"]*"|'[^']*')*?)\\s*/>`,
-      'gi'
-    );
-    return out.replace(re, `<${tag}$1></${tag}>`);
-  }, html);
-
+// grapesjs-mjml lê o conteúdo do bloco com o parser HTML: um self-closed `<mj-image/>` vira tag
+// de abertura e "engole" os irmãos no drag/drop. canonicalizeMjml (#1074) fecha cada tag de forma
+// explícita, o mesmo tratamento que o useEmailEditor aplica ao MJML carregado no editor.
 export default function registerAutonomiaBlocks(editor) {
   BLOCKS.forEach(({ id, label, category, media, content }) => {
     editor.Blocks.add(id, {
       label,
       category,
       media,
-      content: normalizeVoidMjml(content),
+      content: canonicalizeMjml(content),
       select: true,
     });
   });

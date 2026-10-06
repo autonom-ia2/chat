@@ -35,7 +35,7 @@
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
+      <mj-all font-family="Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">
@@ -46,7 +46,7 @@
         <mj-text align="center" color="#006064" font-size="28px" font-weight="bold" padding="0 0 10px 0">
           We Miss You at [Your Service Name]! 🌟
         </mj-text>
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748699925/uploaded-by-ai/a-heartwarming-illustration-depicting-a-sense-of-nostalgia-w.jpg" width="500px" alt="We Miss You illustration" padding="10px 0" />
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748699925/uploaded-by-ai/a-heartwarming-illustration-depicting-a-sense-of-nostalgia-w.jpg" width="500px" alt="We Miss You illustration" padding="10px 0"></mj-image>
         <mj-text align="center" color="#006064" font-size="16px" padding="10px 30px">
           It’s been a while since you visited us—over 120 days, in fact. We noticed that the last feature you used was <b style="color:#00838f;">[Last Used Feature]</b>. We hope you enjoyed it!
         </mj-text>

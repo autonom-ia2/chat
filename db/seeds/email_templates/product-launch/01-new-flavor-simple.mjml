@@ -53,15 +53,15 @@
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
+      <mj-all font-family="Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">
     <!-- HEADER: Logo + Product Hero -->
     <mj-section background-color="#b22234" padding="24px 0 0 0">
       <mj-column width="100%" background-color="transparent" padding="0px 0px 0px 0px">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761312132/uploaded-by-ai/image-1761312132471-bs1pc4o_user_uploaded.png" alt="Cherry Cacao Logo" width="70px" align="center" padding="0px 0px 12px 0px"/>
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761311971/uploaded-by-ai/a-beautiful-glass-bottle-of-cherry-cacao-drink-_ai_generated.jpg" alt="Cherry Cacao Bottle" width="180px" border-radius="24px" align="center" padding="0px 0px 12px 0px"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761312132/uploaded-by-ai/image-1761312132471-bs1pc4o_user_uploaded.png" alt="Cherry Cacao Logo" width="70px" align="center" padding="0px 0px 12px 0px"></mj-image>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761311971/uploaded-by-ai/a-beautiful-glass-bottle-of-cherry-cacao-drink-_ai_generated.jpg" alt="Cherry Cacao Bottle" width="180px" border-radius="24px" align="center" padding="0px 0px 12px 0px"></mj-image>
       </mj-column>
     </mj-section>
     <!-- MAIN CONTENT BLOCK -->

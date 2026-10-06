@@ -45,7 +45,7 @@
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
+      <mj-all font-family="Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">
@@ -61,7 +61,7 @@
     <!-- Hero Section with 16:9 Product Photo -->
     <mj-section background-color="#ffffff" padding="0 0 0 0" border-radius="14px">
       <mj-column width="100%" padding="16px 15px" background-color="transparent">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761314223/uploaded-by-ai/image-1761314223413-83g9fko_user_uploaded.png" alt="NYA Body Cream - Abandoned Cart Hero" width="500px" height="281px" align="center" border-radius="16px" fluid-on-mobile="true" padding="0 0 16px 0"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761314223/uploaded-by-ai/image-1761314223413-83g9fko_user_uploaded.png" alt="NYA Body Cream - Abandoned Cart Hero" width="500px" height="281px" align="center" border-radius="16px" fluid-on-mobile="true" padding="0 0 16px 0"></mj-image>
         <mj-text align="center" color="#111" font-size="25px" font-weight="bold" padding="8px 0 6px 0" line-height="38px">
           Looking for luxury skin care?<br>
         </mj-text>
@@ -128,7 +128,7 @@
     <!-- CTA Button -->
     <mj-section background-color="#ffffff" padding="0 0 16px 0">
       <mj-column width="100%" padding="20px 20px" background-color="transparent">
-        <mj-button href="#" align="center" background-color="#208e7c" color="#fff" font-weight="bold" border-radius="8px" padding="16px 32px" font-size="17px" inner-padding="11px 30px" font-family="Arial, sans-serif" >
+        <mj-button href="#" align="center" background-color="#208e7c" color="#fff" font-weight="bold" border-radius="8px" padding="16px 32px" font-size="17px" inner-padding="11px 30px" font-family="Arial, sans-serif">
           Complete my order
         </mj-button>
       </mj-column>

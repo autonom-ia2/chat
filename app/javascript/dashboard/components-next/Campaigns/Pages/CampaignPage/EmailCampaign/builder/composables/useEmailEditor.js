@@ -7,6 +7,8 @@ import { ref, shallowRef, computed, markRaw } from 'vue';
 import 'grapesjs/dist/css/grapes.min.css';
 
 import registerAutonomiaBlocks from '../blocks';
+// Every MJML handed to setComponents goes through canonicalizeMjml (#1074): see mjmlCanonical.js.
+import { canonicalizeMjml } from '../mjmlCanonical';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -55,25 +57,6 @@ const lockFooter = () => {
   ed.getWrapper().components().each(walk);
   footerLocked.value = locked;
 };
-
-// MJML leaf/void tags that must NOT wrap siblings. grapesjs-mjml registers them with void:false,
-// so a self-closed <mj-spacer/> is parsed by the HTML parser as an OPEN tag that swallows every
-// following sibling; the MJML compiler then DROPS that nested content (the whole body arrives
-// hollow). Forcing an explicit empty close keeps them as leaves so the getMjml/getHtml round-trip
-// stays flat and the rendered/sent e-mail matches the canvas. Applied on every setComponents input.
-const VOID_MJML_TAGS = ['mj-spacer', 'mj-divider', 'mj-image'];
-const normalizeVoidMjml = (mjml = '') =>
-  VOID_MJML_TAGS.reduce(
-    (acc, tag) =>
-      acc.replace(
-        new RegExp(
-          `<${tag}(?=[\\s/>])((?:[^>"']|"[^"]*"|'[^']*')*?)\\s*/>`,
-          'gi'
-        ),
-        `<${tag}$1></${tag}>`
-      ),
-    mjml
-  );
 
 async function init(el, opts = {}) {
   // Idempotente: ja inicializado -> devolve a instancia existente (evita 2o
@@ -155,7 +138,7 @@ async function init(el, opts = {}) {
 
   const initialMjml = opts.mjml || '';
   if (initialMjml) {
-    ed.setComponents(normalizeVoidMjml(initialMjml));
+    ed.setComponents(canonicalizeMjml(initialMjml));
   }
 
   // onReady dispara imediatamente se o editor ja estiver pronto, ou agenda.
@@ -423,7 +406,7 @@ const getHtml = () => {
 };
 
 const setMjml = mjml => {
-  editor.value?.setComponents(normalizeVoidMjml(mjml));
+  editor.value?.setComponents(canonicalizeMjml(mjml));
   lockFooter();
 };
 

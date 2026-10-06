@@ -34,7 +34,7 @@
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
+      <mj-all font-family="Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">

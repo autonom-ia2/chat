@@ -26,7 +26,7 @@ Design Notes:
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Arial, sans-serif" />
+      <mj-all font-family="Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">
@@ -36,7 +36,7 @@ Design Notes:
         <mj-text align="center" font-size="26px" font-weight="bold" color="#543c87" padding="20px 15px">
           🚀 Productivity Pulse – Quarterly Edition
         </mj-text>
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-flat-lay-arrangement-of-various-productivity-tools-showcas.jpg" alt="Productivity Tools" width="500px" align="center" padding="10px 0" border-radius="7px"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-flat-lay-arrangement-of-various-productivity-tools-showcas.jpg" alt="Productivity Tools" width="500px" align="center" padding="10px 0" border-radius="7px"></mj-image>
         <mj-text align="center" color="#543c87" font-size="17px" padding="10px 10px">
           Welcome back! This quarter, discover proven tips, inspiring stories, and the best resources to supercharge your personal productivity.
         </mj-text>
@@ -52,7 +52,7 @@ Design Notes:
         <mj-text color="#23213c" font-size="16px" padding="0 10px" align="center">
           The “90-Minute Block” method pairs deep work sessions with targeted breaks. Here’s how to apply it:
         </mj-text>
-        <mj-divider border-width="2px" border-color="#D6C2F7" padding="10px 0"/>
+        <mj-divider border-width="2px" border-color="#D6C2F7" padding="10px 0"></mj-divider>
         <mj-text color="#513484" font-size="15px" line-height="1.7" align="left" padding="0 15px">
           <ul style="padding-left:20px; margin:0;">
             <li><b>Choose one priority task</b> and block off 90 minutes (no multitasking!).</li>
@@ -70,7 +70,7 @@ Design Notes:
     <!-- Success Story / Testimonial Section -->
     <mj-section background-color="#EDEEF7" padding="25px 0">
       <mj-column width="35%" background-color="transparent" padding="20px 15px">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-joyful-person-engaged-in-reviewing-their-daily-planner-sur.jpg" alt="Happy user testimonial" width="180px" align="center" padding="10px 0 10px 0"/>
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748022063/uploaded-by-ai/a-joyful-person-engaged-in-reviewing-their-daily-planner-sur.jpg" alt="Happy user testimonial" width="180px" align="center" padding="10px 0 10px 0"></mj-image>
       </mj-column>
       <mj-column width="65%" background-color="transparent" padding="20px 15px">
         <mj-text color="#513484" font-size="20px" font-weight="bold" padding="10px 0">

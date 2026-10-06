@@ -38,7 +38,7 @@
 <mjml>
   <mj-head>
     <mj-attributes>
-      <mj-all font-family="Quicksand, Arial, sans-serif" />
+      <mj-all font-family="Quicksand, Arial, sans-serif"></mj-all>
     </mj-attributes>
   </mj-head>
   <mj-body background-color="#ffffff">
@@ -51,9 +51,7 @@
     <!-- Bloc visuel principal avec illustration vectorielle sur mesure -->
     <mj-section background-color="#FDF4EF" padding="0 0 0 0">
       <mj-column background-color="transparent" padding="20px 15px" width="100%">
-        <mj-image align="center" alt="Minimal Outline Megaphone Flat Vector — Announcement" padding="0 0 10px 0"
-          src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761163016/uploaded-by-ai/a-visually-striking-and-modern-flat-vector-illu_ai_generated.jpg"
-          width="320px"></mj-image>
+        <mj-image align="center" alt="Minimal Outline Megaphone Flat Vector — Announcement" padding="0 0 10px 0" src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1761163016/uploaded-by-ai/a-visually-striking-and-modern-flat-vector-illu_ai_generated.jpg" width="320px"></mj-image>
       </mj-column>
     </mj-section>
     <!-- Message principal -->

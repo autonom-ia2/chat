@@ -2,24 +2,19 @@ module EmailCampaigns
   module Ai
     # Cleans AI-returned MJML: strips script/iframe tags, inline event handlers and dangerous URL
     # schemes in href/src attributes (javascript:/vbscript:/data:..., obfuscated with entities or whitespace),
-    # and guarantees the {{ unsubscribe_url }} footer is present (appends a minimal locked footer
-    # when missing). Idempotent.
+    # guarantees the {{ unsubscribe_url }} footer is present (appends a minimal locked footer
+    # when missing), turns web-search markdown citations into links (CitationLinks) and stores
+    # canonical MJML — explicit close tags, flat mj-attributes (MjmlCanonicalizer, #1074). Idempotent.
     class Sanitizer
       UNSUBSCRIBE_PLACEHOLDER = /\{\{\s*unsubscribe_url\s*\}\}/
       SAFE_SCHEMES = %w[http https mailto tel].freeze
       # Matches href/src attribute values (quoted, single-quoted or bare).
       URL_ATTR_REGEX = /(\b(?:href|src)\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i
-      # Mirrors the builder footer block (social row + legal + unsubscribe) so the
-      # safety-net footer honors the same contract as a normal send.
+      # Safety-net footer (legal line + unsubscribe). Brand-neutral on purpose: it is appended to any
+      # account's e-mail, so it carries no social profiles or address of a specific company.
       FALLBACK_FOOTER = <<~MJML.freeze
         <mj-section css-class="footer-locked" background-color="#f4f4f4" padding="20px 16px">
           <mj-column>
-            <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 8px">
-              <mj-social-element name="facebook" href="https://facebook.com/hub2you"></mj-social-element>
-              <mj-social-element name="instagram" href="https://instagram.com/hub2you"></mj-social-element>
-              <mj-social-element name="linkedin" href="https://linkedin.com/company/hub2you"></mj-social-element>
-              <mj-social-element name="youtube" href="https://youtube.com/@hub2you"></mj-social-element>
-            </mj-social>
             <mj-text font-size="12px" color="#6b7280" align="center" line-height="1.6">
               Você recebeu este e-mail porque está em nossa lista de contatos.<br/>
               <a href="{{ unsubscribe_url }}" style="color:#6b7280;">Cancelar inscrição</a>
@@ -33,7 +28,8 @@ module EmailCampaigns
       end
 
       def perform
-        ensure_footer(neutralize_url_attrs(strip_dangerous(@mjml)))
+        linked = CitationLinks.call(strip_dangerous(@mjml))
+        EmailCampaigns::MjmlCanonicalizer.call(ensure_footer(neutralize_url_attrs(linked)))
       end
 
       private
