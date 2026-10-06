@@ -501,6 +501,8 @@ en:
       undo:
         already_undone: 'This was already undone.'
         expired: 'The 5 days to undo this have passed.'
+      records:
+        automation_rule: 'Automation'
       fields:
         id: 'Record'
         name: 'Name'

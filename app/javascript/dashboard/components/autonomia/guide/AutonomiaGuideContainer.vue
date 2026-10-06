@@ -29,6 +29,8 @@ import { usePedidoPendente } from 'dashboard/composables/useGuiaPedido';
 import GuideHeader from './GuideHeader.vue';
 import GuideComposer from './GuideComposer.vue';
 import GuideEtiquetaTela from './GuideEtiquetaTela.vue';
+import GuidePreviaAutomacao from './GuidePreviaAutomacao.vue';
+import { ehAcaoDeAutomacao } from 'dashboard/helper/automacaoEmPortugues';
 import GuideExecucao from './GuideExecucao.vue';
 import { avisarContaMudou, execucaoMudouConta } from './contaMudou';
 import GuideHistorico from './GuideHistorico.vue';
@@ -1191,8 +1193,28 @@ const classeDoPainel = computed(() =>
                 <!-- O pedido literal, sempre visível: a frase acima pode
                      suavizar, isto não. É o que torna a confirmação informada —
                      por isso não fica no menor texto do cartão. -->
-                <p class="mb-0 text-sm break-words text-n-slate-11">
+                <p
+                  v-if="item.acao.descricao.detalhe"
+                  class="mb-0 text-sm break-words text-n-slate-11"
+                >
                   {{ item.acao.descricao.detalhe }}
+                </p>
+                <!-- Criar ou mudar automação: como ela vai ficar, na língua do
+                     resumo, com o que muda marcado. Outra ação com dados
+                     compostos diz só quantos são — nunca a estrutura crua. -->
+                <GuidePreviaAutomacao
+                  v-if="ehAcaoDeAutomacao(item.acao.nome)"
+                  :acao="item.acao"
+                />
+                <p
+                  v-else-if="item.acao.descricao.ajustes > 0"
+                  class="mb-0 text-sm text-n-slate-11"
+                >
+                  {{
+                    $t('AUTONOMIA_GUIDE.ACTION.MORE_ADJUSTMENTS', {
+                      n: item.acao.descricao.ajustes,
+                    })
+                  }}
                 </p>
                 <p
                   v-if="item.acao.descricao.aviso"

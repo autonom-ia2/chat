@@ -2337,7 +2337,11 @@
       "RUNNING": "Doing it now…",
       "FAILED": "I couldn't do that. You can do it from the screen.",
       "FAILED_GENERIC": "I couldn't do that, and I can't tell why. You can do it from the screen.",
-      "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again."
+      "LOST": "This action did run, but I can't show you the outcome here. Check the screen before asking again.",
+      "PREVIEW_TITLE": "How it will look",
+      "PREVIEW_LOADING": "Building the preview…",
+      "PREVIEW_CHANGES": "changes",
+      "MORE_ADJUSTMENTS": "and {n} more change | and {n} more changes"
     },
     "DONE": {
       "TITLE": "What I did",
