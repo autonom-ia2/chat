@@ -15,6 +15,8 @@ describe WhatsappHybrid::Router do
     )
   end
 
+  around { |example| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: inbox.account_id.to_s) { example.run } }
+
   before do
     allow(Waha::Client).to receive(:new).and_return(client)
     allow(client).to receive(:check_contact_exists).and_return({ 'numberExists' => true, 'chatId' => '5511937016094@c.us' })
@@ -97,6 +99,12 @@ describe WhatsappHybrid::Router do
       second = outgoing
       expect { Whatsapp::SendOnWhatsappService.new(message: second).perform }.to have_enqueued_job(SendReplyJob).with(second.id)
       expect(client).to have_received(:send_text).once
+    end
+
+    it 'keeps the official window for accounts outside the pilot' do
+      with_modified_env WHATSAPP_HYBRID_ACCOUNT_IDS: '' do
+        expect(conversation.can_reply?).to be(false)
+      end
     end
 
     it 'stays on the official path when the kill switch is off' do
