@@ -40,13 +40,25 @@ RSpec.describe Waha::Client do
     expect(request).to have_been_requested.once
   end
 
-  it 'recognizes the versioned original-source-ID capability on the authenticated version endpoint' do
+  it 'recognizes both versioned history capabilities on the authenticated version endpoint' do
     stub_request(:get, 'https://waha.example/api/server/version')
       .with(headers: { 'X-Api-Key' => 'test-key' })
       .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
-                 body: { version: '2026.9.2', chat2youHistorySourceIds: 'v1' }.to_json)
+                 body: {
+                   version: '2026.9.2',
+                   chat2youHistorySourceIds: 'v1',
+                   chat2youHistoryFirstConnectionTimestamp: 'v1'
+                 }.to_json)
 
     expect(client.history_source_ids_available?).to be(true)
+  end
+
+  it 'rejects a connector that links source IDs without the provider connection timestamp' do
+    stub_request(:get, 'https://waha.example/api/server/version')
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
+                 body: { version: '2026.9.2', chat2youHistorySourceIds: 'v1' }.to_json)
+
+    expect(client.history_source_ids_available?).to be(false)
   end
 
   it 'rejects an unpatched connector without guessing capability from its version' do

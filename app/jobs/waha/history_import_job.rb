@@ -1,6 +1,92 @@
+require 'digest'
 require 'timeout'
 
+module Waha::HistoryImportSupport
+  private
+
+  def persist_state(channel, state)
+    channel.with_lock do
+      attrs = channel.additional_attributes.to_h
+      current = attrs['waha_history_import']
+      next if current.is_a?(Hash) && current['status'] == 'completed'
+
+      reconcile_immutable_marker!(state, current)
+      attrs['waha_history_import'] = state.deep_stringify_keys
+      channel.update_columns(additional_attributes: attrs) # rubocop:disable Rails/SkipsModelValidations
+    end
+    channel.reload
+  end
+
+  def reconcile_immutable_marker!(state, current)
+    return unless current.is_a?(Hash)
+
+    [Waha::HistoryImportJob::WORKING_TIMESTAMP_KEY, 'cutoff_version'].each do |key|
+      reconcile_immutable_key!(state, current, key)
+    end
+  end
+
+  def reconcile_immutable_key!(state, current, key)
+    current_has_key = current.key?(key)
+    state_has_key = state.key?(key)
+    return unless current_has_key || state_has_key
+
+    if current_has_key && state_has_key && current[key] != state[key]
+      raise Waha::HistoryImportJob::MarkerConflictError, 'history_marker_immutable_conflict'
+    end
+    raise Waha::HistoryImportJob::MarkerConflictError, 'history_marker_immutable_conflict' unless current_has_key
+
+    state[key] = current[key]
+  end
+
+  def mark_failed(channel, state, error_class)
+    return unless channel && state
+
+    state['status'] = 'failed'
+    state['error_class'] = error_class.name
+    persist_state(channel, state)
+  end
+
+  def log_error(inbox_id, error_class)
+    Rails.logger.error("[Waha::HistoryImportJob] inbox=#{inbox_id} error=#{error_class}")
+  end
+
+  def installation_lock_key
+    prefix = Waha::HistoryImportJob::GLOBAL_LOCK_PREFIX
+    "#{prefix}:#{Digest::SHA256.hexdigest(Waha::Config.api_url.to_s)}"
+  end
+
+  def schedule_global_retry(inbox_id)
+    self.class.set(wait: Waha::HistoryImportJob::GLOBAL_RETRY_WAIT).perform_later(inbox_id)
+  end
+
+  def context_for(inbox_id)
+    inbox = Inbox.find_by(id: inbox_id)
+    return unless inbox
+
+    channel = inbox.channel
+    return unless eligible_channel?(channel)
+
+    state = history_state(channel)
+    return unless state && state['status'].to_s.in?(%w[completed failed]) == false
+
+    Waha::HistoryImportJob::Context.new(inbox_id: inbox_id, inbox: inbox, channel: channel, state: state)
+  end
+
+  def eligible_channel?(channel)
+    channel.is_a?(Channel::Api) && channel.additional_attributes.to_h['provider'] == 'waha'
+  end
+
+  def history_state(channel)
+    marker = channel.additional_attributes.to_h['waha_history_import']
+    return unless marker.is_a?(Hash)
+
+    marker.deep_stringify_keys
+  end
+end
+
 class Waha::HistoryImportJob < MutexApplicationJob
+  include Waha::HistoryImportSupport
+
   # Older workers in a blue-green rollout must never consume this new job class.
   queue_as :waha_history
 
@@ -9,8 +95,13 @@ class Waha::HistoryImportJob < MutexApplicationJob
   MAX_CONNECTION_WAIT = 24.hours
   CONNECTION_RETRY_WAIT = 1.minute
   POST_CONNECTION_WAIT = 15.minutes
-  NEXT_PAGE_WAIT = 2.seconds
+  NEXT_PAGE_WAIT = 5.seconds
   PAGE_TIMEOUT = 8.minutes
+  GLOBAL_LOCK_PREFIX = 'waha:history:installation'.freeze
+  GLOBAL_RETRY_WAIT = 5.seconds
+  HISTORY_CUTOFF_SAFETY_SECONDS = 1
+  WORKING_TIMESTAMP_KEY = 'working_at_ms'.freeze
+  CUTOFF_VERSION = 2
   RECONCILIATION_WAIT = [5.minutes, 1.hour, 24.hours].freeze
   WORKING_STATUS = 'WORKING'.freeze
   FAILED_STATUS = 'FAILED'.freeze
@@ -27,6 +118,7 @@ class Waha::HistoryImportJob < MutexApplicationJob
   class ConnectionFailedError < StandardError; end
   class PageTimeoutError < StandardError; end
   class ConnectorCapabilityError < StandardError; end
+  class MarkerConflictError < StandardError; end
   Context = Struct.new(:inbox_id, :inbox, :channel, :client, :session, :state, keyword_init: true)
 
   retry_on Waha::Client::Error, wait: 60.seconds, attempts: 5 do |job, error|
@@ -36,8 +128,16 @@ class Waha::HistoryImportJob < MutexApplicationJob
   def perform(inbox_id)
     return unless context_for(inbox_id)
 
-    with_lock("waha:history:#{inbox_id}", LOCK_TIMEOUT) do
-      process_locked(inbox_id)
+    lock_manager = Redis::LockManager.new
+    installation_lock = installation_lock_key
+    return schedule_global_retry(inbox_id) unless lock_manager.lock(installation_lock, LOCK_TIMEOUT)
+
+    begin
+      with_lock("waha:history:#{inbox_id}", LOCK_TIMEOUT) do
+        process_locked(inbox_id)
+      end
+    ensure
+      lock_manager.unlock(installation_lock)
     end
   end
 
@@ -48,10 +148,15 @@ class Waha::HistoryImportJob < MutexApplicationJob
     return unless context
 
     begin
-      return unless prepare_context(context)
+      Timeout.timeout(PAGE_TIMEOUT, PageTimeoutError) do
+        return unless prepare_context(context)
 
-      Timeout.timeout(PAGE_TIMEOUT, PageTimeoutError) { process_page(context) }
+        process_page(context)
+      end
     rescue MutexApplicationJob::LockAcquisitionError
+      raise
+    rescue MarkerConflictError => e
+      log_error(inbox_id, e.class)
       raise
     rescue Waha::Client::Error => e
       log_error(inbox_id, e.class)
@@ -60,30 +165,6 @@ class Waha::HistoryImportJob < MutexApplicationJob
       mark_failed(context.channel, context.state, e.class)
       log_error(inbox_id, e.class)
     end
-  end
-
-  def context_for(inbox_id)
-    inbox = Inbox.find_by(id: inbox_id)
-    return unless inbox
-
-    channel = inbox.channel
-    return unless eligible_channel?(channel)
-
-    state = history_state(channel)
-    return unless state && state['status'].to_s.in?(%w[completed failed]) == false
-
-    Context.new(inbox_id: inbox_id, inbox: inbox, channel: channel, state: state)
-  end
-
-  def eligible_channel?(channel)
-    channel.is_a?(Channel::Api) && channel.additional_attributes.to_h['provider'] == 'waha'
-  end
-
-  def history_state(channel)
-    marker = channel.additional_attributes.to_h['waha_history_import']
-    return unless marker.is_a?(Hash)
-
-    marker.deep_stringify_keys
   end
 
   def validate_state!(state)
@@ -106,12 +187,22 @@ class Waha::HistoryImportJob < MutexApplicationJob
 
     return validate_waiting_cursor!(state) if state['before'].zero?
 
-    raise InvalidStateError, 'cutoff_invalid' unless state['before'].between?(state['started_at'], now)
+    validate_working_timestamp!(state)
+    minimum_cutoff = state['started_at'] - HISTORY_CUTOFF_SAFETY_SECONDS
+    raise InvalidStateError, 'cutoff_invalid' unless state['before'].between?(minimum_cutoff, now)
   end
 
   def validate_waiting_cursor!(state)
     empty_cursor = state.values_at(*INTEGER_STATE_KEYS.drop(2)).all?(&:zero?) && state['chat_id'].nil?
     raise InvalidStateError, 'unfixed_cutoff_invalid' unless state['status'] == 'waiting_connection' && empty_cursor
+  end
+
+  def validate_working_timestamp!(state)
+    working_at_ms = state[WORKING_TIMESTAMP_KEY]
+    valid_timestamp = working_at_ms.is_a?(Integer) && working_at_ms.positive?
+    expected_cutoff = valid_timestamp ? (working_at_ms / 1000) - HISTORY_CUTOFF_SAFETY_SECONDS : nil
+    valid_version = state['cutoff_version'] == CUTOFF_VERSION
+    raise InvalidStateError, 'working_timestamp_invalid' unless valid_timestamp && valid_version && state['before'] == expected_cutoff
   end
 
   def prepare_context(context)
@@ -123,30 +214,61 @@ class Waha::HistoryImportJob < MutexApplicationJob
     return false unless ensure_working_connection!(context)
 
     begin_import!(context)
-    true
   end
 
   def begin_import!(context)
+    return false if context.state['before'].zero? && !freeze_cutoff!(context)
+
     raise ConnectorCapabilityError, 'history_source_ids_unavailable' unless context.client.history_source_ids_available?
 
     validate_identity!(context.channel, context.client)
-    context.state['before'] = Time.current.to_i if context.state['before'].zero?
     context.state['status'] = 'running'
     context.state.delete('error_class')
+    context.state.delete('waiting_reason')
     persist_state(context.channel, context.state)
+    true
+  end
+
+  def freeze_cutoff!(context)
+    working_at_ms = context.state[WORKING_TIMESTAMP_KEY]
+    if working_at_ms.nil?
+      defer_until_working_timestamp!(context)
+      return false
+    end
+
+    valid_timestamp = working_at_ms.is_a?(Integer) && working_at_ms.positive?
+    valid_version = context.state['cutoff_version'] == CUTOFF_VERSION
+    raise InvalidStateError, 'working_timestamp_invalid' unless valid_timestamp && valid_version
+
+    cutoff = (working_at_ms / 1000) - HISTORY_CUTOFF_SAFETY_SECONDS
+    raise InvalidStateError, 'working_timestamp_invalid' unless cutoff.positive?
+
+    context.state['before'] = cutoff
+    true
+  end
+
+  def defer_until_working_timestamp!(context)
+    context.state['status'] = 'waiting_connection'
+    context.state['waiting_reason'] = 'working_timestamp_missing'
+    persist_state(context.channel, context.state)
+    wait = connection_expired?(context.state) ? POST_CONNECTION_WAIT : CONNECTION_RETRY_WAIT
+    self.class.set(wait: wait).perform_later(context.inbox_id)
+    false
   end
 
   def ensure_working_connection!(context)
     current_session = context.client.get_session(context.session)
-    return true if current_session.is_a?(Hash) && current_session['status'] == WORKING_STATUS
+    status = current_session['status'] if current_session.is_a?(Hash)
+    return true if status == WORKING_STATUS
 
-    if current_session.is_a?(Hash) && current_session['status'] == FAILED_STATUS
+    if status == FAILED_STATUS
       mark_failed(context.channel, context.state, ConnectionFailedError)
       log_error(context.inbox_id, ConnectionFailedError)
       return false
     end
 
     context.state['status'] = 'waiting_connection'
+    context.state['waiting_reason'] = 'session_not_working'
     persist_state(context.channel, context.state)
     wait = connection_expired?(context.state) ? POST_CONNECTION_WAIT : CONNECTION_RETRY_WAIT
     self.class.set(wait: wait).perform_later(context.inbox_id)
@@ -175,26 +297,6 @@ class Waha::HistoryImportJob < MutexApplicationJob
     sanitized
   end
 
-  def persist_state(channel, state)
-    channel.with_lock do
-      attrs = channel.additional_attributes.to_h
-      current = attrs['waha_history_import']
-      next if current.is_a?(Hash) && current['status'] == 'completed'
-
-      attrs['waha_history_import'] = state.deep_stringify_keys
-      channel.update_columns(additional_attributes: attrs) # rubocop:disable Rails/SkipsModelValidations
-    end
-    channel.reload
-  end
-
-  def mark_failed(channel, state, error_class)
-    return unless channel && state
-
-    state['status'] = 'failed'
-    state['error_class'] = error_class.name
-    persist_state(channel, state)
-  end
-
   def fail_after_client_retries(inbox_id, error_class)
     inbox = Inbox.find_by(id: inbox_id)
     return unless inbox
@@ -207,10 +309,6 @@ class Waha::HistoryImportJob < MutexApplicationJob
 
     mark_failed(channel, state, error_class)
     log_error(inbox_id, error_class)
-  end
-
-  def log_error(inbox_id, error_class)
-    Rails.logger.error("[Waha::HistoryImportJob] inbox=#{inbox_id} error=#{error_class}")
   end
 end
 

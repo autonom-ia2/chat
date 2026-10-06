@@ -20,12 +20,14 @@ const BASE_BODY_AFTER = `const body = {
             message_type: type,
             private: private_,
             attachments: message.attachments,
-            source_id: payload.id,
-            external_created_at: payload.timestamp,
             content_attributes: {
                 in_reply_to: replyTo,
             },
-        };`;
+        };
+        if (this.repo && this.repo.config && this.repo.config.chat2youHistoryOnboarding === true) {
+            body.source_id = payload.id;
+            body.external_created_at = payload.timestamp;
+        }`;
 
 const VERSION_BEFORE = `exports.VERSION = {
     version: '2026.9.2',
@@ -44,7 +46,157 @@ const VERSION_AFTER = `exports.VERSION = {
     platform: getPlatform(),
     worker: getWorker(),
     chat2youHistorySourceIds: 'v1',
+    chat2youHistoryFirstConnectionTimestamp: 'v1',
 };`;
+
+const SESSION_STATUS_PROCESS_BEFORE = `    async Process(job, info) {
+        const container = await this.DIContainer(job, job.data.app);
+        const handler = new SessionStatusHandler(container.ContactConversationService(), container.Locale(), container.WAHASelf());
+        return await handler.handle(job.data.event);
+    }`;
+
+const SESSION_STATUS_PROCESS_AFTER = `    async Process(job, info) {
+        const container = await this.DIContainer(job, job.data.app);
+        const handler = new SessionStatusHandler(container.ContactConversationService(), container.Locale(), container.WAHASelf());
+        const event = job.data.event;
+        const historyOnboarding = handler.repo.config && handler.repo.config.chat2youHistoryOnboarding === true;
+        if (historyOnboarding && event.payload && event.payload.status === enums_dto_1.WAHASessionStatus.WORKING) {
+            const timestamp = event.chat2youHistoryWorkingAtMs;
+            if (timestamp === null || timestamp === undefined) {
+                return await handler.handle(event);
+            }
+            if (!Number.isSafeInteger(timestamp) || timestamp <= 0) {
+                throw new Error('waha_history_working_timestamp_invalid');
+            }
+            await handler.repo.registerHistoryConnection(event.session, timestamp);
+        }
+        return await handler.handle(event);
+    }`;
+
+const CONTACT_CONVERSATION_REGISTER_BEFORE = `    async ConversationByContact(contactInfo) {`;
+
+const CONTACT_CONVERSATION_REGISTER_AFTER = `    async registerHistoryConnection(session, workingAtMs) {
+        if (!Number.isSafeInteger(workingAtMs) || workingAtMs <= 0) {
+            throw new Error('waha_history_working_timestamp_invalid');
+        }
+        return this.accountAPI.inboxes.update({
+            accountId: this.config.accountId,
+            id: this.config.inboxId,
+            data: {
+                waha_history_connection: {
+                    session: session,
+                    working_at_ms: workingAtMs,
+                },
+            },
+        });
+    }
+    async ConversationByContact(contactInfo) {`;
+
+const CONFIG_DTO_CLASS_BEFORE = `class ChatWootAppConfig {
+    constructor() {
+        this.linkPreview = LinkPreview.OFF;
+        this.locale = exports.DEFAULT_LOCALE;
+    }
+    static _OPENAPI_METADATA_FACTORY() {
+        return { url: { required: true, type: () => String }, accountId: { required: true, type: () => Number }, accountToken: { required: true, type: () => String }, inboxId: { required: true, type: () => Number }, inboxIdentifier: { required: true, type: () => String }, linkPreview: { required: false, default: LinkPreview.OFF, enum: require("./config.dto").LinkPreview }, locale: { required: true, type: () => String, default: exports.DEFAULT_LOCALE }, templates: { required: false, type: () => Object }, commands: { required: false, type: () => require("./config.dto").ChatWootCommandsConfig }, conversations: { required: false, type: () => require("./config.dto").ChatWootConversationsConfig } };
+    }
+}
+exports.ChatWootAppConfig = ChatWootAppConfig;`;
+
+const CONFIG_DTO_CLASS_AFTER = `class ChatWootAppConfig {
+    constructor() {
+        this.linkPreview = LinkPreview.OFF;
+        this.locale = exports.DEFAULT_LOCALE;
+        this.chat2youHistoryOnboarding = false;
+    }
+    static _OPENAPI_METADATA_FACTORY() {
+        return { url: { required: true, type: () => String }, accountId: { required: true, type: () => Number }, accountToken: { required: true, type: () => String }, inboxId: { required: true, type: () => Number }, inboxIdentifier: { required: true, type: () => String }, linkPreview: { required: false, default: LinkPreview.OFF, enum: require("./config.dto").LinkPreview }, locale: { required: true, type: () => String, default: exports.DEFAULT_LOCALE }, templates: { required: false, type: () => Object }, commands: { required: false, type: () => require("./config.dto").ChatWootCommandsConfig }, conversations: { required: false, type: () => require("./config.dto").ChatWootConversationsConfig }, chat2youHistoryOnboarding: { required: false, type: () => Boolean, default: false } };
+    }
+}
+exports.ChatWootAppConfig = ChatWootAppConfig;`;
+
+const CONFIG_DTO_LOCALE_DECORATOR_BEFORE = `__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ChatWootAppConfig.prototype, "locale", void 0);`;
+
+const CONFIG_DTO_LOCALE_DECORATOR_AFTER = `__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ChatWootAppConfig.prototype, "locale", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], ChatWootAppConfig.prototype, "chat2youHistoryOnboarding", void 0);`;
+
+const SESSION_ABC_STATUS_BEFORE = `        this._statusData = data;
+        this.status$.next({ status: status, data: data });`;
+
+const SESSION_ABC_STATUS_AFTER = `        const chat2youTimestamp = Date.now();
+        if (status === enums_dto_1.WAHASessionStatus.SCAN_QR_CODE) {
+            this.chat2youQrObserved = true;
+        }
+        if (status === enums_dto_1.WAHASessionStatus.WORKING && !Number.isSafeInteger(this.chat2youFirstWorkingAtMs)) {
+            this.chat2youFirstWorkingAtMs = chat2youTimestamp;
+            this.chat2youFirstWorkingHadQr = this.chat2youQrObserved === true;
+        }
+        this._statusData = data;
+        this.status$.next({ status: status, data: data });`;
+
+const QUEUE_SERVICE_LISTEN_BEFORE = `    listenEvents(app, session) {
+        const config = (0, DIContainer_1.ChatWootConfigDefaults)(app.config);
+        const events = (0, base_1.ListenEventsForChatWoot)(config);
+        for (const event of events) {
+            const obs$ = session.getEventObservable(event);
+            obs$.subscribe(async (payload) => {
+                const data = (0, manager_abc_1.populateSessionInfo)(event, session)(payload);
+                await this.addJobToQueue(event, data, app.id);
+            });
+        }
+    }`;
+
+const QUEUE_SERVICE_LISTEN_AFTER = `    async historyWorkingData(config, app, session, data) {
+        if (config.chat2youHistoryOnboarding !== true ||
+            data.event !== enums_dto_1.WAHAEvents.SESSION_STATUS ||
+            data.payload.status !== enums_dto_1.WAHASessionStatus.WORKING) {
+            return data;
+        }
+        const queue = this.getQueueForEvent(data.event);
+        if (!queue || typeof app.id !== 'string' || app.id.length === 0) {
+            throw new Error('waha_history_queue_configuration_invalid');
+        }
+        const key = \`chat2you:waha:first-working:v2:\${app.id}\`;
+        const client = await queue.client;
+        let stored = await client.get(key);
+        if (stored === null) {
+            const timestamp = session.chat2youFirstWorkingAtMs;
+            if (session.chat2youFirstWorkingHadQr !== true ||
+                !Number.isSafeInteger(timestamp) || timestamp <= 0) {
+                data.chat2youHistoryWorkingAtMs = null;
+                return data;
+            }
+            const result = await client.set(key, String(timestamp), 'NX');
+            stored = result === 'OK' ? String(timestamp) : await client.get(key);
+        }
+        if (typeof stored !== 'string' || !Number.isSafeInteger(Number(stored)) || Number(stored) <= 0) {
+            throw new Error('waha_history_timestamp_store_invalid');
+        }
+        data.chat2youHistoryWorkingAtMs = Number(stored);
+        return data;
+    }
+    listenEvents(app, session) {
+        const config = (0, DIContainer_1.ChatWootConfigDefaults)(app.config);
+        const events = (0, base_1.ListenEventsForChatWoot)(config);
+        for (const event of events) {
+            const obs$ = session.getEventObservable(event);
+            obs$.subscribe(async (payload) => {
+                let data = (0, manager_abc_1.populateSessionInfo)(event, session)(payload);
+                data = await this.historyWorkingData(config, app, session, data);
+                await this.addJobToQueue(event, data, app.id);
+            });
+        }
+    }`;
 
 const MESSAGE_CREATED_POST_SEND_BEFORE = `        if (this.config.conversations.syncMessageStatus) {
             await this.syncStatus(message, parts);
@@ -53,7 +205,7 @@ const MESSAGE_CREATED_POST_SEND_BEFORE = `        if (this.config.conversations.
     }
     async syncStatus(message, parts) {`;
 
-const MESSAGE_CREATED_POST_SEND_AFTER = `        if (parts > 0) {
+const MESSAGE_CREATED_POST_SEND_AFTER = `        if (this.config && this.config.chat2youHistoryOnboarding === true && parts > 0) {
             await this.syncSourceIds(message, parts);
         }
         if (this.config.conversations.syncMessageStatus) {
@@ -243,6 +395,38 @@ const PATCHES = [
     after: VERSION_AFTER,
   },
   {
+    relativePath: 'app/dist/apps/chatwoot/consumers/waha/session.status.js',
+    originalSha256: '6293fc3887a1201a5d251044bfc9a65d6ed46ed74f18cc984137175f7981d0c7',
+    before: SESSION_STATUS_PROCESS_BEFORE,
+    after: SESSION_STATUS_PROCESS_AFTER,
+  },
+  {
+    relativePath: 'app/dist/apps/chatwoot/client/ContactConversationService.js',
+    originalSha256: '2e9671bc1fbbe46e8597a9437bfb3ea3912edf33ad5e9baeb7c99b874b90decc',
+    before: CONTACT_CONVERSATION_REGISTER_BEFORE,
+    after: CONTACT_CONVERSATION_REGISTER_AFTER,
+  },
+  {
+    relativePath: 'app/dist/apps/chatwoot/dto/config.dto.js',
+    originalSha256: 'd5e7a1f883f93134372ecf15ac174d696fb6f219a1a64ccc5c9fcf4eb82e30e7',
+    replacements: [
+      { before: CONFIG_DTO_CLASS_BEFORE, after: CONFIG_DTO_CLASS_AFTER },
+      { before: CONFIG_DTO_LOCALE_DECORATOR_BEFORE, after: CONFIG_DTO_LOCALE_DECORATOR_AFTER },
+    ],
+  },
+  {
+    relativePath: 'app/dist/core/abc/session.abc.js',
+    originalSha256: '6e976be9376e82dda93bd3a2670840245be06d1d0ea1601ed6e27b68de65f4e3',
+    before: SESSION_ABC_STATUS_BEFORE,
+    after: SESSION_ABC_STATUS_AFTER,
+  },
+  {
+    relativePath: 'app/dist/apps/chatwoot/services/ChatWootWAHAQueueService.js',
+    originalSha256: 'a0d42f54af317c7b9aea696aca9fa36b712849f64e63fbb29ee7f1697c95c020',
+    before: QUEUE_SERVICE_LISTEN_BEFORE,
+    after: QUEUE_SERVICE_LISTEN_AFTER,
+  },
+  {
     relativePath: 'app/dist/apps/chatwoot/consumers/inbox/message_created.js',
     originalSha256: '7417b6f049b87482de35e14ac4c43aff187ffb28a291edb5aff865120b4ac04a',
     before: MESSAGE_CREATED_POST_SEND_BEFORE,
@@ -300,6 +484,11 @@ function replaceExactly(text, before, after, label) {
 
 function absolutePath(root, relativePath) {
   return path.join(root, relativePath);
+}
+
+function replacementsFor(patch) {
+  if (Array.isArray(patch.replacements)) return patch.replacements;
+  return [{ before: patch.before, after: patch.after }];
 }
 
 function assertSyntax(source, label) {
@@ -663,7 +852,11 @@ function runMessageHandlerSelfTest(source, statusSource, conversationSource) {
   const statusService = new MessageStatusService(mappingService, {}, contactConversationService);
   const logger = { debug: () => {}, error: () => {}, info: () => {}, warn: () => {} };
   const locale = { key: () => ({ render: ({ content }) => content }) };
-  const config = { conversations: { syncMessageStatus: false }, linkPreview: 'OFF' };
+  const config = {
+    chat2youHistoryOnboarding: true,
+    conversations: { syncMessageStatus: false },
+    linkPreview: 'OFF',
+  };
   const handler = new MessageHandler(mappingService, logger, session, config, locale, statusService);
   const body = {
     id: 77,
@@ -714,6 +907,363 @@ function runMessageHandlerSelfTest(source, statusSource, conversationSource) {
     });
 }
 
+async function runSessionStatusSelfTest(source) {
+  const order = [];
+  const registered = [];
+  const repo = {
+    config: { chat2youHistoryOnboarding: true },
+    registerHistoryConnection: async (session, timestamp) => {
+      order.push(`register:${session}:${timestamp}`);
+      registered.push({ session, timestamp });
+    },
+  };
+  const BaseConsumer = class {};
+  const stubs = {
+    '@nestjs/bullmq': { Processor: () => target => target },
+    '../../../app_sdk/constants': { JOB_CONCURRENCY: 1 },
+    '../../client/messages': {},
+    '../../client/types': {},
+    '../QueueName': { QueueName: { WAHA_SESSION_STATUS: 'waha_session_status' } },
+    './base': { ChatWootWAHABaseConsumer: BaseConsumer },
+    '../../emoji': {},
+    '../../../../core/abc/manager.abc': { SessionManager: class {} },
+    '../../../../modules/rmutex/rmutex.service': { RMutexService: class {} },
+    '../../../../structures/enums.dto': {
+      WAHASessionStatus: { WORKING: 'WORKING', STOPPED: 'STOPPED' },
+    },
+    'nestjs-pino': { PinoLogger: class {} },
+    '../../i18n/templates': { TKey: {} },
+    '../../../../utils/promiseTimeout': { waitUntil: async () => false },
+  };
+  const exported = evaluateCommonJs(source, stubs, 'session.status.js');
+  const { WAHASessionStatusConsumer, SessionStatusHandler } = exported;
+  if (typeof WAHASessionStatusConsumer !== 'function' || typeof SessionStatusHandler !== 'function') {
+    throw new Error('self-test: session status exports missing');
+  }
+  SessionStatusHandler.prototype.handle = async () => {
+    order.push('handle');
+  };
+  const consumer = new WAHASessionStatusConsumer({}, {}, {});
+  consumer.DIContainer = async () => ({
+    ContactConversationService: () => repo,
+    Locale: () => ({}),
+    WAHASelf: () => ({}),
+  });
+
+  await consumer.Process({
+    data: {
+      app: 'chatwoot',
+      event: {
+        session: 'session-a',
+        chat2youHistoryWorkingAtMs: 1_760_000_000_123,
+        payload: { status: 'WORKING', statuses: [{ status: 'WORKING', timestamp: 1_760_000_000_123 }] },
+      },
+    },
+  }, {});
+  assert(order.join('|') === 'register:session-a:1760000000123|handle', 'WORKING timestamp was not registered before normal handling');
+  assert(registered.length === 1, 'valid WORKING event was not registered exactly once');
+
+  await consumer.Process({
+    data: {
+      app: 'chatwoot',
+      event: { session: 'session-a', payload: { status: 'STOPPED', statuses: [{ status: 'STOPPED', timestamp: 2 }] } },
+    },
+  }, {});
+  assert(order.join('|').endsWith('|handle|handle'), 'non-WORKING status changed live handling');
+  assert(registered.length === 1, 'non-WORKING status registered a cutoff');
+
+  await consumer.Process({
+    data: {
+      app: 'chatwoot',
+      event: { session: 'session-a', payload: { status: 'WORKING', statuses: [] } },
+    },
+  }, {});
+  assert(order.join('|').endsWith('|handle|handle|handle'), 'missing canonical timestamp changed live handling');
+  assert(registered.length === 1, 'missing canonical timestamp registered a cutoff');
+
+  let invalidError;
+  try {
+    await consumer.Process({
+      data: {
+        app: 'chatwoot',
+        event: {
+          session: 'session-a',
+          chat2youHistoryWorkingAtMs: '1760000000123',
+          payload: { status: 'WORKING', statuses: [] },
+        },
+      },
+    }, {});
+  } catch (error) {
+    invalidError = error;
+  }
+  assert(invalidError && invalidError.message === 'waha_history_working_timestamp_invalid', 'malformed WORKING event did not fail closed');
+  assert(order.join('|').endsWith('|handle|handle|handle'), 'malformed WORKING event reached the normal handler');
+
+  const legacyRepo = {
+    config: { chat2youHistoryOnboarding: false },
+    registerHistoryConnection: async () => {
+      throw new Error('legacy app must not register history');
+    },
+  };
+  consumer.DIContainer = async () => ({
+    ContactConversationService: () => legacyRepo,
+    Locale: () => ({}),
+    WAHASelf: () => ({}),
+  });
+  await consumer.Process({
+    data: {
+      app: 'legacy-chatwoot',
+      event: {
+        session: 'session-legacy',
+        payload: { status: 'WORKING', statuses: [{ status: 'WORKING', timestamp: 1_760_000_000_456 }] },
+      },
+    },
+  }, {});
+}
+
+async function runHistoryTimestampQueueSelfTest(source) {
+  const values = new Map();
+  const gets = [];
+  const sets = [];
+  const redis = {
+    async get(key) {
+      gets.push(key);
+      return values.has(key) ? values.get(key) : null;
+    },
+    async set(key, value, mode) {
+      sets.push([key, value, mode]);
+      if (values.has(key)) return null;
+      values.set(key, value);
+      return 'OK';
+    },
+  };
+  const jobs = [];
+  const queue = {
+    client: Promise.resolve(redis),
+    add: async (name, data) => jobs.push({ name, data }),
+  };
+  const stubs = {
+    '@nestjs/common': { Injectable: () => target => target },
+    '../consumers/waha/base': { ListenEventsForChatWoot: () => ['SESSION_STATUS'] },
+    '../../../core/abc/manager.abc': {
+      populateSessionInfo: (event, session) => payload => ({ event, session: session.name, payload }),
+    },
+    '../../../structures/enums.dto': {
+      WAHAEvents: { SESSION_STATUS: 'SESSION_STATUS' },
+      WAHASessionStatus: { WORKING: 'WORKING' },
+    },
+    '../consumers/QueueName': { QueueName: { WAHA_SESSION_STATUS: 'waha_session_status' } },
+    './QueueRegistry': { QueueRegistry: class QueueRegistry {} },
+    '../di/DIContainer': { ChatWootConfigDefaults: config => config },
+  };
+  const { ChatWootWAHAQueueService } = evaluateCommonJs(source, stubs, 'ChatWootWAHAQueueService.js');
+  if (typeof ChatWootWAHAQueueService !== 'function') {
+    throw new Error('self-test: ChatWoot queue service export missing');
+  }
+  const service = new ChatWootWAHAQueueService({
+    queue: () => queue,
+  });
+  const app = { id: 'app-uuid', config: { chat2youHistoryOnboarding: true } };
+  const noQr = await service.historyWorkingData(
+    app.config,
+    app,
+    { chat2youFirstWorkingAtMs: 100, chat2youFirstWorkingHadQr: false },
+    { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+  );
+  assert(noQr.chat2youHistoryWorkingAtMs === null, 'WORKING before QR was not held without a history timestamp');
+  assert(sets.length === 0, 'WORKING before QR wrote the canonical timestamp');
+
+  const first = await service.historyWorkingData(
+    app.config,
+    app,
+    { chat2youFirstWorkingAtMs: 200, chat2youFirstWorkingHadQr: true },
+    { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+  );
+  assert(first.chat2youHistoryWorkingAtMs === 200, 'first QR-backed WORKING timestamp was not canonicalized');
+  assert(sets.length === 1 && sets[0][0] === 'chat2you:waha:first-working:v2:app-uuid' &&
+    sets[0][1] === '200' && sets[0][2] === 'NX', 'canonical timestamp did not use SET NX without a TTL');
+
+  const afterRestart = await service.historyWorkingData(
+    app.config,
+    app,
+    { chat2youFirstWorkingAtMs: 300, chat2youFirstWorkingHadQr: false },
+    { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+  );
+  assert(afterRestart.chat2youHistoryWorkingAtMs === 200, 'existing canonical timestamp was overwritten after restart');
+
+  const subscribers = [];
+  service.listenEvents(app, {
+    name: 'session-a',
+    getEventObservable: () => ({ subscribe: callback => subscribers.push(callback) }),
+  });
+  await subscribers[0]({ status: 'WORKING' });
+  assert(jobs.length === 1 && jobs[0].data.event.chat2youHistoryWorkingAtMs === 200,
+    'status queue job did not receive the canonical timestamp');
+
+  const legacy = await service.historyWorkingData(
+    { chat2youHistoryOnboarding: false },
+    app,
+    { chat2youFirstWorkingAtMs: 400, chat2youFirstWorkingHadQr: true },
+    { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+  );
+  assert(!Object.prototype.hasOwnProperty.call(legacy, 'chat2youHistoryWorkingAtMs'), 'legacy App was enriched with history state');
+
+  const live = await service.historyWorkingData(
+    app.config,
+    app,
+    { chat2youFirstWorkingAtMs: 450, chat2youFirstWorkingHadQr: true },
+    { event: 'MESSAGE_ANY', payload: { status: 'WORKING' } }
+  );
+  assert(!Object.prototype.hasOwnProperty.call(live, 'chat2youHistoryWorkingAtMs'), 'non-status event was enriched with history state');
+
+  const raceValues = new Map();
+  let raceSet = true;
+  const raceQueue = {
+    client: Promise.resolve({
+      async get(key) {
+        return raceValues.has(key) ? raceValues.get(key) : null;
+      },
+      async set(key) {
+        raceSet = false;
+        raceValues.set(key, '250');
+        return null;
+      },
+    }),
+  };
+  const raceService = new ChatWootWAHAQueueService({ queue: () => raceQueue });
+  const race = await raceService.historyWorkingData(
+    app.config,
+    app,
+    { chat2youFirstWorkingAtMs: 300, chat2youFirstWorkingHadQr: true },
+    { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+  );
+  assert(!raceSet && race.chat2youHistoryWorkingAtMs === 250, 'SET NX race did not read the winning canonical value');
+
+  values.set('chat2you:waha:first-working:v2:app-uuid', 'invalid');
+  let invalidError;
+  try {
+    await service.historyWorkingData(
+      app.config,
+      app,
+      { chat2youFirstWorkingAtMs: 500, chat2youFirstWorkingHadQr: true },
+      { event: 'SESSION_STATUS', payload: { status: 'WORKING' } }
+    );
+  } catch (error) {
+    invalidError = error;
+  }
+  assert(invalidError && invalidError.message === 'waha_history_timestamp_store_invalid', 'invalid canonical Redis state did not fail closed');
+  assert(gets.length >= 5, 'canonical timestamp was not read from Redis for each status event');
+}
+
+async function runHistoryConnectionClientSelfTest(source) {
+  const requests = [];
+  const stubs = {
+    '@figuro/chatwoot-sdk': { ApiError: class ApiError extends Error {} },
+    './ContactService': { AvatarUpdateMode: { IF_MISSING: 'if_missing' } },
+    './Conversation': { Conversation: class Conversation {} },
+    '../contacts/InboxContactInfo': { InboxContactInfo: class InboxContactInfo {} },
+    '../cache/ConversationCache': { CacheForConfig: () => new Map() },
+    '../const': { AttributeKey: {} },
+  };
+  const { ContactConversationService } = evaluateCommonJs(source, stubs, 'ContactConversationService.js');
+  if (typeof ContactConversationService !== 'function') {
+    throw new Error('self-test: contact conversation service export missing');
+  }
+  const accountAPI = {
+    inboxes: {
+      update: async request => {
+        requests.push(request);
+        return { ok: true };
+      },
+    },
+  };
+  const service = new ContactConversationService(
+    { accountId: 7, inboxId: 8 },
+    {},
+    {},
+    accountAPI,
+    {},
+    {}
+  );
+  await service.registerHistoryConnection('session-a', 1_760_000_000_123);
+  assert(requests.length === 1, 'history connection did not perform exactly one inbox update');
+  assert(
+    requests[0].accountId === 7 && requests[0].id === 8 &&
+      requests[0].data.waha_history_connection.session === 'session-a' &&
+      requests[0].data.waha_history_connection.working_at_ms === 1_760_000_000_123,
+    'history connection update used an unexpected account/inbox payload'
+  );
+
+  let invalidError;
+  try {
+    await service.registerHistoryConnection('session-a', '1760000000123');
+  } catch (error) {
+    invalidError = error;
+  }
+  assert(invalidError && invalidError.message === 'waha_history_working_timestamp_invalid', 'invalid timestamp was not rejected');
+  assert(requests.length === 1, 'invalid timestamp reached the inbox API');
+}
+
+function runConfigDtoSelfTest(source) {
+  const decorator = () => () => {};
+  const stubs = {
+    '@nestjs/swagger': { ApiPropertyOptional: decorator },
+    'class-validator': {
+      IsBoolean: decorator,
+      IsEnum: decorator,
+      IsNumber: decorator,
+      IsOptional: decorator,
+      IsString: decorator,
+      ValidateNested: decorator,
+    },
+    'class-transformer': { Type: decorator },
+    '../../../nestjs/validation/IsDynamicObject': { IsDynamicObject: decorator },
+    '../services/ConversationSelector': { ConversationSort: {} },
+    '../client/types': { ConversationStatus: {} },
+  };
+  const { ChatWootAppConfig } = evaluateCommonJs(source, stubs, 'config.dto.js');
+  const config = new ChatWootAppConfig();
+  assert(config.chat2youHistoryOnboarding === false, 'legacy Chatwoot config did not default onboarding off');
+}
+
+function runSessionTimestampSelfTest(source) {
+  assert(
+    source.indexOf('const chat2youTimestamp = Date.now()') < source.indexOf('this.status$.next'),
+    'first WORKING timestamp was captured after status emission'
+  );
+  assert(source.includes(', (0, rxjs_1.timestamp)(),'), 'public status timestamp pipeline was changed');
+  assert(source.includes('this.status$.next({ status: status, data: data });'), 'public status payload was changed');
+  assert(
+    source.includes('this.chat2youFirstWorkingHadQr = this.chat2youQrObserved === true'),
+    'first WORKING did not capture the QR prerequisite'
+  );
+  let now = 1000;
+  const setStatus = vm.runInNewContext(`(function(status, data) {
+    ${SESSION_ABC_STATUS_AFTER}
+  })`, {
+    Date: { now: () => now },
+    Number,
+    enums_dto_1: { WAHASessionStatus: { SCAN_QR_CODE: 'SCAN_QR_CODE', WORKING: 'WORKING' } },
+  });
+  const state = { events: [], status$: { next: event => state.events.push(event) } };
+  setStatus.call(state, 'SCAN_QR_CODE', null);
+  now = 2000;
+  setStatus.call(state, 'WORKING', null);
+  now = 3000;
+  setStatus.call(state, 'WORKING', null);
+  assert(state.chat2youFirstWorkingAtMs === 2000, 'first WORKING timestamp was overwritten');
+  assert(state.chat2youFirstWorkingHadQr === true, 'SCAN_QR_CODE prerequisite was not retained');
+  assert(!Object.prototype.hasOwnProperty.call(state.events[1], 'chat2youTimestamp') &&
+    !Object.prototype.hasOwnProperty.call(state.events[2], 'chat2youTimestamp'),
+    'private timestamp leaked into the public status payload');
+
+  const noQrState = { events: [], status$: { next: event => noQrState.events.push(event) } };
+  now = 4000;
+  setStatus.call(noQrState, 'WORKING', null);
+  assert(noQrState.chat2youFirstWorkingAtMs === 4000 && noQrState.chat2youFirstWorkingHadQr === false,
+    'WORKING without QR was not captured as a failed prerequisite');
+}
+
 function preparePatch(root, patch) {
   const filename = absolutePath(root, patch.relativePath);
   const stat = fs.lstatSync(filename);
@@ -734,7 +1284,9 @@ function preparePatch(root, patch) {
     throw new Error(`${patch.relativePath}: original bytes are not valid UTF-8`);
   }
 
-  const patched = replaceExactly(source, patch.before, patch.after, patch.relativePath);
+  const patched = replacementsFor(patch).reduce((current, replacement, index) => (
+    replaceExactly(current, replacement.before, replacement.after, `${patch.relativePath}#${index + 1}`)
+  ), source);
   return { filename, patch, patched };
 }
 
@@ -766,8 +1318,9 @@ async function selfTest(root = null) {
     'body replacement differs from the expected contract'
   );
   assert(
-    bodyExpected.includes('source_id: payload.id') &&
-      bodyExpected.includes('external_created_at: payload.timestamp'),
+    bodyExpected.includes('body.source_id = payload.id') &&
+      bodyExpected.includes('body.external_created_at = payload.timestamp') &&
+      bodyExpected.includes('chat2youHistoryOnboarding'),
     'body contract fields are missing'
   );
 
@@ -777,7 +1330,11 @@ async function selfTest(root = null) {
     replaceExactly(versionFixture, VERSION_BEFORE, VERSION_AFTER, 'version') === versionExpected,
     'version replacement differs from the expected contract'
   );
-  assert(versionExpected.includes("chat2youHistorySourceIds: 'v1'"), 'capability marker is missing');
+  assert(
+    versionExpected.includes("chat2youHistorySourceIds: 'v1'") &&
+      versionExpected.includes("chat2youHistoryFirstConnectionTimestamp: 'v1'"),
+    'history capability markers are missing'
+  );
 
   let duplicateFailed = false;
   try {
@@ -789,7 +1346,7 @@ async function selfTest(root = null) {
 
   let alreadyPatchedFailed = false;
   try {
-    replaceExactly(BASE_BODY_AFTER, BASE_BODY_BEFORE, BASE_BODY_AFTER, 'body');
+    replaceExactly(BASE_BODY_AFTER.replace(BASE_BODY_BEFORE, 'already patched body'), BASE_BODY_BEFORE, BASE_BODY_AFTER, 'body');
   } catch (error) {
     alreadyPatchedFailed = error.message.includes('found 0');
   }
@@ -822,7 +1379,43 @@ async function selfTest(root = null) {
     const managerCore = prepared.find(
       item => item.patch.relativePath === 'app/dist/core/manager.core.js'
     );
+    const sessionStatus = prepared.find(
+      item => item.patch.relativePath === 'app/dist/apps/chatwoot/consumers/waha/session.status.js'
+    );
+    const contactConversation = prepared.find(
+      item => item.patch.relativePath === 'app/dist/apps/chatwoot/client/ContactConversationService.js'
+    );
+    const base = prepared.find(
+      item => item.patch.relativePath === 'app/dist/apps/chatwoot/consumers/waha/base.js'
+    );
+    const configDto = prepared.find(
+      item => item.patch.relativePath === 'app/dist/apps/chatwoot/dto/config.dto.js'
+    );
+    const sessionAbc = prepared.find(
+      item => item.patch.relativePath === 'app/dist/core/abc/session.abc.js'
+    );
+    const queueService = prepared.find(
+      item => item.patch.relativePath === 'app/dist/apps/chatwoot/services/ChatWootWAHAQueueService.js'
+    );
+    assert(
+      base.patched.includes('this.repo.config.chat2youHistoryOnboarding') &&
+        base.patched.includes('body.source_id = payload.id') &&
+        base.patched.includes('body.external_created_at = payload.timestamp'),
+      'live source IDs are not gated by the onboarding capability'
+    );
+    assert(
+      configDto.patched.includes('chat2youHistoryOnboarding') &&
+        sessionAbc.patched.includes('const chat2youTimestamp = Date.now()') &&
+        sessionAbc.patched.includes('chat2youFirstWorkingHadQr') &&
+        queueService.patched.includes("client.set(key, String(timestamp), 'NX')"),
+      'provider timestamp capability patch is incomplete'
+    );
+    runConfigDtoSelfTest(configDto.patched);
+    runSessionTimestampSelfTest(sessionAbc.patched);
     await runMessageHandlerSelfTest(messageCreated.patched, statusService.patched, conversation.patched);
+    await runSessionStatusSelfTest(sessionStatus.patched);
+    await runHistoryTimestampQueueSelfTest(queueService.patched);
+    await runHistoryConnectionClientSelfTest(contactConversation.patched);
     await runAutoStartGuardSelfTest(managerAbc.patched, managerCore.patched);
   }
 
@@ -849,6 +1442,16 @@ module.exports = {
   MESSAGE_CREATED_POST_SEND_BEFORE,
   MESSAGE_STATUS_SERVICE_AFTER,
   MESSAGE_STATUS_SERVICE_BEFORE,
+  CONTACT_CONVERSATION_REGISTER_AFTER,
+  CONTACT_CONVERSATION_REGISTER_BEFORE,
+  CONFIG_DTO_CLASS_AFTER,
+  CONFIG_DTO_CLASS_BEFORE,
+  CONFIG_DTO_LOCALE_DECORATOR_AFTER,
+  CONFIG_DTO_LOCALE_DECORATOR_BEFORE,
+  SESSION_ABC_STATUS_AFTER,
+  SESSION_ABC_STATUS_BEFORE,
+  SESSION_STATUS_PROCESS_AFTER,
+  SESSION_STATUS_PROCESS_BEFORE,
   MANAGER_ABC_CONSTRUCTOR_AFTER,
   MANAGER_ABC_CONSTRUCTOR_BEFORE,
   MANAGER_CORE_RESTART_AFTER,

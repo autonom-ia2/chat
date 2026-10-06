@@ -441,7 +441,7 @@
     "modelo": "Message",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/conversations/messages_controller.rb:2",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:123",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -535,7 +535,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:46"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:50"
     ],
     "sem_corpo": true
   },
@@ -750,8 +750,8 @@
     "controller": "api/v1/accounts/inboxes#destroy",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:99",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:101",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -761,7 +761,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:28",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -770,8 +770,8 @@
     "controller": "api/v1/accounts/inboxes#disable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:89",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:91",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -4439,15 +4439,21 @@
           "failed"
         ]
       },
-      "target_language": {}
+      "target_language": {},
+      "waha_source_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      }
     },
     "completo": true,
     "controller": "api/v1/accounts/conversations/messages#update",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:16",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:17",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:123",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:65",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -4785,8 +4791,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:196"
     ],
     "sem_corpo": false
   },
@@ -4795,7 +4801,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:72"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:84"
     ],
     "sem_corpo": true
   },
@@ -4821,10 +4827,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:86",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:90",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:89"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:98",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:192",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:102",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:101"
     ],
     "sem_corpo": false
   },
@@ -6162,6 +6168,7 @@
         "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
+      "waha_history_connection": {},
       "working_hours": {
         "campos": {
           "close_hour": {
@@ -6207,16 +6214,21 @@
         "tipo": "booleano"
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: waha_history_connection"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:48",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:138",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:219",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:194",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:265",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:170",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:251",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:226",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:127",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:109",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -12532,7 +12544,7 @@
       "params inteiro repassado a Messages::MessageBuilder.new"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:8",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:9",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -12556,8 +12568,8 @@
     "controller": "api/v1/accounts/conversations/messages#retry",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:28",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:29",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:123",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -12581,8 +12593,8 @@
     "controller": "api/v1/accounts/conversations/messages#translate",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:36",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:37",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:123",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
     ],
     "sem_corpo": false
@@ -13575,6 +13587,15 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/insights": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:55"
+    ],
+    "sem_corpo": true
+  },
   "POST crm/meta_ads_connection/selection": {
     "campos": {
       "ad_account_id": {
@@ -13597,9 +13618,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:63",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:125"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:75",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:76",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:137"
     ],
     "sem_corpo": false
   },
@@ -13614,9 +13635,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:100",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:104",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:103"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:115"
     ],
     "sem_corpo": false
   },
@@ -15433,7 +15454,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:33",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:265",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:113"
     ],
     "sem_corpo": false
@@ -15444,7 +15465,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:17",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15453,8 +15474,8 @@
     "controller": "api/v1/accounts/inboxes#enable_whatsapp_api_campaigns",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:80",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:82",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15464,7 +15485,7 @@
     "modelo": "Inbox",
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:8",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15474,7 +15495,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:51",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15484,7 +15505,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:4",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15494,7 +15515,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_secret_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -15509,9 +15530,9 @@
       "leitura crua sem tipo: agent_bot (repassada a AgentBot.accessible_to(Current.account).find)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:120"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:71",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:152"
     ],
     "sem_corpo": false
   },
@@ -15533,7 +15554,7 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:45",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:51",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:50",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -15550,7 +15571,7 @@
     "origem": [
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:30",
       "enterprise/app/controllers/enterprise/api/v1/accounts/inboxes_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -15560,7 +15581,7 @@
     "modelo": "Inbox",
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:10",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": true
   },
@@ -20674,15 +20695,21 @@
           "failed"
         ]
       },
-      "target_language": {}
+      "target_language": {},
+      "waha_source_ids": {
+        "tipo": "lista",
+        "tipo_pela_leitura": "nome"
+      }
     },
     "completo": true,
     "controller": "api/v1/accounts/conversations/messages#update",
     "modelo": "Message",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:16",
-      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:90",
-      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7"
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:17",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:123",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:7",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:65",
+      "app/controllers/api/v1/accounts/conversations/messages_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -20983,8 +21010,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:196"
     ],
     "sem_corpo": false
   },
@@ -22284,6 +22311,7 @@
         "um_de_resumo": "597 valores aceitos, por exemplo: Africa/Abidjan, Africa/Accra, Africa/Addis_Ababa, Africa/Algiers, Africa/Asmara",
         "valida_no_servidor": true
       },
+      "waha_history_connection": {},
       "working_hours": {
         "campos": {
           "close_hour": {
@@ -22329,16 +22357,21 @@
         "tipo": "booleano"
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/inboxes#update",
     "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: waha_history_connection"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/inboxes_controller.rb:48",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:233",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:138",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:219",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:194",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:265",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:170",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:251",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:226",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:127",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:109",
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": false
   },
@@ -22355,7 +22388,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:60",
       "app/controllers/api/v1/accounts/concerns/inbox_health_management.rb:61",
-      "app/controllers/api/v1/accounts/inboxes_controller.rb:115"
+      "app/controllers/api/v1/accounts/inboxes_controller.rb:147"
     ],
     "sem_corpo": false
   },

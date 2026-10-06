@@ -40,7 +40,9 @@ module Waha
     end
 
     def history_source_ids_available?
-      get('/api/server/version')['chat2youHistorySourceIds'] == 'v1'
+      version = get('/api/server/version')
+      version['chat2youHistorySourceIds'] == 'v1' &&
+        version['chat2youHistoryFirstConnectionTimestamp'] == 'v1'
     end
 
     # ---- CHATS/MENSAGENS ----

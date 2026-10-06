@@ -231,7 +231,10 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       get base_url, headers: auth_headers(admin)
 
       campaigns = response.parsed_body['payload'].find { |link| link['id'] == tracked_link.id }['campaigns']
-      expect(campaigns).to eq(
+      # Último clique de cada campanha (#1068): o mais recente, não o de 2 horas atrás.
+      latest = Ctwa::TrackedLinkClick.where(tracked_link: tracked_link, campaign_key: '120211').maximum(:created_at)
+      expect(campaigns.first['last_clicked_at']).to eq(latest.iso8601)
+      expect(campaigns.map { |row| row.except('last_clicked_at') }).to eq(
         [
           { 'campaign_key' => '120211', 'name' => 'Viagem EUA', 'clicks' => 4, 'conversations' => 2, 'won_cards' => 3,
             'won_value_by_currency' => { 'BRL' => 151_120, 'USD' => 5_000 } },
@@ -257,7 +260,7 @@ RSpec.describe 'CTWA tracked links API', type: :request do
 
       expect(response).to have_http_status(:ok)
       campaign = response.parsed_body['payload'].find { |link| link['id'] == tracked_link.id }['campaigns'].sole
-      expect(campaign).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'conversations' => 1)
+      expect(campaign.except('last_clicked_at')).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'conversations' => 1)
       expect(response.body).not_to include('won_value_by_currency', '37780')
     end
 

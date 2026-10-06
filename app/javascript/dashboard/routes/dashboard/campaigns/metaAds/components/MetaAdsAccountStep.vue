@@ -31,6 +31,8 @@ const loadingPixels = ref(false);
 const pixelId = ref('');
 const pickingPixel = ref(false);
 const saving = ref(false);
+// Erro da gravação fica na tela, embaixo do botão: o balão sumia antes de a pessoa ler (#1068).
+const saveError = ref('');
 
 const chosen = computed(() =>
   accounts.value.find(account => account.id === chosenId.value)
@@ -71,7 +73,7 @@ const loadPixels = async () => {
     pixelId.value = keep?.id || latestPixel(pixels.value)?.id || '';
   } catch (error) {
     pixels.value = [];
-    useAlert(errorText(error));
+    saveError.value = errorText(error);
   } finally {
     loadingPixels.value = false;
   }
@@ -107,6 +109,7 @@ const save = async () => {
   if (!chosen.value) return;
 
   saving.value = true;
+  saveError.value = '';
   const firstRelease = !chosen.value.ready;
   try {
     const { data } = await CrmMetaAdsConnectionAPI.select({
@@ -124,7 +127,7 @@ const save = async () => {
     useAlert(t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.SAVED'));
     emit('saved', data);
   } catch (error) {
-    useAlert(errorText(error));
+    saveError.value = errorText(error);
   } finally {
     saving.value = false;
   }
@@ -164,6 +167,37 @@ onMounted(load);
         {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.HINT') }}
       </p>
     </header>
+
+    <!-- Por qual caminho a conta está sendo lida: nada de trocar de modo em silêncio (#1068). -->
+    <div
+      data-account-mode
+      class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 rounded-xl bg-n-alpha-1"
+    >
+      <span class="flex items-center gap-2 text-sm text-n-slate-12">
+        <span
+          class="size-4 text-n-blue-11"
+          :class="
+            mode === 'partner' ? 'i-lucide-handshake' : 'i-lucide-key-round'
+          "
+          aria-hidden="true"
+        />
+        {{
+          mode === 'partner'
+            ? $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.VIA_PARTNER', {
+                partner: partnerName,
+              })
+            : $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.VIA_TOKEN')
+        }}
+      </span>
+      <button
+        type="button"
+        data-account-switch
+        class="inline-flex items-center px-2 text-sm font-semibold bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:bg-n-alpha-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="emit('back')"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.SWITCH') }}
+      </button>
+    </div>
 
     <div
       v-if="loading"
@@ -369,6 +403,18 @@ onMounted(load);
           @click="emit('back')"
         />
       </div>
+      <p
+        v-if="saveError"
+        data-account-error
+        role="alert"
+        class="flex items-start gap-2 px-4 py-3 m-0 text-sm rounded-xl bg-n-amber-2 text-n-amber-11"
+      >
+        <span
+          class="flex-none mt-0.5 i-lucide-circle-alert size-4"
+          aria-hidden="true"
+        />
+        {{ saveError }}
+      </p>
     </template>
   </section>
 </template>

@@ -133,10 +133,11 @@ https://raw.githubusercontent.com/portainer/portainer/2.21.4/api/exec/swarm_stac
 Preservar Compose, imagem anterior, autenticação e mídia; comparar estado antes da operação.
 Implantação sequencial stop-first, uma instalação por vez, com retorno à imagem anterior segura
 se capacidade, saúde ou identidade divergir. Não executar logout ou novo pareamento nas sessões existentes.
-Antes da candidata, preparar uma revisão original com reinício global/worker desligados,
-sem sessão predefinida e update failure_action=pause. Isso impede que falha no staging
-reabra automaticamente a revisão original com início amplo. A candidata restaura o reinício
-amplo com a exclusão privada; seu rollback anterior terá o início automático desligado.
+A atualização candidata troca imagem e desliga o reinício global/worker na mesma operação,
+com sessões predefinidas vazias e update/rollback failure_action=pause. Isso impede que
+falha no staging reabra automaticamente a revisão original com início amplo. A candidata
+mantém o início automático desligado; a recuperação usa explicitamente a imagem original
+com os mesmos controles desligados.
 Em recuperação, iniciar manualmente somente a allowlist observada como WORKING antes da operação.
 Persistir as revisões correspondentes no Compose, conservando volumes, redes e demais variáveis.
 Aplicação Rails segue PR/review/merge queue/checks e blue-green; confirmar workers antigos drenados.
@@ -148,3 +149,91 @@ Quantidade e profundidade dependem dos dados entregues pelo WhatsApp/WAHA; seis 
 Revisão final e plano operacional verificável, PR/checks, publicação autorizada
 e verificação direta das duas instalações.
 Este registro de andamento não afirma que a funcionalidade de histórico já foi publicada.
+
+## Revisão após a retomada autorizada
+
+Marcadores de Message/Conversation passaram a ser reservados ao contexto interno do
+importador. Criação externa, inclusive false/null/chaves simbólicas, é recusada; update
+ordinário preserva o marcador persistido. Exclusão do conteúdo preserva a exclusão de
+relatórios. A primeira rodada dos testes novos teve 13 falhas de setup porque Current
+é um módulo do projeto, sem método set; os fixtures foram corrigidos com restauração
+do contexto em ensure. Nenhuma alteração de produção decorreu dessa rodada.
+
+Snapshot 20261006-182646-eff0d284-21d6019c31-1b415f6c: 52 exemplos focados da proteção,
+builder e concorrência, zero falhas. A regressão completa anterior foi repetida nesse
+snapshot: 666 exemplos, zero falhas e as mesmas cinco pendências preexistentes.
+Esses resultados não validam alterações posteriores na captura da primeira conexão.
+Todos os comandos usaram o wrapper Ruby 3.4.4 e serviços de teste isolados do MacCluster.
+
+A revisão do provider encontrou o timestamp de status após um delay de até dois
+segundos e histórico limitado aos últimos três estados. Capturar o horário do polling
+ou assumir que esse timestamp é o instante real da conexão não é seguro. A captura
+precisa ocorrer na mudança real para WORKING e sobreviver a retries/reconexões.
+Mensagens usam precisão de segundos, exigindo um corte que exclua a segunda parcial
+da conexão para preservar o tratamento de mensagens ao vivo. Implementação em andamento.
+
+O job agora serializa páginas por instalação, com intervalo de cinco segundos, timeout
+de oito minutos incluindo preparação e TTL de dez minutos. Não há importação nas caixas
+existentes. O Guia de formatos foi regenerado oficialmente em ambiente isolado após
+uma falha no CI; deve ser regenerado novamente se o controlador de caixas mudar.
+
+Os manifests operacionais anteriores não serão aplicados: conservavam start-first,
+início amplo e rollback automático. O gerador v2 prepara uma única atualização com
+stop-first, ALL=false, WORKER=false e failure_action=pause, além de uma recuperação
+explícita na imagem original com início automático desligado. A allowlist vem do
+inventário anterior verificado, nunca do estado transitório após a parada.
+O início manual será individual, limitado à allowlist, com acompanhamento de memória
+e saúde das duas instalações. Não usar docker service rollback para recuperar.
+
+## Validação final da retomada
+
+Integrado main df75602eac65fe0b5ba49d3d2d4743061b2930e5 sem sobrescrever trabalho de
+outras frentes. O Guia de formatos foi regenerado oficialmente nesse código combinado,
+em Rails/test isolado no M2: 527 ações. Os dois outputs foram copiados por hash para a
+branch; o snapshot original foi restaurado e verificado nos dois nós. pnpm guia:check
+aprovado no snapshot 20261006-190225: 192 fluxos, 186 telas, zero sem explicação.
+
+O corte usa o primeiro WORKING capturado antes do delay do provider, com prova de QR,
+valor canônico no Redis por App e registro imutável pelo token API do dono. Mudança
+concorrente do marcador não é perdida na persistência do estado do importador.
+Revisão independente final não encontrou bloqueadores concretos.
+
+Snapshot 20261006-190511-eff0d284-a7285f033e-f174da27, SHA256
+a7285f033e02a75ccd5abe66bd5ca899fe9579340032e1e1e1abcf97efff8317:
+370 exemplos focados, zero falhas, após corrigir três ofensas de organização/estilo.
+O ajuste lê status uma única vez e mantém o tratamento de WORKING/FAILED/outros estados.
+A regressão completa no mesmo snapshot passou: 666 exemplos, zero falhas e as mesmas
+cinco pendências preexistentes. RuboCop: 41 arquivos inspecionados, zero ofensas.
+Self-test local dos bundles reais e git diff --check aprovados. Resultados lidos antes
+de qualquer commit; validação e commit executados em comandos separados.
+
+Imagem candidata privada chat2you/waha-plus-history:2026.9.2-20de19526f construída
+sobre a base fixada, com self-test dos 12 bundles reais aprovado. Image ID
+sha256:4236c31658d67de7a3e428b10a78ccbfde58c6975ede2959c1320916eb72a937.
+Smoke isolado sem rede, sem volumes de produção e zero sessões confirmou os dois
+marcadores v1. O container de teste e seus volumes anônimos foram removidos.
+Nenhuma sessão real foi reiniciada por esse teste.
+
+Revisão independente dos scripts operacionais privados aprovada; dez casos sintéticos
+passaram sem Docker/SSH/produção. O Compose de cada fase faz parte do selo; início
+exige atualização aceita, saúde e mesma versão do serviço; persistência exige check
+final. Recuperação exige releitura completa: com API indisponível, interromper para
+diagnóstico, sem rollback cego ou restauração automática de volumes.
+
+Às 22:08 UTC, os dois frontends respondiam HTTP 200. Hub2You tinha 757,7 MiB livres
+no RDS, swap 0,5 MiB. Autonom.ia tinha 116,8 MiB livres e swap 78,2 MiB, aumento
+acima do limite de 5 MiB em relação à referência da retomada. O gate bloqueou
+publicação; não houve merge, deploy, início de sessões ou importação neste intervalo.
+Confirmado via AWS: RDS da Autonom.ia continua db.t4g.micro, sem modificações pendentes,
+backup retido sete dias. Aumentar essa instalação para 2 GB foi submetido separadamente
+ao Rodrigo por envolver infraestrutura/custo e possível interrupção.
+
+Pre-commit executado separadamente, com Ruby 3.4.4 e Node 24.11.0: ESLint dos 29
+arquivos JS/Vue integrados de main passou. Nenhum arquivo foi reescrito (hashes
+conferidos). O xargs BSD do hook emitiu aviso de comprimento de comando na integração
+de 131 arquivos; o hook retorna zero por seu comportamento preexistente. A validação
+independente e completa dos 41 arquivos Ruby do recorte passou no snapshot, incluindo
+os arquivos que esse pipeline não alcançou. Nenhum --no-verify foi usado.
+git diff df75602eac65fe0b5ba49d3d2d4743061b2930e5 --check passou no recorte WAHA.
+O check contra o HEAD antigo apontou espaços finais/EOF já presentes nos templates
+MJML de main; esses arquivos foram preservados exatamente como publicados.

@@ -37,8 +37,12 @@ describe Messages::MessageBuilder do
 
     context 'when the history message already exists in the same inbox' do
       let!(:existing_message) do
+        previous = Current.waha_history_import
+        Current.waha_history_import = true
         create(:message, conversation: conversation, account: account, inbox: inbox, source_id: source_id,
                          content_attributes: { 'history_import' => true, 'waha_history_import' => true })
+      ensure
+        Current.waha_history_import = previous
       end
 
       it 'returns it without writing or dispatching live side effects' do

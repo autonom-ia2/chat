@@ -28,7 +28,8 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
   end
 
   def account_row(id, owner:, name: 'CA - Placement Seguros')
-    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', business: { id: owner, name: 'Dono' } }
+    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', timezone_name: 'America/Sao_Paulo',
+      business: { id: owner, name: 'Dono' } }
   end
 
   def with_whatsapp_portfolio(target = account, id = portfolio)
@@ -51,7 +52,7 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
 
   def stub_partner_listing(rows, assigned: [])
     stub_graph("#{partner_business}/client_ad_accounts", { data: rows })
-    stub_graph(system_user, { assigned_ad_accounts: { data: assigned } })
+    stub_graph('me/adaccounts', { data: assigned })
   end
 
   def stub_reads(id = ad_account, owner: portfolio, token: platform_token, spend: '1720.40')
@@ -65,6 +66,20 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
     before do
       configure_platform
       with_whatsapp_portfolio
+    end
+
+    it 'recusa da Meta ao conferir o acesso vira erro na tela, nunca conta "ainda liberando", e vai para o log sem token' do
+      stub_graph("#{partner_business}/client_ad_accounts", { data: [account_row(ad_account, owner: portfolio)] })
+      stub_graph('me/adaccounts', { error: { code: 200, message: 'Permissions error' } }, status: 403)
+      logged = []
+      allow(Rails.logger).to receive(:warn) { |line| logged << line }
+
+      get "#{base}/ad_accounts", params: { mode: 'partner' }, headers: auth_headers(admin)
+
+      expect(response.parsed_body['error']).to eq('no_access')
+      line = logged.find { |text| text.start_with?('[MetaAdsGraph]') }
+      expect(line).to include('GET me/adaccounts', 'code=200', 'Permissions error')
+      expect(line).not_to include(platform_token)
     end
 
     it 'lista só contas do portfólio do WhatsApp desta conta, a com mais gasto recomendada' do
@@ -196,6 +211,21 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       connection = Crm::MetaAdsConnection.find_by!(account_id: account.id)
       expect(connection.access_token).to be_nil
       expect(connection.read_token).to eq(platform_token)
+    end
+
+    it 'trocar de conta de anúncios zera a coleta e começa a carga de 90 dias (#1073)' do
+      stub_reads
+      old = Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: '111', insights_synced_at: 1.hour.ago,
+                                           insights_backfilled_at: 1.day.ago)
+
+      expect do
+        post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel }, headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(old.id)
+
+      expect(old.reload).to have_attributes(ad_account_id: ad_account, insights_synced_at: nil, insights_backfilled_at: nil,
+                                            ad_account_timezone: 'America/Sao_Paulo')
+    ensure
+      Crm::MetaAds::Insights::Backfill.release(old.id) if old
     end
 
     it 'recusa conta de anúncios de outro portfólio' do

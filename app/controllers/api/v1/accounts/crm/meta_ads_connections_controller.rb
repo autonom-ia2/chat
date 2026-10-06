@@ -14,13 +14,17 @@
 # PATCH funnel         → grava o tipo de cada etapa e liga o aviso no funil; enabled=false para de avisar
 # POST  suggest_stages → a IA sugere o tipo de cada etapa (assíncrono, como as outras ações de IA do CRM)
 #
+# Coleta (#1073):
+# POST  insights → último dia lido da conta de anúncios; pede a leitura de hoje se tiver mais de 5 minutos.
+#                  O fim da leitura chega pelo canal de tempo real (crm.meta_ads.insights_updated).
+#
 # Quem não é administrador recebe 403 (não 401: a sessão é válida, só falta a permissão).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
 
   # Tokens da Meta têm algumas centenas de caracteres; o teto barra corpos absurdos antes da Graph.
   MAX_TOKEN_LENGTH = 2048
-  READ_ACTIONS = %w[show ad_accounts pixels funnels].freeze
+  READ_ACTIONS = %w[show ad_accounts pixels funnels insights].freeze
 
   before_action :ensure_administrator
   before_action :ensure_mode, only: [:ad_accounts, :pixels, :selection]
@@ -46,6 +50,14 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   def destroy
     current_connection&.destroy!
     render json: payload
+  end
+
+  def insights
+    connection = current_connection
+    return render json: { insights: nil } if connection.blank?
+
+    refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
+    render json: { insights: ::Crm::MetaAds::Insights::Summary.payload(connection, refreshing: refreshing) }
   end
 
   def ad_accounts
@@ -165,6 +177,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     ::Crm::MetaAdsConnection.public_payload_for(connection).merge(
       partner: ::Crm::MetaAds::Platform.public_payload,
       whatsapp_portfolio: setup.portfolio_ids.any?,
+      # Portfólio do cliente na Meta: o "Abrir a Meta" do passo 1 cai direto em Parceiros dele (#1068).
+      client_portfolio_id: setup.portfolio_ids.first,
       sales_signal: { enabled: ::Crm::MetaAds::Funnels.new(Current.account, connection).sales_enabled? }
     )
   end

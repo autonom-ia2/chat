@@ -7,8 +7,12 @@ Não distribuir a imagem PLUS em registry público.
 O conector transmite o ID original em mensagens ao vivo e vincula os IDs de
 texto/anexos aos envios do painel. Isso permite importar o histórico disponível
 até a primeira conexão sem repetir mensagens. Datas externas não alteram a data
-de atendimento de mensagens ao vivo. O marcador `chat2youHistorySourceIds=v1`
-é obrigatório para criar uma conexão com importação habilitada.
+de atendimento de mensagens ao vivo. Os marcadores `chat2youHistorySourceIds=v1`
+e `chat2youHistoryFirstConnectionTimestamp=v1` são obrigatórios para criar uma
+conexão com importação habilitada. O App Chatwoot dessa conexão também leva
+`chat2youHistoryOnboarding=true`; o consumidor só faz o PATCH do timestamp e
+envia IDs extras para esse App. Apps antigos da mesma instalação continuam no
+fluxo original.
 
 ## Início automático e recuperação
 
@@ -19,13 +23,23 @@ JSON ausente ou inválido interrompe o início; não há fallback para lista vaz
 O filtro cobre as rotinas automáticas de reinício e sessões predefinidas.
 O endpoint de início manual continua com o comportamento original.
 
-Não atualizar diretamente uma imagem original com reinício amplo habilitado:
-o rollback automático para ela ignoraria a nova proteção. Primeiro preparar
-uma revisão segura da imagem original com `WHATSAPP_RESTART_ALL_SESSIONS=false`,
-`WAHA_WORKER_RESTART_SESSIONS=false`, sem `WHATSAPP_START_SESSION`, e com falha
-de atualização configurada para `pause`. Essa revisão mantém todas paradas.
-Somente depois instalar a candidata com a lista de exclusão e restaurar o
-reinício amplo. Seu rollback anterior terá o início automático desligado.
+Operar uma instalação por vez, em modo stop-first. A única atualização troca a
+imagem e desliga `WHATSAPP_RESTART_ALL_SESSIONS` e `WAHA_WORKER_RESTART_SESSIONS`,
+mantém `WHATSAPP_START_SESSIONS` vazio e configura a ação de falha como `pause`.
+O preflight recusa a variável singular `WHATSAPP_START_SESSION`. Não há retorno
+automático à revisão anterior com início amplo. Conferir a saúde da candidata e
+iniciar manualmente apenas a allowlist que estava `WORKING` antes da atualização.
+Persistir o Compose somente depois da conferência final. A lista de exclusão
+continua persistida para proteger qualquer rotina automática futura.
+
+Em uma falha, voltar explicitamente à imagem original segura, manter os
+controles automáticos desligados e iniciar manualmente somente a allowlist
+confirmada. Não usar rollback Docker automático nem restaurar início amplo como
+parte da recuperação.
+
+A recuperação exige uma nova leitura completa e comparação de sessões/Apps.
+Se a API não responder, interromper e diagnosticar; não executar a recuperação
+nem iniciar sessões usando somente o snapshot antigo.
 
 Preservar os volumes de autenticação/mídia, configuração completa do serviço,
 Compose e snapshot completo de sessões/Apps. Fazer backup consistente de cada
@@ -56,3 +70,32 @@ instalações e a drenagem de workers antigos. Uma nova conexão real deve valid
 histórico datado, identidade única, mensagens públicas e nenhuma resposta
 automática provocada pela importação. A quantidade depende do histórico
 efetivamente disponibilizado pelo WhatsApp/WAHA; não há promessa de seis meses.
+
+## Corte temporal e exclusão entre páginas
+
+Cada página do job de histórico é exclusiva por instalação. A disputa pelo lock
+global é reagendada em cinco segundos antes de criar cliente, consultar WAHA ou
+alterar o cursor; a página seguinte também espera cinco segundos. Isso impede
+que uma nova execução faça um retry cego da página que outra execução ainda está
+processando. A preparação e as consultas remotas ficam dentro do limite de oito
+minutos, abaixo do TTL do lock.
+
+O corte correto exige o primeiro `WORKING` depois de `SCAN_QR_CODE`. O instante
+é capturado no `setStatus` antes do atraso de até dois segundos do provedor e
+fica privado na sessão; o consumidor da fila, somente para o App com
+`chat2youHistoryOnboarding=true`, grava-o no Redis em uma chave sem TTL por UUID
+do App com `SET NX` e relê o valor vencedor em caso de disputa. Isso evita que
+retries, processos diferentes ou eventos fora de ordem escolham outro corte.
+Sem `SCAN_QR_CODE` antes do primeiro `WORKING`, sem o valor canônico ou com o
+valor inválido, o evento não registra corte e o job permanece `waiting_connection`;
+não há substituição por `GET /api/sessions/:session` ou pelo horário do polling.
+
+A API aceita somente a sessão, o usuário dono e o marcador da caixa; depois do
+primeiro registro, o corte fica imutável. Sem os dois marcadores de capacidade,
+a provisão e o job falham fechado. Como mensagens WAHA chegam em segundos e o
+evento chega em milissegundos, o job usa o segundo inteiro anterior ao evento
+(`floor(timestamp_ms / 1000) - 1`). Essa margem descarta toda a segunda em que a
+conexão foi observada, evitando classificar como histórico uma mensagem ao vivo
+que compartilhe o mesmo segundo. Sem captura canônica, as novas tentativas usam
+os intervalos de conexão de um minuto e, após 24 horas, quinze minutos; não
+fazem polling rápido de cinco segundos.

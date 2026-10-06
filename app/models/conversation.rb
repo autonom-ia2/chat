@@ -70,6 +70,7 @@ class Conversation < ApplicationRecord
 
   CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language].freeze
   WAHA_RESOLUTION_CYCLE_STARTED_AT_KEY = 'waha_resolution_cycle_started_at'.freeze
+  WAHA_HISTORY_ONLY_KEY = 'waha_history_only'.freeze
   FILTERED_UNREAD_COUNT_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
   FILTERED_UNREAD_COUNT_UPDATE_KEYS = %w[
     cached_label_list campaign_id custom_attributes first_reply_created_at label_list last_activity_at priority snoozed_until waiting_since
@@ -80,6 +81,7 @@ class Conversation < ApplicationRecord
   validates :account_id, presence: true
   validates :inbox_id, presence: true
   validates :contact_id, presence: true
+  before_validation :validate_waha_history_only_marker, prepend: true
   before_validation :validate_additional_attributes
   before_validation :reset_agent_bot_when_assignee_present
   validates :additional_attributes, jsonb_attributes_length: true
@@ -288,6 +290,49 @@ class Conversation < ApplicationRecord
   end
 
   private
+
+  def validate_waha_history_only_marker
+    return if Current.waha_history_import == true
+
+    current_attributes = waha_history_marker_attributes(additional_attributes, WAHA_HISTORY_ONLY_KEY)
+    persisted_attributes = waha_history_marker_attributes(attribute_in_database(:additional_attributes), WAHA_HISTORY_ONLY_KEY)
+    invalid = waha_marker_invalid?(current_attributes, persisted_attributes, WAHA_HISTORY_ONLY_KEY)
+
+    return errors.add(:additional_attributes, :invalid) if invalid
+    return unless persisted?
+    return unless persisted_attributes.is_a?(Hash)
+    return unless persisted_attributes.key?(WAHA_HISTORY_ONLY_KEY)
+
+    self.additional_attributes = current_attributes
+    return if current_attributes.key?(WAHA_HISTORY_ONLY_KEY)
+
+    self.additional_attributes = current_attributes.merge(
+      WAHA_HISTORY_ONLY_KEY => persisted_attributes[WAHA_HISTORY_ONLY_KEY]
+    )
+  end
+
+  def waha_history_marker_attributes(attributes, marker_key)
+    attributes = attributes.to_h if attributes.respond_to?(:permitted?) && attributes.permitted?
+    return attributes unless attributes.is_a?(Hash) && attributes.key?(marker_key.to_sym)
+
+    attributes.stringify_keys
+  end
+
+  def waha_marker_invalid?(current_attributes, persisted_attributes, marker_key) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    return true unless current_attributes.nil? || current_attributes.is_a?(Hash)
+
+    current_missing = current_attributes.nil?
+    current_attributes ||= {}
+    current_marker_present = current_attributes.key?(marker_key)
+    return true if new_record? && current_marker_present
+    return false unless persisted?
+
+    persisted_marker_present = persisted_attributes.is_a?(Hash) && persisted_attributes.key?(marker_key)
+    return current_marker_present unless persisted_marker_present
+    return true if current_missing
+
+    current_marker_present && current_attributes[marker_key] != persisted_attributes[marker_key]
+  end # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
   def execute_after_update_commit_callbacks
     handle_resolved_status_change

@@ -128,7 +128,7 @@ module Waha
         accountToken: @api_access_token,
         inboxId: inbox.id,
         inboxIdentifier: inbox.channel.identifier,
-        locale: 'pt-BR',
+        locale: 'pt-BR', chat2youHistoryOnboarding: true,
         linkPreview: 'OFF',
         groups: 'OFF',
         templates: {},

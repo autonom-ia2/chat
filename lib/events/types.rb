@@ -73,6 +73,8 @@ module Events::Types
   CRM_CARD_REOPENED = 'crm.card.reopened'
   CRM_CARD_ARCHIVED = 'crm.card.archived'
   CRM_FOLLOW_UP_DUE = 'crm.follow_up.due'
+  # leitura do gasto de hoje dos anúncios da Meta terminou (#1073) — a tela troca os números
+  CRM_META_ADS_INSIGHTS_UPDATED = 'crm.meta_ads.insights_updated'
 
   # geração de e-mail por IA (assíncrona) concluída/falhou — toast + selo na lista
   EMAIL_CAMPAIGN_AI_READY = 'email_campaign.ai.ready'

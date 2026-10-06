@@ -10,6 +10,8 @@ RSpec.describe Waha::HistoryImportJob do
     {
       'started_at' => started_at,
       'before' => before_cutoff,
+      'working_at_ms' => (before_cutoff + 1) * 1000,
+      'cutoff_version' => 2,
       'status' => 'waiting_connection',
       'chats_offset' => 0,
       'messages_offset' => 0,
@@ -67,16 +69,100 @@ RSpec.describe Waha::HistoryImportJob do
     described_class.perform_now(inbox.id)
   end
 
-  it 'freezes the upper cutoff at the first WORKING observation and retains it in later passes' do
+  it 'deriva o cutoff do primeiro timestamp WORKING do provedor e o mantém nas passagens seguintes' do
     channel.update!(additional_attributes: channel.additional_attributes.merge('waha_history_import' => marker.merge('before' => 0)))
     allow(client).to receive(:list_chats).and_return([])
     connected_at = Time.current.change(usec: 0)
-
-    travel_to(connected_at) { described_class.perform_now(inbox.id) }
-    expect(channel.reload.additional_attributes.dig('waha_history_import', 'before')).to eq(connected_at.to_i)
+    working_at_ms = (connected_at.to_i * 1000) + 900
+    channel.update!(additional_attributes: channel.additional_attributes.merge(
+      'waha_history_import' => marker.merge('before' => 0, 'working_at_ms' => working_at_ms)
+    ))
 
     travel_to(connected_at + 1.hour) { described_class.perform_now(inbox.id) }
-    expect(channel.reload.additional_attributes.dig('waha_history_import', 'before')).to eq(connected_at.to_i)
+    expect(channel.reload.additional_attributes.dig('waha_history_import', 'before')).to eq(connected_at.to_i - 1)
+
+    travel_to(connected_at + 2.hours) { described_class.perform_now(inbox.id) }
+    expect(channel.reload.additional_attributes.dig('waha_history_import', 'before')).to eq(connected_at.to_i - 1)
+  end
+
+  it 'permanece aguardando sem criar cutoff a partir do horário do polling' do
+    channel.update!(additional_attributes: channel.additional_attributes.merge(
+      'waha_history_import' => marker.except('before', 'working_at_ms', 'cutoff_version').merge('before' => 0)
+    ))
+    expect do
+      described_class.perform_now(inbox.id)
+    end.to have_enqueued_job(described_class).with(inbox.id)
+                                             .at(a_value_within(2.seconds).of(described_class::CONNECTION_RETRY_WAIT.from_now))
+
+    expect(channel.reload.additional_attributes.dig('waha_history_import', 'before')).to eq(0)
+    expect(channel.reload.additional_attributes.dig('waha_history_import', 'waiting_reason')).to eq(
+      'working_timestamp_missing'
+    )
+  end
+
+  it 'preserva timestamp registrado enquanto a execução ainda possui estado antigo' do
+    stale_marker = marker.except('working_at_ms', 'cutoff_version').merge('before' => 0)
+    channel.update!(additional_attributes: channel.additional_attributes.merge('waha_history_import' => stale_marker))
+    callback_written = false
+    working_at_ms = (Time.current.to_i * 1000) + 400
+    allow(client).to receive(:get_session).with('5511999999999') do
+      unless callback_written
+        callback_written = true
+        current_attributes = channel.reload.additional_attributes
+        current_marker = current_attributes.fetch('waha_history_import').merge(
+          'working_at_ms' => working_at_ms,
+          'cutoff_version' => described_class::CUTOFF_VERSION
+        )
+        channel.update!(additional_attributes: current_attributes.merge('waha_history_import' => current_marker))
+      end
+      { 'status' => 'WORKING' }
+    end
+
+    expect do
+      described_class.perform_now(inbox.id)
+    end.to have_enqueued_job(described_class).with(inbox.id)
+                                             .at(a_value_within(2.seconds).of(described_class::CONNECTION_RETRY_WAIT.from_now))
+
+    registered = channel.reload.additional_attributes.fetch('waha_history_import')
+    expect(registered).to include(
+      'before' => 0,
+      'working_at_ms' => working_at_ms,
+      'cutoff_version' => described_class::CUTOFF_VERSION
+    )
+
+    allow(client).to receive(:list_chats).with('5511999999999', limit: 10, offset: 0).and_return([])
+    described_class.perform_now(inbox.id)
+
+    state = channel.reload.additional_attributes.fetch('waha_history_import')
+    expect(state['before']).to eq((state['working_at_ms'] / 1000) - 1)
+  end
+
+  it 'rejeita divergência de timestamp sem sobrescrever o marcador atual' do
+    current = channel.reload.additional_attributes.fetch('waha_history_import')
+    stale = current.merge('working_at_ms' => current['working_at_ms'] + 1)
+
+    expect do
+      described_class.new(inbox.id).send(:persist_state, channel, stale)
+    end.to raise_error(described_class::MarkerConflictError, 'history_marker_immutable_conflict')
+
+    expect(channel.reload.additional_attributes.fetch('waha_history_import')).to include(
+      'working_at_ms' => current['working_at_ms'],
+      'cutoff_version' => current['cutoff_version']
+    )
+  end
+
+  it 'reagenda a página concorrente em cinco segundos sem iniciar importação' do
+    global_lock = described_class.new(inbox.id).send(:installation_lock_key)
+    allow(Redis::LockManager).to receive(:new).and_return(lock_manager)
+    allow(lock_manager).to receive(:lock).with(global_lock, described_class::LOCK_TIMEOUT).and_return(false)
+    allow(lock_manager).to receive(:unlock).and_return(true)
+
+    expect(Waha::Client).not_to receive(:new)
+    expect do
+      described_class.perform_now(inbox.id)
+    end.to have_enqueued_job(described_class).with(inbox.id)
+                                             .at(a_value_within(1.second).of(described_class::GLOBAL_RETRY_WAIT.from_now))
+    expect(lock_manager).not_to have_received(:unlock)
   end
 
   it 'stops before importing when the connector loses the stable source ID capability' do
@@ -172,7 +258,7 @@ RSpec.describe Waha::HistoryImportJob do
       described_class.perform_now(inbox.id)
     end.to have_enqueued_job(described_class)
       .with(inbox.id)
-      .at(a_value_within(2.seconds).of(2.seconds.from_now))
+      .at(a_value_within(1.second).of(described_class::NEXT_PAGE_WAIT.from_now))
 
     state = inbox.reload.channel.additional_attributes['waha_history_import']
     expect(state).to include(
@@ -333,8 +419,11 @@ RSpec.describe Waha::HistoryImportJob do
 
   it 'encerra página que excede o limite antes de avançar o cursor e libera o lock' do
     lock_key = "waha:history:#{inbox.id}"
+    global_lock = described_class.new(inbox.id).send(:installation_lock_key)
     allow(Redis::LockManager).to receive(:new).and_return(lock_manager)
+    allow(lock_manager).to receive(:lock).with(global_lock, 10.minutes).and_return(true)
     allow(lock_manager).to receive(:lock).with(lock_key, 10.minutes).and_return(true)
+    allow(lock_manager).to receive(:unlock).with(global_lock).and_return(true)
     allow(lock_manager).to receive(:unlock).with(lock_key).and_return(true)
     allow(Timeout).to receive(:timeout).with(
       described_class::PAGE_TIMEOUT, described_class::PageTimeoutError
@@ -354,10 +443,14 @@ RSpec.describe Waha::HistoryImportJob do
     )
     expect(lock_manager).to have_received(:lock).with(lock_key, 10.minutes)
     expect(lock_manager).to have_received(:unlock).with(lock_key)
+    expect(lock_manager).to have_received(:unlock).with(global_lock)
   end
 
   it 'propaga conflito de lock e usa TTL de dez minutos por inbox' do
     allow(Redis::LockManager).to receive(:new).and_return(lock_manager)
+    global_lock = described_class.new(inbox.id).send(:installation_lock_key)
+    allow(lock_manager).to receive(:lock).with(global_lock, 10.minutes).and_return(true)
+    allow(lock_manager).to receive(:unlock).with(global_lock).and_return(true)
     allow(lock_manager).to receive(:lock).with("waha:history:#{inbox.id}", 10.minutes).and_return(false)
 
     expect do

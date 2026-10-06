@@ -2142,7 +2142,10 @@
         "SAVED": "Account connected. We read the name, the spend and the Pixel.",
         "PIXEL_SUMMARY": "Website sales: {pixel}",
         "PIXEL_SUMMARY_NONE": "Website sales: no website code",
-        "PIXEL_CHANGE": "Change"
+        "PIXEL_CHANGE": "Change",
+        "VIA_PARTNER": "Reading through {partner}",
+        "VIA_TOKEN": "Reading with your access key",
+        "SWITCH": "Change"
       },
       "DESTINATIONS": {
         "TITLE": "Where do your ads take the customer?",
@@ -2164,25 +2167,54 @@
         "SAVED": "Destinations saved.",
         "PICK_ONE": "Pick at least one destination.",
         "WHERE": "Where to paste it on Meta?",
-        "WHERE_TEXT": "In Ads Manager, open the ad › Tracking › URL parameters › paste the text › Publish."
+        "WHERE_TEXT": "In Ads Manager, open the ad › Tracking › URL parameters › paste the text › Publish.",
+        "WHATSAPP_WHEN": "The ad button opens the chat. It already works, nothing to set up.",
+        "SITE_WHEN": "The ad opens a page on your site, and the page button opens WhatsApp.",
+        "ART": {
+          "SPONSORED": "Sponsored",
+          "SEND_MESSAGE": "Send message",
+          "LEARN_MORE": "Learn more",
+          "SITE_BUTTON": "WhatsApp",
+          "CHAT_IN": "Hi! I saw the ad.",
+          "CHAT_OUT": "Hi! How can I help?"
+        }
       },
       "SUMMARY": {
-        "CONNECTED_TO": "Connected to {account}",
         "PIXEL": "Website code: {pixel}",
         "NO_PIXEL": "No website code",
         "MODE_PARTNER": "Shared with {partner}",
         "MODE_TOKEN": "By access key",
         "VERIFIED": "Checked {time}",
-        "NEXT": "Ad names already show on the cards. The dashboard with the cost of each sale comes in the next stage.",
         "REMOVE": "Disconnect",
         "REMOVE_TITLE": "Disconnect Meta?",
         "REMOVE_HINT": "Names already in the CRM stay. Sales stop going to Meta through the connection.",
         "REMOVED": "Meta disconnected.",
         "ATTENTION": "Needs attention",
         "ATTENTION_HINT": "Meta stopped letting us see your ads. Connect again.",
-        "SALES_ON": "Sales to Meta: on",
-        "SALES_OFF": "Sales to Meta: off",
-        "RECONNECT": "Connect again"
+        "RECONNECT": "Connect again",
+        "EYEBROW": "Connected",
+        "HEADLINE": "Meta is connected to {account}.",
+        "OPEN_CRM": "See in the CRM",
+        "TILE_ON": "On",
+        "TILE_OFF": "Off",
+        "SITE_WAITING": "Waiting for the first click",
+        "FUNNELS_VALUE": "{ready} of {total} ready",
+        "TILE_WHATSAPP": "Ads to WhatsApp",
+        "TILE_SITE": "Last click on the site",
+        "TILE_CAMPAIGNS": "Campaigns arriving with a name",
+        "TILE_FUNNELS": "Pipelines telling Meta",
+        "NEXT_TITLE": "What happens now",
+        "NEXT_NAMES": "Each conversation from an ad shows the campaign name and See ad in the CRM card.",
+        "NEXT_SALES": "When a card moves forward or is won, Meta is told and learns who buys.",
+        "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
+        "SPEND_TODAY": "Spent today",
+        "SPEND_ON": "Spent on {date}",
+        "SPEND_CONVERSATIONS": "{count} conversations started",
+        "SPEND_UPDATED": "updated {time}",
+        "SPEND_REFRESHING": "updating…",
+        "SPEND_EMPTY": "Ad spend shows up here after the first read from Meta.",
+        "ACCESS_LOST_HINT": "Meta no longer lets us read this ad account. Share it again or connect another account.",
+        "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Sharing is not available yet. For now, use an access key.",
@@ -2208,7 +2240,14 @@
         "TEST_TIMEOUT": "The click has not arrived yet. Check that the code is on the page and try again.",
         "CAMPAIGNS_TITLE": "Campaigns arriving with their name",
         "CAMPAIGNS_MORE": "+ {count} more",
-        "UNNAMED": "1 click arrived without a campaign name. Paste the text in that ad. | {count} clicks arrived without a campaign name. Paste the text in those ads."
+        "UNNAMED": "1 click arrived without a campaign name. Paste the text in that ad. | {count} clicks arrived without a campaign name. Paste the text in those ads.",
+        "UNNAMED_WHEN": "1 click came without a campaign name, {time}. Paste the text in the ads that lead to this page. | {count} clicks came without a campaign name, the last {time}. Paste the text in the ads that lead to this page.",
+        "KIT_TITLE": "Instructions for your website person",
+        "KIT_HINT": "A page with the ready code and the steps. Takes about 10 minutes.",
+        "KIT_SEND": "Send on WhatsApp",
+        "KIT_COPY": "Copy link",
+        "KIT_COPIED": "Link copied.",
+        "KIT_MESSAGE": "Hi! Here is how to connect the WhatsApp button on the {page} page: {url}"
       },
       "FUNNEL": {
         "TITLE": "Tell Meta about your pipeline",
@@ -2242,7 +2281,8 @@
         "STOP": "Stop reporting",
         "STOPPED": "{name} no longer reports to Meta.",
         "FINISH": "Finish",
-        "LATER": "Not now"
+        "LATER": "Not now",
+        "BEFORE": "Before: {value}"
       }
     }
   },

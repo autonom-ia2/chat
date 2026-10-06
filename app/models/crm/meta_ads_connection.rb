@@ -5,6 +5,8 @@
 #  id                     :bigint           not null, primary key
 #  access_token           :text
 #  destinations           :jsonb            not null
+#  insights_backfilled_at :datetime
+#  insights_synced_at     :datetime
 #  last_checked_at        :datetime
 #  last_error             :string(255)
 #  mode                   :string           default("token"), not null
@@ -14,6 +16,7 @@
 #  ad_account_business_id :string
 #  ad_account_id          :string
 #  ad_account_name        :string(255)
+#  ad_account_timezone    :string
 #  pixel_id               :string
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
@@ -48,6 +51,9 @@ class Crm::MetaAdsConnection < ApplicationRecord
   NAME_LIMIT = 255
   # No modo `partner` o erro é do token da plataforma: o cliente vê só um código, nunca a mensagem da Meta.
   PLATFORM_TOKEN_REJECTED = 'platform_token_rejected'.freeze
+  # A Meta recusou ler a conta de anúncios escolhida: o cliente retirou o compartilhamento ou a chave perdeu o
+  # acesso a ela (#1073, CA-2.6). A conta para de ser lida até ser conectada de novo.
+  AD_ACCOUNT_ACCESS_LOST = 'ad_account_access_lost'.freeze
 
   encrypts :access_token
 
@@ -107,6 +113,17 @@ class Crm::MetaAdsConnection < ApplicationRecord
       Crm::MetaAds::Portfolios.for(account).include?(ad_account_business_id.to_s)
   end
 
+  # Data de hoje no fuso da conta de anúncios, o mesmo em que a Meta conta os dias (#1073). nil sem fuso conhecido.
+  def ad_account_today
+    zone = ad_account_timezone.present? && ActiveSupport::TimeZone[ad_account_timezone]
+    zone ? Time.current.in_time_zone(zone).to_date : nil
+  end
+
+  # Pode ler os insights da conta de anúncios escolhida agora (#1073)?
+  def insights_readable?
+    active? && ad_account_id.present? && readable?
+  end
+
   def destinations_payload
     DESTINATIONS.index_with { |key| destinations.to_h[key] == true }
   end
@@ -122,6 +139,12 @@ class Crm::MetaAdsConnection < ApplicationRecord
     return update!(last_error: PLATFORM_TOKEN_REJECTED) if partner_mode?
 
     update!(status: 'invalid', last_error: self.class.safe_error(message))
+  end
+
+  # Diferente de mark_invalid!, vale nos dois modos: o problema é desta conta de anúncios, não do token da
+  # plataforma.
+  def mark_access_lost!
+    update!(status: 'invalid', last_error: AD_ACCOUNT_ACCESS_LOST)
   end
 
   def self.safe_error(message)

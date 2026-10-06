@@ -90,6 +90,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'crm.card.archived': data =>
         this.onCrmCardChanged('crm.card.archived', data),
       'crm.follow_up.due': this.onCrmFollowUpDue,
+      'crm.meta_ads.insights_updated': this.onCrmMetaAdsInsightsUpdated,
       'crm.ai_usage.created': this.onCrmAiUsageCreated,
       'email_campaign.ai.ready': this.onEmailCampaignAiReady,
       'email_campaign.ai.failed': this.onEmailCampaignAiFailed,
@@ -390,6 +391,12 @@ class ActionCableConnector extends BaseActionCableConnector {
     if (!this.isAValidEvent(data)) return;
 
     emitter.emit(BUS_EVENTS.CRM_FOLLOW_UP_DUE, data);
+  };
+
+  onCrmMetaAdsInsightsUpdated = data => {
+    if (!this.isAValidEvent(data)) return;
+
+    emitter.emit(BUS_EVENTS.CRM_META_ADS_INSIGHTS_UPDATED, data);
   };
 
   onCrmAiUsageCreated = data => {

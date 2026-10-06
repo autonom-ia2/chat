@@ -147,7 +147,8 @@ RSpec.describe Waha::InboxProvisioner do
                 syncMessageStatus: true,
                 sort: 'created_newest',
                 status: nil
-              )
+              ),
+              chat2youHistoryOnboarding: true
             )
           )
         )

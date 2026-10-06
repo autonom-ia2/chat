@@ -35,29 +35,20 @@
 -->
 <mjml>
   <mj-head>
-    <mj-attributes>
-      <mj-all font-family="Inter, Arial, Helvetica, sans-serif" />
-    </mj-attributes>
+    
   </mj-head>
   <mj-body background-color="#ffffff" width="600px">
     <!-- 1) Header: Logo -->
     <mj-section background-color="#F7F1EB" padding="32px 0 0 0">
       <mj-column width="100%" background-color="transparent" padding="0 0 0 0">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760998150/uploaded-by-ai/image-1760998150246-xve9try_user_uploaded.png" alt="Acme Co. logo" align="center" width="80px" padding="0px" />
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760998150/uploaded-by-ai/image-1760998150246-xve9try_user_uploaded.png" alt="Acme Co. logo" align="center" width="80px" padding="0px"></mj-image>
       </mj-column>
     </mj-section>
 
     <!-- 2) Hero Section: Big Image, Headline, Subcopy, CTA -->
     <mj-section background-color="#FFF6ED" padding="0 0 0 0">
       <mj-column width="100%" background-color="transparent" padding="24px 15px 24px 15px">
-        <mj-image 
-          src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760997432/uploaded-by-ai/a-vibrant-and-festive-image-featuring-colorful-_ai_generated.jpg" 
-          alt="Confetti and celebration banner" 
-          width="500px"
-          height="281px"
-          padding="0 0 14px 0"
-          border-radius="12px"
-        />
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760997432/uploaded-by-ai/a-vibrant-and-festive-image-featuring-colorful-_ai_generated.jpg" alt="Confetti and celebration banner" width="500px" height="281px" padding="0 0 14px 0" border-radius="12px"></mj-image>
         <mj-text align="center" color="#222222" font-size="32px" font-weight="bold" font-family="Inter, Arial, Helvetica, sans-serif" padding="24px 12px 8px 12px">
           7 Years Together
         </mj-text>
@@ -73,14 +64,14 @@
     <!-- Divider -->
     <mj-section background-color="transparent" padding="0">
       <mj-column width="100%" background-color="transparent" padding="0">
-        <mj-divider border-width="1px" border-color="#F7F1EB" padding="0 0 0 0" />
+        <mj-divider border-width="1px" border-color="#F7F1EB" padding="0 0 0 0"></mj-divider>
       </mj-column>
     </mj-section>
 
     <!-- 3) CEO Card -->
     <mj-section background-color="#ffffff" padding="24px 15px 28px 15px">
       <mj-column width="100%" padding="0" background-color="transparent">
-        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760997467/uploaded-by-ai/a-portrait-of-a-confident-ceo-showcasing-a-prof_ai_generated.jpg" alt="Emma Wilson CEO portrait" width="88px" align="center" border-radius="44px" />
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760997467/uploaded-by-ai/a-portrait-of-a-confident-ceo-showcasing-a-prof_ai_generated.jpg" alt="Emma Wilson CEO portrait" width="88px" align="center" border-radius="44px"></mj-image>
         <mj-text align="center" color="#222222" font-size="20px" font-weight="bold" font-family="Inter, Arial, Helvetica, sans-serif" padding="16px 8px 10px 8px">
           A word from our CEO
         </mj-text>
@@ -96,7 +87,7 @@
     <!-- Divider -->
     <mj-section background-color="transparent" padding="0">
       <mj-column width="100%" background-color="transparent" padding="0">
-        <mj-divider border-width="1px" border-color="#F7F1EB" padding="0 0 0 0"/>
+        <mj-divider border-width="1px" border-color="#F7F1EB" padding="0 0 0 0"></mj-divider>
       </mj-column>
     </mj-section>
 
@@ -136,7 +127,7 @@
         <mj-text align="center" color="#222222" font-size="17px" font-family="Inter, Arial, Helvetica, sans-serif" padding="0 0 14px 0">
           Your voice has shaped us at every turn. Thank you for walking alongside us over the past seven years—your support and feedback mean the world. If you have thoughts to share or ideas for what’s next, we’re always listening!
         </mj-text>
-        <mj-text align="center" color="#5E5E5E" font-size="15px" padding="0">
+        <mj-text align="center" color="#5E5E5E" font-size="15px" padding="0" font-family="Inter, Arial, Helvetica, sans-serif">
           <a href="https://example.com/celebrate" style="color:#F39C45;text-decoration:underline;font-weight:bold;">Send feedback</a>
         </mj-text>
       </mj-column>
@@ -162,19 +153,19 @@
       <mj-group>
         <!-- Logo Column -->
         <mj-column width="28%" vertical-align="middle" background-color="transparent" padding="0 0 0 0">
-          <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760998150/uploaded-by-ai/image-1760998150246-xve9try_user_uploaded.png" alt="Acme Co. logo" align="left" width="60px" padding="0px" />
+          <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1760998150/uploaded-by-ai/image-1760998150246-xve9try_user_uploaded.png" alt="Acme Co. logo" align="left" width="60px" padding="0px"></mj-image>
         </mj-column>
         <!-- Info & Socials Column -->
         <mj-column width="72%" vertical-align="middle" background-color="transparent" padding="0 0 0 0">
           <mj-text align="right" color="#F7F1EB" font-size="15px" font-family="Inter, Arial, Helvetica, sans-serif" padding="0 0 6px 0">
             123 Main Street, San Francisco, CA 94110
           </mj-text>
-          <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="right" padding="0px 0 4px 0">
-            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="#" alt="YouTube"></mj-social-element>
-            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="#" alt="Twitter"></mj-social-element>
-            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="#" alt="LinkedIn"></mj-social-element>
-            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="#" alt="Instagram"></mj-social-element>
-            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="#" alt="Facebook"></mj-social-element>
+          <mj-social font-size="15px" icon-size="30px" mode="horizontal" align="right" padding="0px 0 4px 0" font-family="Inter, Arial, Helvetica, sans-serif">
+            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061171/youtube-round-outlined.png" href="#" alt="YouTube" font-family="Inter, Arial, Helvetica, sans-serif"></mj-social-element>
+            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1739470105/twitter-round-outlined.png" href="#" alt="Twitter" font-family="Inter, Arial, Helvetica, sans-serif"></mj-social-element>
+            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728425053/linkedin-round-outlined.png" href="#" alt="LinkedIn" font-family="Inter, Arial, Helvetica, sans-serif"></mj-social-element>
+            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1740061962/instagram-round-outlined.png" href="#" alt="Instagram" font-family="Inter, Arial, Helvetica, sans-serif"></mj-social-element>
+            <mj-social-element src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1728426637/facebook-round-outlined.png" href="#" alt="Facebook" font-family="Inter, Arial, Helvetica, sans-serif"></mj-social-element>
           </mj-social>
           <mj-text align="right" color="#F7F1EB" font-size="13px" font-family="Inter, Arial, Helvetica, sans-serif" padding="0">
             <a href="{{ unsubscribe_url }}" style="color:#F39C45;text-decoration:underline;">Unsubscribe</a> &nbsp; | &nbsp;

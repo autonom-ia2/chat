@@ -162,8 +162,12 @@ RSpec.describe Waha::HistoryImporter, :relationships_committed_fixtures do
     end
     let!(:contact_inbox) { create(:contact_inbox, inbox: inbox, contact: contact, source_id: chat_id) }
     let!(:conversation) do
+      previous = Current.waha_history_import
+      Current.waha_history_import = true
       create(:conversation, account: account, inbox: inbox, contact: contact, contact_inbox: contact_inbox,
                             status: :resolved, additional_attributes: { 'waha_history_only' => true })
+    ensure
+      Current.waha_history_import = previous
     end
 
     before do

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
 import { clockTime, relativeTime } from '../metaAdsHelpers';
@@ -33,6 +34,31 @@ const unnamedClicks = computed(() =>
     .filter(row => !row.name)
     .reduce((total, row) => total + row.clicks, 0)
 );
+// Quando chegou o último clique sem nome: é o que deixa a pessoa achar o anúncio sem o texto (#1068).
+const lastUnnamed = computed(() => {
+  const times = (current.value.campaigns || [])
+    .filter(row => !row.name && row.last_clicked_at)
+    .map(row => row.last_clicked_at)
+    .sort();
+  return relativeTime(times[times.length - 1], locale.value);
+});
+const kitMessage = computed(() =>
+  t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_MESSAGE', {
+    page: current.value.name,
+    url: current.value.kit_url,
+  })
+);
+const kitWhatsApp = computed(
+  () => `https://wa.me/?text=${encodeURIComponent(kitMessage.value)}`
+);
+const copyKit = async () => {
+  try {
+    await navigator.clipboard.writeText(current.value.kit_url);
+    useAlert(t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_COPIED'));
+  } catch {
+    // O link segue no botão do WhatsApp.
+  }
+};
 const lastClick = computed(() => {
   const time = relativeTime(current.value.last_signal_at, locale.value);
   return time
@@ -179,14 +205,57 @@ onBeforeUnmount(stop);
             aria-hidden="true"
           />
           {{
-            $t(
-              'CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED',
-              { count: unnamedClicks },
-              unnamedClicks
-            )
+            lastUnnamed
+              ? $t(
+                  'CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED_WHEN',
+                  { count: unnamedClicks, time: lastUnnamed },
+                  unnamedClicks
+                )
+              : $t(
+                  'CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED',
+                  { count: unnamedClicks },
+                  unnamedClicks
+                )
           }}
         </li>
       </ul>
+    </div>
+
+    <div
+      v-if="current.kit_url"
+      data-site-kit
+      class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-n-weak"
+    >
+      <span class="flex flex-col min-w-0 gap-0.5">
+        <span class="text-sm font-semibold text-n-slate-12">
+          {{ $t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_TITLE') }}
+        </span>
+        <span class="text-xs text-n-slate-11">
+          {{ $t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_HINT') }}
+        </span>
+      </span>
+      <span class="flex flex-wrap gap-2">
+        <a
+          data-site-kit-whatsapp
+          :href="kitWhatsApp"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 px-3 text-sm font-semibold no-underline rounded-xl min-h-11 bg-n-teal-9 text-white hover:bg-n-teal-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        >
+          <span class="i-lucide-send size-4" aria-hidden="true" />
+          {{ $t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_SEND') }}
+        </a>
+        <Button
+          data-site-kit-copy
+          class="!min-h-11 !rounded-xl"
+          variant="faded"
+          color="slate"
+          size="sm"
+          icon="i-lucide-link"
+          :label="$t('CRM_KANBAN.META_ADS_HUB.SITE.KIT_COPY')"
+          @click="copyKit"
+        />
+      </span>
     </div>
   </li>
 </template>

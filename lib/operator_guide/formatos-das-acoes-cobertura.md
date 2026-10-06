@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 526 |
-| Sem corpo | 143 |
+| No catálogo | 527 |
+| Sem corpo | 144 |
 | Com corpo | 383 |
-| Com corpo e formato completo | 310 (80,9%) |
-| Com corpo e formato incompleto | 73 |
+| Com corpo e formato completo | 308 (80,4%) |
+| Com corpo e formato incompleto | 75 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 151 |
-| Leituras cruas tipadas | 107 de 179 |
+| Leituras cruas tipadas | 108 de 181 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 58 |
+| leitura crua sem tipo | 60 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -39,6 +39,7 @@ Uma ação pode ter mais de um motivo.
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
+- `PATCH inboxes/:id` — leitura crua sem tipo: waha_history_connection
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
 - `PATCH relationships/configuration` — leitura crua sem tipo: configuration
@@ -104,6 +105,7 @@ Uma ação pode ter mais de um motivo.
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:58)
 - `PUT crm/stages/:id` — leitura crua sem tipo: funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
+- `PUT inboxes/:id` — leitura crua sem tipo: waha_history_connection
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
 
@@ -169,6 +171,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/email_campaigns/videos#resolve` poster_url — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/videos#resolve` url — repassada a EmailCampaigns::VideoAsset.from_url
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
+- `api/v1/accounts/inboxes#update` waha_history_connection — o código não converte nem compara o valor
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor

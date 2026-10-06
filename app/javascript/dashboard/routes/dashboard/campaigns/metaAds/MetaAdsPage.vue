@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -24,8 +25,21 @@ const loadFailed = ref(false);
 const started = ref(false);
 // Passo aberto pela pessoa ("Alterar", "Ligar", "Conectar de novo") ou o passo da vez.
 const openStep = ref(null);
-// Modo escolhido no passo 1 antes de a conexão existir (compartilhar ainda não grava nada).
-const chosenMode = ref(null);
+// Modo escolhido no passo 1 antes de a conexão existir (compartilhar ainda não grava nada). Fica no
+// endereço (?modo=) para recarregar ou voltar não trocar o caminho em silêncio pela chave antiga (#1068).
+const MODES = ['partner', 'token'];
+const route = useRoute();
+const router = useRouter();
+const chosenMode = ref(
+  MODES.includes(route.query.modo) ? route.query.modo : null
+);
+const rememberMode = value => {
+  chosenMode.value = value;
+  const query = { ...route.query };
+  if (value) query.modo = value;
+  else delete query.modo;
+  router.replace({ query });
+};
 // "Agora não" no passo 4: segue para o resumo, com o passo marcado "Desligado".
 const salesLater = ref(false);
 
@@ -41,7 +55,13 @@ const activeStep = computed(() => {
   if (step.value === 2 && !connection.value?.configured && !chosenMode.value) {
     return 1;
   }
-  return step.value;
+  // Caminho escolhido diferente do gravado (ex.: trocar a chave antiga pelo compartilhamento): a
+  // conta é escolhida de novo por esse caminho, mesmo depois de recarregar.
+  const switching =
+    chosenMode.value &&
+    connection.value?.configured &&
+    chosenMode.value !== connection.value.mode;
+  return switching ? 2 : step.value;
 });
 const mode = computed(
   () => chosenMode.value || connection.value?.mode || 'partner'
@@ -76,19 +96,19 @@ const update = data => {
 };
 
 const startPartner = () => {
-  chosenMode.value = 'partner';
+  rememberMode('partner');
   openStep.value = 2;
 };
 
 // A chave colada já foi testada e salva pelo diálogo; a conexão é relida antes de listar as contas.
 const startToken = async () => {
-  chosenMode.value = 'token';
+  rememberMode('token');
   await load();
   if (!loadFailed.value) openStep.value = 2;
 };
 
 const accountSaved = data => {
-  chosenMode.value = null;
+  rememberMode(null);
   update(data);
 };
 
@@ -110,7 +130,7 @@ const reconnect = () => {
 };
 
 const removed = async () => {
-  chosenMode.value = null;
+  rememberMode(null);
   started.value = false;
   salesLater.value = false;
   openStep.value = null;
@@ -179,6 +199,7 @@ onMounted(load);
             :connection="connection"
             @removed="removed"
             @reconnect="reconnect"
+            @open="openStep = $event"
           />
 
           <section

@@ -39,14 +39,7 @@
         <mj-text align="center" font-size="24px" color="#ffffff" font-weight="bold" padding="20px 0">
           Verify Your SecureFunds Account
         </mj-text>
-        <mj-image 
-          src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748807535/uploaded-by-ai/an-illustration-of-a-security-verification-symbol-featuring-.jpg" 
-          alt="Security Verification Icon" 
-          width="220px" 
-          padding="10px 0 10px 0" 
-          align="center" 
-          border-radius="18px"
-        />
+        <mj-image src="https://res.cloudinary.com/dk79hhqvp/image/upload/v1748807535/uploaded-by-ai/an-illustration-of-a-security-verification-symbol-featuring-.jpg" alt="Security Verification Icon" width="220px" padding="10px 0 10px 0" align="center" border-radius="18px"></mj-image>
         <mj-text align="center" font-size="17px" color="#cde5ff" padding="5px 0 15px 0">
           Hello Clara,<br />
           To ensure the highest level of security for your financial account and protect your sensitive data, please complete the verification of your email address. This essential step will activate your access to all our services.

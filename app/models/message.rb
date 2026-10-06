@@ -45,6 +45,7 @@ class Message < ApplicationRecord
   include MessageFilterHelpers
   include Liquidable
   NUMBER_OF_PERMITTED_ATTACHMENTS = 15
+  WAHA_HISTORY_IMPORT_KEY = 'waha_history_import'.freeze
 
   TEMPLATE_PARAMS_SCHEMA = {
     'type': 'object',
@@ -64,6 +65,7 @@ class Message < ApplicationRecord
     }
   }.to_json.freeze
 
+  before_validation :validate_waha_history_import_marker, prepend: true
   before_validation :ensure_content_type
   before_validation :prevent_message_flooding
   before_save :ensure_processed_message_content
@@ -297,6 +299,49 @@ class Message < ApplicationRecord
   end
 
   private
+
+  def validate_waha_history_import_marker
+    return if Current.waha_history_import == true
+
+    current_attributes = waha_history_marker_attributes(content_attributes, WAHA_HISTORY_IMPORT_KEY)
+    persisted_attributes = waha_history_marker_attributes(attribute_in_database(:content_attributes), WAHA_HISTORY_IMPORT_KEY)
+    invalid = waha_marker_invalid?(current_attributes, persisted_attributes, WAHA_HISTORY_IMPORT_KEY)
+
+    return errors.add(:content_attributes, :invalid) if invalid
+    return unless persisted?
+    return unless persisted_attributes.is_a?(Hash)
+    return unless persisted_attributes.key?(WAHA_HISTORY_IMPORT_KEY)
+
+    self.content_attributes = current_attributes
+    return if current_attributes.key?(WAHA_HISTORY_IMPORT_KEY)
+
+    self.content_attributes = current_attributes.merge(
+      WAHA_HISTORY_IMPORT_KEY => persisted_attributes[WAHA_HISTORY_IMPORT_KEY]
+    )
+  end
+
+  def waha_history_marker_attributes(attributes, marker_key)
+    attributes = attributes.to_h if attributes.respond_to?(:permitted?) && attributes.permitted?
+    return attributes unless attributes.is_a?(Hash) && attributes.key?(marker_key.to_sym)
+
+    attributes.stringify_keys
+  end
+
+  def waha_marker_invalid?(current_attributes, persisted_attributes, marker_key) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    return true unless current_attributes.nil? || current_attributes.is_a?(Hash)
+
+    current_missing = current_attributes.nil?
+    current_attributes ||= {}
+    current_marker_present = current_attributes.key?(marker_key)
+    return true if new_record? && current_marker_present
+    return false unless persisted?
+
+    persisted_marker_present = persisted_attributes.is_a?(Hash) && persisted_attributes.key?(marker_key)
+    return current_marker_present unless persisted_marker_present
+    return true if current_missing
+
+    current_marker_present && current_attributes[marker_key] != persisted_attributes[marker_key]
+  end # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
   def prevent_message_flooding
     return if Current.waha_history_import && content_attributes['history_import']

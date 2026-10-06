@@ -1787,4 +1787,68 @@ RSpec.describe 'Inboxes API', type: :request do
       expect(webhook_service).to have_received(:perform)
     end
   end
+
+  describe 'PATCH /api/v1/accounts/{account.id}/inboxes/:id for the WAHA connection timestamp' do
+    let(:working_at_ms) { (Time.current.to_i - 30) * 1000 }
+    let(:channel) do
+      create(
+        :channel_api,
+        account: account,
+        additional_attributes: {
+          'provider' => 'waha',
+          'session' => '5511999999999',
+          'account_token_owner_user_id' => admin.id,
+          'apps' => [{ 'id' => 'app_chatwoot' }],
+          'config' => { 'conversations' => { 'syncMessageStatus' => true } },
+          'waha_history_import' => {
+            'status' => 'waiting_connection', 'started_at' => Time.current.to_i - 60, 'before' => 0,
+            'chats_offset' => 0, 'messages_offset' => 0, 'chat_id' => nil, 'pass' => 0,
+            'imported' => 0, 'unavailable_media' => 0
+          }
+        }
+      )
+    end
+    let(:inbox) { channel.inbox }
+    let(:url) { "/api/v1/accounts/#{account.id}/inboxes/#{inbox.id}" }
+
+    it 'registra somente o marcador dedicado e preserva Apps e config' do
+      patch url,
+            headers: { 'api_access_token' => admin.access_token.token },
+            params: {
+              waha_history_connection: { session: '5511999999999', working_at_ms: working_at_ms }
+            },
+            as: :json
+
+      expect(response).to have_http_status(:no_content)
+      expect(channel.reload.additional_attributes).to include(
+        'apps' => [{ 'id' => 'app_chatwoot' }],
+        'config' => { 'conversations' => { 'syncMessageStatus' => true } }
+      )
+      expect(channel.additional_attributes.dig('waha_history_import', 'working_at_ms')).to eq(working_at_ms)
+    end
+
+    it 'recusa o token da interface para impedir falsificação do instante' do
+      patch url,
+            headers: admin.create_new_auth_token,
+            params: {
+              waha_history_connection: { session: '5511999999999', working_at_ms: working_at_ms }
+            },
+            as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(channel.reload.additional_attributes.dig('waha_history_import', 'working_at_ms')).to be_nil
+    end
+
+    it 'retorna 422 para o marcador sem um objeto JSON' do
+      [nil, 'not-an-object', []].each do |value|
+        patch url,
+              headers: { 'api_access_token' => admin.access_token.token },
+              params: { waha_history_connection: value },
+              as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(channel.reload.additional_attributes.dig('waha_history_import', 'working_at_ms')).to be_nil
+      end
+    end
+  end
 end

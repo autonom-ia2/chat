@@ -23,7 +23,10 @@ class Meta::AdsGraphClient
   ADS_READ = 'ads_read'.freeze
   GRANTED = 'granted'.freeze
 
-  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_message, keyword_init: true) do
+  # Cabeçalhos em que a Meta diz quanto do limite de uso já foi gasto (Crm::MetaAds::Insights::Usage).
+  USAGE_HEADERS = %w[x-business-use-case-usage x-fb-ads-insights-throttle x-app-usage].freeze
+
+  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_message, :usage_headers, keyword_init: true) do
     def token_invalid?
       error_code == TOKEN_INVALID_CODE
     end
@@ -79,19 +82,15 @@ class Meta::AdsGraphClient
   end
 
   # Conexão guiada (#1047). IDs de conta de anúncios entram sem o prefixo `act_`.
-  AD_ACCOUNT_FIELDS = 'id,account_id,name,account_status,currency,business{id,name}'.freeze
+  AD_ACCOUNT_FIELDS = 'id,account_id,name,account_status,currency,timezone_name,business{id,name}'.freeze
   PIXEL_FIELDS = 'id,name,last_fired_time'.freeze
   LIST_LIMIT = 100
   MAX_PAGES = 10
 
-  # Contas que o próprio token enxerga (modo `token`).
+  # Contas que o próprio token enxerga: as do cliente (modo `token`) ou as já atribuídas ao usuário do sistema
+  # da plataforma, cujo token é este (modo `partner`).
   def ad_accounts
     paged('me/adaccounts', fields: AD_ACCOUNT_FIELDS)
-  end
-
-  # Contas atribuídas ao usuário do sistema da plataforma (modo `partner`).
-  def assigned_ad_accounts(system_user_id)
-    get(system_user_id.to_s, fields: "assigned_ad_accounts.limit(#{LIST_LIMIT}){#{AD_ACCOUNT_FIELDS}}")
   end
 
   # Contas que clientes compartilharam com o portfólio da plataforma como parceira.
@@ -112,6 +111,30 @@ class Meta::AdsGraphClient
     get("act_#{ad_account_id}/insights", date_preset: 'last_30d', fields: 'spend')
   end
 
+  # Insights de anúncios (#1073). `query` traz level, fields, date_preset etc. Cada página vai para o bloco
+  # assim que chega; a primeira falha interrompe e é devolvida (com os cabeçalhos de uso, para quem chama
+  # decidir se espera). Sucesso devolve o resultado da última página.
+  INSIGHTS_PAGE_LIMIT = 500
+  INSIGHTS_MAX_PAGES = 100
+
+  def each_insights_page(ad_account_id, query, &)
+    each_page("act_#{ad_account_id}/insights", query.merge(limit: INSIGHTS_PAGE_LIMIT), &)
+  end
+
+  # Relatório assíncrono (primeira carga de 90 dias): POST devolve { report_run_id }; o status é lido em
+  # GET /<id> e as linhas em GET /<id>/insights, quando `async_status` for "Job Completed".
+  def start_insights_report(ad_account_id, query)
+    post("act_#{ad_account_id}/insights", query)
+  end
+
+  def insights_report_status(report_run_id)
+    get(report_run_id.to_s, fields: 'async_status,async_percent_completion')
+  end
+
+  def each_report_page(report_run_id, &)
+    each_page("#{report_run_id}/insights", { limit: INSIGHTS_PAGE_LIMIT }, &)
+  end
+
   def ad_account_pixels(ad_account_id)
     paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
   end
@@ -126,16 +149,25 @@ class Meta::AdsGraphClient
   # { "data" => [...] } como uma página só. Erro em qualquer página devolve esse erro.
   def paged(path, query)
     rows = []
+    result = each_page(path, query.merge(limit: LIST_LIMIT), max_pages: MAX_PAGES) { |page| rows.concat(page) }
+    return result unless result.ok
+
+    Result.new(ok: true, http_code: 200, data: { 'data' => rows })
+  end
+
+  # Segue o cursor `after` página a página, até max_pages.
+  def each_page(path, query, max_pages: INSIGHTS_MAX_PAGES)
     after = nil
-    MAX_PAGES.times do
-      result = get(path, query.merge(limit: LIST_LIMIT, after: after).compact)
+    result = nil
+    max_pages.times do
+      result = get(path, query.merge(after: after).compact)
       return result unless result.ok
 
-      rows.concat(Array(result.data.to_h['data']))
+      yield Array(result.data.to_h['data'])
       after = result.data.to_h.dig('paging', 'cursors', 'after')
       break if after.blank? || result.data.to_h.dig('paging', 'next').blank?
     end
-    Result.new(ok: true, http_code: 200, data: { 'data' => rows })
+    result
   end
 
   def post(path, body)
@@ -150,18 +182,39 @@ class Meta::AdsGraphClient
       timeout: TIMEOUT_SECONDS,
       **
     )
-    build_result(response)
+    log_failure(verb, path, build_result(response))
   rescue StandardError => e
-    Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message))
+    log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message)))
+  end
+
+  # Toda recusa da Meta fica no log com o caminho, o código e a mensagem já limpa: sem isso, um erro que
+  # quem chama trata como "ainda não" vira silêncio em produção (#1068). O token nunca entra no caminho.
+  def log_failure(verb, path, result)
+    return result if result.ok
+
+    Rails.logger.warn("[MetaAdsGraph] #{verb.to_s.upcase} #{path} http=#{result.http_code.inspect} " \
+                      "code=#{result.error_code.inspect} message=#{result.error_message}")
+    result
   end
 
   def build_result(response)
     body = parse(response.body)
-    return Result.new(ok: true, http_code: response.code, data: body) if response.success? && body.is_a?(Hash)
+    usage = usage_headers(response)
+    return Result.new(ok: true, http_code: response.code, data: body, usage_headers: usage) if response.success? && body.is_a?(Hash)
 
     error = body.is_a?(Hash) ? body['error'].to_h : {}
-    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'],
+    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], usage_headers: usage,
                error_message: sanitize(error['message'].presence || "HTTP #{response.code}"))
+  end
+
+  def usage_headers(response)
+    headers = response.headers
+    return {} if headers.blank?
+
+    USAGE_HEADERS.each_with_object({}) do |name, found|
+      value = headers[name]
+      found[name] = value if value.present?
+    end
   end
 
   def parse(text)

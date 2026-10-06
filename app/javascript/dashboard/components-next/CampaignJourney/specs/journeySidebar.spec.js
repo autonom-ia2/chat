@@ -42,6 +42,22 @@ describe('Campanhas menu (PRD D17, A5)', () => {
     expect(items[1].to).toEqual({ name: 'campaigns_journey_index' });
   });
 
+  it('flag on: Anúncios da Meta stays, right after Links e QR codes, when its own flag shows it (#1068)', () => {
+    const withMetaAds = [...LEGACY, { name: 'Campaign Meta Ads' }];
+    const names = withCampaignJourney(options(), withMetaAds).map(
+      item => item.name
+    );
+
+    expect(names).toEqual([
+      'Campaign Audiences',
+      'Campaign Journey',
+      'Campaign WhatsApp Templates',
+      'Campaign Links and QR codes',
+      'Campaign Meta Ads',
+      'Campaign Management',
+    ]);
+  });
+
   it('flag on: per-channel entries leave the menu', () => {
     const names = withCampaignJourney(options(), LEGACY).map(item => item.name);
 
