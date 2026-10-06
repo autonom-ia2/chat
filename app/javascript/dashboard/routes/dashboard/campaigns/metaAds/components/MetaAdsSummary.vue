@@ -159,6 +159,24 @@ const spendUpdated = computed(() => {
 
 const NEXT = ['NEXT_NAMES', 'NEXT_SALES', 'NEXT_PANEL'];
 
+// "Quanto confiar" (#1073, F2b): conversas que vieram de anúncio nos últimos 30 dias, pelo melhor que sabemos
+// de cada uma. Do mais forte ao mais fraco.
+const CONFIDENCE_LEVELS = [
+  { key: 'ad', label: 'AD', dot: 'bg-n-teal-9' },
+  { key: 'ad_name', label: 'AD_NAME', dot: 'bg-n-teal-7' },
+  { key: 'campaign', label: 'CAMPAIGN', dot: 'bg-n-amber-9' },
+  { key: 'unknown', label: 'UNKNOWN', dot: 'bg-n-slate-8' },
+];
+const confidence = computed(() => insights.value?.confidence || null);
+const confidentShare = computed(() => {
+  const data = confidence.value;
+  if (!data?.conversations) return null;
+  return Math.round(((data.ad + data.ad_name) / data.conversations) * 100);
+});
+const confidenceGap = computed(
+  () => (confidence.value?.campaign || 0) + (confidence.value?.unknown || 0)
+);
+
 const pageVisible = () => document.visibilityState !== 'hidden';
 
 // Próxima conferência: rápida enquanto há leitura ou carga em andamento; com a aba escondida, só reagenda.
@@ -293,7 +311,7 @@ onBeforeUnmount(() => {
             <span>
               {{
                 $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.SPEND_CONVERSATIONS', {
-                  count: insights.conversations,
+                  count: insights.ad_conversations_today ?? 0,
                 })
               }}
             </span>
@@ -393,6 +411,73 @@ onBeforeUnmount(() => {
         </button>
       </li>
     </ul>
+
+    <div
+      v-if="!attention && confidence"
+      data-summary-confidence
+      class="flex flex-col gap-3 p-4 border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 sm:p-5"
+    >
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h4 class="m-0 text-base font-semibold text-n-slate-12">
+          {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.TITLE') }}
+        </h4>
+        <span
+          v-if="confidentShare !== null"
+          data-summary-confidence-share
+          class="text-2xl font-semibold text-n-slate-12"
+        >
+          {{
+            $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.SHARE', {
+              share: confidentShare,
+            })
+          }}
+        </span>
+      </div>
+      <p class="m-0 text-sm text-n-slate-11">
+        {{
+          confidence.conversations
+            ? $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.TOTAL', {
+                days: confidence.window_days,
+                count: confidence.conversations,
+              })
+            : $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.EMPTY')
+        }}
+      </p>
+      <ul
+        v-if="confidence.conversations"
+        class="grid gap-2 p-0 m-0 list-none sm:grid-cols-2"
+      >
+        <li
+          v-for="level in CONFIDENCE_LEVELS"
+          :key="level.key"
+          :data-confidence-level="level.key"
+          class="flex items-center gap-2 text-sm text-n-slate-12"
+        >
+          <span
+            class="flex-none rounded-full size-2.5"
+            :class="level.dot"
+            aria-hidden="true"
+          />
+          <span class="flex-1 min-w-0">
+            {{
+              $t(`CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.${level.label}`)
+            }}
+          </span>
+          <span class="font-semibold tabular-nums">
+            {{ confidence[level.key] }}
+          </span>
+        </li>
+      </ul>
+      <button
+        v-if="confidenceGap"
+        type="button"
+        data-summary-confidence-fix
+        class="self-start p-0 text-sm font-medium text-left bg-transparent border-0 min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="emit('open', 3)"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.FIX') }}
+      </button>
+    </div>
 
     <div
       v-if="!attention"
