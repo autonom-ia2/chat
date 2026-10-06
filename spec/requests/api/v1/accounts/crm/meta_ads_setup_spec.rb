@@ -28,7 +28,8 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
   end
 
   def account_row(id, owner:, name: 'CA - Placement Seguros')
-    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', business: { id: owner, name: 'Dono' } }
+    { id: "act_#{id}", account_id: id, name: name, account_status: 1, currency: 'BRL', timezone_name: 'America/Sao_Paulo',
+      business: { id: owner, name: 'Dono' } }
   end
 
   def with_whatsapp_portfolio(target = account, id = portfolio)
@@ -210,6 +211,21 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       connection = Crm::MetaAdsConnection.find_by!(account_id: account.id)
       expect(connection.access_token).to be_nil
       expect(connection.read_token).to eq(platform_token)
+    end
+
+    it 'trocar de conta de anúncios zera a coleta e começa a carga de 90 dias (#1073)' do
+      stub_reads
+      old = Crm::MetaAdsConnection.create!(account: account, mode: 'partner', ad_account_id: '111', insights_synced_at: 1.hour.ago,
+                                           insights_backfilled_at: 1.day.ago)
+
+      expect do
+        post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel }, headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::InsightsBackfillJob).with(old.id)
+
+      expect(old.reload).to have_attributes(ad_account_id: ad_account, insights_synced_at: nil, insights_backfilled_at: nil,
+                                            ad_account_timezone: 'America/Sao_Paulo')
+    ensure
+      Crm::MetaAds::Insights::Backfill.release(old.id) if old
     end
 
     it 'recusa conta de anúncios de outro portfólio' do

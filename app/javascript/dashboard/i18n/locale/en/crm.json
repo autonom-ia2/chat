@@ -2206,7 +2206,15 @@
         "NEXT_TITLE": "What happens now",
         "NEXT_NAMES": "Each conversation from an ad shows the campaign name and See ad in the CRM card.",
         "NEXT_SALES": "When a card moves forward or is won, Meta is told and learns who buys.",
-        "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad."
+        "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
+        "SPEND_TODAY": "Spent today",
+        "SPEND_ON": "Spent on {date}",
+        "SPEND_CONVERSATIONS": "{count} conversations started",
+        "SPEND_UPDATED": "updated {time}",
+        "SPEND_REFRESHING": "updating…",
+        "SPEND_EMPTY": "Ad spend shows up here after the first read from Meta.",
+        "ACCESS_LOST_HINT": "Meta no longer lets us read this ad account. Share it again or connect another account.",
+        "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…"
       },
       "ERRORS": {
         "PLATFORM_UNAVAILABLE": "Sharing is not available yet. For now, use an access key.",

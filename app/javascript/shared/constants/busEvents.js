@@ -15,6 +15,7 @@ export const BUS_EVENTS = {
   NEW_CONVERSATION_MODAL: 'newConversationModal',
   INSERT_INTO_RICH_EDITOR: 'insertIntoRichEditor',
   CRM_FOLLOW_UP_DUE: 'CRM_FOLLOW_UP_DUE',
+  CRM_META_ADS_INSIGHTS_UPDATED: 'CRM_META_ADS_INSIGHTS_UPDATED',
   CRM_AI_USAGE_CREATED: 'CRM_AI_USAGE_CREATED',
   // Geração de e-mail por IA (assíncrona) concluída/falhou — toast global + atualização do selo.
   EMAIL_CAMPAIGN_AI_READY: 'EMAIL_CAMPAIGN_AI_READY',
