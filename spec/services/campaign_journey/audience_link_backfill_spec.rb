@@ -42,7 +42,7 @@ RSpec.describe CampaignJourney::AudienceLinkBackfill, :aggregate_failures do
 
     dry_run = described_class.new.perform
 
-    expect(dry_run).to eq(campaigns_with_labels: 4, linked: 1, already_linked: 0, no_import: 1, ambiguous: 1, not_completed: 1)
+    expect(dry_run).to eq(campaigns_with_labels: 4, linked: 1, already_linked: 0, no_import: 1, ambiguous: 1, extra_labels: 0, not_completed: 1)
     expect(CampaignAudienceLink.count).to eq(0)
 
     expect(described_class.new(apply: true).perform).to include(linked: 1)
@@ -51,6 +51,16 @@ RSpec.describe CampaignJourney::AudienceLinkBackfill, :aggregate_failures do
 
     expect(described_class.new(apply: true).perform).to include(linked: 0, already_linked: 1)
     expect(CampaignAudienceLink.count).to eq(1)
+  end
+
+  # #990 review: a campaign sent to the base label plus another label did not reach the whole import.
+  it 'skips a campaign whose audience has labels beyond the base label of the import' do
+    campaign = label_campaign(base_label(old_import), create(:label, account: account))
+
+    counts = described_class.new(apply: true).perform
+
+    expect(counts).to include(linked: 0, extra_labels: 1)
+    expect(CampaignAudienceLink.for_campaign(campaign)).to be_nil
   end
 
   it 'runs from the rake task, dry-run by default and writing only with APPLY=1' do

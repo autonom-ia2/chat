@@ -4,9 +4,10 @@
 #
 # Only completed campaigns are linked: a linked campaign sends to the audience list instead of
 # the labels, so linking a campaign that has not sent yet would change who receives it (N3).
-# Campaigns whose labels point to more than one import are left out (ambiguous).
+# Campaigns whose labels point to more than one import are left out (ambiguous), and so are campaigns sent to
+# the base label plus other labels (extra_labels): they did not reach the whole import (#990 review).
 class CampaignJourney::AudienceLinkBackfill
-  COUNTERS = %i[campaigns_with_labels linked already_linked no_import ambiguous not_completed].freeze
+  COUNTERS = %i[campaigns_with_labels linked already_linked no_import ambiguous extra_labels not_completed].freeze
 
   def initialize(apply: false)
     @apply = apply
@@ -26,17 +27,22 @@ class CampaignJourney::AudienceLinkBackfill
 
     @counts[:campaigns_with_labels] += 1
     import_ids = label_ids.flat_map { |label_id| base_label_index[[campaign.account_id, label_id]] }.compact.uniq
-    outcome = outcome_for(campaign, import_ids)
+    outcome = outcome_for(campaign, import_ids, extra_labels: label_ids.uniq.size > base_label_count(campaign, label_ids))
     @counts[outcome] += 1
     link!(campaign, import_ids.first) if outcome == :linked
   end
 
-  def outcome_for(campaign, import_ids)
+  def outcome_for(campaign, import_ids, extra_labels:)
     return :already_linked if CampaignAudienceLink.for_campaign(campaign)
     return :no_import if import_ids.empty?
     return :ambiguous if import_ids.size > 1
+    return :extra_labels if extra_labels
 
     campaign.completed? ? :linked : :not_completed
+  end
+
+  def base_label_count(campaign, label_ids)
+    label_ids.uniq.count { |label_id| base_label_index.key?([campaign.account_id, label_id]) }
   end
 
   def link!(campaign, campaign_import_id)
