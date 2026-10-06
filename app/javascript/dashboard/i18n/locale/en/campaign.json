@@ -839,15 +839,14 @@
         "MISSING_BODY": "This template does not have editable content. Choose another template or recreate it.",
         "LOAD_ERROR": "Could not load the templates. Please try again.",
         "CATEGORIES": {
-          "abandoned-cart": "Abandoned cart",
-          "account-activation": "Account activation",
-          "feedback": "Feedback",
-          "newsletter": "Newsletter",
-          "product-launch": "Product launch",
-          "receipt-invoice": "Receipt & invoice",
-          "reengagement": "Re-engagement",
-          "shipping-update": "Shipping update",
-          "upsell": "Upsell"
+          "relacionamento": "Relationship",
+          "lancamento": "Launch",
+          "evento": "Event",
+          "conteudo": "Content",
+          "vendas": "Sales",
+          "pesquisa": "Survey",
+          "cobranca": "Billing",
+          "aviso": "Notice"
         }
       },
       "IMPORT": {
@@ -992,20 +991,19 @@
           }
         },
         "MODELS": {
-          "cart-recovery-benefits": "Abandoned Cart with Benefits Breakdown",
-          "welcome-donation-activation": "Welcome & Account Activation for Donors",
-          "email-verification-security": "Welcome & Email Verification (Security-Focused)",
-          "webinar-thank-you-review": "Webinar Thank You & Review Request",
-          "weekly-data-analysis": "Weekly Newsletter with Data Analysis",
-          "newsletter-productivity-tips": "Productivity Newsletter - Quarterly Edition",
-          "new-flavor-simple": "New Product Launch - Simple Hero",
-          "teaser-mystery": "Product Launch Teaser - Mystery Reveal",
-          "review-request-post-delivery": "Post-Purchase Review Request",
-          "breakup-final": "Re-engagement Breakup (Final Notice)",
-          "anniversary-milestone": "Company Anniversary Celebration",
-          "win-back-poll-feedback": "Win-Back with Anonymous Poll",
-          "card-shipped": "Card Shipped Confirmation",
-          "order-bump-discount": "Order Bump with Future Discount"
+          "boas-vindas": "Welcome",
+          "novidade-lancamento": "New release / launch",
+          "pre-lancamento": "Pre-launch",
+          "convite-evento": "Invitation to a live event",
+          "newsletter": "Newsletter",
+          "oferta": "Offer with coupon",
+          "reengajamento": "Re-engagement",
+          "pesquisa-nps": "Satisfaction survey (NPS)",
+          "lembrete-vencimento": "Due date or renewal reminder",
+          "pos-atendimento": "After-service feedback",
+          "aniversario": "Customer birthday",
+          "comunicado-importante": "Important announcement",
+          "conteudo-educativo": "Educational content"
         },
         "IMPORT_FAILED": "Import needs correction · open details to fix or replace the file"
       }

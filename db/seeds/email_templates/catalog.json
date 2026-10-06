@@ -1,86 +1,80 @@
 [
   {
-    "key": "cart-recovery-benefits",
-    "name": "Abandoned Cart with Benefits Breakdown",
-    "path": "abandoned-cart/01-cart-recovery-benefits.mjml",
-    "category": "abandoned-cart"
+    "key": "boas-vindas",
+    "name": "Boas-vindas",
+    "path": "relacionamento/01-boas-vindas.mjml",
+    "category": "relacionamento"
   },
   {
-    "key": "welcome-donation-activation",
-    "name": "Welcome & Account Activation for Donors",
-    "path": "account-activation/01-welcome-donation-activation.mjml",
-    "category": "account-activation"
+    "key": "novidade-lancamento",
+    "name": "Novidade / lançamento",
+    "path": "lancamento/02-novidade-lancamento.mjml",
+    "category": "lancamento"
   },
   {
-    "key": "email-verification-security",
-    "name": "Welcome & Email Verification (Security-Focused)",
-    "path": "account-activation/02-email-verification-security.mjml",
-    "category": "account-activation"
+    "key": "pre-lancamento",
+    "name": "Pré-lançamento",
+    "path": "lancamento/03-pre-lancamento.mjml",
+    "category": "lancamento"
   },
   {
-    "key": "webinar-thank-you-review",
-    "name": "Webinar Thank You & Review Request",
-    "path": "feedback/01-webinar-thank-you-review.mjml",
-    "category": "feedback"
+    "key": "convite-evento",
+    "name": "Convite para evento ou encontro ao vivo",
+    "path": "evento/04-convite-evento.mjml",
+    "category": "evento"
   },
   {
-    "key": "weekly-data-analysis",
-    "name": "Weekly Newsletter with Data Analysis",
-    "path": "newsletter/01-weekly-data-analysis.mjml",
-    "category": "newsletter"
+    "key": "newsletter",
+    "name": "Newsletter",
+    "path": "conteudo/05-newsletter.mjml",
+    "category": "conteudo"
   },
   {
-    "key": "newsletter-productivity-tips",
-    "name": "Productivity Newsletter - Quarterly Edition",
-    "path": "newsletter/02-newsletter-productivity-tips.mjml",
-    "category": "newsletter"
+    "key": "oferta",
+    "name": "Oferta com cupom",
+    "path": "vendas/06-oferta.mjml",
+    "category": "vendas"
   },
   {
-    "key": "new-flavor-simple",
-    "name": "New Product Launch - Simple Hero",
-    "path": "product-launch/01-new-flavor-simple.mjml",
-    "category": "product-launch"
+    "key": "reengajamento",
+    "name": "Reengajamento",
+    "path": "relacionamento/07-reengajamento.mjml",
+    "category": "relacionamento"
   },
   {
-    "key": "teaser-mystery",
-    "name": "Product Launch Teaser - Mystery Reveal",
-    "path": "product-launch/02-teaser-mystery.mjml",
-    "category": "product-launch"
+    "key": "pesquisa-nps",
+    "name": "Pesquisa de satisfação (NPS)",
+    "path": "pesquisa/08-pesquisa-nps.mjml",
+    "category": "pesquisa"
   },
   {
-    "key": "review-request-post-delivery",
-    "name": "Post-Purchase Review Request",
-    "path": "receipt-invoice/01-review-request-post-delivery.mjml",
-    "category": "receipt-invoice"
+    "key": "lembrete-vencimento",
+    "name": "Lembrete de vencimento ou renovação",
+    "path": "cobranca/09-lembrete-vencimento.mjml",
+    "category": "cobranca"
   },
   {
-    "key": "breakup-final",
-    "name": "Re-engagement Breakup (Final Notice)",
-    "path": "reengagement/01-breakup-final.mjml",
-    "category": "reengagement"
+    "key": "pos-atendimento",
+    "name": "Pós-atendimento e avaliação",
+    "path": "pesquisa/10-pos-atendimento.mjml",
+    "category": "pesquisa"
   },
   {
-    "key": "anniversary-milestone",
-    "name": "Company Anniversary Celebration",
-    "path": "reengagement/02-anniversary-milestone.mjml",
-    "category": "reengagement"
+    "key": "aniversario",
+    "name": "Aniversário do cliente",
+    "path": "relacionamento/11-aniversario.mjml",
+    "category": "relacionamento"
   },
   {
-    "key": "win-back-poll-feedback",
-    "name": "Win-Back with Anonymous Poll",
-    "path": "reengagement/03-win-back-poll-feedback.mjml",
-    "category": "reengagement"
+    "key": "comunicado-importante",
+    "name": "Comunicado importante",
+    "path": "aviso/12-comunicado-importante.mjml",
+    "category": "aviso"
   },
   {
-    "key": "card-shipped",
-    "name": "Card Shipped Confirmation",
-    "path": "shipping-update/01-card-shipped.mjml",
-    "category": "shipping-update"
-  },
-  {
-    "key": "order-bump-discount",
-    "name": "Order Bump with Future Discount",
-    "path": "upsell/01-order-bump-discount.mjml",
-    "category": "upsell"
+    "key": "conteudo-educativo",
+    "name": "Conteúdo educativo",
+    "path": "conteudo/13-conteudo-educativo.mjml",
+    "category": "conteudo"
   }
 ]
