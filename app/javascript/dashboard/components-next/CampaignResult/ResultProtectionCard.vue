@@ -89,7 +89,9 @@ const why = computed(() => {
     ? t(`${EMAIL_NS}.REASON.${reasonKey(recorded)}`)
     : reasonText.value;
 });
-const isManual = computed(() => reasonKey(props.campaign.pause_reason) === 'manual');
+const isManual = computed(
+  () => reasonKey(props.campaign.pause_reason) === 'manual'
+);
 // While paused the reason is said once, in "Por que pausou". The header only adds what blocks the
 // send now when that is something else (e.g. the sending service went down after a manual pause).
 const showHeaderReason = computed(() => {
