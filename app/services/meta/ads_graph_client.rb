@@ -78,14 +78,77 @@ class Meta::AdsGraphClient
     get(id.to_s, fields: fields)
   end
 
+  # Conexão guiada (#1047). IDs de conta de anúncios entram sem o prefixo `act_`.
+  AD_ACCOUNT_FIELDS = 'id,account_id,name,account_status,currency,business{id,name}'.freeze
+  PIXEL_FIELDS = 'id,name,last_fired_time'.freeze
+  LIST_LIMIT = 100
+  MAX_PAGES = 10
+
+  # Contas que o próprio token enxerga (modo `token`).
+  def ad_accounts
+    paged('me/adaccounts', fields: AD_ACCOUNT_FIELDS)
+  end
+
+  # Contas atribuídas ao usuário do sistema da plataforma (modo `partner`).
+  def assigned_ad_accounts(system_user_id)
+    get(system_user_id.to_s, fields: "assigned_ad_accounts.limit(#{LIST_LIMIT}){#{AD_ACCOUNT_FIELDS}}")
+  end
+
+  # Contas que clientes compartilharam com o portfólio da plataforma como parceira.
+  def client_ad_accounts(business_id)
+    paged("#{business_id}/client_ad_accounts", fields: AD_ACCOUNT_FIELDS)
+  end
+
+  # Dá ao usuário do sistema da plataforma acesso "Ver desempenho" (ANALYZE) numa conta compartilhada.
+  def assign_system_user(ad_account_id, system_user_id:, business_id:)
+    post("act_#{ad_account_id}/assigned_users", user: system_user_id, tasks: ['ANALYZE'].to_json, business: business_id)
+  end
+
+  def ad_account(ad_account_id)
+    get("act_#{ad_account_id}", fields: AD_ACCOUNT_FIELDS)
+  end
+
+  def spend_last_30d(ad_account_id)
+    get("act_#{ad_account_id}/insights", date_preset: 'last_30d', fields: 'spend')
+  end
+
+  def ad_account_pixels(ad_account_id)
+    paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
+  end
+
   private
 
   def get(path, query = {})
-    response = HTTParty.get(
+    request(:get, path, query: query.presence)
+  end
+
+  # Listas da Graph vêm em páginas: segue o cursor `after` até MAX_PAGES (1.000 itens) e devolve
+  # { "data" => [...] } como uma página só. Erro em qualquer página devolve esse erro.
+  def paged(path, query)
+    rows = []
+    after = nil
+    MAX_PAGES.times do
+      result = get(path, query.merge(limit: LIST_LIMIT, after: after).compact)
+      return result unless result.ok
+
+      rows.concat(Array(result.data.to_h['data']))
+      after = result.data.to_h.dig('paging', 'cursors', 'after')
+      break if after.blank? || result.data.to_h.dig('paging', 'next').blank?
+    end
+    Result.new(ok: true, http_code: 200, data: { 'data' => rows })
+  end
+
+  def post(path, body)
+    request(:post, path, body: body)
+  end
+
+  def request(verb, path, **)
+    response = HTTParty.public_send(
+      verb,
       "#{BASE_URI}/#{@api_version}/#{path}",
       headers: { 'Authorization' => "Bearer #{@access_token}" },
-      query: query.presence,
-      timeout: TIMEOUT_SECONDS
+      timeout: TIMEOUT_SECONDS,
+      **
     )
     build_result(response)
   rescue StandardError => e

@@ -179,6 +179,27 @@
   locked: false
 # ------- End of WhatsApp Channel Related Config ------- #
 
+# ------- Meta Ads (Anuncios da Meta, #1047) ------- #
+- name: META_ADS_PARTNER_BUSINESS_ID
+  display_title: 'Meta Ads partner business ID'
+  description: 'ID of the platform Meta business portfolio that clients share their ad accounts with (Partners)'
+  locked: false
+- name: META_ADS_PARTNER_BUSINESS_NAME
+  display_title: 'Meta Ads partner business name'
+  description: 'Name shown to clients when they share their ad account with the platform'
+  value: 'Hub2You'
+  locked: false
+- name: META_ADS_SYSTEM_USER_ID
+  display_title: 'Meta Ads system user ID'
+  description: 'ID of the system user in the partner business that reads shared ad accounts'
+  locked: false
+- name: META_ADS_PLATFORM_TOKEN
+  display_title: 'Meta Ads system user token'
+  description: 'System user token with ads_read and business_management. Stored encrypted; never shown again'
+  locked: false
+  type: secret
+# ------- End of Meta Ads Config ------- #
+
 # MARK: Microsoft Email Channel Config
 - name: AZURE_APP_ID
   display_title: 'Azure App ID'

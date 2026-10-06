@@ -36,15 +36,39 @@ RSpec.describe Crm::MetaAds::NameResolver do
 
       result = resolver.resolve([ad_id], type: 'ad')
 
-      expect(result).to eq(ad_id => { name: 'Video 2', type: 'ad', campaign_name: 'Viagem EUA', adset_name: 'Conjunto 60+' })
+      expect(result).to eq(ad_id => { name: 'Video 2', type: 'ad', campaign_name: 'Viagem EUA', adset_name: 'Conjunto 60+',
+                                      preview_url: nil, thumbnail_url: nil })
       expect(graph).to have_been_requested.once
       cache = Crm::MetaAdObject.where(account_id: account.id).pluck(:meta_object_id, :object_type, :name).sort
       expect(cache).to eq([[campaign_id, 'campaign', 'Viagem EUA'], [ad_id, 'ad', 'Video 2'], [adset_id, 'adset', 'Conjunto 60+']].sort)
       expect(connection.reload.last_checked_at).to be_present
     end
 
+    it 'guarda a prévia e a miniatura do anúncio, só com https (#1047, CA-1.11)' do
+      body = ad_body(ad_id).merge(preview_shareable_link: 'https://fb.me/adspreview/abc',
+                                  creative: { id: '9', thumbnail_url: 'http://inseguro.example/x.jpg' })
+      stub_meta_object(id: ad_id, fields: ad_fields, body: body)
+
+      result = resolver.resolve([ad_id], type: 'ad')
+
+      expect(result[ad_id]).to include(preview_url: 'https://fb.me/adspreview/abc', thumbnail_url: nil)
+      expect(Crm::MetaAdObject.find_by(meta_object_id: ad_id).preview_url).to eq('https://fb.me/adspreview/abc')
+    end
+
+    it 'no modo parceiro só grava objeto da conta de anúncios conectada (#1047)' do
+      AiProviderCredential.create!(provider: 'meta_ads', api_key: MetaAdsHelpers::TEST_TOKEN)
+      channel = create(:channel_whatsapp, account: account, sync_templates: false, validate_provider_config: false)
+      create(:inbox, account: account, channel: channel)
+      channel.update_columns(phone_number_health: { 'business_portfolio_id' => '101' }) # rubocop:disable Rails/SkipsModelValidations
+      connection.update!(mode: 'partner', access_token: nil, ad_account_id: '222', ad_account_business_id: '101')
+      stub_meta_object(id: ad_id, fields: ad_fields, body: ad_body(ad_id).merge(account_id: '999'))
+
+      expect(resolver.resolve([ad_id], type: 'ad')).to eq({})
+      expect(Crm::MetaAdObject.where(account_id: account.id).where.not(name: nil)).to be_empty
+    end
+
     it 'não usa o parâmetro ids, descontinuado na Graph v26.0' do
-      stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
+      stub_meta_object(id: campaign_id, fields: 'name,account_id', body: { id: campaign_id, name: 'Viagem EUA' })
 
       resolver.resolve([campaign_id], type: 'campaign')
 
@@ -64,7 +88,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     it 'busca de novo o que passou de 7 dias e atualiza o nome' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Nome antigo',
                                 fetched_at: 8.days.ago)
-      graph = stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Nome novo' })
+      graph = stub_meta_object(id: campaign_id, fields: 'name,account_id', body: { id: campaign_id, name: 'Nome novo' })
 
       expect(resolver.resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Nome novo')
       expect(graph).to have_been_requested.once
@@ -74,7 +98,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
       cached = '900000000000000001'
       Crm::MetaAdObject.create!(account: account, meta_object_id: cached, object_type: 'campaign', name: 'Em cache', fetched_at: 1.day.ago)
       ids = (1..3).map { |n| (800_000_000_000_000_000 + n).to_s }
-      ids.each { |id| stub_meta_object(id: id, fields: 'name', body: { id: id, name: "C#{id}" }) }
+      ids.each { |id| stub_meta_object(id: id, fields: 'name,account_id', body: { id: id, name: "C#{id}" }) }
 
       result = resolver.resolve(ids + [cached], type: 'campaign')
 
@@ -153,7 +177,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     end
 
     it 'cache negativo: o ID que a Meta não resolve não é buscado de novo por 7 dias' do
-      graph = stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      graph = stub_meta_object(id: campaign_id, fields: 'name,account_id', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
       3.times { expect(described_class.new(account).resolve([campaign_id], type: 'campaign')).to eq({}) }
 
@@ -165,7 +189,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     it 'cache negativo mantém o nome já conhecido quando o anúncio deixa de existir' do
       Crm::MetaAdObject.create!(account: account, meta_object_id: campaign_id, object_type: 'campaign', name: 'Viagem EUA',
                                 fetched_at: 8.days.ago)
-      graph = stub_meta_object(id: campaign_id, fields: 'name', status: 400, body: meta_graph_error(100, 'Object does not exist'))
+      graph = stub_meta_object(id: campaign_id, fields: 'name,account_id', status: 400, body: meta_graph_error(100, 'Object does not exist'))
 
       expect(resolver.resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Viagem EUA')
       expect(described_class.new(account).resolve([campaign_id], type: 'campaign')[campaign_id][:name]).to eq('Viagem EUA')
@@ -177,7 +201,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
         cached = '900000000000000001'
         Crm::MetaAdObject.create!(account: account, meta_object_id: cached, object_type: 'campaign', name: 'Em cache', fetched_at: 1.day.ago)
         ids = (1..5).map { |n| (800_000_000_000_000_000 + n).to_s }
-        ids.each { |id| stub_meta_object(id: id, fields: 'name', status: 400, body: meta_graph_error(code, 'User request limit reached')) }
+        ids.each { |id| stub_meta_object(id: id, fields: 'name,account_id', status: 400, body: meta_graph_error(code, 'User request limit reached')) }
 
         result = resolver.resolve(ids + [cached], type: 'campaign')
         resolver.resolve(ids.first(3), type: 'campaign')
@@ -208,7 +232,7 @@ RSpec.describe Crm::MetaAds::NameResolver do
     end
 
     it 'token só no header Authorization, nunca na URL' do
-      stub_meta_object(id: campaign_id, fields: 'name', body: { id: campaign_id, name: 'Viagem EUA' })
+      stub_meta_object(id: campaign_id, fields: 'name,account_id', body: { id: campaign_id, name: 'Viagem EUA' })
 
       resolver.resolve([campaign_id], type: 'campaign')
 

@@ -149,6 +149,12 @@ whatsapp_embedded:
   enabled: true
   icon: 'icon-whatsapp-line'
   config_key: 'whatsapp_embedded'
+meta_ads:
+  name: 'Meta Ads'
+  description: 'Partner portfolio and system user that read the ad accounts clients share (Anúncios da Meta)'
+  enabled: true
+  icon: 'icon-messenger-line'
+  config_key: 'meta_ads'
 shopify:
   name: 'Shopify'
   description: 'Configuration for setting up Shopify Integration'

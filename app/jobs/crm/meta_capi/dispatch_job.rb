@@ -117,13 +117,21 @@ class Crm::MetaCapi::DispatchJob < ApplicationJob
   # is marked invalid; dead or without access to this Pixel, the WhatsApp token gets one try.
   # A passing outage (5xx, rate limit, network) never switches tokens: Sidekiq retries.
   def post_website_event(row, payload, ads_connection, whatsapp_token)
-    return post_events(whatsapp_token, row, payload) if ads_connection.blank?
+    return post_events(whatsapp_token, row, payload) unless ads_token_for?(ads_connection, row)
 
-    response = post_events(ads_connection.access_token, row, payload)
+    response = post_events(ads_connection.read_token, row, payload)
     return response if response.ok || !ads_token_refused?(response)
 
     ads_connection.mark_invalid!(response.error) if response.error_code == Meta::AdsGraphClient::TOKEN_INVALID_CODE
     whatsapp_token.present? ? post_events(whatsapp_token, row, payload) : response
+  end
+
+  # A conexão de anúncios só envia quando pode ler a Meta agora e, no modo `partner` (token da plataforma,
+  # que enxerga Pixels de outros clientes), só para o Pixel que a própria conexão escolheu (#1047).
+  def ads_token_for?(ads_connection, row)
+    return false unless ads_connection&.readable?
+
+    ads_connection.token_mode? || ads_connection.pixel_id.to_s == row.dataset_id.to_s
   end
 
   def website_credentials(card)

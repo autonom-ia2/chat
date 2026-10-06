@@ -1,5 +1,5 @@
 class AiProviderCredential < ApplicationRecord
-  PROVIDERS = %w[typesafe].freeze
+  PROVIDERS = %w[typesafe meta_ads].freeze
 
   encrypts :api_key
 
