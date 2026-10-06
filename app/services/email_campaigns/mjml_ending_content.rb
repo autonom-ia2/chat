@@ -32,19 +32,21 @@ class EmailCampaigns::MjmlEndingContent
     @skeleton ||= scan
   end
 
-  # Puts every slot back in `text` (the skeleton, or what was serialized from it).
+  # Puts every slot back in `text` (the skeleton, or what was serialized from it). A block gets each
+  # slot and its index and returns the content to put back.
   def restore(text)
     slots.each_with_index.reduce(text) do |acc, (slot, index)|
-      content = block_given? ? yield(slot) : slot.content
+      content = block_given? ? yield(slot, index) : slot.content
       acc.sub(token(index)) { content }
     end
   end
 
-  private
-
+  # The text that stands for slot `index` in the skeleton.
   def token(index)
     "MJSLOT#{nonce}N#{index}E"
   end
+
+  private
 
   def scan
     pos = 0

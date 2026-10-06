@@ -29,6 +29,18 @@ RSpec.describe EmailCampaigns::QualityGate, :aggregate_failures do
     expect(footers.uniq.size).to eq(1)
   end
 
+  it 'uses, byte for byte, the canonical locked footer of the editor (#1081) with its company line' do
+    identity = JSON.parse(EmailCampaigns::LockedFooter::SOURCE.read).fetch('identity_placeholder')
+    canonical = EmailCampaigns::LockedFooter.with_first_line(identity)
+
+    catalog.entries.each do |entry|
+      [catalog::ROOT.join(entry.fetch('path')).read, catalog.body(entry)].each do |mjml|
+        expect(mjml.scan('footer-locked').size).to eq(1), entry.fetch('key')
+        expect(mjml).to include(canonical), entry.fetch('key')
+      end
+    end
+  end
+
   it 'names every design and category in English and Brazilian Portuguese' do
     locales.each do |locale, strings|
       catalog.entries.each do |entry|

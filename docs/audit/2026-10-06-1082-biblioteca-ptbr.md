@@ -29,3 +29,12 @@
   `scripts/check-email-protection-i18n.mjs` sem erro; RuboCop sem ofensas nos Ruby tocados.
 
 Publicação em produção: `docs/runbooks/email-biblioteca-modelos.md` (não executada).
+
+## Merge de #1081 (PR #1084, `a728722955`) nesta branch
+
+Merge sem rebase. Conflitos: os 14 `.html` antigos (modificados lá, apagados aqui) ficaram apagados;
+`template_catalog_spec.rb` une as duas versões (um único `{{ unsubscribe_url }}` por modelo). O spec da biblioteca
+agora exige que o rodapé `footer-locked` de cada modelo seja, byte a byte, o de
+`EmailCampaigns::LockedFooter.with_first_line(identity_placeholder)`. Recompilação com o código de #1081: os 13
+`.html` saíram idênticos. Specs alvo 68/0; serviços + requests de e-mail 790/2 (as 2 de contagem de
+`EmailSuppressionEvent`, que passam 12/12 em banco novo); vitest de campanhas 956/956 (builder 63/63).
