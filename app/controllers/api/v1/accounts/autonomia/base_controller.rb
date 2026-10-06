@@ -59,7 +59,7 @@ class Api::V1::Accounts::Autonomia::BaseController < Api::V1::Accounts::BaseCont
 
   def build_threads_scope
     ::Autonomia::Agents::BuildThread.where(account: Current.account)
-                                   .left_joins(:agent).where(autonomia_agents: { deleted_at: nil })
+                                    .left_joins(:agent).where(autonomia_agents: { deleted_at: nil })
   end
 
   def render_unprocessable(message)

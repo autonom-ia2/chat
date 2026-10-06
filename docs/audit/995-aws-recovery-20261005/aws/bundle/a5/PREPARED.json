@@ -1,0 +1,53 @@
+{
+  "utc": "2026-10-05T22:26:48.991624+00:00",
+  "stage": "local_preparation_only",
+  "promotion_performed": false,
+  "AWS_VPS_calls": 0,
+  "fixtures": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "success": true,
+    "AWS_VPS_network_calls": 0,
+    "scope": "Close126..512 only, old budgets/deadline, exclusions, incomplete reads, private passive projection, original stop and helper hash binding",
+    "source_sha256": {
+      "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "ssm_close_diagnostic.py": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "preflight-live-proofs-auth-candidate.py": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+      "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7"
+    }
+  },
+  "sha256": {
+    "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+    "ssm_close_diagnostic.py": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+    "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+    "preflight-live-proofs-auth-candidate.py": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+    "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+    "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+    "test_auth_diagnostic.py": "bc360178b9de4c9a7884b07729ffad2d76f2e2ee7f37e825efcd31a44d6e601c",
+    "test_close_diagnostic.py": "a3f3b1d2c1f821ac6910ef81214b5413cad51fcd2242e60081c4574962008e7e",
+    "auth-a5-collector.diff": "79996917adcd440211ab0c0e600388a81853dbe3cbc3d7d35a0452219c455923",
+    "auth-a5-wrapper.diff": "b9c9263cca776a0ae8066a755fdc941df80e9b35266ee034bbe28afd1b9577d5",
+    "auth-a5-preflight.diff": "d1feb2c20f772309c60d1a0911476ae8f4d2dbd725f9fcc2df2d5f27457ae2bc",
+    "README.md": "e863606648f2fd3aed797093946c5bb8e06bc7ef2f67de1d442ae15964007227",
+    "auth-a5-fixture-cloud-result.json": "a5d648606e4cbadc52ad7d0e7b0e18d8ef07fd13d6601da716ae6a385fe39769",
+    "auth-a5-fixture-cloud.log": "9fbd0761cd63658da3b278a9fecb8e738263da5bea0e7cbfccfd511228735c1b"
+  },
+  "unchanged": {
+    "FrameReader_AST_equals_A4": true,
+    "FrameReader_AST_sha256": "cf99bc8f2a5da9fe53c16c859a702a0b5995c842b0272a82357e0365d1400fc8",
+    "parser_equals_A4": true,
+    "service_equals_A4": true
+  },
+  "requires_fresh_compatible_C0": true,
+  "protocol_frame_remains_invalid": true,
+  "foreign_access_classified": false,
+  "cutover_eligible": false,
+  "semantic_limits": {
+    "known_session_context": "exact known ID token present in reason, not a protocol field or causal claim",
+    "typed_code_with_session_context": "recognized literal code plus known token presence, not an automatic refusal finding",
+    "lexical_hints": "informational and potentially ambiguous"
+  }
+}

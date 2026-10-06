@@ -84,10 +84,10 @@ module Autonomia
         return nil if @agent_id.blank?
 
         Autonomia::Agents::Agent.kept
-          .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
-          .where.not(instruction: [nil, ''])
-          .where("config->>'system_key' IS NULL") # nunca rodar um agente de sistema (Guia) pelo copiloto
-          .find_by(id: @agent_id)
+                                .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
+                                .where.not(instruction: [nil, ''])
+                                .where("config->>'system_key' IS NULL") # nunca rodar um agente de sistema (Guia) pelo copiloto
+                                .find_by(id: @agent_id)
       end
 
       # The agent receives the operator's question PREFIXED with the conversation transcript as

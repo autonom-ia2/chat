@@ -132,7 +132,7 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
   end
 
   describe 'deletion' do
-    it 'destroys an active agent and cleans up the inbox link plus the mirror bot' do
+    it 'archives an active agent and its inbox link while preserving the historical mirror bot' do
       # Arrange — agente ativo conectado a um inbox (AgentBot espelho + AgentBotInbox criados).
       agent = create_external_agent(status: :active, enabled: true, instruction: 'Atenda bem.')
       inbox = create(:inbox, account: account)
@@ -143,16 +143,18 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
       delete "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
              headers: administrator.create_new_auth_token, as: :json
 
-      # Assert — o vínculo cai (dependent: :destroy) e o after_destroy limpa o espelho:
-      # AgentBotInbox e o AgentBot espelho (outgoing_url NULL) são removidos juntos.
+      # Only the operational routing join is removed; historical records remain recoverable.
       expect(response).to have_http_status(:no_content)
-      expect(Autonomia::Agents::Agent.find_by(id: agent.id)).to be_nil
-      expect(Autonomia::Agents::AgentInbox.find_by(id: agent_inbox.id)).to be_nil
+      expect(agent.reload).to have_attributes(enabled: false, status: 'paused', deleted_by_id: administrator.id, deleted_at: be_present)
+      expect(agent_inbox.reload.deleted_at).to eq(agent.deleted_at)
+      expect(Autonomia::Agents::Agent.kept.find_by(id: agent.id)).to be_nil
+      expect(Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox.id)).to be_nil
       expect(AgentBotInbox.find_by(inbox_id: inbox.id)).to be_nil
-      expect(AgentBot.find_by(id: mirror_bot_id)).to be_nil
+      expect(AgentBot.exists?(mirror_bot_id)).to be(true)
+      expect(Audited.audit_class.where(auditable: agent, action: 'destroy').sole.user_id).to eq(administrator.id)
     end
 
-    it 'destroys a draft agent with no links' do
+    it 'archives a draft agent with no links' do
       # Arrange
       agent = create_external_agent
 
@@ -162,7 +164,9 @@ RSpec.describe 'Autonomia journeys - external agent lifecycle', type: :request d
 
       # Assert
       expect(response).to have_http_status(:no_content)
-      expect(Autonomia::Agents::Agent.find_by(id: agent.id)).to be_nil
+      expect(agent.reload).to have_attributes(enabled: false, status: 'paused', deleted_by_id: administrator.id, deleted_at: be_present)
+      expect(Autonomia::Agents::Agent.kept.find_by(id: agent.id)).to be_nil
+      expect(Audited.audit_class.where(auditable: agent, action: 'destroy').sole.user_id).to eq(administrator.id)
     end
   end
 

@@ -7,6 +7,8 @@
 #  meta_object_id :string           not null
 #  name           :string(255)
 #  object_type    :string
+#  preview_url    :text
+#  thumbnail_url  :text
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
 #  account_id     :bigint           not null
@@ -31,6 +33,7 @@ class Crm::MetaAdObject < ApplicationRecord
   TYPES = %w[ad adset campaign].freeze
   CACHE_TTL = 7.days
   NAME_LIMIT = 255
+  URL_LIMIT = 2048
 
   belongs_to :account
 

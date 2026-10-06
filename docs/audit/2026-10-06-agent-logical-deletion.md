@@ -60,3 +60,22 @@ the approved workflow. Keep the deletion markers and audit during an application
 rollback; older code does not know how to hide archived agents. Do not reverse
 the migration after archival/replacement links exist without a reviewed data
 recovery plan (the old unique index cannot represent multiple historical links).
+
+## PR 1063 check and conflict correction
+
+- Integrated main `16a91fb1dd`, including the campaign scheduling fixture fix
+  (`04378cbeae`); the fixed fixture now schedules relative to the test clock.
+- Resolved the sole conflict at the schema version header, retaining the agent
+  migration version and main's Meta connection/ad preview columns and index.
+- Updated external-agent lifecycle request expectations to preserve the agent,
+  archived link and historical bot, remove only native live routing, and
+  attribute the persistent audit to the administrator.
+- Corrected Ruby layout offenses and separated the locked builder write from
+  generation eligibility checks. FAQ resolution excludes an archived historical
+  agent before extraction, with regression coverage.
+- Added a CI database-only migration roundtrip spec. It compares Rails-generated
+  schema dumps before/after down/up within a rolled-back transaction, including
+  FK and partial index reconstruction. It is not permission to reverse an
+  archive containing replacement links in production.
+- Local full Rails/RuboCop execution remains unavailable; the PR workflows must
+  validate the updated head. No CI success is inferred from syntax checking.

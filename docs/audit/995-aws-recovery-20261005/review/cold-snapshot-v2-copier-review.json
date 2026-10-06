@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "record_type": "independent_focal_cold_snapshot_copier_review",
+  "reviewed_at": "2026-10-05T23:13:01Z",
+  "decision": "APPROVED_FOCAL_COPY_SCOPE_NO_BLOCKERS",
+  "scope": "Leitura estática do copiador e da preparação; nenhuma execução da cópia, importação de fontes, teste novo, sondagem Mac ou mutação Git/infra.",
+  "source": {
+    "path": "/workspace/scratch/810b2f03b507/recovery-source-v2/create-cold-snapshot-v2.py",
+    "sha256": "3a6f4110922934f3da0a363008053b474595986cffc9bee685bfa8339868a831",
+    "bytes": 8909
+  },
+  "preparation": {
+    "path": "/workspace/scratch/810b2f03b507/recovery-source-v2/PREPARED.json",
+    "sha256": "3863eab79ca9bd273c4b762f78b9879e9c66dc41d2c0d536b9120118c0398b61",
+    "state": "PREPARED_CLOUD_ONLY_MAC_SESSION_UNAVAILABLE"
+  },
+  "governing_pins": {
+    "allowlist": "18326e1844d21b6f86b755134128b64724d2bf9c95dc44cd8daeb36620a1cd0c",
+    "plan": "5184877dc3e3117ea6eba1f3bd3f4d0898377fd62c52ea5d97572e3d6f644c38",
+    "prior_review": "176720ca548aa723b1aace0bf246552629043a62a5b03ef4bebd09bb0726780d"
+  },
+  "findings": [],
+  "verified_by_source_read": [
+    "Os três documentos governantes têm hashes fixos antes da criação do destino. A allowlist previamente revisada tem 54 entradas únicas, 51 obrigatórias, 3 opcionais e o campo group usado pelo copiador.",
+    "Apenas os caminhos explícitos são lidos; paths absolutos, '..', symlinks e divergência dos mapas de snapshot/restauração são recusados.",
+    "Cada leitura exige arquivo regular, O_NOFOLLOW e identidade/metadados estáveis. Hash, tamanho e modo devem coincidir exatamente com a allowlist.",
+    "O destino é exclusivo; arquivos usam O_EXCL/O_NOFOLLOW, flush/fsync e modo exato, seguidos de leitura de retorno. Não há sobrescrita nem retomada automática de um destino parcial.",
+    "Falhas por entrada ficam registradas e não produzem fontes substitutas. O manifesto distingue copied_and_verified, opcionais ausentes e falhas; complete exige zero falhas.",
+    "Não há subprocess, rede ou importação/execução de fontes copiadas. O conjunto aprovado exclui estado privado e recibos/journals operacionais; os opcionais são evidências offline/patch público.",
+    "O mapa conserva o layout original, o reader fe0 histórico e seu irmão cutover corrigido. Restaurar bytes não autoriza execução. Não é necessário refatorar imports/estado ou repetir suítes para este fechamento mínimo."
+  ],
+  "limits": [
+    "O parecer não prova cópia realizada, fonte Mac atualmente idêntica ou destino atualmente ausente. A preparação registra cópia e manifesto reais ainda não criados por esta frente.",
+    "Uma interrupção antes do manifesto final pode deixar um destino parcial sem manifesto; o próximo uso recusa esse destino e requer reconciliação explícita, sem overwrite ou retry cego.",
+    "Complete refere-se ao conjunto desta allowlist e pode incluir optional_missing devidamente contabilizado. Não significa backup completo de infraestrutura/PKI nem prontidão operacional.",
+    "AWS A5/A6 e o futuro DG de ativação não pertencem à allowlist V2 atual. Qualquer conjunto documental AWS é separado e deve declarar seus próprios limites.",
+    "O Mac permanece sem sondagens conforme coordenação. Este parecer foi persistido somente no cloud."
+  ],
+  "execution": {
+    "copier_invoked": false,
+    "source_imports": 0,
+    "new_tests": 0,
+    "Mac_calls": 0,
+    "Git_changes": false,
+    "infra_changes": false
+  }
+}

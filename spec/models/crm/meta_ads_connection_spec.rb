@@ -34,7 +34,8 @@ RSpec.describe Crm::MetaAdsConnection do
   it 'payload público nunca leva o token' do
     connection = create_meta_ads_connection(account)
 
-    expect(connection.public_payload.keys).to contain_exactly(:configured, :status, :last_checked_at, :last_error)
+    expect(connection.public_payload.keys).to contain_exactly(:configured, :status, :mode, :last_checked_at, :last_error, :verified_at,
+                                                              :destinations, :ad_account, :pixel)
     expect(connection.public_payload.to_json).not_to include(MetaAdsHelpers::TEST_TOKEN.first(8))
   end
 
@@ -46,5 +47,35 @@ RSpec.describe Crm::MetaAdsConnection do
     expect(connection.reload.status).to eq('invalid')
     expect(connection.last_error).not_to include(MetaAdsHelpers::TEST_TOKEN)
     expect(connection.last_error.length).to be <= 255
+  end
+
+  context 'when in partner mode (#1047)' do
+    it 'vale sem token próprio e lê com o token da plataforma' do
+      enable_test_encryption!
+      AiProviderCredential.create!(provider: 'meta_ads', api_key: 'EAAGplataforma123')
+      connection = described_class.create!(account: account, mode: 'partner', ad_account_id: '2196424464528988')
+
+      expect(connection.access_token).to be_nil
+      expect(connection.read_token).to eq('EAAGplataforma123')
+    end
+
+    it 'modo token continua exigindo token' do
+      expect(described_class.new(account: account, mode: 'token')).not_to be_valid
+    end
+
+    it 'uma conta de anúncios lida pela plataforma é de uma conta só' do
+      described_class.create!(account: account, mode: 'partner', ad_account_id: '2196424464528988')
+
+      duplicate = described_class.new(account: create(:account), mode: 'partner', ad_account_id: '2196424464528988')
+      expect(duplicate).not_to be_valid
+    end
+
+    it 'erro do token da plataforma guarda o motivo mas não deixa a conta inválida' do
+      connection = described_class.create!(account: account, mode: 'partner', ad_account_id: '1')
+
+      connection.mark_invalid!('Error validating access token')
+
+      expect(connection.reload).to have_attributes(status: 'active', last_error: 'platform_token_rejected')
+    end
   end
 end

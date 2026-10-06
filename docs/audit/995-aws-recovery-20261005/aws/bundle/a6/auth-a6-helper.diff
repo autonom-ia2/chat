@@ -1,0 +1,116 @@
+--- auth-a5/ssm_close_diagnostic.py
++++ auth-a6/ssm_close_diagnostic.py
+@@ -22,6 +22,94 @@
+     "hint_session_not_found": ("session not found", "session does not exist"),
+ }
+ ID_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_")
++MAX_REASON_TERMS = 64
++TERM_VOCABULARY = {word: word.upper() for word in (
++    "a", "an", "the", "and", "or", "but", "as", "at", "by", "for", "from", "in", "of", "on", "to", "with",
++    "not", "no", "without", "never", "neither", "nor", "does", "do", "did", "is", "are", "was", "were", "be", "has", "have",
++    "session", "id", "identifier", "token", "claim", "request", "message", "channel", "stream", "url", "path", "header", "input", "data",
++    "equal", "equals", "different", "differs", "same", "expected", "actual", "match", "matches", "mismatch",
++    "validate", "validation", "valid", "invalid", "required", "provided", "supplied", "found", "failed", "cannot",
++    "accept", "accepted", "rejected", "denied", "allowed", "unsupported", "received", "contains",
++    "if", "unless", "except", "only", "than",
++)}
++TERM_VOCABULARY.update({
++    "sessionid": "SESSION_ID", "session_id": "SESSION_ID", "session-id": "SESSION_ID",
++    "requestid": "REQUEST_ID", "request_id": "REQUEST_ID", "request-id": "REQUEST_ID",
++    "clientid": "CLIENT_ID", "client_id": "CLIENT_ID", "client-id": "CLIENT_ID",
++    "tokenvalue": "TOKEN_VALUE", "token_value": "TOKEN_VALUE", "streamurl": "STREAM_URL",
++    "stream_url": "STREAM_URL", "schema": "SCHEMA", "version": "VERSION",
++})
++for contraction, label in (
++    ("doesn't", "DOES_NOT"), ("don't", "DO_NOT"), ("didn't", "DID_NOT"),
++    ("isn't", "IS_NOT"), ("aren't", "ARE_NOT"), ("wasn't", "WAS_NOT"), ("weren't", "WERE_NOT"),
++    ("can't", "CANNOT"), ("couldn't", "COULD_NOT"), ("won't", "WILL_NOT"),
++    ("wouldn't", "WOULD_NOT"), ("shouldn't", "SHOULD_NOT"),
++    ("hasn't", "HAS_NOT"), ("haven't", "HAVE_NOT"), ("hadn't", "HAD_NOT"),
++):
++    TERM_VOCABULARY[contraction] = label
++    TERM_VOCABULARY[contraction.replace("'", "’")] = label
++TERM_OPERATORS = {"=": "EQUAL_OP", "==": "EQUAL_OP", "===": "STRICT_EQUAL_OP",
++                  "!=": "NOT_EQUAL_OP", "<>": "NOT_EQUAL_OP", "!==": "STRICT_NOT_EQUAL_OP",
++                  "<": "LESS_THAN_OP", ">": "GREATER_THAN_OP", "<=": "LESS_OR_EQUAL_OP", ">=": "GREATER_OR_EQUAL_OP"}
++
++
++def ordered_reason_terms(reason, own_session_id, foreign_session_id):
++    """Project lexical order with fixed terms only; no semantic/access verdict."""
++    result = {"status": "out_of_scope", "terms": [], "truncated": False, "max_terms": MAX_REASON_TERMS}
++    if not isinstance(reason, str):
++        return result
++    try:
++        if len(reason.encode("utf-8", errors="strict")) > MAX_CLOSE_DIAGNOSTIC-2:
++            return result
++    except UnicodeError:
++        return result
++    ids_valid = (isinstance(own_session_id, str) and isinstance(foreign_session_id, str) and
++                 own_session_id != foreign_session_id and 0 < len(own_session_id) <= 96 and
++                 0 < len(foreign_session_id) <= 96 and all(c in ID_CHARS for c in own_session_id) and
++                 all(c in ID_CHARS for c in foreign_session_id))
++    result["status"] = "observed"
++
++    def emit(label):
++        if result["terms"] and label == "OTHER" and result["terms"][-1] == "OTHER":
++            return
++        if len(result["terms"]) == MAX_REASON_TERMS:
++            result["truncated"] = True
++            return
++        result["terms"].append(label)
++
++    def atom(value):
++        value = value.strip("'\"‘’“”")
++        # Placeholders are never vocabulary keys: exact known IDs only, before
++        # lowercasing. Unknown prefixes/suffixes remain a single OTHER atom.
++        if ids_valid and value == own_session_id:
++            return "OWN_SESSION"
++        if ids_valid and value == foreign_session_id:
++            return "FOREIGN_SESSION"
++        return TERM_VOCABULARY.get(value.lower(), "OTHER")
++
++    for chunk in reason.split():
++        # Do not mine vocabulary or identifier context from URLs/opaque spans.
++        core = chunk.strip("()[]{}<>,;.!?'\"‘’“”")
++        if chunk in TERM_OPERATORS:
++            emit(TERM_OPERATORS[chunk])
++        elif "://" in chunk or any(c in core for c in "/\\@#=."):
++            emit("OTHER")
++        else:
++            value = []
++            for char in chunk:
++                if char.isalnum() or char in "_-'’" or ord(char) >= 128:
++                    value.append(char)
++                else:
++                    if value:
++                        emit(atom("".join(value))); value = []
++                    emit("OTHER")
++                if result["truncated"]:
++                    break
++            if value and not result["truncated"]:
++                emit(atom("".join(value)))
++        if result["truncated"]:
++            break
++    return result
+ 
+ 
+ def _object_without_duplicates(pairs):
+@@ -65,7 +153,9 @@
+               "utf8_valid": False, "reason_format": "unobserved", "reason_bytes": 0,
+               "typed_error_code": "unrecognized", "typed_error_code_format": "none",
+               "reason_evidence_kind": "unknown", "session_id_relation": "unknown",
+-              "known_session_context_valid": False, **{name: False for name in HINTS}}
++              "known_session_context_valid": False,
++              "ordered_reason_terms": {"status": "unobserved", "terms": [], "truncated": False, "max_terms": MAX_REASON_TERMS},
++              **{name: False for name in HINTS}}
+     if not isinstance(payload, bytes) or not 126 <= len(payload) <= MAX_CLOSE_DIAGNOSTIC:
+         return result
+     result.update(projection_status="observed", close_code_present=True,
+@@ -76,6 +166,7 @@
+         result["reason_format"] = "invalid_utf8"
+         return result
+     result["utf8_valid"] = True
++    result["ordered_reason_terms"] = ordered_reason_terms(reason, own_session_id, foreign_session_id)
+     result["session_id_relation"], result["known_session_context_valid"] = _session_context(reason, own_session_id, foreign_session_id)
+     lowered = " ".join(reason.lower().split())
+     for key, phrases in HINTS.items():

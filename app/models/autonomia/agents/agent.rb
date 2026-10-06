@@ -239,14 +239,7 @@ module Autonomia
           # Merge no jsonb `config` em vez de substituí-lo: preserva model/temperature/business_hours/
           # max_turns já setados (o Construtor só gera `guardrails`). Substituir zeraria a config a
           # cada "Ajustar com IA".
-          with_lock do
-            next false if deleted?
-
-            merged = attrs.dup
-            merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
-            update!(merged)
-            true
-          end
+          apply_builder_attributes!(attrs)
         end
       end
 
@@ -324,6 +317,17 @@ module Autonomia
       end
 
       private
+
+      def apply_builder_attributes!(attrs)
+        with_lock do
+          next false if deleted?
+
+          merged = attrs.dup
+          merged[:config] = config.to_h.merge(attrs[:config] || {}) if attrs.key?(:config)
+          update!(merged)
+          true
+        end
+      end
 
       def operating_changed?
         return false unless saved_change_to_enabled? || saved_change_to_status?

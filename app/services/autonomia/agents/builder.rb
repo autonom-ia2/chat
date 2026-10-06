@@ -680,6 +680,7 @@ module Autonomia
         # instruction alheia (adjust_context) e ESCREVER config alheia (apply_builder_config!). Aborta
         # ANTES de qualquer chamada de IA/escrita, marcando failed com telemetria — nunca cross-tenant.
         return abort_cross_account_agent!(token) unless thread_agent_same_account?
+
         if @thread.agent&.deleted?
           @thread.mark_failed!(token, 'agent_deleted')
           return nil

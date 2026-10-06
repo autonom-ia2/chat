@@ -1,0 +1,466 @@
+{
+  "kind": "github_source_inventory_not_deployment_manifest",
+  "operational_manifest": false,
+  "archive_created": false,
+  "archive_sha256": null,
+  "archive_bytes": null,
+  "mac_reconciled": false,
+  "vps_phase_executed": false,
+  "tests_repeated": false,
+  "checked_at": "2026-10-05T23:29:04.054268+00:00",
+  "source_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "source_tree": "4959339843ca4428f730415debeee9d95769984d",
+  "approved_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+  "runtime_paths_changed_from_approved_head": [],
+  "merge_confirmation": {
+    "provider": "release_1023",
+    "pr": 1039,
+    "merged_at": "2026-10-05T23:18:33Z",
+    "approved_head": "c46cf166438b64626d45125450ec2ed4826915aa",
+    "queue_run": 37386874571
+  },
+  "commit_date_distinct_from_merge_time": "2026-10-05T23:09:25Z",
+  "previous_source_sha": "4998091221c2a60ab8e7e6ee3316a6ceb0c0a0bc",
+  "previous_manifest_canonical_sha256": "42b5f482bf1d15bb1ee6a300921f01ff7be39399be6a6827eb441df0fe7e2d38",
+  "selection_from_frozen_wrapper_sha256": "8d619986a8f9f297da87b5c5ee3a9b3b945bb1306656901bacfa3a5ddf08a6b8",
+  "file_count": 41,
+  "unchanged_files": 32,
+  "modified_files": 8,
+  "added_files": 1,
+  "removed_files": [],
+  "files_canonical_sha256": "c5df697fbfdb884f6e728118efb75b32ac1cb3ea164d6c8a8941ec2560dafc8d",
+  "files": {
+    "scripts/instagram_testers/runtime/browser-request-marker.mjs": {
+      "sha256": "18b81caf3d7175b1940769e8d2e405206135a13ebe2e2b1d0b489d3f1eb219f2",
+      "git_blob": "148c6555019f5f2cf8e9e7c2fb6e490f88b2c330",
+      "bytes": 3861,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/entrypoint.mjs": {
+      "sha256": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+      "git_blob": "965fb1d639fb8d4206ee534d18d598acca864054",
+      "bytes": 648,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/operator-protocol.mjs": {
+      "sha256": "bffff02c9e7c011a8cd4a0ea93f8c7c62e9c3048046b362f9c71ba8ad64adf67",
+      "git_blob": "65af0293823ea1c4f2a98ab1e4a4bbeabf2c150f",
+      "bytes": 6198,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/operator-waiter.mjs": {
+      "sha256": "938de8900b35d4eb133873b434b615ff6ba67bf9e6886a675c189c9a23a96eac",
+      "git_blob": "bf27a941d74ebae2469cc7c75e3f09c8fc774002",
+      "bytes": 8699,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/publisher-tunnel.mjs": {
+      "sha256": "7cffb4ead880599742967c20f04f37c6007b326b7af41af7e6f03f0e583effae",
+      "git_blob": "d153a2b03e5dd49c4c307144f7ecc6a7b5d10582",
+      "bytes": 18394,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/docs/requirements.md": {
+      "sha256": "e70ce52cd940066e77e38297429220066274f131c59191d1d4f78c7ccafae25a",
+      "git_blob": "57b5dcf2659ff7b0a7bcccfe8545c19e33c0be63",
+      "bytes": 10732,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/autonomia.aws-config.example": {
+      "sha256": "dc1fd31a89563b4a2ca592f63cb25581120005259b00b69959e607d22b674575",
+      "git_blob": "1a05cc456e68ce5b64b151203ed8584f6721ac27",
+      "bytes": 113,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/autonomia.display.env.example": {
+      "sha256": "8c4497901d1f5cfb70456e1821b0757e96157bceffec2a9e254758e667c268cd",
+      "git_blob": "5fc408317cc681ef2809179cd1122ebc2abf4124",
+      "bytes": 105,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/autonomia.gateway.env.example": {
+      "sha256": "52983f43e882382b93969dd2af386f7d2a0bbad10a1021acf30f52659096b430",
+      "git_blob": "9bdb4f880917ecddae2e66b9f0f9afc121213e71",
+      "bytes": 537,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/autonomia.manager.env.example": {
+      "sha256": "2bb12f581ac4e46781fe83e1b07fe3460eab1515edcbc10fa04cd513c927f878",
+      "git_blob": "6939ae9c92db41c065b1739815f55c66b77f5dbc",
+      "bytes": 770,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/autonomia.publisher.env.example": {
+      "sha256": "a5d0cc054df5e15817e43ea7b3f79149fcee06c5894ce54e21176befc5097f23",
+      "git_blob": "ffb99c0b951c1ddf5e99dd3e5c6ac85abefd2114",
+      "bytes": 533,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/check.py": {
+      "sha256": "194a4decfb49a231f86e04e132c3f4927cef5259a3bcb37abd24ca47f60f653e",
+      "git_blob": "59ece18dd8762f7fafa08690704c6acef8cb9ed8",
+      "bytes": 10973,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/hub2you.aws-config.example": {
+      "sha256": "6d847d09850487443bb9e16702f29132c098ad022334dc3a9c40f530b60097ac",
+      "git_blob": "109d1346bc10f191cde58fcacb768d4ebf20d42b",
+      "bytes": 111,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/hub2you.display.env.example": {
+      "sha256": "aacd1ba6aa4a4b00e0b5e906fbeaaa8178e363f9ef0c5b7fe045c3a0bb049b49",
+      "git_blob": "16596b402752ec7155151fd3ae77fe197228d3e7",
+      "bytes": 101,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/hub2you.gateway.env.example": {
+      "sha256": "d4248629a00881e9e6cc25f46c16723e3937bf02c6b11beca3f0f9a600ee5522",
+      "git_blob": "030b17f21e9caae75a6f312286ff0af070e19e6f",
+      "bytes": 525,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/hub2you.manager.env.example": {
+      "sha256": "8ac3c3764c0e2121ffed3a5073c8bf72e04b500577d64a3e6639afbb05162e79",
+      "git_blob": "778cf55182201f95ae8e4c157ba9abed7701c967",
+      "bytes": 758,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/hub2you.publisher.env.example": {
+      "sha256": "8e1f497eaf106fb1c7dcf31bcd5354b2432de02787389099aecaad2abec5335e",
+      "git_blob": "a7c0c14c63ee8b72f4e1dd6471c7018822b5fb26",
+      "bytes": 523,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/env/verify-pair.py": {
+      "sha256": "a5c5fa3b179a339d663378c648143b98102f545b500d1550f3ca9f008a252485",
+      "git_blob": "2b61ffdf44ece455139cf0a63ad2895f45cd2991",
+      "bytes": 2968,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/gateway-auth.mjs": {
+      "sha256": "c117c9fffcfe00a00f700d66cce159e50c325aa5ab9a211be846daae5a3cfe5d",
+      "git_blob": "e05dfe6349b1074c78e2744033559aa0bbacfbfc",
+      "bytes": 15201,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/gateway.mjs": {
+      "sha256": "dc416ca3e9c3928a381ee99d8593b6b26948dbebca4a7129d6ad94de882a1eb6",
+      "git_blob": "1549f6682f76aef5d1245605cda015e31297f745",
+      "bytes": 13724,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/iam/README.md": {
+      "sha256": "7d544ccca9a9425f4cacb6d7509c0fac4a9efc7a554e360f3619f463874d2a5c",
+      "git_blob": "b141708ce90950f4a3b97a400f6237834f51d921",
+      "bytes": 5495,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/iam/publisher-policy.template.json": {
+      "sha256": "04d0d29b9b936a792dad038347fda5a730bd4b7106d08a45fa785de8bfb9856c",
+      "git_blob": "5740597fc61947e8c1d9ae78303c64b2cb8f00ee",
+      "bytes": 2046,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/iam/ssm-publisher-host-key-document.json": {
+      "sha256": "6f328f644a9abca9f4d313223601144d560377fd5751af54391bf60a3d62d9fb",
+      "git_blob": "947c7181127cbe1cd021966a0d83e41addd252b1",
+      "bytes": 384,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/install/install.py": {
+      "sha256": "ef47556cd62179deda83cda2b25d8a5e5fef598fe58342aeeb40c1302208315b",
+      "git_blob": "59dbc46a8428989fdad6406acab346ea11069f04",
+      "bytes": 18488,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/install/manager.sh": {
+      "sha256": "f0f9c9d0614243cdcfe2a34d14a2e5d9cb3ee6381d54da62c787fa01b4e83f53",
+      "git_blob": "26e0ee25a6137616641c24e2391743120ce64322",
+      "bytes": 1043,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/package-lock.json": {
+      "sha256": "06f43bc0d2868236059cfa5975c2eae6689f86e494099174380b42cb7bdafd37",
+      "git_blob": "6d89b41674e6ecd708814a8762ef533969d4c4ac",
+      "bytes": 3093,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/package.json": {
+      "sha256": "7a940fdb5f7a10a266ef61caa0d5ef47dd9f2d6635141686b4a7660bd8df0fca",
+      "git_blob": "450732985f1f31c5b142b4ab10d1ce0710420e2f",
+      "bytes": 278,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/publisher-broker.mjs": {
+      "sha256": "f4e185b50d07ae8bcff33e94898c15ad2a7d9e6dff7f7677c2f7492f11c90822",
+      "git_blob": "719d0285fb99685d72488782becd6c9826065aca",
+      "bytes": 4894,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/publisher-client.mjs": {
+      "sha256": "33134c3605f6cb9c84e97981d1b1bb6066eb83d0a1dab7eb89e5707578e4a54c",
+      "git_blob": "275acaf33bad212d0a7523debc06bcaaab5b2d44",
+      "bytes": 4124,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/publisher-socket.mjs": {
+      "sha256": "6fe60d43410ffc36c0bd33027db151f2a1e8a8dadcc90aef18b44214fc134cf2",
+      "git_blob": "c2380a0d140167a5759bc055512c40ad9db0658b",
+      "bytes": 4309,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-display@.service": {
+      "sha256": "505b60ec0c02c0a490206cb376081600cb133204704983484b74edd4108e0cb8",
+      "git_blob": "6542f78c35ededec95e08e6e069e67cd4e605b02",
+      "bytes": 1346,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-gateway@.service": {
+      "sha256": "985cd46bc125eb0b675a631ac6f1e57f709b90c4d49a43ef75526ddb9d6aa56b",
+      "git_blob": "336f10e4baaa7751482f03d3a1ca199b8215295e",
+      "bytes": 1353,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-manager@.service": {
+      "sha256": "6b96cb684d937c2a3ec6c5248b7b67891820ac68232ecf8953e6f07188f57be9",
+      "git_blob": "891414a8255a4fe20e9aaa3b002a5ce8bda09e5f",
+      "bytes": 1571,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-publisher@.service": {
+      "sha256": "c1b41267081c93687dcc76fee2ca545e34c656d7e4b31877e49def19f887074d",
+      "git_blob": "2dac20baa63dc07e9395b39caa0d4dfef3051eba",
+      "bytes": 1510,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/web/console.html": {
+      "sha256": "a3d056da7e98b40c1a1a55754b4fed7bf44e1e575eda4bae889ca78f17979557",
+      "git_blob": "837bc0f18b8ed37e5663be8cf263aec057be3181",
+      "bytes": 676,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/web/console.js": {
+      "sha256": "32d7b00ee0e61af79109145e32b6b95f078e60389e9f461862e2092be2e8406b",
+      "git_blob": "b64105d52c62279d906dac474fe661fa805ad794",
+      "bytes": 3002,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/web/enter.html": {
+      "sha256": "050b1a22bfa13534c2669cb2febefe47aeb2aaa14cda7655e0fada43d7069c65",
+      "git_blob": "b849db2a6bfccf713dcdd6fd0673b7fd2ba9f5e0",
+      "bytes": 328,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/runtime/vps/web/enter.js": {
+      "sha256": "634dd13ff773acd1d33f73e6c78aa38cb0220e062eaed59cb6855778b8d34534",
+      "git_blob": "695e0c5d403441ac257a1e410a327f6b311ecbc1",
+      "bytes": 351,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/session-browser.mjs": {
+      "sha256": "f1be8a20fc2575c20d5d00040a201e6bf8df5b8ca70117f0ee02e2938b4bdc17",
+      "git_blob": "4ad0d0d3c297b9004c4a0e4040bf0477801149de",
+      "bytes": 4133,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/session-manager.mjs": {
+      "sha256": "f8b296fe3702afa5d15c0c5e5f5695b2f8538fcfd0e9d6c2be0f2a0b0fffcaea",
+      "git_blob": "d94345870e64761dac727a64dc4b86fa67b4e7a2",
+      "bytes": 17833,
+      "source_mode": "100644"
+    },
+    "scripts/instagram_testers/session-observer.mjs": {
+      "sha256": "6f03ae14572c14cb08284c35ab7ae8276c414b3133eb17621828ca96fdecac08",
+      "git_blob": "c3b5fbae0c752a58e1aa6989cdb229858347f2bd",
+      "bytes": 7125,
+      "source_mode": "100644"
+    }
+  },
+  "sha256_provenance": {
+    "scripts/instagram_testers/runtime/browser-request-marker.mjs": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/entrypoint.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/operator-protocol.mjs": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/operator-waiter.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/publisher-tunnel.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/vps/docs/requirements.md": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/autonomia.aws-config.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/autonomia.display.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/autonomia.gateway.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/autonomia.manager.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/autonomia.publisher.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/check.py": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/hub2you.aws-config.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/hub2you.display.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/hub2you.gateway.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/hub2you.manager.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/hub2you.publisher.env.example": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/env/verify-pair.py": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/gateway-auth.mjs": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/gateway.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/vps/iam/README.md": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/iam/publisher-policy.template.json": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/iam/ssm-publisher-host-key-document.json": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/install/install.py": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/vps/install/manager.sh": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/package-lock.json": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/package.json": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/publisher-broker.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/vps/publisher-client.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/runtime/vps/publisher-socket.mjs": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-display@.service": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-gateway@.service": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-manager@.service": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/systemd/instagram-vps-publisher@.service": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/web/console.html": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/web/console.js": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/web/enter.html": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/runtime/vps/web/enter.js": "sha256_from_pinned_previous_manifest_blob_mode_size_equal",
+    "scripts/instagram_testers/session-browser.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/session-manager.mjs": "github_blob_bytes_rehashed_as_git_object_and_sha256",
+    "scripts/instagram_testers/session-observer.mjs": "sha256_from_pinned_previous_manifest_blob_mode_size_equal"
+  },
+  "changes": [
+    {
+      "path": "scripts/instagram_testers/runtime/entrypoint.mjs",
+      "change": "added",
+      "previous": null,
+      "current": {
+        "sha256": "4ed32db50bd887affe731a5ab5ce1b168461769d78cf3b161a82904947454aa5",
+        "git_blob": "965fb1d639fb8d4206ee534d18d598acca864054",
+        "bytes": 648,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/operator-waiter.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "6320760366026cbd84e466ebc64c77abdff36155461d97b00b5c70c638acc67f",
+        "git_blob": "d51b670deaa561e349e65e1cba94d2e8c023ab72",
+        "bytes": 8762,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "938de8900b35d4eb133873b434b615ff6ba67bf9e6886a675c189c9a23a96eac",
+        "git_blob": "bf27a941d74ebae2469cc7c75e3f09c8fc774002",
+        "bytes": 8699,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/publisher-tunnel.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "777803eb3f5803405d72bdb2a6d6461a5844e0af23c5fa2a78fcd9e4307d2137",
+        "git_blob": "6a664ff717e24f7a2162d8daaa6f103e18e8b0d4",
+        "bytes": 18438,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "7cffb4ead880599742967c20f04f37c6007b326b7af41af7e6f03f0e583effae",
+        "git_blob": "d153a2b03e5dd49c4c307144f7ecc6a7b5d10582",
+        "bytes": 18394,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/gateway.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "38ccb0e4a2a0ce9f028bb91330469c83028c0e54a96746f17b6ba9322bd19c39",
+        "git_blob": "41e3e66c77d168a1840cc7cff3aecd40e2c30d20",
+        "bytes": 13745,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "dc416ca3e9c3928a381ee99d8593b6b26948dbebca4a7129d6ad94de882a1eb6",
+        "git_blob": "1549f6682f76aef5d1245605cda015e31297f745",
+        "bytes": 13724,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/install/install.py",
+      "change": "modified",
+      "previous": {
+        "sha256": "447c3ea213a9ff67ebeaae0c5044b50c428a32726a923a64b7cfa3211c562b15",
+        "git_blob": "574635355f7485c7daaf12b85bb1a41f6dee98ad",
+        "bytes": 18462,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "ef47556cd62179deda83cda2b25d8a5e5fef598fe58342aeeb40c1302208315b",
+        "git_blob": "59dbc46a8428989fdad6406acab346ea11069f04",
+        "bytes": 18488,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/publisher-broker.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "4f02b135262628d48fabc937d1633b8c12a95d1dbee25fb136bfecf7d2c868e1",
+        "git_blob": "222e3ddfd358fd70170feb4219887d2a68038efa",
+        "bytes": 4937,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "f4e185b50d07ae8bcff33e94898c15ad2a7d9e6dff7f7677c2f7492f11c90822",
+        "git_blob": "719d0285fb99685d72488782becd6c9826065aca",
+        "bytes": 4894,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/runtime/vps/publisher-client.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "5ba6fa38339dc5a578a515f7648c6de8febcb44c0ee632c10da8a9c6287c498f",
+        "git_blob": "eaa1314071cf6cd706fb73c14b34dbcc007e2f4d",
+        "bytes": 4167,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "33134c3605f6cb9c84e97981d1b1bb6066eb83d0a1dab7eb89e5707578e4a54c",
+        "git_blob": "275acaf33bad212d0a7523debc06bcaaab5b2d44",
+        "bytes": 4124,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/session-browser.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "121ef07f202802a784c05d22f7d30992f78914a04d4d99a5ece9834280f4a293",
+        "git_blob": "04f6a51c291047bfa50eed8af2d6f6f6b123842e",
+        "bytes": 4127,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "f1be8a20fc2575c20d5d00040a201e6bf8df5b8ca70117f0ee02e2938b4bdc17",
+        "git_blob": "4ad0d0d3c297b9004c4a0e4040bf0477801149de",
+        "bytes": 4133,
+        "source_mode": "100644"
+      }
+    },
+    {
+      "path": "scripts/instagram_testers/session-manager.mjs",
+      "change": "modified",
+      "previous": {
+        "sha256": "ce49ec4ceab14b39ed808c32ada2ba95517b0b25337ebd863b83c2bd7ecfb4fb",
+        "git_blob": "fc89b8b28a2fe89b0379af2672a6e68dff266c37",
+        "bytes": 17836,
+        "source_mode": "100644"
+      },
+      "current": {
+        "sha256": "f8b296fe3702afa5d15c0c5e5f5695b2f8538fcfd0e9d6c2be0f2a0b0fffcaea",
+        "git_blob": "d94345870e64761dac727a64dc4b86fa67b4e7a2",
+        "bytes": 17833,
+        "source_mode": "100644"
+      }
+    }
+  ],
+  "blocker": "Mac Terminal and Filesystem Session terminated 32600; coordinator suspended probes. Normal frozen Mac packager has not run.",
+  "next_required": "Run unchanged approved Mac package command after coordinator releases normal connector; read full output and reconcile actual manifest files against this inventory before root permits stage."
+}

@@ -306,7 +306,13 @@ Rails.application.routes.draw do
               get :summary, on: :collection
             end
             resource :google_conversion_feed, only: [:create]
-            resource :meta_ads_connection, only: [:show, :update, :destroy]
+            resource :meta_ads_connection, only: [:show, :update, :destroy] do
+              get :ad_accounts
+              get :pixels
+              post :selection
+              patch :destinations
+              post :sales_signal
+            end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get :kanban, to: 'kanban#index'

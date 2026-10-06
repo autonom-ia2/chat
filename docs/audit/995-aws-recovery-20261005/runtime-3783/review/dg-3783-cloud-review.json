@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "reviewer": "https_validation",
+  "reviewed_at": "2026-10-05T23:32:25.165144+00:00",
+  "scope": "independent_cloud_only_display_gateway_repin",
+  "decision": "no_technical_blocker_in_exact_single_constant_delta",
+  "source_sha": "3783da330716bf92346e5b017a6a491fdb8f1377",
+  "previous_source_sha": "4998091221c2a60ab8e7e6ee3316a6ceb0c0a0bc",
+  "source_directory": "/workspace/scratch/810b2f03b507/runtime-1023-review/display-gateway-3783da330716bf92346e5b017a6a491fdb8f1377",
+  "baseline_directory": "/workspace/scratch/810b2f03b507/runtime-1023-review/display-gateway",
+  "merge_provenance": "Reported by root/release_1023: PR1039 merged_at 2026-10-05T23:18:33Z; approved head c46cf166438b64626d45125450ec2ed4826915aa. This review does not duplicate GitHub collection.",
+  "hashes": {
+    "baseline_wrapper": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+    "baseline_remote": "4a1f436b3aff0fb5cf08232f03913c1b8c3a97709f7c8d762576e103f60361d8",
+    "candidate_wrapper": "ea58b75358dfb607fb70458a1de87601c94b7d3ee9f19ad51b50bd69c7251aae",
+    "candidate_remote": "22cc71edbeaa5c689177c541f91bd2163fa8799f3a3f8c1fe473140f346a4de1",
+    "repin_patch": "08308c908fc3cfb197a6261d8e0701e641cbf42b96667e204abf257820a567e0",
+    "prepared": "717980aca43f274dd3865adb3951ef8aa0b54fc29987013e184abf3b8e79961d"
+  },
+  "checks": {
+    "wrapper_byte_identical": true,
+    "baseline_hashes_match_prior_approval": true,
+    "remote_only_one_SHA_literal_changed": true,
+    "entire_module_AST_equal_after_SHA_normalization": true,
+    "functions_classes_imports_and_other_globals_unchanged": true,
+    "patch_hash_matches": true,
+    "prepared_metadata_consistent": true,
+    "new_directory_separate_from_baseline": true,
+    "old_sources_not_modified_by_review": true
+  },
+  "unchanged_contracts": [
+    "Start only own display and gateway, with manager/publisher inactive and no enable.",
+    "Readiness401, Unix VNC, loopback gateway, private Node mount and process identity gates are unchanged.",
+    "Other stack, Docker containers and host Node preservation checks are unchanged.",
+    "Focal rollback and stop semantics remain unchanged; no Serve or auth action was added.",
+    "Wrapper keeps exclusive per-phase intents/receipts in its own directory and refuses blind replay."
+  ],
+  "pending": [
+    "Normal Mac transport recovery; coordinator currently suspended Mac Terminal/Filesystem probes after Session terminated (-32600).",
+    "Copy and byte-for-byte readback in the declared new Mac directory.",
+    "Local package for actual merged SHA and review of the real archive/manifest.",
+    "Coordinated stage/preflight/install/verify-inactive of the approved runtime.",
+    "Full verify-pair and separately coordinated Hub start plus verify PASS.",
+    "Only after Hub readiness: Serve Hub, strict TLS and 21 negative cases; auth restart remains separately coordinated after HTTPS results."
+  ],
+  "tests_executed": false,
+  "sources_imported_or_executed": false,
+  "Mac_calls": 0,
+  "VPS_calls": 0,
+  "package_created": false,
+  "services_started": false,
+  "Serve_applied": false,
+  "operational_activation_approved_by_this_review": false,
+  "export_scope": "Public source/review artifact may be preserved on the root-coordinated audit branch; not a main/queue or operational activation."
+}

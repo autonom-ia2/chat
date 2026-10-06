@@ -40,7 +40,9 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       get path, headers: auth_headers(admin), as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to eq('configured' => false, 'status' => nil, 'last_checked_at' => nil, 'last_error' => nil)
+      expect(response.parsed_body).to include('configured' => false, 'status' => nil, 'mode' => nil, 'last_checked_at' => nil, 'last_error' => nil)
+      expect(response.parsed_body['partner']).to include('available' => false)
+      expect(response.parsed_body['sales_signal']).to eq('enabled' => false, 'pipelines' => 0)
     end
 
     it 'devolve o estado sem o token nem parte dele' do
@@ -49,7 +51,9 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       get path, headers: auth_headers(admin), as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body.keys).to contain_exactly('configured', 'status', 'last_checked_at', 'last_error')
+      expect(response.parsed_body.keys).to contain_exactly('configured', 'status', 'mode', 'last_checked_at', 'last_error', 'verified_at',
+                                                           'destinations', 'ad_account', 'pixel', 'partner', 'whatsapp_portfolio', 'sales_signal')
+      expect(response.parsed_body).to include('mode' => 'token', 'destinations' => { 'whatsapp' => false, 'site' => false })
       expect(response.parsed_body).to include('configured' => true, 'status' => 'active')
       expect_no_token_in(response.body)
     end

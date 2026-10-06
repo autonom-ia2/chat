@@ -6,7 +6,7 @@ class AddSoftDeletionToAutonomiaAgents < ActiveRecord::Migration[7.2]
 
     add_column :autonomia_agent_inboxes, :deleted_at, :datetime
     remove_index :autonomia_agent_inboxes, name: 'idx_autonomia_agent_inboxes_on_inbox_uniq', column: :inbox_id, unique: true
-    add_index :autonomia_agent_inboxes, :inbox_id, unique: true,
-              where: 'deleted_at IS NULL', name: 'idx_autonomia_agent_inboxes_on_live_inbox_uniq'
+    add_index :autonomia_agent_inboxes, :inbox_id,
+              unique: true, where: 'deleted_at IS NULL', name: 'idx_autonomia_agent_inboxes_on_live_inbox_uniq'
   end
 end

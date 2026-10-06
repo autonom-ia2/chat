@@ -14,9 +14,11 @@ class Autonomia::Agents::SoftDelete
       archive_inbox_links!(deleted_at)
       archive_agent!(deleted_at)
       metadata = audit_metadata(deleted_at)
-      Audited.audit_class.create!(auditable: @agent, associated: @agent.account, user: @actor,
-                                 action: 'destroy', comment: 'Logical deletion',
-                                 request_uuid: @request_id, audited_changes: metadata)
+      Audited.audit_class.create!(
+        auditable: @agent, associated: @agent.account, user: @actor,
+        action: 'destroy', comment: 'Logical deletion',
+        request_uuid: @request_id, audited_changes: metadata
+      )
       ActiveRecord.after_all_transactions_commit { Rails.logger.info(metadata.to_json) }
       true
     end

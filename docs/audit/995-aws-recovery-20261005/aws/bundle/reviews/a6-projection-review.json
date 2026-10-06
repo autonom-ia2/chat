@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "reviewer": "https_validation",
+  "date": "2026-10-05",
+  "scope": "A6 local ordered-term projection; independent privacy and semantic delta review",
+  "decision": "no_technical_blocker_final_source_and_local_validation",
+  "live_collection_authorized_by_this_review": false,
+  "live_collection_performed": false,
+  "AWS_VPS_calls": 0,
+  "sources": {
+    "baseline_helper": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+    "helper": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0",
+    "preflight": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8",
+    "fixture": "7ba739ff1cad5e83a18c207b78eca8c1e117464d66b757c4a5957d8aedc876ad",
+    "prepared": "58a78a35a52375d75dd77a56030085d6d4ed744acfb82bdd493eda28dd884078",
+    "readme": "7679da5e5107bbfea4b9844f870b8a20cc0c179dc63d006b3881cfc288e5e9ee"
+  },
+  "source_locations": {
+    "cloud": "/workspace/scratch/810b2f03b507/aws-auth-a6",
+    "mac": "/Users/rodrigosilva/dev/worktrees/chat2you/995-instagram-vps-runtime/tmp/approved-1023-20261005/aws/auth-a6"
+  },
+  "read_in_full": [
+    "A5 helper and PREPARED",
+    "A6 helper delta and ordered_reason_terms",
+    "A6 fixture source and complete cloud result/log",
+    "A6 preflight delta",
+    "A6 README and PREPARED"
+  ],
+  "independent_static_checks": {
+    "collector_byte_identical_to_A5": true,
+    "wrapper_byte_identical_to_A5": true,
+    "service_byte_identical_to_A5": true,
+    "parser_byte_identical_to_A5": true,
+    "FrameReader_unchanged_via_exact_collector_bytes": true,
+    "capture_invalid_close_source_identical": true,
+    "all_old_helpers_except_project_close_source_identical": true,
+    "project_close_only_new_field_and_pure_call": true,
+    "preflight_only_helper_pin_changed": true,
+    "close_cap_512_unchanged": true,
+    "old_frame_total_count_deadline_and_cleanup_unchanged": true
+  },
+  "privacy": {
+    "output_terms_are_closed_enums": true,
+    "no_raw_reason_fragments_urls_tokens_ids_or_payload_hashes_exported": true,
+    "exact_session_comparison_before_lowercase": true,
+    "no_substring_suffix_salvage": true,
+    "literal_placeholder_names_are_unknown": true,
+    "opaque_url_chunks_are_other": true,
+    "unknown_unicode_atoms_do_not_salvage_ascii_terms": true,
+    "unknown_spans_are_other": true
+  },
+  "semantics": {
+    "lexical_order_preserved": true,
+    "negations_and_explicit_contractions_preserved": true,
+    "standalone_equality_inequality_operators_distinct": true,
+    "conditional_connectives_preserved": true,
+    "max_terms": 64,
+    "max_reason_utf8_bytes": 510,
+    "truncation_explicit": true,
+    "unknown_punctuation_may_be_other": true,
+    "not_a_complete_sentence_or_causal_interpretation": true,
+    "authentication_access_cutover_flags_remain_false": true
+  },
+  "resolved_finding": {
+    "id": "A6-semantic-1",
+    "observed_on_preliminary_source": true,
+    "reviewer_local_synthetic_cases": 5,
+    "problem": "Standalone equality and inequality had identical OTHER projection; UNLESS was unknown.",
+    "resolution": "Fixed closed enums for standalone operators before opaque-span rejection, plus finite conditionals; fixtures assert independent expected labels.",
+    "resolved_on_helper": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0"
+  },
+  "validation_evidence": {
+    "cloud_fixture_tests": 8,
+    "cloud_fixture_failures": 0,
+    "cloud_fixture_errors": 0,
+    "cloud_log_read_complete": true,
+    "fixture_suite_repeated_by_reviewer": false,
+    "mac_readback_and_execution": {
+      "helper_and_preflight_independently_read_and_equal_to_cloud": true,
+      "fixture_result_and_full_log_independently_read": true,
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "success": true,
+      "process_reported_by_owner": {
+        "pid": 63047,
+        "exit_code": 0
+      },
+      "suite_repeated_by_reviewer": false
+    }
+  },
+  "limits": [
+    "This approval covers only the listed source bytes and the local projection delta.",
+    "A5 Close175/code1003 is not promoted to DENY; its discarded raw reason is not recovered or reconstructed.",
+    "OTHER and truncation mean information is missing; absence of a projected negation or identifier cannot prove its absence from the full reason.",
+    "No IAM changes, no live AWS/VPS collection, no new C0 or session, no endpoint or outbound request changes were made by this review.",
+    "Any future collection remains separately coordinated, with a fresh C0 bound to the final A6 helper and compatible CURRENT."
+  ]
+}

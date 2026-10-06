@@ -1,0 +1,321 @@
+{
+  "schema": "a6-public-recovery-v1",
+  "created_utc": "2026-10-05T23:10:26.904034+00:00",
+  "archive_scope": "public diagnostics A5/A6 only; not a complete IAM/PKI backup",
+  "A6_promoted": false,
+  "live_calls_in_packaging": 0,
+  "Mac_probes_after_root_pause": 0,
+  "selection": "explicit allowlist; no recursive additions",
+  "verification": "all copied bytes checked; known credential patterns and sensitive live-evidence fields rejected; payload_bytes permits only bounded integer counts",
+  "requires_original_Mac_provisioner_and_PKI_custody": true,
+  "files": [
+    {
+      "path": "RECOVERY.md",
+      "sha256": "7821ed6dfcf6b19d1d4c2b99143e2d502763bf3cd322e888e5ff531de40a4364",
+      "bytes": 3888,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RECOVERY.md"
+    },
+    {
+      "path": "RESUME-CHECKPOINT.md",
+      "sha256": "90b121a9031daf6e054c33946b02ef065836723e370f04752f9523af22d45bc9",
+      "bytes": 4614,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RESUME-CHECKPOINT.md"
+    },
+    {
+      "path": "REFERENCES.md",
+      "sha256": "a6214f3d2d0792370da77086c68836aa76db80265af08ec2c26d69a27f43897d",
+      "bytes": 2563,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/REFERENCES.md"
+    },
+    {
+      "path": "ACCESS-INCIDENT.json",
+      "sha256": "734f1563d667fd0b81d6036eab3ba349f4d2d691748d784f5a8e808a9233a79e",
+      "bytes": 4342,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ACCESS-INCIDENT.json"
+    },
+    {
+      "path": "ACCESS-INCIDENT-before-session-termination.json",
+      "sha256": "54a872c5de7c202a78195b494cd5972cf7b6f177244009a4b98b86ecbc985e2f",
+      "bytes": 3138,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ACCESS-INCIDENT-before-session-termination.json"
+    },
+    {
+      "path": "RECOVERY-SOURCE-INDEX.json",
+      "sha256": "3e3e3a892e6d58a2a1f6450a30d8c8671cb3f33c909cc23bf26694565e2a332a",
+      "bytes": 5710,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RECOVERY-SOURCE-INDEX.json"
+    },
+    {
+      "path": "AWS-HANDOFF-last-read-Mac.md",
+      "sha256": "d338b6adb5a73510321c603cda833f794c8282eb4dfd09f21e5b0e0844d1bd8b",
+      "bytes": 37686,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/AWS-HANDOFF-last-read-Mac.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "ef4171605f08621ff52990a3c496a736c10e9d1316059abae2f2c47a8712e47a",
+      "bytes": 1816,
+      "classification": "public_recovery_record",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RECOVERY-README.md"
+    },
+    {
+      "path": "a5/ssm_close_diagnostic.py",
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "bytes": 8362,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/ssm_close_diagnostic.py"
+    },
+    {
+      "path": "a5/preflight-live-proofs-auth-candidate.py",
+      "sha256": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae",
+      "bytes": 2983,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/preflight-live-proofs-auth-candidate.py"
+    },
+    {
+      "path": "a5/auth_diagnostic.py",
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "bytes": 24975,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/auth_diagnostic.py"
+    },
+    {
+      "path": "a5/probe-client-auth-candidate.py",
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "bytes": 26261,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/probe-client-auth-candidate.py"
+    },
+    {
+      "path": "a5/service-proof-auth-candidate.py",
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "bytes": 24765,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/service-proof-auth-candidate.py"
+    },
+    {
+      "path": "a5/ssm_metadata.py",
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+      "bytes": 13203,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/ssm_metadata.py"
+    },
+    {
+      "path": "a5/README.md",
+      "sha256": "e863606648f2fd3aed797093946c5bb8e06bc7ef2f67de1d442ae15964007227",
+      "bytes": 5762,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/README.md"
+    },
+    {
+      "path": "a5/PREPARED.json",
+      "sha256": "ff279ce52eea6ca78252ef91c510dc1b708da4778f7f76328693e22629ad8260",
+      "bytes": 3181,
+      "classification": "approved_A5_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/PREPARED.json"
+    },
+    {
+      "path": "a6/ssm_close_diagnostic.py",
+      "sha256": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0",
+      "bytes": 13166,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ssm_close_diagnostic.py"
+    },
+    {
+      "path": "a6/preflight-live-proofs-auth-candidate.py",
+      "sha256": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8",
+      "bytes": 2983,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/preflight-live-proofs-auth-candidate.py"
+    },
+    {
+      "path": "a6/auth_diagnostic.py",
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "bytes": 24975,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth_diagnostic.py"
+    },
+    {
+      "path": "a6/probe-client-auth-candidate.py",
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "bytes": 26261,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/probe-client-auth-candidate.py"
+    },
+    {
+      "path": "a6/service-proof-auth-candidate.py",
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "bytes": 24765,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/service-proof-auth-candidate.py"
+    },
+    {
+      "path": "a6/ssm_metadata.py",
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+      "bytes": 13203,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ssm_metadata.py"
+    },
+    {
+      "path": "a6/README.md",
+      "sha256": "7679da5e5107bbfea4b9844f870b8a20cc0c179dc63d006b3881cfc288e5e9ee",
+      "bytes": 4279,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/README.md"
+    },
+    {
+      "path": "a6/PREPARED.json",
+      "sha256": "58a78a35a52375d75dd77a56030085d6d4ed744acfb82bdd493eda28dd884078",
+      "bytes": 3694,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/PREPARED.json"
+    },
+    {
+      "path": "a6/promote-auth-a6.py",
+      "sha256": "3e56e68df186e26fd03c0ed80251ea217251608e0c309208f2fcfdccb1872643",
+      "bytes": 4010,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/promote-auth-a6.py"
+    },
+    {
+      "path": "a6/ssm_close_diagnostic-a5-baseline.py",
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+      "bytes": 8362,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ssm_close_diagnostic-a5-baseline.py"
+    },
+    {
+      "path": "a6/test_reason_terms.py",
+      "sha256": "7ba739ff1cad5e83a18c207b78eca8c1e117464d66b757c4a5957d8aedc876ad",
+      "bytes": 8602,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/test_reason_terms.py"
+    },
+    {
+      "path": "a6/auth-a6-helper.diff",
+      "sha256": "c6d5858a638714c941b80368239448c4f99343bef39d221c123504f2049c6f2a",
+      "bytes": 6192,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-helper.diff"
+    },
+    {
+      "path": "a6/auth-a6-preflight.diff",
+      "sha256": "88a7e0f78efab2ea66ad6b1adbb400b240bcf5fa4c92fa4d45a5d54f04872611",
+      "bytes": 1548,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-preflight.diff"
+    },
+    {
+      "path": "a6/auth-a6-promotion.diff",
+      "sha256": "87a27414ff34c66e7c4448bd5669f2351de7058549922d3c468e922dca575709",
+      "bytes": 4143,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-promotion.diff"
+    },
+    {
+      "path": "a6/auth-a6-fixture-cloud-result.json",
+      "sha256": "3232e1fcaf74c54b7472d41ff225a6c80ef4713efd26a03d7da2ed4ccbffeeec",
+      "bytes": 998,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-fixture-cloud-result.json"
+    },
+    {
+      "path": "a6/auth-a6-fixture-cloud.log",
+      "sha256": "8f195a91ba0847c1f47b39c8bdc0d8c5f0c1031f4424c8cdad710721c02bef8f",
+      "bytes": 1250,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-fixture-cloud.log"
+    },
+    {
+      "path": "a6/auth-a6-fixture-initial-result.json",
+      "sha256": "d3b2f46949613422b54edea69f5041fb70e7f8cfe286757e9e8e631797e075a9",
+      "bytes": 999,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-fixture-initial-result.json"
+    },
+    {
+      "path": "a6/auth-a6-fixture-initial.log",
+      "sha256": "fbdab16f1bcc068c7cb02137db6bba6fe6cdc1b21ae21e03c0f82ada365d97e8",
+      "bytes": 1885,
+      "classification": "approved_A6_source_or_preparation",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth-a6-fixture-initial.log"
+    },
+    {
+      "path": "a6/mac-fixture/auth-a6-fixture-result.json",
+      "sha256": "3232e1fcaf74c54b7472d41ff225a6c80ef4713efd26a03d7da2ed4ccbffeeec",
+      "bytes": 998,
+      "classification": "exact_prior_Mac_readback",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/mac-fixture-readback/auth-a6-fixture-result.json"
+    },
+    {
+      "path": "a6/mac-fixture/auth-a6-fixture.log",
+      "sha256": "69ab362bb8fe1a278bb9ce321de7d32cb2808ba5f1479fa6676aa324d83a769a",
+      "bytes": 798,
+      "classification": "exact_prior_Mac_readback",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/mac-fixture-readback/auth-a6-fixture.log"
+    },
+    {
+      "path": "reviews/aws-auth-a5-review.json",
+      "sha256": "9ec25c4b48c9120fac6372eaf68782198fb5a3d19a20cf385c3b6eb2bb7b79ac",
+      "bytes": 7282,
+      "classification": "prior_public_review",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/aws-auth-a5-review-preserved.json"
+    },
+    {
+      "path": "reviews/a6-projection-review.json",
+      "sha256": "9ae3ae73d29de8e71523319ca02c8ce533c7f57bda67da96893fe5ee5965252d",
+      "bytes": 4567,
+      "classification": "independent_public_review",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a6/a6-projection-review.json"
+    },
+    {
+      "path": "reviews/aws-auth-a6-promotion-review.json",
+      "sha256": "a6f80fb6f88210b4344a3abc6970ac5c82208df057f9005f92ab919a6ae133a8",
+      "bytes": 3658,
+      "classification": "independent_public_review",
+      "source_path": "/workspace/scratch/810b2f03b507/tmp/approved-1023-20261005/review/aws-auth-a6-promotion-review.json"
+    },
+    {
+      "path": "live-a5/auth-a5-promotion-20261005.json",
+      "sha256": "97bf7e8ddf3b2b5d411399b5d2551e00340e22a9d3c2b6176670843f3c61ccb8",
+      "bytes": 1568,
+      "classification": "original_public_live_receipt",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/live/auth-a5-promotion-20261005.json"
+    },
+    {
+      "path": "live-a5/proof-protocol-control-54a12d7f3eda4d638544b45a806d5239.json",
+      "sha256": "f0e6fe67161dc0f23162ce110d2b30fbe6b8ceff58bce8d8c63769589c476f6d",
+      "bytes": 32290,
+      "classification": "original_public_live_receipt",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/live/proof-protocol-control-54a12d7f3eda4d638544b45a806d5239.json"
+    },
+    {
+      "path": "live-a5/proof-auth-binding-66ae220f67e74d299f76130466bbff2b.json",
+      "sha256": "a3a38330dec414347954136b3e5f4bc058f1d8dca9685dc18e420decf08dad80",
+      "bytes": 54861,
+      "classification": "original_public_live_receipt",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-a5/live/proof-auth-binding-66ae220f67e74d299f76130466bbff2b.json"
+    },
+    {
+      "path": "source-evidence/SOURCE_INDEX.json",
+      "sha256": "99de7a80d116ed8fbb20badd70bf40977bd125a62b38fccbfde34f240aa234d7",
+      "bytes": 3831,
+      "classification": "prior_public_source_or_runtime_evidence",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-diagnostic/source-evidence/SOURCE_INDEX.json"
+    },
+    {
+      "path": "source-evidence/auth-runtime-readonly-20261005T205522Z.json",
+      "sha256": "8e186de747f5fd8c0b1b567d375a8d5c2295aecd32e63c7f88e43f5cdb12eacc",
+      "bytes": 3713,
+      "classification": "prior_public_source_or_runtime_evidence",
+      "source_path": "/workspace/scratch/810b2f03b507/aws-auth-diagnostic/source-evidence/auth-runtime-readonly-20261005T205522Z.json"
+    }
+  ]
+}

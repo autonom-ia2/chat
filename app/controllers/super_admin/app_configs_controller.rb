@@ -1,4 +1,6 @@
 class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
+  include SuperAdmin::MetaAdsAppConfig
+
   GENERAL_CONFIGS = %w[ENABLE_ACCOUNT_SIGNUP FIREBASE_PROJECT_ID FIREBASE_CREDENTIALS WEBHOOK_TIMEOUT MAXIMUM_FILE_UPLOAD_SIZE
                        WIDGET_TOKEN_EXPIRY].freeze
   META_INCIDENT_CONFIGS = %w[DISABLE_META_INBOX_CREATION DISABLE_META_MESSAGE_SENDING].freeze
@@ -32,6 +34,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       result[config_hash['name']] = config_hash.except('name')
     end
     prepare_typesafe_secret
+    prepare_meta_ads_secret
   end
 
   def create
@@ -41,6 +44,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
 
     errors = shopify_partner_config_errors + typesafe_config_errors
     persist_typesafe_api_key(errors) if errors.empty?
+    persist_meta_ads_token(errors) if errors.empty?
     persist_app_configs(errors) if errors.empty?
 
     if errors.any?
@@ -86,7 +90,8 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
       'notion' => %w[NOTION_CLIENT_ID NOTION_CLIENT_SECRET],
       'google' => %w[GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REDIRECT_URI ENABLE_GOOGLE_OAUTH_LOGIN],
       'captain' => %w[CAPTAIN_OPEN_AI_API_KEY CAPTAIN_OPEN_AI_MODEL CAPTAIN_OPEN_AI_ENDPOINT],
-      'typesafe' => TYPESAFE_CONFIGS
+      'typesafe' => TYPESAFE_CONFIGS,
+      'meta_ads' => META_ADS_CONFIGS
     }
 
     @allowed_configs = mapping.fetch(@config, general_configs)
@@ -95,7 +100,7 @@ class SuperAdmin::AppConfigsController < SuperAdmin::ApplicationController
   def persist_app_configs(errors)
     params.fetch('app_config', {}).each do |key, value|
       break if errors.any?
-      next if key == 'TYPESAFE_API_KEY'
+      next if ['TYPESAFE_API_KEY', META_ADS_TOKEN_KEY].include?(key)
       next unless @allowed_configs.include?(key)
 
       config = InstallationConfig.where(name: key).first_or_create(value: value, locked: false)

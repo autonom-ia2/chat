@@ -1,0 +1,127 @@
+{
+  "created_utc": "2026-10-05T23:01:11.982997+00:00",
+  "scope": "public sources and recorded evidence only; no automatic restore or execution",
+  "A6_live_execution_performed": false,
+  "sources": [
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/ssm_close_diagnostic.py",
+      "status": "last_promoted_A5",
+      "sha256": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/preflight-live-proofs-auth-candidate.py",
+      "status": "last_promoted_A5",
+      "sha256": "0ef4d06ed2a9c223cb77553d3a48bb91e6f12f107422ced2d9088dcdccfe42ae"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/auth_diagnostic.py",
+      "status": "last_promoted_A5",
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/probe-client-auth-candidate.py",
+      "status": "last_promoted_A5",
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/service-proof-auth-candidate.py",
+      "status": "last_promoted_A5",
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a5/ssm_metadata.py",
+      "status": "last_promoted_A5",
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ssm_close_diagnostic.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/preflight-live-proofs-auth-candidate.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/auth_diagnostic.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/probe-client-auth-candidate.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/service-proof-auth-candidate.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ssm_metadata.py",
+      "status": "approved_A6_candidate_not_promoted",
+      "sha256": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/promote-auth-a6.py",
+      "status": "public_source_or_evidence",
+      "sha256": "3e56e68df186e26fd03c0ed80251ea217251608e0c309208f2fcfdccb1872643"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/a6-projection-review.json",
+      "status": "public_source_or_evidence",
+      "sha256": "9ae3ae73d29de8e71523319ca02c8ce533c7f57bda67da96893fe5ee5965252d"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/tmp/approved-1023-20261005/review/aws-auth-a6-promotion-review.json",
+      "status": "public_source_or_evidence",
+      "sha256": "a6f80fb6f88210b4344a3abc6970ac5c82208df057f9005f92ab919a6ae133a8"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/PREPARED.json",
+      "status": "public_source_or_evidence",
+      "sha256": "58a78a35a52375d75dd77a56030085d6d4ed744acfb82bdd493eda28dd884078"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ACCESS-INCIDENT.json",
+      "status": "public_source_or_evidence",
+      "sha256": "734f1563d667fd0b81d6036eab3ba349f4d2d691748d784f5a8e808a9233a79e"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/AWS-HANDOFF-last-read-Mac.md",
+      "status": "public_source_or_evidence",
+      "sha256": "d338b6adb5a73510321c603cda833f794c8282eb4dfd09f21e5b0e0844d1bd8b"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/ACCESS-INCIDENT-before-session-termination.json",
+      "status": "public_recovery_record",
+      "sha256": "54a872c5de7c202a78195b494cd5972cf7b6f177244009a4b98b86ecbc985e2f"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RECOVERY.md",
+      "status": "public_recovery_record",
+      "sha256": "7821ed6dfcf6b19d1d4c2b99143e2d502763bf3cd322e888e5ff531de40a4364"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RESUME-CHECKPOINT.md",
+      "status": "public_recovery_record",
+      "sha256": "90b121a9031daf6e054c33946b02ef065836723e370f04752f9523af22d45bc9"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/REFERENCES.md",
+      "status": "public_recovery_record",
+      "sha256": "a6214f3d2d0792370da77086c68836aa76db80265af08ec2c26d69a27f43897d"
+    },
+    {
+      "path": "/workspace/scratch/810b2f03b507/aws-auth-a6/RECOVERY-README.md",
+      "status": "public_recovery_record",
+      "sha256": "ef4171605f08621ff52990a3c496a736c10e9d1316059abae2f2c47a8712e47a"
+    }
+  ],
+  "requires_Mac_readback_before_next_mutation": true,
+  "provision_identity_528_source_not_in_this_bundle": true,
+  "private_keys_env_payloads_tokens_not_included": true,
+  "updated_utc": "2026-10-05T23:09:36.499480+00:00",
+  "connector_probes_suspended_by_root": true
+}

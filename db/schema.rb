@@ -2158,18 +2158,29 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_06_170000) do
     t.datetime "fetched_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "preview_url"
+    t.text "thumbnail_url"
     t.index ["account_id", "meta_object_id"], name: "idx_crm_meta_ad_objects_account_object", unique: true
   end
 
   create_table "crm_meta_ads_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.text "access_token", null: false
+    t.text "access_token"
     t.string "status", default: "active", null: false
     t.datetime "last_checked_at"
     t.string "last_error", limit: 255
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "mode", default: "token", null: false
+    t.string "ad_account_id"
+    t.string "ad_account_name", limit: 255
+    t.string "ad_account_business_id"
+    t.string "pixel_id"
+    t.string "pixel_name", limit: 255
+    t.jsonb "destinations", default: {}, null: false
+    t.datetime "verified_at"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
+    t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end
 
   create_table "crm_meta_conversion_events", force: :cascade do |t|

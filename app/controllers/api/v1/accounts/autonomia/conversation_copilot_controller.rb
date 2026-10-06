@@ -21,10 +21,10 @@ class Api::V1::Accounts::Autonomia::ConversationCopilotController < Api::V1::Acc
   def agents
     agents = Current.account.then do |account|
       ::Autonomia::Agents::Agent.kept
-        .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
-        .where.not(instruction: [nil, ''])
-        .where("config->>'system_key' IS NULL") # agentes de sistema (Guia) fora do copiloto
-        .order(:name)
+                                .where(account: account, actuation: %i[internal both], status: :active, enabled: true)
+                                .where.not(instruction: [nil, ''])
+                                .where("config->>'system_key' IS NULL") # agentes de sistema (Guia) fora do copiloto
+                                .order(:name)
     end
 
     render json: {

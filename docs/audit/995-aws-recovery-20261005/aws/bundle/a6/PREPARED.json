@@ -1,0 +1,56 @@
+{
+  "utc": "2026-10-05T22:45:25.817448+00:00",
+  "stage": "local_preparation_only",
+  "promotion_performed": false,
+  "AWS_VPS_calls": 0,
+  "fixtures": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "success": true,
+    "AWS_VPS_network_calls": 0,
+    "scope": "Pure closed vocabulary order, negations/contractions, exact ID placeholders, unknown/private spans, Unicode, byte/term caps, unchanged A5 classification",
+    "source_sha256": {
+      "ssm_close_diagnostic.py": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0",
+      "preflight-live-proofs-auth-candidate.py": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8",
+      "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+      "test_reason_terms.py": "7ba739ff1cad5e83a18c207b78eca8c1e117464d66b757c4a5957d8aedc876ad"
+    }
+  },
+  "sha256": {
+    "ssm_close_diagnostic.py": "f8e3da749b14e3427a61f84af927bbb736a372e6b5a1549dc7c2c6806e31d5f0",
+    "preflight-live-proofs-auth-candidate.py": "d78ce8102641d8327fe27e532954c65bc415ed9c729f3c43c73e766ebb75aea8",
+    "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+    "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+    "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+    "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+    "ssm_close_diagnostic-a5-baseline.py": "b6eb8f232b88a9880e80d39e83bf4caa30044382e69476028c4185066641b4f1",
+    "test_reason_terms.py": "7ba739ff1cad5e83a18c207b78eca8c1e117464d66b757c4a5957d8aedc876ad",
+    "auth-a6-helper.diff": "c6d5858a638714c941b80368239448c4f99343bef39d221c123504f2049c6f2a",
+    "auth-a6-preflight.diff": "88a7e0f78efab2ea66ad6b1adbb400b240bcf5fa4c92fa4d45a5d54f04872611",
+    "README.md": "7679da5e5107bbfea4b9844f870b8a20cc0c179dc63d006b3881cfc288e5e9ee",
+    "auth-a6-fixture-cloud-result.json": "3232e1fcaf74c54b7472d41ff225a6c80ef4713efd26a03d7da2ed4ccbffeeec",
+    "auth-a6-fixture-cloud.log": "8f195a91ba0847c1f47b39c8bdc0d8c5f0c1031f4424c8cdad710721c02bef8f",
+    "auth-a6-fixture-initial-result.json": "d3b2f46949613422b54edea69f5041fb70e7f8cfe286757e9e8e631797e075a9",
+    "auth-a6-fixture-initial.log": "fbdab16f1bcc068c7cb02137db6bba6fe6cdc1b21ae21e03c0f82ada365d97e8"
+  },
+  "unchanged": {
+    "capture_invalid_close_source_equals_A5": true,
+    "capture_source_sha256": "6fe4087802421b3f7c84e8d91be6a9ef32dc4f07fecad61e0065e92d11e176d7",
+    "modules_byte_identical_to_A5": {
+      "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+      "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+      "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+      "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7"
+    },
+    "preflight_only_helper_hash_changed": true
+  },
+  "requires_fresh_compatible_C0": true,
+  "no_A5_reason_text_retained_or_reconstructed": true,
+  "foreign_access_classified": false,
+  "cutover_eligible": false,
+  "projection_scope": "ordered closed-vocabulary observation with OTHER and explicit truncation; no automatic clause/access classification"
+}

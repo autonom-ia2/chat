@@ -4,8 +4,9 @@ RSpec.describe Autonomia::Agents::SoftDelete do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:actor) { create(:user, account: account, role: :administrator) }
   let(:agent) do
-    Autonomia::Agents::Agent.create!(account: account, name: 'Agent', agent_type: 'custom',
-                                    status: :active, enabled: true, instruction: 'Private instruction.')
+    Autonomia::Agents::Agent.create!(
+      account: account, name: 'Agent', agent_type: 'custom', status: :active, enabled: true, instruction: 'Private instruction.'
+    )
   end
   let(:service) { described_class.new(agent: agent, actor: actor, request_id: 'delete-request') }
 
@@ -38,8 +39,10 @@ RSpec.describe Autonomia::Agents::SoftDelete do
 
     audit = Audited.audit_class.where(auditable: agent, action: 'destroy').sole
     expect(audit).to have_attributes(user_id: actor.id, associated_id: account.id, request_uuid: 'delete-request')
-    expect(audit.audited_changes).to include('event' => 'autonomia.agent.soft_deleted', 'actor_id' => actor.id,
-                                           'deleted_at' => agent.reload.deleted_at.iso8601(6), 'reason' => 'user_request')
+    expect(audit.audited_changes).to include(
+      'event' => 'autonomia.agent.soft_deleted', 'actor_id' => actor.id,
+      'deleted_at' => agent.reload.deleted_at.iso8601(6), 'reason' => 'user_request'
+    )
     expect(audit.audited_changes.to_json).not_to include('Private instruction.', 'Private knowledge.')
   end
 

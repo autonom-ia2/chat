@@ -1,0 +1,17 @@
+{
+  "tests": 7,
+  "failures": 1,
+  "errors": 0,
+  "success": false,
+  "AWS_VPS_network_calls": 0,
+  "scope": "Pure closed vocabulary order, negations/contractions, exact ID placeholders, unknown/private spans, Unicode, byte/term caps, unchanged A5 classification",
+  "source_sha256": {
+    "ssm_close_diagnostic.py": "e322a1c30dfcc4fdb523126ad51ccb0ef46522f22c07ffa1cd536d4920f41b62",
+    "preflight-live-proofs-auth-candidate.py": "b894b4e71ed23d65609ffb5354f228179dc7c2cbd4d3d02b18cdcb4afd573c78",
+    "auth_diagnostic.py": "161ba3c6235acf2f7b2e7080b38fc77c55e4cbc3b4ccb348d1035543628b961f",
+    "probe-client-auth-candidate.py": "e299c0e5d7ad4915185333034ce796cbedd9ebfbb96460078232a16b8b1b52f8",
+    "service-proof-auth-candidate.py": "d878ffe456d30d77b871added475961a3b94d647a997aa2799c7ef56923e3bc3",
+    "ssm_metadata.py": "49866b1cab65ad28f8ed75da20d0ef5223ea3bf23a89b09f9fbf6771c846d2f7",
+    "test_reason_terms.py": "bd181e018180451089924d0d0657ea0072e1545abcce0ca4bf135f2b2545c30b"
+  }
+}
