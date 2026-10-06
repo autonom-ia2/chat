@@ -206,6 +206,7 @@ class Contact < ApplicationRecord
   private
 
   def ip_lookup
+    return if Current.waha_history_import
     return unless account.feature_enabled?('ip_lookup')
 
     ContactIpLookupJob.perform_later(self)

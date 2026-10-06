@@ -66,11 +66,10 @@ class Reports::RawDataSource < Reports::DataSource
   def count_scope
     case metric.to_s
     when 'conversations_count'
-      scope.conversations.where(account_id: account.id, created_at: range)
-    when 'incoming_messages_count'
-      scope.messages.where(account_id: account.id, created_at: range).incoming.unscope(:order)
-    when 'outgoing_messages_count'
-      scope.messages.where(account_id: account.id, created_at: range).outgoing.unscope(:order)
+      scope.conversations.for_reporting.where(account_id: account.id, created_at: range)
+    when 'incoming_messages_count', 'outgoing_messages_count'
+      scope.messages.for_reporting.where(account_id: account.id, created_at: range,
+                                         message_type: metric.to_s.delete_suffix('_messages_count')).unscope(:order)
     else
       reporting_event_count_scope
     end
@@ -105,7 +104,7 @@ class Reports::RawDataSource < Reports::DataSource
   end
 
   def summary_conversation_counts
-    account.conversations
+    account.conversations.for_reporting
            .where(created_at: range)
            .group(summary_conversation_group_by_key)
            .count

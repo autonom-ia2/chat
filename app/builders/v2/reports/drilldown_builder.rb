@@ -61,7 +61,7 @@ class V2::Reports::DrilldownBuilder
   end
 
   def message_scope
-    scope.messages
+    scope.messages.for_reporting
          .where(account_id: account.id, created_at: bucket_range)
          .public_send(MESSAGE_METRICS.fetch(metric))
          .includes(:sender, conversation: [:assignee, :contact, :inbox])
@@ -69,7 +69,7 @@ class V2::Reports::DrilldownBuilder
   end
 
   def conversation_scope
-    scope.conversations
+    scope.conversations.for_reporting
          .where(account_id: account.id, created_at: bucket_range)
          .includes(:assignee, :contact, :inbox)
          .order(created_at: :desc)

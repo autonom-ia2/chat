@@ -4,7 +4,14 @@ module Waha
   # Cliente HTTP fino do motor externo (WAHA). Autentica via X-Api-Key. Levanta
   # Waha::Client::Error em qualquer falha, com status + corpo para diagnóstico.
   class Client
-    class Error < StandardError; end
+    class Error < StandardError
+      attr_reader :status
+
+      def initialize(message, status: nil)
+        @status = status
+        super(message)
+      end
+    end
 
     DEFAULT_TIMEOUT = 20
 
@@ -30,6 +37,43 @@ module Waha
 
     def list_sessions(all: true)
       get("/api/sessions?all=#{all}")
+    end
+
+    def history_source_ids_available?
+      version = get('/api/server/version')
+      version['chat2youHistorySourceIds'] == 'v1' &&
+        version['chat2youHistoryFirstConnectionTimestamp'] == 'v1'
+    end
+
+    # ---- CHATS/MENSAGENS ----
+    def list_chats(session, limit:, offset:)
+      query = URI.encode_www_form(
+        limit: limit,
+        offset: offset,
+        sortBy: 'id',
+        sortOrder: 'asc'
+      )
+      get("/api/#{path_component(session)}/chats?#{query}")
+    end
+
+    def list_messages(session, chat_id:, limit:, offset:, before:)
+      query = URI.encode_www_form(
+        {
+          'limit' => limit,
+          'offset' => offset,
+          'filter.timestamp.lte' => before,
+          'sortBy' => 'timestamp',
+          'sortOrder' => 'asc',
+          'downloadMedia' => false
+        }
+      )
+      get("/api/#{path_component(session)}/chats/#{path_component(chat_id)}/messages?#{query}")
+    end
+
+    def get_message(session, chat_id:, message_id:)
+      query = URI.encode_www_form(downloadMedia: true)
+      path = "/api/#{path_component(session)}/chats/#{path_component(chat_id)}/messages/#{path_component(message_id)}"
+      get("#{path}?#{query}")
     end
 
     def start_session(name)
@@ -84,6 +128,33 @@ module Waha
       get("/api/contacts/check-exists?#{query}")
     end
 
+    def get_lid_mapping(session, chat_id:)
+      path = chat_id.end_with?('@lid') ? 'lids' : 'lids/pn'
+      get("/api/#{path_component(session)}/#{path}/#{path_component(chat_id)}")
+    end
+
+    def download_media(url)
+      uri = URI.parse(url)
+      base = URI.parse(@base)
+      unless [uri.scheme, uri.host, uri.port] == [base.scheme, base.host, base.port] &&
+             uri.userinfo.nil? && uri.path.start_with?("#{base.path}/api/files/")
+        raise Error, 'history_media_origin_mismatch'
+      end
+
+      limit = GlobalConfigService.load('MAXIMUM_FILE_UPLOAD_SIZE', 40).to_i
+      Down.download(url, headers: { 'X-Api-Key' => @key }, max_redirects: 0,
+                         max_size: (limit.positive? ? limit : 40).megabytes, open_timeout: 10, read_timeout: 10)
+    rescue URI::InvalidURIError
+      raise Error, 'history_media_invalid_url'
+    rescue Down::TimeoutError, Down::ConnectionError, Down::ServerError => e
+      raise Error, "history_media_read_failed #{e.class}", cause: nil
+    end
+
+    def get_contact(session, contact_id:)
+      query = URI.encode_www_form(session: session, contactId: contact_id)
+      get("/api/contacts?#{query}")
+    end
+
     # Read-only capability probe. When the module is enabled but no App is configured
     # for the session, WAHA returns a structured 404 saying the App is not enabled.
     # When the module itself is disabled, Nest returns "Cannot GET ..." instead.
@@ -99,6 +170,10 @@ module Waha
     end
 
     private
+
+    def path_component(value)
+      URI.encode_www_form_component(value.to_s)
+    end
 
     def brazilian_phone_numbers_route_present?(response)
       body = response.parsed_response
@@ -131,7 +206,9 @@ module Waha
         method, "#{@base}#{path}",
         headers: headers, body: body.nil? ? nil : body.to_json, timeout: DEFAULT_TIMEOUT
       )
-      raise Error, "WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}" unless response.success?
+      unless response.success?
+        raise Error.new("WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}", status: response.code)
+      end
 
       response.parsed_response
     rescue HTTParty::Error, SocketError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED => e

@@ -22,6 +22,94 @@ describe Messages::MessageBuilder do
     end
   end
 
+  describe '#perform for WAHA history source IDs' do
+    let(:channel_api) do
+      create(:channel_api, account: account, additional_attributes: {
+               'provider' => 'waha', 'waha_history_import' => { 'status' => 'running' }
+             })
+    end
+    let(:inbox) { channel_api.inbox }
+    let(:conversation) { create(:conversation, inbox: inbox, account: account) }
+    let(:source_id) { 'history-message-1' }
+    let(:params) do
+      ActionController::Parameters.new({ content: 'native message', message_type: 'incoming', source_id: source_id })
+    end
+
+    context 'when the history message already exists in the same inbox' do
+      let!(:existing_message) do
+        previous = Current.waha_history_import
+        Current.waha_history_import = true
+        create(:message, conversation: conversation, account: account, inbox: inbox, source_id: source_id,
+                         content_attributes: { 'history_import' => true, 'waha_history_import' => true })
+      ensure
+        Current.waha_history_import = previous
+      end
+
+      it 'returns it without writing or dispatching live side effects' do
+        user
+        expect(SendReplyJob).not_to receive(:perform_later)
+        expect(Rails.configuration.dispatcher).not_to receive(:dispatch)
+
+        result = nil
+        expect { result = message_builder }.not_to(change { inbox.messages.reload.count })
+
+        expect(result).to eq(existing_message)
+        expect(result.id).to eq(existing_message.id)
+      end
+    end
+
+    it 'creates a new native message when its source ID is absent' do
+      result = nil
+      expect { result = message_builder }.to(change { inbox.messages.reload.count }.by(1))
+
+      expect(result).to be_persisted
+      expect(result.source_id).to eq(source_id)
+      expect(result.content).to eq('native message')
+    end
+
+    it 'returns the original panel message for any WhatsApp attachment ID' do
+      existing = create(:message, conversation: conversation, account: account, inbox: inbox,
+                                  source_id: 'primary-id', additional_attributes: { 'waha_source_ids' => ['primary-id', source_id] })
+
+      expect(message_builder.id).to eq(existing.id)
+      expect(inbox.messages.count).to eq(1)
+    end
+
+    it 'waits for panel outbound identity before writing a new outgoing echo' do
+      create(:message, conversation: conversation, account: account, inbox: inbox, message_type: :outgoing, private: false)
+      echo = ActionController::Parameters.new(
+        content: 'echo', message_type: 'outgoing', source_id: source_id, content_attributes: { external_echo: true }
+      )
+
+      expect { described_class.new(user, conversation, echo).perform }
+        .to raise_error(Waha::MessageSourceIds::IdentityConflict, 'waha_outbound_identity_pending')
+      expect(inbox.messages.outgoing.count).to eq(1)
+    end
+
+    it 'does not deduplicate a matching source ID in another inbox' do
+      other_channel = create(:channel_api, account: account, additional_attributes: {
+                               'provider' => 'waha', 'waha_history_import' => { 'status' => 'running' }
+                             })
+      other_inbox = other_channel.inbox
+      other_conversation = create(:conversation, inbox: other_inbox, account: account)
+      existing_message = create(
+        :message,
+        conversation: conversation,
+        account: account,
+        inbox: inbox,
+        source_id: source_id,
+        content_attributes: { 'history_import' => true }
+      )
+
+      result = described_class.new(user, other_conversation, params).perform
+
+      expect(result).to be_persisted
+      expect(result.id).not_to eq(existing_message.id)
+      expect(result.inbox_id).to eq(other_inbox.id)
+      expect(other_inbox.messages.find_by(source_id: source_id)).to eq(result)
+    end
+  end
+
   describe '#content_attributes' do
     context 'when content_attributes is a JSON string' do
       let(:params) do

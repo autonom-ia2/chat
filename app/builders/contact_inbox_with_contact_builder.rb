@@ -6,6 +6,10 @@ class ContactInboxWithContactBuilder
   pattr_initialize [:inbox!, :contact_attributes!, :source_id, :hmac_verified]
 
   def perform
+    if waha_history_connection? && inbox.channel.additional_attributes.dig('waha_history_import', 'status').in?(%w[waiting_connection running])
+      return account.with_lock { find_or_create_contact_and_contact_inbox }
+    end
+
     find_or_create_contact_and_contact_inbox
   # in case of race conditions where contact is created by another thread
   # we will try to find the contact and create a contact inbox
@@ -28,7 +32,8 @@ class ContactInboxWithContactBuilder
 
   def build_contact_with_contact_inbox
     @contact = find_contact || create_contact
-    @contact_inbox = create_contact_inbox
+    existing = inbox.contact_inboxes.find_by(contact_id: @contact.id) if waha_history_connection?
+    @contact_inbox = existing || create_contact_inbox
   end
 
   def account
@@ -65,12 +70,34 @@ class ContactInboxWithContactBuilder
   end
 
   def find_contact
-    contact = find_contact_by_identifier(contact_attributes[:identifier])
+    contact = find_waha_contact
+    contact ||= find_contact_by_identifier(contact_attributes[:identifier])
     contact ||= find_contact_by_email(contact_attributes[:email])
     contact ||= find_contact_by_phone_numbers
     contact ||= find_contact_by_instagram_source_id(source_id) if instagram_channel?
 
     contact
+  end
+
+  # Native WAHA searches before POSTing a contact. Serialize that POST with history
+  # and reuse its contact-inbox so a concurrent live event cannot create a second thread.
+  def waha_history_connection?
+    inbox.channel_type == 'Channel::Api' && inbox.channel.additional_attributes['provider'] == 'waha' &&
+      inbox.channel.additional_attributes['waha_history_import'].present?
+  end
+
+  def find_waha_contact
+    return unless waha_history_connection?
+
+    attributes = contact_attributes[:custom_attributes].to_h.stringify_keys
+    ids = attributes.values_at('waha_whatsapp_chat_id', 'waha_whatsapp_jid', 'waha_whatsapp_lid').compact_blank.uniq
+    return if ids.empty?
+
+    account.contacts.joins(:contact_inboxes).where(contact_inboxes: { inbox_id: inbox.id }).where(
+      "contacts.identifier IN (:ids) OR contacts.custom_attributes ->> 'waha_whatsapp_chat_id' IN (:ids) OR " \
+      "contacts.custom_attributes ->> 'waha_whatsapp_jid' IN (:ids) OR contacts.custom_attributes ->> 'waha_whatsapp_lid' IN (:ids)",
+      ids: ids
+    ).first
   end
 
   def instagram_channel?
@@ -109,6 +136,11 @@ class ContactInboxWithContactBuilder
 
   def find_contact_by_phone_numbers
     phone_numbers = [contact_attributes[:phone_number], *Array(contact_attributes[:phone_number_candidates])].compact_blank.uniq
+    if waha_history_connection? && contact_attributes[:phone_number].present?
+      digits = contact_attributes[:phone_number].delete_prefix('+')
+      alternatives = Whatsapp::PhoneNumberNormalizationService.new(inbox).phone_number_candidates(digits)
+      phone_numbers.concat(alternatives.map { |number| "+#{number}" }).uniq!
+    end
 
     phone_numbers.each do |phone_number|
       contact = account.contacts.find_by(phone_number: phone_number)

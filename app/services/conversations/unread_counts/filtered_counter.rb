@@ -180,7 +180,7 @@ class Conversations::UnreadCounts::FilteredCounter
   def unread_conversations
     account.conversations
            .joins(:messages)
-           .merge(Message.incoming.reorder(nil))
+           .merge(Message.incoming.without_waha_history.reorder(nil))
            .where(messages: { account_id: account.id })
            .where(unread_since_last_seen_condition)
            .distinct

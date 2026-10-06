@@ -46,6 +46,8 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   def update
+    return update_waha_history_connection if waha_history_connection_request?
+
     continue_update = false
 
     ActiveRecord::Base.transaction do
@@ -102,6 +104,36 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   private
+
+  def waha_history_connection_request?
+    params.key?(:waha_history_connection)
+  end
+
+  def update_waha_history_connection
+    return head :forbidden unless waha_connector_token?
+
+    Waha::FirstConnectionTimestamp.new(
+      inbox: @inbox,
+      user: Current.user,
+      session: waha_history_connection_params[:session],
+      working_at_ms: waha_history_connection_params[:working_at_ms]
+    ).perform
+    head :no_content
+  rescue Waha::FirstConnectionTimestamp::Error
+    render_could_not_create_error('waha_history_connection_invalid')
+  end
+
+  def waha_history_connection_params
+    value = params[:waha_history_connection]
+    raise Waha::FirstConnectionTimestamp::Error, 'history_connection_invalid' unless value.is_a?(ActionController::Parameters)
+
+    value.permit(:session, :working_at_ms)
+  end
+
+  def waha_connector_token?
+    owner_id = @inbox.channel.additional_attributes.to_h['account_token_owner_user_id']
+    authenticate_by_access_token? && Current.user.is_a?(User) && owner_id.is_a?(Integer) && Current.user.id == owner_id
+  end
 
   # inbox_view (#452) lists every account inbox for the settings pages. The Inbox policy scope stays
   # membership-based: it also decides which mailboxes feed the CRM calendar.

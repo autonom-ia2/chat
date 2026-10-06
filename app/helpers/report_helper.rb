@@ -41,15 +41,15 @@ module ReportHelper
   end
 
   def conversations
-    scope.conversations.where(account_id: account.id, created_at: range)
+    scope.conversations.for_reporting.where(account_id: account.id, created_at: range)
   end
 
   def incoming_messages
-    scope.messages.where(account_id: account.id, created_at: range).incoming.unscope(:order)
+    scope.messages.for_reporting.where(account_id: account.id, created_at: range).incoming.unscope(:order)
   end
 
   def outgoing_messages
-    scope.messages.where(account_id: account.id, created_at: range).outgoing.unscope(:order)
+    scope.messages.for_reporting.where(account_id: account.id, created_at: range).outgoing.unscope(:order)
   end
 
   def resolutions

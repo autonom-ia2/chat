@@ -1,5 +1,6 @@
 class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::Conversations::BaseController
   before_action :ensure_api_inbox, only: :update
+  before_action :link_waha_source_ids, only: :update
 
   def index
     @messages = message_finder.perform
@@ -55,6 +56,38 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   private
+
+  def link_waha_source_ids
+    return unless waha_source_ids_request?
+
+    return head :forbidden unless waha_connector_token?
+
+    ids = params[:waha_source_ids]
+    return render_could_not_create_error('Invalid WAHA message source IDs') unless valid_waha_source_ids?(ids)
+    return render_could_not_create_error('WAHA source IDs require a public outgoing message') unless message.outgoing? && !message.private?
+
+    Waha::MessageSourceIds.new(message: message, source_ids: ids).perform
+  rescue Waha::MessageSourceIds::IdentityConflict
+    render_could_not_create_error('WAHA message identity changed; no source IDs were overwritten')
+  end
+
+  def waha_source_ids_request?
+    channel = @conversation.inbox.channel
+    params.key?(:waha_source_ids) && channel.waha_provider? && channel.additional_attributes['waha_history_import'].present?
+  end
+
+  def waha_connector_token?
+    owner_id = @conversation.inbox.channel.additional_attributes.fetch('account_token_owner_user_id')
+    authenticate_by_access_token? && Current.user.is_a?(User) && Current.user.id == owner_id
+  end
+
+  def valid_waha_source_ids?(ids)
+    return false unless ids.is_a?(Array) && ids.present?
+
+    ids.uniq == ids && ids.all? do |id|
+      id.is_a?(String) && id.present? && id.length <= ApplicationRecord::MAX_STRING_COLUMN_LENGTH
+    end
+  end
 
   def message
     @message ||= @conversation.messages.find(permitted_params[:id])

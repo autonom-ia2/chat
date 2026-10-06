@@ -23,11 +23,13 @@ module Waha
 
     def perform
       validate_request!
+      ensure_new_session!
       app_id = "app_#{SecureRandom.hex(16)}"
       phone_numbers_app_id = "br_#{SecureRandom.hex(16)}"
       inbox = create_local_inbox(app_id, phone_numbers_app_id)
 
       provision_remote(inbox, app_id, phone_numbers_app_id)
+      Waha::HistoryImportJob.perform_later(inbox.id)
 
       Result.new(
         inbox: inbox,
@@ -43,6 +45,7 @@ module Waha
       raise Error, 'integration_not_configured' unless @config.enabled?
       raise Error, 'invalid_phone' unless @phone.match?(PHONE_RE)
       raise Error, 'account_token_missing' if @api_access_token.blank?
+      raise Error, 'history_connector_unavailable' unless @client.history_source_ids_available?
     end
 
     def create_local_inbox(app_id, phone_numbers_app_id)
@@ -61,7 +64,6 @@ module Waha
       )
     rescue StandardError => e
       cleanup_inbox(inbox)
-      cleanup_remote(app_id, phone_numbers_app_id)
       Rails.logger.error("[Waha] provisioning failed account=#{@account.id}: #{e.class}")
       raise Error, 'remote_setup_failed'
     end
@@ -74,8 +76,9 @@ module Waha
           'session' => @phone,
           'app_id' => app_id,
           'phone_numbers_app_id' => phone_numbers_app_id,
-          'account_token_owner_user_id' => Current.user&.id,
+          'account_token_owner_user_id' => AccessToken.find_by!(token: @api_access_token).owner_id,
           'kind' => @ai_agent ? 'ai' : 'human',
+          'waha_history_import' => new_history_state,
           # Já nasce marcada como caixa de campanha WhatsApp API — uma caixa WAHA É, por definição,
           # uma caixa de WhatsApp API; sem isto o seletor de campanha (filtra por campaign_channel_type)
           # nunca a enxerga e o disparo "one-click" fica inacessível.
@@ -88,6 +91,15 @@ module Waha
         channel: channel,
         lock_to_single_conversation: true
       )
+    end
+
+    def new_history_state
+      started_at = Time.current.to_i
+      {
+        'status' => 'waiting_connection', 'started_at' => started_at, 'before' => 0,
+        'chats_offset' => 0, 'messages_offset' => 0, 'chat_id' => nil, 'pass' => 0,
+        'imported' => 0, 'unavailable_media' => 0
+      }
     end
 
     # IA: nome = telefone (automação depende). Humano: nome livre, telefone na sessão.
@@ -116,7 +128,7 @@ module Waha
         accountToken: @api_access_token,
         inboxId: inbox.id,
         inboxIdentifier: inbox.channel.identifier,
-        locale: 'pt-BR',
+        locale: 'pt-BR', chat2youHistoryOnboarding: true,
         linkPreview: 'OFF',
         groups: 'OFF',
         templates: {},
@@ -135,24 +147,18 @@ module Waha
       phone.to_s.gsub(/\D/, '')
     end
 
-    def cleanup_inbox(inbox)
-      inbox&.destroy
-    rescue StandardError
-      nil
+    def ensure_new_session!
+      @client.get_session(@phone)
+      raise Error, 'session_already_exists'
+    rescue Waha::Client::Error => e
+      raise Error, 'session_check_failed' unless e.status == 404
     end
 
-    def cleanup_remote(*app_ids)
-      app_ids.compact.each do |app_id|
-        @client.delete_app(app_id)
-      rescue StandardError
-        nil
-      end
-    ensure
-      begin
-        @client.delete_session(@phone)
-      rescue StandardError
-        nil
-      end
+    def cleanup_inbox(inbox)
+      # A failed POST may have created the remote session, or collided with an
+      # existing one. Local rollback must never invoke the remote-delete callback.
+      inbox.channel.update!(additional_attributes: {})
+      inbox.destroy!
     end
   end
 end

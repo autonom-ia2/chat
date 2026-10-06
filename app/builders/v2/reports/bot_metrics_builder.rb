@@ -23,11 +23,11 @@ class V2::Reports::BotMetricsBuilder
   end
 
   def bot_conversations
-    @bot_conversations ||= account.conversations.where(inbox_id: bot_activated_inbox_ids).where(created_at: range)
+    @bot_conversations ||= account.conversations.for_reporting.where(inbox_id: bot_activated_inbox_ids).where(created_at: range)
   end
 
   def bot_messages
-    @bot_messages ||= account.messages.outgoing.where(conversation_id: bot_conversations.ids).where(created_at: range)
+    @bot_messages ||= account.messages.for_reporting.outgoing.where(conversation_id: bot_conversations.ids).where(created_at: range)
   end
 
   def bot_resolutions_count

@@ -27,13 +27,13 @@ class YearInReviewBuilder
   end
 
   def total_conversations_count
-    account.conversations
+    account.conversations.for_reporting
            .where(assignee_id: user_id, created_at: year_range)
            .count
   end
 
   def busiest_day_data
-    daily_counts = account.conversations
+    daily_counts = account.conversations.for_reporting
                           .where(assignee_id: user_id, created_at: year_range)
                           .group_by_day(:created_at, range: year_range, time_zone: Time.zone)
                           .count

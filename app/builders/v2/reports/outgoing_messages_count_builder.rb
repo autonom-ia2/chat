@@ -14,7 +14,7 @@ class V2::Reports::OutgoingMessagesCountBuilder
   private
 
   def base_messages
-    account.messages.outgoing.unscope(:order).where(created_at: range)
+    account.messages.for_reporting.outgoing.unscope(:order).where(created_at: range)
   end
 
   def build_by_agent

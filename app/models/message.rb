@@ -45,6 +45,7 @@ class Message < ApplicationRecord
   include MessageFilterHelpers
   include Liquidable
   NUMBER_OF_PERMITTED_ATTACHMENTS = 15
+  WAHA_HISTORY_IMPORT_KEY = 'waha_history_import'.freeze
 
   TEMPLATE_PARAMS_SCHEMA = {
     'type': 'object',
@@ -64,6 +65,7 @@ class Message < ApplicationRecord
     }
   }.to_json.freeze
 
+  before_validation :validate_waha_history_import_marker, prepend: true
   before_validation :ensure_content_type
   before_validation :prevent_message_flooding
   before_save :ensure_processed_message_content
@@ -119,6 +121,17 @@ class Message < ApplicationRecord
   scope :non_activity_messages, -> { where.not(message_type: :activity).reorder('created_at desc') }
   scope :today, -> { where("date_trunc('day', created_at) = ?", Date.current) }
   scope :voice_calls, -> { where(content_type: :voice_call) }
+  scope :non_historical, -> { where("(messages.content_attributes #>> '{}')::jsonb->>'history_import' IS DISTINCT FROM 'true'") }
+  WAHA_HISTORY_EXCLUSION_SQL = "(messages.content_attributes #>> '{}')::jsonb->>'waha_history_import' IS DISTINCT FROM 'true'".freeze
+  scope :without_waha_history, -> { where(WAHA_HISTORY_EXCLUSION_SQL) }
+  scope :for_reporting, -> { without_waha_history }
+  scope :with_waha_source_id, lambda { |id|
+    where("messages.source_id = :id OR messages.additional_attributes->'waha_source_ids' @> :ids::jsonb", id: id, ids: [id].to_json)
+  }
+  scope :pending_waha_outbound, lambda {
+    outgoing.where(private: false, source_id: nil)
+            .where("(messages.content_attributes #>> '{}')::jsonb->>'external_echo' IS DISTINCT FROM 'true'")
+  }
 
   # TODO: Get rid of default scope
   # https://stackoverflow.com/a/1834250/939299
@@ -134,6 +147,7 @@ class Message < ApplicationRecord
   has_one :csat_survey_response, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
 
+  before_create :activate_waha_history_conversation
   after_create_commit :execute_after_create_commit_callbacks
 
   after_update_commit :dispatch_update_event
@@ -224,7 +238,7 @@ class Message < ApplicationRecord
   def valid_first_reply?
     return false unless human_response? && !private?
     return false if conversation.first_reply_created_at.present?
-    return false if conversation.messages.outgoing
+    return false if conversation.messages.outgoing.non_historical
                                 .where.not(sender_type: ['AgentBot', 'Captain::Assistant'])
                                 .where.not(private: true)
                                 .where("(additional_attributes->'campaign_id') is null")
@@ -286,7 +300,52 @@ class Message < ApplicationRecord
 
   private
 
+  def validate_waha_history_import_marker
+    return if Current.waha_history_import == true
+
+    current_attributes = waha_history_marker_attributes(content_attributes, WAHA_HISTORY_IMPORT_KEY)
+    persisted_attributes = waha_history_marker_attributes(attribute_in_database(:content_attributes), WAHA_HISTORY_IMPORT_KEY)
+    invalid = waha_marker_invalid?(current_attributes, persisted_attributes, WAHA_HISTORY_IMPORT_KEY)
+
+    return errors.add(:content_attributes, :invalid) if invalid
+    return unless persisted?
+    return unless persisted_attributes.is_a?(Hash)
+    return unless persisted_attributes.key?(WAHA_HISTORY_IMPORT_KEY)
+
+    self.content_attributes = current_attributes
+    return if current_attributes.key?(WAHA_HISTORY_IMPORT_KEY)
+
+    self.content_attributes = current_attributes.merge(
+      WAHA_HISTORY_IMPORT_KEY => persisted_attributes[WAHA_HISTORY_IMPORT_KEY]
+    )
+  end
+
+  def waha_history_marker_attributes(attributes, marker_key)
+    attributes = attributes.to_h if attributes.respond_to?(:permitted?) && attributes.permitted?
+    return attributes unless attributes.is_a?(Hash) && attributes.key?(marker_key.to_sym)
+
+    attributes.stringify_keys
+  end
+
+  def waha_marker_invalid?(current_attributes, persisted_attributes, marker_key) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    return true unless current_attributes.nil? || current_attributes.is_a?(Hash)
+
+    current_missing = current_attributes.nil?
+    current_attributes ||= {}
+    current_marker_present = current_attributes.key?(marker_key)
+    return true if new_record? && current_marker_present
+    return false unless persisted?
+
+    persisted_marker_present = persisted_attributes.is_a?(Hash) && persisted_attributes.key?(marker_key)
+    return current_marker_present unless persisted_marker_present
+    return true if current_missing
+
+    current_marker_present && current_attributes[marker_key] != persisted_attributes[marker_key]
+  end # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+
   def prevent_message_flooding
+    return if Current.waha_history_import && content_attributes['history_import']
+
     # Added this to cover the validation specs in messages
     # We can revisit and see if we can remove this later
     return if conversation.blank?
@@ -337,6 +396,19 @@ class Message < ApplicationRecord
     send_reply
     execute_message_template_hooks
     update_contact_activity
+  end
+
+  def activate_waha_history_conversation
+    return if content_attributes['history_import'] || private? || !message_type.in?(%w[incoming outgoing])
+    return unless conversation.additional_attributes['waha_history_only']
+
+    conversation.with_lock do
+      next unless conversation.additional_attributes['waha_history_only']
+
+      attrs = conversation.additional_attributes.except('waha_history_only', 'history_import')
+      # Start reporting at the first live message, preserving every historical message date.
+      conversation.update_columns(additional_attributes: attrs, created_at: created_at) # rubocop:disable Rails/SkipsModelValidations
+    end
   end
 
   def update_contact_activity
@@ -395,6 +467,8 @@ class Message < ApplicationRecord
   end
 
   def dispatch_update_event
+    return if Current.waha_history_import && content_attributes['history_import']
+
     # ref: https://github.com/rails/rails/issues/44500
     # we want to skip the update event if the message is not updated
     return if previous_changes.blank?

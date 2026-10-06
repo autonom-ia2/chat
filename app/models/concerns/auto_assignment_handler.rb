@@ -13,6 +13,8 @@ module AutoAssignmentHandler
   # assignee commit as one change-set; a follow-up save would reset saved_changes and
   # hide the status change from the after_commit callbacks (no conversation.opened).
   def run_legacy_auto_assignment
+    return if Current.waha_history_import
+
     return unless status_changed? && open?
     return if inbox.auto_assignment_v2_enabled?
     return unless should_run_auto_assignment?
@@ -21,6 +23,8 @@ module AutoAssignmentHandler
   end
 
   def run_auto_assignment
+    return if Current.waha_history_import
+
     # Assignment V2: Also trigger assignment when conversation is resolved or snoozed,
     # bypassing the open-only condition so the AssignmentJob can redistribute capacity.
     return unless conversation_status_changed_to_open? || conversation_status_changed_to_resolved_or_snoozed?
