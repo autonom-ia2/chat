@@ -163,6 +163,33 @@ AWS automáticos disparados pelo merge, janela apenas dos serviços Instagram
 VPS, quotas do template medidas antes da consolidação, duas renovações naturais,
 reinício controlado das units e reversões AWS/VPS separadas.
 
+## CI e preflight após publicação do candidato
+
+Head c60e6c623f2cb69f11d7da95beefee6e7b5d045c foi publicado e a PR saiu de
+draft. Os sete campos do Project foram atualizados e relidos: issue Em
+desenvolvimento e PR Em review. Hook executou lint-staged (sem arquivos app
+na seleção) e RuboCop do publicador, sem bypass e sem offenses.
+
+O job Node synthetic contracts executou contratos e verificações Python com
+sucesso, mas falhou no ESLint final: helper do teste usava parâmetro `request`
+que ocultava função de mesmo nome no escopo externo (`no-shadow`, linha175).
+O parâmetro foi renomeado para `requestOverrides`; comportamento não mudou.
+Esse reparo precisa de CI do novo head; não apresentar o job anterior como
+verde. Recibo do job: run37614095156/job112768149583.
+
+Preflight AWS em 11:31 UTC: as duas contas correspondem às stacks, CURRENT
+running e targets saudáveis, listener443 corresponde ao CURRENT em ambas.
+Previous existe, registrado no target group distinto e parado; não é saudável
+agora. O workflow de rollback inicia previous parado, aguarda SSM/saúde e só
+então troca tráfego. Essa leitura não executou rollback nem comprova a saúde
+futura de previous após boot; revalidar na janela de liberação.
+
+Preflight do aceite UI: navegador IAB indisponível; só perfil pessoal Chrome
+foi anunciado pelo inventário. Nenhuma aba/sessão pessoal foi operada.
+O teste de painel requer superfície isolada controlável ou autorização explícita
+para usar uma aba específica do navegador pessoal, preservando a preferência
+de Rodrigo. Isso não demonstra falha do painel nem necessidade de novo login Meta.
+
 ## Aceite permanece pendente
 
 Sem recibo de sessão registrada, duas renovações naturais, persistência

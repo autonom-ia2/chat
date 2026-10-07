@@ -172,14 +172,14 @@ test('accepts every observed loading document from the public SHA fixture', () =
 });
 
 test('rejects each loading document when one pinned guard is changed', () => {
-  const assertRejected = (body, request = {}) => {
+  const assertRejected = (body, requestOverrides = {}) => {
     assert.equal(
       isAllowedBrowserRequest({
         url: graphqlUrl,
         method: 'POST',
         body,
         config,
-        ...request,
+        ...requestOverrides,
       }),
       false
     );

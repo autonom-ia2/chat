@@ -195,7 +195,7 @@
               }
             },
             {
-              "text": "Codex retomou M4/8ae330bf. VPS9a48a2d revalidada: sete serviços ativos e gestor Autonomia parado/perfil livre. Observar resposta inicial com diagnóstico limitado/revisado; medir transporte. #1112 draft sem publicação, renovação ou aceite. Não reinstalar1089 nem repetir login.",
+              "text": "Head c60e6c6: correção carregamento/papéis e boot process-local concluída; revisão independente aprovada; 240 contratos no snapshot M2 aprovados. CI deste SHA em andamento. Próximo gate: aprovação explícita para fila/MERGED, ambos deploys AWS automáticos e upgrade VPS restrito; depois sessão/2 renovações naturais/boot/painel Autonomia conta1, Hub separado. Sem sessão publicada nesta rodada.",
               "field": {
                 "name": "Próxima ação"
               }
@@ -209,7 +209,7 @@
           "nodes": [
             {},
             {
-              "text": "fix(instagram): evitar que respostas paralelas bloqueiem a captura",
+              "text": "fix(instagram): destravar carregamento e reduzir boot do publicador",
               "field": {
                 "name": "Title"
               }
@@ -221,7 +221,7 @@
               }
             },
             {
-              "name": "PR aberta",
+              "name": "Em review",
               "field": {
                 "name": "Status"
               }
@@ -251,7 +251,7 @@
               }
             },
             {
-              "text": "Codex retomou M4/8ae330bf. VPS9a48a2d revalidada: sete serviços ativos e gestor Autonomia parado/perfil livre. Observar resposta inicial com diagnóstico limitado/revisado; medir transporte. #1112 draft sem publicação, renovação ou aceite. Não reinstalar1089 nem repetir login.",
+              "text": "Head c60e6c6: correção carregamento/papéis e boot process-local concluída; revisão independente aprovada; 240 contratos no snapshot M2 aprovados. CI deste SHA em andamento. Próximo gate: aprovação explícita para fila/MERGED, ambos deploys AWS automáticos e upgrade VPS restrito; depois sessão/2 renovações naturais/boot/painel Autonomia conta1, Hub separado. Sem sessão publicada nesta rodada.",
               "field": {
                 "name": "Próxima ação"
               }
@@ -1719,5 +1719,64 @@
     "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
     "scripts/instagram_testers/session_publisher.rb": "a3b65159826bae7d2525577ef7bcfd26285bbd53c2f2661b835925115bd70b01",
     "tests/instagram_testers/fixtures/loading-documents.json": "960f2e25a5692a94a0f9dd2c436da6414facc230c8fed2f69bde55650e1e9e70"
+  },
+  "ci_first_candidate": {
+    "head": "c60e6c623f2cb69f11d7da95beefee6e7b5d045c",
+    "run": "https://github.com/autonom-ia2/chat/actions/runs/37614095156",
+    "node_job": "https://github.com/autonom-ia2/chat/actions/runs/37614095156/job/112768149583",
+    "contracts_and_python_steps": "success",
+    "overall_node_job": "failure",
+    "failure": "ESLint no-shadow at session-observer.test.mjs:175; helper parameter request shadows outer request",
+    "repair": "rename helper parameter to requestOverrides; no behavioral/source runtime change",
+    "job_log_sha256": "a26d9223db4d518c27e616f4e05ced29a71df483ca7bcf8be6584f8273f096a9",
+    "new_head_ci": "pending after push"
+  },
+  "aws_release_preflight": {
+    "utc": "2026-10-07T11:31:04.460488+00:00",
+    "results": [
+      {
+        "stack": "autonomia",
+        "status": "read_complete",
+        "account_matches": true,
+        "current_running": true,
+        "current_environment_prod": true,
+        "current_managed_by_actions": true,
+        "listener_matches_current": true,
+        "current_target_healthy": true,
+        "previous_instance_running": false,
+        "previous_instance_state": "stopped",
+        "previous_target_registered": true,
+        "previous_target_healthy": false,
+        "rollback_target_distinct": true,
+        "mutation_performed": false
+      },
+      {
+        "stack": "hub2you",
+        "status": "read_complete",
+        "account_matches": true,
+        "current_running": true,
+        "current_environment_prod": true,
+        "current_managed_by_actions": true,
+        "listener_matches_current": true,
+        "current_target_healthy": true,
+        "previous_instance_running": false,
+        "previous_instance_state": "stopped",
+        "previous_target_registered": true,
+        "previous_target_healthy": false,
+        "rollback_target_distinct": true,
+        "mutation_performed": false
+      }
+    ]
+  },
+  "panel_browser_preflight": {
+    "isolated_iab_available": false,
+    "only_personal_chrome_advertised": true,
+    "personal_tabs_or_session_operated": false,
+    "surface_or_explicit_permission_required_for_panel_acceptance": true
+  },
+  "old_unapproved_deltas_final_readback": {
+    "verified": 6,
+    "unchanged": 6,
+    "old_worktree_edited": false
   }
 }
