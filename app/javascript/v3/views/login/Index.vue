@@ -33,6 +33,10 @@ const USER_NOT_CONFIRMED_ERROR_CODE = 'user_not_confirmed';
 const AUTH_ERROR_TOAST_DURATION = 6000;
 const AUTONOMIA_SSO_PATH = '/auth/autonomia';
 const AUTONOMIA_SSO_SOURCE = 'autonomia';
+const AUTONOMIA_CALLBACK_ERRORS = new Set([
+  'autonomia-sso-error',
+  'autonomia-sso-state',
+]);
 const TERMINAL_SSO_STATUS_CODES = new Set([400, 401, 403, 410, 422]);
 
 const isSafeAppRedirect = value =>
@@ -158,6 +162,7 @@ export default {
         window.chatwootConfig.autonomiaSsoAutoRedirect === 'true' &&
         !this.ssoAuthToken &&
         !this.authError &&
+        !this.loginApi.hasErrored &&
         !this.email
       );
     },
@@ -183,8 +188,18 @@ export default {
     // shouldAutoRedirectToAutonomia already requires !authError, so the SSO redirect above and
     // this error toast never run together.
     if (this.authError) {
+      this.loginApi.hasErrored = true;
       // Wait for the sibling snackbar to mount and subscribe to toast events.
       this.$nextTick(() => {
+        if (
+          this.showAutonomiaSso &&
+          AUTONOMIA_CALLBACK_ERRORS.has(this.authError)
+        ) {
+          this.ssoLoginFailure = 'authentication';
+          this.showAlertMessage(this.getAutonomiaFailureMessage(true));
+          window.location.replace(this.autonomiaRetryUrl);
+          return;
+        }
         const messageKey = ERROR_MESSAGES[this.authError] ?? 'LOGIN.API.UNAUTH';
         // Use a method to get the translated text to avoid dynamic key warning
         const translatedMessage = this.getTranslatedMessage(messageKey);
