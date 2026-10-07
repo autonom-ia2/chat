@@ -1296,3 +1296,51 @@ Nenhum ponto foi rejeitado por inteiro. Partes rejeitadas, com o motivo:
 - **Ponto 24, "auction_pressure vira nota dentro de outra ação".** Misturaria dois diagnósticos num cartão e
   quebraria "uma ação por tipo". Ficou a outra saída da crítica: o leilão é a última prioridade e só ocupa vaga
   que sobrou.
+
+---
+
+## Status (integração, 07/10)
+
+**Entregue (sem commit; tudo no working tree da branch):** o consultor inteiro em `app/services/crm/meta_ads/advisor/`
+(Facts, History, Rules, Decision, Writer, Check, Analysis, Advice, Format e o esqueleto de Prompt), as 3 tabelas
+com models, `Panel::ResponseTime`, `Panel::MetaComparison`, `Panel::PathList`, as rotas `advisor_actions` e
+`panel_list`, o `PruneJob`, a leitura da frequência de 7 dias, o resumo das 8h com a ação do consultor e a tela
+(até 3 ações, Feito/Dispensar, listas por etapa, tempo de resposta, Meta × nós). Saíram `Panel::AiAction`,
+`Panel::AiActionCache` e `Panel::Action.for`.
+
+**Validação da integração (resultado lido):**
+- `rails db:schema:load` no banco de teste: sem erro. Diff do `schema.rb`: só as 3 tabelas, 7 chaves
+  estrangeiras e a versão `2026_10_09_143800`.
+- rspec de `spec/services/crm/meta_ads`, `spec/requests/api/v1/accounts/crm/meta_ads_*`, `spec/jobs/crm/meta_ads`,
+  `spec/models/crm/meta_*`, `spec/configs/{schedule,crm_schedule}_spec.rb` e `formatos_spec.rb`: **453 examples,
+  0 failures**. A bateria S1–S23 (`scenarios_spec.rb`, sem alteração): 25 examples, 0 failures. Vizinhos (locales,
+  Guia, Central, `ai_request_results`): 223 examples, 0 failures.
+- O `GET panel` do request spec roda o `Advisor::Analysis` e o `Panel::ResponseTime` de verdade, sem stub. Os
+  specs de Digest e DeliverJob continuam com stub do Analysis (de propósito: testam o envio, não o consultor).
+- `autonomia:guia:formatos` (541 ações) e `autonomia:guia:formatos:check`: "em dia".
+- vitest de `metaAds` e `api`: 62 arquivos, 385 testes passando. eslint nos 11 arquivos de tela: 0 erros,
+  79 avisos (`no-missing-keys`/`no-dynamic-keys`, o padrão da pasta). `check-fork-i18n`: 20272 mensagens, en/pt_BR
+  cobertos. `guide-map/check`: 194 fluxos, 0 sem explicação. `central-de-ajuda/conferir`: em dia, sem aviso no
+  13.20.
+- rubocop nos 60 `.rb` tocados (com `--force-exclusion`, que respeita a exclusão do `schema.rb`): sem ofensa.
+- grep de `Panel::AiAction`, `AiActionCache` e `Panel::Action.for` em `app`, `spec`, `lib`, `config`: nada.
+
+**Desvios (os de A, B e C estão nos relatórios deles; os da integração):**
+- `Panel::Action`: além do `for`, saíram `stalled_payload` e `card_payload`, que só o `for` chamava. Ficam
+  `stalled`, `top_ad_name`, `tracking_payload` e `wait_payload`, que o consultor, o `PathList` e o
+  `QuoteMessageSuggester` usam. `spec/services/crm/meta_ads/panel/action_spec.rb` nunca existiu: não havia exemplo
+  a remover.
+- `spec/services/crm/meta_ads/whatsapp_report/sender_spec.rb` (fora da lista do §7): a ação do fixture passou para
+  o formato do consultor (`source`, `facts`). O valor sai `R$ 6.200`, sem centavos zerados, pelo `Advisor::Format`.
+- `formatos-das-acoes.json`: `POST daily_action` agora é "sem corpo" (o `days` é ignorado, §4.4). Junto com ele,
+  o mesmo gerador mudou `formatos-das-acoes-cobertura.md` e `parametros-das-leituras.json` (`panel_list`).
+- Central 13.20: a evidência do `ACTION_DAYS` (sumiu) passou para a linha do `Digest#action` que chama o consultor;
+  duas evidências só mudaram de linha.
+- Integração rodou `db:schema:load`, não `db:migrate` + `rollback`; a ida e volta das migrations é do B1.
+
+**Pendente:**
+- P: reescrever `Advisor::Prompt` (instruções, exemplos, `VERSION`) e o `prompt_spec`/`writer_eval_spec` (§11).
+- A avaliação paga (teto US$ 2), à mão, pelo orquestrador.
+- Conferir na tela real o painel com 3 ações (uma "Feita"), a lista aberta e "Quanto confiar"; e se o
+  `selected_ad_ids` do botão do Gerenciador abre o anúncio (§4.2). Os prints de C são de HTML com a API mockada.
+- Review independente, PR (com os textos obrigatórios do §7) e commit.

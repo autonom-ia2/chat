@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_09_143800) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2148,6 +2148,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
     t.index ["reminder_id"], name: "index_crm_meetings_on_reminder_id"
   end
 
+  create_table "crm_meta_ad_frequency_windows", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "ad_account_id", null: false
+    t.string "ad_id", null: false
+    t.string "adset_id"
+    t.integer "window_days", limit: 2, null: false
+    t.date "date_end", null: false
+    t.bigint "impressions", default: 0, null: false
+    t.bigint "reach", default: 0, null: false
+    t.decimal "frequency", precision: 10, scale: 4
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_account_id", "ad_id", "window_days", "date_end"], name: "idx_crm_meta_ad_freq_windows_unique", unique: true
+  end
+
   create_table "crm_meta_ad_insights_daily", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "ad_account_id", null: false
@@ -2246,6 +2262,60 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
     t.string "whatsapp_report_phone"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
+  end
+
+  create_table "crm_meta_advisor_actions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "run_id"
+    t.bigint "last_run_id"
+    t.date "local_date", null: false
+    t.string "kind", limit: 32, null: false
+    t.string "subject_key", limit: 64, null: false
+    t.string "variant", limit: 32
+    t.string "ad_id"
+    t.integer "position", limit: 2, null: false
+    t.jsonb "facts", default: {}, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "shown_at"
+    t.datetime "opened_at"
+    t.datetime "resolved_at"
+    t.bigint "opened_by_id"
+    t.string "opened_via", limit: 16
+    t.bigint "resolved_by_id"
+    t.string "resolved_via", limit: 16
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "local_date", "kind", "subject_key"], name: "idx_crm_meta_advisor_actions_unique", unique: true
+    t.index ["account_id", "status", "local_date"], name: "idx_crm_meta_advisor_actions_status"
+    t.index ["last_run_id"], name: "index_crm_meta_advisor_actions_on_last_run_id"
+    t.index ["opened_by_id"], name: "index_crm_meta_advisor_actions_on_opened_by_id"
+    t.index ["resolved_by_id"], name: "index_crm_meta_advisor_actions_on_resolved_by_id"
+    t.index ["run_id"], name: "index_crm_meta_advisor_actions_on_run_id"
+  end
+
+  create_table "crm_meta_advisor_runs", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "ad_account_id", null: false
+    t.date "local_date", null: false
+    t.string "locale", limit: 10, null: false
+    t.string "signature", limit: 64, null: false
+    t.string "rules_version", limit: 16, null: false
+    t.string "trigger", limit: 16, null: false
+    t.jsonb "facts", default: {}, null: false
+    t.jsonb "texts", default: {}, null: false
+    t.jsonb "rules", default: [], null: false
+    t.jsonb "decision", default: [], null: false
+    t.string "writer_status", limit: 16, default: "pending", null: false
+    t.string "writer_reason", limit: 32
+    t.integer "writer_attempts", limit: 2, default: 0, null: false
+    t.datetime "writing_started_at"
+    t.datetime "retry_after"
+    t.string "model", limit: 64
+    t.string "prompt_version", limit: 16
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "idx_crm_meta_advisor_runs_account_created"
+    t.index ["account_id", "local_date", "locale", "signature"], name: "idx_crm_meta_advisor_runs_unique", unique: true
   end
 
   create_table "crm_meta_conversion_events", force: :cascade do |t|
@@ -3668,12 +3738,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_100000) do
   add_foreign_key "crm_meetings", "crm_follow_ups", column: "reminder_id", on_delete: :nullify
   add_foreign_key "crm_meetings", "inboxes", on_delete: :nullify
   add_foreign_key "crm_meetings", "users", column: "created_by_id"
+  add_foreign_key "crm_meta_ad_frequency_windows", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_insights_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_links", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_links", "conversations", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
+  add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify
+  add_foreign_key "crm_meta_advisor_actions", "users", column: "opened_by_id", on_delete: :nullify
+  add_foreign_key "crm_meta_advisor_actions", "users", column: "resolved_by_id", on_delete: :nullify
+  add_foreign_key "crm_meta_advisor_runs", "accounts", on_delete: :cascade
   add_foreign_key "crm_pipeline_inboxes", "accounts"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipeline_stages", column: "default_stage_id"
   add_foreign_key "crm_pipeline_inboxes", "crm_pipelines", column: "pipeline_id"

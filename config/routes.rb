@@ -320,6 +320,7 @@ Rails.application.routes.draw do
               post :insights
               get :panel
               get :panel_ad
+              get :panel_list
             end
             # Anúncios da Meta F4 (#1100): ação do dia e mensagem sugerida pela IA; resumo e alerta no WhatsApp.
             scope 'meta_ads_connection' do
@@ -328,6 +329,10 @@ Rails.application.routes.draw do
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
               patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
               post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
+              # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
+              post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
+              post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
+              post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'

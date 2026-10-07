@@ -8,6 +8,7 @@ import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import {
   VERDICT_CLASSES,
   amount,
+  duration,
   relativeTime,
   thumbClass,
 } from '../metaAdsHelpers';
@@ -15,12 +16,17 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 import MetaAdsConfidence from './MetaAdsConfidence.vue';
 import MetaAdsAdDetail from './MetaAdsAdDetail.vue';
 import MetaAdsDailyAction from './MetaAdsDailyAction.vue';
+import MetaAdsPathList from './MetaAdsPathList.vue';
 import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
 // em palavras e o quanto confiar nos números. Tudo do servidor (Crm::MetaAds::Panel::Report); a tela só
 // formata. Fica viva como o resumo (useMetaAdsLive).
+//
+// F5 (#1110): "O que fazer hoje" vira a lista de até 3 ações do consultor (panel.advice); Conversas, Propostas e
+// Vendas abrem a lista da etapa ali mesmo (MetaAdsPathList, uma por vez, fora do endereço); a etapa Conversas
+// mostra o tempo de resposta; "Quanto confiar" ganha o número da Meta ao lado do nosso.
 const emit = defineEmits(['open']);
 
 const { t, locale } = useI18n();
@@ -67,7 +73,10 @@ const live = useMetaAdsLive({
     panel.value = data.panel;
     loading.value = false;
   },
-  waiting: () => panel.value?.refreshing,
+  // A IA escrevendo em outra aba também é espera: o texto chega em segundos, não em 2 minutos.
+  waiting: () =>
+    panel.value?.refreshing ||
+    panel.value?.advice?.writer?.status === 'writing',
 });
 
 const choosePeriod = value => {
@@ -96,35 +105,42 @@ const headline = computed(() =>
   })
 );
 
-// A ação do dia vem pronta do servidor; aqui só vira frase e porquê.
-const action = computed(() => panel.value?.action || { kind: 'wait' });
-const actionText = computed(() => {
-  const data = action.value;
-  const key = `CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.${data.kind.toUpperCase()}`;
+// As ações do dia vêm prontas do servidor (Advisor::Analysis); o texto de cada uma é feito na própria lista.
+const advice = computed(() => panel.value?.advice || null);
+
+// O tempo de resposta do período, na etapa Conversas: some sem resposta medida.
+const SLOW_AFTER_SECONDS = 300;
+const responseTime = computed(() => {
+  const data = panel.value?.response_time;
+  if (data?.median_seconds == null) return null;
   return {
-    text: t(
-      `${key}.TEXT`,
-      {
-        count: data.count,
-        ad: data.ad_name || t('CRM_KANBAN.META_ADS_HUB.PANEL.SEVERAL_ADS'),
-        days: data.days,
-        unknown: data.unknown,
-      },
-      data.count ?? data.unknown ?? 2
-    ),
-    why: t(`${key}.WHY`, {
-      value: fmt(data.value),
-      conversations: data.conversations,
-      missing: data.missing_conversations,
-      ad: data.ad_name || '',
-    }),
+    value: duration(data.median_seconds, t),
+    slow: data.median_seconds > SLOW_AFTER_SECONDS,
+    unanswered: data.unanswered || 0,
   };
 });
+
+// Uma lista do caminho aberta por vez. `slow_replies` vem de "O que fazer hoje" e é sempre de 30 dias (o número
+// da ação); as etapas seguem o período da tela.
+const PATH_LISTS = {
+  CONVERSATIONS: 'conversations',
+  QUOTES: 'quotes',
+  SALES: 'sales',
+};
+const SLOW_REPLIES_DAYS = 30;
+const openList = ref(null);
+const listDays = computed(() =>
+  openList.value === 'slow_replies' ? SLOW_REPLIES_DAYS : days.value
+);
+const toggleList = step => {
+  openList.value = openList.value === step ? null : step;
+};
 
 const path = computed(() => [
   { key: 'SPEND', value: fmt(totals.value.spend), plural: 2 },
   {
     key: 'CONVERSATIONS',
+    response: responseTime.value,
     value: totals.value.conversations || 0,
     plural: totals.value.conversations || 0,
     note:
@@ -172,28 +188,49 @@ const adStats = ad => [
   { key: 'CONVERSATIONS', value: ad.conversations },
   { key: 'SALES', value: ad.sales },
 ];
-const stalled = computed(() =>
-  action.value.kind === 'stalled_quotes' ? action.value.cards || [] : []
+// As propostas paradas são sempre uma ação do dia (aberta ou feita); dispensadas, ficam na etapa Propostas.
+const stalledAction = computed(
+  () =>
+    advice.value?.actions?.find(item => item.kind === 'stalled_quotes') || null
 );
-const stalledMore = computed(
-  () => (action.value.count || 0) - stalled.value.length
-);
+const stalled = computed(() => stalledAction.value?.cards || []);
+const stalledCount = computed(() => stalledAction.value?.facts?.count || 0);
+const stalledMore = computed(() => stalledCount.value - stalled.value.length);
 
 const conversationLink = id =>
   frontendURL(conversationUrl({ accountId: route.params.accountId, id }));
 
 const waitingFor = value => relativeTime(value, locale.value);
 
-// O botão da ação do dia (pela regra ou pela IA, F4a): a IA pode apontar um anúncio para revisar.
-const onAction = ({ kind, adId }) => {
-  if (kind === 'stalled_quotes') {
+// A lista aberta pelo botão de uma ação vai para a vista: no celular ela fica bem abaixo do herói.
+const showList = selector =>
+  nextTick(() =>
+    document
+      .querySelector(selector)
+      ?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
+  );
+
+// O botão principal de uma ação do dia, pelo alvo que o servidor deu (§5.1). O link da Meta e o "Entendi" são
+// resolvidos na própria lista.
+const onAdvice = action => {
+  const target = action.button?.target;
+  if (target === 'stalled_list') {
     showStalled.value = !showStalled.value;
-  } else if (kind === 'fix_tracking') {
-    emit('open', 3);
-  } else if (kind === 'review_ad' && adId) {
-    rememberAd(String(adId));
+    if (showStalled.value) showList('[data-panel-stalled]');
+  } else if (target === 'slow_replies') {
+    toggleList('slow_replies');
+    if (openList.value) showList('[data-panel-path-list]');
+  } else if (target === 'connection_step') {
+    emit('open', action.button.step || 3);
+  } else if (target === 'ad_detail' && action.ad_id) {
+    rememberAd(String(action.ad_id));
   }
 };
+
+const expandedTargets = computed(() => [
+  ...(showStalled.value ? ['stalled_list'] : []),
+  ...(openList.value === 'slow_replies' ? ['slow_replies'] : []),
+]);
 
 onMounted(() => live.start());
 </script>
@@ -282,10 +319,13 @@ onMounted(() => live.start());
           {{ headline }}
         </h3>
         <MetaAdsDailyAction
-          :action="action"
-          :rule-text="actionText"
+          v-if="advice"
+          :advice="advice"
           :days="days"
-          @act="onAction"
+          :currency="panel.currency"
+          :expanded="expandedTargets"
+          @act="onAdvice"
+          @changed="live.reload()"
         />
       </div>
 
@@ -302,8 +342,8 @@ onMounted(() => live.start());
           {{
             $t(
               'CRM_KANBAN.META_ADS_HUB.PANEL.STALLED_TITLE',
-              { count: action.count },
-              action.count
+              { count: stalledCount },
+              stalledCount
             )
           }}
         </h4>
@@ -369,7 +409,7 @@ onMounted(() => live.start());
             v-for="step in path"
             :key="step.key"
             :data-panel-path="step.key"
-            class="flex flex-col gap-1.5 xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak"
+            class="relative flex flex-col gap-1.5 rounded-lg xl:px-6 xl:first:ps-0 xl:[&:not(:first-child)]:border-0 xl:[&:not(:first-child)]:border-s xl:[&:not(:first-child)]:border-solid xl:[&:not(:first-child)]:border-n-weak has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
           >
             <span
               class="font-interDisplay text-[30px] font-520 leading-none tracking-[-0.02em] tabular-nums"
@@ -395,6 +435,72 @@ onMounted(() => live.start());
             <span v-if="step.note" class="text-xs font-420 text-n-slate-10">
               {{ step.note }}
             </span>
+            <span
+              v-if="step.response"
+              data-panel-response-time
+              class="flex flex-col text-xs font-420 text-n-slate-10"
+            >
+              <span>
+                {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.LABEL') }}
+                <span
+                  data-panel-response-time-value
+                  class="font-520 tabular-nums"
+                  :class="
+                    step.response.slow ? 'text-n-amber-11' : 'text-n-slate-12'
+                  "
+                >
+                  {{ step.response.value }}
+                </span>
+              </span>
+              <span class="flex flex-wrap gap-x-1.5">
+                <span>
+                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.NOTE') }}
+                </span>
+                <span
+                  v-if="step.response.unanswered"
+                  data-panel-response-time-unanswered
+                  class="before:content-['·'] before:me-1.5"
+                >
+                  {{
+                    $t(
+                      'CRM_KANBAN.META_ADS_HUB.PANEL.RESPONSE_TIME.UNANSWERED',
+                      { count: step.response.unanswered },
+                      step.response.unanswered
+                    )
+                  }}
+                </span>
+              </span>
+            </span>
+            <!-- O botão cobre a etapa inteira (after:inset-0), como no cartão de anúncio. -->
+            <button
+              v-if="PATH_LISTS[step.key]"
+              type="button"
+              :data-panel-path-open="PATH_LISTS[step.key]"
+              :aria-expanded="String(openList === PATH_LISTS[step.key])"
+              aria-controls="meta-ads-path-list"
+              :aria-label="
+                $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN_LABEL', {
+                  step: $t(`CRM_KANBAN.META_ADS_HUB.PANEL.PATH.${step.key}`, 2),
+                })
+              "
+              class="inline-flex items-center self-start gap-1 p-0 text-[13px] font-440 bg-transparent border-0 min-h-11 text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:content-['']"
+              @click="toggleList(PATH_LISTS[step.key])"
+            >
+              {{
+                openList === PATH_LISTS[step.key]
+                  ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.CLOSE')
+                  : $t('CRM_KANBAN.META_ADS_HUB.PANEL.PATH_LIST.OPEN')
+              }}
+              <span
+                class="size-3.5"
+                :class="
+                  openList === PATH_LISTS[step.key]
+                    ? 'i-lucide-chevron-up'
+                    : 'i-lucide-chevron-down'
+                "
+                aria-hidden="true"
+              />
+            </button>
           </li>
         </ol>
         <ul class="flex flex-wrap gap-2 p-0 m-0 list-none tabular-nums">
@@ -420,6 +526,14 @@ onMounted(() => live.start());
             }}
           </li>
         </ul>
+        <MetaAdsPathList
+          v-if="openList"
+          id="meta-ads-path-list"
+          :key="`${openList}-${listDays}`"
+          :step="openList"
+          :days="listDays"
+          :currency="panel.currency"
+        />
       </div>
 
       <div
@@ -549,6 +663,7 @@ onMounted(() => live.start());
       <MetaAdsConfidence
         v-if="panel.confidence"
         :confidence="panel.confidence"
+        :comparison="panel.meta_comparison || null"
         @fix="emit('open', 3)"
       />
     </template>

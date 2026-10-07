@@ -239,6 +239,29 @@ describe('Anúncios da Meta · resumo com o gasto (#1073)', () => {
     expect(wrapper.emitted('open')).toEqual([[3]]);
   });
 
+  it('keeps the confidence of the Connection tab as it was: 30 days, no Meta line (#1110)', async () => {
+    replyInsights({
+      date: today(),
+      spend: '1',
+      confidence: {
+        window_days: 30,
+        conversations: 10,
+        ad: 6,
+        ad_name: 2,
+        campaign: 1,
+        unknown: 1,
+      },
+    });
+
+    const wrapper = await mountSummary();
+
+    const confidence = wrapper.find('[data-summary-confidence]');
+    expect(confidence.find('h4').text()).toBe(
+      'CRM_KANBAN.META_ADS_HUB.SUMMARY.CONFIDENCE.TITLE {}'
+    );
+    expect(confidence.find('[data-confidence-meta]').exists()).toBe(false);
+  });
+
   it('explains the empty confidence state without a share or a fix link', async () => {
     replyInsights({
       date: null,

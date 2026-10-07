@@ -1,7 +1,10 @@
 # Anúncios da Meta, F4a (#1100): a IA no painel. Só administrador (policy Crm::MetaAdsConnection :show?).
 #
-# POST daily_action  {days}    → "O que fazer hoje" escrito pela IA a partir dos números do painel. Sem IA ou
-#                                com resultado guardado do dia, 200 na hora; senão 202 com poll_url.
+# POST daily_action  {days}    → o texto do consultor (F5, #1110) pela IA: o `Advice` do dia. `days` é aceito e
+#                                ignorado (D5.2: o consultor não depende do período da tela). Já escrito, pela
+#                                regra ou com outra aba escrevendo, 200 na hora; IA indisponível, só fillers ou
+#                                teto do dia, o run fecha pela regra e 200; senão 202 com poll_url. O teto só é
+#                                reservado na escrita (Advisor::Analysis.write!), nunca aqui.
 # POST quote_message {card_id} → mensagem sugerida para retomar uma proposta parada. O card precisa estar entre as
 #                                paradas recalculadas aqui; janela fechada ou IA indisponível, 200 na hora; senão 202.
 #
@@ -15,12 +18,11 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
     connection = current_connection
     return render json: { daily_action: nil } if connection.blank? || connection.ad_account_id.blank?
 
-    report = ::Crm::MetaAds::Panel::Report.new(connection, days: params[:days])
-    payload = report.payload
-    immediate = immediate_daily_action(connection, report, payload)
+    advice = advisor.current(connection, locale: I18n.locale.to_s)
+    immediate = immediate_daily_action(advice)
     return render json: { daily_action: immediate } if immediate
 
-    defer_interactive_ai('meta_ads_daily_action', { days: report.days, language: I18n.locale.to_s })
+    defer_interactive_ai('meta_ads_daily_action', { run_id: advice[:run_id], language: I18n.locale.to_s })
   end
 
   def quote_message
@@ -47,19 +49,21 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
     defer_interactive_ai('meta_ads_quote_message', { card_id: card.id, language: I18n.locale.to_s })
   end
 
-  # A resposta que não precisa da IA: sem IA, nada no período, já guardada, ou o teto do dia.
-  def immediate_daily_action(connection, report, payload)
-    ai_action = ::Crm::MetaAds::Panel::AiAction
-    reason = ai_action.unavailable_reason(Current.account)
-    return ai_action.rule(payload, reason) if reason
-    return ai_action.rule(payload, 'not_applicable') if payload[:action][:kind] == 'no_data'
+  # O Advice que não precisa da IA: já escrito, pela regra, ou outra aba escrevendo (a tela confere o painel de
+  # novo). Livre mas sem IA, só com fillers ou sem vaga no teto: fecha pela regra com o motivo. nil = pedir à IA.
+  def immediate_daily_action(advice)
+    return advice unless advice.dig(:writer, :status) == 'pending'
 
-    cache = ::Crm::MetaAds::Panel::AiActionCache.new(connection: connection, report: payload, zone: report.zone, locale: I18n.locale)
-    cached = cache.read
-    return cached if cached
-    return cache.last || ai_action.rule(payload, 'daily_limit') unless cache.reserve!
+    run = ::Crm::MetaAdvisorRun.find_by!(id: advice[:run_id], account_id: Current.account.id)
+    reason = advisor.immediate_reason(run)
+    return if reason.nil?
 
-    nil
+    advisor.rule!(run, reason)
+    advisor.serialize(run.reload, I18n.locale.to_s)
+  end
+
+  def advisor
+    ::Crm::MetaAds::Advisor::Analysis
   end
 
   def conversation_visible?(conversation)

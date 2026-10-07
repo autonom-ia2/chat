@@ -1,6 +1,11 @@
 import { reactive } from 'vue';
-import { flushPromises, mount } from '@vue/test-utils';
+import { config, flushPromises, mount } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
 import MetaAdsPanel from '../components/MetaAdsPanel.vue';
+import MetaAdsConfidence from '../components/MetaAdsConfidence.vue';
+import confidenceSource from '../components/MetaAdsConfidence.vue?raw';
+import en from 'dashboard/i18n/locale/en/crm.json';
+import ptBR from 'dashboard/i18n/locale/pt_BR/crm.json';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
@@ -14,7 +19,11 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
     panel: vi.fn(),
     panelAd: vi.fn(),
+    panelList: vi.fn(),
     dailyAction: vi.fn(),
+    openAdvice: vi.fn(),
+    acceptAdvice: vi.fn(),
+    dismissAdvice: vi.fn(),
     quoteMessage: vi.fn(),
   },
 }));
@@ -52,22 +61,53 @@ const PANEL = {
       verdict: 'early',
     },
   ],
-  action: {
-    kind: 'stalled_quotes',
-    count: 2,
-    value: 1464.64,
-    days: 3,
-    ad_name: 'Capa (1080x1350)',
-    cards: [
+  advice: {
+    run_id: 812,
+    local_date: '2026-10-07',
+    rules_version: 'f5.1',
+    writer: { status: 'rule', reason: null },
+    actions: [
       {
-        id: 7,
-        title: 'Virgínia',
-        value: 842,
-        conversation_id: 99,
-        waiting_since: '2026-10-01T10:00:00Z',
+        id: 11,
+        position: 1,
+        kind: 'stalled_quotes',
+        variant: null,
+        status: 'open',
+        opened: false,
+        ad_id: null,
+        ad_name: 'Capa (1080x1350)',
+        facts: {
+          count: 2,
+          value: 1464.64,
+          days: 3,
+          ad_name: 'Capa (1080x1350)',
+        },
+        button: { target: 'stalled_list', step: null, url: null },
+        source: 'rule',
+        headline: null,
+        body: null,
+        why: null,
+        cards: [
+          {
+            id: 7,
+            title: 'Virgínia',
+            value: 842,
+            conversation_id: 99,
+            waiting_since: '2026-10-01T10:00:00Z',
+          },
+        ],
       },
     ],
   },
+  response_time: {
+    days: 30,
+    median_seconds: 360,
+    answered: 38,
+    unanswered: 3,
+    slow: 9,
+    target_seconds: 300,
+  },
+  meta_comparison: null,
   confidence: {
     window_days: 30,
     conversations: 9,
@@ -77,6 +117,12 @@ const PANEL = {
     unknown: 0,
   },
 };
+
+const [STALLED_ACTION] = PANEL.advice.actions;
+const panelWith = actions =>
+  CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+    data: { panel: { ...PANEL, advice: { ...PANEL.advice, actions } } },
+  });
 
 let mounted = null;
 const mountPanel = async (options = {}) => {
@@ -112,6 +158,11 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: { panel: PANEL },
     });
+    CrmMetaAdsConnectionAPI.panelList.mockResolvedValue({
+      data: { list: { step: 'quotes', days: 30, total: 0, items: [] } },
+    });
+    CrmMetaAdsConnectionAPI.openAdvice.mockResolvedValue({ data: {} });
+    CrmMetaAdsConnectionAPI.dismissAdvice.mockResolvedValue({ data: {} });
   });
 
   afterEach(() => {
@@ -153,24 +204,20 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     );
   });
 
-  it('the AI can point to an ad to review, and its button opens that ad', async () => {
-    CrmMetaAdsConnectionAPI.dailyAction.mockResolvedValue({
-      data: {
-        daily_action: {
-          source: 'ai',
-          reason: null,
-          kind: 'review_ad',
-          ad_id: '1',
-          headline: 'Revise o anúncio Capa.',
-          body: null,
-          why: 'Ele trouxe 12 conversas e nenhuma venda.',
-          days: 30,
-        },
+  it('an ad to review opens that ad and records the opening', async () => {
+    panelWith([
+      {
+        ...STALLED_ACTION,
+        id: 41,
+        kind: 'review_ad',
+        variant: 'no_sales',
+        ad_id: '1',
+        button: { target: 'ad_detail', step: null, url: null },
+        cards: [],
       },
-    });
+    ]);
     const wrapper = await mountPanel();
 
-    expect(CrmMetaAdsConnectionAPI.dailyAction).toHaveBeenCalledWith(30);
     expect(
       wrapper.find('[data-panel-action]').attributes('data-action-kind')
     ).toBe('review_ad');
@@ -178,6 +225,74 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
 
     expect(routing.replace).toHaveBeenCalledWith({ query: { anuncio: '1' } });
+    expect(CrmMetaAdsConnectionAPI.openAdvice).toHaveBeenCalledWith(41);
+  });
+
+  it('slow replies open the slowest conversations of 30 days, even on 7', async () => {
+    panelWith([
+      {
+        ...STALLED_ACTION,
+        id: 42,
+        kind: 'slow_response',
+        button: { target: 'slow_replies', step: null, url: null },
+        cards: [],
+      },
+    ]);
+    const wrapper = await mountPanel();
+    await wrapper.find('[data-panel-period="7"]').trigger('click');
+    await flushPromises();
+
+    const button = wrapper.find('[data-panel-action-button]');
+    await button.trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenCalledWith(
+      'slow_replies',
+      30
+    );
+    expect(
+      wrapper.find('[data-panel-path-list]').attributes('data-path-list-step')
+    ).toBe('slow_replies');
+    expect(button.attributes('aria-expanded')).toBe('true');
+
+    await button.trigger('click');
+    expect(wrapper.find('[data-panel-path-list]').exists()).toBe(false);
+  });
+
+  it('dismissing an action asks the panel again for the next one', async () => {
+    const wrapper = await mountPanel();
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(1);
+
+    await wrapper.find('[data-action-dismiss]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.dismissAdvice).toHaveBeenCalledWith(11);
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(2);
+  });
+
+  it('checks again in 20 seconds while the AI is writing in another tab', async () => {
+    vi.useFakeTimers();
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          advice: { ...PANEL.advice, writer: { status: 'writing' } },
+        },
+      },
+    });
+    await mountPanel();
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(20 * 1000);
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not check again in 20 seconds when nothing is being written', async () => {
+    vi.useFakeTimers();
+    await mountPanel();
+
+    await vi.advanceTimersByTimeAsync(20 * 1000);
+    expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(1);
   });
 
   it('each stalled quote can get a suggested message', async () => {
@@ -209,14 +324,16 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   });
 
   it('fix tracking sends the person to step 3', async () => {
-    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
-      data: {
-        panel: {
-          ...PANEL,
-          action: { kind: 'fix_tracking', conversations: 9, unknown: 6 },
-        },
+    panelWith([
+      {
+        ...STALLED_ACTION,
+        id: 43,
+        kind: 'fix_tracking',
+        facts: { conversations: 9, unknown: 6, identified_pct: 0.33 },
+        button: { target: 'connection_step', step: 3, url: null },
+        cards: [],
       },
-    });
+    ]);
     const wrapper = await mountPanel();
 
     await wrapper.find('[data-panel-action-button]').trigger('click');
@@ -224,18 +341,139 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(wrapper.emitted('open')).toEqual([[3]]);
   });
 
-  it('wait has no button', async () => {
+  it('wait has no button and no stalled list', async () => {
+    panelWith([
+      {
+        ...STALLED_ACTION,
+        id: null,
+        kind: 'wait',
+        status: null,
+        ad_id: '1',
+        facts: { ad_name: 'Capa', missing_conversations: 8 },
+        button: { target: 'none', step: null, url: null },
+        cards: [],
+      },
+    ]);
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-action-button]').exists()).toBe(false);
+    expect(wrapper.find('[data-panel-stalled]').exists()).toBe(false);
+    expect(wrapper.find('[data-panel-stalled-button]').exists()).toBe(false);
+  });
+
+  it('opens and closes the list of each step, one at a time, in the period of the screen', async () => {
+    const wrapper = await mountPanel();
+    const open = step => wrapper.find(`[data-panel-path-open="${step}"]`);
+
+    expect(wrapper.find('[data-panel-path-open="SPEND"]').exists()).toBe(false);
+    expect(open('quotes').attributes('aria-expanded')).toBe('false');
+    expect(open('quotes').classes()).toContain('min-h-11');
+
+    await open('quotes').trigger('click');
+    await flushPromises();
+    expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenLastCalledWith(
+      'quotes',
+      30
+    );
+    expect(open('quotes').attributes('aria-expanded')).toBe('true');
+    expect(wrapper.findAll('[data-panel-path-list]')).toHaveLength(1);
+
+    await open('sales').trigger('click');
+    await flushPromises();
+    expect(CrmMetaAdsConnectionAPI.panelList).toHaveBeenLastCalledWith(
+      'sales',
+      30
+    );
+    expect(open('quotes').attributes('aria-expanded')).toBe('false');
+    expect(wrapper.findAll('[data-panel-path-list]')).toHaveLength(1);
+
+    await open('sales').trigger('click');
+    expect(wrapper.find('[data-panel-path-list]').exists()).toBe(false);
+    expect(routing.replace).not.toHaveBeenCalled();
+  });
+
+  it('shows the response time on the conversations step, amber above 5 minutes', async () => {
+    const wrapper = await mountPanel();
+
+    const response = wrapper.find(
+      '[data-panel-path="CONVERSATIONS"] [data-panel-response-time]'
+    );
+    expect(response.text()).toContain('PANEL.RESPONSE_TIME.LABEL');
+    expect(response.text()).toContain('PANEL.DURATION.MINUTES');
+    expect(
+      response.find('[data-panel-response-time-value]').classes()
+    ).toContain('text-n-amber-11');
+    expect(
+      response.find('[data-panel-response-time-unanswered]').text()
+    ).toContain('RESPONSE_TIME.UNANSWERED');
+  });
+
+  it('hides the response time without a measured answer, and the unanswered note without one', async () => {
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: {
         panel: {
           ...PANEL,
-          action: { kind: 'wait', ad_name: 'Capa', missing_conversations: 8 },
+          response_time: {
+            ...PANEL.response_time,
+            median_seconds: 120,
+            unanswered: 0,
+          },
+        },
+      },
+    });
+    const fast = await mountPanel();
+    const response = fast.find('[data-panel-response-time]');
+    expect(
+      response.find('[data-panel-response-time-value]').classes()
+    ).not.toContain('text-n-amber-11');
+    expect(
+      response.find('[data-panel-response-time-unanswered]').exists()
+    ).toBe(false);
+    fast.unmount();
+
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          response_time: { ...PANEL.response_time, median_seconds: null },
+        },
+      },
+    });
+    const none = await mountPanel();
+    expect(none.find('[data-panel-response-time]').exists()).toBe(false);
+  });
+
+  it('gives "How much to trust" the period of the screen and the Meta comparison', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          meta_comparison: {
+            days: 30,
+            until: '2026-10-06',
+            rows: [
+              {
+                destination: 'whatsapp',
+                meta: 52,
+                ours: 46,
+                difference: -6,
+                explanation: 'close',
+              },
+            ],
+            explanation: null,
+          },
         },
       },
     });
     const wrapper = await mountPanel();
 
-    expect(wrapper.find('[data-panel-action-button]').exists()).toBe(false);
+    const confidence = wrapper.find('[data-summary-confidence]');
+    expect(confidence.text()).toContain('CONFIDENCE.TITLE_PERIOD {"days":30}');
+    expect(
+      confidence
+        .find('[data-confidence-meta-row="whatsapp"]')
+        .attributes('data-confidence-meta-explanation')
+    ).toBe('close');
   });
 
   it('shows each ad with its verdict in words', async () => {
@@ -443,5 +681,109 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     await flushPromises();
 
     expect(document.activeElement.getAttribute('data-panel-ad-open')).toBe('1');
+  });
+});
+
+// "Quanto confiar" com o catálogo real (#1110, F5, §5.2): os números entram por slot do <I18nT>, em negrito,
+// sem v-html. O i18n vazio do setup dá lugar ao real só neste bloco.
+describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => {
+  const CONFIDENCE = PANEL.confidence;
+  const ROWS = [
+    {
+      destination: 'whatsapp',
+      meta: 52,
+      ours: 46,
+      difference: -6,
+      explanation: 'close',
+    },
+    {
+      destination: 'site',
+      meta: 12,
+      meta_visits: 31,
+      ours: 3,
+      difference: -9,
+      explanation: 'meta_higher',
+    },
+  ];
+  let savedPlugins;
+
+  beforeEach(() => {
+    savedPlugins = config.global.plugins;
+    config.global.plugins = [
+      createI18n({
+        legacy: false,
+        locale: 'pt_BR',
+        messages: { en, pt_BR: ptBR },
+        missingWarn: false,
+        fallbackWarn: false,
+      }),
+    ];
+  });
+
+  afterEach(() => {
+    config.global.plugins = savedPlugins;
+  });
+
+  const mountConfidence = props => mount(MetaAdsConfidence, { props });
+
+  it('shows one line per destination with the numbers in bold and the explanation below', () => {
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: { days: 30, until: '2026-10-06', rows: ROWS },
+    });
+
+    expect(wrapper.find('h4').text()).toBe(
+      'Quanto confiar nos números — últimos 30 dias'
+    );
+    const whatsapp = wrapper.find('[data-confidence-meta-row="whatsapp"]');
+    expect(whatsapp.text()).toContain(
+      'Até ontem, a Meta diz 52 conversas iniciadas pelo WhatsApp; nós contamos 46.'
+    );
+    expect(whatsapp.findAll('strong').map(node => node.text())).toEqual([
+      '52',
+      '46',
+    ]);
+    expect(whatsapp.text()).toContain('Os dois números batem.');
+    const site = wrapper.find('[data-confidence-meta-row="site"]');
+    expect(site.text()).toContain(
+      '12 contatos pelo site (31 visitas à página)'
+    );
+    expect(site.text()).toContain('nem todo mundo clica depois');
+  });
+
+  it('says when Meta has not sent the number yet', () => {
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: { days: 7, rows: [], explanation: 'no_meta_data' },
+    });
+
+    expect(wrapper.find('[data-confidence-meta-empty]').text()).toBe(
+      'A Meta ainda não mandou o número deste período.'
+    );
+  });
+
+  it('without the comparison it stays as before (the Connection tab)', () => {
+    const wrapper = mountConfidence({ confidence: CONFIDENCE });
+
+    expect(wrapper.find('h4').text()).toBe('Quanto confiar nos números');
+    expect(wrapper.find('[data-confidence-meta]').exists()).toBe(false);
+  });
+
+  it('in the panel without any line it keeps the period and shows no Meta line', () => {
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: null,
+    });
+
+    expect(wrapper.find('h4').text()).toContain('últimos 30 dias');
+    expect(wrapper.find('[data-confidence-meta]').exists()).toBe(false);
+  });
+
+  it('never renders HTML from the messages', () => {
+    const template = confidenceSource.slice(
+      confidenceSource.indexOf('<template>')
+    );
+    expect(template).toContain('<I18nT');
+    expect(template).not.toContain('v-html');
   });
 });

@@ -15,7 +15,7 @@
 class Crm::MetaAds::QuoteMessageSuggester
   MODEL = Crm::Ai::Config::MODEL_SUMMARY
   REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
-  FEATURE = Crm::MetaAds::Panel::AiAction::FEATURE
+  FEATURE = Crm::MetaAds::Advisor::Writer::FEATURE
   MESSAGE_LIMIT = 700
   REASONS = %w[closed declined nothing_open none].freeze
   SCHEMA = {
@@ -49,7 +49,7 @@ class Crm::MetaAds::QuoteMessageSuggester
 
   # 'ai_unavailable' | 'credentials_missing' | 'window_closed' | nil
   def unavailable_reason
-    Crm::MetaAds::Panel::AiAction.unavailable_reason(@card.account) ||
+    Crm::MetaAds::Advisor::Analysis.unavailable_reason(@card.account) ||
       ('window_closed' if Crm::FollowUps::MessagingWindow.new(@conversation).requires_template?)
   end
 

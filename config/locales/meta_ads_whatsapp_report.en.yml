@@ -38,6 +38,20 @@ en:
       wait: "Nothing to fix. Keep the ads as they are."
       on_track: "Nothing stalled. See each ad's verdict on the dashboard."
       no_data: "No ad spend or conversation in the last 30 days yet."
+      # F5 (#1110): the advisor kinds F4 had no rule text for. Values arrive already formatted
+      # (Crm::MetaAds::Advisor::Format).
+      slow_response:
+        median: "Reply faster to ad conversations: in the last %{window_days} days, half of them waited more than %{median_seconds} for the first reply. No reply: %{unanswered}. Replying within %{target_seconds} helps you sell."
+        no_median: "Reply to ad conversations: in the last %{window_days} days, none got a reply. No reply: %{unanswered}. Replying within %{target_seconds} helps you sell."
+      review_ad:
+        no_sales: "Review the ad %{ad_name}: it brought %{conversations} conversations and no sale, with %{spend} spent. Check the image, the text and what people ask before turning it off."
+        above_average: "Review the ad %{ad_name}: each sale cost %{cost_per_sale}, above the %{target_cost_per_sale} average of the ads that sell."
+      refresh_creative:
+        ctr: "Change the image or text of %{ad_name}: people click %{ctr_drop_pct} less than in the previous weeks."
+        frequency: "Change the image or text of %{ad_name}: each person has already seen the ad %{frequency_7d} times in the last %{window_days} days."
+        both: "Change the image or text of %{ad_name}: people click %{ctr_drop_pct} less than in the previous weeks, and each person has already seen the ad %{frequency_7d} times in the last %{window_days} days."
+      scale_ad: "%{ad_name} sells below the %{target_cost_per_sale} average for %{weeks} weeks. Raise the budget by up to %{max_increase_pct} in Meta Ads Manager, and only again in %{cooldown_days} days."
+      auction_pressure: "Reaching a thousand people got %{cpm_change_pct} more expensive in the last %{window_days} days, while clicks stayed the same: it is the competition, not your ad. Do not change the ad because of it."
     # The official template variables are always filled in pt_BR; these keys only keep the catalogs in sync.
     template:
       results: "%{conversations}, %{quotes} and %{sales}"

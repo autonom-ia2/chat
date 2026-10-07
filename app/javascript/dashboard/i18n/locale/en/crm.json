@@ -2217,6 +2217,7 @@
         "SPEND_BACKFILLING": "Fetching the last 90 days from Meta…",
         "CONFIDENCE": {
           "TITLE": "How much to trust the numbers",
+          "TITLE_PERIOD": "How much to trust the numbers — last {days} days",
           "TOTAL": "In the last {days} days, 1 conversation came from Meta ads. This is how well we know which ad brought it: | In the last {days} days, {count} conversations came from Meta ads. This is how well we know which ad brought each one:",
           "EMPTY": "As soon as conversations arrive from ads, we show here which ad brought each one.",
           "AD": "Exact ad",
@@ -2224,7 +2225,22 @@
           "CAMPAIGN": "Only the campaign",
           "UNKNOWN": "From Meta, ad unknown",
           "FIX": "Paste the step 3 text in every ad that goes to the site to know the ad",
-          "SHARE": "{share}%"
+          "SHARE": "{share}%",
+          "META": {
+            "WHATSAPP": {
+              "LINE": "Until yesterday, Meta says {meta} conversation started on WhatsApp; we counted {ours}. | Until yesterday, Meta says {meta} conversations started on WhatsApp; we counted {ours}.",
+              "CLOSE": "The two numbers match.",
+              "META_HIGHER": "Meta also counts people who were already talking to you; a forwarded conversation or one from a saved contact reaches us without an origin.",
+              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
+            },
+            "SITE": {
+              "LINE": "Until yesterday, Meta says {meta} contact on the site ({visits} page visits); we counted {ours} conversations that came from the site. | Until yesterday, Meta says {meta} contacts on the site ({visits} page visits); we counted {ours} conversations that came from the site.",
+              "CLOSE": "The two numbers match.",
+              "META_HIGHER": "Meta counts people who left their contact on the site; not everyone clicks afterwards to talk on WhatsApp.",
+              "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there."
+            },
+            "NO_META_DATA": "Meta has not sent the number for this period yet."
+          }
         }
       },
       "ERRORS": {
@@ -2330,7 +2346,46 @@
           "NO_DATA": {
             "TEXT": "There is no ad spend or conversation in this period yet.",
             "WHY": "Why: the numbers show up as soon as an ad spends or brings the first conversation."
-          }
+          },
+          "SLOW_RESPONSE": {
+            "TEXT": "Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer. | Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer, and 1 got none. | Half of the ad conversations in the last {windowDays} days waited more than {medianSeconds} for an answer, and {unanswered} got none.",
+            "TEXT_UNANSWERED": "1 ad conversation in the last {windowDays} days got no answer. | {unanswered} ad conversations in the last {windowDays} days got no answer.",
+            "WHY": "Why: answering within {targetSeconds} changes the sale. Whoever waits too long looks for someone else.",
+            "BUTTON": "See the slowest conversations"
+          },
+          "REVIEW_AD": {
+            "TEXT": "Review \"{ad}\": it brought {conversations} conversations and {sales} sales with {spend}.",
+            "WHY": "Why: your ads that sell average {targetCostPerSale} per sale.",
+            "TEXT_NO_SALES": "Review \"{ad}\": it brought {conversations} conversations and no sale with {spend}.",
+            "WHY_NO_SALES": "Why: your ads that sell average {targetCostPerSale} per sale. Look at the image, the text and who answers these conversations before turning it off.",
+            "TEXT_ABOVE_AVERAGE": "Review \"{ad}\": each sale from it costs {costPerSale}.",
+            "WHY_ABOVE_AVERAGE": "Why: your ads that sell average {targetCostPerSale} per sale. It brought {conversations} conversations and {sales} sales with {spend}.",
+            "BUTTON": "Open the ad"
+          },
+          "REFRESH_CREATIVE": {
+            "TEXT": "Change the image or the text of \"{ad}\".",
+            "WHY": "Why: the ad is wearing out the people who see it.",
+            "TEXT_CTR": "Change the image or the text of \"{ad}\": people are clicking less.",
+            "WHY_CTR": "Why: people click {ctrDropPct} less on it than in the previous weeks. A new image or text usually brings the interest back.",
+            "TEXT_FREQUENCY": "Change the image or the text of \"{ad}\": the same people have seen it many times.",
+            "WHY_FREQUENCY": "Why: each person has already seen this ad {frequency7d} times in the last {windowDays} days. Whoever sees the same ad many times stops paying attention.",
+            "TEXT_BOTH": "Change the image or the text of \"{ad}\": people click less and have seen it many times.",
+            "WHY_BOTH": "Why: people click {ctrDropPct} less on it than in the previous weeks, and each one has already seen it {frequency7d} times in the last {windowDays} days.",
+            "BUTTON": "Open the ad"
+          },
+          "SCALE_AD": {
+            "TEXT": "Raise the budget of \"{ad}\" by up to {maxIncreasePct}.",
+            "WHY": "Why: it has sold for {costPerSale}, below your average of {targetCostPerSale}, for {weeks} weeks. After raising it, wait {cooldownDays} days before raising it again.",
+            "BUTTON": "Open in Meta Ads Manager"
+          },
+          "AUCTION_PRESSURE": {
+            "TEXT": "Do not change your ads because of this week’s price.",
+            "WHY": "Why: showing to a thousand people got {cpmChangePct} more expensive in the last {windowDays} days, from {cpmBaseline} to {cpmRecent}, and clicks stayed the same. It is the competition, not your ad.",
+            "BUTTON": "Got it"
+          },
+          "DONE": "Done",
+          "DISMISS": "Dismiss",
+          "DONE_LABEL": "Done"
         },
         "PATH_TITLE": "Where your money went",
         "PATH": {
@@ -2370,6 +2425,42 @@
           "SPEND": "Invested",
           "CONVERSATIONS": "Conversations",
           "SALES": "Sales"
+        },
+        "DURATION": {
+          "SECONDS": "less than 1 min",
+          "MINUTES": "{n} min",
+          "HOURS": "{n} h",
+          "DAYS": "{n} day | {n} days"
+        },
+        "RESPONSE_TIME": {
+          "LABEL": "Response time:",
+          "NOTE": "half answered within this time",
+          "UNANSWERED": "1 unanswered | {count} unanswered"
+        },
+        "PATH_LIST": {
+          "TITLE_CONVERSATIONS": "Conversations from ads",
+          "TITLE_QUOTES": "Quotes",
+          "TITLE_SALES": "Sales",
+          "TITLE_SLOW_REPLIES": "Slowest conversations to answer",
+          "TOTAL_CONVERSATIONS": "1 conversation | {count} conversations",
+          "TOTAL_QUOTES": "1 quote | {count} quotes",
+          "TOTAL_SALES": "1 sale | {count} sales",
+          "TOTAL_SLOW_REPLIES": "1 conversation | {count} conversations",
+          "LAST_30_DAYS": "last 30 days",
+          "EMPTY": "Nothing in this step for the period.",
+          "ERROR": "We could not load the list right now.",
+          "RETRY": "Try again",
+          "SHOWING": "Showing {shown} of {total}",
+          "OPEN_CONVERSATION": "Open conversation",
+          "OPEN_CARD": "Open in the CRM",
+          "OPEN": "See the list",
+          "CLOSE": "Close the list",
+          "OPEN_LABEL": "See the list of {step}",
+          "NO_TITLE": "No name",
+          "ANSWERED_IN": "Answered in {duration}",
+          "NO_ANSWER": "No answer",
+          "WON": "Won",
+          "LOST": "Lost"
         }
       },
       "AD_DETAIL": {
@@ -2418,8 +2509,9 @@
           "WRITING": "AI is writing…",
           "AI_ERROR": "The AI did not answer right now; this is the action by the rule.",
           "FAILED": "We could not reach the AI right now; this is the action by the rule.",
-          "REVIEW_AD_BUTTON": "See the ad",
-          "WHY_LABEL": "Why:"
+          "WHY_LABEL": "Why:",
+          "DISMISS_FAILED": "We could not dismiss it right now. Try again.",
+          "DONE_FAILED": "We could not mark it as done right now. Try again."
         },
         "QUOTE": {
           "SUGGEST": "Suggest message",
