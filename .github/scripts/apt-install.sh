@@ -9,8 +9,8 @@ ATTEMPT_TIMEOUT=240
 APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o DPkg::Lock::Timeout=60)
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
-  if timeout "$ATTEMPT_TIMEOUT" sudo apt-get "${APT_OPTS[@]}" update -qq &&
-     timeout "$ATTEMPT_TIMEOUT" sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" install -y "$@"; then
+  if timeout -k 10 "$ATTEMPT_TIMEOUT" sudo apt-get "${APT_OPTS[@]}" update -qq &&
+     timeout -k 10 "$ATTEMPT_TIMEOUT" sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" install -y "$@"; then
     exit 0
   fi
   echo "::warning::apt falhou ou passou de ${ATTEMPT_TIMEOUT}s (tentativa ${attempt}/${ATTEMPTS})"
