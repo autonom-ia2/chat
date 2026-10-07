@@ -109,12 +109,20 @@ const path = computed(() => [
     key: 'QUOTES',
     value: totals.value.quotes || 0,
     plural: totals.value.quotes || 0,
+    note: totals.value.conversations
+      ? t('CRM_KANBAN.META_ADS_HUB.PANEL.REACHED', {
+          share: Math.round(
+            ((totals.value.quotes || 0) / totals.value.conversations) * 100
+          ),
+        })
+      : null,
   },
   {
     key: 'SALES',
     value: totals.value.sales || 0,
     plural: totals.value.sales || 0,
     win: true,
+    extra: totals.value.sales ? fmt(totals.value.sales_value) : null,
     note:
       totals.value.cost_per_sale != null
         ? t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -123,6 +131,14 @@ const path = computed(() => [
         : null,
   },
 ]);
+
+// Sem a imagem do anúncio, cada um ganha uma cor, para não virarem cartões iguais.
+const THUMBS = [
+  'from-n-blue-9 to-[#0D2344]',
+  'from-n-amber-9 to-n-amber-11',
+  'from-n-teal-9 to-n-teal-11',
+  'from-n-iris-9 to-n-iris-11',
+];
 
 const VERDICTS = {
   up: 'bg-n-teal-3 text-n-teal-11',
@@ -348,6 +364,13 @@ onMounted(() => live.start());
                   step.plural
                 )
               }}
+              <template v-if="step.extra">
+                {{
+                  $t('CRM_KANBAN.META_ADS_HUB.PANEL.SALES_VALUE', {
+                    value: step.extra,
+                  })
+                }}
+              </template>
             </span>
             <span v-if="step.note" class="text-xs text-n-slate-11">
               {{ step.note }}
@@ -393,13 +416,14 @@ onMounted(() => live.start());
           class="grid gap-3 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
         >
           <li
-            v-for="ad in ads"
+            v-for="(ad, index) in ads"
             :key="ad.ad_id"
             :data-panel-ad="ad.ad_id"
             class="flex flex-col overflow-hidden border border-solid rounded-xl border-n-weak"
           >
             <div
-              class="relative flex items-end h-24 p-3 bg-gradient-to-br from-n-blue-9 to-[#0D2344]"
+              class="relative flex items-end h-24 p-3 bg-gradient-to-br"
+              :class="THUMBS[index % THUMBS.length]"
             >
               <img
                 v-if="ad.thumbnail_url"

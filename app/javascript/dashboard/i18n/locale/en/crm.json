@@ -2362,7 +2362,9 @@
           "CONVERSATIONS": "{n} conversation | {n} conversations",
           "SALES": "{n} sale | {n} sales"
         },
-        "STALLED_MORE": "and {count} more in the CRM"
+        "STALLED_MORE": "and {count} more in the CRM",
+        "REACHED": "{share}% got there",
+        "SALES_VALUE": "· {value}"
       }
     }
   },

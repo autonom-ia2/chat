@@ -2363,7 +2363,9 @@
           "CONVERSATIONS": "{n} conversa | {n} conversas",
           "SALES": "{n} venda | {n} vendas"
         },
-        "STALLED_MORE": "e mais {count} no CRM"
+        "STALLED_MORE": "e mais {count} no CRM",
+        "REACHED": "{share}% chegaram",
+        "SALES_VALUE": "· {value}"
       }
     }
   },
