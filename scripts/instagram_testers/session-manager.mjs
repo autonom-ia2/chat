@@ -13,6 +13,7 @@ import {
   configuration,
   proxyConfiguration,
   observedSession,
+  loadingQueryFields,
   rolesQueryFields,
   safeBrowserLocation,
   validateRolesResponse,
@@ -265,7 +266,10 @@ export function isAllowedBrowserRequest({
   )
     return false;
   try {
-    return rolesQueryFields(body, config) !== null;
+    return (
+      rolesQueryFields(body, config) !== null ||
+      loadingQueryFields(body, config) !== null
+    );
   } catch {
     return false;
   }

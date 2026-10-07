@@ -1,0 +1,1723 @@
+{
+  "assembled_at_utc": "2026-10-07T10:55:06.109791+00:00",
+  "repository": "autonom-ia2/chat",
+  "issue": 995,
+  "pr": 1112,
+  "branch": "fix/995-meta-page-bootstrap",
+  "starting_head": "8ae330bf1b61db5ec8fc8ecd8b5c80350efce037",
+  "production_executor": "root coordinator only; subagents have no production actions",
+  "live_before": {
+    "observed_at_utc": "2026-10-07T10:52:09.190164+00:00",
+    "method": "read-only SSH systemctl/profile exclusivity",
+    "output": "/opt/instagram-meta/releases/9a48a2de08e93f2f7dc6916d7a4c79729f88dec4\nMainPID=72724\nNRestarts=0\nCPUQuotaPerSecUSec=500ms\nId=instagram-vps-display@hub2you.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72773\nNRestarts=0\nCPUQuotaPerSecUSec=500ms\nId=instagram-vps-gateway@hub2you.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72721\nNRestarts=0\nCPUQuotaPerSecUSec=2s\nId=instagram-vps-publisher@hub2you.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72762\nNRestarts=0\nCPUQuotaPerSecUSec=1.500000s\nId=instagram-vps-manager@hub2you.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72727\nNRestarts=0\nCPUQuotaPerSecUSec=500ms\nId=instagram-vps-display@autonomia.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72775\nNRestarts=0\nCPUQuotaPerSecUSec=500ms\nId=instagram-vps-gateway@autonomia.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=72722\nNRestarts=0\nCPUQuotaPerSecUSec=2s\nId=instagram-vps-publisher@autonomia.service\nActiveState=active\nSubState=running\nUnitFileState=disabled\n\nMainPID=0\nNRestarts=0\nCPUQuotaPerSecUSec=1.500000s\nId=instagram-vps-manager@autonomia.service\nActiveState=inactive\nSubState=dead\nUnitFileState=disabled\nHUMAN_MARKER_ABSENT\nMANAGER_LOCK_ABSENT\nCHROME_LOCK_ABSENT\n"
+  },
+  "transport_intent": {
+    "unit": "instagram-autonomia-transport-20261007-105230",
+    "stage": "/opt/instagram-meta-staging/codex-995-20261007-105230",
+    "script_sha256": "d6e3ce827e598c26f34e10e31801d778528cdb8518a248660cfa19239256aff5",
+    "kind": "transport",
+    "publication_allowed": false,
+    "started_at_utc": "2026-10-07T10:52:32.398218+00:00"
+  },
+  "transport_result": {
+    "diagnostic": "publisher_transport_phase_measurement",
+    "operation": "bootstrap",
+    "publication_performed": false,
+    "budget_ms": 25000,
+    "elapsed_ms": 23275.708,
+    "status": "ok",
+    "phases": [
+      {
+        "phase": "sts",
+        "status": "ok",
+        "start_ms": 6.598,
+        "elapsed_ms": 2364.938
+      },
+      {
+        "phase": "current",
+        "status": "ok",
+        "start_ms": 13.087,
+        "elapsed_ms": 2386.489
+      },
+      {
+        "phase": "free_port",
+        "status": "ok",
+        "start_ms": 2399.745,
+        "elapsed_ms": 19.683
+      },
+      {
+        "phase": "tunnel_spawn",
+        "status": "ok",
+        "start_ms": 2419.75,
+        "elapsed_ms": 2.209
+      },
+      {
+        "phase": "host_key_send",
+        "status": "ok",
+        "start_ms": 2425.44,
+        "elapsed_ms": 2522.586
+      },
+      {
+        "phase": "listener_ready",
+        "status": "ok",
+        "start_ms": 2422.175,
+        "elapsed_ms": 3915.125
+      },
+      {
+        "phase": "host_key_poll",
+        "status": "ok",
+        "start_ms": 4948.214,
+        "elapsed_ms": 2724.229
+      },
+      {
+        "phase": "host_key",
+        "status": "ok",
+        "start_ms": 2425.237,
+        "elapsed_ms": 5247.254
+      },
+      {
+        "phase": "scratch_create",
+        "status": "ok",
+        "start_ms": 7673.314,
+        "elapsed_ms": 1.611
+      },
+      {
+        "phase": "known_hosts_write",
+        "status": "ok",
+        "start_ms": 7675.412,
+        "elapsed_ms": 5.865
+      },
+      {
+        "phase": "known_hosts_mode",
+        "status": "ok",
+        "start_ms": 7681.386,
+        "elapsed_ms": 0.592
+      },
+      {
+        "phase": "ssh_remote_publisher",
+        "status": "ok",
+        "start_ms": 7682.237,
+        "elapsed_ms": 15586.71
+      },
+      {
+        "phase": "scratch_cleanup",
+        "status": "ok",
+        "start_ms": 23270.413,
+        "elapsed_ms": 3.187
+      },
+      {
+        "phase": "publisher_result",
+        "status": "ok",
+        "start_ms": 4.743,
+        "elapsed_ms": 23269.329
+      }
+    ]
+  },
+  "old_unapproved_deltas": [
+    {
+      "path": "app/services/instagram/automation/session_publisher.rb",
+      "sha256": "692d81dd18ab07fdfef48116ff7e5d96c1fc32a8b64df1cb571f917d5cacfb17",
+      "unchanged_since_handoff": true
+    },
+    {
+      "path": "scripts/instagram_testers/session-manager.mjs",
+      "sha256": "bdf107e3aa94e7138d067847d991442f967dbfec8065bb56c140cbf40c0abbdf",
+      "unchanged_since_handoff": true
+    },
+    {
+      "path": "scripts/instagram_testers/session-observer.mjs",
+      "sha256": "ebafef7c2f1300da40d1d8000c711b6e7450bff5efa507e540850ceb2278aba1",
+      "unchanged_since_handoff": true
+    },
+    {
+      "path": "spec/services/instagram/automation/session_publisher_spec.rb",
+      "sha256": "0e0ab8e465128826ec6ca260e75960dbbbb24432b9c53069c70310ff121e9e05",
+      "unchanged_since_handoff": true
+    },
+    {
+      "path": "tests/instagram_testers/session-manager.test.mjs",
+      "sha256": "b835d98018e9c15c89dc6cf9c77f74af18f7c15c5a9c3c9f30679fd5d3f16abd",
+      "unchanged_since_handoff": true
+    },
+    {
+      "path": "tests/instagram_testers/session-observer.test.mjs",
+      "sha256": "a65c3a3ef0368e30cb0b378c0e5972b9933559795b7c8d13705f03da11a675df",
+      "unchanged_since_handoff": true
+    }
+  ],
+  "project_readback": {
+    "data": {
+      "i995": {
+        "id": "PVTI_lAHOC3T16M4BX9UHzg-lcig",
+        "fieldValues": {
+          "nodes": [
+            {},
+            {
+              "text": "Instagram: mover runtime administrativo Meta para VPS n8n",
+              "field": {
+                "name": "Title"
+              }
+            },
+            {
+              "name": "Hub2You",
+              "field": {
+                "name": "Projeto"
+              }
+            },
+            {
+              "name": "Em desenvolvimento",
+              "field": {
+                "name": "Status"
+              }
+            },
+            {
+              "name": "Infra",
+              "field": {
+                "name": "Tipo"
+              }
+            },
+            {
+              "name": "P1",
+              "field": {
+                "name": "Prioridade"
+              }
+            },
+            {
+              "name": "Alto",
+              "field": {
+                "name": "Risco"
+              }
+            },
+            {
+              "name": "Produção",
+              "field": {
+                "name": "Ambiente"
+              }
+            },
+            {
+              "text": "Codex retomou M4/8ae330bf. VPS9a48a2d revalidada: sete serviços ativos e gestor Autonomia parado/perfil livre. Observar resposta inicial com diagnóstico limitado/revisado; medir transporte. #1112 draft sem publicação, renovação ou aceite. Não reinstalar1089 nem repetir login.",
+              "field": {
+                "name": "Próxima ação"
+              }
+            }
+          ]
+        }
+      },
+      "i1112": {
+        "id": "PVTI_lAHOC3T16M4BX9UHzg_GqGQ",
+        "fieldValues": {
+          "nodes": [
+            {},
+            {
+              "text": "fix(instagram): evitar que respostas paralelas bloqueiem a captura",
+              "field": {
+                "name": "Title"
+              }
+            },
+            {
+              "name": "Hub2You",
+              "field": {
+                "name": "Projeto"
+              }
+            },
+            {
+              "name": "PR aberta",
+              "field": {
+                "name": "Status"
+              }
+            },
+            {
+              "name": "Bug",
+              "field": {
+                "name": "Tipo"
+              }
+            },
+            {
+              "name": "P1",
+              "field": {
+                "name": "Prioridade"
+              }
+            },
+            {
+              "name": "Alto",
+              "field": {
+                "name": "Risco"
+              }
+            },
+            {
+              "name": "Produção",
+              "field": {
+                "name": "Ambiente"
+              }
+            },
+            {
+              "text": "Codex retomou M4/8ae330bf. VPS9a48a2d revalidada: sete serviços ativos e gestor Autonomia parado/perfil livre. Observar resposta inicial com diagnóstico limitado/revisado; medir transporte. #1112 draft sem publicação, renovação ou aceite. Não reinstalar1089 nem repetir login.",
+              "field": {
+                "name": "Próxima ação"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "acceptance": {
+    "session_published": false,
+    "two_natural_renewals_proven": false,
+    "boot_persistence_proven": false,
+    "panel_channel_connection_proven": false
+  },
+  "initial_browser_intent": {
+    "unit": "instagram-autonomia-browser-20261007-105544",
+    "stage": "/opt/instagram-meta-staging/codex-995-20261007-105544",
+    "script_sha256": "0d2ee4bc0cea5280aa51121aad9e35201aa430196cf72d2af0ef83679ccfcfda",
+    "kind": "browser",
+    "publication_allowed": false,
+    "started_at_utc": "2026-10-07T10:55:47.350175+00:00"
+  },
+  "initial_browser_result": {
+    "diagnostic": "pinned_initial_read_only",
+    "publication_performed": false,
+    "stage": "observation",
+    "browser_closed": true,
+    "lock_released": true,
+    "initial_response_seen": true,
+    "roles_response_seen": false,
+    "response_read_complete": true,
+    "diagnostic_ok": false,
+    "utc": "2026-10-07T10:56:31.457Z",
+    "events": [
+      {
+        "phase": "bootstrap",
+        "ms": 20326,
+        "version_pointer_present": false
+      },
+      {
+        "phase": "browser_ready",
+        "ms": 23734
+      },
+      {
+        "phase": "graphql",
+        "ms": 28056,
+        "friendly_name": "GeoNextAppControllerContainerQuery",
+        "allowed": true,
+        "initial_request": true,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 28128,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "navigation",
+        "ms": 28147,
+        "http": 200,
+        "roles_location": true
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 28598,
+        "name": "GeoNextAppControllerContainerQuery",
+        "http": 200
+      },
+      {
+        "phase": "graphql",
+        "ms": 28674,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "response",
+        "ms": 28701,
+        "name": "GeoNextAppControllerContainerQuery",
+        "http": 200,
+        "top_errors": false,
+        "initial_request": true,
+        "data_present": true,
+        "data_keys": [
+          "fetch__Application"
+        ],
+        "app_context_present": true,
+        "app_context_matches": true,
+        "has_roles_container": false,
+        "roles_valid": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 28755,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 28774,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 28828,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 29111,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 29678,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 29748,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 29774,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 29795,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 32110,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 32677,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 32749,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 32779,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "graphql",
+        "ms": 32808,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "allowed": false,
+        "initial_request": false,
+        "role_doc_matches": false
+      },
+      {
+        "phase": "failed",
+        "ms": 43152,
+        "stage": "observation"
+      }
+    ]
+  },
+  "initial_browser_postcheck": {
+    "main_pid": 0,
+    "unit_result": "exit-code",
+    "exit_status": 1,
+    "human_marker_absent": true,
+    "manager_lock_absent": true,
+    "chrome_lock_absent": true
+  },
+  "initial_browser_limit": "15s Playwright wait wrapped in identical15s timeout; phase observation failed before DOM read. Query response receipt and cleanup are real; no RolesTable request was seen in recorded window.",
+  "loading_documents_intent": {
+    "unit": "instagram-autonomia-browser-20261007-110208",
+    "stage": "/opt/instagram-meta-staging/codex-995-20261007-110208",
+    "script_sha256": "d40058a55fdc15f5171543e31a54578aa3f30f5b56571c2082c24a80ab5f05b5",
+    "source_name": "observe-loading-documents.mjs",
+    "kind": "browser",
+    "publication_allowed": false,
+    "started_at_utc": "2026-10-07T11:02:10.293038+00:00"
+  },
+  "reviews": [
+    {
+      "agent": "nexo_revisao",
+      "scope": "initial diagnostic corrections and wrapper",
+      "verdict": "allowed after bounded cleanup and non-JSON failure fixes",
+      "source_sha256": "0d2ee4bc0cea5280aa51121aad9e35201aa430196cf72d2af0ef83679ccfcfda"
+    },
+    {
+      "agent": "nexo_revisao",
+      "scope": "batch compiled loading metadata only",
+      "verdict": "no static blocker; five queries stay blocked; result pending",
+      "source_sha256": "d40058a55fdc15f5171543e31a54578aa3f30f5b56571c2082c24a80ab5f05b5"
+    },
+    {
+      "reviewer": "/root/nexo_revisao",
+      "result": "functional approved; positive fixture/route coverage approved; formatting addressed; release plan reviewed",
+      "production_authorization": false
+    }
+  ],
+  "panel_acceptance_target_authorized": true,
+  "loading_documents_result": {
+    "diagnostic": "loading_documents_compiled_metadata_only",
+    "publication_performed": false,
+    "stage": "completed",
+    "browser_closed": true,
+    "lock_released": true,
+    "natural_pages_kept": true,
+    "initial_request_seen": true,
+    "target_queries_seen": [
+      "MetaDeveloperAssistantPageOverlayQuery",
+      "DeveloperHeaderComponentContainerQuery",
+      "DeveloperAppVisibilityToggleLazyLoadedQuery",
+      "DeveloperAppBannerQuery",
+      "DeveloperAppDashboardSidebarNavigationV2Query"
+    ],
+    "target_query_count": 5,
+    "max_observations": 20,
+    "duplicate_observations_suppressed": 10,
+    "observations_truncated": 0,
+    "all_queries_seen": true,
+    "all_compiled": true,
+    "diagnostic_ok": true,
+    "utc": "2026-10-07T11:02:50.250Z",
+    "events": [
+      {
+        "phase": "bootstrap",
+        "ms": 18852,
+        "version_pointer_present": false
+      },
+      {
+        "phase": "browser_ready",
+        "ms": 19839,
+        "natural_pages_kept": true
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 23724,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "exposurePoint",
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "exposurePoint",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": false
+          },
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false,
+        "compiled": {
+          "available": true,
+          "reason": "ok",
+          "request_kind": true,
+          "compiled_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "name_matches": true,
+          "operation_kind": "query",
+          "document_hash_available": true,
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "document_matches_request": true,
+          "document_matches_roles_metadata": false,
+          "argument_definitions": [
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            },
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            }
+          ],
+          "selection_names": [
+            "maida_experiment_check",
+            "should_show_mda",
+            "app_id",
+            "exposure_point"
+          ],
+          "property_names": [
+            "app_id",
+            "exposure_point"
+          ]
+        }
+      },
+      {
+        "phase": "navigation",
+        "ms": 23739,
+        "http": 200,
+        "roles_location": true
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 24178,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "businessID",
+          "businessID_is_null"
+        ],
+        "variable_shapes": [
+          {
+            "name": "businessID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": true
+          },
+          {
+            "name": "businessID_is_null",
+            "type": "boolean",
+            "is_null": false,
+            "boolean_value": false,
+            "matches_app": null,
+            "matches_admin": null,
+            "matches_business": null
+          }
+        ],
+        "appID_matches": false,
+        "app_id_matches": false,
+        "compiled": {
+          "available": true,
+          "reason": "ok",
+          "request_kind": true,
+          "compiled_name": "DeveloperHeaderComponentContainerQuery",
+          "name_matches": true,
+          "operation_kind": "query",
+          "document_hash_available": true,
+          "document_sha256": "34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2",
+          "document_matches_request": true,
+          "document_matches_roles_metadata": false,
+          "argument_definitions": [
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            },
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            }
+          ],
+          "selection_names": [
+            "viewer",
+            "actor",
+            "__typename",
+            "id",
+            "is_developer",
+            "developer_info",
+            "recent_developer_docs_navigation_data",
+            "title",
+            "uri",
+            "developer_platform_status_uri",
+            "is_mwa",
+            "logout_token",
+            "developer_request_count",
+            "developer_profile_pic_uri",
+            "developer_notifications",
+            "is_seen",
+            "href",
+            "developer_notifications_unseen_count",
+            "account_switcher_data",
+            "all_saved_account_info",
+            "name",
+            "profile_url",
+            "user_type",
+            "contact_point",
+            "active_session",
+            "uid",
+            "cuid",
+            "enterprise_id",
+            "enterprise_name",
+            "is_curr_user",
+            "is_work_accounts",
+            "business",
+            "is_whatsapp_bsp",
+            "xfb_get_all_required_actions_for_vc",
+            "is_actionable"
+          ],
+          "property_names": [
+            "id"
+          ]
+        }
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 24268,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false,
+        "compiled": {
+          "available": true,
+          "reason": "ok",
+          "request_kind": true,
+          "compiled_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+          "name_matches": true,
+          "operation_kind": "query",
+          "document_hash_available": true,
+          "document_sha256": "eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e",
+          "document_matches_request": true,
+          "document_matches_roles_metadata": false,
+          "argument_definitions": [
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            }
+          ],
+          "selection_names": [
+            "fetch__Application",
+            "app_status_module",
+            "active_araf_exists",
+            "active_self_cert_exists",
+            "is_live",
+            "needs_data_access_renewal_to_go_live",
+            "app_re_review_failsafe_date_lapsed",
+            "should_show_recently_resolved_violation_nux",
+            "toggle_disabled_info",
+            "is_switch_disabled",
+            "switch_tooltip",
+            "id"
+          ],
+          "property_names": [
+            "id"
+          ]
+        }
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 24278,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false,
+        "compiled": {
+          "available": true,
+          "reason": "ok",
+          "request_kind": true,
+          "compiled_name": "DeveloperAppBannerQuery",
+          "name_matches": true,
+          "operation_kind": "query",
+          "document_hash_available": true,
+          "document_sha256": "108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd",
+          "document_matches_request": true,
+          "document_matches_roles_metadata": false,
+          "argument_definitions": [
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            }
+          ],
+          "selection_names": [
+            "fetch__Application",
+            "developer_app_banner",
+            "id"
+          ],
+          "property_names": [
+            "id"
+          ]
+        }
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 24329,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false,
+        "compiled": {
+          "available": true,
+          "reason": "ok",
+          "request_kind": true,
+          "compiled_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+          "name_matches": true,
+          "operation_kind": "query",
+          "document_hash_available": true,
+          "document_sha256": "998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b",
+          "document_matches_request": true,
+          "document_matches_roles_metadata": false,
+          "argument_definitions": [
+            {
+              "name": true,
+              "kind": "LocalArgument",
+              "type_kind": "other",
+              "default_type": "null",
+              "default_is_null": true,
+              "default_boolean_value": null
+            }
+          ],
+          "selection_names": [
+            "fetch__Application",
+            "is_added_product_section_visible",
+            "base_products",
+            "product_title",
+            "product_link",
+            "product_route",
+            "product_badge_count",
+            "product_children",
+            "title",
+            "link",
+            "tab",
+            "badge_count",
+            "is_hidden_sub_tab",
+            "used_products",
+            "footer_products",
+            "id"
+          ],
+          "property_names": [
+            "id"
+          ]
+        }
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 24688,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "exposurePoint",
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "exposurePoint",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": false
+          },
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 25180,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "businessID",
+          "businessID_is_null"
+        ],
+        "variable_shapes": [
+          {
+            "name": "businessID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": true
+          },
+          {
+            "name": "businessID_is_null",
+            "type": "boolean",
+            "is_null": false,
+            "boolean_value": false,
+            "matches_app": null,
+            "matches_admin": null,
+            "matches_business": null
+          }
+        ],
+        "appID_matches": false,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 25266,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 25277,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 25326,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 27692,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "exposurePoint",
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "exposurePoint",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": false
+          },
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 28174,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 2,
+        "variable_names": [
+          "businessID",
+          "businessID_is_null"
+        ],
+        "variable_shapes": [
+          {
+            "name": "businessID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": false,
+            "matches_admin": false,
+            "matches_business": true
+          },
+          {
+            "name": "businessID_is_null",
+            "type": "boolean",
+            "is_null": false,
+            "boolean_value": false,
+            "matches_app": null,
+            "matches_admin": null,
+            "matches_business": null
+          }
+        ],
+        "appID_matches": false,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 28272,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 28279,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      },
+      {
+        "phase": "blocked_query",
+        "ms": 28326,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "body_shape_valid": true,
+        "business_matches": true,
+        "admin_matches": true,
+        "actor_matches": true,
+        "document_numeric": true,
+        "document_matches_roles": false,
+        "natural_shape": true,
+        "request_document_sha256": "998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b",
+        "variables_json_valid": true,
+        "variables_object": true,
+        "variables_count": 1,
+        "variable_names": [
+          "appID"
+        ],
+        "variable_shapes": [
+          {
+            "name": "appID",
+            "type": "string",
+            "is_null": false,
+            "boolean_value": null,
+            "matches_app": true,
+            "matches_admin": false,
+            "matches_business": false
+          }
+        ],
+        "appID_matches": true,
+        "app_id_matches": false
+      }
+    ]
+  },
+  "loading_documents_postcheck": {
+    "main_pid": 0,
+    "unit_result": "success",
+    "exit_status": 0,
+    "manager_lock_absent": true,
+    "chrome_lock_absent": true
+  },
+  "loading_documents_limit": "Compiled argument_definitions.name emitted boolean instead of field name; request variable_names and variable_shapes contain observed structural names. No bodies/IDs/values returned. Five query kinds and document hashes match natural requests.",
+  "rails_baseline": {
+    "observed_at_utc": "2026-10-07T11:06:07.246025+00:00",
+    "script_sha256": "d8cfc023166764a5da882974f5cca573f2f290c7b305b60d5b80aba1724b7b24",
+    "execution": "single AWS-RunShellScript; current/account/tags validated; bootstrap only, no app source writes",
+    "result": {
+      "diagnostic": "rails_phase_measurement",
+      "status": "ok",
+      "runtime_git_sha": "7aaa19ce04dec6aef3310ec4b4e77b76d7c00d01",
+      "rails_boot_ms": 9958.109,
+      "executor_bootstrap_ms": 7.468,
+      "version_present": false
+    }
+  },
+  "loading_responses_intent": {
+    "unit": "instagram-autonomia-browser-20261007-110725",
+    "stage": "/opt/instagram-meta-staging/codex-995-20261007-110725",
+    "script_sha256": "7a5ed066f0ebf1bc0bc084592e22e54ad48aa61de1ed5ab0d842c6111c58b033",
+    "source_name": "observe-loading-responses.mjs",
+    "kind": "browser",
+    "publication_allowed": false,
+    "started_at_utc": "2026-10-07T11:07:27.295614+00:00"
+  },
+  "loading_responses_result": {
+    "diagnostic": "pinned_loading_responses_read_only",
+    "publication_performed": false,
+    "stage": "completed",
+    "browser_closed": true,
+    "lock_released": true,
+    "initial_response_seen": true,
+    "roles_response_seen": true,
+    "pinned_queries_seen": [
+      "GeoNextAppControllerContainerQuery",
+      "DeveloperHeaderComponentContainerQuery",
+      "DeveloperAppVisibilityToggleLazyLoadedQuery",
+      "DeveloperAppBannerQuery",
+      "DeveloperAppDashboardSidebarNavigationV2Query"
+    ],
+    "pinned_responses_seen": [
+      "GeoNextAppControllerContainerQuery",
+      "DeveloperAppBannerQuery",
+      "DeveloperAppDashboardSidebarNavigationV2Query",
+      "DeveloperAppVisibilityToggleLazyLoadedQuery"
+    ],
+    "all_pinned_requests_seen": true,
+    "all_pinned_responses_seen": false,
+    "overlay_blocked_count": 3,
+    "unknown_query_names": [],
+    "response_read_complete": false,
+    "response_contract_ok": true,
+    "diagnostic_ok": false,
+    "utc": "2026-10-07T11:08:09.007Z",
+    "events": [
+      {
+        "phase": "bootstrap",
+        "ms": 19388,
+        "version_pointer_present": false
+      },
+      {
+        "phase": "browser_ready",
+        "ms": 20962
+      },
+      {
+        "phase": "request_allowed_pinned",
+        "ms": 25351,
+        "friendly_name": "GeoNextAppControllerContainerQuery",
+        "document_hash": "e3050f6f5039fae023bca06560b9aba52597bccd045d0e84bf1388e8abeca508",
+        "variable_names": [
+          "appID"
+        ]
+      },
+      {
+        "phase": "navigation",
+        "ms": 25542,
+        "http": 200,
+        "roles_location": true
+      },
+      {
+        "phase": "request_blocked_optional",
+        "ms": 25552,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "exposure_point_type": "string",
+        "exposure_point_is_null": false,
+        "exposure_point_sha256": "ec2722f73b85d49fa3e0f019a4d469a8467af60da65a985e7b1a50b0d02846b9"
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 25672,
+        "name": "GeoNextAppControllerContainerQuery",
+        "http": 200
+      },
+      {
+        "phase": "response",
+        "ms": 25744,
+        "name": "GeoNextAppControllerContainerQuery",
+        "http": 200,
+        "http_ok": true,
+        "top_errors": false,
+        "pinned_request": true,
+        "initial_request": true,
+        "roles_request": false,
+        "data_present": true,
+        "data_keys": [
+          "fetch__Application"
+        ],
+        "app_context_present": true,
+        "app_context_matches": true,
+        "has_roles_container": false,
+        "roles_valid": null
+      },
+      {
+        "phase": "request_allowed_pinned",
+        "ms": 25758,
+        "friendly_name": "DeveloperHeaderComponentContainerQuery",
+        "document_hash": "34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2",
+        "variable_names": [
+          "businessID",
+          "businessID_is_null"
+        ]
+      },
+      {
+        "phase": "request_allowed_pinned",
+        "ms": 25791,
+        "friendly_name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "document_hash": "eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e",
+        "variable_names": [
+          "appID"
+        ]
+      },
+      {
+        "phase": "request_allowed_pinned",
+        "ms": 25805,
+        "friendly_name": "DeveloperAppBannerQuery",
+        "document_hash": "108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd",
+        "variable_names": [
+          "appID"
+        ]
+      },
+      {
+        "phase": "request_allowed_pinned",
+        "ms": 25852,
+        "friendly_name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "document_hash": "998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b",
+        "variable_names": [
+          "appID"
+        ]
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 26211,
+        "name": "DeveloperAppBannerQuery",
+        "http": 200
+      },
+      {
+        "phase": "response",
+        "ms": 26219,
+        "name": "DeveloperAppBannerQuery",
+        "http": 200,
+        "http_ok": true,
+        "top_errors": false,
+        "pinned_request": true,
+        "initial_request": false,
+        "roles_request": false,
+        "data_present": true,
+        "data_keys": [
+          "fetch__Application"
+        ],
+        "app_context_present": true,
+        "app_context_matches": true,
+        "has_roles_container": false,
+        "roles_valid": null
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 26434,
+        "name": "DeveloperHeaderComponentContainerQuery",
+        "http": 200
+      },
+      {
+        "phase": "request_blocked_optional",
+        "ms": 26443,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "exposure_point_type": "string",
+        "exposure_point_is_null": false,
+        "exposure_point_sha256": "ec2722f73b85d49fa3e0f019a4d469a8467af60da65a985e7b1a50b0d02846b9"
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 27080,
+        "name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "http": 200
+      },
+      {
+        "phase": "response",
+        "ms": 27091,
+        "name": "DeveloperAppDashboardSidebarNavigationV2Query",
+        "http": 200,
+        "http_ok": true,
+        "top_errors": false,
+        "pinned_request": true,
+        "initial_request": false,
+        "roles_request": false,
+        "data_present": true,
+        "data_keys": [
+          "fetch__Application"
+        ],
+        "app_context_present": true,
+        "app_context_matches": true,
+        "has_roles_container": false,
+        "roles_valid": null
+      },
+      {
+        "phase": "response_non_json",
+        "ms": 27457,
+        "name": "DeveloperHeaderComponentContainerQuery",
+        "http": 200
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 28350,
+        "name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "http": 200
+      },
+      {
+        "phase": "response",
+        "ms": 28367,
+        "name": "DeveloperAppVisibilityToggleLazyLoadedQuery",
+        "http": 200,
+        "http_ok": true,
+        "top_errors": false,
+        "pinned_request": true,
+        "initial_request": false,
+        "roles_request": false,
+        "data_present": true,
+        "data_keys": [
+          "fetch__Application"
+        ],
+        "app_context_present": true,
+        "app_context_matches": true,
+        "has_roles_container": false,
+        "roles_valid": null
+      },
+      {
+        "phase": "request_name",
+        "ms": 28949,
+        "friendly_name": "RolesTable_Query",
+        "allowed_by_original": true
+      },
+      {
+        "phase": "graphql",
+        "ms": 28949,
+        "friendly_name": "RolesTable_Query",
+        "allowed": true,
+        "roles_request": true
+      },
+      {
+        "phase": "response_length_unknown",
+        "ms": 29389,
+        "name": "RolesTable_Query",
+        "http": 200
+      },
+      {
+        "phase": "response",
+        "ms": 29400,
+        "name": "RolesTable_Query",
+        "http": 200,
+        "http_ok": true,
+        "top_errors": false,
+        "pinned_request": false,
+        "initial_request": false,
+        "roles_request": true,
+        "data_present": true,
+        "data_keys": [
+          "get_app_roles"
+        ],
+        "app_context_present": false,
+        "app_context_matches": false,
+        "has_roles_container": true,
+        "roles_valid": true
+      },
+      {
+        "phase": "request_blocked_optional",
+        "ms": 29470,
+        "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+        "blocked": true,
+        "block_reason": "blockedbyclient",
+        "exposure_point_type": "string",
+        "exposure_point_is_null": false,
+        "exposure_point_sha256": "ec2722f73b85d49fa3e0f019a4d469a8467af60da65a985e7b1a50b0d02846b9"
+      },
+      {
+        "phase": "ui",
+        "ms": 40576,
+        "roles_heading": true,
+        "testers_label": false,
+        "login_action": false,
+        "password_input": false
+      }
+    ]
+  },
+  "loading_responses_limit": "diagnostic_ok=false from non-JSON header response. RolesTable natural response was HTTP200 and passed full validator; loading page and role heading observed. No publication. Optional overlay stayed blocked.",
+  "post_loading_profile_state": "MainPID=0\nNRestarts=0\nId=instagram-vps-manager@autonomia.service\nActiveState=inactive\n\nMainPID=72722\nNRestarts=0\nId=instagram-vps-publisher@autonomia.service\nActiveState=active\nHUMAN_MARKER_ABSENT\nMANAGER_LOCK_ABSENT\nCHROME_LOCK_ABSENT\n",
+  "rails_eager_off": {
+    "observed_at_utc": "2026-10-07T11:10:13.421376+00:00",
+    "script_sha256": "fc0d3aef2c476bb06ee243f53638b2f1647f4b437488ef3b65479514bc35077e",
+    "base_script_sha256": "d8cfc023166764a5da882974f5cca573f2f290c7b305b60d5b80aba1724b7b24",
+    "result": {
+      "diagnostic": "rails_phase_measurement_eager_off",
+      "status": "ok",
+      "runtime_git_sha": "7aaa19ce04dec6aef3310ec4b4e77b76d7c00d01",
+      "rails_boot_ms": 5210.03,
+      "executor_bootstrap_ms": 23.271,
+      "version_present": false,
+      "publisher_eager_load": false
+    },
+    "production_source_changed": false
+  },
+  "rails_baseline_control": {
+    "observed_at_utc": "2026-10-07T11:11:28.352867+00:00",
+    "reason": "Control after eager-off candidate to distinguish framework change from warming",
+    "result": {
+      "diagnostic": "rails_phase_measurement",
+      "status": "ok",
+      "runtime_git_sha": "7aaa19ce04dec6aef3310ec4b4e77b76d7c00d01",
+      "rails_boot_ms": 10172.046,
+      "executor_bootstrap_ms": 7.34,
+      "version_present": false
+    }
+  },
+  "public_document_fixture_collection": {
+    "source_sha256": "dcb66065ab8b0a6714b4d335f40ac193e244778c074f8629587c6959611e670c",
+    "receipt_sha256": "0cc73cb3c2241332f315f0fe530d171282ffdd610ed75cb6b6bb0c5c960fbde0",
+    "unit": "instagram-autonomia-browser-20261007-111618",
+    "public_documents_count": 5,
+    "all_hashes_validated": true,
+    "response_listener_enabled": false,
+    "diagnostic_ok": false,
+    "diagnostic_limit": "Aggregate deliberately false because no response listener; fixture validates only pinned public document IDs.",
+    "browser_closed": true,
+    "lock_released": true,
+    "publication_performed": false
+  },
+  "local_validation": {
+    "snapshot_id": "20261007-082007-8ae330bf-440d7d9a91-381c581e",
+    "snapshot_content_sha256": "440d7d9a91b1d6608f7b6009fd98cac94eb72e5831a098a5890b030c7e32c6b9",
+    "replicas_verified": 2,
+    "execution_node": "m2",
+    "command": "node --test tests/instagram_testers/session-observer.test.mjs tests/instagram_testers/session-manager.test.mjs tests/instagram_testers/session-publisher-stdio.test.mjs tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs tests/instagram_testers/runtime-entrypoint.test.mjs tests/instagram_testers/operator-control.test.mjs tests/instagram_testers/operator-waiter.test.mjs",
+    "tests": 240,
+    "pass": 240,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "receipt_sha256": "8dcb8a97e5464f2d89c303650fb081edef9883f4b6adde767220fa7e797ee49d",
+    "first_run": {
+      "pass": 234,
+      "fail": 6,
+      "cause": "ERR_MODULE_NOT_FOUND ws in gateway entrypoint; snapshot VPS dependencies missing"
+    },
+    "dependency_preparation": "npm ci --prefix snapshot/src/scripts/instagram_testers/runtime/vps --ignore-scripts --no-fund --no-audit; 6 locked packages, m2 only, no active checkout modified",
+    "workspace_prepare_limit": "general prepare refused preexisting tracked template symlink; only isolated VPS dependency directory was prepared",
+    "production_and_fixture_match_snapshot": true,
+    "format_only_after_snapshot": [
+      "tests/instagram_testers/session-observer.test.mjs",
+      "tests/instagram_testers/session-manager.test.mjs"
+    ],
+    "format_tool": "Prettier 3.3.3 from locked repo dependency, isolated .codex cache; no-cache and explicit cache-location preserve old-worktree symlink",
+    "ruby_syntax": "pass",
+    "node_syntax": "pass",
+    "diff_check": "pass",
+    "ci_new_head": "pending after push"
+  },
+  "final_source_sha256": {
+    "scripts/instagram_testers/session-manager.mjs": "f5f282105905d12307a02bece9f4fc847dfa6cced3c1a37566577e68271ae536",
+    "scripts/instagram_testers/session-observer.mjs": "1652c684772e0903c610cda279c9f1e9211a9c8dfc02fcab6daa838ef1d75463",
+    "scripts/instagram_testers/session_publisher.rb": "a3b65159826bae7d2525577ef7bcfd26285bbd53c2f2661b835925115bd70b01",
+    "tests/instagram_testers/fixtures/loading-documents.json": "960f2e25a5692a94a0f9dd2c436da6414facc230c8fed2f69bde55650e1e9e70"
+  }
+}
