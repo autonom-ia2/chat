@@ -78,6 +78,9 @@ let pollTimer = null;
 let pollMisses = 0;
 let isActive = false;
 let visit = 0;
+// Counts the changes the person made (a fix, a rebuild): a check that left before one of them
+// answers the state before it, so it is dropped.
+let writes = 0;
 
 const importId = ref(Number(route.params.importId) || null);
 const errorText = code => t(`EMAIL_IMPORT.ERRORS.${code.toUpperCase()}`);
@@ -192,10 +195,11 @@ const settle = payload => {
 const poll = async () => {
   const run = visit;
   const id = importId.value;
+  const seen = writes;
   if (!id || !isActive) return;
   try {
     const { data: payload } = await EmailCampaignTemplateImportsAPI.show(id);
-    if (!isCurrent(run, id) || payload?.id !== id) return;
+    if (!isCurrent(run, id) || payload?.id !== id || seen !== writes) return;
     pollMisses = 0;
     if (settle(payload)) schedulePoll(poll);
   } catch (error) {
@@ -334,10 +338,22 @@ const closeFix = () => {
   fixError.value = '';
 };
 
+// A change by the person: the checks stop while it goes (one that already left is dropped when
+// it answers) and start again after it while a part is still being rebuilt.
+const write = () => {
+  writes += 1;
+  stopPolling();
+};
+
+const followRebuilds = run => {
+  if (isCurrent(run) && isRebuilding(data.value)) schedulePoll(poll);
+};
+
 const fix = async payload => {
   const run = visit;
   isFixing.value = true;
   fixError.value = '';
+  write();
   try {
     const { data: payloadAfter } = await EmailCampaignTemplateImportsAPI.fix(
       importId.value,
@@ -352,6 +368,7 @@ const fix = async payload => {
       fixError.value = errorText(errorCode(error) || 'fix_invalid');
   } finally {
     isFixing.value = false;
+    followRebuilds(run);
   }
 };
 
@@ -365,18 +382,19 @@ const rebuild = async target => {
   const run = visit;
   isFixing.value = true;
   fixError.value = '';
+  write();
   try {
     const { data: payloadAfter } =
       await EmailCampaignTemplateImportsAPI.rebuild(importId.value, target);
     if (!isCurrent(run)) return;
     data.value = payloadAfter;
     fixDialog.value?.close();
-    schedulePoll(poll);
   } catch (error) {
     if (isCurrent(run))
       fixError.value = errorText(errorCode(error) || 'internal');
   } finally {
     isFixing.value = false;
+    followRebuilds(run);
   }
 };
 

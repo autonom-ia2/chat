@@ -75,6 +75,44 @@ RSpec.describe EmailCampaigns::Import::PartRebuild::Starter, :aggregate_failures
     expect(EmailTemplateImportAiQuota.count).to eq(0)
   end
 
+  it 'refuses, before counting, a part whose markup does not hold all its words' do
+    report['unresolved'][0]['text'] = 'Parte que passou do tamanho guardado'
+    report['unresolved'][1]['html'] = ''
+    import
+
+    expect(refused('trecho-1')).to eq(:rebuild_unfit)
+    expect(refused('trecho-2')).to eq(:rebuild_unfit)
+    expect(EmailTemplateImportAiQuota.count).to eq(0)
+    expect(import.reload.rebuilds).to eq({})
+  end
+
+  it 'refuses a part whose words the cleaning takes out before the AI sees them' do
+    report['unresolved'][0].merge!('html' => '<p>Parte <script>escondida</script></p>', 'text' => 'Parte escondida')
+    import
+
+    expect(refused('trecho-1')).to eq(:rebuild_unfit)
+  end
+
+  it 'gives back the month of a click the job never took, and lets the part be asked again' do
+    start('trecho-1')
+    start('trecho-2')
+    late = (EmailCampaigns::Import::PartRebuild::QUEUE_SECONDS + 1).seconds.ago.iso8601
+    import.update!(rebuilds: import.rebuilds.transform_values { |entry| entry.merge('started_at' => late) })
+
+    expect { start('trecho-1') }.to have_enqueued_job(EmailCampaigns::Import::RebuildJob)
+    expect(import.reload.rebuilds.keys).to eq(['trecho-1'])
+    expect(import.rebuilds['trecho-1']['started_at']).not_to eq(late)
+    expect(EmailTemplateImportAiQuota.find_by(account: account).used).to eq(1)
+  end
+
+  it 'gives the month back and frees the part when the job cannot be queued' do
+    allow(EmailCampaigns::Import::RebuildJob).to receive(:perform_later).and_raise(StandardError, 'fila fora do ar')
+
+    expect { start('trecho-1') }.to raise_error(StandardError, 'fila fora do ar')
+    expect(import.reload.rebuilds).to eq({})
+    expect(EmailTemplateImportAiQuota.find_by(account: account).used).to eq(0)
+  end
+
   context 'when the AI is not configured' do
     let(:configured) { false }
 

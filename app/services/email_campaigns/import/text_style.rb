@@ -20,17 +20,23 @@ class EmailCampaigns::Import::TextStyle
   end
 
   # px, % or a bare multiplier — what mj-text accepts; nil for anything else (normal, inherit, CSS smuggled in). In em
-  # or rem the number already is the multiplier of the letter (1.2em is 1.2, never 1.2 × 16).
+  # the number already is the multiplier of the letter (1.2em is 1.2, never 1.2 × 16); rem is of the page root, so it
+  # is px (1.5rem is 24px whatever the letter).
   def self.line_height(value)
     text = EmailCampaigns::Import::StyleMap.plain(value).downcase
     return if text.empty?
 
-    em = text.end_with?('em')
-    number = EmailCampaigns::Import::StyleMap.px(em ? text.delete_suffix('rem').delete_suffix('em') : text.delete_suffix('%'))
+    number = line_number(text)
     return if number.nil? || number <= 0
-    return "#{number.round}px" if text.end_with?('px')
+    return "#{number.round}px" if text.end_with?('px', 'rem')
 
     text.end_with?('%') ? "#{number.round}%" : number.round(2).to_s
+  end
+
+  # The number of a line height: em is the multiplier itself; px and rem come as px (StyleMap counts a rem as 16 px).
+  def self.line_number(text)
+    em = text.end_with?('em') && !text.end_with?('rem')
+    EmailCampaigns::Import::StyleMap.px(em ? text.delete_suffix('em') : text.delete_suffix('%'))
   end
 
   # The style the content of `node` starts from: every element ancestor folded from the top.

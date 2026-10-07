@@ -201,14 +201,16 @@ module EmailCampaigns
           - Copie TODO texto visível do trecho exatamente: mesmas palavras, grafia, acentos, pontuação, números e preços.
           - Não traduza, não resuma, não corrija, não repita e não acrescente nenhuma palavra visível.
           - Campos entre chaves duplas, como {{ nome }}, ficam exatamente como estão.
-          - Use só os links (href) e os endereços de imagem (src) que aparecem no trecho, copiados sem mudar nada.
+          - Use só os links (href) e os endereços de imagem (src) que aparecem no trecho, copiados sem mudar nada,
+            e use TODOS eles: nenhum link ou imagem do trecho pode ficar de fora.
             Uma imagem de fundo do trecho vira background-url da <mj-section>.
           - Uma linha de tabela com várias células vira uma seção com uma coluna por célula; uma célula com texto,
             imagem e link vira os blocos dela, na mesma ordem.
           - Um link com cara de botão (fundo colorido, cantos, preenchimento) vira <mj-button href> com o mesmo texto.
           - Leve as cores, tamanhos de letra, negrito, alinhamento, fundos e espaçamentos dos estilos inline para os
             atributos MJML (color, font-size, font-weight, align, background-color, padding, width).
-          - <mj-image> leva src, alt (o mesmo do trecho) e width quando o trecho disser a largura.
+          - <mj-image> leva src, alt (o mesmo do trecho) e width quando o trecho disser a largura. alt e title só
+            com o texto que o trecho já tinha neles; sem ele, deixe vazio.
         PROMPT
       end
 

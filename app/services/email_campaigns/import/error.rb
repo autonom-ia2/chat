@@ -7,7 +7,7 @@ class EmailCampaigns::Import::Error < StandardError
   FLOW_CODES = %i[unsupported_file zip_invalid zip_too_large zip_too_many_files zip_unsafe_path zip_no_html url_invalid
                   url_not_https url_unsafe url_unreachable url_not_html in_progress stalled configuration internal].freeze
   FIX_CODES = %i[not_ready fix_invalid fix_gone image_unfit image_too_large text_invalid].freeze
-  REBUILD_CODES = %i[ai_not_configured rebuild_used rebuild_running rebuild_limit rebuild_month_limit].freeze
+  REBUILD_CODES = %i[ai_not_configured rebuild_used rebuild_running rebuild_limit rebuild_month_limit rebuild_unfit].freeze
   CODES = (ENGINE_CODES + FLOW_CODES + FIX_CODES + REBUILD_CODES).freeze
 
   attr_reader :code

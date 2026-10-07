@@ -87,7 +87,8 @@
       "REBUILD_USED": "Este pedaço já foi refeito uma vez. Escolha outra saída.",
       "REBUILD_RUNNING": "Este pedaço já está sendo refeito. Espere um pouco.",
       "REBUILD_LIMIT": "Você já refez o máximo de pedaços deste modelo. Escolha outra saída.",
-      "REBUILD_MONTH_LIMIT": "Você já usou todos os refazer com IA deste mês. Escolha outra saída."
+      "REBUILD_MONTH_LIMIT": "Você já usou todos os refazer com IA deste mês. Escolha outra saída.",
+      "REBUILD_UNFIT": "A IA não consegue refazer este pedaço. Escolha outra saída."
     },
     "SCREEN": {
       "CRUMB": "Trazer meu modelo",
@@ -246,6 +247,7 @@
         "RUNNING": "Este pedaço está sendo refeito.",
         "FAILED": "Não deu para refazer este pedaço. Escolha uma opção abaixo.",
         "USED_UP": "Os refazer com IA acabaram por agora. Escolha uma opção abaixo.",
+        "UNFIT": "A IA não consegue refazer este pedaço. Escolha uma opção abaixo.",
         "KEEP_TEXT": "Deixar só o texto",
         "REMOVE": "Tirar este pedaço"
       },

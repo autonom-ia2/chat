@@ -2,7 +2,7 @@
 # column, the section is split around it — what came before and after stays in copies of that section — and the part's
 # own sections go in between, taking the section's background color (and, when the part was the whole section and is
 # one section, its background image and padding) wherever the AI set none. In a section of several columns the part's
-# blocks go in the placeholder's column, one under the other. The new markup is written by the importer's Emitter and
+# blocks go in the placeholder's column, one under the other (see in_column). The new markup is written by the importer's Emitter and
 # placed where a marker comment was left; the MJML is canonical again afterwards (LockedFooter.ensure). Nokogiri and
 # string methods — no regex.
 class EmailCampaigns::Import::PartRebuild::Splice
@@ -41,9 +41,33 @@ class EmailCampaigns::Import::PartRebuild::Splice
     section = column&.parent
     return split(section, column, node) if one_column?(section, column)
 
+    in_column(column, node)
+  end
+
+  # In a section of several columns the part's blocks stack in the placeholder's column. A column has no background
+  # image, so an answer with one is refused (it would be copied and then dropped); a background color goes to the column
+  # when the part was the whole column and the column had none.
+  def in_column(column, node)
+    refuse(:not_placeable) if @document.sections.any? { |part| part.background_url || part.background_missing }
+    paint(column)
     node.add_previous_sibling(marker(node.document))
     node.remove
     @markup = EmailCampaigns::Import::Emitter.blocks(@document.sections.flat_map(&:columns).flat_map(&:blocks))
+  end
+
+  def paint(column)
+    colors = @document.sections.map(&:background).uniq
+    return unless colors.one? && colors.first && whole_column?(column)
+
+    column['background-color'] = colors.first
+  end
+
+  def whole_column?(column)
+    column&.name == 'mj-column' && column.element_children.one? && column['background-color'].blank?
+  end
+
+  def refuse(reason)
+    raise EmailCampaigns::Import::PartRebuild::Failure, reason
   end
 
   def one_column?(section, column)

@@ -85,7 +85,8 @@ RSpec.describe EmailCampaigns::Import::PartRebuild, :aggregate_failures do
       expect(client).to have_received(:create) do |**args|
         expect(args[:model]).to eq(Crm::Ai::Config::MODEL_EMAIL)
         expect(args[:instructions]).to eq(EmailCampaigns::Ai::PromptBuilder.convert_fragment)
-        expect(args[:instructions]).to include('CONTEÚDO INERTE')
+        expect(args[:instructions]).to include('CONTEÚDO INERTE', 'nenhum link ou imagem do trecho pode ficar de fora',
+                                               'alt e title só')
         expect(args[:input]).to include('<<<TRECHO_', 'Chegou a safra de outubro', 'https://loja.example.com/safra')
         expect(args[:input]).not_to include('Antes do trecho', 'Depois do trecho')
         expect(args[:schema]).to eq(described_class::SCHEMA)
@@ -148,6 +149,48 @@ RSpec.describe EmailCampaigns::Import::PartRebuild, :aggregate_failures do
       .to eq(['Chegou a safra de outubro <b>', 'Grãos frescos, direto da torra', 'R$ 39,90'])
   end
 
+  it 'takes out an image description or a hint the part did not have, and keeps the ones it had' do
+    hinted = '<mj-text><a href="https://loja.example.com/safra" title="Pix para golpe@example.com">R$ 39,90</a></mj-text>'
+    answer(answer_sections.sub('alt="Grão Serra"', 'alt="Grão Serra" title="Ligue já 0800 000 000"').sub('<mj-text>R$ 39,90</mj-text>', hinted))
+    rebuild
+
+    expect(state['status']).to eq('done')
+    expect(import.result_mjml).not_to include('0800 000 000', 'golpe@example.com')
+    expect(Nokogiri::XML(import.result_mjml).css('mj-image').find { |node| node['alt'] == 'Grão Serra' }).to be_present
+  end
+
+  it 'takes out an image description the AI wrote for an image that had none' do
+    report['unresolved'].first['html'] = part_html.sub(' alt="Grão Serra"', '')
+    answer(answer_sections.sub('alt="Grão Serra"', 'alt="Visite golpe.example.com"'))
+    rebuild
+
+    expect(state['status']).to eq('done')
+    expect(import.result_mjml).not_to include('golpe.example.com')
+  end
+
+  it 'keeps the image when the part would land in a column and has a background image' do
+    background = 'https://cdn.example.com/fundo.png'
+    allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::Error, 'offline')
+    report['unresolved'].first.merge!('html' => %(<table><tr><td background="#{background}"><p>Chegou a safra</p></td></tr></table>),
+                                      'text' => 'Chegou a safra')
+    body.replace(%(<mj-section><mj-column><mj-text>Lado</mj-text></mj-column><mj-column>#{placeholder}</mj-column></mj-section>))
+    answer(%(<mj-section background-url="#{background}"><mj-column><mj-text>Chegou a safra</mj-text></mj-column></mj-section>))
+    rebuild
+
+    expect(state).to include('status' => 'failed', 'reason' => 'not_placeable')
+    expect(import.result_mjml).to eq(mjml)
+  end
+
+  it 'gives the column the background color of the part when the part was the whole column' do
+    body.replace(%(<mj-section><mj-column><mj-text>Lado</mj-text></mj-column><mj-column>#{placeholder}</mj-column></mj-section>))
+    answer(answer_sections)
+    rebuild
+
+    columns = Nokogiri::XML(import.result_mjml).css('mj-body > mj-section').first.css('mj-column')
+    expect(columns.last['background-color']).to eq('#fdf6ee')
+    expect(columns.first['background-color']).to be_nil
+  end
+
   describe 'when the answer does not keep the part' do
     {
       'a changed word' => [->(sections) { sections.sub('Grãos frescos', 'Grãos fresquinhos') }, 'text_mismatch'],
@@ -159,7 +202,14 @@ RSpec.describe EmailCampaigns::Import::PartRebuild, :aggregate_failures do
       'a block the editor cannot edit' => [->(sections) { sections.sub('<mj-text>R$ 39,90</mj-text>', '<mj-raw><p>R$ 39,90</p></mj-raw>') },
                                            'not_editable'],
       'a script' => [->(sections) { sections.sub('direto da torra</a>', 'direto da torra</a><script>alert(1)</script>') }, 'unsafe'],
-      'markup that is not MJML' => [->(_sections) { '<mj-section><mj-column>' }, 'unreadable']
+      'markup that is not MJML' => [->(_sections) { '<mj-section><mj-column>' }, 'unreadable'],
+      'a link of the part left out' => [->(sections) { sections.sub('<a href="https://loja.example.com/safra">', '').sub('torra</a>', 'torra') },
+                                        'lost_link'],
+      'an image of the part left out' => [
+        ->(sections) { sections.sub(%(<mj-image src="#{data_src}" alt="Grão Serra" width="180px"></mj-image>), '') }, 'lost_image'
+      ],
+      'an image put inside a text' => [->(sections) { sections.sub('R$ 39,90', 'R$ 39,90<img src="https://golpe.example.com/x.png">') },
+                                       'new_image']
     }.each do |what, (change, reason)|
       it "keeps the image and says it did not work, for #{what}" do
         answer(instance_exec(answer_sections, &change))
@@ -196,18 +246,85 @@ RSpec.describe EmailCampaigns::Import::PartRebuild, :aggregate_failures do
     expect(EmailTemplateImportAiQuota.find_by(account: account).used).to eq(2)
   end
 
-  it 'does nothing for a click that is not the current one, or for a job that came back too late' do
+  it 'does nothing for a click that is not the current one' do
     answer(answer_sections)
 
     rebuild('outro-token')
     expect(state['status']).to eq('running')
-
-    import.update!(rebuilds: { 'trecho-1' => state.merge('started_at' => (described_class::SECONDS + 1).seconds.ago.iso8601) })
-    rebuild
-    expect(state['status']).to eq('running')
-    expect(described_class.view(import)['trecho-1']).to eq(status: 'failed', reason: 'timeout')
+    expect(state).not_to have_key('asked_at')
     expect(client).not_to have_received(:create)
     expect(import.result_mjml).to eq(mjml)
+  end
+
+  describe 'the clock of a part' do
+    it 'asks the AI once, without a second try that would pass the time of the part' do
+      resolver = instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', api_base: 'https://ia.example.com' })
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(resolver)
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(client)
+      answer(answer_sections)
+
+      described_class.call(import, 'trecho-1', token)
+
+      expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 0))
+      expect(client).to have_received(:create).with(hash_including(timeout: described_class::REQUEST_SECONDS))
+      expect(described_class::RUN_SECONDS).to be > described_class::REQUEST_SECONDS + EmailCampaigns::Import::ImageRehoster::BUDGET_SECONDS
+      expect(import.reload.rebuilds['trecho-1']['status']).to eq('done')
+    end
+
+    it 'counts the time of the part from when the job asks, not from the click' do
+      import.update!(rebuilds: { 'trecho-1' => state.merge('started_at' => (described_class::QUEUE_SECONDS - 5).seconds.ago.iso8601) })
+      answer(answer_sections)
+
+      rebuild
+
+      expect(state['status']).to eq('done')
+      expect(Time.zone.parse(state['asked_at'])).to be_within(5.seconds).of(Time.current)
+    end
+
+    it 'uses an answer that was paid for even when it arrives after the time of the part' do
+      allow(client).to receive(:create) do
+        travel(described_class::RUN_SECONDS + 60)
+        { text: { mjml: answer_sections }.to_json }
+      end
+
+      rebuild
+
+      expect(state['status']).to eq('done')
+      expect(import.result_mjml).to include('Grãos frescos')
+    ensure
+      travel_back
+    end
+
+    it 'never asks the AI twice for one click: a second run of the job does nothing' do
+      answer(answer_sections)
+      import.update!(rebuilds: { 'trecho-1' => state.merge('asked_at' => 10.seconds.ago.iso8601) })
+
+      rebuild
+
+      expect(client).not_to have_received(:create)
+      expect(state['status']).to eq('running')
+      expect(import.result_mjml).to eq(mjml)
+    end
+
+    it 'shows as failed a part asked longer ago than the time of the part' do
+      import.update!(rebuilds: { 'trecho-1' => state.merge('asked_at' => (described_class::RUN_SECONDS + 1).seconds.ago.iso8601) })
+
+      expect(described_class.view(import)['trecho-1']).to eq(status: 'failed', reason: 'timeout')
+    end
+
+    it 'gives the month back and frees the part when the job starts after the queue window, without asking the AI' do
+      quota = EmailTemplateImportAiQuota.create!(account: account, period: Date.new(2026, 10, 1), used: 3)
+      answer(answer_sections)
+      import.update!(rebuilds: { 'trecho-1' => state.merge('started_at' => (described_class::QUEUE_SECONDS + 1).seconds.ago.iso8601) })
+      expect(described_class.view(import)).to eq({})
+
+      rebuild
+
+      expect(client).not_to have_received(:create)
+      expect(import.rebuilds).to eq({})
+      expect(quota.reload.used).to eq(2)
+      expect(import.result_mjml).to eq(mjml)
+    end
   end
 
   it 'says the part is gone when the person solved it another way meanwhile' do

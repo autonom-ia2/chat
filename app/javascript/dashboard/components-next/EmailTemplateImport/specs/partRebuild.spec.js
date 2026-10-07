@@ -35,6 +35,18 @@ describe('partRebuild', () => {
     ).toEqual({ enabled: false, hint: `${D}.USED_UP` });
   });
 
+  it('turns the button off, before any click, for a part the AI cannot rebuild', () => {
+    const unfit = { available: true, left: 3, unfit: ['trecho-1'] };
+    expect(rebuildButton(data({}, unfit), 'trecho-1')).toEqual({
+      enabled: false,
+      hint: `${D}.UNFIT`,
+    });
+    expect(rebuildButton(data({}, unfit), 'trecho-2')).toEqual({
+      enabled: true,
+      hint: `${D}.REBUILD_HINT`,
+    });
+  });
+
   it('keeps the product message when the AI is not configured', () => {
     expect(
       rebuildButton(data({}, { available: false, left: 0 }), 'trecho-1')

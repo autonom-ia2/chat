@@ -402,7 +402,7 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
     it 'rebuilds the part in the background, and the model can be saved' do
       with_ai
       id = paste(raw_model)
-      expect(show(id)['ai_rebuild']).to eq('available' => true, 'left' => 5)
+      expect(show(id)['ai_rebuild']).to eq('available' => true, 'left' => 5, 'unfit' => [])
 
       rebuild(id, 'trecho-1')
       expect(response).to have_http_status(:accepted)
@@ -412,7 +412,8 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       expect(body['blocking']).to eq([])
       expect(body['targets']['parts']).to eq([])
       expect(body['result_mjml']).to include('Faltam 3 dias')
-      expect(body['ai_rebuild']).to eq('available' => true, 'left' => 4)
+      expect(body['ai_rebuild']).to eq('available' => true, 'left' => 4, 'unfit' => [])
+      expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(max_retries: 0))
       expect(body['fixes'].last).to include('code' => 'unresolved_parts', 'choice' => 'rebuild', 'target' => 'trecho-1')
 
       rebuild(id, 'trecho-1')
@@ -423,9 +424,25 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       expect(response).to have_http_status(:created)
     end
 
+    it 'tells which parts the AI cannot rebuild, and refuses them without counting' do
+      with_ai
+      id = paste(raw_model)
+      import = EmailCampaignTemplateImport.find(id)
+      report = import.report.deep_dup
+      report['unresolved'][0]['text'] = 'Faltam 3 dias e mais um pedaço que não coube'
+      import.update!(report: report)
+
+      expect(show(id)['ai_rebuild']).to eq('available' => true, 'left' => 5, 'unfit' => ['trecho-1'])
+      rebuild(id, 'trecho-1')
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('error' => 'email_template_import.rebuild_unfit')
+      expect(EmailTemplateImportAiQuota.count).to eq(0)
+      expect(client).not_to have_received(:create)
+    end
+
     it 'says the AI is not configured, and counts nothing' do
       id = paste(raw_model)
-      expect(show(id)['ai_rebuild']).to eq('available' => false, 'left' => 0)
+      expect(show(id)['ai_rebuild']).to eq('available' => false, 'left' => 0, 'unfit' => [])
 
       rebuild(id, 'trecho-1')
       expect(response).to have_http_status(:unprocessable_entity)

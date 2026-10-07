@@ -95,24 +95,27 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
 
   def payload(import)
     ready = import.status == 'ready'
+    targets = ready ? EmailCampaigns::Import::Fixer.targets(import) : nil
+    rebuilds = EmailCampaigns::Import::PartRebuild.view(import)
     import.as_json(only: FIELDS).merge(
       'report' => import.report.presence,
       'result_mjml' => ready ? import.result_mjml : nil,
       'preview_html' => ready ? import.preview_html : nil,
       'blocking' => ready ? import.blocking : [],
-      'targets' => ready ? EmailCampaigns::Import::Fixer.targets(import) : nil,
-      'rebuilds' => EmailCampaigns::Import::PartRebuild.view(import),
-      'ai_rebuild' => ready ? ai_rebuild(import) : nil
+      'targets' => targets,
+      'rebuilds' => rebuilds,
+      'ai_rebuild' => ready ? ai_rebuild(import, targets, rebuilds) : nil
     )
   end
 
-  # Whether the AI can rebuild parts here and how many are left (for this import and this month, whichever is less).
-  def ai_rebuild(import)
-    return { available: false, left: 0 } unless EmailCampaigns::Import::PartRebuild.available?(import.account)
+  # Whether the AI can rebuild parts here, how many are left (for this import and this month, whichever is less) and
+  # which parts it cannot rebuild at all (`unfit`: the screen turns their button off before any click).
+  def ai_rebuild(import, targets, rebuilds)
+    return { available: false, left: 0, unfit: [] } unless EmailCampaigns::Import::PartRebuild.available?(import.account)
 
-    left = [EmailCampaigns::Import::PartRebuild::MAX_PER_IMPORT - import.rebuilds.size,
-            EmailCampaigns::Import::PartRebuild::Quota.left(import.account)].min
-    { available: true, left: [left, 0].max }
+    left = [EmailCampaigns::Import::PartRebuild::MAX_PER_IMPORT - rebuilds.size, EmailCampaigns::Import::PartRebuild::Quota.left(import.account)].min
+    unfit = targets[:parts].pluck(:id).reject { |id| EmailCampaigns::Import::PartRebuild::Fragment.fit?(import, id) }
+    { available: true, left: [left, 0].max, unfit: unfit }
   end
 
   def render_error(code, status: nil, **extra)

@@ -87,7 +87,8 @@
       "REBUILD_USED": "This part was already rebuilt once. Pick another way out.",
       "REBUILD_RUNNING": "This part is already being rebuilt. Wait a little.",
       "REBUILD_LIMIT": "You already rebuilt the most parts this model allows. Pick another way out.",
-      "REBUILD_MONTH_LIMIT": "You used every AI rebuild of this month. Pick another way out."
+      "REBUILD_MONTH_LIMIT": "You used every AI rebuild of this month. Pick another way out.",
+      "REBUILD_UNFIT": "The AI cannot rebuild this part. Pick another way out."
     },
     "SCREEN": {
       "CRUMB": "Bring my template",
@@ -246,6 +247,7 @@
         "RUNNING": "This part is being rebuilt.",
         "FAILED": "This part could not be rebuilt. Pick one of the options below.",
         "USED_UP": "AI rebuilds are used up for now. Pick one of the options below.",
+        "UNFIT": "The AI cannot rebuild this part. Pick one of the options below.",
         "KEEP_TEXT": "Keep only the text",
         "REMOVE": "Remove this part"
       },

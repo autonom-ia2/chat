@@ -13,13 +13,16 @@ export const isRebuilding = data =>
   Object.values(data?.rebuilds || {}).some(entry => entry?.status === RUNNING);
 
 // The "Refazer para editar" button of a part: { enabled, hint } (hint is an i18n key). Without
-// the AI configured here, the product's message stays as it was ("chega em breve").
+// the AI configured here, the product's message stays as it was ("chega em breve"). A part the
+// server says the AI cannot rebuild (`ai_rebuild.unfit`) keeps the button off before any click.
 export const rebuildButton = (data, partId) => {
   const state = rebuildOf(data, partId)?.status;
   const ai = data?.ai_rebuild || {};
   if (state === RUNNING) return { enabled: false, hint: `${D}.RUNNING` };
   if (state === FAILED) return { enabled: false, hint: `${D}.FAILED` };
   if (!ai.available) return { enabled: false, hint: `${D}.SOON` };
+  if ((ai.unfit || []).includes(partId))
+    return { enabled: false, hint: `${D}.UNFIT` };
   if (!(ai.left > 0)) return { enabled: false, hint: `${D}.USED_UP` };
   return { enabled: true, hint: `${D}.REBUILD_HINT` };
 };

@@ -294,6 +294,86 @@ it('rebuilds a part with the AI, follows it and shows the new preview', async ()
   }
 });
 
+it('never lets an old check undo a fix made while a part is being rebuilt', async () => {
+  route.params.importId = '7';
+  const running = {
+    blocking: [
+      { code: 'unresolved_parts', items: ['trecho-1'] },
+      { code: 'unknown_fields', items: ['cupom'] },
+    ],
+    targets: {
+      images: [],
+      parts: [{ id: 'trecho-1', text: 'Safra' }],
+      fields: ['cupom'],
+    },
+    rebuilds: { 'trecho-1': { status: 'running' } },
+    ai_rebuild: { available: true, left: 4 },
+  };
+  const fixed = ready({
+    ...running,
+    result_mjml: '<mjml><mj-body>campo trocado</mj-body></mjml>',
+    blocking: [{ code: 'unresolved_parts', items: ['trecho-1'] }],
+    targets: { ...running.targets, fields: [] },
+    fixes: [
+      {
+        code: 'unknown_fields',
+        choice: 'field',
+        target: 'cupom',
+        value: 'primeiro_nome',
+      },
+    ],
+  });
+  let oldCheck;
+  api.show.mockResolvedValueOnce({ data: ready(running) });
+  vi.useFakeTimers();
+  try {
+    await mountPage();
+    // The next check leaves before the fix and comes back after it, with the state before the fix.
+    api.show.mockReturnValueOnce(
+      new Promise(resolve => {
+        oldCheck = resolve;
+      })
+    );
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(api.show).toHaveBeenCalledTimes(2);
+
+    api.fix.mockResolvedValue({ data: fixed });
+    api.show.mockResolvedValue({ data: fixed });
+    await buttonWith('EMAIL_IMPORT.SCREEN.ROWS.CHOOSE').trigger('click');
+    await flushPromises();
+    const dialog = document.body.querySelector('dialog[open]');
+    dialog.querySelector('[role="combobox"]').click();
+    await flushPromises();
+    Array.from(dialog.querySelectorAll('[role="option"]'))
+      .find(item => item.textContent.includes('FIELDS.PRIMEIRO_NOME'))
+      .click();
+    await flushPromises();
+    Array.from(dialog.querySelectorAll('button'))
+      .find(button => button.textContent.includes('FIELD_DIALOG.CHOOSE'))
+      .click();
+    await flushPromises();
+    expect(wrapper.find('[data-tone="ok"]').text()).toContain(
+      'FIXED.FIELD_FIELD'
+    );
+
+    oldCheck({ data: ready(running) });
+    await flushPromises();
+    expect(wrapper.find('[data-tone="ok"]').text()).toContain(
+      'FIXED.FIELD_FIELD'
+    );
+
+    // It keeps following the part that is still being rebuilt.
+    api.show.mockClear();
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(api.show).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-tone="ok"]').text()).toContain(
+      'FIXED.FIELD_FIELD'
+    );
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it('keeps "Refazer para editar" off with the current message when the AI is not configured', async () => {
   route.params.importId = '7';
   api.show.mockResolvedValue({

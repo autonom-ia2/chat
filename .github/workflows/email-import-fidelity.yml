@@ -10,6 +10,9 @@ on:
     branches: [main]
     paths:
       - 'app/services/email_campaigns/import/**'
+      - 'app/services/email_campaigns/mjml_canonicalizer.rb'
+      - 'app/services/email_campaigns/locked_footer.rb'
+      - 'app/services/email_campaigns/mjml_compiler.rb'
       - 'spec/fixtures/email_imports/**'
       - 'lib/email_import_fidelity/**'
       - 'lib/tasks/email_import_fidelity.rake'
