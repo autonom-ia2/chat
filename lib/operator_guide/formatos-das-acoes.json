@@ -15456,6 +15456,72 @@
     ],
     "sem_corpo": true
   },
+  "POST email_campaigns/template_imports": {
+    "campos": {
+      "content": {},
+      "file": {},
+      "source_kind": {
+        "tipo": "string",
+        "um_de": [
+          "paste",
+          "file",
+          "url"
+        ]
+      },
+      "url": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#create",
+    "modelo": "EmailCampaignTemplateImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:44",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:81"
+    ],
+    "sem_corpo": false
+  },
+  "POST email_campaigns/template_imports/:id/fix": {
+    "campos": {
+      "choice": {},
+      "file": {},
+      "kind": {},
+      "target": {},
+      "value": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#fix",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:58",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:89",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:77"
+    ],
+    "sem_corpo": false
+  },
+  "POST email_campaigns/template_imports/:id/rebuild": {
+    "campos": {
+      "target": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#rebuild",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:63",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:93",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:77"
+    ],
+    "sem_corpo": false
+  },
+  "POST email_campaigns/template_imports/:id/save": {
+    "campos": {
+      "name": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#save",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:52",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:85",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:77"
+    ],
+    "sem_corpo": false
+  },
   "POST email_campaigns/templates": {
     "campos": {
       "body_html": {

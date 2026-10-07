@@ -3,20 +3,30 @@
 # footer with the only unsubscribe link, WCAG AA contrast, 44px buttons, readable sizes in explicit Arial,
 # described images served by the installation (<= 200 KB), HTML under Gmail's 102 KB clip, and placeholders
 # every campaign can fill. Wired to the seed library (spec/services/email_campaigns/quality_gate_library_spec.rb);
-# built to run after AI generation too (EmailCampaigns::Ai::QualityCheck): without compiled HTML (`html: nil`,
-# production has no Node to compile MJML) the two checks on the HTML are skipped. Parses with Nokogiri and
-# plain string methods — no regex.
+# built to run after AI generation too (EmailCampaigns::Ai::QualityCheck). Parses with Nokogiri and plain string
+# methods — no regex.
+#
+# On the server, without Node (template import, #1099, and the AI jobs, #1095), it runs on the MJML alone: html: nil
+# skips the checks that need the compiled HTML and estimates its size (EstimatedSize); remote_images: true accepts
+# absolute web images that the import copies afterwards (RemoteImage), still demanding a description; fonts: lets an
+# imported model keep a font every e-mail program shows (Import::WebFonts) instead of Arial.
 class EmailCampaigns::QualityGate
   include Css
 
-  Violation = Struct.new(:check, :detail)
+  # target: what the problem is about — the text of a block, an image src, a placeholder, a tag — or nil when it is about
+  # the whole e-mail (size, unsubscribe). detail carries measurements (bytes, ratios, px) and is only for people.
+  Violation = Struct.new(:check, :detail, :target) do
+    # Same problem in two versions of an e-mail: same check on the same target, whatever the measurements say.
+    def identity
+      [check, target]
+    end
+  end
 
   EDITABLE_TAGS = %w[
     mjml mj-head mj-title mj-preview mj-attributes mj-all mj-body mj-wrapper mj-section mj-group mj-column
     mj-text mj-image mj-button mj-divider mj-spacer mj-social mj-social-element
   ].freeze
   INLINE_TAGS = %w[a br strong b em span].freeze
-  CONTAINERS = %w[mj-group mj-section mj-wrapper mj-body].freeze
   FONT = 'arial'.freeze
   UNSUBSCRIBE = 'unsubscribe_url'.freeze
   UNSUBSCRIBE_HREF = '{{ unsubscribe_url }}'.freeze
@@ -37,7 +47,6 @@ class EmailCampaigns::QualityGate
   DEFAULT_BUTTON_BACKGROUND = '#414141'.freeze
   DEFAULT_INNER_PADDING = '10px 25px'.freeze
   DEFAULT_BUTTON_LINE_HEIGHT = '120%'.freeze
-  DEFAULT_BACKGROUND = '#ffffff'.freeze
 
   def self.locked_footers(mjml)
     footer_sections(Nokogiri::HTML5.fragment(mjml.to_s)).map(&:to_html)
@@ -47,15 +56,16 @@ class EmailCampaigns::QualityGate
     doc.css('mj-section, mj-wrapper').select { |node| node['css-class'].to_s.split.include?('footer-locked') }
   end
 
-  def initialize(mjml:, html:, compile_errors: [], public_root: Rails.public_path,
-                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS)
+  def initialize(mjml:, html: nil, compile_errors: [], public_root: Rails.public_path, # rubocop:disable Metrics/ParameterLists
+                 placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS, remote_images: false, fonts: [FONT])
     @mjml = mjml.to_s
-    # nil when the MJML is not compiled (the AI jobs: no compiler in the production image); checks that read the
-    # compiled HTML are then skipped.
+    @fonts = fonts
+    # nil when the MJML is not compiled (import and AI jobs: no compiler in the production image).
     @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path
     @placeholders = placeholders
+    @remote_images = remote_images
     @doc = Nokogiri::HTML5.fragment(@mjml)
   end
 
@@ -68,22 +78,26 @@ class EmailCampaigns::QualityGate
     check_buttons
     check_images
     check_placeholders
-    add(:html_size, "#{@html.bytesize} bytes") if @html && @html.bytesize > MAX_HTML_BYTES
+    add(:html_size, "#{html_bytes} bytes#{' (estimated)' if @html.nil?}") if html_bytes > MAX_HTML_BYTES
     @violations
+  end
+
+  def html_bytes
+    @html_bytes ||= @html.nil? ? EstimatedSize.bytes(@mjml) : @html.bytesize
   end
 
   private
 
-  def add(check, detail)
-    @violations << Violation.new(check, detail)
+  def add(check, detail, target: nil)
+    @violations << Violation.new(check, detail, target)
   end
 
   def check_tags
     @doc.css('*').map(&:name).uniq.each do |name|
       allowed = name.start_with?('mj') ? EDITABLE_TAGS : INLINE_TAGS
-      add(:editable_tags, name) unless allowed.include?(name)
+      add(:editable_tags, name, target: name) unless allowed.include?(name)
     end
-    self_closed_tags.each { |name| add(:explicit_close_tags, name) }
+    self_closed_tags.each { |name| add(:explicit_close_tags, name, target: name) }
   end
 
   # `<mj-x />` means "closed" to MJML but "open" to the editor's HTML parser, which then swallows siblings.
@@ -133,13 +147,13 @@ class EmailCampaigns::QualityGate
 
   def check_font_family(node)
     family = node['font-family'].to_s.split(',').first.to_s.strip.delete('"\'').downcase
-    add(:font_family, "#{node.name} #{node['font-family'].inspect}") unless family == FONT
+    add(:font_family, "#{node.name} #{node['font-family'].inspect}", target: label(node)) unless @fonts.include?(family)
   end
 
   def check_font_sizes(node)
     minimum = in_footer?(node) ? MIN_FOOTER_PX : MIN_BODY_PX
     sizes = [font_px(node)] + node.css('*').filter_map { |inner| style(inner)['font-size'] }.map { |value| px(value) }
-    sizes.each { |size| add(:font_size, "#{label(node)} #{size}px < #{minimum}px") if size < minimum }
+    sizes.each { |size| add(:font_size, "#{label(node)} #{size}px < #{minimum}px", target: label(node)) if size < minimum }
   end
 
   def check_text_contrast(node)
@@ -155,15 +169,15 @@ class EmailCampaigns::QualityGate
       check_contrast(button['color'] || DEFAULT_BUTTON_COLOR, button['background-color'] || DEFAULT_BUTTON_BACKGROUND,
                      MIN_CONTRAST, "button #{label(button)}")
       height = button_height(button)
-      add(:button_height, "#{label(button)} #{height.round(1)}px < #{MIN_BUTTON_PX}px") if height < MIN_BUTTON_PX
+      add(:button_height, "#{label(button)} #{height.round(1)}px < #{MIN_BUTTON_PX}px", target: label(button)) if height < MIN_BUTTON_PX
     end
   end
 
   def check_contrast(color, background, needed, where)
     ratio = Contrast.ratio(color, background)
-    return add(:contrast, "#{where}: unmeasurable color #{color}/#{background}") if ratio.nil?
+    return add(:contrast, "#{where}: unmeasurable color #{color}/#{background}", target: where) if ratio.nil?
 
-    add(:contrast, "#{where}: #{color} on #{background} = #{ratio.round(2)}:1 < #{needed}") if ratio < needed
+    add(:contrast, "#{where}: #{color} on #{background} = #{ratio.round(2)}:1 < #{needed}", target: where) if ratio < needed
   end
 
   # Vertical inner padding plus one line of text: the rendered height of a one-line button.
@@ -177,14 +191,14 @@ class EmailCampaigns::QualityGate
   def check_images
     @doc.css('mj-image').each do |image|
       src = image['src'].to_s
-      add(:image_alt, src) if image['alt'].to_s.strip.empty?
-      problem = LocalImage.problem(src, @public_root)
-      add(:local_images, "#{src}: #{problem}") if problem
+      add(:image_alt, src, target: src) if image['alt'].to_s.strip.empty?
+      problem = (@remote_images ? RemoteImage : LocalImage).problem(src, @public_root)
+      add(:local_images, "#{src}: #{problem}", target: src) if problem
     end
   end
 
   def check_placeholders
-    (placeholder_keys(@mjml).uniq - @placeholders).each { |key| add(:placeholders, key) }
+    (placeholder_keys(@mjml).uniq - @placeholders).each { |key| add(:placeholders, key, target: key) }
   end
 
   def placeholder_keys(source)
@@ -192,12 +206,7 @@ class EmailCampaigns::QualityGate
   end
 
   def background_of(node)
-    node.ancestors.each do |parent|
-      color = parent['inner-background-color'] || parent['background-color'] if parent.name == 'mj-column'
-      color = parent['background-color'] if CONTAINERS.include?(parent.name)
-      return color if color.present?
-    end
-    DEFAULT_BACKGROUND
+    Background.of(node)
   end
 
   def in_footer?(node)

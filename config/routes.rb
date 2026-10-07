@@ -570,6 +570,14 @@ Rails.application.routes.draw do
             post 'ai/campaigns/:id/adjustment/apply', to: 'ai#apply_adjustment'
             post 'ai/campaigns/:id/adjustment/undo', to: 'ai#undo_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
+            # Importar modelo (#1099): colar/arquivo/endereço → job → acompanhar → corrigir → salvar em "Meus modelos".
+            resources :template_imports, only: [:index, :create, :show] do
+              member do
+                post :save
+                post :fix
+                post :rebuild
+              end
+            end
             resources :reports, only: [:index, :show] do
               member do
                 get :clicks

@@ -13,11 +13,13 @@ class SafeFetch::RequestOptions
     http_basic_authentication: nil,
     allowed_content_type_prefixes: SafeFetch::DEFAULT_ALLOWED_CONTENT_TYPE_PREFIXES,
     allowed_content_types: SafeFetch::DEFAULT_ALLOWED_CONTENT_TYPES,
-    validate_content_type: true
+    validate_content_type: true,
+    # Esquemas aceitos em CADA salto (o ssrf_filter confere a lista a cada redirecionamento). nil = http e https.
+    schemes: nil
   }.freeze
 
   attr_reader :allowed_content_type_prefixes, :allowed_content_types, :body, :headers, :http_basic_authentication,
-              :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :sensitive_headers, :total_timeout, :uri, :url
+              :max_redirects, :method, :open_timeout, :read_timeout, :resolver, :schemes, :sensitive_headers, :total_timeout, :uri, :url
 
   def initialize(url:, **options)
     config = DEFAULTS.merge(options)
@@ -29,6 +31,7 @@ class SafeFetch::RequestOptions
     @sensitive_headers = normalize_sensitive_headers(config[:sensitive_headers])
     @resolver = config[:resolver]
     @http_basic_authentication = config[:http_basic_authentication]
+    @schemes = config[:schemes]&.map(&:to_s)
     apply_limits(config)
     apply_content_type_rules(config)
   end
@@ -42,7 +45,7 @@ class SafeFetch::RequestOptions
   end
 
   def request_options
-    {
+    options = {
       headers: headers,
       body: body,
       request_proc: request_proc,
@@ -51,6 +54,7 @@ class SafeFetch::RequestOptions
       max_redirects: max_redirects,
       http_options: { open_timeout: bounded_by_total(open_timeout), read_timeout: bounded_by_total(read_timeout) }
     }
+    schemes ? options.merge(scheme_whitelist: schemes) : options
   end
 
   def validate_content_type?

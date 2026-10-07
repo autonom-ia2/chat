@@ -304,3 +304,9 @@
   display_name: Meta Ads hub (Anúncios da Meta)
   enabled: false
   column: feature_flags_ext_1
+
+# Importar modelo de e-mail (#1099): colar, .html/.zip ou endereço. Desligada: o endpoint responde 404 e o botão some.
+- name: email_template_import
+  display_name: Email template import (Importar modelo de e-mail)
+  enabled: false
+  column: feature_flags_ext_1

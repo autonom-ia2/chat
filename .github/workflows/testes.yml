@@ -219,6 +219,10 @@ jobs:
       POSTGRES_USERNAME: postgres
       POSTGRES_PASSWORD: ''
       REDIS_URL: redis://localhost:6379
+      # O autoBuild do Vite (primeiro spec que renderiza pagina) roda neste job. Sem teto explicito o Node usa o
+      # padrao do runner (~3,3 GB), no limite do build atual: falta de memoria vira 500 nas telas renderizadas.
+      # Mesmo orcamento do build de producao (docker/Dockerfile, NODE_OPTIONS) (#1118).
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - uses: actions/checkout@v4

@@ -151,6 +151,34 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
     expect(client).not_to have_received(:create_background)
   end
 
+  describe 'an e-mail over the Gmail clip (compared by check and target, never by the byte count)' do
+    let(:limit) { EmailCampaigns::QualityGate::MAX_HTML_BYTES }
+    let(:long_faq) { EmailAdjustFixture::FAQ.sub('Perguntas frequentes', "Perguntas frequentes #{'x' * limit}") }
+
+    it 'does not blame the adjustment when the e-mail was already over the limit before it' do
+      base = adjust_base_mjml.sub(EmailAdjustFixture::FAQ, long_faq)
+      start_adjustment(base)
+      answers['resp_1'] = changed(write(adjust_hero(title: 'Outubro, com um título bem mais comprido')), keep('b2'))
+
+      poll
+
+      sizes = [base, adjustment['mjml']].map { |mjml| EmailCampaigns::QualityGate::EstimatedSize.bytes(mjml) }
+      expect(sizes).to all(be > limit)
+      expect(sizes.uniq.size).to eq(2)
+      expect(adjustment['status']).to eq('proposed')
+      expect(client).not_to have_received(:create_background)
+    end
+
+    it 'asks for a fix when the adjustment is what takes the e-mail over the limit' do
+      answers['resp_1'] = changed(keep('b1'), write(long_faq))
+
+      expect { poll }.to have_enqueued_job(described_class).with(campaign.id, token, 'resp_fix', 0)
+
+      expect(client).to have_received(:create_background).once
+      expect(adjustment['status']).to eq('working')
+    end
+  end
+
   it 'shows the one sentence of the model when the request cannot be done' do
     answers['resp_1'] = { outcome: 'impossible', reason: 'Vídeo não toca dentro do e-mail; posso pôr uma imagem que abre o vídeo.',
                           summary: '', blocks: [] }

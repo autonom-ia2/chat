@@ -70,6 +70,9 @@ jobs:
       POSTGRES_PASSWORD: synthetic-ci-only
       POSTGRES_DATABASE: relationships_757_test
       REDIS_URL: redis://127.0.0.1:6379/0
+      # Specs que renderizam pagina disparam o build do Vite neste job: mesmo heap do build de producao
+      # (docker/Dockerfile, NODE_OPTIONS). Sem isso o Node estoura (~3,3 GB) e as telas respondem 500 (#1118).
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
         with:

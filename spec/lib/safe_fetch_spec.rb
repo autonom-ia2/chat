@@ -111,6 +111,18 @@ RSpec.describe SafeFetch do
         expect(redirected_headers).to include('authorization' => 'Basic dXNlcjpwYXNz')
       end
 
+      it 'tells where the redirects ended and the charset of the answer' do
+        stub_request(:get, url).to_return(status: 302, headers: { 'Location' => 'http://example.com/final/page.html' })
+        stub_request(:get, 'http://example.com/final/page.html')
+          .to_return(status: 200, body: '<p>oi</p>', headers: { 'Content-Type' => 'text/html; Charset="ISO-8859-1"' })
+
+        described_class.fetch(url, allowed_content_type_prefixes: ['text/html']) do |result|
+          expect(result.url).to eq('http://example.com/final/page.html')
+          expect(result.charset).to eq('iso-8859-1')
+          expect(result.content_type).to eq('text/html')
+        end
+      end
+
       it 'strips embedded credentials on cross-origin redirects' do
         authenticated_url = 'http://user:pass@example.com/protected.png'
         initial_url = 'http://example.com/protected.png'

@@ -1943,6 +1943,16 @@
 - gotchas: usar o modelo substitui o conteúdo atual da campanha, então quem já escreveu perde o que estava lá; sem permissão de gerenciar campanhas sobra só a pré-visualização; as miniaturas carregam conforme você rola; se o modelo não tiver conteúdo editável, a tela avisa e nada é aplicado.
 - nav_target: `campaigns_email_templates`
 
+### trazer_modelo_de_email_de_outra_plataforma
+- titulo: Trazer um modelo de e-mail de outra plataforma
+- rota: campaigns_email_template_import
+- intent: Como trago um e-mail que fiz em outra plataforma?; Posso importar meu modelo de e-mail?; Como colo o código do meu e-mail aqui?; Dá para enviar o arquivo .html ou .zip do e-mail?; Por que a imagem do meu modelo não veio?; O que faço com um campo que não existe aqui?; Por que não consigo salvar o modelo trazido?; Como refaço com IA um pedaço que ficou como imagem?
+- onde_fica: Campanhas > E-mails > Biblioteca de modelos > Trazer meu modelo (também no meio de Meus modelos quando está vazio)
+- pre_requisitos: recurso de trazer modelo ligado na conta (email_template_import) e permissão de gerenciar campanhas (campaign_manage)
+- passos: 1. Abra a Biblioteca de modelos e clique em Trazer meu modelo; 2. Escolha Enviar arquivo (.html, ou .zip com as imagens), Colar o código ou Usar o endereço da página do e-mail; 3. Clique em Trazer este modelo e espere as três frases terminarem; 4. Compare Como era e Como ficou, no computador ou no celular, e leia o que mudou; 5. Resolva cada aviso amarelo pelo botão dele (Trocar imagem, Resolver, Escolher); 6. Clique em Está bom, continuar, confirme o nome e clique em Salvar em Meus modelos; 7. O modelo aparece primeiro em Meus modelos, marcado Novo, pronto para Usar modelo.
+- gotchas: nada é salvo antes de Salvar em Meus modelos; imagem que não veio, campo que não existe aqui e pedaço que ficou como imagem impedem salvar até serem resolvidos (trocar ou tirar a imagem; trocar o campo por um da conta, por um texto igual para todos, ou apagar; refazer o pedaço com IA, deixar só o texto do pedaço ou tirar o pedaço); Refazer para editar (em Resolver) pede à IA para remontar só aquele pedaço em blocos editáveis, sem mudar o texto, e leva alguns segundos — se o texto não bater com o original, o pedaço continua como imagem e aparece Não deu para refazer; cada pedaço vai para a IA uma vez, até 5 pedaços por modelo e um limite por mês na conta; sem a IA ligada na conta, o botão fica apagado com Refazer com IA chega em breve; pedaço que a IA não consegue refazer (grande demais) deixa o botão apagado com A IA não consegue refazer este pedaço, sem gastar o limite; o rodapé antigo sai e entra o rodapé da conta com o link para sair da lista; contadores de abertura, códigos e textos escondidos saem; o endereço precisa começar com https://; colar aceita até 500 KB, .html até 500 KB e .zip até 2 MB; uma importação por vez na conta e até 10 a cada 10 minutos; dá para sair durante a preparação e voltar por Meus modelos, que mostra Ver como ficou; use só e-mails que são seus ou que você pode usar.
+- nav_target: `campaigns_email_template_import`
+
 ### ver_resultado_da_campanha_de_whatsapp
 - titulo: Ver o resultado de uma campanha de WhatsApp
 - rota: campaigns_whatsapp_analytics

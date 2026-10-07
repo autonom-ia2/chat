@@ -1,0 +1,23 @@
+# The HTML path of a template import (#1099): parse within the limits, read the subject, bring the stylesheet into the
+# tags, clean (Cleaner) and convert (Converter). The hidden preview text found on the way becomes the preheader.
+class EmailCampaigns::Import::HtmlSource
+  def self.call(source, report, base_url: nil, budget: EmailCampaigns::Import::Budget.new)
+    new(source, report, base_url, budget).call
+  end
+
+  def initialize(source, report, base_url, budget)
+    @source = source
+    @report = report
+    @base_url = base_url
+    @budget = budget
+  end
+
+  def call
+    doc = EmailCampaigns::Import::Limits.html!(@source, @budget)
+    title = EmailCampaigns::Import::MergeTags.new(@report).plain_text(doc.at_css('title')&.text.to_s)
+    EmailCampaigns::Import::StyleInliner.call(doc, @report)
+    body = EmailCampaigns::Import::Cleaner.call(doc.root, @report, base_url: @base_url)
+    document = EmailCampaigns::Import::Converter.call(body, @report, budget: @budget)
+    document.with(title: title.presence, preview: @report.preheader)
+  end
+end
