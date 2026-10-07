@@ -497,6 +497,7 @@ en:
         linha_media: '%{nome}: %{valor} now, more than %{vezes} times the weekly average (%{media}).'
         resumo: 'Yesterday I held back %{n} warnings so I would not flood you:'
         pausada: 'I paused the watch "%{nome}": the person who created it is no longer an admin. If you still want it, turn it back on or ask me.'
+        whatsapp_api_caiu: 'WhatsApp API on the inbox "%{caixa}" disconnected. Until you reconnect it in the inbox WhatsApp API tab, replies after 24 hours need an approved template. Do you want me to show you how to reconnect?'
       needs_confirmation: 'This cannot be undone, so it needs your confirmation on screen first.'
       undo:
         already_undone: 'This was already undone.'

@@ -658,12 +658,16 @@
         "SAVE_SUCCESS": "Campaign saved successfully",
         "SAVE_ERROR": "Could not save the campaign, try again",
         "SEND_TEST": "Send test",
-        "SEND_TEST_EMAIL_LABEL": "Recipient email",
+        "SEND_TEST_EMAIL_LABEL": "Send the test to",
         "SEND_TEST_EMAIL_PLACEHOLDER": "name{'@'}domain.com",
-        "SEND_TEST_SUBMIT": "Send",
+        "SEND_TEST_EMAIL_HINT": "Up to 5 e-mails, one per line.",
+        "SEND_TEST_SUBMIT": "Send test",
         "SEND_TEST_SUCCESS": "Test email sent",
         "SEND_TEST_ERROR": "Could not send the test email",
-        "SEND_TEST_ONLY_SELF": "The test email goes only to your own address",
+        "SEND_TEST_EMPTY": "Write at least one e-mail.",
+        "SEND_TEST_INVALID": "This doesn't look like an e-mail: {email}",
+        "SEND_TEST_TOO_MANY": "Up to 5 e-mails per test.",
+        "SEND_TEST_SUPPRESSED": "{email} does not receive e-mails from this account. Use another address.",
         "SEND_TEST_RATE_LIMITED": "Too many test emails for this campaign. Try again in an hour",
         "SAVE_TEMPLATE": "Save as template",
         "SAVE_TEMPLATE_NAME_LABEL": "Template name",
@@ -797,7 +801,8 @@
           "PERSUASIVE": "More persuasive",
           "NO_TEXT": "Select a block with text to improve.",
           "ERROR": "Could not rewrite the text. Please try again.",
-          "NOT_CONFIGURED": "Set up the CRM AI key in Connections to use this feature."
+          "NOT_CONFIGURED": "Set up the CRM AI key in Connections to use this feature.",
+          "HINT": "Click a text or button in the e-mail to improve it with AI."
         }
       },
       "WELCOME": {

@@ -51,7 +51,6 @@ const emit = defineEmits([
   'attach',
   'emailCreate',
   'openEditor',
-  'emailReload',
   'manageIdentity',
 ]);
 
@@ -241,7 +240,6 @@ const chooseChannel = card => {
           @update="patch => emit('update', patch)"
           @create="emit('emailCreate')"
           @open-editor="emit('openEditor')"
-          @reload="emit('emailReload')"
           @manage-identity="create => emit('manageIdentity', create)"
         />
         <template v-else>

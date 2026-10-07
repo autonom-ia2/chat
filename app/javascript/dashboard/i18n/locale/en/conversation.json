@@ -1,5 +1,9 @@
 {
   "CONVERSATION": {
+    "WHATSAPP_TRANSPORT": {
+      "WEB": "WhatsApp API",
+      "WEB_FALLBACK": "WhatsApp API · fallback"
+    },
     "REFERRAL": {
       "AD_LABEL": "Ad",
       "POST_LABEL": "Post",

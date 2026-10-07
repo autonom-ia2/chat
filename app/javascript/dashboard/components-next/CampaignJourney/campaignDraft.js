@@ -71,3 +71,39 @@ export const clearDraft = (accountId, storage = defaultStorage()) => {
     // Nothing to clear when storage is blocked.
   }
 };
+
+// A draft holds work once it has a name, an audience, a channel or an e-mail on the server.
+// An empty one is the same as no draft (#1093).
+export const hasDraftWork = draft =>
+  Boolean(
+    draft &&
+      (String(draft.title || '').trim() ||
+        draft.audienceId ||
+        draft.channel ||
+        draft.emailCampaignId)
+  );
+
+// The address marks a journey in progress, so a reload keeps the work (#1093).
+export const DRAFT_QUERY = 'draft';
+
+// Where Nova campanha starts comes from the address, never silently from storage (#1093):
+// - `returned=1`: back from Novo público (J3) → the stored draft, with the new audience;
+// - `audience=<id>`: "Usar em nova campanha" (F3) → a fresh draft with that audience;
+// - `email=<id>`: back from the editor → the stored draft when it holds that e-mail, else fresh;
+// - `draft=1`: a reload in the middle → the stored draft;
+// - nothing: a fresh draft, or `pending` when a draft with work waits for the person to choose.
+export const journeyEntry = (query, stored) => {
+  const audienceId = Number(query?.audience) || null;
+  if (query?.returned === '1') {
+    const base = stored || emptyDraft();
+    return { draft: audienceId ? { ...base, audienceId, step: 1 } : base };
+  }
+  if (audienceId) return { draft: { ...emptyDraft(), audienceId, step: 1 } };
+  if (query?.email) {
+    const isSameEmail = stored?.emailCampaignId === Number(query.email);
+    return { draft: isSameEmail ? stored : emptyDraft() };
+  }
+  if (query?.[DRAFT_QUERY] === '1') return { draft: stored || emptyDraft() };
+  if (hasDraftWork(stored)) return { draft: null, pending: stored };
+  return { draft: emptyDraft() };
+};

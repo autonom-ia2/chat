@@ -10,4 +10,11 @@ Rails.application.config.to_prepare do
   unless Whatsapp::IncomingMessageBaseService <= WhatsappHybrid::EchoReconcilerExtension
     Whatsapp::IncomingMessageBaseService.prepend(WhatsappHybrid::EchoReconcilerExtension)
   end
+  unless Whatsapp::IncomingMessageBaseService <= WhatsappHybrid::CloudFailureFallback
+    Whatsapp::IncomingMessageBaseService.prepend(WhatsappHybrid::CloudFailureFallback)
+  end
+  # Excluir a caixa oficial apaga a conexão, que desliga a sessão no motor.
+  unless Inbox.reflect_on_association(:whatsapp_hybrid_connection)
+    Inbox.has_one :whatsapp_hybrid_connection, class_name: 'WhatsappHybrid::Connection', dependent: :destroy
+  end
 end

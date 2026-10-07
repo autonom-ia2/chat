@@ -1,5 +1,9 @@
 {
   "CONVERSATION": {
+    "WHATSAPP_TRANSPORT": {
+      "WEB": "WhatsApp API",
+      "WEB_FALLBACK": "WhatsApp API · plano B"
+    },
     "404": "Desculpe, não conseguimos encontrar a conversa. Por favor, tente novamente",
     "REFERRAL": {
       "AD_LABEL": "Anúncio",

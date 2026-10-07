@@ -319,6 +319,7 @@ Rails.application.routes.draw do
               post :suggest_stages
               post :insights
               get :panel
+              get :panel_ad
             end
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
@@ -1137,6 +1138,7 @@ Rails.application.routes.draw do
   post 'webhooks/sms/:phone_number', to: 'webhooks/sms#process_payload'
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
+  post 'webhooks/whatsapp_hybrid/:public_id', to: 'webhooks/whatsapp_hybrid#create'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
   post 'webhooks/tiktok', to: 'webhooks/tiktok#events'

@@ -914,6 +914,7 @@ pt_BR:
         linha_media: '%{nome}: %{valor} agora, mais de %{vezes} vezes a média da semana (%{media}).'
         resumo: 'Ontem eu guardei %{n} avisos para não te encher de mensagem:'
         pausada: 'Pausei a vigia "%{nome}": quem criou não é mais administrador. Se ainda quiser, ligue de novo ou me peça.'
+        whatsapp_api_caiu: 'O WhatsApp API da caixa "%{caixa}" desconectou. Até reconectar na aba WhatsApp API da caixa, respostas depois de 24 horas precisam de modelo aprovado. Quer que eu mostre como reconectar?'
       needs_confirmation: 'Isto não tem volta, então precisa da sua confirmação na tela antes.'
       undo:
         already_undone: 'Isto já foi desfeito.'

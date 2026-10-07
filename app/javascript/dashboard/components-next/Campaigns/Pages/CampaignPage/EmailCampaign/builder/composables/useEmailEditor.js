@@ -12,6 +12,7 @@ import registerAutonomiaBlocks from '../blocks';
 import { prepareMjmlForEditor, restoreHeldHead } from '../editorMjml';
 // grapesjs-mjml options and the plugin that keep canvas paddings = sent e-mail (#1081).
 import { mjmlEditorPlugins, mjmlEditorPluginsOpts } from '../grapesMjmlSetup';
+import { isTextComponentType } from '../editorTextTypes';
 
 // ---- estado interno (modulo) ----
 const editor = shallowRef(null);
@@ -290,6 +291,8 @@ const setSectionStyle = (propName, value) => {
 
 // Tipo do componente selecionado. grapesjs-mjml usa 'mj-image' p/ imagens.
 const selectedType = computed(() => selectedComponent.value?.get?.('type'));
+// Only a text or a button holds text to rewrite or personalize (#1093).
+const isTextSelected = computed(() => isTextComponentType(selectedType.value));
 
 // ---- TOP BAR / COMANDOS ----
 const runCommand = (name, opts) => editor.value?.runCommand(name, opts);
@@ -430,10 +433,13 @@ const getSelectedText = () => {
   return cmp.getEl?.()?.innerText ?? cmp.getInnerHTML?.() ?? '';
 };
 
+// Defense in depth (#1093): a section/column selected would have its whole structure swapped for
+// loose text. Only a text or a button is ever replaced; returns whether it was.
 const setSelectedText = html => {
   const cmp = selectedComponent.value || editor.value?.getSelected();
-  if (!cmp) return;
+  if (!cmp || !isTextComponentType(cmp.get?.('type'))) return false;
   cmp.components(html);
+  return true;
 };
 
 export function useEmailEditor() {
@@ -444,6 +450,7 @@ export function useEmailEditor() {
     blocks,
     selectedComponent,
     selectedType,
+    isTextSelected,
     sectors,
     styleVersion,
     device,

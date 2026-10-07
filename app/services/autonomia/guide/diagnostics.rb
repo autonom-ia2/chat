@@ -66,6 +66,11 @@ module Autonomia
             end
           end
 
+          hibrido = inbox.whatsapp? ? WhatsappHybrid::Connection.find_by(inbox_id: inbox.id) : nil
+          if hibrido && hibrido.status != 'connected'
+            findings << "WhatsApp API da caixa oficial \"#{label}\": desconectado — respostas depois de 24 horas precisam de modelo aprovado. Reconecte na aba WhatsApp API da caixa."
+          end
+
           if inbox.api? && ch.respond_to?(:waha_provider?) && ch.waha_provider?
             aa = (ch.additional_attributes || {}).to_h
             findings << "WhatsApp API \"#{label}\": ainda não foi totalmente provisionado — abra a caixa em Conexão e leia o QR Code para parear." if aa['session'].blank? || aa['app_id'].blank?

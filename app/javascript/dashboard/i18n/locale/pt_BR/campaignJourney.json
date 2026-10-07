@@ -473,7 +473,6 @@
         "OPEN_EDITOR": "Abrir o editor",
         "CONTENT_READY": "Assunto: {subject}",
         "CONTENT_EMPTY": "Ainda sem conteúdo.",
-        "RELOAD": "Voltei do editor",
         "ERROR": "Não foi possível criar o e-mail agora. Tente de novo.",
         "PREHEADER_LABEL": "Texto de prévia"
       },
@@ -489,6 +488,13 @@
         "PREVIEW_HINT": "Prévia com o primeiro contato do público.",
         "PREVIEW_EMPTY": "Escreva a mensagem para ver.",
         "DETAIL": "Caixa {inbox} · {segments} SMS por pessoa"
+      },
+      "RESUME": {
+        "TITLE": "Você tem uma campanha sem terminar: {name}.",
+        "NO_NAME": "sem nome",
+        "CONTINUE": "Continuar essa",
+        "START_NEW": "Começar uma nova",
+        "EMAIL_KEPT": "Ela continua salva na lista de e-mails."
       }
     },
     "LIVE_CHAT": {

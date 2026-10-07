@@ -1,14 +1,21 @@
+import { reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsPanel from '../components/MetaAdsPanel.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 
+const routing = vi.hoisted(() => ({
+  route: { params: { accountId: '18' }, query: {} },
+  replace: vi.fn(),
+}));
+
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
-  default: { panel: vi.fn() },
+  default: { panel: vi.fn(), panelAd: vi.fn() },
 }));
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ params: { accountId: '18' } }),
+  useRoute: () => routing.route,
+  useRouter: () => ({ replace: routing.replace }),
 }));
 
 const PANEL = {
@@ -67,8 +74,9 @@ const PANEL = {
 };
 
 let mounted = null;
-const mountPanel = async () => {
+const mountPanel = async (options = {}) => {
   mounted = mount(MetaAdsPanel, {
+    ...options,
     global: {
       mocks: { $t: (key, values) => `${key} ${JSON.stringify(values || {})}` },
       stubs: {
@@ -87,6 +95,12 @@ const mountPanel = async () => {
 describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Rota reativa e replace que muda o endereço, como o vue-router: o painel lê o anúncio aberto do endereço.
+    routing.route = reactive({ params: { accountId: '18' }, query: {} });
+    routing.replace.mockImplementation(({ query }) => {
+      routing.route.query = query;
+    });
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue({ data: { ad: null } });
     CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
       data: { panel: PANEL },
     });
@@ -166,6 +180,28 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(ad.find('[data-verdict]').text()).toContain('VERDICT.EARLY');
   });
 
+  it('shows the ad image in its own format, or a placeholder without one', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          ads: [
+            { ...PANEL.ads[0], thumbnail_url: 'https://scontent/capa.jpg' },
+            { ...PANEL.ads[0], ad_id: '2', thumbnail_url: null },
+          ],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const image = wrapper.find('[data-panel-ad="1"] [data-panel-ad-image]');
+    expect(image.attributes('src')).toBe('https://scontent/capa.jpg');
+    expect(image.classes()).toContain('h-auto');
+    expect(
+      wrapper.find('[data-panel-ad="2"] [data-panel-ad-placeholder]').exists()
+    ).toBe(true);
+  });
+
   it('changes the period and asks again', async () => {
     const wrapper = await mountPanel();
 
@@ -221,5 +257,70 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
 
     await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
     expect(CrmMetaAdsConnectionAPI.panel).toHaveBeenCalledTimes(3);
+  });
+
+  it('opens the ad from inside its card and keeps it in the address', async () => {
+    const wrapper = await mountPanel();
+
+    const open = wrapper.find('[data-panel-ad-open="1"]');
+    expect(open.element.tagName).toBe('BUTTON');
+    expect(open.classes()).toContain('min-h-11');
+    await open.trigger('click');
+    await flushPromises();
+
+    expect(routing.replace).toHaveBeenCalledWith({ query: { anuncio: '1' } });
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 30);
+    expect(wrapper.find('[data-ad-detail]').exists()).toBe(true);
+    expect(wrapper.find('[data-panel-hero]').exists()).toBe(false);
+    expect(wrapper.find('[data-panel-ad="1"]').exists()).toBe(false);
+  });
+
+  it('opens straight on the ad when the address has ?anuncio and goes back to the panel', async () => {
+    routing.route.query = { aba: 'resultado', anuncio: '1' };
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-ad-detail]').exists()).toBe(true);
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenCalledWith('1', 30);
+
+    await wrapper.find('[data-ad-detail-back]').trigger('click');
+
+    expect(routing.replace).toHaveBeenLastCalledWith({
+      query: { aba: 'resultado' },
+    });
+    expect(wrapper.find('[data-ad-detail]').exists()).toBe(false);
+    expect(wrapper.find('[data-panel-ad="1"]').exists()).toBe(true);
+  });
+
+  it('asks the open ad again for the new period', async () => {
+    routing.route.query = { anuncio: '1' };
+    const wrapper = await mountPanel();
+
+    await wrapper.find('[data-panel-period="7"]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenLastCalledWith('1', 7);
+  });
+
+  it('closes the ad when the address loses ?anuncio, like the side menu to the same page', async () => {
+    routing.route.query = { anuncio: '1' };
+    const wrapper = await mountPanel();
+    expect(wrapper.find('[data-ad-detail]').exists()).toBe(true);
+
+    routing.route.query = {};
+    await flushPromises();
+
+    expect(wrapper.find('[data-ad-detail]').exists()).toBe(false);
+    expect(wrapper.find('[data-panel-hero]').exists()).toBe(true);
+  });
+
+  it('gives the focus back to the card of the ad when coming back', async () => {
+    const wrapper = await mountPanel({ attachTo: document.body });
+
+    await wrapper.find('[data-panel-ad-open="1"]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-ad-detail-back]').trigger('click');
+    await flushPromises();
+
+    expect(document.activeElement.getAttribute('data-panel-ad-open')).toBe('1');
   });
 });

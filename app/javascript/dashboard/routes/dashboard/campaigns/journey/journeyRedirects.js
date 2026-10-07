@@ -16,6 +16,8 @@ import {
 // D12: the e-mail editor (EmailBuilderPage, not edited) leaves to the e-mail list. When it was
 // opened from Nova campanha (`?journey=1` and the journey draft of this account holds that
 // e-mail), that exit goes back to Passo 2 of the journey instead, with the content saved.
+// NewCampaignPage reads `?email=<id>` (journeyEntry, #1093): same e-mail as the stored draft →
+// resumes it directly; another one → starts fresh.
 export const JOURNEY_EDITOR_QUERY = 'journey';
 
 const journeyEditorReturn = (to, from) => {

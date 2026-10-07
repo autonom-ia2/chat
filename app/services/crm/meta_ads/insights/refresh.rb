@@ -26,10 +26,12 @@ class Crm::MetaAds::Insights::Refresh
       true
     end
 
-    # Carga de 90 dias (Meta) e das ligações conversa → anúncio (banco) que ainda não rodaram.
+    # Carga de 90 dias (Meta) e das ligações conversa → anúncio (banco) que ainda não rodaram; imagem dos
+    # anúncios, uma vez por dia.
     def start_missing_loads(connection)
       Crm::MetaAds::InsightsBackfillJob.start(connection) if connection.insights_backfilled_at.nil?
       Crm::MetaAds::LinksBackfillJob.start(connection) if connection.links_backfilled_at.nil?
+      Crm::MetaAds::AdImagesJob.start(connection)
     end
 
     def stale?(connection)

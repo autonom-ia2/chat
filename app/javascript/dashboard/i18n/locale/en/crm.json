@@ -2346,7 +2346,8 @@
         "ADS_TITLE": "Your ads, by sale",
         "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
         "AD_NO_NAME": "Unnamed ad",
-        "AD_LINE": "{spend} → {conversations} → {sales}",
+        "OPEN_AD": "See inside",
+        "OPEN_AD_LABEL": "See inside the ad {name}",
         "AD_QUOTES": "1 open quote | {count} open quotes",
         "VERDICT": {
           "UP": "Increase · enough data",
@@ -2364,7 +2365,52 @@
         },
         "STALLED_MORE": "and {count} more in the CRM",
         "REACHED": "{share}% got there",
-        "SALES_VALUE": "· {value}"
+        "SALES_VALUE": "· {value}",
+        "AD_STATS": {
+          "SPEND": "Invested",
+          "CONVERSATIONS": "Conversations",
+          "SALES": "Sales"
+        }
+      },
+      "AD_DETAIL": {
+        "BACK": "Back to the panel",
+        "CAMPAIGN": "Campaign",
+        "ADSET": "Ad set",
+        "EMPTY": "We found no numbers for this ad in this period.",
+        "ERROR": "We could not load this ad now. We will try again on our own in a moment.",
+        "RETRY": "Try again",
+        "PREVIEW": "See how it shows on Meta",
+        "NO_VALUE": "—",
+        "TILES": {
+          "COST_PER_SALE": "Cost per sale",
+          "AVERAGE": "Account average",
+          "SPEND": "Invested",
+          "QUOTES": "Quotes",
+          "SALES": "Sales",
+          "CONVERSATIONS": "Conversations"
+        },
+        "WHY_TITLE": "Why",
+        "REASON": {
+          "EARLY": "It is too early to say whether this ad sells. It brought 1 conversation and needs {missing} more. We will look again when it reaches 20 conversations. | It is too early to say whether this ad sells. It brought {count} conversations and needs {missing} more. We will look again when it reaches 20 conversations.",
+          "NO_SALES": "It brought 1 conversation and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience. | It brought {count} conversations and no sale. With {spend} invested, it is worth reviewing the image, the text or the audience.",
+          "SIGNAL": "It made 1 sale with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on. | It made {count} sales with {spend} invested. Still too few to compare with the account average: the verdict comes from 3 sales on.",
+          "BELOW_AVERAGE": "Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With 1 sale, the base is already enough. | Each sale from this ad cost {cost}, {difference} less than the account average ({average}). With {count} sales, the base is already enough.",
+          "NEAR_AVERAGE": "Each sale from this ad cost {cost}, close to the account average ({average}). It is worth keeping it as it is.",
+          "ABOVE_AVERAGE": "Each sale from this ad cost {cost}, {difference} more than the account average ({average}). Review the ad before putting more money in."
+        },
+        "MEANWHILE_TITLE": "Meanwhile",
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "CHART_TITLE": "Spend and conversations per day",
+        "LEGEND_SPEND": "Spend",
+        "LEGEND_CONVERSATIONS": "Conversations",
+        "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
+        "DAYS_TOGGLE": "See day by day",
+        "DAYS_DATE": "Day",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "WON": "Sold"
       }
     }
   },

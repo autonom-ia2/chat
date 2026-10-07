@@ -131,6 +131,14 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  # The account does not e-mail this address: it is suppressed (bounce, complaint, unsubscribe) or
+  # belongs to a contact who refused messages. Same protection as the real send
+  # (EmailCampaigns::DeliveryClaim); the test send refuses it too (#1093).
+  def refuses_address?(email)
+    EmailSuppression.suppressed?(account, email) ||
+      account.contacts.opted_out.exists?(['lower(email) = ?', email.to_s.strip.downcase])
+  end
+
   # Don't let an empty campaign go out: require rendered HTML or MJML source before sending.
   def body_present?
     body_html.present? || body_mjml.present?

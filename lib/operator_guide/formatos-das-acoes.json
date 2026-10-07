@@ -545,7 +545,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:53"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:55"
     ],
     "sem_corpo": true
   },
@@ -4915,8 +4915,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:208"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:217"
     ],
     "sem_corpo": false
   },
@@ -4925,7 +4925,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:96"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:105"
     ],
     "sem_corpo": true
   },
@@ -4951,10 +4951,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:110",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:114",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:113"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:119",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:213",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:122"
     ],
     "sem_corpo": false
   },
@@ -13889,7 +13889,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#insights",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:58"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:60"
     ],
     "sem_corpo": true
   },
@@ -13915,9 +13915,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#selection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:87",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:88",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:149"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:97",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:158"
     ],
     "sem_corpo": false
   },
@@ -13932,9 +13932,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:124",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:128",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:127"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:133",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:137",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:136"
     ],
     "sem_corpo": false
   },
@@ -15217,18 +15217,18 @@
   },
   "POST email_campaigns/campaigns/:id/test_send": {
     "campos": {
-      "to_email": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
+      "to_email": {},
+      "to_emails": {
+        "tipo": "lista"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/email_campaigns/test_sends#create",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:10",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:66",
-      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:11"
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:12",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:71",
+      "app/controllers/api/v1/accounts/email_campaigns/test_sends_controller.rb:13"
     ],
     "sem_corpo": false
   },
@@ -21457,8 +21457,8 @@
     "envelope": "meta_ads_connection",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:208"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:217"
     ],
     "sem_corpo": false
   },
