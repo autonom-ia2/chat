@@ -13,7 +13,14 @@
 class EmailCampaigns::QualityGate
   include Css
 
-  Violation = Struct.new(:check, :detail)
+  # target: what the problem is about — the text of a block, an image src, a placeholder, a tag — or nil when it is about
+  # the whole e-mail (size, unsubscribe). detail carries measurements (bytes, ratios, px) and is only for people.
+  Violation = Struct.new(:check, :detail, :target) do
+    # Same problem in two versions of an e-mail: same check on the same target, whatever the measurements say.
+    def identity
+      [check, target]
+    end
+  end
 
   EDITABLE_TAGS = %w[
     mjml mj-head mj-title mj-preview mj-attributes mj-all mj-body mj-wrapper mj-section mj-group mj-column
@@ -81,16 +88,16 @@ class EmailCampaigns::QualityGate
 
   private
 
-  def add(check, detail)
-    @violations << Violation.new(check, detail)
+  def add(check, detail, target: nil)
+    @violations << Violation.new(check, detail, target)
   end
 
   def check_tags
     @doc.css('*').map(&:name).uniq.each do |name|
       allowed = name.start_with?('mj') ? EDITABLE_TAGS : INLINE_TAGS
-      add(:editable_tags, name) unless allowed.include?(name)
+      add(:editable_tags, name, target: name) unless allowed.include?(name)
     end
-    self_closed_tags.each { |name| add(:explicit_close_tags, name) }
+    self_closed_tags.each { |name| add(:explicit_close_tags, name, target: name) }
   end
 
   # `<mj-x />` means "closed" to MJML but "open" to the editor's HTML parser, which then swallows siblings.
@@ -140,13 +147,13 @@ class EmailCampaigns::QualityGate
 
   def check_font_family(node)
     family = node['font-family'].to_s.split(',').first.to_s.strip.delete('"\'').downcase
-    add(:font_family, "#{node.name} #{node['font-family'].inspect}") unless @fonts.include?(family)
+    add(:font_family, "#{node.name} #{node['font-family'].inspect}", target: label(node)) unless @fonts.include?(family)
   end
 
   def check_font_sizes(node)
     minimum = in_footer?(node) ? MIN_FOOTER_PX : MIN_BODY_PX
     sizes = [font_px(node)] + node.css('*').filter_map { |inner| style(inner)['font-size'] }.map { |value| px(value) }
-    sizes.each { |size| add(:font_size, "#{label(node)} #{size}px < #{minimum}px") if size < minimum }
+    sizes.each { |size| add(:font_size, "#{label(node)} #{size}px < #{minimum}px", target: label(node)) if size < minimum }
   end
 
   def check_text_contrast(node)
@@ -162,15 +169,15 @@ class EmailCampaigns::QualityGate
       check_contrast(button['color'] || DEFAULT_BUTTON_COLOR, button['background-color'] || DEFAULT_BUTTON_BACKGROUND,
                      MIN_CONTRAST, "button #{label(button)}")
       height = button_height(button)
-      add(:button_height, "#{label(button)} #{height.round(1)}px < #{MIN_BUTTON_PX}px") if height < MIN_BUTTON_PX
+      add(:button_height, "#{label(button)} #{height.round(1)}px < #{MIN_BUTTON_PX}px", target: label(button)) if height < MIN_BUTTON_PX
     end
   end
 
   def check_contrast(color, background, needed, where)
     ratio = Contrast.ratio(color, background)
-    return add(:contrast, "#{where}: unmeasurable color #{color}/#{background}") if ratio.nil?
+    return add(:contrast, "#{where}: unmeasurable color #{color}/#{background}", target: where) if ratio.nil?
 
-    add(:contrast, "#{where}: #{color} on #{background} = #{ratio.round(2)}:1 < #{needed}") if ratio < needed
+    add(:contrast, "#{where}: #{color} on #{background} = #{ratio.round(2)}:1 < #{needed}", target: where) if ratio < needed
   end
 
   # Vertical inner padding plus one line of text: the rendered height of a one-line button.
@@ -184,14 +191,14 @@ class EmailCampaigns::QualityGate
   def check_images
     @doc.css('mj-image').each do |image|
       src = image['src'].to_s
-      add(:image_alt, src) if image['alt'].to_s.strip.empty?
+      add(:image_alt, src, target: src) if image['alt'].to_s.strip.empty?
       problem = (@remote_images ? RemoteImage : LocalImage).problem(src, @public_root)
-      add(:local_images, "#{src}: #{problem}") if problem
+      add(:local_images, "#{src}: #{problem}", target: src) if problem
     end
   end
 
   def check_placeholders
-    (placeholder_keys(@mjml).uniq - @placeholders).each { |key| add(:placeholders, key) }
+    (placeholder_keys(@mjml).uniq - @placeholders).each { |key| add(:placeholders, key, target: key) }
   end
 
   def placeholder_keys(source)

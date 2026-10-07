@@ -2,9 +2,10 @@
 # adjustment. The answer (EditPromptBuilder::SCHEMA) is rebuilt into the e-mail (MjmlSections), cleaned
 # (Sanitizer: dangerous markup, citation links, the single locked footer, canonical MJML) and checked by
 # EmailCampaigns::QualityGate on what an adjustment can break. Only problems the e-mail did not have before
-# count: the person is not blamed for a template's old flaw. With problems, the model gets ONE more round
-# with the report; still failing, the generation fails with the check that broke. A good result becomes a
-# proposal (Adjustment) the editor shows before and after — the campaign itself is never changed here.
+# (same check on the same block, image or placeholder) count: the person is not blamed for a template's old
+# flaw. With problems, the model gets ONE more round with the report; still failing, the generation fails with
+# the check that broke. A good result becomes a proposal (Adjustment) the editor shows before and after — the
+# campaign itself is never changed here.
 class EmailCampaigns::Ai::AdjustFinisher
   MAX_FIX_ROUNDS = 1
   REASON_MAX = 300
@@ -59,10 +60,12 @@ class EmailCampaigns::Ai::AdjustFinisher
     nil
   end
 
+  # Compared by Violation#identity (check and target), never by detail: the detail carries measurements (bytes,
+  # ratios) that change with any edit, so an e-mail already over the size limit would look like a new problem.
   def new_problems(mjml, sections)
-    before = problems(sections.canonical).map { |violation| [violation.check, violation.detail] }
-    unknown = sections.unknown_ids.map { |id| Violation.new(:unknown_block, id) }
-    unknown + problems(mjml).reject { |violation| before.include?([violation.check, violation.detail]) }
+    before = problems(sections.canonical).map(&:identity)
+    unknown = sections.unknown_ids.map { |id| Violation.new(:unknown_block, id, id) }
+    unknown + problems(mjml).reject { |violation| before.include?(violation.identity) }
   end
 
   def problems(mjml)

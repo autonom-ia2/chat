@@ -55,16 +55,22 @@ RSpec.describe EmailCampaigns::Ai::QualityCheck, :aggregate_failures do
 
   describe 'size against the Gmail clip (estimated from the MJML)' do
     let(:limit) { EmailCampaigns::QualityGate::MAX_HTML_BYTES }
-    let(:ratio) { described_class::ESTIMATED_HTML_PER_MJML_BYTE }
+    let(:estimate) { EmailCampaigns::QualityGate::EstimatedSize }
 
-    # An e-mail whose MJML has exactly `bytes` bytes.
-    def email_of(bytes)
-      base = email(%(<mj-text #{font} font-size="16px" color="#0b243f">x</mj-text>))
-      email(%(<mj-text #{font} font-size="16px" color="#0b243f">#{'x' * (bytes - base.bytesize + 1)}</mj-text>))
+    def email_with(letters)
+      email(%(<mj-text #{font} font-size="16px" color="#0b243f">#{'x' * letters}</mj-text>))
+    end
+
+    # An e-mail whose estimated HTML is within a few bytes of `bytes` (each letter of text adds CONTENT_FACTOR).
+    def email_estimated_at(bytes)
+      empty = estimate.bytes(email_with(0))
+      email_with(((bytes - empty) / estimate::CONTENT_FACTOR).floor)
     end
 
     def size_checks(fraction_of_limit)
-      result = described_class.new(email_of((limit * fraction_of_limit / ratio).floor)).call
+      mjml = email_estimated_at((limit * fraction_of_limit).floor)
+      expect(estimate.bytes(mjml)).to be_within(5).of(limit * fraction_of_limit)
+      result = described_class.new(mjml).call
       [result.blocking.map(&:check), result.warnings.map(&:check)]
     end
 
@@ -82,8 +88,12 @@ RSpec.describe EmailCampaigns::Ai::QualityCheck, :aggregate_failures do
       expect(size_checks(1.16)).to eq([[:html_size], []])
     end
 
-    it 'estimates with the largest ratio measured on the library (5.5x)' do
-      expect(ratio).to eq(5.5)
+    it 'reports the same estimate the QualityGate uses for the import (one source of truth)' do
+      mjml = email_estimated_at(limit)
+      detail = described_class.new(mjml).call.warnings.find { |violation| violation.check == :html_size_near }.detail
+
+      expect(detail).to include("about #{estimate.bytes(mjml)} bytes")
+      expect(EmailCampaigns::QualityGate.new(mjml: mjml).html_bytes).to eq(estimate.bytes(mjml))
     end
   end
 
