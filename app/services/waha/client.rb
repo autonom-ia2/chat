@@ -7,6 +7,8 @@ module Waha
     class Error < StandardError; end
     # A resposta não chegou: não dá para saber se o motor executou o pedido.
     class Timeout < Error; end
+    # O recurso não existe no motor (ex.: sessão já apagada).
+    class NotFound < Error; end
 
     DEFAULT_TIMEOUT = 20
 
@@ -156,7 +158,10 @@ module Waha
         method, "#{@base}#{path}",
         headers: headers, body: body.nil? ? nil : body.to_json, timeout: DEFAULT_TIMEOUT
       )
-      raise Error, "WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}" unless response.success?
+      unless response.success?
+        error_class = response.code == 404 ? NotFound : Error
+        raise error_class, "WAHA #{method.upcase} #{path} -> #{response.code}: #{response.body.to_s[0, 300]}"
+      end
 
       response.parsed_response
     rescue Net::ReadTimeout => e
