@@ -31,7 +31,7 @@ Para busca/status, comprovar primeiro a ação natural e seu contrato; convite d
 
 ## Resultado
 
-Comprovados: leitura Roles e diálogo/papel Instagram tester no Chrome. Pendentes: busca real autorizada, integração, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
+Comprovados: leitura Roles, diálogo/papel Instagram tester e transporte de busca HTTP 200 no Chrome. Pendentes: identificação exata do alvo autorizado, integração, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
 
 ## Primeira observação executada — 18:54 UTC
 
@@ -98,3 +98,11 @@ Observer `943db4cfead2f1467eaf369672d75489f2fd0f17eeec7f27f742e71c392edc61`, run
 A requisição natural passou origem/path/queryvalue único/16campos/tokensnão-vazios/faseUI. `__bid`, `__user` e `__a` corresponderam; `__aaid` NÃO foi igual a config.appId. O POST continuou abortado e nenhuma resposta foi recebida. A igualdade AAID=aplicativo foi uma hipótese nossa, não contrato demonstrado; não relaxar silenciosamente. Próximo candidato deverá ancorar eventual contexto AAID na requisição Roles canônica cuja resposta200full foi validada, conservando appbinding por variável app_id e URL canonical, e abortar caso não haja igualdade comprovada. Essa prova/gate pode ser condicional no mesmo run, antes do únicoPOSTpermitido, sujeito à revisão.
 
 Cleanup/restauração/7units/limites preservados; nenhum convite, seleção de sugestão ou publicação pelo diagnóstico.
+
+## Nona observação — 20:04 UTC, busca respondeu 200 sem alvo exato
+
+Observer `f40d4fbbbea36ad0a41a9ed6f870fccbdf7e4ab8a6589627f131461aa13f7a9e`, runner `9e8add2b0c4442fcf318bfd0da8568bf328e2dcbee05961a5c361dcc893ac78a`, unit `instagram-autonomia-browser-search-20261007-200244`. Revisão inicial encontrou lacuna de invalidação persistente do contexto, corrigida antes de executar. Root encontrou ainda AAID ausente sendo ignorado; corrigido, SHA final revisado por Nexo. Ausência, valor inválido, página não canônica ou conflito impedem reativação do contexto neste run.
+
+Roles200 completo/canônico validou contexto fresco; AAID numérico do typeahead igual ao Roles, embora não igual a config.appId. Business/admin/a, query única autorizada, corpo exato, tokens e fase UI conferiram. Um POST natural foi permitido e uma resposta HTTP200 JSON completa de28717bytes recebida, com8entradas válidas pelo contrato atual e sem erros. Zero correspondência exata para o alvo autorizado; runner recusou aceite funcional em validate_search. Transporte de busca do Chrome comprovado, identificação do alvo ainda não. Não há evidência para selecionar outro resultado ou enviar convite.
+
+Cleanup/lock/manager restaurados, sete units e limites preservados. Sem convite, seleção de sugestão ou publicação pelo diagnóstico. Próxima investigação somente leitura deve distinguir estrutura/semântica dos campos e ausência real do alvo, emitindo apenas schema/flags/contagens, sem dados de outras contas. Confirmação do @ atual solicitada ao Rodrigo, sem alterar o alvo durante a espera.
