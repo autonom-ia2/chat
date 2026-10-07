@@ -25,6 +25,8 @@ export const emptyDraft = () => ({
   fromEmail: '',
   replyInboxId: null,
   emailCampaignId: null,
+  // Identity of the e-mail (#1076): null = the default one.
+  brandKitId: null,
   when: 'now',
   scheduledAt: '',
   step: 1,

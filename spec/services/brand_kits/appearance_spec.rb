@@ -20,7 +20,7 @@ RSpec.describe BrandKits::Appearance do
     appearance = described_class.new(raw)
 
     expect(appearance).to be_valid
-    expect(appearance.to_h.dig('palettes', 'light', 'primary')).to eq('#ff1f2d')
+    expect(appearance.to_h.dig('palettes', 'light', 'primary')).to eq('#e61c29')
     expect(appearance.to_h.dig('site_palette', 'primary')).to eq('#ff1f2d')
     expect(appearance.to_h['typography']['fallback']).to eq('Arial, Helvetica, sans-serif')
     expect(appearance.to_h['social_links']).to eq([{ 'network' => 'linkedin', 'url' => 'https://www.linkedin.com/company/hub2you-insurtech' }])
@@ -50,6 +50,12 @@ RSpec.describe BrandKits::Appearance do
       expect(appearance.errors).to include('typography.google_font_url'), url
     end
     expect(described_class.new(raw.deep_merge(typography: { google_font_url: nil }))).to be_valid
+  end
+
+  it 'fills the Google Fonts link from the catalog when the fonts changed and no link came' do
+    appearance = described_class.new(raw.deep_merge(typography: { heading_font: 'Inter', body_font: 'Lora', google_font_url: nil }))
+
+    expect(appearance.to_h.dig('typography', 'google_font_url')).to eq('https://fonts.googleapis.com/css2?family=Inter&family=Lora&display=swap')
   end
 
   it 'refuses font names that could break out of a CSS or MJML attribute' do

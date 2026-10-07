@@ -22,6 +22,8 @@ const MAX_MS = 16 * 60 * 1000; // teto de segurança ACIMA do backend (~15 min)
 
 // processing | ready | failed
 const phase = ref('processing');
+// 'quality_gate_failed' (#1076): the e-mail kept failing the quality check after one repair.
+const failureCode = ref('');
 let timer = null;
 let startedAt = 0;
 
@@ -42,6 +44,7 @@ const poll = async () => {
     }
     if (data.ai_status === 'failed') {
       phase.value = 'failed';
+      failureCode.value = data.ai_error || '';
       stop();
       return;
     }
@@ -146,7 +149,11 @@ const leave = () => emit('close');
             {{ tk('FAILED_TITLE') }}
           </h3>
           <p class="max-w-md mb-0 text-sm leading-6 text-n-slate-11">
-            {{ tk('FAILED_BODY') }}
+            {{
+              failureCode === 'quality_gate_failed'
+                ? t('BRAND_KITS.QUALITY.FAILED')
+                : tk('FAILED_BODY')
+            }}
           </p>
         </div>
         <Button

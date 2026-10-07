@@ -25,6 +25,8 @@ import GrapesEditor from 'dashboard/components-next/Campaigns/Pages/CampaignPage
 import AiComposerDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiComposerDialog.vue';
 import AiGeneratingDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiGeneratingDialog.vue';
 import AiBlockActions from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiBlockActions.vue';
+import BrandEmailIdentityPanel from 'dashboard/components-next/BrandKits/BrandEmailIdentityPanel.vue';
+import { useBrandKits } from 'dashboard/components-next/BrandKits/useBrandKits';
 import PlaceholderChips from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PlaceholderChips.vue';
 import BlocksPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/BlocksPanel.vue';
 import PropertiesPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PropertiesPanel.vue';
@@ -54,6 +56,17 @@ const campaign = computed(() =>
 );
 
 useRecipientImportPolling(campaign);
+
+// Identity of this e-mail (#1076): the one Nova campanha chose (?brand_kit=&brand_mode=), else the one
+// the last generation used; "Criar com IA" starts from it.
+const { isEnabled: brandKitsEnabled } = useBrandKits();
+const initialBrand = computed(() => {
+  const used = campaign.value?.brand_identity || {};
+  return {
+    kitId: Number(route.query.brand_kit) || used.kit_id || null,
+    mode: route.query.brand_mode || used.mode || 'light',
+  };
+});
 
 // UNICA fonte da verdade do editor: o composable singleton.
 const {
@@ -942,6 +955,13 @@ const insertPlaceholder = key => {
           class="min-h-0 w-full flex-1 shrink-0 overflow-y-auto border-s border-n-weak bg-n-solid-1 xl:w-[17rem] xl:flex-none"
           :class="activePanel === 'properties' ? 'block' : 'hidden xl:block'"
         >
+          <BrandEmailIdentityPanel
+            v-if="isReady && brandKitsEnabled && campaign"
+            :identity="campaign.brand_identity || {}"
+            :warnings="campaign.ai_quality_warnings || []"
+            :can-manage="canManage"
+            @change="openAiDialog"
+          />
           <AiBlockActions v-if="isReady && canManage" class="p-3" />
           <PropertiesPanel v-if="isReady" />
           <p v-else class="m-0 p-6 text-sm leading-6 text-n-slate-11">
@@ -999,6 +1019,7 @@ const insertPlaceholder = key => {
       :campaign-id="campaignId"
       :placeholders="placeholders"
       :base-mjml="aiBaseMjml"
+      :initial-brand="initialBrand"
       @generation-started="onGenerationStarted"
       @close="showAiDialog = false"
     />

@@ -8,6 +8,9 @@ import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import BrandIdentityPicker from 'dashboard/components-next/BrandKits/BrandIdentityPicker.vue';
+import { useBrandKits } from 'dashboard/components-next/BrandKits/useBrandKits';
+import { brandRequest } from 'dashboard/components-next/BrandKits/brandRequest';
 
 const props = defineProps({
   campaignId: {
@@ -23,6 +26,11 @@ const props = defineProps({
   baseMjml: {
     type: String,
     default: '',
+  },
+  // Identity this e-mail starts with (#1076): { kitId, mode } from the campaign or Nova campanha.
+  initialBrand: {
+    type: Object,
+    default: () => ({}),
   },
 });
 
@@ -55,6 +63,15 @@ const hasBase = computed(() => props.baseMjml.trim().length > 0);
 const adaptDesign = ref(true);
 
 const isGenerating = ref(false);
+const isReadingSite = ref(false);
+const { isEnabled: brandKitsEnabled } = useBrandKits();
+const identity = ref({
+  kitId: props.initialBrand.kitId || null,
+  importId: null,
+  proposal: null,
+  mode: props.initialBrand.mode || 'light',
+  saveAsKit: false,
+});
 const isUploadingImage = ref(false);
 const isUploadingPdf = ref(false);
 const isResolvingVideo = ref(false);
@@ -71,7 +88,11 @@ const isBusy = computed(
 );
 
 const canGenerate = computed(
-  () => brief.value.trim().length > 0 && !isGenerating.value && !isBusy.value
+  () =>
+    brief.value.trim().length > 0 &&
+    !isGenerating.value &&
+    !isBusy.value &&
+    !isReadingSite.value
 );
 
 const close = () => emit('close');
@@ -83,6 +104,13 @@ const humanizeError = error => {
   }
   if (code === 'email_campaign.base_mjml_too_large') {
     return tk('BASE_TOO_LARGE');
+  }
+  // "Salvar como identidade" with a name already in the list (#1076).
+  if (error?.response?.data?.attributes?.includes('name')) {
+    return t('BRAND_KITS.PICKER.NAME_TAKEN');
+  }
+  if (code?.startsWith('brand_kit')) {
+    return t('BRAND_KITS.PICKER.UNAVAILABLE');
   }
   return tk('ERROR');
 };
@@ -240,6 +268,7 @@ const generate = async () => {
       placeholders: props.placeholders,
       assets: buildPayloadAssets(),
       baseMjml: hasBase.value && adaptDesign.value ? props.baseMjml : undefined,
+      brand: brandKitsEnabled.value ? await brandRequest(identity.value) : {},
     });
     emit('generationStarted');
     close();
@@ -288,6 +317,12 @@ const generate = async () => {
           resize
           min-height="7rem"
           max-height="16rem"
+        />
+
+        <BrandIdentityPicker
+          v-if="brandKitsEnabled"
+          v-model="identity"
+          @reading="value => (isReadingSite = value)"
         />
 
         <!-- Modo adaptar: visivel quando ja existe um design/modelo carregado -->

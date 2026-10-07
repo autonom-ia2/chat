@@ -52,6 +52,7 @@ const emit = defineEmits([
   'emailCreate',
   'openEditor',
   'emailReload',
+  'manageIdentity',
 ]);
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_CAMPAIGN.MESSAGE';
@@ -241,6 +242,7 @@ const chooseChannel = card => {
           @create="emit('emailCreate')"
           @open-editor="emit('openEditor')"
           @reload="emit('emailReload')"
+          @manage-identity="create => emit('manageIdentity', create)"
         />
         <template v-else>
           <div class="flex flex-col gap-1">

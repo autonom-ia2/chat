@@ -1,7 +1,8 @@
 # As duas versões de cores do e-mail a partir das cores do site (#1076). Cada kit guarda as duas e cada
 # e-mail escolhe uma:
 # - light (padrão, recomendada): fundo branco; o texto é a cor escura do site que passa 4,5:1; os botões
-#   são a primary do site se ela aparece no branco (3:1), senão a accent, senão a cor do texto; a faixa do
+#   são a primary do site se ela aparece no branco (3:1), senão a accent, senão a cor do texto — um pouco
+#   mais funda quando preciso para o texto branco do botão passar 4,5:1; a faixa do
 #   topo (onde fica a logo) é o fundo do site quando ele é escuro, senão o tom claro da primary;
 # - dark (igual ao site): o fundo escuro do site, ou um fundo escuro derivado quando o site é claro.
 # Detalhes (accent) são decorativos: ficam com a cor do site. Os textos (ink, muted) passam 4,5:1 em todo
@@ -19,6 +20,7 @@ class BrandKits::EmailPalettes
   LIGHT_TINT_ALPHA = 0.12
   DARK_TINT_ALPHA = 0.16
   DARK_SURFACE_LIFT = 0.08
+  DARKEN_STEPS = [0.0, 0.05, 0.1, 0.15, 0.2].freeze
 
   def self.from_site(site)
     new(site).to_h
@@ -42,7 +44,7 @@ class BrandKits::EmailPalettes
 
   def light
     ink = first_readable([@site['ink'], @site['background'], @site['surface']], [WHITE]) || BrandKits::Color::DARK_INK
-    primary = first_visible([@site['primary'], @site['accent']], WHITE) || ink
+    primary = white_text_ready(first_visible([@site['primary'], @site['accent']], WHITE) || ink)
     tint = BrandKits::Color.composite(primary, WHITE, LIGHT_TINT_ALPHA)
     ink = BrandKits::Color::DARK_INK unless readable?(ink, tint)
     {
@@ -62,6 +64,14 @@ class BrandKits::EmailPalettes
       'muted' => muted(ink, [surface, background, tint]), 'surface' => surface, 'background' => background, 'tint' => tint,
       'band' => background
     }
+  end
+
+  # A bright brand color (e.g. #ff1f2d, 3.9:1 with white) gets slightly deeper until white button text
+  # passes 4.5:1, so the e-mail keeps the brand look with white text; past the last step it stays as is
+  # and the button text turns dark (PromptPayload on_primary).
+  def white_text_ready(color)
+    DARKEN_STEPS.lazy.map { |alpha| BrandKits::Color.composite('#000000', color, alpha) }
+                .find { |shade| readable?(WHITE, shade) } || color
   end
 
   def dark_grounds

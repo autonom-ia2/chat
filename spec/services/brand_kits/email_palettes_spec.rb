@@ -19,7 +19,7 @@ RSpec.describe BrandKits::EmailPalettes do
       light = described_class.from_site(dark_site)['light']
 
       expect(light).to include('background' => '#ffffff', 'surface' => '#ffffff', 'ink' => '#0b243f',
-                               'primary' => '#ff1f2d', 'accent' => '#0ab9d1', 'band' => '#0b243f')
+                               'primary' => '#e61c29', 'accent' => '#0ab9d1', 'band' => '#0b243f')
     end
 
     it 'keeps every text role readable (WCAG AA) and the buttons visible on white' do
@@ -31,6 +31,7 @@ RSpec.describe BrandKits::EmailPalettes do
         expect(contrast(light['muted'], light['tint'])).to be >= 4.5
         expect(contrast(light['ink'], light['tint'])).to be >= 4.5
         expect(contrast(light['primary'], light['surface'])).to be >= 3
+        expect(contrast('#ffffff', light['primary'])).to be >= 4.5
       end
     end
 

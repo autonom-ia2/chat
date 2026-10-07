@@ -46,7 +46,7 @@ class BrandKits::Appearance
     {
       'palettes' => palettes(site),
       'site_palette' => site,
-      'typography' => TYPOGRAPHY_KEYS.index_with { |key| text(section('typography')[key]) }.merge('fallback' => FALLBACK_FONT_STACK),
+      'typography' => typography,
       'logo_url' => text(@raw['logo_url']),
       'social_links' => social_links,
       'footer' => FOOTER_LIMITS.keys.index_with { |key| text(section('footer')[key]) }
@@ -55,6 +55,13 @@ class BrandKits::Appearance
 
   def validate
     palette_errors + typography_errors + logo_errors + social_errors + footer_errors
+  end
+
+  # Sem link do Google Fonts (a pessoa trocou a fonte), o link sai do catálogo quando a família está nele.
+  def typography
+    fonts = TYPOGRAPHY_KEYS.index_with { |key| text(section('typography')[key]) }
+    fonts['google_font_url'] ||= BrandKits::GoogleFonts.url_for(fonts.values_at('heading_font', 'body_font').compact)
+    fonts.merge('fallback' => FALLBACK_FONT_STACK)
   end
 
   # Cores do site: as de `site_palette`, ou as do formato antigo `palette`.

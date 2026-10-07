@@ -66,7 +66,7 @@ RSpec.describe BrandKits::SiteImporter do
 
     it 'proposes a light e-mail (white, navy text, red buttons, navy top band for the white logo) and a dark one like the site' do
       light = appearance.dig('palettes', 'light')
-      expect(light).to include('background' => '#ffffff', 'ink' => '#0b243f', 'primary' => '#ff1f2d', 'band' => '#0b243f')
+      expect(light).to include('background' => '#ffffff', 'ink' => '#0b243f', 'primary' => '#e61c29', 'band' => '#0b243f')
       expect(appearance.dig('palettes', 'dark')).to include('background' => '#0b243f', 'ink' => '#ffffff', 'primary' => '#ff1f2d')
     end
 

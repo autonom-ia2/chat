@@ -22,7 +22,7 @@ RSpec.describe 'Brand kits API', type: :request do
       expect(kits.first).to include('id' => default.id, 'is_default' => true, 'archived_at' => nil)
       expect(kits.first['appearance']['palettes']['light']).to include('primary' => '#c8102e')
       expect(kits.first['suggested_palettes']['dark']).to include('background' => '#0b243f')
-      expect(response.parsed_body['meta']).to eq('archived_count' => 1)
+      expect(response.parsed_body['meta']).to include('archived_count' => 1, 'google_fonts' => include('Roboto', 'Inter'))
     end
 
     it 'refuses an agent without a custom role' do
