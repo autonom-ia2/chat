@@ -4,6 +4,14 @@ RSpec.describe BrandKits::SiteImporter do
   let(:fixtures) { Rails.root.join('spec/fixtures/files/brand_kits') }
   let(:requested) { [] }
 
+  # Nenhum exemplo chega à rede, nem a localhost: o spec_helper deixa localhost aberto, aqui não.
+  around do |example|
+    WebMock.disable_net_connect!(allow_localhost: false)
+    example.run
+  ensure
+    WebMock.disable_net_connect!(allow_localhost: true)
+  end
+
   # Sem rede: cada URL conhecida devolve o arquivo local; qualquer outra responde 404.
   def stub_site(pages)
     allow(SafeFetch).to receive(:fetch) do |url, **options, &block|
@@ -191,11 +199,17 @@ RSpec.describe BrandKits::SiteImporter do
         end
     end
 
-    it 'refuses localhost and private addresses (SSRF) through SafeFetch' do
-      %w[http://127.0.0.1/ http://localhost/ http://169.254.169.254/latest/meta-data http://10.0.0.5/].each do |url|
-        expect { described_class.new(url).perform }
-          .to raise_error(described_class::Error) { |error| expect(error.code).to eq('unsafe_url') }
+    # SafeFetch de verdade, só com IP literal privado: o filtro recusa antes de qualquer DNS ou conexão.
+    it 'refuses loopback, private and metadata addresses (SSRF) before connecting' do
+      allow(Net::HTTP).to receive(:start).and_raise('network reached')
+
+      with_modified_env SAFE_FETCH_ALLOW_PRIVATE_NETWORK: 'false' do
+        %w[http://127.0.0.1/ http://[::1]/ http://169.254.169.254/latest/meta-data http://10.0.0.5/ http://192.168.0.10/].each do |url|
+          expect { described_class.new(url).perform }
+            .to raise_error(described_class::Error) { |error| expect(error.code).to eq('unsafe_url') }
+        end
       end
+      expect(Net::HTTP).not_to have_received(:start)
     end
 
     it 'maps fetch failures to stable codes' do

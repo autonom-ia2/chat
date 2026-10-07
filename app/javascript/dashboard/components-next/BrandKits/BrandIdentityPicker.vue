@@ -4,7 +4,7 @@
 // identity only when the person ticks "Salvar como identidade"), and the e-mail picks the light
 // (recommended) or dark version of the colors.
 // v-model: { kitId, importId, proposal, mode, saveAsKit }
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { vOnClickOutside } from '@vueuse/components';
@@ -27,6 +27,13 @@ const { kits, defaultKit, ensureKits } = useBrandKits();
 onMounted(ensureKits);
 const menuOpen = ref(false);
 const otherSite = ref(Boolean(props.modelValue.importId));
+// The site was saved as an identity (Criar com IA): show that identity, not the site reader.
+watch(
+  () => [props.modelValue.kitId, props.modelValue.importId],
+  ([kitId, importId]) => {
+    if (kitId && !importId) otherSite.value = false;
+  }
+);
 
 const choice = computed(() => props.modelValue);
 const kit = computed(

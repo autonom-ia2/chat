@@ -26,6 +26,7 @@
         "BUTTON_HEIGHT": "Some button is too small to tap on a phone.",
         "IMAGE_ALT": "Some image has no description.",
         "SUBJECT_VARIANTS": "The AI suggested fewer than 3 subjects.",
+        "HTML_SIZE_NEAR": "The e-mail is close to the size at which Gmail cuts the end. Shorten it if you can.",
         "OTHER": "Some block needs a fix."
       }
     },
@@ -49,7 +50,9 @@
         "DARK": "Dark background"
       },
       "ARIAL_NOTE": "Some e-mails show Arial.",
-      "NAME_TAKEN": "There is already an identity with this name. Untick Save as identity or rename it later.",
+      "SAVED": "Identity {name} saved. It shows in Visual identity.",
+      "SAVED_WITHOUT_LOGO": "Identity {name} saved, but without the logo. Upload the logo in Visual identity.",
+      "SAVE_FAILED": "Could not save the identity. The e-mail uses the website anyway.",
       "UNAVAILABLE": "This identity is no longer available. Choose another one."
     },
     "EMAIL_PANEL": {

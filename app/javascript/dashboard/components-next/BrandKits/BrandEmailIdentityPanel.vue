@@ -22,6 +22,7 @@ const KNOWN_CHECKS = [
   'button_height',
   'image_alt',
   'subject_variants',
+  'html_size_near',
 ];
 const { t } = useI18n();
 const router = useRouter();

@@ -105,6 +105,34 @@ describe('choosing the identity of an e-mail (#1076)', () => {
     wrapper.unmount();
   });
 
+  it('shows the new identity once the site was saved as one', async () => {
+    const wrapper = mountWith(BrandIdentityPicker, {
+      modelValue: {
+        kitId: null,
+        importId: 9,
+        proposal: { name: 'Aurora' },
+        mode: 'light',
+        saveAsKit: true,
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-test="identity-site"]').exists()).toBe(true);
+
+    await wrapper.setProps({
+      modelValue: {
+        kitId: 2,
+        importId: null,
+        proposal: null,
+        mode: 'light',
+        saveAsKit: false,
+      },
+    });
+
+    expect(wrapper.find('[data-test="identity-site"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('Autonomia');
+    wrapper.unmount();
+  });
+
   it('the e-mail picks the light (recommended) or the dark version', async () => {
     const wrapper = mountWith(BrandIdentityPicker, {
       modelValue: {

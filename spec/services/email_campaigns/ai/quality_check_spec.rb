@@ -45,12 +45,46 @@ RSpec.describe EmailCampaigns::Ai::QualityCheck, :aggregate_failures do
     expect(result.warnings.map(&:check)).to contain_exactly(:contrast, :button_height, :image_alt)
   end
 
-  it 'blocks a second footer, an unknown placeholder and an e-mail Gmail would clip' do
-    content = %(<mj-text #{font} font-size="16px" color="#0b243f">Oi {{ cupom }}#{'a' * 20_000}</mj-text>)
+  it 'blocks a second footer and an unknown placeholder' do
+    content = %(<mj-text #{font} font-size="16px" color="#0b243f">Oi {{ cupom }}</mj-text>)
 
     result = described_class.new(email(content, footer + footer)).call
 
-    expect(result.blocking.map(&:check)).to contain_exactly(:unsubscribe, :placeholders, :html_size)
+    expect(result.blocking.map(&:check)).to contain_exactly(:unsubscribe, :placeholders)
+  end
+
+  describe 'size against the Gmail clip (estimated from the MJML)' do
+    let(:limit) { EmailCampaigns::QualityGate::MAX_HTML_BYTES }
+    let(:ratio) { described_class::ESTIMATED_HTML_PER_MJML_BYTE }
+
+    # An e-mail whose MJML has exactly `bytes` bytes.
+    def email_of(bytes)
+      base = email(%(<mj-text #{font} font-size="16px" color="#0b243f">x</mj-text>))
+      email(%(<mj-text #{font} font-size="16px" color="#0b243f">#{'x' * (bytes - base.bytesize + 1)}</mj-text>))
+    end
+
+    def size_checks(fraction_of_limit)
+      result = described_class.new(email_of((limit * fraction_of_limit / ratio).floor)).call
+      [result.blocking.map(&:check), result.warnings.map(&:check)]
+    end
+
+    it 'says nothing well below the limit' do
+      expect(size_checks(0.84)).to eq([[], []])
+    end
+
+    it 'warns (never blocks) when the estimate is within 15% of the limit, on either side' do
+      expect(size_checks(0.86)).to eq([[], [:html_size_near]])
+      expect(size_checks(1.0)).to eq([[], [:html_size_near]])
+      expect(size_checks(1.14)).to eq([[], [:html_size_near]])
+    end
+
+    it 'blocks only when the estimate is clearly over the limit' do
+      expect(size_checks(1.16)).to eq([[:html_size], []])
+    end
+
+    it 'estimates with the largest ratio measured on the library (5.5x)' do
+      expect(ratio).to eq(5.5)
+    end
   end
 
   it 'accepts the placeholders of the audience' do

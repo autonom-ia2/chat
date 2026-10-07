@@ -4,17 +4,21 @@
 # servidor da imagem não entram: o e-mail com identidade usa a fonte do site (com Arial de reserva) e a
 # logo/assets vêm do ActiveStorage.
 #
-# Sem Node em produção não há HTML compilado; o tamanho é estimado pelo MJML. Medido nos 13 modelos da
-# biblioteca e no e-mail de IA de exemplo, o HTML compilado tem 4,2–5,5x o MJML; com folga de 6x, 102 KB
-# de HTML equivalem a 17 KB de MJML.
+# Sem Node em produção não há HTML compilado; o tamanho é estimado pelo MJML (ESTIMATED_HTML_PER_MJML_BYTE).
+# A estimativa erra para os dois lados, então perto do corte do Gmail (dentro de SIZE_MARGIN) é aviso
+# (html_size_near); só bloqueia (html_size) quando passa claramente.
 #
 # Tudo que falha pede UMA correção ao modelo (repair?). Depois dela, o que impede o envio (blocking) faz a
 # geração falhar; o resto vira aviso para a pessoa (warnings).
 class EmailCampaigns::Ai::QualityCheck
-  REVIEWED = %i[contrast button_height image_alt placeholders html_size unsubscribe].freeze
+  REVIEWED = %i[contrast button_height image_alt placeholders unsubscribe].freeze
   BLOCKING = %i[placeholders html_size unsubscribe].freeze
-  HTML_TO_MJML_RATIO = 6
-  MAX_MJML_BYTES = EmailCampaigns::QualityGate::MAX_HTML_BYTES / HTML_TO_MJML_RATIO
+  # Bytes de HTML compilado por byte de MJML. Medido em 07/10/2026 compilando os 13 modelos da biblioteca
+  # (db/seeds/email_templates) com mjml-browser: 4,2x a 5,5x. Usa o maior, para não subestimar.
+  ESTIMATED_HTML_PER_MJML_BYTE = 5.5
+  # Faixa de incerteza em volta do corte (102 KB): dentro dela, aviso; acima dela, bloqueio.
+  SIZE_MARGIN = 0.15
+  HTML_LIMIT = EmailCampaigns::QualityGate::MAX_HTML_BYTES
 
   Result = Struct.new(:violations) do
     def repair?
@@ -42,9 +46,16 @@ class EmailCampaigns::Ai::QualityCheck
   def call
     gate = EmailCampaigns::QualityGate.new(mjml: @mjml, html: nil, placeholders: @placeholders)
     violations = gate.violations.select { |violation| REVIEWED.include?(violation.check) }
-    if @mjml.bytesize > MAX_MJML_BYTES
-      violations << EmailCampaigns::QualityGate::Violation.new(:html_size, "MJML #{@mjml.bytesize} bytes > #{MAX_MJML_BYTES}")
-    end
-    Result.new(violations)
+    Result.new([*violations, size_violation].compact)
+  end
+
+  private
+
+  def size_violation
+    estimate = (@mjml.bytesize * ESTIMATED_HTML_PER_MJML_BYTE).round
+    return if estimate < HTML_LIMIT * (1 - SIZE_MARGIN)
+
+    check = estimate > HTML_LIMIT * (1 + SIZE_MARGIN) ? :html_size : :html_size_near
+    EmailCampaigns::QualityGate::Violation.new(check, "about #{estimate} bytes of HTML (Gmail clips at #{HTML_LIMIT})")
   end
 end

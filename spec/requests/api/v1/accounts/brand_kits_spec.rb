@@ -73,6 +73,33 @@ RSpec.describe 'Brand kits API', type: :request do
       expect(response.parsed_body['warnings']).to eq(['logo_unsupported_type'])
     end
 
+    it 'saves a site read in Criar com IA (Salvar como identidade): not the default when one exists, logo stored' do
+      create(:brand_kit, account: account, name: 'Hub2You', is_default: true)
+      downloader = instance_double(BrandKits::LogoDownloader, perform: true)
+      allow(BrandKits::LogoDownloader).to receive(:new).and_return(downloader)
+      import = create(:brand_import_job, account: account, status: :succeeded,
+                                         result: { 'name' => 'Aurora', 'source_url' => 'https://aurora.example/', 'appearance' => appearance })
+      proposal = import.result
+
+      post base_path, params: { brand_kit: { name: proposal['name'], source_url: proposal['source_url'], appearance: proposal['appearance'],
+                                             logo_source_url: 'https://aurora.example/logo.png' } },
+                      headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:created)
+      kit = BrandKit.find(response.parsed_body.dig('payload', 'id'))
+      expect(kit).to have_attributes(name: 'Aurora', is_default: false, source_url: 'https://aurora.example/')
+      expect(BrandKits::LogoDownloader).to have_received(:new).with(kit, 'https://aurora.example/logo.png')
+    end
+
+    it 'refuses a name already on the list (the composer picks a free one before saving)' do
+      create(:brand_kit, account: account, name: 'Aurora')
+
+      post base_path, params: { brand_kit: { name: 'aurora', appearance: appearance } }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['attributes']).to include('name')
+    end
+
     it 'returns 422 for an invalid appearance' do
       post base_path, params: { brand_kit: { name: 'X', appearance: appearance.deep_merge(palettes: { light: { primary: 'vermelho' } }) } },
                       headers: admin.create_new_auth_token, as: :json
