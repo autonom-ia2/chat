@@ -487,6 +487,485 @@
         }
       ],
       "interpretation": "Captura corrigida comprovou cinco radios e mençãoInstagram/permissões; não houve busca ou seleção. Consultas bloqueadas sóOverlay conhecida, sem novo contrato necessário para abrir esse diálogo."
+    },
+    {
+      "unit": "instagram-autonomia-browser-role-20261007-192722",
+      "script_sha256": "4bb37a1d5e4653d5a06575bb99cecdfe1e972d2c14a610debc41aa1a561fe99f",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "99bf6c878229090731d8d77f8a5510a31244c3d3b8b38015d195b528bed7dd36",
+      "result": {
+        "diagnostic": "browser_role_selection_read_only",
+        "stage": "completed",
+        "failure_code": null,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "instagram_tester_found": true,
+        "instagram_tester_unique": true,
+        "instagram_tester_visible": true,
+        "instagram_tester_enabled": true,
+        "instagram_tester_selected": true,
+        "accessible_name_exact": true,
+        "role_selection_performed": true,
+        "role_selection_failure": null,
+        "after_selection_stable": true,
+        "utc": "2026-10-07T19:28:22.337Z"
+      },
+      "after_selection_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 9,
+        "inspected_count": 9,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 3,
+        "node_count": 9,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_enum": "cancel",
+            "name": "Cancel"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": true
+          },
+          {
+            "tag": "input",
+            "role": "combobox",
+            "type": "text",
+            "name_unknown": true
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "after_selection_state": {
+        "state_capture_complete": true,
+        "aria_busy": null,
+        "aria_busy_present": false,
+        "progressbar_present": false,
+        "progressbar_count": 0,
+        "input_count": 6,
+        "message_count": 0,
+        "message_unknown_count": 0,
+        "message_truncated": false,
+        "business_settings_mentioned": false,
+        "business_manager_mentioned": false,
+        "business_portfolio_mentioned": false,
+        "permissions_mentioned": true,
+        "instagram_mentioned": true,
+        "messages": []
+      },
+      "interpretation": "Seleção exata única do papelInstagramtester confirmada após estabilidade. Apareceu inputcomboboxtext único; nenhuma pesquisa/seleção de perfil/convite."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-194132",
+      "script_sha256": "b391795939bd1a9bfaec82b6fb193c6ceea23fd69bffacc54b6eca92e393bc4f",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "a9a74dc8dd1d3be087808fb2b96aa1c2ad00c8526bbf41acb5890d00d8272aba",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "failure_code": null,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "search_control_present": false,
+        "search_input_found": true,
+        "search_input_unique": true,
+        "search_input_visible": true,
+        "search_input_enabled": true,
+        "search_input_editable": true,
+        "search_input_filled": true,
+        "search_input_value_confirmed": true,
+        "search_input_failure": null,
+        "search_request_observed": true,
+        "search_response_observed": false,
+        "search_response_validated": false,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_response_shape": null,
+        "search_requests_truncated": false,
+        "search_responses_truncated": false,
+        "search_response_incomplete": false,
+        "search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": false,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "value_match_authorized": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "known_endpoint": true,
+            "target_request": true
+          }
+        ],
+        "search_responses": [],
+        "utc": "2026-10-07T19:42:40.166Z"
+      },
+      "interpretation": "Input preenchido e umPOSTnaturaltypeaheadexato575bytes16campos observado; bloqueado pelo guardoriginal. Nenhumaresposta. Isso refutaGEThypothesis, não comprova busca funcional. Próximarevisão permissãoPOSTreadlocalexata/únicapincanonicalsemalterarguardglobal."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-195221",
+      "script_sha256": "943db4cfead2f1467eaf369672d75489f2fd0f17eeec7f27f742e71c392edc61",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "0db03fadf56fcb5927a55332edefb6385b45103a6b3f3a7ef4715d1875cc6de2",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "failure_code": null,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "search_control_present": false,
+        "search_input_found": true,
+        "search_input_unique": true,
+        "search_input_visible": true,
+        "search_input_enabled": true,
+        "search_input_editable": true,
+        "search_input_filled": true,
+        "search_input_value_confirmed": true,
+        "search_input_failure": null,
+        "typeahead_guard_passed": true,
+        "search_request_observed": false,
+        "search_response_observed": false,
+        "search_response_validated": false,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_response_shape": null,
+        "search_requests_truncated": false,
+        "search_responses_truncated": false,
+        "search_response_incomplete": false,
+        "search_requests": [],
+        "unknown_search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": false,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "body_field_names_exact": true,
+            "tokens_nonempty": true,
+            "value_match_authorized": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "identity_app_matched": false,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_a_matched": true,
+            "identity_matched": false,
+            "typeahead_guard_passed": true,
+            "known_endpoint": false,
+            "target_request": false
+          }
+        ],
+        "unknown_search_requests_truncated": false,
+        "search_responses": [],
+        "utc": "2026-10-07T19:53:33.124Z"
+      },
+      "interpretation": "POSTabortadoanteswireporque__aaid!=appIdconfig. Business/admin/a/query/body/tokens/gateconferiram. SuposiçãoAAID=appcanonicalrefutada; provarcorrelaçãocomrequestRoles200canonicalantesqualquerpermissaoderivada. Zeroresponses,nãobuscaaceita."
     }
   ]
 }

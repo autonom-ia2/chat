@@ -31,7 +31,7 @@ Para busca/status, comprovar primeiro a ação natural e seu contrato; convite d
 
 ## Resultado
 
-Pendente: observação estrutural revisada, busca real autorizada, integração, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
+Comprovados: leitura Roles e diálogo/papel Instagram tester no Chrome. Pendentes: busca real autorizada, integração, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
 
 ## Primeira observação executada — 18:54 UTC
 
@@ -72,3 +72,29 @@ Correção single-argument evaluate e cap32 revisados antes da execução. Obser
 Roles200 full; diálogo capturado estável/completo,8controles incluindo5radios, Cancel e2botões sem nome reconhecido. Estado menciona Instagram e permissões; nenhum flagBusiness verdadeiro. Isso não basta para classificar o texto inteiro, mas refuta a conclusão prematura de que não haveria formulário nessa amostra. Os3POSTs bloqueados são exclusivamente `MetaDeveloperAssistantPageOverlayQuery`, já excluída no contrato de carregamento; todos os metadados completos. Não há evidência para liberar uma query nova aqui.
 
 Nenhuma busca, seleção, convite ou publicação. Cleanup/restauração/7units/limites preservados. Próximo candidato identifica o rádio de Instagram tester e a navegação legítima ao formulário, sem confirmação de convite.
+
+## Sexta observação — 19:28 UTC, seleção do papel
+
+Observer `4bb37a1d5e4653d5a06575bb99cecdfe1e972d2c14a610debc41aa1a561fe99f`, runner `99bf6c878229090731d8d77f8a5510a31244c3d3b8b38015d195b528bed7dd36`, unit `instagram-autonomia-browser-role-20261007-192722`. Revisão exigiu seletor por quatro nomes completos fechados e confirmação de checked após estabilidade; aplicado antes da execução. Nexo confirmou SHA final e guards.
+
+Rádio Instagramtester exato/único/visível/habilitado selecionado, estado marcado persistente após estabilidade. Apareceu um input texto com rolecombobox dentro do diálogo, agora9controles. Sem Next/Continue nem busca de perfil. Cleanup/manager/7units/limites preservados, sem convite/publicação. Próximo candidato preenche somente o usuário autorizado e observa a requisição natural/resultado, mantendo POSTs desconhecidos bloqueados e sem selecionar perfil/confirmar.
+
+## Drift externo de runtime — 19:32 UTC
+
+Reader independente confirmou as duas stacks AWS em `9960b3a518ac52a8696283579618864176d7a02b`, ambas com sessão/gestor saudáveis e restrições1/18 preservadas. Essa publicação veio de outro fluxo, não desta PR. Fetch e diff contra496 confirmaram nenhum delta nos scripts/serviços/controllers/composable/client/componentes de Instagram desta análise. Próximo preflight usa996; branch/PR de auditoria permanecem em sua base sem rebase/merge. VPS permanece2cc6.
+
+## Sétima observação — 19:42 UTC, contrato natural POST observado
+
+Observer `b391795939bd1a9bfaec82b6fb193c6ceea23fd69bffacc54b6eca92e393bc4f`, runner `a9a74dc8dd1d3be087808fb2b96aa1c2ad00c8526bbf41acb5890d00d8272aba`, unit `instagram-autonomia-browser-search-20261007-194132`. Candidato anterior109b foi rejeitado antes de executar: parser genérico/aliases podia associar IDs de outra entrada; corrigido para contrato exato do ResponseParserRuby e hash somente do alvo único. Runner exige uma requisição/uma resposta e não aceita unknowns.
+
+Combobox único/visível/habilitado/editável preenchido uma vez e valor autorizado confirmado. Um POST natural para `/roles/instagram/typeahead/user/`, query somentevaluecomalvoautorizado,575bytes/16campos completos foi abortado pelo guard original. Zero resposta; aceite funcional recusado em validate_search, embora a observação da interação esteja completa. POST é o método real da UI: hipótese de que o Client usaria POST indevidamente fica refutada para esta operação. Isso não explica Rails400.
+
+Cleanup/restauração/7units/limites preservados. Próxima medida exige exceção somente local de leitura para esse POST exato/único, canonicalapp/business/admin, corpo/fields/query estritos e fase/UI verificadas. Não alterar guard global, liberar GraphQL desconhecido nem permitir `/roles/add/`. Não houve seleção de sugestão ou convite.
+
+## Oitava observação — 19:53 UTC, pin AAID recusado
+
+Observer `943db4cfead2f1467eaf369672d75489f2fd0f17eeec7f27f742e71c392edc61`, runner `0db03fadf56fcb5927a55332edefb6385b45103a6b3f3a7ef4715d1875cc6de2`, unit `instagram-autonomia-browser-search-20261007-195221`. Exceção local/única foi revisada antes da execução; guard global intacto.
+
+A requisição natural passou origem/path/queryvalue único/16campos/tokensnão-vazios/faseUI. `__bid`, `__user` e `__a` corresponderam; `__aaid` NÃO foi igual a config.appId. O POST continuou abortado e nenhuma resposta foi recebida. A igualdade AAID=aplicativo foi uma hipótese nossa, não contrato demonstrado; não relaxar silenciosamente. Próximo candidato deverá ancorar eventual contexto AAID na requisição Roles canônica cuja resposta200full foi validada, conservando appbinding por variável app_id e URL canonical, e abortar caso não haja igualdade comprovada. Essa prova/gate pode ser condicional no mesmo run, antes do únicoPOSTpermitido, sujeito à revisão.
+
+Cleanup/restauração/7units/limites preservados; nenhum convite, seleção de sugestão ou publicação pelo diagnóstico.
