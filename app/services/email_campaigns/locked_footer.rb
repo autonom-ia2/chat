@@ -83,10 +83,17 @@ class EmailCampaigns::LockedFooter
 
   def slot_hrefs(index)
     content = @slot_changes.fetch(index, @cut.slots[index].content)
-    hrefs = Nokogiri::HTML5.fragment(content).css('a[href]').pluck('href')
+    hrefs = content_hrefs(content)
     foreign = hrefs.select { |href| foreign?(href) }.uniq
     @slot_changes[index] = foreign.reduce(content) { |acc, href| acc.gsub(href, UNSUBSCRIBE_URL) } if foreign.any?
     hrefs.map { |href| foreign?(href) ? UNSUBSCRIBE_URL : href }
+  end
+
+  # Content nested deeper than the parser reads has no link it can vouch for (the markup cleaning drops it, #1104).
+  def content_hrefs(content)
+    Nokogiri::HTML5.fragment(content).css('a[href]').pluck('href')
+  rescue ArgumentError
+    []
   end
 
   def ours?(href)

@@ -5,9 +5,10 @@
 # or escape — background colors included. Position, offsets, indent and clip stay so Visibility can tell off-screen
 # and clipped text; the converter never writes them out. A background image (attribute or CSS) becomes the internal
 # data-import-bg marker the converter turns into a section background, when it is an http(s) address. Nokogiri and
-# string methods — no regex.
+# string methods — no regex. Active elements and unsafe CSS are the rules shared with the AI path
+# (EmailCampaigns::MarkupPolicy, #1104).
 class EmailCampaigns::Import::Sanitizer
-  UNSAFE = %w[script iframe frame frameset object embed applet svg math form base link canvas audio param noscript template].freeze
+  UNSAFE = EmailCampaigns::MarkupPolicy::UNSAFE_ELEMENTS
   FORM_PARTS = %w[input button select textarea option optgroup label fieldset legend datalist output].freeze
   SILENT = %w[style head title meta source track xml map area].freeze
   KEEP = %w[html body center table thead tbody tfoot tr td th caption col colgroup div span p a img br hr h1 h2 h3 h4 h5 h6
@@ -21,7 +22,6 @@ class EmailCampaigns::Import::Sanitizer
                         border-right border-bottom border-left border-color border-width border-style border-radius width max-width
                         min-width height max-height display visibility opacity overflow mso-hide vertical-align float position
                         left top text-indent clip].freeze
-  UNSAFE_VALUES = ['url(', 'expression', 'javascript:', 'vbscript:', 'behavior', '-moz-binding', '@import', '\\', '<'].freeze
   HEAD_UNSAFE = 'script, base, iframe, object, embed'.freeze
 
   def self.call(root, report)
@@ -152,7 +152,6 @@ class EmailCampaigns::Import::Sanitizer
   end
 
   def unsafe?(value)
-    lower = EmailCampaigns::Import::Url.compact(value).downcase
-    UNSAFE_VALUES.any? { |marker| lower.include?(marker) }
+    EmailCampaigns::MarkupPolicy.unsafe_css?(value)
   end
 end
