@@ -1,0 +1,303 @@
+{
+  "purpose": "Documentation handoff; historical operational evidence, not a new production acceptance",
+  "assembled_at_utc": "2026-10-07T10:14:19.445275+00:00",
+  "repository": "autonom-ia2/chat",
+  "issue": 995,
+  "pr": 1112,
+  "branch": "fix/995-meta-page-bootstrap",
+  "functional_commit": "0dab6b6c4d401312d25d4ec91e8e707d0c5315cc",
+  "new_vps_read_during_handoff": "tool denied before result; no newer live-state claim",
+  "last_recorded_vps": {
+    "all_units_observed_at_utc": "2026-10-07T09:55:50Z",
+    "autonomia_rechecked_at_utc": "2026-10-07T10:02:42Z",
+    "runtime_commit": "9a48a2de08e93f2f7dc6916d7a4c79729f88dec4",
+    "units": [
+      {
+        "unit": "instagram-vps-display@hub2you.service",
+        "state": "active",
+        "pid": 72724,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-gateway@hub2you.service",
+        "state": "active",
+        "pid": 72773,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-publisher@hub2you.service",
+        "state": "active",
+        "pid": 72721,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-manager@hub2you.service",
+        "state": "active",
+        "pid": 72762,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-display@autonomia.service",
+        "state": "active",
+        "pid": 72727,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-gateway@autonomia.service",
+        "state": "active",
+        "pid": 72775,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-publisher@autonomia.service",
+        "state": "active",
+        "pid": 72722,
+        "restarts": 0
+      },
+      {
+        "unit": "instagram-vps-manager@autonomia.service",
+        "state": "inactive",
+        "pid": 0,
+        "restarts": 0
+      }
+    ],
+    "autonomia_manager_intentionally_stopped": true,
+    "autonomia_profile_lock_present": false,
+    "autonomia_human_marker_present": false,
+    "assistido": "recorded_OFF_not_revalidated_during_handoff"
+  },
+  "compiled_document_receipt": {
+    "source_path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-operator-recovery/.codex/ops-995/after-manual-resume-20261007/instagram-autonomia-document-095152.result.json",
+    "source_sha256": "391096317a9ea0aee29c5d68013bc3e189a5c506cdb40cf2cd194f13291805b2",
+    "unit": "instagram-autonomia-document-095152",
+    "started_at": "2026-10-07T09:51:52.404403+00:00",
+    "finished_at": "2026-10-07T09:52:27.714703+00:00",
+    "script_sha256": "1bce6de47549fa3709c2902cc52f48a879f5d8e593bc62c853f6a6a327e5d080",
+    "exit_code": 0,
+    "parsed_stdout": {
+      "diagnostic": "public_compiled_document",
+      "publication_performed": false,
+      "bootstrap_ms": 20010,
+      "http_status": 200,
+      "compiled": {
+        "available": true,
+        "request_kind": true,
+        "name_matches": true,
+        "operation_kind": "query",
+        "only_app_argument": true,
+        "document_matches_natural_request": true,
+        "document_sha256": "e3050f6f5039fae023bca06560b9aba52597bccd045d0e84bf1388e8abeca508"
+      },
+      "query_seen": true,
+      "ok": true,
+      "browser_closed": true,
+      "elapsed_ms": 33559,
+      "utc": "2026-10-07T09:52:27.654Z"
+    },
+    "limit": "Identifies public query document; does not provide its response, roles, or a valid session."
+  },
+  "pre_handoff_ci": {
+    "head": "0dab6b6c4d401312d25d4ec91e8e707d0c5315cc",
+    "checks": [
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112738189268",
+        "name": "RSpec",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442134",
+        "name": "RSpec (2/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442212",
+        "name": "RSpec (1/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442419",
+        "name": "RSpec (0/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442714",
+        "name": "RSpec (7/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442305",
+        "name": "RSpec (6/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442214",
+        "name": "RSpec (5/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442162",
+        "name": "RSpec (4/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734442238",
+        "name": "RSpec (3/8)",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809365/job/112734451862",
+        "name": "Email UI, locales, build and isolated browser",
+        "state": "SKIPPED"
+      },
+      {
+        "bucket": "skipping",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809365/job/112734452665",
+        "name": "Email backend and bounded regression",
+        "state": "SKIPPED"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809398/job/112734319796",
+        "name": "Vitest Instagram onboarding",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734320043",
+        "name": "ESLint",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734320115",
+        "name": "Rubocop",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809343/job/112734319290",
+        "name": "central",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734319702",
+        "name": "RSpec - plano",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809398/job/112734319953",
+        "name": "VPS Linux Chrome and private VNC",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734320211",
+        "name": "Vitest",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809398/job/112734319948",
+        "name": "Component browser QA",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809496/job/112734320172",
+        "name": "Brakeman e bundle-audit",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809398/job/112734319407",
+        "name": "Node synthetic contracts",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809365/job/112734319470",
+        "name": "Detect feature scope",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809398/job/112734319692",
+        "name": "Python session preparer",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809343/job/112734319663",
+        "name": "trava",
+        "state": "SUCCESS"
+      },
+      {
+        "bucket": "pass",
+        "link": "https://github.com/autonom-ia2/chat/actions/runs/37603809295/job/112734318782",
+        "name": "fork-i18n",
+        "state": "SUCCESS"
+      }
+    ],
+    "limit": "Must not be attributed to the subsequent documentation head or future functional changes."
+  },
+  "unapproved_worktree": {
+    "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-operator-recovery",
+    "head": "5ff4be0a7f8df86653498dfbfb659917dfa8beb5",
+    "files": [
+      {
+        "path": "app/services/instagram/automation/session_publisher.rb",
+        "sha256": "692d81dd18ab07fdfef48116ff7e5d96c1fc32a8b64df1cb571f917d5cacfb17",
+        "approved": false,
+        "installed": false
+      },
+      {
+        "path": "scripts/instagram_testers/session-manager.mjs",
+        "sha256": "bdf107e3aa94e7138d067847d991442f967dbfec8065bb56c140cbf40c0abbdf",
+        "approved": false,
+        "installed": false
+      },
+      {
+        "path": "scripts/instagram_testers/session-observer.mjs",
+        "sha256": "ebafef7c2f1300da40d1d8000c711b6e7450bff5efa507e540850ceb2278aba1",
+        "approved": false,
+        "installed": false
+      },
+      {
+        "path": "spec/services/instagram/automation/session_publisher_spec.rb",
+        "sha256": "0e0ab8e465128826ec6ca260e75960dbbbb24432b9c53069c70310ff121e9e05",
+        "approved": false,
+        "installed": false
+      },
+      {
+        "path": "tests/instagram_testers/session-manager.test.mjs",
+        "sha256": "b835d98018e9c15c89dc6cf9c77f74af18f7c15c5a9c3c9f30679fd5d3f16abd",
+        "approved": false,
+        "installed": false
+      },
+      {
+        "path": "tests/instagram_testers/session-observer.test.mjs",
+        "sha256": "a65c3a3ef0368e30cb0b378c0e5972b9933559795b7c8d13705f03da11a675df",
+        "approved": false,
+        "installed": false
+      }
+    ]
+  },
+  "pending_diagnostic": {
+    "path": "/Users/rodrigosilva/dev/worktrees/chat2you/995-meta-page-bootstrap/.codex/observe-initial-read.mjs",
+    "sha256": "fe0fbf429943f0d17776be95c18e53691014a20c58085417babf96106e7bb9b0",
+    "status": "prepared source; execution was denied; no response receipt",
+    "review_before_running": true
+  }
+}

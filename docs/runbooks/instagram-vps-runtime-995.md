@@ -1,5 +1,8 @@
 # Runtime Instagram na VPS — #995
 
+> **Retomada em 07/10/2026:** leia [o handoff consolidado](instagram-assisted-codex-handoff.md) antes dos comandos históricos abaixo. A #1089 já foi instalada e os sete serviços retomados; a resposta da consulta inicial e o aceite do assistido ainda estão pendentes.
+
+
 A instalação do runtime e a publicação HTTPS privada foram aprovadas por Rodrigo
 no escopo da [issue #995](https://github.com/autonom-ia2/chat/issues/995).
 A aprovação não comprova execução ou homologação: registrar cada etapa concluída
@@ -384,3 +387,8 @@ A supervisão é única desde o claim e atravessa o fechamento do navegador e a 
 Validar com relógio controlado resposta aplicada/perdida, leitura tardia, troca de ID, revogação, expiração, fechamento durante renovação e sucesso com confirmação final incerta. O workflow executa explicitamente `operator-waiter.test.mjs` junto aos contratos de controle e ao ESLint.
 
 Para implantar: Issue → branch → PR → Project → revisão e CI → aprovação/fila → release imutável da VPS. Não sobrescrever a release em execução. Preservar o perfil autenticado e a chave de cada instalação. Não interromper janela humana ativa. Após implantação, conferir captura natural, publicação, renovação e estado do SuperAdmin antes de ativar o assistido. Rollback restaura somente a release anterior sob contenção do próprio gestor; não apaga sessão nem reativa os Macs.
+
+## Respostas de carregamento não são captura de sessão
+
+O observer deve classificar URL, método POST e campos da consulta canônica de papéis antes de reservar a publicação ou aguardar cabeçalhos. Respostas GET/HEAD, consultas não relacionadas e campos inválidos são ignorados sem impedir uma resposta elegível posterior. A validação completa da resposta de papéis, identidade e revisão/CAS permanece obrigatória.
+Essa separação não amplia o filtro de navegação: uma consulta inicial diferente ainda precisa de contrato próprio comprovadamente de leitura antes de ser permitida. A simples presença de um identificador do aplicativo não autoriza publicar uma sessão. Evidência e regressões: `docs/audit/995-post-resume-page-loading-20261007.md`.

@@ -13,6 +13,7 @@ import {
   configuration,
   proxyConfiguration,
   observedSession,
+  loadingQueryFields,
   rolesQueryFields,
   safeBrowserLocation,
   validateRolesResponse,
@@ -265,7 +266,10 @@ export function isAllowedBrowserRequest({
   )
     return false;
   try {
-    return rolesQueryFields(body, config) !== null;
+    return (
+      rolesQueryFields(body, config) !== null ||
+      loadingQueryFields(body, config) !== null
+    );
   } catch {
     return false;
   }
@@ -412,8 +416,20 @@ export async function run(
             response.url() !== 'https://developers.facebook.com/api/graphql/'
           )
             return;
+          const request = response.request();
+          if (
+            request.url() !== 'https://developers.facebook.com/api/graphql/' ||
+            request.method() !== 'POST'
+          )
+            return;
+          // Loading responses must never reserve the slot for a roles capture.
+          try {
+            if (!rolesQueryFields(request.postData() || '', cycleConfig))
+              return;
+          } catch {
+            return;
+          }
           publication = (async () => {
-            const request = response.request();
             const headers = await wait(request.allHeaders());
             cycle.signal.throwIfAborted();
             const session = observedSession(

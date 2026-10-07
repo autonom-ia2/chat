@@ -14,6 +14,34 @@ export const extraFormKeys = [
   '__dyn',
   'qpl_active_flow_ids',
 ];
+
+// Read-only browser evidence, 2026-10-07. These public document pins are
+// intentionally kept here instead of coming from runtime metadata; their
+// provenance is recorded in docs/audit/995-loading-contract-20261007.md.
+export const loadingQueryDocumentSha256 = Object.freeze({
+  GeoNextAppControllerContainerQuery:
+    'e3050f6f5039fae023bca06560b9aba52597bccd045d0e84bf1388e8abeca508',
+  DeveloperHeaderComponentContainerQuery:
+    '34abd55916c1d35a7c4f9aa7db399dd263dbc0b2bb5b85ac93df704b4050e7e2',
+  DeveloperAppVisibilityToggleLazyLoadedQuery:
+    'eb759a93022e512816320a08284e22585c2eafb0476dbea91baf2c1431838f6e',
+  DeveloperAppBannerQuery:
+    '108dc0b68c940503ae888f48ab296b1e6e1ac323398ef236f4968db71b2c7abd',
+  DeveloperAppDashboardSidebarNavigationV2Query:
+    '998762536e2ad143534eb74762e333c33d763c5bc97b52df2fb8d828f5f5582b',
+});
+
+const loadingQueryVariableNames = Object.freeze({
+  GeoNextAppControllerContainerQuery: Object.freeze(['appID']),
+  DeveloperHeaderComponentContainerQuery: Object.freeze([
+    'businessID',
+    'businessID_is_null',
+  ]),
+  DeveloperAppVisibilityToggleLazyLoadedQuery: Object.freeze(['appID']),
+  DeveloperAppBannerQuery: Object.freeze(['appID']),
+  DeveloperAppDashboardSidebarNavigationV2Query: Object.freeze(['appID']),
+});
+
 const numeric = value =>
   typeof value === 'string' && /^[0-9]{1,40}$/.test(value);
 const safe = value =>
@@ -113,6 +141,54 @@ export function rolesQueryFields(body, config) {
   );
   requireSafe(variables && variables[1] === config.appId);
   return fields;
+}
+
+function exactLoadingVariables(name, fields, config) {
+  const expectedKeys = loadingQueryVariableNames[name];
+  if (!expectedKeys) return false;
+  let variables;
+  try {
+    variables = JSON.parse(fields.variables);
+  } catch {
+    return false;
+  }
+  if (!variables || typeof variables !== 'object' || Array.isArray(variables))
+    return false;
+  const keys = Object.keys(variables).sort();
+  const sortedExpectedKeys = [...expectedKeys].sort();
+  if (
+    keys.length !== sortedExpectedKeys.length ||
+    !keys.every((key, index) => key === sortedExpectedKeys[index])
+  )
+    return false;
+  if (name === 'DeveloperHeaderComponentContainerQuery')
+    return (
+      variables.businessID === config.businessId &&
+      variables.businessID_is_null === false
+    );
+  return variables.appID === config.appId;
+}
+
+export function loadingQueryFields(body, config) {
+  requireSafe(typeof body === 'string' && Buffer.byteLength(body) <= 262144);
+  const entries = [...new URLSearchParams(body)];
+  requireSafe(new Set(entries.map(([key]) => key)).size === entries.length);
+  const fields = Object.fromEntries(entries);
+  const name = fields.fb_api_req_friendly_name;
+  if (!Object.prototype.hasOwnProperty.call(loadingQueryDocumentSha256, name))
+    return null;
+  requireSafe(
+    config &&
+      numeric(fields.doc_id) &&
+      fields.__bid === config.businessId &&
+      fields.__user === config.adminId &&
+      fields.av === config.adminId
+  );
+  const documentSha256 = createHash('sha256')
+    .update(fields.doc_id)
+    .digest('hex');
+  requireSafe(documentSha256 === loadingQueryDocumentSha256[name]);
+  return exactLoadingVariables(name, fields, config) ? fields : null;
 }
 
 // Observes a request emitted by the authorized browser. Never constructs or
