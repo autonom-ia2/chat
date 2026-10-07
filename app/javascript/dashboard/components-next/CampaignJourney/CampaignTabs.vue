@@ -31,6 +31,7 @@ const tabs = computed(() => [
 ]);
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <nav
     v-if="tabs.length > 1"

@@ -13,6 +13,7 @@ import {
 } from './brandColors';
 import { lockedFooterPreview } from './lockedFooterPreview';
 import { NETWORK_LABELS, siteHost } from './brandKitData';
+import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 
 const props = defineProps({
   name: { type: String, default: '' },
@@ -176,7 +177,7 @@ onBeforeUnmount(() => fontLink?.remove());
           <p class="m-0">
             <strong>{{ identityLine.join(' · ') }}</strong>
             <template v-if="site">
-              · <span class="underline">{{ site }}</span>
+              {{ DOT }} <span class="underline">{{ site }}</span>
             </template>
           </p>
           <p v-if="networks.length" class="m-0">
