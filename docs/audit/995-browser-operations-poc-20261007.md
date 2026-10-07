@@ -144,3 +144,35 @@ Navegador encerrado, launch settled, lock liberado e manager restaurado. Outros 
 Fundação local em fila própria separa search/status/authorization da reconexão humana. Novo gate desligado por padrão; claims, correlação e resultados privados possuem expiração. A autorização final exige observação nova accepted e mantém validações do callback OAuth. O convite está bloqueado antes do enqueue até a prova do contrato de escrita. Controller/client adaptados para resposta assíncrona e cancelamento pelo painel; manager/predicate ainda em revisão independente. Nenhum desses arquivos funcionais foi committed, merged, deployed ou instalado.
 
 `node --check` passou em client/protocol/manager; Atlas conferiu syntax Ruby nos três arquivos sob sua responsabilidade e `git diff --check` passou. Testes funcionais ainda não executados: planner MacCluster recusou nós por cwd-missing/node-modules-missing, sem forçar execução nem sobrescrever checkout. Preparar snapshot isolado após estabilizar os arquivos.
+
+## Décima quarta observação — 20:48 UTC, estrutura dentro do diálogo
+
+Observer `80ead48e0339cb173a81cb662d092fa9c10376a1c2f65f664cb475425658f5da`, runner `c264144c1780c21bef2405bd6ac6085bd0cb55a820888a41d573530530759209`, unit `instagram-hub2you-browser-result-shape-20261007-204623`. Revisão independente autorizou uma execução Hub2You somente de leitura; preflight às20:46:10UTC confirmou ambas as sessões/gestores saudáveis em996.
+
+Busca natural e alvo JSON exato/único/ID válido novamente comprovados. A inspeção completa dos controles semânticos dentro do diálogo retornou zero correspondência por token, text, username ou name do alvo. `json_id_bound=false`. Isso não prova ausência em outro escopo da página nem valida um seletor clicável; portal externo ao diálogo ou controle sem papel semântico são hipóteses, não causas confirmadas.
+
+Nenhum resultado selecionado, confirmação, convite ou publicação. Cleanup/lock/manager restaurados, sete units e limites preservados. Próxima observação precisa distinguir escopo do popup/combobox e estrutura semântica, mantendo saída sanitizada e nenhum clique de resultado.
+
+Validação local posterior: 19 testes existentes de client/composable passaram em snapshot MacCluster isolado no M4, preservando o checkout ativo. Cobrem os contratos anteriores e regressão da UI; a nova resposta202 não foi exercitada por esses exemplos. ESLint passou nos três arquivos JS alterados pelo root. Wrapper de transporte aceitou9envelopes canônicos e recusou13formas inválidas em harness offline; nenhum comando Docker/SSH foi executado por esse harness. `pnpm guia:build` passou, sem delta nos arquivos gerados; formato das ações e testes completos do manager ainda pendentes.
+
+
+## Décima quinta observação — 21:05 UTC, resultado fora do diálogo
+
+Observer `11ac44934ce2b59be5ff7b3a7754d608038f9e65129ba6f322522f4689e5be25`, runner `3ae94973f96aa6fb465e1374f00adba5a6c10f25315733b0bfca0038eab9ec1c`, unit `instagram-hub2you-browser-result-scope-20261007-210317`. Revisão independente autorizou uma única observação Hub2You somente leitura. Runner recusou o aceite global em validate_result_scope:155 controles inspecionados sem truncagem, mas o snapshot de80 itens ficou truncado. Não aumentar limites para declarar sucesso.
+
+A inspeção separada dos253text nodes não truncou e encontrou um token do alvo fora do diálogo, sob ancestrais option/listbox. Há um listbox visível e um combobox ligado a ele por aria-controls. Isso é evidência parcial de escopo externo ao diálogo; não comprova texto acessível exato, vínculo completo da opção ou seletor clicável. Não se comprovou loading. Próxima leitura fica restrita ao popup ligado ao input preenchido, com identificação em memória e saída sanitizada.
+
+Navegador encerrado, launch settled, lock liberado, manager restaurado; sete units e limites preservados. Nenhuma seleção de resultado, confirmação, convite ou publicação pelo diagnóstico.
+
+Validação isolada em snapshot chat2you:229 testes Node do runtime passaram,136 exemplos Ruby de controllers/requests/helpers/publisher/OAuth (incluindo Enterprise) passaram e19 testes UI legados passaram. Esses testes não exercitam o novo protocolo202/CAS/ACL; não são aceite funcional. Guia build/check passou. Gerador de formatos executado somente com ENV test/serviços locais55432/56379, gerou três arquivos com delta limitado a Instagram; formatos:check passou no snapshot seguinte. A tentativa inicial de discovery Python carregou zero testes por nomes com hífen: não contar como teste aprovado; execução explícita dos arquivos está em andamento. RuboCop encontrou53ofensas nos três arquivos de fundação; correção pendente antes de publicar código.
+
+
+## Décima sexta observação — 21:13 UTC, predicado de diálogo recusado
+
+Observer `77a4d24144ccf51e4ed51a19887b84a0b6fbcbb61dd5ff0eda85f9ed309cbcd7`, runner `ee1cd658caecf3d4f72cf17f8ffb156795fe933ddfa28aa89cf0472573e5d5de`, unit `instagram-hub2you-browser-result-popup-20261007-211109`. Após revisão e preflight21:11UTC, busca/alvo novamente validados, mas a inspeção restrita falhou:predicado de diálogo por querySelector/getClientRects/aria-hidden encontrouzero. Antes do preenchimento o diálogo/input já tinham sido validados. Não confundir esse predicado incompleto com sessão expirada ou ausência do resultado. Próximo candidato deve ancorar a leitura na referência do input já preenchido, com identidade/conexão/valor e vínculo de popup revalidados.
+
+Nenhum clique em resultado, confirmação, convite ou publicação. Cleanup e restauração do manager, sete serviços restantes e limites novamente comprovados. O campo bound_to_response_entry do candidato significa coincidência de textos com entradaJSON deIDválido; não prova ID literal noDOM nem opção visível/habilitada. Não elevá-lo a aceite funcional.
+
+Revisão do protocolo local:erro desconhecido no polling deve virar meta_unavailable; códigos conhecidos permanecem fechados. Prazo agora limita intervalo, impedeGETpós-expiração e configura timeout no Axios. Nove cenários offline passaram; nenhum provider/produção acessado. ESLint focal passou. Atlas corrigiu estilo Ruby e registrou RuboCop0ofensas nos três arquivos de fundação, sem alterarCAS/ACL/deadline.
+
+Os dois workflows precisavam permitir a chave nova e verify-pair precisava aceitá-la opcionalmente só no manager; correções locais aplicadas, preservando ausência=false. Nenhuma alteraçãoENV/SSM/instalação emprodução. Python59examples inicialmente mostrou2erros reais de parser do novo flag e5erros deancestral/temporário noMac; parser corrigido e TMPDIRprivado parafixtures aplicável. O loader seguinte noM2 carregou79testes, com1limitação depermissões por workspace em/Users/Shared e16falhas desetup(tmp ausente), não aceites. RuboCop root noM2 nãoexecutou porcss_parser3.2.0 ausente; não instalar runtime para mascarar isso. Proteção térmicaM4 respeitada; snapshot foi replicado/verificado noM2 porchecksum, sem sobrescrevercheckoutativo. Dependênciasgeradas antigas desnapshots próprios foram removidas; fontes/manifestos/recibos preservados.
