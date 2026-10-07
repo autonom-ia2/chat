@@ -589,11 +589,11 @@
 ### montar_e_mail_com_editor_ia_e_templates
 - titulo: Montar e-mail com editor, IA e templates
 - rota: campaigns_email_builder
-- intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"
+- intent: "Como edito o corpo do e-mail?"; "Onde uso IA para escrever?"; "Como aplicar template?"; "Como peço para a IA mudar só uma parte do e-mail?"
 - onde_fica: Sidebar > Campanhas > E-mails > Editor
 - pre_requisitos: campanha em rascunho; para IA, `CRM_AI_ENABLED=true` e credencial de IA resolvível.
-- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; envie teste, salve e abra Revisar envio.
-- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de enviar.
+- passos: Abra o editor; escolha IA, Biblioteca de modelos ou começar do zero; ajuste assunto e prévia do assunto no topo; edite blocos e propriedades; use Personalizar para inserir os campos disponíveis; com o e-mail já montado, clique em Ajustar com IA, escreva o que quer mudar (ex.: "deixe o botão verde") e confira o antes e depois: Aplicar troca o e-mail, Descartar mantém como estava, e Desfazer volta logo depois de aplicar; envie teste, salve e abra Revisar envio.
+- gotchas: geração por IA é assíncrona e mostra status `processing/ready/failed`; o botão diz Criar com IA com o editor vazio e Ajustar com IA quando já há conteúdo — desmarcar "Mudar só o que eu pedir" cria um e-mail novo do zero; o ajuste muda só o pedido, nunca o rodapé de descadastro, e não aplica nada sem a pessoa ver a prévia; se a mudança deixaria o e-mail difícil de ler ou não dá para fazer num e-mail, a tela diz o motivo em uma frase; templates ficam em rota própria `campaigns_email_templates`; enviar teste persiste o corpo antes de enviar.
 
 ### gerenciar_destinatarios_agendar_e_enviar_campanha_de_e_mail
 - titulo: Gerenciar destinatários, agendar e enviar campanha de e-mail
