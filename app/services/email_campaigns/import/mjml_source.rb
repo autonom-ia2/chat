@@ -94,7 +94,7 @@ class EmailCampaigns::Import::MjmlSource
     return [] if columns.empty?
 
     background = color(node['background-color'] || wrapper&.[]('background-color'))
-    [EmailCampaigns::Import::Model::Section.new(columns: columns, background: background, background_url: background_url(node['background-url']),
+    [EmailCampaigns::Import::Model::Section.new(columns: columns, background: background, **background_image(node['background-url']),
                                                 padding: EmailCampaigns::Import::StyleMap.padding(node['padding'].to_s))]
   end
 
@@ -110,7 +110,7 @@ class EmailCampaigns::Import::MjmlSource
 
     [EmailCampaigns::Import::Model::Section.new(columns: [EmailCampaigns::Import::Model::Column.new(blocks: blocks)],
                                                 background: color(node['background-color']),
-                                                background_url: background_url(node['background-url']),
+                                                **background_image(node['background-url']),
                                                 padding: EmailCampaigns::Import::StyleMap.padding(node['padding'].to_s))]
   end
 
@@ -191,11 +191,12 @@ class EmailCampaigns::Import::MjmlSource
 
   private
 
-  def background_url(value)
-    return if value.blank?
+  # The section's background image, or the mark of one that could not be used (the check before saving reads it).
+  def background_image(value)
+    return {} if value.blank?
 
     src, kind = @links.image(@tags.attribute(value, link: false))
-    src unless kind == :missing
+    kind == :missing ? { background_missing: true } : { background_url: src }
   end
 
   def attribute_value(name, value)

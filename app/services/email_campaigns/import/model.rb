@@ -7,8 +7,8 @@ module EmailCampaigns::Import::Model
     end
   end
 
-  Section = Data.define(:columns, :background, :background_url, :padding) do
-    def initialize(columns:, background: nil, background_url: nil, padding: nil)
+  Section = Data.define(:columns, :background, :background_url, :padding, :background_missing) do
+    def initialize(columns:, background: nil, background_url: nil, padding: nil, background_missing: false)
       super
     end
   end

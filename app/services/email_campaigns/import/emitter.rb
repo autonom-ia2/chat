@@ -26,7 +26,8 @@ class EmailCampaigns::Import::Emitter
   def section(section)
     url = section.background_url
     attrs = { 'background-color' => section.background, 'background-url' => url, 'background-size' => url && 'cover',
-              'background-repeat' => url && 'no-repeat', 'padding' => section.padding }
+              'background-repeat' => url && 'no-repeat', 'padding' => section.padding,
+              'css-class' => section.background_missing ? EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS : nil }
     ["    <mj-section#{attributes(attrs)}>", *section.columns.map { |column| column(column) }, '    </mj-section>'].join("\n")
   end
 

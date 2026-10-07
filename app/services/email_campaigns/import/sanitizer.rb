@@ -111,10 +111,10 @@ class EmailCampaigns::Import::Sanitizer
     element.remove_attribute('background')
     return if url.blank?
 
-    url = "https:#{EmailCampaigns::Import::Url.compact(url)}" if EmailCampaigns::Import::Url.protocol_relative?(url)
+    url = "https:#{EmailCampaigns::Import::Url.clean(url)}" if EmailCampaigns::Import::Url.protocol_relative?(url)
     return @report.add(:unsafe_css_removed) unless EmailCampaigns::Import::Url.http?(url)
 
-    element['data-import-bg'] = EmailCampaigns::Import::Url.compact(url)
+    element['data-import-bg'] = EmailCampaigns::Import::Url.clean(url)
   end
 
   def style_url(style)

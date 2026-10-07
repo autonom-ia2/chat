@@ -1,16 +1,17 @@
 # What a template import did (#1099), in counts and lists the import screen turns into short sentences. Warning keys are
-# i18n keys (EMAIL_IMPORT.REPORT.<CODE>) with a severity: blocking ones (an unknown field, an image that did not come)
-# stop the saving until solved, the others only inform. Nothing here names the platform a model came from. Dropped
-# texts, links and images keep the reason they left, so the fidelity suite (and the screen) can account for each one.
+# i18n keys (EMAIL_IMPORT.REPORT.<CODE>) with a severity: blocking ones (an unknown field, an image that did not
+# come, a part not converted yet) stop the saving until solved, the others only inform. Nothing here names the platform
+# a model came from. Dropped texts, links and images keep the reason they left, so the fidelity suite (and the screen)
+# can account for each one.
 class EmailCampaigns::Import::Report
   VERSION = 1
   I18N_PREFIX = 'EMAIL_IMPORT.REPORT.'.freeze
   SEVERITIES = {
-    blocking: %i[unknown_fields image_missing],
-    warning: %i[unresolved_parts unsafe_removed unsafe_css_removed hidden_text_removed conditional_simplified tag_simplified
+    blocking: %i[unknown_fields image_missing unresolved_parts],
+    warning: %i[unsafe_removed unsafe_css_removed hidden_text_removed conditional_simplified tag_simplified
                 link_removed redirect_kept embed_removed video_as_image dark_mode_ignored web_font_ignored styles_dropped
                 include_ignored css_limit layout_stacked table_as_text outlook_only quality_pending gmail_clip template_code_removed
-                unsubscribe_link_removed unsubscribe_text_kept],
+                unsubscribe_link_removed unsubscribe_text_kept characters_replaced animation_lost social_icon_default],
     info: %i[images_to_copy images_copied image_compressed tags_converted platform_tags_removed footer_replaced tracking_removed
              preheader_kept link_unwrapped vml_button_recovered hero_converted navbar_converted accordion_converted carousel_converted
              font_replaced quality_fixed]

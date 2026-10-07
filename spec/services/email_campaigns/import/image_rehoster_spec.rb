@@ -134,6 +134,44 @@ RSpec.describe EmailCampaigns::Import::ImageRehoster, :aggregate_failures do
     expect(report.images.last).to include(reason: 'out_of_time')
   end
 
+  it 'copies the custom icons of social links and drops one that does not come, back to the default icon' do
+    bodies['https://cdn.example.com/fb.png'] = png
+    social = '<mj-social><mj-social-element name="facebook" href="https://f.example.com" src="https://cdn.example.com/fb.png">F' \
+             '</mj-social-element><mj-social-element name="instagram" href="https://i.example.com" ' \
+             'src="http://rastreador.example.com/x.png">I</mj-social-element></mj-social>'
+    mjml = "<mjml><mj-body><mj-section><mj-column>#{social}</mj-column></mj-section></mj-body></mjml>"
+
+    out = run(mjml)
+
+    icons = Nokogiri::HTML5.fragment(out).css('mj-social-element')
+    expect(icons.first['src']).to start_with('https://app.exemplo.com.br/rails/active_storage/blobs/redirect/')
+    expect(icons.last['src']).to be_nil
+    expect(out).not_to include('rastreador')
+    expect(report.count(:social_icon_default)).to eq(1)
+    expect(report.count(:image_missing)).to eq(0)
+  end
+
+  it 'marks the section whose background did not come, so the saving stays blocked' do
+    out = run(mjml_with([], background: 'https://cdn.example.com/sumiu.png'))
+
+    section = Nokogiri::HTML5.fragment(out).at_css('mj-section')
+    expect(section['background-url']).to be_nil
+    expect(section['css-class'].to_s.split).to include(EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS)
+    expect(EmailCampaigns::Import::SaveCheck.call(out, import).pluck(:code)).to include(:image_missing)
+  end
+
+  it 'warns when an animated image had to stand still to fit' do
+    bodies['https://cdn.example.com/anima.gif'] = png
+    allow(EmailCampaigns::Import::ImageCompressor).to receive(:call) do |bytes, _content_type|
+      EmailCampaigns::Import::ImageCompressor::Output.new(bytes: bytes, content_type: 'image/png', extension: 'png', compressed: true,
+                                                          animation_lost: true)
+    end
+
+    run(mjml_with(%w[https://cdn.example.com/anima.gif]))
+
+    expect(report.count(:animation_lost)).to eq(1)
+  end
+
   it 'refuses to run without the public address of the installation' do
     bodies['https://cdn.example.com/a.png'] = png
 

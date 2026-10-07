@@ -37,16 +37,17 @@ class EmailCampaigns::Import::LinkPolicy
     return text if KEPT_SCHEMES.include?(scheme)
     return refuse(text, scheme.nil? ? :relative : :unsafe) unless EmailCampaigns::Import::Url::HTTP.include?(scheme)
 
-    strip_tracking(unwrap_redirect(EmailCampaigns::Import::Url.compact(text)))
+    strip_tracking(unwrap_redirect(EmailCampaigns::Import::Url.clean(text)))
   end
 
-  # [src, kind] with kind :remote or :data, or [nil, :missing].
-  def image(value)
+  # [src, kind] with kind :remote or :data, or [nil, :missing], recorded under `missing`: the blocking code by default,
+  # a softer one for an image that has a fallback (the default icon of a social link).
+  def image(value, missing: :image_missing)
     text = absolute(value.to_s.strip)
-    return [EmailCampaigns::Import::Url.compact(text), :remote] if EmailCampaigns::Import::Url.http?(text)
+    return [EmailCampaigns::Import::Url.clean(text), :remote] if EmailCampaigns::Import::Url.http?(text)
     return [text, :data] if raster_data?(text)
 
-    @report.add(:image_missing)
+    @report.add(missing)
     @report.drop_image(text, :missing) if text.present?
     [nil, :missing]
   end
@@ -82,7 +83,7 @@ class EmailCampaigns::Import::LinkPolicy
   end
 
   def absolute(value)
-    return "https:#{EmailCampaigns::Import::Url.compact(value)}" if EmailCampaigns::Import::Url.protocol_relative?(value)
+    return "https:#{EmailCampaigns::Import::Url.clean(value)}" if EmailCampaigns::Import::Url.protocol_relative?(value)
     return value if @base_url.nil? || value.empty? || EmailCampaigns::Import::Url.scheme(value) || value.start_with?('#', '{{')
 
     EmailCampaigns::Import::Url.resolve(value, @base_url) || value

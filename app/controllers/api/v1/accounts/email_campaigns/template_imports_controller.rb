@@ -1,8 +1,8 @@
 # Importar modelo de e-mail (#1099, delivery B): `create` receives the pasted model, the .html/.zip file or the
 # address and queues the import (202); `show` is polled by the screen until it is ready or failed, and takes back a
-# job that died; `save` turns a ready import into a template in "Meus modelos", checked again on the server. Behind the
-# per-account flag email_template_import (404 while it is off) and campaign_manage. Errors are codes the screen
-# explains in one sentence, never the client's markup.
+# job that died, answering what blocks the saving from what the job stored; `save` turns a ready import into a template
+# in "Meus modelos", checked again on the server. Behind the per-account flag email_template_import (404 while it is
+# off) and campaign_manage. Errors are codes the screen explains in one sentence, never the client's markup.
 class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Accounts::EmailCampaigns::BaseController
   FEATURE = 'email_template_import'.freeze
   ERROR_PREFIX = 'email_template_import.'.freeze
@@ -65,7 +65,7 @@ class Api::V1::Accounts::EmailCampaigns::TemplateImportsController < Api::V1::Ac
     import.as_json(only: FIELDS).merge(
       'report' => import.report.presence,
       'result_mjml' => ready ? import.result_mjml : nil,
-      'blocking' => ready ? EmailCampaigns::Import::SaveCheck.call(import.result_mjml, import) : []
+      'blocking' => ready ? import.blocking : []
     )
   end
 

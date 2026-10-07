@@ -3,7 +3,9 @@
 # the archive announces, so a zip bomb stops at the ceiling. Symbolic links, absolute paths and ".." are refused. The
 # page is the shallowest index.html (else the shallowest .html); its images are found by their relative name through a
 # base address on a reserved domain (.invalid never resolves), which the image step reads from the archive instead of
-# the network. Path and name handling with String and URI methods — no regex.
+# the network. A name is UTF-8 when it reads as UTF-8 (macOS writes it decomposed: it is composed again, as the page
+# writes it), else the code page of Windows in Portuguese (850), used by archives without the UTF-8 flag. Path and name
+# handling with String and URI methods — no regex.
 class EmailCampaigns::Import::ZipReader
   BASE_URL = 'https://arquivo-importado.invalid/'.freeze
   MAX_BYTES = 2 * 1024 * 1024
@@ -12,6 +14,7 @@ class EmailCampaigns::Import::ZipReader
   MAX_ENTRIES = 200
   CHUNK = 64 * 1024
   PAGE_EXTENSIONS = %w[.html .htm].freeze
+  LEGACY_NAMES = Encoding::IBM850
   SKIPPED_FOLDERS = %w[__MACOSX].freeze
 
   Result = Data.define(:markup, :base_url, :files)
@@ -24,8 +27,8 @@ class EmailCampaigns::Import::ZipReader
   def self.file_for(files, src)
     return unless src.to_s.start_with?(BASE_URL)
 
-    path = URI.decode_uri_component(URI.parse(src).path.to_s.delete_prefix('/'))
-    files[path]
+    path = URI.decode_uri_component(URI.parse(src).path.to_s.delete_prefix('/')).force_encoding(Encoding::UTF_8)
+    files[path.unicode_normalize(:nfc)] if path.valid_encoding?
   rescue URI::InvalidURIError, ArgumentError
     nil
   end
@@ -41,7 +44,7 @@ class EmailCampaigns::Import::ZipReader
     page = choose_page(files.keys)
     raise EmailCampaigns::Import::Error, :zip_no_html if page.nil?
 
-    Result.new(markup: files.delete(page).force_encoding(Encoding::UTF_8), base_url: base_for(page), files: files)
+    Result.new(markup: files.delete(page), base_url: base_for(page), files: files)
   end
 
   private
@@ -90,7 +93,10 @@ class EmailCampaigns::Import::ZipReader
   end
 
   def name_of(entry)
-    entry.name.to_s.dup.force_encoding(Encoding::UTF_8).scrub('')
+    raw = entry.name.to_s.b
+    utf8 = raw.dup.force_encoding(Encoding::UTF_8)
+    name = utf8.valid_encoding? ? utf8 : raw.force_encoding(LEGACY_NAMES).encode(Encoding::UTF_8, invalid: :replace, undef: :replace, replace: '')
+    name.unicode_normalize(:nfc)
   end
 
   def read(entry)

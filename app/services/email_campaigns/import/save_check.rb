@@ -1,7 +1,11 @@
-# What still stops an imported design from going to "Meus modelos" (#1099, delivery B), recomputed on the server from
-# the MJML itself every time — never taken from the stored report nor from the browser:
-#   - image_missing: an image block that is the "image to swap" placeholder, or any image or section background that is
-#     not one of this import's copies (an address of the internet, of another import, of another account);
+# What still stops an imported design from going to "Meus modelos" (#1099, delivery B), computed on the server from the
+# MJML itself — never taken from the browser. The import job stores it when it finishes (for the screen to follow) and
+# the saving computes it again:
+#   - image_missing: an image block that is the "image to swap" placeholder, a section whose background did not come,
+#     or any address of an image (`src` on any element — image blocks, social icons, defaults in mj-attributes — or a
+#     section background) that is not one of this import's copies (the internet, another import, another account);
+#   - unresolved_parts: a part the converter did not understand, still the placeholder image (until delivery D
+#     rebuilds it, saving it would send a generic picture instead of the part);
 #   - unknown_fields: a field our campaigns cannot fill (QualityGate's placeholder rule);
 #   - invalid: a design that broke the rules the importer guarantees (only editable blocks, explicit close tags, one
 #     locked footer with the only unsubscribe link).
@@ -39,14 +43,23 @@ class EmailCampaigns::Import::SaveCheck
 
   def check_images
     doc = EmailCampaigns::Import::Limits.fragment(@mjml)
-    doc.css('mj-image').each { |node| check_image(node['src'].to_s.strip, node['alt']) }
-    doc.css('[background-url]').each { |node| check_image(node['background-url'].to_s.strip, nil, background: true) }
+    doc.css('[src]').each { |node| check_source(node) }
+    doc.css('[background-url]').each { |node| check_owned(node['background-url'].to_s.strip, nil) }
+    doc.css('[css-class]').each do |node|
+      @problems[:image_missing] << nil if node['css-class'].split.include?(EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS)
+    end
   end
 
-  def check_image(src, alt, background: false)
-    return if !background && src == EmailCampaigns::Import::Placeholders::UNRESOLVED_SRC
-    return @problems[:image_missing] << alt.presence if src == EmailCampaigns::Import::Placeholders::MISSING_SRC
+  def check_source(node)
+    src = node['src'].to_s.strip
+    return check_owned(src, node['alt']) unless node.name == 'mj-image'
+    return @problems[:unresolved_parts] << node['title'].presence if src == EmailCampaigns::Import::Placeholders::UNRESOLVED_SRC
+    return @problems[:image_missing] << node['alt'].presence if src == EmailCampaigns::Import::Placeholders::MISSING_SRC
 
+    check_owned(src, node['alt'])
+  end
+
+  def check_owned(src, alt)
     @problems[:image_missing] << alt.presence unless EmailCampaigns::Import::PublicUrl.owned_blob(src, @import)
   end
 

@@ -38,15 +38,47 @@ RSpec.describe EmailCampaigns::Import::RunJob, :aggregate_failures do
     expect(import.reload.status).to eq('processing')
   end
 
-  it 'turns an unexpected error into the internal code without the message' do
+  it 'turns an unexpected error into the internal code, traceable but without the client content' do
     allow(EmailCampaigns::Import::Engine).to receive(:call).and_raise(RuntimeError, '<script>segredo do cliente</script>')
-    allow(Rails.logger).to receive(:error)
+    logged = []
+    allow(Rails.logger).to receive(:error) { |line| logged << line }
+    tracked = []
+    allow(ChatwootExceptionTracker).to receive(:new).and_wrap_original do |original, error, **options|
+      tracked << [error, options]
+      original.call(error, **options)
+    end
 
     described_class.perform_now(import.id)
 
     expect(import.reload).to have_attributes(status: 'failed', error_code: 'internal')
-    expect(Rails.logger).to have_received(:error).with(satisfy { |line| line.exclude?('segredo') && line.include?('RuntimeError') })
+    error, options = tracked.sole
+    expect(error.message).to eq('RuntimeError')
+    expect(error.backtrace).to be_present
+    expect(options).to eq(account: account)
+    text = logged.map { |line| line.is_a?(Exception) ? [line.message, *line.backtrace].join("\n") : line.to_s }.join("\n")
+    expect(text).not_to include('segredo')
+    expect(text).to include('RuntimeError')
     expect(import.source).not_to be_attached
+  end
+
+  it 'keeps the received input when this worker lost the import to a newer attempt' do
+    allow(EmailCampaigns::Import::Engine).to receive(:call).and_wrap_original do |original, *args, **kwargs|
+      EmailCampaignTemplateImport.where(id: import.id).update_all(attempts: 2, locked_until: 2.minutes.from_now) # rubocop:disable Rails/SkipsModelValidations
+      original.call(*args, **kwargs)
+    end
+
+    described_class.perform_now(import.id)
+
+    expect(import.reload).to have_attributes(status: 'processing', attempts: 2, result_mjml: nil)
+    expect(import.source).to be_attached
+  end
+
+  it 'stores what blocks the saving once, when the import finishes' do
+    import.source.attach(io: StringIO.new('<p>Olá, {{ campo_que_nao_existe }}</p>'), filename: 'modelo.html', content_type: 'text/html')
+
+    described_class.perform_now(import.id)
+
+    expect(import.reload.blocking.pluck('code')).to eq(['unknown_fields'])
   end
 
   it 'stops when the whole job goes past its 90 seconds' do

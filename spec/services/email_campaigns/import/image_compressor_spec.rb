@@ -14,12 +14,27 @@ RSpec.describe EmailCampaigns::Import::ImageCompressor, :aggregate_failures do
     bands.first.bandjoin(bands.drop(1)).cast(:uchar).jpegsave_buffer(Q: 100)
   end
 
-  it 'keeps a small PNG byte for byte' do
-    png = Vips::Image.black(10, 10).pngsave_buffer
+  it 'saves a small image again without its metadata (camera, place), upright, at the same size' do
+    jpeg = Vips::Image.black(10, 20).copy.tap do |image|
+      image.set_type!(GObject::GINT_TYPE, 'orientation', 6)
+      image.set_type!(GObject::GSTR_TYPE, 'exif-ifd0-Make', 'Camera X')
+    end.jpegsave_buffer
 
-    output = described_class.call(png, 'image/png')
+    output = described_class.call(jpeg, 'image/jpeg')
+    saved = Vips::Image.new_from_buffer(output.bytes, '')
 
-    expect(output).to have_attributes(bytes: png, content_type: 'image/png', extension: 'png', compressed: false)
+    expect(output).to have_attributes(content_type: 'image/jpeg', extension: 'jpg', compressed: false, animation_lost: false)
+    expect(saved.get_fields).not_to include('exif-data', 'orientation')
+    expect([saved.width, saved.height]).to eq([20, 10])
+  end
+
+  it 'keeps a small animated GIF byte for byte, and warns when one has to stand still to fit' do
+    frames = Vips::Image.black(10, 20).cast(:uchar)
+    small = frames.copy.tap { |image| image.set_type!(GObject::GINT_TYPE, 'page-height', 10) }.gifsave_buffer
+    expect(described_class.call(small, 'image/gif')).to have_attributes(bytes: small, animation_lost: false)
+
+    wide = Vips::Image.black(1600, 200).copy.tap { |image| image.set_type!(GObject::GINT_TYPE, 'page-height', 100) }.gifsave_buffer
+    expect(described_class.call(wide, 'image/gif')).to have_attributes(animation_lost: true)
   end
 
   it 'brings a wide and heavy photo down to 1200 px and 200 KB' do

@@ -74,7 +74,7 @@ class EmailCampaigns::Import::MjmlBlocks
   def social(node)
     elements = node.xpath('./mj-social-element').filter_map do |element|
       attrs = @source.allowed(element).merge('href' => @source.href(element['href']))
-      icon, kind = element['src'].present? ? @source.links.image(element['src']) : [nil, nil]
+      icon, kind = element['src'].present? ? @source.links.image(element['src'], missing: :social_icon_default) : [nil, nil]
       attrs['src'] = icon if kind && kind != :missing
       "<mj-social-element#{attributes(attrs)}>#{escape(label(element))}</mj-social-element>"
     end

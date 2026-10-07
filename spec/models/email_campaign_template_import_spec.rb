@@ -129,4 +129,12 @@ RSpec.describe EmailCampaignTemplateImport, :aggregate_failures do
       expect(described_class.expired).not_to include(saved)
     end
   end
+
+  it 'goes with its account, taking the copied images along' do
+    import = build_import(status: 'ready')
+    import.images.attach(io: StringIO.new('png'), filename: 'imagem-1.png', content_type: 'image/png')
+
+    expect { perform_enqueued_jobs { account.destroy! } }.to change(ActiveStorage::Blob, :count).by(-1)
+    expect(described_class.where(id: import.id)).to be_empty
+  end
 end

@@ -121,9 +121,16 @@ class EmailCampaigns::Import::QualityFix::Fixes
   end
 
   def file_name(src)
-    base = File.basename(EmailCampaigns::Import::Url.path(src.to_s)).to_s
+    base = readable(File.basename(EmailCampaigns::Import::Url.path(src.to_s)).to_s)
     name = base.include?('.') ? base[0...base.rindex('.')] : base
     name.tr('-_', '  ').split.join(' ').presence || 'Imagem'
+  end
+
+  # A file name as the person wrote it ("minha%20foto" back to "minha foto").
+  def readable(name)
+    URI.decode_uri_component(name).force_encoding(Encoding::UTF_8).scrub('')
+  rescue ArgumentError
+    name
   end
 
   def footer?(node)

@@ -16,22 +16,25 @@ class EmailCampaigns::Import::Engine
   SOURCE_KINDS = %w[paste file url].freeze
   PLACEHOLDERS = (EmailCampaigns::TemplateValidator::DEFAULT_KEYS + EmailCampaigns::Import::MergeTags::Catalog::LIST_FIELDS).freeze
 
-  def self.call(input, source_kind:, base_url: nil, budget: nil)
-    new(input, source_kind, base_url, budget || EmailCampaigns::Import::Budget.new).call
+  def self.call(input, source_kind:, base_url: nil, budget: nil, charset: nil)
+    new(input, source_kind, base_url, budget || EmailCampaigns::Import::Budget.new, charset).call
   end
 
-  def initialize(input, source_kind, base_url, budget)
+  def initialize(input, source_kind, base_url, budget, charset = nil)
     @input = input
     @source_kind = source_kind.to_s
     @base_url = base_url
     @budget = budget
+    @charset = charset
     @report = EmailCampaigns::Import::Report.new(source_kind: @source_kind)
   end
 
   def call
     raise EmailCampaigns::Import::Error, :invalid_source_kind unless SOURCE_KINDS.include?(@source_kind)
 
-    source = EmailCampaigns::Import::Limits.source!(@input)
+    decoded = EmailCampaigns::Import::Limits.source!(@input, charset: @charset)
+    @report.add(:characters_replaced) if decoded.lossy
+    source = decoded.text
     reader = mjml?(source) ? EmailCampaigns::Import::MjmlSource : EmailCampaigns::Import::HtmlSource
     document = EmailCampaigns::Import::FooterCleaner.call(reader.call(source, @report, base_url: @base_url, budget: @budget), @report)
     raise EmailCampaigns::Import::Error, :empty if document.sections.empty?

@@ -44,6 +44,16 @@ RSpec.describe EmailCampaigns::Import::ZipReader, :aggregate_failures do
     expect(described_class.file_for(result.files, 'https://example.com/minha%20foto.jpg')).to be_nil
   end
 
+  it 'reads names in UTF-8 (also decomposed, as macOS writes them) and in the old Windows code page' do
+    legacy = "fotos/promo\x87\xC6o.png".b # "promoção" in the code page of Windows in Portuguese (850), without the UTF-8 flag
+    decomposed = 'fotos/verão.png'.unicode_normalize(:nfd)
+    result = described_class.call(zip('index.html' => html, legacy => 'A', decomposed => 'B'))
+
+    expect(result.files.keys).to contain_exactly('fotos/promoção.png', 'fotos/verão.png')
+    expect(described_class.file_for(result.files, "#{described_class::BASE_URL}fotos/promo%C3%A7%C3%A3o.png")).to eq('A')
+    expect(described_class.file_for(result.files, "#{described_class::BASE_URL}fotos/ver%C3%A3o.png")).to eq('B')
+  end
+
   it 'refuses a zip bomb: more than 10 MB once uncompressed' do
     bomb = zip('index.html' => html, 'zeros.png' => "\0" * (10.megabytes + 1))
 

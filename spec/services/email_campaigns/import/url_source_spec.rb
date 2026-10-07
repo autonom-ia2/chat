@@ -31,6 +31,23 @@ RSpec.describe EmailCampaigns::Import::UrlSource, :aggregate_failures do
     expect(calls.first.last[:allowed_content_type_prefixes]).to eq(['text/html'])
   end
 
+  it 'uses the address the redirects ended at as the base, and keeps the charset the page answered with' do
+    allow(SafeFetch).to receive(:fetch) do |_url, **_options, &block|
+      file = Tempfile.new('url-source-spec', binmode: true)
+      file.write('<p>Ver</p>')
+      file.rewind
+      block.call(SafeFetch::Result.new(tempfile: file, filename: 'x', content_type: 'text/html',
+                                       url: 'https://view.news.example.com/c/42/', charset: 'iso-8859-1'))
+    ensure
+      file&.close!
+    end
+
+    result = described_class.call('https://news.example.com/ver?id=1')
+
+    expect(result.base_url).to eq('https://view.news.example.com/c/42/')
+    expect(result.charset).to eq('iso-8859-1')
+  end
+
   it 'accepts only https addresses with a host' do
     expect(code_of('http://news.example.com/x')).to eq(:url_not_https)
     expect(code_of('ftp://news.example.com/x')).to eq(:url_not_https)

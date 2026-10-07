@@ -16,17 +16,17 @@ module EmailCampaigns::Import::Limits
 
   module_function
 
-  # The input as valid UTF-8 text, or an error when it is too big or blank.
-  def source!(input)
-    text = input.to_s
-    raise EmailCampaigns::Import::Error, :too_large if text.bytesize > MAX_BYTES
+  # The input as UTF-8 text (Charset::Text, whose `lossy` tells that characters could not be read), or an error when it
+  # is too big or blank. `charset` is the encoding the address answered with, when there is one.
+  def source!(input, charset: nil)
+    bytes = input.to_s.b
+    raise EmailCampaigns::Import::Error, :too_large if bytes.bytesize > MAX_BYTES
 
-    text = text.dup.force_encoding(Encoding::UTF_8)
-    text = text.scrub('') unless text.valid_encoding?
-    text = text.delete_prefix(BOM)
+    decoded = EmailCampaigns::Import::Charset.decode(bytes, declared: charset)
+    text = decoded.text.delete_prefix(BOM)
     raise EmailCampaigns::Import::Error, :empty if text.strip.empty?
 
-    text
+    decoded.with(text: text)
   end
 
   # A whole page, parsed within the parser depth and counted against the import's budget.

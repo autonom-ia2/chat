@@ -13,7 +13,9 @@ class SafeFetch::Fetcher
       yield SafeFetch::Result.new(
         tempfile: tempfile,
         filename: options.filename,
-        content_type: normalized_content_type(response['content-type'])
+        content_type: normalized_content_type(response['content-type']),
+        url: response.uri&.to_s || options.url.to_s,
+        charset: charset_of(response['content-type'])
       )
     end
   end
@@ -108,5 +110,11 @@ class SafeFetch::Fetcher
 
   def normalized_content_type(value)
     value.to_s.split(';').first&.strip&.downcase
+  end
+
+  # "text/html; charset=ISO-8859-1" → "iso-8859-1".
+  def charset_of(value)
+    param = value.to_s.split(';').drop(1).map(&:strip).find { |part| part.downcase.start_with?('charset=') }
+    param && param.split('=', 2).last.strip.delete('"\'').downcase.presence
   end
 end

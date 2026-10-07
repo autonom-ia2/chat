@@ -19,6 +19,7 @@ class CreateEmailCampaignTemplateImports < ActiveRecord::Migration[7.2]
       t.string :source_kind, null: false
       t.string :source_url
       t.jsonb :report, null: false, default: {}
+      t.jsonb :blocking, null: false, default: []
       t.text :result_mjml
       t.string :error_code
       t.integer :attempts, null: false, default: 0

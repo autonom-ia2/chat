@@ -167,6 +167,25 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       expect(body['report']['warnings']).to include(hash_including('code' => 'link_removed'))
     end
 
+    it 'finds the images of a .zip whose names have spaces and accents' do
+      page = html.sub('https://cdn.example.com/logo.png', '../img/minha foto.png')
+                 .sub('</td>', '<img src="../img/promoção.png" alt="Promoção" width="200"></td>')
+      files = { 'pasta/modelo.html' => page, 'img/minha foto.png' => png, 'img/promoção.png' => png }
+      create_import(source_kind: 'file', file: upload(zip(files), 'modelo.zip', 'application/zip'))
+
+      body = show(response.parsed_body['id'])
+      expect(body['status']).to eq('ready')
+      expect(body['report']['images'].pluck('status')).to eq(%w[copied copied])
+      expect(body['blocking']).to eq([])
+    end
+
+    it 'keeps the accents of an .html saved in the western encoding' do
+      latin = html.sub('<head>', '<head><meta charset="iso-8859-1">').encode(Encoding::Windows_1252).b
+      create_import(source_kind: 'file', file: upload(latin, 'modelo.html', 'text/html'))
+
+      expect(show(response.parsed_body['id'])['result_mjml']).to include('Chegou a coleção nova')
+    end
+
     it 'refuses a zip bomb' do
       bomb = zip('modelo.html' => html, 'zeros.png' => "\0" * (10.megabytes + 1))
       create_import(source_kind: 'file', file: upload(bomb, 'modelo.zip', 'application/zip'))
@@ -210,13 +229,17 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       expect(show(response.parsed_body['id'])).to include('status' => 'failed', 'error_code' => 'url_unsafe')
     end
 
-    it 'imports the page of the address' do
-      page = EmailCampaigns::Import::UrlSource::Page.new(markup: html, base_url: 'https://news.example.com/ver?id=1')
+    it 'imports the page of the address, in the encoding it answered with, with images relative to where it ended up' do
+      markup = html.sub('https://cdn.example.com/logo.png', 'img/logo.png').encode(Encoding::Windows_1252).b
+      page = EmailCampaigns::Import::UrlSource::Page.new(markup: markup, base_url: 'https://view.news.example.com/c/42/', charset: 'windows-1252')
       allow(EmailCampaigns::Import::UrlSource).to receive(:call).with('https://news.example.com/ver?id=1', deadline: anything).and_return(page)
 
       create_import(source_kind: 'url', url: 'https://news.example.com/ver?id=1')
 
-      expect(show(response.parsed_body['id'])).to include('status' => 'ready', 'source_kind' => 'url')
+      body = show(response.parsed_body['id'])
+      expect(body).to include('status' => 'ready', 'source_kind' => 'url')
+      expect(body['result_mjml']).to include('Chegou a coleção nova')
+      expect(fetched.map(&:first)).to eq(['https://view.news.example.com/c/42/img/logo.png'])
     end
   end
 
@@ -306,6 +329,40 @@ RSpec.describe 'Email template imports', :aggregate_failures, type: :request do
       post "#{path}/#{id}/save", params: { name: 'Adulterado' }, headers: headers
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['blocking'].pluck('code')).to include('image_missing')
+    end
+
+    it 'copies the custom social icons of an MJML model and never saves an outside one' do
+      social = '<mj-social><mj-social-element name="facebook" href="https://f.example.com" src="http://rastreador.example.com/x.png">F' \
+               '</mj-social-element></mj-social>'
+      id = paste("<mjml><mj-body><mj-section><mj-column><mj-text>Oi</mj-text>#{social}</mj-column></mj-section></mj-body></mjml>")
+
+      body = show(id)
+      expect(fetched.map(&:first)).to eq(['https://rastreador.example.com/x.png'])
+      expect(body['result_mjml']).not_to include('rastreador')
+      expect(body['blocking']).to eq([])
+
+      import = EmailCampaignTemplateImport.find(id)
+      icon = Nokogiri::HTML5.fragment(import.result_mjml).at_css('mj-social-element')['src']
+      import.update!(result_mjml: import.result_mjml.sub(icon, 'http://rastreador.example.com/x.png'))
+      post "#{path}/#{id}/save", params: { name: 'Com rastreador' }, headers: headers
+      expect(response.parsed_body['blocking'].pluck('code')).to eq(['image_missing'])
+    end
+
+    it 'blocks the saving while a part the converter did not understand is not rebuilt' do
+      id = paste('<mjml><mj-body><mj-section><mj-column><mj-text>Oi</mj-text><mj-raw><div>Faltam 3 dias</div></mj-raw>' \
+                 '</mj-column></mj-section></mj-body></mjml>')
+
+      expect(show(id)['blocking'].pluck('code')).to eq(['unresolved_parts'])
+      post "#{path}/#{id}/save", params: { name: 'Com trecho' }, headers: headers
+      expect(response.parsed_body['blocking'].pluck('code')).to eq(['unresolved_parts'])
+    end
+
+    it 'answers the progress from what the import stored, without checking the design again' do
+      id = paste
+      allow(EmailCampaigns::Import::SaveCheck).to receive(:call).and_call_original
+
+      expect(show(id)['blocking']).to eq([])
+      expect(EmailCampaigns::Import::SaveCheck).not_to have_received(:call)
     end
 
     it 'asks for a name that is not taken' do

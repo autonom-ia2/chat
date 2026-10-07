@@ -4,6 +4,7 @@
 #
 #  id                         :bigint           not null, primary key
 #  attempts                   :integer          default(0), not null
+#  blocking                   :jsonb            not null
 #  error_code                 :string
 #  expires_at                 :datetime         not null
 #  locked_until               :datetime
@@ -91,8 +92,8 @@ class EmailCampaignTemplateImport < ApplicationRecord
     guarded(token, locked_until: LOCK_SECONDS.seconds.from_now)
   end
 
-  def finish!(token, mjml:, report:)
-    guarded(token, status: 'ready', result_mjml: mjml, report: report, error_code: nil, locked_until: nil)
+  def finish!(token, mjml:, report:, blocking: [])
+    guarded(token, status: 'ready', result_mjml: mjml, report: report, blocking: blocking, error_code: nil, locked_until: nil)
   end
 
   def fail!(token, code, report: nil)

@@ -2665,6 +2665,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_08_000000) do
     t.string "source_kind", null: false
     t.string "source_url"
     t.jsonb "report", default: {}, null: false
+    t.jsonb "blocking", default: [], null: false
     t.text "result_mjml"
     t.string "error_code"
     t.integer "attempts", default: 0, null: false

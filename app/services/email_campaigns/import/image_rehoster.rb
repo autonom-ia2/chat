@@ -4,9 +4,11 @@
 # never falls back to http, and every redirect hop must stay on https (SafeFetch `schemes:`), with a byte ceiling and a
 # total deadline per download inside a global budget of BUDGET_SECONDS and MAX_IMAGES. The type is read from the bytes
 # (Marcel): PNG, JPEG, GIF or WebP; SVG and anything else are refused. ImageCompressor makes it fit, and the copy is
-# served at a permanent public address (PublicUrl). An image that fails becomes the "image to swap" placeholder with a
-# blocking warning (an image block) or leaves the section background (with the same warning). Report entries keep the
-# outcome; data: addresses are shortened and archive images named by their relative path.
+# served at a permanent public address (PublicUrl). The custom icons of social links are copied the same way. An image
+# that fails becomes the "image to swap" placeholder with a blocking warning (an image block), leaves the section
+# background marking the section (MISSING_BACKGROUND_CLASS, same warning, seen by SaveCheck), or leaves a social link
+# with its network's default icon (a warning). Report entries keep the outcome; data: addresses are shortened and archive
+# images named by their relative path.
 class EmailCampaigns::Import::ImageRehoster
   MAX_IMAGES = 40
   BUDGET_SECONDS = 30
@@ -25,7 +27,7 @@ class EmailCampaigns::Import::ImageRehoster
     new(report, import, files, deadline).call(mjml)
   end
 
-  # Every image address of an MJML design (image blocks and section backgrounds), placeholders aside.
+  # Every image address of an MJML design (image blocks, social icons and section backgrounds), placeholders aside.
   def self.sources(mjml)
     found = []
     EmailCampaigns::MjmlCanonicalizer.call(mjml.to_s) do |root, _cut|
@@ -36,7 +38,7 @@ class EmailCampaigns::Import::ImageRehoster
   end
 
   def self.image_nodes(root)
-    root.css('mj-image').select { |node| node['src'].present? }
+    root.css('mj-image, mj-social-element').select { |node| node['src'].present? }
   end
 
   def self.background_nodes(root)
@@ -70,7 +72,7 @@ class EmailCampaigns::Import::ImageRehoster
     raise Failure, 'unsupported_type' unless RASTER_TYPES.include?(type)
 
     output = EmailCampaigns::Import::ImageCompressor.call(bytes, type)
-    { url: upload(output, index), compressed: output.compressed }
+    { url: upload(output, index), compressed: output.compressed, animation_lost: output.animation_lost }
   rescue Failure => e
     { error: e.message }
   rescue EmailCampaigns::Import::ImageCompressor::Unfit
@@ -154,6 +156,8 @@ class EmailCampaigns::Import::ImageRehoster
     @report.add(:images_copied, count: copied) if copied.positive?
     compressed = copies.count { |copy| copy[:compressed] }
     @report.add(:image_compressed, count: compressed) if compressed.positive?
+    stilled = copies.count { |copy| copy[:animation_lost] }
+    @report.add(:animation_lost, count: stilled) if stilled.positive?
   end
 
   def point(mjml, copies)
@@ -167,11 +171,17 @@ class EmailCampaigns::Import::ImageRehoster
   def point_image(node, copy)
     return if copy.nil?
     return node['src'] = copy[:url] if copy[:url]
+    return drop_icon(node) unless node.name == 'mj-image'
 
     node['src'] = EmailCampaigns::Import::Placeholders::MISSING_SRC
-    classes = node['css-class'].to_s.split
-    node['css-class'] = (classes | [EmailCampaigns::Import::Placeholders::MISSING_CLASS]).join(' ')
+    add_class(node, EmailCampaigns::Import::Placeholders::MISSING_CLASS)
     @report.add(:image_missing, item: node['alt'].presence)
+  end
+
+  # A social link keeps working with its network's default icon.
+  def drop_icon(node)
+    node.remove_attribute('src')
+    @report.add(:social_icon_default)
   end
 
   def point_background(node, copy)
@@ -179,6 +189,11 @@ class EmailCampaigns::Import::ImageRehoster
     return node['background-url'] = copy[:url] if copy[:url]
 
     BACKGROUND_ATTRIBUTES.each { |name| node.remove_attribute(name) }
+    add_class(node, EmailCampaigns::Import::Placeholders::MISSING_BACKGROUND_CLASS)
     @report.add(:image_missing)
+  end
+
+  def add_class(node, name)
+    node['css-class'] = (node['css-class'].to_s.split | [name]).join(' ')
   end
 end
