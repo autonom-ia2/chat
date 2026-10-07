@@ -676,6 +676,7 @@
         "SAVE_TEMPLATE_SUCCESS": "Template saved successfully.",
         "SAVE_TEMPLATE_ERROR": "Could not save the template. Please try again.",
         "AI_COMPOSE": "Create with AI",
+        "AI_ADJUST": "Adjust with AI",
         "SUBJECT_LABEL": "Subject",
         "SUBJECT_PLACEHOLDER": "Email subject (the AI fills this in)",
         "PREVIEW_DESKTOP": "Desktop",
@@ -750,7 +751,23 @@
           "OPEN_EDITOR": "Open in editor",
           "FAILED_TITLE": "I couldn't finish the generation",
           "FAILED_BODY": "Something went wrong while generating your email. Try again — or simplify the brief or remove heavy attachments.",
-          "CLOSE": "Close"
+          "CLOSE": "Close",
+          "ADJUST_TITLE": "Adjusting your email",
+          "ADJUST_BODY": "Changing only what you asked. Then you see the before and after, and nothing changes without your OK.",
+          "ADJUST_WORKING": "Adjusting...",
+          "ADJUST_LEAVE_HINT": "Keep working: when you come back to this email, the before and after will be waiting.",
+          "ADJUST_FAILED_TITLE": "I couldn't make this change",
+          "ADJUST_FAILED_BODY": "Something went wrong, so your email stayed as it was; try again, asking in other words.",
+          "PROBLEM": {
+            "CONTRAST": "The change would make the text hard to read, so your email stayed as it was.",
+            "BUTTON_HEIGHT": "The button would be too small to tap, so your email stayed as it was.",
+            "IMAGE_ALT": "An image would be left without a description, so your email stayed as it was.",
+            "PLACEHOLDERS": "The change used a personalization field your list does not have, so your email stayed as it was.",
+            "UNSUBSCRIBE": "The change would touch the unsubscribe footer, which is fixed, so your email stayed as it was.",
+            "UNKNOWN_BLOCK": "I couldn't put the email back together with this change; try asking in other words.",
+            "ADJUST_UNREADABLE": "I couldn't read the email on the screen; save it and try again.",
+            "BASE_MJML_TOO_LARGE": "This email is too big to adjust at once: use \"Improve with AI\" on each block."
+          }
         },
         "TOAST": {
           "READY": "✨ The email for campaign \"{name}\" is ready! Open it in the editor to review.",
@@ -766,15 +783,10 @@
           "SUBTITLE": "Describe the email you need and the AI will draft the subject, preheader and layout.",
           "BRIEF_LABEL": "Briefing",
           "BRIEF_PLACEHOLDER": "E.g.: promotional email about the new auto insurance plan, friendly tone, discount call-to-action",
-          "ADAPT_LABEL": "Adapt the current template",
-          "ADAPT_HINT": "Keep this template's layout and structure; the AI only rewrites the copy and restyles to your brief. Uncheck to generate from scratch.",
           "GENERATE": "Generate",
           "CANCEL": "Cancel",
           "ERROR": "Could not generate the email. Please try again.",
           "NOT_CONFIGURED": "Set up the CRM AI key in Connections to use this feature.",
-          "BASE_TOO_LARGE": "This template is too large to adapt. Uncheck \"Adapt the current template\" to generate from scratch.",
-          "PLACEHOLDERS_LABEL": "Base placeholders",
-          "PLACEHOLDERS_HINT": "The AI can personalize the email with these columns from your recipient list.",
           "ASSETS_LABEL": "Assets",
           "ASSETS_HINT": "Add images, a logo, a PDF or a video so the AI can use them. Tell the AI how each asset should be used.",
           "ADD_IMAGE": "Image / Logo",
@@ -792,7 +804,19 @@
           "ROLE_PRODUCT": "Product",
           "ROLE_BANNER": "Banner",
           "ROLE_TESTIMONIAL": "Testimonial",
-          "ROLE_OTHER": "Other"
+          "ROLE_OTHER": "Other",
+          "ADJUST_TITLE": "Adjust with AI",
+          "ADJUST_SUBTITLE": "Say what to change. The rest of the email stays the same, and you see it before anything changes.",
+          "ADJUST_BRIEF_LABEL": "What do you want to change?",
+          "ADJUST_BRIEF_PLACEHOLDER": "E.g.: change the title, make the button green, remove the questions section",
+          "ADJUST_GENERATE": "Adjust",
+          "ADJUST_ONLY_LABEL": "Change only what I ask",
+          "ADJUST_ONLY_HINT": "The rest of the email stays the same. Untick to create a new email from scratch.",
+          "ADJUST_ONLY_OFF_HINT": "A new email will be created from scratch. Tick again to change only this one.",
+          "ADJUST_ASSETS_LABEL": "Images and files (optional)",
+          "ADJUST_ASSETS_HINT": "Send an image if you want to swap one, and say where it goes.",
+          "ADJUST_TOO_LARGE": "This email is too big to adjust at once: use \"Improve with AI\" on each block, or untick to create one from scratch.",
+          "PERSONALIZE_HINT": "You can personalize it: ask, for example, \"start with the person's name\"."
         },
         "BLOCK_ACTIONS": {
           "TRIGGER": "Improve with AI",
@@ -803,6 +827,20 @@
           "ERROR": "Could not rewrite the text. Please try again.",
           "NOT_CONFIGURED": "Set up the CRM AI key in Connections to use this feature.",
           "HINT": "Click a text or button in the e-mail to improve it with AI."
+        },
+        "ADJUST_PREVIEW": {
+          "TITLE": "Check the change",
+          "SUBTITLE": "Nothing changes in your email until you apply it.",
+          "BEFORE": "Before",
+          "AFTER": "After",
+          "TOGGLE": "Show before or after",
+          "APPLY": "Apply change",
+          "DISCARD": "Discard",
+          "UNDO_HINT": "After applying, you can still undo.",
+          "TOO_LARGE": "This version got too big and Gmail would cut the end of the email, so discard it and ask for a smaller change.",
+          "APPLIED": "Change applied.",
+          "UNDO": "Undo",
+          "DISMISS": "Close"
         }
       },
       "WELCOME": {

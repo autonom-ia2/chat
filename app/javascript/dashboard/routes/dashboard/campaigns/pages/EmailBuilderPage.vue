@@ -3,6 +3,7 @@ import {
   computed,
   nextTick,
   onActivated,
+  onBeforeUnmount,
   onDeactivated,
   onMounted,
   ref,
@@ -25,6 +26,9 @@ import GrapesEditor from 'dashboard/components-next/Campaigns/Pages/CampaignPage
 import AiComposerDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiComposerDialog.vue';
 import AiGeneratingDialog from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiGeneratingDialog.vue';
 import AiBlockActions from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiBlockActions.vue';
+import AiAdjustPreview from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/AiAdjustPreview.vue';
+import { hasEmailContent } from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/canvasContent';
+import EmailCampaignAiAPI from 'dashboard/api/emailCampaignAi';
 import TestSendForm from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/TestSendForm.vue';
 import PlaceholderChips from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/PlaceholderChips.vue';
 import BlocksPanel from 'dashboard/components-next/Campaigns/Pages/CampaignPage/EmailCampaign/builder/BlocksPanel.vue';
@@ -63,6 +67,8 @@ const {
   getMjml,
   getHtml,
   setMjml,
+  compileMjml,
+  contentVersion,
   setDevice,
   selectedComponent,
   isTextSelected,
@@ -78,10 +84,17 @@ const preheaderInput = ref(campaign.value?.preheader || '');
 
 const showAiDialog = ref(false);
 const showGeneratingDialog = ref(false);
-// Current design captured when opening the AI dialog, so the AI can ADAPT a
-// chosen template (preserve structure, rewrite copy) instead of only generating
-// from scratch. Empty when there's no design yet.
-const aiBaseMjml = ref('');
+// "Ajustar com IA" (#1095): with content on the canvas the AI changes only what the person asks, and
+// the result waits in a before/after preview until it is applied or discarded.
+const aiCanAdjust = ref(false);
+const generationMode = ref('create');
+const adjustPreview = ref(null);
+const pendingAdjustment = ref(null);
+const undoMjml = ref('');
+const showUndo = ref(false);
+const canvasHasContent = ref(false);
+const CONTENT_CHECK_MS = 300;
+let contentTimer = null;
 const showTestPopover = ref(false);
 // #1093: the test goes to any typed address (up to 5); the field starts with the user's own.
 const testEmail = computed(() => testSendAddress(currentUser.value));
@@ -259,10 +272,26 @@ const saveTemplate = async () => {
   }
 };
 
+// Any content on the canvas (AI, library, saved models or by hand) turns "Criar com IA" into "Ajustar com
+// IA". Checked a moment after the last change, not on every keystroke.
+const refreshCanvasContent = () => {
+  canvasHasContent.value =
+    isReady.value && !showWelcome.value && hasEmailContent(getMjml());
+};
+watch([isReady, contentVersion, showWelcome], () => {
+  clearTimeout(contentTimer);
+  contentTimer = setTimeout(refreshCanvasContent, CONTENT_CHECK_MS);
+});
+onBeforeUnmount(() => clearTimeout(contentTimer));
+const aiButtonLabel = computed(() =>
+  canvasHasContent.value
+    ? t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_ADJUST')
+    : t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')
+);
+
 const openAiDialog = () => {
-  // Capture the current canvas as the adaptation base when there's a design loaded
-  // (e.g. a template was chosen). Generating with no design yet -> empty (from scratch).
-  aiBaseMjml.value = isReady.value && campaignHasBody.value ? getMjml() : '';
+  showUndo.value = false;
+  aiCanAdjust.value = isReady.value && hasEmailContent(getMjml());
   if (isReady.value) {
     showAiDialog.value = true;
     return;
@@ -271,18 +300,91 @@ const openAiDialog = () => {
 };
 
 // Geração assíncrona: o composer só dispara o job; o popup de geração assume daqui.
-const onGenerationStarted = () => {
+const onGenerationStarted = ({ mode } = {}) => {
+  generationMode.value = mode || 'create';
   showAiDialog.value = false;
   showGeneratingDialog.value = true;
 };
 
-// Concluiu (popup avisou): recarrega a campanha -> o watcher applyCampaignMjml aplica o
-// body_mjml gerado no canvas; sincroniza o assunto.
-const onGenerationReady = async () => {
+const openAdjustPreview = adjustment => {
+  adjustPreview.value = {
+    after: adjustment.mjml,
+    beforeHtml: compileMjml(adjustment.base),
+    afterHtml: compileMjml(adjustment.mjml),
+    summary: adjustment.summary || '',
+  };
+};
+
+// Concluiu (popup avisou). Ajuste: abre o antes/depois. Geração: recarrega a campanha -> o watcher
+// applyCampaignMjml aplica o body_mjml gerado no canvas; sincroniza o assunto.
+const onGenerationReady = async status => {
   showGeneratingDialog.value = false;
+  if (status?.ai_adjustment?.status === 'proposed') {
+    openAdjustPreview(status.ai_adjustment);
+    return;
+  }
   await store.dispatch('emailCampaigns/get');
   if (campaign.value?.subject) subjectInput.value = campaign.value.subject;
 };
+
+// The proposal is used up once the person decides. If this call fails the same proposal is offered
+// again on the next visit, which is harmless; the decision itself already happened on the canvas.
+const forgetAdjustment = async () => {
+  try {
+    await EmailCampaignAiAPI.discardAdjustment(campaignId.value);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[EmailBuilderPage] could not discard the AI adjustment',
+      error
+    );
+  }
+};
+
+const persistBody = async () => {
+  try {
+    await persist();
+  } catch (error) {
+    useAlert(t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.SAVE_ERROR'));
+  }
+};
+
+const applyAdjustment = async () => {
+  const proposal = adjustPreview.value;
+  adjustPreview.value = null;
+  undoMjml.value = getMjml();
+  setMjml(proposal.after);
+  showUndo.value = true;
+  await Promise.all([persistBody(), forgetAdjustment()]);
+};
+
+const discardAdjustment = () => {
+  adjustPreview.value = null;
+  forgetAdjustment();
+};
+
+const undoAdjustment = async () => {
+  showUndo.value = false;
+  setMjml(undoMjml.value);
+  await persistBody();
+};
+
+// Came back after leaving during an adjustment: the proposal waits for the editor to be ready.
+const resumeAdjustment = async () => {
+  try {
+    const { data } = await EmailCampaignAiAPI.status(campaignId.value);
+    if (data.ai_adjustment?.status === 'proposed') {
+      pendingAdjustment.value = data.ai_adjustment;
+    }
+  } catch (error) {
+    // Network hiccup: the proposal stays on the server and is offered on the next visit.
+  }
+};
+watch([isReady, pendingAdjustment], ([ready, adjustment]) => {
+  if (!ready || !adjustment) return;
+  pendingAdjustment.value = null;
+  openAdjustPreview(adjustment);
+});
 
 // Welcome handlers
 const chooseAi = () => {
@@ -369,6 +471,7 @@ onMounted(async () => {
   if (campaign.value?.ai_status === 'processing') {
     showGeneratingDialog.value = true;
   }
+  if (campaign.value?.ai_status === 'ready') resumeAdjustment();
   fetchPlaceholders();
 });
 
@@ -712,9 +815,10 @@ const insertPlaceholder = key => {
         >
           <div v-if="canManage" class="space-y-2 border-b border-n-weak p-4">
             <Button
-              :label="t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')"
+              :label="aiButtonLabel"
               icon="i-lucide-sparkles"
               class="!min-h-11 w-full !rounded-xl"
+              data-test="ai-compose-button"
               @click="showWelcome ? chooseAi() : openAiDialog()"
             />
             <Button
@@ -907,7 +1011,39 @@ const insertPlaceholder = key => {
             @choose-template="openGallery"
             @start-blank="startBlank"
           />
-          <div v-else ref="canvasHost" class="min-h-0 flex-1">
+          <div
+            v-if="showUndo && !showWelcome && !fullView"
+            role="status"
+            class="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-n-weak bg-n-teal-2 px-4 py-1.5 text-sm text-n-teal-12"
+            data-test="ai-adjust-undo"
+          >
+            <span class="flex items-center gap-2">
+              <span class="i-lucide-check size-4 shrink-0" />
+              {{ t('CAMPAIGN.EMAIL_CAMPAIGN.AI.ADJUST_PREVIEW.APPLIED') }}
+            </span>
+            <span class="flex items-center gap-1">
+              <Button
+                :label="t('CAMPAIGN.EMAIL_CAMPAIGN.AI.ADJUST_PREVIEW.UNDO')"
+                icon="i-lucide-undo-2"
+                slate
+                outline
+                class="!min-h-11 !rounded-xl"
+                data-test="ai-adjust-undo-button"
+                @click="undoAdjustment"
+              />
+              <Button
+                :aria-label="
+                  t('CAMPAIGN.EMAIL_CAMPAIGN.AI.ADJUST_PREVIEW.DISMISS')
+                "
+                icon="i-lucide-x"
+                slate
+                ghost
+                class="!size-11"
+                @click="showUndo = false"
+              />
+            </span>
+          </div>
+          <div v-if="!showWelcome" ref="canvasHost" class="min-h-0 flex-1">
             <GrapesEditor
               :mjml="campaign.body_mjml || ''"
               :full-view="fullView"
@@ -978,15 +1114,25 @@ const insertPlaceholder = key => {
       v-if="showAiDialog"
       :campaign-id="campaignId"
       :placeholders="placeholders"
-      :base-mjml="aiBaseMjml"
+      :can-adjust="aiCanAdjust"
+      :read-current-mjml="getMjml"
       @generation-started="onGenerationStarted"
       @close="showAiDialog = false"
     />
     <AiGeneratingDialog
       v-if="showGeneratingDialog"
       :campaign-id="campaignId"
+      :mode="generationMode"
       @ready="onGenerationReady"
       @close="showGeneratingDialog = false"
+    />
+    <AiAdjustPreview
+      v-if="adjustPreview"
+      :before-html="adjustPreview.beforeHtml"
+      :after-html="adjustPreview.afterHtml"
+      :summary="adjustPreview.summary"
+      @apply="applyAdjustment"
+      @discard="discardAdjustment"
     />
   </section>
 </template>

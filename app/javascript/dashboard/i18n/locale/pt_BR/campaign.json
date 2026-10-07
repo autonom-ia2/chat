@@ -694,6 +694,7 @@
         "SAVE_TEMPLATE_SUCCESS": "Modelo salvo com sucesso.",
         "SAVE_TEMPLATE_ERROR": "Não foi possível salvar o modelo. Tente novamente.",
         "AI_COMPOSE": "Criar com IA",
+        "AI_ADJUST": "Ajustar com IA",
         "SUBJECT_LABEL": "Assunto",
         "SUBJECT_PLACEHOLDER": "Assunto do e-mail (a IA preenche)",
         "PREVIEW_DESKTOP": "Computador",
@@ -768,7 +769,23 @@
           "OPEN_EDITOR": "Ver no editor",
           "FAILED_TITLE": "Não consegui terminar a geração",
           "FAILED_BODY": "Algo deu errado ao gerar o seu e-mail. Tente novamente — se preferir, simplifique o briefing ou remova anexos pesados.",
-          "CLOSE": "Fechar"
+          "CLOSE": "Fechar",
+          "ADJUST_TITLE": "Ajustando o seu e-mail",
+          "ADJUST_BODY": "Mudando só o que você pediu. Depois você vê o antes e o depois, e nada muda sem o seu OK.",
+          "ADJUST_WORKING": "Ajustando...",
+          "ADJUST_LEAVE_HINT": "Pode seguir trabalhando: quando voltar a este e-mail, o antes e o depois estarão esperando.",
+          "ADJUST_FAILED_TITLE": "Não consegui fazer essa mudança",
+          "ADJUST_FAILED_BODY": "Algo deu errado, então seu e-mail ficou como estava; tente de novo, pedindo com outras palavras.",
+          "PROBLEM": {
+            "CONTRAST": "A mudança deixaria o texto difícil de ler, então seu e-mail ficou como estava.",
+            "BUTTON_HEIGHT": "O botão ficaria pequeno demais para tocar, então seu e-mail ficou como estava.",
+            "IMAGE_ALT": "Uma imagem ficaria sem descrição, então seu e-mail ficou como estava.",
+            "PLACEHOLDERS": "A mudança usou um campo de personalização que a sua lista não tem, então seu e-mail ficou como estava.",
+            "UNSUBSCRIBE": "A mudança mexeria no rodapé de descadastro, que é fixo, então seu e-mail ficou como estava.",
+            "UNKNOWN_BLOCK": "Não consegui montar o e-mail com essa mudança; tente pedir com outras palavras.",
+            "ADJUST_UNREADABLE": "Não consegui ler o e-mail da tela; salve e tente de novo.",
+            "BASE_MJML_TOO_LARGE": "Este e-mail é grande demais para ajustar de uma vez: use \"Melhorar com IA\" em cada bloco."
+          }
         },
         "TOAST": {
           "READY": "✨ O e-mail da campanha \"{name}\" está pronto! Abra no editor para revisar.",
@@ -784,15 +801,10 @@
           "SUBTITLE": "Descreva o e-mail que você precisa e a IA cria o assunto, o texto de prévia e o layout.",
           "BRIEF_LABEL": "Briefing",
           "BRIEF_PLACEHOLDER": "Ex.: e-mail promocional sobre o novo plano de seguro auto, tom amigável, chamada para desconto",
-          "ADAPT_LABEL": "Adaptar o modelo atual",
-          "ADAPT_HINT": "Mantém o layout e a estrutura deste modelo; a IA só reescreve os textos e ajusta ao seu briefing. Desmarque para gerar do zero.",
           "GENERATE": "Gerar",
           "CANCEL": "Cancelar",
           "ERROR": "Não foi possível gerar o e-mail. Tente novamente.",
           "NOT_CONFIGURED": "Configure a chave de IA do CRM em Conexões para usar este recurso.",
-          "BASE_TOO_LARGE": "Este modelo é grande demais para adaptar. Desmarque \"Adaptar o modelo atual\" para gerar do zero.",
-          "PLACEHOLDERS_LABEL": "Campos de personalização da lista",
-          "PLACEHOLDERS_HINT": "A IA pode personalizar o e-mail com estas colunas da sua lista de contatos.",
           "ASSETS_LABEL": "Recursos",
           "ASSETS_HINT": "Adicione imagens, um logo, um PDF ou um vídeo para a IA usar. Diga como cada recurso deve ser usado.",
           "ADD_IMAGE": "Imagem / Logo",
@@ -810,7 +822,19 @@
           "ROLE_PRODUCT": "Produto",
           "ROLE_BANNER": "Banner",
           "ROLE_TESTIMONIAL": "Depoimento",
-          "ROLE_OTHER": "Outro"
+          "ROLE_OTHER": "Outro",
+          "ADJUST_TITLE": "Ajustar com IA",
+          "ADJUST_SUBTITLE": "Diga o que mudar. O resto do e-mail fica igual, e você vê antes de qualquer mudança.",
+          "ADJUST_BRIEF_LABEL": "O que você quer mudar?",
+          "ADJUST_BRIEF_PLACEHOLDER": "Ex.: troque o título, deixe o botão verde, tire a seção de perguntas",
+          "ADJUST_GENERATE": "Ajustar",
+          "ADJUST_ONLY_LABEL": "Mudar só o que eu pedir",
+          "ADJUST_ONLY_HINT": "O resto do e-mail fica igual. Desmarque para criar um e-mail novo do zero.",
+          "ADJUST_ONLY_OFF_HINT": "Um e-mail novo será criado do zero. Marque de novo para mudar só este.",
+          "ADJUST_ASSETS_LABEL": "Imagens e arquivos (opcional)",
+          "ADJUST_ASSETS_HINT": "Envie uma imagem se quiser trocar alguma, e diga onde ela entra.",
+          "ADJUST_TOO_LARGE": "Este e-mail é grande demais para ajustar de uma vez: use \"Melhorar com IA\" em cada bloco ou desmarque para criar um do zero.",
+          "PERSONALIZE_HINT": "Dá para personalizar: peça, por exemplo, \"comece com o nome da pessoa\"."
         },
         "BLOCK_ACTIONS": {
           "TRIGGER": "Melhorar com IA",
@@ -821,6 +845,20 @@
           "ERROR": "Não foi possível reescrever o texto. Tente novamente.",
           "NOT_CONFIGURED": "Configure a chave de IA do CRM em Conexões para usar este recurso.",
           "HINT": "Clique num texto ou botão do e-mail para melhorar com IA."
+        },
+        "ADJUST_PREVIEW": {
+          "TITLE": "Confira a mudança",
+          "SUBTITLE": "Nada muda no seu e-mail até você aplicar.",
+          "BEFORE": "Antes",
+          "AFTER": "Depois",
+          "TOGGLE": "Mostrar antes ou depois",
+          "APPLY": "Aplicar mudança",
+          "DISCARD": "Descartar",
+          "UNDO_HINT": "Depois de aplicar, ainda dá para desfazer.",
+          "TOO_LARGE": "Esta versão ficou grande demais e o Gmail cortaria o fim do e-mail, então descarte e peça uma mudança menor.",
+          "APPLIED": "Mudança aplicada.",
+          "UNDO": "Desfazer",
+          "DISMISS": "Fechar"
         }
       },
       "WELCOME": {

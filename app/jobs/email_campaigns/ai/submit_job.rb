@@ -9,7 +9,7 @@ module EmailCampaigns
 
       INITIAL_POLL_WAIT = 5.seconds
 
-      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' => }
+      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' => } — com base_mjml é um ajuste (#1095)
       def perform(campaign_id, token, params)
         campaign = EmailCampaign.find_by(id: campaign_id)
         return if campaign.blank? || !active?(campaign, token)
@@ -20,12 +20,14 @@ module EmailCampaigns
         generator = Generator.new(account: campaign.account, brief: params['brief'], placeholders: params['placeholders'],
                                   assets: params['assets'], base_mjml: params['base_mjml'])
         return fail_generation(campaign, token, 'base_mjml_too_large') if generator.base_mjml_too_large?
+        return fail_generation(campaign, token, 'adjust_unreadable') if generator.adjust? && generator.sections.nil?
 
         req = generator.build
+        start_adjustment(campaign, token, generator, req, params) if generator.adjust?
         client = Crm::Ai::ResponsesClient.new(credential: credential)
         result = client.create_background(
           model: Crm::Ai::Config::MODEL_EMAIL, instructions: req[:instructions], input: req[:input],
-          schema: Generator::GENERATE_SCHEMA, reasoning_effort: 'high', tools: Crm::Ai::WebSearch.tools
+          schema: req[:schema], reasoning_effort: 'high', tools: req[:tools]
         )
         # Resposta sem id (provedor devolveu algo malformado): falha rápido em vez de esperar ~10min.
         return fail_generation(campaign, token, 'empty_response') if result[:id].blank?
@@ -47,6 +49,12 @@ module EmailCampaigns
 
       def active?(campaign, token)
         campaign.ai_processing? && campaign.ai_generation_token == token
+      end
+
+      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado.
+      def start_adjustment(campaign, token, generator, req, params)
+        Adjustment.start(campaign, token: token, request: { base: generator.sections.canonical, placeholders: params['placeholders'],
+                                                            instructions: req[:instructions], input: req[:input_text] })
       end
 
       # Só dispara o toast de falha se ESTA geração ainda era a ativa (ganhou o update guardado).

@@ -26,6 +26,8 @@ class EmailCampaigns::QualityGate
   LARGE_TEXT_PX = 24
   BOLD = %w[bold 700 800 900].freeze
   MAX_HTML_BYTES = 102 * 1024
+  # What an AI adjustment of an e-mail can break (#1095). The others are about how a template is built and served.
+  AI_CHECKS = %i[contrast button_height image_alt placeholders unsubscribe html_size].freeze
   # MJML defaults, used when the attribute is absent.
   DEFAULT_FONT_PX = 13
   DEFAULT_TEXT_COLOR = '#000000'.freeze
@@ -46,7 +48,9 @@ class EmailCampaigns::QualityGate
   def initialize(mjml:, html:, compile_errors: [], public_root: Rails.public_path,
                  placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS)
     @mjml = mjml.to_s
-    @html = html.to_s
+    # nil when the MJML is not compiled (the AI jobs: no compiler in the production image); checks that read the
+    # compiled HTML are then skipped.
+    @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path
     @placeholders = placeholders
@@ -62,7 +66,7 @@ class EmailCampaigns::QualityGate
     check_buttons
     check_images
     check_placeholders
-    add(:html_size, "#{@html.bytesize} bytes") if @html.bytesize > MAX_HTML_BYTES
+    add(:html_size, "#{@html.bytesize} bytes") if @html && @html.bytesize > MAX_HTML_BYTES
     @violations
   end
 
@@ -105,6 +109,10 @@ class EmailCampaigns::QualityGate
     unless footers.size == 1 && links.size == 1 && in_footer == 1 && placeholder_uses == 1
       add(:unsubscribe, "#{footers.size} footer-locked, #{links.size} unsubscribe link(s), #{in_footer} in the footer")
     end
+    check_compiled_unsubscribe unless @html.nil?
+  end
+
+  def check_compiled_unsubscribe
     html_links = unsubscribe_links(Nokogiri::HTML5(@html)).size
     add(:unsubscribe, "#{html_links} unsubscribe link(s) in the compiled HTML") unless html_links == 1
   end

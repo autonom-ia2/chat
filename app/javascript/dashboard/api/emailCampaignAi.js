@@ -27,6 +27,11 @@ class EmailCampaignAiAPI extends ApiClient {
   status(campaignId) {
     return axios.get(`${this.url}/campaigns/${campaignId}/status`);
   }
+
+  // "Ajustar com IA" (#1095): the person applied or discarded the proposal shown before/after.
+  discardAdjustment(campaignId) {
+    return axios.delete(`${this.url}/campaigns/${campaignId}/adjustment`);
+  }
 }
 
 export default new EmailCampaignAiAPI();

@@ -546,6 +546,7 @@ Rails.application.routes.draw do
             post 'ai/generate',                to: 'ai#generate'
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
+            delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
             resources :reports, only: [:index, :show] do
               member do

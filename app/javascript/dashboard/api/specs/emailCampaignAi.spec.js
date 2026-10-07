@@ -5,6 +5,7 @@ describe('Email campaign AI API', () => {
   const axiosMock = {
     get: vi.fn(() => Promise.resolve()),
     post: vi.fn(() => Promise.resolve()),
+    delete: vi.fn(() => Promise.resolve()),
   };
 
   beforeEach(() => {
@@ -41,6 +42,14 @@ describe('Email campaign AI API', () => {
     );
     expect(axiosMock.get).toHaveBeenCalledWith(
       '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/status'
+    );
+  });
+
+  it('discards the AI adjustment of a campaign (#1095)', () => {
+    EmailCampaignAiAPI.discardAdjustment(7);
+
+    expect(axiosMock.delete).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment'
     );
   });
 

@@ -124,4 +124,9 @@ RSpec.describe EmailCampaigns::QualityGate, :aggregate_failures do
     expect(footers.first).to include('footer-locked', '{{ unsubscribe_url }}')
     expect(described_class.locked_footers(template(text('', 'Outro')))).to eq(footers)
   end
+
+  it 'checks only the MJML when there is no compiled HTML (AI adjustment in production, #1095)' do
+    expect(checks(template(text), html: nil)).to be_empty
+    expect(checks(template(text, ''), html: nil)).to eq([:unsubscribe])
+  end
 end
