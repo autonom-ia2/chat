@@ -70,6 +70,15 @@ module Waha
       get("/api/sessions/#{session}/capping")
     end
 
+    # "digitando…" antes do envio (WhatsApp Híbrido, chat#1067).
+    def start_typing(session:, chat_id:)
+      post('/api/startTyping', { session: session, chatId: chat_id })
+    end
+
+    def stop_typing(session:, chat_id:)
+      post('/api/stopTyping', { session: session, chatId: chat_id })
+    end
+
     # ---- ENVIO DIRETO (WhatsApp Híbrido, chat#1067) ----
     # O id é gerado antes do envio para a mensagem já ter identidade quando o eco da Meta chegar.
     def new_message_id(session)

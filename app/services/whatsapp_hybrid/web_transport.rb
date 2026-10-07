@@ -38,10 +38,7 @@ class WhatsappHybrid::WebTransport
     chat_id = resolve_chat_id
     return fail!('O número deste contato não tem WhatsApp ativo.') if chat_id.blank?
 
-    physical_id = @client.new_message_id(session)
-    mark_pending!(physical_id)
-    deliver(chat_id, physical_id)
-    log('sent', physical_id)
+    send_now(chat_id)
   rescue Waha::Client::Timeout
     # Sem resposta não sabemos se saiu: nunca reenviar automaticamente.
     fail!('O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.', 'uncertain')
@@ -66,6 +63,14 @@ class WhatsappHybrid::WebTransport
   def session_working?
     session_manager.refresh! if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
     @connection.status == 'connected' && @connection.same_number?
+  end
+
+  def send_now(chat_id)
+    physical_id = @client.new_message_id(session)
+    mark_pending!(physical_id)
+    WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
+    deliver(chat_id, physical_id)
+    log('sent', physical_id)
   end
 
   def deliver(chat_id, physical_id)
