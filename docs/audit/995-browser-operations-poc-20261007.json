@@ -1,0 +1,492 @@
+{
+  "observations": [
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-185335",
+      "script_sha256": "c4d147a6659dbf2d10e320591b2570db3e02c8bceee2178ed1f6b99b99d94d8b",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dom_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "response_read_complete": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "node_count": 80,
+        "unknown_name_nodes": 52,
+        "tester_button_present": false,
+        "search_control_present": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T18:54:30.905Z"
+      },
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Leitura Roles comprovada; amostra DOM truncada em80 não comprova presença/ausência de busca. Nenhuma busca realizada."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-185749",
+      "script_sha256": "2baa02a96cf66a94a6ba052e3f96fec9b781c410306840462aee6f125074909f",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dom_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "candidate_count": 66,
+        "inspected_count": 66,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "flags_scope": "inspected_candidates",
+        "node_count": 66,
+        "unknown_name_nodes": 24,
+        "tester_button_present": true,
+        "search_control_present": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T18:58:44.547Z"
+      },
+      "known_control_enums": [
+        "add_people"
+      ],
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Leitura estrutural sem truncagem identificou Add people; busca e diálogo ainda não executados."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-190506",
+      "script_sha256": "abf0d93af78d1ba3ef434a24ec4bc0b7eb8438311a4bd0681bd44f2e14be3608",
+      "runner_sha256": "ccf3f09de0f26dce264bb068ef98d7ecd345b8236e16ea90c8a5dfcfc7eddf93",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:06:09.232Z"
+      },
+      "dialog_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 2,
+        "inspected_count": 2,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 2,
+        "node_count": 2,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Diálogo aberto e estrutura sanitizada de2botões desconhecidos; não comprova carregamento completo do fluxo nem busca."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-191456",
+      "script_sha256": "09ee2d29aa40a901651828b93d1a426b84c408a7f9a640cb6438b0372278a91b",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "a58bba478233efdc21cd3d8c581271a642212080003fc12bc5d559f83f8c4221",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "failure_code": "dialog_dom_incomplete",
+        "roles_http200_validated": true,
+        "diagnostic_ok": false,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:16:02.910Z"
+      },
+      "blocked_request_count": 3,
+      "blocked_request_metadata_complete": false,
+      "interpretation": "Diálogo não capturado por completo; três consultas bloqueadas com metadados truncados no cap20. Não autorizar consulta nem concluir causa a partir disso. Guardas falharam fechadas e serviço restaurado."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-192004",
+      "script_sha256": "401c50574cecccf867890f24be97fac78b65e7487d3da49b1f2c0b0b0af4beb5",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "a58bba478233efdc21cd3d8c581271a642212080003fc12bc5d559f83f8c4221",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "failure_code": null,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:21:12.065Z"
+      },
+      "dialog_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 8,
+        "inspected_count": 8,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 2,
+        "node_count": 8,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_enum": "cancel",
+            "name": "Cancel"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "dialog_state": {
+        "state_capture_complete": true,
+        "aria_busy": null,
+        "aria_busy_present": false,
+        "progressbar_present": false,
+        "progressbar_count": 0,
+        "input_count": 5,
+        "message_count": 0,
+        "message_unknown_count": 0,
+        "message_truncated": false,
+        "business_settings_mentioned": false,
+        "business_manager_mentioned": false,
+        "business_portfolio_mentioned": false,
+        "permissions_mentioned": true,
+        "instagram_mentioned": true,
+        "messages": []
+      },
+      "blocked_graphql_requests": [
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        },
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        },
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        }
+      ],
+      "interpretation": "Captura corrigida comprovou cinco radios e mençãoInstagram/permissões; não houve busca ou seleção. Consultas bloqueadas sóOverlay conhecida, sem novo contrato necessário para abrir esse diálogo."
+    }
+  ]
+}
