@@ -190,7 +190,7 @@ describe('Autonomia SSO login failure recovery', () => {
     expect(assign).not.toHaveBeenCalled();
   });
 
-  it.each(['autonomia-sso-error', 'autonomia-sso-state'])(
+  it.each(['autonomia-sso-account', 'autonomia-sso-state'])(
     'returns callback error %s to a fresh Auth login without attempting local login',
     authError => {
       const context = buildContext();
@@ -211,6 +211,52 @@ describe('Autonomia SSO login failure recovery', () => {
       expect(context.$router.replace).not.toHaveBeenCalled();
     }
   );
+
+  it('keeps a generic callback failure on the recovery screen without restarting Auth', () => {
+    const context = buildContext();
+    context.ssoAuthToken = '';
+    context.email = '';
+    context.authError = 'autonomia-sso-error';
+
+    Login.mounted.call(context);
+
+    expect(context.ssoLoginFailure).toBe('transient');
+    expect(Login.computed.showSilentSsoLoader.call(context)).toBe(false);
+    expect(context.loginApi.message).toBe('LOGIN.AUTONOMIA.TRANSIENT_ERROR');
+    expect(replace).not.toHaveBeenCalled();
+    expect(login).not.toHaveBeenCalled();
+  });
+
+  it('does not automatically restart Auth when automatic SSO is disabled', () => {
+    const context = buildContext();
+    context.ssoAuthToken = '';
+    context.email = '';
+    context.authError = 'autonomia-sso-account';
+    window.chatwootConfig.autonomiaSsoAutoRedirect = 'false';
+
+    Login.mounted.call(context);
+
+    expect(context.ssoLoginFailure).toBe('authentication');
+    expect(Login.computed.showSilentSsoLoader.call(context)).toBe(false);
+    expect(replace).not.toHaveBeenCalled();
+    expect(login).not.toHaveBeenCalled();
+  });
+
+  it('keeps a cancelled OAuth login on the local form without restarting Auth', () => {
+    const context = buildContext();
+    context.ssoAuthToken = '';
+    context.email = '';
+    context.authError = 'autonomia-sso-cancelled';
+    context.requestIdleCallbackPolyfill = callback => callback();
+
+    Login.mounted.call(context);
+
+    expect(context.ssoLoginFailure).toBeNull();
+    expect(context.$router.replace).toHaveBeenCalled();
+    expect(Login.computed.showSilentSsoLoader.call(context)).toBe(false);
+    expect(replace).not.toHaveBeenCalled();
+    expect(login).not.toHaveBeenCalled();
+  });
 
   it.each(['no-account-found', 'autonomia-sso-disabled'])(
     'does not reactivate the silent loader after removing error %s from the URL',

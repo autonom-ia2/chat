@@ -19,11 +19,25 @@ class Autonomia::AuthController < ApplicationController
   end
 
   def callback
-    return redirect_to login_page_url(error: 'autonomia-sso-error') if params[:error].present?
-
     state = consume_state
+    if params[:error].present?
+      error = params[:error] == 'access_denied' ? 'autonomia-sso-cancelled' : 'autonomia-sso-error'
+      return redirect_to login_page_url(error: error, redirect_to: state&.dig(:return_to))
+    end
     return redirect_to login_page_url(error: 'autonomia-sso-state') if state.blank?
 
+    complete_sign_in(state)
+  rescue CustomExceptions::AutonomiaUntrustedAccount
+    Rails.logger.warn('[Autonomia SSO] Account resolution rejected')
+    redirect_to login_page_url(error: 'autonomia-sso-account', redirect_to: state&.dig(:return_to))
+  rescue StandardError => e
+    Rails.logger.error("[Autonomia SSO] #{e.class}: #{e.message}")
+    redirect_to login_page_url(error: 'autonomia-sso-error', redirect_to: state&.dig(:return_to))
+  end
+
+  private
+
+  def complete_sign_in(state)
     client = Autonomia::Sso::Client.new
     token = client.exchange_code!(
       code: params.require(:code),
@@ -39,12 +53,7 @@ class Autonomia::AuthController < ApplicationController
       sso_auth_token: user.generate_sso_auth_token,
       redirect_to: provisioner.post_login_redirect_path.presence || state[:return_to]
     )
-  rescue StandardError => e
-    Rails.logger.error("[Autonomia SSO] #{e.class}: #{e.message}")
-    redirect_to login_page_url(error: 'autonomia-sso-error')
   end
-
-  private
 
   def authorization_url(state, verifier)
     uri = URI.join(issuer_url, '/login')

@@ -192,7 +192,7 @@ class Autonomia::Sso::Provisioner
   end
 
   def raise_untrusted_account!
-    raise 'Autonomia SSO requires an invitation, provisioned checkout, or confirmed account link.'
+    raise CustomExceptions::AutonomiaUntrustedAccount, 'Autonomia SSO requires an invitation, provisioned checkout, or confirmed account link.'
   end
 
   def registration_checkout_account

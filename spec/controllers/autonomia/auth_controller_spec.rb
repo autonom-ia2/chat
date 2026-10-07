@@ -192,5 +192,104 @@ RSpec.describe 'Autonomia::AuthController', type: :request do
       expect(Autonomia::Sso::Client).not_to have_received(:new)
       expect(response).to redirect_to(%r{/app/login\?error=autonomia-sso-state$})
     end
+
+    context 'when the callback fails with a stored return target' do
+      let(:return_target) { '/app/accounts/1/conversations/42?status=open' }
+      let(:state) do
+        with_modified_env sso_env do
+          get '/auth/autonomia', params: { return_to: return_target }
+        end
+        Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')
+      end
+
+      before do
+        allow(Autonomia::Sso::Client).to receive(:new).and_return(client)
+        allow(client).to receive(:exchange_code!).and_return(token)
+        allow(client).to receive(:fetch_context!).and_return({})
+        allow(Autonomia::Sso::Provisioner).to receive(:new).and_return(provisioner)
+      end
+
+      it 'identifies an account rejection and preserves the validated state destination' do
+        allow(provisioner).to receive(:perform).and_raise(CustomExceptions::AutonomiaUntrustedAccount)
+
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { code: code, state: state, return_to: 'https://evil.example' }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params).to include('error' => 'autonomia-sso-account', 'redirect_to' => return_target)
+        expect(params).not_to have_key('sso_auth_token')
+      end
+
+      it 'keeps an exchange timeout distinct from an account rejection' do
+        allow(client).to receive(:exchange_code!).and_raise(Net::ReadTimeout)
+
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { code: code, state: state }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params).to include('error' => 'autonomia-sso-error', 'redirect_to' => return_target)
+        expect(provisioner).not_to have_received(:perform)
+      end
+
+      it 'keeps an unexpected provisioning failure distinct from an account rejection' do
+        allow(provisioner).to receive(:perform).and_raise(StandardError, 'Synthetic failure')
+
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { code: code, state: state }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params).to include('error' => 'autonomia-sso-error', 'redirect_to' => return_target)
+      end
+
+      it 'marks cancellation without exchanging the code and consumes the state' do
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { error: 'access_denied', state: state }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params).to include('error' => 'autonomia-sso-cancelled', 'redirect_to' => return_target)
+        expect(client).not_to have_received(:exchange_code!)
+
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { code: code, state: state }
+        end
+        expect(response).to redirect_to("#{frontend_url}/app/login?error=autonomia-sso-state")
+      end
+
+      it 'does not treat an unknown provider error as an account rejection' do
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { error: 'temporarily_unavailable', state: state }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params).to include('error' => 'autonomia-sso-error', 'redirect_to' => return_target)
+        expect(client).not_to have_received(:exchange_code!)
+      end
+
+      it 'does not preserve an external destination in the stored state' do
+        with_modified_env sso_env do
+          get '/auth/autonomia', params: { return_to: '//evil.example/steal' }
+          unsafe_state = Rack::Utils.parse_query(URI.parse(response.location).query).fetch('state')
+          get '/auth/autonomia/callback', params: { error: 'access_denied', state: unsafe_state }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params['error']).to eq('autonomia-sso-cancelled')
+        expect(params).not_to have_key('redirect_to')
+      end
+
+      it 'does not trust a return target supplied with an invalid state' do
+        with_modified_env sso_env do
+          get '/auth/autonomia/callback', params: { error: 'access_denied', state: 'invalid-state', return_to: return_target }
+        end
+
+        params = Rack::Utils.parse_query(URI.parse(response.location).query)
+        expect(params['error']).to eq('autonomia-sso-cancelled')
+        expect(params).not_to have_key('redirect_to')
+      end
+    end
   end
 end
