@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_08_000000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2658,6 +2658,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
     t.index ["ses_message_id"], name: "index_email_campaign_recipients_on_ses_message_id"
   end
 
+  create_table "email_campaign_template_imports", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "status", default: "queued", null: false
+    t.string "source_kind", null: false
+    t.string "source_url"
+    t.jsonb "report", default: {}, null: false
+    t.text "result_mjml"
+    t.string "error_code"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "locked_until"
+    t.datetime "expires_at", null: false
+    t.bigint "email_campaign_template_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "created_at"], name: "index_email_template_imports_on_account_and_created"
+    t.index ["account_id"], name: "index_email_template_imports_one_active_per_account", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'processing'::character varying])::text[]))"
+    t.index ["email_campaign_template_id"], name: "index_email_template_imports_on_template"
+    t.index ["expires_at"], name: "index_email_campaign_template_imports_on_expires_at"
+  end
+
   create_table "email_campaign_templates", force: :cascade do |t|
     t.bigint "account_id"
     t.string "name", null: false
@@ -3703,6 +3724,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_07_235900) do
   add_foreign_key "email_campaign_imports", "email_campaigns"
   add_foreign_key "email_campaign_recipients", "contacts", on_delete: :nullify, validate: false
   add_foreign_key "email_campaign_recipients", "email_campaigns"
+  add_foreign_key "email_campaign_template_imports", "accounts", on_delete: :cascade
+  add_foreign_key "email_campaign_template_imports", "email_campaign_templates", on_delete: :nullify
   add_foreign_key "email_campaign_templates", "accounts"
   add_foreign_key "email_campaigns", "accounts"
   add_foreign_key "email_campaigns", "email_sender_identities", column: "sender_identity_id"

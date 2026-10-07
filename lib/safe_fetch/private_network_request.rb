@@ -26,9 +26,10 @@ class SafeFetch::PrivateNetworkRequest
   attr_reader :options
 
   def validate_scheme!(uri)
-    return if SsrfFilter::DEFAULT_SCHEME_WHITELIST.include?(uri.scheme)
+    allowed = options.schemes || SsrfFilter::DEFAULT_SCHEME_WHITELIST
+    return if allowed.include?(uri.scheme)
 
-    raise SsrfFilter::InvalidUriScheme, "URI scheme '#{uri.scheme}' not in whitelist: #{SsrfFilter::DEFAULT_SCHEME_WHITELIST}"
+    raise SsrfFilter::InvalidUriScheme, "URI scheme '#{uri.scheme}' not in whitelist: #{allowed}"
   end
 
   def resolved_addresses(hostname)

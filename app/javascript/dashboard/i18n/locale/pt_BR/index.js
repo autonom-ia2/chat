@@ -15,6 +15,7 @@ import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
 import resultJourney from './resultJourney.json';
 import emailCampaignProtection from './emailCampaignProtection.json';
+import emailTemplateImport from './emailTemplateImport.json';
 import emailCampaignImportRecovery from './emailCampaignImportRecovery.json';
 import cannedMgmt from './cannedMgmt.json';
 import chatlist from './chatlist.json';
@@ -77,6 +78,7 @@ export default {
   ...campaignJourney,
   ...resultJourney,
   ...emailCampaignProtection,
+  ...emailTemplateImport,
   ...emailCampaignImportRecovery,
   ...cannedMgmt,
   ...chatlist,

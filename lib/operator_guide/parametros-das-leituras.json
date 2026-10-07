@@ -1431,6 +1431,10 @@
     "controller": "api/v1/accounts/email_campaigns/sender_identities#show",
     "parametros": []
   },
+  "email_campaigns/template_imports/:id": {
+    "controller": "api/v1/accounts/email_campaigns/template_imports#show",
+    "parametros": []
+  },
   "email_campaigns/templates": {
     "controller": "api/v1/accounts/email_campaigns/templates#index",
     "parametros": [

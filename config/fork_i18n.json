@@ -24,6 +24,9 @@
       "file": "emailCampaignProtection.json"
     },
     {
+      "file": "emailTemplateImport.json"
+    },
+    {
       "file": "financial.json"
     },
     {

@@ -11,8 +11,9 @@ class EmailCampaigns::Import::Report
                 link_removed redirect_kept embed_removed video_as_image dark_mode_ignored web_font_ignored styles_dropped
                 include_ignored css_limit layout_stacked table_as_text outlook_only quality_pending gmail_clip template_code_removed
                 unsubscribe_link_removed unsubscribe_text_kept],
-    info: %i[images_to_copy tags_converted platform_tags_removed footer_replaced tracking_removed preheader_kept link_unwrapped
-             vml_button_recovered hero_converted navbar_converted accordion_converted carousel_converted font_replaced quality_fixed]
+    info: %i[images_to_copy images_copied image_compressed tags_converted platform_tags_removed footer_replaced tracking_removed
+             preheader_kept link_unwrapped vml_button_recovered hero_converted navbar_converted accordion_converted carousel_converted
+             font_replaced quality_fixed]
   }.freeze
   SEVERITY = SEVERITIES.flat_map { |severity, codes| codes.map { |code| [code, severity] } }.to_h.freeze
   MAX_ITEMS = 50
@@ -41,6 +42,11 @@ class EmailCampaigns::Import::Report
     entry = (@warnings[code] ||= { count: 0, items: [] })
     entry[:count] += count
     entry[:items] << item if item && entry[:items].size < MAX_ITEMS && entry[:items].exclude?(item)
+  end
+
+  # Drops a code the import job has settled (the images to copy, once copied).
+  def remove(code)
+    @warnings.delete(code)
   end
 
   def count(code)

@@ -15056,6 +15056,42 @@
     ],
     "sem_corpo": true
   },
+  "POST email_campaigns/template_imports": {
+    "campos": {
+      "content": {},
+      "file": {},
+      "source_kind": {
+        "tipo": "string",
+        "um_de": [
+          "paste",
+          "file",
+          "url"
+        ]
+      },
+      "url": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#create",
+    "modelo": "EmailCampaignTemplateImport",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:29",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:56"
+    ],
+    "sem_corpo": false
+  },
+  "POST email_campaigns/template_imports/:id/save": {
+    "campos": {
+      "name": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/email_campaigns/template_imports#save",
+    "origem": [
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:37",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:60",
+      "app/controllers/api/v1/accounts/email_campaigns/template_imports_controller.rb:52"
+    ],
+    "sem_corpo": false
+  },
   "POST email_campaigns/templates": {
     "campos": {
       "body_html": {

@@ -191,6 +191,12 @@ email_campaign_retry_sweep_job:
   class: 'EmailCampaigns::RetrySweepJob'
   queue: scheduled_jobs
 
+# executed daily; removes e-mail template imports nobody saved within 7 days, with their images (#1099).
+email_campaign_template_import_cleanup_job:
+  cron: '40 3 * * *'
+  class: 'EmailCampaigns::Import::CleanupJob'
+  queue: housekeeping
+
 # executed every 10 minutes; pauses tenants over bounce/complaint limits. Flag checked inside the job.
 email_campaign_guardrail_sweep_job:
   cron: '*/10 * * * *'
