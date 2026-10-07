@@ -11,8 +11,10 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
   TEST_WINDOW = 1.hour
   TEST_KEY_PREFIX = 'crm:meta_ads:whatsapp_report:test'.freeze
   PERMITTED = %w[enabled alert_enabled inbox_id phone].freeze
+  FEATURE = 'meta_ads_hub'.freeze
 
   before_action :ensure_administrator
+  before_action :ensure_feature, only: [:update, :test_send]
   before_action :ensure_connection, only: [:update, :test_send]
 
   def show
@@ -32,7 +34,8 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
     settings.origin!
     return render json: { error: 'rate_limited' }, status: :too_many_requests unless test_allowed?
 
-    Crm::MetaAds::WhatsappReport::Sender.new(connection).send_summary(Crm::MetaAds::WhatsappReport::Digest.new(connection).payload, test: true)
+    digest = Crm::MetaAds::WhatsappReport::Digest.new(connection).payload
+    Crm::MetaAds::WhatsappReport::Sender.new(connection, settings: settings).send_summary(digest, test: true)
     render json: { sent: true, sent_at: Time.current.iso8601 }
   rescue Crm::MetaAds::WhatsappReport::Settings::Error => e
     render_unprocessable(e.code)
@@ -45,6 +48,11 @@ class Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController < Api::V1::Accoun
     return if Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).public_send(action)
 
     render json: { error: 'forbidden' }, status: :forbidden
+  end
+
+  # Os envios agendados só saem com Anúncios da Meta ligado; ligar e testar seguem a mesma regra.
+  def ensure_feature
+    render json: { error: 'feature_disabled' }, status: :forbidden unless Current.account.feature_enabled?(FEATURE)
   end
 
   def ensure_connection

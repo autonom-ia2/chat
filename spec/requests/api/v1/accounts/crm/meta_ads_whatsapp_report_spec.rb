@@ -19,6 +19,7 @@ RSpec.describe 'CRM meta_ads_connection whatsapp_report API', type: :request do
   let(:test_key) { "#{Api::V1::Accounts::Crm::MetaAdsWhatsappReportsController::TEST_KEY_PREFIX}:#{account.id}" }
 
   before do
+    account.enable_features!('meta_ads_hub')
     allow(Waha::Config).to receive(:enabled?).and_return(true)
     allow(Waha::Client).to receive(:new).and_return(waha)
     allow(waha).to receive(:get_session).with('vendas').and_return({ 'status' => 'WORKING', 'me' => { 'id' => '5511999990000@c.us' } })
@@ -88,6 +89,17 @@ RSpec.describe 'CRM meta_ads_connection whatsapp_report API', type: :request do
 
       patch path, params: { whatsapp_report: { enabled: false, alert_enabled: false } }, headers: auth_headers(admin), as: :json
       expect(response).to have_http_status(:ok)
+    end
+
+    it 'sem Anúncios da Meta ligado na conta, não grava nem testa' do
+      account.disable_features!('meta_ads_hub')
+
+      patch path, params: { whatsapp_report: { enabled: false } }, headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body).to eq('error' => 'feature_disabled')
+
+      post "#{path}/test", headers: auth_headers(admin), as: :json
+      expect(response).to have_http_status(:forbidden)
     end
 
     it 'agente não grava' do

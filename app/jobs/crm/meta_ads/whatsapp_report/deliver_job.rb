@@ -42,7 +42,9 @@ class Crm::MetaAds::WhatsappReport::DeliverJob < ApplicationJob
     digest = Crm::MetaAds::WhatsappReport::Digest.new(connection, with_ai: true)
     return settings(connection).record_error!(NOTHING_TO_REPORT) if digest.nothing_to_report?
 
-    deliver(connection, 'summary') { |sender| sender.send_summary(digest.payload) }
+    # Números e texto da IA antes da chave do dia: um erro aqui sobe sem a chave, e o novo tentar do Sidekiq refaz.
+    payload = digest.payload
+    deliver(connection, 'summary') { |sender| sender.send_summary(payload) }
   end
 
   def deliver_alert(connection)

@@ -144,6 +144,17 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Sender do
       expect_code('send_failed') { sender.send_alert(alert) }
       expect(request).to have_been_made.once
     end
+
+    it 'conexão que cai no meio do envio pode ter mandado: send_uncertain; recusa antes de conectar é send_failed' do
+      configure(cloud_inbox)
+      [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError].each do |error|
+        stub_request(:post, ->(uri) { uri.path.end_with?('/messages') }).to_raise(error)
+        expect_code('send_uncertain') { sender.send_summary(digest) }
+      end
+
+      stub_request(:post, ->(uri) { uri.path.end_with?('/messages') }).to_raise(Errno::ECONNREFUSED)
+      expect_code('send_failed') { sender.send_summary(digest) }
+    end
   end
 
   def cloud_inbox_approved

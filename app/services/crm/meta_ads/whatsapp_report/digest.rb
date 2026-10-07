@@ -31,9 +31,9 @@ class Crm::MetaAds::WhatsappReport::Digest
     }
   end
 
-  # Ontem sem gasto e sem conversa: não há o que contar.
+  # Ontem sem gasto e sem conversa: não há o que contar. Não monta o `payload`, para não chamar a IA à toa.
   def nothing_to_report?
-    payload[:spend].zero? && payload[:conversations].zero?
+    spend.zero? && cohort.conversation_ads.empty?
   end
 
   private

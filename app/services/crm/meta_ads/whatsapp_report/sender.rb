@@ -11,12 +11,14 @@
 class Crm::MetaAds::WhatsappReport::Sender
   Error = Crm::MetaAds::WhatsappReport::Settings::Error
 
-  # Falhas de rede no Oficial: o pedido não chegou à Meta (nada saiu) ou a resposta não voltou (pode ter saído).
+  # Falhas de rede no Oficial: o pedido não chegou à Meta (nada saiu) ou a conexão caiu no meio (pode ter saído).
   CLOUD_NOT_SENT = [SocketError, Net::OpenTimeout, Errno::ECONNREFUSED, HTTParty::Error].freeze
+  CLOUD_UNCERTAIN = [Net::ReadTimeout, Net::WriteTimeout, Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError].freeze
 
-  def initialize(connection)
+  # `settings`: a do controller, para não montar de novo a lista de origens (cada WAHA é uma consulta).
+  def initialize(connection, settings: nil)
     @connection = connection
-    @settings = Crm::MetaAds::WhatsappReport::Settings.new(connection)
+    @settings = settings || Crm::MetaAds::WhatsappReport::Settings.new(connection)
     @builder = Crm::MetaAds::WhatsappReport::MessageBuilder.new(connection.account)
   end
 
@@ -80,7 +82,7 @@ class Crm::MetaAds::WhatsappReport::Sender
     raise Error, 'send_failed' if message_id.blank?
 
     true
-  rescue Net::ReadTimeout => e
+  rescue *CLOUD_UNCERTAIN => e
     failure!('send_uncertain', e)
   rescue *CLOUD_NOT_SENT => e
     failure!('send_failed', e)

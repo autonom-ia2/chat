@@ -28,6 +28,23 @@ RSpec.describe Crm::MetaAds::WhatsappReport::DeliverJob do
     travel_to(now) { %w[summary alert].each { |kind| Redis::Alfred.delete(described_class.lock_key(connection, kind)) } }
   end
 
+  it 'o resumo leva o texto da IA; erro ao montar sobe sem prender a trava do dia' do
+    travel_to(now) do
+      spend_yesterday
+      answer = { source: 'ai', kind: 'wait', headline: 'Deixe rodar.', body: nil }
+      allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_raise(Redis::CannotConnectError)
+      allow(sender).to receive(:send_summary).and_return(true)
+
+      expect { described_class.perform_now(connection.id, 'summary') }.to raise_error(Redis::CannotConnectError)
+      expect(Redis::Alfred.get(described_class.lock_key(connection, 'summary'))).to be_nil
+
+      allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(answer)
+      described_class.perform_now(connection.id, 'summary')
+
+      expect(sender).to have_received(:send_summary).once.with(hash_including(ai_action: answer))
+    end
+  end
+
   it 'manda o resumo uma vez por dia e grava quando saiu' do
     travel_to(now) do
       spend_yesterday
@@ -59,9 +76,10 @@ RSpec.describe Crm::MetaAds::WhatsappReport::DeliverJob do
     end
   end
 
-  it 'ontem sem gasto nem conversa não envia e registra nothing_to_report' do
+  it 'ontem sem gasto nem conversa não envia, não chama a IA e registra nothing_to_report' do
     travel_to(now) do
       allow(sender).to receive(:send_summary)
+      expect(Crm::MetaAds::Panel::AiAction).not_to receive(:daily)
 
       described_class.perform_now(connection.id, 'summary')
 

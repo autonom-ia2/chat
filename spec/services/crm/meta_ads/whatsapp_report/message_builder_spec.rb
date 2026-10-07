@@ -48,6 +48,17 @@ RSpec.describe Crm::MetaAds::WhatsappReport::MessageBuilder do
     expect(builder.summary_parameters(ai).sole[:parameters].last[:text]).to eq('Retome a proposta parada há mais de 3 dias (R$ 450,00).')
   end
 
+  it 'no pior caso (texto da IA no limite, valores grandes) o corpo do modelo cabe nos 1.024 caracteres da Meta' do
+    builder = described_class.new(create(:account, locale: 'pt_BR'))
+    big = digest.merge(spend: 9_999_999.99, conversations: 99_999, quotes: 99_999, sales: 99_999,
+                       ai_action: { source: 'ai', headline: 'a' * 120, body: 'b' * 400 })
+    values = builder.summary_parameters(big, test: true).sole[:parameters].pluck(:text)
+    body = I18n.t('meta_ads_whatsapp_report.templates.summary', locale: :pt_BR)
+    values.each_with_index { |value, index| body = body.sub("{{#{index + 1}}}", value) }
+
+    expect(body.length).to be <= 1024
+  end
+
   it 'variável do modelo sai numa linha só: nome de anúncio com quebra de linha, tab ou espaços seguidos' do
     builder = described_class.new(create(:account, locale: 'pt_BR'))
     alert = { name: "Promo\noutubro\t\t  2026     final", spend: 35.0, currency: 'BRL' }

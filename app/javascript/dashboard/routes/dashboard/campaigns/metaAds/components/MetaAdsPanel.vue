@@ -162,8 +162,8 @@ const path = computed(() => [
 ]);
 
 const ads = computed(() => panel.value?.ads || []);
-// O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva até a
-// renovação diária trazer o link novo.
+// O link de imagem da Meta vence (o "oe=" da URL); imagem que não abre vira o quadro de reserva. Guarda o link
+// que falhou por anúncio: quando a renovação diária traz um link novo, a imagem volta sem recarregar a página.
 const brokenImages = ref({});
 // Os três números de cada anúncio: o investido numa linha, conversas e vendas lado a lado embaixo (em três
 // colunas o rótulo "Conversas" não cabe no cartão estreito).
@@ -445,13 +445,16 @@ onMounted(() => live.start());
           >
             <div class="flex justify-center bg-n-alpha-1">
               <img
-                v-if="ad.thumbnail_url && !brokenImages[ad.ad_id]"
+                v-if="
+                  ad.thumbnail_url &&
+                  brokenImages[ad.ad_id] !== ad.thumbnail_url
+                "
                 :src="ad.thumbnail_url"
                 :alt="ad.name || ''"
                 loading="lazy"
                 data-panel-ad-image
                 class="block object-contain w-full h-auto max-h-[32rem]"
-                @error="brokenImages[ad.ad_id] = true"
+                @error="brokenImages[ad.ad_id] = ad.thumbnail_url"
               />
               <div
                 v-else
