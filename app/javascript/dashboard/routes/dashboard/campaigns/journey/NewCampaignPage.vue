@@ -4,8 +4,9 @@
 // journey (the e-mail content in the existing editor); Chat ao vivo has its own flow
 // (LiveChatJourneyPage). The draft stays in this browser (campaignDraft.js) so "Criar público" can
 // leave and come back with the new audience selected (J2, J3). `?audience=<id>` opens
-// Passo 1 with it selected (F3).
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+// Passo 1 with it selected (F3). Where the page starts comes from the address (#1093,
+// journeyEntry): with no query and a campaign left unfinished, it asks before resuming.
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
@@ -18,6 +19,7 @@ import JourneyStepper from 'dashboard/components-next/CampaignJourney/JourneySte
 import StepAudience from 'dashboard/components-next/CampaignJourney/StepAudience.vue';
 import StepMessage from 'dashboard/components-next/CampaignJourney/StepMessage.vue';
 import StepReview from 'dashboard/components-next/CampaignJourney/StepReview.vue';
+import DraftResumeChoice from 'dashboard/components-next/CampaignJourney/DraftResumeChoice.vue';
 import EmailCampaignsAPI from 'dashboard/api/emailCampaigns';
 import {
   audiencesAPI,
@@ -33,8 +35,11 @@ import {
   savedAudienceRows,
 } from 'dashboard/components-next/CampaignJourney/audienceChannels';
 import {
+  DRAFT_QUERY,
   clearDraft,
   emptyDraft,
+  hasDraftWork,
+  journeyEntry,
   loadDraft,
   saveDraft,
 } from 'dashboard/components-next/CampaignJourney/campaignDraft';
@@ -83,6 +88,10 @@ const filteredTemplates = useMapGetter('inboxes/getFilteredWhatsAppTemplates');
 const currentUser = useMapGetter('getCurrentUser');
 
 const draft = ref(emptyDraft());
+// A draft left unfinished, shown as a question before the journey (#1093).
+const pendingDraft = ref(null);
+// Kept-alive page: only the visible one may change the address.
+let isActive = false;
 const listedImports = ref([]);
 const listMeta = ref({ count: 0, page: 1 });
 const searchQuery = ref('');
@@ -425,7 +434,23 @@ watch(
     loadAudienceDetail();
   }
 );
-watch(draft, value => saveDraft(accountId.value, value), { deep: true });
+// A journey in progress marks the address (?draft=1) so a reload keeps it (#1093).
+const markDraftAddress = () => {
+  if (!isActive || route.query?.[DRAFT_QUERY] === '1') return;
+  router.replace({ query: { [DRAFT_QUERY]: '1' } });
+};
+watch(
+  draft,
+  value => {
+    if (!hasDraftWork(value)) {
+      clearDraft(accountId.value);
+      return;
+    }
+    saveDraft(accountId.value, value);
+    markDraftAddress();
+  },
+  { deep: true }
+);
 
 // ---- Actions ----
 const selectAudience = id => {
@@ -610,19 +635,10 @@ const loadMoreAudiences = async () => {
   }
 };
 
-// Every visit (first mount or back to the kept-alive page) reads the draft and the address.
-useOnEnter(async () => {
-  // Back from Novo público (J3) keeps the draft; "Usar em nova campanha" (F3) starts fresh.
+const startJourney = async initial => {
+  pendingDraft.value = null;
   isLoading.value = true;
-  submitError.value = '';
-  returned.value = route.query.returned === '1';
-  const stored = loadDraft(accountId.value) || emptyDraft();
-  const queryAudience = Number(route.query.audience) || null;
-  const base = route.query.returned === '1' ? stored : emptyDraft();
-  draft.value = queryAudience
-    ? { ...base, audienceId: queryAudience, step: 1 }
-    : stored;
-
+  draft.value = initial;
   searchQuery.value = '';
   audienceDetail.value = null;
   const requests = [loadAudiences(), store.dispatch('inboxes/get')];
@@ -639,6 +655,30 @@ useOnEnter(async () => {
   if (draft.value.step > reachable.value) update({ step: reachable.value });
   loadSample();
   refreshCoverage();
+};
+
+const continuePending = () => startJourney(pendingDraft.value);
+const startNew = () => {
+  clearDraft(accountId.value);
+  startJourney(emptyDraft());
+};
+
+// Every visit (first mount or back to the kept-alive page) reads the address first (#1093).
+useOnEnter(async () => {
+  isActive = true;
+  submitError.value = '';
+  returned.value = route.query.returned === '1';
+  const entry = journeyEntry(route.query, loadDraft(accountId.value));
+  if (entry.pending) {
+    pendingDraft.value = entry.pending;
+    isLoading.value = false;
+    return;
+  }
+  await startJourney(entry.draft);
+});
+
+onDeactivated(() => {
+  isActive = false;
 });
 
 onBeforeUnmount(() => {
@@ -677,6 +717,7 @@ onBeforeUnmount(() => {
           {{ t(`${NS}.TITLE`) }}
         </h1>
         <Button
+          v-if="!pendingDraft"
           :label="t(`${NS}.CANCEL`)"
           variant="outline"
           color="slate"
@@ -686,91 +727,104 @@ onBeforeUnmount(() => {
         />
       </header>
 
-      <JourneyStepper :current="draft.step" :reachable="reachable" @go="goTo" />
-
-      <StepAudience
-        v-if="draft.step === 1"
-        :rows="audienceRows"
-        :selected-id="draft.audienceId"
-        :is-loading="isLoading"
-        :has-load-error="hasLoadError"
-        :returned-name="returned && audience ? audience.name : ''"
-        :show-live-chat="showLiveChat"
-        :search-query="searchQuery"
-        :has-more="hasMoreAudiences"
-        @search="searchAudiences"
-        @load-more="loadMoreAudiences"
-        @select="selectAudience"
-        @create="createAudience"
-        @live-chat="openLiveChat"
-        @continue="goTo(2)"
+      <DraftResumeChoice
+        v-if="pendingDraft"
+        :title="pendingDraft.title"
+        :has-email="Boolean(pendingDraft.emailCampaignId)"
+        @continue="continuePending"
+        @start-new="startNew"
       />
 
-      <StepMessage
-        v-else-if="draft.step === 2 && audience"
-        :audience="audience"
-        :channels="channels"
-        :draft="draft"
-        :inbox-options="inboxOptions"
-        :template-options="templateOptions"
-        :variables="variables"
-        :columns="columns"
-        :coverage="coverage"
-        :media-header="mediaHeader"
-        :preview-text="previewText"
-        :can-continue="isMessageReady"
-        :api-form="{
-          inboxOptions: forms.apiInboxOptions.value,
-          templates: forms.apiTemplates.value,
-          extraColumns: columns,
-          mediaFile: forms.mediaFile.value,
-          preview: forms.preview.value,
-        }"
-        :email-form="{
-          identities: forms.identities.value || [],
-          inboxes: forms.inboxes.value || [],
-          emailCampaign: forms.emailCampaign.value,
-          isCreating: isCreatingEmail,
-        }"
-        :sms-form="{
-          inboxOptions: forms.smsInboxOptions.value,
-          extraColumns: columns,
-          sample,
-          preview: forms.preview.value,
-        }"
-        @attach="file => (forms.mediaFile.value = file)"
-        @email-create="createEmail"
-        @open-editor="openEmailEditor"
-        @email-reload="forms.loadEmailCampaign"
-        @update="update"
-        @bind="bind"
-        @default="setDefault"
-        @change-audience="goTo(1)"
-        @back="goTo(1)"
-        @continue="goTo(3)"
-      />
+      <template v-else>
+        <JourneyStepper
+          :current="draft.step"
+          :reachable="reachable"
+          @go="goTo"
+        />
 
-      <StepReview
-        v-else-if="draft.step === 3 && audience && isMessageReady"
-        :draft="draft"
-        :blocks="reviewBlocks"
-        :channel-label="channelLabel"
-        :on-channel-label="onChannelLabel"
-        :crm-tag="crmTag"
-        :reach="reach"
-        :preview="forms.preview.value"
-        :checks="reviewChecks"
-        :show-test-send="isEmailChannel"
-        :is-test-sending="isTestSending"
-        :time-zone="timeZone"
-        :is-submitting="isSubmitting"
-        :error-message="submitError"
-        @update="update"
-        @go="goTo"
-        @back="goTo(2)"
-        @submit="submit"
-        @test-send="sendTestToMe"
-      />
+        <StepAudience
+          v-if="draft.step === 1"
+          :rows="audienceRows"
+          :selected-id="draft.audienceId"
+          :is-loading="isLoading"
+          :has-load-error="hasLoadError"
+          :returned-name="returned && audience ? audience.name : ''"
+          :show-live-chat="showLiveChat"
+          :search-query="searchQuery"
+          :has-more="hasMoreAudiences"
+          @search="searchAudiences"
+          @load-more="loadMoreAudiences"
+          @select="selectAudience"
+          @create="createAudience"
+          @live-chat="openLiveChat"
+          @continue="goTo(2)"
+        />
+
+        <StepMessage
+          v-else-if="draft.step === 2 && audience"
+          :audience="audience"
+          :channels="channels"
+          :draft="draft"
+          :inbox-options="inboxOptions"
+          :template-options="templateOptions"
+          :variables="variables"
+          :columns="columns"
+          :coverage="coverage"
+          :media-header="mediaHeader"
+          :preview-text="previewText"
+          :can-continue="isMessageReady"
+          :api-form="{
+            inboxOptions: forms.apiInboxOptions.value,
+            templates: forms.apiTemplates.value,
+            extraColumns: columns,
+            mediaFile: forms.mediaFile.value,
+            preview: forms.preview.value,
+          }"
+          :email-form="{
+            identities: forms.identities.value || [],
+            inboxes: forms.inboxes.value || [],
+            emailCampaign: forms.emailCampaign.value,
+            isCreating: isCreatingEmail,
+          }"
+          :sms-form="{
+            inboxOptions: forms.smsInboxOptions.value,
+            extraColumns: columns,
+            sample,
+            preview: forms.preview.value,
+          }"
+          @attach="file => (forms.mediaFile.value = file)"
+          @email-create="createEmail"
+          @open-editor="openEmailEditor"
+          @update="update"
+          @bind="bind"
+          @default="setDefault"
+          @change-audience="goTo(1)"
+          @back="goTo(1)"
+          @continue="goTo(3)"
+        />
+
+        <StepReview
+          v-else-if="draft.step === 3 && audience && isMessageReady"
+          :draft="draft"
+          :blocks="reviewBlocks"
+          :channel-label="channelLabel"
+          :on-channel-label="onChannelLabel"
+          :crm-tag="crmTag"
+          :reach="reach"
+          :preview="forms.preview.value"
+          :checks="reviewChecks"
+          :show-test-send="isEmailChannel"
+          :is-test-sending="isTestSending"
+          :time-zone="timeZone"
+          :is-submitting="isSubmitting"
+          :error-message="submitError"
+          @update="update"
+          @go="goTo"
+          @back="goTo(2)"
+          @submit="submit"
+          @test-send="sendTestToMe"
+        />
+      </template>
     </div>
   </section>
 </template>
