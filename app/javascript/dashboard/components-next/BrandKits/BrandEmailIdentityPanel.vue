@@ -17,7 +17,12 @@ const props = defineProps({
 const emit = defineEmits(['change']);
 
 const NS = 'BRAND_KITS.EMAIL_PANEL';
-const KNOWN_CHECKS = ['contrast', 'button_height', 'image_alt'];
+const KNOWN_CHECKS = [
+  'contrast',
+  'button_height',
+  'image_alt',
+  'subject_variants',
+];
 const { t } = useI18n();
 const router = useRouter();
 

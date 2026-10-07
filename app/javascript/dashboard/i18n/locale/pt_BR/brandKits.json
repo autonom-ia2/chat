@@ -25,6 +25,7 @@
         "CONTRAST": "Algum texto está difícil de ler sobre a cor do fundo.",
         "BUTTON_HEIGHT": "Algum botão está pequeno para tocar no celular.",
         "IMAGE_ALT": "Alguma imagem está sem descrição.",
+        "SUBJECT_VARIANTS": "A IA sugeriu menos de 3 assuntos.",
         "OTHER": "Algum bloco precisa de ajuste."
       }
     },

@@ -25,6 +25,7 @@
         "CONTRAST": "Some text is hard to read on its background color.",
         "BUTTON_HEIGHT": "Some button is too small to tap on a phone.",
         "IMAGE_ALT": "Some image has no description.",
+        "SUBJECT_VARIANTS": "The AI suggested fewer than 3 subjects.",
         "OTHER": "Some block needs a fix."
       }
     },

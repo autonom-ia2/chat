@@ -19,7 +19,7 @@ module EmailCampaigns
             subject: { type: 'string' },
             preheader: { type: 'string' },
             mjml: { type: 'string' },
-            subject_variants: { type: 'array', items: { type: 'string' }, minItems: 3, maxItems: 3 }
+            subject_variants: { type: 'array', items: { type: 'string' } }
           },
           required: %w[subject preheader mjml subject_variants],
           additionalProperties: false

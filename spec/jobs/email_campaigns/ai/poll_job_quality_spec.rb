@@ -76,6 +76,22 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
     expect(campaign.ai_quality_warnings.pluck('check')).to eq(['contrast'])
   end
 
+  it 'keeps 3 subject variants and warns, without failing, when fewer come back' do
+    many = completed(email).merge(text: { subject: 'Oi', preheader: 'P', subject_variants: %w[a b c d e], mjml: email }.to_json)
+    allow(client).to receive(:retrieve).with('resp_1').and_return(many)
+    described_class.perform_now(campaign.id, token, 'resp_1', 0, options)
+    expect(campaign.reload.ai_subject_variants).to eq(%w[a b c])
+
+    other = create(:email_campaign, account: account, sender_identity: campaign.sender_identity)
+    other_token = other.ai_begin!.tap { |value| other.ai_attach_response!(value, 'resp_2') }
+    few = completed(email).merge(text: { subject: 'Oi', preheader: 'P', subject_variants: %w[a a b], mjml: email }.to_json)
+    allow(client).to receive(:retrieve).with('resp_2').and_return(few)
+    described_class.perform_now(other.id, other_token, 'resp_2', 0, options)
+
+    expect(other.reload).to have_attributes(ai_status: 'ready', ai_subject_variants: %w[a b])
+    expect(other.ai_quality_warnings).to eq([{ 'check' => 'subject_variants', 'detail' => '2 of 3' }])
+  end
+
   it 'fails with a clear code when the repaired e-mail still cannot be sent (two footers)' do
     allow(client).to receive(:retrieve).with('resp_1').and_return(completed(email(footers: 2)))
 

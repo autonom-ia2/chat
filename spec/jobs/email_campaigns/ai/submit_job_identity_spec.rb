@@ -23,7 +23,7 @@ RSpec.describe EmailCampaigns::Ai::SubmitJob, :aggregate_failures do
 
     expect(client).to have_received(:create_background) do |**request|
       expect(request[:instructions]).to include('<<<IDENTIDADE', '"name":"Hub2You"')
-      expect(request[:schema][:schema][:properties][:subject_variants]).to include(minItems: 3, maxItems: 3)
+      expect(request[:schema][:schema][:properties][:subject_variants]).to eq(type: 'array', items: { type: 'string' })
     end
   end
 end

@@ -90,11 +90,12 @@ module EmailCampaigns
 
       def succeed(draft, check, result)
         campaign = @run.campaign
+        variants = SubjectVariants.new(draft['subject_variants'])
+        warnings = check.warnings.map { |warning| { 'check' => warning.check.to_s, 'detail' => warning.detail } }
         won = campaign.ai_succeed!(
           @run.token,
-          { subject: draft['subject'], preheader: draft['preheader'], body_mjml: draft['mjml'], subject_variants: draft['subject_variants'] },
-          brand_identity: @options['brand_identity'] || {},
-          quality_warnings: check.warnings.map { |warning| { 'check' => warning.check.to_s, 'detail' => warning.detail } }
+          { subject: draft['subject'], preheader: draft['preheader'], body_mjml: draft['mjml'], subject_variants: variants.variants },
+          brand_identity: @options['brand_identity'] || {}, quality_warnings: [*warnings, variants.warning].compact
         )
         # Telemetria de consumo só na transição idempotente vencedora (evita evento duplicado
         # se dois ticks vissem 'completed'). Os tokens já foram gastos na geração concluída.
