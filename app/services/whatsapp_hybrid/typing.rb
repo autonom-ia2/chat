@@ -15,7 +15,7 @@ class WhatsappHybrid::Typing
   end
 
   def simulate(message)
-    return unless ENV.fetch('WHATSAPP_HYBRID_TYPING', 'true') == 'true'
+    return if ENV.fetch('WHATSAPP_HYBRID_TYPING', 'true').to_s.downcase == 'false'
 
     started = start
     Kernel.sleep(duration_for(message))

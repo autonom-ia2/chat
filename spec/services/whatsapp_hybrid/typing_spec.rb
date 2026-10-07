@@ -35,7 +35,7 @@ describe WhatsappHybrid::Typing do
   it 'can be turned off' do
     allow(client).to receive(:start_typing)
 
-    with_modified_env(WHATSAPP_HYBRID_TYPING: 'false') { typing.simulate(message) }
+    with_modified_env(WHATSAPP_HYBRID_TYPING: 'FALSE') { typing.simulate(message) }
 
     expect(client).not_to have_received(:start_typing)
     expect(Kernel).not_to have_received(:sleep)
