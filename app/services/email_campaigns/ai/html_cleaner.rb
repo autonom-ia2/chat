@@ -1,10 +1,10 @@
 # Cleans the HTML of one MJML ending tag (mj-text, mj-button, mj-raw, mj-title, mj-preview...) or comment for the
 # AI, editor and gallery path (#1104), on the parsed fragment — the browser's own HTML5 parser, so split or nested
 # tags (`<scr<script>ipt>`) never reassemble — with the rules shared with the import (EmailCampaigns::MarkupPolicy):
-# active elements and comments that hide them go with their content, a style sheet that can run code goes, inline
+# active elements go with their content, comments only stay as HtmlComment allows, a style sheet that can run code goes, inline
 # event handlers go, a URL attribute with another scheme becomes `#`, unsafe CSS declarations go and the others stay.
 # A tag name no element can have (`scr<script`) is unwrapped, its text kept. Content that is already safe comes
-# back byte for byte (entities, <br/> and Liquid untouched); only a fragment that lost something is written back
+# back byte for byte (entities, <br/> and Liquid untouched); a fragment that lost something or has a comment is written back
 # from the tree. Nokogiri and string methods — no regex.
 class EmailCampaigns::Ai::HtmlCleaner
   NAME_PUNCTUATION = %w[- _ : .].freeze
@@ -48,20 +48,26 @@ class EmailCampaigns::Ai::HtmlCleaner
   end
 
   def visit(node)
-    return remove(node) if drop?(node)
+    return comment(node) if node.comment?
     return unless node.element?
+    return remove(node) if drop?(node)
 
     walk(node)
     attributes(node)
     unwrap(node) unless element_name?(node.name)
   end
 
-  # A comment hiding active markup (Outlook reads conditional comments), an active element, a style sheet that can run code.
-  def drop?(node)
-    return self.class.call(node.content) != node.content if node.comment?
-    return false unless node.element?
+  # Bogus markup (CDATA, `<?...>`) parses into comments too, and the source bytes cannot tell which: content with any
+  # comment is always written back from the tree, where every comment is a real one, and only those HtmlComment
+  # keeps stay.
+  def comment(node)
+    @changed = true
+    node.remove unless EmailCampaigns::Ai::HtmlComment.keep?(node.content)
+  end
 
-    policy.unsafe_element?(node.name) || (node.name == 'style' && policy.unsafe_stylesheet?(node.content))
+  # An active element, a style sheet that can run code.
+  def drop?(element)
+    policy.unsafe_element?(element.name) || (element.name == 'style' && policy.unsafe_stylesheet?(element.content))
   end
 
   def attributes(element)

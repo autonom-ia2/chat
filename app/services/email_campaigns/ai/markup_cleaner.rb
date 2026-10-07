@@ -4,7 +4,7 @@
 # that would carry unsafe CSS into the compiled HTML goes (text attributes such as alt are text, not CSS). Ending-tag
 # contents and comments go through HtmlCleaner, a style sheet (mj-style) that can run code or leave its <style> is
 # emptied. MJML that is not well-formed is repaired by the lenient parser and cleaned too — never kept unchecked.
-# The result is canonical MJML (MjmlCanonicalizer).
+# CDATA never stays. The result is canonical MJML (MjmlCanonicalizer).
 class EmailCampaigns::Ai::MarkupCleaner
   TEXT_ATTRIBUTES = %w[alt title].freeze
   STYLESHEET_TAG = 'mj-style'.freeze
@@ -38,7 +38,7 @@ class EmailCampaigns::Ai::MarkupCleaner
 
   def walk(node)
     node.children.to_a.each do |child|
-      next child.remove if child.cdata? && EmailCampaigns::Ai::HtmlCleaner.call(child.content) != child.content
+      next child.remove if child.cdata?
       next unless child.element?
       next child.remove if policy.unsafe_element?(child.name)
 

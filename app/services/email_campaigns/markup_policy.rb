@@ -1,7 +1,8 @@
 # What e-mail markup may never carry, shared by the import (#1099, EmailCampaigns::Import::Sanitizer) and by the MJML of
 # the AI, the editor and the gallery (#1104, EmailCampaigns::Ai::MarkupCleaner): active elements (dropped with their
-# content), URL schemes other than http, https, mailto and tel (no scheme is fine: relative addresses, anchors and
-# placeholders such as {{ unsubscribe_url }}), inline event handlers and CSS that can run code or reach outside.
+# content), URL schemes other than http, https, mailto and tel (no scheme is fine: relative addresses and anchors),
+# Liquid in an address that could render another scheme (only {{ unsubscribe_url }} or a value after a fixed safe
+# scheme stays), inline event handlers and CSS that can run code or reach outside.
 # Values are read the way a browser reads them, and then some: entities decoded until nothing changes (so a
 # double-encoded scheme is caught too) and control characters or spaces inside the scheme ignored. Nokogiri and
 # string methods — no regex.
@@ -18,6 +19,12 @@ module EmailCampaigns::MarkupPolicy
                       data codebase cite].freeze
   CSS_URL = 'url('.freeze
   MAX_DECODE = 5
+  # Liquid in an address is rendered at send time, after every check here: a tag ({% %}) can write any scheme; an
+  # output ({{ }}) stays only as a placeholder the platform fills with a safe address, or after a fixed safe scheme.
+  LIQUID_TAG = '{%'.freeze
+  LIQUID_OUTPUT = '{{'.freeze
+  SAFE_URL_PLACEHOLDERS = [EmailCampaigns::LockedFooter::UNSUBSCRIBE_URL].freeze
+  TEMPLATE_URL_PREFIXES = %w[http:// https:// mailto: tel:].freeze
 
   module_function
 
@@ -41,8 +48,21 @@ module EmailCampaigns::MarkupPolicy
   end
 
   def safe_url?(value)
-    scheme = EmailCampaigns::Import::Url.scheme(decoded(value))
+    text = decoded(value)
+    return false unless safe_template_url?(text)
+
+    scheme = EmailCampaigns::Import::Url.scheme(text)
     scheme.nil? || SAFE_SCHEMES.include?(scheme)
+  end
+
+  def safe_template_url?(value)
+    text = decoded(value)
+    return false if text.include?(LIQUID_TAG)
+    return true unless text.include?(LIQUID_OUTPUT)
+    return true if SAFE_URL_PLACEHOLDERS.any? { |placeholder| placeholder.split.join == text.split.join }
+
+    prefix = EmailCampaigns::Import::Url.compact(text[0...text.index(LIQUID_OUTPUT)]).downcase
+    TEMPLATE_URL_PREFIXES.any? { |scheme| prefix.start_with?(scheme) }
   end
 
   # The import's rule: any marker, url() included.

@@ -5,7 +5,8 @@
 # with a destination-like parameter (a share button's ?u=, a login's ?redirect=) is a page of its own and stays as is.
 # Tracking parameters of the source platform leave. Images keep http(s) and raster data: addresses (both listed for
 # copying later); anything else becomes a placeholder to swap. Relative addresses resolve only against the page address
-# of an import by URL. URI, Rack::Utils and string methods — no regex.
+# of an import by URL. Liquid in a link or image address follows the rule shared with the AI path
+# (EmailCampaigns::MarkupPolicy.safe_template_url?, #1104). URI, Rack::Utils and string methods — no regex.
 class EmailCampaigns::Import::LinkPolicy
   REDIRECT_PARAMS = %w[u url redirect redirect_url redirect_uri target dest destination link].freeze
   # Path segments of the click-tracking addresses e-mail platforms wrap links in. A URL's structure, not a person's text.
@@ -30,9 +31,10 @@ class EmailCampaigns::Import::LinkPolicy
   def href(value)
     text = value.to_s.strip
     return text if text.split.join == UNSUBSCRIBE.split.join
-    return refuse(text, :placeholder_link) if text.start_with?('{{')
 
     text = absolute(text)
+    return refuse(text, :placeholder_link) unless EmailCampaigns::MarkupPolicy.safe_template_url?(text)
+
     scheme = EmailCampaigns::Import::Url.scheme(text)
     return text if KEPT_SCHEMES.include?(scheme)
     return refuse(text, scheme.nil? ? :relative : :unsafe) unless EmailCampaigns::Import::Url::HTTP.include?(scheme)
@@ -44,7 +46,7 @@ class EmailCampaigns::Import::LinkPolicy
   # a softer one for an image that has a fallback (the default icon of a social link).
   def image(value, missing: :image_missing)
     text = absolute(value.to_s.strip)
-    return [EmailCampaigns::Import::Url.clean(text), :remote] if EmailCampaigns::Import::Url.http?(text)
+    return [EmailCampaigns::Import::Url.clean(text), :remote] if remote?(text)
     return [text, :data] if raster_data?(text)
 
     @report.add(missing)
@@ -87,6 +89,10 @@ class EmailCampaigns::Import::LinkPolicy
     return value if @base_url.nil? || value.empty? || EmailCampaigns::Import::Url.scheme(value) || value.start_with?('#', '{{')
 
     EmailCampaigns::Import::Url.resolve(value, @base_url) || value
+  end
+
+  def remote?(text)
+    EmailCampaigns::Import::Url.http?(text) && EmailCampaigns::MarkupPolicy.safe_template_url?(text)
   end
 
   def raster_data?(text)

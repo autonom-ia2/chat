@@ -111,8 +111,9 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
     end
 
     it 'keeps safe schemes, relative links, anchors and Liquid placeholders exactly as written' do
-      body = '<mj-image src="https://x.test/a.png?w=1&amp;h=2"></mj-image><mj-button href="{{ link_oferta }}">Ir</mj-button>' \
-             '<mj-text><a href="mailto:oi@loja.test">e-mail</a> <a href="tel:+5511999999999">tel</a> <a href="/p?x=1">rel</a> ' \
+      body = '<mj-image src="https://x.test/a.png?w=1&amp;h=2"></mj-image>' \
+             '<mj-button href="https://loja.test/oferta?c={{ nome }}">Ir</mj-button><mj-text><a href="mailto:{{ email }}">eu</a>' \
+             '<a href="mailto:oi@loja.test">e-mail</a> <a href="tel:+5511999999999">tel</a> <a href="/p?x=1">rel</a> ' \
              '<a href="#topo">topo</a> Olá {{ nome }}, {% if pontos > 10 %}parabéns{% endif %}&nbsp;<br/>' \
              '<span style="color:#111;background-image:url(https://x.test/bg.png)">fim</span></mj-text>'
 
@@ -178,6 +179,48 @@ RSpec.describe EmailCampaigns::Ai::Sanitizer, :aggregate_failures do
 
       expect(out).to include('<mj-text></mj-text>')
       safe!(out)
+    end
+
+    it 'drops CDATA and other bogus markup in ending content, nested or not' do
+      ['a<![CDATA[<script>alert(1)</script>]]>b', '<![CDATA[<![CDATA[<img src=x onerror=alert(1)>]]>]]>',
+       '<![cdata[<svg onload=alert(1)>]]>', '<?x <script>alert(1)</script> ?>', '</ <script>alert(1)</script>>'].each do |payload|
+        text = clean("<mj-text>#{payload}</mj-text>")
+        raw = clean("<mj-raw>#{payload}</mj-raw>")
+
+        [text, raw].each { |out| safe!(out) }
+        expect([text, raw].join.upcase).not_to include('CDATA', '<?')
+      end
+    end
+
+    it 'drops CDATA from the MJML tree' do
+      out = clean('<![CDATA[<script>alert(1)</script>]]><mj-text>Oi</mj-text><![CDATA[x]]>')
+
+      expect(out).to include('<mj-column><mj-text>Oi</mj-text></mj-column>')
+      expect(out).not_to include('CDATA')
+      safe!(out)
+    end
+
+    it 'keeps MSO conditional comments only when what they hide passes the allowlist' do
+      mso = '<!--[if mso]><table role="presentation"><tr><td width="300"><![endif]-->Oi<!--[if mso]></td></tr></table><![endif]-->'
+      revealed = '<!--[if !mso]><!-->web<!--<![endif]-->'
+      out = clean("<mj-raw>#{mso}</mj-raw><mj-text>#{revealed} <!-- nota --></mj-text>" \
+                  '<mj-text>a<!--[if mso]><script>alert(1)</script><![endif]-->b<!--[if mso]><img src=x onerror=alert(1)><![endif]-->c' \
+                  '<!-- <img src=x onerror=alert(1)> -->d<!--[if mso]><a href="javascript:x()">x</a><![endif]-->e</mj-text>')
+
+      expect(out).to include("<mj-raw>#{mso}</mj-raw>", "<mj-text>#{revealed} <!-- nota --></mj-text>", '<mj-text>abcde</mj-text>')
+      safe!(out)
+    end
+
+    it 'neutralizes Liquid in an address unless it is the unsubscribe placeholder or follows a fixed safe scheme' do
+      ['{% if x %}javascript:alert(1){% endif %}', '{{ link }}', '{{link}}', '{{ link }}/x', '/p?x={{ id }}', '&#123;&#123; link }}',
+       'https:{{ x }}', '{%- raw -%}https://x.test{%- endraw -%}'].each do |href|
+        out = clean(%(<mj-button href="#{href}">Ir</mj-button><mj-text><a href="#{href}">a</a></mj-text>))
+
+        expect(out).to include('<mj-button href="#">Ir</mj-button>', '<a href="#">a</a>')
+      end
+
+      kept = clean('<mj-text><a href="{{unsubscribe_url}}">s</a> <a href="https://{{ dominio }}/p">p</a> <a href="tel:{{ fone }}">t</a></mj-text>')
+      expect(kept).to include('<a href="{{unsubscribe_url}}">s</a> <a href="https://{{ dominio }}/p">p</a> <a href="tel:{{ fone }}">t</a>')
     end
 
     it 'repairs and cleans MJML that is not well-formed instead of keeping it as written' do
