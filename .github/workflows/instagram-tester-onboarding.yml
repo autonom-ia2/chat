@@ -125,7 +125,7 @@ jobs:
             tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs \
             tests/instagram_testers/runtime-entrypoint.test.mjs \
             tests/instagram_testers/session-publisher-stdio.test.mjs \
-            tests/instagram_testers/operator-control.test.mjs \
+            tests/instagram_testers/operator-control.test.mjs tests/instagram_testers/operator-waiter.test.mjs \
             tests/instagram_testers/vps-browser-marker.test.mjs \
             tests/instagram_testers/vps-gateway.test.mjs \
             tests/instagram_testers/vps-jwt-interoperability.test.mjs \
@@ -171,7 +171,7 @@ jobs:
           tests/instagram_testers/runtime-publisher.test.mjs tests/instagram_testers/publisher-concurrency.test.mjs
           tests/instagram_testers/runtime-entrypoint.test.mjs
           tests/instagram_testers/session-publisher-stdio.test.mjs
-          tests/instagram_testers/operator-control.test.mjs
+          tests/instagram_testers/operator-control.test.mjs tests/instagram_testers/operator-waiter.test.mjs
           tests/instagram_testers/vps-browser-marker.test.mjs
           tests/instagram_testers/vps-gateway.test.mjs
           tests/instagram_testers/vps-jwt-interoperability.test.mjs
