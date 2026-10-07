@@ -31,7 +31,7 @@ Para busca/status, comprovar primeiro a ação natural e seu contrato; convite d
 
 ## Resultado
 
-Comprovados: leitura Roles, diálogo/papel Instagram tester e transporte de busca HTTP 200 no Chrome. Pendentes: identificação exata do alvo autorizado, integração, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
+Comprovados: leitura Roles, diálogo/papel Instagram tester e transporte de busca HTTP 200 no Chrome. Busca do alvo autorizada comprovada na Hub2You. Pendentes: alvo Autonom.ia, integração, status, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
 
 ## Primeira observação executada — 18:54 UTC
 
@@ -106,3 +106,19 @@ Observer `f40d4fbbbea36ad0a41a9ed6f870fccbdf7e4ab8a6589627f131461aa13f7a9e`, run
 Roles200 completo/canônico validou contexto fresco; AAID numérico do typeahead igual ao Roles, embora não igual a config.appId. Business/admin/a, query única autorizada, corpo exato, tokens e fase UI conferiram. Um POST natural foi permitido e uma resposta HTTP200 JSON completa de28717bytes recebida, com8entradas válidas pelo contrato atual e sem erros. Zero correspondência exata para o alvo autorizado; runner recusou aceite funcional em validate_search. Transporte de busca do Chrome comprovado, identificação do alvo ainda não. Não há evidência para selecionar outro resultado ou enviar convite.
 
 Cleanup/lock/manager restaurados, sete units e limites preservados. Sem convite, seleção de sugestão ou publicação pelo diagnóstico. Próxima investigação somente leitura deve distinguir estrutura/semântica dos campos e ausência real do alvo, emitindo apenas schema/flags/contagens, sem dados de outras contas. Confirmação do @ atual solicitada ao Rodrigo, sem alterar o alvo durante a espera.
+
+## Décima observação — 20:09 UTC, prefixo e schema conferidos
+
+Observer `ef1ba2ac21e5507bfbc587d04067d27d6a5f3b54dfde18b81bea5b6aeb06259f`, runner `490954c922d07b411af79faf485a117403661547d9928831d3298bbdc99593a8`, unit `instagram-autonomia-browser-search-20261007-200815`. Ambos revisados antes da execução. Stack explícita e mapa fechado de alvo/socket; esse mapa não é prova independente de vínculo real da conta. O preflight verifica o backend/conta restrita e a sessão/configuração canônica.
+
+Teste usou a forma `@username` já usada pelo Client Rails, com um preenchimento e um POST natural; prefixo confirmado no input e query. Resposta200 JSON completa de28725bytes,8entradas válidas. Schema contém somente uniqueID/text/subtitle/photo, semcampo username ou campo adicional. Comparações somente em memória emitiram zero match literal, por caixa, normalização ou prefixo em text e demais campos conhecidos. Não é um alias ou diferença de caixa demonstrada; o alvo autorizado não apareceu nesses resultados. Runner manteve a recusa funcional.
+
+Cleanup/manager/7units/limites preservados, sem convite/publicação. Nome atual do alvo permanece aguardando confirmação; não trocar pelo resultado aproximado. O mesmo diagnóstico revisado será aplicado isoladamente à Hub2You, após preflight novo.
+
+## Décima primeira observação — 20:11 UTC, busca Hub2You comprovada
+
+Mesmo observer `ef1ba2ac21e5507bfbc587d04067d27d6a5f3b54dfde18b81bea5b6aeb06259f` e runner `490954c922d07b411af79faf485a117403661547d9928831d3298bbdc99593a8`, com `--stack hub2you` explícito e preflight novo. Unit `instagram-hub2you-browser-search-20261007-200954`; conclusão20:11:14UTC. Fonte permaneceu intacta durante o bloco sequencial aprovado por Nexo.
+
+POST único autorizado recebeuHTTP200, JSON completo24373bytes,2entradas válidas e uma correspondênciaexataúnica do alvoemtext, comIDnumérico válido. Runneraprovou observation_completed. Não selecionar outra conta. Hash somente doID doalvo permanece no reciboprivado; auditoriapública registra apenascontagem1, semvalor.
+
+Nexo confirmou que isso prova a busca no Chrome para aHub2You, não OAuth/token/convite/roleaplicado nemintegraçãoRuby. Cleanup/manager restaurados,7units/limitespreservados. Reader20:12:59 confirmouambosgestoressaúde e sessãorepublicadapósrestauração (não nova contagemderenovação natural). Próximocandidato somenteleitura destatus: manterIDapenasemmemória, fazeruma nova navegaçãoRoles, ignorar resposta inicial, validar novo request/response200full e espelhar apenas o parser puro de status. NenhumClientstatus/callbackRedis/reconcile/convite.
