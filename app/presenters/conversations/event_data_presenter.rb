@@ -3,6 +3,7 @@ class Conversations::EventDataPresenter < SimpleDelegator
     {
       additional_attributes: additional_attributes,
       can_reply: can_reply?,
+      whatsapp_api_reply: whatsapp_api_reply?, # fork chat#1067: aviso no editor
       channel: inbox.try(:channel_type),
       contact_inbox: contact_inbox,
       id: display_id,

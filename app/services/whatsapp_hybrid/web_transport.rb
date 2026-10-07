@@ -2,7 +2,6 @@
 # O id físico é gerado ANTES do envio e gravado no source_id: quando o eco da Meta chegar (2 a 7 s
 # depois, às vezes antes da resposta do WAHA), a conciliação já encontra a mensagem.
 class WhatsappHybrid::WebTransport
-  RATE_WINDOW = 60
   THROTTLE_RETRY = 15.seconds
   CHAT_ID_TTL = 1.day.to_i
   # Estado da sessão mais velho que isto é revalidado no motor antes de enviar.
@@ -12,6 +11,8 @@ class WhatsappHybrid::WebTransport
   MEDIA_ENDPOINTS = { 'image' => 'sendImage', 'audio' => 'sendVoice', 'video' => 'sendVideo' }.freeze
 
   MESSAGE_KEY_TTL = 7.days.to_i
+  CAPPED_ERROR = 'O WhatsApp limitou conversas novas neste número por enquanto. Use um modelo aprovado ' \
+                 'ou tente de novo depois do fim do ciclo (aba WhatsApp API da caixa).'.freeze
 
   # Mensagem enviada pelo WhatsApp API a partir do id físico (para as confirmações de entrega do motor).
   def self.message_for(connection, physical_id)
@@ -32,15 +33,12 @@ class WhatsappHybrid::WebTransport
 
   def perform
     return fail!(DISCONNECTED_ERROR, 'disconnected') unless session_working?
-    return throttle! if over_rate_limit?
+    return throttle! if WhatsappHybrid::RateLimit.new(@connection, @origin).exceeded?
 
     chat_id = resolve_chat_id
     return fail!('O número deste contato não tem WhatsApp ativo.') if chat_id.blank?
 
-    physical_id = @client.new_message_id(session)
-    mark_pending!(physical_id)
-    deliver(chat_id, physical_id)
-    log('sent', physical_id)
+    send_now(chat_id)
   rescue Waha::Client::Timeout
     # Sem resposta não sabemos se saiu: nunca reenviar automaticamente.
     fail!('O WhatsApp API não confirmou o envio. Confira no celular antes de reenviar.', 'uncertain')
@@ -48,7 +46,7 @@ class WhatsappHybrid::WebTransport
     Rails.logger.error("[whatsapp_hybrid] send failed message=#{@message.id}: #{e.message.to_s[0, 200]}")
     # O erro pode ser a sessão caída: atualiza o estado para o roteador parar de escolher o Web.
     session_manager.refresh!
-    fail!('Não foi possível enviar pelo WhatsApp API. Verifique a conexão na aba WhatsApp API da caixa.')
+    fail!(engine_error_text(e))
   end
 
   private
@@ -65,6 +63,14 @@ class WhatsappHybrid::WebTransport
   def session_working?
     session_manager.refresh! if @connection.status_checked_at.nil? || @connection.status_checked_at < STATUS_MAX_AGE.ago
     @connection.status == 'connected' && @connection.same_number?
+  end
+
+  def send_now(chat_id)
+    physical_id = @client.new_message_id(session)
+    mark_pending!(physical_id)
+    WhatsappHybrid::Typing.new(@client, session: session, chat_id: chat_id).simulate(@message)
+    deliver(chat_id, physical_id)
+    log('sent', physical_id)
   end
 
   def deliver(chat_id, physical_id)
@@ -95,11 +101,11 @@ class WhatsappHybrid::WebTransport
     chat_id
   end
 
-  def over_rate_limit?
-    key = "whatsapp_hybrid:rate:#{@connection.id}:#{Time.current.to_i / RATE_WINDOW}"
-    count = ::Redis::Alfred.incr(key)
-    ::Redis::Alfred.expire(key, RATE_WINDOW * 2) if count == 1
-    count > @connection.rate_limit_per_minute
+  # O WhatsApp devolve o erro 475 quando o número atingiu o limite de conversas novas do ciclo.
+  def engine_error_text(error)
+    return CAPPED_ERROR if error.message.to_s.include?('error 475')
+
+    'Não foi possível enviar pelo WhatsApp API. Verifique a conexão na aba WhatsApp API da caixa.'
   end
 
   # Passou do limite por minuto: a mensagem espera a próxima janela em vez de sair em rajada.
@@ -118,6 +124,7 @@ class WhatsappHybrid::WebTransport
   end
 
   def log(outcome, physical_id = nil)
+    WhatsappHybrid::Stats.record(@connection, origin: @origin, outcome: outcome)
     Rails.logger.info(
       "[whatsapp_hybrid] route=web outcome=#{outcome} origin=#{@origin} inbox=#{@connection.inbox_id} " \
       "message=#{@message.id} physical_id=#{physical_id}"

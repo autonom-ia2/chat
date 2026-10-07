@@ -26,6 +26,18 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  it 'passes only the WhatsApp limit fields of the status event' do
+    capped = JSON.parse(body).merge('payload' => { 'status' => 'WORKING', 'data' => { 'messageCapping' => {
+                                      'cappingStatus' => 'CAPPED', 'totalQuota' => 1000, 'usedQuota' => 1000, 'mvStatus' => 'X'
+                                    } } }).to_json
+
+    expect { post_signed(capped, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', capped)) }
+      .to have_enqueued_job(WhatsappHybrid::WebhookEventJob).with(
+        connection.id, 'session.status',
+        hash_including('capping' => { 'cappingStatus' => 'CAPPED', 'totalQuota' => 1000, 'usedQuota' => 1000 })
+      )
+  end
+
   it 'applies a replayed event only once' do
     signature = OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body)
     post_signed(body, signature)
