@@ -52,6 +52,13 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
     render json: { brand_identity: EmailCampaigns::Ai::Adjustment.apply(campaign) }
   end
 
+  # "Desfazer" logo depois de aplicar: volta a identidade de antes (uma vez, na mesma geração). O corpo o editor salva.
+  def undo_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    render json: { brand_identity: EmailCampaigns::Ai::Adjustment.undo(campaign) }
+  end
+
   # Reescrita também roda fora do limite de tempo da requisição web.
   def rewrite
     authorize EmailCampaign, :create?

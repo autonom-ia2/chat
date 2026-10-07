@@ -38,6 +38,7 @@ const api = vi.hoisted(() => ({
   status: vi.fn(),
   discardAdjustment: vi.fn(),
   applyAdjustment: vi.fn(),
+  undoAdjustment: vi.fn(),
 }));
 vi.mock('dashboard/api/emailCampaignAi', () => ({ default: api }));
 vi.mock('dashboard/api/emailCampaignTemplates', () => ({ default: {} }));
@@ -172,10 +173,23 @@ describe('EmailBuilderPage — Ajustar com IA', () => {
       false
     );
 
+    // Desfazer restores the identity on the server before saving the old body (#1111).
+    const savesBeforeUndo = dispatch.mock.calls.length;
+    let savedBeforeIdentity = null;
+    api.undoAdjustment.mockImplementation(async () => {
+      savedBeforeIdentity = dispatch.mock.calls.length > savesBeforeUndo;
+      return { data: { brand_identity: {} } };
+    });
     await wrapper.find('[data-test="ai-adjust-undo-button"]').trigger('click');
     await settle();
 
     expect(editor.api.setMjml).toHaveBeenLastCalledWith(WITH_CONTENT);
+    expect(api.undoAdjustment).toHaveBeenCalledWith(7);
+    expect(savedBeforeIdentity).toBe(false);
+    expect(dispatch).toHaveBeenLastCalledWith(
+      'emailCampaigns/update',
+      expect.objectContaining({ id: 7, body_mjml: WITH_CONTENT })
+    );
     expect(wrapper.find('[data-test="ai-adjust-undo"]').exists()).toBe(false);
   });
 

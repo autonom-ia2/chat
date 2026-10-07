@@ -392,9 +392,21 @@ const discardAdjustment = () => {
   forgetAdjustment();
 };
 
+// Undo restores the body and, when the adjustment changed it (#1111), the identity the campaign had before. The
+// identity goes first so the save answer brings the campaign back with it for the identity panel.
+const restoreIdentity = async () => {
+  try {
+    await EmailCampaignAiAPI.undoAdjustment(campaignId.value);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('[EmailBuilderPage] could not restore the identity', error);
+  }
+};
+
 const undoAdjustment = async () => {
   showUndo.value = false;
   setMjml(undoMjml.value);
+  await restoreIdentity();
   await persistBody();
 };
 

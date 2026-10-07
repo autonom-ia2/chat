@@ -41,6 +41,32 @@ RSpec.describe 'E-mail campaign AI adjustment identity (#1111)', :aggregate_fail
     expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)).to be_nil
   end
 
+  it 'restores the previous identity once when the person undoes right after applying' do
+    propose(site_identity)
+    post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
+
+    post "#{path}/undo", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['brand_identity']).to eq(old_identity)
+    expect(campaign.reload.brand_identity).to eq(old_identity)
+
+    campaign.record_brand_identity!(site_identity)
+    post "#{path}/undo", headers: admin.create_new_auth_token, as: :json
+
+    expect(campaign.reload.brand_identity).to eq(site_identity)
+  end
+
+  it 'does not undo the identity after a newer generation started' do
+    propose(site_identity)
+    post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
+    campaign.ai_begin!
+
+    post "#{path}/undo", headers: admin.create_new_auth_token, as: :json
+
+    expect(campaign.reload.brand_identity).to eq(site_identity)
+  end
+
   it 'writes nothing when the person discards the preview' do
     token = propose(site_identity)
 

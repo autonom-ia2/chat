@@ -47,6 +47,11 @@ class EmailCampaignAiAPI extends ApiClient {
   applyAdjustment(campaignId) {
     return axios.post(`${this.url}/campaigns/${campaignId}/adjustment/apply`);
   }
+
+  // "Desfazer" right after applying: the identity the campaign had before comes back (once). -> { brand_identity }
+  undoAdjustment(campaignId) {
+    return axios.post(`${this.url}/campaigns/${campaignId}/adjustment/undo`);
+  }
 }
 
 export default new EmailCampaignAiAPI();

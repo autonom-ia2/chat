@@ -45,9 +45,31 @@ class EmailCampaigns::Ai::Adjustment
   def self.apply(campaign)
     data = find(campaign, campaign.ai_generation_token)
     identity = data && data['status'] == 'proposed' ? data['brand_identity'].to_h : {}
-    campaign.record_brand_identity!(identity) if identity.dig('site_request', 'status') == 'used'
+    change_identity(campaign, identity) if identity.dig('site_request', 'status') == 'used'
     clear(campaign)
     campaign.brand_identity
+  end
+
+  # "Desfazer" right after applying: the identity the campaign had before comes back, once, while the generation is
+  # still the one that applied it. -> the campaign's brand_identity.
+  def self.undo(campaign)
+    value = Redis::Alfred.get(undo_key(campaign))
+    # The delete is the claim: of two clicks only the one that removed the key restores (single use).
+    data = value.present? && Redis::Alfred.delete(undo_key(campaign)).to_i == 1 ? JSON.parse(value) : nil
+    same_generation = data && data['token'].present? && data['token'] == campaign.ai_generation_token
+    campaign.record_brand_identity!(data['previous'].to_h) if same_generation
+    campaign.brand_identity
+  end
+
+  def self.change_identity(campaign, identity)
+    undo = { 'token' => campaign.ai_generation_token, 'previous' => campaign.brand_identity.to_h }
+    Redis::Alfred.set(undo_key(campaign), undo.to_json, ex: TTL.to_i)
+    campaign.record_brand_identity!(identity)
+  end
+  private_class_method :change_identity
+
+  def self.undo_key(campaign)
+    "#{key(campaign)}:undo"
   end
 
   # Each provider response is handled once, even if Sidekiq delivers the poll twice.

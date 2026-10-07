@@ -555,6 +555,7 @@ Rails.application.routes.draw do
             get  'ai/campaigns/:id/status',    to: 'ai#status'
             delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
             post 'ai/campaigns/:id/adjustment/apply', to: 'ai#apply_adjustment'
+            post 'ai/campaigns/:id/adjustment/undo', to: 'ai#undo_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
             resources :reports, only: [:index, :show] do
               member do
