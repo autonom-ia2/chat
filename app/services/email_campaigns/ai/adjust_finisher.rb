@@ -43,6 +43,8 @@ class EmailCampaigns::Ai::AdjustFinisher
   end
 
   # The model says whether it dressed the e-mail in the chosen identity (#1126); then the footer line follows it.
+  # Only a literal `true` counts: an answer without the field (an adjustment already in flight when #1126 was
+  # deployed, asked with the old schema) is "not applied" — the footer and the campaign identity stay as they were.
   def check(sections, answer, text)
     applied = answer['identity_applied'] == true
     footer = applied ? @adjustment['footer'] : nil

@@ -210,6 +210,20 @@ RSpec.describe EmailCampaigns::Ai::PollJob, :aggregate_failures do
       expect(adjustment['mjml']).not_to include('Autonomia')
       expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['identity_applied']).to be(false)
     end
+
+    # An adjustment asked before #1126 (old schema) is answered without the field: treated as not applied.
+    it 'treats an answer without identity_applied as not applied, and Aplicar keeps the identity' do
+      campaign.update!(brand_identity: { 'kit_id' => 1, 'name' => 'Hub2You', 'mode' => 'light', 'source' => 'kit' })
+      answers['resp_1'] = changed(write(adjust_hero(button_color: '#c8102e')), keep('b2'))
+
+      poll
+
+      expect(adjustment['status']).to eq('proposed')
+      expect(adjustment['mjml']).to include(EmailCampaigns::LockedFooter::MJML)
+      expect(adjustment['mjml']).not_to include('Autonomia')
+      expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['identity_applied']).to be(false)
+      expect(EmailCampaigns::Ai::Adjustment.apply(campaign.reload)).to include('name' => 'Hub2You')
+    end
   end
 
   it 'shows the one sentence of the model when the request cannot be done' do

@@ -12,12 +12,15 @@ const brandKitsList = vi.hoisted(() => [
   { id: 2, name: 'Autonomia', is_default: false },
   { id: 3, name: 'Aurora', is_default: false },
 ]);
+// The list the dialog sees; a case may empty it and fill it after mount (the kits load late).
+const loadedKits = vi.hoisted(() => ({ ref: null }));
 vi.mock('dashboard/components-next/BrandKits/useBrandKits', async () => {
   const { ref } = await import('vue');
+  loadedKits.ref = ref(brandKitsList);
   return {
     useBrandKits: () => ({
       isEnabled: ref(brandKitsEnabled.value),
-      kits: ref(brandKitsList),
+      kits: loadedKits.ref,
       fetchKits: vi.fn(),
     }),
   };
@@ -253,6 +256,45 @@ describe('AiComposerDialog — identity picked in the editor panel (#1126)', () 
       .find('[data-test="ai-composer-adjust-only"] input')
       .setValue(true);
     expect(brief(wrapper).element.value).toBe(request('Autonomia'));
+  });
+
+  describe('when the identities load after the dialog opened', () => {
+    beforeEach(() => {
+      loadedKits.ref.value = [];
+    });
+    afterEach(() => {
+      loadedKits.ref.value = brandKitsList;
+    });
+
+    const pickAurora = async wrapper => {
+      picker(wrapper).vm.$emit('update:modelValue', {
+        ...picker(wrapper).props('modelValue'),
+        kitId: 3,
+      });
+      await flushPromises();
+    };
+
+    it('writes the request once the name of the identity picked is known', async () => {
+      const wrapper = mountDialog({ canAdjust: true, changeIdentity });
+      await pickAurora(wrapper);
+      expect(brief(wrapper).element.value).toBe('');
+
+      loadedKits.ref.value = brandKitsList;
+      await flushPromises();
+
+      expect(brief(wrapper).element.value).toBe(request('Aurora'));
+    });
+
+    it('never overwrites what the person typed before they loaded', async () => {
+      const wrapper = mountDialog({ canAdjust: true, changeIdentity });
+      await pickAurora(wrapper);
+      await typeRequest(wrapper, 'Só o botão');
+
+      loadedKits.ref.value = brandKitsList;
+      await flushPromises();
+
+      expect(brief(wrapper).element.value).toBe('Só o botão');
+    });
   });
 
   it('opens "Create with AI" with the identity picked when the canvas is empty', () => {

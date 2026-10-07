@@ -86,8 +86,9 @@ const identity = ref({
   mode: props.initialBrand.mode || 'light',
   saveAsKit: false,
 });
-// #1126: the written request names the identity chosen now and follows it while the person has not
-// edited it; creating a new e-mail instead (unticked) starts with an empty briefing.
+// #1126: the written request names the identity chosen now and follows it — also when the identities
+// arrive after the dialog opened — until the person types in the field (briefTouched); creating a new
+// e-mail instead (unticked) starts with an empty briefing.
 const identityName = computed(() => {
   const { kitId, proposal } = identity.value;
   const kit = brandKits.value.find(item => item.id === kitId);
@@ -104,10 +105,18 @@ const identityRequest = computed(() =>
       })
     : ''
 );
-brief.value = identityRequest.value;
-watch(identityRequest, (next, previous) => {
-  if (brief.value === previous) brief.value = next;
-});
+const briefTouched = ref(false);
+const typeBrief = value => {
+  briefTouched.value = true;
+  brief.value = value;
+};
+watch(
+  identityRequest,
+  next => {
+    if (!briefTouched.value) brief.value = next;
+  },
+  { immediate: true }
+);
 
 const isUploadingImage = ref(false);
 const isUploadingPdf = ref(false);
@@ -401,7 +410,7 @@ const generate = async () => {
         </label>
 
         <TextArea
-          v-model="brief"
+          :model-value="brief"
           :label="tk(modeKey('BRIEF_LABEL'))"
           :placeholder="tk(modeKey('BRIEF_PLACEHOLDER'))"
           auto-height
@@ -409,6 +418,7 @@ const generate = async () => {
           min-height="7rem"
           max-height="16rem"
           data-test="ai-composer-brief"
+          @update:model-value="typeBrief"
         />
 
         <BrandIdentityPicker
