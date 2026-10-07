@@ -44,7 +44,11 @@ class Crm::MetaAds::WhatsappReport::DeliverJob < ApplicationJob
 
     # Números e texto da IA antes da chave do dia: um erro aqui sobe sem a chave, e o novo tentar do Sidekiq refaz.
     payload = digest.payload
-    deliver(connection, 'summary') { |sender| sender.send_summary(payload) }
+    deliver(connection, 'summary') do |sender|
+      sender.send_summary(payload)
+      # Só o envio real conta a ação 1 como mostrada (F5, métrica de aceite); o de teste não passa por aqui.
+      digest.mark_shown!
+    end
   end
 
   def deliver_alert(connection)

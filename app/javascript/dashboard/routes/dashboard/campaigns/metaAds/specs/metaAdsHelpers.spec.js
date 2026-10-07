@@ -1,7 +1,9 @@
 import {
   clockTime,
   currentStep,
+  duration,
   errorMessageKey,
+  formatFact,
   money,
   thumbClass,
 } from '../metaAdsHelpers';
@@ -61,5 +63,36 @@ describe('Anúncios da Meta · helpers (#1047)', () => {
     );
     expect(new Set(['1', '2', '3', '4'].map(thumbClass)).size).toBe(4);
     expect(thumbClass(null)).toContain('from-[');
+  });
+
+  // t de mentira: devolve a última parte da chave com o número, para ver a unidade e o arredondamento.
+  const t = (key, values = {}) => `${key.split('.').pop()}:${values.n ?? ''}`;
+
+  it('turns seconds into a duration for a layperson, rounding down (#1110)', () => {
+    expect(duration(null, t)).toBeNull();
+    expect(duration(undefined, t)).toBeNull();
+    expect(duration(0, t)).toBe('SECONDS:');
+    expect(duration(59, t)).toBe('SECONDS:');
+    expect(duration(60, t)).toBe('MINUTES:1');
+    expect(duration(359, t)).toBe('MINUTES:5');
+    expect(duration(3600, t)).toBe('HOURS:1');
+    expect(duration(4800, t)).toBe('HOURS:1 MINUTES:20');
+    expect(duration(48 * 3600 - 1, t)).toBe('HOURS:47 MINUTES:59');
+    expect(duration(48 * 3600, t)).toBe('DAYS:2');
+    expect(duration(5 * 24 * 3600 + 7000, t)).toBe('DAYS:5');
+  });
+
+  it('formats each fact of an advice action by its type, like the server (#1110)', () => {
+    const options = { t, currency: 'BRL', locale: 'pt_BR' };
+
+    expect(formatFact('value', 1464.64, options)).toMatch(/R\$\s1\.464,64/);
+    expect(formatFact('spend', 842, options)).toMatch(/R\$\s842$/);
+    expect(formatFact('count', 1234, options)).toBe('1.234');
+    expect(formatFact('identified_pct', 0.69, options)).toMatch(/^69\s?%$/);
+    expect(formatFact('frequency_7d', 4.6, options)).toBe('4,6');
+    expect(formatFact('median_seconds', 1500, options)).toBe('MINUTES:25');
+    expect(formatFact('ad_name', 'Promo 10/10', options)).toBe('Promo 10/10');
+    expect(formatFact('median_seconds', null, options)).toBeNull();
+    expect(formatFact('no_such_fact', 3, options)).toBeNull();
   });
 });

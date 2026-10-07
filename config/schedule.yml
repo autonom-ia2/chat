@@ -306,3 +306,10 @@ crm_meta_ads_whatsapp_alert_job:
   class: 'Crm::MetaAds::WhatsappReport::ScheduleJob'
   queue: scheduled_jobs
   args: ['alert']
+
+# Anúncios da Meta F5 (#1110): apaga análises do consultor com mais de 90 dias, ações com mais de 400 e janelas de
+# frequência com mais de 35, às 5h30 de Brasília (08:30 UTC), depois da leitura das 4h.
+crm_meta_ads_advisor_prune_job:
+  cron: '30 8 * * *'
+  class: 'Crm::MetaAds::Advisor::PruneJob'
+  queue: low

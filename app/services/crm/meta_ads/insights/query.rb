@@ -9,6 +9,7 @@ module Crm::MetaAds::Insights::Query
   ].join(',').freeze
   PLACEMENT_FIELDS = %w[ad_id spend impressions inline_link_clicks actions].join(',').freeze
   PLACEMENT_BREAKDOWNS = 'publisher_platform,platform_position'.freeze
+  WINDOW_FIELDS = %w[ad_id adset_id impressions reach frequency].join(',').freeze
 
   # Nomes da Meta para os períodos: hoje, os 3 dias completos anteriores e os 90 dias da primeira carga.
   TODAY = 'today'.freeze
@@ -23,6 +24,12 @@ module Crm::MetaAds::Insights::Query
 
   def placements(date_preset)
     base(date_preset).merge(fields: PLACEMENT_FIELDS, breakdowns: PLACEMENT_BREAKDOWNS)
+  end
+
+  # A frequência dos últimos `days` dias inteiros (F5, D5.4): uma linha por anúncio para o período todo. Sem
+  # `time_increment`, porque alcance não soma entre dias, e sem janela de atribuição, porque não lê ações.
+  def ads_window(days)
+    { level: 'ad', date_preset: "last_#{days}d", fields: WINDOW_FIELDS }
   end
 
   def base(date_preset)

@@ -39,6 +39,10 @@ RSpec.describe Crm::MetaAds::InsightsSyncJob do
     admin
     stub_meta_insights(ad_account_id, date_preset: 'last_3d', rows: [])
     stub_meta_insights(ad_account_id, date_preset: 'last_3d', breakdowns: 'publisher_platform,platform_position', rows: [])
+    # A frequência de 7 dias (F5) vem depois do posicionamento.
+    stub_request(:get, meta_graph_url("act_#{ad_account_id}/insights"))
+      .with(query: hash_including('date_preset' => 'last_7d'))
+      .to_return(status: 200, body: { data: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     expect { described_class.perform_now(connection.id, 'recent') }.not_to have_enqueued_job(ActionCableBroadcastJob)
   end

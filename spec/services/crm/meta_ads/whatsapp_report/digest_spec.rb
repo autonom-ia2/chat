@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Números do resumo diário e regra do alerta (#1100, F4b): ontem e hoje no fuso da conta de anúncios, do banco.
+# Números do resumo diário e regra do alerta (#1100, F4b): ontem e hoje no fuso da conta de anúncios, do banco. O
+# que fazer hoje vem do consultor (F5, #1110).
 RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
   let(:account) { create(:account) }
   let(:connection) { create_meta_ads_insights_connection(account) }
@@ -26,6 +27,17 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
   end
 
   describe 'resumo de ontem' do
+    # O consultor (Advisor::Analysis) é do construtor A: aqui ele é stub (a integração roda sem stub).
+    let(:advice) do
+      { run_id: 812, local_date: '2026-10-07', rules_version: 'f5.1', writer: { status: 'written', reason: nil },
+        actions: [{ id: 4521, position: 1, kind: 'stalled_quotes', variant: nil, status: 'open', source: 'ai',
+                    headline: 'Retome as 2 propostas.', body: 'Comece hoje.', facts: { count: 2, value: 1500.0, days: 3 } },
+                  { id: 4522, position: 2, kind: 'slow_response', variant: nil, status: 'open', source: 'rule', facts: {} }] }
+    end
+    # rubocop:disable RSpec/VerifiedDoubleReference
+    let!(:analysis) { class_double('Crm::MetaAds::Advisor::Analysis', current: advice, daily: advice, mark_shown!: nil).as_stubbed_const }
+    # rubocop:enable RSpec/VerifiedDoubleReference
+
     it 'soma gasto, conversas, propostas e vendas de ontem e aponta o anúncio que mais trouxe conversa' do
       travel_to(now) do
         Crm::MetaAdObject.create!(account: account, meta_object_id: promo, object_type: 'ad', name: 'Promo outubro', fetched_at: now)
@@ -42,77 +54,56 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
         expect(payload).to include(date: Date.new(2026, 10, 6), currency: 'BRL', spend: 120.0, conversations: 3, cost_per_conversation: 40.0,
                                    quotes: 2, sales: 1, sales_value: 900.0)
         expect(payload[:best_ad]).to eq(ad_id: promo, name: 'Promo outubro', conversations: 2)
-        expect(payload[:action]).to eq(kind: 'wait', ad_name: 'Promo outubro', missing_conversations: 18)
+        expect(payload).not_to have_key(:ai_action)
       end
     end
 
-    describe 'o que fazer hoje' do
-      let(:zone) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
-
-      def panel_cache
-        report = Crm::MetaAds::Panel::Report.new(connection, days: 30).payload
-        Crm::MetaAds::Panel::AiActionCache.new(connection: connection, report: report, zone: zone, locale: 'pt_BR')
-      end
-
-      after do
-        Redis::Alfred.scan_each(match: "#{Crm::MetaAds::Panel::AiActionCache::PREFIX}:#{account.id}:*").each { |key| Redis::Alfred.delete(key) }
-      end
-
-      it 'o envio das 8h usa o texto da IA guardado pelo painel no dia, sem chamada nova' do
+    describe 'o que fazer hoje: a primeira ação do consultor (F5)' do
+      it 'o envio das 8h pede a análise do dia, que pode escrever pela IA, no idioma do resumo' do
         travel_to(now) do
           account.update!(locale: 'pt_BR')
           spend(promo, Date.new(2026, 10, 6), 10)
-          panel_cache.write(source: 'ai', kind: 'on_track', headline: 'Siga com o Promo outubro.')
-          expect(Crm::Ai::ResponsesClient).not_to receive(:new)
 
-          payload = described_class.new(connection, with_ai: true).payload
-
-          expect(payload[:ai_action]).to include(source: 'ai', headline: 'Siga com o Promo outubro.')
-          expect(payload[:action]).to eq(Crm::MetaAds::Panel::Report.new(connection, days: 30).payload[:action])
+          expect(described_class.new(connection, with_ai: true).payload[:action]).to eq(advice[:actions].first)
+          expect(analysis).to have_received(:daily).with(connection, language: 'pt_BR')
+          expect(analysis).not_to have_received(:current)
         end
       end
 
-      it 'sem texto guardado, o envio das 8h pede à IA no idioma da conta, no período de 30 dias do painel' do
+      it 'o envio de teste não chama a IA: só a análise atual, como resumo' do
         travel_to(now) do
-          account.update!(locale: 'pt_BR')
+          account.update!(locale: 'en')
           spend(promo, Date.new(2026, 10, 6), 10)
-          answer = { source: 'ai', kind: 'wait', headline: 'Deixe rodar.', body: nil }
-          allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(answer)
 
-          expect(described_class.new(connection, with_ai: true).payload[:ai_action]).to eq(answer)
-          expect(Crm::MetaAds::Panel::AiAction).to have_received(:daily).with(connection: connection, days: 30, language: 'pt_BR')
+          expect(described_class.new(connection).payload[:action]).to eq(advice[:actions].first)
+          expect(analysis).to have_received(:current).with(connection, locale: 'en', trigger: 'digest')
+          expect(analysis).not_to have_received(:daily)
         end
       end
 
-      it 'IA indisponível ou com falha: fica só a regra' do
+      it 'marca como mostrada só a ação 1, a que o WhatsApp mostra; o filler não tem linha' do
         travel_to(now) do
           spend(promo, Date.new(2026, 10, 6), 10)
-          allow(Crm::MetaAds::Panel::AiAction).to receive(:daily).and_return(source: 'rule', reason: 'ai_error', kind: 'wait')
+          described_class.new(connection, with_ai: true).mark_shown!
 
-          payload = described_class.new(connection, with_ai: true).payload
+          expect(analysis).to have_received(:mark_shown!).once.with([4521])
 
-          expect(payload[:ai_action]).to be_nil
-          expect(payload[:action][:kind]).to eq('wait')
-        end
-      end
+          advice[:actions] = [{ id: nil, position: 1, kind: 'on_track', status: nil, source: 'rule', facts: {} }]
+          described_class.new(connection, with_ai: true).mark_shown!
 
-      it 'o envio de teste não chama a IA' do
-        travel_to(now) do
-          spend(promo, Date.new(2026, 10, 6), 10)
-          expect(Crm::MetaAds::Panel::AiAction).not_to receive(:daily)
-
-          expect(described_class.new(connection).payload[:ai_action]).to be_nil
+          expect(analysis).to have_received(:mark_shown!).once
         end
       end
     end
 
-    it 'ontem sem gasto e sem conversa não tem o que contar' do
+    it 'ontem sem gasto e sem conversa não tem o que contar, e não chama o consultor' do
       travel_to(now) do
         spend(promo, Date.new(2026, 10, 7), 50) # hoje
 
-        digest = described_class.new(connection)
+        digest = described_class.new(connection, with_ai: true)
 
         expect(digest).to be_nothing_to_report
+        expect(analysis).not_to have_received(:daily)
         expect(digest.payload).to include(spend: 0.0, conversations: 0, cost_per_conversation: nil, best_ad: nil)
       end
     end

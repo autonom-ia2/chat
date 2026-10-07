@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Painel do dia a dia (#1088, F3a, CA-3.1): números do herói, anúncios por venda e ação do dia, do banco.
+# Painel do dia a dia (#1088, F3a, CA-3.1): números do herói, anúncios por venda e quanto confiar, do banco. A ação
+# do dia saiu na F5 (#1110): é do consultor.
 RSpec.describe Crm::MetaAds::Panel::Report do
   let(:account) { create(:account) }
   let(:connection) { create_meta_ads_insights_connection(account) }
@@ -75,37 +76,23 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     end
   end
 
-  it 'ação do dia: propostas paradas há mais de 3 dias, com o anúncio de onde vieram e a lista' do
+  it 'não traz mais a ação do dia: ela é do consultor, que não depende do período (F5, D5.2)' do
     travel_to(now) do
-      name(capa, 'Capa (1080x1350)')
-      stalled = from_ad(capa, at: 6.days.ago, card: card(stage: quote_stage, value: 842, waiting: 4.days.ago))
-      from_ad(capa, at: 1.day.ago, card: card(stage: quote_stage, waiting: 1.hour.ago))
+      from_ad(capa, at: 6.days.ago, card: card(stage: quote_stage, value: 842, waiting: 4.days.ago))
 
-      action = described_class.new(connection, days: 30).payload[:action]
-
-      expect(action).to include(kind: 'stalled_quotes', count: 1, value: 842.0, days: 3, ad_name: 'Capa (1080x1350)')
-      expect(action[:cards].sole).to include(value: 842.0, conversation_id: stalled.id)
+      expect(described_class.new(connection, days: 30).payload).not_to have_key(:action)
     end
   end
 
-  it 'ação do dia: medição a corrigir quando a maioria das conversas não tem anúncio' do
+  it 'quanto confiar segue o período do painel (F5, D5.8)' do
     travel_to(now) do
-      4.times { from_ad(nil, at: 1.day.ago) }
       from_ad(capa, at: 1.day.ago)
+      from_ad(nil, at: 2.days.ago)
+      from_ad(capa, at: 10.days.ago)
 
-      expect(described_class.new(connection, days: 30).payload[:action]).to eq(kind: 'fix_tracking', conversations: 5, unknown: 4)
-    end
-  end
-
-  it 'ação do dia: aguardar, dizendo quantas conversas faltam; sem dado, diz que não há dado' do
-    travel_to(now) do
-      expect(described_class.new(connection, days: 30).payload[:action]).to eq(kind: 'no_data')
-
-      name(capa, 'Capa (1080x1350)')
-      3.times { from_ad(capa, at: 1.day.ago) }
-
-      expect(described_class.new(connection, days: 30).payload[:action])
-        .to eq(kind: 'wait', ad_name: 'Capa (1080x1350)', missing_conversations: 17)
+      expect(described_class.new(connection, days: 7).payload[:confidence])
+        .to eq(window_days: 7, conversations: 2, ad: 1, ad_name: 0, campaign: 0, unknown: 1)
+      expect(described_class.new(connection, days: 30).payload[:confidence]).to include(window_days: 30, conversations: 3, ad: 2)
     end
   end
 

@@ -1,202 +1,475 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { formatFact } from '../metaAdsHelpers';
 
-// "O que fazer hoje" (#1100, F4a). A ação pela regra aparece na hora; a versão escrita pela IA chega depois e
-// entra no lugar do texto. Os números continuam os da regra. Se a IA não responder, a regra fica, com o aviso.
+// "O que fazer hoje" (#1110, F5, §5.1): até 3 ações do consultor, decididas pelo servidor (Advisor::Decision) e
+// na ordem dele. A tela não escolhe nada: mostra o texto da IA quando há, senão o da regra com os fatos de cada
+// ação. O botão principal leva ao trabalho e grava a abertura; "Feito" é o aceite e "Dispensar" tira a ação do
+// dia (D5.9). A ação aceita fica, marcada "Feita" (D5.10). Pedir a IA só quando o run está `pending`.
 const props = defineProps({
-  // panel.action: a ação do dia pela regra (Crm::MetaAds::Panel::Action).
-  action: { type: Object, required: true },
-  // O texto da regra, já pronto no painel: { text, why }.
-  ruleText: { type: Object, required: true },
+  // panel.advice: { run_id, writer: { status, reason }, actions: [AdviceAction] }.
+  advice: { type: Object, required: true },
   days: { type: Number, required: true },
+  // A moeda da conta, para os fatos em dinheiro do texto da regra.
+  currency: { type: String, default: 'BRL' },
+  // Os alvos cuja lista está aberta no painel ('stalled_list', 'slow_replies'), para o aria-expanded.
+  expanded: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['act']);
+const emit = defineEmits(['act', 'changed']);
 
-const { t } = useI18n();
-const daily = ref(null);
-const writing = ref(false);
-const failed = ref(false);
-
-const BUTTON_KINDS = ['stalled_quotes', 'fix_tracking', 'review_ad'];
-
-// Troca de período no meio do pedido: a resposta do período antigo é descartada.
-const ask = async () => {
-  const asked = props.days;
-  writing.value = true;
-  failed.value = false;
-  try {
-    const { data } = await CrmMetaAdsConnectionAPI.dailyAction(asked);
-    if (asked !== props.days) return;
-    daily.value = data.daily_action;
-  } catch {
-    if (asked !== props.days) return;
-    daily.value = null;
-    failed.value = true;
-  } finally {
-    if (asked === props.days) writing.value = false;
-  }
+const { t, locale } = useI18n();
+const KEY = 'CRM_KANBAN.META_ADS_HUB.PANEL.ACTION';
+// Os estados em que o servidor já não escreve mais: o painel vale mais que a resposta guardada.
+const FINAL = ['written', 'rule'];
+const TOGGLES = ['stalled_list', 'slow_replies'];
+const NAVIGATES = ['stalled_list', 'slow_replies', 'connection_step'];
+// O número que escolhe singular ou plural no texto da regra de cada tipo.
+const PLURAL_BY = {
+  stalled_quotes: 'count',
+  fix_tracking: 'unknown',
+  slow_response: 'unanswered',
 };
 
-const fromAi = computed(() => daily.value?.source === 'ai');
-const kind = computed(() =>
-  fromAi.value ? daily.value.kind : props.action.kind
+const answer = ref(null);
+const asking = ref(false);
+const failed = ref(false);
+// O que a pessoa fez nesta tela, por id, até o próximo painel confirmar.
+const accepted = ref([]);
+const dismissed = ref([]);
+const opened = ref([]);
+const busy = ref([]);
+// O foco depois de um gesto que tira o botão da tela (o foco não pode cair no <body>).
+const root = ref(null);
+const list = ref(null);
+
+const current = computed(() => {
+  const fromPanel = props.advice;
+  if (FINAL.includes(fromPanel.writer?.status)) return fromPanel;
+  if (answer.value?.run_id === fromPanel.run_id) return answer.value;
+  return fromPanel;
+});
+
+const actions = computed(() =>
+  (current.value.actions || [])
+    .filter(action => !action.id || !dismissed.value.includes(action.id))
+    .map(action => ({
+      ...action,
+      status: accepted.value.includes(action.id) ? 'accepted' : action.status,
+      opened: action.opened || opened.value.includes(action.id),
+    }))
 );
 
-const text = computed(() =>
-  fromAi.value ? daily.value.headline : props.ruleText.text
-);
-const detail = computed(() => (fromAi.value ? daily.value.body : null));
-const why = computed(() =>
-  fromAi.value ? daily.value.why : props.ruleText.why
+const fromAi = action => action.source === 'ai' && !!action.headline;
+const anyAi = computed(() => actions.value.some(fromAi));
+const writing = computed(
+  () =>
+    !anyAi.value && (asking.value || current.value.writer?.status === 'writing')
 );
 
 // Só quando a IA falhou: os outros motivos (sem IA, nada a dizer, teto do dia) ficam com a regra em silêncio.
 const notice = computed(() => {
   if (failed.value) return t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.FAILED');
-  if (daily.value?.reason === 'ai_error') {
+  if (current.value.writer?.reason === 'ai_error') {
     return t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.AI_ERROR');
   }
   return null;
 });
 
-const showButton = computed(
-  () =>
-    BUTTON_KINDS.includes(kind.value) &&
-    (kind.value !== 'review_ad' || daily.value?.ad_id)
-);
-const buttonLabel = computed(() => {
-  if (kind.value === 'review_ad') {
-    return t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.REVIEW_AD_BUTTON');
+// A resposta de outro run (o painel já mudou de análise) é descartada. Se o painel trouxe um run novo `pending`
+// com este pedido no ar, o watch não pediu (asking): pede agora, senão o novo esperaria o próximo painel.
+const ask = async () => {
+  const runId = props.advice.run_id;
+  asking.value = true;
+  failed.value = false;
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.dailyAction(props.days);
+    if (data.daily_action?.run_id === props.advice.run_id) {
+      answer.value = data.daily_action;
+    }
+  } catch {
+    if (runId === props.advice.run_id) failed.value = true;
+  } finally {
+    asking.value = false;
   }
-  return t(
-    `CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.${kind.value.toUpperCase()}.BUTTON`,
-    { count: props.action.count },
-    props.action.count ?? 2
-  );
-});
-
-const act = () =>
-  emit('act', {
-    kind: kind.value,
-    adId: fromAi.value ? daily.value.ad_id : null,
-  });
-
-// A regra achou propostas paradas, mas a IA escolheu outra ação: a lista (e a mensagem sugerida) continua a um
-// clique, num botão secundário.
-const showStalledButton = computed(
-  () =>
-    props.action.kind === 'stalled_quotes' && kind.value !== 'stalled_quotes'
-);
-const stalledLabel = computed(() =>
-  t(
-    'CRM_KANBAN.META_ADS_HUB.PANEL.ACTION.STALLED_QUOTES.BUTTON',
-    { count: props.action.count },
-    props.action.count ?? 2
-  )
-);
-const openStalled = () => emit('act', { kind: 'stalled_quotes', adId: null });
+  if (
+    props.advice.run_id !== runId &&
+    props.advice.writer?.status === 'pending'
+  ) {
+    ask();
+  }
+};
 
 watch(
-  () => [props.days, props.action.kind],
-  () => ask()
+  () => props.advice,
+  advice => {
+    if (advice.writer?.status !== 'pending') {
+      failed.value = false;
+      return;
+    }
+    if (!asking.value) ask();
+  },
+  { immediate: true }
 );
-onMounted(ask);
+
+// "median_seconds" vira "medianSeconds" no texto; "ad" e "missing" são os nomes curtos dos textos da F3.
+const paramName = key =>
+  key
+    .split('_')
+    .map((part, index) =>
+      index ? part.charAt(0).toUpperCase() + part.slice(1) : part
+    )
+    .join('');
+
+const ruleParams = action => {
+  const facts = action.facts || {};
+  const formatted = Object.fromEntries(
+    Object.entries(facts).map(([key, raw]) => [
+      paramName(key),
+      formatFact(key, raw, {
+        t,
+        currency: props.currency,
+        locale: locale.value,
+      }) ?? '',
+    ])
+  );
+  return {
+    ...formatted,
+    ad:
+      facts.ad_name ||
+      action.ad_name ||
+      t('CRM_KANBAN.META_ADS_HUB.PANEL.SEVERAL_ADS'),
+    missing: formatted.missingConversations,
+  };
+};
+
+const pluralOf = action => {
+  const raw = action.facts?.[PLURAL_BY[action.kind]];
+  return raw === null || raw === undefined ? 2 : Number(raw);
+};
+
+// Pela causa que disparou a regra (Rules#slow_status): mediana acima da meta é demora; dentro dela (ou sem
+// nenhuma resposta), a regra falhou só pelas sem resposta. O mesmo critério do WhatsApp (MessageBuilder#slow_variant).
+const onlyUnanswered = action => {
+  const median = action.facts?.median_seconds;
+  if (median === null || median === undefined) return true;
+  return Number(median) <= Number(action.facts?.target_seconds);
+};
+
+const ruleText = action => {
+  const base = `${KEY}.${action.kind.toUpperCase()}`;
+  const suffix = action.variant ? `_${action.variant.toUpperCase()}` : '';
+  const params = ruleParams(action);
+  const textKey =
+    action.kind === 'slow_response' && onlyUnanswered(action)
+      ? `${base}.TEXT_UNANSWERED`
+      : `${base}.TEXT${suffix}`;
+  return {
+    headline: t(textKey, params, pluralOf(action)),
+    body: null,
+    why: t(`${base}.WHY${suffix}`, params),
+  };
+};
+
+const textOf = action =>
+  fromAi(action)
+    ? { headline: action.headline, body: action.body, why: action.why }
+    : ruleText(action);
+
+const items = computed(() =>
+  actions.value.map(action => ({ ...action, text: textOf(action) }))
+);
+
+const targetOf = action => action.button?.target || 'none';
+
+const hasButton = action => {
+  const target = targetOf(action);
+  if (target === 'acknowledge') return !!action.id && action.status === 'open';
+  if (target === 'ads_manager') return !!action.button.url;
+  if (target === 'ad_detail') return !!action.ad_id;
+  return NAVIGATES.includes(target);
+};
+
+const buttonLabel = action =>
+  t(
+    `${KEY}.${action.kind.toUpperCase()}.BUTTON`,
+    { count: action.facts?.count },
+    pluralOf(action)
+  );
+
+const isExpanded = action =>
+  TOGGLES.includes(targetOf(action))
+    ? String(props.expanded.includes(targetOf(action)))
+    : undefined;
+
+const focusLater = async find => {
+  await nextTick();
+  find()?.focus();
+};
+
+// Gesto em andamento por id: dois cliques seguidos não mandam dois pedidos. 422 (`not_open`) é a ação já
+// resolvida em outra aba, por outro administrador ou na virada do dia: tentar de novo não adianta, o painel
+// relê a análise.
+const run = async (action, request, onDone, failedKey) => {
+  if (busy.value.includes(action.id)) return;
+  busy.value = [...busy.value, action.id];
+  try {
+    await request(action.id);
+    onDone();
+  } catch (error) {
+    if (error?.response?.status === 422) {
+      useAlert(t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.ALREADY_RESOLVED'));
+      emit('changed');
+    } else {
+      useAlert(t(`CRM_KANBAN.META_ADS_HUB.AI.DAILY.${failedKey}`));
+    }
+  } finally {
+    busy.value = busy.value.filter(id => id !== action.id);
+  }
+};
+
+// O "Feito" (e o "Entendi") sai da tela: o foco vai para o selo "Feita" da mesma ação.
+const accept = action =>
+  run(
+    action,
+    CrmMetaAdsConnectionAPI.acceptAdvice,
+    () => {
+      accepted.value = [...accepted.value, action.id];
+      focusLater(() =>
+        root.value?.querySelector(
+          `[data-action-id="${action.id}"] [data-action-done]`
+        )
+      );
+    },
+    'DONE_FAILED'
+  );
+
+// A vaga da dispensada vai para a próxima candidata: o painel pede a análise de novo. O foco vai para o
+// primeiro botão da ação que tomou o lugar dela, ou para a lista quando não há outra.
+const dismiss = action => {
+  const index = items.value.findIndex(entry => entry.id === action.id);
+  return run(
+    action,
+    CrmMetaAdsConnectionAPI.dismissAdvice,
+    () => {
+      dismissed.value = [...dismissed.value, action.id];
+      emit('changed');
+      focusLater(() => {
+        const next = root.value?.querySelectorAll('[data-panel-action]')[index];
+        return next?.querySelector('a, button') || list.value;
+      });
+    },
+    'DISMISS_FAILED'
+  );
+};
+
+// A abertura só registra; a falha não segura a pessoa, vai para o console.
+const markOpened = async action => {
+  if (!action.id || action.opened) return;
+  opened.value = [...opened.value, action.id];
+  try {
+    await CrmMetaAdsConnectionAPI.openAdvice(action.id);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('[meta-ads] openAdvice failed', error?.constructor?.name);
+  }
+};
+
+const go = action => {
+  if (targetOf(action) === 'acknowledge') {
+    accept(action);
+    return;
+  }
+  emit('act', action);
+  markOpened(action);
+};
+
+const canResolve = action => !!action.id && action.status === 'open';
+
+const MAIN_BUTTON =
+  'inline-flex items-center justify-center gap-1.5 px-4 text-sm font-520 no-underline rounded-lg min-h-11 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
+const mainClass = index =>
+  index
+    ? `${MAIN_BUTTON} bg-transparent border border-solid border-white/40 text-white hover:bg-white/10`
+    : `${MAIN_BUTTON} bg-white border-0 text-[#0D2344] hover:bg-n-blue-2`;
+const LINK_BUTTON =
+  'inline-flex items-center justify-center px-2 min-w-11 min-h-11 text-[13px] font-460 bg-transparent border-0 rounded text-white/70 hover:text-white hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
 </script>
 
 <template>
-  <div class="relative flex flex-col gap-5">
-    <div
-      data-panel-action
-      :data-action-kind="kind"
-      :data-action-source="fromAi ? 'ai' : 'rule'"
-      class="flex flex-col gap-4 p-4 rounded-lg sm:p-5 bg-white/[0.07] ring-1 ring-inset ring-white/10 sm:flex-row sm:items-center"
+  <div
+    ref="root"
+    data-panel-today
+    class="relative flex flex-col gap-4 p-4 rounded-lg sm:p-5 bg-white/[0.07] ring-1 ring-inset ring-white/10"
+  >
+    <p
+      class="flex flex-wrap items-center m-0 gap-x-2 gap-y-1 text-[11px] font-520 uppercase tracking-[0.1em] text-white/60"
     >
-      <div class="flex-1 m-0" aria-live="polite">
+      {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.TODAY') }}
+      <span
+        v-if="anyAi"
+        data-daily-ai-badge
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded normal-case tracking-normal bg-white/10 text-white/80"
+      >
+        <span class="i-lucide-sparkles size-3" aria-hidden="true" />
+        {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.BADGE') }}
+      </span>
+      <span
+        v-else-if="writing"
+        data-daily-writing
+        class="inline-flex items-center gap-1 normal-case tracking-normal text-white/60"
+      >
         <span
-          class="flex flex-wrap items-center mb-1 gap-x-2 gap-y-1 text-[11px] font-520 uppercase tracking-[0.1em] text-white/60"
-        >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.TODAY') }}
+          class="i-lucide-loader-circle size-3 animate-spin"
+          aria-hidden="true"
+        />
+        {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.WRITING') }}
+      </span>
+    </p>
+
+    <ol
+      ref="list"
+      data-panel-actions
+      tabindex="-1"
+      aria-live="polite"
+      class="flex flex-col p-0 m-0 list-none"
+    >
+      <li
+        v-for="(action, index) in items"
+        :key="action.id ?? action.kind"
+        data-panel-action
+        :data-action-kind="action.kind"
+        :data-action-source="fromAi(action) ? 'ai' : 'rule'"
+        :data-action-id="action.id"
+        :data-action-status="action.status"
+        class="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6"
+        :class="
+          index
+            ? 'pt-4 mt-4 border-0 border-t border-solid border-white/10'
+            : ''
+        "
+      >
+        <div class="flex flex-1 min-w-0 gap-3">
           <span
-            v-if="fromAi"
-            data-daily-ai-badge
-            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded normal-case tracking-normal bg-white/10 text-white/80"
+            v-if="index"
+            aria-hidden="true"
+            class="grid flex-none mt-0.5 text-xs rounded-full size-6 place-items-center font-520 tabular-nums bg-white/10 text-white/80"
           >
-            <span class="i-lucide-sparkles size-3" aria-hidden="true" />
-            {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.BADGE') }}
+            {{ index + 1 }}
           </span>
-          <span
-            v-else-if="writing"
-            data-daily-writing
-            class="inline-flex items-center gap-1 normal-case tracking-normal text-white/60"
-          >
+          <div class="flex flex-col flex-1 min-w-0 gap-1">
             <span
-              class="i-lucide-loader-circle size-3 animate-spin"
-              aria-hidden="true"
-            />
-            {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.WRITING') }}
-          </span>
-        </span>
-        <span
-          data-daily-text
-          class="block text-[15px] font-440 leading-relaxed text-white"
+              v-if="action.status === 'accepted'"
+              data-action-done
+              tabindex="-1"
+              class="inline-flex items-center self-start gap-1 px-1.5 py-0.5 text-[11px] font-520 rounded bg-n-teal-9 text-white"
+            >
+              <span class="i-lucide-check size-3" aria-hidden="true" />
+              {{ $t(`${KEY}.DONE_LABEL`) }}
+            </span>
+            <span
+              data-daily-text
+              class="block leading-snug text-pretty"
+              :class="[
+                index
+                  ? 'text-[15px] font-460'
+                  : 'text-[17px] sm:text-[19px] font-520',
+                action.status === 'accepted' ? 'text-white/70' : 'text-white',
+              ]"
+            >
+              {{ action.text.headline }}
+            </span>
+            <span
+              v-if="!index && action.text.body"
+              data-daily-body
+              class="block text-sm leading-relaxed font-420 text-white/80"
+            >
+              {{ action.text.body }}
+            </span>
+            <p
+              v-if="action.text.why"
+              data-daily-why
+              class="max-w-3xl m-0 text-[13px] font-420 leading-relaxed text-pretty text-white/65"
+            >
+              <span
+                v-if="fromAi(action)"
+                data-daily-why-label
+                class="font-520 text-white/80"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.WHY_LABEL') }}
+              </span>
+              {{ action.text.why }}
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="hasButton(action) || canResolve(action)"
+          class="flex flex-wrap items-center gap-x-4 gap-y-1 sm:flex-col sm:items-stretch sm:flex-none"
+          :class="{ 'ps-9 sm:ps-0': index }"
         >
-          {{ text }}
-        </span>
-        <span
-          v-if="detail"
-          data-daily-body
-          class="block mt-1 text-sm font-420 leading-relaxed text-white/80"
-        >
-          {{ detail }}
-        </span>
-      </div>
-      <div
-        v-if="showButton || showStalledButton"
-        class="flex flex-col gap-2 sm:items-stretch"
-      >
-        <button
-          v-if="showButton"
-          type="button"
-          data-panel-action-button
-          class="px-4 text-sm font-520 bg-white border-0 rounded-lg min-h-11 text-[#0D2344] whitespace-nowrap hover:bg-n-blue-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          @click="act"
-        >
-          {{ buttonLabel }}
-        </button>
-        <button
-          v-if="showStalledButton"
-          type="button"
-          data-panel-stalled-button
-          class="px-4 text-sm font-520 bg-transparent border border-solid rounded-lg min-h-11 border-white/40 text-white whitespace-nowrap hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          @click="openStalled"
-        >
-          {{ stalledLabel }}
-        </button>
-      </div>
-    </div>
-    <div class="flex flex-col gap-1.5">
-      <p
-        v-if="why"
-        data-daily-why
-        class="max-w-3xl m-0 text-[13px] font-420 leading-relaxed text-pretty text-white/65"
-      >
-        <span v-if="fromAi" data-daily-why-label class="font-520 text-white/80">
-          {{ $t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.WHY_LABEL') }}
-        </span>
-        {{ why }}
-      </p>
-      <p
-        v-if="notice"
-        data-daily-notice
-        role="status"
-        class="inline-flex items-center max-w-3xl gap-1.5 m-0 text-xs font-420 text-white/60"
-      >
-        <span class="i-lucide-info size-3.5 flex-none" aria-hidden="true" />
-        {{ notice }}
-      </p>
-    </div>
+          <a
+            v-if="hasButton(action) && targetOf(action) === 'ads_manager'"
+            data-panel-action-button
+            :href="action.button.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            :class="mainClass(index)"
+            @click="markOpened(action)"
+          >
+            {{ buttonLabel(action) }}
+            <span class="i-lucide-external-link size-3.5" aria-hidden="true" />
+          </a>
+          <button
+            v-else-if="hasButton(action)"
+            type="button"
+            data-panel-action-button
+            :aria-expanded="isExpanded(action)"
+            :disabled="busy.includes(action.id)"
+            :class="mainClass(index)"
+            @click="go(action)"
+          >
+            {{ buttonLabel(action) }}
+          </button>
+          <div
+            v-if="canResolve(action)"
+            class="flex flex-wrap items-center gap-x-4 sm:justify-center"
+          >
+            <button
+              v-if="targetOf(action) !== 'acknowledge'"
+              type="button"
+              data-action-accept
+              :disabled="busy.includes(action.id)"
+              :class="LINK_BUTTON"
+              @click="accept(action)"
+            >
+              {{ $t(`${KEY}.DONE`) }}
+            </button>
+            <button
+              type="button"
+              data-action-dismiss
+              :disabled="busy.includes(action.id)"
+              :class="LINK_BUTTON"
+              @click="dismiss(action)"
+            >
+              {{ $t(`${KEY}.DISMISS`) }}
+            </button>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <p
+      v-if="notice"
+      data-daily-notice
+      role="status"
+      class="inline-flex items-center max-w-3xl gap-1.5 m-0 text-xs font-420 text-white/60"
+    >
+      <span class="i-lucide-info size-3.5 flex-none" aria-hidden="true" />
+      {{ notice }}
+    </p>
   </div>
 </template>

@@ -5,11 +5,16 @@
 #   é sempre o pt_BR. A Meta recusa variável com quebra de linha, tab ou 4+ espaços seguidos (erro 132018), e o
 #   nome do anúncio é texto livre vindo da Meta: toda variável sai numa linha só, com os espaços juntados.
 #
-# Valores com `number_to_currency` na moeda da conta; separadores e símbolo vêm do i18n de servidor.
+# Valores com `number_to_currency` na moeda da conta; separadores e símbolo vêm do i18n de servidor. Os números do
+# "o que fazer hoje" pela regra são os fatos da ação do consultor (F5), formatados por Crm::MetaAds::Advisor::Format.
 class Crm::MetaAds::WhatsappReport::MessageBuilder
   SCOPE = 'meta_ads_whatsapp_report'.freeze
   DEFAULT_LOCALE = :pt_BR
   TEMPLATE_LOCALE = :pt_BR
+  # O fato que escolhe o plural do texto da regra, nos tipos que têm plural.
+  PLURAL_FACTS = { 'stalled_quotes' => :count, 'fix_tracking' => :unknown }.freeze
+  # Tipos cujo texto muda pela variante da ação (`review_ad`: no_sales/above_average; `refresh_creative`: ctr/frequency/both).
+  VARIANT_KINDS = %w[review_ad refresh_creative].freeze
 
   def initialize(account)
     @account = account
@@ -83,24 +88,39 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
                           quotes: t('template.quotes', count: digest[:quotes]), sales: t('template.sales', count: digest[:sales]))
   end
 
-  # O texto da IA quando há (título e como fazer, numa linha); senão a regra.
+  # O texto da IA quando há (título e como fazer, numa linha, já com os números); senão a regra.
   def action_text(digest)
-    ai = digest[:ai_action]
-    return [ai[:headline], ai[:body]].compact.join(' ') if ai
+    action = digest[:action]
+    return [action[:headline], action[:body]].compact.join(' ') if action[:source] == 'ai'
 
     rule_text(digest)
   end
 
-  # A ação da regra (Panel::Action).
+  # A ação do consultor pela regra (F5): o texto do tipo (e da variante) com os fatos da ação, cada um formatado
+  # pelo tipo dele (Advisor::Format), o mesmo da tela. `count` só escolhe o plural.
   def rule_text(digest)
-    rule = digest[:action]
-    kind = rule[:kind]
-    case kind
-    when 'stalled_quotes'
-      t('actions.stalled_quotes', count: rule[:count], days: rule[:days], value: money(rule[:value], digest[:currency]))
-    when 'fix_tracking' then t('actions.fix_tracking', count: rule[:unknown])
-    else t("actions.#{kind}")
-    end
+    action = digest[:action]
+    facts = action[:facts].to_h.symbolize_keys
+    values = facts.to_h { |key, raw| [key, Crm::MetaAds::Advisor::Format.fact(key, raw, locale: I18n.locale, currency: digest[:currency])] }
+    plural = PLURAL_FACTS[action[:kind]]
+    values[:count] = facts[plural] if plural
+    t(rule_key(action, facts), **values)
+  end
+
+  def rule_key(action, facts)
+    kind = action[:kind]
+    return "actions.#{kind}.#{action[:variant]}" if VARIANT_KINDS.include?(kind)
+    return "actions.slow_response.#{slow_variant(facts)}" if kind == 'slow_response'
+
+    "actions.#{kind}"
+  end
+
+  # Pela causa que disparou a regra (Rules#slow_status): mediana acima da meta é demora; mediana dentro dela (ou
+  # sem nenhuma resposta) é só a parte que ficou sem resposta. Mesmo critério da tela (MetaAdsDailyAction).
+  def slow_variant(facts)
+    return 'no_median' if facts[:median_seconds].nil?
+
+    facts[:median_seconds].to_i > facts[:target_seconds].to_i ? 'median' : 'unanswered'
   end
 
   def money(value, currency)
