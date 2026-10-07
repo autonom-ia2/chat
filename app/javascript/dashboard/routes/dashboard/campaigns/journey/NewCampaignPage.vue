@@ -568,7 +568,23 @@ const openEmailEditor = () => {
   router.push({
     name: 'campaigns_email_builder',
     params: { campaignId: draft.value.emailCampaignId },
-    query: { [JOURNEY_EDITOR_QUERY]: '1' },
+    query: {
+      [JOURNEY_EDITOR_QUERY]: '1',
+      ...(draft.value.brandKitId
+        ? { brand_kit: String(draft.value.brandKitId) }
+        : {}),
+    },
+  });
+};
+
+// Gerenciar / Usar o meu site (#1076): Identidade visual, then back here with the draft (like Público).
+const manageIdentity = create => {
+  saveDraft(accountId.value, draft.value);
+  router.push({
+    name: create
+      ? 'campaigns_journey_brand_kit_new'
+      : 'campaigns_journey_brand_kits',
+    query: { from: 'campaign' },
   });
 };
 
@@ -795,6 +811,7 @@ onBeforeUnmount(() => {
           @attach="file => (forms.mediaFile.value = file)"
           @email-create="createEmail"
           @open-editor="openEmailEditor"
+          @manage-identity="manageIdentity"
           @update="update"
           @bind="bind"
           @default="setDefault"

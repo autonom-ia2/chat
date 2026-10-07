@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { chmod, mkdtemp, mkdir, symlink, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +10,8 @@ import {
   configuration,
   proxyConfiguration,
   observedSession,
+  loadingQueryDocumentSha256,
+  loadingQueryFields,
   rolesQueryFields,
   validateRolesResponse,
   safeBrowserLocation,
@@ -32,6 +35,13 @@ const env = {
   INSTAGRAM_TESTER_PROXY_IDENTITY: '93.184.216.34:8080',
 };
 const config = configuration(env);
+const loadingDocuments = JSON.parse(
+  readFileSync(
+    new URL('./fixtures/loading-documents.json', import.meta.url),
+    'utf8'
+  )
+);
+const graphqlUrl = 'https://developers.facebook.com/api/graphql/';
 
 test('manual browser initialization validates the proxy without inventing Meta bindings', () => {
   const proxyEnv = {
@@ -108,6 +118,129 @@ const request = overrides => ({
   body: new URLSearchParams(fields).toString(),
   ...overrides,
 });
+
+const loadingVariables = name =>
+  name === 'DeveloperHeaderComponentContainerQuery'
+    ? { businessID: config.businessId, businessID_is_null: false }
+    : { appID: config.appId };
+
+const loadingBody = (
+  name,
+  variables = loadingVariables(name),
+  overrides = {}
+) =>
+  new URLSearchParams({
+    __user: config.adminId,
+    __bid: config.businessId,
+    av: config.adminId,
+    doc_id: loadingDocuments[name]?.doc_id || config.docId,
+    fb_api_req_friendly_name: name,
+    variables: JSON.stringify(variables),
+    ...overrides,
+  }).toString();
+
+test('accepts every observed loading document from the public SHA fixture', () => {
+  assert.deepEqual(Object.keys(loadingDocuments).sort(), [
+    'DeveloperAppBannerQuery',
+    'DeveloperAppDashboardSidebarNavigationV2Query',
+    'DeveloperAppVisibilityToggleLazyLoadedQuery',
+    'DeveloperHeaderComponentContainerQuery',
+    'GeoNextAppControllerContainerQuery',
+  ]);
+  assert.deepEqual(
+    Object.keys(loadingDocuments).sort(),
+    Object.keys(loadingQueryDocumentSha256).sort()
+  );
+  for (const [name, document] of Object.entries(loadingDocuments)) {
+    assert.equal(
+      createHash('sha256').update(document.doc_id).digest('hex'),
+      document.sha256
+    );
+    assert.equal(document.sha256, loadingQueryDocumentSha256[name]);
+    const body = loadingBody(name);
+    assert.equal(loadingQueryFields(body, config).doc_id, document.doc_id);
+    assert.equal(
+      isAllowedBrowserRequest({
+        url: graphqlUrl,
+        method: 'POST',
+        body,
+        config,
+      }),
+      true
+    );
+  }
+});
+
+test('rejects each loading document when one pinned guard is changed', () => {
+  const assertRejected = (body, requestOverrides = {}) => {
+    assert.equal(
+      isAllowedBrowserRequest({
+        url: graphqlUrl,
+        method: 'POST',
+        body,
+        config,
+        ...requestOverrides,
+      }),
+      false
+    );
+  };
+  for (const name of Object.keys(loadingDocuments)) {
+    const body = loadingBody(name);
+    const wrongVariables =
+      name === 'DeveloperHeaderComponentContainerQuery'
+        ? { businessID: '99999', businessID_is_null: false }
+        : { appID: '99999' };
+    assert.throws(() =>
+      loadingQueryFields(
+        loadingBody(name, loadingVariables(name), { doc_id: '99999' }),
+        config
+      )
+    );
+    assertRejected(
+      loadingBody(name, loadingVariables(name), { doc_id: '99999' })
+    );
+    assert.equal(
+      loadingQueryFields(
+        loadingBody(name, loadingVariables(name), {
+          fb_api_req_friendly_name: 'UnknownLoadingQuery',
+        }),
+        config
+      ),
+      null
+    );
+    assertRejected(
+      loadingBody(name, loadingVariables(name), {
+        fb_api_req_friendly_name: 'UnknownLoadingQuery',
+      })
+    );
+    for (const field of ['__bid', '__user', 'av']) {
+      assertRejected(
+        loadingBody(name, loadingVariables(name), { [field]: '99999' })
+      );
+    }
+    assertRejected(loadingBody(name, wrongVariables));
+    assertRejected(
+      loadingBody(name, loadingVariables(name), { __bid: undefined })
+    );
+    const duplicate = `${body}&__bid=${encodeURIComponent(config.businessId)}`;
+    assert.throws(() => loadingQueryFields(duplicate, config));
+    assertRejected(duplicate);
+    assertRejected(body, { method: 'PUT' });
+    assertRejected(body, { url: `${graphqlUrl}?write=1` });
+  }
+  const appIdOnly = new URLSearchParams(
+    loadingBody('GeoNextAppControllerContainerQuery')
+  );
+  for (const field of ['__bid', '__user', 'av']) appIdOnly.delete(field);
+  assertRejected(appIdOnly.toString());
+  assertRejected(
+    loadingBody('MetaDeveloperAssistantPageOverlayQuery', {
+      exposurePoint: 'unknown',
+      appID: config.appId,
+    })
+  );
+});
+
 const roles = {
   data: {
     get_app_roles: {

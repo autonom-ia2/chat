@@ -3,7 +3,9 @@
 # footer with the only unsubscribe link, WCAG AA contrast, 44px buttons, readable sizes in explicit Arial,
 # described images served by the installation (<= 200 KB), HTML under Gmail's 102 KB clip, and placeholders
 # every campaign can fill. Wired to the seed library (spec/services/email_campaigns/quality_gate_library_spec.rb);
-# built to run after AI generation too. Parses with Nokogiri and plain string methods — no regex.
+# built to run after AI generation too (EmailCampaigns::Ai::QualityCheck): without compiled HTML (`html: nil`,
+# production has no Node to compile MJML) the two checks on the HTML are skipped. Parses with Nokogiri and
+# plain string methods — no regex.
 class EmailCampaigns::QualityGate
   include Css
 

@@ -19,9 +19,12 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
       return render json: { error: 'email_campaign.base_mjml_too_large' }, status: :unprocessable_entity
     end
 
+    brand = brand_params
+    return if performed?
+
     EmailCampaigns::Ai::Adjustment.clear(campaign)
     token = campaign.ai_begin!
-    EmailCampaigns::Ai::SubmitJob.perform_later(campaign.id, token, generation_params)
+    EmailCampaigns::Ai::SubmitJob.perform_later(campaign.id, token, generation_params.merge('brand' => brand))
     render json: { ai_status: campaign.ai_status }, status: :accepted
   end
 
@@ -41,6 +44,21 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
     head :no_content
   end
 
+  # A pessoa aplicou o ajuste no editor: a proposta deixa de existir e, se o ajuste usou um site pedido no próprio
+  # pedido (#1111), a identidade da campanha passa a ser a dele. Descartar (discard_adjustment) não grava nada.
+  def apply_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    render json: { brand_identity: EmailCampaigns::Ai::Adjustment.apply(campaign) }
+  end
+
+  # "Desfazer" logo depois de aplicar: volta a identidade de antes (uma vez, na mesma geração). O corpo o editor salva.
+  def undo_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    render json: { brand_identity: EmailCampaigns::Ai::Adjustment.undo(campaign) }
+  end
+
   # Reescrita também roda fora do limite de tempo da requisição web.
   def rewrite
     authorize EmailCampaign, :create?
@@ -56,6 +74,43 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
       'assets' => permitted_assets,
       'base_mjml' => params[:base_mjml].to_s.presence
     }
+  end
+
+  # Identidade visual do e-mail (#1076): o kit escolhido, um site lido só para este e-mail (import), ou
+  # a padrão da conta. brand_kit_id="none" gera sem identidade. Com BRAND_KITS_ENABLED desligada, nada.
+  def brand_params
+    return nil unless BrandKits::Config.enabled?
+    return brand_from_import if params[:brand_import_id].present?
+    return nil if params[:brand_kit_id] == 'none'
+
+    params[:brand_kit_id].present? ? chosen_kit : default_kit
+  end
+
+  def brand_mode
+    modes = BrandKits::EmailPalettes::MODES
+    modes.include?(params[:brand_mode]) ? params[:brand_mode] : BrandKits::EmailPalettes::DEFAULT_MODE
+  end
+
+  def chosen_kit
+    kit = BrandKit.where(account: Current.account).live.find_by(id: params[:brand_kit_id])
+    kit ? { 'kit_id' => kit.id, 'mode' => brand_mode } : render_brand_error('brand_kit.not_found', :not_found)
+  end
+
+  def default_kit
+    kit = BrandKit.where(account: Current.account).live.find_by(is_default: true)
+    kit && { 'kit_id' => kit.id, 'mode' => brand_mode }
+  end
+
+  def brand_from_import
+    import = BrandImportJob.where(account: Current.account).find_by(id: params[:brand_import_id])
+    return render_brand_error('brand_kit_import.not_ready', :unprocessable_entity) unless import&.succeeded?
+
+    { 'import_id' => import.id, 'mode' => brand_mode }
+  end
+
+  def render_brand_error(code, status)
+    render json: { error: code }, status: status
+    nil
   end
 
   def permitted_assets

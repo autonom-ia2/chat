@@ -6,11 +6,14 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import Button from 'dashboard/components-next/button/Button.vue';
+import RequestedSiteNotice from 'dashboard/components-next/BrandKits/RequestedSiteNotice.vue';
 
 const props = defineProps({
   beforeHtml: { type: String, required: true },
   afterHtml: { type: String, required: true },
   summary: { type: String, default: '' },
+  // #1111: a site the request asked for, used or unreadable ({ host, status, import_id }).
+  siteRequest: { type: Object, default: null },
 });
 
 const emit = defineEmits(['apply', 'discard']);
@@ -71,6 +74,7 @@ onMounted(() => {
           <span class="i-lucide-sparkles mt-0.5 size-4 shrink-0" />
           <span>{{ summary }}</span>
         </p>
+        <RequestedSiteNotice v-if="siteRequest" :site-request="siteRequest" />
         <div
           class="grid grid-cols-2 gap-1 rounded-xl bg-n-alpha-1 p-1 lg:hidden"
           role="group"

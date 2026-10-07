@@ -229,6 +229,10 @@ gem 'rubyzip', '~> 2.3', require: 'zip' # docx (Zip::File) + dep do roo
 gem 'mini_magick', '~> 4.12'
 gem 'rtesseract', '~> 3.1'
 
+##-- autonomia: identidade visual importada do site (#1076) --##
+# Lê as folhas de estilo já baixadas pelo SafeFetch (cores, fontes); nunca busca URL sozinho. MIT.
+gem 'css_parser', '~> 3.2'
+
 ### Gems required only in specific deployment environments ###
 ##############################################################
 

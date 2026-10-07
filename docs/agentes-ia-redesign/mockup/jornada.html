@@ -1,0 +1,1563 @@
+<title>Agentes Chat2You — jornada</title>
+<style>
+/* Layout: o painel real do Chat2You (menu azul-marinho à esquerda, conteúdo max-w-6xl) com uma faixa de protótipo no topo.
+   Tokens = os n-* do painel (_next-colors.scss) + azul-marinho dos heróis (#0D2344). */
+:root{
+  --bg:#F7F7F7; --surface:#FEFEFE; --solid:#FFFFFF; --weak:#EAEAEA; --strong:#E2E3E7; --alpha:rgba(196,197,198,.22);
+  --s9:#8B8D98; --s10:#80838D; --s11:#60646C; --s12:#1C2024; --s3:#F0F0F3; --s2:#F9F9FB;
+  --brand:#2781F6; --brandh:#1073E9; --b2:#F5F9FF; --b3:#E9F3FF; --b6:#B5D5FF; --b7:#8EC0FF; --b11:#086DE0;
+  --t2:#F3FBF9; --t3:#E0F8F3; --t9:#12A594; --t11:#008573;
+  --a3:#FFF7C2; --a9:#FFC53D; --a11:#AB6400;
+  --r3:#FEEAED; --r9:#E54666; --r11:#CA244D;
+  --v3:#F4F0FE; --v11:#6555B7;
+  --navy:#0D2344; --navy2:#163A6B; --side:#0E1D38; --sidefg:#E6ECF5; --sidemuted:#9FB0C8;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --shadowlg:0 12px 32px rgba(13,35,68,.14);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1C1D20; --surface:#141517; --solid:#17171A; --weak:#1F1F25; --strong:#2E2D32; --alpha:rgba(147,153,176,.12);
+  --s9:#696E77; --s10:#777B84; --s11:#B0B4BA; --s12:#EDEEF0; --s3:#212225; --s2:#18191B;
+  --b2:#0F1826; --b3:#0F2748; --b6:#1D5486; --b7:#2870BD; --b11:#7EB6FF;
+  --t2:#111C1B; --t3:#0D2D2A; --t11:#0BD8B6; --a3:#302008; --a11:#FFCA16; --r3:#3A141E; --r11:#FF949D; --v3:#291F43; --v11:#A999EC;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --shadowlg:0 12px 32px rgba(0,0,0,.5); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#1C1D20; --surface:#141517; --solid:#17171A; --weak:#1F1F25; --strong:#2E2D32; --alpha:rgba(147,153,176,.12);
+  --s9:#696E77; --s10:#777B84; --s11:#B0B4BA; --s12:#EDEEF0; --s3:#212225; --s2:#18191B;
+  --b2:#0F1826; --b3:#0F2748; --b6:#1D5486; --b7:#2870BD; --b11:#7EB6FF;
+  --t2:#111C1B; --t3:#0D2D2A; --t11:#0BD8B6; --a3:#302008; --a11:#FFCA16; --r3:#3A141E; --r11:#FF949D; --v3:#291F43; --v11:#A999EC;
+  --shadow:0 1px 2px rgba(0,0,0,.4); --shadowlg:0 12px 32px rgba(0,0,0,.5); color-scheme:dark }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--s12);font-family:var(--font);font-size:15px;line-height:1.5}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.ico{width:1.25rem;height:1.25rem;flex:none;stroke-width:2}
+
+/* faixa do protótipo */
+.proto{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;
+  padding:.55rem 16px;background:#111827;color:#E5E7EB;font-size:13px}
+.proto b{color:#fff}
+.proto nav{display:flex;flex-wrap:wrap;gap:.35rem}
+.proto button{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#E5E7EB;border-radius:999px;padding:.2rem .7rem;font-size:12.5px}
+.proto button[aria-current="true"]{background:#fff;color:#111827}
+.proto .note{margin-left:auto;color:#9CA3AF}
+
+/* moldura do painel */
+.app{display:flex;min-height:calc(100% - 40px)}
+.side{width:15.5rem;flex:none;background:var(--side);color:var(--sidefg);padding:1rem .75rem;display:flex;flex-direction:column;gap:.25rem}
+.side .acct{display:flex;align-items:center;gap:.6rem;padding:.25rem .5rem 1rem;font-weight:600}
+.side .logo{width:2rem;height:2rem;border-radius:999px;background:conic-gradient(from 200deg,#2781F6,#7EB6FF,#0D2344,#2781F6)}
+.side a{display:flex;align-items:center;gap:.7rem;padding:.55rem .65rem;border-radius:.6rem;color:var(--sidefg);text-decoration:none;font-size:14.5px}
+.side a.on{background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);font-weight:600}
+.side a .ico{color:var(--sidemuted)}
+.side a.on .ico{color:#fff}
+.side .tag{margin-left:auto;font-size:11px;background:var(--brand);color:#fff;border-radius:999px;padding:0 .45rem}
+.main{flex:1;min-width:0;background:var(--surface);overflow-x:hidden}
+.main:focus{outline:none}
+@media (max-width:860px){.side{display:none}}
+
+/* página */
+.page{max-width:72rem;margin:0 auto;padding-block:2.5rem 4rem;padding-inline:2rem;display:flex;flex-direction:column;gap:2rem}
+@media (max-width:640px){.page{padding-inline:16px;padding-block:1.5rem 3rem}}
+.ph{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1.25rem}
+.h1{font-size:clamp(1.9rem,3vw,2.25rem);font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.sub{margin-top:.5rem;font-size:1.0625rem;color:var(--s11);max-width:42rem}
+.h2{font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+.muted{color:var(--s11)}
+.small{font-size:13px;color:var(--s11)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:2.75rem;padding:0 1.1rem;border-radius:.75rem;border:0;font-weight:600;font-size:15px;white-space:nowrap}
+.btn.lg{min-height:3rem;padding:0 1.35rem;font-size:15.5px}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brandh)}
+.btn.primary[disabled]{background:var(--s3);color:var(--s9);cursor:not-allowed}
+.btn.soft{background:var(--s3);color:var(--s12)}
+.btn.soft:hover{background:var(--strong)}
+.btn.outline{background:transparent;box-shadow:inset 0 0 0 1px var(--strong);color:var(--s12)}
+.btn.outline:hover{background:var(--s2)}
+.btn.danger{background:var(--r3);color:var(--r11)}
+.btn.link{background:none;color:var(--b11);padding:0 .25rem;min-height:2.75rem}
+.back{display:inline-flex;align-items:center;gap:.5rem;min-height:2.75rem;background:none;border:0;color:var(--s11);font-size:15px;padding:0}
+.back:hover{color:var(--s12)}
+
+.chips{display:flex;flex-wrap:wrap;gap:.6rem}
+.count{display:inline-flex;align-items:center;gap:.6rem;padding:.6rem 1rem;border-radius:.75rem;border:1px solid var(--weak);background:var(--solid);font-size:15px}
+.dot{width:.6rem;height:.6rem;border-radius:999px;background:var(--t9)}
+.dot.amber{background:var(--a9)} .dot.slate{background:var(--s9)}
+
+.pill{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .65rem;border-radius:999px;font-size:13px;font-weight:600}
+.pill.on{background:var(--t3);color:var(--t11)} .pill.off{background:var(--s3);color:var(--s11)}
+.pill.todo{background:var(--a3);color:var(--a11)} .pill.ready{background:var(--b3);color:var(--b11)}
+.pill .dot{width:.45rem;height:.45rem}
+
+/* cartões de agente */
+.list{display:flex;flex-direction:column;gap:1rem}
+.agent{display:flex;flex-wrap:wrap;align-items:center;gap:1.25rem;padding:1.25rem 1.5rem;border-radius:1rem;border:1px solid var(--weak);background:var(--solid);box-shadow:var(--shadow);transition:border-color .15s}
+.agent:hover{border-color:var(--b6)}
+.av{width:3.25rem;height:3.25rem;border-radius:1rem;display:grid;place-items:center;font-weight:700;font-size:1.2rem;flex:none}
+.av.blue{background:var(--b3);color:var(--b11)} .av.teal{background:var(--t3);color:var(--t11)} .av.violet{background:var(--v3);color:var(--v11)} .av.amber{background:var(--a3);color:var(--a11)}
+.agent .body{flex:1;min-width:14rem;display:flex;flex-direction:column;gap:.35rem}
+.agent .name{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;font-size:1.125rem;font-weight:600}
+.agent .line{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .9rem;color:var(--s11)}
+.agent .line span{display:inline-flex;align-items:center;gap:.35rem}
+.agent .acts{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.kind{font-size:12.5px;font-weight:500;color:var(--s11);background:var(--s3);border-radius:.4rem;padding:.05rem .45rem}
+
+/* interruptor */
+.sw{display:inline-flex;align-items:center;gap:.6rem;min-height:2.75rem;background:none;border:0;padding:0 .25rem;font-size:14.5px;font-weight:500;color:var(--s11)}
+.sw .track{width:2.75rem;height:1.6rem;border-radius:999px;background:var(--strong);position:relative;transition:background .15s}
+.sw .track::after{content:"";position:absolute;top:.2rem;left:.2rem;width:1.2rem;height:1.2rem;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw[aria-checked="true"] .track{background:var(--t9)}
+.sw[aria-checked="true"] .track::after{transform:translateX(1.15rem)}
+.sw[aria-checked="true"]{color:var(--t11)}
+
+/* herói */
+.hero{position:relative;overflow:hidden;border-radius:1.5rem;background:var(--navy);color:#fff;padding:3rem 3rem 2.75rem}
+@media (max-width:640px){.hero{padding:2rem 1.25rem}}
+.hero .ring{position:absolute;border-radius:999px;border:3rem solid #2781F6;opacity:.14;pointer-events:none}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:.4rem;font-size:13px;font-weight:600;color:#9CC8FF}
+.hero h1{margin-top:.75rem;font-size:clamp(1.9rem,3.4vw,2.6rem);font-weight:700;letter-spacing:-.02em;line-height:1.12;color:#fff;max-width:36rem}
+.hero p{margin-top:.75rem;color:rgba(255,255,255,.78);font-size:1.0625rem;max-width:36rem}
+.hero .row{margin-top:1.75rem;display:flex;flex-wrap:wrap;gap:.75rem}
+.hero .ghost{background:rgba(255,255,255,.1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);color:#fff}
+
+/* grade de modelos */
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid.pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.grid,.grid.pair{grid-template-columns:1fr}}
+.model.row{flex-direction:row;align-items:center}
+.model.row .txt{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.model{display:flex;flex-direction:column;gap:.9rem;text-align:left;padding:1.4rem;border-radius:1rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--weak),var(--shadow);transition:transform .15s,box-shadow .15s}
+.model:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px var(--b7),var(--shadowlg)}
+.model[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--brand),var(--shadowlg)}
+.model .tile{width:3.25rem;height:3.25rem;border-radius:1rem;display:grid;place-items:center}
+.model .tile .ico{width:1.6rem;height:1.6rem}
+.model b{font-size:1.0625rem}
+.model .d{color:var(--s11);font-size:14.5px}
+.model .ex{margin-top:auto;padding-top:.8rem;border-top:1px dashed var(--weak);font-size:13.5px;color:var(--s11)}
+.t-blue{background:var(--b3);color:var(--b11)} .t-teal{background:var(--t3);color:var(--t11)} .t-amber{background:var(--a3);color:var(--a11)}
+.t-ruby{background:var(--r3);color:var(--r11)} .t-violet{background:var(--v3);color:var(--v11)} .t-slate{background:var(--s3);color:var(--s11)}
+.check{position:absolute}
+
+/* etapas */
+.steps{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:.5rem;font-size:14.5px;color:var(--s11)}
+.step .n{width:2rem;height:2rem;border-radius:999px;display:grid;place-items:center;font-weight:600;font-size:14px;background:var(--s3);color:var(--s11)}
+.step.cur{color:var(--s12);font-weight:600} .step.cur .n{background:var(--b3);color:var(--b11)}
+.step.past .n{background:var(--t3);color:var(--t11)}
+.step + .bar{width:1.75rem;height:2px;background:var(--strong);border-radius:2px}
+.bar.past{background:var(--b7)}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+
+/* construtor */
+.two{display:grid;gap:1.75rem;grid-template-columns:minmax(0,1fr) minmax(0,25rem);align-items:start}
+@media (max-width:980px){.two{grid-template-columns:1fr}}
+.panel{display:flex;flex-direction:column;gap:1.25rem;padding:1.5rem;border-radius:1.5rem;border:1px solid var(--weak);background:var(--solid);box-shadow:var(--shadow)}
+.panel h3{font-size:1.125rem;font-weight:600}
+.chat{display:flex;flex-direction:column;gap:1rem;min-height:24rem}
+.msg{max-width:36rem;padding:.85rem 1.1rem;border-radius:1.1rem;font-size:15.5px;line-height:1.55}
+.msg.bot{background:var(--s3);border-top-left-radius:.35rem;align-self:flex-start}
+.msg.me{background:var(--brand);color:#fff;border-top-right-radius:.35rem;align-self:flex-end}
+.who{display:flex;align-items:center;gap:.5rem;font-size:13px;color:var(--s11);font-weight:600}
+.who .mini{width:1.6rem;height:1.6rem;border-radius:.5rem;background:var(--navy);display:grid;place-items:center;color:#9CC8FF}
+.who .mini .ico{width:.95rem;height:.95rem}
+.quick{display:flex;flex-wrap:wrap;gap:.5rem}
+.quick button{display:inline-flex;align-items:center;gap:.5rem;min-height:2.75rem;padding:0 1rem;border-radius:.75rem;border:0;background:var(--b2);box-shadow:inset 0 0 0 1px var(--b6);color:var(--b11);font-weight:500;font-size:14.5px;text-align:left}
+.quick button:hover{background:var(--b3)}
+.composer{display:flex;align-items:flex-end;gap:.5rem;padding:.5rem;border-radius:1rem;background:var(--solid);box-shadow:inset 0 0 0 1px var(--strong)}
+.composer textarea{flex:1;min-width:0;border:0;resize:none;background:transparent;color:var(--s12);font:inherit;font-size:15.5px;padding:.6rem .5rem;min-height:2.75rem;max-height:10rem;outline:none}
+.iconbtn{width:2.75rem;height:2.75rem;border-radius:.75rem;border:0;background:transparent;color:var(--s11);display:grid;place-items:center}
+.iconbtn:hover{background:var(--s3);color:var(--s12)}
+.send{background:var(--brand);color:#fff}
+.send:hover{background:var(--brandh);color:#fff}
+
+.know{display:flex;flex-direction:column;gap:.9rem;padding:0;margin:0;list-style:none}
+.know li{display:flex;gap:.75rem;align-items:flex-start}
+.know .st{width:1.6rem;height:1.6rem;border-radius:999px;display:grid;place-items:center;flex:none;background:var(--s3);color:var(--s9)}
+.know .st .ico{width:.95rem;height:.95rem}
+.know li.ok .st{background:var(--t3);color:var(--t11)}
+.know .k{font-size:13px;color:var(--s11);font-weight:600}
+.know .v{font-size:15px}
+.know li:not(.ok) .v{color:var(--s9)}
+.progress{height:.4rem;border-radius:999px;background:var(--alpha);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--brand);border-radius:999px;transition:width .3s}
+.drop{display:flex;flex-direction:column;align-items:center;gap:.4rem;padding:1.25rem;border-radius:1rem;border:1.5px dashed var(--strong);text-align:center;color:var(--s11)}
+.file{display:flex;align-items:center;gap:.75rem;padding:.75rem .9rem;border-radius:.85rem;background:var(--s2);border:1px solid var(--weak)}
+.file .fi{width:2.4rem;height:2.4rem;border-radius:.6rem;display:grid;place-items:center;background:var(--r3);color:var(--r11);flex:none}
+.file .fn{flex:1;min-width:0;font-size:14px;font-weight:500;overflow-wrap:anywhere}
+.tip{display:flex;gap:.75rem;padding:1rem 1.1rem;border-radius:1rem;background:var(--b2);border:1px solid var(--b6);font-size:14.5px}
+.tip .ico{color:var(--b11)}
+
+/* teste */
+.phone{border-radius:1.75rem;border:1px solid var(--weak);background:var(--s2);padding:1rem;display:flex;flex-direction:column;gap:.85rem;min-height:30rem}
+.phone .bar2{display:flex;align-items:center;gap:.6rem;padding-bottom:.75rem;border-bottom:1px solid var(--weak)}
+.src{display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:12.5px;color:var(--s11)}
+.flag{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:.75rem;background:var(--a3);color:var(--a11);font-size:13.5px;font-weight:500;align-self:flex-start}
+
+/* ligar */
+.opt{display:flex;align-items:center;gap:1rem;width:100%;text-align:left;padding:1rem 1.15rem;border-radius:1rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--weak)}
+.opt[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--brand);background:var(--b2)}
+.opt[disabled]{opacity:.62;cursor:not-allowed}
+.opt .radio{width:1.35rem;height:1.35rem;border-radius:999px;box-shadow:inset 0 0 0 2px var(--strong);flex:none}
+.opt[aria-checked="true"] .radio{box-shadow:inset 0 0 0 6px var(--brand)}
+.field{display:flex;flex-direction:column;gap:.45rem}
+.field label{font-weight:600;font-size:14.5px}
+.field input,.field textarea{font:inherit;font-size:15.5px;color:var(--s12);background:var(--solid);border:0;box-shadow:inset 0 0 0 1px var(--strong);border-radius:.75rem;padding:.7rem .9rem;min-height:2.9rem;resize:vertical}
+.field input:focus,.field textarea:focus{outline:none;box-shadow:inset 0 0 0 2px var(--brand)}
+.sentence{padding:1.1rem 1.25rem;border-radius:1rem;background:var(--s2);border:1px solid var(--weak);font-size:15.5px}
+
+.done{display:flex;align-items:center;gap:1rem;padding:1.25rem 1.4rem;border-radius:1rem;background:var(--t3)}
+.done .c{width:2.75rem;height:2.75rem;border-radius:999px;background:var(--t9);color:#fff;display:grid;place-items:center;flex:none}
+
+/* painel do agente */
+.tabs{display:flex;gap:.25rem;border-bottom:1px solid var(--weak);overflow-x:auto}
+.tabs button{border:0;background:none;padding:.85rem 1rem;min-height:2.75rem;font-weight:500;color:var(--s11);border-bottom:2px solid transparent;white-space:nowrap;font-size:15px}
+.tabs button[aria-selected="true"]{color:var(--s12);border-bottom-color:var(--brand);font-weight:600}
+.stats{display:grid;gap:1rem;grid-template-columns:repeat(auto-fill,minmax(min(100%,14rem),1fr))}
+.stat{padding:1.25rem 1.4rem;border-radius:1rem;border:1px solid var(--weak);background:var(--solid)}
+.stat .num{font-size:2rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .lab{color:var(--s11);font-size:14.5px}
+.rows{display:flex;flex-direction:column;border:1px solid var(--weak);border-radius:1rem;background:var(--solid);overflow:hidden}
+.rowi{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;padding:1rem 1.25rem}
+.rowi + .rowi{border-top:1px solid var(--weak)}
+.rowi .grow{flex:1;min-width:12rem}
+.rowi .k{font-size:13px;color:var(--s11);font-weight:600}
+.danger{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;border-radius:1rem;border:1px solid var(--r3)}
+
+/* diálogo */
+.scrim{position:fixed;inset:0;z-index:60;background:rgba(13,35,68,.45);display:grid;place-items:center;padding:16px}
+.dlg{width:min(100%,30rem);background:var(--solid);border-radius:1.25rem;padding:1.6rem;box-shadow:var(--shadowlg);display:flex;flex-direction:column;gap:1rem}
+.dlg h2{font-size:1.25rem;font-weight:600}
+.dlg .acts{display:flex;justify-content:flex-end;gap:.6rem;flex-wrap:wrap}
+.toast{position:fixed;bottom:calc(1.25rem + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);z-index:70;background:#111827;color:#fff;padding:.75rem 1.1rem;border-radius:.85rem;font-size:14.5px;box-shadow:var(--shadowlg);display:flex;gap:.6rem;align-items:center}
+.callout{display:flex;gap:.7rem;align-items:flex-start;padding:.85rem 1rem;border-radius:.85rem;background:var(--s2);border:1px solid var(--weak);font-size:14px;color:var(--s11)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.hide-sm{}
+@media (max-width:640px){.hide-sm{display:none}}
+
+/* ===== v2 ===== */
+.proto .sep{width:1px;height:1.2rem;background:rgba(255,255,255,.18)}
+.proto .seg{display:inline-flex;gap:.25rem;align-items:center}
+.proto .lbl{color:#9CA3AF}
+.proto .note{margin-left:0}
+@media (max-width:860px){.proto .note{display:none}}
+.mapbtn{border:0!important;background:var(--brand)!important;color:#fff!important}
+.drawer{position:fixed;inset:0 0 0 auto;z-index:65;width:min(100%,26rem);background:var(--solid);box-shadow:var(--shadowlg);display:flex;flex-direction:column}
+.drawer header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 1.25rem;background:var(--navy);color:#fff}
+.drawer header h2{font-size:1.15rem;font-weight:600;color:#fff}
+.drawer header .iconbtn{color:#fff}
+.drawer header .iconbtn:hover{background:rgba(255,255,255,.12);color:#fff}
+.drawer .scroll{overflow:auto;padding:1rem 1.25rem 2rem;display:flex;flex-direction:column;gap:1.25rem}
+.maplist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.15rem}
+.maplist button{width:100%;text-align:left;border:0;background:none;border-radius:.6rem;padding:.55rem .65rem;min-height:2.75rem;display:flex;gap:.6rem;align-items:center;font-size:14.5px}
+.maplist button:hover{background:var(--s3)}
+.maplist small{color:var(--s11);margin-left:auto;font-size:12px}
+.mapgroup{font-size:12.5px;font-weight:600;color:var(--s11);padding:.25rem .65rem}
+.statebar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;padding:.6rem .8rem;border-radius:.85rem;background:var(--s2);border:1px dashed var(--strong);font-size:13px;color:var(--s11)}
+.statebar button{border:0;border-radius:999px;padding:.2rem .7rem;min-height:2rem;background:var(--s3);font-size:12.5px;color:var(--s12)}
+.statebar button[aria-pressed="true"]{background:var(--s12);color:var(--solid)}
+.skel{border-radius:1rem;background:var(--alpha);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.errorbox{display:flex;flex-direction:column;align-items:flex-start;gap:1rem;padding:2rem;border-radius:1rem;border:1px solid var(--weak);background:var(--solid)}
+.errorbox .tile{width:3rem;height:3rem;border-radius:.85rem;display:grid;place-items:center}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;padding:.9rem 1.1rem;border-radius:1rem;font-size:14.5px}
+.banner.red{background:var(--r3);color:var(--r11)}
+.banner.amber{background:var(--a3);color:var(--a11)}
+.banner.blue{background:var(--b2);color:var(--b11);border:1px solid var(--b6)}
+.banner .grow{flex:1;min-width:12rem}
+.banner .btn{min-height:2.5rem}
+.think{display:inline-flex;gap:.3rem;padding:.95rem 1.1rem;border-radius:1.1rem;background:var(--s3);align-self:flex-start}
+.think i{width:.45rem;height:.45rem;border-radius:999px;background:var(--s9);animation:pulse 1s infinite}
+.think i:nth-child(2){animation-delay:.2s}.think i:nth-child(3){animation-delay:.4s}
+.imgchips{display:flex;flex-wrap:wrap;gap:.5rem}
+.imgchip{display:flex;align-items:center;gap:.5rem;padding:.35rem .5rem .35rem .35rem;border-radius:.7rem;background:var(--s3);font-size:13px}
+.imgchip .th{width:2rem;height:2rem;border-radius:.45rem;background:linear-gradient(135deg,var(--b6),var(--v3))}
+.imgchip button{width:1.8rem;height:1.8rem;border:0;border-radius:.45rem;background:transparent;display:grid;place-items:center;color:var(--s11)}
+.seg2{display:inline-flex;padding:.25rem;border-radius:.85rem;background:var(--s3);gap:.25rem}
+.seg2 button{border:0;background:none;border-radius:.65rem;min-height:2.5rem;padding:0 .9rem;font-weight:500;color:var(--s11);font-size:14.5px}
+.seg2 button[aria-pressed="true"]{background:var(--solid);color:var(--s12);box-shadow:var(--shadow);font-weight:600}
+.mat{display:flex;flex-direction:column;gap:.55rem;padding:.85rem .95rem;border-radius:.9rem;border:1px solid var(--weak);background:var(--solid)}
+.mat.warn{border-color:var(--a9)} .mat.good{border-color:var(--t9)}
+.mat .hd{display:flex;align-items:center;gap:.7rem}
+.mat .fi{width:2.3rem;height:2.3rem;border-radius:.6rem;display:grid;place-items:center;flex:none;background:var(--s3);color:var(--s11)}
+.mat .nm{flex:1;min-width:0;font-weight:500;font-size:14px;overflow-wrap:anywhere}
+.mat .st{display:inline-flex;align-items:center;gap:.35rem;font-size:12.5px;font-weight:600;white-space:nowrap}
+.mat .why{font-size:13.5px;color:var(--s11)}
+.spin{width:1rem;height:1rem;border-radius:999px;border:2px solid var(--b6);border-top-color:var(--brand);animation:rot .8s linear infinite;flex:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+.meter{display:flex;flex-direction:column;gap:.35rem}
+.meter .row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--s11)}
+.meter .row b{color:var(--s12);font-variant-numeric:tabular-nums}
+.progress.teal i{background:var(--t9)} .progress.amber i{background:var(--a9)} .progress.red i{background:var(--r9)}
+.counter{font-size:13px;color:var(--s11);font-variant-numeric:tabular-nums}
+.used{border-top:1px solid var(--weak);margin-top:.6rem;padding-top:.6rem;font-size:13px;color:var(--s11)}
+.used summary{cursor:pointer;min-height:2rem;display:flex;align-items:center;gap:.35rem;font-weight:600}
+.used blockquote{margin:.4rem 0 0;padding:.5rem .7rem;border-left:3px solid var(--b6);background:var(--solid);border-radius:.35rem}
+.conf{display:flex;align-items:center;gap:.6rem;margin-top:.55rem;font-size:12.5px;color:var(--s11)}
+.conf .progress{flex:1;max-width:8rem}
+.chart{display:flex;align-items:flex-end;gap:3px;height:9rem;padding-top:.5rem}
+.chart .day{flex:1;display:flex;flex-direction:column-reverse;gap:2px;min-width:4px;height:100%}
+.chart .r{background:var(--brand);border-radius:3px 3px 0 0}
+.chart .h{background:var(--a9);border-radius:3px 3px 0 0}
+.axis{display:flex;justify-content:space-between;font-size:12px;color:var(--s11);margin-top:.35rem}
+.legend{display:flex;gap:1rem;font-size:13px;color:var(--s11)}
+.legend span{display:inline-flex;align-items:center;gap:.4rem}
+.legend i{width:.7rem;height:.7rem;border-radius:.2rem;display:inline-block}
+.outcomes{display:grid;gap:.75rem;grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:980px){.outcomes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.outcome{display:flex;flex-direction:column;gap:.2rem;text-align:left;padding:1rem;border-radius:.9rem;border:0;background:var(--s2);box-shadow:inset 0 0 0 1px var(--weak)}
+.outcome:hover{box-shadow:inset 0 0 0 1px var(--b7)}
+.outcome b{font-size:1.6rem;font-variant-numeric:tabular-nums}
+.outcome span{font-size:13.5px;color:var(--s11)}
+.reasons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem}
+.reasons li{display:grid;grid-template-columns:minmax(0,12rem) 1fr auto;gap:.75rem;align-items:center;font-size:14.5px}
+.reasons .progress{height:.5rem}
+.sect{display:flex;flex-direction:column;gap:1rem;padding:1.5rem;border-radius:1.25rem;border:1px solid var(--weak);background:var(--solid)}
+.sect > header{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.sect h3{font-size:1.125rem;font-weight:600}
+.sect .desc{color:var(--s11);font-size:14.5px;margin-top:.2rem;max-width:44rem}
+.radiocards{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr))}
+.rc{display:flex;flex-direction:column;gap:.3rem;text-align:left;padding:1rem 1.1rem;border-radius:.9rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--strong)}
+.rc[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--brand);background:var(--b2)}
+.rc b{display:flex;align-items:center;gap:.5rem}
+.rc span{font-size:13.5px;color:var(--s11)}
+.chipsel{display:flex;flex-wrap:wrap;gap:.5rem}
+.chipsel button{min-height:2.75rem;padding:0 1rem;border-radius:999px;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--strong);font-size:14.5px}
+.chipsel button[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--brand);background:var(--b2);color:var(--b11);font-weight:600}
+.slider{display:flex;flex-direction:column;gap:.5rem}
+.slider input{width:100%;accent-color:var(--brand);min-height:2.75rem}
+.slider .ends{display:flex;justify-content:space-between;font-size:13px;color:var(--s11)}
+.cond{display:flex;flex-direction:column;gap:.6rem;padding:1rem;border-radius:.9rem;background:var(--s2);border:1px solid var(--weak)}
+.condrow{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.pick{display:inline-flex;align-items:center;justify-content:space-between;gap:.6rem;min-height:2.75rem;min-width:9rem;padding:0 .8rem;border-radius:.65rem;border:0;background:var(--solid);box-shadow:inset 0 0 0 1px var(--strong);font-size:14.5px}
+.pick .ico{width:1rem;height:1rem;color:var(--s11)}
+.condrow input{font:inherit;font-size:14.5px;min-height:2.75rem;padding:0 .8rem;border:0;border-radius:.65rem;box-shadow:inset 0 0 0 1px var(--strong);background:var(--solid);color:var(--s12);flex:1;min-width:8rem}
+.ver{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;padding:.85rem 1rem;border-radius:.85rem;border:1px solid var(--weak)}
+.ver .grow{flex:1;min-width:12rem}
+.qr{width:15rem;height:15rem;max-width:100%;border-radius:1rem;background:
+  conic-gradient(from 90deg at 2rem 2rem,var(--s12) 25%,transparent 0) 0 0/3rem 3rem,
+  repeating-linear-gradient(45deg,var(--s12) 0 .5rem,transparent .5rem 1rem),var(--solid);border:1rem solid var(--solid);box-shadow:inset 0 0 0 1px var(--weak),0 0 0 1px var(--weak)}
+.steps3{margin:0;padding-left:1.25rem;display:flex;flex-direction:column;gap:.5rem;color:var(--s11)}
+.convo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,22rem);gap:1.25rem;align-items:start}
+@media (max-width:980px){.convo{grid-template-columns:1fr}}
+.ctx{position:relative}
+.menu{position:absolute;right:0;top:100%;margin-top:.35rem;z-index:5;min-width:14rem;padding:.35rem;border-radius:.85rem;background:var(--solid);box-shadow:var(--shadowlg),inset 0 0 0 1px var(--weak);display:flex;flex-direction:column}
+.menu button{border:0;background:none;text-align:left;min-height:2.75rem;padding:0 .75rem;border-radius:.6rem;display:flex;gap:.6rem;align-items:center;font-size:14.5px}
+.menu button:hover{background:var(--s3)}
+.menu .red{color:var(--r11)}
+.tool{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;padding:1rem 1.15rem;border-radius:.9rem;border:1px solid var(--weak);background:var(--solid)}
+.tool .grow{flex:1;min-width:12rem}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.kv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;gap:.5rem;align-items:center}
+.kv input{font:inherit;font-size:14px;min-height:2.6rem;padding:0 .7rem;border:0;border-radius:.6rem;box-shadow:inset 0 0 0 1px var(--strong);background:var(--solid);color:var(--s12);min-width:0}
+.check2{display:inline-flex;align-items:center;gap:.4rem;font-size:13.5px;min-height:2.6rem}
+.dlg.wide{width:min(100%,44rem);max-height:90vh;overflow:auto}
+.lockline{display:flex;gap:.6rem;align-items:center;padding:.85rem 1rem;border-radius:.85rem;background:var(--s2);border:1px solid var(--weak);color:var(--s11);font-size:14px}
+.copilot{border-radius:1.1rem;border:1px solid var(--weak);background:var(--solid);display:flex;flex-direction:column;overflow:hidden}
+.copilot header{display:flex;align-items:center;gap:.6rem;padding:.85rem 1rem;border-bottom:1px solid var(--weak);font-weight:600}
+.copilot .body{padding:1rem;display:flex;flex-direction:column;gap:.75rem}
+.convpane{border-radius:1.1rem;border:1px solid var(--weak);background:var(--solid);padding:1rem;display:flex;flex-direction:column;gap:.85rem}
+.msgrow{display:flex;align-items:flex-start;gap:.5rem}
+.msgrow.out{justify-content:flex-end}
+.msgrow .more{width:2.2rem;height:2.2rem;border-radius:.6rem;border:0;background:transparent;color:var(--s11);display:grid;place-items:center}
+.msgrow .more:hover{background:var(--s3)}
+.tagline{font-size:12px;color:var(--s11);margin-top:.25rem}
+
+.newtag{display:inline-flex;align-items:center;margin-left:.4rem;padding:0 .4rem;border-radius:.35rem;background:var(--v3);color:var(--v11);font-size:11px;font-weight:700;letter-spacing:.02em;vertical-align:middle}
+</style>
+<script src="https://unpkg.com/lucide@0.453.0/dist/umd/lucide.min.js"></script>
+<script>
+// ---------- dados reais: conta Hub2you (16), produção, consulta só leitura em 05/10/2026 ----------
+// Série diária de respostas/passagens (eventos replied / handoff) dos últimos 30 dias.
+const SERIE_CLARA = { '2026-09-10': [2, 0], '2026-09-21': [7, 1], '2026-09-23': [1, 0], '2026-09-24': [3, 1], '2026-09-28': [4, 1], '2026-09-29': [10, 3] };
+const SERIE_LIA = {
+  '2026-09-08': [10, 0], '2026-09-09': [6, 0], '2026-09-10': [11, 0], '2026-09-11': [12, 0], '2026-09-12': [15, 0], '2026-09-13': [4, 0],
+  '2026-09-14': [3, 0], '2026-09-18': [18, 0], '2026-09-19': [20, 2], '2026-09-20': [25, 4], '2026-09-21': [25, 5], '2026-09-22': [18, 0],
+  '2026-09-23': [44, 14], '2026-09-24': [19, 2], '2026-09-25': [12, 0], '2026-09-26': [16, 1],
+};
+const HOJE = new Date('2026-10-05T12:00:00');
+
+function serie(map, dias) {
+  const out = [];
+  for (let i = dias - 1; i >= 0; i -= 1) {
+    const d = new Date(HOJE); d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    out.push({ date: k, r: (map[k] || [0, 0])[0], h: (map[k] || [0, 0])[1] });
+  }
+  return out;
+}
+
+const CHANNELS = [
+  { id: 43, name: 'WhatsApp (11) 94454-7873', icon: 'message-circle', busyBy: 'clara' },
+  { id: 57, name: 'WhatsApp (51) 99656-9128', icon: 'message-circle', busyBy: 'lia' },
+  { id: 109, name: 'Chat do site hub2you', icon: 'globe', busyBy: null },
+  { id: 3, name: 'E-mail Comercial', icon: 'mail', busyBy: null },
+];
+
+const PDF_CLARA = {
+  id: 's1', kind: 'knowledge', name: 'hub2you_base_conhecimento_agente_vendas_v1.pdf', type: 'pdf', state: 'accepted',
+  nota: 8, label: 'Boa', conf: 'alta', resumo: 'Base comercial da Hub2You: Chat2You, Protege, integrações e como cada solução ajuda a corretora.',
+};
+
+const AGENTS = [
+  {
+    id: 'clara', name: 'Clara', color: 'blue', type: 'custom', actuation: 'external', status: 'on', mode: 'guided',
+    channels: [43],
+    card: 'Atende corretores de seguros, tira dúvidas comerciais sobre a Hub2You e entende se a solução faz sentido para a corretora.',
+    greeting: 'Oi, eu sou a Clara, da Hub2You. Posso te ajudar com uma dúvida sobre a plataforma ou entender se alguma solução faz sentido para a sua corretora.',
+    fallback: 'Não tenho informação confiável o suficiente para responder esse ponto por aqui. Posso encaminhar para o time humano, que atende de segunda a sexta, das 09h às 18h.',
+    tone: 'consultivo, claro e objetivo', handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null,
+    starters: ['Sua dúvida hoje é sobre a Hub2You, o Chat2You, o Protege ou integrações?', 'Você quer só tirar uma dúvida específica ou entender se a solução faz sentido para a sua corretora?', 'Qual é o principal desafio da sua corretora nesse tema hoje?'],
+    base: 71, faqOn: true, faq: [], versions: [], files: [PDF_CLARA], media: [],
+    stats: {
+      7: { conv: 3, replies: 14, handed: 4, conf: 97, know: 82, reasons: [['Pediu uma pessoa', 2], ['Outro motivo', 2]] },
+      30: { conv: 6, replies: 27, handed: 6, conf: 98, know: 74, reasons: [['Pediu uma pessoa', 3], ['Outro motivo', 3]] },
+    },
+    serie: SERIE_CLARA, created: '06/07/2026',
+  },
+  {
+    id: 'lia', name: 'Lia', color: 'teal', type: 'insurance_quote', actuation: 'external', status: 'on', mode: 'guided',
+    channels: [57],
+    card: 'Agente de Cotação. Identifica o ramo, coleta só os dados necessários e cota nas seguradoras da conta AGGER.',
+    greeting: '', fallback: '', tone: '', handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null,
+    starters: [], base: null, faqOn: false, faq: [], versions: [], files: [], media: [],
+    ramos: ['Cotação de automóvel', 'Cotação empresarial', 'Cotação residencial'], behavior: 'consultivo',
+    stats: {
+      7: { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] },
+      30: { conv: 29, replies: 258, handed: 28, conf: 99, know: 98, reasons: [['Pediu uma pessoa', 22], ['Outro motivo', 6]] },
+    },
+    serie: SERIE_LIA, created: '08/09/2026',
+  },
+];
+
+const MODELS = [
+  { id: 'support', t: 'Tirar dúvidas', d: 'Responde perguntas comuns e resolve pedidos simples.', ex: 'Ex.: horário, preços, como funciona', icon: 'life-buoy', tone: 't-teal' },
+  { id: 'sdr', t: 'Qualificar contatos', d: 'Conversa com quem chega, entende o interesse e passa os bons para a equipe.', ex: 'Ex.: quem pediu orçamento no site', icon: 'target', tone: 't-blue' },
+  { id: 'reception', t: 'Receber e encaminhar', d: 'Dá boas-vindas, entende o assunto e manda para a pessoa certa.', ex: 'Ex.: vendas, financeiro, suporte', icon: 'concierge-bell', tone: 't-amber' },
+  { id: 'onboarding', t: 'Acompanhar depois da venda', d: 'Ajuda o cliente novo nos primeiros passos e tira dúvidas de uso.', ex: 'Ex.: boas-vindas e primeiro acesso', icon: 'heart-handshake', tone: 't-ruby' },
+  { id: 'scheduler', t: 'Marcar horários', d: 'Pergunta o melhor dia e horário e deixa tudo pronto para confirmar.', ex: 'Ex.: reunião, visita, demonstração', icon: 'calendar-clock', tone: 't-violet' },
+  { id: 'reactivation', t: 'Trazer cliente de volta', d: 'Fala com quem sumiu e reabre a conversa com a equipe.', ex: 'Ex.: quem não responde há 30 dias', icon: 'refresh-cw', tone: 't-slate' },
+];
+const MODEL_TEAM = { id: 'internal', t: 'Ajudar minha equipe', d: 'Fica dentro das conversas e ajuda quem atende. Nunca fala com clientes.', icon: 'users', tone: 't-slate' };
+const MODEL_FREE = { id: 'custom', t: 'Outro trabalho', d: 'Você descreve com suas palavras o que ele deve fazer.', icon: 'pencil', tone: 't-slate' };
+
+// Roteiro de exemplo da etapa "Conte" (respostas com dados reais da Hub2You).
+const SCRIPT = {
+  sdr: [
+    { ask: 'Vamos montar seu agente para qualificar contatos. Primeiro: o que sua empresa vende? Uma frase basta.', key: 'negocio', label: 'O que a empresa vende', ex: 'A Hub2You tem o Chat2You, plataforma de atendimento para corretoras de seguros. Site: hub2you.ai/chat2you' },
+    { ask: 'Entendi. Quem vai conversar com ele?', key: 'publico', label: 'Com quem ele fala', ex: 'Donos e gestores de corretoras que chegam pelo site.' },
+    { ask: 'Quando ele deve chamar alguém da equipe?', key: 'equipe', label: 'Quando chama a equipe', ex: 'Quando a pessoa pedir preço, demonstração ou quiser falar com um vendedor.' },
+    { ask: 'Ótimo. Qual vai ser o nome dele? O cliente vê esse nome.', key: 'nome', label: 'Nome', ex: 'Bia' },
+  ],
+  internal: [
+    { ask: 'Vamos montar um ajudante para a sua equipe. Ele aparece ao lado de cada conversa. No que ele mais deve ajudar?', key: 'negocio', label: 'No que ajuda', ex: 'Resumir a conversa e sugerir a próxima resposta para quem está atendendo.' },
+    { ask: 'Quem vai usar?', key: 'publico', label: 'Quem usa', ex: 'O time comercial e o suporte da Hub2You.' },
+    { ask: 'Tem algo que ele nunca deve sugerir?', key: 'equipe', label: 'O que ele evita', ex: 'Prometer prazo ou desconto sem falar com o gestor.' },
+    { ask: 'Qual vai ser o nome dele? A equipe vê esse nome.', key: 'nome', label: 'Nome', ex: 'Apoio' },
+  ],
+};
+
+const TEST_ANSWERS = {
+  'O que vocês fazem?': { a: ['Oi! Que bom falar com você. O Chat2You é a plataforma de atendimento da Hub2You.', 'Junta WhatsApp, Instagram e o chat do site num lugar só, e tem agentes que respondem seus clientes.', 'Sua corretora atende hoje por WhatsApp?'], conf: 92, used: true },
+  'Quanto custa?': { a: ['O valor depende do tamanho da sua corretora.', 'Vou chamar alguém do comercial para te passar os planos certinhos, tudo bem?'], conf: 88, flag: 'A pessoa pediu preço.', used: true },
+  'Quero ver uma demonstração': { a: ['Ótimo! Vou chamar alguém da equipe para marcar com você. Qual o melhor dia?'], conf: 95, flag: 'A pessoa pediu uma demonstração.' },
+  'Vocês atendem no sábado?': { a: ['Não tenho certeza sobre isso.', 'Vou passar para alguém da equipe confirmar com você.'], conf: 34, flag: 'Pouca certeza na resposta.' },
+  // Ajudante da equipe: conversa de exemplo como contexto, sem passagem (D26)
+  'Resuma esta conversa': { a: ['O cliente quer saber o preço do plano para 3 atendentes e pediu uma demonstração.', 'Ainda não disse o nome da corretora.'], conf: 90 },
+  'Sugira uma resposta': { a: ['"Oi, Marcos! Posso marcar a demonstração para amanhã às 10h? Me diz o nome da sua corretora para eu já deixar pronto."'], conf: 86 },
+  'O que falta perguntar?': { a: ['O nome da corretora e quantas pessoas atendem hoje.'], conf: 80 },
+};
+const TEAM_QUESTIONS = ['Resuma esta conversa', 'Sugira uma resposta', 'O que falta perguntar?'];
+const CLIENT_QUESTIONS = ['O que vocês fazem?', 'Quanto custa?', 'Quero ver uma demonstração', 'Vocês atendem no sábado?'];
+
+// ---------- estado do protótipo ----------
+const S = {
+  agents: structuredClone(AGENTS),
+  profile: 'manage', // manage | view | super
+  build: null,
+  period: 30,
+  view: {}, // estado simulado por tela: { lista: 'normal' }
+  open: null, // menus/desenhos abertos
+};
+
+// ---------- utilidades ----------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+const icon = (n, cls = 'ico') => `<i data-lucide="${n}" class="${cls}" aria-hidden="true"></i>`;
+const can = () => S.profile !== 'view';
+const isSuper = () => S.profile === 'super';
+const agentById = (id) => S.agents.find((a) => a.id === id);
+// D32: gênero vem de "Tratar por" (config.voice), nunca da última letra do nome
+const isEle = (a) => (a.voice ? a.voice === 'masculina' : a.actuation === 'internal');
+const ela = (a) => (isEle(a) ? 'ele' : 'ela');
+const artigo = (a) => (isEle(a) ? 'o' : 'a');
+const channelById = (id) => CHANNELS.find((c) => c.id === id);
+function paint() { if (window.lucide) window.lucide.createIcons(); }
+
+function toast(text, tone = 'ok') {
+  document.querySelectorAll('.toast').forEach((t) => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = icon(tone === 'ok' ? 'check' : 'alert-triangle') + esc(text);
+  document.body.appendChild(t); paint();
+  setTimeout(() => t.remove(), 3400);
+}
+
+// Diálogo com foco preso, Esc e clique fora devolvem o foco ao gatilho.
+function dialog({ title, body, confirm, danger, onOk, wide, html, okDisabled }) {
+  const layer = $('#layer');
+  const prev = document.activeElement;
+  layer.innerHTML = `<div class="scrim" data-scrim><div class="dlg ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+    <h2 id="dlgT">${esc(title)}</h2>${body ? `<p class="muted">${body}</p>` : ''}${html || ''}
+    <div class="acts"><button class="btn outline" data-dlg-close>${confirm ? 'Cancelar' : 'Fechar'}</button>
+    ${confirm ? `<button class="btn ${danger ? 'danger' : 'primary'}" id="dlgOk" ${okDisabled ? 'disabled' : ''}>${esc(confirm)}</button>` : ''}</div></div></div>`;
+  paint();
+  const dlg = layer.querySelector('.dlg');
+  const close = () => { layer.innerHTML = ''; document.removeEventListener('keydown', onKey); prev && prev.focus && prev.focus(); };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    if (e.key === 'Tab') {
+      const f = [...dlg.querySelectorAll('button,input,textarea,[tabindex="0"]')].filter((x) => !x.disabled);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  };
+  document.addEventListener('keydown', onKey);
+  layer.querySelector('[data-scrim]').addEventListener('click', (e) => { if (e.target.hasAttribute('data-scrim')) close(); });
+  layer.querySelector('[data-dlg-close]').addEventListener('click', close);
+  const ok = $('#dlgOk');
+  if (ok) ok.addEventListener('click', () => { if (onOk && onOk(dlg) === false) return; close(); });
+  (dlg.querySelector('input,textarea') || ok || layer.querySelector('[data-dlg-close]')).focus();
+  return dlg;
+}
+
+// Barra de estados simulados (só no protótipo).
+function stateBar(key, options) {
+  const cur = S.view[key] || options[0][0];
+  return `<div class="statebar" role="group" aria-label="Estado da tela (protótipo)">${icon('eye', 'ico')}<span>Ver esta tela como:</span>
+    ${options.map(([k, l]) => `<button data-state="${key}:${k}" aria-pressed="${cur === k}">${esc(l)}</button>`).join('')}</div>`;
+}
+const viewState = (key, def) => S.view[key] || def;
+
+function statusPill(a) {
+  if (a.status === 'on') return '<span class="pill on"><span class="dot"></span>Atendendo</span>';
+  if (a.status === 'off') return '<span class="pill off"><span class="dot slate"></span>Pausado</span>';
+  if (a.status === 'ready') return '<span class="pill ready"><span class="dot" style="background:var(--brand)"></span>Pronto para ligar</span>';
+  return '<span class="pill todo"><span class="dot amber"></span>Falta terminar</span>';
+}
+function switchBtn(a) {
+  if (!can() || !(a.status === 'on' || a.status === 'off')) return '';
+  const on = a.status === 'on';
+  return `<button class="sw" role="switch" aria-checked="${on}" data-toggle="${a.id}" aria-label="${on ? 'Atendendo' : 'Pausado'}: ${esc(a.name)}"><span class="track"></span>${on ? 'Atendendo' : 'Pausado'}</button>`;
+}
+const avatar = (a, size = '') => `<span class="av ${a.color}" ${size ? `style="${size}"` : ''} aria-hidden="true">${esc(a.name[0])}</span>`;
+
+const stepsBar = (cur, names = ['Escolha', 'Conte', 'Teste', 'Ligue']) => `<ol class="steps" aria-label="Etapas">${names.map((n, i) => {
+  const c = i < cur ? 'past' : i === cur ? 'cur' : '';
+  const bar = i < names.length - 1 ? `<span class="bar ${i < cur ? 'past' : ''}" aria-hidden="true"></span>` : '';
+  return `<li class="step ${c}" ${i === cur ? 'aria-current="step"' : ''}><span class="n">${i < cur ? icon('check') : i + 1}</span>${n}</li>${bar}`;
+}).join('')}</ol>`;
+
+function meter(label, pct) {
+  const tone = pct >= 70 ? 'teal' : pct >= 40 ? 'amber' : 'red';
+  const word = pct >= 70 ? 'boa' : pct >= 40 ? 'razoável' : 'fraca';
+  return `<div class="meter"><div class="row"><span>${esc(label)}</span><b>${pct}% · ${word}</b></div>
+    <div class="progress ${tone}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(label)}"><i style="width:${pct}%"></i></div></div>`;
+}
+
+// Cartão de material com todos os estados reais de Source.
+const MAT_STATES = {
+  sending: { st: '<span class="spin" aria-hidden="true"></span>Enviando', cls: '' },
+  analyzing: { st: '<span class="spin" aria-hidden="true"></span>Lendo', cls: '' },
+  failed: { st: `${icon('file-x')}Não deu para ler`, cls: 'warn', why: 'Confira se o arquivo tem menos de 25 MB, não tem senha e é PDF, Word, Excel, TXT, MD ou JSON.', act: 'Enviar de novo' },
+  resend: { st: `${icon('alert-triangle')}Precisa de outro arquivo`, cls: 'warn', why: 'O texto saiu cortado. Envie uma versão com o conteúdo completo.', act: 'Enviar de novo' },
+  review: { st: `${icon('clock')}Ainda não conferido`, cls: 'warn', why: 'Lido, mas a conferência não terminou. O agente ainda não usa este material.', act: 'Enviar de novo' },
+  offscope: { st: `${icon('ban')}Não é sobre o seu negócio`, cls: 'warn', why: 'O agente não usa este material. Tire ou troque por um sobre o seu negócio.' },
+  accepted: { st: `${icon('check')}Pronto`, cls: 'good' },
+};
+function matCard(m, { removable = true, agentId = '' } = {}) {
+  const s = MAT_STATES[m.state];
+  const isLink = m.type === 'link';
+  const fi = m.kind === 'media' ? 'image' : isLink ? 'link' : 'file-text';
+  const color = m.state === 'accepted' ? 'var(--t11)' : s.cls === 'warn' ? 'var(--a11)' : 'var(--s11)';
+  return `<div class="mat ${s.cls}">
+    <div class="hd"><span class="fi">${icon(fi)}</span><span class="nm">${esc(m.name)}</span>
+      <span class="st" style="color:${color}">${s.st}</span>
+      ${removable && can() ? `<button class="iconbtn" aria-label="Tirar ${esc(m.name)}" data-rmmat="${agentId}:${m.id}">${icon('trash-2')}</button>` : ''}</div>
+    ${m.state === 'accepted' && m.resumo ? `<div class="why">Nota ${m.nota} de 10 · ${m.label} · certeza ${m.conf}. ${esc(m.resumo)}</div>` : ''}
+    ${s.why ? `<div class="why">${esc(s.why)}</div>` : ''}
+    ${s.act && can() ? `<div><button class="btn outline" data-resend="${agentId}:${m.id}">${icon('upload')}${s.act}</button></div>` : ''}
+  </div>`;
+}
+
+const CH_LABEL = (id) => (channelById(id) || { name: '' }).name;
+
+// ---------- Seus agentes ----------
+function agentLine(a) {
+  if (a.status === 'todo') return a.empty ? `<span>${icon('pencil-line')}Parou em "Conte". Guardado por 2 dias.</span>` : `<span>${icon('pencil-line')}Parou em "${esc(a.stepName)}". Fica guardado até você terminar ou excluir.</span>`;
+  if (a.status === 'ready') return `<span>${icon('plug-zap')}${a.actuation === 'internal' ? 'Falta ligar para a equipe usar' : 'Falta escolher onde atende'}</span>`;
+  const parts = [];
+  if (a.actuation === 'internal') parts.push(`<span>${icon('users')}Aparece ao lado das conversas da equipe</span>`);
+  else if (a.channels.length) parts.push(`<span>${icon(channelById(a.channels[0]).icon)}${esc(CH_LABEL(a.channels[0]))}${a.channels.length > 1 ? ` e mais ${a.channels.length - 1}` : ''}</span>`);
+  else parts.push(`<span style="color:var(--a11)">${icon('alert-triangle')}Sem canal: ninguém fala com ${ela(a)}</span>`);
+  const w = a.stats[7]; const m = a.stats[30];
+  if (a.actuation === 'internal') { /* D14: sem números de uso do ajudante nesta entrega */ }
+  else if (w.replies) parts.push(`<span>${icon('activity')}Esta semana: ${w.replies} respostas · passou ${w.handed} para a equipe<span class="newtag">Novo</span></span>`);
+  else if (m.replies) parts.push(`<span>${icon('activity')}Nada esta semana · ${m.replies} respostas em 30 dias</span>`);
+  else parts.push(`<span>${icon('activity')}Ainda sem conversas</span>`);
+  return parts.join('');
+}
+
+function agentCard(a) {
+  let main;
+  if (a.status === 'todo') main = can() ? `<button class="btn primary" data-continue="${a.id}">Continuar</button>` : '';
+  else if (a.status === 'ready') main = can() ? `<button class="btn primary" data-continue="${a.id}">${a.actuation === 'internal' ? 'Ligar' : 'Escolher onde atende'}</button>` : '';
+  else main = `<button class="btn outline" data-open="${a.id}">Abrir</button>`;
+  const tags = [];
+  if (a.type === 'insurance_quote') tags.push('<span class="kind">Agente de Cotação</span>');
+  if (a.actuation === 'internal') tags.push('<span class="kind">Ajuda a equipe</span>');
+  if (a.actuation === 'both') tags.push('<span class="kind">Clientes e equipe</span>');
+  const menu = can() && (a.status === 'todo' || a.status === 'ready')
+    ? `<div class="ctx"><button class="iconbtn" aria-label="Mais opções de ${esc(a.name)}" aria-haspopup="menu" aria-expanded="${S.open === 'm-' + a.id}" data-menu="m-${a.id}">${icon('more-horizontal')}</button>
+      ${S.open === 'm-' + a.id ? `<div class="menu" role="menu"><button role="menuitem" class="red" data-del="${a.id}">${icon('trash-2')}Excluir rascunho</button></div>` : ''}</div>` : '';
+  return `<article class="agent">
+    ${avatar(a)}
+    <div class="body">
+      <div class="name">${esc(a.name)} ${tags.join(' ')} ${statusPill(a)}</div>
+      <div class="line">${agentLine(a)}</div>
+    </div>
+    <div class="acts">${switchBtn(a)}${main}${menu}</div>
+  </article>`;
+}
+
+function viewLista() {
+  const st = viewState('lista', 'normal');
+  const bar = stateBar('lista', [['normal', 'Com agentes'], ['carregando', 'Carregando'], ['erro', 'Erro ao carregar'], ['vazio', 'Sem nenhum agente']]);
+  if (st === 'vazio') return viewVazio(bar);
+  const header = `<header class="ph">
+      <div><h1 class="h1">Seus agentes</h1>
+      <p class="sub">Eles respondem seus clientes e chamam alguém da equipe quando precisam.</p></div>
+      ${can() ? `<button class="btn primary lg" data-go="escolha">${icon('plus')}Criar agente</button>` : ''}
+    </header>`;
+  if (st === 'carregando') {
+    return `<div class="page">${bar}${header}<div aria-busy="true" class="list"><span class="sr">Carregando seus agentes</span>
+      <div class="skel" style="height:3rem;width:20rem"></div>${'<div class="skel" style="height:6.5rem"></div>'.repeat(3)}</div></div>`;
+  }
+  if (st === 'erro') {
+    return `<div class="page">${bar}${header}<div class="errorbox" role="alert"><span class="tile t-ruby">${icon('cloud-off')}</span>
+      <div><b style="font-size:1.125rem">Não deu para carregar seus agentes</b><p class="muted">Pode ser a internet. Seus agentes continuam atendendo normalmente.</p></div>
+      <button class="btn soft" data-state="lista:normal">${icon('refresh-cw')}Tentar de novo</button></div></div>`;
+  }
+  const list = S.agents;
+  const on = list.filter((a) => a.status === 'on').length;
+  const off = list.filter((a) => a.status === 'off').length;
+  const todo = list.filter((a) => a.status === 'todo' || a.status === 'ready').length;
+  return `<div class="page">
+    ${bar}${header}
+    <div class="chips" aria-label="Resumo">
+      <span class="count"><span class="dot"></span>${on} atendendo</span>
+      <span class="count"><span class="dot slate"></span>${off} pausado${off === 1 ? '' : 's'}</span>
+      ${todo ? `<span class="count"><span class="dot amber"></span>${todo} para terminar</span>` : ''}
+    </div>
+    <section class="list" aria-label="Agentes">${list.map(agentCard).join('')}</section>
+    ${!can() ? `<div class="lockline">${icon('lock')}Você pode ver e testar os agentes. Para criar ou mudar, peça a quem administra a conta.</div>` : ''}
+    <div class="callout">${icon('info')}<span>Pausou um agente? As conversas que estavam com ele vão para a equipe na hora, e as novas chegam direto para as pessoas.</span></div>
+  </div>`;
+}
+
+function viewVazio(bar = '') {
+  return `<div class="page">${bar}
+    <section class="hero">
+      <span class="ring" style="width:22rem;height:22rem;right:-6rem;top:-9rem"></span>
+      <span class="ring" style="width:14rem;height:14rem;right:9rem;bottom:-9rem;opacity:.08"></span>
+      <span class="eyebrow">${icon('sparkles')}Agentes</span>
+      <h1>Um agente responde seus clientes enquanto você trabalha</h1>
+      <p>Você conta como é o seu negócio, testa as respostas e liga no canal que quiser. Quando ele não souber, chama alguém da equipe.</p>
+      ${can() ? `<div class="row"><button class="btn primary lg" data-go="escolha">${icon('plus')}Criar meu primeiro agente</button></div>`
+    : '<p style="margin-top:1.25rem">Ainda não há agentes nesta conta. Quem administra a conta pode criar o primeiro.</p>'}
+    </section>
+    ${can() ? `<div><h2 class="h2">Comece por um destes</h2><p class="muted" style="margin-top:.35rem">Cada um já vem com as perguntas certas. Você ajusta tudo depois.</p></div>
+    <div class="grid">${MODELS.slice(0, 3).map((m) => modelCard(m, false)).join('')}</div>` : ''}
+  </div>`;
+}
+
+function modelCard(m, pressed) {
+  return `<button class="model" data-model="${m.id}" aria-pressed="${pressed}">
+    <span class="tile ${m.tone}">${icon(m.icon)}</span>
+    <b>${esc(m.t)}</b><span class="d">${esc(m.d)}</span>${m.ex ? `<span class="ex">${esc(m.ex)}</span>` : ''}</button>`;
+}
+
+// ---------- Criar agente: Escolha → Conte → Teste → Ligue ----------
+function newBuild(model) {
+  return { model, answers: {}, turn: 0, files: [], media: [], images: [], tested: [], chunks: {}, channel: null, linkHint: false, linkAdded: false, tab: 'knowledge', starters: null, window: 'always' };
+}
+function ensureBuild() { if (!S.build) S.build = newBuild('sdr'); if (!S.build.model) S.build.model = 'sdr'; return S.build; }
+const script = () => SCRIPT[S.build.model === 'internal' ? 'internal' : 'sdr'];
+const modelName = (id) => (MODELS.concat(MODEL_TEAM, MODEL_FREE).find((m) => m.id === id) || MODEL_FREE).t;
+const bName = () => (S.build && S.build.answers.nome) || (S.build && S.build.model === 'internal' ? 'Apoio' : 'Bia');
+const isInternal = () => S.build && S.build.model === 'internal';
+const defGreeting = (internal, nome) => internal ? `Oi! Sou o ${nome}. Me peça um resumo ou uma sugestão de resposta.` : `Oi! Eu sou a ${nome}, da Hub2You. Posso te ajudar a entender se o Chat2You serve para a sua corretora.`;
+const bGreeting = () => (S.build && S.build.greeting) || defGreeting(isInternal(), bName());
+const builderTop = (cur) => `<div class="top"><button class="back" data-act="sair">${cur === 0 ? icon('arrow-left') + 'Voltar' : icon('x') + 'Sair e continuar depois'}</button>${stepsBar(cur)}</div>`;
+
+function viewEscolha() {
+  const sel = S.build && S.build.model;
+  const noTeam = viewState('escolha', 'normal') === 'semajudante';
+  const bar = stateBar('escolha', [['normal', 'Normal'], ['semajudante', 'Conta sem o painel da equipe']]);
+  return `<div class="page">
+    ${bar}${builderTop(0)}
+    <header><h1 class="h1">O que o agente vai fazer?</h1>
+    <p class="sub">Escolha o trabalho principal. Ele já começa com as perguntas certas para esse trabalho. Você muda tudo depois.</p></header>
+    <div class="grid">${MODELS.map((m) => modelCard(m, sel === m.id)).join('')}</div>
+    <div class="grid pair">
+      ${(noTeam ? [MODEL_FREE] : [MODEL_TEAM, MODEL_FREE]).map((m) => `<button class="model row" data-model="${m.id}" aria-pressed="${sel === m.id}">
+        <span class="tile ${m.tone}">${icon(m.icon)}</span><span class="txt"><b>${esc(m.t)}</b><span class="d">${esc(m.d)}</span></span></button>`).join('')}
+    </div>
+    <div class="top"><span class="small">${sel ? 'Escolhido: <b>' + esc(modelName(sel)) + '</b>' : 'Escolha um para continuar'}</span>
+      <button class="btn primary lg" data-go="conte" ${sel ? '' : 'disabled'}>Continuar${icon('arrow-right')}</button></div>
+  </div>`;
+}
+
+function chatMessages(b) {
+  const sc = script();
+  const out = [];
+  sc.slice(0, Math.min(b.turn + 1, sc.length)).forEach((s) => {
+    out.push(`<div class="who"><span class="mini">${icon('sparkles')}</span>Construtor</div><div class="msg bot">${esc(s.ask)}</div>`);
+    if (b.answers[s.key]) out.push(`<div class="msg me">${esc(b.answers[s.key])}${s.key === 'negocio' && b.images.length ? `<div class="tagline" style="color:rgba(255,255,255,.8)">${b.images.length} imagem anexada</div>` : ''}</div>`);
+  });
+  if (b.turn >= sc.length) {
+    out.push(`<div class="who"><span class="mini">${icon('sparkles')}</span>Construtor</div><div class="msg bot">Pronto. ${isInternal() ? 'O ' : 'A '}${esc(bName())} já sabe o básico. ${isInternal() ? 'Teste como ele ajudaria numa conversa.' : 'Se tiver um material sobre seus planos, coloque ao lado: ela responde melhor. Ou teste agora.'}</div>`);
+  }
+  return out.join('');
+}
+
+function viewConte() {
+  const b = ensureBuild();
+  const st = viewState('conte', 'normal');
+  const sc = script();
+  const finished = b.turn >= sc.length;
+  const cur = sc[b.turn];
+  const filled = sc.filter((s) => b.answers[s.key]).length;
+  const bar = stateBar('conte', [['normal', 'Normal'], ['pensando', 'Pensando'], ['erro', 'Erro ao enviar'], ['recusado', 'Não salvou'], ['demora', 'Demorando'], ['ocupado', 'Ainda respondendo'], ['limite', 'Muitas mensagens']]);
+  const banners = {
+    erro: `<div class="banner red" role="alert">${icon('wifi-off')}<span class="grow">Sua mensagem não foi enviada. Confira a internet e tente de novo.</span><button class="btn soft" data-state="conte:normal">Tentar de novo</button></div>`,
+    recusado: `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">Nada foi salvo: a primeira mensagem ficou maior que o permitido. Peça para encurtar ou tente de novo.</span><button class="btn soft" data-state="conte:normal">Tentar de novo</button></div>`,
+    demora: `<div class="banner amber" role="status">${icon('hourglass')}<span class="grow">Está demorando mais que o normal. Envie sua mensagem de novo.</span><button class="btn soft" data-state="conte:normal">Enviar de novo</button></div>`,
+    limite: `<div class="banner amber" role="status">${icon('timer')}<span class="grow">Você mandou muitas mensagens seguidas. Espere um minuto e tente de novo.</span></div>`,
+    ocupado: `<div class="banner blue" role="status">${icon('loader')}<span class="grow">Ainda estou respondendo sua mensagem anterior. Espere um instante.</span></div>`,
+  };
+  const know = sc.map((s) => `<li class="${b.answers[s.key] ? 'ok' : ''}"><span class="st">${icon(b.answers[s.key] ? 'check' : 'circle')}</span>
+    <div><div class="k">${esc(s.label)}</div><div class="v">${esc(b.answers[s.key] || 'Ainda não')}</div></div></li>`).join('');
+  const list = b.tab === 'knowledge' ? b.files : b.media;
+  const accepted = b.files.filter((f) => f.state === 'accepted').length;
+  const atLimit = b.files.length >= 30;
+  return `<div class="page">
+    ${bar}${builderTop(1)}
+    <header><h1 class="h1">${isInternal() ? 'Conte como ele vai ajudar' : 'Conte sobre o seu negócio'}</h1>
+    <p class="sub">Responda como falaria com alguém novo na equipe. Uma pergunta de cada vez. Pode mandar print ou foto também.</p></header>
+    <div class="two">
+      <section class="panel" aria-label="Conversa">
+        <div class="chat" aria-live="polite">${chatMessages(b)}
+          ${st === 'pensando' ? '<div class="think" aria-label="Pensando"><i></i><i></i><i></i></div>' : ''}</div>
+        ${banners[st] || ''}
+        ${b.linkHint && !b.linkAdded ? `<div class="banner blue">${icon('link')}<span class="grow">Vi o link <b>hub2you.ai/chat2you</b>. Usar como material ${isInternal() ? 'do' : 'da'} ${esc(bName())}?</span>
+          <button class="btn primary" data-act="link-sim">Usar</button><button class="btn link" data-act="link-nao">Agora não</button></div>` : ''}
+        ${!finished ? `<div class="quick"><button data-ans="${esc(cur.ex)}">${icon('corner-down-right')}${esc(cur.ex)}</button></div>` : ''}
+        ${`
+        ${b.images.length ? `<div class="imgchips">${b.images.map((n, i) => `<span class="imgchip"><span class="th"></span>${esc(n)}<button aria-label="Tirar imagem ${esc(n)}" data-rmimg="${i}">${icon('x')}</button></span>`).join('')}</div>` : ''}
+        <form class="composer" id="composer"><button type="button" class="iconbtn" aria-label="Anexar foto ou arquivo" data-act="anexar">${icon('paperclip')}</button>
+          <label for="answer" class="sr">Sua resposta</label>
+          <textarea id="answer" rows="1" placeholder="${finished ? 'Quer mudar ou acrescentar algo? Escreva aqui.' : 'Escreva sua resposta'}" ${st === 'ocupado' || st === 'limite' ? 'disabled' : ''}></textarea>
+          <button class="iconbtn send" aria-label="Enviar" ${st === 'ocupado' ? 'disabled' : ''}>${icon('arrow-up')}</button></form>
+        <p class="small">${finished ? 'O que você escrever aqui atualiza o que o agente sabe.' : 'Toque na sugestão para usar a resposta de exemplo.'} Até 4 imagens por mensagem, 5 MB cada.</p>`}
+      </section>
+      <aside class="panel" aria-label="O que o agente já sabe">
+        <h3>O que ${isInternal() ? 'o' : 'a'} ${esc(b.answers.nome || 'agente')} já sabe</h3>
+        <div><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${filled}" aria-label="Respostas"><i style="width:${filled * 25}%"></i></div>
+        <p class="small" style="margin-top:.4rem">${filled === 4 ? 'Pronto para testar' : `${filled} de 4 respostas`}</p></div>
+        <ul class="know">${know}</ul>
+        <div style="display:flex;flex-direction:column;gap:.7rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+            <b style="font-size:15px">Materiais <span class="small">(se tiver)</span></b>
+            </div>
+          <p class="small">O agente lê e usa para responder.</p>
+          ${b.tab === 'knowledge' && b.files.length ? meter('Base de conhecimento', b.files.some((f) => f.state === 'accepted') ? 71 : 0) : ''}
+          ${list.map((m) => matCard(m, { agentId: 'build' })).join('')}
+          <div class="drop">${icon('upload')}<span>${b.tab === 'knowledge' ? 'Solte um PDF, Word, Excel, TXT ou link' : 'Solte uma foto, vídeo ou PDF'}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:.25rem;justify-content:center">
+              ${b.tab === 'knowledge' ? `<button class="btn link" data-act="usar-pdf" ${atLimit ? 'disabled' : ''}>Usar o PDF que a Clara já usa<span class="newtag">Novo</span></button><button class="btn link" data-act="add-link">Colar um link</button><button class="btn link" data-act="demo-falha">Simular arquivo com problema</button>`
+    : '<button class="btn link" data-act="add-media">Adicionar foto de exemplo</button>'}</div></div>
+          ${b.tab === 'knowledge' ? `<p class="counter">${b.files.length} de 30 materiais${accepted ? ` · ${accepted} pronto${accepted > 1 ? 's' : ''}` : ''}</p>` : ''}
+        </div>
+        <button class="btn primary lg" data-go="teste" ${finished ? '' : 'disabled'}>Testar ${isInternal() ? 'o' : 'a'} ${esc(bName())}${icon('arrow-right')}</button>
+      </aside>
+    </div>
+  </div>`;
+}
+
+function testBubble(q, b, idx, internal) {
+  const r = TEST_ANSWERS[q];
+  const shown = b.chunks[idx] ?? r.a.length;
+  const typing = shown < r.a.length;
+  const parts = r.a.slice(0, shown).map((t, i) => `<div class="msg bot">${esc(t)}${i === r.a.length - 1 && !typing ? `
+      <div class="conf"><span>Certeza</span><div class="progress ${r.conf >= 70 ? 'teal' : r.conf >= 40 ? 'amber' : 'red'}"><i style="width:${r.conf}%"></i></div><b>${r.conf}%</b></div>
+      ${r.used && b.files.length ? `<details class="used"><summary>${icon('book-open')}Material usado (1)</summary><blockquote>${esc(b.files[0].name)}<br>"Chat2You é a plataforma de atendimento da Hub2You…"</blockquote></details>` : ''}` : ''}</div>`).join('');
+  return `<div class="msg me">${esc(q)}</div>${parts}${typing ? '<div class="think" aria-label="Digitando"><i></i><i></i><i></i></div>' : ''}
+    ${!typing && r.flag && !internal ? `<div class="flag">${icon('user-round')}Aqui ${isInternal() ? 'ele' : 'ela'} passaria para a equipe. ${esc(r.flag)}</div>` : ''}`;
+}
+
+function testPhone(b, nome, { greeting, internal } = {}) {
+  const left = (internal ? TEAM_QUESTIONS : CLIENT_QUESTIONS).filter((q) => !b.tested.includes(q));
+  return `<section class="phone" aria-label="${internal ? 'Como a equipe vê' : 'Como o cliente vê'}">
+    <div class="bar2"><span class="av ${internal ? 'violet' : 'blue'}" style="width:2.4rem;height:2.4rem;border-radius:.75rem;font-size:1rem">${esc(nome[0])}</span>
+      <div style="flex:1"><b>${esc(nome)}</b><div class="small">Teste · só você vê</div></div>
+      ${b.tested.length ? `<button class="btn link" data-act="limpar-teste">Limpar conversa</button>` : ''}</div>
+    ${internal ? `<div class="callout">${icon('messages-square')}<span><b>Conversa de exemplo:</b> Marcos pergunta o preço do plano para 3 atendentes e pede uma demonstração.</span></div>` : '<p class="small">No teste, horário e público não são aplicados. A primeira resposta já vem com o cumprimento.</p>'}
+    <div aria-live="polite" style="display:flex;flex-direction:column;gap:.85rem">${b.tested.map((q, i) => testBubble(q, b, i, internal)).join('')}</div>
+    <div class="quick" style="margin-top:auto">${left.map((q) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+    <form class="composer" onsubmit="event.preventDefault()"><button type="button" class="iconbtn" aria-label="Anexar foto" data-act="anexar">${icon('image')}</button>
+      <label for="tq" class="sr">Pergunta de teste</label><textarea id="tq" rows="1" placeholder="${internal ? 'Peça como alguém da equipe pediria' : 'Escreva como um cliente escreveria'}"></textarea>
+      <button class="iconbtn send" aria-label="Enviar">${icon('arrow-up')}</button></form>
+  </section>`;
+}
+
+function viewTeste() {
+  const b = ensureBuild();
+  const st = viewState('teste', 'normal');
+  const nome = bName();
+  const bar = stateBar('teste', [['normal', 'Normal'], ['incompleto', 'Ainda montando'], ['erro', 'Não respondeu'], ['demora', 'Demorando'], ['limite', 'Muitas mensagens'], ['material', 'Aprendeu material novo'], ['grava', 'Ferramenta que grava']]);
+  const done = b.tested.filter((q, i) => (b.chunks[i] ?? 99) >= TEST_ANSWERS[q].a.length).length;
+  return `<div class="page">
+    ${bar}${builderTop(2)}
+    <header><h1 class="h1">${isInternal() ? 'Teste como ele ajudaria numa conversa' : 'Teste antes de ligar'}</h1>
+    <p class="sub">${isInternal() ? 'Peça como alguém da equipe pediria, sobre a conversa de exemplo.' : 'Pergunte como um cliente perguntaria.'} Nada disso vai para clientes de verdade.</p></header>
+    ${b.stale ? `<div class="banner amber" role="status">${icon('pencil')}<span class="grow">Você mudou como ${isInternal() ? 'ele' : 'ela'} se apresenta. O teste recomeçou: faça uma pergunta.</span></div>` : ''}
+    ${st === 'demora' ? `<div class="banner amber" role="status">${icon('hourglass')}<span class="grow">Está demorando mais que o normal.</span><button class="btn soft" data-state="teste:normal">Tentar de novo</button></div>` : ''}
+    ${st === 'limite' ? `<div class="banner amber" role="status">${icon('timer')}<span class="grow">Você testou muitas vezes seguidas. Espere um minuto.</span></div>` : ''}
+    ${st === 'material' ? `<div class="banner amber" role="status">${icon('book-open')}<span class="grow">${isInternal() ? 'O' : 'A'} ${esc(nome)} aprendeu um material novo. Teste de novo antes de ligar.</span></div>` : ''}
+    ${st === 'grava' ? `<div class="callout">${icon('database')}<span>Ferramentas que gravam em outro sistema rodam de verdade no teste.</span></div>` : ''}
+    ${st === 'incompleto' ? `<div class="banner amber">${icon('construction')}<span class="grow">${isInternal() ? 'O ' : 'A '}${esc(nome)} ainda está sendo montad${isInternal() ? 'o' : 'a'}. As respostas podem mudar quando terminar.</span></div>` : ''}
+    ${st === 'erro' ? `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">${isInternal() ? 'Ele' : 'Ela'} não conseguiu responder agora. Tente de novo.</span><button class="btn soft" data-state="teste:normal">Tentar de novo</button></div>` : ''}
+    <div class="sect"><h3>Como ${isInternal() ? 'ele' : 'ela'} se apresenta</h3>
+      <div class="field"><label for="tNome">Nome</label><input id="tNome" data-bfield="nome" value="${esc(nome)}"></div>
+      ${isInternal() ? '' : `<div class="field"><label for="tOla">Primeira mensagem</label><textarea id="tOla" data-bfield="greeting" rows="2">${esc(bGreeting())}</textarea>
+        <span class="small">É uma sugestão. Mude como quiser. Se mudar, o teste recomeça: a primeira resposta já traz o novo.</span></div>`}</div>
+    <div class="two">
+      ${testPhone(b, nome, { internal: isInternal() })}
+      <aside class="panel">
+        <h3>Ficou bom?</h3>
+        <p class="muted">Espere pelo menos uma resposta chegar. Se algo não estiver certo, volte e conte mais.</p>
+        <button class="btn primary lg" data-go="ligue" ${done && !b.stale && !['erro', 'demora', 'limite', 'material'].includes(st) ? '' : 'disabled'}>Está bom, continuar${icon('arrow-right')}</button>
+        <button class="btn outline lg" data-go="conte">${icon('message-square-text')}Quero mudar algo</button>
+        <div class="tip">${icon('lightbulb')}<span>${isInternal() ? 'Abaixo de cada resposta aparece a certeza dele. Ele nunca fala com clientes: só ajuda a equipe.' : 'Abaixo de cada resposta aparece a certeza dela. Quando ela decide chamar alguém da equipe, aparece em amarelo, com o motivo.'}</span></div>
+      </aside>
+    </div>
+  </div>`;
+}
+
+function viewLigue() {
+  const b = ensureBuild();
+  const st = viewState('ligue', 'normal');
+  const nome = bName();
+  const internal = isInternal();
+  const free = CHANNELS.filter((c) => !c.busyBy);
+  const busy = CHANNELS.filter((c) => c.busyBy);
+  const ch = channelById(b.channel);
+  const accepted = b.files.filter((f) => f.state === 'accepted').length;
+  const starters = b.starters || (internal ? ['Resuma esta conversa', 'Sugira uma resposta'] : ['Sua corretora atende hoje por WhatsApp?', 'Quer ver como funciona na prática?', 'Quantas pessoas atendem na sua corretora?']);
+  b.starters = starters;
+  const opt = (c) => `<button class="opt" role="radio" aria-checked="${b.channel === c.id}" data-ch="${c.id}" ${c.busyBy ? 'disabled' : ''}>
+    <span class="radio" aria-hidden="true"></span><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
+    <span style="flex:1;min-width:0"><b>${esc(c.name)}</b>${c.busyBy ? `<div class="small">Já tem ${artigo(agentById(c.busyBy) || { name: 'a' })} ${esc((agentById(c.busyBy) || {}).name || c.busyBy)} atendendo aqui. Cada canal tem um agente.</div>` : ''}</span></button>`;
+  const windows = [['always', 'Sempre', 'Responde a qualquer hora.'], ['business_hours', 'No horário comercial', 'Só quando a caixa está aberta.'], ['outside_business_hours', 'Fora do horário comercial', 'Só quando a equipe não está.']];
+  const bar = stateBar('ligue', [['normal', 'Normal'], ['semcanal', 'Nenhum canal livre'], ['falhou', 'Falhou ao ligar'], ['semhorario', 'Canal sem horário'], ['semteste', 'Sem teste'], ['naoadmin', 'Quem edita sem ser admin']]);
+  const freeList = st === 'semcanal' ? [] : free;
+  return `<div class="page">
+    ${bar}${builderTop(3)}
+    <header><h1 class="h1">${internal ? `Confira e ligue o ${esc(nome)}` : `Confira e escolha onde ${artigo({ name: nome })} ${esc(nome)} atende`}</h1>
+    <p class="sub">${internal ? 'Ele aparece ao lado de cada conversa para a equipe. Nunca fala com clientes.' : 'Aparecem só os canais conectados na sua conta.'}</p></header>
+    ${st === 'semteste' ? `<div class="banner amber" role="alert">${icon('flask-conical')}<span class="grow">Teste ${internal ? 'o' : 'a'} ${esc(nome)} antes de ligar.</span><button class="btn soft" data-go="teste">Ir para o teste</button></div>` : ''}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para ligar ${artigo({ name: nome })} ${esc(nome)} no ${esc(ch ? ch.name : 'canal')}. Nada mudou: ${internal ? 'ele' : 'ela'} continua desligad${internal ? 'o' : 'a'}.</span><button class="btn soft" data-state="ligue:normal">Tentar de novo</button></div>` : ''}
+    <div class="two">
+      <section style="display:flex;flex-direction:column;gap:1.5rem">
+        ${internal ? `<div class="sect"><h3>Onde a equipe encontra</h3><p class="desc">Abra qualquer conversa: ${esc(nome)} fica no painel da direita, com resumo e sugestão de resposta.</p></div>` : `
+        <div class="sect"><h3>Onde atende</h3>
+          ${freeList.length ? `<div role="radiogroup" aria-label="Canal" style="display:flex;flex-direction:column;gap:.75rem">${freeList.map(opt).join('')}</div>`
+    : `<div class="callout">${icon('info')}<span>Todos os canais já têm um agente. Conecte um canal novo ou tire um agente de um canal.</span></div>`}
+          ${st === 'naoadmin' ? `<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>` : `<button class="btn outline" data-go="conectar">${icon('plus')}Conectar um WhatsApp novo</button>`}
+          <details><summary class="small" style="cursor:pointer;min-height:2.75rem;display:flex;align-items:center">Canais ocupados (${busy.length})</summary>
+            <div style="display:flex;flex-direction:column;gap:.75rem;margin-top:.5rem">${busy.map(opt).join('')}</div></details></div>`}
+        <div class="sect"><header><div><h3>Como ${internal ? 'ele' : 'ela'} se apresenta</h3><p class="desc">Do jeito que você testou.</p></div><button class="btn link" data-go="teste">Mudar</button></header>
+          <p class="sentence"><b>${esc(nome)}</b>${internal ? '' : ` · "${esc(bGreeting())}"`}</p></div>
+        ${internal ? '' : `<div class="sect"><h3>Quando atende</h3><div class="radiocards" role="radiogroup" aria-label="Quando atende">
+          ${windows.map(([k, t, d]) => `<button class="rc" role="radio" aria-checked="${b.window === k}" data-bwin="${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>
+          ${st === 'semhorario' ? `<div class="banner amber">${icon('clock')}<span class="grow">Este canal não tem horário definido: ${internal ? 'ele' : 'ela'} vai responder sempre.</span><button class="btn soft">Definir horário</button></div>` : ''}</div>`}
+      </section>
+      <aside class="panel">
+        <h3>Resumo</h3>
+        <div class="who">${avatar({ name: nome, color: 'violet' }, 'width:2.4rem;height:2.4rem;font-size:1rem;border-radius:.75rem')}<span style="font-size:15px;color:var(--s12)">${esc(nome)} · ${esc(modelName(b.model))}</span></div>
+        <p class="sentence">${internal ? `O <b>${esc(nome)}</b> vai aparecer ao lado das conversas para a equipe.`
+    : ch ? `A <b>${esc(nome)}</b> vai responder quem escrever no <b>${esc(ch.name)}</b>${b.window === 'always' ? '' : b.window === 'business_hours' ? ', no horário comercial' : ', fora do horário comercial'}. Quando não souber, passa a conversa para a equipe.` : 'Escolha um canal para ver o resumo.'}</p>
+        <p class="small">${b.files.length ? `${accepted} material pronto · base 71%` : 'Sem material: responde só com o que você contou.'}</p>
+        <button class="btn primary lg" data-act="ligar" ${internal || ch ? '' : 'disabled'}>${icon('power')}Ligar ${internal ? 'o' : 'a'} ${esc(nome)}</button>
+        <button class="btn link" data-act="ligar-depois">Deixar desligad${internal ? 'o' : 'a'} por enquanto</button>
+      </aside>
+    </div>
+  </div>`;
+}
+
+function viewPronto() {
+  const a = agentById('novo');
+  if (!a) return viewLista();
+  const internal = a.actuation === 'internal';
+  return `<div class="page">
+    <div class="done" role="status"><span class="c">${icon('check')}</span>
+      <div><b style="font-size:1.125rem">${internal ? `O ${esc(a.name)} já aparece para a equipe.` : `A ${esc(a.name)} está atendendo no ${esc(CH_LABEL(a.channels[0]))}.`}</b>
+      <div class="muted">${internal ? 'Abra qualquer conversa e veja no painel da direita.' : 'Ela já responde quem chegar. Você pode pausar quando quiser.'}</div></div></div>
+    <div class="grid">
+      ${internal ? `<button class="model" data-go="conversa"><span class="tile t-violet">${icon('message-circle')}</span><b>Ver numa conversa</b><span class="d">Abre suas conversas. Em qualquer uma, ${esc(a.name)} aparece no painel ao lado.</span></button>` : ''}
+      <button class="model" data-open="novo"><span class="tile t-blue">${icon('activity')}</span><b>Ver como está indo</b><span class="d">Respostas, conversas passadas para a equipe e o que ${ela(a)} não soube.</span></button>
+      <button class="model" data-go="lista"><span class="tile t-slate">${icon('layout-list')}</span><b>Voltar para seus agentes</b><span class="d">Todos os agentes e o que cada um está fazendo.</span></button>
+    </div>
+  </div>`;
+}
+
+// ---------- Painel do agente ----------
+function panelTabs(a) {
+  const t = [['resumo', 'Como está indo'], ['testar', 'Testar']];
+  if (can()) t.push(['sabe', 'O que sabe']);
+  if (can() && a.actuation !== 'internal') t.push(['onde', 'Onde atende']);
+  if (can()) t.push(['ajustes', 'Ajustes']);
+  if (isSuper() && a.type !== 'insurance_quote') t.push(['ferramentas', 'Ferramentas']);
+  return t;
+}
+
+function viewAgente(id, tab) {
+  const a = agentById(id);
+  if (!a) return viewLista();
+  const tabs = panelTabs(a);
+  if (!tabs.some(([k]) => k === tab)) tab = 'resumo';
+  const body = { resumo: tabResumo, testar: tabTestar, sabe: tabSabe, onde: tabOnde, ajustes: tabAjustes, ferramentas: tabFerramentas }[tab](a);
+  const draft = a.status === 'todo' || a.status === 'ready';
+  return `<div class="page">
+    <button class="back" data-go="lista">${icon('arrow-left')}Seus agentes</button>
+    <header class="ph">
+      <div style="display:flex;align-items:center;gap:1rem;min-width:0">
+        ${avatar(a, 'width:4rem;height:4rem;font-size:1.5rem;border-radius:1.25rem')}
+        <div style="min-width:0"><h1 class="h1" style="display:flex;flex-wrap:wrap;align-items:center;gap:.75rem">${esc(a.name)} ${statusPill(a)}</h1>
+        <p class="muted" style="margin-top:.25rem;max-width:44rem">${esc(a.card)}</p></div></div>
+      <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+        ${draft && can() ? `<button class="btn primary" data-continue="${a.id}">${a.status === 'todo' ? 'Continuar montagem' : 'Ligar'}</button>` : switchBtn(a)}
+      </div>
+    </header>
+    ${a.type === 'insurance_quote' ? `<div class="callout">${icon('shield-check')}<span>A forma de cotar da ${esc(a.name)} é mantida pela Hub2You. Você escolhe nome, horário, jeito de cotar e para quem ela responde. Conexão com as seguradoras fica em <button class="btn link" style="min-height:auto;padding:0">Cotação</button>.</span></div>` : ''}
+    <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-go="agente-${a.id}-${k}">${l}</button>`).join('')}</div>
+    <section style="display:flex;flex-direction:column;gap:1.25rem">${body}</section>
+  </div>`;
+}
+
+// ----- Como está indo -----
+const OUT_LABELS = [['handled', 'Conversas atendidas'], ['resolved', 'Resolvidas sem ninguém da equipe'], ['handed', 'Passadas para a equipe'], ['reopened', 'Voltaram depois de resolvidas'], ['wrong', 'Respostas marcadas como erradas']];
+function tabResumo(a) {
+  const st = viewState('resumo', 'normal');
+  const bar = stateBar('resumo', [['normal', 'Com dados'], ['carregando', 'Carregando'], ['erro', 'Erro'], ['vazio', 'Sem conversas ainda']]);
+  const p = S.period;
+  const s = a.stats[p];
+  const period = `<div class="seg2" role="group" aria-label="Período"><button aria-pressed="${p === 7}" data-period="7">Últimos 7 dias</button><button aria-pressed="${p === 30}" data-period="30">Últimos 30 dias</button></div>`;
+  if (a.actuation === 'internal') {
+    return `<div class="errorbox"><span class="tile t-violet">${icon('users')}</span><div><b style="font-size:1.125rem">O ${esc(a.name)} ajuda a equipe dentro das conversas</b><p class="muted">Os números de uso ainda não aparecem aqui.</p></div><button class="btn outline" data-go="conversa">Ver numa conversa</button></div>`;
+  }
+  if (st === 'carregando') return `${bar}${period}<div class="stats">${'<div class="skel" style="height:6.5rem"></div>'.repeat(4)}</div><div class="skel" style="height:14rem"></div>`;
+  if (st === 'erro') return `${bar}<div class="errorbox" role="alert"><span class="tile t-ruby">${icon('cloud-off')}</span><b>Não deu para carregar os números</b><button class="btn soft" data-state="resumo:normal">${icon('refresh-cw')}Tentar de novo</button></div>`;
+  if (st === 'vazio' || (!s.replies && !s.handed)) {
+    return `${bar}${period}<div class="errorbox"><span class="tile t-blue">${icon('sparkles')}</span>
+      <div><b style="font-size:1.125rem">${p === 7 && a.stats[30].replies ? 'Nenhuma conversa nesta semana' : `${artigo(a).toUpperCase()} ${esc(a.name)} está pront${artigo(a)}`}</b>
+      <p class="muted">${p === 7 && a.stats[30].replies ? `Nos últimos 30 dias foram ${a.stats[30].replies} respostas. Confira se o canal está recebendo mensagens.` : 'Os números aparecem aqui depois das primeiras conversas. Enquanto isso, teste.'}</p></div>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">${p === 7 && a.stats[30].replies ? '<button class="btn soft" data-period="30">Ver 30 dias</button>' : ''}<button class="btn outline" data-go="agente-${a.id}-testar">Testar</button></div></div>`;
+  }
+  const rate = Math.round((s.handed / (s.replies + s.handed)) * 100);
+  const days = serie(a.serie, p);
+  const max = Math.max(1, ...days.map((d) => d.r + d.h));
+  const fmt = (k) => k.slice(8, 10) + '/' + k.slice(5, 7);
+  const out = { handled: s.conv, resolved: a.id === 'lia' && p === 30 ? 26 : 0, handed: s.handed, reopened: 0, wrong: 0 };
+  const maxR = Math.max(1, ...s.reasons.map((r) => r[1]));
+  const insight = rate >= 40 ? ['Muitas conversas estão indo para a equipe', 'Veja os motivos abaixo e ensine o que faltou.']
+    : s.know !== null && s.know <= 30 ? ['Poucas respostas vieram dos seus materiais', 'Adicione material sobre o que os clientes mais perguntam.'] : null;
+  return `${bar}<div class="top">${period}<span class="small">Dados reais da conta, até 05/10</span></div>
+    <div class="stats">
+      <div class="stat"><div class="num">${s.conv}</div><div class="lab">conversas atendidas</div></div>
+      <div class="stat"><div class="num">${s.replies}</div><div class="lab">respostas enviadas</div></div>
+      <div class="stat"><div class="num">${rate}%</div><div class="lab">passaram para a equipe (${s.handed})</div></div>
+      <div class="stat"><div class="num">${s.conf === null ? 'Sem dados' : s.conf + '%'}</div><div class="lab">certeza média nas respostas</div></div>
+      ${a.type === 'insurance_quote' ? '' : `<div class="stat"><div class="num">${s.know === null ? 'Sem dados' : s.know + '%'}</div><div class="lab">respostas que usaram seus materiais</div></div>`}
+    </div>
+    ${insight ? `<div class="banner amber">${icon('lightbulb')}<span class="grow"><b>${insight[0]}</b>. ${insight[1]}</span>${a.type === 'insurance_quote' ? '' : `<button class="btn soft" data-go="agente-${a.id}-sabe">Ensinar</button>`}</div>` : ''}
+    <div class="sect"><header><div><h3>Resultado das conversas</h3><p class="desc">Toque num número para ver as conversas.</p></div></header>
+      <div class="outcomes">${OUT_LABELS.map(([k, l]) => `<button class="outcome" data-drill="${a.id}:${k}"><b>${out[k]}</b><span>${l}</span></button>`).join('')}</div></div>
+    <div class="sect"><header><div><h3>Dia a dia</h3></div><div class="legend"><span><i style="background:var(--brand)"></i>Respostas</span><span><i style="background:var(--a9)"></i>Passadas para a equipe</span></div></header>
+      <div class="chart" role="img" aria-label="Respostas e passagens por dia">${days.map((d) => `<div class="day" title="${fmt(d.date)}: ${d.r} respostas, ${d.h} para a equipe">
+        <span class="r" style="height:${(d.r / max) * 100}%"></span><span class="h" style="height:${(d.h / max) * 100}%"></span></div>`).join('')}</div>
+      <div class="axis"><span>${fmt(days[0].date)}</span><span>${fmt(days[days.length - 1].date)}</span></div></div>
+    <div class="sect"><header><div><h3>Por que passou para a equipe</h3></div></header>
+      ${s.reasons.length ? `<ul class="reasons">${s.reasons.map(([l, n]) => `<li><span>${l}</span><div class="progress amber"><i style="width:${(n / maxR) * 100}%"></i></div><b>${n}</b></li>`).join('')}</ul>`
+    : '<p class="muted">Nenhuma conversa foi para a equipe neste período.</p>'}</div>`;
+}
+
+// ----- Testar -----
+function tabTestar(a) {
+  S.ptest = S.ptest || { tested: [], chunks: {}, files: a.files };
+  S.ptest.files = a.files;
+  const st = viewState('ptestar', 'normal');
+  const bar = stateBar('ptestar', [['normal', 'Normal'], ['incompleto', 'Montagem não terminou'], ['erro', 'Não respondeu'], ['semperm', 'Ferramenta pulada (só ver)']]);
+  const internal = a.actuation === 'internal';
+  const draft = a.status === 'todo';
+  return `${bar}
+    ${draft || st === 'incompleto' ? `<div class="banner amber">${icon('construction')}<span class="grow">${artigo(a).toUpperCase()} ${esc(a.name)} ainda não terminou de ser montad${artigo(a)}. O teste pode não mostrar o jeito final.</span></div>` : ''}
+    ${st === 'erro' ? `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">${ela(a)[0].toUpperCase() + ela(a).slice(1)} não conseguiu responder agora. Tente de novo.</span><button class="btn soft" data-state="ptestar:normal">Tentar de novo</button></div>` : ''}
+    ${a.type === 'insurance_quote' ? `<div class="callout">${icon('shield-check')}<span>No teste a cotação não é feita de verdade: ${esc(a.name)} conversa e pede os dados, mas não consulta as seguradoras.</span></div>` : ''}
+    ${st === 'semperm' ? `<div class="callout">${icon('lock')}<span>Neste teste, ${ela(a)} não usou Consulta de estoque: só quem edita testa essa consulta.</span></div>` : ''}
+    <div class="two">${testPhone(S.ptest, a.name, { internal })}
+      <aside class="panel"><h3>Como ler o teste</h3>
+        <ul class="know"><li class="ok"><span class="st">${icon('gauge')}</span><div><div class="k">Certeza</div><div class="v">Quanto ${ela(a)} confia na resposta. Quem decide passar para a equipe é a regra de "Quando passa para a equipe".</div></div></li>
+        <li class="ok"><span class="st">${icon('book-open')}</span><div><div class="k">Material usado</div><div class="v">Mostra de qual material veio a resposta.</div></div></li>
+        ${internal ? '' : `<li class="ok"><span class="st">${icon('user-round')}</span><div><div class="k">Amarelo</div><div class="v">Aqui a conversa iria para a equipe, e o motivo.</div></div></li>`}</ul>
+        ${can() && a.type !== 'insurance_quote' ? `<button class="btn outline" data-go="agente-${a.id}-sabe">${icon('plus')}Ensinar algo que faltou</button>` : ''}</aside></div>`;
+}
+
+// ----- O que sabe -----
+function tabSabe(a) {
+  if (a.type === 'insurance_quote') {
+    return `<div class="sect"><header><div><h3>O que a ${esc(a.name)} cota</h3><p class="desc">Os ramos ligados na sua conta. As regras de cada ramo e as condições gerais são mantidas pela Hub2You.</p></div></header>
+      <div class="rows">${a.ramos.map((r) => `<div class="rowi"><span class="tile t-teal" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon('shield-check')}</span><div class="grow"><b>${esc(r)}</b><div class="small">Ligado</div></div></div>`).join('')}</div></div>`;
+  }
+  const st = viewState('sabe', 'normal');
+  const bar = stateBar('sabe', [['normal', 'Como está'], ['estados', 'Materiais em todos os estados'], ['vazio', 'Sem material'], ['limite', 'Limite de 30']]);
+  S.sabeTab = S.sabeTab || 'knowledge';
+  let files = a.files;
+  if (st === 'estados') files = [a.files[0] || PDF_CLARA,
+    { id: 'x1', name: 'tabela-planos-2026.xlsx', type: 'xlsx', state: 'analyzing' },
+    { id: 'x2', name: 'hub2you.ai/chat2you', type: 'link', state: 'sending' },
+    { id: 'x3', name: 'contrato-escaneado.pdf', type: 'pdf', state: 'failed' },
+    { id: 'x4', name: 'faq-antigo.docx', type: 'docx', state: 'resend' },
+    { id: 'x5', name: 'politica-de-cancelamento.md', type: 'md', state: 'review' },
+    { id: 'x6', name: 'cardapio-restaurante.pdf', type: 'pdf', state: 'offscope' }];
+  if (st === 'vazio') files = [];
+  const count = st === 'limite' ? 30 : files.length;
+  const limit = count >= 30;
+  const media = false; // D20: sem aba "Para enviar"
+  const faqOn = a.faqOn;
+  const faqItems = st === 'estados' ? [{ q: 'Vocês atendem corretora com só uma pessoa?', ans: 'Sim. O Chat2You funciona para corretoras de qualquer tamanho.', conv: 412 }] : a.faq;
+  return `${bar}
+    <div class="sect"><header><div><h3>Materiais</h3><p class="desc">${media ? 'Fotos, vídeos e arquivos que o agente manda para o cliente quando faz sentido.' : 'O que o agente lê para responder. Quanto mais completo, melhor ele responde.'}</p></div>
+      <span class="counter">${count} de 30</span></header>
+      ${!media && files.length && a.base ? meter('Base de conhecimento', a.base) : ''}
+      ${media ? ''
+    : files.length ? files.map((m) => matCard(m, { agentId: a.id })).join('') : `<p class="muted">Nenhum material ainda. Sem material, ${ela(a)} responde só com o que você contou na montagem.</p>`}
+      ${limit && !media ? `<div class="banner amber">${icon('alert-triangle')}<span class="grow">Chegou ao limite de 30 materiais. Tire um para colocar outro.</span></div>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center">
+        <button class="btn primary" data-act="add-material" ${limit && !media ? 'disabled' : ''}>${icon('plus')}${media ? 'Adicionar mídia' : 'Adicionar material'}</button>
+        ${!media ? `<span class="counter">${count} de 30 materiais</span>` : ''}</div></div>
+    <div class="sect"><header><div><h3>Perguntas que a equipe respondeu</h3>
+      <p class="desc">Quando uma conversa é resolvida, as perguntas que alguém da equipe respondeu aparecem aqui. Aprove e ${ela(a)} passa a saber.</p></div>
+      <button class="sw" role="switch" aria-checked="${faqOn}" data-faqon="${a.id}"><span class="track"></span>${faqOn ? 'Ligado' : 'Desligado'}</button></header>
+      ${!faqOn ? '<p class="muted">Ligue para receber sugestões a partir das conversas resolvidas.</p>'
+    : faqItems.length ? faqItems.map((f, i) => `<div class="mat"><b>${esc(f.q)}</b><div class="why">${esc(f.ans)}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center"><button class="btn primary" data-faq="ok:${i}">Aprovar</button><button class="btn outline" data-faq="edit:${i}">Mudar e aprovar</button><button class="btn link" data-faq="no:${i}">Ignorar</button>
+        <span class="small" style="margin-left:auto">Da conversa #${f.conv}</span></div></div>`).join('')
+      : `<p class="muted">Nenhuma pergunta nova. Elas aparecem depois que conversas com resposta da equipe são resolvidas.</p>`}</div>`;
+}
+
+// ----- Onde atende -----
+function tabOnde(a) {
+  const st = viewState('onde', 'normal');
+  const bar = stateBar('onde', [['normal', 'Como está'], ['semcanal', 'Sem canal'], ['falhou', 'Falhou ao conectar'], ['naoadmin', 'Quem edita sem ser admin']]);
+  const chans = st === 'semcanal' ? [] : a.channels;
+  const free = CHANNELS.filter((c) => !c.busyBy);
+  const off = a.status !== 'on'; // rascunho ou pausado (backend recusa agent_not_active)
+  return `${bar}
+    ${st === 'falhou' ? `<div class="banner red" role="alert">${icon('plug-zap')}<span class="grow">Não deu para conectar no Chat do site hub2you: esse canal já tem um robô de outro sistema. Tire o outro robô nas configurações da caixa e tente de novo.</span></div>` : ''}
+    <div class="sect"><header><div><h3>Onde ${ela(a)} atende</h3><p class="desc">Cada canal tem um agente só. ${esc(a.name)} responde todo mundo que escreve nestes canais${a.audience ? ', dentro do público escolhido' : ''}.</p></div></header>
+      ${chans.length ? `<div class="rows">${chans.map((id) => { const c = channelById(id); return `<div class="rowi"><span class="tile t-blue" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
+        <div class="grow"><b>${esc(c.name)}</b><div class="small">Conectado</div></div><button class="btn outline" data-disc="${a.id}:${id}">Tirar deste canal</button></div>`; }).join('')}</div>`
+    : `<div class="banner amber">${icon('alert-triangle')}<span class="grow">${artigo(a).toUpperCase()} ${esc(a.name)} não está em nenhum canal. Ninguém fala com ${ela(a)}.</span></div>`}</div>
+    <div class="sect"><header><div><h3>Colocar em outro canal</h3><p class="desc">Aparecem só canais conectados que ainda não têm agente.</p></div></header>
+      ${off ? `<div class="callout">${icon('info')}<span>Ligue ${artigo(a)} ${esc(a.name)} para colocar em outro canal.</span></div>` : ''}
+      ${free.length ? `<div class="rows">${free.map((c) => `<div class="rowi"><span class="tile t-slate" style="width:2.5rem;height:2.5rem;border-radius:.75rem;display:grid;place-items:center">${icon(c.icon)}</span>
+        <div class="grow"><b>${esc(c.name)}</b></div><button class="btn primary" data-conn="${a.id}:${c.id}" ${off ? 'disabled' : ''}>Colocar aqui</button></div>`).join('')}</div>` : '<p class="muted">Todos os canais já têm agente.</p>'}
+      ${st === 'naoadmin' ? '<p class="small">Peça a quem administra a conta para conectar um WhatsApp.</p>' : `<div><button class="btn outline" data-go="conectar">${icon('qr-code')}Conectar um WhatsApp novo</button></div>`}</div>`;
+}
+
+// ----- Ajustes -----
+const TONES = ['Amigável', 'Profissional', 'Neutro', 'Descontraído'];
+function tabAjustes(a) {
+  const quote = a.type === 'insurance_quote';
+  const manual = a.mode === 'manual';
+  const noTeam = viewState('ajustes', 'normal') === 'semajudante';
+  const handoffs = [['low_confidence', 'Quando estiver em dúvida', 'Chama a equipe quando não tem segurança na resposta.'], ['always_ask', 'Sempre oferecer uma pessoa', 'Pergunta ao cliente se quer falar com alguém.'], ['never', 'Nunca', 'Não oferece uma pessoa. Ainda passa quando o cliente pede.']];
+  const windows = [['always', 'Sempre', 'Responde a qualquer hora.'], ['business_hours', 'No horário comercial', 'Usa a agenda da caixa de entrada.'], ['outside_business_hours', 'Fora do horário comercial', 'Só quando a equipe não está.']];
+  const acts = [['external', 'Clientes', 'Responde nos canais.'], ['internal', 'A equipe', 'Ajuda dentro das conversas. Não fala com clientes.'], ['both', 'Os dois', 'Responde clientes e ajuda a equipe.']];
+  const target = a.target || 'any';
+  const aud = a.audienceOpen ? 'some' : a.audience ? 'some' : 'all';
+  const sect = (h, d, inner, save = true, saveTxt = 'Salvar') => `<div class="sect"><header><div><h3>${h}</h3>${d ? `<p class="desc">${d}</p>` : ''}</div></header>${inner}${save ? `<div><button class="btn primary" data-save="${esc(h)}">${saveTxt}</button></div>` : ''}</div>`;
+  const parts = [];
+  parts.push(sect('Foto e nome', '', `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:1rem">${avatar(a, 'width:4rem;height:4rem;font-size:1.5rem;border-radius:1.25rem')}
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn outline">${icon('image-up')}Trocar foto</button><button class="btn link">Tirar foto</button></div></div>
+    <div class="field"><label for="aNome">Nome</label><input id="aNome" value="${esc(a.name)}"></div>
+    <div class="field"><label>Tratar por</label><div class="radiocards" role="radiogroup" aria-label="Tratar por"><button class="rc" role="radio" aria-checked="${!isEle(a)}" data-voice="${a.id}:feminina"><b>Ela</b><span>"A ${esc(a.name)} está atendendo"</span></button><button class="rc" role="radio" aria-checked="${isEle(a)}" data-voice="${a.id}:masculina"><b>Ele</b><span>"O ${esc(a.name)} está atendendo"</span></button></div></div>`));
+  if (quote) {
+    parts.push(sect('Jeito de cotar', `Quando ${artigo(a)} ${esc(a.name)} explica a cobertura. Nos dois casos ${ela(a)} nunca responde de memória.`, `<div class="radiocards" role="radiogroup" aria-label="Jeito de cotar">
+      <button class="rc" role="radio" aria-checked="${a.behavior === 'consultivo'}" data-behavior="consultivo"><b>Consultivo</b><span>Explica o que o cliente vai receber antes de cotar.</span></button>
+      <button class="rc" role="radio" aria-checked="${a.behavior === 'objetivo'}" data-behavior="objetivo"><b>Objetivo</b><span>Cota primeiro. Explica se perguntarem.</span></button></div>`));
+    parts.push(sect(`Horário que ${ela(a)} informa ao cliente`, `É o que ${artigo(a)} ${esc(a.name)} diz quando perguntam quando a equipe atende.`, `<div class="field"><label for="lhor" class="sr">Horário</label><input id="lhor" value="de segunda a sexta, das 09h às 18h"></div>`));
+  } else {
+    parts.push(sect('O que faz', 'Resumo do trabalho. Para mudar, converse com o construtor ou escreva você mesmo.', `<p class="sentence">${esc(a.card)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center"><button class="btn primary" data-act="reconversar" ${manual ? 'disabled' : ''}>${icon('message-square-text')}Mudar conversando</button>
+      <button class="sw" role="switch" aria-checked="${manual}" data-manual="${a.id}"><span class="track"></span>Escrever as instruções eu mesmo</button></div>
+      ${manual ? `<p class="small">Para mudar conversando, volte ao modo guiado (desligue o interruptor).</p><div class="banner amber">${icon('alert-triangle')}<span class="grow">Aqui você escreve tudo. Ao ligar isso, o texto montado pela conversa é trocado pelo seu. As proteções de segurança continuam valendo.</span></div>
+      <div class="field"><label for="instr">Instruções</label><textarea id="instr" rows="10" maxlength="50000" placeholder="Escreva aqui como ${artigo(a)} ${esc(a.name)} deve atender."></textarea><span class="counter">0 de 50.000 caracteres · o modo manual só vale depois de salvar</span></div>` : ''}`, manual, 'Salvar instruções'));
+    parts.push(sect('Onde atua', '', `<div class="radiocards" role="radiogroup" aria-label="Onde atua">${acts.map(([k, t, d]) => `<button class="rc" role="radio" aria-checked="${a.actuation === k}" data-act-mode="${a.id}:${k}" ${noTeam && k !== 'external' ? 'disabled' : ''}><b>${t}</b><span>${d}</span></button>`).join('')}</div>
+      ${noTeam ? '<p class="small">Esta conta ainda não tem o ajudante dentro das conversas.</p>' : ''}
+      ${a.channels.length ? `<p class="small">Para mudar para "A equipe", tire ${artigo(a)} ${esc(a.name)} dos canais antes.</p>` : ''}`));
+    parts.push(sect('Como fala', '', `${a.actuation === 'internal' ? '' : `<div class="field"><label for="aOla">Primeira mensagem</label><textarea id="aOla" rows="3">${esc(a.greeting)}</textarea></div>`}
+      <div class="field"><label for="aFall">${a.actuation === 'internal' ? 'Quando não souber, o ajudante mostra à equipe' : 'Quando não souber responder'}</label><textarea id="aFall" rows="3">${esc(a.fallback)}</textarea></div>
+      <div class="field"><label>Jeito de falar</label><div class="chipsel" role="group" aria-label="Jeito de falar">${TONES.map((t) => `<button aria-pressed="false">${t}</button>`).join('')}<button aria-pressed="true">Do meu jeito</button></div>
+        <input aria-label="Do meu jeito" value="${esc(a.tone)}"></div>`));
+  }
+  if (a.actuation !== 'internal') { // ajudante: sem leitor para estes controles (§6.3)
+    if (a.actuation === 'both') parts.push(`<div class="callout">${icon('info')}<span>As seções abaixo valem só quando ${ela(a)} atende clientes. No painel da equipe, isto não se aplica.</span></div>`);
+  parts.push(sect(quote ? 'Para quem vai a conversa' : 'Quando passa para a equipe', '', `${quote ? '' : `<div class="radiocards" role="radiogroup" aria-label="Quando passa">${handoffs.map(([k, t, d]) => `<button class="rc" role="radio" aria-checked="${a.handoff === k}" data-handoff="${a.id}:${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`}
+    <div class="field"><label>Para quem vai<span class="newtag">Novo</span></label><div class="radiocards" role="radiogroup" aria-label="Para quem vai">
+      ${[['any', 'Quem estiver livre', 'A distribuição normal da caixa.'], ['member', 'Uma pessoa', 'Só aparece quem está em todas as caixas do agente.'], ['team', 'Um time', 'Ex.: Comercial.']].map(([k, t, d]) => `<button class="rc" role="radio" aria-checked="${target === k}" data-target="${a.id}:${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>
+      ${target !== 'any' ? `<button class="pick" style="max-width:20rem">${target === 'member' ? 'Escolha a pessoa' : 'Escolha o time'}${icon('chevron-down')}</button>` : ''}</div>`));
+  parts.push(sect('Para quem responde', 'Quem fica fora vai direto para a equipe, sem resposta do agente.', `<div class="radiocards" role="radiogroup" aria-label="Para quem responde">
+      <button class="rc" role="radio" aria-checked="${aud === 'all'}" data-aud="${a.id}:all"><b>Todo mundo</b><span>Responde todas as conversas dos canais.</span></button>
+      <button class="rc" role="radio" aria-checked="${aud === 'some'}" data-aud="${a.id}:some"><b>Só alguns clientes</b><span>Escolha as condições.</span></button></div>
+    ${aud === 'some' ? `<div class="cond"><div class="condrow"><span>Responder quando</span><button class="pick" style="min-width:6rem">todas${icon('chevron-down')}</button><span>as condições valerem:</span></div>
+      <div class="condrow"><button class="pick">Etiqueta${icon('chevron-down')}</button><button class="pick" style="min-width:7rem">é${icon('chevron-down')}</button><input aria-label="Valor" value="cliente-ativo"><button class="iconbtn" aria-label="Tirar condição">${icon('trash-2')}</button></div>
+      <div class="condrow"><button class="pick">Cidade${icon('chevron-down')}</button><button class="pick" style="min-width:7rem">contém${icon('chevron-down')}</button><input aria-label="Valor" value="São Paulo"><button class="iconbtn" aria-label="Tirar condição">${icon('trash-2')}</button></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn link">${icon('plus')}Mais uma condição</button><button class="btn link">${icon('layers')}Grupo de condições (e/ou)</button></div></div>
+      <div class="field"><label>Quando ainda não dá para saber quem é o cliente</label><div class="radiocards" role="radiogroup">
+        <button class="rc" role="radio" aria-checked="true"><b>Responder normalmente</b><span>Alguns canais abrem a conversa antes de saber quem é.</span></button>
+        <button class="rc" role="radio" aria-checked="false"><b>Passar para a equipe</b><span>Só responde quem dá para conferir.</span></button></div></div>` : ''}`));
+  parts.push(sect('Quando atende', 'Fora desse horário, as conversas vão direto para a equipe.', `<div class="radiocards" role="radiogroup" aria-label="Quando atende">${windows.map(([k, t, d]) => `<button class="rc" role="radio" aria-checked="${a.window === k}" data-win="${a.id}:${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>
+    ${viewState('ajustes', 'normal') === 'semhorario' ? `<div class="banner amber">${icon('clock')}<span class="grow">Estes canais não têm horário definido: ${ela(a)} responde sempre neles.<br><a href="#" class="btn link">WhatsApp Comercial · definir horário</a> <a href="#" class="btn link">Chat do site · definir horário</a></span></div>` : ''}`));
+  } else {
+    parts.push(`<div class="callout">${icon('info')}<span>O ${esc(a.name)} só ajuda a equipe dentro das conversas. Horário, público e passagem para a equipe não se aplicam a ele.</span></div>`);
+  }
+  if (!quote) {
+    const vers = a.versions.length ? a.versions : (viewState('ajustes', 'normal') === 'versoes' ? [['Mudança conversando', '04/10/2026', 'Rodrigo'], ['Edição manual', '02/10/2026', 'Rodrigo'], ['Material novo entrou', '28/09/2026', 'Automático'], ['Antes de escrever eu mesmo', '27/09/2026', 'Rodrigo'], ['Versão restaurada', '21/09/2026', 'Rodrigo']] : []);
+    parts.push(sect('Versões anteriores', 'Cada mudança nas instruções fica guardada. Se algo piorar, volte para uma versão anterior.',
+      vers.length ? vers.map(([r, d, w], i) => `<div class="ver"><div class="grow"><b>${r}</b><div class="small">${d} · ${w}</div></div>${i === 0 ? '<span class="pill on">Atual</span>' : `<button class="btn outline" data-restore="${a.id}">Voltar para esta</button>`}</div>`).join('')
+        : '<p class="muted">Ainda não há versões anteriores. Elas aparecem depois da primeira mudança.</p>', false));
+  }
+  parts.push(`${a.status !== 'on' && a.status !== 'off' ? `<div class="danger"><div><b>Continuar a montagem</b><div class="small">${artigo(a).toUpperCase()} ${esc(a.name)} ainda não está atendendo.</div></div><button class="btn primary" data-go="${a.status === 'ready' ? 'ligue' : a.stepName === 'Teste' ? 'teste' : 'conte'}">Continuar montagem</button></div>` : ''}${a.status !== 'on' && a.status !== 'off' ? '' : `<div class="danger"><div><b>${a.status === 'on' ? `Pausar ${artigo(a)} ${esc(a.name)}` : `Ligar ${artigo(a)} ${esc(a.name)}`}</b><div class="small">${a.actuation === 'internal' ? (a.status === 'on' ? `O ${esc(a.name)} some do painel das conversas até você ligar de novo.` : 'Volta a aparecer no painel das conversas.') : a.status === 'on' ? 'As conversas com ' + ela(a) + ' vão para a equipe na hora.' : 'Volta a responder as conversas novas.'}</div></div>${switchBtn(a)}</div>`}
+    <div class="danger"><div><b>Excluir ${esc(a.name)}</b><div class="small">${a.actuation === 'internal' ? `O ${esc(a.name)} sai da lista e some do painel das conversas.` : `${artigo(a).toUpperCase()} ${esc(a.name)} sai da lista e para de atender. As conversas com ${ela(a)} vão para a equipe.`}</div></div>
+      <button class="btn danger" data-del="${a.id}">${icon('trash-2')}Excluir</button></div>`);
+  const bar = quote ? '' : stateBar('ajustes', [['normal', 'Como está'], ['versoes', 'Com versões anteriores'], ['semhorario', 'Vários canais sem horário'], ['semajudante', 'Conta sem o painel da equipe']]);
+  return bar + parts.join('');
+}
+
+// ----- Ferramentas (só administrador da plataforma) -----
+function tabFerramentas(a) {
+  const tools = a.tools || [];
+  return `<div class="callout">${icon('shield')}<span>Só administradores da plataforma veem esta aba.</span></div>
+    <div class="sect"><header><div><h3>Ferramentas</h3><p class="desc">Consultas a sistemas de fora que ${ela(a)} faz quando as instruções pedem. Até 10 por agente.</p></div>
+      <button class="btn primary" data-act="tool-new">${icon('plus')}Nova ferramenta</button></header>
+      ${tools.length ? tools.map((t, i) => `<div class="tool"><div class="grow"><b>${esc(t.name)}</b> <span class="pill ${t.on ? 'on' : 'off'}">${t.on ? 'Ligada' : 'Desligada'}</span><div class="small mono">${esc(t.slug)} · ${t.method}</div><div class="small">${esc(t.when)}</div></div>
+        <button class="btn outline" data-tooltest="${i}">${icon('play')}Testar</button><button class="btn outline" data-act="tool-new">${icon('pencil')}Mudar</button><button class="iconbtn" aria-label="Excluir ${esc(t.name)}" data-tooldel="${a.id}:${i}">${icon('trash-2')}</button></div>`).join('')
+    : `<p class="muted">Nenhuma ferramenta ainda.</p><div><button class="btn link" data-act="tool-model">Começar pelo modelo de consulta de estoque</button></div>`}
+      ${S.toolResult ? `<div class="mat"><b>Resultado do teste</b><pre class="mono" style="margin:0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.toolResult)}</pre></div>` : ''}</div>`;
+}
+
+// ---------- Conectar WhatsApp novo (QR) ----------
+function viewConectar() {
+  const st = viewState('conectar', 'numero');
+  const bar = stateBar('conectar', [['numero', 'Informar o número'], ['numeroerrado', 'Número inválido'], ['qr', 'Esperando leitura'], ['verificando', 'Verificando'], ['conectando', 'Conectando'], ['ok', 'Conectado'], ['falhou', 'Código venceu'], ['desligada', 'Sessão desligada']]);
+  const pill = { verificando: '<span class="pill off"><span class="spin"></span>Verificando</span>', desligada: '<span class="pill off">Sessão desligada</span>', qr: '<span class="pill todo"><span class="dot amber"></span>Esperando a leitura do código · 52 s</span>', conectando: '<span class="pill todo"><span class="spin"></span>Conectando</span>', ok: '<span class="pill on"><span class="dot"></span>Conectado</span>', falhou: '<span class="pill" style="background:var(--r3);color:var(--r11)">Não conectou</span>' }[st];
+  return `<div class="page">${bar}
+    <button class="back" data-back>${icon('arrow-left')}Voltar</button>
+    <header><h1 class="h1">Conectar um WhatsApp</h1><p class="sub">Leia o código com o celular do número que o agente vai usar. Leva menos de um minuto.</p></header>
+    <div class="two">${st === 'numero' || st === 'numeroerrado' ? `<section class="sect">
+      <div class="field"><label for="wnum">Número do WhatsApp</label><input id="wnum" inputmode="tel" value="${st === 'numeroerrado' ? '11 4454-787' : '55 11 94454-0000'}">
+        <span class="small">Com 55, DDD e o número do celular.</span></div>
+      ${st === 'numeroerrado' ? `<div class="banner red" role="alert">${icon('alert-octagon')}<span class="grow">Esse número não parece um celular do Brasil. Confira: 55, DDD e os 9 dígitos.</span></div>` : ''}
+      <div class="callout">${icon('info')}<span>Esta conexão usa o seu acesso. Se você sair da conta, ela para.</span></div>
+      <div><button class="btn primary lg" data-state="conectar:qr">Mostrar o código</button></div></section>` : `<section class="sect" style="align-items:center;text-align:center">
+      ${pill}
+      ${st === 'ok' ? `<span class="tile t-teal" style="width:5rem;height:5rem;border-radius:1.5rem;display:grid;place-items:center">${icon('check', 'ico" style="width:2.5rem;height:2.5rem')}</span><b style="font-size:1.25rem">WhatsApp conectado</b><p class="muted">Agora escolha o agente que vai atender nele.</p><button class="btn primary lg" data-back>Escolher o agente</button>`
+    : st === 'desligada' ? `<p class="muted">O WhatsApp deste número foi desconectado no celular. Conecte de novo para o agente voltar a receber mensagens.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Reconectar</button>`
+    : st === 'verificando' ? `<p class="muted">Conferindo a conexão com o WhatsApp…</p>`
+    : st === 'falhou' ? `<p class="muted">O código venceu antes da leitura. Gere outro e leia em até 1 minuto.</p><button class="btn primary lg" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`
+      : `<div class="qr" role="img" aria-label="Código para ler no WhatsApp"></div><button class="btn outline" data-state="conectar:qr">${icon('refresh-cw')}Gerar outro código</button>`}
+    </section>`}
+    <aside class="panel"><h3>Como ler</h3><ol class="steps3">
+      <li>Abra o WhatsApp no celular desse número.</li><li>Toque em <b>⋮</b> (Android) ou <b>Configurações</b> (iPhone) e depois em <b>Aparelhos conectados</b>.</li>
+      <li>Toque em <b>Conectar um aparelho</b> e aponte o celular para o código.</li></ol>
+      <div class="tip">${icon('lightbulb')}<span>Use um número da empresa, não o seu número pessoal.</span></div></aside></div></div>`;
+}
+
+// ---------- Dentro de uma conversa: copiloto e "resposta errada" ----------
+function viewConversa() {
+  const helper = S.agents.find((x) => x.actuation === 'internal' || x.actuation === 'both');
+  return `<div class="page">
+    <button class="back" data-go="lista">${icon('arrow-left')}Seus agentes</button>
+    <header><h1 class="h1">Dentro de uma conversa</h1><p class="sub">Como a equipe encontra os agentes enquanto atende. Conversa de exemplo, sem dados de clientes.</p></header>
+    <div class="convo">
+      <section class="convpane" aria-label="Conversa">
+        <div class="bar2" style="display:flex;align-items:center;gap:.6rem;padding-bottom:.75rem;border-bottom:1px solid var(--weak)"><span class="av slate t-slate" style="width:2.4rem;height:2.4rem;border-radius:.75rem;font-size:1rem">M</span><div><b>Cliente de exemplo</b><div class="small">WhatsApp (11) 94454-7873</div></div></div>
+        <div class="msgrow"><div class="msg bot">Oi, quanto custa o Chat2You para 3 atendentes?</div></div>
+        <div class="msgrow out"><div class="ctx"><button class="more" aria-label="Opções da mensagem" aria-haspopup="menu" aria-expanded="${S.open === 'msgmenu'}" data-menu="msgmenu">${icon('more-vertical')}</button>
+          ${S.open === 'msgmenu' ? `<div class="menu" role="menu" style="right:auto;left:0"><button role="menuitem" data-act="wrong">${icon('flag')}Marcar resposta como errada</button><button role="menuitem">${icon('copy')}Copiar</button></div>` : ''}</div>
+          <div><div class="msg me">O valor depende do tamanho da sua corretora. Vou chamar alguém do comercial para te passar os planos, tudo bem?</div><div class="tagline" style="text-align:right">Clara · agente</div></div></div>
+        <div class="callout" style="background:var(--a3);border-color:transparent;color:var(--a11)">${icon('lock')}<span><b>Nota interna</b> · A Clara passou esta conversa para a equipe: o cliente pediu uma pessoa.</span></div>
+      </section>
+      <aside class="copilot" aria-label="Ajudante da equipe">
+        <header>${icon('sparkles')}${helper ? esc(helper.name) : 'Ajudante da equipe'}</header>
+        <div class="body">${helper ? `<div class="msg bot" style="max-width:100%">Resumo: cliente quer saber o preço para 3 atendentes. A Clara já explicou que depende do tamanho e passou para o comercial.</div>
+          <div class="quick"><button>Sugerir resposta</button><button>Resumir de novo</button></div>
+          <form class="composer" onsubmit="event.preventDefault()"><label for="cp" class="sr">Pergunte</label><textarea id="cp" rows="1" placeholder="Pergunte algo sobre esta conversa"></textarea><button class="iconbtn send" aria-label="Enviar">${icon('arrow-up')}</button></form>`
+    : `<p class="muted">Nenhum ajudante ligado. Crie um agente "Ajudar minha equipe" para ele aparecer aqui.</p>${can() ? '<button class="btn primary" data-model="internal">Criar ajudante</button>' : ''}`}</div>
+      </aside></div></div>`;
+}
+
+// ---------- Lista de conversas por resultado (painel lateral) ----------
+function openDrill(agentId, key) {
+  const a = agentById(agentId);
+  const label = OUT_LABELS.find((o) => o[0] === key)[1];
+  const n = { handled: a.stats[S.period].conv, handed: a.stats[S.period].handed }[key] || 0;
+  const layer = $('#layer');
+  const prev = document.activeElement;
+  layer.innerHTML = `<div class="scrim" data-scrim style="place-items:stretch end;padding:0"><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drT">
+    <header><div><h2 id="drT">${esc(label)}</h2><div style="color:#B9C6DA;font-size:13px">${n} conversa${n === 1 ? '' : 's'} · últimos ${S.period} dias</div></div><button class="iconbtn" aria-label="Fechar" data-dlg-close>${icon('x')}</button></header>
+    <div class="scroll">${key === 'wrong' ? `<p class="small">Cada marcação mostra o motivo e a resposta certa que a equipe sugeriu (exemplo).</p>
+      <div class="mat"><b>Informação errada</b><div class="why">Sugestão da equipe: "O plano mínimo atende até 3 pessoas."</div><div style="display:flex;gap:.5rem"><button class="btn outline">Abrir conversa</button><button class="btn primary" data-go="agente-${a.id}-sabe">Ensinar</button></div></div>` : ''}
+      ${n ? `<p class="small">Algumas conversas são de caixas que você não vê.</p><p class="small">No produto aparecem as conversas reais, com contato, canal e última mensagem. Aqui elas ficam ocultas para não expor clientes.</p>
+      ${Array.from({ length: Math.min(n, 6) }, (_, i) => `<div class="tool"><span class="tile t-slate" style="width:2.4rem;height:2.4rem;border-radius:.7rem;display:grid;place-items:center">${icon('message-circle')}</span><div class="grow"><b>Conversa ${i + 1}</b><div class="small">${esc(CH_LABEL(a.channels[0]))}</div></div><button class="btn outline">Abrir</button></div>`).join('')}`
+    : '<p class="muted">Nenhuma conversa com esse resultado no período.</p>'}</div></aside></div>`;
+  paint();
+  const close = () => { layer.innerHTML = ''; prev && prev.focus(); };
+  layer.querySelector('[data-dlg-close]').addEventListener('click', close);
+  layer.querySelector('[data-scrim]').addEventListener('click', (e) => { if (e.target.hasAttribute('data-scrim')) close(); });
+  layer.querySelector('[data-dlg-close]').focus();
+}
+
+// ---------- Mapa das telas ----------
+const MAP = [
+  ['Seus agentes', [['lista', 'Lista com agentes'], ['lista@carregando', 'Carregando'], ['lista@erro', 'Erro ao carregar'], ['lista@vazio', 'Conta sem agentes']]],
+  ['Criar agente', [['escolha', '1. Escolha o trabalho'], ['conte', '2. Conte (conversa + materiais)'], ['conte@pensando', '2. Pensando'], ['conte@erro', '2. Erro ao enviar'], ['conte@recusado', '2. Não salvou'], ['conte@limite', '2. Muitas mensagens'], ['teste', '3. Teste'], ['teste@incompleto', '3. Ainda montando'], ['ligue', '4. Confira e ligue'], ['ligue@semcanal', '4. Sem canal livre'], ['ligue@falhou', '4. Falhou ao ligar'], ['escolha@semajudante', '1. Conta sem o painel da equipe'], ['teste@demora', '3. Demorando'], ['teste@material', '3. Aprendeu material novo'], ['teste@grava', '3. Ferramenta que grava'], ['ligue@semteste', '4. Sem teste'], ['interno', 'Ajudante da equipe (interno)'], ['interno-teste', 'Ajudante: teste numa conversa de exemplo']]],
+  ['Clara (agente comum)', [['agente-clara-resumo', 'Como está indo'], ['agente-clara-resumo@vazio', 'Como está indo: sem conversas'], ['agente-clara-testar', 'Testar'], ['agente-clara-sabe', 'O que sabe'], ['agente-clara-sabe@estados', 'Materiais em todos os estados'], ['agente-clara-sabe@limite', 'Limite de 30 materiais'], ['agente-clara-onde', 'Onde atende'], ['agente-clara-onde@semcanal', 'Sem canal'], ['agente-clara-ajustes', 'Ajustes'], ['agente-clara-ajustes@versoes', 'Ajustes com versões'], ['agente-clara-ajustes@semhorario', 'Ajustes: canais sem horário'], ['agente-clara-testar@semperm', 'Testar: ferramenta pulada (só ver)'], ['agente-clara-ferramentas#super', 'Ferramentas (admin da plataforma)']]],
+  ['Lia (Agente de Cotação)', [['agente-lia-resumo', 'Como está indo'], ['agente-lia-sabe', 'O que cota'], ['agente-lia-ajustes', 'Ajustes da cotação']]],
+  ['Outras', [['conectar', 'Conectar WhatsApp (número + código)'], ['conversa', 'Dentro da conversa: ajudante e "resposta errada"'], ['lista#view', 'Quem só pode ver']]],
+];
+function openMap() {
+  const layer = $('#layer');
+  const prev = document.activeElement;
+  layer.innerHTML = `<div class="scrim" data-scrim style="place-items:stretch end;padding:0"><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="mapT">
+    <header><h2 id="mapT">Todas as telas</h2><button class="iconbtn" aria-label="Fechar" data-dlg-close>${icon('x')}</button></header>
+    <div class="scroll">${MAP.map(([g, items]) => `<div><div class="mapgroup">${g}</div><ul class="maplist">${items.map(([k, l]) => `<li><button data-mapgo="${k}">${icon('chevron-right')}${esc(l)}</button></li>`).join('')}</ul></div>`).join('')}</div></aside></div>`;
+  paint();
+  const close = () => { layer.innerHTML = ''; prev && prev.focus(); };
+  layer.querySelector('[data-dlg-close]').addEventListener('click', close);
+  layer.querySelector('[data-scrim]').addEventListener('click', (e) => { if (e.target.hasAttribute('data-scrim')) close(); });
+  layer.querySelectorAll('[data-mapgo]').forEach((b) => b.addEventListener('click', () => { close(); mapGo(b.dataset.mapgo); }));
+  layer.querySelector('[data-mapgo]').focus();
+}
+function mapGo(spec) {
+  let [r, prof] = spec.split('#');
+  let st = null;
+  if (r.includes('@')) [r, st] = r.split('@');
+  S.profile = prof === 'super' ? 'super' : prof === 'view' ? 'view' : 'manage';
+  if (r === 'interno') { S.build = newBuild('internal'); r = 'conte'; }
+  if (r === 'interno-teste') { S.build = newBuild('internal'); r = 'teste'; }
+  if (['conte', 'teste', 'ligue'].includes(r) && !S.build) S.build = newBuild('sdr');
+  if (r === 'teste' && !S.build.turn) { S.build.turn = 4; script().forEach((s) => { S.build.answers[s.key] = s.ex; }); }
+  if (r === 'ligue') { if (!S.build.turn) { S.build.turn = 4; script().forEach((s) => { S.build.answers[s.key] = s.ex; }); } if (!S.build.tested.length) S.build.tested = ['O que vocês fazem?']; }
+  const key = { 'agente-clara-resumo': 'resumo', 'agente-lia-resumo': 'resumo', 'agente-clara-sabe': 'sabe', 'agente-clara-onde': 'onde', 'agente-clara-ajustes': 'ajustes', 'agente-clara-testar': 'ptestar' }[r] || r;
+  Object.keys(S.view).forEach((k) => { delete S.view[k]; });
+  if (st) S.view[key] = st;
+  go(r);
+}
+
+// ---------- moldura ----------
+function shell() {
+  document.body.insertAdjacentHTML('afterbegin', `
+  <div class="proto" role="region" aria-label="Controles do protótipo">
+    <b>Protótipo · Agentes</b>
+    <button class="mapbtn" data-act="mapa">${icon('map')} Todas as telas</button>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="seg" role="group" aria-label="Ver como"><span class="lbl">Ver como:</span>
+      <button data-profile="manage">Pode editar</button><button data-profile="view">Só pode ver</button><button data-profile="super">Admin da plataforma</button></span>
+    <span class="note">Dados reais da conta Hub2you (05/10). Respostas do teste e conversas são exemplos. <b>Novo</b> = precisa de backend.</span>
+  </div>
+  <div class="app">
+    <aside class="side" aria-label="Menu">
+      <div class="acct"><span class="logo" aria-hidden="true"></span>Hub2you</div>
+      ${[['list-checks', 'Primeiros passos'], ['inbox', 'Caixa de Entrada'], ['message-circle', 'Conversas'], ['repeat', 'Automações']].map(([i, l]) => `<a href="#lista" tabindex="-1">${icon(i)}${l}</a>`).join('')}
+      <a href="#lista" class="on">${icon('bot')}Agentes de IA</a>
+      ${[['search', 'Prospecção'], ['shield-check', 'Cotação'], ['contact', 'Relacionamentos'], ['kanban', 'CRM'], ['megaphone', 'Campanhas'], ['library', 'Central de Ajuda']].map(([i, l]) => `<a href="#lista" tabindex="-1">${icon(i)}${l}</a>`).join('')}
+    </aside>
+    <main class="main" id="main" tabindex="-1"></main>
+  </div><div id="layer"></div>`);
+}
+
+// ---------- roteador ----------
+const ROUTES = { lista: viewLista, escolha: viewEscolha, conte: viewConte, teste: viewTeste, ligue: viewLigue, pronto: viewPronto, conectar: viewConectar, conversa: viewConversa };
+let lastRoute = 'lista';
+function current() { return location.hash.slice(1) || 'lista'; }
+function go(r) { if (current() === r) render(); else location.hash = r; }
+function render() {
+  const r = current();
+  const main = $('#main');
+  if (r.startsWith('agente-')) { const [, id, tab] = r.split('-'); main.innerHTML = viewAgente(id, tab || 'resumo'); }
+  else main.innerHTML = (ROUTES[r] || viewLista)();
+  document.querySelectorAll('[data-profile]').forEach((b) => b.setAttribute('aria-current', String(b.dataset.profile === S.profile)));
+  paint();
+  const ta = $('#answer');
+  if (ta) ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+}
+window.addEventListener('hashchange', () => {
+  const r = current();
+  if (r !== lastRoute) { S.open = null; window.scrollTo(0, 0); $('#main').focus({ preventScroll: true }); }
+  if (!r.startsWith('conectar')) lastRoute = r;
+  render();
+});
+
+// ---------- ações ----------
+function answer(text) {
+  const b = S.build; const s = script()[b.turn];
+  if (!text.trim() || !s) return;
+  b.answers[s.key] = text.trim(); b.turn += 1;
+  if (text.includes('hub2you.ai')) b.linkHint = true;
+  render();
+}
+function progressMaterial(list, m, done = 'accepted') {
+  list.push(m); render();
+  setTimeout(() => { m.state = 'analyzing'; render(); }, 900);
+  setTimeout(() => { m.state = done; render(); }, 2300);
+}
+function playTest(holder, q) {
+  const idx = holder.tested.length;
+  holder.tested.push(q); holder.chunks[idx] = 0; holder.stale = false; render();
+  const total = TEST_ANSWERS[q].a.length; // perguntas genéricas por trabalho (D28)
+  const tick = () => { holder.chunks[idx] += 1; render(); if (holder.chunks[idx] < total) setTimeout(tick, 800); };
+  setTimeout(tick, 900);
+}
+function toggleAgent(id) {
+  const a = agentById(id);
+  const internal = a.actuation === 'internal';
+  if (a.status === 'on') {
+    dialog({ title: `Pausar ${artigo(a)} ${a.name}?`,
+      body: internal ? `O ${a.name} some do painel das conversas até você ligar de novo.` : `As conversas que estão com ${ela(a)} vão para a equipe agora. As novas mensagens chegam direto para as pessoas até você ligar de novo.`,
+      confirm: 'Pausar', onOk: () => { a.status = 'off'; render(); toast(internal ? `${a.name} pausado.` : `${a.name} pausad${artigo(a)}. As conversas foram para a equipe.`); } });
+  } else { a.status = 'on'; render(); toast(`${a.name} voltou a atender.`); }
+}
+function saveNewAgent(on) {
+  const b = S.build; const internal = isInternal();
+  const nome = bName();
+  S.agents = S.agents.filter((x) => x.id !== 'novo');
+  CHANNELS.forEach((c) => { if (c.busyBy === 'novo') c.busyBy = null; });
+  const zero = { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] };
+  const a = { id: 'novo', name: nome, color: 'violet', type: b.model, actuation: internal ? 'internal' : 'external', status: on ? 'on' : 'ready', mode: 'guided',
+    channels: on && !internal ? [b.channel] : [], card: internal ? 'Ajuda a equipe: resume a conversa e sugere a próxima resposta.' : `Conversa com donos e gestores de corretoras que chegam pelo site e chama a equipe quando pedem preço ou demonstração.`,
+    greeting: bGreeting(), fallback: 'Não sei responder isso com segurança. Vou chamar alguém da equipe.', tone: '', handoff: 'low_confidence', threshold: 0.6,
+    window: b.window, audience: null, starters: b.starters || [], base: b.files.some((f) => f.state === 'accepted') ? 71 : null, faqOn: false, faq: [], versions: [],
+    files: b.files, media: b.media, stats: { 7: zero, 30: zero }, serie: {}, stepName: 'Ligue' };
+  S.agents.push(a);
+  if (on && !internal) channelById(b.channel).busyBy = 'novo';
+  if (on) { S.build = null; go('pronto'); } else { b.answers.nome = nome; go('lista'); toast(`${nome} guardad${artigo(a)}. Ligue quando quiser.`); }
+}
+
+const ACTIONS = {
+  mapa: openMap,
+  sair() {
+    const b = S.build; const r = current();
+    const stepName = { conte: 'Conte', teste: 'Teste', ligue: 'Teste' }[r] || 'Conte';
+    S.agents = S.agents.filter((x) => x.id !== 'novo' || x.status === 'on' || x.status === 'off');
+    if (r === 'escolha') { go('lista'); return; } // o rascunho só nasce depois da Escolha (§6.6)
+    if (b && b.model) {
+      const zero = { conv: 0, replies: 0, handed: 0, conf: null, know: null, reasons: [] };
+      const tested = b.tested.some((q, i) => (b.chunks[i] ?? 99) >= TEST_ANSWERS[q].a.length) && !b.stale; // §6.6: E4 com teste válido
+      S.agents.push({ id: 'novo', name: b.answers.nome || 'Novo agente', color: 'violet', type: b.model, actuation: isInternal() ? 'internal' : 'external', status: (r === 'ligue' || (r === 'teste' && tested)) ? 'ready' : 'todo', stepName, empty: !Object.keys(b.answers).length, channels: [], card: 'Montagem pela metade.', greeting: b.greeting || '', fallback: '', tone: '', handoff: 'low_confidence', threshold: 0.6, window: 'always', audience: null, starters: [], base: null, faqOn: false, faq: [], versions: [], files: b.files, media: b.media, stats: { 7: zero, 30: zero }, serie: {} });
+      toast('Guardado. Continue quando quiser.');
+    }
+    go('lista');
+  },
+  anexar() {
+    const b = S.build;
+    if (!b || current() !== 'conte') { toast('No produto abre a escolha de arquivo.'); return; }
+    if (b.images.length >= 4) { toast('Até 4 imagens por mensagem.', 'warn'); return; }
+    b.images.push(`print-${b.images.length + 1}.png`); render();
+  },
+  'link-sim'() { const b = S.build; b.linkAdded = true; progressMaterial(b.files, { id: 'l' + Date.now(), kind: 'knowledge', name: 'hub2you.ai/chat2you', type: 'link', state: 'sending', nota: 7, label: 'Boa', conf: 'média', resumo: 'Página do Chat2You: canais, agentes e planos.' }); toast('Link adicionado. Lendo agora.'); },
+  'link-nao'() { S.build.linkAdded = true; render(); },
+  'usar-pdf'() { const b = S.build; if (b.files.some((f) => f.id === 's1')) return; progressMaterial(b.files, { ...PDF_CLARA, state: 'sending' }); },
+  'demo-falha'() { const b = S.build; progressMaterial(b.files, { id: 'f' + Date.now(), kind: 'knowledge', name: 'contrato-escaneado.pdf', type: 'pdf', state: 'sending' }, 'failed'); },
+  'add-media'() { const b = S.build; b.media.push({ id: 'm' + Date.now(), kind: 'media', name: 'tela-do-chat2you.png', type: 'png', state: 'accepted' }); render(); },
+  'add-link'() { addMaterialDialog(S.build.files, true); },
+  'add-material'() { const a = agentById(current().split('-')[1]); addMaterialDialog(S.sabeTab === 'media' ? a.media : a.files, false, S.sabeTab === 'media'); },
+  'limpar-teste'() { const h = current() === 'teste' ? S.build : S.ptest; h.tested = []; h.chunks = {}; render(); },
+  ligar() { saveNewAgent(true); },
+  'ligar-depois'() { saveNewAgent(false); },
+  reconversar() {
+    const a = agentById(current().split('-')[1]);
+    dialog({ title: `Mudar ${artigo(a)} ${a.name} conversando`, wide: true, confirm: 'Concluir',
+      html: `<div class="chat" style="min-height:12rem"><div class="who"><span class="mini">${icon('sparkles')}</span>Construtor</div><div class="msg bot">O que você quer mudar ${a.name.endsWith('a') ? 'na' : 'no'} ${esc(a.name)}? Ex.: "passe a perguntar o número de atendentes antes de falar de preço".</div></div>
+        <form class="composer" onsubmit="event.preventDefault()"><button type="button" class="iconbtn" aria-label="Anexar">${icon('paperclip')}</button><label for="rc" class="sr">Mudança</label><textarea id="rc" rows="2" placeholder="Escreva o que mudar"></textarea><button class="iconbtn send" aria-label="Enviar">${icon('arrow-up')}</button></form>
+        <p class="small">A conversa continua de onde parou na montagem. Toda mudança vira uma versão nova, e dá para voltar.</p>`,
+      onOk: () => toast('Mudanças salvas.') });
+  },
+  'tool-new'() { toolDialog(); },
+  'tool-model'() { const a = agentById(current().split('-')[1]); a.tools = [{ name: 'Consulta de estoque', slug: 'consultar_estoque', method: 'POST', when: 'Quando o cliente perguntar se um item tem em estoque.', on: true }]; render(); },
+  wrong() {
+    S.open = null; render();
+    const opts = ['Informação errada', 'Resposta inadequada', 'Resposta incompleta', 'Informação desatualizada', 'Outro'];
+    const dlg = dialog({ title: 'Marcar esta resposta como errada', confirm: 'Marcar como errada', okDisabled: true,
+      body: 'Conte o que saiu errado. Só a equipe vê. Ajuda quem cuida do agente a corrigir.',
+      html: `<div class="field"><label>O que houve</label><div class="chipsel" role="radiogroup">${opts.map((o) => `<button role="radio" aria-pressed="false" data-wr="${o}">${o}</button>`).join('')}</div></div>
+        <div class="field"><label for="wrd">Qual seria a resposta certa? (se souber)</label><textarea id="wrd" rows="3"></textarea></div>`,
+      onOk: () => toast('Obrigado. A resposta foi marcada como errada.') });
+    dlg.querySelectorAll('[data-wr]').forEach((b) => b.addEventListener('click', () => { dlg.querySelectorAll('[data-wr]').forEach((x) => x.setAttribute('aria-pressed', 'false')); b.setAttribute('aria-pressed', 'true'); $('#dlgOk').disabled = false; }));
+  },
+};
+
+function addMaterialDialog(list, linkOnly, media) {
+  let mode = linkOnly ? 'link' : media ? 'file' : 'link';
+  const html = () => `${linkOnly || media ? '' : `<div class="seg2" role="group" aria-label="Tipo"><button aria-pressed="${mode === 'link'}" data-mm="link">Um link</button><button aria-pressed="${mode === 'file'}" data-mm="file">Um arquivo</button></div>`}
+    ${mode === 'link' ? '<div class="field"><label for="mlink">Link</label><input id="mlink" type="url" placeholder="https://exemplo.com/pagina" value="https://hub2you.ai/protege"></div>'
+    : `<div class="drop">${icon('upload')}<span>${media ? 'Foto, vídeo ou PDF para enviar ao cliente' : 'PDF, Word, Excel, TXT, MD ou JSON · até 25 MB'}</span><button class="btn link">Escolher arquivo</button></div>`}
+    <p class="small">${media ? 'O agente manda quando fizer sentido na conversa.' : 'Word e Excel ainda podem perder parte do conteúdo. Depois de enviar, ele lê e confere cada material.'}</p>`;
+  const dlg = dialog({ title: media ? 'Adicionar mídia' : linkOnly ? 'Colar um link' : 'Adicionar material', confirm: 'Adicionar', html: `<div id="mmb">${html()}</div>`,
+    onOk: () => {
+      if (media) { list.push({ id: 'm' + Date.now(), kind: 'media', name: 'catalogo-planos.pdf', type: 'pdf', state: 'accepted' }); render(); toast('Mídia adicionada.'); return true; }
+      const name = mode === 'link' ? ($('#mlink').value || 'link').replace('https://', '') : 'tabela-planos-2026.xlsx';
+      progressMaterial(list, { id: 'n' + Date.now(), kind: 'knowledge', name, type: mode === 'link' ? 'link' : 'xlsx', state: 'sending', nota: 7, label: 'Boa', conf: 'média', resumo: 'Conteúdo novo lido e conferido.' });
+      toast('Adicionado. Lendo agora.');
+      return true;
+    } });
+  dlg.addEventListener('click', (e) => { const t = e.target.closest('[data-mm]'); if (!t) return; mode = t.dataset.mm; $('#mmb').innerHTML = html(); paint(); });
+}
+
+function toolDialog() {
+  const a = agentById(current().split('-')[1]);
+  dialog({ title: 'Nova ferramenta', wide: true, confirm: 'Salvar ferramenta',
+    html: `<div class="field"><label for="tn">Nome</label><input id="tn" value="Consulta de estoque"></div>
+      <div class="field"><label for="ts">Identificador</label><input id="ts" class="mono" value="consultar_estoque"><span class="small">Só letras, números e _. Até 64.</span></div>
+      <div class="field"><label for="tw">Quando usar</label><textarea id="tw" rows="2">Quando o cliente perguntar se um item tem em estoque.</textarea></div>
+      <div class="field"><label>Método</label><div class="chipsel" role="radiogroup"><button role="radio" aria-pressed="false">GET</button><button role="radio" aria-pressed="true">POST</button></div></div>
+      <div class="field"><label for="tu">Endereço</label><input id="tu" class="mono" value="https://api.exemplo.com/estoque"></div>
+      <div class="field"><label for="tb">Corpo (JSON)</label><textarea id="tb" class="mono" rows="3">{ "q": "{{q}}", "limit": 5 }</textarea></div>
+      <div class="field"><label>Cabeçalhos</label><div class="kv"><input aria-label="Nome" class="mono" value="x-api-key"><input aria-label="Valor" value="••••••••"><label class="check2"><input type="checkbox" checked>Segredo</label><button class="iconbtn" aria-label="Tirar">${icon('trash-2')}</button></div><button class="btn link" style="justify-self:start">${icon('plus')}Mais um</button></div>
+      <div class="field"><label>Informações que ela pede ao cliente</label><div class="kv"><input aria-label="Nome" class="mono" value="q"><input aria-label="Para que serve" value="O que o cliente está procurando"><label class="check2"><input type="checkbox" checked>Obrigatório</label><button class="iconbtn" aria-label="Tirar">${icon('trash-2')}</button></div></div>
+      <button class="sw" role="switch" aria-checked="true"><span class="track"></span>Ligada</button>`,
+    onOk: () => { a.tools = a.tools || []; if (a.tools.length >= 10) { toast('Limite de 10 ferramentas por agente.', 'warn'); return false; } a.tools.push({ name: $('#tn').value, slug: $('#ts').value, method: 'POST', when: $('#tw').value, on: true }); render(); toast('Ferramenta salva.'); return true; } });
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button,a'); if (!t) return;
+  const d = t.dataset;
+  if (t.closest('#layer') && !d.mapgo && !d.wr && !d.mm) return;
+  if (d.go) { e.preventDefault(); if (d.go === 'escolha' && !S.build) S.build = newBuild(null); go(d.go); return; }
+  if (d.back !== undefined) { go(lastRoute); return; }
+  if (d.profile) { S.profile = d.profile; render(); return; }
+  if (d.open) { go(`agente-${d.open}-resumo`); return; }
+  if (d.state) { const [k, v] = d.state.split(':'); S.view[k] = v; render(); return; }
+  if (d.menu) { S.open = S.open === d.menu ? null : d.menu; render(); return; }
+  if (d.model) { S.build = S.build && current() === 'escolha' ? S.build : newBuild(null); S.build.model = d.model; if (current() !== 'escolha') go('escolha'); else render(); return; }
+  if (d.ans) { answer(d.ans); return; }
+  if (d.q) { playTest(current() === 'teste' ? S.build : S.ptest, d.q); return; }
+  if (d.ch) { S.build.channel = Number(d.ch); render(); return; }
+  if (d.bwin) { S.build.window = d.bwin; render(); return; }
+  if (d.btab) { S.build.tab = d.btab; render(); return; }
+  if (d.rmimg) { S.build.images.splice(Number(d.rmimg), 1); render(); return; }
+  if (d.rmstarter) { S.build.starters.splice(Number(d.rmstarter), 1); render(); return; }
+  if (d.rmmat) {
+    const [aid, mid] = d.rmmat.split(':');
+    const list = aid === 'build' ? null : agentById(aid);
+    const arr = aid === 'build' ? (S.build.tab === 'media' ? S.build.media : S.build.files) : (S.sabeTab === 'media' ? list.media : list.files);
+    const m = arr.find((x) => x.id === mid);
+    if (!m) { toast('Material de exemplo.'); return; }
+    dialog({ title: `Tirar "${m.name}"?`, body: 'O agente deixa de usar este material. Não dá para desfazer.', confirm: 'Tirar', danger: true,
+      onOk: () => { arr.splice(arr.indexOf(m), 1); render(); toast('Material tirado.'); } });
+    return;
+  }
+  if (d.resend) { const [aid, mid] = d.resend.split(':'); const arr = aid === 'build' ? S.build.files : agentById(aid).files; const m = arr.find((x) => x.id === mid); if (m) { arr.splice(arr.indexOf(m), 1); progressMaterial(arr, { ...m, state: 'sending', nota: 7, label: 'Boa', conf: 'média', resumo: 'Versão nova lida.' }); } else toast('Enviando de novo.'); return; }
+  if (d.continue) {
+    const a = agentById(d.continue);
+    if (!S.build) { S.build = newBuild(a.type === 'internal' ? 'internal' : 'sdr'); S.build.files = a.files; }
+    go(a.status === 'ready' ? 'ligue' : ({ Escolha: 'escolha', Conte: 'conte', Teste: 'teste', Ligue: 'ligue' }[a.stepName] || 'conte'));
+    return;
+  }
+  if (d.toggle) { toggleAgent(d.toggle); return; }
+  if (d.del) {
+    S.open = null;
+    const a = agentById(d.del);
+    dialog({ title: `Excluir ${a.name}?`, body: a.status !== 'on' && a.status !== 'off' ? 'O rascunho sai da lista.' : a.actuation === 'internal' ? `O ${a.name} sai da lista e some do painel das conversas.` : `${artigo(a).toUpperCase()} ${a.name} sai da lista e para de atender. As conversas com ${ela(a)} vão para a equipe.`, // D34 (#1063)
+      confirm: 'Excluir', danger: true, onOk: () => { S.agents = S.agents.filter((x) => x.id !== a.id); CHANNELS.forEach((c) => { if (c.busyBy === a.id) c.busyBy = null; }); go('lista'); toast(`${a.name} foi excluíd${artigo(a)}.`); } });
+    return;
+  }
+  if (d.period) { S.period = Number(d.period); render(); return; }
+  if (d.drill) { const [aid, k] = d.drill.split(':'); openDrill(aid, k); return; }
+  if (d.sabetab) { S.sabeTab = d.sabetab; render(); return; }
+  if (d.faqon) { const a = agentById(d.faqon); a.faqOn = !a.faqOn; render(); toast(a.faqOn ? 'Ligado. As próximas conversas resolvidas viram sugestões.' : 'Desligado.'); return; }
+  if (d.faq) {
+    const [k] = d.faq.split(':');
+    if (k === 'edit') dialog({ title: 'Mudar e aprovar', confirm: 'Salvar e aprovar', html: '<div class="field"><label for="fq">Pergunta</label><input id="fq" value="Vocês atendem corretora com só uma pessoa?"></div><div class="field"><label for="fa">Resposta</label><textarea id="fa" rows="3">Sim. O Chat2You funciona para corretoras de qualquer tamanho.</textarea></div>', onOk: () => toast('Adicionada ao que ela sabe.') });
+    else toast(k === 'ok' ? 'Adicionada ao que ela sabe.' : 'Sugestão ignorada.');
+    return;
+  }
+  if (d.disc) {
+    const [aid, cid] = d.disc.split(':'); const a = agentById(aid); const c = channelById(Number(cid));
+    dialog({ title: `Tirar ${artigo(a)} ${a.name} do ${c.name}?`, body: `As conversas com ${ela(a)} neste canal vão para a equipe agora. Quem escrever depois fala direto com as pessoas.`, confirm: 'Tirar do canal', danger: true,
+      onOk: () => { a.channels = a.channels.filter((x) => x !== c.id); c.busyBy = null; render(); toast(`${a.name} saiu do ${c.name}.`); } });
+    return;
+  }
+  if (d.conn) { const [aid, cid] = d.conn.split(':'); const a = agentById(aid); const c = channelById(Number(cid)); a.channels.push(c.id); c.busyBy = a.id; render(); toast(`${a.name} agora atende no ${c.name}.`); return; }
+  if (d.actMode) { const [aid, k] = d.actMode.split(':'); const a = agentById(aid); if (k === 'internal' && a.channels.length) { toast(`Tire ${artigo(a)} ${a.name} dos canais antes.`, 'warn'); return; } a.actuation = k; render(); return; }
+  if (d.voice) { const [aid, k] = d.voice.split(':'); agentById(aid).voice = k; render(); return; }
+  if (d.handoff) { const [aid, k] = d.handoff.split(':'); agentById(aid).handoff = k; render(); return; }
+  if (d.target) { const [aid, k] = d.target.split(':'); agentById(aid).target = k; render(); return; }
+  if (d.aud) { const [aid, k] = d.aud.split(':'); agentById(aid).audienceOpen = k === 'some'; render(); return; }
+  if (d.win) { const [aid, k] = d.win.split(':'); agentById(aid).window = k; render(); return; }
+  if (d.manual) {
+    const a = agentById(d.manual);
+    if (a.mode === 'manual') {
+      dialog({ title: 'Voltar ao modo guiado?', body: `O texto que você escreveu deixa de valer e ${ela(a)} volta para a última versão montada pela conversa. O seu texto fica guardado em Versões anteriores.`, confirm: 'Voltar ao modo guiado', onOk: () => { a.mode = 'guided'; render(); toast('Voltou ao modo guiado.'); } });
+      return;
+    }
+    dialog({ title: 'Escrever as instruções você mesmo?', body: 'O campo abre vazio. Enquanto você não salvar, ' + ela(a) + ' continua atendendo como hoje. Ao salvar, o seu texto passa a valer; a versão atual fica guardada.', confirm: 'Escrever eu mesmo', onOk: () => { a.mode = 'manual'; render(); } });
+    return;
+  }
+  if (d.behavior) { agentById(current().split('-')[1]).behavior = d.behavior; render(); return; }
+  if (d.restore) { dialog({ title: 'Voltar para esta versão?', body: 'A versão atual fica guardada. Você pode voltar para ela depois.', confirm: 'Voltar para esta', onOk: () => toast('Versão restaurada.') }); return; }
+  if (d.save) { toast('Salvo.'); return; }
+  if (d.tooltest) { S.toolResult = '{\n  "itens": [{ "nome": "Pastilha de freio dianteira", "estoque": 12 }]\n}  (exemplo)'; render(); toast('Ferramenta executada.'); return; }
+  if (d.tooldel) { const [aid, i] = d.tooldel.split(':'); const a = agentById(aid); dialog({ title: `Excluir "${a.tools[i].name}"?`, confirm: 'Excluir', danger: true, onOk: () => { a.tools.splice(Number(i), 1); render(); toast('Ferramenta excluída.'); } }); return; }
+  if (d.act && ACTIONS[d.act]) { ACTIONS[d.act](); }
+});
+document.addEventListener('submit', (e) => { if (e.target.id === 'composer') { e.preventDefault(); answer($('#answer').value); } });
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'answer' && e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); answer(e.target.value); }
+  if (e.key === 'Escape' && S.open) { S.open = null; render(); }
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset.bfield && S.build) { // D29: mudar como se apresenta invalida o teste anterior
+    const f = e.target.dataset.bfield; if (f === 'nome') S.build.answers.nome = e.target.value; else S.build.greeting = e.target.value;
+    S.build.stale = true;
+  }
+});
+document.addEventListener('change', (e) => { // D29: ao terminar a edição, a conversa de teste recomeça
+  if (e.target.dataset.bfield && S.build && S.build.tested.length) { S.build.tested = []; S.build.chunks = {}; render(); }
+  if (e.target.dataset.thr) { const a = agentById(e.target.dataset.thr); a.threshold = Number(e.target.value) / 100; const l = e.target.previousElementSibling.querySelector('span'); if (l) l.textContent = e.target.value + '%'; }
+});
+
+function boot() { shell(); render(); }
+if (document.body) boot(); else document.addEventListener('DOMContentLoaded', boot);
+
+</script>

@@ -521,6 +521,12 @@ Rails.application.routes.draw do
               resources :saved_presets, only: [:create, :update, :destroy]
             end
           end
+          # Identidade visual (#1076): kits de marca da conta e importação a partir do site.
+          resources :brand_kits, only: [:index, :show, :create, :update, :destroy] do
+            post :set_default, on: :member
+            post :restore, on: :member
+          end
+          resources :brand_kit_imports, only: [:create, :show]
           namespace :email_campaigns do
             post 'maintenance/backfills', to: 'maintenance#create'
             get 'maintenance/backfills/:id', to: 'maintenance#show'
@@ -561,6 +567,8 @@ Rails.application.routes.draw do
             post 'ai/rewrite',                 to: 'ai#rewrite'
             get  'ai/campaigns/:id/status',    to: 'ai#status'
             delete 'ai/campaigns/:id/adjustment', to: 'ai#discard_adjustment'
+            post 'ai/campaigns/:id/adjustment/apply', to: 'ai#apply_adjustment'
+            post 'ai/campaigns/:id/adjustment/undo', to: 'ai#undo_adjustment'
             resources :templates, only: [:index, :show, :create, :destroy]
             resources :reports, only: [:index, :show] do
               member do

@@ -13,6 +13,7 @@ import calls from './calls.json';
 import campaign from './campaign.json';
 import campaignImport from './campaignImport.json';
 import campaignJourney from './campaignJourney.json';
+import brandKits from './brandKits.json';
 import resultJourney from './resultJourney.json';
 import emailCampaignProtection from './emailCampaignProtection.json';
 import emailCampaignImportRecovery from './emailCampaignImportRecovery.json';
@@ -75,6 +76,7 @@ export default {
   ...campaign,
   ...campaignImport,
   ...campaignJourney,
+  ...brandKits,
   ...resultJourney,
   ...emailCampaignProtection,
   ...emailCampaignImportRecovery,

@@ -44,6 +44,16 @@ class Autonomia::Guide::Entrega
     end
   end
 
+  # O WhatsApp avisou que o número está perto (ou no) limite de conversas novas (chat#1067).
+  # Uma vez por estado e ciclo; urgente só no bloqueio.
+  def whatsapp_api_limite!(inbox, estado, inicio_ciclo, fim_ciclo)
+    gravidade = estado == 'CAPPED' ? AVISO::URGENTE : 'agir'
+    administradores.find_each do |user|
+      entregar(user, chave: "whatsapp_api_limite:#{user.id}:#{inbox.id}:#{estado}:#{inicio_ciclo}", gravidade: gravidade,
+                     sinal: { 'inbox_id' => inbox.id }, texto: @texto.whatsapp_api_limite(inbox, estado, fim_ciclo))
+    end
+  end
+
   # O resumo dos adiados de dias anteriores: um por pessoa, no primeiro pulso do dia.
   def resumir_adiados!
     adiados = AVISO.where(account: @account, estado: AVISO::ADIADO).where(created_at: ...@agora.beginning_of_day).includes(:user)

@@ -3595,6 +3595,73 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.21",
+     "titulo": "Fazer os e-mails saírem com a logo e as cores da sua marca",
+     "para_que_serve": "Ver as identidades visuais da conta, escolher a padrão dos e-mails novos, arquivar e restaurar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_brand_kits"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_brand_kits",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Guardar a identidade visual dos e-mails"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.22",
+     "titulo": "Criar a identidade visual a partir do seu site",
+     "para_que_serve": "Ler o site da marca e conferir logo, cores claro e escuro, fontes, redes e rodapé antes de salvar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_brand_kit_new"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_brand_kit_new",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Criar a identidade visual a partir do site"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.23",
+     "titulo": "Alterar uma identidade visual e usar no Criar com IA",
+     "para_que_serve": "Mudar logo, cores, fontes, redes e rodapé de uma identidade e escolher a identidade de cada e-mail no Criar com IA.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_journey_brand_kit_edit"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_journey_brand_kits",
+      "destaque": null
+     },
+     "requer": "campaigns",
+     "prints": [],
+     "fontes": [
+      "porques: Alterar uma identidade visual",
+      "porques: Usar a identidade visual num e-mail criado com IA"
+     ],
+     "revisar": false,
+     "nota": "A tela de alterar precisa do id da identidade; o botão leva à lista, onde fica o Alterar de cada cartão."
     }
    ]
   },

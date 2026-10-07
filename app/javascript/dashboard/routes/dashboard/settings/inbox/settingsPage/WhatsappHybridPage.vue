@@ -62,6 +62,41 @@ const timeLeft = computed(() => {
 const wrongNumber = computed(() => connected.value && !state.value.same_number);
 const disabledOrigins = computed(() => state.value.disabled_origins || []);
 
+// Limite de conversas novas do WhatsApp (NONE, FIRST_WARNING, SECOND_WARNING, CAPPED).
+const capping = computed(() => state.value.capping || { status: 'NONE' });
+const cappingKey = computed(() => {
+  const keys = {
+    FIRST_WARNING: 'NEAR',
+    SECOND_WARNING: 'NEAR',
+    CAPPED: 'BLOCKED',
+  };
+  return keys[capping.value.status] || '';
+});
+const cappingEnd = computed(() =>
+  capping.value.cycle_end
+    ? new Date(capping.value.cycle_end * 1000).toLocaleDateString()
+    : '—'
+);
+
+// Últimos 7 dias, por origem: o que saiu, o que falhou e o que esperou a vez.
+const statsRows = computed(() => {
+  const byOrigin = state.value.stats?.by_origin || {};
+  return ORIGINS.map(origin => {
+    const row = byOrigin[origin] || {};
+    return {
+      origin,
+      sent: row.sent || 0,
+      failed:
+        (row.failed || 0) + (row.uncertain || 0) + (row.disconnected || 0),
+      waited: row.throttled || 0,
+      fallback: row.fallback || 0,
+    };
+  });
+});
+const hasStats = computed(() =>
+  statsRows.value.some(row => row.sent || row.failed || row.waited)
+);
+
 const STATUS_TONES = {
   connected: 'text-n-teal-11 bg-n-teal-3',
   failed: 'text-n-ruby-11 bg-n-ruby-3',
@@ -411,7 +446,79 @@ onBeforeUnmount(() => {
           class="w-24 px-3 py-2 mb-0 text-sm rounded-lg border border-n-weak bg-n-alpha-black2 text-n-slate-12"
           @change="saveRateLimit"
         />
+        <p class="w-full mb-0 text-xs text-n-slate-11">
+          {{
+            tk('CAMPAIGN_LIMIT', {
+              limit: state.campaign_rate_limit_per_minute || 10,
+            })
+          }}
+        </p>
       </div>
+    </section>
+
+    <section
+      v-if="connected && !wrongNumber && cappingKey"
+      class="flex items-start gap-2 px-4 py-3 text-sm rounded-xl"
+      :class="
+        cappingKey === 'BLOCKED'
+          ? 'text-n-ruby-11 bg-n-ruby-3'
+          : 'text-n-amber-11 bg-n-amber-3'
+      "
+    >
+      <span class="i-lucide-gauge size-4 mt-0.5 shrink-0" />
+      <span>
+        {{
+          tk(`CAPPING.${cappingKey}`, {
+            used: capping.used ?? '—',
+            total: capping.total ?? '—',
+            end: cappingEnd,
+          })
+        }}
+      </span>
+    </section>
+
+    <section
+      v-if="connected && !wrongNumber"
+      class="flex flex-col gap-3 p-5 border rounded-xl border-n-weak bg-n-solid-1"
+    >
+      <p class="mb-0 text-base font-medium text-n-slate-12">
+        {{ tk('STATS.TITLE', { days: state.stats?.days || 7 }) }}
+      </p>
+      <p v-if="!hasStats" class="mb-0 text-sm text-n-slate-11">
+        {{ tk('STATS.EMPTY') }}
+      </p>
+      <table v-else class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-n-slate-11">
+            <th class="py-1 font-normal">{{ tk('STATS.WHO') }}</th>
+            <th class="py-1 font-normal text-right">{{ tk('STATS.SENT') }}</th>
+            <th class="py-1 font-normal text-right">
+              {{ tk('STATS.FAILED') }}
+            </th>
+            <th class="py-1 font-normal text-right">
+              {{ tk('STATS.WAITED') }}
+            </th>
+            <th class="py-1 font-normal text-right">
+              {{ tk('STATS.FALLBACK') }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in statsRows"
+            :key="row.origin"
+            class="border-t border-n-weak text-n-slate-12"
+          >
+            <td class="py-2">
+              {{ tk(`ORIGINS.${row.origin.toUpperCase()}`) }}
+            </td>
+            <td class="py-2 text-right tabular-nums">{{ row.sent }}</td>
+            <td class="py-2 text-right tabular-nums">{{ row.failed }}</td>
+            <td class="py-2 text-right tabular-nums">{{ row.waited }}</td>
+            <td class="py-2 text-right tabular-nums">{{ row.fallback }}</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
     <div v-if="!notConnected && state.status !== 'loading'" class="flex">

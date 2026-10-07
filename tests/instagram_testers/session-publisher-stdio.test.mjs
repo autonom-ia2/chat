@@ -30,8 +30,9 @@ const successEvents = [
   'at_exit',
 ];
 
-// Only the copied CLI executes. The environment and service are synthetic;
-// no Rails, Bundler, database, publisher transport or inherited config is loaded.
+// Only the copied CLI executes. The application, environment and service are
+// synthetic; no Rails, Bundler, database, publisher transport or inherited
+// config is loaded.
 async function fixture(
   t,
   {
@@ -49,6 +50,43 @@ async function fixture(
   await mkdir(join(root, 'config'));
   const script = join(root, 'scripts/instagram_testers/session_publisher.rb');
   await copyFile(publisher, script);
+  await writeFile(
+    join(root, 'config/application.rb'),
+    `
+module Rails
+  class Configuration
+    attr_accessor :eager_load
+
+    def initialize
+      @eager_load = true
+      @before_initialize = nil
+    end
+
+    def before_initialize(&block)
+      @before_initialize = block
+    end
+
+    def initialize_application(app)
+      @before_initialize&.call(app)
+    end
+  end
+
+  @config = Configuration.new
+
+  def self.application
+    self
+  end
+
+  def self.config
+    @config
+  end
+
+  def self.initialize!
+    @config.initialize_application(self)
+  end
+end
+`
+  );
   await writeFile(
     join(root, 'config/environment.rb'),
     `
@@ -102,6 +140,8 @@ module Rails
     end
   end
 end
+Rails.application.initialize!
+File.write('eager_load.json', JSON.generate({ eager_load: Rails.application.config.eager_load }))
 module Instagram
   module Testers
     class Error < StandardError; end
@@ -146,6 +186,7 @@ end
       return result;
     },
     called: () => readFile(join(root, 'called.json'), 'utf8'),
+    eagerLoad: () => readFile(join(root, 'eager_load.json'), 'utf8'),
     async lifecycle(events) {
       assert.deepEqual(
         JSON.parse(await readFile(join(root, 'lifecycle.json'), 'utf8')),
@@ -154,6 +195,20 @@ end
     },
   };
 }
+
+test('publisher disables eager loading before environment initialization', async t => {
+  const cli = await fixture(t);
+  const result = cli.run();
+  assert.equal(result.status, 0);
+  assert.deepEqual(JSON.parse(await cli.eagerLoad()), { eager_load: false });
+});
+
+test('publisher boot hook uses Rails config without a global ENV toggle', async () => {
+  const source = await readFile(publisher, 'utf8');
+  assert.ok(source.includes("require_relative '../../config/application'"));
+  assert.ok(source.includes('Rails.application.config.before_initialize'));
+  assert.equal(source.includes('ENV['), false);
+});
 
 test('success emits one JSON line despite boot, call and at_exit logs', async t => {
   const cli = await fixture(t);

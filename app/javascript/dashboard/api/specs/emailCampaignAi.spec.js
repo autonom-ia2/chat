@@ -83,4 +83,24 @@ describe('Email campaign AI API', () => {
       '/api/v1/accounts/85/ai_requests/rewrite-1'
     );
   });
+
+  it('applies an adjustment on the server, which records a site identity it used (#1111)', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: { brand_identity: {} } });
+
+    await EmailCampaignAiAPI.applyAdjustment(7);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment/apply'
+    );
+  });
+
+  it('undoes an applied adjustment on the server, which restores the identity (#1111)', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: { brand_identity: {} } });
+
+    await EmailCampaignAiAPI.undoAdjustment(7);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/email_campaigns/ai/campaigns/7/adjustment/undo'
+    );
+  });
 });

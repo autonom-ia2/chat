@@ -15,6 +15,7 @@ class WhatsappHybrid::Connection < ApplicationRecord
   before_validation :assign_public_id, on: :create
   # Excluir a conexão (ou a caixa) desliga o aparelho no celular e apaga a sessão no motor.
   after_destroy_commit { WhatsappHybrid::TeardownSessionJob.perform_later(session_name) }
+  after_commit(on: %i[create destroy]) { WhatsappHybrid::Config.forget_inbox(inbox_id) }
 
   validates :session_name, presence: true, uniqueness: true
   validates :inbox_id, uniqueness: true

@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 541 |
-| Sem corpo | 154 |
-| Com corpo | 387 |
-| Com corpo e formato completo | 314 (81,1%) |
-| Com corpo e formato incompleto | 73 |
+| No catálogo | 550 |
+| Sem corpo | 159 |
+| Com corpo | 391 |
+| Com corpo e formato completo | 317 (81,1%) |
+| Com corpo e formato incompleto | 74 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 152 |
-| Leituras cruas tipadas | 108 de 180 |
+| Campos aninhados com vocabulário | 17 de 168 |
+| Leituras cruas tipadas | 110 de 183 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 58 |
+| leitura crua sem tipo | 59 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -82,6 +82,7 @@ Uma ação pode ter mais de um motivo.
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/retry` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/start` — params inteiro repassado a DataImportSkipLogFinder.new
+- `POST email_campaigns/ai/generate` — leitura crua sem tipo: brand_mode (repassada a modes.include?)
 - `POST email_campaigns/campaigns/:id/resolve_video` — leitura crua sem tipo: poster_url, url (repassada a EmailCampaigns::VideoAsset.from_url)
 - `POST email_campaigns/maintenance/backfills` — lê o corpo cru da requisição
 - `POST email_campaigns/maintenance/backfills/:id/retry` — lê o corpo cru da requisição
@@ -162,6 +163,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#update` ctwa_tracked_link — o código não converte nem compara o valor
+- `api/v1/accounts/email_campaigns/ai#generate` brand_mode — repassada a modes.include?
 - `api/v1/accounts/email_campaigns/reputations#override` duration_seconds — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` message_budget — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
 - `api/v1/accounts/email_campaigns/reputations#override` reason — repassada a ::EmailCampaigns::Reputation::Evaluator.new(Current.accou...
@@ -188,8 +190,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 323 |
-| Com parâmetros conhecidos | 272 |
+| No catálogo | 326 |
+| Com parâmetros conhecidos | 275 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

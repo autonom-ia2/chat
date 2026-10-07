@@ -9,7 +9,8 @@ module EmailCampaigns
 
       INITIAL_POLL_WAIT = 5.seconds
 
-      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' => } — com base_mjml é um ajuste (#1095)
+      # params: { 'brief' =>, 'placeholders' => [], 'assets' => [], 'base_mjml' =>, 'brand' => { kit_id|import_id, mode } }
+      # — com base_mjml é um ajuste (#1095)
       def perform(campaign_id, token, params)
         campaign = EmailCampaign.find_by(id: campaign_id)
         return if campaign.blank? || !active?(campaign, token)
@@ -17,13 +18,14 @@ module EmailCampaigns
         credential = Crm::Ai::CredentialResolver.new(account: campaign.account).resolve
         return fail_generation(campaign, token, 'ai_not_configured') if credential.blank?
 
+        identity, brand_identity = resolve_identity(campaign, credential, params)
         generator = Generator.new(account: campaign.account, brief: params['brief'], placeholders: params['placeholders'],
-                                  assets: params['assets'], base_mjml: params['base_mjml'])
+                                  assets: params['assets'], base_mjml: params['base_mjml'], identity: identity)
         return fail_generation(campaign, token, 'base_mjml_too_large') if generator.base_mjml_too_large?
         return fail_generation(campaign, token, 'adjust_unreadable') if generator.adjust? && generator.sections.nil?
 
         req = generator.build
-        start_adjustment(campaign, token, generator, req, params) if generator.adjust?
+        start_adjustment(campaign, token, generator, req, params.merge('brand_identity' => brand_identity)) if generator.adjust?
         client = Crm::Ai::ResponsesClient.new(credential: credential)
         result = client.create_background(
           model: Crm::Ai::Config::MODEL_EMAIL, instructions: req[:instructions], input: req[:input],
@@ -33,7 +35,8 @@ module EmailCampaigns
         return fail_generation(campaign, token, 'empty_response') if result[:id].blank?
 
         if campaign.ai_attach_response!(token, result[:id])
-          PollJob.set(wait: INITIAL_POLL_WAIT).perform_later(campaign.id, token, result[:id], 0)
+          options = { 'brand_identity' => brand_identity, 'placeholders' => Array(params['placeholders']) }
+          PollJob.set(wait: INITIAL_POLL_WAIT).perform_later(campaign.id, token, result[:id], 0, options)
         else
           # Substituída no meio do caminho (token mudou): apaga a resposta órfã p/ não reter à toa.
           client.delete(result[:id])
@@ -51,10 +54,18 @@ module EmailCampaigns
         campaign.ai_processing? && campaign.ai_generation_token == token
       end
 
-      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado.
+      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado. Com a
+      # identidade usada (#1111: o aviso do site pedido no próprio pedido e o que "Aplicar" grava na campanha).
       def start_adjustment(campaign, token, generator, req, params)
         Adjustment.start(campaign, token: token, request: { base: generator.sections.canonical, placeholders: params['placeholders'],
-                                                            instructions: req[:instructions], input: req[:input_text] })
+                                                            instructions: req[:instructions], input: req[:input_text],
+                                                            brand_identity: params['brand_identity'] })
+      end
+
+      # A site asked for in the request itself (#1111) wins over the identity chosen in the composer for this e-mail.
+      def resolve_identity(campaign, credential, params)
+        requested_url = SiteRequest.new(account: campaign.account, credential: credential, brief: params['brief']).url
+        BrandResolution.new(campaign, params['brand'], requested_url: requested_url).call
       end
 
       # Só dispara o toast de falha se ESTA geração ainda era a ativa (ganhou o update guardado).

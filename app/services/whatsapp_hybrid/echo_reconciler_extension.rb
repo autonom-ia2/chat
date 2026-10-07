@@ -6,7 +6,8 @@ module WhatsappHybrid::EchoReconcilerExtension
   private
 
   def process_messages
-    return super unless outgoing_echo && WhatsappHybrid::Config.account_allowed?(inbox.account_id)
+    return super unless outgoing_echo && WhatsappHybrid::Config.account_allowed?(inbox.account_id) &&
+                        WhatsappHybrid::Config.hybrid_inbox?(inbox.id)
 
     target = hybrid_echo_target
     return super if target.nil?

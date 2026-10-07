@@ -10,7 +10,8 @@
 import { canonicalizeMjml } from './mjmlCanonical';
 import { linkMjmlCitations } from './citationLinks';
 
-const HELD_TAGS = ['mj-title', 'mj-preview'];
+// mj-font (#1076): the brand font of an identity e-mail; one per family, all held.
+const HELD_TAGS = ['mj-title', 'mj-preview', 'mj-font'];
 
 // [start, end) of the first <tag ...>...</tag> in mjml, or null.
 const elementRange = (mjml, tag) => {
@@ -24,10 +25,13 @@ const elementRange = (mjml, tag) => {
 const cutTag = ({ mjml, held }, tag) => {
   const range = elementRange(mjml, tag);
   if (!range) return { mjml, held };
-  return {
-    mjml: mjml.slice(0, range[0]) + mjml.slice(range[1]),
-    held: held + mjml.slice(range[0], range[1]),
-  };
+  return cutTag(
+    {
+      mjml: mjml.slice(0, range[0]) + mjml.slice(range[1]),
+      held: held + mjml.slice(range[0], range[1]),
+    },
+    tag
+  );
 };
 
 // -> { mjml: for setComponents, held: head markup to give back on export }

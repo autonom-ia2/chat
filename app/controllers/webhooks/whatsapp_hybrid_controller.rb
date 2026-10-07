@@ -9,6 +9,7 @@ class Webhooks::WhatsappHybridController < ActionController::API
   MAX_BODY_BYTES = 64.kilobytes
   MAX_CLOCK_SKEW_MS = 5.minutes.in_milliseconds
   SEEN_EVENT_TTL = 10.minutes.to_i
+  CAPPING_FIELDS = %w[cappingStatus totalQuota usedQuota cycleStart cycleEnd].freeze
 
   before_action :reject_oversized_body
   before_action :authenticate_engine
@@ -62,6 +63,8 @@ class Webhooks::WhatsappHybridController < ActionController::API
   def used_fields(body)
     payload = body['payload'].is_a?(Hash) ? body['payload'] : {}
     me = body['me'].is_a?(Hash) ? body['me'].slice('id') : nil
-    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => payload['id'], 'me' => me }.compact
+    capping = payload.dig('data', 'messageCapping')
+    capping = capping.slice(*CAPPING_FIELDS) if capping.is_a?(Hash)
+    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => payload['id'], 'me' => me, 'capping' => capping }.compact
   end
 end
