@@ -8,6 +8,14 @@ ATTEMPTS=3
 ATTEMPT_TIMEOUT=240
 APT_OPTS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o DPkg::Lock::Timeout=60)
 
+# O espelho da Azure (primeiro do mirrorlist do runner) entrega a 10-50 KB/s nos dias ruins; o oficial respondeu
+# na hora nas mesmas falhas. Troca só o host, mantendo a ordem e as prioridades do arquivo do runner.
+MIRRORS=/etc/apt/apt-mirrors.txt
+if [ -f "$MIRRORS" ]; then
+  sudo sed -i 's#http://azure.archive.ubuntu.com/#http://archive.ubuntu.com/#' "$MIRRORS"
+  cat "$MIRRORS"
+fi
+
 for attempt in $(seq 1 "$ATTEMPTS"); do
   if timeout -k 10 "$ATTEMPT_TIMEOUT" sudo apt-get "${APT_OPTS[@]}" update -qq &&
      timeout -k 10 "$ATTEMPT_TIMEOUT" sudo DEBIAN_FRONTEND=noninteractive apt-get "${APT_OPTS[@]}" install -y "$@"; then
