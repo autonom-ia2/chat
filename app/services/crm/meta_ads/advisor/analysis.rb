@@ -2,11 +2,14 @@
 # Decision, guardado em crm_meta_advisor_runs / _actions, escrito pela IA (Writer + Check) e servido como o
 # `Advice` da API (§4.2). Substitui a ação única da F4, escrita pela IA e guardada no Redis.
 #
-# Um run por conta · dia · idioma · assinatura. A assinatura cobre a versão das regras, a das instruções da IA e
-# [tipo, assunto, variante] de cada ação, na ordem; ficam fora os valores (o render usa os atuais) e o status
-# (aceitar não muda a assinatura nem pede IA). O `GET panel` a cada 2 min, com o run do dia já criado, só lê:
-# cache dos fatos, History, today, um find_by e um update_all de `shown_at` que não muda linha. Upsert das ações
-# e expiração das de ontem, só quando este processo cria o run.
+# Um run por conta · dia · idioma · assinatura. A assinatura cobre a versão das regras, a das instruções da IA, a
+# conta de anúncios e [tipo, assunto, variante, singulares] de cada ação, na ordem; ficam fora os valores (o render
+# usa os atuais; de cada contagem e prazo entra só se é 1, para a concordância) e o status (aceitar não muda a
+# assinatura nem pede IA). A conta de anúncios entra porque trocar de conta
+# no mesmo dia pode dar a mesma decisão (ações de conta têm assunto `account`), e o run da conta antiga serviria os
+# fatos dela. O `GET panel` a cada 2 min, com o run do dia já criado, só lê: cache dos fatos, History, today, um
+# find_by e um update_all de `shown_at` que não muda linha. Upsert das ações e expiração das de ontem, só quando
+# este processo cria o run, na mesma transação da criação: o run nunca fica visível sem as ações dele.
 #
 # A escrita (`write!`) nunca segura transação durante a IA: reivindica o run numa troca atômica (update_all com
 # condição; `writing` há mais de STALE_WRITING conta como abandonado), só então reserva o teto do dia, chama o
@@ -22,13 +25,16 @@ class Crm::MetaAds::Advisor::Analysis
   COUNTER_TTL = 36.hours
   STALE_WRITING = 5.minutes
   FILLERS = Crm::MetaAds::Advisor::Decision::FILLERS
+  # Os tipos de fato que pedem concordância de número no texto (substantivo depois do valor).
+  SINGULAR_TYPES = %i[count days].freeze
   CLAIMABLE = "(writer_status = 'pending' AND (retry_after IS NULL OR retry_after <= :now)) " \
               "OR (writer_status = 'writing' AND writing_started_at < :stale)".freeze
 
   class << self
-    # → Advice. Com trigger 'panel', marca `shown_at` nas ações mostradas.
-    def current(connection, locale:, trigger: 'panel', report: nil)
-      new(connection, locale: locale, report: report).current(trigger)
+    # → Advice. Com trigger 'panel', marca `shown_at` nas ações mostradas, salvo `shown: false` (o pedido veio pelo
+    # token de API, como o Guia chama: a métrica de aceite conta só o que o painel mostrou, D5.11).
+    def current(connection, locale:, trigger: 'panel', report: nil, shown: true)
+      new(connection, locale: locale, report: report).current(trigger, shown: shown)
     end
 
     # O resumo das 8h: escreve na hora se o run está livre e há vaga no teto.
@@ -135,10 +141,10 @@ class Crm::MetaAds::Advisor::Analysis
     @report = report
   end
 
-  def current(trigger)
+  def current(trigger, shown: true)
     @run = find_or_create_run(trigger)
     payload = advice(@run)
-    mark_panel_shown(payload) if trigger == 'panel'
+    mark_panel_shown(payload) if trigger == 'panel' && shown
     payload
   end
 
@@ -161,9 +167,18 @@ class Crm::MetaAds::Advisor::Analysis
   end
 
   def signature(actions)
-    parts = [Crm::MetaAds::Advisor::Rules::RULES_VERSION, Crm::MetaAds::Advisor::Prompt::VERSION] +
-            actions.map { |action| [action[:kind], action[:subject_key], action[:variant]] }
+    parts = [Crm::MetaAds::Advisor::Rules::RULES_VERSION, Crm::MetaAds::Advisor::Prompt::VERSION, @connection.ad_account_id] +
+            actions.map { |action| [action[:kind], action[:subject_key], action[:variant], singulars(action[:facts])] }
     Digest::SHA256.hexdigest(parts.to_json)
+  end
+
+  # O texto guardado tem marcadores e é renderizado com o valor atual: "{{count}} propostas" escrito com 4 viraria
+  # "1 propostas". Por isso cada contagem e prazo entra na assinatura só como "é 1 ou não" (o valor em si fica fora):
+  # cruzar 1 ↔ vários pede texto novo, escrito com o valor que concorda; 4 → 3 mantém o run. Compara o valor como
+  # aparece na tela (arredondado, como o Format.integer).
+  def singulars(facts)
+    facts.to_h.stringify_keys.select { |key, _value| SINGULAR_TYPES.include?(Crm::MetaAds::Advisor::Format::TYPES[key]) }
+         .sort.map { |key, value| [key, value.present? && value.to_f.round == 1] }
   end
 
   def fresh?(run)
@@ -171,20 +186,31 @@ class Crm::MetaAds::Advisor::Analysis
       evaluation[:local_date] == run.local_date
   end
 
+  # O `today` lido antes do run vale só se já tem a linha de cada ação: outra aba pode ter criado o run (com as
+  # ações) entre essa leitura e o find_by, e a leitura velha daria as ações sem id.
   def today_rows(run)
-    return evaluation[:today] if fresh?(run) && !@stored
+    return evaluation[:today] if fresh?(run) && !@stored && stored_rows?(evaluation[:today])
 
     Crm::MetaAds::Advisor::History.today(run.account_id, run.local_date)
   end
 
+  def stored_rows?(today)
+    evaluation[:actions].all? { |action| FILLERS.include?(action[:kind]) || today.key?([action[:kind], action[:subject_key]]) }
+  end
+
+  # Criação do run e gravação das ações na mesma transação: se o upsert falhar ou o processo cair no meio, nada
+  # fica, e a próxima leitura cria tudo. A corrida entre duas abas segue resolvida pelo savepoint do
+  # create_or_find_by! (a outra espera o commit desta no índice único e acha o run já com as ações).
   def find_or_create_run(trigger)
     keys = { account_id: @connection.account_id, local_date: evaluation[:local_date], locale: @locale, signature: evaluation[:signature] }
     found = Crm::MetaAdvisorRun.find_by(keys)
     return found if found
 
-    run = Crm::MetaAdvisorRun.create_or_find_by!(keys) { |created| created.assign_attributes(run_attributes(trigger)) }
-    store_actions!(run) if run.previously_new_record?
-    run
+    Crm::MetaAdvisorRun.transaction do
+      run = Crm::MetaAdvisorRun.create_or_find_by!(keys) { |created| created.assign_attributes(run_attributes(trigger)) }
+      store_actions!(run) if run.previously_new_record?
+      run
+    end
   end
 
   def run_attributes(trigger)

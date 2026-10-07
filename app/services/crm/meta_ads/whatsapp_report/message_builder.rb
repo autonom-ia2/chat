@@ -110,9 +110,17 @@ class Crm::MetaAds::WhatsappReport::MessageBuilder
   def rule_key(action, facts)
     kind = action[:kind]
     return "actions.#{kind}.#{action[:variant]}" if VARIANT_KINDS.include?(kind)
-    return "actions.slow_response.#{facts[:median_seconds].nil? ? 'no_median' : 'median'}" if kind == 'slow_response'
+    return "actions.slow_response.#{slow_variant(facts)}" if kind == 'slow_response'
 
     "actions.#{kind}"
+  end
+
+  # Pela causa que disparou a regra (Rules#slow_status): mediana acima da meta é demora; mediana dentro dela (ou
+  # sem nenhuma resposta) é só a parte que ficou sem resposta. Mesmo critério da tela (MetaAdsDailyAction).
+  def slow_variant(facts)
+    return 'no_median' if facts[:median_seconds].nil?
+
+    facts[:median_seconds].to_i > facts[:target_seconds].to_i ? 'median' : 'unanswered'
   end
 
   def money(value, currency)

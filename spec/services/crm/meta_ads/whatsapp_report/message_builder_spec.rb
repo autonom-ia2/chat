@@ -98,6 +98,17 @@ RSpec.describe Crm::MetaAds::WhatsappReport::MessageBuilder do
       )
     end
 
+    # A regra também falha com a mediana dentro da meta quando 20% ou mais ficaram sem resposta: o texto não pode
+    # acusar demora que não há.
+    it 'atendimento dentro da meta mas com muitas sem resposta: fala só das sem resposta' do
+      facts = { 'median_seconds' => 120, 'answered' => 12, 'unanswered' => 4, 'target_seconds' => 300, 'window_days' => 30 }
+
+      expect(rule_line('slow_response', facts)).to eq(
+        'O que fazer hoje: Responda as conversas de anúncio: nos últimos 30 dias, parte delas ficou sem resposta. Sem resposta: 4. ' \
+        'Responder em até 5 min ajuda a vender.'
+      )
+    end
+
     it 'revisar anúncio, pela variante' do
       facts = { ad_name: 'Promo 10/10', conversations: 25, sales: 0, spend: 1234.5, cost_per_sale: nil, target_cost_per_sale: 170 }
 
@@ -129,8 +140,8 @@ RSpec.describe Crm::MetaAds::WhatsappReport::MessageBuilder do
       auction = { cpm_change_pct: 0.4, cpm_recent: 28, cpm_baseline: 20, window_days: 7 }
 
       expect(rule_line('scale_ad', scale)).to eq(
-        'O que fazer hoje: Promo vende abaixo da média de R$ 150 há 2 semanas. Aumente o orçamento em até 20% no Gerenciador da Meta, ' \
-        'e só de novo daqui a 3 dias.'
+        'O que fazer hoje: Promo vende abaixo da média de R$ 150 há 2 semanas. Aumente o valor por dia do anúncio em até 20% ' \
+        'no Gerenciador da Meta, e só de novo daqui a 3 dias.'
       )
       expect(rule_line('auction_pressure', auction)).to eq(
         'O que fazer hoje: Aparecer para mil pessoas ficou 40% mais caro nos últimos 7 dias, e os cliques continuam iguais: ' \

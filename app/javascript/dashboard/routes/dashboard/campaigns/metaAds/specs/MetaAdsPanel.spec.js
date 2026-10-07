@@ -746,7 +746,7 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     expect(whatsapp.text()).toContain('Os dois números batem.');
     const site = wrapper.find('[data-confidence-meta-row="site"]');
     expect(site.text()).toContain(
-      '12 contatos pelo site (31 visitas à página)'
+      '12 contatos pelo site (visitas à página: 31); conversas que vieram do site, nós contamos 3.'
     );
     expect(site.text()).toContain('nem todo mundo clica depois');
   });
@@ -760,6 +760,34 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     expect(wrapper.find('[data-confidence-meta-empty]').text()).toBe(
       'A Meta ainda não mandou o número deste período.'
     );
+  });
+
+  // meta = 0: o servidor manda a linha sem explicação; "batem" ao lado de "a Meta ainda não mandou" se contradiz.
+  it('a line without a Meta number shows no explanation, only the notice', () => {
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: {
+        days: 7,
+        rows: [
+          {
+            destination: 'site',
+            meta: 0,
+            meta_visits: 0,
+            ours: 1,
+            difference: 1,
+            explanation: null,
+          },
+        ],
+        explanation: 'no_meta_data',
+      },
+    });
+
+    const site = wrapper.find('[data-confidence-meta-row="site"]');
+    expect(site.text()).toBe(
+      'Até ontem, a Meta diz 0 contatos pelo site (visitas à página: 0); conversas que vieram do site, nós contamos 1.'
+    );
+    expect(site.findAll('p')).toHaveLength(1);
+    expect(wrapper.find('[data-confidence-meta-empty]').exists()).toBe(true);
   });
 
   it('without the comparison it stays as before (the Connection tab)', () => {

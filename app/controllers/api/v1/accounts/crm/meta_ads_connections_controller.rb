@@ -207,19 +207,27 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   # O consultor recebe o Report da própria requisição: com 30 dias, os fatos dele reaproveitam a mesma coorte.
+  # Pedido pelo token de API (o Guia) não marca as ações como mostradas: a métrica de aceite é do painel (D5.11).
   def panel_payload(connection, report)
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report)
+      advice: ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report,
+                                                                    shown: !authenticate_by_access_token?)
     )
   end
 
-  # Sem conversa de anúncio no período não há o que medir.
+  # Sem conversa de anúncio no período não há o que medir. Com 30 dias é a mesma janela dos fatos do consultor
+  # (§4.2): sai do cache deles, sem refazer a consulta sobre `messages` a cada GET.
   def response_time(connection, report)
     return if report.cohort.conversation_ads.empty?
 
-    ::Crm::MetaAds::Panel::ResponseTime.new(account_id: connection.account_id, range: report.range).payload.merge(days: report.days)
+    payload = if report.days == ::Crm::MetaAds::Advisor::Facts::COHORT_DAYS
+                ::Crm::MetaAds::Advisor::Facts.new(connection, report: report).payload.dig(:account, :response)
+              else
+                ::Crm::MetaAds::Panel::ResponseTime.new(account_id: connection.account_id, range: report.range).payload
+              end
+    payload.merge(days: report.days)
   end
 
   def payload

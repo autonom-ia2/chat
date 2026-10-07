@@ -17,14 +17,21 @@ class Crm::MetaAds::Advisor::Writer
   REASONING_EFFORT = Crm::Ai::Config::SUMMARY_REASONING_EFFORT
   FEATURE = 'anuncios_meta'.freeze
   RETRY_AFTER = 15.minutes
+  # O pior caso da escrita (2 pedidos × (1 + MAX_RETRIES) chamadas de até REQUEST_TIMEOUT s, mais as esperas de
+  # 1 s entre elas) fica abaixo de Analysis::STALE_WRITING: um run em `writing` só conta como abandonado quando o
+  # job que o reivindicou já não pode estar vivo. Com os padrões do cliente (180 s, 2 novas tentativas), seriam
+  # ~18 min, e outra aba reivindicaria o run aos 5 min, gastando outra vaga do teto e jogando fora o texto pago.
+  REQUEST_TIMEOUT = 60
+  MAX_RETRIES = 1
   TEXT_KEYS = %w[headline body why].freeze
+  # `numbers_in_words` vem depois de `actions`: o modelo gera as chaves na ordem do schema e declara depois de ter
+  # escrito os textos, não antes.
   SCHEMA = {
     name: 'meta_ads_advisor_texts',
     schema: {
       type: 'object',
       properties: {
         applies: { type: 'boolean' },
-        numbers_in_words: { type: 'boolean' },
         actions: {
           type: 'array',
           items: {
@@ -32,9 +39,10 @@ class Crm::MetaAds::Advisor::Writer
             properties: { key: { type: 'string' }, headline: { type: 'string' }, body: { type: 'string' }, why: { type: 'string' } },
             required: %w[key headline body why], additionalProperties: false
           }
-        }
+        },
+        numbers_in_words: { type: 'boolean' }
       },
-      required: %w[applies numbers_in_words actions], additionalProperties: false
+      required: %w[applies actions numbers_in_words], additionalProperties: false
     }
   }.freeze
 
@@ -79,9 +87,9 @@ class Crm::MetaAds::Advisor::Writer
   def ask(payload)
     @attempts += 1
     credential = Crm::Ai::CredentialResolver.new(account: @run.account).resolve
-    client = Crm::Ai::ResponsesClient.new(credential: credential, feature: FEATURE, account: @run.account)
+    client = Crm::Ai::ResponsesClient.new(credential: credential, feature: FEATURE, account: @run.account, max_retries: MAX_RETRIES)
     response = client.create(model: MODEL, instructions: Crm::MetaAds::Advisor::Prompt.instructions, input: payload.to_json, schema: SCHEMA,
-                             reasoning_effort: REASONING_EFFORT)
+                             reasoning_effort: REASONING_EFFORT, timeout: REQUEST_TIMEOUT)
     parsed = JSON.parse(response.fetch(:text))
     parsed.is_a?(Hash) ? parsed : {}
   rescue JSON::ParserError

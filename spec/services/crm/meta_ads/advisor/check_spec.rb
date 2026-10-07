@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # A checagem do texto da IA (#1110, F5, CA-4.2): um caso por código, sem regex.
 RSpec.describe Crm::MetaAds::Advisor::Check do
-  let(:facts) { { 'ad_name' => 'Promo 10/10', 'window_days' => 7, 'ctr_drop_pct' => 0.33, 'frequency_7d' => nil } }
+  let(:facts) { { 'ad_name' => 'Promo 10/10', 'window_days' => 7, 'ctr_drop_pct' => 0.33, 'frequency_7d' => nil, 'value' => 3000.0 } }
   let(:actions) { [{ key: 'a1', facts: facts }] }
   let(:valid) do
     { 'key' => 'a1', 'headline' => 'Troque a imagem de {{ad_name}}.',
@@ -37,6 +37,25 @@ RSpec.describe Crm::MetaAds::Advisor::Check do
     expect(codes('headline' => 'Troque {{ad_name a imagem.')).to eq(['malformed_placeholder'])
     expect(codes('headline' => 'Troque ad_name}} a imagem.')).to eq(['malformed_placeholder'])
     expect(codes('headline' => 'Troque {{}} a imagem.')).to eq(['malformed_placeholder'])
+  end
+
+  it 'malformed_placeholder: chave simples que sobra fora de um marcador válido' do
+    expect(codes('body' => 'As pessoas clicaram {ctr_drop_pct} menos.')).to eq(['malformed_placeholder'])
+    expect(codes('body' => 'As pessoas clicaram {{ctr_drop_pct}}} menos.')).to eq(['malformed_placeholder'])
+    expect(codes('body' => 'Nos últimos {{window_days} dias.')).to eq(['malformed_placeholder'])
+  end
+
+  it 'duplicated_unit: % logo depois de marcador de porcentagem, mesmo com espaço' do
+    expect(codes('body' => 'As pessoas clicaram {{ctr_drop_pct}}% menos.')).to eq(['duplicated_unit'])
+    expect(codes('body' => 'As pessoas clicaram {{ctr_drop_pct}} % menos.')).to eq(['duplicated_unit'])
+    expect(codes('body' => 'Nos últimos {{window_days}}% dos dias.')).to eq([])
+  end
+
+  it 'duplicated_unit: símbolo da moeda logo antes de marcador de dinheiro, mesmo com espaço' do
+    expect(codes('body' => 'Somam R$ {{value}}.')).to eq(['duplicated_unit'])
+    expect(codes('body' => 'Somam R${{value}}.')).to eq(['duplicated_unit'])
+    expect(codes('body' => 'Somam US$ {{value}}.')).to eq(['duplicated_unit'])
+    expect(codes('body' => 'Somam {{value}}, R$ que voltam.')).to eq([])
   end
 
   it 'unknown_fact: chave fora dos fatos daquela ação, ou fato sem valor' do

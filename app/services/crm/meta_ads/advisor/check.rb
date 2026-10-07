@@ -11,6 +11,9 @@
 # → { ok: [key], rejected: { key => [códigos] }, global: [códigos] }. Código global recusa todas as ações.
 module Crm::MetaAds::Advisor::Check
   LIMITS = { 'headline' => 120, 'body' => 400, 'why' => 300 }.freeze
+  PERCENT = '%'.freeze
+  # A unidade que o valor de dinheiro já traz; somam-se os símbolos de Format (currency_units, en e pt_BR).
+  MONEY_UNITS = ['R$'].freeze
 
   module_function
 
@@ -46,15 +49,37 @@ module Crm::MetaAds::Advisor::Check
   def text_codes(field, text, limit, facts)
     codes = text.length > limit ? ['too_long'] : []
     parts = Crm::MetaAds::Advisor::Format.split_markers(text)
-    keys = parts&.filter_map(&:last)
-    return codes << 'malformed_placeholder' if malformed?(keys)
+    return codes << 'malformed_placeholder' if malformed?(parts)
 
+    keys = parts.filter_map(&:last)
     codes << 'digit_outside_fact' if digit?(parts.map(&:first).join)
+    codes << 'duplicated_unit' if duplicated_unit?(parts)
     codes + marker_codes(field, keys, facts)
   end
 
-  def malformed?(keys)
-    keys.nil? || keys.any? { |key| key.empty? || key.include?('{') }
+  # Marcador partido, chave vazia ou chave simples (`{` ou `}`) que sobrou fora de um marcador válido ("{count}").
+  def malformed?(parts)
+    parts.nil? || parts.any? do |text, key|
+      text.include?('{') || text.include?('}') || (key && (key.empty? || key.include?('{')))
+    end
+  end
+
+  # A unidade já vem no valor: "%" logo depois de um marcador de porcentagem, ou o símbolo da moeda logo antes de um
+  # de dinheiro, sairia repetido ("35%%", "R$ R$ 6.200"). Espaço entre os dois não conta.
+  def duplicated_unit?(parts)
+    parts.each_cons(2).any? do |(before, key), (after, _next_key)|
+      case Crm::MetaAds::Advisor::Format::TYPES[key]
+      when :percent then after.lstrip.start_with?(PERCENT)
+      when :money then money_units.any? { |unit| before.rstrip.end_with?(unit) }
+      else false
+      end
+    end
+  end
+
+  def money_units
+    (MONEY_UNITS + I18n.available_locales.flat_map do |locale|
+      I18n.t("#{Crm::MetaAds::Advisor::Format::SCOPE}.currency_units", locale: locale, default: {}).values
+    end).uniq
   end
 
   # Sem valor é o "fato inexistente" do CA-4.2: o mesmo vazio que faz o Format.render desistir.

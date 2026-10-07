@@ -1,8 +1,8 @@
 # O que a pessoa já fez com as ações do consultor (#1110, F5, §1.3 e §1.4), lido a cada análise e nunca guardado
 # no cache dos fatos: depois de um aceite, a próxima leitura já precisa saber.
 #
-# - `for`: os anúncios com aumento de orçamento aceito nos últimos SCALE_COOLDOWN_DAYS dias, hoje incluído
-#   (aceito em 04/10 → só escala de novo em 07/10). É o "descanso" da regra `scale`.
+# - `for`: os anúncios com aumento do valor por dia aceito nos últimos SCALE_COOLDOWN_DAYS dias, hoje incluído
+#   (com 5 dias: aceito em 04/10 → só escala de novo em 09/10). É o "descanso" da regra `scale`.
 # - `today`: as ações já gravadas hoje, com o status (aceita fica, dispensada sai) e os fatos guardados, que a
 #   Decision usa quando a regra já não dispara.
 module Crm::MetaAds::Advisor::History

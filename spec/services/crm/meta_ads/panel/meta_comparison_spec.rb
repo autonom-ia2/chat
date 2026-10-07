@@ -75,7 +75,8 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     expect(comparison[:rows].map { |row| row[:destination] }).to eq(['whatsapp'])
   end
 
-  it 'sem número da Meta e sem conversa nossa, nil; com gasto e só a nossa conta, no_meta_data' do
+  # Sem número da Meta na linha não há o que explicar: "batem" ou "a Meta só conta 7 dias" seria falso.
+  it 'sem número da Meta e sem conversa nossa, nil; com gasto e só a nossa conta, no_meta_data e a linha sem explicação' do
     connection.update!(destinations: { 'whatsapp' => true, 'site' => true })
     insight(Date.new(2026, 10, 3), spend: 50)
 
@@ -84,7 +85,7 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     link_from(conversations(1).first, 'site', 3)
 
     expect(comparison).to include(explanation: 'no_meta_data',
-                                  rows: [{ destination: 'site', meta: 0, meta_visits: 0, ours: 1, difference: 1, explanation: 'close' }])
+                                  rows: [{ destination: 'site', meta: 0, meta_visits: 0, ours: 1, difference: 1, explanation: nil }])
   end
 
   it 'segue o período do painel' do
@@ -92,6 +93,6 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     conversations(12).each { |conversation| link_from(conversation, 'whatsapp', 1) }
 
     expect(comparison(days: 30)).to include(days: 30, rows: [include(meta: 12, ours: 12, explanation: 'close')])
-    expect(comparison(days: 7)[:rows].sole).to include(meta: 0, ours: 12)
+    expect(comparison(days: 7)[:rows].sole).to include(meta: 0, ours: 12, explanation: nil)
   end
 end

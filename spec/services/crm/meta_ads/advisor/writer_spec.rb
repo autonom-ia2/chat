@@ -31,7 +31,8 @@ RSpec.describe Crm::MetaAds::Advisor::Writer do
 
   before do
     allow(Crm::Ai::CredentialResolver).to receive(:new).with(account: account).and_return(resolver)
-    allow(Crm::Ai::ResponsesClient).to receive(:new).with(credential: credential, feature: 'anuncios_meta', account: account).and_return(client)
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+      .with(credential: credential, feature: 'anuncios_meta', account: account, max_retries: described_class::MAX_RETRIES).and_return(client)
   end
 
   def reply(entries, applies: true)
@@ -44,7 +45,7 @@ RSpec.describe Crm::MetaAds::Advisor::Writer do
 
   it 'manda só os fatos de cada ação, com o tipo e a variante, e guarda o texto com marcadores' do
     expect(client).to receive(:create) do |request|
-      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA,
+      expect(request).to include(model: Crm::Ai::Config::MODEL_SUMMARY, schema: described_class::SCHEMA, timeout: described_class::REQUEST_TIMEOUT,
                                  instructions: Crm::MetaAds::Advisor::Prompt.instructions)
       input = JSON.parse(request[:input])
       expect(input.slice('language', 'currency')).to eq('language' => 'pt_BR', 'currency' => 'BRL')
@@ -90,6 +91,22 @@ RSpec.describe Crm::MetaAds::Advisor::Writer do
     allow(client).to receive(:create).and_return(reply([], applies: false))
 
     expect(perform).to include(writer_status: 'rule', writer_reason: 'not_applicable', writer_attempts: 1, texts: {})
+  end
+
+  # O modelo gera as chaves na ordem do schema: a autodeclaração vem depois dos textos, não antes de escrevê-los.
+  it 'numbers_in_words vem depois de actions no schema' do
+    schema = described_class::SCHEMA[:schema]
+
+    expect(schema[:properties].keys).to eq(%i[applies actions numbers_in_words])
+    expect(schema[:required]).to eq(%w[applies actions numbers_in_words])
+  end
+
+  # Senão outra aba reivindica o run com o primeiro job ainda vivo: outra vaga do teto e o texto pago jogado fora.
+  it 'o pior caso da escrita (2 pedidos, com as novas tentativas e as esperas) cabe antes de o run contar como abandonado' do
+    calls = 1 + described_class::MAX_RETRIES
+    worst = 2 * ((calls * described_class::REQUEST_TIMEOUT) + (1..described_class::MAX_RETRIES).sum)
+
+    expect(worst.seconds).to be < Crm::MetaAds::Advisor::Analysis::STALE_WRITING
   end
 
   it 'falha do provedor não é estado final: volta a pending por 15 min' do

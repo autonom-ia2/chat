@@ -245,7 +245,7 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(panel['totals']).to include('spend' => 0.0, 'conversations' => 0, 'sales' => 0)
       expect(panel['confidence']).to include('window_days' => 7, 'conversations' => 0)
       run = Crm::MetaAdvisorRun.sole
-      expect(panel['advice']).to include('run_id' => run.id, 'local_date' => run.local_date.iso8601, 'rules_version' => 'f5.1')
+      expect(panel['advice']).to include('run_id' => run.id, 'local_date' => run.local_date.iso8601, 'rules_version' => 'f5.2')
       expect(panel['advice']['actions'].pluck('kind')).to eq(%w[no_data])
     end
 
@@ -262,8 +262,12 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
         create(:message, account: account, inbox: conversation.inbox, conversation: conversation, message_type: :outgoing,
                          created_at: 1.day.ago + 6.minutes)
 
+        allow(Crm::MetaAds::Panel::ResponseTime).to receive(:new).and_call_original
+
         get "#{path}/panel", params: { days: 30 }, headers: auth_headers(admin)
 
+        # Com 30 dias o tempo de resposta sai dos fatos do consultor: uma consulta só, a dos fatos.
+        expect(Crm::MetaAds::Panel::ResponseTime).to have_received(:new).once
         panel = response.parsed_body['panel']
         expect(panel['meta_comparison']).to eq(
           'days' => 30, 'until' => '2026-10-06', 'explanation' => nil,
@@ -273,6 +277,26 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
                                              'target_seconds' => 300)
         expect(panel['advice']).to include('run_id' => Crm::MetaAdvisorRun.sole.id, 'local_date' => '2026-10-07')
         expect(panel['advice']['actions'].first).to include('kind' => 'wait', 'ad_id' => '1')
+      end
+    end
+
+    # D5.11: a métrica de aceite conta só o que o painel mostrou; o Guia lê o painel pelo token de API.
+    it 'só o painel (sessão) marca as ações como mostradas; o pedido pelo token de API não' do
+      travel_to(Time.zone.parse('2026-10-07T15:00:00-03:00')) do
+        connection.update!(insights_backfilled_at: 1.day.ago, links_backfilled_at: 1.day.ago)
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'k1', origin: 'whatsapp',
+                                certainty: 'campaign', ad_account_id: connection.ad_account_id, touched_at: 1.day.ago)
+        allow(Crm::MetaAds::Advisor::Rules).to receive(:evaluate).and_wrap_original do |original, *args, **options|
+          original.call(*args, **options).map { |result| result[:key] == 'tracking' ? result.merge(status: 'fail') : result }
+        end
+
+        get "#{path}/panel", params: { days: 7 }, headers: auth_headers(admin)
+        action = Crm::MetaAdvisorAction.find_by!(account_id: account.id, kind: 'fix_tracking')
+        expect(action.shown_at).to be_nil
+
+        get "#{path}/panel", params: { days: 7 }, headers: admin.create_new_auth_token
+        expect(response).to have_http_status(:ok)
+        expect(action.reload.shown_at).to eq(Time.current)
       end
     end
 

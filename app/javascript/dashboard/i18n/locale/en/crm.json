@@ -2234,7 +2234,7 @@
               "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
             },
             "SITE": {
-              "LINE": "Until yesterday, Meta says {meta} contact on the site ({visits} page visits); we counted {ours} conversations that came from the site. | Until yesterday, Meta says {meta} contacts on the site ({visits} page visits); we counted {ours} conversations that came from the site.",
+              "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); conversations that came from the site, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); conversations that came from the site, we counted {ours}.",
               "CLOSE": "The two numbers match.",
               "META_HIGHER": "Meta counts people who left their contact on the site; not everyone clicks afterwards to talk on WhatsApp.",
               "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there."
@@ -2374,7 +2374,7 @@
             "BUTTON": "Open the ad"
           },
           "SCALE_AD": {
-            "TEXT": "Raise the budget of \"{ad}\" by up to {maxIncreasePct}.",
+            "TEXT": "Raise the daily amount of \"{ad}\" by up to {maxIncreasePct}.",
             "WHY": "Why: it has sold for {costPerSale}, below your average of {targetCostPerSale}, for {weeks} weeks. After raising it, wait {cooldownDays} days before raising it again.",
             "BUTTON": "Open in Meta Ads Manager"
           },
@@ -2511,7 +2511,8 @@
           "FAILED": "We could not reach the AI right now; this is the action by the rule.",
           "WHY_LABEL": "Why:",
           "DISMISS_FAILED": "We could not dismiss it right now. Try again.",
-          "DONE_FAILED": "We could not mark it as done right now. Try again."
+          "DONE_FAILED": "We could not mark it as done right now. Try again.",
+          "ALREADY_RESOLVED": "This action was already handled on another screen. The list has been updated."
         },
         "QUOTE": {
           "SUGGEST": "Suggest message",

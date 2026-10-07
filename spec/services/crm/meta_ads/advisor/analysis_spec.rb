@@ -48,7 +48,7 @@ RSpec.describe Crm::MetaAds::Advisor::Analysis do
   it 'devolve o Advice pela regra enquanto a IA não escreveu e marca a ação como mostrada' do
     advice = current
 
-    expect(advice).to include(local_date: '2026-10-07', rules_version: 'f5.1', writer: { status: 'pending', reason: nil })
+    expect(advice).to include(local_date: '2026-10-07', rules_version: 'f5.2', writer: { status: 'pending', reason: nil })
     action = advice[:actions].sole
     expect(action).to include(position: 1, kind: 'fix_tracking', variant: nil, status: 'open', opened: false, source: 'rule', headline: nil,
                               button: { target: 'connection_step', step: 3, url: nil }, cards: [])
@@ -129,6 +129,66 @@ RSpec.describe Crm::MetaAds::Advisor::Analysis do
 
     expect(current[:run_id]).to eq(other.id)
     expect(Crm::MetaAdvisorAction.where(account_id: account.id)).to be_empty
+  end
+
+  it 'o run só fica gravado com as ações: se o upsert falha, nada fica e a leitura seguinte cria tudo com id' do
+    calls = 0
+    allow(Crm::MetaAdvisorAction).to receive(:upsert_all).and_wrap_original do |original, *args, **options|
+      (calls += 1) == 1 ? raise(ActiveRecord::StatementInvalid, 'canceling statement due to statement timeout') : original.call(*args, **options)
+    end
+
+    expect { current }.to raise_error(ActiveRecord::StatementInvalid)
+    expect(Crm::MetaAdvisorRun.where(account_id: account.id)).to be_empty
+
+    action = current[:actions].sole
+    expect(action[:id]).to be_present
+    expect(Crm::MetaAdvisorAction.find(action[:id]).shown_at).to eq(Time.current)
+  end
+
+  it 'outra aba criou o run depois da leitura de hoje: relê as ações e devolve os ids' do
+    run_record
+    calls = 0
+    allow(Crm::MetaAds::Advisor::History).to receive(:today).and_wrap_original do |original, *args|
+      (calls += 1) == 1 ? {} : original.call(*args)
+    end
+
+    expect(current[:actions].sole[:id]).to eq(Crm::MetaAdvisorAction.find_by!(account_id: account.id, kind: 'fix_tracking').id)
+  end
+
+  it 'trocar a conta de anúncios no mesmo dia cria outro run, com a conta nova, mesmo com a mesma decisão' do
+    first = run_record
+    connection.update_columns(ad_account_id: 'act_9002') # rubocop:disable Rails/SkipsModelValidations
+
+    second = run_record
+
+    expect(second.decision.pluck('kind')).to eq(first.decision.pluck('kind'))
+    expect(second.id).not_to eq(first.id)
+    expect(second.ad_account_id).to eq('act_9002')
+  end
+
+  # O texto guardado tem marcadores: "{{unknown}} conversas" escrito com 4 viraria "1 conversas" com o valor atual.
+  it 'mesma decisão: contagem que cruza 1 cria run novo; 4 → 3 mantém o run' do
+    decision = lambda do |unknown|
+      [{ kind: 'fix_tracking', subject_key: 'account', variant: nil, ad_id: nil, position: 1, status: 'open',
+         facts: { 'conversations' => 6, 'unknown' => unknown, 'identified_pct' => 0.5 } }]
+    end
+    allow(Crm::MetaAds::Advisor::Decision).to receive(:for).and_return(decision.call(4))
+    four = current[:run_id]
+
+    allow(Crm::MetaAds::Advisor::Decision).to receive(:for).and_return(decision.call(1))
+    one = current[:run_id]
+
+    allow(Crm::MetaAds::Advisor::Decision).to receive(:for).and_return(decision.call(3))
+    three = current[:run_id]
+
+    expect(one).not_to eq(four)
+    expect(three).to eq(four)
+  end
+
+  it 'com shown: false (pedido pelo token de API, o Guia) não marca a ação como mostrada' do
+    advice = described_class.current(connection, locale: 'pt_BR', shown: false)
+
+    expect(Crm::MetaAdvisorAction.find(advice[:actions].sole[:id]).shown_at).to be_nil
   end
 
   it 'expira as abertas dos dias anteriores e grava as ações só quando cria o run' do

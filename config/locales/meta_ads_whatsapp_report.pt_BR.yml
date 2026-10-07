@@ -43,6 +43,7 @@ pt_BR:
       slow_response:
         median: "Responda mais rápido às conversas de anúncio: nos últimos %{window_days} dias, metade esperou mais de %{median_seconds} pela primeira resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
         no_median: "Responda as conversas de anúncio: nos últimos %{window_days} dias, nenhuma teve resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
+        unanswered: "Responda as conversas de anúncio: nos últimos %{window_days} dias, parte delas ficou sem resposta. Sem resposta: %{unanswered}. Responder em até %{target_seconds} ajuda a vender."
       review_ad:
         no_sales: "Revise o anúncio %{ad_name}: trouxe %{conversations} conversas e nenhuma venda, com %{spend} investidos. Olhe a imagem, o texto e o que as pessoas perguntam antes de desligar."
         above_average: "Revise o anúncio %{ad_name}: cada venda custou %{cost_per_sale}, acima da média de %{target_cost_per_sale} dos anúncios que vendem."
@@ -50,7 +51,7 @@ pt_BR:
         ctr: "Troque a imagem ou o texto de %{ad_name}: as pessoas clicam %{ctr_drop_pct} menos do que nas semanas anteriores."
         frequency: "Troque a imagem ou o texto de %{ad_name}: cada pessoa já viu o anúncio %{frequency_7d} vezes nos últimos %{window_days} dias."
         both: "Troque a imagem ou o texto de %{ad_name}: as pessoas clicam %{ctr_drop_pct} menos do que nas semanas anteriores, e cada uma já viu o anúncio %{frequency_7d} vezes nos últimos %{window_days} dias."
-      scale_ad: "%{ad_name} vende abaixo da média de %{target_cost_per_sale} há %{weeks} semanas. Aumente o orçamento em até %{max_increase_pct} no Gerenciador da Meta, e só de novo daqui a %{cooldown_days} dias."
+      scale_ad: "%{ad_name} vende abaixo da média de %{target_cost_per_sale} há %{weeks} semanas. Aumente o valor por dia do anúncio em até %{max_increase_pct} no Gerenciador da Meta, e só de novo daqui a %{cooldown_days} dias."
       auction_pressure: "Aparecer para mil pessoas ficou %{cpm_change_pct} mais caro nos últimos %{window_days} dias, e os cliques continuam iguais: é a concorrência, não o seu anúncio. Não troque o anúncio por isso."
     # As variáveis do modelo do Oficial (sempre pt_BR): {{3}} junta conversas, propostas e vendas.
     template:

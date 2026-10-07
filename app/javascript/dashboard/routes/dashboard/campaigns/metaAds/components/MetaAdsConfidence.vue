@@ -136,7 +136,10 @@ const confidenceGap = computed(
             <span>{{ row.meta_visits ?? 0 }}</span>
           </template>
         </I18nT>
-        <p class="m-0 text-[13px] font-420 leading-relaxed text-n-slate-11">
+        <p
+          v-if="row.explanation"
+          class="m-0 text-[13px] font-420 leading-relaxed text-n-slate-11"
+        >
           {{
             $t(
               `${META}.${row.destination.toUpperCase()}.${row.explanation.toUpperCase()}`

@@ -13,6 +13,8 @@ module Crm::MetaAds::Advisor::Decision
   FILLERS = %w[wait on_track no_data].freeze
   MAX_ACTIONS = 3
   RESPONSE_WINDOW_DAYS = 30
+  # O período do relatório de 30 dias de onde vêm o gasto, as conversas e as vendas da revisão do anúncio.
+  REVIEW_WINDOW_DAYS = 30
   # A regra de conta que dispara cada tipo de conta.
   ACCOUNT_RULE = { 'stalled_quotes' => 'stalled_quotes', 'slow_response' => 'slow_response', 'fix_tracking' => 'tracking',
                    'auction_pressure' => 'auction' }.freeze
@@ -42,12 +44,21 @@ module Crm::MetaAds::Advisor::Decision
     end
   end
 
+  # As aceitas hoje, também dentro do teto e uma por tipo: uma aba atrasada pode aceitar a ação de um run anterior
+  # do dia (ex.: a revisão do anúncio 1, quando a regra já escolheu o 2) e a pessoa aceitar a nova também. Fica a
+  # da decisão de agora, senão a de menor posição.
   def accepted(today, candidates)
-    today.select { |_key, row| row[:status].to_s == 'accepted' }.map do |(kind, subject_key), row|
-      fresh = candidates.find { |action| action[:kind] == kind && action[:subject_key] == subject_key }
-      fresh&.merge(status: 'accepted') ||
-        action(kind, row[:facts].to_h, subject_key: subject_key, variant: row[:variant]).merge(status: 'accepted')
-    end
+    rows = today.select { |_key, row| row[:status].to_s == 'accepted' }.map { |key, row| accepted_row(key, row, candidates) }
+    rows.sort_by { |kept, stale, position| [KINDS.index(kept[:kind]) || KINDS.size, stale, position] }
+        .map(&:first).uniq { |kept| kept[:kind] }.first(MAX_ACTIONS)
+  end
+
+  # [ação aceita, 0 se é a da decisão de agora (1 se não), posição gravada]. A da decisão de agora vem com os fatos
+  # atuais; a outra, com os guardados na linha.
+  def accepted_row((kind, subject_key), row, candidates)
+    fresh = candidates.find { |action| action[:kind] == kind && action[:subject_key] == subject_key }
+    kept = fresh || action(kind, row[:facts].to_h, subject_key: subject_key, variant: row[:variant])
+    [kept.merge(status: 'accepted'), fresh ? 0 : 1, row[:position].to_i]
   end
 
   def status(today, action)
@@ -120,7 +131,7 @@ module Crm::MetaAds::Advisor::Decision
 
   def review_ad_facts(row, account, _rules)
     { ad_name: row[:ad_name], conversations: row[:conversations], sales: row[:sales], spend: row[:spend_30d], cost_per_sale: row[:cost_per_sale],
-      target_cost_per_sale: account[:target_cost_per_sale] }
+      target_cost_per_sale: account[:target_cost_per_sale], window_days: REVIEW_WINDOW_DAYS }
   end
 
   def refresh_creative_facts(row, _account, rules)

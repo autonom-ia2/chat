@@ -9,7 +9,7 @@
 # Mudou limiar, regra ou o gabarito (spec/services/crm/meta_ads/advisor/scenarios_spec.rb)? Sobe RULES_VERSION e
 # explica no PR: a versão entra na chave do cache dos fatos e na assinatura do run.
 module Crm::MetaAds::Advisor::Rules
-  RULES_VERSION = 'f5.1'.freeze
+  RULES_VERSION = 'f5.2'.freeze
   MIN_IMPRESSIONS = 1_000
   MIN_BASELINE_CLICKS = 30
   FATIGUE_CTR_DROP = 0.20
@@ -18,7 +18,7 @@ module Crm::MetaAds::Advisor::Rules
   STABLE_CTR = 0.10
   SCALE_FREQUENCY = 3.0
   SCALE_STEP = 0.20
-  SCALE_COOLDOWN_DAYS = 3
+  SCALE_COOLDOWN_DAYS = 5
   SCALE_WEEKS = 2
   LEARNING_RESULTS = 50
   DATA_GATE_FACTOR = 3

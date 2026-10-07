@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
@@ -42,6 +42,9 @@ const accepted = ref([]);
 const dismissed = ref([]);
 const opened = ref([]);
 const busy = ref([]);
+// O foco depois de um gesto que tira o botão da tela (o foco não pode cair no <body>).
+const root = ref(null);
+const list = ref(null);
 
 const current = computed(() => {
   const fromPanel = props.advice;
@@ -76,7 +79,8 @@ const notice = computed(() => {
   return null;
 });
 
-// A resposta de outro run (o painel já mudou de análise) é descartada.
+// A resposta de outro run (o painel já mudou de análise) é descartada. Se o painel trouxe um run novo `pending`
+// com este pedido no ar, o watch não pediu (asking): pede agora, senão o novo esperaria o próximo painel.
 const ask = async () => {
   const runId = props.advice.run_id;
   asking.value = true;
@@ -90,6 +94,12 @@ const ask = async () => {
     if (runId === props.advice.run_id) failed.value = true;
   } finally {
     asking.value = false;
+  }
+  if (
+    props.advice.run_id !== runId &&
+    props.advice.writer?.status === 'pending'
+  ) {
+    ask();
   }
 };
 
@@ -141,15 +151,22 @@ const pluralOf = action => {
   return raw === null || raw === undefined ? 2 : Number(raw);
 };
 
+// Pela causa que disparou a regra (Rules#slow_status): mediana acima da meta é demora; dentro dela (ou sem
+// nenhuma resposta), a regra falhou só pelas sem resposta. O mesmo critério do WhatsApp (MessageBuilder#slow_variant).
+const onlyUnanswered = action => {
+  const median = action.facts?.median_seconds;
+  if (median === null || median === undefined) return true;
+  return Number(median) <= Number(action.facts?.target_seconds);
+};
+
 const ruleText = action => {
   const base = `${KEY}.${action.kind.toUpperCase()}`;
   const suffix = action.variant ? `_${action.variant.toUpperCase()}` : '';
   const params = ruleParams(action);
-  const noMedian =
-    action.kind === 'slow_response' && action.facts?.median_seconds == null;
-  const textKey = noMedian
-    ? `${base}.TEXT_UNANSWERED`
-    : `${base}.TEXT${suffix}`;
+  const textKey =
+    action.kind === 'slow_response' && onlyUnanswered(action)
+      ? `${base}.TEXT_UNANSWERED`
+      : `${base}.TEXT${suffix}`;
   return {
     headline: t(textKey, params, pluralOf(action)),
     body: null,
@@ -188,41 +205,66 @@ const isExpanded = action =>
     ? String(props.expanded.includes(targetOf(action)))
     : undefined;
 
-// Gesto em andamento por id: dois cliques seguidos não mandam dois pedidos.
+const focusLater = async find => {
+  await nextTick();
+  find()?.focus();
+};
+
+// Gesto em andamento por id: dois cliques seguidos não mandam dois pedidos. 422 (`not_open`) é a ação já
+// resolvida em outra aba, por outro administrador ou na virada do dia: tentar de novo não adianta, o painel
+// relê a análise.
 const run = async (action, request, onDone, failedKey) => {
   if (busy.value.includes(action.id)) return;
   busy.value = [...busy.value, action.id];
   try {
     await request(action.id);
     onDone();
-  } catch {
-    useAlert(t(`CRM_KANBAN.META_ADS_HUB.AI.DAILY.${failedKey}`));
+  } catch (error) {
+    if (error?.response?.status === 422) {
+      useAlert(t('CRM_KANBAN.META_ADS_HUB.AI.DAILY.ALREADY_RESOLVED'));
+      emit('changed');
+    } else {
+      useAlert(t(`CRM_KANBAN.META_ADS_HUB.AI.DAILY.${failedKey}`));
+    }
   } finally {
     busy.value = busy.value.filter(id => id !== action.id);
   }
 };
 
+// O "Feito" (e o "Entendi") sai da tela: o foco vai para o selo "Feita" da mesma ação.
 const accept = action =>
   run(
     action,
     CrmMetaAdsConnectionAPI.acceptAdvice,
     () => {
       accepted.value = [...accepted.value, action.id];
+      focusLater(() =>
+        root.value?.querySelector(
+          `[data-action-id="${action.id}"] [data-action-done]`
+        )
+      );
     },
     'DONE_FAILED'
   );
 
-// A vaga da dispensada vai para a próxima candidata: o painel pede a análise de novo.
-const dismiss = action =>
-  run(
+// A vaga da dispensada vai para a próxima candidata: o painel pede a análise de novo. O foco vai para o
+// primeiro botão da ação que tomou o lugar dela, ou para a lista quando não há outra.
+const dismiss = action => {
+  const index = items.value.findIndex(entry => entry.id === action.id);
+  return run(
     action,
     CrmMetaAdsConnectionAPI.dismissAdvice,
     () => {
       dismissed.value = [...dismissed.value, action.id];
       emit('changed');
+      focusLater(() => {
+        const next = root.value?.querySelectorAll('[data-panel-action]')[index];
+        return next?.querySelector('a, button') || list.value;
+      });
     },
     'DISMISS_FAILED'
   );
+};
 
 // A abertura só registra; a falha não segura a pessoa, vai para o console.
 const markOpened = async action => {
@@ -254,11 +296,12 @@ const mainClass = index =>
     ? `${MAIN_BUTTON} bg-transparent border border-solid border-white/40 text-white hover:bg-white/10`
     : `${MAIN_BUTTON} bg-white border-0 text-[#0D2344] hover:bg-n-blue-2`;
 const LINK_BUTTON =
-  'p-0 text-[13px] font-460 bg-transparent border-0 rounded min-h-11 text-white/70 hover:text-white hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
+  'inline-flex items-center justify-center px-2 min-w-11 min-h-11 text-[13px] font-460 bg-transparent border-0 rounded text-white/70 hover:text-white hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white';
 </script>
 
 <template>
   <div
+    ref="root"
     data-panel-today
     class="relative flex flex-col gap-4 p-4 rounded-lg sm:p-5 bg-white/[0.07] ring-1 ring-inset ring-white/10"
   >
@@ -288,7 +331,9 @@ const LINK_BUTTON =
     </p>
 
     <ol
+      ref="list"
       data-panel-actions
+      tabindex="-1"
       aria-live="polite"
       class="flex flex-col p-0 m-0 list-none"
     >
@@ -319,6 +364,7 @@ const LINK_BUTTON =
             <span
               v-if="action.status === 'accepted'"
               data-action-done
+              tabindex="-1"
               class="inline-flex items-center self-start gap-1 px-1.5 py-0.5 text-[11px] font-520 rounded bg-n-teal-9 text-white"
             >
               <span class="i-lucide-check size-3" aria-hidden="true" />

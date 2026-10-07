@@ -205,7 +205,7 @@ describe('Anúncios da Meta · o que fazer hoje, até 3 ações (#1110, F5)', ()
     );
     const scale = item(wrapper, 21);
     expect(scale.find('[data-daily-text]').text()).toBe(
-      'Aumente o orçamento de "Promo C" em até 20%.'
+      'Aumente o valor por dia do anúncio "Promo C" em até 20%.'
     );
     expect(scale.find('[data-daily-why]').text()).toMatch(
       /R\$\s120.*R\$\s150.*há 2 semanas.*espere 3 dias/
@@ -443,6 +443,150 @@ describe('Anúncios da Meta · o que fazer hoje, até 3 ações (#1110, F5)', ()
     });
     expect(unavailable.find('[data-daily-notice]').exists()).toBe(false);
     expect(CrmMetaAdsConnectionAPI.dailyAction).not.toHaveBeenCalled();
+  });
+
+  // Rules#slow_status também falha com a mediana dentro da meta quando 20% ou mais ficaram sem resposta.
+  it('slow response within the target: the rule text speaks only of the unanswered ones', async () => {
+    useRealI18n('pt_BR');
+    const wrapper = await mountAction({
+      advice: advice([
+        {
+          ...SLOW,
+          source: 'rule',
+          headline: null,
+          why: null,
+          facts: { ...SLOW.facts, median_seconds: 120, unanswered: 4 },
+        },
+      ]),
+    });
+
+    expect(item(wrapper, 12).find('[data-daily-text]').text()).toBe(
+      '4 conversas de anúncio dos últimos 30 dias ficaram sem resposta.'
+    );
+  });
+
+  it('"Done" and "Dismiss" are touch targets of at least 44 px both ways', async () => {
+    const wrapper = await mountAction();
+
+    ['[data-action-accept]', '[data-action-dismiss]'].forEach(selector => {
+      expect(item(wrapper, 11).find(selector).classes()).toEqual(
+        expect.arrayContaining(['min-h-11', 'min-w-11'])
+      );
+    });
+  });
+
+  it('an action already handled elsewhere (422) says so and asks the panel again, without "try again"', async () => {
+    CrmMetaAdsConnectionAPI.acceptAdvice.mockRejectedValue({
+      response: { status: 422, data: { error: 'not_open' } },
+    });
+    const wrapper = await mountAction();
+
+    await item(wrapper, 11).find('[data-action-accept]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'CRM_KANBAN.META_ADS_HUB.AI.DAILY.ALREADY_RESOLVED'
+    );
+    expect(useAlert).not.toHaveBeenCalledWith(
+      'CRM_KANBAN.META_ADS_HUB.AI.DAILY.DONE_FAILED'
+    );
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+  });
+
+  describe('focus after a gesture removes the focused button', () => {
+    const mountAttached = async actions => {
+      mounted = mount(MetaAdsDailyAction, {
+        props: { advice: advice(actions), days: 30 },
+        attachTo: document.body,
+        global: {
+          mocks: {
+            $t: (key, values) => `${key} ${JSON.stringify(values || {})}`,
+          },
+        },
+      });
+      await flushPromises();
+      return mounted;
+    };
+
+    it('"Done" moves the focus to the "Done" badge of the same action', async () => {
+      const wrapper = await mountAttached([STALLED, SLOW]);
+      const accept = item(wrapper, 11).find('[data-action-accept]');
+      accept.element.focus();
+
+      await accept.trigger('click');
+      await flushPromises();
+
+      expect(document.activeElement).toBe(
+        item(wrapper, 11).find('[data-action-done]').element
+      );
+    });
+
+    it('"Got it" (auction) also lands on the badge', async () => {
+      const wrapper = await mountAttached([AUCTION]);
+
+      await item(wrapper, 31)
+        .find('[data-panel-action-button]')
+        .trigger('click');
+      await flushPromises();
+
+      expect(document.activeElement).toBe(
+        item(wrapper, 31).find('[data-action-done]').element
+      );
+    });
+
+    it('"Dismiss" moves the focus to the next action, or to the list when it was the last', async () => {
+      const wrapper = await mountAttached([STALLED, SLOW]);
+
+      await item(wrapper, 11).find('[data-action-dismiss]').trigger('click');
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        item(wrapper, 12).find('[data-panel-action-button]').element
+      );
+
+      await item(wrapper, 12).find('[data-action-dismiss]').trigger('click');
+      await flushPromises();
+      expect(document.activeElement).toBe(
+        wrapper.find('[data-panel-actions]').element
+      );
+    });
+  });
+
+  it('a new pending run that arrives while another request is in the air is asked for right after', async () => {
+    let first;
+    CrmMetaAdsConnectionAPI.dailyAction
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          first = resolve;
+        })
+      )
+      .mockResolvedValueOnce({
+        data: {
+          daily_action: {
+            ...advice(
+              [{ ...STALLED, source: 'ai', headline: 'Texto do run novo.' }],
+              { status: 'written', reason: null }
+            ),
+            run_id: 813,
+          },
+        },
+      });
+    const wrapper = await mountAction({
+      advice: advice([STALLED], { status: 'pending', reason: null }),
+    });
+
+    await wrapper.setProps({
+      advice: {
+        ...advice([STALLED], { status: 'pending', reason: null }),
+        run_id: 813,
+      },
+    });
+    expect(CrmMetaAdsConnectionAPI.dailyAction).toHaveBeenCalledTimes(1);
+
+    first({ data: { daily_action: advice([STALLED], { status: 'written' }) } });
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.dailyAction).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-daily-text]').text()).toBe('Texto do run novo.');
   });
 
   it('tells the screen reader whether the list of the button is open', async () => {

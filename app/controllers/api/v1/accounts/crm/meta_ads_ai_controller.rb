@@ -18,7 +18,7 @@ class Api::V1::Accounts::Crm::MetaAdsAiController < Api::V1::Accounts::Crm::Base
     connection = current_connection
     return render json: { daily_action: nil } if connection.blank? || connection.ad_account_id.blank?
 
-    advice = advisor.current(connection, locale: I18n.locale.to_s)
+    advice = advisor.current(connection, locale: I18n.locale.to_s, shown: !authenticate_by_access_token?)
     immediate = immediate_daily_action(advice)
     return render json: { daily_action: immediate } if immediate
 

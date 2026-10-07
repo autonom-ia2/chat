@@ -58,7 +58,9 @@ class Crm::MetaAds::Panel::MetaComparison
     { destination: destination, meta: meta, ours: ours, difference: difference, explanation: explanation(meta, difference) }
   end
 
+  # Sem número da Meta (ainda não mandou, ou o destino não tem o dado) não há o que explicar: nil.
   def explanation(meta, difference)
+    return if meta.zero?
     return 'close' if difference.abs <= [CLOSE_MIN, meta * CLOSE_SHARE].max
 
     difference.negative? ? 'meta_higher' : 'ours_higher'

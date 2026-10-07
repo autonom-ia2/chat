@@ -2235,7 +2235,7 @@
               "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
             },
             "SITE": {
-              "LINE": "Até ontem, a Meta diz {meta} contato pelo site ({visits} visitas à página); nós contamos {ours} conversas que vieram do site. | Até ontem, a Meta diz {meta} contatos pelo site ({visits} visitas à página); nós contamos {ours} conversas que vieram do site.",
+              "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); conversas que vieram do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); conversas que vieram do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
               "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."
@@ -2375,7 +2375,7 @@
             "BUTTON": "Abrir o anúncio"
           },
           "SCALE_AD": {
-            "TEXT": "Aumente o orçamento de \"{ad}\" em até {maxIncreasePct}.",
+            "TEXT": "Aumente o valor por dia do anúncio \"{ad}\" em até {maxIncreasePct}.",
             "WHY": "Por quê: ele vende por {costPerSale}, abaixo da média de {targetCostPerSale}, há {weeks} semanas. Depois de aumentar, espere {cooldownDays} dias antes de aumentar de novo.",
             "BUTTON": "Abrir no Gerenciador da Meta"
           },
@@ -2512,7 +2512,8 @@
           "FAILED": "Não foi possível falar com a IA agora; esta é a ação pela regra.",
           "WHY_LABEL": "Por quê:",
           "DISMISS_FAILED": "Não foi possível dispensar agora. Tente de novo.",
-          "DONE_FAILED": "Não foi possível marcar como feita agora. Tente de novo."
+          "DONE_FAILED": "Não foi possível marcar como feita agora. Tente de novo.",
+          "ALREADY_RESOLVED": "Esta ação já foi resolvida em outra tela. A lista foi atualizada."
         },
         "QUOTE": {
           "SUGGEST": "Sugerir mensagem",
