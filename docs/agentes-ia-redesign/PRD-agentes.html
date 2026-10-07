@@ -85,13 +85,13 @@ td:first-child{min-width:70px;font-weight:600}
   <div>
     <div class="eyebrow">Chat2You · PRD</div>
     <h1>Agentes de IA — nova experiência</h1>
-    <p class="lede">A área de agentes passa a ter o mesmo padrão premium e simples de Automações e Campanhas: lista clara, criação em 4 etapas (Escolha → Conte → Teste → Ligue), teste obrigatório antes de ir ao ar e um painel completo — sem tocar no que a Clara e a Lia fazem hoje em produção.</p>
-    <div class="chips"><span class="chip">Status <b>Rascunho v9.1</b></span><span class="chip"><b>35</b> decisões para o Rodrigo</span><span class="chip"><b>8</b> rodadas de revisão</span></div>
+    <p class="lede">A área de agentes passa a ter o mesmo padrão premium e simples de Automações e Campanhas: lista clara, criação em 4 etapas (Escolha → Conte → Teste → Ligue), teste obrigatório antes de ir ao ar e um painel completo; mudanças de resposta e operação seguem os gates e a validação previstos no PRD.</p>
+    <div class="chips"><span class="chip">Status <b>Rascunho v9.2</b></span><span class="chip"><b>35</b> decisões registradas</span><span class="chip"><b>9</b> rodadas concluídas</span></div>
   </div>
   <div class="todo">
-    <div class="card"><h2>1. Veja a jornada</h2><p>O protótipo navegável mostra cada tela e cada estado, com os dados reais da conta Hub2you. <a href="https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM">Abrir o protótipo</a></p></div>
-    <div class="card"><h2>2. Decida os D</h2><p>Cada decisão tem uma recomendação. O que não depende dela já pode começar. A lista está logo abaixo.</p></div>
-    <div class="card"><h2>3. Revisões</h2><p>Achados · altos por rodada:</p><div class="conv"><span class="">R1 60·16</span><span class="">R2 63·16</span><span class="">R3 59·17</span><span class="">R4 46·9</span><span class="">R5 43·3</span><span class="">R6 27·5</span><span class="z">R7 28·0</span><span class="z">R8 28·0</span></div></div>
+    <div class="card"><h2>1. Veja a jornada</h2><p>O protótipo navegável mostra cada tela e cada estado, com exemplos demonstrativos. <a href="https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM">Abrir o protótipo</a></p></div>
+    <div class="card"><h2>2. Confira as decisões</h2><p>D1–D35 têm plano aprovado. D10 depende do OK específico para o UPDATE ao vivo; merge, deploy e produção mantêm autorização própria. A lista mostra cada estado.</p></div>
+    <div class="card"><h2>3. Revisões</h2><p>Achados · altos por rodada:</p><div class="conv"><span class="">R1 60·16</span><span class="">R2 63·16</span><span class="">R3 59·17</span><span class="">R4 46·9</span><span class="">R5 43·3</span><span class="">R6 27·5</span><span class="z">R7 28·0</span><span class="z">R8 28·0</span><span class="">R9 11·1</span></div></div>
   </div>
 </div></header>
 <div class="wrap">
@@ -101,7 +101,7 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#1-resumo">1. Resumo</a></li>
 <li><a href="#2-objetivos-e-como-medir">2. Objetivos e como medir</a></li>
 <li><a href="#3-fora-do-escopo">3. Fora do escopo</a></li>
-<li><a href="#4-decisoes-que-o-rodrigo-precisa-tomar-bloqueiam-partes-especificas">4. Decisões que o Rodrigo precisa tomar (bloqueiam partes específicas)</a></li>
+<li><a href="#4-decisoes-do-rodrigo-e-estado-bloqueiam-partes-especificas">4. Decisões do Rodrigo e estado (bloqueiam partes específicas)</a></li>
 <li><a href="#5-principios-de-experiencia-valem-em-toda-tela">5. Princípios de experiência (valem em toda tela)</a></li>
 <li><a href="#6-experiencia-tela-por-tela-como-no-prototipo">6. Experiência — tela por tela (como no protótipo)</a><ul>
 <li><a href="#61-seus-agentes-screens-listjs-viewlista-agentcard-viewvazio">6.1 Seus agentes (screens-list.js · viewLista, agentCard, viewVazio)</a></li>
@@ -146,6 +146,8 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#15-registro-de-revisao-do-prd">15. Registro de revisão do PRD</a><ul>
 <li><a href="#151-registro-de-conferencia-da-rodada-7-passos-5-6-e-7-do-103">15.1 Registro de conferência da rodada 7 (passos 5, 6 e 7 do §10.3)</a></li>
 <li><a href="#151b-registro-de-conferencia-da-rodada-8">15.1b Registro de conferência da rodada 8</a></li>
+<li><a href="#151c-registro-de-conferencia-pre-r9-07102026">15.1c Registro de conferência pré-R9 (07/10/2026)</a></li>
+<li><a href="#151d-resultado-das-leituras-b1-autorizadas-07102026">15.1d Resultado das leituras B1 autorizadas (07/10/2026)</a></li>
 </ul>
 </li>
 </ul>
@@ -157,7 +159,7 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#1-resumo">1. Resumo</a></li>
 <li><a href="#2-objetivos-e-como-medir">2. Objetivos e como medir</a></li>
 <li><a href="#3-fora-do-escopo">3. Fora do escopo</a></li>
-<li><a href="#4-decisoes-que-o-rodrigo-precisa-tomar-bloqueiam-partes-especificas">4. Decisões que o Rodrigo precisa tomar (bloqueiam partes específicas)</a></li>
+<li><a href="#4-decisoes-do-rodrigo-e-estado-bloqueiam-partes-especificas">4. Decisões do Rodrigo e estado (bloqueiam partes específicas)</a></li>
 <li><a href="#5-principios-de-experiencia-valem-em-toda-tela">5. Princípios de experiência (valem em toda tela)</a></li>
 <li><a href="#6-experiencia-tela-por-tela-como-no-prototipo">6. Experiência — tela por tela (como no protótipo)</a><ul>
 <li><a href="#61-seus-agentes-screens-listjs-viewlista-agentcard-viewvazio">6.1 Seus agentes (screens-list.js · viewLista, agentCard, viewVazio)</a></li>
@@ -202,13 +204,15 @@ td:first-child{min-width:70px;font-weight:600}
 <li><a href="#15-registro-de-revisao-do-prd">15. Registro de revisão do PRD</a><ul>
 <li><a href="#151-registro-de-conferencia-da-rodada-7-passos-5-6-e-7-do-103">15.1 Registro de conferência da rodada 7 (passos 5, 6 e 7 do §10.3)</a></li>
 <li><a href="#151b-registro-de-conferencia-da-rodada-8">15.1b Registro de conferência da rodada 8</a></li>
+<li><a href="#151c-registro-de-conferencia-pre-r9-07102026">15.1c Registro de conferência pré-R9 (07/10/2026)</a></li>
+<li><a href="#151d-resultado-das-leituras-b1-autorizadas-07102026">15.1d Resultado das leituras B1 autorizadas (07/10/2026)</a></li>
 </ul>
 </li>
 </ul>
 </details>
-    <section class="decs" aria-labelledby="dtit"><h2 id="dtit">Decisões que dependem do Rodrigo</h2>
-      <p class="sub">Resumo da §4. As opções completas e o que cada uma bloqueia estão na tabela da §4.</p>
-      <ol><li><span class="did">D1</span><div><div class="dq"><strong>O agente em produção ignora o "limite de certeza" e a regra "Quando passa para a equipe".</strong> Em produção o Operate chama o Answerer com <code>trust_instruction: true</code> (<code>operate/responder.rb:331</code>), que nunca aplica portão de sistema (<code>answerer.rb:124,134-150</code>); o limite só vale no Testar e no Guia (<code>answerer.rb:649</code>). <code>handoff_strategy</code> é salvo e <strong>nenhum código lê</strong> (<code>agent.rb:125-128</code>). Hoje esses controles são decorativos e o Testar mostra um comportamento diferente do real.</div><div class="dr">Recomendação: <strong>(a)</strong> — honesto, sem mudar o que está no ar. A régua sai do protótipo; "Quando passa para a equipe" continua, gravando a regra no texto que o modelo lê (<code>PromptBuilder</code>), com spec provando o efeito.</div></div></li><li><span class="did">D2</span><div><div class="dq">"Para quem vai" (pessoa / time)</div><div class="dr">Recomendação: <strong>(a)</strong> com padrão "Quem estiver livre" = comportamento atual</div></div></li><li><span class="did">D3</span><div><div class="dq">Flag para alternar tela nova/antiga</div><div class="dr">Recomendação: <strong>(2)</strong> — liga primeiro na Hub2you (conta 16)</div></div></li><li><span class="did">D4</span><div><div class="dq">Azul-marinho <code>#0D2344</code> sem token (4 arquivos já usam <code>bg-[#0D2344]</code>)</div><div class="dr">Recomendação: <strong>(b)</strong> e migrar os 4 usos no mesmo PR F0</div></div></li><li><span class="did">D5</span><div><div class="dq">Sugestão "Vi o link X. Usar como material?"</div><div class="dr">Recomendação: <strong>(a)</strong> — regra do Rodrigo proíbe detectar por texto/regex no front</div></div></li><li><span class="did">D6</span><div><div class="dq">Texto "Fica guardado até você terminar ou excluir" × limpeza automática de 48 h (rascunho sem instrução e sem material que tem conversa)</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D7</span><div><div class="dq">Conectar WhatsApp novo pelo fluxo do agente</div><div class="dr">Recomendação: <strong>(a)</strong>: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; <code>invalid_phone</code> vira mensagem pt-BR</div></div></li><li><span class="did">D8</span><div><div class="dq">Quem só pode ver pode usar a aba Testar? (hoje <code>POST test</code> aceita <code>autonomia_view</code>, <code>playground_controller.rb:29</code>)</div><div class="dr">Recomendação: <strong>sim</strong> (como hoje)</div></div></li><li><span class="did">D9</span><div><div class="dq">Ordem de merge com o lote de Campanhas (#993, ainda fora da <code>main</code>), que tem <code>JourneyStepper</code>, <code>JourneySwitch</code>, <code>useModalFocus</code>, <code>localeTag</code></div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D10</span><div><div class="dq">Converter os tons antigos gravados em inglês (<code>friendly</code>, <code>professional</code>, <code>neutral</code>, <code>playful</code>) para a frase em português. <strong>Muda o texto que o modelo lê ao vivo</strong> (<code>prompt_builder.rb:242-246</code>)</div><div class="dr">Recomendação: <strong>(a)</strong>, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto</div></div></li><li><span class="did">D11</span><div><div class="dq">Etapa "Parou em …"</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-08)</div></div></li><li><span class="did">D12</span><div><div class="dq"><strong>Problema em produção hoje:</strong> <code>GET analytics/conversations</code> e <code>GET faq_suggestions</code> exigem só <code>autonomia_view</code> e devolvem dados de conversas de qualquer caixa (contato, atendente, última mensagem; pergunta e resposta de conversas reais) — <code>analytics_controller.rb:15-33</code>, <code>faq_suggestions_controller.rb:9-16</code></div><div class="dr">Recomendação: <strong>(a)</strong>, no B1 (BE-25)</div></div></li><li><span class="did">D13</span><div><div class="dq">Onde ficam as edições do Agente de Cotação. <code>insurance/*</code> exige <code>insurance_*</code> + flag de Cotação (<code>insurance/base_controller.rb:1-12</code>)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-17)</div></div></li><li><span class="did">D14</span><div><div class="dq">Números do agente interno (ajudante): uso do ajudante não gera evento</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D15</span><div><div class="dq">Garantir O2 ("ninguém liga sem testar"): rascunho "Pronto para ligar" vai direto para Ligue</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D16</span><div><div class="dq">"Usar material de outro agente"</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D17</span><div><div class="dq">Testar executa ferramentas de verdade (HTTP, inclusive POST com segredo) e é liberado a quem só vê (D8)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-12)</div></div></li><li><span class="did">D18</span><div><div class="dq"><strong>Campos sem efeito hoje</strong> (§6.5): Primeira mensagem (<code>greeting</code>), Perguntas para puxar conversa (<code>starter_questions</code>) e Quando não souber responder (<code>fallback_message</code>) — nenhum chega ao cliente no atendimento real</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D19</span><div><div class="dq">Renomear não muda como o agente se apresenta (o nome vive na instrução)</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D20</span><div><div class="dq">Mídias "Para enviar": o atendimento não envia os arquivos ao cliente</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue própria</div></div></li><li><span class="did">D21</span><div><div class="dq">Ajustes de operação por agente que o BE-19 fecha no PATCH (<code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code>) — hoje só por esse PATCH</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D22</span><div><div class="dq">"Mudar conversando" sobrescreve nome, saudação, tom, perguntas e até a instrução manual</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-05)</div></div></li><li><span class="did">D23</span><div><div class="dq">Até onde vale "ninguém liga sem testar" (O2). Hoje também ligam: tela antiga (PATCH), Guia, API e a criação da Lia pela Cotação</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D24</span><div><div class="dq">O que acontece depois de ir ao ar</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D25</span><div><div class="dq">Voltar do modo manual para o guiado</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D26</span><div><div class="dq">Testar do ajudante da equipe (interno)</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D27</span><div><div class="dq">No teste, ferramentas que gravam em outro sistema (método ≠ GET) rodam de verdade para quem edita</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D28</span><div><div class="dq">De onde vêm as perguntas sugeridas do Teste</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D29</span><div><div class="dq">Nome e Primeira mensagem eram editados no Ligue, <strong>depois</strong> do teste — o agente ia ao ar com cumprimento não testado</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D30</span><div><div class="dq">Criar já ativo sem instrução (create da API/Guia com <code>status</code>/<code>enabled</code>)</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D31</span><div><div class="dq">O funil do CRM (<code>Crm::Ai::HandoffExecutor</code>) passa conversas com o seletor dele, fora dos 3 pontos do BE-06</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D32</span><div><div class="dq">De onde vem o gênero dos textos da tela ({a}, {ela})</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li><li><span class="did">D33</span><div><div class="dq">"Nunca" prometia passar quando a IA cai, e o atendimento não faz isso (falha de IA = silêncio, salvo a cotação assíncrona da Lia)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div></div></li><li><span class="did">D34</span><div><div class="dq">Texto de excluir depois do #1063 (exclusão lógica: some da lista, para de atender, materiais e vínculos guardados)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div></div></li><li><span class="did">D35</span><div><div class="dq">Lote de um PR só (§14) × fila da Automação com até 7 PRs por lote (07/10)</div><div class="dr">Recomendação: <strong>(a)</strong></div></div></li></ol></section>
+    <section class="decs" aria-labelledby="dtit"><h2 id="dtit">Decisões e estados registrados</h2>
+      <p class="sub">Resumo da §4, com recomendação e decisão/estado. As opções completas e os gates estão na tabela da §4.</p>
+      <ol><li><span class="did">D1</span><div><div class="dq"><strong>O agente em produção ignora o "limite de certeza" e a regra "Quando passa para a equipe".</strong> Em produção o Operate chama o Answerer com <code>trust_instruction: true</code> (<code>operate/responder.rb:331</code>), que nunca aplica portão de sistema (<code>answerer.rb:124,134-150</code>); o limite só vale no Testar e no Guia (<code>answerer.rb:649</code>). <code>handoff_strategy</code> é salvo e <strong>nenhum código lê</strong> (<code>agent.rb:125-128</code>). Hoje esses controles são decorativos e o Testar mostra um comportamento diferente do real.</div><div class="dr">Recomendação: <strong>(a)</strong> — honesto, sem mudar o que está no ar. A régua sai do protótipo; "Quando passa para a equipe" continua, gravando a regra no texto que o modelo lê (<code>PromptBuilder</code>), com spec provando o efeito.</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D2</span><div><div class="dq">"Para quem vai" (pessoa / time)</div><div class="dr">Recomendação: <strong>(a)</strong> com padrão "Quem estiver livre" = comportamento atual</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D3</span><div><div class="dq">Flag para alternar tela nova/antiga</div><div class="dr">Recomendação: <strong>(2)</strong> — liga primeiro na Hub2you (conta 16)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D4</span><div><div class="dq">Azul-marinho <code>#0D2344</code> sem token (4 arquivos já usam <code>bg-[#0D2344]</code>)</div><div class="dr">Recomendação: <strong>(b)</strong> e migrar os 4 usos no mesmo PR F0</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D5</span><div><div class="dq">Sugestão "Vi o link X. Usar como material?"</div><div class="dr">Recomendação: <strong>(a)</strong> — regra do Rodrigo proíbe detectar por texto/regex no front</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D6</span><div><div class="dq">Texto "Fica guardado até você terminar ou excluir" × limpeza automática de 48 h (rascunho sem instrução e sem material que tem conversa)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D7</span><div><div class="dq">Conectar WhatsApp novo pelo fluxo do agente</div><div class="dr">Recomendação: <strong>(a)</strong>: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; <code>invalid_phone</code> vira mensagem pt-BR</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D8</span><div><div class="dq">Quem só pode ver pode usar a aba Testar? (hoje <code>POST test</code> aceita <code>autonomia_view</code>, <code>playground_controller.rb:29</code>)</div><div class="dr">Recomendação: <strong>sim</strong> (como hoje)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D9</span><div><div class="dq">Ordem de merge com o lote de Campanhas (#993, ainda fora da <code>main</code>), que tem <code>JourneyStepper</code>, <code>JourneySwitch</code>, <code>useModalFocus</code>, <code>localeTag</code></div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D10</span><div><div class="dq">Converter os tons antigos gravados em inglês (<code>friendly</code>, <code>professional</code>, <code>neutral</code>, <code>playful</code>) para a frase em português. <strong>Muda o texto que o modelo lê ao vivo</strong> (<code>prompt_builder.rb:242-246</code>)</div><div class="dr">Recomendação: <strong>(a)</strong>, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); UPDATE ao vivo exige OK específico, foto Q14 e validação.</div></div></li><li><span class="did">D11</span><div><div class="dq">Etapa "Parou em …"</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-08)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D12</span><div><div class="dq"><strong>Problema em produção hoje:</strong> <code>GET analytics/conversations</code> e <code>GET faq_suggestions</code> exigem só <code>autonomia_view</code> e devolvem dados de conversas de qualquer caixa (contato, atendente, última mensagem; pergunta e resposta de conversas reais) — <code>analytics_controller.rb:15-33</code>, <code>faq_suggestions_controller.rb:9-16</code></div><div class="dr">Recomendação: <strong>(a)</strong>, no B1 (BE-25)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D13</span><div><div class="dq">Onde ficam as edições do Agente de Cotação. <code>insurance/*</code> exige <code>insurance_*</code> + flag de Cotação (<code>insurance/base_controller.rb:1-12</code>)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-17)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D14</span><div><div class="dq">Números do agente interno (ajudante): uso do ajudante não gera evento</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D15</span><div><div class="dq">Garantir O2 ("ninguém liga sem testar"): rascunho "Pronto para ligar" vai direto para Ligue</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D16</span><div><div class="dq">"Usar material de outro agente"</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D17</span><div><div class="dq">Testar executa ferramentas de verdade (HTTP, inclusive POST com segredo) e é liberado a quem só vê (D8)</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-12)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D18</span><div><div class="dq"><strong>Campos sem efeito hoje</strong> (§6.5): Primeira mensagem (<code>greeting</code>), Perguntas para puxar conversa (<code>starter_questions</code>) e Quando não souber responder (<code>fallback_message</code>) — nenhum chega ao cliente no atendimento real</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D19</span><div><div class="dq">Renomear não muda como o agente se apresenta (o nome vive na instrução)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D20</span><div><div class="dq">Mídias "Para enviar": o atendimento não envia os arquivos ao cliente</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue própria</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D21</span><div><div class="dq">Ajustes de operação por agente que o BE-19 fecha no PATCH (<code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code>) — hoje só por esse PATCH</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D22</span><div><div class="dq">"Mudar conversando" sobrescreve nome, saudação, tom, perguntas e até a instrução manual</div><div class="dr">Recomendação: <strong>(a)</strong> (BE-05)</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D23</span><div><div class="dq">Até onde vale "ninguém liga sem testar" (O2). Hoje também ligam: tela antiga (PATCH), Guia, API e a criação da Lia pela Cotação</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D24</span><div><div class="dq">O que acontece depois de ir ao ar</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D25</span><div><div class="dq">Voltar do modo manual para o guiado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D26</span><div><div class="dq">Testar do ajudante da equipe (interno)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D27</span><div><div class="dq">No teste, ferramentas que gravam em outro sistema (método ≠ GET) rodam de verdade para quem edita</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D28</span><div><div class="dq">De onde vêm as perguntas sugeridas do Teste</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D29</span><div><div class="dq">Nome e Primeira mensagem eram editados no Ligue, <strong>depois</strong> do teste — o agente ia ao ar com cumprimento não testado</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D30</span><div><div class="dq">Criar já ativo sem instrução (create da API/Guia com <code>status</code>/<code>enabled</code>)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D31</span><div><div class="dq">O funil do CRM (<code>Crm::Ai::HandoffExecutor</code>) passa conversas com o seletor dele, fora dos 3 pontos do BE-06</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho do funil permanece separado.</div></div></li><li><span class="did">D32</span><div><div class="dq">De onde vem o gênero dos textos da tela ({a}, {ela})</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D33</span><div><div class="dq">"Nunca" prometia passar quando a IA cai, e o atendimento não faz isso (falha de IA = silêncio, salvo a cotação assíncrona da Lia)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D34</span><div><div class="dq">Texto de excluir depois do #1063 (exclusão lógica: some da lista, para de atender, materiais e vínculos guardados)</div><div class="dr">Recomendação: <strong>(a)</strong>; (b) vira Issue</div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); segue os gates do PR.</div></div></li><li><span class="did">D35</span><div><div class="dq">Lote de um PR só (§14) × fila da Automação com até 7 PRs por lote (07/10)</div><div class="dr">Recomendação: <strong>(a)</strong></div><div class="dr">Decisão/estado: Plano aprovado no escopo (07/10); caminho ao vivo isolado; demais em lote de até 7 pela Automação.</div></div></li></ol></section>
     <article>
 <div class="tw"><table>
 <thead>
@@ -220,7 +224,7 @@ td:first-child{min-width:70px;font-weight:600}
 <tbody>
 <tr>
 <td><strong>Status</strong></td>
-<td>Rascunho v9.1 — rodadas 1–8 aplicadas; atualizado com o #1063 (§0); causas raiz C1–C15 (rodadas 2–8) em <code>docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md</code>; aguardando decisões da §4</td>
+<td>Rascunho v9.2 — rodadas 1–8 aplicadas; decisões D1–D35 registradas e aprovadas como plano em 07/10/2026; rodada 9 normal concluída com 11 achados confirmados (1 alto, 9 médios, 1 baixo; UX-04 rejeitado), correções e checagem concluídas sem achados residuais documentais; atualizado com o #1063 (§0); causas C1–C15 em <code>docs/audit/2026-10-05-agentes-prd-r2-causa-raiz.md</code>; protótipo publicado inspecionado em 07/10; implementação e gate das telas reais pendentes</td>
 </tr>
 <tr>
 <td><strong>Data</strong></td>
@@ -236,7 +240,7 @@ td:first-child{min-width:70px;font-weight:600}
 </tr>
 <tr>
 <td><strong>Fonte da verdade visual</strong></td>
-<td>Protótipo aprovado: <code>docs/agentes-ia-redesign/mockup/jornada.html</code> (código em <code>mockup/src/*.js</code>) — publicado em https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM (versão 5)</td>
+<td>Protótipo aprovado: <code>docs/agentes-ia-redesign/mockup/jornada.html</code> (código em <code>mockup/src/*.js</code>) — publicado em https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM (versão 8, conforme handoff; cópia publicada inspecionada em 07/10)</td>
 </tr>
 <tr>
 <td><strong>Contexto</strong></td>
@@ -266,8 +270,9 @@ remove o <code>AgentBotInbox</code> vivo; o vínculo e os materiais ficam guarda
   "id sumido" vira "id arquivado", explicado pelo próprio registro. Todas as consultas filtram <code>deleted_at IS NULL</code>.</li>
 <li><strong>NR-13</strong> passa a incluir <code>spec/services/autonomia/agents/soft_delete_spec.rb</code> e
   <code>spec/requests/api/v1/accounts/autonomia/agents/soft_delete_spec.rb</code>.</li>
-<li><strong>Fila:</strong> desde 07/10 a sessão Automação junta até 7 PRs sem migration por lote. O §14 pede lote de um PR só para os PRs
-  deste projeto (rollback de um degrau) → conflito registrado em D35, para o Rodrigo decidir.</li>
+<li><strong>Fila:</strong> desde 07/10 a sessão Automação junta até 7 PRs sem migration por lote. Pela decisão de plano registrada em D35,
+  os PRs do caminho ao vivo (B1, B4b, B5 e B6b) pedem vaga isolada para permitir rollback de um degrau; os demais seguem
+  lotes de até 7 conforme a Automação. Isso não autoriza merge, deploy, leitura ou escrita em produção.</li>
 </ul>
 <h2 id="1-resumo">1. Resumo</h2>
 <p>A área <strong>Agentes de IA</strong> é a única do painel que não passou pelo redesign "premium e simples" (Automações #982, Campanhas</p>
@@ -332,8 +337,12 @@ sozinha.</p>
 <li>Novos canais além dos que o Chatwoot já conecta.</li>
 </ul>
 <hr />
-<h2 id="4-decisoes-que-o-rodrigo-precisa-tomar-bloqueiam-partes-especificas">4. Decisões que o Rodrigo precisa tomar (bloqueiam partes específicas)</h2>
-<p>Cada decisão tem recomendação. O que <strong>não</strong> depende dela pode começar já.</p>
+<h2 id="4-decisoes-do-rodrigo-e-estado-bloqueiam-partes-especificas">4. Decisões do Rodrigo e estado (bloqueiam partes específicas)</h2>
+<p>Cada decisão tem recomendação. Em 07/10/2026, Rodrigo aprovou as recomendações D1–D35 e autorizou a rodada 9 como plano.
+Este registro não autoriza merge, deploy, produção, alteração de banco, fila ou o UPDATE ao vivo previsto em D10. A rodada
+normal foi consolidada em <a href="revisoes/rodada-9.md"><code>revisoes/rodada-9.md</code></a>: 11 achados foram confirmados (1 alto, 9 médios e
+1 baixo; UX-04 foi rejeitado), corrigidos e fechados na checagem independente, sem achados residuais documentais. A inspeção visual
+do protótipo foi feita na cópia publicada em 07/10, mas a aprovação visual e o gate das telas reais ainda estão pendentes.</p>
 <div class="tw"><table>
 <thead>
 <tr>
@@ -342,6 +351,7 @@ sozinha.</p>
 <th>Opções</th>
 <th>Recomendação</th>
 <th>Bloqueia</th>
+<th>Decisão aprovada / estado</th>
 </tr>
 </thead>
 <tbody>
@@ -351,6 +361,7 @@ sozinha.</p>
 <td><strong>(a)</strong> Testar passa a usar o mesmo caminho da produção; tira-se a régua de certeza; "Quando passa" vira texto da instrução (o modelo decide, como já decide hoje). <strong>(b)</strong> O Operate passa a aplicar limite e estratégia de verdade (muda o comportamento da Clara e da Lia no ar). <strong>(c)</strong> Esconder os dois controles até decidir.</td>
 <td><strong>(a)</strong> — honesto, sem mudar o que está no ar. A régua sai do protótipo; "Quando passa para a equipe" continua, gravando a regra no texto que o modelo lê (<code>PromptBuilder</code>), com spec provando o efeito.</td>
 <td>Ajustes › "Quando passa para a equipe"; legenda da aba Testar (BE-12, F7)</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D2</strong></td>
@@ -358,6 +369,7 @@ sozinha.</p>
 <td>(a) Implementar <code>HandoffRouter</code> (BE-06); (b) adiar e esconder</td>
 <td><strong>(a)</strong> com padrão "Quem estiver livre" = comportamento atual</td>
 <td>BE-06, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D3</strong></td>
@@ -365,6 +377,7 @@ sozinha.</p>
 <td>(1) ENV global; (2) ENV mestra + atributo por conta; (3) sem flag</td>
 <td><strong>(2)</strong> — liga primeiro na Hub2you (conta 16)</td>
 <td>F0</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D4</strong></td>
@@ -372,6 +385,7 @@ sozinha.</p>
 <td>(a) seguir o precedente arbitrário; (b) criar token <code>n-navy</code> em <code>theme/colors.js</code></td>
 <td><strong>(b)</strong> e migrar os 4 usos no mesmo PR F0</td>
 <td>F0</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D5</strong></td>
@@ -379,6 +393,7 @@ sozinha.</p>
 <td>(a) o Construtor (modelo) devolve <code>suggested_links[]</code> no estado da conversa; (b) sem a sugestão, só "Colar um link"</td>
 <td><strong>(a)</strong> — regra do Rodrigo proíbe detectar por texto/regex no front</td>
 <td>BE-09, F2</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D6</strong></td>
@@ -386,6 +401,7 @@ sozinha.</p>
 <td>(a) poupar rascunho com ao menos 1 resposta do usuário na conversa; (b) mudar o texto para "Guardado por 2 dias"</td>
 <td><strong>(a)</strong></td>
 <td>BE-14, F1</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D7</strong></td>
@@ -393,6 +409,7 @@ sozinha.</p>
 <td>O backend de caixa WAHA exige <code>phone</code> (<code>waha_inboxes_controller.rb:18,99</code>), aceita só celular do Brasil (55 + DDD + 9 dígitos, <code>inbox_provisioner.rb:11,44</code>) e grava o token de quem conecta (<code>waha_inboxes_controller.rb:102-104</code>). (a) pedir o número na tela e liberar a quem é administrador; (b) só administrador</td>
 <td><strong>(a)</strong>: campo "Número do WhatsApp" (55 + DDD + número) antes do código, permissão = administrador da conta, aviso "Esta conexão usa o seu acesso. Se você sair da conta, ela para."; <code>invalid_phone</code> vira mensagem pt-BR</td>
 <td>BE-13, F6</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D8</strong></td>
@@ -400,6 +417,7 @@ sozinha.</p>
 <td>sim / não</td>
 <td><strong>sim</strong> (como hoje)</td>
 <td>—</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D9</strong></td>
@@ -407,13 +425,15 @@ sozinha.</p>
 <td>(a) F0 extrai esses 4 para <code>components-next/</code>/<code>helper/</code> e #993 importa no rebase; (b) esperar #993</td>
 <td><strong>(a)</strong></td>
 <td>F0</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D10</strong></td>
 <td>Converter os tons antigos gravados em inglês (<code>friendly</code>, <code>professional</code>, <code>neutral</code>, <code>playful</code>) para a frase em português. <strong>Muda o texto que o modelo lê ao vivo</strong> (<code>prompt_builder.rb:242-246</code>)</td>
 <td>(a) UPDATE por psql com foto antes (Q14) e 🟢, excluindo <code>insurance_quote</code> e agentes de sistema; (b) só a tela pré-seleciona</td>
 <td><strong>(a)</strong>, depois do deploy de F7, seguido do núcleo do §11.8 e do "teste responde" de cada agente ativo alterado, contra a foto Q14; volta = UPDATE pela foto</td>
-<td></td>
+<td>F9</td>
+<td>Plano aprovado no escopo (07/10); UPDATE ao vivo exige OK específico, foto Q14 e validação.</td>
 </tr>
 <tr>
 <td><strong>D11</strong></td>
@@ -421,6 +441,7 @@ sozinha.</p>
 <td>(a) a lista e o "Continuar" seguem os estados de §6.6 (mecanismo no desenho técnico do B2); (b) a lista diz só "Falta terminar"</td>
 <td><strong>(a)</strong> (BE-08)</td>
 <td>F1</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D12</strong></td>
@@ -428,6 +449,7 @@ sozinha.</p>
 <td>(a) filtrar as conversas com <code>Conversations::PermissionFilterService</code> (a mesma regra que o repo usa para ver conversas, com a extensão Enterprise de funções personalizadas) e exigir <code>autonomia_manage</code> em <code>faq_suggestions</code>; (b) exigir <code>autonomia_manage</code> nos dois</td>
 <td><strong>(a)</strong>, no B1 (BE-25)</td>
 <td>B1, F4, F5</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D13</strong></td>
@@ -435,6 +457,7 @@ sozinha.</p>
 <td>(a) rota sob <code>autonomia/agents/:id/quote_choices</code> (permissões de agentes); (b) exigir as duas permissões e esconder sem <code>insurance_manage</code></td>
 <td><strong>(a)</strong> (BE-17)</td>
 <td>B5, F5, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D14</strong></td>
@@ -442,6 +465,7 @@ sozinha.</p>
 <td>(a) sem números nesta entrega, com texto explicando; (b) criar evento de uso do copiloto</td>
 <td><strong>(a)</strong></td>
 <td>F1, F4</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D15</strong></td>
@@ -449,6 +473,7 @@ sozinha.</p>
 <td>(a) <code>publish</code> exige teste válido da instrução atual (BE-08) → 422 <code>missing_test</code>; vale para o ajudante interno (D26); escopo dos outros caminhos em D23; (b) só medir</td>
 <td><strong>(a)</strong></td>
 <td>B3, F3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D16</strong></td>
@@ -456,6 +481,7 @@ sozinha.</p>
 <td>(a) atalho de 1 clique do protótipo ("Usar o PDF que a Clara já usa") quando há exatamente 1 material pronto em outro agente; com 2+, diálogo com a lista; (b) só a lista</td>
 <td><strong>(a)</strong></td>
 <td>F2</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D17</strong></td>
@@ -463,6 +489,7 @@ sozinha.</p>
 <td>(a) quem só vê não executa ferramenta com método diferente de GET no teste <strong>e no "sugerir resposta"</strong> (<code>POST suggest</code>, também liberado a quem só vê); cotação nunca é feita no teste; o chat do ajudante dentro da conversa segue a regra própria; (b) aceitar o risco</td>
 <td><strong>(a)</strong> (BE-12)</td>
 <td>B4b</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D18</strong></td>
@@ -470,6 +497,7 @@ sozinha.</p>
 <td>(a) Primeira mensagem e Quando não souber passam a entrar no texto que o modelo lê (BE-30, PR isolado, muda o prompt ao vivo de quem tem os campos preenchidos — foto Q15 e lista ao Rodrigo); Perguntas iniciais saem da tela; (b) os três saem da tela</td>
 <td><strong>(a)</strong></td>
 <td>B4b, F3, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D19</strong></td>
@@ -477,6 +505,7 @@ sozinha.</p>
 <td>(a) o texto do modelo ganha "Seu nome é {nome}." <strong>só</strong> quando o nome mudou depois da última instrução gerada (byte a byte igual nos demais, BE-29); (b) renomear avisa "Para ela se apresentar com o nome novo, use Mudar conversando"</td>
 <td><strong>(a)</strong></td>
 <td>B4b, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D20</strong></td>
@@ -484,6 +513,7 @@ sozinha.</p>
 <td>(a) aba sai nesta entrega (o upload continua no Construtor só como referência que o Construtor cita); (b) criar o envio de anexo pelo agente (escopo novo)</td>
 <td><strong>(a)</strong>; (b) vira Issue própria</td>
 <td>F2, F5</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D21</strong></td>
@@ -491,6 +521,7 @@ sozinha.</p>
 <td>(a) tela no Super Admin "Ajustes de operação do agente" com lista fechada, registro de quem mudou e spec (BE-31); (b) só por psql com 🟢 e foto, comando no runbook</td>
 <td><strong>(a)</strong></td>
 <td>B1</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D22</strong></td>
@@ -498,6 +529,7 @@ sozinha.</p>
 <td>(a) só em modo guiado (422 <code>manual_mode</code> no manual; botão desabilitado com explicação) e a retomada só pode mudar instrução, resumo, andaime e regra de passagem — nome, saudação, "quando não souber" e tom editados à mão ficam; (b) avisar no diálogo o que será trocado</td>
 <td><strong>(a)</strong> (BE-05)</td>
 <td>B3, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D29</strong></td>
@@ -505,6 +537,7 @@ sozinha.</p>
 <td>(a) "Como se apresenta" (Nome, Primeira mensagem) fica no <strong>topo do Teste</strong>, editável; mudar e testar de novo é imediato; o Ligue só mostra os dois no resumo; (b) mudar no Ligue invalida o teste</td>
 <td><strong>(a)</strong></td>
 <td>F3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D30</strong></td>
@@ -512,6 +545,7 @@ sozinha.</p>
 <td>(a) o BE-04 vale também no create → 422 <code>missing_instruction</code>; com instrução e sem teste continua como hoje (D23); (b) como hoje</td>
 <td><strong>(a)</strong></td>
 <td>B3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D31</strong></td>
@@ -519,6 +553,7 @@ sozinha.</p>
 <td>(a) continua como hoje: "Para quem vai" do agente não se aplica ao funil; o evento do funil não leva alvo e fica fora do invariante I5; (b) o funil passa a respeitar o alvo do agente</td>
 <td><strong>(a)</strong></td>
 <td>B5</td>
+<td>Plano aprovado no escopo (07/10); caminho do funil permanece separado.</td>
 </tr>
 <tr>
 <td><strong>D32</strong></td>
@@ -526,6 +561,7 @@ sozinha.</p>
 <td>(a) de <code>config.voice</code> (feminina/masculina), que o Construtor já grava pela conversa; editável em "Foto e nome" como "Tratar por: ela / ele"; vale para todo tipo, inclusive o ajudante (sem masculino fixo); renomear não muda sozinho; nunca deduzido do texto do nome; (b) masculino neutro sempre</td>
 <td><strong>(a)</strong></td>
 <td>F1–F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D33</strong></td>
@@ -533,6 +569,7 @@ sozinha.</p>
 <td>(a) tirar a promessa: "Nunca" passa só quando o cliente pede ou fora do horário/público; texto "Não oferece uma pessoa. Ainda passa quando o cliente pede."; (b) criar passagem por falha de IA para todas as opções (mudança ao vivo nova)</td>
 <td><strong>(a)</strong>; (b) vira Issue</td>
 <td>B4b, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D34</strong></td>
@@ -540,6 +577,7 @@ sozinha.</p>
 <td>(a) externo "{A} {nome} sai da lista e para de atender. As conversas com {ela} vão para a equipe."; ajudante "O {nome} sai da lista e some do painel das conversas."; rascunho "O rascunho sai da lista."; sem "não dá para desfazer" (a recuperação existe no banco, sem tela nesta entrega); (b) criar tela de recuperação</td>
 <td><strong>(a)</strong>; (b) vira Issue</td>
 <td>F1, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D35</strong></td>
@@ -547,6 +585,7 @@ sozinha.</p>
 <td>(a) PRs do caminho ao vivo (B1, B4b, B5, B6b) pedem vaga "sozinho por rollback"; os demais entram no lote de 7, e para eles a volta é por revert com OK (nunca rollback automático, §11.7 "lote misto"); (b) todos entram no lote de 7</td>
 <td><strong>(a)</strong></td>
 <td>B1–F9</td>
+<td>Plano aprovado no escopo (07/10); caminho ao vivo isolado; demais em lote de até 7 pela Automação.</td>
 </tr>
 <tr>
 <td><strong>D23</strong></td>
@@ -554,6 +593,7 @@ sozinha.</p>
 <td>(a) só o fluxo novo exige teste (Ligar da tela nova e <code>publish</code>); tela antiga, Guia, API e Cotação continuam como hoje enquanto a flag existir; com o F10 (fim da tela antiga) a regra passa a valer em toda transição para "atendendo"; (b) toda transição exige teste já agora, com exceções</td>
 <td><strong>(a)</strong></td>
 <td>B3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D24</strong></td>
@@ -561,6 +601,7 @@ sozinha.</p>
 <td>(a) a invalidação do teste só vale <strong>antes</strong> de ir ao ar (E3/E4); agente no ar ou pausado (E5/E6) continua como está quando a instrução muda (por material novo, pergunta aprovada, Mudar conversando, texto manual, voltar versão); religar um pausado pelo interruptor só exige instrução; (b) exigir novo teste</td>
 <td><strong>(a)</strong></td>
 <td>B2, B3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D25</strong></td>
@@ -568,6 +609,7 @@ sozinha.</p>
 <td>(a) confirma ("O texto que você escreveu deixa de valer e {ela} volta para a última versão montada pela conversa."); restaura a última versão guiada guardada (BE-23) com o seu andaime; sem versão guiada guardada, a opção não aparece; o texto da pessoa fica nas versões; (b) não permitir voltar</td>
 <td><strong>(a)</strong></td>
 <td>B4, F7</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D26</strong></td>
@@ -575,6 +617,7 @@ sozinha.</p>
 <td>(a) o Testar do ajudante usa o caminho do ajudante dentro da conversa, com uma conversa de exemplo (do i18n) como contexto; sem faixa "passaria para a equipe"; esse teste conta para ligar; (b) ajudante liga sem teste</td>
 <td><strong>(a)</strong></td>
 <td>B4b, F3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D27</strong></td>
@@ -582,6 +625,7 @@ sozinha.</p>
 <td>(a) avisar na tela do teste "Ferramentas que gravam em outro sistema rodam de verdade no teste." quando o agente tiver alguma; tester só roda T07/T08 com Clara sem ferramenta não-GET (conferido antes); (b) não rodar ≠ GET para ninguém no teste</td>
 <td><strong>(a)</strong></td>
 <td>B4b, F3, F5</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 <tr>
 <td><strong>D28</strong></td>
@@ -589,6 +633,7 @@ sozinha.</p>
 <td>(a) exemplos genéricos por trabalho escolhido, no i18n (sem nicho); (b) nenhuma sugestão</td>
 <td><strong>(a)</strong></td>
 <td>F3</td>
+<td>Plano aprovado no escopo (07/10); segue os gates do PR.</td>
 </tr>
 </tbody>
 </table></div>
@@ -734,7 +779,9 @@ modelo mostra "Salvo. Teste {a} {nome} de novo antes de ligar." (§6.6):
    andaime; o texto da pessoa fica em Versões.
 3. Onde atua — Clientes / A equipe / Os dois (recusa "A equipe" com canal: "Tire a Clara dos canais antes.", BE-10).
 4. Como fala — Primeira mensagem e Quando não souber responder (efeito real por D18), Jeito de falar (Amigável, Profissional,
-   Neutro, Descontraído, Do meu jeito + texto; grava a frase em português, D10).
+   Neutro, Descontraído, Do meu jeito + texto; grava a frase em português, D10). Primeira mensagem e Quando não souber
+   mudam a resposta e o prompt do caminho externo, no Testar e no atendimento ao vivo, sob a guarda do BE-30; em <code>both</code>, só
+   a perna do cliente muda. O lado interno/copiloto, a Lia/Cotação e o Guia/sistema ficam byte a byte iguais.
 5. Quando passa para a equipe — Quando estiver em dúvida ("Chama a equipe quando não tem segurança na resposta.") /
    Sempre oferecer uma pessoa / Nunca (efeito real, D1; sem régua de percentual) + Para quem
    vai: Quem estiver livre / Uma pessoa / Um time (escolha por <code>ChoiceSelect</code>, D2, BE-06).
@@ -777,8 +824,9 @@ modelo mostra "Salvo. Teste {a} {nome} de novo antes de ligar." (§6.6):
 9. Pausar/Ligar e Excluir (texto do que acontece com conversas e materiais). Rascunho (E1–E4): no lugar de Pausar/Ligar,
    "Continuar montagem", que leva à etapa que falta (mesmo destino do "Continuar" da lista: E1/E2 → Conte, E3 → Teste, E4 →
    Ligue, E2m → Ajustes › O que faz). Ajudante interno: "O {nome} some do painel das
-   conversas até você ligar de novo." (pausar) e "O {nome} some do painel das conversas. Os materiais dele são apagados."
-   (excluir) — ele não atende conversa.
+   conversas até você ligar de novo." (pausar) e "O {nome} some do painel das conversas. Os materiais, vínculos e histórico
+   ficam guardados." (excluir) — ele não atende conversa. A exclusão do agente externo usa a mesma exclusão lógica e preserva
+   os materiais, vínculos e histórico; as conversas voltam para a equipe.
 <strong>Ajudante interno:</strong> não mostra "Quando passa para a equipe", "Para quem vai", "Para quem responde" nem "Quando atende"
 (nenhum tem leitor no ajudante: <code>operate.rb:45</code> corta o interno e o copiloto não lê essas chaves), nem a Primeira mensagem
 (no Teste, no Ligue e em Como fala). No <code>both</code>, um aviso acima das seções de atendimento: "As seções abaixo valem só quando {ela} atende clientes. No
@@ -796,7 +844,10 @@ ao cliente, ligada), resultado do teste em bloco, limite 10, "Começar pelo mode
 <ul>
 <li><strong>Conectar um WhatsApp</strong> (<code>viewConectar</code>): número (D7) → código QR, passos "Como ler", dica "Use um número da empresa";
   estados Esperando leitura / Conectando / Conectado ("Escolher o agente", volta à origem) / Não conectou ("Gerar outro
-  código").</li>
+  código"). Com a flag desligada, se não houver rota antiga equivalente, <code>from</code> só pode apontar para uma origem interna
+  validada da mesma conta (agente/canal) e volta a ela com aviso localizado; sem origem válida, volta à lista de agentes com
+  aviso localizado. Esse caminho nunca renderiza <code>InviteConnectionPage</code>, não cria conexão e não promete retomar conversa no
+  painel antigo; os dados salvos do agente, thread e canal são preservados.</li>
 <li><strong>Dentro da conversa</strong> (<code>viewConversa</code>): painel do ajudante da equipe (resumo, "Sugerir resposta", "Resumir de novo",
   pergunta livre; vazio com "Criar ajudante") e "Marcar resposta como errada" (5 motivos como opções, "Qual seria a resposta
   certa?", botão libera após escolher). O que for marcado aparece na gaveta "Respostas marcadas como erradas" com motivo,
@@ -1267,12 +1318,12 @@ cada marca é gravada, qual sinal o front manda) é decidido no desenho técnico
 </tr>
 <tr>
 <td>Primeira mensagem e "quando não souber" (BE-30)</td>
-<td>vale</td>
-<td>vale</td>
-<td>Primeira mensagem escondida; "quando não souber" já tem leitor no copiloto (sem mudança)</td>
-<td>parte externa</td>
-<td><strong>não</strong></td>
-<td><strong>não</strong></td>
+<td>vale no caminho externo</td>
+<td>vale no caminho externo</td>
+<td><strong>não</strong> (campos escondidos; copiloto byte a byte igual)</td>
+<td>só parte externa; equipe byte a byte igual</td>
+<td><strong>não</strong> (byte a byte igual)</td>
+<td><strong>não</strong> (byte a byte igual)</td>
 </tr>
 <tr>
 <td>Nome no texto do modelo (BE-29)</td>
@@ -1338,14 +1389,14 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <tr>
 <td><strong>BE-01</strong></td>
 <td>Números e canais na lista sem N+1</td>
-<td>Service <code>Autonomia::Agents::ListStats</code> com <strong>uma</strong> consulta agregada em <code>autonomia_agent_events</code> (índice <code>idx_autonomia_events_agent_created</code>), janela <strong>idêntica</strong> ao Analytics (<code>(dias-1).days.ago.beginning_of_day</code>) e <code>HANDOFF_TYPES</code>; <code>index</code> entrega <code>stats: {week:{replies,handoffs}, month:{replies,handoffs}}</code> e <code>channels: [{inbox_id,name,channel_type}]</code> (<code>includes(agent_inboxes: :inbox)</code>).</td>
+<td>Service <code>Autonomia::Agents::ListStats</code> com <strong>uma</strong> consulta agregada em <code>autonomia_agent_events</code> (índice <code>idx_autonomia_events_agent_created</code>), janela <strong>idêntica</strong> ao Analytics (<code>(dias-1).days.ago.beginning_of_day</code>) e <code>HANDOFF_TYPES</code>; <code>index</code> entrega <code>stats: {week:{replies,handoffs}, month:{replies,handoffs}}</code> e <code>channels: [{inbox_id,name,channel_type}]</code> (<code>includes(agent_inboxes: :inbox)</code>). Agentes arquivados e vínculos arquivados ficam fora da lista, das projeções de canais e dos contadores; um agente vivo pode ocupar o mesmo inbox depois que o vínculo antigo foi arquivado.</td>
 <td>Baixo</td>
 <td>P</td>
 </tr>
 <tr>
 <td><strong>BE-02</strong></td>
 <td>Usar material de outro agente</td>
-<td><code>GET agents/:agent_id/sources/reusable</code> (só <code>knowledge</code> aceitos de outros agentes da conta; exclui agentes de sistema e a fonte de FAQ) e <code>POST agents/:agent_id/sources/copy {source_id}</code> (origem resolvida pela conta → 404 cross-tenant; limite 30; anexa a mesma blob; enfileira <code>IngestJob</code>; <code>metadata.copied_from_source_id</code>).</td>
+<td><code>GET agents/:agent_id/sources/reusable</code> (só <code>knowledge</code> aceitos de outros agentes da conta, com agente e vínculo <code>kept</code>; exclui arquivados, agentes de sistema e a fonte de FAQ) e <code>POST agents/:agent_id/sources/copy {source_id}</code> (origem resolvida pela conta → 404 cross-tenant; limite 30; anexa a mesma blob; enfileira <code>IngestJob</code>; <code>metadata.copied_from_source_id</code>).</td>
 <td>Baixo</td>
 <td>M</td>
 </tr>
@@ -1408,7 +1459,7 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <tr>
 <td><strong>BE-11</strong></td>
 <td>Quem ocupa o canal e se ele tem horário</td>
-<td><code>channels#index</code> ganha <code>occupied_inboxes: [{id,name,channel_type, occupied_by:{kind:'agent'|'other_bot', agent_id?, agent_name?}}]</code> (só agentes da conta; bot externo sem nome) e, em cada caixa (livre, ocupada ou conectada), <code>has_schedule</code> (true quando há agenda de atendimento do CRM ou horário comercial ligado — mesma regra de <code>engagement_gate.rb</code>). Remover leitura de <code>inbox.occupied</code> no front.</td>
+<td><code>channels#index</code> ganha <code>occupied_inboxes: [{id,name,channel_type, occupied_by:{kind:'agent'|'other_bot', agent_id?, agent_name?}}]</code> (só agentes da conta; bot externo sem nome) e, em cada caixa (livre, ocupada ou conectada), <code>has_schedule</code> (true quando há agenda de atendimento do CRM ou horário comercial ligado — mesma regra de <code>engagement_gate.rb</code>). Remover leitura de <code>inbox.occupied</code> no front; ocupação e elegibilidade consideram apenas agentes e vínculos <code>kept</code>, e não exibem links arquivados. Um agente vivo pode substituir o vínculo arquivado no mesmo inbox.</td>
 <td>Baixo</td>
 <td>P</td>
 </tr>
@@ -1422,7 +1473,7 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <tr>
 <td><strong>BE-13</strong></td>
 <td>Criar caixa WhatsApp pelo fluxo do agente (D7)</td>
-<td>Reusar <code>waha_inboxes</code> com <code>phone</code> (55 + DDD + número) vindo da tela; permissão = administrador; erros com <code>code</code> (BE-10); volta com <code>?from=</code>, que só aceita rotas de agentes da própria conta (Ligue, Onde atende); qualquer outro valor volta para "Seus agentes".</td>
+<td>Reusar <code>waha_inboxes</code> com <code>phone</code> (55 + DDD + número) vindo da tela; permissão = administrador; erros com <code>code</code> (BE-10); volta com <code>?from=</code>, que só aceita rotas de agentes da própria conta (Ligue, Onde atende). Com a flag desligada e sem equivalente antigo, valida a origem interna da mesma conta e dos canais do agente; origem válida volta a ela com aviso localizado, inválida volta para "Seus agentes" com aviso localizado. Nunca renderiza <code>InviteConnectionPage</code>, dispara criação ou promete retomar conversa no painel antigo; dados salvos são preservados.</td>
 <td>Baixo</td>
 <td>M</td>
 </tr>
@@ -1534,21 +1585,21 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <tr>
 <td><strong>BE-29</strong></td>
 <td>Nome novo no modo de se apresentar (D19)</td>
-<td>Depois de renomear, o agente se apresenta com o nome novo. Nenhum agente que <strong>não</strong> foi renomeado depois desta entrega tem o texto do modelo alterado (byte a byte), incluindo Clara, Lia e Guia; Agente de Cotação e agentes de sistema ficam fora (a Lia recebe o nome pelo BE-17); modo manual: o nome fica no texto que a pessoa escreve.</td>
+<td>Caso separado de BE-30: o teste de renomeação prova o efeito controlado do nome (<code>Seu nome é {nome}.</code>) só quando o nome mudou depois da última instrução gerada; o teste de igualdade byte a byte usa Clara, Lia, Guia e manual <strong>sem renome</strong> e confirma que a instrução fica igual. O texto manual continua sendo da pessoa; Lia/Cotação segue o BE-17; Guia/sistema e copiloto não mudam.</td>
 <td><strong>Médio</strong></td>
 <td>P</td>
 </tr>
 <tr>
 <td><strong>BE-30</strong></td>
 <td>Primeira mensagem e "quando não souber" com efeito (D18)</td>
-<td>A primeira resposta de uma conversa nova segue a Primeira mensagem; quando o agente não sabe, a resposta é a frase de "Quando não souber" e o que acontece depois segue a tabela de §6.3 Ajustes item 5 (spec por opção com modelo simulado: o texto que o modelo recebe contém a frase como resposta para esse caso e a regra da opção). Vale no atendimento e no Testar. O caminho do copiloto (ajudante interno, Testar do ajudante pela D26 e a parte de equipe do <code>both</code>) recebe texto <strong>byte a byte igual ao de hoje</strong>, mesmo com os campos preenchidos. Agente de Cotação e agentes de sistema ficam fora (byte a byte iguais mesmo com os campos preenchidos). Entra no B4b (lote de um PR só); antes do merge, Q15 e lista ao Rodrigo de quem muda (o Construtor preenche esses campos, então a Clara muda de propósito).</td>
+<td>Caso separado de BE-29: campos não vazios mudam a resposta externa e o prompt que a produz, tanto no Testar quanto no atendimento ao vivo; em <code>both</code>, só a perna do cliente muda. O lado interno/copiloto, agentes internos, Lia/Cotação e Guia/sistema ficam byte a byte iguais e não mudam; a prova cobre os caminhos Test/live e fica guardada para o PR isolado B4b, com Q15/lista ao Rodrigo antes do merge.</td>
 <td><strong>Médio</strong></td>
 <td>P</td>
 </tr>
 <tr>
 <td><strong>BE-31</strong></td>
 <td>Ajustes de operação no Super Admin (D21)</td>
-<td>Só SuperAdmin muda, por agente, a lista fechada <code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code> (a mesma da D21); agentes de sistema não aparecem na tela e, no Agente de Cotação, <code>native_tool_slugs</code> não é oferecida (vale a lista do deploy) — recusa sem linha no registro; o registro guarda só as chaves do BE-31, com telefone mascarado, nunca <code>instruction</code>/<code>scaffold</code> (o model <code>Agent</code> não passa a ser auditado por inteiro), e aparece no Registro de atividades da conta; cada mudança registrada no <code>Enterprise::AuditLog</code> (sem migration). <code>voice</code> fica fora: o Construtor grava na criação, pelo nome (<code>builder.rb:1021</code>); renomear não muda a voz (fora do escopo, Issue própria).</td>
+<td>Só SuperAdmin muda, por agente, a lista fechada <code>voice_reply</code>, <code>voice_instructions</code>, <code>humanize_delivery</code>, <code>operate_media</code>, <code>operate_reactions</code>, <code>test_allowlist_phones</code>, <code>silence_tokens</code>, <code>native_tool_slugs</code>, <code>debounce_seconds</code>, <code>async_tools</code>, <code>async_poll_intervals</code>, <code>async_deadline_seconds</code> (a mesma da D21); agentes de sistema não aparecem na tela e, no Agente de Cotação, <code>native_tool_slugs</code> não é oferecida (vale a lista do deploy) — recusa sem linha no registro. O registro legível guarda actor, data, chave mascarada e mudança, permite filtrar por agente/data/chave, aparece no Registro de atividades da conta, usa a extensão Enterprise e tem rótulos en/pt_BR; cada mudança é registrada no <code>Enterprise::AuditLog</code> (sem migration), nunca <code>instruction</code>/<code>scaffold</code>. <code>voice</code> fica fora: o Construtor grava na criação, pelo nome (<code>builder.rb:1021</code>); renomear não muda a voz (fora do escopo, Issue própria).</td>
 <td>Baixo</td>
 <td>M</td>
 </tr>
@@ -1600,7 +1651,10 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
 <li><strong>BE-05:</strong> um limite novo pedido no "Mudar conversando" aparece em <code>guardrails</code> e no texto do modelo [R5-16].</li>
 <li><strong>BE-12 (ajudante):</strong> <code>internal</code> com qualquer <code>handoff_strategy</code> → texto byte a byte igual; <code>both</code> → bloco só no Operate [R5-02].</li>
 <li><strong>BE-06:</strong> alvo administrador fora da caixa é válido e o evento registra o alvo [R5-04/18/23/35].</li>
-<li><strong>BE-13:</strong> <code>from</code> fora da lista volta para "Seus agentes" (inclusive <code>javascript:</code> e endereço externo) [R4-33].</li>
+<li><strong>BE-13:</strong> <code>from</code> fora da lista volta para "Seus agentes" (inclusive <code>javascript:</code> e endereço externo); com a flag desligada,
+  origem sem equivalente antigo só volta para origem interna validada da mesma conta e dos canais do agente, ou para a lista,
+  sempre com aviso localizado; não renderiza <code>InviteConnectionPage</code>, cria conexão ou promete retomar conversa no painel antigo.
+  Dados salvos do agente, thread e canal permanecem [R4-33].</li>
 <li><strong>BE-14:</strong> rascunho criado pela API/Guia sem instrução e sem conversa é E1, e a lista mostra o prazo configurado [R4-39/46].</li>
 <li><strong>E1 / BE-03 (abertura):</strong> abertura que falha antes de existir rascunho mostra erro com "Tentar de novo" e não deixa o front
   esperando [R3-18/42/49]; o rascunho existe antes de abrir o Conte, mesmo sem material [R2-48].</li>
@@ -1624,11 +1678,14 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
   [R3-32, R2-19/52]; cotação nunca é feita no teste e a tela sabe disso por um campo da API [R2-38].</li>
 <li><strong>BE-27 (materiais):</strong> a tela diz "não usa" ⇔ o retriever não usa, inclusive quando todos são fora do negócio, fonte sem revisão
   (legado) e fonte em revisão [R3-04/14/37/52, R2-35].</li>
-<li><strong>BE-29 (nome):</strong> Clara, Lia, Guia e um agente manual sem renomear → texto igual byte a byte; renomear → o nome novo aparece
-  [R3-03/15/30/44].</li>
-<li><strong>BE-30 (primeira mensagem / quando não souber):</strong> Lia, um ajudante interno e um <code>both</code> (no copiloto) com os campos
-  preenchidos → texto igual [R7-01]; Q10 compara esses campos
-  [R3-35].</li>
+<li><strong>BE-01 / BE-11 / #1063:</strong> agente e vínculo arquivados ficam ausentes da projeção da lista, dos contadores/estatísticas, da
+  ocupação e elegibilidade de canais e da lista de materiais reutilizáveis; um agente vivo pode substituir o vínculo arquivado no
+  mesmo inbox, sem atravessar contas; exclusão lógica preserva materiais, vínculos e histórico.</li>
+<li><strong>BE-29 (nome):</strong> caso de igualdade byte a byte para Clara, Lia, Guia e manual sem renomear, separado do caso de renomeação;
+  renomear só o agente guiado elegível acrescenta <code>Seu nome é {nome}.</code>, e o texto manual continua da pessoa [R3-03/15/30/44].</li>
+<li><strong>BE-30 (primeira mensagem / quando não souber):</strong> campos preenchidos mudam resposta/prompt no atendimento externo e no Testar;
+  em <code>both</code>, somente a perna do cliente muda. Lado interno/copiloto, Lia/Cotação e Guia/sistema ficam byte a byte iguais;
+  Test/live cobrem o efeito com guarda do BE-30 [R7-01, R3-35].</li>
 <li><strong>BE-19 / Q12:</strong> chaves gravadas pelo Construtor e pelo model (<code>voice</code>, <code>builder_active_thread_id</code>, e qualquer chave nova
   deste projeto) não contam como desvio [R3-34/56]; os valores para a volta da limpeza ficam fora do repositório (podem ter
   telefone) [R3-33]; NR-05 e BE-19 com o mesmo texto [R3-40/53].</li>
@@ -1640,7 +1697,8 @@ params ou GET regenera <code>bundle exec rails autonomia:guia:formatos</code> e 
   [R3-25/55].</li>
 <li><strong>BE-10 / WhatsApp:</strong> <code>account_token_missing</code> com frase pt-BR; a tela antiga de criar caixa WhatsApp continua recebendo o código
   como hoje (compatibilidade) [R3-06/11/43/58].</li>
-<li><strong>BE-31:</strong> registro em <code>Enterprise::AuditLog</code>, sem migration [R3-41/58].</li>
+<li><strong>BE-31:</strong> registro legível em <code>Enterprise::AuditLog</code> (actor, data, chave mascarada e mudança), filtros por agente/data/chave,
+  extensão Enterprise e rótulos en/pt_BR, sem migration [R3-41/58].</li>
 </ul>
 <p><strong>Prioridade de segurança:</strong> BE-19 (ferramenta nativa e outras chaves ligadas pelo PATCH) e BE-25 (conversas de outras caixas
 visíveis a quem só vê agentes) são falhas reais em produção hoje, independentes do redesign; entram no <strong>primeiro</strong> PR de
@@ -1704,7 +1762,13 @@ backend (B1).</p>
 </tbody>
 </table></div>
 <p>Toda rota usa <code>ensureAutonomiaEnabled</code> com <code>await contaDaRota(to)</code>; as mantidas renderizam a página nova ou antiga pela
-  flag (<code>AgentsIndexEntry.vue</code> etc.); as novas redirecionam para a equivalente antiga com a flag desligada.
+  flag (<code>AgentsIndexEntry.vue</code> etc.). Com a flag desligada, as rotas novas seguem este mapa, sempre mantendo os guards
+  existentes de conta, permissão e agente: <code>build/tell</code> → painel antigo <code>tune</code> do mesmo agente e da thread já salva; <code>build/test</code>
+  → <code>test</code>; <code>build/live</code> → <code>publish</code>; <code>ready</code> → <code>performance</code>. Nenhuma delas cria uma nova thread nem amplia um guard. Para
+  <code>connect-whatsapp</code>, não há equivalente antigo: só uma origem interna validada da mesma conta e dos canais do agente é aceita;
+  uma origem válida recebe aviso localizado e volta para ela, e uma inválida vai para a lista de agentes com aviso localizado.
+  Esse fallback não renderiza <code>InviteConnectionPage</code>, não cria conexão e não promete retomar conversa no painel antigo; dados
+  salvos ficam preservados.
 - <strong>Menu lateral</strong> (<code>Sidebar.vue</code>, toque mínimo, F1): item único "Agentes de IA" com <code>activeOn</code> = <code>autonomia_agents_index</code>,
   <code>autonomia_agents_builder</code>, <code>autonomia_agent_build</code>, <code>autonomia_agent_ready</code>, <code>autonomia_agent_panel</code>,
   <code>autonomia_agents_connect_whatsapp</code>; com a flag desligada, os filhos atuais.
@@ -1821,8 +1885,12 @@ backend (B1).</p>
 <hr />
 <h2 id="10-plano-de-entrega">10. Plano de entrega</h2>
 <h3 id="101-prs-e-ordem">10.1 PRs e ordem</h3>
-<p><strong>Todo PR deste projeto sobe em lote de um PR só</strong> (§14). Backend e frontend em PRs separados (um PR de backend que toca <code>config/routes.rb</code> liga o gate de lint de e-mail da CI
-para todo o front do mesmo PR). Cada PR de front depende só dos BE listados.</p>
+<p>PRs do caminho ao vivo (B1, B4b, B5 e B6b) sobem isolados para permitir rollback de um degrau. Os demais PRs podem entrar em
+lotes de até 7 sem migration, sempre coordenados pela sessão Automação; PR com migration sobe sozinho com o snapshot e o plano
+de volta exigidos por ela. Backend e frontend ficam em PRs separados (um PR de backend que toca <code>config/routes.rb</code> liga o
+gate de lint de e-mail da CI para todo o front do mesmo PR). Cada PR de front depende só dos BE listados. O autor não contata
+a Automação diretamente: quando o PR estiver pronto, entrega ao Rodrigo apenas número do PR, OK específico, CI verde no head
+atual e indicação de migration; Rodrigo repassa à Automação.</p>
 <div class="tw"><table>
 <thead>
 <tr>
@@ -1937,7 +2005,7 @@ para todo o front do mesmo PR). Cada PR de front depende só dos BE listados.</p
 </tr>
 <tr>
 <td><strong>F9</strong></td>
-<td>Reescrita do Guia (8 blocos) e da Central (cap. 11, 00.08, 01.01, 18.x); ligar a flag na conta 16 pelo <strong>Super Admin</strong> (BE-00); UPDATE de tons D10 por psql com 🟢</td>
+<td>Reescrita do Guia (8 blocos) e da Central (cap. 11, 00.08, 01.01, 18.x); ligar a flag na conta 16 pelo <strong>Super Admin</strong> (BE-00); UPDATE de tons D10 por psql com 🟢, somente após OK específico</td>
 <td>F1–F8</td>
 <td>—</td>
 </tr>
@@ -1952,6 +2020,13 @@ para todo o front do mesmo PR). Cada PR de front depende só dos BE listados.</p
 <p>Cada PR: Issue filha da épica, worktree em <code>/Users/rodrigosilva/dev/worktrees/chat2you/&lt;issue&gt;-&lt;slug&gt;</code>, <code>Refs #&lt;épica&gt;</code>,
 entrada no Project Autonom.ia Dev (Projeto Hub2You, Tipo, Prioridade, Risco, Próxima ação, Ambiente), fila de merge
 coordenada pela sessão <strong>Automação</strong> (avisar antes, mandar "ok, SHA" depois da validação).</p>
+<p><strong>Gate obrigatório antes do primeiro deploy do redesign.</strong> O backend necessário para as telas deve estar desenvolvido e
+validado no ambiente local de teste antes de qualquer release do redesign. Nesse ambiente, a jornada deve ser percorrida em
+cenários representativos e todas as telas reais devem ser mostradas, com seus estados de carregamento, vazio, erro e sucesso,
+em 1440 px e 400 px, claro e escuro, e para os perfis editar, só ver e administrador da plataforma. A matriz e os grupos de
+cenários estão em <a href="aceite-telas-reais.md"><code>aceite-telas-reais.md</code></a>; ela inclui a conferência tela a tela contra o protótipo,
+o mapa <strong>Todas as telas</strong> e <strong>Ver esta tela como</strong>. O gate só fecha com capturas lidas, sem tela branca ou corte, e aprovação
+visual explícita do Rodrigo. A inspeção visual está em andamento; portanto este gate ainda não está aprovado.</p>
 <h3 id="102-orquestracao-dinamica-como-cada-pr-e-executado">10.2 Orquestração dinâmica (como cada PR é executado)</h3>
 <p>Cada PR roda como um workflow de agentes, com o agente principal no comando entre as fases:</p>
 <ol>
@@ -1969,11 +2044,13 @@ coordenada pela sessão <strong>Automação</strong> (avisar antes, mandar "ok, 
    <code>pnpm test</code> dos specs da tela, <code>pnpm eslint</code> sem nenhum aviso, rubocop, <code>pnpm i18n:fork:check</code>, <code>pnpm guia:check</code>,
    <code>pnpm central:check</code>, <code>autonomia:guia:formatos:check</code> quando a API mudar, build do front. Teste e commit nunca no mesmo
    comando; ferramenta que reescreve código (<code>rubocop -a</code>, <code>eslint --fix</code>) é seguida de <code>git diff</code> lido e testes de novo.</li>
-<li><strong>Conferir visual</strong> (PRs de front) — capturas protótipo × implementação (§11.6); ninguém entrega tela sem olhar a captura.</li>
+<li><strong>Conferir visual e jornada</strong> — antes do primeiro deploy, e depois em cada PR de front, executar o gate de telas reais e
+   cenários de <a href="aceite-telas-reais.md"><code>aceite-telas-reais.md</code></a> no ambiente local de teste; comparar protótipo × implementação
+   (§11.6), ler as capturas e registrar qualquer divergência. Ninguém entrega tela sem olhar a captura.</li>
 <li><strong>Revisão</strong> — protocolo de §10.3, com os 5 passos de método abaixo já feitos pelo principal antes de chamar os revisores.</li>
 <li><strong>Testes de aceite</strong> — os CA da tela (§11) marcados um a um no PR, com evidência (spec, captura ou passo manual).</li>
-<li><strong>Merge e deploy</strong> — com OK do Rodrigo, pela fila; validação pós-deploy (§11.7) e tester (§11.8) nos PRs que mudam
-   comportamento em produção.</li>
+<li><strong>Merge e deploy</strong> — somente com OK do Rodrigo, pela fila da Automação e depois do gate de telas reais; validação
+   pós-deploy (§11.7) e tester (§11.8) nos PRs que mudam comportamento em produção.</li>
 </ol>
 <h3 id="103-protocolo-de-revisao-regra-do-rodrigo">10.3 Protocolo de revisão (regra do Rodrigo)</h3>
 <ul>
@@ -1990,7 +2067,7 @@ coordenada pela sessão <strong>Automação</strong> (avisar antes, mandar "ok, 
     validação não pegaram, ou por que a correção introduziu o problema (requisito ambíguo, padrão do repo ignorado, teste
     fraco, falta de contexto do implementador) — e registra em <code>docs/audit/&lt;data&gt;-agentes-&lt;pr&gt;-causa-raiz.md</code> com: achado,
     causa raiz, correção da causa (não só do sintoma), o que muda no processo para não repetir. Só depois corrige, roda a
-    validação local e manda para <strong>nova revisão</strong>, e continua.</li>
+    validação local e manda para <strong>uma revisão final</strong>. Se essa revisão ainda encontrar erro, para e retorna ao Rodrigo; não inicia outro ciclo por conta própria.</li>
 <li>Achado de severidade <strong>crítica</strong> (segurança, perda de dado, agente no ar quebrado) em qualquer rodada bloqueia o PR até a
   causa raiz estar registrada.</li>
 <li><strong>Passos de método obrigatórios antes de cada rodada</strong> (vieram da causa raiz da rodada 2 deste PRD,
@@ -2011,6 +2088,13 @@ coordenada pela sessão <strong>Automação</strong> (avisar antes, mandar "ok, 
      campos que mudam o texto do modelo.</li>
 <li>CI verde não é revisão. Revisão não substitui o teste de aceite.</li>
 </ul>
+<p><strong>Limite desta retomada do PRD.</strong> A R9 normal foi concluída com quatro lentes independentes e registro consolidado em
+<a href="revisoes/rodada-9.md"><code>revisoes/rodada-9.md</code></a>: 11 achados confirmados (1 alto, 9 médios e 1 baixo; UX-04 foi rejeitado).
+As correções foram fechadas na única checagem independente, sem achado residual documental. Não repetir a rodada. Nos próximos
+PRs, se a checagem encontrar achados, parar, registrar causa raiz em <code>docs/audit/</code>, corrigir a causa e fazer uma revisão final.
+Persistindo erro nessa final, parar e retornar ao Rodrigo. Não repetir ciclos. O critério documental é zero altos e zero médios de
+segurança/produção; demais pendências não bloqueantes precisam ter responsável e PR de destino. Nada disso autoriza merge,
+deploy, acesso adicional a produção ou a escrita de D10.</p>
 <hr />
 <h2 id="11-criterios-de-aceite-termos-de-aceite-por-tela">11. Critérios de aceite (termos de aceite por tela)</h2>
 <p>Formato: cada critério é verificado por <strong>V</strong> (Vitest), <strong>R</strong> (RSpec), <strong>P</strong> (Playwright/captura) ou <strong>M</strong> (inspeção
@@ -2035,9 +2119,11 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
   <code>POST agents/:id/suggest</code> (D8), <code>POST agents/message_reports</code> e o chat do ajudante dentro da conversa (regra própria: qualquer
   membro que vê a conversa); quem edita faz tudo menos Ferramentas; Ferramentas só SuperAdmin (401 para os demais).</li>
 <li><strong>CA-GERAL-11 (R)</strong> Com <code>Config.enabled?</code> desligado, a API de agentes devolve 404 e o menu não aparece.</li>
-<li><strong>CA-GERAL-12 (V/R/P)</strong> Flag do redesign (BE-00): desligada → as rotas resolvem os componentes antigos (spec de rota), as
-  specs atuais das telas antigas passam sem alteração e há capturas das telas antigas antes/depois do F0 sem diferença; ligada →
-  telas novas; ligar/desligar numa conta (botão do Super Admin) não muda <code>autonomia_agents_redesign_enabled</code> de outra (R).</li>
+<li><strong>CA-GERAL-12 (V/R/P)</strong> Flag do redesign (BE-00): desligada → <code>build/tell</code> cai em <code>tune</code>, <code>build/test</code> em <code>test</code>,
+  <code>build/live</code> em <code>publish</code> e <code>ready</code> em <code>performance</code>, com o mesmo agente/thread salvo e os guards atuais; as specs atuais das
+  telas antigas passam sem alteração e há capturas antes/depois do F0 sem diferença; <code>connect-whatsapp</code> sem equivalente só
+  aceita origem interna validada da mesma conta/canais ou a lista, com aviso localizado, sem <code>InviteConnectionPage</code> nem criação;
+  ligada → telas novas; ligar/desligar numa conta (botão do Super Admin) não muda <code>autonomia_agents_redesign_enabled</code> de outra (R).</li>
 <li><strong>CA-GERAL-13 (M)</strong> Correções de acessibilidade sobre o protótipo (§6.4) aplicadas.</li>
 <li><strong>CA-GERAL-14 (V/R)</strong> Todo controle tem efeito real: cada linha da matriz §6.5 tem o leitor provado por spec (grava → o
   atendimento ou o Testar muda) ou a decisão aplicada (controle removido).</li>
@@ -2293,7 +2379,8 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
     por estado); ajudante interno: o aviso de §6.3 no lugar das seções de atendimento; num rascunho testado, salvar algo que muda o
     texto do modelo mostra "Salvo. Teste {a} {nome} de novo antes de ligar."; <code>both</code>: um aviso "As seções abaixo valem só quando {ela}
     atende clientes. No painel da equipe, isto não se aplica." Pausar/Ligar e Excluir com textos sobre conversas e materiais (ajudante interno: textos de §6.3 item 9);
-    excluir confirma, apaga, volta para a lista com toast; conversas voltam para a equipe.</li>
+    excluir confirma, arquiva por exclusão lógica, preserva materiais, vínculos e histórico, volta para a lista com toast;
+    conversas voltam para a equipe.</li>
 <li><strong>CA-AJU-12 (V/R)</strong> Agente de Cotação: Foto e nome, Jeito de cotar (Consultivo/Objetivo, texto com {nome}), Horário que
     {ela} informa ao cliente (<code>quote_choices.horario</code>), Para quem vai (sem as 3 opções de estratégia), Para quem responde, Quando
     atende (<code>response_window</code>, só abre/fecha a porta), Pausar/Excluir; renomear e trocar o jeito de cotar mudam o texto que a Lia recebe (BE-17, spec R);
@@ -2331,13 +2418,19 @@ manual). Um critério só conta como atendido com evidência anexada ao PR.</p>
   <code>Rack::Attack.enabled = true</code>); o front mostra a frase pt-BR.</li>
 <li><strong>CA-BE-03 (R)</strong> BE-21/BE-05: <code>GET build_threads/:id</code> e <code>GET agents/:id/build_thread</code> com só <code>autonomia_view</code> → 401.</li>
 <li><strong>CA-BE-04 (R)</strong> ~~BE-22~~ fora desde o #1063; no lugar: excluir pela tela nova usa a exclusão lógica do #1063
-  (<code>deleted_at</code>, auditoria) e devolve as conversas (spec existente <code>soft_delete_spec</code>).</li>
+  (<code>deleted_at</code>, auditoria), deixa agentes e vínculos arquivados fora de projeções, contadores, ocupação/elegibilidade e
+  materiais reutilizáveis, permite substituição viva no mesmo inbox e devolve as conversas; materiais, vínculos e histórico ficam
+  preservados (spec existente <code>soft_delete_spec</code>).</li>
 <li><strong>CA-BE-05 (R)</strong> BE-16: renomear o agente muda o nome do bot nas caixas conectadas; trocar e tirar a foto mudam o avatar do espelho (o gatilho cobre os dois caminhos do endpoint de avatar).</li>
 <li><strong>CA-BE-06 (R)</strong> Todo endpoint novo tem spec cross-tenant (outra conta → 404).</li>
-<li><strong>CA-BE-07 (R)</strong> BE-31: só SuperAdmin muda os ajustes de operação; cada mudança fica registrada com quem e quando.</li>
+<li><strong>CA-BE-07 (R)</strong> BE-31: só SuperAdmin muda os ajustes de operação; o registro legível mostra actor, data, chave mascarada e
+  mudança, filtra por agente/data/chave, aparece no Enterprise e usa rótulos en/pt_BR.</li>
 <li><strong>CA-BE-08 (R)</strong> BE-26: <code>knows</code> reflete respostas fora de ordem (spec com modelo simulado).</li>
-<li><strong>CA-BE-09 (R)</strong> BE-29/BE-30: Clara, Lia, Guia, um agente manual sem renomear, e o copiloto de um ajudante interno e de um
-  <code>both</code> com Primeira mensagem e "quando não souber" preenchidos → <code>instructions</code> byte a byte iguais; Lia com Primeira mensagem e "quando não souber" preenchidos → igual; renomear → nome novo aparece.</li>
+<li><strong>CA-BE-09 (R)</strong> BE-29: Clara, Lia, Guia e um agente manual sem renomear → <code>instructions</code> byte a byte iguais.
+  Renomear prova o nome novo pelo leitor previsto em BE-29 e §6.7; o texto escrito pela pessoa no modo manual não é reescrito.
+  Cotação usa BE-17 para a renomeação; não aplicar a regra de prompt externo ao Guia ou ao copiloto.</li>
+<li><strong>CA-BE-10 (R)</strong> BE-30: Primeira mensagem e "quando não souber" preenchidos mudam a resposta/prompt do caminho externo no
+  Test/live; em <code>both</code>, só a perna do cliente muda. Copiloto, interno, Lia/Cotação e Guia/sistema permanecem byte a byte iguais.</li>
 </ul>
 <h3 id="116-aceite-visual-prototipo-implementacao">11.6 Aceite visual (protótipo × implementação)</h3>
 <ul>
@@ -2445,6 +2538,11 @@ legado e estado antigo nunca disparam volta.</p>
 <p><strong>Antes do B1</strong> (uma vez, só leitura, nas duas stacks): contar agentes que não atendem com espelho ativo e conversas presas
 neles, sobra de antes do #1036, que só sincroniza na transição. Se houver algum, a correção vai para decisão com 🟢 e foto
 (inativar o espelho e devolver as conversas pelo caminho do #1036).</p>
+<p><strong>Resultado das leituras autorizadas (07/10/2026):</strong> depois do OK específico do Rodrigo, as duas consultas read-only foram
+executadas nas duas stacks, com recibos em <code>docs/audit/2026-10-07-agentes-retomada-codex.md</code>. Antes B1 = zero nas duas.
+Q12a = zero no Hub2You; Autonom.ia, conta 20: chave <code>recovery</code>, uma ocorrência em um agente. O código do baseline não tem
+leitor ou escritor semântico dessa chave; ela fica classificada como desconhecida/órfã e preservada até decisão humana.
+Q12b não foi executada e continua fora de escopo. Nenhuma correção ou escrita foi feita.</p>
 <p><strong>Consequência de uma falha</strong> (invariante violado, ou cenário do núcleo ou da cobertura que falhou), C15. Nada volta por regra
 mecânica. A falha dispara a <strong>classificação</strong>, feita na hora pelo tester/sessão com a coluna (d), o cenário repetido uma
 vez e outro agente sem mudança do lote como controle:
@@ -2525,7 +2623,7 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 </tr>
 <tr>
 <td>B5</td>
-<td>Nota de passagem privada não chega ao cliente (BE-24); "Uma pessoa" e "Um time" atribuem conforme o BE-06 e nunca fora do time</td>
+<td>Nota de passagem privada não chega ao cliente (BE-24); "Uma pessoa" e "Um time" atribuem conforme o BE-06 e nunca fora do time; o tester usa uma caixa de teste sem funil do CRM com IA, que pode atribuir depois (D31)</td>
 </tr>
 <tr>
 <td>B6a</td>
@@ -2549,6 +2647,9 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <h2 id="12-termos-de-aceite-da-entrega-final">12. Termos de aceite da entrega final</h2>
 <p>A entrega final do projeto só é aceita quando <strong>todos</strong> os itens abaixo estiverem marcados, com evidência linkada:</p>
 <p><strong>Escopo e fidelidade</strong>
+- [ ] Gate pré-deploy do redesign fechado em ambiente local de teste: backend local, todas as telas reais e os cenários de
+      <a href="aceite-telas-reais.md"><code>aceite-telas-reais.md</code></a> mostrados, capturas lidas em 1440/400 px, claro/escuro e perfis
+      editar/só ver/admin; aprovação visual explícita do Rodrigo registrada.
 - [ ] Todas as telas, estados e diálogos de §6 implementados e com a flag ligada na conta 16.
 - [ ] Matriz §6.5 sem nenhuma linha "nenhum leitor" sem decisão aplicada; máquina de estados §6.6 coberta por spec.
 - [ ] CA-GERAL, CA-LISTA, CA-CRIAR (ESC/CON/TES/LIG/PRO), CA-PAINEL (RES/PTES/SAB/OND/AJU/FER), CA-CONECTAR, CA-CONVERSA, CA-BE:
@@ -2590,10 +2691,16 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 </thead>
 <tbody>
 <tr>
+<td>Falhas de segurança já abertas no B1 (BE-19: <code>config</code> fora da lista; BE-25: conversas fora das caixas permitidas; BE-31 ainda não implementado)</td>
+<td>Alta</td>
+<td>Alto</td>
+<td>B1 continua bloqueado até desenho, implementação local, specs e revisão. A leitura read-only autorizada de 07/10 só registrou Antes B1 e Q12a (§11.7/§15.1d); não houve correção ou escrita. Só depois do OK específico entram merge/deploy e o plano de validação</td>
+</tr>
+<tr>
 <td>Mudança no caminho de resposta ao vivo (BE-06, BE-12, BE-17, BE-24, BE-29, BE-30) afeta Clara/Lia</td>
 <td>Média</td>
 <td>Alto</td>
-<td>Padrões que reproduzem o comportamento atual; specs NR; invariantes da §11.7; tester com o núcleo e a cobertura de cada PR (§11.8); lote de um PR só com rollback de um degrau (§14)</td>
+<td>Padrões que reproduzem o comportamento atual; specs NR; invariantes da §11.7; tester com o núcleo e a cobertura de cada PR (§11.8); PRs ao vivo isolados com rollback de um degrau (§14)</td>
 </tr>
 <tr>
 <td>Guia/Central ficam descrevendo a tela antiga</td>
@@ -2623,7 +2730,7 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <td>Fila de deploy congestionada (2 stacks, ~30 min cada)</td>
 <td>Alta</td>
 <td>Baixo</td>
-<td>Agrupar PRs pequenos de backend; coordenar com a Automação</td>
+<td>Lotes de até 7 sem migration para PRs fora do caminho ao vivo; PRs do caminho ao vivo isolados; coordenação exclusiva da Automação</td>
 </tr>
 </tbody>
 </table></div>
@@ -2634,13 +2741,12 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
   <code>UPDATE accounts SET internal_attributes = internal_attributes - 'autonomia_agents_redesign' WHERE id = 16;</code>. Nunca
   <code>rails runner</code>/console.</li>
 <li><strong>Volta padrão de um deploy</strong> (<code>docs/processo-de-release.md</code>, regra 9): <code>workflow_dispatch</code> com <code>action=rollback</code> nos
-  dois workflows de deploy. Ele religa a instância anterior, que fica parada com a tag, sem build. Só volta <strong>um
-  degrau</strong> e desfaz o <strong>lote inteiro</strong>. Por isso, <strong>todo PR deste projeto que vai para produção</strong> (B1–B6b e os de front) sobe num <strong>lote de um PR
-  só</strong>: o rollback desfaz só ele. Isso deixa o trem de release mais lento; é o preço da volta automática segura. Vale enquanto não houver outro lote por cima, e a regra 4 garante isso até o
-  "ok, SHA". Com outro lote por cima, a volta é um lote novo com <code>git revert</code>, que espera os "ok" das outras sessões.
-  O tempo de cada caminho é medido e registrado no primeiro uso. <strong>Lote de um PR só na prática:</strong> combinar com a sessão
-  Automação que a fila de merge esteja vazia do <code>gh pr merge</code> até o deploy (a fila junta até 2 PRs por rodada) e conferir no
-  <code>git log</code> da <code>main</code> que o push tem só esse PR; se veio junto com outro, a volta é por revert em lote novo.</li>
+  dois workflows de deploy. Ele religa a instância anterior, que fica parada com a tag, sem build. Só volta <strong>um degrau</strong> e
+  desfaz o <strong>lote inteiro</strong>. Pela D35, B1, B4b, B5 e B6b entram isolados, para que essa volta desfaça só o PR do caminho ao
+  vivo. Os demais PRs podem entrar em lote de até 7 sem migration pela Automação; um PR com migration sobe sozinho com
+  snapshot e plano próprios. Para lote misto, ou se um PR ao vivo vier acompanhado de outro, nunca há rollback automático:
+  parar, registrar e retornar ao Rodrigo e à Automação; a volta passa a ser <code>git revert</code> em lote novo, com OK explícito.
+  O tempo de cada caminho é medido e registrado no primeiro uso.</li>
 <li><strong>O que volta junto:</strong> nenhum dado migrado (sem migration). D10: UPDATE de volta pela foto de Q14. Limpeza da Q12:
   <code>UPDATE autonomia_agents SET config = config || &lt;foto&gt; WHERE id = &lt;id&gt;</code> por agente, com 🟢.</li>
 <li><strong>Limpeza de rascunhos (BE-14, no B1):</strong> voltar o B1 devolve a limpeza do #1036, que poupa instrução e material mas apaga
@@ -2751,7 +2857,7 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <tr>
 <td>Conectar WhatsApp</td>
 <td><code>ConnectWhatsappPage</code>, <code>QrPanel</code></td>
-<td><code>InviteConnectionPage</code>, <code>wahaQrWindow</code></td>
+<td><code>ConnectionPage.vue</code>, <code>wahaQrWindow</code> (somente o fluxo antigo equivalente; o fallback sem equivalente valida a origem interna/lista)</td>
 <td><code>waha_inboxes</code></td>
 <td>F6</td>
 </tr>
@@ -2853,10 +2959,10 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <td><strong>Parou.</strong> Zero altos pela 2ª vez; 12 achados na volta automática. Causa raiz C15: volta por regra mecânica exige prever todo estado legítimo (conjunto aberto). Correção da causa: falha dispara classificação (defeito do lote → volta na hora, sem 🟢; não é do lote → lista; dúvida → volta). C11 de novo: invalidação por lista → regra pelo efeito ("o que responde ou por onde responde"). D32 (gênero por "Tratar por"), D33 ("Nunca" sem promessa de passar quando a IA cai); restaurar versão manual; chaves <code>async_*</code>; WAHA compatível; avatar; registro do BE-31; Lia sem "Ensinar"; textos de excluir; rascunho para quem só vê</td>
 </tr>
 <tr>
-<td>9</td>
-<td>mesmas lentes</td>
-<td>—</td>
-<td>pendente</td>
+<td>9 (07/10)</td>
+<td>produto/UX, técnica, segurança/produção, testes — uma rodada normal nesta retomada</td>
+<td>11 (1 alto, 9 médios, 1 baixo; UX-04 rejeitado)</td>
+<td><strong>Rodada e checagem concluídas</strong> em <a href="revisoes/rodada-9.md"><code>revisoes/rodada-9.md</code></a>: achados confirmados corrigidos; zero residuais no escopo documental. Desenho B1 completo e aceite das telas reais continuam pendentes; não é aprovação de código ou release.</td>
 </tr>
 </tbody>
 </table></div>
@@ -2897,7 +3003,7 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 </tr>
 <tr>
 <td>BE-30 fora do copiloto</td>
-<td>BE-30, §6.7, §7.2, CA-BE-09</td>
+<td>BE-30, §6.7, §7.2, CA-BE-10</td>
 <td>—</td>
 <td>interno, <code>both</code> (parte de equipe), D26</td>
 </tr>
@@ -2979,6 +3085,77 @@ produção: o volume é baixo (05/10: Clara com 3 conversas em 7 dias; Lia com 2
 <td>D21, BE-31, I6</td>
 <td>—</td>
 <td>sistema fora; Lia sem <code>native_tool_slugs</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="151c-registro-de-conferencia-pre-r9-07102026">15.1c Registro de conferência pré-R9 (07/10/2026)</h3>
+<p>Este registro fecha o que mudou depois da rodada 8 antes de chamar a rodada 9. As referências locais abaixo foram conferidas
+na worktree; a leitura read-only autorizada posterior está registrada em §11.7 e §15.1d. O registro pré-R9 não autoriza
+correção, escrita ou limpeza em produção.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Item alterado antes da R9</th>
+<th>Passo 5 — referências verificáveis localmente</th>
+<th>Passo 6 (a–d)</th>
+<th>Passo 7 — variantes / estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Decisão de plano D1–D35 e saída R9</td>
+<td>§4, §10.3, §15 linha da R9; resposta do Rodrigo nesta sessão em 07/10</td>
+<td>Não há consulta nem aborto de produção nesta decisão; merge, deploy, produção e D10 continuam sem autorização</td>
+<td>Todos os D; R9 normal, checagem das correções; erro na checagem → causa raiz e revisão final; erro na final → parada e retorno</td>
+</tr>
+<tr>
+<td>#1063 e D34 (exclusão lógica)</td>
+<td><code>git show 4d79f25612</code>; <code>docs/audit/2026-10-06-agent-logical-deletion.md:5-38,40-62</code>; <code>app/models/autonomia/agents/agent.rb:44-49</code>; <code>app/services/autonomia/agents/soft_delete.rb:9-50</code></td>
+<td>(a) volume de produção: pendente, requer OK específico; (b) caminho local: <code>kept</code>, <code>SoftDelete</code>, liberação do espelho e auditoria; (c) evidência de produção: pendente do responsável; (d) estado legítimo arquivado não dispara volta</td>
+<td>externo, ajudante e rascunho; consultas novas usam <code>kept</code>; D34 só ajusta texto, sem tela de recuperação</td>
+</tr>
+<tr>
+<td>D35 e fila</td>
+<td>§0, D35, §10.1 (linhas B1/B4b/B5/B6b), §11.7 consequência, §14, Apêndice A e handoff §6</td>
+<td>(a–d) são definidos no plano do PR; lote misto não dispara rollback automático; não contatar Automação diretamente</td>
+<td>caminho ao vivo isolado; demais lotes de até 7 sem migration; migration isolada com snapshot pela Automação</td>
+</tr>
+<tr>
+<td>Gate de telas reais e cenários</td>
+<td>§10.1 gate, §10.2 passo 5, §12 Escopo e <a href="aceite-telas-reais.md"><code>aceite-telas-reais.md</code></a></td>
+<td>(a–d) de produção não se aplica; a prova é local, com capturas e execução da jornada</td>
+<td>14 grupos do aceite; 1440/400 px; claro/escuro; editar/só ver/admin; carregando/vazio/erro/sucesso</td>
+</tr>
+<tr>
+<td>Segurança B1 ainda aberta</td>
+<td>D12, BE-19, BE-25, BE-31, §7.2, §11.8 cobertura B1 e §13 risco</td>
+<td>(a) leituras autorizadas em §11.7/§15.1d: Antes B1 zero nas duas stacks; Q12a zero no Hub2You e chave <code>recovery</code> em um agente da conta 20 da Autonom.ia, desconhecida/órfã e preservada; nenhuma escrita; (b) baseline <code>6242e31695fd1c6b8b088f2fcb819c027fc5083c</code>: <code>agents_controller.rb:151-193</code> permite config aberta; <code>analytics_controller.rb:15-32</code> não filtra caixas; BE-31 sem caminho próprio; desenho B1 ainda pendente; (c) Q12b não executada; (d) falha de isolamento é bloqueio, sem volta automática por regra</td>
+<td>B1 primeiro; config fora da lista, PermissionFilter e auditoria; nenhum release antes do gate e da revisão</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="151d-resultado-das-leituras-b1-autorizadas-07102026">15.1d Resultado das leituras B1 autorizadas (07/10/2026)</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>Consulta</th>
+<th>Referência</th>
+<th>Resultado documental</th>
+<th>Limite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Antes B1</td>
+<td>§11.7, plano B1 e recibo read-only da sessão responsável</td>
+<td>Zero nas duas stacks; nenhuma correção ou escrita</td>
+<td>Não prova o contrato B1 nem autoriza release</td>
+</tr>
+<tr>
+<td>Q12a</td>
+<td>§11.7 e Q12a do plano B1</td>
+<td>Hub2You: zero; Autonom.ia, conta 20: chave <code>recovery</code>, uma ocorrência em um agente; desconhecida/órfã sem leitor ou escritor semântico encontrado no baseline, preservada</td>
+<td>Só nomes de chave e contagens; sem telefones/valores; Q12b fora do escopo</td>
 </tr>
 </tbody>
 </table></div></article>

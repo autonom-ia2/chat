@@ -28,19 +28,20 @@ for line in src.split("\n"):
     if not line.startswith("| **D"):
         continue
     cells = [c.strip() for c in line.strip("|").split("|")]
-    if len(cells) >= 4:
-        decisions.append((cells[0].replace("*", ""), cells[1], cells[3]))
+    if len(cells) >= 6:
+        decisions.append((cells[0].replace("*", ""), cells[1], cells[3], cells[5]))
 decisions.sort(key=lambda d: int(d[0][1:]))
 cards = "".join(
     f'<li><span class="did">{html.escape(d)}</span><div><div class="dq">{inline(q)}</div>'
-    f'<div class="dr">Recomendação: {inline(r)}</div></div></li>'
-    for d, q, r in decisions
+    f'<div class="dr">Recomendação: {inline(r)}</div>'
+    f'<div class="dr">Decisão/estado: {inline(state)}</div></div></li>'
+    for d, q, r, state in decisions
 )
 status = next(l for l in src.split("\n") if l.startswith("| **Status** |")).split("|")[2].split("—")[0].strip()
 rounds = []
 for line in src.split("\n"):
     cells = [c.strip() for c in line.strip("|").split("|")]
-    if len(cells) >= 4 and cells[0].endswith("(05/10)") and cells[0].split(" ")[0].isdigit() and " altos" in cells[2]:
+    if len(cells) >= 4 and cells[0].endswith(")") and cells[0].split(" ")[0].isdigit() and " alto" in cells[2]:
         count, rest = cells[2].split(" (", 1)
         rounds.append((cells[0].split(" ")[0], count, rest.split(" ")[0]))
 conv = "".join(
@@ -56,12 +57,12 @@ page = f"""<title>PRD Agentes de IA</title>
   <div>
     <div class="eyebrow">Chat2You · PRD</div>
     <h1>Agentes de IA — nova experiência</h1>
-    <p class="lede">A área de agentes passa a ter o mesmo padrão premium e simples de Automações e Campanhas: lista clara, criação em 4 etapas (Escolha → Conte → Teste → Ligue), teste obrigatório antes de ir ao ar e um painel completo — sem tocar no que a Clara e a Lia fazem hoje em produção.</p>
-    <div class="chips"><span class="chip">Status <b>{html.escape(status)}</b></span><span class="chip"><b>{len(decisions)}</b> decisões para o Rodrigo</span><span class="chip"><b>{len(rounds)}</b> rodadas de revisão</span></div>
+    <p class="lede">A área de agentes passa a ter o mesmo padrão premium e simples de Automações e Campanhas: lista clara, criação em 4 etapas (Escolha → Conte → Teste → Ligue), teste obrigatório antes de ir ao ar e um painel completo; mudanças de resposta e operação seguem os gates e a validação previstos no PRD.</p>
+    <div class="chips"><span class="chip">Status <b>{html.escape(status)}</b></span><span class="chip"><b>{len(decisions)}</b> decisões registradas</span><span class="chip"><b>{len(rounds)}</b> rodadas concluídas</span></div>
   </div>
   <div class="todo">
-    <div class="card"><h2>1. Veja a jornada</h2><p>O protótipo navegável mostra cada tela e cada estado, com os dados reais da conta Hub2you. <a href="https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM">Abrir o protótipo</a></p></div>
-    <div class="card"><h2>2. Decida os D</h2><p>Cada decisão tem uma recomendação. O que não depende dela já pode começar. A lista está logo abaixo.</p></div>
+    <div class="card"><h2>1. Veja a jornada</h2><p>O protótipo navegável mostra cada tela e cada estado, com exemplos demonstrativos. <a href="https://claude.ai/artifact/NdjZdAnt8uhTa4P2VziyGM">Abrir o protótipo</a></p></div>
+    <div class="card"><h2>2. Confira as decisões</h2><p>D1–D35 têm plano aprovado. D10 depende do OK específico para o UPDATE ao vivo; merge, deploy e produção mantêm autorização própria. A lista mostra cada estado.</p></div>
     <div class="card"><h2>3. Revisões</h2><p>Achados · altos por rodada:</p><div class="conv">{conv}</div></div>
   </div>
 </div></header>
@@ -69,8 +70,8 @@ page = f"""<title>PRD Agentes de IA</title>
   <nav class="toc" aria-label="Índice"><div class="t">Índice</div>{toc}</nav>
   <main>
     <details class="tocm"><summary>Índice</summary>{toc}</details>
-    <section class="decs" aria-labelledby="dtit"><h2 id="dtit">Decisões que dependem do Rodrigo</h2>
-      <p class="sub">Resumo da §4. As opções completas e o que cada uma bloqueia estão na tabela da §4.</p>
+    <section class="decs" aria-labelledby="dtit"><h2 id="dtit">Decisões e estados registrados</h2>
+      <p class="sub">Resumo da §4, com recomendação e decisão/estado. As opções completas e os gates estão na tabela da §4.</p>
       <ol>{cards}</ol></section>
     <article>{body}</article>
   </main>
