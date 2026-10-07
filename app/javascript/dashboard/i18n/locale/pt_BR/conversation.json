@@ -2,7 +2,8 @@
   "CONVERSATION": {
     "WHATSAPP_TRANSPORT": {
       "WEB": "WhatsApp API",
-      "WEB_FALLBACK": "WhatsApp API · plano B"
+      "WEB_FALLBACK": "WhatsApp API · plano B",
+      "REPLY_HINT": "Fora da janela de 24 horas: esta resposta sai pelo WhatsApp API."
     },
     "404": "Desculpe, não conseguimos encontrar a conversa. Por favor, tente novamente",
     "REFERRAL": {
