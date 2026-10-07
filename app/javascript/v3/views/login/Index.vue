@@ -26,6 +26,7 @@ const ERROR_MESSAGES = {
   'business-account-only': 'LOGIN.OAUTH.BUSINESS_ACCOUNTS_ONLY',
   'saml-authentication-failed': 'LOGIN.SAML.API.ERROR_MESSAGE',
   'saml-not-enabled': 'LOGIN.SAML.API.ERROR_MESSAGE',
+  'autonomia-sso-cancelled': 'LOGIN.AUTONOMIA.CANCELLED_ERROR',
 };
 
 const IMPERSONATION_URL_SEARCH_KEY = 'impersonation';
@@ -33,6 +34,10 @@ const USER_NOT_CONFIRMED_ERROR_CODE = 'user_not_confirmed';
 const AUTH_ERROR_TOAST_DURATION = 6000;
 const AUTONOMIA_SSO_PATH = '/auth/autonomia';
 const AUTONOMIA_SSO_SOURCE = 'autonomia';
+const AUTONOMIA_CALLBACK_ERRORS = new Set([
+  'autonomia-sso-account',
+  'autonomia-sso-state',
+]);
 const TERMINAL_SSO_STATUS_CODES = new Set([400, 401, 403, 410, 422]);
 
 const isSafeAppRedirect = value =>
@@ -158,6 +163,7 @@ export default {
         window.chatwootConfig.autonomiaSsoAutoRedirect === 'true' &&
         !this.ssoAuthToken &&
         !this.authError &&
+        !this.loginApi.hasErrored &&
         !this.email
       );
     },
@@ -183,8 +189,30 @@ export default {
     // shouldAutoRedirectToAutonomia already requires !authError, so the SSO redirect above and
     // this error toast never run together.
     if (this.authError) {
+      this.loginApi.hasErrored = true;
       // Wait for the sibling snackbar to mount and subscribe to toast events.
       this.$nextTick(() => {
+        const authenticationFailed = AUTONOMIA_CALLBACK_ERRORS.has(
+          this.authError
+        );
+        if (
+          this.showAutonomiaSso &&
+          (authenticationFailed || this.authError === 'autonomia-sso-error')
+        ) {
+          this.ssoLoginFailure = authenticationFailed
+            ? 'authentication'
+            : 'transient';
+          this.showAlertMessage(
+            this.getAutonomiaFailureMessage(authenticationFailed)
+          );
+          if (
+            authenticationFailed &&
+            window.chatwootConfig.autonomiaSsoAutoRedirect === 'true'
+          ) {
+            window.location.replace(this.autonomiaRetryUrl);
+          }
+          return;
+        }
         const messageKey = ERROR_MESSAGES[this.authError] ?? 'LOGIN.API.UNAUTH';
         // Use a method to get the translated text to avoid dynamic key warning
         const translatedMessage = this.getTranslatedMessage(messageKey);
@@ -206,6 +234,8 @@ export default {
           return this.$t('LOGIN.OAUTH.NO_ACCOUNT_FOUND');
         case 'LOGIN.OAUTH.BUSINESS_ACCOUNTS_ONLY':
           return this.$t('LOGIN.OAUTH.BUSINESS_ACCOUNTS_ONLY');
+        case 'LOGIN.AUTONOMIA.CANCELLED_ERROR':
+          return this.$t('LOGIN.AUTONOMIA.CANCELLED_ERROR');
         case 'LOGIN.API.UNAUTH':
         default:
           return this.$t('LOGIN.API.UNAUTH');
@@ -435,7 +465,7 @@ export default {
       </p>
       <div class="flex flex-col gap-3 mt-6">
         <NextButton
-          v-if="ssoLoginFailure === 'transient'"
+          v-if="ssoLoginFailure === 'transient' && ssoAuthToken"
           lg
           type="button"
           data-testid="autonomia_sso_retry"
@@ -486,7 +516,7 @@ export default {
           <GoogleOAuthButton v-if="showGoogleOAuth" />
           <div v-if="showAutonomiaSso" class="text-center">
             <a
-              :href="authError ? autonomiaRetryUrl : autonomiaSsoUrl"
+              :href="loginApi.hasErrored ? autonomiaRetryUrl : autonomiaSsoUrl"
               class="inline-flex justify-center w-full px-4 py-3 items-center bg-n-background dark:bg-n-solid-3 rounded-md shadow-sm ring-1 ring-inset ring-n-container dark:ring-n-container focus:outline-offset-0 hover:bg-n-alpha-2 dark:hover:bg-n-alpha-2"
             >
               <Icon icon="i-lucide-cloud" class="size-5 text-n-slate-11" />
