@@ -44,6 +44,21 @@ class Api::V1::Accounts::EmailCampaigns::AiController < Api::V1::Accounts::Email
     head :no_content
   end
 
+  # A pessoa aplicou o ajuste no editor: a proposta deixa de existir e, se o ajuste usou um site pedido no próprio
+  # pedido (#1111), a identidade da campanha passa a ser a dele. Descartar (discard_adjustment) não grava nada.
+  def apply_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    render json: { brand_identity: EmailCampaigns::Ai::Adjustment.apply(campaign) }
+  end
+
+  # "Desfazer" logo depois de aplicar: volta a identidade de antes (uma vez, na mesma geração). O corpo o editor salva.
+  def undo_adjustment
+    authorize EmailCampaign, :create?
+    campaign = EmailCampaign.where(account: Current.account).find(params[:id])
+    render json: { brand_identity: EmailCampaigns::Ai::Adjustment.undo(campaign) }
+  end
+
   # Reescrita também roda fora do limite de tempo da requisição web.
   def rewrite
     authorize EmailCampaign, :create?

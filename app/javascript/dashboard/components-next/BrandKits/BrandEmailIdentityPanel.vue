@@ -1,12 +1,14 @@
 <script setup>
 // "Identidade deste e-mail" in the editor (#1076): which identity the AI used (light or dark),
 // "Trocar" (opens "Criar com IA" to redo the e-mail in another identity), where to change the
-// identity for good, the Arial note and what the quality check still points out.
+// identity for good, the Arial note and what the quality check still points out. A site the request itself
+// asked for (#1111) gets its own sentence on top.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
+import RequestedSiteNotice from './RequestedSiteNotice.vue';
 
 const props = defineProps({
   identity: { type: Object, default: () => ({}) },
@@ -55,6 +57,10 @@ const manageHref = computed(
     <h3 class="m-0 text-sm font-semibold text-n-slate-12">
       {{ t(`${NS}.TITLE`) }}
     </h3>
+    <RequestedSiteNotice
+      v-if="identity.site_request"
+      :site-request="identity.site_request"
+    />
     <div
       class="flex items-center gap-3 rounded-xl border border-n-blue-6 bg-n-blue-2 p-3"
     >

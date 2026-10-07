@@ -9,7 +9,7 @@ RSpec.describe 'E-mail campaign AI adjustment (#1095)', :aggregate_failures, typ
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:campaign) { create(:email_campaign, account: account, status: :draft, body_mjml: adjust_base_mjml) }
-  let(:client) { instance_double(Crm::Ai::ResponsesClient, delete: true) }
+  let(:client) { instance_double(Crm::Ai::ResponsesClient, delete: true, create: { text: '{"site_url":null,"reason":""}' }) }
   let(:request_text) { 'Deixe o botão verde e tire a seção de perguntas' }
   let(:base_url) { "/api/v1/accounts/#{account.id}/email_campaigns/ai" }
 

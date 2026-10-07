@@ -325,6 +325,7 @@ const openAdjustPreview = adjustment => {
     beforeHtml: compileMjml(adjustment.base),
     afterHtml: compileMjml(adjustment.mjml),
     summary: adjustment.summary || '',
+    siteRequest: adjustment.site_request || null,
   };
 };
 
@@ -354,6 +355,20 @@ const forgetAdjustment = async () => {
   }
 };
 
+// Applied: the server uses the proposal up and records a site identity the adjustment used (#1111). It runs before
+// the save, whose answer brings the campaign back with that identity for the identity panel.
+const recordAppliedAdjustment = async () => {
+  try {
+    await EmailCampaignAiAPI.applyAdjustment(campaignId.value);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[EmailBuilderPage] could not record the applied AI adjustment',
+      error
+    );
+  }
+};
+
 const persistBody = async () => {
   try {
     await persist();
@@ -368,7 +383,8 @@ const applyAdjustment = async () => {
   undoMjml.value = getMjml();
   setMjml(proposal.after);
   showUndo.value = true;
-  await Promise.all([persistBody(), forgetAdjustment()]);
+  await recordAppliedAdjustment();
+  await persistBody();
 };
 
 const discardAdjustment = () => {
@@ -376,9 +392,21 @@ const discardAdjustment = () => {
   forgetAdjustment();
 };
 
+// Undo restores the body and, when the adjustment changed it (#1111), the identity the campaign had before. The
+// identity goes first so the save answer brings the campaign back with it for the identity panel.
+const restoreIdentity = async () => {
+  try {
+    await EmailCampaignAiAPI.undoAdjustment(campaignId.value);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('[EmailBuilderPage] could not restore the identity', error);
+  }
+};
+
 const undoAdjustment = async () => {
   showUndo.value = false;
   setMjml(undoMjml.value);
+  await restoreIdentity();
   await persistBody();
 };
 
@@ -1152,6 +1180,7 @@ const insertPlaceholder = key => {
       :before-html="adjustPreview.beforeHtml"
       :after-html="adjustPreview.afterHtml"
       :summary="adjustPreview.summary"
+      :site-request="adjustPreview.siteRequest"
       @apply="applyAdjustment"
       @discard="discardAdjustment"
     />

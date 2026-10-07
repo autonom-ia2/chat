@@ -50,6 +50,15 @@ RSpec.describe 'Brand kit imports API', type: :request do
     expect(response.parsed_body['error']).to eq('brand_kit_import.rate_limited')
   end
 
+  it 'does not count the sites read from a request (#1111) against the hourly limit' do
+    create_list(:brand_import_job, BrandImportJob::HOURLY_LIMIT, account: account, status: :succeeded,
+                                                                 result: { 'origin' => BrandImportJob::ORIGIN_BRIEFING })
+
+    post path, params: { url: 'https://hub2you.ai' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:accepted)
+  end
+
   it 'returns the proposal once the import succeeded' do
     job = create(:brand_import_job, account: account, status: :succeeded, result: { 'name' => 'Hub2You' })
 

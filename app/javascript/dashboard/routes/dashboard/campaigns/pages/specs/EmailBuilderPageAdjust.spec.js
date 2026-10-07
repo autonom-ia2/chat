@@ -34,7 +34,12 @@ vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 1, campaignId: 7 }, query: {} }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
-const api = vi.hoisted(() => ({ status: vi.fn(), discardAdjustment: vi.fn() }));
+const api = vi.hoisted(() => ({
+  status: vi.fn(),
+  discardAdjustment: vi.fn(),
+  applyAdjustment: vi.fn(),
+  undoAdjustment: vi.fn(),
+}));
 vi.mock('dashboard/api/emailCampaignAi', () => ({ default: api }));
 vi.mock('dashboard/api/emailCampaignTemplates', () => ({ default: {} }));
 
@@ -133,6 +138,14 @@ describe('EmailBuilderPage — Ajustar com IA', () => {
     api.status.mockResolvedValue({
       data: { ai_status: 'ready', ai_adjustment: proposal },
     });
+    // #1111: the server records the identity before the save, whose answer brings it back.
+    let savedBeforeApply = null;
+    api.applyAdjustment.mockImplementation(async () => {
+      savedBeforeApply = dispatch.mock.calls.some(
+        ([action]) => action === 'emailCampaigns/update'
+      );
+      return { data: { brand_identity: {} } };
+    });
     api.discardAdjustment.mockResolvedValue({});
     const wrapper = setUp({ canvas: WITH_CONTENT, aiStatus: 'ready' });
     await settle();
@@ -153,15 +166,30 @@ describe('EmailBuilderPage — Ajustar com IA', () => {
       'emailCampaigns/update',
       expect.objectContaining({ id: 7, body_mjml: '<mjml>novo</mjml>' })
     );
-    expect(api.discardAdjustment).toHaveBeenCalledWith(7);
+    expect(api.applyAdjustment).toHaveBeenCalledWith(7);
+    expect(savedBeforeApply).toBe(false);
+    expect(api.discardAdjustment).not.toHaveBeenCalled();
     expect(wrapper.findComponent({ name: 'AiAdjustPreview' }).exists()).toBe(
       false
     );
 
+    // Desfazer restores the identity on the server before saving the old body (#1111).
+    const savesBeforeUndo = dispatch.mock.calls.length;
+    let savedBeforeIdentity = null;
+    api.undoAdjustment.mockImplementation(async () => {
+      savedBeforeIdentity = dispatch.mock.calls.length > savesBeforeUndo;
+      return { data: { brand_identity: {} } };
+    });
     await wrapper.find('[data-test="ai-adjust-undo-button"]').trigger('click');
     await settle();
 
     expect(editor.api.setMjml).toHaveBeenLastCalledWith(WITH_CONTENT);
+    expect(api.undoAdjustment).toHaveBeenCalledWith(7);
+    expect(savedBeforeIdentity).toBe(false);
+    expect(dispatch).toHaveBeenLastCalledWith(
+      'emailCampaigns/update',
+      expect.objectContaining({ id: 7, body_mjml: WITH_CONTENT })
+    );
     expect(wrapper.find('[data-test="ai-adjust-undo"]').exists()).toBe(false);
   });
 

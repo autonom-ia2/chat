@@ -234,6 +234,12 @@
       "ARCHIVED_DONE": "{name} arquivada. Os e-mails já feitos não mudam.",
       "RESTORED": "{name} voltou para a lista.",
       "ACTION_ERROR": "Não deu certo. Tente de novo."
+    },
+    "SITE_REQUEST": {
+      "USED": "Usei a identidade de {host}, como você pediu.",
+      "UNREADABLE": "Não consegui ler {host}. Usei a identidade padrão.",
+      "SAVE": "Salvar como identidade",
+      "SAVE_FAILED": "Não deu para salvar a identidade. Tente de novo em Identidade visual."
     }
   }
 }
