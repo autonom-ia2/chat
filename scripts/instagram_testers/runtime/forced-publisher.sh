@@ -28,5 +28,24 @@ name_unit='([^"\\[:cntrl:]]|\\["\\/]|\\u[0-9a-fA-F]{4})'
 name="$name_unit{1,240}($name_unit{1,240})?"
 metadata='\{"INSTAGRAM_META_DEVELOPER_APP_ID":"[0-9]{1,40}","INSTAGRAM_META_BUSINESS_ID":"[0-9]{1,40}","INSTAGRAM_TESTER_APP_NAME":"'"$name"'","INSTAGRAM_TESTER_ADMIN_USER_ID":"[0-9]{1,40}","INSTAGRAM_TESTER_ROLES_DOC_ID":"[0-9]{1,40}"\}'
 bootstrap='\{"type":"bootstrap","metadata":'"$metadata"',"revision":"[0-9a-f]{64}","version":(null|"'"$uuid"'")\}'
-printf '%s' "$result" | /usr/bin/grep -Eq "^($session|$operator|$bootstrap)$" || fail
+# Browser observations use the same bounded transport, with canonical Ruby key
+# order and no result data or authorization URL in the acknowledgement.
+browser_errors='invalid_username|invalid_selection|meta_unavailable|meta_session_expired|unknown_status|invite_rejected|invite_unknown|rate_limited|forbidden|not_enabled|busy|proxy_unavailable|session_update_rejected|operator_required'
+browser_request_pattern() {
+  prefix='\{"id":"'"$uuid"'","request_id":"'"$uuid"'","action":"'"$1"'","state":"'"$2"'","deadline":"'"$timestamp"'","app_id":"[0-9]{1,40}"'
+  target=''
+  [ "$1" = 'search' ] || target=',"target_id":"[0-9]{1,40}"'
+  claim=''
+  [ "$3" = 'read' ] || claim=',"claim":"'"$uuid"'"'
+  printf '%s' "$prefix$target,\"username\":\"[a-z0-9._]{1,30}\"$claim\}"
+}
+browser_search_read=$(browser_request_pattern 'search' '(queued|running)' 'read')
+browser_role_read=$(browser_request_pattern '(status|authorization|invite)' '(queued|running)' 'read')
+browser_search_claim=$(browser_request_pattern 'search' 'running' 'claim')
+browser_role_claim=$(browser_request_pattern '(status|authorization|invite)' 'running' 'claim')
+browser_read='\{"type":"browser_operation","operation":"read","request":(null|'"$browser_search_read"'|'"$browser_role_read"')\}'
+browser_claim='\{"type":"browser_operation","operation":"claim","request":('"$browser_search_claim"'|'"$browser_role_claim"')\}'
+browser_complete='\{"type":"browser_operation","operation":"complete","id":"'"$uuid"'","request_id":"'"$uuid"'",("state":"ready"|"state":"(failed|expired)","error_code":"('"$browser_errors"')")\}'
+browser_permit='\{"type":"browser_operation","operation":"invite_permit","id":"'"$uuid"'","request_id":"'"$uuid"'","claim":"'"$uuid"'",("decision":"write","status":"absent"|"decision":"noop","status":"pending"|"error_code":"('"$browser_errors"')")\}'
+printf '%s' "$result" | /usr/bin/grep -Eq "^($session|$operator|$bootstrap|$browser_read|$browser_claim|$browser_complete|$browser_permit)$" || fail
 printf '%s\n' "$result"

@@ -347,6 +347,7 @@ jobs:
             if ! awk '
               BEGIN {
                 allowed["INSTAGRAM_TESTER_AUTOMATION_ENABLED"] = 1
+                allowed["INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED"] = 1
                 allowed["INSTAGRAM_TESTER_ALLOWED_ACCOUNT_IDS"] = 1
                 allowed["INSTAGRAM_META_DEVELOPER_APP_ID"] = 1
                 allowed["INSTAGRAM_META_BUSINESS_ID"] = 1

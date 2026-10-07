@@ -73,6 +73,7 @@ def validate(stack, role, env, uid, gid=None):
         private_path(env['XAUTHORITY'], uid, 0o600)
     if role == 'manager':
         require(env.get('INSTAGRAM_TESTER_RUNTIME_MODE') == 'vps')
+        require(env.get('INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED', 'false') in ('true', 'false'))
         require(env.get('PATH') == '/usr/local/bin:/usr/bin:/bin')
         require(env['HOME'] == home and env['INSTAGRAM_TESTER_CHROMIUM_SANDBOX'] == 'true')
         require(env['INSTAGRAM_TESTER_BROWSER_PROFILE'] == f'{home}/profile')

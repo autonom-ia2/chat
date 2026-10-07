@@ -2384,6 +2384,306 @@
         "invite_state_contract_requests": []
       },
       "interpretation": "Emissor corrigido gerou recibo completo. Baseline/transition completos, mas identidade por leaftext exato continua0. Token lexical inteiro do username esta em1divrolebutton visible/enabled posselecao. Selecao exata provada; predicado selectedtransition recusouantesAdd. NenhumPOSTconvite/confirmacao. Recuperacaoautomaticaindependentecgroup/perfilok. NaoafirmarcausaestilotextoMetasemobservacao."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-token-contract-dry-20261007-220720",
+      "script_sha256": "d1da003c641d5ad0adfc32969d8e202b93deecfdcbb189fd3a9441d8cd1d4955",
+      "status": "observation_completed",
+      "failed_phase": null,
+      "failure_class": null,
+      "manager_restored": true,
+      "restore_basis": "terminal_cgroup_and_profile_exclusive",
+      "restore_failure_class": null,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "2ad0f8fd3d386ace94f72419349d2182af30f589c48054893c3aecdb0d34a245",
+      "result": {
+        "diagnostic": "browser_username_invite_token_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": null,
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "result_popup_source_truncated": false,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "invite_contract_target_sources_truncated": false,
+        "confirmation_performed": true,
+        "invite_performed": false,
+        "publication_performed": false,
+        "invite_state_contract_baseline_capture_complete": true,
+        "invite_state_contract_baseline_identity_count": 0,
+        "invite_state_contract_baseline_identity_button_count": 0,
+        "invite_state_contract_baseline_token_count": 0,
+        "invite_state_contract_baseline_token_button_count": 0,
+        "invite_state_contract_baseline_source_truncated": false,
+        "invite_state_contract_transition_capture_complete": true,
+        "invite_state_contract_transition_identity_count": 0,
+        "invite_state_contract_transition_identity_button_count": 0,
+        "invite_state_contract_transition_identity_button_unique": false,
+        "invite_state_contract_transition_identity_button_visible": false,
+        "invite_state_contract_transition_identity_button_enabled": false,
+        "invite_state_contract_transition_identity_button_new": false,
+        "invite_state_contract_transition_identity_button_role": null,
+        "invite_state_contract_transition_target_found": false,
+        "invite_state_contract_transition_target_unique": false,
+        "invite_state_contract_transition_token_count": 1,
+        "invite_state_contract_transition_token_button_count": 1,
+        "invite_state_contract_transition_token_button_unique": true,
+        "invite_state_contract_transition_token_button_visible": true,
+        "invite_state_contract_transition_token_button_enabled": true,
+        "invite_state_contract_transition_token_button_new": true,
+        "invite_state_contract_transition_token_button_role": "button",
+        "invite_state_contract_transition_token_found": true,
+        "invite_state_contract_transition_token_unique": true,
+        "invite_state_contract_transition_source_truncated": false,
+        "invite_state_contract_selection_performed": true,
+        "invite_state_contract_selection_failure": null,
+        "invite_state_contract_instagram_tester_checked": true,
+        "invite_state_contract_add_button_found": true,
+        "invite_state_contract_add_button_unique": true,
+        "invite_state_contract_add_button_visible": true,
+        "invite_state_contract_add_button_enabled": true,
+        "invite_state_contract_armed": true,
+        "invite_state_contract_confirmation_attempted": true,
+        "invite_state_contract_write_request_observed": true,
+        "invite_state_contract_write_request_count": 1,
+        "invite_state_contract_write_abort_failures": 0,
+        "invite_state_contract_requests_truncated": false,
+        "invite_state_contract_writes_blocked": true,
+        "invite_state_contract_last_request_target_matched": true,
+        "invite_state_contract_invite_request_target_matched": true,
+        "invite_state_contract_invite_request_count": 1,
+        "invite_state_contract_all_metadata_complete": true,
+        "invite_state_contract_failure": null,
+        "invite_state_contract_diagnostic_ok": true,
+        "invite_state_contract_requests": [
+          {
+            "origin_exact": true,
+            "path": "app_roles_add",
+            "path_exact": true,
+            "app_path_matched": true,
+            "method": "POST",
+            "body_bytes": 664,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "field_count": 19,
+            "field_names": [
+              "role",
+              "user_id_or_vanitys[0]",
+              "reload_on_success",
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "role",
+                "type": "string"
+              },
+              {
+                "name": "user_id_or_vanitys[0]",
+                "type": "string"
+              },
+              {
+                "name": "reload_on_success",
+                "type": "string"
+              },
+              {
+                "name": "__aaid",
+                "type": "string"
+              },
+              {
+                "name": "__bid",
+                "type": "string"
+              },
+              {
+                "name": "__user",
+                "type": "string"
+              },
+              {
+                "name": "__a",
+                "type": "string"
+              },
+              {
+                "name": "__req",
+                "type": "string"
+              },
+              {
+                "name": "__hs",
+                "type": "string"
+              },
+              {
+                "name": "dpr",
+                "type": "string"
+              },
+              {
+                "name": "__ccg",
+                "type": "string"
+              },
+              {
+                "name": "__rev",
+                "type": "string"
+              },
+              {
+                "name": "__s",
+                "type": "string"
+              },
+              {
+                "name": "__hsi",
+                "type": "string"
+              },
+              {
+                "name": "__dyn",
+                "type": "string"
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string"
+              },
+              {
+                "name": "jazoest",
+                "type": "string"
+              },
+              {
+                "name": "lsd",
+                "type": "string"
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string"
+              }
+            ],
+            "variables_json_valid": false,
+            "variables_object": false,
+            "variable_count": null,
+            "variables_truncated": false,
+            "variable_names": [],
+            "variable_shapes": [],
+            "identity_app_matched": true,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_aaid_matched": true,
+            "target_id_matched": true,
+            "role_matches_instagram_tester": true,
+            "reload_on_success_false": true
+          }
+        ]
+      },
+      "interpretation": "ProvaUI dry-run completa:exactuniqueJSONoption nativeclick;freshbaseline0→1tokeninteirocontrolebuttonvis/enabled,radioIG/Addunicos.1POSTcanonicalapp_roles_add19fields/664bytespinnedapp/bid/admin/AAID/target/role/reload. Todoswritesabortados1/0falhas;nenhuminvite/OAuth/conexao. confirmation_performed ecliquenativoAddcomredebloqueada,nãoconfirmaçãoservertester. cleanupmanager7unitscapscomprovados."
     }
-  ]
+  ],
+  "local_implementation": {
+    "production_mutated": false,
+    "flag_default": "false",
+    "provider_invite_performed": false,
+    "oauth_or_inbox_acceptance": false,
+    "checks": {
+      "node_runtime": {
+        "tests": 240,
+        "passed": 240,
+        "failed": 0,
+        "snapshot": "20261007-192310-47d0fdb8-8760104c67-14daf671",
+        "node": "m2",
+        "job": "m2-be35c58ae5cb47f299ea0c9e1f5cc5df"
+      },
+      "ruby_legacy_regression": {
+        "examples": 144,
+        "failed": 0,
+        "snapshot": "20261007-192010-47d0fdb8-f3332cd6ab-3a4f46ac",
+        "node": "m2",
+        "job": "m2-5c3a67e8d6f641b495093441afc7f52a",
+        "isolated_wrapper": true,
+        "production_environment": false
+      },
+      "eslint": {
+        "errors": 0,
+        "warnings": 0,
+        "job": "m2-d01bb2581fe04f3db0a7b73f5752ae38"
+      },
+      "actual_executor_offline": {
+        "cases": 34,
+        "passed": 34,
+        "network": false
+      },
+      "actual_ruby_services_fake_redis": {
+        "checks": 23,
+        "passed": 23,
+        "real_redis": false
+      },
+      "outcome_real_redis_cas": {
+        "cases": 4,
+        "passed": 4,
+        "node": "m2",
+        "job": "m2-1ee1588f08df45548b9e2fff3f4ad1fe",
+        "private_test_namespace_cleaned": true,
+        "production": false,
+        "durable_WAITAOF_tested": false
+      },
+      "rubocop_bundler": {
+        "files": 8,
+        "offenses": 0,
+        "node": "m2",
+        "job": "m2-2e1e27769aa54d59b1dc47190d932365",
+        "runtime": "Ruby3.4.4 isolated test tools",
+        "rbenv_init_available": false
+      },
+      "guide": {
+        "flows": 199,
+        "screens": 190,
+        "unexplained": 0,
+        "job": "m2-f1c8d17671cc4c9194505b3b9e333580",
+        "up_to_date": true
+      }
+    },
+    "files_sha256": {
+      "scripts/instagram_testers/browser-operations.mjs": "ca8eddba1103565df16f5375b03eff666d155fb27a3ef8e70fc0e392cc3dcfe2",
+      "scripts/instagram_testers/session-manager.mjs": "c011bdf898ec0e73ac6163301a8f44f28472909a2d3f166d2b48b435fc1b7e8a",
+      "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+      "app/services/instagram/testers/browser_operations.rb": "0d29e8d7cb7c72a3b7c59c592496246d9ef6253696a84b6716b6b96415140005",
+      "app/services/instagram/testers/invitation_outcome.rb": "1574c4d3a67665666d583c0675c67f6520d0f65fede5539111d79a34c27f1b74"
+    },
+    "release_approval_pending": true,
+    "preflight": {
+      "utc": "2026-10-07T22:27:51.444979+00:00",
+      "aws_runtime_sha": "caca5eae44705d6d9449d00b005fae67b2da454c",
+      "stacks_healthy_and_exact_allowlists": true,
+      "external_release": true,
+      "publication_performed_by_this_work": false,
+      "new_flag_utc": "2026-10-07T22:28:26.759286+00:00",
+      "new_flag_both_aws": "unset",
+      "flag_reader_sha256": "b51cc6009d465f9dc220761585a38846e5797d6ee1bd197f08ac6925dbbffb78"
+    },
+    "independent_review": {
+      "reviewer": "nexo_revisao",
+      "decision": "green_for_commit_and_ci",
+      "production_approval": false,
+      "previous_findings_closed": true,
+      "documentary_corrections_applied": true,
+      "release_plan_sha256": "3c0d06221ec98653003f5fd522a06328b575ffc13e69318b4c17154dcdcd6104"
+    }
+  }
 }

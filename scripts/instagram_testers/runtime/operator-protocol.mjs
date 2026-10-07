@@ -14,6 +14,25 @@ const exact = (value, keys) =>
   !Array.isArray(value) &&
   Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 const uuid = value => typeof value === 'string' && UUID.test(value);
+const BROWSER_ACTIONS = ['search', 'status', 'authorization', 'invite'];
+const BROWSER_ERRORS = [
+  'invalid_username',
+  'invalid_selection',
+  'meta_unavailable',
+  'meta_session_expired',
+  'unknown_status',
+  'invite_rejected',
+  'invite_unknown',
+  'rate_limited',
+  'forbidden',
+  'not_enabled',
+  'busy',
+  'proxy_unavailable',
+  'session_update_rejected',
+  'operator_required',
+];
+const username = value =>
+  typeof value === 'string' && /^[a-z0-9._]{1,30}$/.test(value);
 export const METADATA_KEYS = [
   'INSTAGRAM_META_DEVELOPER_APP_ID',
   'INSTAGRAM_META_BUSINESS_ID',
@@ -86,6 +105,33 @@ export function validateOperatorRequest(value) {
   );
 }
 
+export function validateBrowserOperation(value, claimed = false) {
+  const roleAction = value?.action !== 'search';
+  const keys = [
+    'id',
+    'request_id',
+    'action',
+    'state',
+    'deadline',
+    'app_id',
+    'username',
+    ...(roleAction ? ['target_id'] : []),
+    ...(claimed ? ['claim'] : []),
+  ];
+  return (
+    exact(value, keys) &&
+    uuid(value.id) &&
+    uuid(value.request_id) &&
+    BROWSER_ACTIONS.includes(value.action) &&
+    ['queued', 'running'].includes(value.state) &&
+    timestamp(value.deadline) &&
+    numeric(value.app_id) &&
+    username(value.username) &&
+    (!roleAction || numeric(value.target_id)) &&
+    (!claimed || (value.state === 'running' && uuid(value.claim)))
+  );
+}
+
 export function parseEnvelope(output, type) {
   try {
     if (typeof output !== 'string' || Buffer.byteLength(output) > 1024)
@@ -113,6 +159,54 @@ export function parseEnvelope(output, type) {
       (value.request === null || validateOperatorRequest(value.request))
     )
       return value;
+    if (value?.type === 'browser_operation') {
+      if (value.operation === 'invite_permit') {
+        const failed = Object.hasOwn(value, 'error_code');
+        if (
+          exact(value, [
+            'type',
+            'operation',
+            'id',
+            'request_id',
+            'claim',
+            ...(failed ? ['error_code'] : ['decision', 'status']),
+          ]) &&
+          uuid(value.id) &&
+          uuid(value.request_id) &&
+          uuid(value.claim) &&
+          (failed
+            ? BROWSER_ERRORS.includes(value.error_code)
+            : (value.decision === 'write' && value.status === 'absent') ||
+              (value.decision === 'noop' && value.status === 'pending'))
+        )
+          return value;
+      }
+      if (
+        ['read', 'claim'].includes(value.operation) &&
+        exact(value, ['type', 'operation', 'request']) &&
+        ((value.operation === 'read' && value.request === null) ||
+          validateBrowserOperation(value.request, value.operation === 'claim'))
+      )
+        return value;
+      if (
+        value.operation === 'complete' &&
+        exact(value, [
+          'type',
+          'operation',
+          'id',
+          'request_id',
+          'state',
+          ...(Object.hasOwn(value, 'error_code') ? ['error_code'] : []),
+        ]) &&
+        uuid(value.id) &&
+        uuid(value.request_id) &&
+        ['ready', 'failed', 'expired'].includes(value.state) &&
+        (value.state === 'ready'
+          ? !Object.hasOwn(value, 'error_code')
+          : BROWSER_ERRORS.includes(value.error_code))
+      )
+        return value;
+    }
     throw failure();
   } catch {
     throw failure();
@@ -145,6 +239,98 @@ export function validateRequest(value) {
         uuid(value.id) &&
         ['operator_required', 'failed'].includes(value.state);
     valid = valid && Buffer.byteLength(JSON.stringify(value)) <= 512;
+  } else if (value?.type === 'browser_operation') {
+    if (value.operation === 'read') valid = exact(value, ['type', 'operation']);
+    if (value.operation === 'invite_permit')
+      valid =
+        exact(value, [
+          'type',
+          'operation',
+          'id',
+          'request_id',
+          'claim',
+          'captured_at',
+          'target_id',
+          'username',
+          'status',
+        ]) &&
+        uuid(value.id) &&
+        uuid(value.request_id) &&
+        uuid(value.claim) &&
+        timestamp(value.captured_at) &&
+        numeric(value.target_id) &&
+        username(value.username) &&
+        value.status === 'absent';
+    if (value.operation === 'claim')
+      valid =
+        exact(value, ['type', 'operation', 'id', 'request_id']) &&
+        uuid(value.id) &&
+        uuid(value.request_id);
+    if (value.operation === 'complete') {
+      const failed = Object.hasOwn(value, 'error_code');
+      const search = value.action === 'search';
+      const invite = value.action === 'invite';
+      let resultKeys = ['target_id', 'status'];
+      if (failed)
+        resultKeys = invite
+          ? ['target_id', 'error_code', 'write_started']
+          : ['error_code'];
+      else if (search) resultKeys = ['results'];
+      else if (invite)
+        resultKeys = ['target_id', 'status', 'invited', 'write_started'];
+      const keys = [
+        'type',
+        'operation',
+        'action',
+        'id',
+        'request_id',
+        'claim',
+        'captured_at',
+        ...resultKeys,
+      ];
+      valid =
+        exact(value, keys) &&
+        BROWSER_ACTIONS.includes(value.action) &&
+        uuid(value.id) &&
+        uuid(value.request_id) &&
+        uuid(value.claim) &&
+        timestamp(value.captured_at);
+      if (failed)
+        valid =
+          valid &&
+          BROWSER_ERRORS.includes(value.error_code) &&
+          (!invite ||
+            (numeric(value.target_id) &&
+              typeof value.write_started === 'boolean'));
+      else if (search)
+        valid =
+          valid &&
+          Array.isArray(value.results) &&
+          value.results.length <= 100 &&
+          value.results.every(
+            candidate =>
+              exact(candidate, ['id', 'username', 'name', 'avatar_url']) &&
+              numeric(candidate.id) &&
+              username(candidate.username) &&
+              typeof candidate.name === 'string' &&
+              candidate.name.length <= 500 &&
+              (candidate.avatar_url === null ||
+                typeof candidate.avatar_url === 'string')
+          );
+      else
+        valid =
+          valid &&
+          numeric(value.target_id) &&
+          ['absent', 'pending', 'accepted'].includes(value.status) &&
+          (!invite ||
+            (typeof value.invited === 'boolean' &&
+              typeof value.write_started === 'boolean' &&
+              value.invited === value.write_started &&
+              ['pending', 'accepted'].includes(value.status) &&
+              (!value.invited || value.status === 'pending')));
+    }
+    valid =
+      valid && Buffer.byteLength(JSON.stringify(value)) <= 2 * 1024 * 1024;
   } else if (value?.type === 'session') {
     if (['version', 'bootstrap'].includes(value.operation))
       valid = exact(value, ['type', 'operation']);

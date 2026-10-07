@@ -848,6 +848,7 @@ Rails.application.routes.draw do
             get 'testers/search', to: 'testers#search'
             post 'testers/status', to: 'testers#status'
             post 'testers/invite', to: 'testers#invite'
+            get 'testers/operations/:id', to: 'testers#operation'
           end
 
           namespace :tiktok do

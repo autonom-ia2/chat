@@ -230,3 +230,48 @@ Nenhum clique Add, confirmacao ou request de convite. Navegador encerrado, launc
 
 
 Verificacao de isolamento21:57:07UTC: leitura viaRedis::Alfred deINFOserver.run_id, emitindo somenteSHA256, comprovou servidoresRedis fisicos distintos nas duasAWS. Ambos runtimes8ec e allowlists exatamente conta1/18; sessoes/gestores saudaveis. Os fingerprints e endpoints nao foram publicados. A fila global e segura nesse escopo de backends fisicamente separados/uma conta autorizada; compartilharRedis entre stacks exigira afinidade antes de ativar. Essa precondicao deve ser reconfirmada no release, nao inferida somente dos nomes AWS. Nenhum filtro/esquema novo foi adicionado para um compartilhamento nao observado.
+
+
+Preparacao local do candidato seguinte: textos normalizados de120caracteres/64fontes possuem flag de truncagem nos tres leitores; qualquer limite excedido impede captura e selecao. Root corrigiu ainda o if anterior ao clique nativo para exigir !sourceTruncated, apos revisao independente apontar que a recusa externa ocorria tarde demais. Nenhuma fonte draft recusada foi executada. Fixtures14cenarios e emissor completo/no-undef45estados passaram offline; verificacao do callback real antes do clique em andamento. Harness da funcao real de recuperacao do runner passou10cenarios (processo/grupo/perfil vivo recusam); zeroSSH/mutacao de servico pelo harness. Isso nao acrescenta uma observacao remota nem comprova convite.
+
+
+## Vigesima segunda observacao - 22:08 UTC, contrato UI de convite capturado e abortado
+
+Observer `d1da003c641d5ad0adfc32969d8e202b93deecfdcbb189fd3a9441d8cd1d4955`, runner `2ad0f8fd3d386ace94f72419349d2182af30f589c48054893c3aecdb0d34a245`, unit `instagram-hub2you-browser-invite-token-contract-dry-20261007-220720`. Revisao independente,14fixtures adversariais, emissor real/no-undef45estados, harness real do callback de clique e preflight22:07:16UTC antecederam uma unica execucao. Harness real provou clique normal1 e clique0 se qualquer opcao tiver fonte acima120caracteres/64fontes. Drafts recusados nao foram executados.
+
+Runner observation_completed. Popup exato/unico e opcao vinculada ao mesmoJSONvalidID, clique nativo uma vez. Baseline fresco noDialog0token/0button; depois exatamente1controlebutton com token lexical inteiro do username, visivel/habilitado/novo, sem truncagem. Texto isolado leafidentity permanece0 e e apenas observacao. RadioInstagramtester marcado; Addunico visivel/habilitado. Nao inferir formato literal do rotulo a partir dos booleans.
+
+O clique Add protegido produziu exatamente1POST na origemdevelopers.facebook.com e path /apps/<app_id>/async/instagram/roles/add/. Corpo664bytes,19campos completos e sem duplicatas:16campos do typeahead maisrole,user_id_or_vanitys[0],reload_on_success. Aplicativo no path, business/admin/AAIDfreshRoles e IDdoalvo correspondem aos pins; role igualinstagramtesters e reloadfalse. Uma escrita observada/abortada, zero falhas de abort, sem truncagem. confirmation_performed=true significa tentativa de clique com rede abortada; NAO significa convite aplicado. Nao ha resposta de sucesso do provider nem tester aplicado, OAuth, inbox ou reconexao provados.
+
+Chrome encerrado, launch settled, lock liberado, gestor restaurado automaticamente apos terminal/cgroup/perfil exclusivo, sete units e limites preservados. Essa prova permite implementar localmente o contrato no executor; convite real continua proibido ate revisao/release/aprovacao. Permit duravel de uso unico reutilizara claimUUID internamente e OutcomeNX/WAITAOF; nunca substituir clique autenticado do usuario ou autorizacao de release. Nenhuma nova key/grant planejada.
+
+
+## Implementação local após POC22 — revisão e validação
+
+O convite foi implementado somente após o contrato observado: 19 campos, alvo exato, uma escrita, permissão fresca no backend e claim de uso único com o token interno da operação. A flag nova continua ausente/false em produção; nenhum merge, deploy, instalação permanente ou convite real desta implementação.
+
+Revisão independente encontrou e corrigiu duas falhas de proteção: no-op pending não pode apagar marcador a partir de status sintético; `unwatch` retorna `OK`, portanto divergência de geração precisa retornar falso explicitamente. Erro genérico, captura inválida ou ACL revogada preservam unknown; liberação ocorre apenas em erro pré-write validado ou resposta estrita HTTP200/payload.success=false. Accepted observado fresco pode reconciliar. O polling autorizado não depende de sessão/proxy disponíveis para ler o resultado terminal.
+
+Revisão adicional exige âncoras Roles/typeahead intactas antes do Add, antes do permit e antes de continuar o POST. Atualização extra da Meta invalida a operação. Harness privado carrega o módulo real e cobre 34 cenários de formulário/permit/resposta/fronteira de escrita; todos passaram sem rede/provider. Dois casos revalidam âncora inválida antes/depois do permit. A primeira fixture não fornecia rolesResult.ok e falhou corretamente; só a execução corrigida conta como aprovada. Harness Ruby privado carrega as classes reais com Redis/modelos sintéticos:23 verificações passaram, incluindo9 casos novos de marcador/CAS/ACL; não é Redis real nem Rails completo.
+
+Snapshot com checksum foi replicado aos dois Macs; testes pesados usam M2 pelo scheduler, com M4 excluído por espaço/temperatura. Primeira execução Node com8arquivos falhou em entrypoints por dependências runtime ausentes; preparar dependências locked no snapshot antes de repetir. ESLint completo encontrou7 erros no executor, incluindo maxControls inexistente no callback DOM; correção e novo check necessários. RSpec do snapshot não iniciou por css_parser3.2.0 ausente; não declarar aprovado. Preparação dessa dependência no runtime de testes M2, sem reinstalar Ruby ou alterar produção, foi planejada explicitamente no nó M2.
+
+Plano novo: `docs/audit/995-browser-operations-release-plan-20261007.md`. A aprovação final permanece pendente após revisão/checks do head concreto. Redis Alfred distinto e allowlists exatas são pré-requisitos a reconfirmar; metadata fica congelada na janela de ativação. Não ampliar para compartilhamento de fila entre instalações.
+
+
+Rodada final isolada:240/240 testes Node passaram no snapshot192310;144 exemplos Ruby passaram sem falhas no snapshot192010, usando o wrapper que limpa ENV e fixa PostgreSQL55432/Redis56379. Os nove arquivos Ruby validam regressão dos caminhos existentes; não substituem integração202/poll/provider. Dependência css_parser3.2.0 e sua dependência ssrf_filter1.6.0 foram preparadas somente no runtime de teste M2. ESLint completo dos quatro arquivos JS/Node alterados passou sem erros/avisos após correção do maxControls e sombreamentos. Callback DOM real validou baseline0/token1 e recusa acima de500controles; nenhum provider acessado. O scheduler recusou um check adicional por M2thermalunknown/M4disco; não forçar nó. RuboCop CLI parcial anterior não equivale a check Bundler completo pendente.
+
+
+Validação final adicional:4 CAS passaram contra Redis de teste real56379 no M2, namespace UUID exclusivo limpo sem FLUSH:pending da mesma geração; geração diferente retornafalse mesmo com UNWATCH=OK;release antigo preserva nova geração;reconcile concorrente preserva geração instalada após snapshot. Não exercitou WAITAOF/Redis de produção. RuboCop via Bundler inspecionou8arquivos alterados sem ofensas no runtime Ruby3.4.4 explícito do M2. A tentativa de initrbenv no ambiente limpo do worker retornou comando não encontrado; o binário Ruby/Bundler e GEM_HOME/GEM_PATH foram fixados nos test tools, não houve downgrade/reinstalação de runtime. Não elevar isso a validação do ambiente local M4.
+
+
+Guia:check final passou no M2:199fluxos,190telas,0sem explicação. Warnings de Browserslist/logger não alteraram o resultado; nenhuma biblioteca atualizada para escondê-los. Main avançou externamente para caca5eae44705d6d9449d00b005fae67b2da454c; diff desde8ec é email/identidade visual, sem sobreposição nos arquivos funcionais Instagram. Não rebasear/mergear automaticamente; revalidar main/CI na fila após aprovação.
+
+
+Preflight de leitura22:27:51UTC:ambas AWS já executam caca5eae44705d6d9449d00b005fae67b2da454c por publicação externa. Sessoes disponíveis, managershealthy, ponteirosactive e restrição exata1/18 confirmados; nenhuma solicitação humana em andamento. Capturas recentes verificadas, sem atribuir essa renovação/publicação a esta PR.
+
+
+Leitura22:28:26UTC, observerb51cc6009d465f9dc220761585a38846e5797d6ee1bd197f08ac6925dbbffb78:flag nova explicitamenteunset nas duas AWS, portanto defaultfalse. Inspeção só emitiu unset/true/false/invalid; nenhum valor de secret. Mesmos runtimescaca/sessoes/allowlists saudáveis, sem mutação.
+
+
+Revisão final independenteNexo:verde condicional para commit/CI/revisão da PR, sem novo bloqueio funcional ou de segurança. Todos os achados anteriores fechados nos hashes registrados. Duas correções documentais aplicadas:Chrome faz busca/status/convite;backend prepara URL OAuth depois do accepted. Alvo do teste é autorizado, mas a ativação do piloto ainda depende da aprovação final. Parecer não autoriza merge/deploy/instalação nem declara aceite de provider. Maincaca revalidada; CI deve executar no head final antes da liberação.

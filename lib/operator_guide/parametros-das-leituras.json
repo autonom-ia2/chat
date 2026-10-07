@@ -1541,6 +1541,10 @@
     "controller": "api/v1/accounts/instagram/testers#configuration",
     "parametros": []
   },
+  "instagram/testers/operations/:id": {
+    "controller": "api/v1/accounts/instagram/testers#operation",
+    "parametros": []
+  },
   "instagram/testers/search": {
     "controller": "api/v1/accounts/instagram/testers#search",
     "parametros": [

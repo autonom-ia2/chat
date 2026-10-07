@@ -27,20 +27,22 @@ GATEWAY = COMMON | {
     'INSTAGRAM_TESTER_VNC_SOCKET', 'INSTAGRAM_TESTER_GATEWAY_PORT', 'INSTAGRAM_TESTER_GATEWAY_STATE_DIR',
 }
 ALLOWED = {'display': DISPLAY, 'manager': MANAGER, 'gateway': GATEWAY, 'publisher': PUBLISHER}
+OPTIONAL = {'manager': {'INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED'}}
 
 
 def read_literals(path, role):
     values = {}
+    optional = OPTIONAL.get(role, set())
     for line in path.read_text().splitlines():
         if not line or line.startswith('#'):
             continue
         key, separator, value = line.partition('=')
-        require(separator and key in ALLOWED[role] and key not in values)
+        require(separator and key in ALLOWED[role] | optional and key not in values)
         # This is intentionally a strict subset of systemd EnvironmentFile syntax.
         require(not any(c.isspace() or ord(c) < 32 or c in '\\"\'' for c in value))
         require('REQUIRED_' not in value)
         values[key] = value
-    require(values.keys() == ALLOWED[role])
+    require(values.keys() - optional == ALLOWED[role])
     return values
 
 
