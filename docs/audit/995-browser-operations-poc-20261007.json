@@ -1973,7 +1973,234 @@
         "publication_performed": false,
         "invite_performed": false
       },
-      "interpretation": "Busca válida mas popup não observado:predicado document.querySelector de diálogo visível encontrouzero. Não prova expiração ou inexistência do resultado. Próximo candidato precisa preservar referência do input já preenchido e vincular aria-controls sem depender da geometria do wrapper. Nenhum clique de resultado/convite/publicação. Cleanup e recursos preservados."
+      "interpretation": "Busca exata comprovada; leitura popup devolveu defaults. A POC17 identificou ReferenceError no sanitizador local; o catch também mascara falhas de leitura como contagens zero. A saída POC16 não basta para concluir ausência de diálogo/input/popup e precisa ser reavaliada após correção. Nenhum resultado selecionado, convite ou publicação; cleanup e recursos preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-popup-handle-20261007-211946",
+      "script_sha256": "bca6febad7a4eec7f0854e0d2dab87f7b2a9db4844510705d7160d5c1db31166",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "02c5bb19d2bfd1285b1bb84a0f895a15d56051b3c4b3e7dae565164696cc04da",
+      "result": {
+        "diagnostic": "browser_username_result_popup_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "search_result_popup_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": false,
+        "result_popup_stable": false,
+        "result_popup_failure": "popup_not_bound",
+        "result_popup_input_connected": false,
+        "result_popup_input_tag_valid": false,
+        "result_popup_target_entry_response_id_valid": false,
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Busca exata novamente comprovada; captura popup devolveu defaults. Inspeção local encontrou variável option_matches indefinida no sanitizador (const declarado optionMatches), escondida pelo catch. POC17 teve saída incompleta por erro local; defaults POC16 também não permitem concluir ausência de diálogo/input/popup sem comprovar leitura completa. Nenhuma seleção, confirmação, convite ou publicação; encerramento, restauração e limites comprovados. Correção e harness offline necessários antes de nova execução."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-popup-fixed-20261007-212959",
+      "script_sha256": "1c3ecbf9579b0400a65e9c1373dc554090cca8890c58cdeaba7a3298ab7d9166",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "95d8a5f356aceeb6d681dd49a2b6a44e58a5de6dc43cd06cd09c2e55a0da6a82",
+      "result": {
+        "diagnostic": "browser_username_result_popup_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": null,
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_failure": null,
+        "result_popup_input_connected": true,
+        "result_popup_input_tag_valid": true,
+        "result_popup_input_visible": true,
+        "result_popup_input_enabled": true,
+        "result_popup_combobox_unique": true,
+        "result_popup_listbox_unique": true,
+        "result_popup_option_count": 2,
+        "result_popup_option_inspected_count": 2,
+        "result_popup_options_truncated": false,
+        "result_popup_authorized_username_match_count": 1,
+        "result_popup_entry_text_match_count": 1,
+        "result_popup_entry_username_match_count": 1,
+        "result_popup_entry_name_match_count": 0,
+        "result_popup_target_entry_exact_match_count": 0,
+        "result_popup_target_entry_response_id_valid": true,
+        "result_popup_target_entry_bound_to_response_entry": false,
+        "result_popup_option_matches": [
+          {
+            "tag": "div",
+            "role": "option",
+            "visible": true,
+            "enabled": true,
+            "authorized_username_match": true,
+            "entry_text_match": true,
+            "entry_username_match": true
+          },
+          {
+            "tag": "div",
+            "role": "option",
+            "visible": true,
+            "enabled": true
+          }
+        ],
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Popup lido integralmente/estavel:2options, uma opcao visivel/habilitada com username/text exatos do autorizado. Nome secundario subtitle nao coincidiu; gate composto com fullname nao provado, nao usar como requisito de identidade do UI. IDJSON valido/unico, nao ID literal DOM. Nenhuma selecao/confirma/convite/publicacao; cleanup/restauracao/limites completos. Proximo contrato exige username exato unico/entrada JSON valida e bloqueio de todas escritas."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-contract-dry-20261007-213750",
+      "script_sha256": "c6771755c2edb479b9b97db8894836bb55e9cbd95d4d7361ffee35862ae32b64",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "8d73ae5f2dd460c90db56cfa7a2ee0331ddaf2a439afe701e985fd5b9c945999",
+      "result": {
+        "diagnostic": "browser_username_invite_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "invite_contract_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "invite_contract_target_option_found": true,
+        "invite_contract_target_option_unique": true,
+        "invite_contract_target_option_visible": true,
+        "invite_contract_target_option_enabled": true,
+        "invite_contract_target_option_exact": true,
+        "invite_contract_target_option_response_bound": true,
+        "invite_contract_state_capture_complete": false,
+        "invite_contract_selected_chip_count": 0,
+        "invite_contract_instagram_tester_checked": false,
+        "invite_contract_add_button_found": false,
+        "invite_contract_armed": false,
+        "invite_contract_confirmation_attempted": false,
+        "invite_contract_write_request_count": 0,
+        "invite_contract_write_abort_failures": 0,
+        "invite_contract_requests_truncated": false,
+        "invite_contract_failure": "selected_target_state_not_proved",
+        "confirmation_performed": false,
+        "invite_performed": false,
+        "publication_performed": false,
+        "selected_result_snapshot": {
+          "result_capture_complete": true,
+          "candidate_count": 6,
+          "inspected_count": 6,
+          "inspection_truncated": false,
+          "snapshot_truncated": false,
+          "target_exact_count": 0,
+          "target_exact_unique": false,
+          "target_exact_roles": [],
+          "target_exact_types": [],
+          "target_exact_editable": false,
+          "target_exact_selected": false,
+          "target_token_match_count": 1,
+          "target_entry_text_match_count": 0,
+          "target_entry_username_match_count": 0,
+          "target_entry_name_match_count": 0,
+          "target_entry_identity_match_count": 0,
+          "target_entry_identity_unique": false,
+          "target_entry_identity_selected": false,
+          "target_entry_exact_match_count": 0,
+          "target_entry_exact_unique": false,
+          "target_entry_matches": [
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "target_entry_matches_truncated": false,
+          "action_button_count": 4,
+          "action_buttons_known_count": 1,
+          "action_buttons_unknown_count": 3,
+          "action_buttons": [
+            {
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add",
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "known_confirmation_button_count": 1,
+          "known_confirmation_buttons": [
+            "add"
+          ],
+          "selected_chip_count": 0,
+          "selected_chip_present": false,
+          "controls": [
+            {
+              "tag": "a",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add"
+            },
+            {
+              "tag": "div",
+              "selected": true,
+              "name_unknown": true
+            }
+          ]
+        }
+      },
+      "interpretation": "Opcao alvo exata/unica visivel/habilitada e vinculada aJSON foi selecionada. Leitura posterior completa6controles achou tokenusername emdivrolebutton eAddunicoenabled; nao provou leaftext/username exatos por sourcesForsemTreeWalker nem aria-selectedchip. Falhou antesAdd; nenhum requestinvite/confirm/pub. Proximo candidato compara freshbaselineantesselect comregistroexatounicovisivelenableddepois, namesecundario/ARIAnaosupostos; writescontinuamabortados."
     }
   ]
 }
