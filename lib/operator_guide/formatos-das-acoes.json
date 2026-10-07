@@ -16187,12 +16187,15 @@
     "controller": "api/v1/accounts/instagram/authorizations#create",
     "modelo": "Inbox",
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:41",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:47",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:46",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:39"
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:10",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:70",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:58",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:57",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:50",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:37"
     ],
     "sem_corpo": false
   },
@@ -16203,8 +16206,9 @@
     "completo": true,
     "controller": "api/v1/accounts/instagram/testers#invite",
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:23",
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:36",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:94",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -16215,8 +16219,9 @@
     "completo": true,
     "controller": "api/v1/accounts/instagram/testers#status",
     "origem": [
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:18",
-      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:59"
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:25",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:94",
+      "app/controllers/api/v1/accounts/instagram/testers_controller.rb:28"
     ],
     "sem_corpo": false
   },

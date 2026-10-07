@@ -1,15 +1,26 @@
 # Fixed stdin protocol for the restricted runtime. No executable input is accepted.
+# Keep the stdin protocol validators together so every publisher reply is bounded
+# before it reaches the browser transport.
+# rubocop:disable Metrics/ClassLength -- session and browser envelopes share one protocol boundary
 class Instagram::Automation::SessionPublisher
   INPUT_KEYS = {
     %w[operator manager_heartbeat] => %w[type operation state control_available],
     %w[operator operator_read] => %w[type operation],
     %w[operator operator_claim] => %w[type operation id],
     %w[operator operator_complete] => %w[type operation id state],
+    %w[browser_operation read] => %w[type operation],
+    %w[browser_operation claim] => %w[type operation id request_id],
+    %w[browser_operation invite_permit] => %w[type operation id request_id claim captured_at target_id username status],
     %w[session bootstrap] => %w[type operation],
     %w[session version] => %w[type operation],
     %w[session publish] => %w[type operation session expected_version captured_at app_id business_id proxy_fingerprint roles_response
                               configuration_revision roles_doc_id]
   }.freeze
+  BROWSER_COMPLETE_KEYS = %w[type operation action id request_id claim captured_at].freeze
+  BROWSER_ACTIONS = %w[search status authorization invite].freeze
+  BROWSER_ROLE_ACTIONS = %w[status authorization invite].freeze
+  BROWSER_STATUS_VALUES = %w[absent pending accepted].freeze
+  BROWSER_TIMESTAMP = /\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\z/
   FINGERPRINT = /\A[0-9a-f]{64}\z/
   # Pin every configuration read by SessionStore to the same locked metadata snapshot.
   Snapshot = Struct.new(:app_id, :business_id, :admin_user_id, :proxy_fingerprint, keyword_init: true)
@@ -17,6 +28,7 @@ class Instagram::Automation::SessionPublisher
   def call(request)
     validate!(request)
     return operator_result(request) if request.fetch('type') == 'operator'
+    return browser_operation_result(request) if request.fetch('type') == 'browser_operation'
 
     configuration = Instagram::Testers::Configuration.new(account_id: '0')
     raise Instagram::Testers::Error, 'session_update_rejected' unless configuration.managed_session? && configuration.proxy.valid?
@@ -97,11 +109,31 @@ class Instagram::Automation::SessionPublisher
     end
   end
 
+  def browser_operation_result(request)
+    operations = Instagram::Testers::BrowserOperations.new
+    case request.fetch('operation')
+    when 'read'
+      { type: 'browser_operation', operation: 'read', request: operations.next_request }
+    when 'claim'
+      claimed = operations.claim(id: request.fetch('id'), request_id: request.fetch('request_id'))
+      { type: 'browser_operation', operation: 'claim', request: claimed }
+    when 'invite_permit'
+      invite_permit_result(operations, request)
+    when 'complete'
+      completed = operations.complete!(request)
+      response = { type: 'browser_operation', operation: 'complete', id: completed.fetch('id'),
+                   request_id: completed.fetch('request_id'), state: completed.fetch('state') }
+      response[:error_code] = completed.fetch('error_code') if completed.key?('error_code')
+      response
+    end
+  end
+
   def validate!(request)
     raise Instagram::Automation::OperatorControl::Rejected unless request.is_a?(Hash) && request.keys.sort == expected_keys(request).sort
     raise Instagram::Automation::OperatorControl::Rejected if request.to_json.bytesize > (request['type'] == 'operator' ? 512 : 2.megabytes)
 
     validate_operator_fields!(request)
+    validate_browser_operation!(request) if request['type'] == 'browser_operation'
     validate_session!(request) if request['operation'] == 'publish'
   end
 
@@ -113,11 +145,120 @@ class Instagram::Automation::SessionPublisher
   end
 
   def expected_keys(request)
+    return browser_complete_keys(request) if request['type'] == 'browser_operation' && request['operation'] == 'complete'
+
     keys = INPUT_KEYS[[request['type'], request['operation']]]
     raise Instagram::Automation::OperatorControl::Rejected unless keys
     return keys unless %w[publish manager_heartbeat].include?(request['operation'])
 
     request.key?('request_id') ? keys + ['request_id'] : keys
+  end
+
+  def browser_complete_keys(request)
+    action = request['action']
+    if request.key?('error_code')
+      return BROWSER_COMPLETE_KEYS + %w[target_id error_code write_started] if action == 'invite'
+      return BROWSER_COMPLETE_KEYS + ['error_code'] if BROWSER_ACTIONS.include?(action)
+
+      raise Instagram::Automation::OperatorControl::Rejected
+    end
+    return BROWSER_COMPLETE_KEYS + ['results'] if action == 'search'
+    return BROWSER_COMPLETE_KEYS + %w[target_id status invited write_started] if action == 'invite'
+    return BROWSER_COMPLETE_KEYS + %w[target_id status] if BROWSER_ROLE_ACTIONS.include?(action)
+
+    raise Instagram::Automation::OperatorControl::Rejected
+  end
+
+  def validate_browser_operation!(request) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity -- exact envelope validation is intentionally fail-closed
+    case request.fetch('operation')
+    when 'read'
+      true
+    when 'claim'
+      validate_browser_uuid!(request.fetch('id'))
+      validate_browser_uuid!(request.fetch('request_id'))
+    when 'invite_permit'
+      validate_browser_uuid!(request.fetch('id'))
+      validate_browser_uuid!(request.fetch('request_id'))
+      validate_browser_uuid!(request.fetch('claim'))
+      validate_browser_timestamp!(request.fetch('captured_at'))
+      raise Instagram::Automation::OperatorControl::Rejected unless Instagram::Testers::Validation.id?(request.fetch('target_id'))
+      raise Instagram::Automation::OperatorControl::Rejected unless Instagram::Testers::Validation.username?(request.fetch('username'))
+      raise Instagram::Automation::OperatorControl::Rejected unless request.fetch('status') == 'absent'
+    when 'complete'
+      validate_browser_uuid!(request.fetch('id'))
+      validate_browser_uuid!(request.fetch('request_id'))
+      validate_browser_uuid!(request.fetch('claim'))
+      validate_browser_timestamp!(request.fetch('captured_at'))
+      if request.key?('error_code')
+        validate_browser_error_code!(request.fetch('error_code'))
+        if request.fetch('action') == 'invite'
+          raise Instagram::Automation::OperatorControl::Rejected unless Instagram::Testers::Validation.id?(request.fetch('target_id'))
+          raise Instagram::Automation::OperatorControl::Rejected unless [true, false].include?(request.fetch('write_started'))
+        end
+        return
+      end
+      if request.fetch('action') == 'search'
+        validate_browser_results!(request.fetch('results'))
+      elsif request.fetch('action') == 'invite'
+        raise Instagram::Automation::OperatorControl::Rejected unless Instagram::Testers::Validation.id?(request.fetch('target_id'))
+        raise Instagram::Automation::OperatorControl::Rejected unless %w[pending accepted].include?(request.fetch('status'))
+        raise Instagram::Automation::OperatorControl::Rejected unless [true, false].include?(request.fetch('invited'))
+        raise Instagram::Automation::OperatorControl::Rejected unless [true, false].include?(request.fetch('write_started'))
+        raise Instagram::Automation::OperatorControl::Rejected unless request.fetch('invited') == request.fetch('write_started')
+        raise Instagram::Automation::OperatorControl::Rejected if request.fetch('invited') && request.fetch('status') != 'pending'
+      else
+        raise Instagram::Automation::OperatorControl::Rejected unless BROWSER_ROLE_ACTIONS.include?(request.fetch('action'))
+        raise Instagram::Automation::OperatorControl::Rejected unless Instagram::Testers::Validation.id?(request.fetch('target_id'))
+        raise Instagram::Automation::OperatorControl::Rejected unless BROWSER_STATUS_VALUES.include?(request.fetch('status'))
+      end
+    else
+      raise Instagram::Automation::OperatorControl::Rejected
+    end
+  rescue KeyError, TypeError
+    raise Instagram::Automation::OperatorControl::Rejected
+  end
+
+  def validate_browser_results!(results) # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity -- every candidate field is validated before materialization
+    raise Instagram::Automation::OperatorControl::Rejected unless results.is_a?(Array) && results.length <= 100
+
+    results.each do |candidate|
+      valid = candidate.is_a?(Hash) && candidate.keys.sort == %w[avatar_url id name username] &&
+              Instagram::Testers::Validation.id?(candidate['id']) &&
+              Instagram::Testers::Validation.username?(candidate['username']) &&
+              candidate['name'].is_a?(String) && candidate['name'].length <= 500 &&
+              Instagram::Testers::Validation.avatar?(candidate['avatar_url'])
+      raise Instagram::Automation::OperatorControl::Rejected unless valid
+    end
+  end
+
+  def validate_browser_uuid!(value)
+    raise Instagram::Automation::OperatorControl::Rejected unless uuid?(value)
+  end
+
+  def validate_browser_error_code!(value)
+    raise Instagram::Automation::OperatorControl::Rejected unless value.is_a?(String) && Instagram::Testers::Error::STATUSES.key?(value)
+  end
+
+  def invite_permit_result(operations, request)
+    operations.invite_permit(request)
+  rescue Instagram::Testers::Error, Instagram::Testers::BrowserOperationStore::Rejected => e
+    invite_permit_error(request, e)
+  rescue StandardError
+    invite_permit_error(request, nil)
+  end
+
+  def invite_permit_error(request, error)
+    code = error.respond_to?(:code) ? error.code : nil
+    code = 'invite_unknown' unless Instagram::Testers::Error::STATUSES.key?(code)
+    { type: 'browser_operation', operation: 'invite_permit', id: request.fetch('id'),
+      request_id: request.fetch('request_id'), claim: request.fetch('claim'), error_code: code }
+  end
+
+  def validate_browser_timestamp!(value)
+    valid = value.is_a?(String) && BROWSER_TIMESTAMP.match?(value) && Time.iso8601(value).utc.iso8601(3) == value
+    raise Instagram::Automation::OperatorControl::Rejected unless valid
+  rescue ArgumentError
+    raise Instagram::Automation::OperatorControl::Rejected
   end
 
   def validate_session!(request)
@@ -137,3 +278,4 @@ class Instagram::Automation::SessionPublisher
     value.is_a?(String) && value.match?(Instagram::Automation::OperatorControl::UUID)
   end
 end
+# rubocop:enable Metrics/ClassLength

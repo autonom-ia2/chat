@@ -30,6 +30,19 @@ module Instagram::IntegrationHelper
     payload
   end
 
+  def instagram_authorization_url(oauth_state)
+    instagram_client.auth_code.authorize_url(
+      {
+        redirect_uri: "#{base_url}/instagram/callback",
+        scope: REQUIRED_SCOPES.join(','),
+        enable_fb_login: '0',
+        force_reauth: 'true',
+        response_type: 'code',
+        state: oauth_state
+      }
+    )
+  end
+
   # Verifies and decodes a Instagram JWT token
   #
   # @param token [String] The JWT token to verify

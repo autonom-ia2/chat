@@ -1,0 +1,2718 @@
+{
+  "observations": [
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-185335",
+      "script_sha256": "c4d147a6659dbf2d10e320591b2570db3e02c8bceee2178ed1f6b99b99d94d8b",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dom_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "response_read_complete": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "node_count": 80,
+        "unknown_name_nodes": 52,
+        "tester_button_present": false,
+        "search_control_present": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T18:54:30.905Z"
+      },
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Leitura Roles comprovada; amostra DOM truncada em80 não comprova presença/ausência de busca. Nenhuma busca realizada."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-185749",
+      "script_sha256": "2baa02a96cf66a94a6ba052e3f96fec9b781c410306840462aee6f125074909f",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dom_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "candidate_count": 66,
+        "inspected_count": 66,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "flags_scope": "inspected_candidates",
+        "node_count": 66,
+        "unknown_name_nodes": 24,
+        "tester_button_present": true,
+        "search_control_present": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T18:58:44.547Z"
+      },
+      "known_control_enums": [
+        "add_people"
+      ],
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Leitura estrutural sem truncagem identificou Add people; busca e diálogo ainda não executados."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-190506",
+      "script_sha256": "abf0d93af78d1ba3ef434a24ec4bc0b7eb8438311a4bd0681bd44f2e14be3608",
+      "runner_sha256": "ccf3f09de0f26dce264bb068ef98d7ecd345b8236e16ea90c8a5dfcfc7eddf93",
+      "status": "observation_completed",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:06:09.232Z"
+      },
+      "dialog_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 2,
+        "inspected_count": 2,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 2,
+        "node_count": 2,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "interpretation": "Diálogo aberto e estrutura sanitizada de2botões desconhecidos; não comprova carregamento completo do fluxo nem busca."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-191456",
+      "script_sha256": "09ee2d29aa40a901651828b93d1a426b84c408a7f9a640cb6438b0372278a91b",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "a58bba478233efdc21cd3d8c581271a642212080003fc12bc5d559f83f8c4221",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "failure_code": "dialog_dom_incomplete",
+        "roles_http200_validated": true,
+        "diagnostic_ok": false,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:16:02.910Z"
+      },
+      "blocked_request_count": 3,
+      "blocked_request_metadata_complete": false,
+      "interpretation": "Diálogo não capturado por completo; três consultas bloqueadas com metadados truncados no cap20. Não autorizar consulta nem concluir causa a partir disso. Guardas falharam fechadas e serviço restaurado."
+    },
+    {
+      "unit": "instagram-autonomia-browser-dialog-20261007-192004",
+      "script_sha256": "401c50574cecccf867890f24be97fac78b65e7487d3da49b1f2c0b0b0af4beb5",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "a58bba478233efdc21cd3d8c581271a642212080003fc12bc5d559f83f8c4221",
+      "result": {
+        "diagnostic": "browser_search_dialog_read_only",
+        "stage": "completed",
+        "failure_code": null,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "utc": "2026-10-07T19:21:12.065Z"
+      },
+      "dialog_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 8,
+        "inspected_count": 8,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 2,
+        "node_count": 8,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_enum": "cancel",
+            "name": "Cancel"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "input",
+            "type": "radio"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "dialog_state": {
+        "state_capture_complete": true,
+        "aria_busy": null,
+        "aria_busy_present": false,
+        "progressbar_present": false,
+        "progressbar_count": 0,
+        "input_count": 5,
+        "message_count": 0,
+        "message_unknown_count": 0,
+        "message_truncated": false,
+        "business_settings_mentioned": false,
+        "business_manager_mentioned": false,
+        "business_portfolio_mentioned": false,
+        "permissions_mentioned": true,
+        "instagram_mentioned": true,
+        "messages": []
+      },
+      "blocked_graphql_requests": [
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        },
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        },
+        {
+          "origin": "https://developers.facebook.com",
+          "path": "/api/graphql/",
+          "method": "POST",
+          "body_bytes": 779,
+          "body_cap_bytes": 262144,
+          "body_capped": false,
+          "metadata_read_complete": true,
+          "duplicate_field_names": false,
+          "fields_truncated": false,
+          "field_names": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "field_order": [
+            "av",
+            "__aaid",
+            "__bid",
+            "__user",
+            "__a",
+            "__req",
+            "__hs",
+            "dpr",
+            "__ccg",
+            "__rev",
+            "__s",
+            "__hsi",
+            "__dyn",
+            "fb_dtsg",
+            "jazoest",
+            "lsd",
+            "fb_api_caller_class",
+            "fb_api_req_friendly_name",
+            "server_timestamps",
+            "variables",
+            "doc_id"
+          ],
+          "friendly_name": "MetaDeveloperAssistantPageOverlayQuery",
+          "document_sha256": "c1bbc067b272b4e9abc1c14b5110bf7a715861c6e8ce5ed249b467a8031d6eea",
+          "variables_json_valid": true,
+          "variables_object": true,
+          "variables_count": 2,
+          "variable_names": [
+            "exposurePoint",
+            "appID"
+          ],
+          "variable_shapes": [
+            {
+              "name": "exposurePoint",
+              "type": "string",
+              "is_null": false,
+              "matches_app": false,
+              "matches_business": false,
+              "matches_admin": false
+            },
+            {
+              "name": "appID",
+              "type": "string",
+              "is_null": false,
+              "matches_app": true,
+              "matches_business": false,
+              "matches_admin": false
+            }
+          ]
+        }
+      ],
+      "interpretation": "Captura corrigida comprovou cinco radios e mençãoInstagram/permissões; não houve busca ou seleção. Consultas bloqueadas sóOverlay conhecida, sem novo contrato necessário para abrir esse diálogo."
+    },
+    {
+      "unit": "instagram-autonomia-browser-role-20261007-192722",
+      "script_sha256": "4bb37a1d5e4653d5a06575bb99cecdfe1e972d2c14a610debc41aa1a561fe99f",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "99bf6c878229090731d8d77f8a5510a31244c3d3b8b38015d195b528bed7dd36",
+      "result": {
+        "diagnostic": "browser_role_selection_read_only",
+        "stage": "completed",
+        "failure_code": null,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "dom_capture_complete": true,
+        "add_people_clicked": true,
+        "dialog_opened": true,
+        "dialog_stability_complete": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "publication_performed": false,
+        "search_performed": false,
+        "invite_performed": false,
+        "instagram_tester_found": true,
+        "instagram_tester_unique": true,
+        "instagram_tester_visible": true,
+        "instagram_tester_enabled": true,
+        "instagram_tester_selected": true,
+        "accessible_name_exact": true,
+        "role_selection_performed": true,
+        "role_selection_failure": null,
+        "after_selection_stable": true,
+        "utc": "2026-10-07T19:28:22.337Z"
+      },
+      "after_selection_snapshot": {
+        "dialog_capture_complete": true,
+        "candidate_count": 9,
+        "inspected_count": 9,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "unknown_name_nodes": 3,
+        "node_count": 9,
+        "controls": [
+          {
+            "tag": "div",
+            "role": "button",
+            "name_enum": "cancel",
+            "name": "Cancel"
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": false
+          },
+          {
+            "tag": "input",
+            "type": "radio",
+            "checked": true
+          },
+          {
+            "tag": "input",
+            "role": "combobox",
+            "type": "text",
+            "name_unknown": true
+          },
+          {
+            "tag": "div",
+            "role": "button",
+            "name_unknown": true
+          }
+        ]
+      },
+      "after_selection_state": {
+        "state_capture_complete": true,
+        "aria_busy": null,
+        "aria_busy_present": false,
+        "progressbar_present": false,
+        "progressbar_count": 0,
+        "input_count": 6,
+        "message_count": 0,
+        "message_unknown_count": 0,
+        "message_truncated": false,
+        "business_settings_mentioned": false,
+        "business_manager_mentioned": false,
+        "business_portfolio_mentioned": false,
+        "permissions_mentioned": true,
+        "instagram_mentioned": true,
+        "messages": []
+      },
+      "interpretation": "Seleção exata única do papelInstagramtester confirmada após estabilidade. Apareceu inputcomboboxtext único; nenhuma pesquisa/seleção de perfil/convite."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-194132",
+      "script_sha256": "b391795939bd1a9bfaec82b6fb193c6ceea23fd69bffacc54b6eca92e393bc4f",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "a9a74dc8dd1d3be087808fb2b96aa1c2ad00c8526bbf41acb5890d00d8272aba",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "failure_code": null,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "search_control_present": false,
+        "search_input_found": true,
+        "search_input_unique": true,
+        "search_input_visible": true,
+        "search_input_enabled": true,
+        "search_input_editable": true,
+        "search_input_filled": true,
+        "search_input_value_confirmed": true,
+        "search_input_failure": null,
+        "search_request_observed": true,
+        "search_response_observed": false,
+        "search_response_validated": false,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_response_shape": null,
+        "search_requests_truncated": false,
+        "search_responses_truncated": false,
+        "search_response_incomplete": false,
+        "search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": false,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "value_match_authorized": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "known_endpoint": true,
+            "target_request": true
+          }
+        ],
+        "search_responses": [],
+        "utc": "2026-10-07T19:42:40.166Z"
+      },
+      "interpretation": "Input preenchido e umPOSTnaturaltypeaheadexato575bytes16campos observado; bloqueado pelo guardoriginal. Nenhumaresposta. Isso refutaGEThypothesis, não comprova busca funcional. Próximarevisão permissãoPOSTreadlocalexata/únicapincanonicalsemalterarguardglobal."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-195221",
+      "script_sha256": "943db4cfead2f1467eaf369672d75489f2fd0f17eeec7f27f742e71c392edc61",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "0db03fadf56fcb5927a55332edefb6385b45103a6b3f3a7ef4715d1875cc6de2",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "failure_code": null,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "diagnostic_ok": true,
+        "search_control_present": false,
+        "search_input_found": true,
+        "search_input_unique": true,
+        "search_input_visible": true,
+        "search_input_enabled": true,
+        "search_input_editable": true,
+        "search_input_filled": true,
+        "search_input_value_confirmed": true,
+        "search_input_failure": null,
+        "typeahead_guard_passed": true,
+        "search_request_observed": false,
+        "search_response_observed": false,
+        "search_response_validated": false,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_response_shape": null,
+        "search_requests_truncated": false,
+        "search_responses_truncated": false,
+        "search_response_incomplete": false,
+        "search_requests": [],
+        "unknown_search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": false,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "body_field_names_exact": true,
+            "tokens_nonempty": true,
+            "value_match_authorized": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "identity_app_matched": false,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_a_matched": true,
+            "identity_matched": false,
+            "typeahead_guard_passed": true,
+            "known_endpoint": false,
+            "target_request": false
+          }
+        ],
+        "unknown_search_requests_truncated": false,
+        "search_responses": [],
+        "utc": "2026-10-07T19:53:33.124Z"
+      },
+      "interpretation": "POSTabortadoanteswireporque__aaid!=appIdconfig. Business/admin/a/query/body/tokens/gateconferiram. SuposiçãoAAID=appcanonicalrefutada; provarcorrelaçãocomrequestRoles200canonicalantesqualquerpermissaoderivada. Zeroresponses,nãobuscaaceita."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-200244",
+      "script_sha256": "f40d4fbbbea36ad0a41a9ed6f870fccbdf7e4ab8a6589627f131461aa13f7a9e",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "9e8add2b0c4442fcf318bfd0da8568bf328e2dcbee05961a5c361dcc893ac78a",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "failure_code": null,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "roles_app_bound": true,
+        "roles_page_canonical": true,
+        "aaid_numeric_valid": true,
+        "aaid_equals_config_app": false,
+        "roles_aaid_conflict": false,
+        "roles_anchor_invalidated": false,
+        "roles_app_context_matched": true,
+        "typeahead_identity_matches_validated_roles_aaid": true,
+        "identity_async_context_matched": true,
+        "identity_matched": true,
+        "diagnostic_ok": true,
+        "search_input_filled": true,
+        "search_input_value_confirmed": true,
+        "search_request_observed": true,
+        "search_response_observed": true,
+        "search_response_validated": true,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_response_shape": "known",
+        "search_requests_truncated": false,
+        "search_responses_truncated": false,
+        "search_response_incomplete": false,
+        "search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": true,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "body_field_names_exact": true,
+            "tokens_nonempty": true,
+            "value_match_authorized": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "identity_app_matched": false,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_a_matched": true,
+            "aaid_numeric_valid": true,
+            "aaid_equals_config_app": false,
+            "typeahead_aaid_numeric_valid": true,
+            "typeahead_identity_matches_validated_roles_aaid": true,
+            "identity_async_context_matched": true,
+            "identity_matched": true,
+            "roles_app_context_matched": true,
+            "roles_app_bound": true,
+            "typeahead_guard_passed": true,
+            "known_endpoint": true,
+            "target_request": true
+          }
+        ],
+        "unknown_search_requests": [],
+        "unknown_search_requests_truncated": false,
+        "search_responses": [
+          {
+            "status": 200,
+            "declared_bytes": null,
+            "body_bytes": 28717,
+            "content_type": "other",
+            "parser": "json",
+            "json_valid": true,
+            "clean_errors": true,
+            "payload_present": true,
+            "payload_entries": 8,
+            "payload_entries_truncated": false,
+            "shape": "known",
+            "entry_schema_valid": true,
+            "exact_target_matches": 0,
+            "target_entry_unique": false,
+            "numeric_id_valid": false,
+            "id_sha256": [],
+            "http200_validated": true,
+            "read_complete": true
+          }
+        ],
+        "utc": "2026-10-07T20:04:00.197Z"
+      },
+      "interpretation": "Um POST natural autorizado e uma resposta HTTP200 JSON completa com8entradas válidas. Igualdade de contexto Roles/AAID comprovada; zero correspondência exata para o alvo autorizado. Transporte de busca do Chrome comprovado, identidade do alvo ainda pendente. Não selecionar/invitar nem elevar a conexão funcional."
+    },
+    {
+      "unit": "instagram-autonomia-browser-search-20261007-200815",
+      "script_sha256": "ef1ba2ac21e5507bfbc587d04067d27d6a5f3b54dfde18b81bea5b6aeb06259f",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_search",
+      "failure_class": "AssertionError",
+      "runner_sha256": "490954c922d07b411af79faf485a117403661547d9928831d3298bbdc99593a8",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "stack": "autonomia",
+        "stack_target_binding_closed": true,
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "roles_app_context_matched": true,
+        "diagnostic_ok": true,
+        "input_prefixed_with_at": true,
+        "search_request_observed": true,
+        "search_response_observed": true,
+        "search_response_validated": true,
+        "search_target_found": false,
+        "search_target_unique": false,
+        "search_target_id_valid": false,
+        "search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": true,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "body_field_names_exact": true,
+            "tokens_nonempty": true,
+            "value_match_authorized": true,
+            "query_prefixed": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "identity_app_matched": false,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_a_matched": true,
+            "aaid_numeric_valid": true,
+            "aaid_equals_config_app": false,
+            "typeahead_aaid_numeric_valid": true,
+            "typeahead_identity_matches_validated_roles_aaid": true,
+            "identity_async_context_matched": true,
+            "identity_matched": true,
+            "roles_app_context_matched": true,
+            "roles_app_bound": true,
+            "typeahead_guard_passed": true,
+            "known_endpoint": true,
+            "target_request": true
+          }
+        ],
+        "search_responses": [
+          {
+            "status": 200,
+            "declared_bytes": null,
+            "body_bytes": 28725,
+            "content_type": "other",
+            "parser": "json",
+            "json_valid": true,
+            "clean_errors": true,
+            "payload_present": true,
+            "payload_entries": 8,
+            "payload_entries_truncated": false,
+            "shape": "known",
+            "entry_schema_valid": true,
+            "exact_target_matches": 0,
+            "target_entry_unique": false,
+            "numeric_id_valid": false,
+            "id_sha256": [],
+            "entry_observation": {
+              "complete": true,
+              "known_field_names": {
+                "uniqueID": true,
+                "text": true,
+                "subtitle": true,
+                "photo": true,
+                "username": false
+              },
+              "known_field_types": {
+                "uniqueID": "string",
+                "text": "string",
+                "subtitle": "string",
+                "photo": "string",
+                "username": "missing"
+              },
+              "unknown_field_names_present": false,
+              "non_object_entry_present": false,
+              "text_present": true,
+              "text_string": true,
+              "text_regex_valid": true,
+              "text_regex_invalid": false,
+              "text_status_regex_valid": true,
+              "text_status_regex_invalid": false,
+              "text_at_prefix": false,
+              "text_authorized_exact": false,
+              "text_authorized_case_insensitive": false,
+              "text_authorized_at_prefix": false,
+              "text_authorized_case_variant": false,
+              "text_match_counts": {
+                "literal": 0,
+                "case_insensitive": 0,
+                "normalized": 0,
+                "at_prefix": 0
+              },
+              "authorized_match_by_known_field": {
+                "uniqueID": false,
+                "text": false,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              },
+              "authorized_case_insensitive_match_by_known_field": {
+                "uniqueID": false,
+                "text": false,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              },
+              "authorized_normalized_match_by_known_field": {
+                "uniqueID": false,
+                "text": false,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              }
+            },
+            "http200_validated": true,
+            "read_complete": true
+          }
+        ],
+        "unknown_search_requests": [],
+        "utc": "2026-10-07T20:09:19.962Z"
+      },
+      "interpretation": "Prefixo@autorizado preenchido e enviado naturalmente; resposta200 com8entradas, quatrocamposesperados, semoutroscampos. Alvoausenteemcomparação literal/case/normalização noscampos observados. Prefixo/aliasnão explicamzero-match; identidadealvopendente, nãoinvitar."
+    },
+    {
+      "unit": "instagram-hub2you-browser-search-20261007-200954",
+      "script_sha256": "ef1ba2ac21e5507bfbc587d04067d27d6a5f3b54dfde18b81bea5b6aeb06259f",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": null,
+      "failure_class": null,
+      "runner_sha256": "490954c922d07b411af79faf485a117403661547d9928831d3298bbdc99593a8",
+      "result": {
+        "diagnostic": "browser_username_search_read_only",
+        "stack": "hub2you",
+        "stack_target_binding_closed": true,
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "roles_app_context_matched": true,
+        "diagnostic_ok": true,
+        "input_prefixed_with_at": true,
+        "search_request_observed": true,
+        "search_response_observed": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "search_requests": [
+          {
+            "origin": "https://developers.facebook.com",
+            "origin_exact": true,
+            "path_category": "roles/instagram/typeahead/user",
+            "path_exact": true,
+            "path_roles": true,
+            "path_instagram": true,
+            "path_typeahead": true,
+            "path_user": true,
+            "method": "POST",
+            "allowed": true,
+            "body_bytes": 575,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "query_fields": [
+              {
+                "name": "value",
+                "type": "string",
+                "value_match_authorized": true
+              }
+            ],
+            "field_names": [
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "__aaid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__bid",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__user",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__a",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__req",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hs",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "dpr",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__ccg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__rev",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__s",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__hsi",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "__dyn",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "jazoest",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "lsd",
+                "type": "string",
+                "value_match_authorized": false
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string",
+                "value_match_authorized": false
+              }
+            ],
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "body_field_names_exact": true,
+            "tokens_nonempty": true,
+            "value_match_authorized": true,
+            "query_prefixed": true,
+            "friendly_name": null,
+            "document_sha256": null,
+            "identity_app_matched": false,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_a_matched": true,
+            "aaid_numeric_valid": true,
+            "aaid_equals_config_app": false,
+            "typeahead_aaid_numeric_valid": true,
+            "typeahead_identity_matches_validated_roles_aaid": true,
+            "identity_async_context_matched": true,
+            "identity_matched": true,
+            "roles_app_context_matched": true,
+            "roles_app_bound": true,
+            "typeahead_guard_passed": true,
+            "known_endpoint": true,
+            "target_request": true
+          }
+        ],
+        "search_responses": [
+          {
+            "status": 200,
+            "declared_bytes": null,
+            "body_bytes": 24373,
+            "content_type": "other",
+            "parser": "json",
+            "json_valid": true,
+            "clean_errors": true,
+            "payload_present": true,
+            "payload_entries": 2,
+            "payload_entries_truncated": false,
+            "shape": "known",
+            "entry_schema_valid": true,
+            "exact_target_matches": 1,
+            "target_entry_unique": true,
+            "numeric_id_valid": true,
+            "entry_observation": {
+              "complete": true,
+              "known_field_names": {
+                "uniqueID": true,
+                "text": true,
+                "subtitle": true,
+                "photo": true,
+                "username": false
+              },
+              "known_field_types": {
+                "uniqueID": "string",
+                "text": "string",
+                "subtitle": "string",
+                "photo": "string",
+                "username": "missing"
+              },
+              "unknown_field_names_present": false,
+              "non_object_entry_present": false,
+              "text_present": true,
+              "text_string": true,
+              "text_regex_valid": true,
+              "text_regex_invalid": false,
+              "text_status_regex_valid": true,
+              "text_status_regex_invalid": false,
+              "text_at_prefix": false,
+              "text_authorized_exact": true,
+              "text_authorized_case_insensitive": true,
+              "text_authorized_at_prefix": false,
+              "text_authorized_case_variant": false,
+              "text_match_counts": {
+                "literal": 1,
+                "case_insensitive": 1,
+                "normalized": 1,
+                "at_prefix": 0
+              },
+              "authorized_match_by_known_field": {
+                "uniqueID": false,
+                "text": true,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              },
+              "authorized_case_insensitive_match_by_known_field": {
+                "uniqueID": false,
+                "text": true,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              },
+              "authorized_normalized_match_by_known_field": {
+                "uniqueID": false,
+                "text": true,
+                "subtitle": false,
+                "photo": false,
+                "username": false
+              }
+            },
+            "http200_validated": true,
+            "read_complete": true,
+            "target_id_hash_count": 1
+          }
+        ],
+        "unknown_search_requests": [],
+        "utc": "2026-10-07T20:11:14.198Z"
+      },
+      "interpretation": "Hub2You: busca naturalPOST autorizado respondeu200com2entradas. Uma correspondênciaexataúnica emtext/IDnumericovalid. Buscaalvo comprovada, nãoOAuth/convite/status/integration. HashIDtarget ficaapenasreceiptprivado, auditoria contémcontagem. Cleanupmanager7caps preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-status-20261007-201959",
+      "script_sha256": "b59e449d3c54123ede6165224e2ada5a2ad6301d6a4682c790f4f67ea27b75b0",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": null,
+      "failure_class": null,
+      "runner_sha256": "4fe76ce735c04152f31fc40a0cdfa8cddf8d9e77a1fce69a4350350a0d12f36a",
+      "result": {
+        "diagnostic": "browser_username_status_read_only",
+        "stack": "hub2you",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "roles_app_context_matched": true,
+        "diagnostic_ok": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "status_target_bound_to_search": true,
+        "status_navigation_started": true,
+        "status_navigation_completed": true,
+        "status_request_count": 1,
+        "status_response_count": 1,
+        "status_http200_validated": true,
+        "status_response_read_complete": true,
+        "status_schema_valid": true,
+        "status_parse_valid": true,
+        "status_conflict_detected": false,
+        "status_closed": true,
+        "status_value": "absent",
+        "status_error": null,
+        "status_requests": [
+          {
+            "canonical": true,
+            "after_search": true
+          }
+        ],
+        "status_responses": [
+          {
+            "status": 200,
+            "status200": true,
+            "http200_validated": true,
+            "read_complete": true,
+            "schema_valid": true,
+            "parse_valid": true,
+            "conflict_detected": false,
+            "value": "absent",
+            "closed": true,
+            "page_canonical": true
+          }
+        ],
+        "status_instagram_testers_group_count": 2,
+        "status_instagram_testers_user_count": 2,
+        "status_target_present": false,
+        "status_target_status_valid": false,
+        "status_user_field_names": {
+          "id": true,
+          "status": true,
+          "name": true,
+          "role": true
+        },
+        "status_user_field_types": {
+          "id": "string",
+          "status": "string",
+          "name": "string",
+          "role": "string"
+        },
+        "utc": "2026-10-07T20:21:23.210Z"
+      },
+      "search_target_hash_count": 1,
+      "interpretation": "BuscaHubcomalvoexato; um novo request/responseRoles200fullapóssearch, parserpurovinculadoaoIDemmemória. Statusabsent noinstanteobservado. NãoOAuth/token/permissãodeconvite/provedorinvitation. Cleanupmanager7caps preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-selection-20261007-203613",
+      "script_sha256": "d4fd61234e81fe6ef31c809c8fde2d2dce729fe162dd6909eed364b8acca4f86",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "c41bb04f025b6517156c346c1b94955f23834277677322657d07f85cd49c488e",
+      "result": {
+        "diagnostic": "browser_username_selection_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "search_result_selection_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "selection_target_found": false,
+        "selection_target_unique": false,
+        "selection_target_visible": false,
+        "selection_target_enabled": false,
+        "selection_target_name_exact": false,
+        "selection_performed": false,
+        "selection_target_selected": false,
+        "selection_snapshot_complete": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "result_dom": {
+        "result_capture_complete": true,
+        "candidate_count": 5,
+        "inspected_count": 5,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "target_exact_count": 0,
+        "known_confirmation_button_count": 1,
+        "selected_chip_count": 0
+      },
+      "interpretation": "Busca do alvo novamente comprovada; seletor exato da UI não encontrou item autorizado, falhou antes de seleção. Não inferir nome/role nem ampliar clique sem nova prova. Cleanup/manager/sete units/limites preservados; nenhum convite ou publicação."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-shape-20261007-204623",
+      "script_sha256": "80ead48e0339cb173a81cb662d092fa9c10376a1c2f65f664cb475425658f5da",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": null,
+      "failure_class": null,
+      "runner_sha256": "c264144c1780c21bef2405bd6ac6085bd0cb55a820888a41d573530530759209",
+      "result": {
+        "diagnostic": "browser_username_result_shape_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": null,
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "result_shape_capture_complete": true,
+        "result_shape_failure": null,
+        "result_shape_target_token_match_count": 0,
+        "result_shape_target_entry_text_match_count": 0,
+        "result_shape_target_entry_username_match_count": 0,
+        "result_shape_target_entry_name_match_count": 0,
+        "result_shape_target_entry_exact_match_count": 0,
+        "result_shape_target_entry_exact_unique": false,
+        "result_shape_target_entry_json_id_valid": true,
+        "result_shape_target_entry_json_id_bound": false,
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Inspeção somente leitura aprovada e completa dos controles semânticos dentro do diálogo. Todas as correspondências DOM foram zero apesar do alvo JSON válido. Não prova ausência fora do diálogo, seleção ou ID literal no DOM. Portal ou controle sem papel semântico são hipóteses ainda não provadas. Serviços/limites preservados; nenhum convite/publicação."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-scope-20261007-210317",
+      "script_sha256": "11ac44934ce2b59be5ff7b3a7754d608038f9e65129ba6f322522f4689e5be25",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_result_scope",
+      "failure_class": "AssertionError",
+      "runner_sha256": "3ae94973f96aa6fb465e1374f00adba5a6c10f25315733b0bfca0038eab9ec1c",
+      "result": {
+        "diagnostic": "browser_username_result_scope_read_only",
+        "stack": "hub2you",
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "result_scope_capture_complete": true,
+        "result_scope_failure": null,
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "result_scope": {
+        "result_scope_capture_complete": true,
+        "body_present": true,
+        "body_node_count": 500,
+        "candidate_count": 155,
+        "inspected_count": 155,
+        "inspection_truncated": false,
+        "snapshot_truncated": true,
+        "text_node_count": 253,
+        "text_nodes_inspected": 253,
+        "text_nodes_truncated": false,
+        "target_token_match_count": 1,
+        "target_token_control_match_count": 1,
+        "target_token_inside_dialog_count": 0,
+        "target_token_outside_dialog_count": 1,
+        "target_token_match_nodes_truncated": false,
+        "outside_dialog_target_present": true,
+        "plain_control_target_count": 1,
+        "loading_flag_present": false,
+        "loading_flag_count": 0,
+        "aria_busy_count": 0,
+        "progressbar_count": 0,
+        "listbox_count": 1,
+        "listbox_visible_count": 1,
+        "combobox_count": 2,
+        "combobox_aria_controls_count": 1,
+        "combobox_listbox_link_count": 1,
+        "combobox_listbox_visible_link_count": 1,
+        "combobox_target_token_match_count": 0
+      },
+      "interpretation": "Validação global recusada por snapshot truncado:155 controles para80 itens. Text nodes253 sem truncagem mostraram um token do alvo fora do diálogo sob option/listbox; um combobox ligado a listbox visível. Evidência parcial de escopo, nenhum seletor ou clique aceito. Cleanup/manager/sete units/limites preservados. Próxima leitura restrita ao popup ligado ao input."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-popup-20261007-211109",
+      "script_sha256": "77a4d24144ccf51e4ed51a19887b84a0b6fbcbb61dd5ff0eda85f9ed309cbcd7",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "ee1cd658caecf3d4f72cf17f8ffb156795fe933ddfa28aa89cf0472573e5d5de",
+      "result": {
+        "diagnostic": "browser_username_result_popup_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "search_result_popup_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": false,
+        "result_popup_stable": false,
+        "result_popup_failure": "popup_not_bound",
+        "result_popup_dialog_count": 0,
+        "result_popup_dialog_unique": false,
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Busca exata comprovada; leitura popup devolveu defaults. A POC17 identificou ReferenceError no sanitizador local; o catch também mascara falhas de leitura como contagens zero. A saída POC16 não basta para concluir ausência de diálogo/input/popup e precisa ser reavaliada após correção. Nenhum resultado selecionado, convite ou publicação; cleanup e recursos preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-popup-handle-20261007-211946",
+      "script_sha256": "bca6febad7a4eec7f0854e0d2dab87f7b2a9db4844510705d7160d5c1db31166",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "02c5bb19d2bfd1285b1bb84a0f895a15d56051b3c4b3e7dae565164696cc04da",
+      "result": {
+        "diagnostic": "browser_username_result_popup_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "search_result_popup_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": false,
+        "result_popup_stable": false,
+        "result_popup_failure": "popup_not_bound",
+        "result_popup_input_connected": false,
+        "result_popup_input_tag_valid": false,
+        "result_popup_target_entry_response_id_valid": false,
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Busca exata novamente comprovada; captura popup devolveu defaults. Inspeção local encontrou variável option_matches indefinida no sanitizador (const declarado optionMatches), escondida pelo catch. POC17 teve saída incompleta por erro local; defaults POC16 também não permitem concluir ausência de diálogo/input/popup sem comprovar leitura completa. Nenhuma seleção, confirmação, convite ou publicação; encerramento, restauração e limites comprovados. Correção e harness offline necessários antes de nova execução."
+    },
+    {
+      "unit": "instagram-hub2you-browser-result-popup-fixed-20261007-212959",
+      "script_sha256": "1c3ecbf9579b0400a65e9c1373dc554090cca8890c58cdeaba7a3298ab7d9166",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "95d8a5f356aceeb6d681dd49a2b6a44e58a5de6dc43cd06cd09c2e55a0da6a82",
+      "result": {
+        "diagnostic": "browser_username_result_popup_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": null,
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_failure": null,
+        "result_popup_input_connected": true,
+        "result_popup_input_tag_valid": true,
+        "result_popup_input_visible": true,
+        "result_popup_input_enabled": true,
+        "result_popup_combobox_unique": true,
+        "result_popup_listbox_unique": true,
+        "result_popup_option_count": 2,
+        "result_popup_option_inspected_count": 2,
+        "result_popup_options_truncated": false,
+        "result_popup_authorized_username_match_count": 1,
+        "result_popup_entry_text_match_count": 1,
+        "result_popup_entry_username_match_count": 1,
+        "result_popup_entry_name_match_count": 0,
+        "result_popup_target_entry_exact_match_count": 0,
+        "result_popup_target_entry_response_id_valid": true,
+        "result_popup_target_entry_bound_to_response_entry": false,
+        "result_popup_option_matches": [
+          {
+            "tag": "div",
+            "role": "option",
+            "visible": true,
+            "enabled": true,
+            "authorized_username_match": true,
+            "entry_text_match": true,
+            "entry_username_match": true
+          },
+          {
+            "tag": "div",
+            "role": "option",
+            "visible": true,
+            "enabled": true
+          }
+        ],
+        "selection_performed": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "interpretation": "Popup lido integralmente/estavel:2options, uma opcao visivel/habilitada com username/text exatos do autorizado. Nome secundario subtitle nao coincidiu; gate composto com fullname nao provado, nao usar como requisito de identidade do UI. IDJSON valido/unico, nao ID literal DOM. Nenhuma selecao/confirma/convite/publicacao; cleanup/restauracao/limites completos. Proximo contrato exige username exato unico/entrada JSON valida e bloqueio de todas escritas."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-contract-dry-20261007-213750",
+      "script_sha256": "c6771755c2edb479b9b97db8894836bb55e9cbd95d4d7361ffee35862ae32b64",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "8d73ae5f2dd460c90db56cfa7a2ee0331ddaf2a439afe701e985fd5b9c945999",
+      "result": {
+        "diagnostic": "browser_username_invite_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "invite_contract_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "invite_contract_target_option_found": true,
+        "invite_contract_target_option_unique": true,
+        "invite_contract_target_option_visible": true,
+        "invite_contract_target_option_enabled": true,
+        "invite_contract_target_option_exact": true,
+        "invite_contract_target_option_response_bound": true,
+        "invite_contract_state_capture_complete": false,
+        "invite_contract_selected_chip_count": 0,
+        "invite_contract_instagram_tester_checked": false,
+        "invite_contract_add_button_found": false,
+        "invite_contract_armed": false,
+        "invite_contract_confirmation_attempted": false,
+        "invite_contract_write_request_count": 0,
+        "invite_contract_write_abort_failures": 0,
+        "invite_contract_requests_truncated": false,
+        "invite_contract_failure": "selected_target_state_not_proved",
+        "confirmation_performed": false,
+        "invite_performed": false,
+        "publication_performed": false,
+        "selected_result_snapshot": {
+          "result_capture_complete": true,
+          "candidate_count": 6,
+          "inspected_count": 6,
+          "inspection_truncated": false,
+          "snapshot_truncated": false,
+          "target_exact_count": 0,
+          "target_exact_unique": false,
+          "target_exact_roles": [],
+          "target_exact_types": [],
+          "target_exact_editable": false,
+          "target_exact_selected": false,
+          "target_token_match_count": 1,
+          "target_entry_text_match_count": 0,
+          "target_entry_username_match_count": 0,
+          "target_entry_name_match_count": 0,
+          "target_entry_identity_match_count": 0,
+          "target_entry_identity_unique": false,
+          "target_entry_identity_selected": false,
+          "target_entry_exact_match_count": 0,
+          "target_entry_exact_unique": false,
+          "target_entry_matches": [
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "target_entry_matches_truncated": false,
+          "action_button_count": 4,
+          "action_buttons_known_count": 1,
+          "action_buttons_unknown_count": 3,
+          "action_buttons": [
+            {
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add",
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "known_confirmation_button_count": 1,
+          "known_confirmation_buttons": [
+            "add"
+          ],
+          "selected_chip_count": 0,
+          "selected_chip_present": false,
+          "controls": [
+            {
+              "tag": "a",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add"
+            },
+            {
+              "tag": "div",
+              "selected": true,
+              "name_unknown": true
+            }
+          ]
+        }
+      },
+      "interpretation": "Opcao alvo exata/unica visivel/habilitada e vinculada aJSON foi selecionada. Leitura posterior completa6controles achou tokenusername emdivrolebutton eAddunicoenabled; nao provou leaftext/username exatos por sourcesForsemTreeWalker nem aria-selectedchip. Falhou antesAdd; nenhum requestinvite/confirm/pub. Proximo candidato compara freshbaselineantesselect comregistroexatounicovisivelenableddepois, namesecundario/ARIAnaosupostos; writescontinuamabortados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-214525",
+      "script_sha256": "89aab5b3898cd35efcd425c2927a104990c72c473960bb26212472b24738290e",
+      "status": "observation_failed",
+      "failed_phase": "diagnostic",
+      "failure_class": "JSONDecodeError",
+      "manager_restored": false,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "4c06ecab230ce5693785a2a17b2e13ace7b7bd9637577a6cddce2f0b1d82f7a5",
+      "result": {},
+      "receipt_available": false,
+      "recovery": {
+        "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-214525",
+        "recovery_utc": "2026-10-07T21:47:18Z",
+        "diagnostic_unit_failed": true,
+        "diagnostic_main_pid_zero": true,
+        "diagnostic_kill_mode": "control-group",
+        "chrome_absent": true,
+        "profile_lock_absent": true,
+        "human_browser_marker_absent": true,
+        "singleton_pid_not_alive": true,
+        "exclusive_verified": true,
+        "manager_before": "inactive",
+        "manager_after": "active",
+        "manager_restored": true,
+        "manager_original_caps_verified": true,
+        "new_invite_permitted": false,
+        "basis": "independent systemd/process/profile check; no JSON receipt available"
+      },
+      "interpretation": "Stdout vazio nao comprova estado Meta nem ausencia de atividade. ReferenceError local reproduzido no emissor final por nome de variavel inconsistente. Runner recusou restauracao sem JSON; gestor retomado separadamente apos comprovacao independente de termino/processos/perfil livre. Fonte antiga preservada; fix minimo e emissor completo/no-undef validados offline antes de novo diagnostico. Nenhuma escrita permitida pelo candidato revisado."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-state-contract-dry-20261007-215216",
+      "script_sha256": "c794b046a44a2b14835183e65d243e78e9c91ac445108e5873306e93e6a25208",
+      "status": "observation_failed",
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "manager_restored": true,
+      "restore_basis": "terminal_cgroup_and_profile_exclusive",
+      "restore_failure_class": null,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "b436dc0429b49032379857f399dd386eb295a49dad9250246e1c79df0c387c04",
+      "result": {
+        "diagnostic": "browser_username_invite_state_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "invite_state_contract_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "confirmation_performed": false,
+        "invite_performed": false,
+        "publication_performed": false,
+        "selected_result_snapshot": {
+          "result_capture_complete": true,
+          "candidate_count": 6,
+          "inspected_count": 6,
+          "inspection_truncated": false,
+          "snapshot_truncated": false,
+          "target_exact_count": 0,
+          "target_exact_unique": false,
+          "target_exact_roles": [],
+          "target_exact_types": [],
+          "target_exact_editable": false,
+          "target_exact_selected": false,
+          "target_token_match_count": 1,
+          "target_entry_text_match_count": 0,
+          "target_entry_username_match_count": 0,
+          "target_entry_name_match_count": 0,
+          "target_entry_identity_match_count": 0,
+          "target_entry_identity_unique": false,
+          "target_entry_identity_selected": false,
+          "target_entry_exact_match_count": 0,
+          "target_entry_exact_unique": false,
+          "target_entry_matches": [
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "target_entry_matches_truncated": false,
+          "action_button_count": 4,
+          "action_buttons_known_count": 1,
+          "action_buttons_unknown_count": 3,
+          "action_buttons": [
+            {
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add",
+              "visible": true,
+              "enabled": true
+            }
+          ],
+          "known_confirmation_button_count": 1,
+          "known_confirmation_buttons": [
+            "add"
+          ],
+          "selected_chip_count": 0,
+          "selected_chip_present": false,
+          "controls": [
+            {
+              "tag": "a",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "target_token_match": true,
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_unknown": true
+            },
+            {
+              "tag": "div",
+              "role": "button",
+              "name_enum": "add",
+              "name": "Add"
+            },
+            {
+              "tag": "div",
+              "selected": true,
+              "name_unknown": true
+            }
+          ]
+        },
+        "invite_state_contract_baseline_capture_complete": true,
+        "invite_state_contract_baseline_identity_count": 0,
+        "invite_state_contract_baseline_identity_button_count": 0,
+        "invite_state_contract_transition_capture_complete": true,
+        "invite_state_contract_transition_identity_count": 0,
+        "invite_state_contract_transition_identity_button_count": 0,
+        "invite_state_contract_transition_identity_button_unique": false,
+        "invite_state_contract_transition_identity_button_visible": false,
+        "invite_state_contract_transition_identity_button_enabled": false,
+        "invite_state_contract_transition_identity_button_new": false,
+        "invite_state_contract_transition_identity_button_role": null,
+        "invite_state_contract_transition_target_found": false,
+        "invite_state_contract_transition_target_unique": false,
+        "invite_state_contract_selection_performed": true,
+        "invite_state_contract_selection_failure": null,
+        "invite_state_contract_instagram_tester_checked": false,
+        "invite_state_contract_add_button_found": false,
+        "invite_state_contract_add_button_unique": false,
+        "invite_state_contract_add_button_visible": false,
+        "invite_state_contract_add_button_enabled": false,
+        "invite_state_contract_armed": false,
+        "invite_state_contract_confirmation_attempted": false,
+        "invite_state_contract_write_request_observed": false,
+        "invite_state_contract_write_request_count": 0,
+        "invite_state_contract_write_abort_failures": 0,
+        "invite_state_contract_requests_truncated": false,
+        "invite_state_contract_writes_blocked": false,
+        "invite_state_contract_last_request_target_matched": false,
+        "invite_state_contract_invite_request_target_matched": false,
+        "invite_state_contract_invite_request_count": 0,
+        "invite_state_contract_all_metadata_complete": false,
+        "invite_state_contract_failure": "selected_target_transition_not_proved",
+        "invite_state_contract_diagnostic_ok": false,
+        "invite_state_contract_requests": []
+      },
+      "interpretation": "Emissor corrigido gerou recibo completo. Baseline/transition completos, mas identidade por leaftext exato continua0. Token lexical inteiro do username esta em1divrolebutton visible/enabled posselecao. Selecao exata provada; predicado selectedtransition recusouantesAdd. NenhumPOSTconvite/confirmacao. Recuperacaoautomaticaindependentecgroup/perfilok. NaoafirmarcausaestilotextoMetasemobservacao."
+    },
+    {
+      "unit": "instagram-hub2you-browser-invite-token-contract-dry-20261007-220720",
+      "script_sha256": "d1da003c641d5ad0adfc32969d8e202b93deecfdcbb189fd3a9441d8cd1d4955",
+      "status": "observation_completed",
+      "failed_phase": null,
+      "failure_class": null,
+      "manager_restored": true,
+      "restore_basis": "terminal_cgroup_and_profile_exclusive",
+      "restore_failure_class": null,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "runner_sha256": "2ad0f8fd3d386ace94f72419349d2182af30f589c48054893c3aecdb0d34a245",
+      "result": {
+        "diagnostic": "browser_username_invite_token_contract_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": null,
+        "diagnostic_ok": true,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "result_popup_capture_complete": true,
+        "result_popup_stable": true,
+        "result_popup_target_entry_bound_to_response_entry": true,
+        "result_popup_source_truncated": false,
+        "invite_contract_selection_performed": true,
+        "invite_contract_selection_failure": null,
+        "invite_contract_target_sources_truncated": false,
+        "confirmation_performed": true,
+        "invite_performed": false,
+        "publication_performed": false,
+        "invite_state_contract_baseline_capture_complete": true,
+        "invite_state_contract_baseline_identity_count": 0,
+        "invite_state_contract_baseline_identity_button_count": 0,
+        "invite_state_contract_baseline_token_count": 0,
+        "invite_state_contract_baseline_token_button_count": 0,
+        "invite_state_contract_baseline_source_truncated": false,
+        "invite_state_contract_transition_capture_complete": true,
+        "invite_state_contract_transition_identity_count": 0,
+        "invite_state_contract_transition_identity_button_count": 0,
+        "invite_state_contract_transition_identity_button_unique": false,
+        "invite_state_contract_transition_identity_button_visible": false,
+        "invite_state_contract_transition_identity_button_enabled": false,
+        "invite_state_contract_transition_identity_button_new": false,
+        "invite_state_contract_transition_identity_button_role": null,
+        "invite_state_contract_transition_target_found": false,
+        "invite_state_contract_transition_target_unique": false,
+        "invite_state_contract_transition_token_count": 1,
+        "invite_state_contract_transition_token_button_count": 1,
+        "invite_state_contract_transition_token_button_unique": true,
+        "invite_state_contract_transition_token_button_visible": true,
+        "invite_state_contract_transition_token_button_enabled": true,
+        "invite_state_contract_transition_token_button_new": true,
+        "invite_state_contract_transition_token_button_role": "button",
+        "invite_state_contract_transition_token_found": true,
+        "invite_state_contract_transition_token_unique": true,
+        "invite_state_contract_transition_source_truncated": false,
+        "invite_state_contract_selection_performed": true,
+        "invite_state_contract_selection_failure": null,
+        "invite_state_contract_instagram_tester_checked": true,
+        "invite_state_contract_add_button_found": true,
+        "invite_state_contract_add_button_unique": true,
+        "invite_state_contract_add_button_visible": true,
+        "invite_state_contract_add_button_enabled": true,
+        "invite_state_contract_armed": true,
+        "invite_state_contract_confirmation_attempted": true,
+        "invite_state_contract_write_request_observed": true,
+        "invite_state_contract_write_request_count": 1,
+        "invite_state_contract_write_abort_failures": 0,
+        "invite_state_contract_requests_truncated": false,
+        "invite_state_contract_writes_blocked": true,
+        "invite_state_contract_last_request_target_matched": true,
+        "invite_state_contract_invite_request_target_matched": true,
+        "invite_state_contract_invite_request_count": 1,
+        "invite_state_contract_all_metadata_complete": true,
+        "invite_state_contract_failure": null,
+        "invite_state_contract_diagnostic_ok": true,
+        "invite_state_contract_requests": [
+          {
+            "origin_exact": true,
+            "path": "app_roles_add",
+            "path_exact": true,
+            "app_path_matched": true,
+            "method": "POST",
+            "body_bytes": 664,
+            "body_cap_bytes": 262144,
+            "body_capped": false,
+            "metadata_read_complete": true,
+            "duplicate_field_names": false,
+            "fields_truncated": false,
+            "field_count": 19,
+            "field_names": [
+              "role",
+              "user_id_or_vanitys[0]",
+              "reload_on_success",
+              "__aaid",
+              "__bid",
+              "__user",
+              "__a",
+              "__req",
+              "__hs",
+              "dpr",
+              "__ccg",
+              "__rev",
+              "__s",
+              "__hsi",
+              "__dyn",
+              "fb_dtsg",
+              "jazoest",
+              "lsd",
+              "qpl_active_flow_ids"
+            ],
+            "field_types": [
+              {
+                "name": "role",
+                "type": "string"
+              },
+              {
+                "name": "user_id_or_vanitys[0]",
+                "type": "string"
+              },
+              {
+                "name": "reload_on_success",
+                "type": "string"
+              },
+              {
+                "name": "__aaid",
+                "type": "string"
+              },
+              {
+                "name": "__bid",
+                "type": "string"
+              },
+              {
+                "name": "__user",
+                "type": "string"
+              },
+              {
+                "name": "__a",
+                "type": "string"
+              },
+              {
+                "name": "__req",
+                "type": "string"
+              },
+              {
+                "name": "__hs",
+                "type": "string"
+              },
+              {
+                "name": "dpr",
+                "type": "string"
+              },
+              {
+                "name": "__ccg",
+                "type": "string"
+              },
+              {
+                "name": "__rev",
+                "type": "string"
+              },
+              {
+                "name": "__s",
+                "type": "string"
+              },
+              {
+                "name": "__hsi",
+                "type": "string"
+              },
+              {
+                "name": "__dyn",
+                "type": "string"
+              },
+              {
+                "name": "fb_dtsg",
+                "type": "string"
+              },
+              {
+                "name": "jazoest",
+                "type": "string"
+              },
+              {
+                "name": "lsd",
+                "type": "string"
+              },
+              {
+                "name": "qpl_active_flow_ids",
+                "type": "string"
+              }
+            ],
+            "variables_json_valid": false,
+            "variables_object": false,
+            "variable_count": null,
+            "variables_truncated": false,
+            "variable_names": [],
+            "variable_shapes": [],
+            "identity_app_matched": true,
+            "identity_business_matched": true,
+            "identity_admin_matched": true,
+            "identity_aaid_matched": true,
+            "target_id_matched": true,
+            "role_matches_instagram_tester": true,
+            "reload_on_success_false": true
+          }
+        ]
+      },
+      "interpretation": "ProvaUI dry-run completa:exactuniqueJSONoption nativeclick;freshbaseline0→1tokeninteirocontrolebuttonvis/enabled,radioIG/Addunicos.1POSTcanonicalapp_roles_add19fields/664bytespinnedapp/bid/admin/AAID/target/role/reload. Todoswritesabortados1/0falhas;nenhuminvite/OAuth/conexao. confirmation_performed ecliquenativoAddcomredebloqueada,nãoconfirmaçãoservertester. cleanupmanager7unitscapscomprovados."
+    }
+  ],
+  "local_implementation": {
+    "production_mutated": false,
+    "flag_default": "false",
+    "provider_invite_performed": false,
+    "oauth_or_inbox_acceptance": false,
+    "checks": {
+      "node_runtime": {
+        "tests": 240,
+        "passed": 240,
+        "failed": 0,
+        "snapshot": "20261007-192310-47d0fdb8-8760104c67-14daf671",
+        "node": "m2",
+        "job": "m2-be35c58ae5cb47f299ea0c9e1f5cc5df"
+      },
+      "ruby_legacy_regression": {
+        "examples": 144,
+        "failed": 0,
+        "snapshot": "20261007-192010-47d0fdb8-f3332cd6ab-3a4f46ac",
+        "node": "m2",
+        "job": "m2-5c3a67e8d6f641b495093441afc7f52a",
+        "isolated_wrapper": true,
+        "production_environment": false
+      },
+      "eslint": {
+        "errors": 0,
+        "warnings": 0,
+        "job": "m2-d01bb2581fe04f3db0a7b73f5752ae38"
+      },
+      "actual_executor_offline": {
+        "cases": 35,
+        "passed": 35,
+        "network": false,
+        "extra_typeahead_during_permit_blocks_write": true
+      },
+      "actual_ruby_services_fake_redis": {
+        "checks": 23,
+        "passed": 23,
+        "real_redis": false
+      },
+      "outcome_real_redis_cas": {
+        "cases": 4,
+        "passed": 4,
+        "node": "m2",
+        "job": "m2-1ee1588f08df45548b9e2fff3f4ad1fe",
+        "private_test_namespace_cleaned": true,
+        "production": false,
+        "durable_WAITAOF_tested": false
+      },
+      "rubocop_bundler": {
+        "files": 8,
+        "offenses": 0,
+        "node": "m2",
+        "job": "m2-2e1e27769aa54d59b1dc47190d932365",
+        "runtime": "Ruby3.4.4 isolated test tools",
+        "rbenv_init_available": false
+      },
+      "guide": {
+        "flows": 199,
+        "screens": 190,
+        "unexplained": 0,
+        "job": "m2-f1c8d17671cc4c9194505b3b9e333580",
+        "up_to_date": true
+      },
+      "late_fix_eslint": {
+        "errors": 0,
+        "warnings": 0,
+        "node": "m2",
+        "job": "m2-7bcf0fb85ddf42f0acf78ac660129f58",
+        "snapshot": "20261007-194636-ef2321db-6decd3f40b-0bf920c8",
+        "source_sha256": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354"
+      }
+    },
+    "files_sha256": {
+      "scripts/instagram_testers/browser-operations.mjs": "c115b10c1a9f1934f7504e4c9823c0e3e048bd4a0988dbcc93031c5da024e354",
+      "scripts/instagram_testers/session-manager.mjs": "c011bdf898ec0e73ac6163301a8f44f28472909a2d3f166d2b48b435fc1b7e8a",
+      "scripts/instagram_testers/runtime/operator-protocol.mjs": "0cfb99f7bf3327d0dd653fc5f18d8549777e741db70380b105d771dbf03e5d40",
+      "app/services/instagram/testers/browser_operations.rb": "0d29e8d7cb7c72a3b7c59c592496246d9ef6253696a84b6716b6b96415140005",
+      "app/services/instagram/testers/invitation_outcome.rb": "1574c4d3a67665666d583c0675c67f6520d0f65fede5539111d79a34c27f1b74"
+    },
+    "release_approval_pending": true,
+    "preflight": {
+      "utc": "2026-10-07T22:27:51.444979+00:00",
+      "aws_runtime_sha": "caca5eae44705d6d9449d00b005fae67b2da454c",
+      "stacks_healthy_and_exact_allowlists": true,
+      "external_release": true,
+      "publication_performed_by_this_work": false,
+      "new_flag_utc": "2026-10-07T22:28:26.759286+00:00",
+      "new_flag_both_aws": "unset",
+      "flag_reader_sha256": "b51cc6009d465f9dc220761585a38846e5797d6ee1bd197f08ac6925dbbffb78"
+    },
+    "independent_review": {
+      "reviewer": "nexo_revisao",
+      "decision": "green_for_commit_and_ci",
+      "production_approval": false,
+      "previous_findings_closed": true,
+      "documentary_corrections_applied": true,
+      "release_plan_sha256": "3c0d06221ec98653003f5fd522a06328b575ffc13e69318b4c17154dcdcd6104",
+      "late_finding": {
+        "severity": "P1",
+        "description": "armed typeahead aborted without invalidating previous selection",
+        "fixed": true,
+        "delta_lines": 1,
+        "targeted_review": "green_for_commit_and_ci",
+        "production_approval": false
+      }
+    },
+    "ci_previous_head": {
+      "head": "ef2321dbb7c40752bbae907b07d641319afb8536",
+      "checks_passed": 26,
+      "required_contexts_passed": [
+        "RSpec",
+        "Vitest",
+        "trava",
+        "central",
+        "fork-i18n"
+      ],
+      "applies_to_late_fix": false
+    }
+  }
+}

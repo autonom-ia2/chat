@@ -5,6 +5,7 @@ import { resolve, dirname, isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { isMainModule } from './runtime/entrypoint.mjs';
+import { executeBrowserOperation } from './browser-operations.mjs';
 import {
   parseEnvelope,
   validateRequest,
@@ -21,6 +22,8 @@ import {
 
 const CYCLE_BUDGET_MS = 30000;
 const REFRESH_INTERVAL_MS = 900000;
+const BROWSER_OPERATION_POLL_MS = 15000;
+const BROWSER_OPERATION_BUDGET_MS = 120000;
 
 export function cancellable(promise, signal) {
   return new Promise((done, reject) => {
@@ -286,11 +289,15 @@ export async function run(
     stdout = process.stdout,
     stderr = process.stderr,
     files = { privateProfile, open, unlink },
+    executeOperation = executeBrowserOperation,
   } = {}
 ) {
   let config;
   const proxy = proxyConfiguration(env);
   const cycleBudget = managerCycleBudget(env);
+  const browserOperationsEnabled =
+    env.INSTAGRAM_TESTER_RUNTIME_MODE === 'vps' &&
+    env.INSTAGRAM_TESTER_BROWSER_OPERATIONS_ENABLED === 'true';
   // 13 minutes asleep + a bounded 2-minute cycle fits the backend's 16-minute heartbeat TTL.
   // Legacy runtimes retain the original 15-minute pause and 30-second cycle.
   const refreshInterval =
@@ -354,8 +361,8 @@ export async function run(
     context.on('page', other => {
       other.close().catch(() => {});
     });
-    // Prevent writes performed by this manager. It only opens the roles page;
-    // invitations remain exclusively in the reviewed backend adapter.
+    // The default guard stays in place; the operation executor permits only
+    // its reviewed natural typeahead request on the primary page.
     await setup.wait(
       context.route('**/*', async route => {
         const request = route.request();
@@ -524,8 +531,144 @@ export async function run(
         // Release pending headers/body/publication; never await them in cleanup.
         cycle.close();
       }
-      // A transport failure waits for the normal refresh, with no captured replay.
-      await pause(refreshInterval, shutdown.signal, clock).catch(() => {});
+      // Browser operations run serially between refreshes. They never share
+      // a live publication observer or the human reconnect queue.
+      const refreshDue = now() + refreshInterval;
+      while (!shutdown.signal.aborted && now() < refreshDue) {
+        if (!browserOperationsEnabled || unhealthy) {
+          await pause(refreshDue - now(), shutdown.signal, clock).catch(
+            () => {}
+          );
+          break;
+        }
+        // Reserve the existing refresh window instead of extending the
+        // manager heartbeat past its backend TTL with a late operation.
+        if (refreshDue - now() <= BROWSER_OPERATION_BUDGET_MS) break;
+        const operationScope = deadlineScope(
+          shutdown.signal,
+          clock,
+          BROWSER_OPERATION_BUDGET_MS,
+          now
+        );
+        const operationConfig = config;
+        let executionPending = false;
+        try {
+          const sendOperation = payload =>
+            operationScope.wait(
+              publish(command, payload, {
+                signal: operationScope.signal,
+                clock,
+              })
+            );
+          const envelope = await sendOperation({
+            type: 'browser_operation',
+            operation: 'read',
+          });
+          if (envelope.request) {
+            const claimed = await sendOperation({
+              type: 'browser_operation',
+              operation: 'claim',
+              id: envelope.request.id,
+              request_id: envelope.request.request_id,
+            });
+            if (
+              [
+                'id',
+                'request_id',
+                'action',
+                'app_id',
+                'username',
+                'target_id',
+                'deadline',
+              ].some(key => claimed.request[key] !== envelope.request[key])
+            )
+              throw new Error('publication_failed');
+            executionPending = true;
+            const result = await operationScope.wait(
+              executeOperation({
+                context,
+                page,
+                configuration: operationConfig,
+                request: claimed.request,
+                signal: operationScope.signal,
+                permitInvite: async observation => {
+                  if (
+                    observation?.target_id !== claimed.request.target_id ||
+                    observation?.username !== claimed.request.username ||
+                    observation?.status !== 'absent'
+                  )
+                    throw new Error('publication_failed');
+                  const permit = await sendOperation({
+                    type: 'browser_operation',
+                    operation: 'invite_permit',
+                    id: claimed.request.id,
+                    request_id: claimed.request.request_id,
+                    claim: claimed.request.claim,
+                    captured_at: observation.captured_at,
+                    target_id: claimed.request.target_id,
+                    username: claimed.request.username,
+                    status: 'absent',
+                  });
+                  if (
+                    permit.operation !== 'invite_permit' ||
+                    ['id', 'request_id', 'claim'].some(
+                      key => permit[key] !== claimed.request[key]
+                    )
+                  )
+                    throw new Error('publication_failed');
+                  return permit;
+                },
+                requestGuard: request =>
+                  isAllowedBrowserRequest({
+                    ...request,
+                    config: operationConfig,
+                  }),
+              })
+            );
+            executionPending = false;
+            if (
+              ['id', 'request_id', 'action', 'claim'].some(
+                key => result[key] !== claimed.request[key]
+              )
+            )
+              throw new Error('publication_failed');
+            const completed = await sendOperation(result);
+            if (
+              completed.id !== claimed.request.id ||
+              completed.request_id !== claimed.request.request_id
+            )
+              throw new Error('publication_failed');
+            if (
+              ['operator_required', 'meta_session_expired'].includes(
+                result.error_code
+              )
+            ) {
+              operatorState.required = true;
+              await sendOperation({
+                type: 'operator',
+                operation: 'manager_heartbeat',
+                state: 'operator_required',
+                control_available: false,
+              }).catch(() => {});
+              break;
+            }
+          }
+        } catch {
+          // Cancellation does not cancel Playwright's underlying call. Stop
+          // this lifecycle so cleanup finishes before another job can run.
+          if (executionPending) throw new Error('browser_runtime_required');
+          if (!shutdown.signal.aborted)
+            stderr.write('instagram_browser_operation_failed\n');
+        } finally {
+          operationScope.close();
+        }
+        await pause(
+          Math.min(BROWSER_OPERATION_POLL_MS, Math.max(1, refreshDue - now())),
+          shutdown.signal,
+          clock
+        ).catch(() => {});
+      }
+      if (operatorState.required) break;
     }
     if (operatorState.required) throw new Error('operator_required');
   } finally {
