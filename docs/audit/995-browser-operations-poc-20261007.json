@@ -1711,6 +1711,135 @@
         "utc": "2026-10-07T20:11:14.198Z"
       },
       "interpretation": "Hub2You: busca naturalPOST autorizado respondeu200com2entradas. Uma correspondênciaexataúnica emtext/IDnumericovalid. Buscaalvo comprovada, nãoOAuth/convite/status/integration. HashIDtarget ficaapenasreceiptprivado, auditoria contémcontagem. Cleanupmanager7caps preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-status-20261007-201959",
+      "script_sha256": "b59e449d3c54123ede6165224e2ada5a2ad6301d6a4682c790f4f67ea27b75b0",
+      "status": "observation_completed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": null,
+      "failure_class": null,
+      "runner_sha256": "4fe76ce735c04152f31fc40a0cdfa8cddf8d9e77a1fce69a4350350a0d12f36a",
+      "result": {
+        "diagnostic": "browser_username_status_read_only",
+        "stack": "hub2you",
+        "publication_performed": false,
+        "search_performed": true,
+        "invite_performed": false,
+        "stage": "completed",
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "roles_app_context_matched": true,
+        "diagnostic_ok": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "status_target_bound_to_search": true,
+        "status_navigation_started": true,
+        "status_navigation_completed": true,
+        "status_request_count": 1,
+        "status_response_count": 1,
+        "status_http200_validated": true,
+        "status_response_read_complete": true,
+        "status_schema_valid": true,
+        "status_parse_valid": true,
+        "status_conflict_detected": false,
+        "status_closed": true,
+        "status_value": "absent",
+        "status_error": null,
+        "status_requests": [
+          {
+            "canonical": true,
+            "after_search": true
+          }
+        ],
+        "status_responses": [
+          {
+            "status": 200,
+            "status200": true,
+            "http200_validated": true,
+            "read_complete": true,
+            "schema_valid": true,
+            "parse_valid": true,
+            "conflict_detected": false,
+            "value": "absent",
+            "closed": true,
+            "page_canonical": true
+          }
+        ],
+        "status_instagram_testers_group_count": 2,
+        "status_instagram_testers_user_count": 2,
+        "status_target_present": false,
+        "status_target_status_valid": false,
+        "status_user_field_names": {
+          "id": true,
+          "status": true,
+          "name": true,
+          "role": true
+        },
+        "status_user_field_types": {
+          "id": "string",
+          "status": "string",
+          "name": "string",
+          "role": "string"
+        },
+        "utc": "2026-10-07T20:21:23.210Z"
+      },
+      "search_target_hash_count": 1,
+      "interpretation": "BuscaHubcomalvoexato; um novo request/responseRoles200fullapóssearch, parserpurovinculadoaoIDemmemória. Statusabsent noinstanteobservado. NãoOAuth/token/permissãodeconvite/provedorinvitation. Cleanupmanager7caps preservados."
+    },
+    {
+      "unit": "instagram-hub2you-browser-selection-20261007-203613",
+      "script_sha256": "d4fd61234e81fe6ef31c809c8fde2d2dce729fe162dd6909eed364b8acca4f86",
+      "status": "observation_failed",
+      "manager_restored": true,
+      "other_seven_units_unchanged": true,
+      "manager_resources_preserved": true,
+      "failed_phase": "validate_capture",
+      "failure_class": "AssertionError",
+      "runner_sha256": "c41bb04f025b6517156c346c1b94955f23834277677322657d07f85cd49c488e",
+      "result": {
+        "diagnostic": "browser_username_selection_read_only",
+        "stack": "hub2you",
+        "stage": "completed",
+        "failure_code": "search_result_selection_failed",
+        "diagnostic_ok": false,
+        "browser_closed": true,
+        "launch_settled": true,
+        "lock_released": true,
+        "roles_http200_validated": true,
+        "search_response_validated": true,
+        "search_target_found": true,
+        "search_target_unique": true,
+        "search_target_id_valid": true,
+        "selection_target_found": false,
+        "selection_target_unique": false,
+        "selection_target_visible": false,
+        "selection_target_enabled": false,
+        "selection_target_name_exact": false,
+        "selection_performed": false,
+        "selection_target_selected": false,
+        "selection_snapshot_complete": false,
+        "confirmation_performed": false,
+        "publication_performed": false,
+        "invite_performed": false
+      },
+      "result_dom": {
+        "result_capture_complete": true,
+        "candidate_count": 5,
+        "inspected_count": 5,
+        "inspection_truncated": false,
+        "snapshot_truncated": false,
+        "target_exact_count": 0,
+        "known_confirmation_button_count": 1,
+        "selected_chip_count": 0
+      },
+      "interpretation": "Busca do alvo novamente comprovada; seletor exato da UI não encontrou item autorizado, falhou antes de seleção. Não inferir nome/role nem ampliar clique sem nova prova. Cleanup/manager/sete units/limites preservados; nenhum convite ou publicação."
     }
   ]
 }

@@ -31,7 +31,7 @@ Para busca/status, comprovar primeiro a ação natural e seu contrato; convite d
 
 ## Resultado
 
-Comprovados: leitura Roles, diálogo/papel Instagram tester e transporte de busca HTTP 200 no Chrome. Busca do alvo autorizada comprovada na Hub2You. Pendentes: alvo Autonom.ia, integração, status, convite/OAuth e reconexão completa. Não encerrar #995 nem declarar conexão funcional.
+Comprovados: leitura Roles, diálogo/papel Instagram tester e transporte de busca HTTP 200 no Chrome. Busca do alvo autorizada comprovada na Hub2You. Pendentes: alvo Autonom.ia, integração, contrato de convite/OAuth e reconexão completa; status de role Hub2You comprovado como ausente. Não encerrar #995 nem declarar conexão funcional.
 
 ## Primeira observação executada — 18:54 UTC
 
@@ -122,3 +122,25 @@ Mesmo observer `ef1ba2ac21e5507bfbc587d04067d27d6a5f3b54dfde18b81bea5b6aeb06259f
 POST único autorizado recebeuHTTP200, JSON completo24373bytes,2entradas válidas e uma correspondênciaexataúnica do alvoemtext, comIDnumérico válido. Runneraprovou observation_completed. Não selecionar outra conta. Hash somente doID doalvo permanece no reciboprivado; auditoriapública registra apenascontagem1, semvalor.
 
 Nexo confirmou que isso prova a busca no Chrome para aHub2You, não OAuth/token/convite/roleaplicado nemintegraçãoRuby. Cleanup/manager restaurados,7units/limitespreservados. Reader20:12:59 confirmouambosgestoressaúde e sessãorepublicadapósrestauração (não nova contagemderenovação natural). Próximocandidato somenteleitura destatus: manterIDapenasemmemória, fazeruma nova navegaçãoRoles, ignorar resposta inicial, validar novo request/response200full e espelhar apenas o parser puro de status. NenhumClientstatus/callbackRedis/reconcile/convite.
+
+## Décima segunda observação — 20:21 UTC, status fresco Hub2You ausente
+
+Observer `b59e449d3c54123ede6165224e2ada5a2ad6301d6a4682c790f4f67ea27b75b0`, runner `4fe76ce735c04152f31fc40a0cdfa8cddf8d9e77a1fce69a4350350a0d12f36a`, unit `instagram-hub2you-browser-status-20261007-201959`. Node/Python checks e revisão final antes da única execução. Prazo diagnóstico120s+cleanup25; unit155s, espera185s, SSH externo345s; CPU/RAM originais. A segunda navegação exige esse orçamento explícito. Um parecer inicial sobre usuários de grupos não-Instagram foi retificado após confronto com group_testersRuby: shape validado para todos os grupos; users validados só após filtro instagramtesters. Contrato não ampliado.
+
+Busca provou o alvo único/ID numérico, mantido somente em memória. Depois uma nova navegação Roles canônica produziu exatamente um request/respostaHTTP200 completo; resposta inicial não contou. Parser puro replicou grupos/paginação/status e conflito do ResponseParserRuby, semClient/callbackRedis/Outcome.reconcile. Resultado fechado `absent`, semconflito: o alvo não aparece na lista atual de testers desse documento naquele instante. Não provarOAuth/token ou permissãodeconvite a partir disso.
+
+Runner observation_completed, Nexo confirmourecibo. Cleanup/manager/7units/limites preservados; nenhumconvite/publicação. Hash doID continua só noreciboprivado, auditoria apenascontagem1. PróximoPOC13 será seleção exata no DOM/estado final semconfirmação; contrato de confirmação bloqueada ficará paraPOC14 apósconhecer ocontrole real.
+
+## Décima terceira observação — 20:37 UTC, seleção recusada antes do clique
+
+Observer `d4fd61234e81fe6ef31c809c8fde2d2dce729fe162dd6909eed364b8acca4f86`, runner `c41bb04f025b6517156c346c1b94955f23834277677322657d07f85cd49c488e`, unit `instagram-hub2you-browser-selection-20261007-203613`. Nexo aprovou uma execução após corrigir falso positivo que associava qualquer chip selecionado ao alvo. Preflight AWS falhou temporariamente no acesso ao serviço de administração; nenhuma execução ocorreu durante essa falha. Reader às20:35:55UTC voltou a confirmar ambas as sessões saudáveis e runtime996, sem mudança de produção feita aqui.
+
+Busca natural voltou a trazer o alvo exato e único. A inspeção completa dos cinco controles do resultado encontrou zero controle com nome acessível exatamente igual ao username autorizado. A seleção falhou antes de qualquer clique de resultado; existência do botão Add não autoriza clicar. É uma diferença ainda não explicada da estrutura da interface, não falha de transporte da busca nem prova de que outro item seja o alvo.
+
+Navegador encerrado, launch settled, lock liberado e manager restaurado. Outros sete serviços, limites e drop-ins preservados. Nenhum convite, confirmação ou publicação pelo diagnóstico. Próximo passo: observar apenas propriedades e correspondências booleanas da estrutura do resultado autorizado, sem textos livres nem clique.
+
+## Implementação local em revisão — sem release
+
+Fundação local em fila própria separa search/status/authorization da reconexão humana. Novo gate desligado por padrão; claims, correlação e resultados privados possuem expiração. A autorização final exige observação nova accepted e mantém validações do callback OAuth. O convite está bloqueado antes do enqueue até a prova do contrato de escrita. Controller/client adaptados para resposta assíncrona e cancelamento pelo painel; manager/predicate ainda em revisão independente. Nenhum desses arquivos funcionais foi committed, merged, deployed ou instalado.
+
+`node --check` passou em client/protocol/manager; Atlas conferiu syntax Ruby nos três arquivos sob sua responsabilidade e `git diff --check` passou. Testes funcionais ainda não executados: planner MacCluster recusou nós por cwd-missing/node-modules-missing, sem forçar execução nem sobrescrever checkout. Preparar snapshot isolado após estabilizar os arquivos.
