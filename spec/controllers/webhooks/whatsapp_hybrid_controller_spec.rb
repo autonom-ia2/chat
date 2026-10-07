@@ -21,15 +21,44 @@ RSpec.describe 'WhatsApp Híbrido engine webhook', type: :request do
     expect(response).to have_http_status(:ok)
   end
 
+  it 'accepts the signature in upper case hex' do
+    post_signed(body, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', body).upcase)
+
+    expect(response).to have_http_status(:ok)
+  end
+
+  it 'rejects a request without signature' do
+    post path, params: body, headers: { 'CONTENT_TYPE' => 'application/json' }
+
+    expect(response).to have_http_status(:unauthorized)
+  end
+
+  it 'rejects a signed body that is not an object' do
+    array_body = [1, 2].to_json
+
+    post_signed(array_body, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', array_body))
+
+    expect(response).to have_http_status(:bad_request)
+  end
+
   it 'rejects a wrong signature' do
     expect { post_signed(body, 'assinatura-errada') }.not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
     expect(response).to have_http_status(:unauthorized)
   end
 
-  it 'answers 404 for an unknown connection' do
-    post '/webhooks/whatsapp_hybrid/nao-existe', params: body, headers: { 'CONTENT_TYPE' => 'application/json' }
+  it 'answers an unknown address exactly like a wrong signature' do
+    post '/webhooks/whatsapp_hybrid/nao-existe', params: body, headers: { 'CONTENT_TYPE' => 'application/json', 'X-Webhook-Hmac' => 'x' }
 
-    expect(response).to have_http_status(:not_found)
+    expect(response).to have_http_status(:unauthorized)
+    expect(response.body).to be_empty
+  end
+
+  it 'refuses oversized bodies before anything else' do
+    big = { event: 'session.status', payload: { status: 'WORKING', pad: 'x' * 70_000 } }.to_json
+
+    expect { post_signed(big, OpenSSL::HMAC.hexdigest('SHA512', 'segredo-de-teste', big)) }
+      .not_to have_enqueued_job(WhatsappHybrid::WebhookEventJob)
+    expect(response).to have_http_status(:payload_too_large)
   end
 
   it 'ignores events other than session status and acks' do
