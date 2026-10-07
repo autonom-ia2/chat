@@ -257,8 +257,10 @@ jobs:
       # As previas de empresa (Relationships::PreviewRenderer) chamam ffmpeg,
       # pdftoppm e libvips de verdade; sem eles os specs falham com ENOENT/LoadError.
       # Mesma lista do workflow relationships.yml.
+      # Com teto de tempo e nova tentativa: mirror lento travava este passo 30-40 min (#1131).
       - name: Instalar conversores nativos
-        run: sudo apt-get update && sudo apt-get install -y libvips42 poppler-utils ffmpeg
+        timeout-minutes: 15
+        run: .github/scripts/apt-install.sh libvips42 poppler-utils ffmpeg
 
       - name: Criar banco e carregar schema
         run: |

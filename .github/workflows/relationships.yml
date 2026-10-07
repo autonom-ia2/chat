@@ -89,7 +89,8 @@ jobs:
           ruby-version: '3.4.4'
           bundler-cache: true
       - name: Disposable runner converter dependencies
-        run: sudo apt-get update && sudo apt-get install -y libvips42 poppler-utils ffmpeg
+        timeout-minutes: 15
+        run: .github/scripts/apt-install.sh libvips42 poppler-utils ffmpeg
       - run: pnpm install --frozen-lockfile
       - name: No new regex AST gate
         run: pnpm relationships:check
