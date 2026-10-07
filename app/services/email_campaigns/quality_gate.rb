@@ -3,7 +3,9 @@
 # footer with the only unsubscribe link, WCAG AA contrast, 44px buttons, readable sizes in explicit Arial,
 # described images served by the installation (<= 200 KB), HTML under Gmail's 102 KB clip, and placeholders
 # every campaign can fill. Wired to the seed library (spec/services/email_campaigns/quality_gate_library_spec.rb);
-# built to run after AI generation too. Parses with Nokogiri and plain string methods — no regex.
+# built to run after AI generation too (EmailCampaigns::Ai::QualityCheck): without compiled HTML (`html: nil`,
+# production has no Node to compile MJML) the two checks on the HTML are skipped. Parses with Nokogiri and
+# plain string methods — no regex.
 class EmailCampaigns::QualityGate
   include Css
 
@@ -46,7 +48,7 @@ class EmailCampaigns::QualityGate
   def initialize(mjml:, html:, compile_errors: [], public_root: Rails.public_path,
                  placeholders: EmailCampaigns::TemplateValidator::DEFAULT_KEYS)
     @mjml = mjml.to_s
-    @html = html.to_s
+    @html = html&.to_s
     @compile_errors = compile_errors
     @public_root = Pathname.new(public_root).expand_path
     @placeholders = placeholders
@@ -62,7 +64,7 @@ class EmailCampaigns::QualityGate
     check_buttons
     check_images
     check_placeholders
-    add(:html_size, "#{@html.bytesize} bytes") if @html.bytesize > MAX_HTML_BYTES
+    add(:html_size, "#{@html.bytesize} bytes") if @html && @html.bytesize > MAX_HTML_BYTES
     @violations
   end
 
@@ -105,6 +107,10 @@ class EmailCampaigns::QualityGate
     unless footers.size == 1 && links.size == 1 && in_footer == 1 && placeholder_uses == 1
       add(:unsubscribe, "#{footers.size} footer-locked, #{links.size} unsubscribe link(s), #{in_footer} in the footer")
     end
+    check_compiled_unsubscribe unless @html.nil?
+  end
+
+  def check_compiled_unsubscribe
     html_links = unsubscribe_links(Nokogiri::HTML5(@html)).size
     add(:unsubscribe, "#{html_links} unsubscribe link(s) in the compiled HTML") unless html_links == 1
   end

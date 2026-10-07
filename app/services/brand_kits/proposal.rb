@@ -16,7 +16,7 @@ class BrandKits::Proposal
 
   def to_h
     {
-      'version' => 1,
+      'version' => 2,
       'source_url' => @page_uri.to_s,
       'name' => @name,
       'appearance' => appearance,
@@ -30,7 +30,8 @@ class BrandKits::Proposal
 
   def appearance
     BrandKits::Appearance.new(
-      'palette' => roles.palette,
+      'palettes' => BrandKits::EmailPalettes.from_site(roles.palette),
+      'site_palette' => roles.palette,
       'typography' => { 'heading_font' => fonts.heading_font, 'body_font' => fonts.body_font, 'google_font_url' => fonts.google_font_url },
       'logo_url' => logo.candidates.first&.url,
       'social_links' => socials,

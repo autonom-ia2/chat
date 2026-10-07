@@ -1,13 +1,19 @@
 # Formato de `brand_kits.appearance` (#1076). Leitor tolerante, escritor estrito (lição do Bio): chaves
 # desconhecidas somem em `to_h`, em qualquer nível; o que fica é validado em `errors`, campo a campo.
 #
-#   palette:      { primary accent ink muted surface background tint } — todas '#rrggbb'
+#   palettes:     { light: {...}, dark: {...} } — as duas versões de cores do e-mail (EmailPalettes::ROLES,
+#                 todas '#rrggbb'); cada e-mail escolhe uma. `band` é a faixa do topo, onde fica a logo.
+#   site_palette: { primary accent ink muted surface background tint } — as cores achadas no site ('#rrggbb'
+#                 ou nil); dão as "cores sugeridas" de volta.
 #   typography:   { heading_font, body_font, google_font_url (só https://fonts.googleapis.com), fallback }
 #   logo_url:     http(s) ou nil (reserva quando não há logo guardada no ActiveStorage)
 #   social_links: [{ network, url }] — rede da lista e link do domínio dela, uma vez cada
 #   footer:       { company_name, address, phone, website }
+#
+# Kits gravados antes das duas versões têm só `palette` (as cores do site): ela vira `site_palette` e as
+# duas versões são derivadas dela. Versão ausente também é derivada das cores do site.
 class BrandKits::Appearance
-  PALETTE_ROLES = %w[primary accent ink muted surface background tint].freeze
+  SITE_ROLES = %w[primary accent ink muted surface background tint].freeze
   TYPOGRAPHY_KEYS = %w[heading_font body_font google_font_url].freeze
   FOOTER_LIMITS = { 'company_name' => 120, 'address' => 300, 'phone' => 40, 'website' => BrandKits::WebAddress::MAX_LENGTH }.freeze
   FALLBACK_FONT_STACK = 'Arial, Helvetica, sans-serif'.freeze
@@ -36,8 +42,10 @@ class BrandKits::Appearance
   private
 
   def normalize
+    site = site_palette
     {
-      'palette' => PALETTE_ROLES.index_with { |role| text(section('palette')[role])&.downcase },
+      'palettes' => palettes(site),
+      'site_palette' => site,
       'typography' => TYPOGRAPHY_KEYS.index_with { |key| text(section('typography')[key]) }.merge('fallback' => FALLBACK_FONT_STACK),
       'logo_url' => text(@raw['logo_url']),
       'social_links' => social_links,
@@ -49,8 +57,29 @@ class BrandKits::Appearance
     palette_errors + typography_errors + logo_errors + social_errors + footer_errors
   end
 
+  # Cores do site: as de `site_palette`, ou as do formato antigo `palette`.
+  def site_palette
+    raw = section('site_palette').presence || section('palette')
+    SITE_ROLES.index_with { |role| text(raw[role])&.downcase }
+  end
+
+  def palettes(site)
+    given = section('palettes')
+    derived = nil
+    BrandKits::EmailPalettes::MODES.index_with do |mode|
+      colors = hash_of(given[mode])
+      next (derived ||= BrandKits::EmailPalettes.from_site(site))[mode] if colors.empty?
+
+      BrandKits::EmailPalettes::ROLES.index_with { |role| text(colors[role])&.downcase }
+    end
+  end
+
   def palette_errors
-    PALETTE_ROLES.reject { |role| BrandKits::Color.hex?(@normalized['palette'][role]) }.map { |role| "palette.#{role}" }
+    version_errors = @normalized['palettes'].flat_map do |mode, colors|
+      colors.reject { |_role, hex| BrandKits::Color.hex?(hex) }.keys.map { |role| "palettes.#{mode}.#{role}" }
+    end
+    site_errors = @normalized['site_palette'].reject { |_role, hex| hex.nil? || BrandKits::Color.hex?(hex) }.keys
+    version_errors + site_errors.map { |role| "site_palette.#{role}" }
   end
 
   def typography_errors

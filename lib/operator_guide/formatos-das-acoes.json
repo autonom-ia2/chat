@@ -232,8 +232,8 @@
     "controller": "api/v1/accounts/brand_kits#destroy",
     "modelo": "BrandKit",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:34",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
     ],
     "sem_corpo": true
   },
@@ -3832,7 +3832,38 @@
             "tipo": "objeto"
           },
           "logo_url": {},
-          "palette": {
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
             "campos": {
               "accent": {},
               "background": {},
@@ -3886,10 +3917,10 @@
     "envelope": "brand_kit",
     "modelo": "BrandKit",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:22",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -11205,8 +11236,8 @@
     "controller": "api/v1/accounts/brand_kit_imports#create",
     "modelo": "BrandImportJob",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:10",
-      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:12"
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:12",
+      "app/controllers/api/v1/accounts/brand_kit_imports_controller.rb:14"
     ],
     "sem_corpo": false
   },
@@ -11224,7 +11255,38 @@
             "tipo": "objeto"
           },
           "logo_url": {},
-          "palette": {
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
             "campos": {
               "accent": {},
               "background": {},
@@ -11278,9 +11340,9 @@
     "envelope": "brand_kit",
     "modelo": "BrandKit",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:14",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88"
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:20",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105"
     ],
     "sem_corpo": false,
     "so_no_envelope": [
@@ -11289,13 +11351,23 @@
       "remove_logo"
     ]
   },
+  "POST brand_kits/:id/restore": {
+    "completo": true,
+    "controller": "api/v1/accounts/brand_kits#restore",
+    "modelo": "BrandKit",
+    "origem": [
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:46",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
+    ],
+    "sem_corpo": true
+  },
   "POST brand_kits/:id/set_default": {
     "completo": true,
     "controller": "api/v1/accounts/brand_kits#set_default",
     "modelo": "BrandKit",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:33",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:41",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
     ],
     "sem_corpo": true
   },
@@ -14900,6 +14972,15 @@
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
+      "brand_import_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "brand_kit_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "brand_mode": {},
       "brief": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
@@ -14913,15 +14994,24 @@
         "tipo_pela_leitura": "uso"
       }
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/email_campaigns/ai#generate",
-    "modelo": "EmailCampaign",
+    "modelo": "BrandKit",
+    "motivos": [
+      "leitura crua sem tipo: brand_mode (repassada a modes.include?)"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:15",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:49",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:91",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:47",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:46",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:51",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:44",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:43",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:65",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:69",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:60",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:58",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:79",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:57",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:18",
       "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:17"
     ],
@@ -14942,8 +15032,8 @@
     "controller": "api/v1/accounts/email_campaigns/ai#rewrite",
     "modelo": "EmailCampaign",
     "origem": [
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:34",
-      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:36"
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:37",
+      "app/controllers/api/v1/accounts/email_campaigns/ai_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -20394,7 +20484,38 @@
             "tipo": "objeto"
           },
           "logo_url": {},
-          "palette": {
+          "palettes": {
+            "campos": {
+              "dark": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              },
+              "light": {
+                "campos": {
+                  "accent": {},
+                  "background": {},
+                  "band": {},
+                  "ink": {},
+                  "muted": {},
+                  "primary": {},
+                  "surface": {},
+                  "tint": {}
+                },
+                "tipo": "objeto"
+              }
+            },
+            "tipo": "objeto"
+          },
+          "site_palette": {
             "campos": {
               "accent": {},
               "background": {},
@@ -20448,10 +20569,10 @@
     "envelope": "brand_kit",
     "modelo": "BrandKit",
     "origem": [
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:22",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:84",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:88",
-      "app/controllers/api/v1/accounts/brand_kits_controller.rb:45"
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:28",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:101",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:105",
+      "app/controllers/api/v1/accounts/brand_kits_controller.rb:58"
     ],
     "sem_corpo": false,
     "so_no_envelope": [

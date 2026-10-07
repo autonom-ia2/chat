@@ -1,12 +1,18 @@
-# Kits de marca da conta (#1076). Arquivar substitui apagar. A logo escolhida na importação
-# (`logo_source_url`) só é baixada aqui, ao salvar; falha na logo não impede salvar o kit — vira aviso.
+# Kits de marca da conta (#1076). Arquivar substitui apagar; a padrão só sai da lista depois que outra vira
+# padrão, e a arquivada volta com restore. A logo escolhida na importação (`logo_source_url`) só é baixada
+# aqui, ao salvar; falha na logo não impede salvar o kit — vira aviso.
 class Api::V1::Accounts::BrandKitsController < Api::V1::Accounts::BaseController
-  before_action :fetch_kit, only: [:show, :update, :destroy, :set_default]
+  include BrandKits::FeatureGate
+
+  before_action :fetch_kit, only: [:show, :update, :destroy, :set_default, :restore]
   before_action :refuse_archived, only: [:update, :set_default]
 
   def index
     authorize BrandKit
-    @brand_kits = kit_scope.live.with_attached_logo.order(is_default: :desc, name: :asc)
+    archived = kit_scope.where.not(archived_at: nil)
+    scope = boolean_value(params[:archived]) ? archived : kit_scope.live
+    @brand_kits = scope.with_attached_logo.order(is_default: :desc, name: :asc)
+    @archived_count = archived.count
   end
 
   def show; end
@@ -28,10 +34,17 @@ class Api::V1::Accounts::BrandKitsController < Api::V1::Accounts::BaseController
   def destroy
     @brand_kit.archive!
     render :show
+  rescue BrandKit::DefaultArchiveError
+    render json: { error: 'brand_kit.default_cannot_be_archived' }, status: :unprocessable_entity
   end
 
   def set_default
     @brand_kit.make_default!
+    render :show
+  end
+
+  def restore
+    @brand_kit.restore! if @brand_kit.archived?
     render :show
   end
 
@@ -76,7 +89,11 @@ class Api::V1::Accounts::BrandKitsController < Api::V1::Accounts::BaseController
   end
 
   def boolean_param(key)
-    ActiveModel::Type::Boolean.new.cast(option_params[key]) || false
+    boolean_value(option_params[key])
+  end
+
+  def boolean_value(value)
+    ActiveModel::Type::Boolean.new.cast(value) || false
   end
 
   # Opções do salvamento que não são colunas: padrão, remover logo, logo escolhida na importação ou enviada.
@@ -88,7 +105,8 @@ class Api::V1::Accounts::BrandKitsController < Api::V1::Accounts::BaseController
     params.require(:brand_kit).permit(
       :name, :source_url,
       appearance: [:logo_url, {
-        palette: BrandKits::Appearance::PALETTE_ROLES,
+        palettes: BrandKits::EmailPalettes::MODES.index_with { BrandKits::EmailPalettes::ROLES },
+        site_palette: BrandKits::Appearance::SITE_ROLES,
         typography: BrandKits::Appearance::TYPOGRAPHY_KEYS,
         social_links: [:network, :url],
         footer: BrandKits::Appearance::FOOTER_LIMITS.keys

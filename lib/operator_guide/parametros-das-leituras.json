@@ -311,7 +311,9 @@
   },
   "brand_kits": {
     "controller": "api/v1/accounts/brand_kits#index",
-    "parametros": []
+    "parametros": [
+      "archived"
+    ]
   },
   "brand_kits/:id": {
     "controller": "api/v1/accounts/brand_kits#show",

@@ -12,10 +12,10 @@ RSpec.describe BrandKit do
 
   it 'is invalid with a malformed palette color' do
     kit = build(:brand_kit, account: account)
-    kit.appearance = kit.appearance.deep_merge('palette' => { 'primary' => 'blue' })
+    kit.appearance = kit.appearance.deep_stringify_keys.deep_merge('palettes' => { 'dark' => { 'primary' => 'blue' } })
 
     expect(kit).not_to be_valid
-    expect(kit.errors[:appearance].join).to include('palette.primary')
+    expect(kit.errors[:appearance].join).to include('palettes.dark.primary')
   end
 
   it 'keeps names unique per account among live kits, case-insensitively' do
@@ -52,12 +52,14 @@ RSpec.describe BrandKit do
       expect { other.update!(is_default: true) }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
-    it 'clears the default when archiving and refuses to make an archived kit the default' do
-      kit = create(:brand_kit, account: account, is_default: true)
+    it 'never archives the default and refuses to make an archived kit the default' do
+      default = create(:brand_kit, account: account, is_default: true)
+      expect { default.archive! }.to raise_error(BrandKit::DefaultArchiveError)
+
+      kit = create(:brand_kit, account: account)
       kit.archive!
 
-      expect(kit.reload.is_default).to be(false)
-      expect(kit.archived_at).to be_present
+      expect(kit.reload.archived_at).to be_present
       expect { kit.make_default! }.to raise_error(BrandKit::ArchivedError)
     end
   end

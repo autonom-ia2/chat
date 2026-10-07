@@ -3,7 +3,10 @@ json.name brand_kit.name
 json.is_default brand_kit.is_default
 json.archived_at brand_kit.archived_at
 json.source_url brand_kit.source_url
-json.appearance brand_kit.appearance_data
+appearance = brand_kit.appearance_data
+json.appearance appearance
+# "Voltar às cores sugeridas": as duas versões refeitas a partir das cores achadas no site.
+json.suggested_palettes BrandKits::EmailPalettes.from_site(appearance['site_palette'].compact)
 json.logo do
   if brand_kit.logo.attached?
     json.url url_for(brand_kit.logo)

@@ -510,6 +510,7 @@ Rails.application.routes.draw do
           # Identidade visual (#1076): kits de marca da conta e importação a partir do site.
           resources :brand_kits, only: [:index, :show, :create, :update, :destroy] do
             post :set_default, on: :member
+            post :restore, on: :member
           end
           resources :brand_kit_imports, only: [:create, :show]
           namespace :email_campaigns do

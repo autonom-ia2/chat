@@ -46,4 +46,16 @@ RSpec.describe BrandKits::LogoDownloader do
 
     expect(kit.logo.content_type).to eq('image/png')
   end
+
+  it 'stores the logo of a site read for one e-mail as a blob, with the same checks' do
+    serve(png, content_type: 'application/octet-stream')
+
+    blob = described_class.blob_from('https://aurora.example/logo.png')
+
+    expect(blob).to have_attributes(content_type: 'image/png', filename: ActiveStorage::Filename.new('logo.png'))
+
+    serve('<svg></svg>')
+    expect { described_class.blob_from('https://aurora.example/logo.svg') }
+      .to raise_error(described_class::Error) { |error| expect(error.code).to eq('logo_unsupported_type') }
+  end
 end

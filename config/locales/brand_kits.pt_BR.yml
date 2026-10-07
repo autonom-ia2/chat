@@ -10,9 +10,6 @@ pt_BR:
               invalid_type: "precisa ser uma imagem PNG, JPEG, WebP ou GIF"
               too_large: "precisa ter no máximo 5 MB"
   brand_kits:
-    footer:
-      reason: "Você recebeu este e-mail porque está em nossa lista de contatos."
-      unsubscribe: "Cancelar inscrição"
     import_errors:
       invalid_url: "Digite o endereço completo do site, por exemplo https://suaempresa.com.br."
       unsafe_url: "Este endereço aponta para uma rede privada ou local e não pode ser lido."

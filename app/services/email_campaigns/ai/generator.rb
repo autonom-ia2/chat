@@ -19,14 +19,17 @@ module EmailCampaigns
             subject: { type: 'string' },
             preheader: { type: 'string' },
             mjml: { type: 'string' },
-            subject_variants: { type: 'array', items: { type: 'string' } }
+            subject_variants: { type: 'array', items: { type: 'string' }, minItems: 3, maxItems: 3 }
           },
           required: %w[subject preheader mjml subject_variants],
           additionalProperties: false
         }
       }.freeze
 
-      def initialize(account:, brief:, placeholders: [], assets: [], base_mjml: nil)
+      # identity: BrandKits::PromptPayload hash of the chosen visual identity (#1076), or nil.
+      # rubocop:disable Metrics/ParameterLists -- keyword data of one generation request
+      def initialize(account:, brief:, placeholders: [], assets: [], base_mjml: nil, identity: nil)
+        @identity = identity
         @account = account
         @brief = brief.to_s
         @placeholders = Array(placeholders)
@@ -35,6 +38,7 @@ module EmailCampaigns
         @image_budget = MAX_IMAGES_PER_REQUEST
         @pdf_budget = Crm::Ai::Config::MAX_PDFS_PER_REQUEST
       end
+      # rubocop:enable Metrics/ParameterLists
 
       def base_mjml_too_large?
         @base_mjml.present? && @base_mjml.bytesize > MAX_BASE_MJML_BYTES
@@ -47,7 +51,7 @@ module EmailCampaigns
         enrich_image_src!
         {
           instructions: PromptBuilder.generate(placeholders: @placeholders, assets: @assets, videos: videos,
-                                               base_mjml: @base_mjml, brand: @account.name),
+                                               base_mjml: @base_mjml, brand: @account.name, identity: @identity),
           input: build_input(videos)
         }
       end
@@ -63,7 +67,7 @@ module EmailCampaigns
 
       def build_input(videos)
         text = PromptBuilder.input_text(brief: @brief, placeholders: @placeholders, assets: @assets,
-                                        videos: videos, base_mjml: @base_mjml)
+                                        videos: videos, base_mjml: @base_mjml, identity: @identity)
         content = [{ type: 'input_text', text: text }]
         @assets.each do |asset|
           part = asset_content_part(asset)
@@ -184,11 +188,7 @@ module EmailCampaigns
       # um domínio fixo (evita gravar URLs apontando para a instalação errada). Falha clara se
       # ausente (a geração é marcada failed e o usuário pode tentar de novo).
       def blob_url(blob)
-        base = ENV['FRONTEND_URL'].presence
-        raise 'frontend_url_not_configured' if base.blank?
-
-        uri = URI.parse(base)
-        Rails.application.routes.url_helpers.rails_blob_url(blob, host: uri.host, protocol: uri.scheme, port: uri.port)
+        EmailCampaigns::PublicBlobUrl.call(blob)
       end
 
       def image_content_type?(content_type)

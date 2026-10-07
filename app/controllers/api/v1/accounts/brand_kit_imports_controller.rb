@@ -2,6 +2,8 @@
 # termina, devolve a proposta para a pessoa conferir antes de salvar como kit. Uma importação ativa por
 # conta e até BrandImportJob::HOURLY_LIMIT por hora.
 class Api::V1::Accounts::BrandKitImportsController < Api::V1::Accounts::BaseController
+  include BrandKits::FeatureGate
+
   def show
     @import = BrandImportJob.where(account: Current.account).find(params[:id])
     authorize @import

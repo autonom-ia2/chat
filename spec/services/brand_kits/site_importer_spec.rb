@@ -53,7 +53,7 @@ RSpec.describe BrandKits::SiteImporter do
     end
 
     it 'assigns the palette roles: CTA red as primary, cyan accent, navy background, readable ink' do
-      palette = appearance['palette']
+      palette = appearance['site_palette']
 
       expect(palette['primary']).to eq('#ff1f2d')
       expect(palette['accent']).to eq('#0ab9d1')
@@ -62,6 +62,12 @@ RSpec.describe BrandKits::SiteImporter do
       expect(BrandKits::Color.contrast(palette['ink'], palette['background'])).to be >= 4.5
       expect(BrandKits::Color.contrast(palette['muted'], palette['surface'])).to be >= 4.5
       expect(proposal['fields']['palette.primary']).to include('source' => 'button_background')
+    end
+
+    it 'proposes a light e-mail (white, navy text, red buttons, navy top band for the white logo) and a dark one like the site' do
+      light = appearance.dig('palettes', 'light')
+      expect(light).to include('background' => '#ffffff', 'ink' => '#0b243f', 'primary' => '#ff1f2d', 'band' => '#0b243f')
+      expect(appearance.dig('palettes', 'dark')).to include('background' => '#0b243f', 'ink' => '#ffffff', 'primary' => '#ff1f2d')
     end
 
     it 'resolves the fonts through CSS variables and maps them to Google Fonts' do
@@ -120,7 +126,7 @@ RSpec.describe BrandKits::SiteImporter do
     end
 
     it 'takes the brand color from the custom property and button rule, the ink and background from body' do
-      palette = appearance['palette']
+      palette = appearance['site_palette']
 
       expect(palette['primary']).to eq('#7a3e9d')
       expect(palette['accent']).to eq('#e8a33d')
@@ -169,7 +175,7 @@ RSpec.describe BrandKits::SiteImporter do
     it 'falls back to safe defaults and says so' do
       proposal = described_class.new('https://plain.example').perform
 
-      expect(proposal['appearance']['palette']).to include('background' => '#ffffff', 'surface' => '#ffffff')
+      expect(proposal['appearance']['site_palette']).to include('background' => '#ffffff', 'surface' => '#ffffff')
       expect(proposal['appearance']['typography']).to include('heading_font' => nil, 'body_font' => nil, 'google_font_url' => nil)
       expect(proposal['warnings']).to include('colors_not_found', 'fonts_not_found', 'logo_not_found')
       expect(BrandKits::Appearance.new(proposal['appearance'])).to be_valid

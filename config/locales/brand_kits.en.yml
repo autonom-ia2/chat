@@ -10,9 +10,6 @@ en:
               invalid_type: "must be a PNG, JPEG, WebP or GIF image"
               too_large: "must be at most 5 MB"
   brand_kits:
-    footer:
-      reason: "You received this email because you are on our contact list."
-      unsubscribe: "Unsubscribe"
     import_errors:
       invalid_url: "Enter the full website address, for example https://yourcompany.com."
       unsafe_url: "This address points to a private or local network and cannot be read."

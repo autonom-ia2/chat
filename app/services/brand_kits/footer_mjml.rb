@@ -1,80 +1,54 @@
-# Rodapé travado do e-mail montado pelo sistema a partir do kit (#1076): linha de redes, empresa, endereço,
-# telefone/site e o link {{ unsubscribe_url }}. Todo valor do kit é escapado; nenhuma tag se fecha sozinha.
-# MJML não tem ícone para TikTok e WhatsApp: esses usam o ícone genérico "web" com o nome escrito.
+# Rodapé travado de um e-mail com identidade (#1076). É SEMPRE o rodapé canônico (lockedFooter.json,
+# EmailCampaigns::LockedFooter, #1081 — texto legal, cores e o único link de descadastro); o kit só
+# preenche a linha de identidade do topo — empresa · endereço · site — e, quando há, uma linha de redes
+# como links de texto (sem ícone de outro servidor). Todo valor do kit é escapado.
 class BrandKits::FooterMjml
-  MJML_ICON_NETWORKS = %w[facebook instagram linkedin youtube x].freeze
-  NETWORK_LABELS = { 'tiktok' => 'TikTok', 'whatsapp' => 'WhatsApp' }.freeze
+  SEPARATOR = ' · '.freeze
+  # Mesma cor de link do rodapé canônico (#4b5563 sobre #f4f4f4, contraste AA).
+  LINK_STYLE = 'color:#4b5563;text-decoration:underline;'.freeze
+  NETWORK_LABELS = {
+    'facebook' => 'Facebook', 'instagram' => 'Instagram', 'linkedin' => 'LinkedIn', 'youtube' => 'YouTube',
+    'tiktok' => 'TikTok', 'x' => 'X', 'whatsapp' => 'WhatsApp'
+  }.freeze
 
-  def initialize(source, locale: I18n.locale)
-    @payload = BrandKits::PromptPayload.new(source).to_h
-    @locale = locale
+  # payload: { footer: { company_name, address, website }, social_links: [{ network, url }] }
+  def initialize(payload)
+    @footer = payload[:footer] || {}
+    @social_links = payload[:social_links] || []
   end
 
   def to_s
-    palette = @payload[:palette]
-    <<~MJML.strip
-      <mj-section css-class="footer-locked" background-color="#{escape(palette[:surface])}" padding="24px 16px">
-        <mj-column>
-      #{[social_row, text_block].compact.join("\n")}
-        </mj-column>
-      </mj-section>
-    MJML
+    lines = [identity_line, social_line].compact
+    return EmailCampaigns::LockedFooter::MJML if lines.empty?
+
+    EmailCampaigns::LockedFooter.with_first_line(lines.join('<br/>'))
   end
 
   private
 
-  def social_row
-    links = @payload[:social_links]
-    return nil if links.empty?
-
-    elements = links.map { |link| social_element(link) }.join("\n")
-    %(    <mj-social font-size="12px" icon-size="24px" mode="horizontal" align="center" padding="0 0 12px">\n#{elements}\n    </mj-social>)
+  def identity_line
+    parts = [@footer[:company_name], @footer[:address]].compact.map { |value| escape(value) }
+    website = @footer[:website]
+    parts << link(website, host(website)) if website.present?
+    parts.join(SEPARATOR).presence
   end
 
-  def social_element(link)
-    href = escape(link[:url])
-    if MJML_ICON_NETWORKS.include?(link[:network])
-      %(      <mj-social-element name="#{link[:network]}" href="#{href}"></mj-social-element>)
-    else
-      %(      <mj-social-element name="web" href="#{href}">#{escape(NETWORK_LABELS[link[:network]])}</mj-social-element>)
+  def social_line
+    links = @social_links.filter_map do |item|
+      label = NETWORK_LABELS[item[:network]]
+      link(item[:url], label) if label && item[:url].present?
     end
+    links.join(SEPARATOR).presence
   end
 
-  def text_block
-    lines = (kit_lines + [I18n.t('brand_kits.footer.reason', locale: @locale)]).map { |line| paragraph(escape(line)) }
-    lines << paragraph(unsubscribe_link)
-    %(    <mj-text font-family="#{font_attribute}" font-size="12px" color="#{escape(muted)}" ) +
-      %(align="center" line-height="1.6">\n#{lines.join("\n")}\n    </mj-text>)
+  def link(url, label)
+    %(<a href="#{escape(url)}" style="#{LINK_STYLE}">#{escape(label)}</a>)
   end
 
-  def kit_lines
-    footer = @payload[:footer]
-    contact = [footer[:phone], website_label(footer[:website])].compact.join(' · ').presence
-    [footer[:company_name], footer[:address], contact].compact
-  end
-
-  def unsubscribe_link
-    label = escape(I18n.t('brand_kits.footer.unsubscribe', locale: @locale))
-    %(<a href="{{ unsubscribe_url }}" style="color:#{escape(muted)};text-decoration:underline;">#{label}</a>)
-  end
-
-  def paragraph(html)
-    %(      <p style="margin:0;">#{html}</p>)
-  end
-
-  def website_label(url)
-    url && URI.parse(url).host
+  def host(url)
+    URI.parse(url).host.to_s.delete_prefix('www.').presence || url
   rescue URI::Error
-    nil
-  end
-
-  # O nome da fonte vai entre aspas simples dentro do atributo de aspas duplas; o resto é escapado.
-  def font_attribute
-    escape(@payload[:typography][:body_stack]).gsub('&#39;', "'")
-  end
-
-  def muted
-    @payload[:palette][:muted]
+    url
   end
 
   def escape(value)

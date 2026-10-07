@@ -24,10 +24,22 @@ class BrandKits::LogoDownloader
   end
 
   def self.attach(kit, bytes)
-    content_type = signature(bytes)
-    raise Error, 'logo_unsupported_type' if content_type.nil?
+    kit.logo.attach(io: StringIO.new(bytes), filename: filename(bytes), content_type: signature!(bytes), identify: false)
+  end
 
-    kit.logo.attach(io: StringIO.new(bytes), filename: "logo.#{EXTENSIONS[content_type]}", content_type: content_type, identify: false)
+  # A logo de um site lido só para um e-mail (#1076, "Usar outro site") fica guardada com a campanha:
+  # devolve o blob, com os mesmos limites e a mesma conferência de assinatura.
+  def self.blob_from(url)
+    bytes = new(nil, url).download
+    ActiveStorage::Blob.create_and_upload!(io: StringIO.new(bytes), filename: filename(bytes), content_type: signature!(bytes), identify: false)
+  end
+
+  def self.signature!(bytes)
+    signature(bytes) || raise(Error, 'logo_unsupported_type')
+  end
+
+  def self.filename(bytes)
+    "logo.#{EXTENSIONS[signature!(bytes)]}"
   end
 
   def self.signature(bytes)
@@ -45,9 +57,12 @@ class BrandKits::LogoDownloader
   end
 
   def perform
-    bytes = SafeFetch.fetch(@url, max_bytes: MAX_BYTES, total_timeout: TIMEOUT, max_redirects: 3,
-                                  allowed_content_type_prefixes: ['image/'], validate_content_type: false) { |result| result.tempfile.read }
-    self.class.attach(@kit, bytes.b)
+    self.class.attach(@kit, download)
+  end
+
+  def download
+    SafeFetch.fetch(@url, max_bytes: MAX_BYTES, total_timeout: TIMEOUT, max_redirects: 3,
+                          allowed_content_type_prefixes: ['image/'], validate_content_type: false) { |result| result.tempfile.read.b }
   rescue SafeFetch::InvalidUrlError, SafeFetch::UnsafeUrlError
     raise Error, 'logo_unsafe_url'
   rescue SafeFetch::FileTooLargeError

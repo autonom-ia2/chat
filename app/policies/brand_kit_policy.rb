@@ -24,6 +24,10 @@ class BrandKitPolicy < ApplicationPolicy
     update?
   end
 
+  def restore?
+    update?
+  end
+
   private
 
   def own_account?

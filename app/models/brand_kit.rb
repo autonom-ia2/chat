@@ -3,6 +3,7 @@
 # não apaga, e libera o nome.
 class BrandKit < ApplicationRecord
   class ArchivedError < StandardError; end
+  class DefaultArchiveError < StandardError; end
 
   LOGO_CONTENT_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   LOGO_MAX_BYTES = 5.megabytes
@@ -26,8 +27,16 @@ class BrandKit < ApplicationRecord
     archived_at.present?
   end
 
+  # A padrão não sai da lista: antes, outra vira padrão (os e-mails novos sempre têm uma identidade).
   def archive!
-    update!(archived_at: Time.current, is_default: false)
+    raise DefaultArchiveError if is_default?
+
+    update!(archived_at: Time.current)
+  end
+
+  # Volta para a lista sem virar padrão; o nome precisa estar livre entre as da lista.
+  def restore!
+    update!(archived_at: nil)
   end
 
   def make_default!
