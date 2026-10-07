@@ -8,10 +8,10 @@ class EmailCampaigns::Ai::Adjustment
   TTL = 1.day
   PREFIX = 'email_campaigns:ai:adjustment:'.freeze
 
-  # request: { base:, placeholders:, instructions:, input: } — the e-mail before (canonical MJML) and what a
-  # second round needs to ask again.
+  # request: { base:, placeholders:, instructions:, input:, site_request: } — the e-mail before (canonical MJML), what
+  # a second round needs to ask again and the notice about a site asked for in the request (#1111).
   def self.start(campaign, token:, request:)
-    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input')
+    data = request.to_h.stringify_keys.slice('base', 'placeholders', 'instructions', 'input', 'site_request')
                   .merge('token' => token, 'round' => 0, 'status' => 'working')
     data['placeholders'] = Array(data['placeholders'])
     Redis::Alfred.set(key(campaign), data.to_json, ex: TTL.to_i)
@@ -49,7 +49,7 @@ class EmailCampaigns::Ai::Adjustment
     data = find(campaign, token)
     return nil if data.nil?
 
-    fields = data['status'] == 'proposed' ? %w[status base mjml summary] : %w[status reason problem]
+    fields = data['status'] == 'proposed' ? %w[status base mjml summary site_request] : %w[status reason problem]
     data.slice(*fields).compact
   end
 

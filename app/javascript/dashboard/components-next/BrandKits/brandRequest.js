@@ -18,7 +18,7 @@ export const uniqueKitName = (name, takenNames = []) => {
 // "Salvar como identidade" (#1076): the site read for this e-mail becomes a kit through the same
 // POST brand_kits as Nova identidade (validation and logo download on the server; not the default
 // unless it is the first). -> the saved name, or null when saving failed.
-const saveSiteAsKit = async (proposal, takenNames) => {
+export const saveSiteAsKit = async (proposal, takenNames) => {
   const name = uniqueKitName(proposal.name, takenNames);
   try {
     const { data } = await BrandKitsAPI.save(null, {

@@ -4,7 +4,10 @@ RSpec.describe EmailCampaigns::Ai::SubmitJob, :aggregate_failures do
   let(:account) { create(:account) }
   let(:campaign) { create(:email_campaign, account: account) }
   let(:kit) { create(:brand_kit, account: account, name: 'Hub2You') }
-  let(:client) { instance_double(Crm::Ai::ResponsesClient, create_background: { id: 'resp_1', status: 'queued' }) }
+  let(:client) do
+    instance_double(Crm::Ai::ResponsesClient, create_background: { id: 'resp_1', status: 'queued' },
+                                              create: { text: '{"site_url":null,"reason":""}' })
+  end
 
   before do
     resolver = instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'test-key' })

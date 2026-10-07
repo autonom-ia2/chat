@@ -234,6 +234,12 @@
       "ARCHIVED_DONE": "{name} archived. E-mails already made do not change.",
       "RESTORED": "{name} is back on the list.",
       "ACTION_ERROR": "That did not work. Try again."
+    },
+    "SITE_REQUEST": {
+      "USED": "I used the identity of {host}, as you asked.",
+      "UNREADABLE": "I could not read {host}. I used the default identity.",
+      "SAVE": "Save as identity",
+      "SAVE_FAILED": "Could not save the identity. Try again in Visual identity."
     }
   }
 }

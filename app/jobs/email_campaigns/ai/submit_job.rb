@@ -18,14 +18,14 @@ module EmailCampaigns
         credential = Crm::Ai::CredentialResolver.new(account: campaign.account).resolve
         return fail_generation(campaign, token, 'ai_not_configured') if credential.blank?
 
-        identity, brand_identity = BrandResolution.new(campaign, params['brand']).call
+        identity, brand_identity = resolve_identity(campaign, credential, params)
         generator = Generator.new(account: campaign.account, brief: params['brief'], placeholders: params['placeholders'],
                                   assets: params['assets'], base_mjml: params['base_mjml'], identity: identity)
         return fail_generation(campaign, token, 'base_mjml_too_large') if generator.base_mjml_too_large?
         return fail_generation(campaign, token, 'adjust_unreadable') if generator.adjust? && generator.sections.nil?
 
         req = generator.build
-        start_adjustment(campaign, token, generator, req, params) if generator.adjust?
+        start_adjustment(campaign, token, generator, req, params.merge('site_request' => brand_identity['site_request'])) if generator.adjust?
         client = Crm::Ai::ResponsesClient.new(credential: credential)
         result = client.create_background(
           model: Crm::Ai::Config::MODEL_EMAIL, instructions: req[:instructions], input: req[:input],
@@ -54,10 +54,18 @@ module EmailCampaigns
         campaign.ai_processing? && campaign.ai_generation_token == token
       end
 
-      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado.
+      # Ajuste (#1095): guarda o e-mail de antes e o pedido; o PollJob monta, confere e propõe o resultado. Com o
+      # aviso do site pedido no próprio pedido (#1111), que o editor mostra junto da proposta.
       def start_adjustment(campaign, token, generator, req, params)
         Adjustment.start(campaign, token: token, request: { base: generator.sections.canonical, placeholders: params['placeholders'],
-                                                            instructions: req[:instructions], input: req[:input_text] })
+                                                            instructions: req[:instructions], input: req[:input_text],
+                                                            site_request: params['site_request'] })
+      end
+
+      # A site asked for in the request itself (#1111) wins over the identity chosen in the composer for this e-mail.
+      def resolve_identity(campaign, credential, params)
+        requested_url = SiteRequest.new(account: campaign.account, credential: credential, brief: params['brief']).url
+        BrandResolution.new(campaign, params['brand'], requested_url: requested_url).call
       end
 
       # Só dispara o toast de falha se ESTA geração ainda era a ativa (ganhou o update guardado).

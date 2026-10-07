@@ -325,6 +325,7 @@ const openAdjustPreview = adjustment => {
     beforeHtml: compileMjml(adjustment.base),
     afterHtml: compileMjml(adjustment.mjml),
     summary: adjustment.summary || '',
+    siteRequest: adjustment.site_request || null,
   };
 };
 
@@ -1152,6 +1153,7 @@ const insertPlaceholder = key => {
       :before-html="adjustPreview.beforeHtml"
       :after-html="adjustPreview.afterHtml"
       :summary="adjustPreview.summary"
+      :site-request="adjustPreview.siteRequest"
       @apply="applyAdjustment"
       @discard="discardAdjustment"
     />
