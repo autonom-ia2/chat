@@ -42,6 +42,11 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('dashboard/api/emailCampaignAi', () => ({ default: api }));
 vi.mock('dashboard/api/emailCampaignTemplates', () => ({ default: {} }));
+// The identity panel (#1126) shows only with visual identity on.
+vi.mock('dashboard/components-next/BrandKits/useBrandKits', async () => {
+  const { ref: vueRef } = await import('vue');
+  return { useBrandKits: () => ({ isEnabled: vueRef(true) }) };
+});
 
 const { default: EmailBuilderPage } = await import('../EmailBuilderPage.vue');
 
@@ -209,5 +214,43 @@ describe('EmailBuilderPage — Ajustar com IA', () => {
     expect(wrapper.findComponent({ name: 'AiAdjustPreview' }).exists()).toBe(
       false
     );
+  });
+});
+
+// #1126: "Trocar" in "Identidade deste e-mail" — the identity picked goes to the AI dialog.
+describe('EmailBuilderPage — Trocar a identidade', () => {
+  const picked = { kitId: 2, name: 'Autonomia' };
+  const panel = wrapper =>
+    wrapper.findComponent({ name: 'BrandEmailIdentityPanel' });
+  const composer = wrapper =>
+    wrapper.findComponent({ name: 'AiComposerDialog' });
+
+  it('opens the adjustment with the identity picked, and a later "Adjust with AI" opens it plain', async () => {
+    const wrapper = setUp({ canvas: WITH_CONTENT });
+    await settle();
+
+    panel(wrapper).vm.$emit('change', picked);
+    await settle();
+
+    expect(composer(wrapper).props('canAdjust')).toBe(true);
+    expect(composer(wrapper).props('changeIdentity')).toEqual(picked);
+
+    composer(wrapper).vm.$emit('close');
+    await settle();
+    expect(composer(wrapper).exists()).toBe(false);
+
+    await aiButton(wrapper).trigger('click');
+    expect(composer(wrapper).props('changeIdentity')).toBeNull();
+  });
+
+  it('opens "Create with AI" with the identity picked when the canvas is empty', async () => {
+    const wrapper = setUp();
+    await settle();
+
+    panel(wrapper).vm.$emit('change', picked);
+    await settle();
+
+    expect(composer(wrapper).props('canAdjust')).toBe(false);
+    expect(composer(wrapper).props('changeIdentity')).toEqual(picked);
   });
 });

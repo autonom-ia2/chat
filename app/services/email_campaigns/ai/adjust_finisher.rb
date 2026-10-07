@@ -42,12 +42,17 @@ class EmailCampaigns::Ai::AdjustFinisher
     check(sections, answer, text)
   end
 
+  # The model says whether it dressed the e-mail in the chosen identity (#1126); then the footer line follows it.
+  # Only a literal `true` counts: an answer without the field (an adjustment already in flight when #1126 was
+  # deployed, asked with the old schema) is "not applied" — the footer and the campaign identity stay as they were.
   def check(sections, answer, text)
-    mjml = EmailCampaigns::Ai::Sanitizer.new(sections.assemble(answer['blocks'])).perform
+    applied = answer['identity_applied'] == true
+    footer = applied ? @adjustment['footer'] : nil
+    mjml = EmailCampaigns::Ai::Sanitizer.new(sections.assemble(answer['blocks'], footer: footer)).perform
     return fail!('generation_too_large') if mjml.length > EmailCampaign::BODY_HTML_MAX
 
     problems = new_problems(mjml, sections)
-    return propose!(mjml, answer['summary']) if problems.empty?
+    return propose!(mjml, answer['summary'], applied) if problems.empty?
     return fix!(text, problems) if @adjustment['round'].to_i < MAX_FIX_ROUNDS
 
     fail!('adjust_quality', problem: problems.first.check.to_s)
@@ -96,9 +101,10 @@ class EmailCampaigns::Ai::AdjustFinisher
     [{ role: 'user', content: [{ type: 'input_text', text: @adjustment['input'] }, { type: 'input_text', text: fix }] }]
   end
 
-  def propose!(mjml, summary)
+  def propose!(mjml, summary, identity_applied)
     summary = EmailCampaigns::Ai::ShortSentence.call(summary, SUMMARY_MAX)
-    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'proposed', mjml: mjml, summary: summary)
+    EmailCampaigns::Ai::Adjustment.update(@campaign, @token, status: 'proposed', mjml: mjml, summary: summary,
+                                                             identity_applied: identity_applied)
     EmailCampaigns::Ai::Broadcaster.ready(@campaign) if @campaign.ai_propose!(@token)
   end
 

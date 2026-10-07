@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 
@@ -38,6 +38,12 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // Identity picked under "Trocar" in the editor panel (#1126): { kitId, name }. It comes chosen and,
+  // when adjusting, the request to apply it to the whole e-mail comes written (the person may edit it).
+  changeIdentity: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close', 'generationStarted']);
@@ -74,12 +80,44 @@ const {
   fetchKits: fetchBrandKits,
 } = useBrandKits();
 const identity = ref({
-  kitId: props.initialBrand.kitId || null,
+  kitId: props.changeIdentity?.kitId || props.initialBrand.kitId || null,
   importId: null,
   proposal: null,
   mode: props.initialBrand.mode || 'light',
   saveAsKit: false,
 });
+// #1126: the written request names the identity chosen now and follows it — also when the identities
+// arrive after the dialog opened — until the person types in the field (briefTouched); creating a new
+// e-mail instead (unticked) starts with an empty briefing.
+const identityName = computed(() => {
+  const { kitId, proposal } = identity.value;
+  const kit = brandKits.value.find(item => item.id === kitId);
+  if (kit) return kit.name;
+  if (kitId && kitId === props.changeIdentity?.kitId) {
+    return props.changeIdentity.name;
+  }
+  return proposal?.name || '';
+});
+const identityRequest = computed(() =>
+  props.changeIdentity && isAdjust.value && identityName.value
+    ? t('CAMPAIGN.EMAIL_CAMPAIGN.AI.COMPOSER.APPLY_IDENTITY_REQUEST', {
+        name: identityName.value,
+      })
+    : ''
+);
+const briefTouched = ref(false);
+const typeBrief = value => {
+  briefTouched.value = true;
+  brief.value = value;
+};
+watch(
+  identityRequest,
+  next => {
+    if (!briefTouched.value) brief.value = next;
+  },
+  { immediate: true }
+);
+
 const isUploadingImage = ref(false);
 const isUploadingPdf = ref(false);
 const isResolvingVideo = ref(false);
@@ -372,7 +410,7 @@ const generate = async () => {
         </label>
 
         <TextArea
-          v-model="brief"
+          :model-value="brief"
           :label="tk(modeKey('BRIEF_LABEL'))"
           :placeholder="tk(modeKey('BRIEF_PLACEHOLDER'))"
           auto-height
@@ -380,6 +418,7 @@ const generate = async () => {
           min-height="7rem"
           max-height="16rem"
           data-test="ai-composer-brief"
+          @update:model-value="typeBrief"
         />
 
         <BrandIdentityPicker

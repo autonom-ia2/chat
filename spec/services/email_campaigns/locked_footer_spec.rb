@@ -76,4 +76,24 @@ RSpec.describe EmailCampaigns::LockedFooter, :aggregate_failures do
     expect(out).to end_with("#{described_class::MJML}</mj-body></mjml>")
     expect(sanitize(out)).to eq(out)
   end
+
+  # #1126: only our own footer takes the line of another identity. The match is structural (same opening and the
+  # same legal text after the identity line), so a footer byte-identical to ours is ours — that is expected.
+  describe '.ours?' do
+    it 'is true for the shared footer, byte for byte, with or without an identity line' do
+      expect(described_class.ours?(described_class::MJML)).to be(true)
+      expect(described_class.ours?(described_class.with_first_line('Hub2You · Rua A, 1'))).to be(true)
+    end
+
+    it 'is never true for a footer an imported template brought, even locked and with our unsubscribe link' do
+      imported = [
+        described_class::MJML.sub('Você recebeu este e-mail', 'Você está recebendo esta mensagem'),
+        described_class::MJML.sub('background-color="#f4f4f4"', 'background-color="#111111"'),
+        '<mj-section css-class="footer-locked"><mj-column><mj-text>Loja X · ' \
+        '<a href="{{ unsubscribe_url }}">Sair</a></mj-text></mj-column></mj-section>'
+      ]
+
+      imported.each { |footer| expect(described_class.ours?(footer)).to be(false) }
+    end
+  end
 end

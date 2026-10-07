@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router';
 import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
 import BrandSiteReader from './BrandSiteReader.vue';
+import BrandKitMenu from './BrandKitMenu.vue';
 import { useBrandKits } from './useBrandKits';
 import { kitLogoUrl, siteHost } from './brandKitData';
 import { textOn } from './brandColors';
@@ -132,46 +133,13 @@ const seeAll = () => {
           data-test="identity-change"
           @click="menuOpen = !menuOpen"
         />
-        <div
+        <BrandKitMenu
           v-if="menuOpen"
-          role="menu"
-          class="absolute end-0 top-full z-30 mt-2 w-72 rounded-xl border border-n-weak bg-n-solid-1 p-1 shadow-lg"
+          :kits="kits"
+          :selected-id="kit?.id ?? null"
+          class="w-72"
+          @choose="chooseKit"
         >
-          <button
-            v-for="item in kits"
-            :key="item.id"
-            type="button"
-            role="menuitemradio"
-            :aria-checked="kit?.id === item.id"
-            class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-start text-sm hover:bg-n-alpha-1"
-            :class="
-              kit?.id === item.id
-                ? 'font-semibold text-n-blue-11'
-                : 'text-n-slate-12'
-            "
-            :data-kit-option="item.id"
-            @click="chooseKit(item)"
-          >
-            <span
-              class="size-5 shrink-0 rounded-full border border-n-weak"
-              :style="{
-                backgroundColor: item.appearance?.palettes?.light?.primary,
-              }"
-              aria-hidden="true"
-            />
-            <span class="flex-1 truncate">{{ item.name }}</span>
-            <span
-              v-if="item.is_default"
-              class="rounded-full bg-n-blue-3 px-2 py-0.5 text-xs font-medium text-n-blue-11"
-            >
-              {{ t(`${NS}.DEFAULT`) }}
-            </span>
-            <span
-              v-if="kit?.id === item.id"
-              class="i-lucide-check size-4 text-n-blue-11"
-              aria-hidden="true"
-            />
-          </button>
           <div v-if="kits.length" class="my-1 border-t border-n-weak" />
           <button
             type="button"
@@ -192,7 +160,7 @@ const seeAll = () => {
             <span class="i-lucide-palette size-4" aria-hidden="true" />
             {{ t(`${NS}.SEE_ALL`) }}
           </button>
-        </div>
+        </BrandKitMenu>
       </div>
     </div>
 

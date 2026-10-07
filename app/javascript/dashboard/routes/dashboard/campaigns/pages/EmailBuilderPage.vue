@@ -302,7 +302,11 @@ const aiButtonLabel = computed(() =>
     : t('CAMPAIGN.EMAIL_CAMPAIGN.BUILDER.AI_COMPOSE')
 );
 
-const openAiDialog = () => {
+// "Trocar" in "Identidade deste e-mail" (#1126) passes the identity picked ({ kitId, name }): the dialog
+// comes with it chosen and, with content on the canvas, the request to apply it already written.
+const identityChange = ref(null);
+const openAiDialog = (change = null) => {
+  identityChange.value = change;
   showUndo.value = false;
   aiCanAdjust.value = isReady.value && hasEmailContent(getMjml());
   if (isReady.value) {
@@ -1165,6 +1169,7 @@ const insertPlaceholder = key => {
       :can-adjust="aiCanAdjust"
       :read-current-mjml="getMjml"
       :initial-brand="initialBrand"
+      :change-identity="identityChange"
       @generation-started="onGenerationStarted"
       @close="showAiDialog = false"
     />

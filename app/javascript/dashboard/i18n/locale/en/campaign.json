@@ -813,6 +813,7 @@
           "ADJUST_ONLY_LABEL": "Change only what I ask",
           "ADJUST_ONLY_HINT": "The rest of the email stays the same. Untick to create a new email from scratch.",
           "ADJUST_ONLY_OFF_HINT": "A new email will be created from scratch. Tick again to change only this one.",
+          "APPLY_IDENTITY_REQUEST": "Apply the {name} identity to the whole email: colors, fonts and logo.",
           "ADJUST_ASSETS_LABEL": "Images and files (optional)",
           "ADJUST_ASSETS_HINT": "Send an image if you want to swap one, and say where it goes.",
           "ADJUST_TOO_LARGE": "This email is too big to adjust at once: use \"Improve with AI\" on each block, or untick to create one from scratch.",

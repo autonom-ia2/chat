@@ -48,6 +48,27 @@ RSpec.describe EmailCampaigns::Ai::EditPromptBuilder, :aggregate_failures do
     expect(instructions).not_to include('PRIMARY=#c8102e', 'footer-locked')
   end
 
+  # #1126: "Trocar" in the identity panel asks to dress the whole e-mail in another identity. The model reads the
+  # request; the prompt only says what applying an identity means and how to report it.
+  it 'says what applying the chosen identity to the whole e-mail changes and what it keeps' do
+    kit = create(:brand_kit, account: account, name: 'Autonomia')
+    identity = BrandKits::PromptPayload.new(kit, mode: 'light').to_h
+
+    instructions = build(identity: identity)[:instructions]
+
+    expect(instructions).to include('aplicar esta identidade', 'e-mail INTEIRO', 'logo_url', 'logo antiga')
+    expect(instructions).to include('textos, imagens, links, a ordem e a estrutura dos blocos continuam exatamente como estão')
+    expect(instructions).to include('"identity_applied": true')
+  end
+
+  it 'asks the model to report whether it applied the identity, always false without one' do
+    properties = described_class::SCHEMA[:schema][:properties]
+
+    expect(properties[:identity_applied]).to eq(type: 'boolean')
+    expect(described_class::SCHEMA[:schema][:required]).to include('identity_applied')
+    expect(build[:instructions]).to include('"identity_applied": false')
+  end
+
   it 'asks for blocks, not a whole e-mail, and never searches the web' do
     req = build
 

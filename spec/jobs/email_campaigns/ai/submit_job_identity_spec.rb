@@ -43,5 +43,7 @@ RSpec.describe EmailCampaigns::Ai::SubmitJob, :aggregate_failures do
       expect(request[:instructions]).to include('<<<IDENTIDADE', '"name":"Hub2You"', 'PRIMARY=#c8102e')
     end
     expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['instructions']).to include('<<<IDENTIDADE')
+    # #1126: the footer of the identity waits with the adjustment, used only if the model applies the identity.
+    expect(EmailCampaigns::Ai::Adjustment.find(campaign, token)['footer']).to include('Hub2You', 'footer-locked')
   end
 end

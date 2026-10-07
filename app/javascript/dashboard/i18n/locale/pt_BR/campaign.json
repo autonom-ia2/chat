@@ -831,6 +831,7 @@
           "ADJUST_ONLY_LABEL": "Mudar só o que eu pedir",
           "ADJUST_ONLY_HINT": "O resto do e-mail fica igual. Desmarque para criar um e-mail novo do zero.",
           "ADJUST_ONLY_OFF_HINT": "Um e-mail novo será criado do zero. Marque de novo para mudar só este.",
+          "APPLY_IDENTITY_REQUEST": "Aplicar a identidade {name} no e-mail todo: cores, fontes e logo.",
           "ADJUST_ASSETS_LABEL": "Imagens e arquivos (opcional)",
           "ADJUST_ASSETS_HINT": "Envie uma imagem se quiser trocar alguma, e diga onde ela entra.",
           "ADJUST_TOO_LARGE": "Este e-mail é grande demais para ajustar de uma vez: use \"Melhorar com IA\" em cada bloco ou desmarque para criar um do zero.",

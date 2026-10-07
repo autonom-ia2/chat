@@ -21,10 +21,11 @@ RSpec.describe 'E-mail campaign AI adjustment identity (#1111)', :aggregate_fail
 
   after { EmailCampaigns::Ai::Adjustment.clear(campaign) }
 
-  def propose(brand_identity)
+  def propose(brand_identity, identity_applied: false)
     token = campaign.ai_begin!
     EmailCampaigns::Ai::Adjustment.start(campaign, token: token, request: { base: '<mjml></mjml>', brand_identity: brand_identity })
-    EmailCampaigns::Ai::Adjustment.update(campaign, token, status: 'proposed', mjml: '<mjml></mjml>', summary: 'Troquei as cores.')
+    EmailCampaigns::Ai::Adjustment.update(campaign, token, status: 'proposed', mjml: '<mjml></mjml>', summary: 'Troquei as cores.',
+                                                           identity_applied: identity_applied)
     campaign.ai_propose!(token)
     token
   end
@@ -78,13 +79,47 @@ RSpec.describe 'E-mail campaign AI adjustment identity (#1111)', :aggregate_fail
   end
 
   it 'keeps the identity when the adjustment did not use a site' do
-    propose('kit_id' => 2, 'name' => 'Outra', 'mode' => 'light', 'source' => 'kit',
-            'site_request' => { 'host' => 'aurora.example', 'status' => 'unreadable' })
+    propose({ 'kit_id' => 2, 'name' => 'Outra', 'mode' => 'light', 'source' => 'kit',
+              'site_request' => { 'host' => 'aurora.example', 'status' => 'unreadable' } })
 
     post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
     expect(campaign.reload.brand_identity).to eq(old_identity)
+  end
+
+  # #1126: "Trocar" in the identity panel — the model applied another identity to the whole e-mail.
+  describe 'an identity the model applied to the whole e-mail' do
+    let(:kit_identity) { { 'kit_id' => 2, 'name' => 'Autonomia', 'mode' => 'light', 'source' => 'kit' } }
+
+    it 'records it when the person applies the proposal and brings the old one back on undo' do
+      propose(kit_identity, identity_applied: true)
+
+      post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['brand_identity']).to eq(kit_identity)
+      expect(campaign.reload.brand_identity).to eq(kit_identity)
+
+      post "#{path}/undo", headers: admin.create_new_auth_token, as: :json
+
+      expect(campaign.reload.brand_identity).to eq(old_identity)
+    end
+
+    it 'keeps the identity when the model only touched part of the e-mail' do
+      propose(kit_identity, identity_applied: false)
+
+      post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
+
+      expect(campaign.reload.brand_identity).to eq(old_identity)
+    end
+
+    it 'records nothing when there was no identity to apply' do
+      propose({}, identity_applied: true)
+
+      post "#{path}/apply", headers: admin.create_new_auth_token, as: :json
+
+      expect(campaign.reload.brand_identity).to eq(old_identity)
+    end
   end
 
   it 'ignores an adjustment of an older generation' do
